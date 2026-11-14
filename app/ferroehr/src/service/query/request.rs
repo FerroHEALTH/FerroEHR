@@ -45,11 +45,11 @@ pub struct AqlQueryRequest {
     /// must match a parameter name in the query" (`$name` binds, no `$`
     /// prefix).
     pub parameters: BTreeMap<String, Value>,
-    /// The ABAC patient-scope subject id (no openEHR spec governs this — our
-    /// own access-control extension): when set, the engine pre-filters every
+    /// The patient-scope subject id (no openEHR spec governs this — our own
+    /// access-control extension): when set, the engine pre-filters every
     /// VO root and EHR source to EHRs whose subject it names.
     pub subject_scope: Option<String>,
-    /// The configured patient namespace (`[authz.abac] patient_namespace`) the
+    /// The configured patient namespace (`[auth] patient_namespace`) the
     /// [`Self::subject_scope`] id is read in; `None` reads the id alone and
     /// refuses one held under several namespaces.
     pub subject_namespace: Option<String>,
@@ -57,8 +57,8 @@ pub struct AqlQueryRequest {
     /// rows the query may read, applied to every EHR-anchored source whatever
     /// the query scopes or projects.
     pub ehr_access: crate::access_eval::condition::AccessCondition,
-    /// Whether the executor should collect the touched EHR-id / template-id
-    /// sets for the ABAC query post-check (our own extension).
+    /// Whether the executor should collect the touched EHR ids and their
+    /// subjects for the patient-scope query post-check (our own extension).
     pub collect_attributes: bool,
     /// What the caller may read of the access log, which decides whether and
     /// how a query over `ACCESS_LOG_ENTRY` runs; the default refuses it. No
@@ -82,18 +82,16 @@ impl AqlQueryRequest {
 ///
 /// Carries the assembled `RESULT_SET` (rendered as ITS-REST
 /// canonical JSON) plus — when the caller asked for them
-/// ([`AqlQueryRequest::collect_attributes`]) — the distinct EHR ids, template
-/// ids and EHR subjects the query touched, for the ABAC post-check.
+/// ([`AqlQueryRequest::collect_attributes`]) — the distinct EHR ids and EHR
+/// subjects the query touched, for the patient-scope post-check.
 #[derive(Debug, Clone, Default)]
 pub struct QueryOutcome {
     /// The `RESULT_SET` (canonical JSON) the adapter renders.
     pub result_set: Value,
     /// The distinct EHR ids the query touched (empty unless collected).
     pub ehr_ids: Vec<String>,
-    /// The distinct template ids the query touched (empty unless collected).
-    pub template_ids: Vec<String>,
     /// The distinct subjects of the EHRs the query touched (empty unless
-    /// collected), from which the ABAC post-check folds its patient attribute.
+    /// collected), which the patient-scope post-check holds to the claim.
     pub subjects: Vec<EhrSubject>,
     /// The EHRs this execution actually SERVED, each with its served-row count.
     ///
@@ -153,7 +151,6 @@ impl QueryOutcome {
         Self {
             result_set,
             ehr_ids: Vec::new(),
-            template_ids: Vec::new(),
             subjects: Vec::new(),
             served_ehrs: Vec::new(),
             served_rows: 0,

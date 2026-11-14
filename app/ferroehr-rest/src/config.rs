@@ -36,11 +36,6 @@ pub struct AppConfig {
     /// Basic users, product scope), the vendor adapter tables, the SMART App
     /// Launch posture and the SCIM service provider.
     pub auth: AuthConfig,
-    /// `[authz.abac] organization_claim` — the access-token claim naming the
-    /// organisation a caller acts for, lifted here because the access log
-    /// records it whether or not the ABAC gate that shares the setting is
-    /// switched on. `None` when the deployment configures no claim.
-    pub audit_organization_claim: Option<String>,
     /// `[authz.rbac]` — the role rules.
     pub rbac: RbacConfig,
     /// `[authz.assurance]` — the assurance a patient-data request must carry.
@@ -62,7 +57,6 @@ impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
             public_root: config.server.public_root(),
             api: config.api.clone(),
             auth: config.auth.clone(),
-            audit_organization_claim: config.authz.abac.organization_claim().map(str::to_owned),
             rbac: config.authz.rbac.clone(),
             assurance: config.authz.assurance.clone(),
             spec_profile: config.deployment.spec_profile,

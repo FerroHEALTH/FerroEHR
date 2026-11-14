@@ -57,13 +57,7 @@ fn base_config(auth: ferroehr::config::auth_section::AuthConfig) -> AppConfig {
 fn authz_for(config: &AppConfig, rbac_enabled: bool) -> Option<Arc<AuthzHandle>> {
     let mut authz_cfg = ferroehr::config::authz::AuthzConfig::default();
     authz_cfg.rbac.enabled = rbac_enabled;
-    AuthzHandle::build(
-        &authz_cfg,
-        &config.api.base_path,
-        None,
-        common::null_resolvers(),
-    )
-    .map(Arc::new)
+    AuthzHandle::build(&authz_cfg, &config.api.base_path, None).map(Arc::new)
 }
 
 /// Assemble the full app over a real service on a fresh database.

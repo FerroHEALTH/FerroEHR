@@ -542,7 +542,7 @@ impl Builder<'_> {
     /// The node's version row is then bound one-to-one beside it, so the
     /// server-assigned `uid` synthesizes as for a joined root (RM common
     /// master06 §Version Identification), and the pair is reported to the
-    /// access log and the ABAC scope collection. A row where the branch did
+    /// access log and the patient scope collection. A row where the branch did
     /// not match carries `NULL` in both bindings.
     ///
     /// # Errors

@@ -42,7 +42,6 @@ http = { workspace = true }
 # The body-limit error a read failure is classified by (`limits::exceeds_limit`).
 http-body-util = { workspace = true }
 bytes = { workspace = true }
-async-trait = { workspace = true }
 uuid = { workspace = true }
 
 # Async runtime.
@@ -82,10 +81,6 @@ sha2 = { workspace = true }
 # The SCIM protocol layer (`scim::protocol`) checks a `binary` attribute value
 # is base64 (RFC 7643 §2.3.6).
 base64 = { workspace = true }
-
-# The ABAC policy decision: the family's Cedar engine, over the attributes
-# this CDR resolves.
-ferrohealth-authz = { workspace = true, features = ["cedar"] }
 url = { workspace = true }
 reqwest = { workspace = true }
 

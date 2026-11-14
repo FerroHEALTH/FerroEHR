@@ -453,7 +453,6 @@ async fn rbac_app(issuer: &str) -> (testkit::TestDb, Router) {
         &authz,
         &cfg.api.base_path,
         None,
-        common::null_resolvers(),
     )
     .map(std::sync::Arc::new);
     let app = common::build_full(

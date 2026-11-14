@@ -14,7 +14,7 @@
 //! the ITS-REST drift check.
 //!
 //! The extension groups mount inside the ITS-REST API router, so the full path
-//! is `{rest_root}/extensions/v1/terminology/...`; nesting keeps the auth, ATNA-audit and ABAC
+//! is `{rest_root}/extensions/v1/terminology/...`; nesting keeps the auth, ATNA-audit and PEP
 //! middleware stack uniform across the whole HTTP surface. Existence is
 //! answered through the `200`-versus-`404` of each read rather than by
 //! separate endpoints: the bundle provider maps an unknown terminology, term or
@@ -63,7 +63,7 @@ pub(crate) fn routes() -> OpenApiRouter<AppState> {
 // ── Handlers (our own wire shape) ─────────────────────────────────────────────
 // Every handler snapshots the request into `RequestParts` (identical to the
 // generated-group adapter) and runs it through the shared guarded dispatch, so
-// the EHR_ACCESS gate, ABAC PEP, and ATNA audit tagging apply uniformly.
+// the EHR_ACCESS gate, PEP, and ATNA audit tagging apply uniformly.
 
 guarded_handler! {
     /// Every terminology id the server knows

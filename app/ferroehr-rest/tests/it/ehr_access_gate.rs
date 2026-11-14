@@ -533,7 +533,6 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
         &authz,
         &config.api.base_path,
         None,
-        common::null_resolvers(),
     )
     .map(Arc::new);
     assert!(

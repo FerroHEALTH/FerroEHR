@@ -1,13 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The keys of the removed remote policy decision point are unknown keys.
+//! The keys of the removed `[authz.abac]` tree are unknown keys.
 //!
 //! The remote decision point, `[authz.abac.remote]` with its endpoint tree,
-//! and the `[authz.abac.policy.<name>]` bindings it read are gone (#5516).
-//! FerroEHR is greenfield, so each is refused as any unknown key is, from the
-//! file and from the environment. No openEHR spec governs authorization: our
-//! own design.
+//! and the `[authz.abac.policy.<name>]` bindings it read are gone (#5516), and
+//! so is the embedded Cedar engine with the whole `[authz.abac]` table: its
+//! switch, engine, organisation claim and directory switch, and the Cedar
+//! settings (#5515). The patient binding moved to `[auth] patient_claim` and
+//! `patient_namespace`. FerroEHR is greenfield, so each is refused as any
+//! unknown key is, from the file and from the environment. No openEHR spec
+//! governs authorization: our own design.
 
 use super::tests::{env, file_refusal};
 use super::*;
@@ -15,6 +18,23 @@ use super::*;
 /// Every key of the removed tree, by table: the table, whether it is an array
 /// of tables, and its keys.
 const REMOVED: &[(&str, bool, &[&str])] = &[
+    (
+        "authz.abac",
+        false,
+        &[
+            "enabled",
+            "engine",
+            "organization_claim",
+            "patient_claim",
+            "patient_namespace",
+            "check_directory",
+        ],
+    ),
+    (
+        "authz.abac.cedar",
+        false,
+        &["policy_dir", "reload_interval"],
+    ),
     (
         "authz.abac.remote.endpoint",
         false,
@@ -197,13 +217,10 @@ const REMOVED: &[(&str, bool, &[&str])] = &[
     ("authz.abac.policy.ehr", false, &["name", "parameters"]),
 ];
 
-/// The removed table a key sits under, as the refusal names it.
-fn removed_table(table: &str) -> &'static str {
-    if table.starts_with("authz.abac.policy") {
-        "policy"
-    } else {
-        "remote"
-    }
+/// The removed table every key sits under, as the refusal names it: the
+/// `[authz]` table no longer has an `abac` field.
+fn removed_table(_table: &str) -> &'static str {
+    "abac"
 }
 
 #[test]
@@ -247,6 +264,8 @@ fn every_removed_key_is_unknown_in_the_environment() {
 #[test]
 fn the_removed_tables_are_unknown() {
     for table in [
+        "authz.abac",
+        "authz.abac.cedar",
         "authz.abac.remote",
         "authz.abac.remote.endpoint",
         "authz.abac.policy",
@@ -259,17 +278,40 @@ fn the_removed_tables_are_unknown() {
     }
 }
 
-/// `remote` was the second value of `abac.engine`; `cedar` is its only one.
+/// Neither engine of `[authz.abac] engine` is a value any more: the key
+/// itself is unknown.
 #[test]
-fn the_remote_engine_is_unknown() {
-    let refusal = file_refusal("[authz.abac]\nengine = \"remote\"\n");
-    assert!(refusal.contains("remote"), "{refusal}");
-    let refusal = assemble(
+fn every_engine_is_unknown() {
+    for engine in ["cedar", "remote"] {
+        let refusal = file_refusal(&format!("[authz.abac]\nengine = \"{engine}\"\n"));
+        assert!(refusal.contains("abac"), "{refusal}");
+        let refusal = assemble(
+            None,
+            &env(&[("FERROEHR__AUTHZ__ABAC__ENGINE", engine)]),
+            &[],
+        )
+        .expect_err("the engine key")
+        .to_string();
+        assert!(
+            refusal.contains("FERROEHR__AUTHZ__ABAC__ENGINE") || refusal.contains("abac"),
+            "{refusal}"
+        );
+    }
+}
+
+/// The patient binding is read under `[auth]`, from the file and from the
+/// environment, and nowhere else.
+#[test]
+fn the_patient_binding_moved_under_auth() {
+    let config = assemble(
         None,
-        &env(&[("FERROEHR__AUTHZ__ABAC__ENGINE", "remote")]),
+        &env(&[
+            ("FERROEHR__AUTH__PATIENT_CLAIM", "patient_id"),
+            ("FERROEHR__AUTH__PATIENT_NAMESPACE", "nl.example.patients"),
+        ]),
         &[],
     )
-    .expect_err("the remote engine")
-    .to_string();
-    assert!(refusal.contains("remote"), "{refusal}");
+    .expect("the binding under [auth]");
+    assert_eq!(config.auth.patient_claim(), Some("patient_id"));
+    assert_eq!(config.auth.patient_namespace(), Some("nl.example.patients"));
 }

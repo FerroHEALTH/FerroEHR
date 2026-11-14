@@ -317,7 +317,7 @@ Each record additionally carries:
 | Field | What it holds |
 |---|---|
 | `domain` | The pseudonymisation domain read: `ehr`, `demographic`, `linkage` for a crossing that resolves a party or a subject to its EHRs, or `system` for an operation that touches no domain. |
-| `organisation` | The organisation the caller acted for, read from the access token's `[authz.abac] organization_claim` — the same claim the ABAC layer decides on, so no second setting can name a different one. The recording does not depend on that layer being switched on. A Basic-authenticated caller and an unconfigured claim both leave it empty. |
+| `organisation` | The organisation a record written before 5.7.2 names, as an access-token claim named it. FerroEHR reads no organisation claim, so a new record leaves it empty; the provider the caller acts for is the binding's `provider`. |
 | `purpose` | The purpose of use the caller declared in the `x-purpose-of-use` header, when the deployment accepts it. |
 | `token_attributes` | The purposes of use and the professional roles the access token states, each with its code system, for an issuer with an `[[auth.attributes]]` table ([where the purpose comes from](#where-the-purpose-of-use-comes-from)). |
 | `emergency_access` | `true` when the declared purpose, or a purpose the token states, is one of `[audit] emergency_purpose_codes`: an [emergency access](#emergency-access-ehds-art-115) (EHDS Art. 11(5)). |
@@ -376,7 +376,7 @@ the authority and the wording below is a paraphrase.
 
 | Annex II 3.2 | Access-event field | DICOM PS3.15 | FHIR `AuditEvent` | State |
 |---|---|---|---|---|
-| (a) the healthcare provider or other individuals having accessed | `organisation` | — (no such attribute) | an `agent` whose `who` is a logical reference to an `Organization` | Recorded |
+| (a) the healthcare provider or other individuals having accessed | `provider` of the binding (the provider of the caller's party binding, read from the CDR), or the `organisation` record of a verified external organisation | — (no such attribute) | the `acts-for` detail of the `ehds-accessor` entity | Recorded |
 | (b) the specific natural person or persons having accessed | `principal` (+ `token_id`, `client_ip`), and `professional_id` + `acting_mode` for a caller its issuer classifies as a person or a delegate | `ActiveParticipant/@UserID` (the professional; a client application acting for one is a second, non-requesting participant; the token subject is `@AlternativeUserID` when it differs) | the `agent:user` slice, `who` the token's issuer and subject, the professional's identifier as its `ihe-otherId`, and the client application as an agent of its own (BALP 1.1.4 §3:5.7.5.4) | Recorded |
 | (c) the categories of data accessed | `categories` + `category_basis` + `category_evidence` + `category_map_digest`, classified by `ehds-logging` through the audit category register (beside `resource_class`, `domain` and `result_count`) | none (no such element) | the `entity` named `ehds-categories`, with one `ehds-category` detail per category and its basis, each id the classification read and the map digest; each category is also a `meta.security` label | Recorded |
 | (d) the time and date of access | `recorded_at` | `EventIdentification/@EventDateTime` | `recorded` | Recorded |
@@ -384,20 +384,11 @@ the authority and the wording below is a paraphrase.
 
 Read (a) beside (b): they are both about the accessing side, and the pair
 distinguishes the **organisation** on whose behalf the access happened from the
-**natural person** who made it. The principal answers (b); the `organisation`
-column answers (a), resolved from the same access-token claim the ABAC layer
-reads (`[authz.abac] organization_claim`) rather than from a second setting
-that could name a different claim. Sharing the setting is not sharing the
-switch: the organisation is recorded whether or not the ABAC gate is enabled,
-because the trail describes a caller rather than deciding anything about them.
-The FHIR rendering carries it as an `agent` of its own, a logical reference to
-an `Organization`, with no participation code, because `AuditEvent.agent.type`
-is optional and inventing a code would be worse than omitting one. The DICOM
-rendering carries nothing: PS3.15 §A.5 defines no organisation attribute on
-`ActiveParticipant`, and `AuditEnterpriseSiteID` is the reporting node's own
-site rather than the caller's organisation. Where no claim is configured or the
-caller authenticated with Basic, the field stays empty rather than being
-guessed.
+**natural person** who made it. The principal answers (b); the provider of the
+caller's party binding answers (a). It is read from the CDR, never from a token
+claim, so the provider a record names is the one the deployment bound the
+caller to. A caller with no binding, such as a Basic user with no `PERSON`,
+leaves it empty rather than guessed.
 
 Element (b) asks for a **natural person**, and a bearer token can name a client
 application instead. Each issuer's [`kind` and profile](security.md#assurance-level-and-the-natural-person-on-patient-data)

@@ -77,7 +77,7 @@ flowchart LR
     subgraph Server["FerroEHR process"]
       B1["B1 network + protocol"]
       B2["B2 authentication"]
-      B3["B3 authorization<br/>EHR_ACCESS - RBAC - ABAC - SMART"]
+      B3["B3 authorization<br/>EHR_ACCESS - RBAC - patient scope - SMART"]
       B4["B4 content validation"]
       B5["B5 instance separation"]
     end
@@ -173,35 +173,37 @@ allowed, which is what makes an optional stage safe to leave off:
 
 1. **Authentication** produces a principal or a typed refusal.
 2. **`EHR_ACCESS`** is always on and unconditional, from the openEHR Reference
-   Model's own gateway clause.
+   Model's own gateway clause: the access evaluator decides every request that
+   reaches an EHR over the subject's access directives, the caller's facts in
+   the CDR and the controller's access policy.
 3. **RBAC** checks the coarse operation class (public, clinical, or admin)
    against roles taken from the RFC 9068 claim carriers. An OAuth2
    scope is deliberately not treated as a role. The read-only restriction
    overrides any grant. (The `/management/*` surface is *not* in this
    classification: it is governed endpoint-by-endpoint by its own configuration,
    and an endpoint you do not name is not mounted at all.)
-4. **ABAC** (off by default) evaluates subject and resource attributes through
-   the embedded Cedar engine, fanning multi-valued
-   attributes out as a cartesian product with all-must-permit and short-circuit
-   deny.
-5. **SMART scopes** (off by default) are AND-composed onto the ABAC decision.
+4. **The patient scope** (off by default) holds every caller to the EHR whose
+   subject the `[auth] patient_claim` names, on direct routes and in queries.
+5. **SMART scopes** (off by default) are AND-composed onto the decisions
+   before them.
 
 Deny-by-default throughout, and **fail-closed in both senses**: no stage permits
 by omission, and a stage that cannot *decide* is never read as a decision: an
-unreachable issuer is `503`, and a Cedar policy that errors during evaluation is
-a fail-closed `500`. Silence is
+unreachable issuer is `503`, and a fact the evaluator cannot read refuses
+rather than opens data. Silence is
 never consent, and a broken control never looks like a policy outcome.
 
 **Residual risk.**
 
-- **Coarse by default.** With ABAC off (the default) authorization is
-  role-level and `EHR_ACCESS`-level. Any authenticated clinical caller can reach
-  any EHR that `EHR_ACCESS` does not restrict. If your model is "a clinician may
-  read only their own patients", that is ABAC, and you must turn it on and write
-  the policy.
-- **Policy is only as good as the attributes.** Every decision is made from
-  claims the identity provider asserted. A wrong `organization` claim produces a
-  correct decision on a false premise.
+- **Open by default.** With no access directives and an access policy that
+  requires no care relationship, any authenticated clinical caller can reach
+  any EHR the default disposition admits. If your model is "a clinician may
+  read only their own patients", write it in the access policy
+  (`care_relationship_required`) and record the care relationships.
+- **Policy is only as good as the facts.** Every decision is made from the
+  caller's identity the identity provider asserted and the facts the CDR
+  holds about that caller. A wrong binding produces a correct decision on a
+  false premise.
 - **Authorization is enforced at the API.** Anything with a direct database
   connection is past it entirely; see B6.
 - **A legitimate caller acting outside their remit is not prevented, only

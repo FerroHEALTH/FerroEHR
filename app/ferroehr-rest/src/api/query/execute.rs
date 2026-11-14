@@ -3,9 +3,9 @@
 
 //! The execution of the `query` API group — ad-hoc + stored AQL execution
 //! (ITS-REST 1.1.0 QUERY API). Every operation runs the same frame: the
-//! ABAC pre-filter (`extensions::abac`), its ad-hoc ([`super::adhoc`]), stored
+//! patient-scope pre-filter (`extensions::access::patient_scope`), its ad-hoc ([`super::adhoc`]), stored
 //! ([`super::stored`]) or cohort ([`super::cohort`]) execution path, then
-//! the ABAC post-check, and renders the assembled `RESULT_SET` (with its
+//! the patient-scope post-check, and renders the assembled `RESULT_SET` (with its
 //! spec-mandated `ETag`) via [`super::response`].
 //!
 //! Spec: the six released operations, their parameter lists, and their
@@ -59,7 +59,7 @@ impl Execution {
 }
 
 /// Run one query operation along `execution`: the access scope first,
-/// then the execution, the ABAC post-check and the rendered `RESULT_SET`.
+/// then the execution, the patient-scope post-check and the rendered `RESULT_SET`.
 ///
 /// # Errors
 /// The refusals of the execution path and of the result-set rendering.
@@ -69,14 +69,13 @@ pub(crate) async fn serve(
     execution: Execution,
 ) -> Result<Response, RestError> {
     let op = execution.op();
-    // ABAC: the patient subject-scope pre-filter + collection flag. A
-    // missing configured patient claim is a ready 403. The PEP entry points
-    // (`extensions::access::pep::{query_pre,query_post}`) are `pub(crate)`, so
-    // this cross-module dispatcher calls them directly.
-    let (subject_scope, collect) = match crate::extensions::access::pep::query_pre(&state, op) {
-        Ok(prep) => prep,
-        Err(deny) => return Ok(deny),
-    };
+    // The patient scope: the subject pre-filter + collection flag. A missing
+    // configured patient claim is a ready 403.
+    let (subject_scope, collect) =
+        match crate::extensions::access::patient_scope::query_pre(&state, op) {
+            Ok(prep) => prep,
+            Err(deny) => return Ok(deny),
+        };
     // EHR_ACCESS: the access evaluator's verdict the path routes apply, held
     // over every row the query could reach (RM ehr `ehr_access.adoc`
     // §`EHR_ACCESS` Class).
@@ -98,7 +97,7 @@ pub(crate) async fn serve(
         Execution::StoredBody => stored::post(&state, &parts, &scope).await?,
         Execution::StoredVersion => stored::version_get(&state, &parts, &scope).await?,
         Execution::StoredVersionBody => stored::version_post(&state, &parts, &scope).await?,
-        // The cohort extension: the same ABAC pre-filter, post-check, rendering
+        // The cohort extension: the same patient-scope pre-filter, post-check, rendering
         // and access extensions as the released operations, over a scope
         // resolved across the pseudonymisation boundary rather than supplied.
         Execution::Cohort => {
@@ -115,8 +114,8 @@ pub(crate) async fn serve(
         }
     };
 
-    // ABAC query post-check: PDP fan-out over the touched template set.
-    if let Err(deny) = crate::extensions::access::pep::query_post(&state, op, &outcome).await {
+    // The patient-scope query post-check over the touched subjects.
+    if let Err(deny) = crate::extensions::access::patient_scope::query_post(&state, op, &outcome) {
         return Ok(deny);
     }
 

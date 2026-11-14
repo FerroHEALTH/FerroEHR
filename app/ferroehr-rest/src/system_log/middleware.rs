@@ -112,14 +112,12 @@ pub struct AuditObject {
 }
 
 /// The access-logging facts every record of one request shares: the request
-/// correlation id, the declared purpose of use, and the organisation the
-/// caller acted for.
+/// correlation id, the declared purpose of use and the declared data permit.
 #[derive(Debug, Clone, Default)]
 pub(super) struct AccessContext {
     request_id: Option<String>,
     purpose: Option<String>,
     permit: Option<String>,
-    organisation: Option<String>,
 }
 
 /// The caller as the authentication layer published it on the response: the
@@ -164,7 +162,6 @@ pub(super) fn fill_access(event: &mut AuditEvent, access: &AccessContext, state:
     event.request_id.clone_from(&access.request_id);
     event.purpose.clone_from(&access.purpose);
     event.permit.clone_from(&access.permit);
-    event.organisation.clone_from(&access.organisation);
     event.legal_basis = state.backend().audit_legal_basis().map(str::to_owned);
 }
 
@@ -225,26 +222,6 @@ fn declared_permit(req: &Request, backend: &ferroehr::service::FerroEhrService) 
     access_context::permit_identifier(declared)
 }
 
-/// The organisation the caller acted for, from the identity token.
-///
-/// The claim is `[authz.abac] organization_claim`, resolved the same way the
-/// policy-enforcement point resolves it ([`crate::extensions::access::pep`]).
-/// One setting serves both: a second one could name a different claim than
-/// authorization decides on, and the trail would then record an organisation
-/// the deployment never granted anything to.
-///
-/// The setting is shared; the switch is not. It is read from the adapter's
-/// configuration rather than off the live ABAC gate, so the trail records the
-/// organisation whether or not that gate is enabled — an access log that went
-/// blank because a policy layer was disabled would answer a different question
-/// than the one it is kept for. A Basic-authenticated caller carries no claims,
-/// so it resolves to `None`, as does an unconfigured claim — never a guess.
-fn caller_organisation(state: &AppState, principal: Option<&Principal>) -> Option<String> {
-    let principal = principal?;
-    let claim = state.config().audit_organization_claim.as_deref()?;
-    ferrohealth_smart::roles::claim_text(&principal.claims, claim).map(str::to_owned)
-}
-
 /// The ATNA audit middleware, routing emission through the platform's
 /// `SystemLog` component.
 pub async fn middleware(State(state): State<AppState>, req: Request, next: Next) -> Response {
@@ -284,7 +261,6 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         request_id,
         purpose,
         permit,
-        organisation: caller_organisation(&state, caller.principal),
     };
 
     let fresh_auth = resp.extensions().get::<FreshAuthentication>().is_some();

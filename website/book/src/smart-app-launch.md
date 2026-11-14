@@ -23,7 +23,7 @@ claim; a Basic user's from the `hold_scopes` grants of its `PERSON`
 `[auth] product_scope` from `[authz.rbac] first_admin`. With
 authentication off nothing is checked.
 
-The scopes and the RBAC and ABAC layers are all checked: SMART only narrows,
+The scopes, the role gate and the access evaluator are all checked: SMART only narrows,
 and never lets through what a role or a policy refuses (see
 [Security](security.md#authorization)).
 

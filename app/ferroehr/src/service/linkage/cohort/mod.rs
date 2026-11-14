@@ -125,7 +125,7 @@ pub struct CohortQueryRequest {
     /// to the request scope's own purpose
     /// ([`crate::system_log::access_context`]).
     pub purpose: Option<String>,
-    /// The paging window, `$parameter` binds and ABAC scope of the inner
+    /// The paging window, `$parameter` binds and patient scope of the inner
     /// execution. Its `ehr_ids` MUST be empty — the cohort is the scope.
     pub query: AqlQueryRequest,
 }

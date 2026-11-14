@@ -176,7 +176,7 @@ free text, so the origins your deployment recognises are policy in the CDR,
 not configuration: each is the `origin` element of a `data_origin` grant in
 force, which a
 [retention period](../compliance/retention.md#keying-a-period-on-an-origin)
-and an [ABAC rule](../security.md#abac-attribute-based-fine-grained) may then
+and an [access directive's data scope](../security.md#access-directives) may then
 name ([Operational policy](../operational-policy.md#what-the-grants-decide)).
 A body that carries no `FEEDER_AUDIT`, committed by the holder of such a
 grant, is stamped with its origin; a direct commit by any other caller keeps

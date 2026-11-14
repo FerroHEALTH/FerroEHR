@@ -102,7 +102,7 @@ on three levels (high, medium, low).
 | # | Risk | Magnitude | Likelihood with the shipped controls | Controls | Annex I Part I(2) |
 |---|---|---|---|---|---|
 | C1 | An unauthenticated caller reads or writes clinical data | high | low under the intended purpose; high when `auth.enabled = false` is misused under `sandbox` or accepted by name under `production` | authentication on by default with a boot refusal when no mechanism is configured; `production` refuses `auth.enabled = false` unless `auth_off` is accepted by name; per-request authorisation | (b), (d) |
-| C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, ABAC, per-EHR `EHR_ACCESS`; `production` refuses the role gate off (`rbac_off`) and an `open` `EHR_ACCESS` default (`open_ehr_access_default`) unless each is accepted by name; every access recorded | (d), (l) |
+| C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, the access evaluator over per-EHR `EHR_ACCESS` and the access policy, the patient scope; `production` refuses the role gate off (`rbac_off`) and an `open` `EHR_ACCESS` default (`open_ehr_access_default`) unless each is accepted by name; every access recorded | (d), (l) |
 | C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address and a separate plain-HTTP management listener unless `plaintext_listener` is accepted by name; the syslog audit feed sends over TLS only (`ihe-atna`); a boot warning on a plaintext routable bind | (e) |
 | C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log | (e), (f) |
 | C5 | An access happens and the log does not show it, or the log is altered | high | low with `fail_mode = "closed"` and an off-box sink; medium with the shipped `fail_mode = "open"` | refusals always recorded; `production` refuses audit off and audit failing open unless accepted; the hash chain | (f), (l) |
@@ -304,14 +304,14 @@ systems, and report on possible unauthorised access"
   RFC 9068 profile by default, and each issuer's metadata and keys read at
   boot. Every route carries a SMART on openEHR scope requirement, and a
   `patient/` grant reaches only the EHR of the token's launch context. Then
-  RBAC, Cedar or remote ABAC, and per-EHR `EHR_ACCESS`; an ABAC block that is enabled but
-  cannot be built aborts boot. A restricted `EHR_ACCESS` default holds with
+  RBAC, and the access evaluator over per-EHR `EHR_ACCESS` and the
+  controller's access policy. A restricted `EHR_ACCESS` default holds with
   the role gate off, and is refused at boot with authentication off. With a
-  patient claim configured, the ABAC patient scope applies to the EHR row and
+  patient claim configured, the patient scope applies to the EHR row and
   to every versioned object on every query plan and on the direct EHR,
   composition and status routes. An EHR that records no subject is refused
   to a patient caller, and so is one whose subject id another namespace also
-  holds, unless `[authz.abac] patient_namespace` names the namespace the
+  holds, unless `[auth] patient_namespace` names the namespace the
   claim is issued in. Every refused access (`401`, `403`) is recorded
   in the access log and counted in the `auth_failures` metric.
 - **Evidence:** `app/ferroehr-rest/src/extensions/access/`;
@@ -672,7 +672,7 @@ exists, so the list cannot rot. CRA Art. 13(14) asks for procedures that keep
 each product of a series in conformity as its design changes.
 
 <!-- security-relevant-paths:start -->
-- `app/ferroehr-rest/src/extensions/access` authentication and the RBAC/ABAC enforcement point
+- `app/ferroehr-rest/src/extensions/access` authentication, the RBAC gate, the patient scope and the enforcement point
 - `app/ferroehr-rest/src/smart` SMART scope enforcement
 - `app/ferroehr/src/config/auth.rs` the authentication configuration
 - `app/ferroehr/src/config/authz.rs` the authorization configuration

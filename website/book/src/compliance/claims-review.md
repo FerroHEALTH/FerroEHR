@@ -189,7 +189,7 @@ the deployment posture too; it names `GET /management/status` now.
 - **FOSSA**: no text in scope names FOSSA, a FOSSA badge or a FOSSA lane after
   its removal in this release.
 - **The patient scope and `patient_namespace`**: the
-  [`[authz.abac]`](../installation/config-auth.md#authzabac) table and its
+  [`[authz.abac]`](../security.md#the-patient-scope) table and its
   patient-scope list state the EHR-only queries, the direct-route refusals and
   the namespace rule as they ship; the [security](../security.md) page's
   fail-closed box is unchanged by them.

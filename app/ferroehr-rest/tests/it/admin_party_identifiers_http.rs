@@ -93,13 +93,8 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
             crate::system_grants::performs(&svc, ("PERSON", person), &read).await;
         }
     }
-    let authz = AuthzHandle::build(
-        &AuthzConfig::default(),
-        &config().api.base_path,
-        None,
-        common::null_resolvers(),
-    )
-    .map(Arc::new);
+    let authz =
+        AuthzHandle::build(&AuthzConfig::default(), &config().api.base_path, None).map(Arc::new);
     let app = common::build_full(config(), Arc::new(svc), authz, Observability::default()).await;
     (db, pool, app)
 }

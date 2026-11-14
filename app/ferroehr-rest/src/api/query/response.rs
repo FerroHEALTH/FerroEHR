@@ -38,18 +38,18 @@ use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::ids::EhrId;
 use ferroehr::service::query::request::AqlQueryRequest;
 
-/// The access pre-filter derived from the request: the ABAC patient
-/// subject-scope id, the touched-attribute collection flag, and the caller's
+/// The access pre-filter derived from the request: the patient
+/// subject-scope id, the touched-EHR collection flag, and the caller's
 /// per-EHR `EHR_ACCESS` decision.
 ///
 /// All three are applied uniformly to every normalized [`AqlQueryRequest`]
 /// before execution. No openEHR spec governs how they reach a query — our own
 /// access-control extension.
 pub(super) struct QueryScope {
-    /// The ABAC patient scope, if a scoped principal is configured.
+    /// The patient scope, if a scoped principal is configured.
     pub(super) subject_scope: Option<SubjectScope>,
-    /// Whether the executor must collect the touched EHR/template ids for the
-    /// ABAC post-check.
+    /// Whether the executor must collect the touched EHRs and their subjects for the
+    /// patient-scope post-check.
     pub(super) collect: bool,
     /// The rows the access evaluator lets the query read.
     pub(super) ehr_access: AccessCondition,
@@ -58,7 +58,7 @@ pub(super) struct QueryScope {
 }
 
 impl QueryScope {
-    /// Stamps the ABAC scope, the collection flag and the per-EHR access
+    /// Stamps the patient scope, the collection flag and the per-EHR access
     /// decision onto a normalized request.
     pub(super) fn apply(&self, mut request: AqlQueryRequest) -> AqlQueryRequest {
         request.subject_scope = self.subject_scope.as_ref().map(|s| s.id.clone());

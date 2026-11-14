@@ -1048,7 +1048,7 @@ patient is possible only through the [audit trail](audit.md).
   scrape surface and be missing from the push. The catalogue covers HTTP
   request duration (`http.server.request.duration`) and the requests in flight
   (`http.server.active_requests`); authentication failures
-  and authorization decisions (Cedar and remote-PDP); database pool state,
+  and login-binding refusals; database pool state,
   acquire latency and transaction counts; AQL query counts, latency and plan-
   cache events; compositions committed (by openEHR audit change type);
   validation failures and version-signature faults; WebTemplate cache events;

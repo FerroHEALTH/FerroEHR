@@ -43,7 +43,7 @@ memory per replica (`LiveGrants`, invalidated through `NOTIFY`) for
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
 `policy_register` (the operational-policy admin registers: the audit category
-map, the access delay and the Cedar policy set, versioned in the clinical
+map and the access delay, versioned in the clinical
 `policy_register` table, held in memory and read again when `listen::Listened`
 says a write notified),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db

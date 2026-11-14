@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The ADMIN **operational-policy registers** wire: the audit category map,
-//! the EHDS Art. 3(3) access delay and the Cedar policy set, **our own
-//! extension**.
+//! The ADMIN **operational-policy registers** wire: the audit category map and
+//! the EHDS Art. 3(3) access delay, **our own extension**.
 //!
 //! Each register is one JSON document, versioned with its committer
 //! ([`ferroehr::policy_register`]). A read answers the newest version with
@@ -65,7 +64,7 @@ guarded_handler! {
     #[utoipa::path(
         get, path = "/admin/registers/{register}", tag = "admin-registers",
         params(("register" = String, Path,
-                description = "`audit-categories`, `access-delay` or `cedar-policies`.")),
+                description = "`audit-categories` or `access-delay`.")),
         responses(
             (status = 200, description = "`{ \"register\": …, \"version\": …, \
                                           \"committer\": …, \"committed_at\": …, \
@@ -100,7 +99,7 @@ guarded_handler! {
         put, path = "/admin/registers/{register}", tag = "admin-registers",
         params(
             ("register" = String, Path,
-             description = "`audit-categories`, `access-delay` or `cedar-policies`."),
+             description = "`audit-categories` or `access-delay`."),
             ("If-Match" = String, Header,
              description = "The version this write replaces, as the read's `ETag` gave it.")
         ),
@@ -109,8 +108,7 @@ guarded_handler! {
                                     `{ \"shipped_map\": …, \"national\": [...], \
                                     \"templates\": {...}, \"archetypes\": {...} }`. \
                                     `access-delay`: `{ \"enabled\": …, \
-                                    \"categories\": [...], \"max_delay\": \"72h\" }`. \
-                                    `cedar-policies`: `{ \"policies\": \"<Cedar text>\" }`.",
+                                    \"categories\": [...], \"max_delay\": \"72h\" }`.",
                      example = json!({
                          "enabled": true,
                          "categories": ["Laboratory-Reports"],
@@ -125,10 +123,9 @@ guarded_handler! {
                                           document is refused whole: not the register's \
                                           shape, a category map that does not compile \
                                           or classifies nothing under the production \
-                                          floor, an access delay with an unusable limit \
-                                          or an unknown category, or a Cedar policy set \
-                                          that does not parse or validate. The version \
-                                          in force stays.",
+                                          floor, or an access delay with an unusable \
+                                          limit or an unknown category. The version in \
+                                          force stays.",
              body = serde_json::Value),
             (status = 404, description = "No such register.", body = serde_json::Value),
             (status = 412, description = "`If-Match` names a version that is no longer \
@@ -150,7 +147,7 @@ guarded_handler! {
     #[utoipa::path(
         get, path = "/admin/registers/{register}/history", tag = "admin-registers",
         params(("register" = String, Path,
-                description = "`audit-categories`, `access-delay` or `cedar-policies`.")),
+                description = "`audit-categories` or `access-delay`.")),
         responses(
             (status = 200, description = "`{ \"register\": …, \"versions\": [...] }`: \
                                           every version as a read answers it, newest \

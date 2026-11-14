@@ -16,7 +16,7 @@
 //! shortened half would join to a wrong answer with nothing in the
 //! `RESULT_SET` to say so.
 //!
-//! The clinical query carries the caller's per-EHR access decision and ABAC
+//! The clinical query carries the caller's per-EHR access decision and
 //! patient scope as any query does; the party read and the crossing each
 //! leave an access record in their own domain.
 
@@ -76,7 +76,7 @@ pub(super) struct JoinRequest<'a> {
     pub(super) params: &'a Params,
 }
 
-/// What the clinical half answered, with the ABAC scope it collected.
+/// What the clinical half answered, with the patient scope it collected.
 type ClinicalAnswer = (QueryResult, Option<aql::exec::QueryScope>);
 
 impl FerroEhrService {
@@ -168,7 +168,7 @@ impl FerroEhrService {
     }
 
     /// Runs the clinical half over the EHRs the map names, under the caller's
-    /// per-EHR access decision and ABAC patient scope.
+    /// per-EHR access decision and patient scope.
     async fn run_clinical(
         &self,
         job: &JoinRequest<'_>,
@@ -296,7 +296,6 @@ impl FerroEhrService {
         outcome.accessed = Some(accessed);
         if let Some(scope) = scope {
             outcome.ehr_ids = scope.ehr_ids;
-            outcome.template_ids = scope.template_ids;
             outcome.subjects = scope.subjects;
         }
         Ok(outcome)
