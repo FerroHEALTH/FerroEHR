@@ -699,7 +699,24 @@ async fn a_shared_class_reads_each_ehrs_validity() {
 #[tokio::test]
 async fn a_shared_class_reads_each_ehrs_party() {
     let world = Box::pin(World::new()).await;
-    let (nurse, other) = (world.nurse.clone(), world.subject(2));
+    let other = crate::fixtures::create_party(
+        &world.svc,
+        uv(
+            &crate::admin_fixture::person(
+                "Doctor",
+                &json!([{ "_type": "ELEMENT", "archetype_node_id": "at0003",
+                    "name": { "_type": "DV_TEXT", "value": "family" },
+                    "value": { "_type": "DV_TEXT", "value": "Doctor" } }]),
+            ),
+            "249",
+            None,
+        ),
+    )
+    .await
+    .expect("the doctor is created")
+    .0
+    .to_string();
+    let nurse = world.nurse.clone();
     let deny = |party: &str| {
         directive(
             "consent",

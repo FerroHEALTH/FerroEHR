@@ -7,10 +7,18 @@
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
 
-use serde_json::json;
+//! Settings classes (#5588): settings that differ only in their facts share
+//! one class, a class classifies as itself, and a gate-keeper is a fact. No
+//! openEHR spec governs the classes: our own design.
 
-use super::*;
-use crate::party_binding::policy_mark::TERMINOLOGY;
+use ferroehr::access_eval::class::{Class, DataLayout, KeeperLayout, classify, resolve};
+use ferroehr::access_eval::condition::CallerKeys;
+use ferroehr::access_eval::scope::Pred;
+use ferroehr::party_binding::policy_mark::TERMINOLOGY;
+use ferroehr::service::ehr::access_rule::SettingsCaller;
+use ferroehr::service::ehr::access_settings::EhrAccessSettings;
+use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
+use serde_json::{Value, json};
 
 const DOCTOR: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f81";
 const NURSE: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f82";

@@ -593,8 +593,8 @@ async fn projected(
             .await
             .expect("the settings row reads");
     let directives = sqlx::query_scalar(
-        "SELECT d->'kind'->'defining_code'->>'code_string' || '/' || \
-                d->'effect'->'defining_code'->>'code_string' \
+        "SELECT (d->'kind'->'defining_code'->>'code_string') || '/' || \
+                (d->'effect'->'defining_code'->>'code_string') \
          FROM access_settings s JOIN access_class c ON c.id = s.class_id \
          CROSS JOIN LATERAL jsonb_array_elements(c.settings->'directives') WITH ORDINALITY AS t(d, n) \
          WHERE s.ehr_id = $1 ORDER BY n",

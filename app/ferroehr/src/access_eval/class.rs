@@ -40,7 +40,7 @@ use openehr_rm::draft::access_control::access_control::access_directive::AccessD
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind};
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
-use serde_json::{Map, Value, json};
+use serde_json::Value;
 use sha2::{Digest as _, Sha256};
 
 use crate::access_eval::condition::CallerKeys;
@@ -320,13 +320,33 @@ pub fn classify(settings: &AccessDirectiveSettings) -> Result<Classified, serde_
     let walked = Walk::default().settings(settings);
     let mut class = serde_json::to_value(settings)?;
     normalize_settings(&mut class);
-    for (pointer, dummy) in walked.edits {
-        if let Some(at) = class.pointer_mut(&pointer) {
-            *at = dummy;
-        }
+    for edit in &walked.edits {
+        edit.apply(&mut class);
     }
-    set_or_remove(&mut class, "gate_keepers", walked.keepers);
-    set_or_remove(&mut class, "labels", walked.labels);
+    let keepers = class
+        .get("gate_keepers")
+        .and_then(Value::as_array)
+        .map(|keepers| {
+            walked
+                .keepers
+                .iter()
+                .filter_map(|(at, subject)| keepers.get(*at).map(|k| keeper_class(k, *subject)))
+                .collect()
+        })
+        .unwrap_or_default();
+    let labels = class
+        .get("labels")
+        .and_then(Value::as_array)
+        .map(|labels| {
+            walked
+                .labels
+                .iter()
+                .filter_map(|(at, coded)| labels.get(*at).map(|l| label_class(l, *coded)))
+                .collect()
+        })
+        .unwrap_or_default();
+    set_or_remove(&mut class, "gate_keepers", keepers);
+    set_or_remove(&mut class, "labels", labels);
     let digest = Sha256::digest(serde_json::to_string(&class)?.as_bytes()).to_vec();
     Ok(Classified {
         class,
@@ -335,14 +355,62 @@ pub fn classify(settings: &AccessDirectiveSettings) -> Result<Classified, serde_
     })
 }
 
-/// What one walk of a settings yields.
+/// What one walk of a settings yields: the layout, the facts, the edits that
+/// make the class, each gate-keeper kept by its position and whether it is
+/// `PARTY_SELF`, and for each sensitivity the label and the code that first
+/// name it.
 #[derive(Debug, Default)]
 struct Walked {
     layout: Layout,
     facts: Vec<Value>,
-    edits: Vec<(String, Value)>,
-    keepers: Vec<Value>,
-    labels: Vec<Value>,
+    edits: Vec<Edit>,
+    keepers: Vec<(usize, bool)>,
+    labels: Vec<(usize, usize)>,
+}
+
+/// One change the class makes to the settings at a JSON pointer.
+#[derive(Debug)]
+enum Edit {
+    /// Replace the value with the string.
+    Set(String, &'static str),
+    /// Hold the reference as one to no particular party or object.
+    Reference(String),
+    /// Hold the list of references as one reference to no particular object.
+    Objects(String),
+    /// Hold the list of origins as one fixed origin.
+    Origins(String),
+}
+
+impl Edit {
+    /// Applies the edit to `class`.
+    fn apply(&self, class: &mut Value) {
+        match self {
+            Self::Set(pointer, value) => {
+                if let Some(at) = class.pointer_mut(pointer) {
+                    *at = Value::String((*value).to_owned());
+                }
+            }
+            Self::Reference(pointer) => {
+                if let Some(at) = class.pointer_mut(pointer) {
+                    nil_reference(at);
+                }
+            }
+            Self::Objects(pointer) | Self::Origins(pointer) => {
+                let Some(Value::Array(items)) = class.pointer_mut(pointer) else {
+                    return;
+                };
+                items.truncate(1);
+                if let Some(first) = items.first_mut() {
+                    if matches!(self, Self::Origins(_)) {
+                        *first = Value::String("-".to_owned());
+                    } else {
+                        nil_reference(first);
+                        set(first, "_type", "OBJECT_REF");
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// The depth-first walk that places every fact.
@@ -364,11 +432,17 @@ impl Walk {
             let placed = self.directive(directive, &format!("/directives/{at}"));
             self.out.layout.directives.push(placed);
         }
-        for keeper in settings.gate_keepers.as_deref().unwrap_or_default() {
+        for (index, keeper) in settings
+            .gate_keepers
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
             match keeper {
                 PartyProxy::PartySelf(_) => {
                     self.out.layout.keepers.push(KeeperLayout::Subject);
-                    self.out.keepers.push(json!({ "_type": "PARTY_SELF" }));
+                    self.out.keepers.push((index, true));
                 }
                 PartyProxy::PartyIdentified(_) => {
                     // NOTE: our own design, a gate-keeper that names no party names no caller,
@@ -376,37 +450,37 @@ impl Walk {
                     if let Some(key) = proxy_key(keeper) {
                         let at = self.fact(Value::String(key));
                         self.out.layout.keepers.push(KeeperLayout::Party(at));
-                        self.out.keepers.push(
-                            json!({ "_type": "PARTY_IDENTIFIED", "external_ref": nil_party() }),
-                        );
+                        self.out.keepers.push((index, false));
                     }
                 }
             }
         }
-        let mut labelled: BTreeMap<ForeignCode, (Vec<String>, Value)> = BTreeMap::new();
-        for label in settings.labels.as_deref().unwrap_or_default() {
+        let mut labelled: BTreeMap<ForeignCode, (Vec<String>, (usize, usize))> = BTreeMap::new();
+        for (index, label) in settings
+            .labels
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
             let Some(vo_id) = object_id(&label.target) else {
                 continue;
             };
-            for coded in &label.sensitivities {
+            for (position, coded) in label.sensitivities.iter().enumerate() {
                 let Ok(code) = ForeignCode::read(ForeignKind::Sensitivity, coded) else {
                     continue;
                 };
-                let coded = serde_json::to_value(coded).map_or(Value::Null, |c| normal_coded(&c));
                 labelled
                     .entry(code)
-                    .or_insert_with(|| (Vec::new(), coded))
+                    .or_insert_with(|| (Vec::new(), (index, position)))
                     .0
                     .push(vo_id.to_string());
             }
         }
-        for (code, (objects, coded)) in labelled {
-            let at = self.fact(json!(objects));
+        for (code, (objects, first)) in labelled {
+            let at = self.fact(Value::from(objects));
             self.out.layout.labels.push((code, at));
-            self.out
-                .labels
-                .push(json!({ "_type": "ACCESS_LABEL", "target": nil_object(),
-                                         "sensitivities": [coded] }));
+            self.out.labels.push(first);
         }
         self.out.layout.facts = self.out.facts.len();
         self.out
@@ -434,8 +508,7 @@ impl Walk {
             placed.parties.push(key.map(|key| {
                 self.edited(
                     Value::String(key),
-                    &format!("{at}/applies_to/{scope_at}/party"),
-                    nil_party(),
+                    Edit::Reference(format!("{at}/applies_to/{scope_at}/party")),
                 )
             }));
         }
@@ -456,14 +529,15 @@ impl Walk {
             });
             if let Some(Some(objects)) = objects {
                 data.objects = Some(self.edited(
-                    json!(objects),
-                    &format!("{pointer}/objects"),
-                    json!([nil_object()]),
+                    Value::from(objects),
+                    Edit::Objects(format!("{pointer}/objects")),
                 ));
             }
             if let Some(origins) = scope.origins.as_deref() {
-                data.origins =
-                    Some(self.edited(json!(origins), &format!("{pointer}/origins"), json!(["-"])));
+                data.origins = Some(self.edited(
+                    Value::from(origins.to_vec()),
+                    Edit::Origins(format!("{pointer}/origins")),
+                ));
             }
             if let Some(Validity::Within { from, until }) = scope.recorded.as_ref().map(validity) {
                 data.from =
@@ -490,14 +564,13 @@ impl Walk {
     fn instant(&mut self, pointer: &str, at: jiff::Timestamp) -> usize {
         self.edited(
             Value::String(at.to_string()),
-            pointer,
-            Value::String(INSTANT.to_owned()),
+            Edit::Set(pointer.to_owned(), INSTANT),
         )
     }
 
-    /// Sets aside `fact`, found at `pointer`, which the class holds as `dummy`.
-    fn edited(&mut self, fact: Value, pointer: &str, dummy: Value) -> usize {
-        self.out.edits.push((pointer.to_owned(), dummy));
+    /// Sets aside `fact`, which the class holds as `edit` makes it.
+    fn edited(&mut self, fact: Value, edit: Edit) -> usize {
+        self.out.edits.push(edit);
         self.fact(fact)
     }
 
@@ -508,16 +581,65 @@ impl Walk {
     }
 }
 
-/// The `PARTY_REF` a class holds in place of a party of its EHRs.
-fn nil_party() -> Value {
-    json!({ "_type": "PARTY_REF", "namespace": "local", "type": "PARTY",
-            "id": { "_type": "HIER_OBJECT_ID", "value": NIL } })
+/// Holds the reference `value` as one to no particular party or object: its
+/// namespace local and its id the nil UUID.
+fn nil_reference(value: &mut Value) {
+    retain(value, &["_type", "namespace", "type", "id"]);
+    set(value, "namespace", "local");
+    if let Some(id) = value.get_mut("id") {
+        retain(id, &["_type", "value"]);
+        set(id, "_type", "HIER_OBJECT_ID");
+        set(id, "value", NIL);
+    }
 }
 
-/// The `OBJECT_REF` a class holds in place of an object of its EHRs.
-fn nil_object() -> Value {
-    json!({ "_type": "OBJECT_REF", "namespace": "local", "type": "VERSIONED_OBJECT",
-            "id": { "_type": "HIER_OBJECT_ID", "value": NIL } })
+/// The class of the gate-keeper `keeper`: `PARTY_SELF` alone, or a party
+/// reference to no particular party.
+fn keeper_class(keeper: &Value, subject: bool) -> Value {
+    let mut keeper = keeper.clone();
+    if subject {
+        retain(&mut keeper, &["_type"]);
+    } else {
+        retain(&mut keeper, &["_type", "external_ref"]);
+        set(&mut keeper, "_type", "PARTY_IDENTIFIED");
+        if let Some(reference) = keeper.get_mut("external_ref") {
+            nil_reference(reference);
+        }
+    }
+    keeper
+}
+
+/// The class of the label `label` for the sensitivity at `coded`: a label
+/// of that one code on no particular object.
+fn label_class(label: &Value, coded: usize) -> Value {
+    let mut label = label.clone();
+    retain(&mut label, &["_type", "target", "sensitivities"]);
+    if let Some(target) = label.get_mut("target") {
+        nil_reference(target);
+        set(target, "_type", "OBJECT_REF");
+    }
+    let code = label
+        .get("sensitivities")
+        .and_then(|codes| codes.get(coded))
+        .map(normal_coded);
+    if let (Some(object), Some(code)) = (label.as_object_mut(), code) {
+        object.insert("sensitivities".to_owned(), Value::Array(vec![code]));
+    }
+    label
+}
+
+/// Keeps of the object `value` only the members `keys`.
+fn retain(value: &mut Value, keys: &[&str]) {
+    if let Some(object) = value.as_object_mut() {
+        object.retain(|key, _| keys.contains(&key.as_str()));
+    }
+}
+
+/// Sets the member `key` of the object `value` to the string `text`.
+fn set(value: &mut Value, key: &str, text: &str) {
+    if let Some(object) = value.as_object_mut() {
+        object.insert(key.to_owned(), Value::String(text.to_owned()));
+    }
 }
 
 /// Sets `key` of `object` to `members`, or removes it when there are none.
@@ -563,12 +685,16 @@ fn normalize_directive(value: &mut Value) {
     let Some(object) = value.as_object_mut() else {
         return;
     };
-    object.retain(|key, _| DIRECTIVE.contains(&key.as_str()));
+    object.retain(|key, _| DIRECTIVE.contains(&key.as_str()) || key == "name");
+    if let Some(name) = object.get_mut("name") {
+        retain(name, &["_type", "value"]);
+        set(name, "_type", "DV_TEXT");
+        set(name, "value", "directive");
+    }
     object.insert(
-        "name".to_owned(),
-        json!({ "_type": "DV_TEXT", "value": "directive" }),
+        "archetype_node_id".to_owned(),
+        Value::String("at0000".to_owned()),
     );
-    object.insert("archetype_node_id".to_owned(), json!("at0000"));
     for key in ["kind", "effect"] {
         if let Some(coded) = object.get_mut(key) {
             *coded = normal_coded(coded);
@@ -621,50 +747,47 @@ fn normalize_interval(value: &mut Value) {
     let Some(object) = value.as_object_mut().filter(|_| readable) else {
         return;
     };
-    let mut kept = Map::new();
-    for key in [
-        "_type",
-        "lower_unbounded",
-        "upper_unbounded",
-        "lower_included",
-        "upper_included",
-    ] {
-        if let Some(member) = object.get(key) {
-            kept.insert(key.to_owned(), member.clone());
-        }
-    }
     for (bound, unbounded) in [("lower", "lower_unbounded"), ("upper", "upper_unbounded")] {
         let open = object
             .get(unbounded)
             .and_then(Value::as_bool)
             .unwrap_or(false);
-        if let (false, Some(at)) = (open, object.get(bound)) {
-            kept.insert(
-                bound.to_owned(),
-                json!({ "_type": "DV_DATE_TIME", "value": at.get("value").cloned().unwrap_or(Value::Null) }),
-            );
+        if open {
+            object.remove(bound);
+        } else if let Some(at) = object.get_mut(bound) {
+            retain(at, &["_type", "value"]);
         }
     }
-    *object = kept;
+    object.retain(|key, _| {
+        [
+            "_type",
+            "lower",
+            "upper",
+            "lower_unbounded",
+            "upper_unbounded",
+            "lower_included",
+            "upper_included",
+        ]
+        .contains(&key.as_str())
+    });
 }
 
 /// A `DV_CODED_TEXT` by its code phrase alone, its value the code.
 fn normal_coded(coded: &Value) -> Value {
-    let phrase = coded.get("defining_code");
-    let code = phrase
-        .and_then(|p| p.get("code_string"))
+    let mut coded = coded.clone();
+    retain(&mut coded, &["_type", "value", "defining_code"]);
+    let code = coded
+        .pointer("/defining_code/code_string")
         .cloned()
         .unwrap_or(Value::Null);
-    let terminology = phrase
-        .and_then(|p| p.get("terminology_id"))
-        .and_then(|t| t.get("value"))
-        .cloned()
-        .unwrap_or(Value::Null);
-    json!({ "_type": "DV_CODED_TEXT", "value": code,
-            "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
-                "code_string": code } })
+    if let Some(object) = coded.as_object_mut() {
+        object.insert("value".to_owned(), code);
+    }
+    if let Some(phrase) = coded.get_mut("defining_code") {
+        retain(phrase, &["_type", "terminology_id", "code_string"]);
+        if let Some(terminology) = phrase.get_mut("terminology_id") {
+            retain(terminology, &["_type", "value"]);
+        }
+    }
+    coded
 }
-
-#[cfg(test)]
-mod tests;

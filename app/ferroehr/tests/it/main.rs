@@ -36,6 +36,7 @@
               approval 2026-11-02, #4767)"
 )]
 
+mod access_classes;
 mod access_delay_sinks;
 mod access_eval_aql;
 mod access_eval_examples;

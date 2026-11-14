@@ -42,8 +42,9 @@ impl Builder<'_> {
     /// valid SQL. The contract those two exclusions leave is on
     /// [`super::ACCESS_EHR_PREFIX`].
     ///
-    /// Beside each it appends whether that EHR carries `EHR_ACCESS` settings
-    /// ([`super::ACCESS_SETTLED_PREFIX`]), returned second.
+    /// Beside each, for a query a request judges, it appends whether that EHR
+    /// carries `EHR_ACCESS` settings ([`super::ACCESS_SETTLED_PREFIX`]),
+    /// returned second.
     pub(super) fn build_access_ehr_columns(&mut self, ir: &QueryIr) -> (Vec<String>, Vec<String>) {
         let aggregates = ir
             .select
@@ -57,14 +58,18 @@ impl Builder<'_> {
         let mut settled = Vec::with_capacity(served.len());
         for (i, ehr) in served.into_iter().enumerate() {
             let alias = format!("{}{i}", super::ACCESS_EHR_PREFIX);
-            let flag = format!("{}{i}", super::ACCESS_SETTLED_PREFIX);
-            self.q.expr_as(
-                super::access::settled(ehr.clone()),
-                Alias::new(flag.as_str()),
-            );
+            // NOTE: our own design (#5588), only a query a request judges records grounds,
+            // so only its statement asks which served EHRs carry settings.
+            if self.ctx.ehr_access.groups().is_some() {
+                let flag = format!("{}{i}", super::ACCESS_SETTLED_PREFIX);
+                self.q.expr_as(
+                    super::access::settled(ehr.clone()),
+                    Alias::new(flag.as_str()),
+                );
+                settled.push(flag);
+            }
             self.q.expr_as(ehr, Alias::new(alias.as_str()));
             aliases.push(alias);
-            settled.push(flag);
         }
         (aliases, settled)
     }
