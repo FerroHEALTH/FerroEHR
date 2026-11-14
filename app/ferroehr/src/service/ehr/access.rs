@@ -66,18 +66,20 @@ impl FerroEhrService {
         if access.judgement(ehr_id).is_none() {
             return;
         }
-        match self.load_ehr_access(ehr_id).await {
-            Ok(entry) => {
-                access.judge_ehr(ehr_id, &entry);
-            }
-            Err(error) => {
-                let cause: &(dyn std::error::Error + 'static) = &error;
-                tracing::warn!(
-                    %ehr_id,
-                    error = cause,
-                    "the committed EHR_ACCESS settings could not be read; the request's reads refuse"
-                );
-            }
+        let judged = match self.load_ehr_access(ehr_id).await {
+            Ok(entry) => access
+                .judge_ehr(ehr_id, &entry)
+                .await
+                .map_err(ServiceError::from),
+            Err(error) => Err(error),
+        };
+        if let Err(error) = judged {
+            let cause: &(dyn std::error::Error + 'static) = &error;
+            tracing::warn!(
+                %ehr_id,
+                error = cause,
+                "the committed EHR_ACCESS settings could not be read; the request's reads refuse"
+            );
         }
     }
 
