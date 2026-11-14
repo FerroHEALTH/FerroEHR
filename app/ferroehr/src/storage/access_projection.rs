@@ -163,10 +163,11 @@ pub enum StoredSettings {
     Settings(String),
 }
 
-/// What a decision on one EHR reads that can change on another replica: the
-/// storage ordinal of the `EHR_ACCESS` version its settings row was projected
-/// from, and the `PERSON` its `EHR_STATUS` names as subject, whose care
-/// relationships the decision reads.
+/// What a decision on one EHR reads that can change on another replica.
+///
+/// It is the storage ordinal of the `EHR_ACCESS` version the EHR's settings
+/// row was projected from, and the `PERSON` its `EHR_STATUS` names as
+/// subject, whose care relationships the decision reads.
 ///
 /// A read that leaves the store selects it beside its own columns
 /// (`access_revision!`), so a replica compares the revision its copy was
