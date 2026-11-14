@@ -31,6 +31,8 @@ use ferroehr::system_log::event::{
 
 /// The EHR of the tests.
 const EHR: &str = "7d44b88c-4199-4bad-97dc-d78268e01398";
+/// Another patient's EHR, the one a subject caller of [`EHR`] is not.
+const OTHER_EHR: &str = "7d44b88c-4199-4bad-97dc-d78268e01399";
 /// The uid of the `EHR_ACCESS` version that carries its settings.
 const EHR_ACCESS_VERSION: &str = "5a1c0b8e-55a6-4d0b-9a63-3f0f6c3c2a11::cdr.example.org::2";
 /// The uid of the `ACCESS_POLICY` version in force.
@@ -66,6 +68,15 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
 fn subject_of_ehr() -> Caller {
     Caller {
         own_ehr: Some(EhrId(uuid(EHR))),
+        ..caller(CallerKind::Subject, GUARDIAN)
+    }
+}
+
+/// The subject of another patient's EHR, through a patient context naming
+/// that EHR.
+fn subject_of_other_ehr() -> Caller {
+    Caller {
+        own_ehr: Some(EhrId(uuid(OTHER_EHR))),
         ..caller(CallerKind::Subject, GUARDIAN)
     }
 }
@@ -392,6 +403,20 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             settings("consent_required", &[], &[], &[]),
             Item::Ehr,
             "the default_access of EHR_ACCESS",
+        ),
+        (
+            Refusal::NotSubject,
+            subject_of_other_ehr(),
+            None,
+            None,
+            settings(
+                "open",
+                &[directive("consent", "permit", &json!({}))],
+                &[],
+                &[],
+            ),
+            Item::Ehr,
+            "the EHR of the caller's patient context",
         ),
     ];
     assert_eq!(rows.len(), Refusal::ALL.len(), "a row per refusal code");

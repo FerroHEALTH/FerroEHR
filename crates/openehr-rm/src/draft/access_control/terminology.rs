@@ -373,6 +373,9 @@ group! {
         PurposeNotPermitted => "refused-purpose-not-permitted",
         /// The EHR needs consent and no permit directive applies.
         ConsentRequired => "refused-consent-required",
+        /// A subject caller asks for an EHR other than the one its patient
+        /// context names: it is the subject of that EHR alone.
+        NotSubject => "refused-not-subject",
     }
 }
 

@@ -620,8 +620,8 @@ which is what makes an optional stage safe to disable:
    `refused-purpose-missing` or `refused-purpose-not-permitted`; (7) the
    default disposition, `403` `refused-consent-required`, an EHR with no
    settings taking `[authz.rbac] ehr_access_default`. The subject skips every
-   step on their own EHR (Art. 3) and is refused `refused-consent-required`
-   on every other: a caller is the `subject` kind through a SMART App Launch
+   step on their own EHR (Art. 3) and is refused `403` `refused-not-subject`
+   on every other, before step 1 (#5605): a caller is the `subject` kind through a SMART App Launch
    patient-context credential, and its own EHR is the `ehrId` of that launch
    context (ITS-REST `master07` §Context Selection; `master08` §Resource
    Scopes, "Access is restricted to data within that patient's EHR"), so the

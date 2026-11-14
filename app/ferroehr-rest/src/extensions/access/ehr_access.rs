@@ -294,6 +294,7 @@ const fn reason(code: Refusal) -> &'static str {
             "the caller's capabilities do not permit the declared purpose of use"
         }
         Refusal::ConsentRequired => "the EHR needs consent and no permit directive applies",
+        Refusal::NotSubject => "the caller's patient context names another EHR",
         Refusal::OptOut | Refusal::Restricted => "the data cannot be read",
     }
 }
@@ -345,6 +346,7 @@ mod tests {
             Refusal::PurposeMissing,
             Refusal::PurposeNotPermitted,
             Refusal::ConsentRequired,
+            Refusal::NotSubject,
         ] {
             assert!(!code.is_invisible());
             assert_eq!(forbidden(None, code).status(), http::StatusCode::FORBIDDEN);
