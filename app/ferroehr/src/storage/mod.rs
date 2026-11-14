@@ -72,6 +72,18 @@
 //! sign, attest, import policy) and calls these functions with plain inputs,
 //! consuming [`version_repo::read::StoredVersion`] on read.
 
+/// The select-list item that reads, as `access_revision`, the revision of
+/// the settings row of the EHR the SQL expression `$ehr` names
+/// ([`access_projection::Revision`]). Each domain's schema defines the
+/// function, so a statement both domains run reads it: the clinical one
+/// reads the row, the party one answers `NULL` (migrations `clinical/0043`
+/// and `party/0040`).
+macro_rules! access_revision {
+    ($ehr:literal) => {
+        concat!("access_revision(", $ehr, ") AS access_revision")
+    };
+}
+
 /// The columns of [`access_facts::HeadFacts`], read off the `vo_head` row
 /// aliased `h`: what the access evaluator judges an object by.
 macro_rules! head_facts {
@@ -84,7 +96,8 @@ macro_rules! head_facts {
             "(SELECT COALESCE(n.data->>'archetype_node_id', ",
             "ext.node_archetype_node_id(n.archetype, n.rm_version)) FROM node n ",
             "WHERE n.tier = h.tier AND n.vo_id = h.vo_id ",
-            "AND n.sys_version = h.trunk_head_content_key AND n.num = 0) AS access_archetype"
+            "AND n.sys_version = h.trunk_head_content_key AND n.num = 0) AS access_archetype, ",
+            access_revision!("h.ehr_id")
         )
     };
 }

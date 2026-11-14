@@ -77,6 +77,7 @@ fn decide_on(
             settings: Arc::new(settings),
             subject: None,
             version,
+            revision: ferroehr::storage::access_projection::Revision::default(),
         },
     );
     let outcome = access.note(ehr_id, &verdict, item);

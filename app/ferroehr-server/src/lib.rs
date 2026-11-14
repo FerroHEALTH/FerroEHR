@@ -984,7 +984,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let binding_lease = party_binding::prepare(&service, &config).await?;
     // The policy in force before the listeners take traffic, and the retention
     // register keyed on the category register in force.
-    policy::read_and_listen(&service).await?;
+    policy::read_and_listen(&service, &config).await?;
     service
         .mirror_category_map()
         .await

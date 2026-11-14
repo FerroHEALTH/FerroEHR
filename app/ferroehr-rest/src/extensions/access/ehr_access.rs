@@ -103,7 +103,10 @@ async fn enforce_objects(
         let Some(ehr_id) = held.ehr_id else {
             continue;
         };
-        let verdict = backend.ehr_verdict(&access, ehr_id).await.map_err(fault)?;
+        let verdict = backend
+            .ehr_verdict_at(&access, ehr_id, held.revision)
+            .await
+            .map_err(fault)?;
         let raw = objects
             .iter()
             .find(|(_, vo_id)| *vo_id == held.vo_id)

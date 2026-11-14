@@ -22,6 +22,7 @@ use crate::access_eval::scope::{CategoryIndex, Item};
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
+use crate::storage::access_projection::Revision;
 
 impl FerroEhrService {
     /// The facts a request that begins now is judged under, an EHR with no
@@ -58,6 +59,32 @@ impl FerroEhrService {
         }
         let entry = Box::pin(self.ehr_access_entry(ehr_id)).await?;
         Ok(access.judge_ehr(ehr_id, &entry))
+    }
+
+    /// The verdict of `access` on `ehr_id` as [`Self::ehr_verdict`] gives
+    /// it, judged again from the settings row in force when the verdict was
+    /// judged on a revision other than `seen`, the one a read found: a
+    /// change another replica committed before this one's notification
+    /// arrives decides the request. No openEHR spec governs this: our own
+    /// design (#5589).
+    ///
+    /// # Errors
+    /// As [`Self::ehr_verdict`].
+    pub async fn ehr_verdict_at(
+        &self,
+        access: &RequestAccess,
+        ehr_id: EhrId,
+        seen: Revision,
+    ) -> Result<Arc<Verdict>, ServiceError> {
+        match access.judgement(ehr_id) {
+            Some(judged) if judged.revision == seen => Ok(judged.verdict),
+            Some(_) => {
+                self.ehr_access.forget(ehr_id).await;
+                let entry = Box::pin(self.ehr_access_entry(ehr_id)).await?;
+                Ok(access.judge_ehr(ehr_id, &entry))
+            }
+            None => self.ehr_verdict(access, ehr_id).await,
+        }
     }
 
     /// What the evaluator reads of each of `vo_ids` this store holds.

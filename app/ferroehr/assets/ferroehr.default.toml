@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 738 keys. A deployment that holds real data sets the 10
+# This file lists 746 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1116,6 +1116,13 @@ system_id = "ferroehr.local"
 # the mounted-secret route, as `Self::url_file` is for the clinical DSN.
 # Setting both is a boot error. Optional, unset by default (infrastructure).
 #? migrate_url_file = ""
+# DSN the policy listeners hold their `LISTEN` sessions on, for every domain on
+# `Self::url`; unset reuses `Self::url`. Optional, unset by default
+# (infrastructure).
+#? listen_url = ""
+# Path to a file holding `Self::listen_url`, read at boot in place of it.
+# Setting both is a boot error. Optional, unset by default (infrastructure).
+#? listen_url_file = ""
 # Upper bound of the connection pool. Optional.
 #? max_connections = 20
 # Connections the pool keeps open when idle (avoids cold reopen + `SET
@@ -1148,6 +1155,16 @@ system_id = "ferroehr.local"
 # Path to a file holding `Self::migrate_url`, read at boot in place of it.
 # Setting both is a boot error. Optional, unset by default (infrastructure).
 #? migrate_url_file = ""
+# The DSN this domain's policy listeners hold their `LISTEN` sessions on when
+# the domain connects on `Self::url`: a direct or session-mode connection to
+# the database the domain lives in. Unset reuses the domain's DSN. The audit
+# domain holds no listener, so its key is refused. No openEHR spec governs the
+# process model: our own design (#5589). Optional, unset by default
+# (infrastructure).
+#? listen_url = ""
+# Path to a file holding `Self::listen_url`, read at boot in place of it.
+# Setting both is a boot error. Optional, unset by default (infrastructure).
+#? listen_url_file = ""
 
 # The identities' own DSN and the credential that prepares their database.
 #? [database.party]
@@ -1167,6 +1184,16 @@ system_id = "ferroehr.local"
 # Path to a file holding `Self::migrate_url`, read at boot in place of it.
 # Setting both is a boot error. Optional, unset by default (infrastructure).
 #? migrate_url_file = ""
+# The DSN this domain's policy listeners hold their `LISTEN` sessions on when
+# the domain connects on `Self::url`: a direct or session-mode connection to
+# the database the domain lives in. Unset reuses the domain's DSN. The audit
+# domain holds no listener, so its key is refused. No openEHR spec governs the
+# process model: our own design (#5589). Optional, unset by default
+# (infrastructure).
+#? listen_url = ""
+# Path to a file holding `Self::listen_url`, read at boot in place of it.
+# Setting both is a boot error. Optional, unset by default (infrastructure).
+#? listen_url_file = ""
 
 # The audit repository's own DSN and the credential that prepares its database.
 #? [database.audit]
@@ -1186,6 +1213,16 @@ system_id = "ferroehr.local"
 # Path to a file holding `Self::migrate_url`, read at boot in place of it.
 # Setting both is a boot error. Optional, unset by default (infrastructure).
 #? migrate_url_file = ""
+# The DSN this domain's policy listeners hold their `LISTEN` sessions on when
+# the domain connects on `Self::url`: a direct or session-mode connection to
+# the database the domain lives in. Unset reuses the domain's DSN. The audit
+# domain holds no listener, so its key is refused. No openEHR spec governs the
+# process model: our own design (#5589). Optional, unset by default
+# (infrastructure).
+#? listen_url = ""
+# Path to a file holding `Self::listen_url`, read at boot in place of it.
+# Setting both is a boot error. Optional, unset by default (infrastructure).
+#? listen_url_file = ""
 
 # The management/observability surface.
 #? [management]

@@ -101,7 +101,9 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
             .collect(),
     };
     Some(Arc::new(
-        RequestAccess::new(caller, asking, in_force).with_record_facts(record),
+        RequestAccess::new(caller, asking, in_force)
+            .with_record_facts(record)
+            .with_stale_copies(backend.stale_ehr_access_copies()),
     ))
 }
 

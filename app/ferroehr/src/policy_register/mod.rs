@@ -161,7 +161,7 @@ impl LiveRegisters {
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         Self {
-            listened: Arc::new(Listened::new(pool.clone(), CHANNEL)),
+            listened: Arc::new(Listened::new(CHANNEL)),
             pool,
             categories: RwLock::new(Arc::new(CategoriesInForce {
                 version: 0,

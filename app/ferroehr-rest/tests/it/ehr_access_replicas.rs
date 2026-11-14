@@ -7,10 +7,13 @@
 //! contribution (RM ehr `org.openehr.rm.ehr.ehr_access.adoc`; RM common
 //! change control), and each replica holds a copy of the settings it decides
 //! by. The tests assert that a commit on one replica decides the next request
-//! on another once its notification arrives; that a replica whose listener is
-//! down reads the settings on every request, so a change it was never
-//! notified of decides its next request; and that a settings store that
-//! cannot answer is `503`. No openEHR spec governs the copy: our own design.
+//! on another once its notification arrives; that before it arrives the other
+//! replica never admits a read or a write under the settings it held, since
+//! each read compares the revision it was judged on with the row it reads
+//! (#5589); that a replica whose listener is down reads the settings on every
+//! request, so a change it was never notified of decides its next request;
+//! and that a settings store that cannot answer is `503`. No openEHR spec
+//! governs the copy: our own design.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,6 +23,7 @@ use axum::body::Body;
 use ferroehr::config::rest::ApiConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
+use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr_rest::config::AppConfig;
@@ -46,7 +50,8 @@ async fn replica(pool: &PgPool, listening: bool) -> (Arc<FerroEhrService>, Route
     );
     common::grant_basic_users(&svc, pool, USERS).await;
     if listening {
-        svc.ehr_access_listened().spawn_listener();
+        svc.ehr_access_listened()
+            .spawn_listener((*pool.connect_options()).clone());
         wait_until(
             || svc.ehr_access_listened().is_listening(),
             "the listener connects",
@@ -196,6 +201,165 @@ async fn a_revoked_gate_keeper_is_refused_on_the_next_request_of_another_replica
         StatusCode::FORBIDDEN,
         "and on the committing replica"
     );
+}
+
+/// A term of the access control groups.
+fn term(code: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID",
+                    "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
+                "code_string": code } })
+}
+
+/// Settings of the default `default` holding `directives`.
+fn settings_with(default: &str, directives: Vec<Value>) -> Value {
+    let mut settings = common::access_settings(default, &[]);
+    if !directives.is_empty() {
+        settings["directives"] = Value::Array(directives);
+    }
+    settings
+}
+
+/// A consent that permits every access service every operation.
+fn consent() -> Value {
+    json!({
+        "_type": "ACCESS_DIRECTIVE",
+        "name": { "_type": "DV_TEXT", "value": "consent" },
+        "archetype_node_id": "at0001",
+        "kind": term("consent"),
+        "effect": term("permit"),
+        "emergency_override": false,
+        "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("access_service") }]
+    })
+}
+
+/// Stops the notifications of a change to any EHR's settings, as the database
+/// owner: the state of a replica whose notification has not arrived yet.
+async fn unnotified(pool: &PgPool) {
+    sqlx::raw_sql(
+        "ALTER TABLE clinical.access_settings DISABLE TRIGGER tg_access_settings_notify; \
+         ALTER TABLE clinical.access_class DISABLE TRIGGER tg_access_class_notify",
+    )
+    .execute(pool)
+    .await
+    .expect("the notification triggers are disabled");
+}
+
+/// The status of `bob`'s request `method` `path` through `app`, with `body`
+/// and `if_match` when given.
+async fn bob_sends(
+    app: &Router,
+    method: &str,
+    path: &str,
+    body: Option<&Value>,
+    if_match: Option<&str>,
+) -> (StatusCode, http::HeaderMap, Value) {
+    let mut builder = request(&format!("/ehr/{EHR_ID}{path}"), "bob").method(method);
+    if let Some(tag) = if_match {
+        builder = builder.header("if-match", tag);
+    }
+    let body = body.map_or_else(Body::empty, |body| Body::from(body.to_string()));
+    let (code, headers, body) = common::send(app, builder.body(body).expect("a request")).await;
+    let body = serde_json::from_str(&body).unwrap_or(Value::Null);
+    (code, headers, body)
+}
+
+/// A restriction, an opt-out and a withdrawn consent committed on one
+/// replica decide the other replica's next read and write before the
+/// commit's notification reaches it: the other replica judged the EHR on
+/// the settings it held, each read finds a newer revision of the settings
+/// row and refuses, and the next request reads the row. `bob` holds the
+/// `access_service` grant, which every one of the three binds (EHDS Art. 8
+/// and 10).
+#[tokio::test]
+async fn a_change_before_its_notification_is_never_admitted_on_another_replica() {
+    let cases = [
+        (
+            "an opt-out",
+            settings_with("open", Vec::new()),
+            settings_with("open", vec![common::access_directive("opt_out", &[])]),
+        ),
+        (
+            "a restriction",
+            settings_with("open", Vec::new()),
+            settings_with("open", vec![common::access_directive("restriction", &[])]),
+        ),
+        (
+            "a withdrawn consent",
+            settings_with("consent_required", vec![consent()]),
+            settings_with("consent_required", Vec::new()),
+        ),
+    ];
+    for (change, before, after) in cases {
+        let (_db, pool) = common::migrated_pool().await;
+        let (a, writer) = replica(&pool, true).await;
+        let (b, reader) = replica(&pool, true).await;
+        common::grant_to(&a, &pool, "bob", Operation::AccessService).await;
+        common::allowing(&b, &[Operation::AccessService]);
+        let ehr_id: EhrId = EHR_ID.parse().expect("an EHR id");
+        Box::pin(a.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
+            .await
+            .expect("create the EHR");
+        let ehr = a.ehr_read(ehr_id).await.expect("the EHR").body;
+        commit(&writer, &ehr, &before, 1).await;
+        wait_until(
+            || b.ehr_access_listened().notifications() > 0,
+            "the first settings reach the other replica",
+        )
+        .await;
+        let (code, headers, status) = bob_sends(&reader, "GET", "/ehr_status", None, None).await;
+        assert_eq!(code, StatusCode::OK, "{change}: bob reads before: {status}");
+        let etag = |headers: &http::HeaderMap| {
+            headers
+                .get("etag")
+                .and_then(|tag| tag.to_str().ok())
+                .expect("the status ETag")
+                .to_owned()
+        };
+        let (code, headers, written) = bob_sends(
+            &reader,
+            "PUT",
+            "/ehr_status",
+            Some(&status),
+            Some(&etag(&headers)),
+        )
+        .await;
+        assert!(
+            code.is_success(),
+            "{change}: bob writes before: {code} {written}"
+        );
+        let etag = etag(&headers);
+        assert_eq!(bob_reads(&reader).await, StatusCode::OK, "{change}");
+
+        unnotified(&pool).await;
+        let seen = b.ehr_access_listened().notifications();
+        commit(&writer, &ehr, &after, 2).await;
+        for (what, path) in [("the EHR", ""), ("its status", "/ehr_status")] {
+            let (code, _, body) = bob_sends(&reader, "GET", path, None, None).await;
+            assert!(
+                !code.is_success(),
+                "{change}: the other replica admits no read of {what}: {code} {body}"
+            );
+        }
+        let (code, _, body) =
+            bob_sends(&reader, "PUT", "/ehr_status", Some(&status), Some(&etag)).await;
+        assert!(
+            !code.is_success(),
+            "{change}: the other replica admits no write: {code} {body}"
+        );
+        assert_eq!(
+            b.ehr_access_listened().notifications(),
+            seen,
+            "{change}: the other replica was never notified"
+        );
+        let (code, _, _) = bob_sends(&reader, "GET", "/ehr_status", None, None).await;
+        assert!(
+            matches!(code, StatusCode::FORBIDDEN | StatusCode::NOT_FOUND),
+            "{change}: the next request reads the settings in force: {code}"
+        );
+        assert!(b.ehr_access_listened().is_listening(), "{change}");
+    }
 }
 
 /// A replica whose listener cannot stay connected reads the settings on

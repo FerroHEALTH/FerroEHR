@@ -312,6 +312,14 @@ impl FerroEhrService {
         let read = crate::storage::ehr_repo::ehr_summary_read(&self.pool, ehr_id)
             .await?
             .ok_or_else(|| ServiceError::not_found(Missing::Ehr, format!("EHR {ehr_id}")))?;
+        // NOTE: our own design (#5589), a verdict judged on settings older than the row
+        // this statement read is refused, as an absent EHR is.
+        if crate::access_eval::condition::stale(ehr_id, read.access_revision) {
+            return Err(ServiceError::not_found(
+                Missing::Ehr,
+                format!("EHR {ehr_id}"),
+            ));
+        }
         let time_created = read.time_created;
         let status = read.status.ok_or_else(|| {
             ServiceError::not_found(Missing::Ehr, format!("EHR_STATUS for EHR {ehr_id}"))

@@ -276,7 +276,7 @@ async fn a_change_on_one_replica_decides_the_next_read_on_another() {
     let writer = replica(&db.pool());
     let reader = replica(&db.pool());
     let listened = reader.access_policy().listened();
-    listened.spawn_listener();
+    listened.spawn_listener((*db.pool().connect_options()).clone());
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     while !listened.is_listening() {
         assert!(

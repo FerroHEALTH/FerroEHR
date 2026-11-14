@@ -30,7 +30,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::access_eval::class::{Class, Classes, Keepers};
-use crate::access_eval::condition::EhrEntry;
+use crate::access_eval::condition::{EhrEntry, StaleCopies};
 use crate::aql::sql::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
@@ -43,7 +43,7 @@ use sqlx::PgConnection;
 
 use crate::policy_register::listen::{Dropping, Listened, Subscriber};
 use crate::service::FerroEhrService;
-use crate::storage::access_projection::{CHANNEL, NEW_CLASS, Stored, StoredSettings};
+use crate::storage::access_projection::{CHANNEL, NEW_CLASS, Revision, Stored, StoredSettings};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, commit_contribution};
@@ -53,8 +53,40 @@ impl FerroEhrService {
     /// any `EHR_ACCESS` commit so this replica's next access decision reflects
     /// the new version before the commit's notification arrives (the settings
     /// are change-controlled — RM ehr master04 §EHR Access).
+    ///
+    /// A request that judged the EHR before its own commit is judged again on
+    /// the committed settings, so what it reads after the commit is decided
+    /// by them. When they cannot be read the earlier verdict stays, and each
+    /// read refuses it as judged on an older revision.
     pub(crate) async fn invalidate_ehr_access(&self, ehr_id: EhrId) {
         self.ehr_access.forget(ehr_id).await;
+        let Some(access) = crate::access_eval::condition::current() else {
+            return;
+        };
+        if access.judgement(ehr_id).is_none() {
+            return;
+        }
+        match self.load_ehr_access(ehr_id).await {
+            Ok(entry) => {
+                access.judge_ehr(ehr_id, &entry);
+            }
+            Err(error) => {
+                let cause: &(dyn std::error::Error + 'static) = &error;
+                tracing::warn!(
+                    %ehr_id,
+                    error = cause,
+                    "the committed EHR_ACCESS settings could not be read; the request's reads refuse"
+                );
+            }
+        }
+    }
+
+    /// The EHRs whose copy a read of the running request found stale, which
+    /// the copy drops before its next read
+    /// ([`crate::access_eval::condition::StaleCopies`]).
+    #[must_use]
+    pub fn stale_ehr_access_copies(&self) -> Arc<StaleCopies> {
+        self.ehr_access.stale()
     }
 
     /// The listener that drops this replica's copy of an EHR's settings when
@@ -81,6 +113,7 @@ impl FerroEhrService {
                 settings: Arc::new(None),
                 subject,
                 version: None,
+                revision: Revision::default(),
             };
             self.ehr_access.insert(ehr_id, entry).await;
         }
@@ -183,6 +216,7 @@ impl FerroEhrService {
         &self,
         ehr_ids: &[EhrId],
     ) -> Result<Vec<(EhrId, EhrEntry)>, ServiceError> {
+        self.ehr_access.forget_stale().await;
         let listening = self.ehr_access_listened.is_listening();
         let mut entries = Vec::with_capacity(ehr_ids.len());
         let mut missing = Vec::new();
@@ -218,6 +252,7 @@ impl FerroEhrService {
     /// [`ServiceError`] when the miss path fails; the error is shared across
     /// concurrent callers of the single-flight load.
     pub async fn ehr_access_entry(&self, ehr_id: EhrId) -> Result<EhrEntry, ServiceError> {
+        self.ehr_access.forget_stale().await;
         if !self.ehr_access_listened.is_listening() {
             return self.load_ehr_access(ehr_id).await;
         }
@@ -391,6 +426,7 @@ fn entry_of(ehr_id: EhrId, stored: Stored) -> Result<EhrEntry, ServiceError> {
         version: settings.as_ref().and(stored.version),
         settings: Arc::new(settings),
         subject,
+        revision: stored.revision,
     })
 }
 
@@ -477,6 +513,8 @@ pub(crate) struct EhrAccessCache {
     classes: Cache<(), Arc<Classes>>,
     /// Moved by every drop, so a load that started before one keeps nothing.
     drops: AtomicU64,
+    /// The EHRs a read found newer than their entry.
+    stale: Arc<StaleCopies>,
 }
 
 impl EhrAccessCache {
@@ -486,6 +524,19 @@ impl EhrAccessCache {
             inner: Cache::builder().max_capacity(capacity).build(),
             classes: Cache::builder().max_capacity(1).build(),
             drops: AtomicU64::new(0),
+            stale: Arc::default(),
+        }
+    }
+
+    /// The EHRs a read found newer than their entry.
+    fn stale(&self) -> Arc<StaleCopies> {
+        Arc::clone(&self.stale)
+    }
+
+    /// Drop the entry of every EHR a read found newer than it.
+    pub(in crate::service) async fn forget_stale(&self) {
+        for ehr_id in self.stale.take() {
+            self.forget(ehr_id).await;
         }
     }
 
@@ -602,10 +653,10 @@ impl Subscriber for EhrAccessCache {
     }
 }
 
-/// The listener of `pool` on [`CHANNEL`], dropping from `cache`.
-pub(in crate::service) fn listened(pool: sqlx::PgPool, cache: &Arc<EhrAccessCache>) -> Listened {
+/// The listener on [`CHANNEL`], dropping from `cache`.
+pub(in crate::service) fn listened(cache: &Arc<EhrAccessCache>) -> Listened {
     let cache: Arc<EhrAccessCache> = Arc::clone(cache);
-    Listened::with_subscriber(pool, CHANNEL, cache)
+    Listened::with_subscriber(CHANNEL, cache)
 }
 
 /// The outcome of a single-flight load, with an error of the caller's own.

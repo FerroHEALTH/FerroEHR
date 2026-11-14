@@ -296,10 +296,7 @@ impl FerroEhrService {
             #[cfg(feature = "multimedia")]
             multimedia: None,
             ehr_access: Arc::clone(&ehr_access),
-            ehr_access_listened: Arc::new(ehr::access::listened(
-                pools.clinical.clone(),
-                &ehr_access,
-            )),
+            ehr_access_listened: Arc::new(ehr::access::listened(&ehr_access)),
             plan_cache: PlanCache::default(),
             archetype_lineage: archetype_lineage_cache(),
             query_timeout: None,

@@ -47,7 +47,7 @@ async fn replica(pool: &PgPool, listening: bool, granted: bool) -> (Arc<FerroEhr
     .await;
     if listening {
         let listened = svc.access_policy().listened();
-        listened.spawn_listener();
+        listened.spawn_listener((*pool.connect_options()).clone());
         let deadline = std::time::Instant::now() + Duration::from_secs(10);
         while !listened.is_listening() {
             assert!(

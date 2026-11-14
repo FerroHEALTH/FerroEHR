@@ -10,6 +10,7 @@ use sqlx::PgConnection;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
+use crate::storage::access_projection::Revision;
 
 /// Refuse a write that would process an object whose processing is restricted.
 ///
@@ -32,14 +33,14 @@ pub(crate) async fn ensure_not_restricted_tx(
     ehr_id: Option<EhrId>,
     vo_id: Option<VoId>,
 ) -> Result<(), ServiceError> {
+    let mut seen = Revision::default();
     if let Some(ehr_id) = ehr_id {
-        let restricted: Option<bool> =
-            sqlx::query_scalar("SELECT restricted_at IS NOT NULL FROM ehr WHERE id = $1")
-                .bind(ehr_id)
-                .fetch_optional(&mut *tx)
-                .await?;
-        if restricted == Some(true) {
-            return Err(ServiceError::restricted(&format!("EHR {ehr_id}")));
+        let read = crate::storage::ehr_repo::restriction_and_revision(&mut *tx, ehr_id).await?;
+        if let Some((restricted, revision)) = read {
+            if restricted {
+                return Err(ServiceError::restricted(&format!("EHR {ehr_id}")));
+            }
+            seen = revision;
         }
     }
     if let Some(vo_id) = vo_id
@@ -49,7 +50,7 @@ pub(crate) async fn ensure_not_restricted_tx(
             "versioned object {vo_id}"
         )));
     }
-    ensure_not_access_restricted_tx(tx, ehr_id, vo_id).await?;
+    ensure_not_access_restricted_tx(tx, ehr_id, vo_id, seen).await?;
     crate::versioning::access_delay::ensure_not_withheld_tx(tx, vo_id).await
 }
 
@@ -58,9 +59,11 @@ pub(crate) async fn ensure_not_restricted_tx(
 /// Art. 10 opt-out, whose fact is "not visible to healthcare providers"
 /// (`docs/law/eu/ehds/text.html`), and with its `refused-*` code under every
 /// other step of an EHR the request names. An EHR the request did not judge
-/// yet is judged from the rows the commit's transaction reads; an object of a
-/// verdict that depends on the object is judged by its head row. No openEHR
-/// spec governs this: our own design (#5513).
+/// yet, or judged on a revision of its settings row other than `seen`, the
+/// one the commit's transaction reads, is judged from the rows that
+/// transaction reads, so a change another replica committed is never written
+/// past; an object of a verdict that depends on the object is judged by its
+/// head row. No openEHR spec governs this: our own design (#5513, #5589).
 ///
 /// # Errors
 /// [`ServiceError::NotFound`] (`ehr_id_does_not_exist` or
@@ -71,16 +74,17 @@ async fn ensure_not_access_restricted_tx(
     tx: &mut PgConnection,
     ehr_id: Option<EhrId>,
     vo_id: Option<VoId>,
+    seen: Revision,
 ) -> Result<(), ServiceError> {
     use crate::access_eval::procedure::Outcome;
     use crate::access_eval::scope::Item;
     let (Some(access), Some(ehr_id)) = (crate::access_eval::condition::current(), ehr_id) else {
         return Ok(());
     };
-    let judged = access.verdict(ehr_id);
+    let judged = access.judgement(ehr_id);
     let named = judged.is_some();
-    let verdict = if let Some(verdict) = judged {
-        verdict
+    let verdict = if let Some(judged) = judged.filter(|judged| judged.revision == seen) {
+        judged.verdict
     } else {
         let body =
             crate::storage::version_repo::ehr_access::current_ehr_access_body(&mut *tx, ehr_id)
@@ -100,6 +104,7 @@ async fn ensure_not_access_restricted_tx(
                 version: settings.as_ref().and(version),
                 settings: std::sync::Arc::new(settings),
                 subject,
+                revision: seen,
             },
         )
     };

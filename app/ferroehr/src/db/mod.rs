@@ -40,6 +40,7 @@ pub mod iden;
 pub mod parent_statistics;
 
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use sqlx::migrate::Migrator;
@@ -120,6 +121,19 @@ pub struct DbConfig {
     /// it — the mounted-secret route, as [`Self::url_file`] is for the
     /// clinical DSN. Setting both is a boot error.
     pub migrate_url_file: Option<PathBuf>,
+    /// DSN the policy listeners hold their `LISTEN` sessions on, for every
+    /// domain on [`Self::url`]; unset reuses [`Self::url`].
+    ///
+    /// Each listener holds one connection of its own, apart from the pools, for
+    /// as long as it listens. `PgBouncer` in transaction mode ends a `LISTEN`
+    /// when the transaction ends, so a deployment whose pools reach
+    /// `PostgreSQL` through such a pooler points this key at the primary
+    /// directly or at a session-mode pooler. No openEHR spec governs the
+    /// process model: our own design (#5589).
+    pub listen_url: Option<SecretUrl>,
+    /// Path to a file holding [`Self::listen_url`], read at boot in place of
+    /// it. Setting both is a boot error.
+    pub listen_url_file: Option<PathBuf>,
     /// Upper bound of the connection pool.
     pub max_connections: u32,
     /// Connections the pool keeps open when idle (avoids cold reopen +
@@ -169,6 +183,8 @@ impl Default for DbConfig {
             url_file: None,
             migrate_url: None,
             migrate_url_file: None,
+            listen_url: None,
+            listen_url_file: None,
             // Deliberate defaults: 20 max (10 hard-capped realistic write
             // concurrency ×2), 2 min (no cold reopen churn at idle).
             max_connections: 20,
@@ -541,6 +557,17 @@ pub async fn connect_domains(settings: &DbConfig) -> Result<DomainPools, DbError
         party: connect_domain(settings, Domain::Party).await?,
         audit: connect_domain(settings, Domain::Audit).await?,
     })
+}
+
+/// The connect options of the `LISTEN` sessions of `domain`'s policy
+/// listeners, on [`DbConfig::listen_dsn`].
+///
+/// # Errors
+///
+/// Returns [`DbError::Sqlx`] when the DSN does not parse as a `PostgreSQL`
+/// URL.
+pub fn listen_options(settings: &DbConfig, domain: Domain) -> Result<PgConnectOptions, DbError> {
+    Ok(PgConnectOptions::from_str(settings.listen_dsn(domain))?)
 }
 
 /// A pool for `domain` over the DSN an existing pool already holds, for a

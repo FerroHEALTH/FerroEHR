@@ -163,6 +163,29 @@ pub enum StoredSettings {
     Settings(String),
 }
 
+/// The revision of one EHR's settings row: the storage ordinal of the
+/// `EHR_ACCESS` version it was projected from, `None` when the EHR has no
+/// row.
+///
+/// A read that leaves the store selects it beside its own columns
+/// (`access_revision!`), so a replica compares the revision its copy was
+/// judged on with the row in force without a statement of its own. The
+/// ordinal grows with every version of the object, so two revisions are
+/// equal only when they name one version. No openEHR spec governs this: our
+/// own design (#5589).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Revision(pub Option<i32>);
+
+impl Revision {
+    /// The revision a row selecting `access_revision!` holds.
+    ///
+    /// # Errors
+    /// [`sqlx::Error`] when the column does not decode.
+    pub fn read(row: &sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        row.try_get("access_revision").map(Self)
+    }
+}
+
 /// One EHR's settings row and subject as stored.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Stored {
@@ -174,6 +197,8 @@ pub struct Stored {
     /// The uid of the `EHR_ACCESS` version the settings row was projected
     /// from; `None` when the EHR has no settings row.
     pub version: Option<String>,
+    /// The revision of the settings row.
+    pub revision: Revision,
 }
 
 /// One EHR's settings row and its subject, in one statement.
@@ -184,7 +209,8 @@ pub struct Stored {
 pub async fn settings_of(pool: &PgPool, ehr_id: EhrId) -> Result<Stored, StorageError> {
     let row = sqlx::query(
         "SELECT e.subject_id, s.ehr_id IS NOT NULL AS has_settings, s.settings::text AS settings, \
-                s.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, v.branch_version \
+                s.sys_version AS access_revision, s.vo_id, v.creating_system_id, v.trunk_version, \
+                v.branch_number, v.branch_version \
          FROM (SELECT $1::uuid AS id) k \
          LEFT JOIN ehr e ON e.id = k.id \
          LEFT JOIN access_settings s ON s.ehr_id = k.id \
@@ -213,6 +239,7 @@ fn stored(row: &sqlx::postgres::PgRow) -> Result<Stored, sqlx::Error> {
         settings,
         subject: row.try_get("subject_id")?,
         version,
+        revision: Revision::read(row)?,
     })
 }
 
@@ -251,7 +278,8 @@ pub async fn settings_of_many(
     let ids: Vec<uuid::Uuid> = ehr_ids.iter().map(|id| id.0).collect();
     let rows = sqlx::query(
         "SELECT k.id AS ehr_id, e.subject_id, s.ehr_id IS NOT NULL AS has_settings, \
-                s.settings::text AS settings, s.vo_id, v.creating_system_id, v.trunk_version, \
+                s.settings::text AS settings, s.sys_version AS access_revision, s.vo_id, \
+                v.creating_system_id, v.trunk_version, \
                 v.branch_number, v.branch_version \
          FROM unnest($1::uuid[]) AS k(id) \
          LEFT JOIN ehr e ON e.id = k.id \

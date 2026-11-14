@@ -121,6 +121,8 @@ pub struct StoredVersion {
     pub head_committed_at: Option<jiff::Timestamp>,
     /// Whether an EHDS Art. 3(3) delay withholds the object from the person.
     pub person_withheld: bool,
+    /// The revision of the owning EHR's settings row the read found.
+    pub access_revision: crate::storage::access_projection::Revision,
     /// The materialized canonical body (`version.body` — written from the
     /// same value the node rows decompose from), or [`Value::Null`] for a
     /// logically deleted version (master06 §Logical Deletion). [`Value::Null`]
@@ -173,6 +175,7 @@ macro_rules! version_select {
             "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
             "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",
             "v.body, h.restricted_at, h.committed_at AS head_committed_at, (h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
+            access_revision!("v.ehr_id"), ", ",
             "(SELECT COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
             "AND n.sys_version = v.content_key AND n.num = 0) AS root_archetype, ",
             "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
@@ -191,17 +194,6 @@ macro_rules! version_select {
             $tail
         )
     };
-}
-
-/// Whether `stored` may be served to the current request: the access
-/// evaluator admits it ([`crate::storage::access_facts::admits_stored`]), and
-/// an object an EHDS Art. 3(3) delay withholds is absent to a patient-context
-/// request (`docs/law/eu/ehds/text.html`). No openEHR spec governs either:
-/// our own design/extension.
-fn visible(stored: &StoredVersion) -> bool {
-    use crate::system_log::access_context::access_delay_enforced;
-    crate::storage::access_facts::admits_stored(stored)
-        && (!stored.person_withheld || !access_delay_enforced())
 }
 
 // ── the rendered statements ──────────────────────────────────────────────────
@@ -334,6 +326,7 @@ fn stored_version_fields(
             .try_get::<Option<jiff_sqlx::Timestamp>, _>("head_committed_at")?
             .map(jiff_sqlx::Timestamp::to_jiff),
         person_withheld: row.try_get("person_withheld")?,
+        access_revision: crate::storage::access_projection::Revision::read(row)?,
         canonical,
         canonical_text,
         attestations_at_committal,
@@ -454,7 +447,11 @@ pub async fn read_currents(
             let vo_id: VoId = row.try_get("vo_id")?;
             stored_version(vo_id, &row)
         })
-        .filter(|decoded| decoded.as_ref().map_or(true, visible))
+        .filter(|decoded| {
+            decoded
+                .as_ref()
+                .map_or(true, crate::storage::access_facts::visible)
+        })
         .collect()
 }
 
@@ -496,7 +493,11 @@ pub async fn read_versions_by_tree(
             let vo_id: VoId = row.try_get("vo_id")?;
             stored_version(vo_id, &row)
         })
-        .filter(|decoded| decoded.as_ref().map_or(true, visible))
+        .filter(|decoded| {
+            decoded
+                .as_ref()
+                .map_or(true, crate::storage::access_facts::visible)
+        })
         .collect()
 }
 
@@ -618,7 +619,7 @@ pub async fn read_one(
         Body::Parsed => stored_version(vo_id, &row)?,
         Body::Text => stored_version_raw(vo_id, &row)?,
     };
-    Ok(Some(stored).filter(visible))
+    Ok(Some(stored).filter(crate::storage::access_facts::visible))
 }
 
 /// The stored canonical body BYTES of one version, across both storage tiers

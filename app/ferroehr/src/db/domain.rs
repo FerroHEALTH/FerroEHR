@@ -191,6 +191,16 @@ pub struct DomainDsn {
     /// Path to a file holding [`Self::migrate_url`], read at boot in place of
     /// it. Setting both is a boot error.
     pub migrate_url_file: Option<PathBuf>,
+    /// The DSN this domain's policy listeners hold their `LISTEN` sessions on
+    /// when the domain connects on [`Self::url`]: a direct or session-mode
+    /// connection to the database the domain lives in. Unset reuses the
+    /// domain's DSN. The audit domain holds no listener, so its key is
+    /// refused. No openEHR spec governs the process model: our own design
+    /// (#5589).
+    pub listen_url: Option<SecretUrl>,
+    /// Path to a file holding [`Self::listen_url`], read at boot in place of
+    /// it. Setting both is a boot error.
+    pub listen_url_file: Option<PathBuf>,
 }
 
 impl DbConfig {
@@ -232,6 +242,26 @@ impl DbConfig {
             .url
             .as_ref()
             .map_or_else(|| self.url.expose(), SecretUrl::expose)
+    }
+
+    /// The DSN the `LISTEN` sessions of `domain` connect on: the domain's
+    /// `listen_url`; for a domain on the shared `[database] url`, else
+    /// `[database] listen_url`; else the domain's DSN ([`Self::dsn`]).
+    #[must_use]
+    pub fn listen_dsn(&self, domain: Domain) -> &str {
+        let settings = self.domain(domain);
+        let shared = || {
+            settings
+                .url
+                .is_none()
+                .then_some(self.listen_url.as_ref())
+                .flatten()
+        };
+        settings
+            .listen_url
+            .as_ref()
+            .or_else(shared)
+            .map_or_else(|| self.dsn(domain), SecretUrl::expose)
     }
 
     /// Whether this domain connects on a DSN of its own rather than the shared
@@ -532,5 +562,43 @@ mod tests {
         let described = storage.layout().describe();
         assert!(!described.contains("pw"), "{described}");
         assert!(!described.contains("postgres://"), "{described}");
+    }
+
+    /// A listener connects on its domain's `listen_url`, then on `[database]
+    /// listen_url` while the domain is on the shared DSN, then on the
+    /// domain's DSN (#5589).
+    #[test]
+    fn a_listener_connects_on_the_nearest_listen_dsn() {
+        let shared = DbConfig::new("postgres://pooled/ferroehr");
+        assert_eq!(
+            shared.listen_dsn(Domain::Clinical),
+            "postgres://pooled/ferroehr"
+        );
+        let direct = DbConfig {
+            listen_url: Some(SecretUrl::new("postgres://primary/ferroehr")),
+            party: DomainDsn {
+                url: Some(SecretUrl::new("postgres://pooled/party")),
+                ..DomainDsn::default()
+            },
+            ..DbConfig::new("postgres://pooled/ferroehr")
+        };
+        assert_eq!(
+            direct.listen_dsn(Domain::Clinical),
+            "postgres://primary/ferroehr"
+        );
+        assert_eq!(
+            direct.listen_dsn(Domain::Party),
+            "postgres://pooled/party",
+            "a domain in a database of its own never listens on the shared database"
+        );
+        let party = DbConfig {
+            party: DomainDsn {
+                url: Some(SecretUrl::new("postgres://pooled/party")),
+                listen_url: Some(SecretUrl::new("postgres://primary/party")),
+                ..DomainDsn::default()
+            },
+            ..direct
+        };
+        assert_eq!(party.listen_dsn(Domain::Party), "postgres://primary/party");
     }
 }

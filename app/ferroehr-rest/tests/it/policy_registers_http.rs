@@ -43,15 +43,17 @@ async fn replica(pool: &PgPool) -> (Arc<FerroEhrService>, Router) {
     .await;
     let handle =
         AuthzHandle::build(&AuthzConfig::default(), &config.api.base_path, None).map(Arc::new);
-    listening(&svc).await;
+    listening(&svc, pool).await;
     let app = common::build_full(config, Arc::clone(&svc), handle, Observability::default()).await;
     (svc, app)
 }
 
 /// Start `svc`'s register listener, as the binary does at boot, and wait
 /// until it is connected.
-async fn listening(svc: &Arc<FerroEhrService>) {
-    svc.policy_registers().listened().spawn_listener();
+async fn listening(svc: &Arc<FerroEhrService>, pool: &PgPool) {
+    svc.policy_registers()
+        .listened()
+        .spawn_listener((*pool.connect_options()).clone());
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     while !svc.policy_registers().listened().is_listening() {
         assert!(

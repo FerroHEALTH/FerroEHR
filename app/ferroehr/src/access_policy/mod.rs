@@ -95,7 +95,7 @@ impl LivePolicy {
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         Self {
-            listened: Arc::new(Listened::new(pool.clone(), CHANNEL)),
+            listened: Arc::new(Listened::new(CHANNEL)),
             pool,
             in_force: RwLock::new(Arc::default()),
             installing: tokio::sync::Mutex::new(()),
