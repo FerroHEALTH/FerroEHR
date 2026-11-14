@@ -2578,7 +2578,7 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
         "the aggregate names the EHRs it read: {}",
         counted.sql
     );
-    assert!(counted.access_version_cols.is_empty());
+    assert_eq!(counted.access_version_cols, Vec::<(String, String)>::new());
 }
 
 /// A LIMIT does not move an OR read onto the streaming shape: the bindings
