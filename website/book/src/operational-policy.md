@@ -1867,6 +1867,11 @@ one, nothing is tightened.
 - **Checked when written.** A body that is no canonical-JSON `ACCESS_POLICY`
   or breaks an invariant of the draft model is refused whole with `400`.
 - **Effective without a restart**, as the registers above.
+- **Read by the access evaluator** on every request: a classification gives
+  the data it covers its sensitivities (step 4), and the two requirements
+  are steps 5 and 6 of the [decision procedure](security.md#access-directives).
+  A `relationship_grace` that is no ISO 8601 duration admits nothing after a
+  care relationship ends.
 
 The routes are on
 [Admin & messaging APIs](operations-admin-apis.md#the-access-policy). A write

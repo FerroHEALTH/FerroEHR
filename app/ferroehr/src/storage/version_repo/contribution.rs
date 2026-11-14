@@ -89,10 +89,12 @@ pub async fn contribution_version_refs(
     pool: &PgPool,
     contribution_id: Uuid,
 ) -> Result<Vec<(VoId, (i32, i32, i32), String, String)>, StorageError> {
-    // NOTE: EHDS Art. 8 and Art. 3(3) (`docs/law/eu/ehds/text.html`), a member under an
-    // access restriction, or withheld from the person, is left out while enforced.
-    let rows = sqlx::query(
-        "SELECT m.* FROM (\
+    // NOTE: EHDS Art. 8 and Art. 3(3) (`docs/law/eu/ehds/text.html`), a member the access
+    // evaluator does not admit, or withheld from the person, is left out.
+    let rows = sqlx::query(concat!(
+        "SELECT m.*, ",
+        head_facts!(),
+        " FROM (\
          SELECT vo_id, trunk_version, branch_number, branch_version, creating_system_id, \
          kind FROM version \
          WHERE contribution_id = $1 \
@@ -101,31 +103,32 @@ pub async fn contribution_version_refs(
          v.creating_system_id, v.kind FROM version v \
          JOIN vo_attestation att ON att.vo_id = v.vo_id AND att.sys_version = v.sys_version \
          WHERE att.contribution_id = $1) m \
-         WHERE (NOT $2 OR NOT EXISTS (SELECT 1 FROM vo_head h \
-             WHERE h.vo_id = m.vo_id AND h.access_restricted_at IS NOT NULL)) \
-           AND (NOT $3 OR NOT EXISTS (SELECT 1 FROM vo_head h \
-             WHERE h.vo_id = m.vo_id AND h.person_withheld_until > now())) \
-         ORDER BY m.vo_id",
-    )
+         JOIN vo_head h ON h.vo_id = m.vo_id \
+         WHERE (NOT $2 OR (h.person_withheld_until > now()) IS NOT TRUE) \
+         ORDER BY m.vo_id"
+    ))
     .bind(contribution_id)
-    .bind(crate::system_log::access_context::access_restriction_enforced())
     .bind(crate::system_log::access_context::access_delay_enforced())
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
-    rows.iter()
-        .map(|row| {
-            Ok((
-                row.try_get("vo_id")?,
-                (
-                    row.try_get("trunk_version")?,
-                    row.try_get("branch_number")?,
-                    row.try_get("branch_version")?,
-                ),
-                row.try_get("creating_system_id")?,
-                row.try_get("kind")?,
-            ))
-        })
-        .collect()
+    let mut refs = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let vo_id: VoId = row.try_get("vo_id")?;
+        if !crate::storage::access_facts::HeadFacts::read(row, vo_id)?.admitted() {
+            continue;
+        }
+        refs.push((
+            vo_id,
+            (
+                row.try_get("trunk_version")?,
+                row.try_get("branch_number")?,
+                row.try_get("branch_version")?,
+            ),
+            row.try_get("creating_system_id")?,
+            row.try_get("kind")?,
+        ));
+    }
+    Ok(refs)
 }
 
 /// One row of the EHR CONTRIBUTION-list extension: the contribution's own audit,

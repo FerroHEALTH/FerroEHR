@@ -26,9 +26,7 @@ task_local! {
     static DECLARED_PURPOSE: Option<String>;
     static DECLARED_PERMIT: Option<String>;
     static REQUEST_ROLES: Vec<String>;
-    static ACCESS_RESTRICTION_ENFORCED: bool;
     static ACCESS_DELAY_ENFORCED: bool;
-    static ACCESS_OPT_OUT_ENFORCED: bool;
     static COMMITTED_FACILITIES: FacilitySink;
 }
 
@@ -141,32 +139,6 @@ pub fn permit_identifier(declared: &str) -> Option<String> {
         .then(|| value.to_owned())
 }
 
-/// Whether the EHDS Art. 8 restriction of access holds for the current
-/// request: restricted data then reads as absent.
-///
-/// The protocol adapter publishes `true` for the request of a health
-/// professional or a healthcare provider, and `false` for the controller's
-/// own surfaces and for an emergency access in the vital interest of the
-/// person (EHDS Art. 11(5), `docs/law/eu/ehds/text.html`). Outside a request
-/// scope (a background task, the admin dump, an erase) it is `false`: the
-/// restriction limits access by professionals, never storage or the
-/// controller's processing. No openEHR spec governs restriction of access —
-/// our own design/extension.
-#[must_use]
-pub fn access_restriction_enforced() -> bool {
-    ACCESS_RESTRICTION_ENFORCED
-        .try_with(|enforced| *enforced)
-        .unwrap_or(false)
-}
-
-/// Run `fut` with the EHDS Art. 8 restriction of access enforced or not.
-pub async fn with_access_restriction<F>(enforced: bool, fut: F) -> F::Output
-where
-    F: Future,
-{
-    ACCESS_RESTRICTION_ENFORCED.scope(enforced, fut).await
-}
-
 /// Whether the EHDS Art. 3(3) delay of the person's own access holds for the
 /// current request: data a professional has not yet released then reads as
 /// absent.
@@ -191,31 +163,6 @@ where
     F: Future,
 {
     ACCESS_DELAY_ENFORCED.scope(enforced, fut).await
-}
-
-/// Whether the EHDS Art. 10 opt-out holds for the current request: an EHR
-/// whose person opted out of access through the access services then reads as
-/// absent.
-///
-/// The protocol adapter publishes `true` for an access-service caller, one
-/// holding an `access_service` grant, unless it declares a vital interest
-/// under Art. 10(2), and `false` for every other
-/// caller, the controller's own surfaces among them. Outside a request scope
-/// it is `false` (`docs/law/eu/ehds/text.html` Art. 10). No openEHR spec
-/// governs an opt-out: our own design/extension.
-#[must_use]
-pub fn access_opt_out_enforced() -> bool {
-    ACCESS_OPT_OUT_ENFORCED
-        .try_with(|enforced| *enforced)
-        .unwrap_or(false)
-}
-
-/// Run `fut` with the EHDS Art. 10 opt-out enforced or not.
-pub async fn with_access_opt_out<F>(enforced: bool, fut: F) -> F::Output
-where
-    F: Future,
-{
-    ACCESS_OPT_OUT_ENFORCED.scope(enforced, fut).await
 }
 
 #[cfg(test)]

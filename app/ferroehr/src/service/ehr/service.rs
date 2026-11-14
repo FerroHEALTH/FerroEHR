@@ -93,6 +93,7 @@ impl FerroEhrService {
         // another EHR is a distinct 409 (RM ehr master04 §EHR Status).
         let (subject_id, subject_namespace, is_queryable, is_modifiable) =
             super::status::ehr_promoted_columns(status);
+        let subject = subject_id.and_then(|subject| subject.parse::<uuid::Uuid>().ok());
         let time_created = match crate::storage::ehr_repo::insert_ehr(
             &mut tx,
             ehr_id,
@@ -160,7 +161,7 @@ impl FerroEhrService {
         // The EHR is created with the settings-less default EHR_ACCESS
         // (default-open); seed the access cache so the first EHR-scoped request
         // is a hit, not a DB miss (the access gate runs on every such request).
-        self.prewarm_ehr_access_open(ehr_id).await;
+        self.prewarm_ehr_access_open(ehr_id, subject).await;
 
         // The RM `EHR` wire body is built from the commit results rather than
         // re-read through `ehr_read`: the version identities are in

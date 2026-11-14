@@ -84,7 +84,7 @@ pub struct DirectiveFacts {
 }
 
 /// One bound of a [`Validity`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Bound {
     /// The instant.
     pub at: jiff::Timestamp,
@@ -287,7 +287,7 @@ fn code_phrase(coded: &DvCodedText) -> ForeignCode {
 }
 
 /// The instants `interval` holds.
-fn validity(interval: &DvInterval<DvDateTime>) -> Validity {
+pub(crate) fn validity(interval: &DvInterval<DvDateTime>) -> Validity {
     // NOTE: our own design, a bound without a full date, time and offset names no instant.
     let bound = |unbounded: bool, at: Option<&DvDateTime>, included: bool| match at {
         Some(at) if !unbounded => at

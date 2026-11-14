@@ -52,6 +52,7 @@ mod status;
 pub(in crate::service) mod tags;
 pub(crate) mod validation;
 
+pub mod access_judge;
 pub mod access_projection;
 pub mod access_rule;
 pub mod access_settings;
