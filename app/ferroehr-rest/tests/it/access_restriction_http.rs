@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The EHDS Art. 8 restriction of access by health professionals, end to end
-//! over the assembled router (#3682).
+//! over the assembled router (#3682), as a `restriction` directive of the
+//! EHR's `EHR_ACCESS` the controller commits (#5510).
 //!
 //! Regulation (EU) 2025/327 Art. 8 lets a person restrict the access of health
 //! professionals and healthcare providers to all or parts of their data and
@@ -12,8 +13,9 @@
 //! composition and a restricted EHR answer every professional route as an
 //! unknown one does, that a query and an export leave them out, that only the
 //! configured emergency role declaring an emergency purpose reads them, with
-//! the emergency mark on its record, and that a lift brings them back. No
-//! openEHR spec governs restriction of access — our own design/extension.
+//! the emergency mark on its record, and that a later version without the
+//! directive brings them back. No openEHR spec governs restriction of access:
+//! our own design/extension.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -189,27 +191,80 @@ async fn commit(app: &Router, ehr: &str) -> String {
         .to_owned()
 }
 
-/// The admin records (`lift = false`) or lifts an access restriction.
-async fn mark(app: &Router, ehr: &str, vo: Option<&str>, lift: bool) {
-    let mut body = json!({ "ehr_id": ehr });
-    if let Some(vo) = vo {
-        body["vo_id"] = json!(vo);
-    }
-    let path = if lift {
-        "admin/access-restriction/lift"
-    } else {
-        "admin/access-restriction"
-    };
-    let (status, response) = send(
+/// The current `EHR_ACCESS` version uid and settings of `ehr`, as the admin
+/// reads them.
+async fn current_settings(app: &Router, ehr: &str) -> (String, Value) {
+    let (status, body) = send(
         app,
-        "POST",
-        &common::full(&format!("/{path}")),
+        "GET",
+        &format!("{EXT}/admin/ehr-access?ehr_id={ehr}"),
         "root",
         None,
-        Some(("application/json", body.to_string())),
+        None,
     )
     .await;
-    assert_eq!(status, StatusCode::NO_CONTENT, "{path}: {response}");
+    assert_eq!(status, StatusCode::OK, "settings read: {body}");
+    let read: Value = serde_json::from_str(&body).expect("settings json");
+    let current = &read["versions"][0];
+    (
+        current["version_uid"]
+            .as_str()
+            .expect("version uid")
+            .to_owned(),
+        current["settings"].clone(),
+    )
+}
+
+/// The admin commits `settings` for `ehr` over the version `preceding`.
+async fn commit_settings(
+    app: &Router,
+    ehr: &str,
+    preceding: &str,
+    settings: &Value,
+) -> (StatusCode, String) {
+    send(
+        app,
+        "POST",
+        &common::full("/admin/ehr-access"),
+        "root",
+        None,
+        Some((
+            "application/json",
+            json!({ "ehr_id": ehr, "preceding_version_uid": preceding, "settings": settings })
+                .to_string(),
+        )),
+    )
+    .await
+}
+
+/// The admin records (`lift = false`) a restriction directive of `vo`, or of
+/// the whole EHR, or lifts (`lift = true`) every restriction at that grain, by
+/// committing a new `EHR_ACCESS` version on the person's instruction.
+async fn mark(app: &Router, ehr: &str, vo: Option<&str>, lift: bool) {
+    let (preceding, settings) = current_settings(app, ehr).await;
+    let mut directives: Vec<Value> = settings["directives"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let grain = |directive: &Value| {
+        directive["data"][0]["objects"][0]["id"]["value"]
+            .as_str()
+            .map(str::to_owned)
+    };
+    if lift {
+        directives.retain(|directive| grain(directive).as_deref() != vo);
+    } else {
+        let objects: Vec<&str> = vo.into_iter().collect();
+        directives.push(common::access_directive("restriction", &objects));
+    }
+    let (status, response) = commit_settings(
+        app,
+        ehr,
+        &preceding,
+        &common::directive_settings(&directives),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "lift={lift}: {response}");
 }
 
 /// The composition uids an AQL population query returns to `user`.
@@ -327,7 +382,7 @@ async fn a_restricted_composition_reads_as_absent_until_lifted() {
 
 /// A whole-EHR restriction makes the EHR answer as an unknown EHR does, by id,
 /// in a scoped query, and for a write, and keeps its compositions out of a
-/// population query; the admin still reads the register.
+/// population query; the admin still reads the restriction in the settings.
 #[tokio::test]
 async fn a_restricted_ehr_reads_as_absent() {
     let (_db, _pool, app) = Box::pin(app()).await;
@@ -396,20 +451,12 @@ async fn a_restricted_ehr_reads_as_absent() {
     let uids = composition_uids(&app, "clinician", None).await;
     assert!(!uids.iter().any(|uid| uid.starts_with(&vo)), "{uids:?}");
 
-    let (status, body) = send(
-        &app,
-        "GET",
-        &format!("{EXT}/admin/access-restriction?ehr_id={ehr}"),
-        "root",
-        None,
-        None,
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    let register: Value = serde_json::from_str(&body).expect("register json");
+    let (_, settings) = current_settings(&app, &ehr).await;
+    let directives = settings["directives"].as_array().expect("directives");
+    assert_eq!(directives.len(), 1, "{settings}");
     assert_eq!(
-        register["access_restrictions"].as_array().map(Vec::len),
-        Some(1)
+        directives[0]["kind"]["defining_code"]["code_string"],
+        json!("restriction")
     );
 }
 
@@ -462,44 +509,37 @@ async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
     }
 }
 
-/// A malformed EHR or object id is refused `400` on recording, lifting and
-/// reading an access restriction.
+/// A malformed EHR id, or a restriction naming an object by an id that names
+/// no versioned object, is refused `400` naming it, on recording, lifting and
+/// reading an access restriction alike; nothing is committed.
 #[tokio::test]
 async fn a_malformed_id_is_refused_on_every_restriction_route() {
     let (_db, _pool, app) = Box::pin(app()).await;
     let ehr = ehr(&app).await;
-    let cases = [
-        (
-            json!({ "ehr_id": "not-a-uuid" }),
-            "invalid EHR id: not-a-uuid",
-        ),
-        (
-            json!({ "ehr_id": ehr, "vo_id": "not-a-uuid" }),
-            "invalid versioned object id: not-a-uuid",
-        ),
-    ];
-    for path in [
-        "/admin/access-restriction",
-        "/admin/access-restriction/lift",
-    ] {
-        for (body, message) in &cases {
-            let (status, answer) = send(
-                &app,
-                "POST",
-                &common::full(path),
-                "root",
-                None,
-                Some(("application/json", body.to_string())),
-            )
-            .await;
-            assert_eq!(status, StatusCode::BAD_REQUEST, "{path} {body}: {answer}");
-            assert!(answer.contains(message), "{path} {body}: {answer}");
-        }
+    let (preceding, _) = current_settings(&app, &ehr).await;
+    let whole = common::directive_settings(&[common::access_directive("restriction", &[])]);
+    for settings in [whole, common::directive_settings(&[])] {
+        let (status, answer) = commit_settings(&app, "not-a-uuid", &preceding, &settings).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{answer}");
+        assert!(answer.contains("invalid EHR id: not-a-uuid"), "{answer}");
     }
+    let object =
+        common::directive_settings(&[common::access_directive("restriction", &["not-a-uuid"])]);
+    let (status, answer) = commit_settings(&app, &ehr, &preceding, &object).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{answer}");
+    assert!(
+        answer.contains("not-a-uuid") && answer.contains("names no versioned object"),
+        "{answer}"
+    );
+    assert_eq!(
+        current_settings(&app, &ehr).await.0,
+        preceding,
+        "nothing is committed"
+    );
     let (status, answer) = send(
         &app,
         "GET",
-        &format!("{EXT}/admin/access-restriction?ehr_id=not-a-uuid"),
+        &format!("{EXT}/admin/ehr-access?ehr_id=not-a-uuid"),
         "root",
         None,
         None,

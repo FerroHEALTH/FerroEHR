@@ -12,7 +12,7 @@
 //! rather than `/ehr/`, and its Extract record is written by the service layer,
 //! where the user came from no principal; both now name the EHR and the user. A
 //! read of the restriction register names the EHR in a query parameter and is
-//! recorded by the service with the EHR, as the access-restriction register is.
+//! recorded by the service with the EHR, as the read of its `EHR_ACCESS` settings is.
 
 use std::time::Duration;
 

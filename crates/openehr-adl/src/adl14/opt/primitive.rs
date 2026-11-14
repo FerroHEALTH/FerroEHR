@@ -16,6 +16,7 @@ use openehr_its::opt14;
 use super::RootCx;
 use super::value::{enumerated_and_range, int_interval, map_mult, real_interval};
 use crate::aom::build::ObjectNode;
+use crate::odin::escape_regex_delimiter;
 
 pub(super) fn complex(
     rm_type_name: &str,
@@ -117,13 +118,15 @@ pub(super) fn map_primitive_object(c: &opt14::types::CPrimitiveObject, cx: &mut 
             CObject::CBoolean(node.c_boolean(constraint, p.assumed_value))
         }
         opt14::types::CPrimitive::CString(p) => {
-            let constraint = if !p.list.is_empty() {
-                p.list.clone()
-            } else if let Some(pat) = &p.pattern {
-                vec![pat.clone()]
-            } else {
-                Vec::new()
-            };
+            // The AOM 1.4 `pattern` is a bare regex and AOM2 stores one with its
+            // delimiters (`C_STRING` class table). Both forms are carried, so
+            // validation refuses a pattern beside a list (`C_STRING.constraint`).
+            let mut constraint = p.list.clone();
+            constraint.extend(
+                p.pattern
+                    .iter()
+                    .map(|pat| format!("/{}/", escape_regex_delimiter(pat))),
+            );
             CObject::CString(node.c_string(constraint, p.assumed_value.clone()))
         }
         opt14::types::CPrimitive::CInteger(p) => CObject::CInteger(node.c_integer(

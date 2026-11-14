@@ -351,99 +351,6 @@ impl FerroEhrService {
             .map_err(ServiceError::Storage)
     }
 
-    /// Record an EHDS Art. 8 restriction of access by health professionals on
-    /// one EHR, or on one versioned object of it, on the person's instruction.
-    ///
-    /// The restricted data then reads as absent to every professional route,
-    /// query and export, unless an emergency access in the vital interest of
-    /// the person overrides it (EHDS Art. 11(5)). It limits access only:
-    /// nothing is deleted, and storage and the controller's own processing go
-    /// on (`docs/law/eu/ehds/text.html` Art. 8). No openEHR spec governs
-    /// restriction of access — our own design/extension.
-    ///
-    /// # Errors
-    /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
-    /// - `versioned_object_does_not_exist` (`404`) — the object is unknown, or
-    ///   is not in that EHR.
-    /// - `exception` — a database fault mid-transaction (rolled back).
-    pub async fn restrict_access(
-        &self,
-        ehr_id: EhrId,
-        vo_id: Option<VoId>,
-        note: Option<&str>,
-    ) -> Result<(), ServiceError> {
-        self.check_mark_target(ehr_id, vo_id).await?;
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
-        marks::record_access_restriction(&mut tx, ehr_id, vo_id, note)
-            .await
-            .map_err(ServiceError::Storage)?;
-        tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Create, ehr_id, vo_id, "access-restriction")?;
-        Ok(())
-    }
-
-    /// Lift every in-force EHDS Art. 8 access restriction of one EHR at the
-    /// given grain; a lift with nothing to lift succeeds.
-    ///
-    /// # Errors
-    /// The [`Self::restrict_access`] rejections.
-    pub async fn lift_access_restriction(
-        &self,
-        ehr_id: EhrId,
-        vo_id: Option<VoId>,
-    ) -> Result<(), ServiceError> {
-        self.check_mark_target(ehr_id, vo_id).await?;
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
-        marks::lift_access_restriction(&mut tx, ehr_id, vo_id)
-            .await
-            .map_err(ServiceError::Storage)?;
-        tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Delete, ehr_id, vo_id, "access-restriction")?;
-        Ok(())
-    }
-
-    /// The EHDS Art. 8 access-restriction register of one EHR, newest request
-    /// first.
-    ///
-    /// # Errors
-    /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
-    /// - `exception` — a database fault.
-    pub async fn access_restriction_register(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<Vec<marks::AccessRestrictionRow>, ServiceError> {
-        self.check_mark_target(ehr_id, None).await?;
-        self.emit_mark_access(EventActionCode::Read, ehr_id, None, "access-restriction")?;
-        marks::access_restrictions(&self.pool, ehr_id)
-            .await
-            .map_err(ServiceError::Storage)
-    }
-
-    /// Whether the EHR `ehr_id` carries a whole-EHR EHDS Art. 8 access
-    /// restriction; `false` for an unknown EHR.
-    ///
-    /// # Errors
-    /// `exception` — a database fault.
-    pub async fn is_ehr_access_restricted(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        marks::is_ehr_access_restricted(&self.pool, ehr_id)
-            .await
-            .map_err(ServiceError::Storage)
-    }
-
-    /// Whether the versioned object `vo_id` carries an EHDS Art. 8 access
-    /// restriction, its own or its EHR's; `false` for an unknown object.
-    ///
-    /// # Errors
-    /// `exception` — a database fault.
-    pub async fn is_object_access_restricted(&self, vo_id: VoId) -> Result<bool, ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
-        marks::is_access_restricted(&mut conn, vo_id)
-            .await
-            .map_err(ServiceError::Storage)
-    }
-
     /// Existence-check the EHR a mark names, and the object when one is named.
     ///
     /// All-or-nothing like every other admin route: an unknown id is refused
@@ -477,7 +384,7 @@ impl FerroEhrService {
     /// The record names the EHR, the object when the act was object-scoped, and
     /// which register moved — never a subject identifier, which the clinical
     /// domain does not hold in readable form anyway.
-    pub(super) fn emit_mark_access(
+    pub(in crate::service) fn emit_mark_access(
         &self,
         action: EventActionCode,
         ehr_id: EhrId,

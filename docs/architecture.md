@@ -452,7 +452,10 @@ which is what makes an optional stage safe to disable:
    access control package, refused whole with `400` at every write unless the
    draft BMM's invariants and the terminology groups hold (RM EHR IM
    §`ACCESS_CONTROL_SETTINGS` leaves the class "Currently implementation
-   dependent": the scheme is our own design). A new version is committed by a
+   dependent": the scheme is our own design). The default archetype
+   `access_directives.v1.0.0` constrains the settings to that class, which the
+   ADL 2 validator reads from the draft class tables beside RM 1.2.0
+   (`draft_model`, AOM2 master11 RM adaptation). A new version is committed by a
    gate-keeper the current settings name or by `admin_role` on the subject's
    instruction (BASE Architecture Overview §Security Policy, "Access control of
    access settings"); the settings are read only by those callers and the
@@ -461,7 +464,21 @@ which is what makes an optional stage safe to disable:
    Art. 8). An EHR Extract also carries them for the holder of an
    `export_ehr_extract` grant covering the EHR, since the extract transfers
    the whole EHR (RM EHR Extract IM, `X_VERSIONED_EHR_ACCESS`). Who writes and
-   reads them is our own design (`service::ehr::access_rule`).
+   reads them is our own design (`service::ehr::access_rule`). The EHDS
+   Art. 8 restriction and Art. 10 opt-out are `restriction` and `opt_out` directives of these settings,
+   committed by the controller over `POST /admin/ehr-access` (which names the
+   EHR in its body, so it reaches an EHR a restriction hides) or by a
+   gate-keeper. Every `EHR_ACCESS` commit, import, archive load and repair
+   projects the directives in force, in its own transaction, onto the marks
+   `ehr.access_restricted_at`, `vo_head.access_restricted_at` and
+   `ehr.opted_out_at`, which the version reads, AQL, the exports and the write
+   guard filter on, and each boot projects every stored `EHR_ACCESS` again
+   (`service::ehr::access_marks`). The projection never reads a directive more
+   permissively than it is written: a data scope beyond objects restricts the
+   whole EHR, a directive holds until its validity ends, and one that no
+   emergency may lift is refused `400` until the evaluator reads
+   `emergency_override`. The projection and its rules are our own design;
+   no specification governs them.
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an

@@ -9,8 +9,8 @@ access control terminology, never by this archetype's id, and a deployment
 versions or replaces it through the definition API.
 
 1. `openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0.adls`: the `EHR_ACCESS`
-   root and its `settings`, constrained to the RM's
-   `ACCESS_CONTROL_SETTINGS`.
+   root, its `settings` constrained to `ACCESS_DIRECTIVE_SETTINGS`, and the
+   settings' attributes constrained to their classes.
 
 ## Source
 
@@ -20,12 +20,14 @@ EHR IM, `org.openehr.rm.ehr.access_control_settings.adoc`).
 
 ## Our own modelling
 
-- **The settings are constrained to the abstract RM class.** Their concrete
-  class, `ACCESS_DIRECTIVE_SETTINGS`, is in FerroEHR's draft access control
-  package, which the ADL 2 validator does not read: it checks every object
-  type against RM 1.2.0, so a constraint naming a draft class is refused.
-  The write check of every `EHR_ACCESS` holds the settings to the draft class
-  and its invariants instead.
+- **The settings name a draft class.** `ACCESS_DIRECTIVE_SETTINGS` is in
+  FerroEHR's draft access control package, which is no openEHR release. The
+  definition path validates every ADL 2 archetype against RM 1.2.0 extended
+  by the class tables of the draft packages (`ferroehr::draft_model`), where
+  the class conforms to the RM's `ACCESS_CONTROL_SETTINGS` (AOM2
+  `master11-rm_adaptation.adoc`). The validator over RM 1.2.0 alone refuses
+  it (`VCORM`). The write check of every `EHR_ACCESS` still holds the
+  settings to the class, its invariants and its terminology groups.
 - The node ids are ADL 2 id-codes and the terminology is English only.
 
 ## Licence
