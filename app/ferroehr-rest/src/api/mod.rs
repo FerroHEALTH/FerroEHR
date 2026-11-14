@@ -279,6 +279,7 @@ pub(crate) fn extension_openapi_router() -> OpenApiRouter<AppState> {
         .merge(admin::marks::marks_routes())
         .merge(admin::access_delay::access_delay_routes())
         .merge(admin::ehr_access::ehr_access_routes())
+        .merge(admin::access_exchange::access_exchange_routes())
         .merge(admin::access_repair::access_repair_routes())
         .merge(admin::access_log_erasure::access_log_erasure_routes())
         .merge(admin::identifiers::identifier_routes())

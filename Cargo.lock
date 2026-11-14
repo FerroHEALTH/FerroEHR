@@ -2275,6 +2275,7 @@ dependencies = [
  "ferrohealth-smart",
  "ferrohealth-telemetry",
  "ferrohealth-usage-report",
+ "fhir-types",
  "futures",
  "hmac 0.13.0",
  "http",

@@ -41,6 +41,7 @@ mod abac_e2e;
 mod access_delay_http;
 mod access_delay_trail;
 mod access_evaluator_http;
+mod access_exchange_http;
 mod access_log_erasure_http;
 mod access_log_http;
 mod access_log_management_http;

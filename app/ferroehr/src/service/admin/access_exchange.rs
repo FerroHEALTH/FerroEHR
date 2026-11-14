@@ -22,11 +22,11 @@
 
 use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
-use openehr_rm::v1_2::common::generic::party_identified::PartyIdentified;
-use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use openehr_rm::draft::access_control::terminology::{AccessDefault, Term};
+use openehr_rm::v1_2::common::generic::party_identified::PartyIdentified;
+use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use serde_json::Value;
 
 use crate::access_exchange::{Format, Loss, Refused, appc, bppc};

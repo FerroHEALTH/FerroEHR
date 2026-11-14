@@ -18,7 +18,8 @@
 //! them, [`marks`] keeps the legal marks, [`access_delay`] the EHDS Art. 3(3)
 //! delay of the person's own access, [`ehr_access`] the controller's commit
 //! and read of an EHR's `EHR_ACCESS` settings, which hold the EHDS Art. 8
-//! restriction and the Art. 10 opt-out as directives, [`access_log_erasure`] the
+//! restriction and the Art. 10 opt-out as directives, [`access_exchange`]
+//! their import and export as FHIR `Consent`, IHE BPPC and IHE APPC, [`access_log_erasure`] the
 //! erasure of an access-log entry a law orders, [`identifiers`] serves the audited
 //! read of a party's protected national identifiers, [`binding_key`] the re-key of a
 //! `PERSON`'s binding key, and [`outbox`] the feed of
@@ -29,6 +30,7 @@
 //! spec-silence flag and register citation.
 
 pub mod access_delay;
+pub mod access_exchange;
 pub mod access_log;
 pub mod access_log_erasure;
 pub mod access_policy;

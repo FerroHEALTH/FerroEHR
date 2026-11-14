@@ -457,6 +457,46 @@ restriction and Art. 10 opt-out registers below with their rows and their
 admin routes: record each restriction and opt-out that stood again as a
 directive.
 
+### Exchanging access directives
+
+The controller imports and exports an EHR's access directives in the formats
+other systems hold patient choices in, under
+`/ferroehr/rest/extensions/v1/admin/ehr-access/`:
+
+- **HL7 FHIR `Consent`, R4 and R5** (`fhir/r4/Consent`, `fhir/r5/Consent`).
+  One directive is one `Consent`: an unscoped directive is the base policy
+  (R4 `policyRule` `OPTIN` or `OPTOUT`, R5 `decision`) and its exceptions the
+  provisions; a scoped directive is one provision under the opposite base,
+  marked so its base is not read back as a directive. Each attribute with no
+  core element, such as `emergency_override`, an actor scope's
+  `caller_kind` and `relationship`, or a data scope's `archetypes`, is
+  written in an extension under `https://ferroehr.eu/fhir/StructureDefinition/`.
+  An action coded outside FerroEHR's terminology, such as HL7
+  `consentaction`, is translated to an operation class through the
+  terminology server's concept maps.
+- **IHE BPPC** (`bppc`). An acknowledgement names policies the domain
+  publishes; each must be an entry of the `ACCESS_POLICY` catalogue, matched
+  by code and code system, and is copied into the EHR with the service
+  event's effectiveTime as its time validity and the composition that holds
+  the document, named in `evidence`, as its evidence. Store the document as a
+  composition of your own consent template first.
+- **IHE APPC** (`appc`). An XACML 2.0 policy set combining by
+  deny-overrides: each policy is one directive, each reference to a
+  foundational policy a catalogue entry.
+
+An import is a new `EHR_ACCESS` version over the one `If-Match` names,
+appended to the directives in force. A document that holds what no directive
+can state is refused whole with the element named, never trimmed: a FHIR
+provision nested deeper than one exception level, `provision.data.meaning`
+other than `instance`, R5 `provision.expression`, an actor role other than a
+recipient, a policy the catalogue does not hold, a party the demographic
+service does not hold, or an XACML combining algorithm or condition the
+mapping cannot read. An export refuses the same way a directive the format
+cannot state. The routes, the extensions and the reading of a three-level
+`Consent` are FerroEHR's own design: FHIR leaves enforcement out of the
+`Consent` resource, BPPC carries no structured rule, and APPC leaves the
+resolution of references to the policy domain.
+
 ### Restriction of access by health professionals (EHDS Art. 8)
 
 Regulation (EU) 2025/327 Art. 8 gives a person the right to restrict the

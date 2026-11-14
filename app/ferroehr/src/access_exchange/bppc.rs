@@ -83,12 +83,8 @@ pub struct Exported {
     pub refused: Vec<(usize, Refused)>,
 }
 
-fn refused(element: impl Into<String>, loss: Loss) -> Refused {
-    Refused::new(Format::Bppc, element, loss)
-}
-
 fn malformed(element: impl Into<String>, why: &str) -> Refused {
-    refused(element, Loss::Malformed(why.to_owned()))
+    Refused::new(Format::Bppc, element, Loss::Malformed(why.to_owned()))
 }
 
 /// Reads `text`, a BPPC document, as the catalogue entries it acknowledges.
@@ -97,17 +93,27 @@ fn malformed(element: impl Into<String>, why: &str) -> Refused {
 /// [`Refused`] for a document that is no BPPC acknowledgement, a service
 /// event that breaks TF-3 5.1.2.2, or a policy the catalogue does not hold.
 pub fn import(text: &str, context: &ImportContext<'_>) -> Result<Vec<AccessDirective>, Refused> {
-    let root = parse(text)
-        .map_err(|error| refused("ClinicalDocument", Loss::Malformed(error.to_string())))?;
+    let root = parse(text).map_err(|error| {
+        Refused::new(
+            Format::Bppc,
+            "ClinicalDocument",
+            Loss::Malformed(error.to_string()),
+        )
+    })?;
     if root.name != "ClinicalDocument" {
-        return Err(refused(root.name.clone(), Loss::NoDirectiveForm));
+        return Err(Refused::new(
+            Format::Bppc,
+            root.name.clone(),
+            Loss::NoDirectiveForm,
+        ));
     }
     let templates: Vec<&str> = root
         .all("templateId")
         .filter_map(|t| t.get("root"))
         .collect();
     if !templates.contains(&DOCUMENT_TEMPLATE) && !templates.contains(&SCANNED_TEMPLATE) {
-        return Err(refused(
+        return Err(Refused::new(
+            Format::Bppc,
             "ClinicalDocument/templateId",
             Loss::Code(templates.join(", ")),
         ));
@@ -165,7 +171,8 @@ pub fn import(text: &str, context: &ImportContext<'_>) -> Result<Vec<AccessDirec
         }
         range = Some((low, high));
         let entry = catalogue_entry(context.catalogue, Some(system), policy).ok_or_else(|| {
-            refused(
+            Refused::new(
+                Format::Bppc,
                 format!("{SERVICE_EVENT}/code"),
                 Loss::NotInCatalogue(format!("{system}|{policy}")),
             )
@@ -355,7 +362,13 @@ const TS_LENGTHS: [usize; 6] = [4, 6, 8, 10, 12, 14];
 
 /// An HL7 v3 `TS` (`YYYY[MM[DD[HH[MM[SS[.S+]]]]]][+|-ZZZZ]`) as ISO 8601.
 fn iso(ts: &str, element: &str) -> Result<String, Refused> {
-    let malformed = || refused(element, Loss::Malformed(format!("{ts} is no HL7 TS")));
+    let malformed = || {
+        Refused::new(
+            Format::Bppc,
+            element,
+            Loss::Malformed(format!("{ts} is no HL7 TS")),
+        )
+    };
     let (body, zone) = match ts.find(['+', '-']) {
         Some(at) => (ts.get(..at).unwrap_or_default(), ts.get(at..)),
         None => (ts, None),

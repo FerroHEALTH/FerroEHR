@@ -128,7 +128,13 @@ pub(super) struct Scope {
 impl Scope {
     /// Sets the scope on `target`, refusing an attribute both state.
     pub(super) fn apply(self, target: &mut AccessDirective, element: &str) -> Result<(), Refused> {
-        let conflict = |what: &str| refused(format!("{element}/{what}"), Loss::NoDirectiveForm);
+        let conflict = |what: &str| {
+            Refused::new(
+                Format::Appc,
+                format!("{element}/{what}"),
+                Loss::NoDirectiveForm,
+            )
+        };
         if !self.actors.is_empty() {
             if target.applies_to.is_some() {
                 return Err(conflict("Subjects"));
@@ -157,10 +163,6 @@ impl Scope {
     }
 }
 
-fn refused(element: impl Into<String>, loss: Loss) -> Refused {
-    Refused::new(Format::Appc, element, loss)
-}
-
 /// One match of a target: its attribute id and value.
 struct Match<'a> {
     attribute: &'a str,
@@ -174,7 +176,8 @@ fn matches<'a>(group: &'a Node, kind: &str, element: &str) -> Result<Vec<Match<'
     let mut out = Vec::new();
     for child in &group.children {
         if child.name != match_name {
-            return Err(refused(
+            return Err(Refused::new(
+                Format::Appc,
                 format!("{element}/{}", child.name),
                 Loss::NoDirectiveForm,
             ));
@@ -183,7 +186,8 @@ fn matches<'a>(group: &'a Node, kind: &str, element: &str) -> Result<Vec<Match<'
             child.first("AttributeValue"),
             child.first(&designator).and_then(|d| d.get("AttributeId")),
         ) else {
-            return Err(refused(
+            return Err(Refused::new(
+                Format::Appc,
                 format!("{element}/{match_name}"),
                 Loss::Malformed(format!("a match names its value and its {designator}")),
             ));
@@ -206,7 +210,8 @@ fn cv(value: &Node, element: &str) -> Result<DvCodedText, Refused> {
             code,
             node.and_then(|n| n.get("displayName")).unwrap_or(code),
         )),
-        _ => Err(refused(
+        _ => Err(Refused::new(
+            Format::Appc,
             element,
             Loss::Malformed("a CV has a CodedValue with code and codeSystem".to_owned()),
         )),
@@ -263,7 +268,7 @@ pub(super) fn read(target: Option<&Node>, element: &str) -> Result<Scope, Refuse
                 }
                 ROLE => actor.role = Some(cv(value, &at)?),
                 PURPOSE if subjects.len() == 1 => scope.purposes.push(cv(value, &at)?),
-                other => return Err(refused(at, Loss::Code(other.to_owned()))),
+                other => return Err(Refused::new(Format::Appc, at, Loss::Code(other.to_owned()))),
             }
         }
         if actor.party.is_some() || actor.role.is_some() {
@@ -285,7 +290,9 @@ pub(super) fn read(target: Option<&Node>, element: &str) -> Result<Scope, Refuse
                     SOURCE_SYSTEM_ID | AUTHOR_INSTITUTION_ID => {
                         push(&mut data.origins, value.text.trim().to_owned());
                     }
-                    other => return Err(refused(at, Loss::Code(other.to_owned()))),
+                    other => {
+                        return Err(Refused::new(Format::Appc, at, Loss::Code(other.to_owned())));
+                    }
                 }
             }
             if named {
@@ -299,14 +306,18 @@ pub(super) fn read(target: Option<&Node>, element: &str) -> Result<Scope, Refuse
             for Match { attribute, value } in matches(action, "Action", &at)? {
                 let at = format!("{at}/ActionMatch");
                 if attribute != ACTION_ID {
-                    return Err(refused(at, Loss::Code(attribute.to_owned())));
+                    return Err(Refused::new(
+                        Format::Appc,
+                        at,
+                        Loss::Code(attribute.to_owned()),
+                    ));
                 }
                 let uri = value.text.trim();
                 let class = ACTIONS
                     .iter()
                     .find(|(known, _)| *known == uri)
                     .map(|(_, class)| *class)
-                    .ok_or_else(|| refused(at, Loss::Code(uri.to_owned())))?;
+                    .ok_or_else(|| Refused::new(Format::Appc, at, Loss::Code(uri.to_owned())))?;
                 scope.operations.push(term(class));
             }
         }
@@ -342,7 +353,7 @@ pub(super) fn validity(
     let Some(condition) = condition else {
         return Ok(None);
     };
-    let other = || refused(element, Loss::NoDirectiveForm);
+    let other = || Refused::new(Format::Appc, element, Loss::NoDirectiveForm);
     let apply = condition.first("Apply").ok_or_else(other)?;
     let comparisons: Vec<&Node> = if apply.get("FunctionId") == Some(&format!("{FUNCTION}and")) {
         apply.all("Apply").collect()

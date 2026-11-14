@@ -574,6 +574,23 @@ which is what makes an optional stage safe to disable:
 5. **SMART scopes** — off by default, AND-composed onto the ABAC decision, so it
    can only narrow. Disabled SMART produces zero wire drift.
 
+   **The exchange of access directives** (`access_exchange`, #5517) maps
+   directives to and from HL7 FHIR `Consent` R4 and R5
+   (`docs/specs/fhir-consent/`), IHE BPPC acknowledgements and IHE APPC
+   XACML policy sets (`docs/specs/ihe-consents/`, `docs/specs/xacml/`), behind
+   the admin routes `admin/ehr-access/{fhir/{release}/Consent,bppc,appc}`.
+   A round trip keeps every attribute the evaluator reads; whatever one side
+   cannot state is refused with the element named. Our own design: one
+   directive per `Consent`, a scoped directive written under the opposite
+   base with the `base-undecided` extension, the FerroEHR extensions, the
+   actor roles read as recipients (v3 `PRCP`, `IRCP`), the v3
+   `Confidentiality` levels a label covers, the fixed table from APPC action
+   URIs to operation classes, and the canonical JSON of the attributes no
+   format element holds in a FHIR extension or an XACML rule `Description`.
+   BPPC and APPC references resolve against the `ACCESS_POLICY` catalogue;
+   a foreign FHIR action code goes through the terminology server's
+   `$translate`.
+
 **Deny-by-default and fail-closed, in both senses.** No stage permits by
 omission: a gate reached without a principal refuses; Cedar is
 deny-by-default with `forbid` overriding `permit`. And a stage that cannot

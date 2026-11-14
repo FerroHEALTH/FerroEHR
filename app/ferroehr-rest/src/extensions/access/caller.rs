@@ -87,10 +87,7 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
         emergency: emergency(state, principal, kind, purpose.as_deref()),
         purpose,
     };
-    let default = match server_default {
-        EhrAccessDefault::Open => AccessDefault::Open,
-        EhrAccessDefault::Restricted => AccessDefault::Restricted,
-    };
+    let default = access_default(server_default);
     Some(Arc::new(RequestAccess::new(
         caller,
         asking,
@@ -169,5 +166,14 @@ fn emergency(
         declared,
         break_glass,
         opt_out_override,
+    }
+}
+
+/// The evaluator's disposition of an EHR with no settings, from `[authz.rbac]
+/// ehr_access_default`.
+pub(crate) const fn access_default(default: EhrAccessDefault) -> AccessDefault {
+    match default {
+        EhrAccessDefault::Open => AccessDefault::Open,
+        EhrAccessDefault::Restricted => AccessDefault::Restricted,
     }
 }

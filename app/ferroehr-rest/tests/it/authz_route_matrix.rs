@@ -410,6 +410,11 @@ const ADMIN_READ: &[(&str, &str)] = &[
     // The versions of an EHR's EHR_ACCESS settings, which hold the EHDS
     // Art. 8 restriction and Art. 10 opt-out directives (#5510).
     ("GET", "/admin/ehr-access"),
+    // The export of an EHR's access directives as FHIR Consent, IHE BPPC and
+    // IHE APPC (#5517).
+    ("GET", "/admin/ehr-access/fhir/{release}/Consent"),
+    ("GET", "/admin/ehr-access/bppc"),
+    ("GET", "/admin/ehr-access/appc"),
     // The EHDS Art. 3(3) access-delay register (#4351).
     ("GET", "/admin/access-delay"),
     // The audited read of a party's protected national identifiers (#3776). It
@@ -462,6 +467,11 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // instruction, the EHDS Art. 8 restriction and Art. 10 opt-out among them
     // (#5510).
     ("POST", "/admin/ehr-access"),
+    // The import of access directives from FHIR Consent, IHE BPPC and IHE
+    // APPC, each a new EHR_ACCESS version (#5517).
+    ("POST", "/admin/ehr-access/fhir/{release}/Consent"),
+    ("POST", "/admin/ehr-access/bppc"),
+    ("POST", "/admin/ehr-access/appc"),
     // The EHDS Art. 3(3) delay of the person's access, held and released by a
     // health professional (#4351).
     ("POST", "/admin/access-delay"),

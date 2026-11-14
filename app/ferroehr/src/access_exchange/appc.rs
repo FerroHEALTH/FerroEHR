@@ -84,12 +84,8 @@ pub struct ExportContext<'a> {
     pub description: &'a str,
 }
 
-fn refused(element: impl Into<String>, loss: Loss) -> Refused {
-    Refused::new(Format::Appc, element, loss)
-}
-
 fn malformed(element: &str, why: &str) -> Refused {
-    refused(element, Loss::Malformed(why.to_owned()))
+    Refused::new(Format::Appc, element, Loss::Malformed(why.to_owned()))
 }
 
 /// Reads `text`, a Privacy Consent Document, as directives.
@@ -98,10 +94,19 @@ fn malformed(element: &str, why: &str) -> Refused {
 /// [`Refused`] naming the first element with no directive form (module
 /// docs).
 pub fn import(text: &str, context: &ImportContext<'_>) -> Result<Vec<AccessDirective>, Refused> {
-    let root =
-        parse(text).map_err(|error| refused("PolicySet", Loss::Malformed(error.to_string())))?;
+    let root = parse(text).map_err(|error| {
+        Refused::new(
+            Format::Appc,
+            "PolicySet",
+            Loss::Malformed(error.to_string()),
+        )
+    })?;
     if root.name != "PolicySet" {
-        return Err(refused(root.name.clone(), Loss::NoDirectiveForm));
+        return Err(Refused::new(
+            Format::Appc,
+            root.name.clone(),
+            Loss::NoDirectiveForm,
+        ));
     }
     if !root
         .get("PolicySetId")
@@ -120,7 +125,8 @@ pub fn import(text: &str, context: &ImportContext<'_>) -> Result<Vec<AccessDirec
     }
     let algorithm = root.get("PolicyCombiningAlgId").unwrap_or_default();
     if !POLICY_DENY_FAMILY.contains(&algorithm) {
-        return Err(refused(
+        return Err(Refused::new(
+            Format::Appc,
             "PolicySet/@PolicyCombiningAlgId",
             Loss::Code(algorithm.to_owned()),
         ));
@@ -141,14 +147,21 @@ pub fn import(text: &str, context: &ImportContext<'_>) -> Result<Vec<AccessDirec
                 catalogue_entry(context.catalogue, None, id)
                     .cloned()
                     .ok_or_else(|| {
-                        refused(
+                        Refused::new(
+                            Format::Appc,
                             format!("PolicySet/{}", child.name),
                             Loss::NotInCatalogue(id.to_owned()),
                         )
                     })?
             }
             "Policy" => policy(child)?,
-            other => return Err(refused(format!("PolicySet/{other}"), Loss::NoDirectiveForm)),
+            other => {
+                return Err(Refused::new(
+                    Format::Appc,
+                    format!("PolicySet/{other}"),
+                    Loss::NoDirectiveForm,
+                ));
+            }
         };
         scope.clone().apply(&mut found, "PolicySet/Target")?;
         out.push(found);
@@ -163,7 +176,8 @@ fn policy(node: &Node) -> Result<AccessDirective, Refused> {
         .iter()
         .find(|c| !matches!(c.name.as_str(), "Description" | "Target" | "Rule"))
     {
-        return Err(refused(
+        return Err(Refused::new(
+            Format::Appc,
             format!("Policy/{}", other.name),
             Loss::NoDirectiveForm,
         ));
@@ -194,7 +208,8 @@ fn policy(node: &Node) -> Result<AccessDirective, Refused> {
             _ => false,
         };
         if !decides {
-            return Err(refused(
+            return Err(Refused::new(
+                Format::Appc,
                 "Policy/@RuleCombiningAlgId",
                 Loss::Code(algorithm.to_owned()),
             ));
@@ -218,7 +233,11 @@ fn policy(node: &Node) -> Result<AccessDirective, Refused> {
             continue;
         }
         if rule_effect(rule)? != opposite(effect) {
-            return Err(refused("Policy/Rule/@Effect", Loss::NotException));
+            return Err(Refused::new(
+                Format::Appc,
+                "Policy/Rule/@Effect",
+                Loss::NotException,
+            ));
         }
         let own = residual(rule);
         let x_kind = own
@@ -243,7 +262,8 @@ fn rule_effect(rule: &Node) -> Result<Effect, Refused> {
     match rule.get("Effect") {
         Some("Permit") => Ok(Effect::Permit),
         Some("Deny") => Ok(Effect::Deny),
-        other => Err(refused(
+        other => Err(Refused::new(
+            Format::Appc,
             "Policy/Rule/@Effect",
             Loss::Code(other.unwrap_or_default().to_owned()),
         )),
