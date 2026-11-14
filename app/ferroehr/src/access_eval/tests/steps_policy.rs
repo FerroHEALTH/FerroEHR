@@ -319,6 +319,16 @@ fn step_7_default_disposition() {
             Outcome::Admit,
         ),
         (
+            "open settings over a restricted server",
+            Case {
+                server_default: Some(AccessDefault::Restricted),
+                ..Case::of(settings("open", &[], &[], &[]))
+            },
+            false,
+            professional(NURSE),
+            Outcome::Admit,
+        ),
+        (
             "no settings, restricted server",
             Case {
                 server_default: Some(AccessDefault::Restricted),

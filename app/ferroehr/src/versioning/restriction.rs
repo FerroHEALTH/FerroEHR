@@ -57,10 +57,10 @@ pub(crate) async fn ensure_not_restricted_tx(
 /// though the target did not exist under an EHDS Art. 8 restriction or an
 /// Art. 10 opt-out, whose fact is "not visible to healthcare providers"
 /// (`docs/law/eu/ehds/text.html`), and with its `refused-*` code under every
-/// other step. The EHR the request did not judge yet is judged from the rows
-/// the commit's transaction reads; an object of a verdict that depends on the
-/// object is judged by its head row. No openEHR spec governs this: our own
-/// design (#5513).
+/// other step of an EHR the request names. An EHR the request did not judge
+/// yet is judged from the rows the commit's transaction reads; an object of a
+/// verdict that depends on the object is judged by its head row. No openEHR
+/// spec governs this: our own design (#5513).
 ///
 /// # Errors
 /// [`ServiceError::NotFound`] (`ehr_id_does_not_exist` or
@@ -77,7 +77,9 @@ async fn ensure_not_access_restricted_tx(
     let (Some(access), Some(ehr_id)) = (crate::access_eval::condition::current(), ehr_id) else {
         return Ok(());
     };
-    let verdict = if let Some(verdict) = access.verdict(ehr_id) {
+    let judged = access.verdict(ehr_id);
+    let named = judged.is_some();
+    let verdict = if let Some(verdict) = judged {
         verdict
     } else {
         let body =
@@ -123,6 +125,9 @@ async fn ensure_not_access_restricted_tx(
             Missing::Ehr,
             format!("EHR {ehr_id}"),
         )),
+        // NOTE: our own design (#5513), a write to an EHR the request does not name, such
+        // as the one it creates or imports, is held to steps 1 and 2 only, as before.
+        (Outcome::Refused(_), _) if !named => Ok(()),
         (Outcome::Refused(code), _) => Err(ServiceError::not_permitted(format!(
             "{code}: the access directives of EHR {ehr_id} refuse this write"
         ))),
