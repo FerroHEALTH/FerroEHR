@@ -54,7 +54,7 @@ fn the_subject_is_refused_on_an_ehr_not_their_own() {
                 assert_outcome(
                     &verdict,
                     &item,
-                    Outcome::Refused(Refusal::ConsentRequired),
+                    Outcome::Refused(Refusal::NotSubject),
                     &format!("a subject on another EHR ({default})"),
                 );
             }

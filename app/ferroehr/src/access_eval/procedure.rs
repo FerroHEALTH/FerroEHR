@@ -35,8 +35,8 @@
 //!    takes the server's default.
 //!
 //! The subject reading their own record skips every step (EHDS Art. 3), and
-//! every other EHR refuses them (`refused-consent-required`): a subject
-//! caller is the subject of the one EHR its patient context names. A
+//! every other EHR refuses them before step 1 (`refused-not-subject`): a
+//! subject caller is the subject of the one EHR its patient context names. A
 //! representative is held to steps 1 to 3 and skips 4 to 7. A declared
 //! emergency by the break-glass role lifts steps 4 to 7.
 //!
@@ -350,7 +350,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         } else {
             // NOTE: our own design (#5586), SMART master08 §Resource Scopes confines a patient
             // context to "data within that patient's EHR", so every other EHR refuses it.
-            verdict.otherwise = Outcome::Refused(Refusal::ConsentRequired);
+            verdict.otherwise = Outcome::Refused(Refusal::NotSubject);
         }
         return verdict;
     }

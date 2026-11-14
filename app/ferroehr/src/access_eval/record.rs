@@ -45,6 +45,9 @@ const ACCESS_POLICY: &str = "ACCESS_POLICY";
 /// ([`crate::access_eval::procedure`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Step {
+    /// 0, a subject caller on an EHR other than its own, before the
+    /// numbered steps.
+    Subject,
     /// 1, an opt-out (EHDS Art. 10).
     OptOut,
     /// 2, a restriction (EHDS Art. 8).
@@ -73,6 +76,7 @@ impl Step {
             Refusal::NoCareRelationship => Self::CareRelationship,
             Refusal::PurposeMissing | Refusal::PurposeNotPermitted => Self::Purpose,
             Refusal::ConsentRequired => Self::DefaultDisposition,
+            Refusal::NotSubject => Self::Subject,
         }
     }
 
@@ -80,6 +84,7 @@ impl Step {
     #[must_use]
     pub const fn number(self) -> u8 {
         match self {
+            Self::Subject => 0,
             Self::OptOut => 1,
             Self::Restriction => 2,
             Self::ConsentDeny => 3,
@@ -94,6 +99,7 @@ impl Step {
     #[must_use]
     pub const fn rubric(self) -> &'static str {
         match self {
+            Self::Subject => "subject",
             Self::OptOut => "opt-out",
             Self::Restriction => "restriction",
             Self::ConsentDeny => "consent deny",
@@ -295,6 +301,7 @@ impl RequestAccess {
             match step {
                 Step::Sensitivity => format!("{} and the labels of {}", policy(), carrier()),
                 Step::CareRelationship | Step::Purpose => policy(),
+                Step::Subject => "the EHR of the caller's patient context".to_owned(),
                 Step::DefaultDisposition if settings_of(judged).is_some() => {
                     format!("the default_access of {}", carrier())
                 }
@@ -484,6 +491,7 @@ mod tests {
                 "refused-no-care-relationship" => 5,
                 "refused-purpose-missing" | "refused-purpose-not-permitted" => 6,
                 "refused-consent-required" => 7,
+                "refused-not-subject" => 0,
                 other => panic!("an unknown refusal code {other}"),
             };
             assert_eq!(number, expected, "{code}");

@@ -293,12 +293,39 @@ fn request(method: &str, path: &str, token: &str, body: &Value) -> Request<Body>
         .expect("request")
 }
 
-async fn status(app: &Router, req: Request<Body>) -> StatusCode {
-    common::send_status(app, req).await
+/// What one request answers: its status, and the `access refusal` code its
+/// problem body names (`null` where it names none).
+#[derive(Debug, PartialEq)]
+struct Answer {
+    status: StatusCode,
+    refusal: Value,
+}
+
+/// The answer to a subject caller on an EHR other than its own: `403` with
+/// `refused-not-subject` (#5605).
+fn not_subject() -> Answer {
+    Answer {
+        status: StatusCode::FORBIDDEN,
+        refusal: json!("refused-not-subject"),
+    }
+}
+
+/// The answer to `req`, asked with `Prefer: return=representation` so a
+/// refusal's problem body names its code.
+async fn status(app: &Router, mut req: Request<Body>) -> Answer {
+    req.headers_mut().insert(
+        "prefer",
+        http::HeaderValue::from_static("return=representation"),
+    );
+    let (status, _, body) = common::send(app, req).await;
+    // NOTE: our own test design, a body that is no problem document names no refusal.
+    let refusal =
+        serde_json::from_str::<Value>(&body).map_or(Value::Null, |p| p["refusal"].clone());
+    Answer { status, refusal }
 }
 
 /// Drive one request as the person in the launch context of `launch`.
-async fn probe(app: &Router, method: &str, path: &str, launch: Option<&str>) -> StatusCode {
+async fn probe(app: &Router, method: &str, path: &str, launch: Option<&str>) -> Answer {
     status(
         app,
         request(method, path, &patient(launch), &own_composition()),
@@ -351,7 +378,7 @@ async fn create_for_other_patient_is_pre_check_forbidden() {
     .await;
     assert_eq!(
         s,
-        StatusCode::FORBIDDEN,
+        not_subject(),
         "the evaluator must deny a create for another patient's EHR"
     );
 }
@@ -370,11 +397,11 @@ async fn create_for_own_patient_clears_the_gate() {
     )
     .await;
     assert_ne!(
-        s,
+        s.status,
         StatusCode::FORBIDDEN,
         "own-patient create must clear the gate"
     );
-    assert_eq!(s, StatusCode::CREATED);
+    assert_eq!(s.status, StatusCode::CREATED);
 }
 
 #[tokio::test]
@@ -393,7 +420,7 @@ async fn read_of_other_patient_is_post_check_forbidden() {
     .await;
     assert_eq!(
         s,
-        StatusCode::FORBIDDEN,
+        not_subject(),
         "the evaluator must deny a read of another patient's composition"
     );
 }
@@ -412,7 +439,7 @@ async fn read_of_own_patient_is_served() {
         Some(EHR_OWN),
     )
     .await;
-    assert_eq!(s, StatusCode::OK, "own-patient read is served");
+    assert_eq!(s.status, StatusCode::OK, "own-patient read is served");
 }
 
 /// A patient context that names no EHR reaches none.
@@ -423,7 +450,7 @@ async fn a_patient_context_naming_no_ehr_is_forbidden() {
     let s = probe(&app, "POST", &format!("/ehr/{EHR_OWN}/composition"), None).await;
     assert_eq!(
         s,
-        StatusCode::FORBIDDEN,
+        not_subject(),
         "a patient context naming no EHR is denied"
     );
 }
@@ -446,8 +473,8 @@ async fn a_professional_is_held_to_no_patient_context() {
         ),
     )
     .await;
-    assert_ne!(s, StatusCode::FORBIDDEN);
-    assert_eq!(s, StatusCode::CREATED);
+    assert_ne!(s.status, StatusCode::FORBIDDEN);
+    assert_eq!(s.status, StatusCode::CREATED);
 }
 
 #[tokio::test]
@@ -466,7 +493,7 @@ async fn a_patient_deny_is_audited() {
         Some(EHR_OWN),
     )
     .await;
-    assert_eq!(s, StatusCode::FORBIDDEN);
+    assert_eq!(s, not_subject());
 
     let xml = record_matching(&mut socket, |xml| {
         xml.contains(r#"UserID="svc""#) && xml.contains(r#"EventOutcomeIndicator="4""#)
@@ -540,7 +567,7 @@ async fn the_direct_route_gate_refuses_ambiguous_and_subject_less_ehrs() {
                 Some(EHR_UNIQUE)
             )
             .await,
-            StatusCode::FORBIDDEN,
+            not_subject(),
             "{ehr}: another patient's EHR"
         );
     }
@@ -552,7 +579,7 @@ async fn the_direct_route_gate_refuses_ambiguous_and_subject_less_ehrs() {
             Some(EHR_UNIQUE)
         )
         .await,
-        StatusCode::FORBIDDEN,
+        not_subject(),
         "a subject-less EHR is in no patient's context"
     );
     assert_eq!(
@@ -562,7 +589,8 @@ async fn the_direct_route_gate_refuses_ambiguous_and_subject_less_ehrs() {
             &format!("/ehr/{EHR_UNIQUE}/composition"),
             Some(EHR_UNIQUE)
         )
-        .await,
+        .await
+        .status,
         StatusCode::CREATED,
         "the EHR of the launch context is the caller's"
     );
@@ -598,12 +626,12 @@ async fn a_directory_of_another_patient_is_refused() {
             .expect("request")
     };
     assert_eq!(
-        status(&app, directory(EHR_OTHER, EHR_OWN)).await,
+        status(&app, directory(EHR_OTHER, EHR_OWN)).await.status,
         StatusCode::FORBIDDEN,
         "a directory create in another patient's EHR is refused"
     );
     assert_eq!(
-        status(&app, directory(EHR_OWN, EHR_OWN)).await,
+        status(&app, directory(EHR_OWN, EHR_OWN)).await.status,
         StatusCode::CREATED,
         "a directory create in the caller's own EHR is served"
     );
@@ -626,7 +654,8 @@ async fn a_shared_subject_id_reaches_only_the_launch_ehr() {
             &format!("/ehr/{EHR_SHARED_A}/composition"),
             Some(EHR_SHARED_A)
         )
-        .await,
+        .await
+        .status,
         StatusCode::CREATED,
         "the EHR of the launch context is the caller's"
     );
@@ -638,7 +667,7 @@ async fn a_shared_subject_id_reaches_only_the_launch_ehr() {
             Some(EHR_SHARED_A)
         )
         .await,
-        StatusCode::FORBIDDEN,
+        not_subject(),
         "the same id under another namespace is another subject"
     );
     let served = query_first_column(
@@ -655,7 +684,7 @@ async fn a_shared_subject_id_reaches_only_the_launch_ehr() {
 
 /// One request as the person in the launch context of `launch`, with a
 /// one-tag list as its body (the body a tag write takes; a read ignores it).
-async fn tag_probe(app: &Router, method: &str, path: &str, launch: &str) -> StatusCode {
+async fn tag_probe(app: &Router, method: &str, path: &str, launch: &str) -> Answer {
     let req = Request::builder()
         .method(method)
         .uri(common::full(path))
@@ -741,12 +770,14 @@ async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
     ];
     for (label, (target_method, target), (tag_method, tag)) in pairs {
         assert_eq!(
-            tag_probe(&app, target_method, &target, EHR_OWN).await,
+            tag_probe(&app, target_method, &target, EHR_OWN)
+                .await
+                .status,
             StatusCode::FORBIDDEN,
             "the target of the {label} is refused for another patient's EHR"
         );
         assert_eq!(
-            tag_probe(&app, tag_method, &tag, EHR_OWN).await,
+            tag_probe(&app, tag_method, &tag, EHR_OWN).await.status,
             StatusCode::FORBIDDEN,
             "the {label} is refused as its target is"
         );
@@ -778,7 +809,7 @@ async fn an_item_tag_of_the_callers_patient_is_served() {
         ),
     ];
     for (method, path) in served {
-        let s = tag_probe(&app, method, &path, EHR_OWN).await;
+        let s = tag_probe(&app, method, &path, EHR_OWN).await.status;
         assert!(
             s.is_success(),
             "a {method} of an own tag is served, got {s}"
@@ -833,12 +864,15 @@ async fn an_export_of_another_patients_ehr_is_forbidden() {
             &format!("/message/export/{EHR_OTHER}"),
             Some(EHR_OWN)
         )
-        .await,
+        .await
+        .status,
         StatusCode::FORBIDDEN,
         "the path export of another patient's EHR is refused"
     );
     assert_eq!(
-        status(&app, manifest_export(&[EHR_OWN, EHR_OTHER], EHR_OWN)).await,
+        status(&app, manifest_export(&[EHR_OWN, EHR_OTHER], EHR_OWN))
+            .await
+            .status,
         StatusCode::FORBIDDEN,
         "a manifest naming another patient's EHR is refused whole"
     );
@@ -862,7 +896,8 @@ async fn an_export_of_the_own_patients_ehr_is_served() {
             &format!("/message/export/{EHR_OWN}"),
             Some(EHR_OWN)
         )
-        .await,
+        .await
+        .status,
         StatusCode::OK,
         "the path export of the own EHR is served"
     );
@@ -902,7 +937,8 @@ async fn an_import_outside_the_patient_context_is_forbidden() {
                 Some(EHR_OWN)
             )
         )
-        .await,
+        .await
+        .status,
         StatusCode::FORBIDDEN,
         "an import into another patient's EHR is refused"
     );
@@ -911,7 +947,9 @@ async fn an_import_outside_the_patient_context_is_forbidden() {
         format!("/message/import/{EHR_OWN}"),
     ] {
         assert_eq!(
-            status(&app, import(&path, "ehr_extract.v1.json", None)).await,
+            status(&app, import(&path, "ehr_extract.v1.json", None))
+                .await
+                .status,
             StatusCode::FORBIDDEN,
             "{path} needs a patient context naming the EHR"
         );

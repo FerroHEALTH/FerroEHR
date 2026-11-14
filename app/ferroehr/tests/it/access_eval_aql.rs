@@ -13,7 +13,7 @@
 use std::sync::Arc;
 
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
-use ferroehr::access_eval::procedure::{Caller, Emergency};
+use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::party_binding::BindingMapping;
@@ -25,7 +25,7 @@ use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr::versioning::committer::CommitterIdentity;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, CallerKind, ForeignCode, OperationClass,
+    AccessDefault, CallerKind, ForeignCode, OperationClass, Refusal,
 };
 use serde_json::{Value, json};
 
@@ -946,10 +946,10 @@ async fn a_patient_is_refused_every_ehr_but_their_own() {
     .await
     .expect("the EHRs are judged");
     let item = ferroehr::access_eval::scope::Item::Ehr;
+    let refused = Outcome::Refused(Refusal::NotSubject);
     for ehr in &ehrs {
-        let admitted =
-            access.outcome(*ehr, &item) == ferroehr::access_eval::procedure::Outcome::Admit;
-        assert_eq!(admitted, *ehr == own, "{ehr:?}");
+        let expected = if *ehr == own { Outcome::Admit } else { refused };
+        assert_eq!(access.outcome(*ehr, &item), expected, "{ehr:?}");
     }
     let nobody = request_of(&Ask::subject(&world, None));
     Box::pin(with_request_access(
@@ -959,9 +959,9 @@ async fn a_patient_is_refused_every_ehr_but_their_own() {
     .await
     .expect("the EHRs are judged");
     for ehr in &ehrs {
-        assert_ne!(
+        assert_eq!(
             nobody.outcome(*ehr, &item),
-            ferroehr::access_eval::procedure::Outcome::Admit,
+            refused,
             "a patient context naming no EHR reaches none"
         );
     }
