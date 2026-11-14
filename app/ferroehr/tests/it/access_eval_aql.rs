@@ -594,7 +594,7 @@ async fn a_query_served_ehr_names_the_grounds_of_a_direct_read() {
     world
         .settings(0, &settings("consent_required", &[permit], &[]))
         .await;
-    let (ask, ehr_id) = (Ask::professional(), world.ehrs[0].0);
+    let (ask, ehr_id) = (Ask::professional(&world), world.ehrs[0].0);
 
     let queried = request_of(&ask);
     let outcome = run_query(&world, &ask, &queried, COMPOSITIONS, None).await;
