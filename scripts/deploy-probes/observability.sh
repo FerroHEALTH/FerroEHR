@@ -130,9 +130,15 @@ obs_diag_stop() {
   dim "    obs-diag otel-lgtm log:"
   dc -f docker-compose.yml -f docker-compose.observability.yml logs --no-color --timestamps otel-lgtm 2>&1 \
     | grep -i -E 'up and running|startup time|error|warn|drop|refus|fail' | tail -80 | sed 's/^/      /'
-  dim "    obs-diag ferroehr log (export lines):"
+  dim "    obs-diag traces in the store:"
+  local tuid
+  tuid="$(obs_datasource_uid tempo)"
+  curl -s -u "$GRAFANA_AUTH" --get --data-urlencode 'q={ resource.service.name="ferroehr" }' \
+    --data-urlencode 'limit=100' "$GRAFANA/api/datasources/proxy/uid/$tuid/api/search" \
+    | jq -r '.traces[] | "\(.startTimeUnixNano | tonumber / 1e9 | todate) \(.rootTraceName)"' 2>&1 | sort | sed 's/^/      /'
+  dim "    obs-diag ferroehr log (request lines):"
   dc -f docker-compose.yml -f docker-compose.observability.yml logs --no-color --timestamps ferroehr 2>&1 \
-    | grep -i -E 'opentelemetry|otlp|export|span' | tail -40 | sed 's/^/      /'
+    | grep -v -i -E 'password|token|secret' | cut -c1-400 | tail -80 | sed 's/^/      /'
 }
 
 probes_observability() {
