@@ -411,7 +411,7 @@ impl RequestAccess {
     /// The condition a query applies, over every EHR whose settings are in
     /// `index` and the default for every other, the caller caring for the
     /// subjects `cared`; the access record of each EHR the query serves names
-    /// its grounds from `index` ([`Self::reached_judgement`]).
+    /// its grounds from `index`.
     #[must_use]
     pub fn condition(&self, index: &EhrAccessIndex, cared: Vec<String>) -> AccessCondition {
         *self.reached.lock().unwrap_or_else(PoisonError::into_inner) = Some(Arc::clone(index));
