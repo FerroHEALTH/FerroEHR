@@ -102,7 +102,18 @@ FerroEHR's proposal to openEHR, which no openEHR release defines yet. Reads,
 writes, AQL queries, exports, refusals and reads of the access log itself each
 write one. An access that reaches several EHRs writes one entry per EHR, and
 the entries of one request share its request id, so a population query writes
-one entry for each EHR that contributed a row.
+one entry for each EHR that contributed a row, a statement that projects
+only the EHR (`SELECT e/ehr_id/value FROM EHR e`) included.
+
+The administrative routes that touch an EHR write entries the same way, one
+per EHR they touched: the physical EHR delete, one EHR or in bulk; the
+restriction, research-objection, access-delay and access-repair registers and
+the `EHR_ACCESS` settings commit that carries a restriction or an opt-out;
+archiving an EHR and restoring it; its retention anchor and the retention hold
+on one of its objects; the repository dump and load; and the EHR Extract
+export and import. The import of another system's access log (`ferroehr
+access-log import`) writes its `import` entry through the same path. SCIM
+provisioning touches party data only and writes none.
 
 The entry names who accessed (the bound party, the groups, the provider, the
 binding outcome and the credential by its issuer, subject, client and token
@@ -293,7 +304,9 @@ operation but potentially many disclosures, so it produces its own execute
 record **plus one access record per EHR it served**, each carrying that EHR's
 served-row count. The served set is read off the rows the caller actually
 received rather than the rows the statement matched: a legal record of access
-must not name an EHR whose content was never disclosed. Two query shapes carry
+must not name an EHR whose content was never disclosed. Each row names the EHR
+of every `EHR` source and every versioned object it was drawn from, so a
+statement that reads only the EHR is attributed too. Two query shapes carry
 no per-EHR breakdown, because the shape makes it underivable —
 `SELECT DISTINCT`, where an extra column changes which rows are distinct, and
 an aggregate projection, where a per-row EHR is not valid SQL. Those record the
@@ -1021,7 +1034,8 @@ is our own design.
   verifies the export against its checkpoint and the certificates in
   `[audit.access_log] trusted_key_files`, keeps the records with their
   `system_id`, links and `retain_until` apart from its own chain, and records
-  the import as an `import` entry of its own log. An import repeated stores
+  the import as an `import` entry of its own log, built like every other
+  entry and naming the system as its accessor. An import repeated stores
   nothing twice. An access to EHR data is stored as its entry alone, so a
   span holds an `audit_event` record only where an access outside the
   access log (an authentication, a template or party operation, an

@@ -31,6 +31,7 @@ use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::storage::{erasure, identifier_repo, template_repo, version_repo};
+use crate::system_log::event::EventActionCode;
 
 impl FerroEhrService {
     /// Admin extension `DELETE /admin/template/{template_id}`: physically delete
@@ -163,8 +164,13 @@ impl FerroEhrService {
     /// our own design (no openEHR spec governs bulk-delete internals); a
     /// partial success is observable at the REST edge.
     ///
+    /// Each EHR removed is recorded as its own access, so the deletion shows
+    /// in that EHR's access log beside the operation's own record.
+    ///
     /// # Errors
     /// - `exception` — a database fault while deleting.
+    /// - `service_overloaded` — the record of a removed EHR was refused under
+    ///   `[audit] fail_mode = "closed"`; its chunk is already committed.
     pub async fn admin_ehr_delete_all(&self, ehr_ids: &[EhrId]) -> Result<u64, ServiceError> {
         // Chunking bounds each transaction's lock/WAL footprint on a
         // full-store wipe.
@@ -191,6 +197,9 @@ impl FerroEhrService {
             let mut tx = conn.begin().await?;
             let removed = self.erase_ehrs(&mut tx, chunk).await?;
             tx.commit().await?;
+            for &ehr_id in &removed {
+                self.emit_mark_access(EventActionCode::Delete, ehr_id, None, "ehr-delete")?;
+            }
             #[expect(
                 clippy::as_conversions,
                 reason = "the removed-row count widens exactly: usize is at most 64 bits \

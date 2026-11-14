@@ -17,7 +17,6 @@ pub mod checkpoint;
 pub mod config;
 #[cfg(feature = "fhir")]
 pub mod details;
-#[cfg(feature = "fhir")]
 pub mod entry;
 pub mod expiry;
 #[cfg(feature = "fhir")]

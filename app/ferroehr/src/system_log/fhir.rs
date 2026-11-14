@@ -38,18 +38,14 @@ use ihe_atna::user::{Code, OnBehalfOf, PurposeOfUse, User};
 use secrecy::SecretString;
 
 use crate::system_log::AuditError;
-use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass};
+use crate::system_log::event::{
+    AuditEvent, EventActionCode, EventOutcome, EventType, OPERATION_SYSTEM, ObjectClass,
+};
 use crate::system_log::fhir_accessor::accessor;
 use crate::system_log::message::AuditContext;
 
 /// The canonical-URL prefix of the IHE BALP profiles (v1.1.4).
 pub const BALP_PROFILE_BASE: &str = "https://profiles.ihe.net/ITI/BALP/StructureDefinition";
-
-/// The code system of the ITS-REST operation ids a record writes as its
-/// operation subtype.
-// NOTE: no specification governs this: our own design; no external code system names the
-// openEHR REST operations, and the DICOM rendering names them `openEHR-ITS-REST`.
-pub const OPERATION_SYSTEM: &str = "urn:openehr:its-rest:operation";
 
 /// The namespace of the openEHR object ids (BASE 1.3.0 `OBJECT_ID.value`) an
 /// access record names its data entity by, written as

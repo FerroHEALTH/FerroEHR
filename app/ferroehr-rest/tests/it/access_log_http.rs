@@ -6,8 +6,9 @@
 //!
 //! Every route kind that touches EHR data writes its entries through the one
 //! recording path: an ITS-REST write and read, an AQL population query with
-//! one entry per EHR it served, a refusal, a read of the access log through
-//! the FHIR ITI-81 search, and the export extension. No entry carries a data
+//! one entry per EHR it served (an EHR-only statement included), a refusal, a
+//! read of the access log through the FHIR ITI-81 search, and the export
+//! extension; the management routes are `crate::access_log_management_http`. No entry carries a data
 //! value of the EHR or the query text. No openEHR spec governs the access log:
 //! our own design on the draft `org.openehr.rm.access_log` 0.1.0.
 
@@ -23,18 +24,18 @@ use crate::common;
 use crate::common::{BASE, EXT, FHIR};
 
 /// The synthetic patient subject every EHR of the test resolves to.
-const SUBJECT: &str = "patient-access-log-1";
+pub(crate) const SUBJECT: &str = "patient-access-log-1";
 /// A value written into a composition, which no entry may carry.
 const SENTINEL: &str = "access-log-sentinel-6b1f";
 
 /// One stored entry: its EHR, action, result, request id and canonical form.
 #[derive(Debug, Clone)]
-struct Stored {
-    ehr_id: Option<String>,
-    action: Option<String>,
-    result: Option<String>,
-    request_id: Option<String>,
-    content: String,
+pub(crate) struct Stored {
+    pub(crate) ehr_id: Option<String>,
+    pub(crate) action: Option<String>,
+    pub(crate) result: Option<String>,
+    pub(crate) request_id: Option<String>,
+    pub(crate) content: String,
 }
 
 /// The columns of one stored entry, in [`Stored`]'s order.
@@ -48,7 +49,11 @@ type Columns = (
 
 /// The entries stored so far that `keep` selects, polled until there are at
 /// least `expected`.
-async fn entries(pool: &PgPool, expected: usize, keep: impl Fn(&Stored) -> bool) -> Vec<Stored> {
+pub(crate) async fn entries(
+    pool: &PgPool,
+    expected: usize,
+    keep: impl Fn(&Stored) -> bool,
+) -> Vec<Stored> {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<Columns> = sqlx::query_as(
@@ -119,12 +124,12 @@ fn composition() -> Value {
 }
 
 /// `req` sent as the ADMIN `root`.
-fn as_root(req: http::request::Builder) -> http::request::Builder {
+pub(crate) fn as_root(req: http::request::Builder) -> http::request::Builder {
     req.header(header::AUTHORIZATION, common::basic_credential("root"))
 }
 
 /// Create one more EHR; returns its id.
-async fn create_ehr(app: &Router) -> String {
+pub(crate) async fn create_ehr(app: &Router) -> String {
     let (status, body) = common::send_body(
         app,
         as_root(Request::post(format!("{BASE}/ehr")))
@@ -142,7 +147,7 @@ async fn create_ehr(app: &Router) -> String {
 }
 
 /// Commit [`composition`] into `ehr`; returns its version uid.
-async fn commit(app: &Router, ehr: &str) -> String {
+pub(crate) async fn commit(app: &Router, ehr: &str) -> String {
     let (status, body) = common::send_body(
         app,
         as_root(Request::post(format!("{BASE}/ehr/{ehr}/composition")))
@@ -245,6 +250,47 @@ async fn a_population_query_writes_one_entry_per_ehr_it_served() {
         assert!(!entry.content.contains(SENTINEL), "{}", entry.content);
         assert!(entry.content.contains("text_digest"), "{}", entry.content);
     }
+}
+
+/// A statement that projects only the EHR, with no `CONTAINS COMPOSITION`,
+/// writes one entry for each EHR it served under the request id of the query
+/// (#5564), so the patient's view of who queried the record finds it.
+#[tokio::test]
+async fn an_ehr_only_query_writes_one_entry_per_ehr_it_served() {
+    let (_db, pool, app, first) = common::audited_app(SUBJECT, "root").await;
+    let others = [create_ehr(&app).await, create_ehr(&app).await];
+    let text = "SELECT e/ehr_id/value FROM EHR e";
+    let (status, body) = common::send_body(
+        &app,
+        as_root(Request::post(format!("{BASE}/query/aql")))
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(json!({ "q": text }).to_string()))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "EHR-only query: {body}");
+    let answered: Value = serde_json::from_str(&body).expect("result set json");
+    let rows = answered["rows"].as_array().expect("rows").len();
+
+    let served = entries(&pool, rows, |s| {
+        s.action.as_deref() == Some("query") && s.ehr_id.is_some()
+    })
+    .await;
+    assert_eq!(served.len(), rows, "one entry per row's EHR: {served:?}");
+    for ehr in [&first, &others[0], &others[1]] {
+        assert!(
+            served
+                .iter()
+                .any(|s| s.ehr_id.as_deref() == Some(ehr.as_str())),
+            "the EHR {ehr} the query served has its entry: {served:?}"
+        );
+    }
+    let request = served[0].request_id.clone();
+    assert!(request.is_some(), "the entries name their request");
+    assert!(
+        served.iter().all(|s| s.request_id == request),
+        "the entries share the request id: {served:?}"
+    );
 }
 
 /// A refused access to an EHR writes one refused entry for that EHR.

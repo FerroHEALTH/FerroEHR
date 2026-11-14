@@ -33,8 +33,8 @@ impl Builder<'_> {
         Ok(specs)
     }
 
-    /// Append the hidden access-logging columns: one `ehr_id` per bound VO
-    /// root, after the projection.
+    /// Append the hidden access-logging columns: the EHR id of each bound
+    /// `EHR` source and each bound VO root, after the projection.
     ///
     /// Returns their SQL aliases, or empty when this plan cannot carry them —
     /// `SELECT DISTINCT`, where an extra column changes which rows are
@@ -46,15 +46,14 @@ impl Builder<'_> {
             .select
             .iter()
             .any(|column| matches!(column.value, SelectValue::Aggregate { .. }));
-        let roots = self.served_roots();
-        if ir.distinct || aggregates || roots.is_empty() {
+        let served = self.served_ehr_ids();
+        if ir.distinct || aggregates || served.is_empty() {
             return Vec::new();
         }
-        let mut aliases = Vec::with_capacity(roots.len());
-        for (i, (root, _)) in roots.iter().enumerate() {
+        let mut aliases = Vec::with_capacity(served.len());
+        for (i, ehr) in served.into_iter().enumerate() {
             let alias = format!("{}{i}", super::ACCESS_EHR_PREFIX);
-            self.q
-                .expr_as(col(root, Node::EhrId), Alias::new(alias.as_str()));
+            self.q.expr_as(ehr, Alias::new(alias.as_str()));
             aliases.push(alias);
         }
         aliases

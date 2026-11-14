@@ -41,10 +41,11 @@ use crate::access_log::search::LOG_RECORD;
 use crate::system_log::binding::{BindingCode, BindingRecord, Identified};
 use crate::system_log::event::{
     AccessDecision, AccessDomain, ActingMode, AuditEvent, EntryScope, EventActionCode,
-    EventOutcome, EventType, ObjectClass,
+    EventOutcome, EventType, OPERATION_SYSTEM, ObjectClass,
 };
-use crate::system_log::fhir::OPERATION_SYSTEM;
+#[cfg(feature = "fhir")]
 use crate::system_log::message::AuditContext;
+#[cfg(feature = "fhir")]
 use crate::system_log::store::RecordEnd;
 use crate::versioning::audit::dv_date_time;
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
@@ -148,7 +149,7 @@ pub fn entry_of(
         channel: channel(event),
         security_labels: None,
         retention,
-        other_details: crate::access_log::recorded::details(event, subject),
+        other_details: details(event, subject),
     })
 }
 
@@ -159,6 +160,7 @@ pub fn entry_of(
 /// its categories and origins call for
 /// ([`crate::access_log::retention::retention`]), any other until the end its
 /// record has ([`crate::system_log::fhir::record_end`]).
+#[cfg(feature = "fhir")]
 #[must_use]
 pub fn for_store(
     event: &AuditEvent,
@@ -648,6 +650,25 @@ pub fn horizon_retention(end: Option<Date>) -> AccessRetention {
             "the retention horizon of the audit store",
         )),
     }
+}
+
+/// FerroEHR's access details of the access `event` records, which its
+/// projections read ([`crate::access_log::recorded::details`]).
+#[cfg(feature = "fhir")]
+fn details(
+    event: &AuditEvent,
+    subject: Option<&str>,
+) -> Option<openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure> {
+    crate::access_log::recorded::details(event, subject)
+}
+
+/// A slim build projects no entry, so its entries keep no access details.
+#[cfg(not(feature = "fhir"))]
+fn details(
+    _event: &AuditEvent,
+    _subject: Option<&str>,
+) -> Option<openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure> {
+    None
 }
 
 #[cfg(test)]
