@@ -56,6 +56,14 @@ The `ehr_access` copy holds at most 4096 EHRs' settings, and beside them the
 settings classes a query is judged over
 ([the bound](security.md#per-ehr-access-control-ehr_access)). The `copy` label is `ehr` or `classes`.
 
+The care relationships of the EHRs' subjects sit beside the grants, in two
+caches with fixed defaults: the care relationships of at most 4096 subjects,
+and the patients of care teams holding at most 262144 patients together. A
+team with more patients than that is read on each use and never held. A miss
+reads one indexed statement on the party pool, and the `grants` listener's
+notification drops what it changed. A care relationship that cannot be read
+answers `503`, so no decision is made without it.
+
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
 | `access_copy_entries` | gauge | `copy` | EHRs the per-EHR copy holds, and classes the class copy holds. |
