@@ -514,7 +514,9 @@ which is what makes an optional stage safe to disable:
    `instructed_by.external_ref`, in the directive or an exception, names no
    party of the demographic store of its type, nor one the import's
    demographics chapter or the archive's demographic records carry
-   (`service::ehr::access_parties`); `PARTY_SELF` needs no lookup. The EHDS
+   (`service::ehr::access_parties`); `PARTY_SELF` needs no lookup. An import
+   and an archive load check only the head version, the one in force, since
+   an earlier version is the immutable record of what was in force then. The EHDS
    Art. 8 restriction and Art. 10 opt-out are `restriction` and `opt_out` directives of these settings,
    committed by the controller over `POST /admin/ehr-access` (which names the
    EHR in its body, so it reaches an EHR a restriction hides) or by a

@@ -360,6 +360,10 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   way, and so is an id that is no UUID, since the evaluator could never
   match it to a caller. An import may name a party its own demographics
   chapter carries, and an archive load one its demographic records carry.
+  An import and an archive load check only the head `EHR_ACCESS` version,
+  the one in force: an earlier version is the unchanged record of what was
+  in force then and decides nothing, so a party erased since (under GDPR
+  Art. 17, for example) never blocks a faithful restore of your own export.
   `PARTY_SELF` names the record's person and needs no lookup.
 - **Unreadable settings:** stored settings that do not read as the scheme
   hold the EHR closed. A request that names the EHR is refused with `500`,

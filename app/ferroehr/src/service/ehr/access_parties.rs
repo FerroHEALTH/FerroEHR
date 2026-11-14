@@ -14,7 +14,8 @@
 //! nobody. Each write path therefore refuses it with `422`, naming the
 //! directive and the party: the CONTRIBUTION and the controller's commit
 //! through [`FerroEhrService::validate_for_commit`], an EHR Extract import and
-//! an archive load through [`FerroEhrService::check_directive_parties`]. A
+//! an archive load through [`FerroEhrService::check_directive_parties`] on
+//! the head version, the one they put in force. A
 //! `PARTY_SELF` names the EHR's subject, whom `EHR_STATUS.subject`
 //! identifies, so it is not looked up. No openEHR spec governs the scheme or
 //! this check: our own design (#5517).

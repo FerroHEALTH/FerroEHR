@@ -93,9 +93,12 @@ impl FerroEhrService {
         Ok((containers, parties))
     }
 
-    /// Refuses an import any of whose `EHR_ACCESS` versions has a directive
-    /// naming a party that neither the demographic store nor the extract's
-    /// demographics chapter holds ([`Self::check_directive_parties`]).
+    /// Refuses an import whose head `EHR_ACCESS` version, the one the import
+    /// puts in force, has a directive naming a party that neither the
+    /// demographic store nor the extract's demographics chapter holds
+    /// ([`Self::check_directive_parties`]). An earlier version is the record of
+    /// what was in force then and decides nothing, so a party erased since
+    /// never blocks a faithful import.
     ///
     /// # Errors
     /// The refusals of [`Self::check_directive_parties`].
@@ -109,10 +112,12 @@ impl FerroEhrService {
             .map(|party| (party.vo_id, party.kind.as_str().to_owned()))
             .collect();
         for container in containers.iter().filter(|c| c.kind == Kind::EhrAccess) {
-            for version in &container.versions {
-                if let Some(settings) = version.data.get("settings").filter(|s| !s.is_null()) {
-                    self.check_directive_parties(settings, &landing).await?;
-                }
+            let head = container.versions.iter().max_by_key(|v| v.replay_order());
+            if let Some(settings) = head
+                .and_then(|v| v.data.get("settings"))
+                .filter(|s| !s.is_null())
+            {
+                self.check_directive_parties(settings, &landing).await?;
             }
         }
         Ok(())

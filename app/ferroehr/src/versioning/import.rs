@@ -147,6 +147,12 @@ fn wrapped_fragment(version: &ImportVersion) -> Value {
 
 impl ImportVersion {
     /// The lineage this version sits on.
+    /// The order a container's versions are replayed in, the last of which
+    /// is the head the import puts in force.
+    pub(crate) fn replay_order(&self) -> (Lineage, (i32, i32, i32)) {
+        (self.lineage(), self.tree.columns())
+    }
+
     fn lineage(&self) -> Lineage {
         match self.tree.branch {
             None => (String::new(), 0, 0),
@@ -743,9 +749,7 @@ async fn commit_import_scoped(
         // Version-tree order; a duplicated version identity within one import
         // is a conflict (the identity tuple is {object_id, creating_system_id,
         // version_tree_id} — master06 §Distributed Versioning).
-        container
-            .versions
-            .sort_by_key(|v| (v.lineage(), v.tree.columns()));
+        container.versions.sort_by_key(ImportVersion::replay_order);
         reject_duplicate_identities(&container)?;
 
         let state = container_state(tx, container.vo_id).await?;

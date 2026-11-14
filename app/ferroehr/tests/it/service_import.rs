@@ -426,17 +426,17 @@ async fn import_ehr_refuses_access_settings_that_do_not_parse() {
     .expect("settings that parse import");
 }
 
-/// An extract whose `EHR_ACCESS` directive names a party neither this CDR
-/// nor the extract holds is refused with the `422` a CONTRIBUTION writing it
-/// gets, naming the directive and the party (#5517); a directive instructed
-/// by the subject, whom no party lookup names, imports.
+/// An extract whose head `EHR_ACCESS` version, the one the import puts in
+/// force, has a directive naming a party neither this CDR nor the extract
+/// holds is refused with the `422` a CONTRIBUTION writing it gets, naming the
+/// directive and the party; the same directive in an earlier version, the
+/// record of what was in force then, imports (#5517).
 #[tokio::test]
-async fn import_ehr_refuses_a_directive_naming_an_unknown_party() {
+async fn import_ehr_refuses_a_head_directive_naming_an_unknown_party() {
     const NOBODY: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f99";
     let (_source_db, source) = crate::fixtures::service().await;
     let (_target_db, svc) = crate::fixtures::service().await;
     let ehr = seed_extract_ehr(&source).await.0;
-    let exported = openehr_its::json::to_canonical_value(&export_one(&source, ehr).await);
     let term = |code: &str| {
         json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",
@@ -444,40 +444,79 @@ async fn import_ehr_refuses_a_directive_naming_an_unknown_party() {
                     "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                 "code_string": code } })
     };
-    let with_directive = |extra: Value| -> Extract {
-        let mut directive = json!({ "_type": "ACCESS_DIRECTIVE",
+    let open = json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS", "default_access": term("open") });
+    let versions = source
+        .ehr_access_versions(ehr)
+        .await
+        .expect("the EHR_ACCESS versions");
+    let (first, _) = versions.first().expect("the default EHR_ACCESS");
+    source
+        .commit_ehr_access_settings(ehr, first, open.clone())
+        .await
+        .expect("a second EHR_ACCESS version");
+    let exported = openehr_its::json::to_canonical_value(&export_one(&source, ehr).await);
+    let naming_nobody = json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS",
+        "default_access": term("open"),
+        "directives": [{ "_type": "ACCESS_DIRECTIVE",
             "name": { "_type": "DV_TEXT", "value": "consent" }, "archetype_node_id": "at0001",
-            "kind": term("consent"), "effect": term("permit"), "emergency_override": false });
-        if let (Some(d), Some(extra)) = (directive.as_object_mut(), extra.as_object()) {
-            d.extend(extra.clone());
+            "kind": term("consent"), "effect": term("permit"), "emergency_override": false,
+            "applies_to": [{ "party": { "_type": "PARTY_REF", "namespace": "demographic",
+                "type": "PERSON", "id": { "_type": "HIER_OBJECT_ID", "value": NOBODY } } }] }] });
+    // The export carries the newest version only; the version it supersedes
+    // goes beside it, as an extract carrying the whole history would hold it.
+    let mut exported = exported;
+    for item in exported["chapters"][0]["items"]
+        .as_array_mut()
+        .expect("chapter items")
+    {
+        if item["item"]["_type"] == json!("X_VERSIONED_EHR_ACCESS") {
+            let head = item["item"]["versions"][0].clone();
+            let head_uid = head["uid"]["value"].as_str().expect("a version uid");
+            assert!(head_uid.ends_with("::2"), "{head_uid}");
+            let mut older = head.clone();
+            older["uid"]["value"] = json!(format!("{}1", head_uid.trim_end_matches('2')));
+            if let Some(older) = older.as_object_mut() {
+                older.remove("preceding_version_uid");
+            }
+            older["commit_audit"]["change_type"]["value"] = json!("creation");
+            older["commit_audit"]["change_type"]["defining_code"]["code_string"] = json!("249");
+            item["item"]["versions"] = json!([older, head]);
+            item["item"]["extract_version_count"] = json!(2);
         }
+    }
+    // The extract with the EHR_ACCESS version of trunk `trunk` naming nobody.
+    let naming_in = |trunk: &str| -> Extract {
         let mut raw = exported.clone();
+        let mut found = false;
         for item in raw["chapters"][0]["items"]
             .as_array_mut()
             .expect("chapter items")
         {
             if item["item"]["_type"] == json!("X_VERSIONED_EHR_ACCESS") {
                 for version in item["item"]["versions"].as_array_mut().expect("versions") {
-                    version["data"]["settings"] = json!({
-                        "_type": "ACCESS_DIRECTIVE_SETTINGS",
-                        "default_access": term("open"),
-                        "directives": [directive.clone()]
-                    });
+                    let uid = version["uid"]["value"].as_str().expect("a version uid");
+                    if uid.ends_with(&format!("::{trunk}")) {
+                        version["data"]["settings"] = naming_nobody.clone();
+                        found = true;
+                    }
                 }
             }
         }
+        assert!(
+            found,
+            "the extract carries EHR_ACCESS version {trunk}: {}",
+            raw["chapters"][0]["items"]
+        );
         openehr_its::json::from_canonical_value(&raw).expect("EXTRACT with a directive")
     };
 
     let refused = svc
         .import_ehr(
             Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
-            with_directive(json!({ "applies_to": [{ "party": { "_type": "PARTY_REF",
-                "namespace": "demographic", "type": "PERSON",
-                "id": { "_type": "HIER_OBJECT_ID", "value": NOBODY } } }] })),
+            naming_in("2"),
         )
         .await
-        .expect_err("a directive naming nobody is refused");
+        .expect_err("a head directive naming nobody is refused");
     let detail = format!("{refused:?}");
     assert!(
         matches!(&refused, ServiceError::Unprocessable { .. }),
@@ -490,10 +529,10 @@ async fn import_ehr_refuses_a_directive_naming_an_unknown_party() {
     assert!(detail.contains(NOBODY), "the party is named: {detail}");
     svc.import_ehr(
         Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
-        with_directive(json!({ "instructed_by": { "_type": "PARTY_SELF" } })),
+        naming_in("1"),
     )
     .await
-    .expect("a directive the subject instructed imports");
+    .expect("an earlier version naming nobody imports");
 }
 
 #[tokio::test]
