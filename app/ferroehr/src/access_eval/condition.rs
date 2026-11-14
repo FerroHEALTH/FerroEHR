@@ -18,7 +18,7 @@
 //! a background task or a test, nothing is published and nothing is
 //! withheld. No openEHR spec governs this: our own design (#5513, #5588).
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
@@ -35,6 +35,7 @@ use crate::access_eval::procedure::{
 };
 use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
+use crate::access_eval::stale::StaleCopies;
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
 use crate::party_binding::grants::live::{GrantsUnavailable, LiveGrants};
@@ -63,33 +64,6 @@ pub struct RequestAccess {
     recorded: Recorded,
     stale: Option<Arc<StaleCopies>>,
     written: Mutex<BTreeSet<Uuid>>,
-}
-
-/// The EHRs whose copy on this replica a read found older than the row in
-/// force: the copy drops each before its next read of the EHR.
-///
-/// A replica learns of a change committed on another one by its
-/// notification, which arrives after the commit. A read in between compares
-/// the revision its verdict was judged on with the row it reads, refuses on
-/// a mismatch, and marks the copy here, so the next request reads the row.
-/// No openEHR spec governs this: our own design (#5589).
-#[derive(Debug, Default)]
-pub struct StaleCopies(Mutex<BTreeSet<EhrId>>);
-
-impl StaleCopies {
-    /// Marks the copy of `ehr_id` stale.
-    pub fn mark(&self, ehr_id: EhrId) {
-        self.0
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .insert(ehr_id);
-    }
-
-    /// The EHRs marked since the last call, which are no longer marked.
-    #[must_use]
-    pub fn take(&self) -> BTreeSet<EhrId> {
-        std::mem::take(&mut *self.0.lock().unwrap_or_else(PoisonError::into_inner))
-    }
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
