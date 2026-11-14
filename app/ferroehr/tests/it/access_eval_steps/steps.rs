@@ -63,6 +63,48 @@ fn the_subject_is_refused_on_an_ehr_not_their_own() {
     }
 }
 
+/// Step 0: a representative reaches only the EHR whose subject its recorded
+/// representation names, whatever another EHR's directives permit, its
+/// `delegation` directives included (#5609).
+#[test]
+fn a_representative_is_refused_on_an_ehr_it_does_not_represent() {
+    let delegation = directive(
+        "delegation",
+        "permit",
+        &json!({ "applies_to": [{ "party": party("PERSON", GUARDIAN) }] }),
+    );
+    let representative = caller(CallerKind::Representative, GUARDIAN);
+    for default in ["open", "restricted", "consent_required"] {
+        for case in [
+            Case {
+                foreign: true,
+                ..Case::of(settings(
+                    default,
+                    std::slice::from_ref(&delegation),
+                    &[],
+                    &[],
+                ))
+            },
+            Case {
+                foreign: true,
+                server_default: Some(AccessDefault::Open),
+                ..Case::default()
+            },
+        ] {
+            let verdict = case.verdict(&representative, read(None));
+            for item in [Item::Ehr, object(OBJECT, Some("vital_signs.v1"))] {
+                assert_outcome(
+                    &verdict,
+                    &item,
+                    Outcome::Refused(Refusal::NotRepresented),
+                    &format!("a representative on another EHR ({default})"),
+                );
+            }
+            assert!(verdict.grounds.permits.is_empty(), "{default}: {verdict:?}");
+        }
+    }
+}
+
 /// Step 1: an opt-out binds the access services only, reads as absent, and
 /// yields to a declared emergency only where its override holds.
 #[test]

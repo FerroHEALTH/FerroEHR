@@ -634,7 +634,14 @@ which is what makes an optional stage safe to disable:
    is refused at step 0. The SMART layer checks only a grant's family and
    permission (#5586, #5606, our own design: SMART App Launch requires the
    patient context held and names no layer). On its own EHR a confined
-   professional takes every step. A representative skips steps 4 to 7. An emergency purpose lifts
+   professional takes every step. A representative is confined the same way
+   to the EHR whose `EHR_STATUS.subject` names the subject of its recorded
+   representation `PARTY_RELATIONSHIP` (resolved once at authentication, no
+   added query), refused `403` `refused-not-represented` on every other EHR
+   and on an operation that names none, recorded as step 0 (representation)
+   (#5609, our own design under EHDS Art. 4(2)). On that EHR it is held to
+   steps 1 to 3, the `delegation` directives of its `EHR_ACCESS` included,
+   and skips steps 4 to 7. An emergency purpose lifts
    an opt-out for an access service that may override it (Art. 10(2)), and,
    with `[authz.rbac] emergency_access_role`, a restriction or a consent deny
    whose `emergency_override` holds and steps 4 to 7 (Art. 11(5)). A

@@ -139,12 +139,7 @@ pub(crate) async fn pre_check(
     } else {
         composition_template(parts)
     };
-    smart_composition(
-        &principal,
-        op,
-        template.as_deref(),
-        parts.path.get("ehr_id").map(String::as_str),
-    )
+    smart_composition(&principal, op, template.as_deref())
 }
 
 /// The SMART gate of a COMPOSITION read, on the template of the version the
@@ -160,14 +155,13 @@ async fn smart_post(
     let Some(principal) = current_principal() else {
         return Ok(());
     };
-    let ehr_id = object.as_ref().and_then(|o| o.ehr_id.clone());
     let uid = object.as_ref().and_then(|o| o.uid.clone());
     let template = composition_template_of(state, &principal, uid.as_deref()).await?;
-    smart_composition(&principal, op, template.as_deref(), ehr_id.as_deref())
+    smart_composition(&principal, op, template.as_deref())
 }
 
 /// Checks the `composition-` requirement of `op` on `template` for
-/// `principal`, a `patient/` grant confined to the launch context's EHR.
+/// `principal`; which EHR it reaches is the access evaluator's decision.
 ///
 /// An unresolved template is covered only by a grant on every template, `*`
 /// or `**` (master08 §Resource Scopes).
@@ -175,14 +169,13 @@ fn smart_composition(
     principal: &Principal,
     op: &str,
     template: Option<&str>,
-    ehr_id: Option<&str>,
 ) -> Result<(), Response> {
     let requirement = Requirement::OpenEhr {
         family: ResourceFamily::Composition,
         permission: operation(op).map_or(Permission::Read, Operation::permission),
         resource: template.map(str::to_owned),
     };
-    routes::check(&requirement, principal, ehr_id).map_err(|reason| {
+    routes::check(&requirement, principal).map_err(|reason| {
         tracing::debug!(reason, "a SMART on openEHR requirement was not met");
         forbidden(principal, "the credential does not permit this request")
     })
@@ -251,8 +244,8 @@ mod tests {
     #[test]
     fn smart_user_scope_permits_its_template() {
         let p = principal_with_scopes("user/composition-Vitals.v1.r", &serde_json::json!({}));
-        assert!(smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_ok());
-        let other = smart_composition(&p, "composition_get", Some("Labs.v1"), Some("ehr-1"))
+        assert!(smart_composition(&p, "composition_get", Some("Vitals.v1")).is_ok());
+        let other = smart_composition(&p, "composition_get", Some("Labs.v1"))
             .expect_err("another template is not granted");
         assert_eq!(other.status(), StatusCode::FORBIDDEN);
     }
@@ -261,9 +254,7 @@ mod tests {
     fn smart_permission_mismatch_denies() {
         // A read-only scope cannot authorise a create.
         let p = principal_with_scopes("user/composition-*.r", &serde_json::json!({}));
-        assert!(
-            smart_composition(&p, "composition_create", Some("Vitals.v1"), Some("ehr-1")).is_err()
-        );
+        assert!(smart_composition(&p, "composition_create", Some("Vitals.v1")).is_err());
     }
 
     /// SMART on openEHR scopes are enforced on every route: a token carrying no
@@ -272,9 +263,7 @@ mod tests {
     #[test]
     fn smart_a_token_without_a_resource_scope_is_refused() {
         let p = principal_with_scopes("openid profile", &serde_json::json!({}));
-        assert!(
-            smart_composition(&p, "composition_create", Some("Vitals.v1"), Some("ehr-1")).is_err()
-        );
+        assert!(smart_composition(&p, "composition_create", Some("Vitals.v1")).is_err());
     }
 
     /// A Basic user holds the scopes `[[auth.basic.users]]` grants it, and
@@ -289,29 +278,13 @@ mod tests {
             vec!["USER".to_owned()],
             Honoured::default(),
         );
-        assert!(
-            smart_composition(
-                &granted,
-                "composition_create",
-                Some("Vitals.v1"),
-                Some("ehr-1")
-            )
-            .is_ok()
-        );
+        assert!(smart_composition(&granted, "composition_create", Some("Vitals.v1")).is_ok());
         let bare = Principal::new(
             Access::Caller(Arc::new(Caller::basic("bob".to_owned(), ""))),
             vec!["USER".to_owned()],
             Honoured::default(),
         );
-        assert!(
-            smart_composition(
-                &bare,
-                "composition_create",
-                Some("Vitals.v1"),
-                Some("ehr-1")
-            )
-            .is_err()
-        );
+        assert!(smart_composition(&bare, "composition_create", Some("Vitals.v1")).is_err());
     }
 
     /// An unresolved template is covered only by a grant on every template.
@@ -319,14 +292,14 @@ mod tests {
     fn smart_an_unresolved_template_needs_a_wildcard() {
         let specific =
             principal_with_scopes("user/composition-Vitals.v1.r", &serde_json::json!({}));
-        assert!(smart_composition(&specific, "composition_get", None, Some("ehr-1")).is_err());
+        assert!(smart_composition(&specific, "composition_get", None).is_err());
         let every = principal_with_scopes("user/composition-*.r", &serde_json::json!({}));
-        assert!(smart_composition(&every, "composition_get", None, Some("ehr-1")).is_ok());
+        assert!(smart_composition(&every, "composition_get", None).is_ok());
     }
 
     /// A `patient/` grant from a bound issuer meets the `composition-`
-    /// requirement by its family and permission alone, whichever EHR the
-    /// request names: the access evaluator holds the caller to the EHR of its
+    /// requirement by its family and permission alone, naming no EHR: the
+    /// access evaluator holds the caller to the EHR of its
     /// launch context (`master07 §Context Selection`, #5606), which
     /// `access_evaluator_patient_http` pins end to end.
     #[test]
@@ -341,15 +314,13 @@ mod tests {
             serde_json::json!({ "patient": "ehr-1" }),
         ] {
             let p = principal_honoured("patient/composition-*.r", &claims, bound);
-            for ehr in [Some("ehr-1"), Some("ehr-2"), None] {
-                assert!(
-                    smart_composition(&p, "composition_get", Some("Vitals.v1"), ehr).is_ok(),
-                    "{claims}: the read grant meets a read of {ehr:?}"
-                );
-                let create = smart_composition(&p, "composition_create", Some("Vitals.v1"), ehr)
-                    .expect_err("a read grant does not meet a create");
-                assert_eq!(create.status(), StatusCode::FORBIDDEN);
-            }
+            assert!(
+                smart_composition(&p, "composition_get", Some("Vitals.v1")).is_ok(),
+                "{claims}: the read grant meets a read"
+            );
+            let create = smart_composition(&p, "composition_create", Some("Vitals.v1"))
+                .expect_err("a read grant does not meet a create");
+            assert_eq!(create.status(), StatusCode::FORBIDDEN);
         }
     }
 
@@ -360,15 +331,13 @@ mod tests {
             "patient/composition-*.r",
             &serde_json::json!({ "ehrId": "ehr-1" }),
         );
-        assert!(
-            smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_err()
-        );
+        assert!(smart_composition(&p, "composition_get", Some("Vitals.v1")).is_err());
     }
 
     #[test]
     fn smart_user_scope_needs_no_patient_binding() {
         let p = principal_with_scopes("user/composition-*.r", &serde_json::json!({}));
-        assert!(smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-2")).is_ok());
+        assert!(smart_composition(&p, "composition_get", Some("Vitals.v1")).is_ok());
     }
 
     /// Only the COMPOSITION operations are gated here; the tags are held to

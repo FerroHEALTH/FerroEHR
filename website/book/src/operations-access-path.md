@@ -80,7 +80,7 @@ The `refused-*` codes are the evaluator's own (`refused-opt-out`,
 `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`,
 `refused-no-care-relationship`, `refused-purpose-missing`,
 `refused-purpose-not-permitted`, `refused-consent-required`,
-`refused-not-subject`); the access
+`refused-not-subject`, `refused-not-represented`); the access
 record of each refusal names the step and the directive that decided it. A
 refusal is the evaluator working as configured, so alert on a change in the
 rate of a code against its usual level. Alert on every increase of

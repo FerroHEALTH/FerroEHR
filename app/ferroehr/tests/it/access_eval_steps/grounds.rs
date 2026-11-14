@@ -81,6 +81,23 @@ fn subject_of_other_ehr() -> Caller {
     }
 }
 
+/// A representative of the subject of [`EHR`], the EHR its recorded
+/// representation names.
+fn representative_of_ehr() -> Caller {
+    Caller {
+        own_ehr: Some(EhrId(uuid(EHR))),
+        ..caller(CallerKind::Representative, GUARDIAN)
+    }
+}
+
+/// A representative of the subject of another patient's EHR.
+fn representative_of_other_ehr() -> Caller {
+    Caller {
+        own_ehr: Some(EhrId(uuid(OTHER_EHR))),
+        ..caller(CallerKind::Representative, GUARDIAN)
+    }
+}
+
 /// The decision `access` records for the EHR with `settings`, after it
 /// answered `item`.
 fn decide_on(
@@ -211,11 +228,7 @@ fn a_delegation_is_a_representation_ground() {
         &json!({ "applies_to": [{ "party": party("PERSON", GUARDIAN) }],
                  "operations": [term("read")] }),
     );
-    let access = request(
-        caller(CallerKind::Representative, GUARDIAN),
-        read(None),
-        None,
-    );
+    let access = request(representative_of_ehr(), read(None), None);
     let (outcome, decision) = decide_on(
         &access,
         Some(settings("consent_required", &[delegation], &[], &[])),
@@ -417,6 +430,20 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             ),
             Item::Ehr,
             "the EHR of the caller's patient context",
+        ),
+        (
+            Refusal::NotRepresented,
+            representative_of_other_ehr(),
+            None,
+            None,
+            settings(
+                "open",
+                &[directive("consent", "permit", &json!({}))],
+                &[],
+                &[],
+            ),
+            Item::Ehr,
+            "the EHR of the subject the caller represents",
         ),
     ];
     assert_eq!(rows.len(), Refusal::ALL.len(), "a row per refusal code");

@@ -39,13 +39,13 @@ const NAMESPACE: &str = "demographic";
 /// The claim naming the subject a representative acts for.
 const REPRESENTS: &str = "represents";
 /// The subject the representative's relationship is recorded to.
-const CHILD: &str = "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+pub(crate) const CHILD: &str = "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
 /// A subject no relationship of the representative names.
-const STRANGER: &str = "8b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e";
+pub(crate) const STRANGER: &str = "8b2c3d4e-5f6a-4b7c-9d8e-0f1a2b3c4d5e";
 
 /// The configuration trusting `ISSUER` for persons, whose representation
 /// claim is `represents`, with its `patient/` grants honoured.
-fn config() -> AppConfig {
+pub(crate) fn config() -> AppConfig {
     let mut auth = common::auth(AuthSection {
         issuer: vec![IssuerEntry {
             jwks_file: common::jwks_file().display().to_string(),
@@ -75,7 +75,7 @@ fn config() -> AppConfig {
 }
 
 /// The router over `svc`, looking every caller up in `source`.
-async fn router(svc: Arc<FerroEhrService>, source: Arc<dyn BindingSource>) -> Router {
+pub(crate) async fn router(svc: Arc<FerroEhrService>, source: Arc<dyn BindingSource>) -> Router {
     let config = config();
     common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
@@ -96,8 +96,8 @@ async fn router(svc: Arc<FerroEhrService>, source: Arc<dyn BindingSource>) -> Ro
 /// whose live representation relationships name `subjects`: the local source
 /// reports a relationship that has ended as none, so an empty list is the
 /// ended one.
-struct Recorded {
-    subjects: Vec<&'static str>,
+pub(crate) struct Recorded {
+    pub(crate) subjects: Vec<&'static str>,
 }
 
 /// The `PERSON` every login of [`Recorded`] binds.
@@ -136,7 +136,7 @@ impl PartySource for Recorded {
 
 /// Creates an EHR whose `EHR_STATUS.subject` names the `PERSON` `subject`,
 /// or no subject, returning its id.
-async fn ehr(svc: &FerroEhrService, subject: Option<&str>) -> String {
+pub(crate) async fn ehr(svc: &FerroEhrService, subject: Option<&str>) -> String {
     let status = subject.map(|id| {
         let status = json!({
             "_type": "EHR_STATUS",
@@ -171,7 +171,7 @@ async fn status(app: &Router, method: &str, path: &str, credential: &str) -> (St
 }
 
 /// A representative's token asserting `subject`, with the full `user/` grants.
-fn representative(subject: &str) -> String {
+pub(crate) fn representative(subject: &str) -> String {
     token("rep-login", &json!({ REPRESENTS: subject }))
 }
 
