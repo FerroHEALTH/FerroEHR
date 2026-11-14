@@ -100,6 +100,7 @@ mod node_header;
 mod node_readers;
 mod one_schema_per_statement;
 mod opt_resource_meta;
+mod outbox_access;
 mod outbox_feed;
 mod party_binding_adopt;
 mod party_binding_check;

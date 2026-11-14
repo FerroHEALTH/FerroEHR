@@ -29,8 +29,11 @@ The rules that follow from it:
   client.
 - **Shared crates carry the cross-cutting work**, never a product's domain:
   - FerroAUTH (renamed from FerroSMART on 2026-10-25): `ferrohealth-smart` (authentication, OAuth 2.0 and SMART,
-    the authenticated subject with its scopes and roles) and
-    `ferrohealth-authz` (the policy decision: ABAC, Cedar);
+    the authenticated subject with its scopes and roles). FerroEHR decides
+    access to EHR data itself, with its fixed evaluator over the openEHR
+    access content (`EHR_ACCESS` settings, the demographic capabilities and
+    the controller's `ACCESS_POLICY`), so it depends on no policy-decision
+    crate, embeds no policy engine and calls no remote decision point;
   - FerroAUDIT: `ihe-atna` (the whole audit trail: sending, forwarding and
     retrieving) and `ehds-logging` (the EHDS access record);
   - FerroUI: `ferrohealth-ui` (every console);

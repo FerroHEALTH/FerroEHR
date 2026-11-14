@@ -3,7 +3,7 @@
 
 //! The rows of the deployment's running instances.
 //!
-//! The `instance` table (migration `clinical/0044`) holds what each must
+//! The `instance` table (migration `clinical/0045`) holds what each must
 //! share with the others and when it was last seen ([`crate::instance`]). No
 //! openEHR spec governs the process model or its storage SQL: our own design
 //! (#5589).

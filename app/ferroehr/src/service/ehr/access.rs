@@ -48,10 +48,11 @@ use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, commit_contribution};
 
 impl FerroEhrService {
-    /// Drop the copy of the `EHR_ACCESS` settings for `ehr_id`, called after
-    /// any `EHR_ACCESS` commit so this replica's next access decision reflects
-    /// the new version before the commit's notification arrives (the settings
-    /// are change-controlled — RM ehr master04 §EHR Access).
+    /// Drop the copy of the `EHR_ACCESS` settings and subject for `ehr_id`,
+    /// called after any `EHR_ACCESS` or `EHR_STATUS` commit so this replica's
+    /// next access decision reflects the new version before the commit's
+    /// notification arrives (the settings are change-controlled — RM ehr
+    /// master04 §EHR Access).
     ///
     /// A request that judged the EHR before its own commit is judged again on
     /// the committed settings, so what it reads after the commit is decided
@@ -112,7 +113,10 @@ impl FerroEhrService {
                 settings: Arc::new(None),
                 subject,
                 version: None,
-                revision: Revision::default(),
+                revision: Revision {
+                    settings: None,
+                    subject,
+                },
             };
             self.ehr_access.insert(ehr_id, entry).await;
         }
@@ -418,7 +422,7 @@ fn entry_of(ehr_id: EhrId, stored: Stored) -> Result<EhrEntry, ServiceError> {
             None => ServiceError::internal(message, HeldClosed),
         }
     };
-    let subject = subject_of(stored.subject.as_deref());
+    let subject = stored.revision.subject;
     let settings = match stored.settings {
         StoredSettings::None => None,
         StoredSettings::HeldClosed => return Err(unreadable(None)),
@@ -433,13 +437,6 @@ fn entry_of(ehr_id: EhrId, stored: Stored) -> Result<EhrEntry, ServiceError> {
         subject,
         revision: stored.revision,
     })
-}
-
-/// The `PERSON` container a stored `ehr.subject_id` names.
-fn subject_of(stored: Option<&str>) -> Option<uuid::Uuid> {
-    // NOTE: the local source names each party by its container's UUID, so a subject
-    // id that is no UUID names no PERSON of this store and has no care relationship.
-    stored.and_then(|subject| subject.parse::<uuid::Uuid>().ok())
 }
 
 /// The message of the `503` of a projection that cannot be read.

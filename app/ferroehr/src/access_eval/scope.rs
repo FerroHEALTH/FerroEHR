@@ -481,7 +481,7 @@ impl Scopes {
         for label in labels {
             // NOTE: our own design, a label on a reference that names no versioned object
             // labels nothing, since nothing it names can be read.
-            let Some(vo_id) = crate::service::ehr::access_marks::object_id(&label.target) else {
+            let Some(vo_id) = crate::service::ehr::access_settings::object_id(&label.target) else {
                 continue;
             };
             for code in sensitivities(&label.sensitivities) {
@@ -612,7 +612,7 @@ impl Scopes {
         let objects = scope.objects.as_deref().map(|objects| {
             objects
                 .iter()
-                .filter_map(crate::service::ehr::access_marks::object_id)
+                .filter_map(crate::service::ehr::access_settings::object_id)
                 .collect::<Vec<_>>()
         });
         // NOTE: our own design, an object reference that names no object covers every

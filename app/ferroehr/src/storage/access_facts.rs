@@ -144,3 +144,33 @@ pub async fn of_objects(
         .map(|row| HeadFacts::read(row, VoId(row.try_get("vo_id")?)))
         .collect()
 }
+
+/// The facts of every versioned object each of `contributions` committed a
+/// version of, as `(contribution, facts)` in contribution and object order.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn of_contributions(
+    conn: &mut sqlx::PgConnection,
+    contributions: &[Uuid],
+) -> Result<Vec<(Uuid, HeadFacts)>, StorageError> {
+    let rows = sqlx::query(concat!(
+        "SELECT c.contribution_id, h.vo_id, ",
+        head_facts!(),
+        " FROM (SELECT DISTINCT v.contribution_id, v.vo_id FROM version v \
+           WHERE v.contribution_id = ANY($1)) c \
+         JOIN vo_head h ON h.vo_id = c.vo_id \
+         ORDER BY c.contribution_id, h.vo_id"
+    ))
+    .bind(contributions)
+    .fetch_all(&mut *conn)
+    .await?;
+    rows.iter()
+        .map(|row| {
+            Ok((
+                row.try_get("contribution_id")?,
+                HeadFacts::read(row, VoId(row.try_get("vo_id")?))?,
+            ))
+        })
+        .collect()
+}

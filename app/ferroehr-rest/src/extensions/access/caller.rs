@@ -35,9 +35,11 @@ use crate::api::operation::{Verb, operation};
 use crate::state::AppState;
 
 /// The evaluator of the running request of `op`; `None` for the controller's
-/// own operations (`admin_*`), which no directive binds.
+/// own operations (`admin_*`), which no directive binds. The read of the
+/// change feed is judged: each event names EHR data, and the feed publishes
+/// only what its reader may read (#5587).
 pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAccess>> {
-    if op.starts_with("admin_") {
+    if op.starts_with("admin_") && op != crate::api::admin::outbox::READ {
         return None;
     }
     let principal = current_principal();

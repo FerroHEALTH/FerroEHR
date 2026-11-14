@@ -153,8 +153,13 @@ impl FerroEhrService {
                     let committed = commit(&mut tx, write, &signing_ctx).await?;
                     if let Mode::SyncSubject(ehr_id, status) = mode {
                         self.sync_ehr_subject(&mut tx, ehr_id, status).await?;
+                        tx.commit().await?;
+                        // NOTE: our own design (#5589), the status names the subject whose care
+                        // relationships decide access, so the copy and the request see the commit.
+                        self.invalidate_ehr_access(ehr_id).await;
+                    } else {
+                        tx.commit().await?;
                     }
-                    tx.commit().await?;
                     (ehr_id, committed)
                 }
             };

@@ -42,24 +42,24 @@ usually within milliseconds. A request on another instance in that window is
 judged on the settings that instance held, and it never runs under them:
 
 - every read that leaves the store selects the revision of the EHR's
-  `EHR_ACCESS` settings row beside its own columns, in the same statement, and
-  a verdict judged on another revision admits nothing;
-- every commit reads that revision on its own transaction and judges the EHR
-  again from the rows that transaction reads;
+  `EHR_ACCESS` settings row and the EHR's subject beside its own columns, in
+  the same statement, and a verdict judged on another revision or another
+  subject admits nothing;
+- every commit reads them on its own transaction and judges the EHR again
+  from the rows that transaction reads;
 - a query decides every EHR in its one SQL statement from the settings row it
   reads there.
 
-So a restriction, an opt-out or a withdrawn consent committed on one instance
-decides the next read or write that reaches its data on every instance. A read
+So a restriction, an opt-out, a withdrawn consent or a change of subject
+committed on one instance decides the next read or write that reaches its data
+on every instance. The subject matters because the decision reads its care
+relationships. A read
 caught in the window answers as an EHR the caller may not see (`404`), even
 when the change made the record more open, and the instance drops its copy so
 the next request reads the settings again. The window lasts until the
 notification arrives; while an instance's listener is down it reads the
 settings on every request, so it has no window. No request adds a statement or
 a transaction for this.
-
-The copy also holds the EHR's subject, which decides care relationships. A
-change of subject reaches another instance with its notification.
 
 ## The listeners hold connections of their own
 
@@ -104,9 +104,13 @@ at most 3 × 20 + 4 = 64 connections:
 | 3 | 192 | no |
 
 Keep `instances × (3 × max_connections + 4)` below PostgreSQL's
-`max_connections` minus the connections your operators and tools need. For two
-instances on a default PostgreSQL, set `[database] max_connections = 14`
-((3 × 14 + 4) × 2 = 92 connections), or raise PostgreSQL's `max_connections`.
+`max_connections` minus `superuser_reserved_connections` (3 by default) and
+the connections your operators and tools need. With the default pool size,
+PostgreSQL needs `max_connections` of at least 64 + 3 = 67 for one instance,
+128 + 3 = 131 for two and 192 + 3 = 195 for three, before your own
+connections; the default of 100 fits one instance only. To fit two instances
+in the default of 100, set `[database] max_connections = 12` on each:
+(3 × 12 + 4) × 2 = 80, which leaves 17 for the reserved slots and your tools.
 The Compose overlay above sets 10 on each instance, 68 in all. Through a
 transaction-mode pooler, the pools count against the pooler's server
 connections and only the listeners against PostgreSQL's.

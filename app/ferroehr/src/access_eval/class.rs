@@ -46,10 +46,9 @@ use sha2::{Digest as _, Sha256};
 use crate::access_eval::condition::CallerKeys;
 use crate::access_eval::procedure::{Rule, Verdict};
 use crate::access_eval::scope::{DataMatch, Edge, EhrFact, Held, Pred, Recorded};
-use crate::service::ehr::access_marks::object_id;
 use crate::service::ehr::access_projection::{Validity, validity};
 use crate::service::ehr::access_rule::{SettingsCaller, party_key, proxy_key};
-use crate::service::ehr::access_settings::{EhrAccessSettings, UnreadableSettings};
+use crate::service::ehr::access_settings::{EhrAccessSettings, UnreadableSettings, object_id};
 
 /// The instant a class holds in place of an instant of its EHRs.
 const INSTANT: &str = "1970-01-01T00:00:00Z";

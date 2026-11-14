@@ -165,11 +165,9 @@ async fn subject_and_access_version(
     let Some(row) = row else {
         return Ok((None, None));
     };
-    // NOTE: the local source names each party by its container's UUID, so a subject
-    // id that is no UUID names no PERSON of this store.
-    let subject = row
-        .try_get::<Option<String>, _>("subject_id")?
-        .and_then(|subject| subject.parse::<uuid::Uuid>().ok());
+    let subject = crate::storage::access_projection::subject_of(
+        row.try_get::<Option<String>, _>("subject_id")?.as_deref(),
+    );
     let version = crate::storage::access_projection::version_of(&row)?;
     Ok((subject, version))
 }

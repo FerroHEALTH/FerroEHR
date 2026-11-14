@@ -9,8 +9,8 @@
 //! by. The tests assert that a commit on one replica decides the next request
 //! on another once its notification arrives; that before it arrives the other
 //! replica never admits a read or a write under the settings it held, since
-//! each read compares the revision it was judged on with the row it reads
-//! (#5589); that a replica whose listener is down reads the settings on every
+//! each read compares the revision of the settings and the subject it was
+//! judged on with the rows it reads (#5589); that a replica whose listener is down reads the settings on every
 //! request, so a change it was never notified of decides its next request;
 //! and that a settings store that cannot answer is `503`. No openEHR spec
 //! governs the copy: our own design.
@@ -360,6 +360,61 @@ async fn a_change_before_its_notification_is_never_admitted_on_another_replica()
         );
         assert!(b.ehr_access_listened().is_listening(), "{change}");
     }
+}
+
+/// A change of the EHR's subject, whose care relationships the decision
+/// reads, decides the other replica's next read before its notification
+/// arrives: the read finds the subject in force differ from the one the
+/// verdict was judged on and refuses, and the next request is judged on the
+/// new subject. The subject is moved in the row as the database owner, as a
+/// committed status leaves it, with no notification sent.
+#[tokio::test]
+async fn a_changed_subject_before_its_notification_is_never_admitted_on_another_replica() {
+    let (_db, pool) = common::migrated_pool().await;
+    let (a, writer) = replica(&pool, true).await;
+    let (b, reader) = replica(&pool, true).await;
+    common::grant_to(&a, &pool, "bob", Operation::AccessService).await;
+    common::allowing(&b, &[Operation::AccessService]);
+    let ehr_id: EhrId = EHR_ID.parse().expect("an EHR id");
+    Box::pin(a.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
+        .await
+        .expect("create the EHR");
+    let ehr = a.ehr_read(ehr_id).await.expect("the EHR").body;
+    commit(&writer, &ehr, &settings_with("open", Vec::new()), 1).await;
+    wait_until(
+        || b.ehr_access_listened().notifications() > 0,
+        "the settings reach the other replica",
+    )
+    .await;
+    let (code, _, status) = bob_sends(&reader, "GET", "/ehr_status", None, None).await;
+    assert_eq!(code, StatusCode::OK, "bob reads before: {status}");
+
+    let seen = b.ehr_access_listened().notifications();
+    let person = uuid::Uuid::now_v7().to_string();
+    sqlx::query(
+        "UPDATE clinical.ehr SET subject_id = $1, subject_namespace = 'demographic' WHERE id = $2",
+    )
+    .bind(&person)
+    .bind(ehr_id)
+    .execute(&pool)
+    .await
+    .expect("the subject moves");
+    let (code, _, body) = bob_sends(&reader, "GET", "/ehr_status", None, None).await;
+    assert!(
+        !code.is_success(),
+        "the other replica admits no read on the old subject: {code} {body}"
+    );
+    assert_eq!(
+        b.ehr_access_listened().notifications(),
+        seen,
+        "the other replica was never notified"
+    );
+    let (code, _, body) = bob_sends(&reader, "GET", "/ehr_status", None, None).await;
+    assert_eq!(
+        code,
+        StatusCode::OK,
+        "the next request is judged on the subject in force: {body}"
+    );
 }
 
 /// A replica whose listener cannot stay connected reads the settings on

@@ -47,8 +47,6 @@
 //!   each EHR's current version projects.
 //! - [`access_delay`] — the EHDS Art. 3(3) delay of the person's own access
 //!   and its mark on `vo_head`.
-//! - [`access_marks`] — the marks of the EHDS Art. 8 restriction and Art. 10
-//!   opt-out directives of `EHR_ACCESS` on `ehr` / `vo_head`.
 //! - [`policy_register`] — the versions of the operational-policy admin
 //!   registers.
 //! - [`access_policy`] — the versions of the controller's
@@ -76,7 +74,7 @@
 /// the settings row of the EHR the SQL expression `$ehr` names
 /// ([`access_projection::Revision`]). Each domain's schema defines the
 /// function, so a statement both domains run reads it: the clinical one
-/// reads the row, the party one answers `NULL` (migrations `clinical/0043`
+/// reads the row, the party one answers `NULL` (migrations `clinical/0044`
 /// and `party/0040`).
 macro_rules! access_revision {
     ($ehr:literal) => {
@@ -104,7 +102,6 @@ macro_rules! head_facts {
 
 pub mod access_delay;
 pub mod access_facts;
-pub mod access_marks;
 pub mod access_policy;
 pub mod access_projection;
 pub mod adl2_repo;

@@ -680,7 +680,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/render/zenodo-json.sh --check
 
-      # The class partials of the draft openEHR modules under docs/plans/*/antora/
+      # The class partials of the draft openEHR modules under docs/specifications/*/antora/
       # are rendered from their BMM schemas, so a hand edit of a class table, or a
       # BMM change without its partials, fails here.
       - name: bmm-partials / The draft class partials match their BMM schemas

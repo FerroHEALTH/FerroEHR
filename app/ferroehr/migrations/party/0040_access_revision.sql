@@ -6,16 +6,16 @@
 --
 -- A version read selects access_revision(ehr_id) beside its own columns, and
 -- the party schema shares the statement with the clinical one
--- (clinical/0043). A demographic object belongs to no EHR, so the party
+-- (clinical/0044). A demographic object belongs to no EHR, so the party
 -- domain answers NULL.
 --
 -- No openEHR spec governs the projection or its revision: our own design.
 --
 -- Runs with search_path = party, ext, public.
 
-CREATE FUNCTION access_revision(ehr uuid) RETURNS integer
+CREATE FUNCTION access_revision(ehr uuid) RETURNS text
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    AS $$ SELECT NULL::integer $$;
+    AS $$ SELECT NULL::text $$;
 
 COMMENT ON FUNCTION access_revision(uuid) IS 'NULL: no party object belongs to an EHR, so none carries EHR access settings. Our own design.';
 
