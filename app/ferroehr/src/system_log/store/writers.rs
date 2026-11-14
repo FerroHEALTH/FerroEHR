@@ -30,6 +30,20 @@ pub(super) struct WritePolicy {
 }
 
 impl WritePolicy {
+    /// The policy compiled, the first time it is asked for.
+    ///
+    /// # Errors
+    /// The [`RenderPolicy::compile`] errors.
+    #[cfg(feature = "fhir")]
+    pub(super) async fn compiled(
+        &self,
+    ) -> Result<Arc<CompiledPolicy>, crate::system_log::AuditError> {
+        self.compiled
+            .get_or_try_init(|| async { self.policy.compile().map(Arc::new) })
+            .await
+            .cloned()
+    }
+
     fn new(policy: RenderPolicy) -> Self {
         Self {
             policy,

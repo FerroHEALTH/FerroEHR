@@ -16,7 +16,7 @@ use sqlx::PgPool;
 pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
     let mut texts: Vec<String> = sqlx::query_scalar(
         "SELECT concat_ws(' ', issuer, client_id, ehr_id, subject_namespace, \
-             category_content::text) FROM audit.audit_event ORDER BY chain_seq",
+             category_content::text) FROM audit.access_trail ORDER BY chain_seq",
     )
     .fetch_all(pool)
     .await

@@ -812,7 +812,7 @@ async fn latest_composition_get_record(pool: &sqlx::PgPool) -> (Option<Value>, O
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     loop {
         let found: Option<(Option<Value>, Option<i64>, i64)> = sqlx::query_as(
-            "SELECT origins, origin_count, chain_seq FROM audit.audit_event \
+            "SELECT origins, origin_count, chain_seq FROM audit.access_trail \
              WHERE operation = 'composition_get' ORDER BY recorded_at DESC LIMIT 1",
         )
         .fetch_optional(pool)
@@ -897,7 +897,7 @@ async fn composition_get_records_the_origins_of_the_served_data() {
         row.2
     );
     let create: Option<Value> = sqlx::query_scalar(
-        "SELECT origins FROM audit.audit_event WHERE operation = 'composition_create'",
+        "SELECT origins FROM audit.access_trail WHERE operation = 'composition_create'",
     )
     .fetch_one(&pool)
     .await

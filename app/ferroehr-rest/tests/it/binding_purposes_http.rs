@@ -80,7 +80,7 @@ async fn list(app: &Router, credential: &str, purpose: Option<&str>) -> StatusCo
 async fn records(pool: &sqlx::PgPool, count: usize) -> Vec<(i16, Option<String>, Option<Value>)> {
     for _ in 0..50 {
         let rows: Vec<(i16, Option<String>, Option<Value>)> = sqlx::query_as(
-            "SELECT outcome, purpose, token_attributes FROM audit.audit_event \
+            "SELECT outcome, purpose, token_attributes FROM audit.access_trail \
              WHERE principal = $1 ORDER BY chain_seq",
         )
         .bind(KEY)

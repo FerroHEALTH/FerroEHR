@@ -38,7 +38,7 @@ impl AuditSender {
     ) -> Option<Box<openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry>>
     {
         self.inner.store.as_ref()?;
-        crate::access_log::entry::for_store(event, &self.inner.context)
+        crate::access_log::entry::for_store(event, None, &self.inner.context)
     }
 
     /// Append the access-log entries the drain writes through `access_log`,

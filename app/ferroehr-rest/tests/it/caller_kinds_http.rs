@@ -365,7 +365,7 @@ async fn delegated_rows(
 ) -> Vec<(Option<String>, Option<Value>, Option<String>)> {
     for _ in 0..50 {
         let rows: Vec<(Option<String>, Option<Value>, Option<String>)> = sqlx::query_as(
-            "SELECT acting_mode, actor_chain, party ->> 'id' FROM audit.audit_event \
+            "SELECT acting_mode, actor_chain, party ->> 'id' FROM audit.access_trail \
              WHERE operation = $1 AND principal = $2 ORDER BY recorded_at",
         )
         .bind(operation)
@@ -542,7 +542,7 @@ async fn stored_rows(
     for _ in 0..50 {
         let rows: Vec<Stored> = sqlx::query_as(
             "SELECT binding, acting_mode, client_id, provider ->> 'id' \
-                 FROM audit.audit_event WHERE operation = $1 AND principal = $2 \
+                 FROM audit.access_trail WHERE operation = $1 AND principal = $2 \
                  ORDER BY recorded_at",
         )
         .bind(operation)
@@ -589,7 +589,7 @@ async fn a_system_callers_records_carry_its_client_and_provider() {
             "{principal}"
         );
         let party: Option<Value> = sqlx::query_scalar(
-            "SELECT party FROM audit.audit_event WHERE operation = 'ehr_create' AND principal = $1",
+            "SELECT party FROM audit.access_trail WHERE operation = 'ehr_create' AND principal = $1",
         )
         .bind(principal)
         .fetch_one(&db.pool())

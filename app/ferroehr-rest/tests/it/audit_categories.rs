@@ -213,17 +213,9 @@ struct Classified {
     fhir: Value,
 }
 
-/// The four classification columns and the chain position of one stored record.
-type StoredClassification = (
-    Option<Value>,
-    Option<String>,
-    Option<Value>,
-    Option<String>,
-    i64,
-);
-
 /// The classification of the newest record of `operation` on `resource_class`,
-/// polled until the drain has written it.
+/// polled until the drain has written it, as the record's projection computes
+/// it.
 ///
 /// The wait settles the moment the record lands and fails only at a 60-second
 /// deadline, the bound the route-coverage test gives the same drain, so a drain
@@ -231,23 +223,29 @@ type StoredClassification = (
 async fn classified(pool: &PgPool, operation: &str, resource_class: &str) -> Classified {
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
     loop {
-        let found: Option<StoredClassification> = sqlx::query_as(
-            "SELECT categories, category_basis, category_evidence, category_map_digest, chain_seq \
-                 FROM audit.audit_event WHERE operation = $1 AND resource_class = $2 \
-                 ORDER BY chain_seq DESC LIMIT 1",
+        let found: Option<i64> = sqlx::query_scalar(
+            "SELECT chain_seq FROM audit.access_trail \
+             WHERE operation = $1 AND resource_class = $2 \
+             ORDER BY chain_seq DESC LIMIT 1",
         )
         .bind(operation)
         .bind(resource_class)
         .fetch_optional(pool)
         .await
         .expect("read the trail");
-        if let Some((categories, basis, evidence, digest, chain_seq)) = found {
+        if let Some(chain_seq) = found {
+            let (event, _) = ferroehr::system_log::store::AuditStore::new(pool.clone())
+                .record(chain_seq)
+                .await
+                .expect("read the record")
+                .expect("the record is stored");
+            let category = event.category.as_ref();
             let fhir = common::rendered_audit_event(pool, chain_seq).await;
             return Classified {
-                categories: categories.unwrap_or(Value::Null),
-                basis,
-                evidence: evidence.unwrap_or(Value::Null),
-                digest,
+                categories: category.map_or(Value::Null, |c| json!(c.stored_categories())),
+                basis: category.map(|c| c.read_from.code().to_owned()),
+                evidence: category.map_or(Value::Null, |c| json!(c.stored_evidence())),
+                digest: event.category_map_digest.map(|digest| digest.to_string()),
                 fhir,
             };
         }

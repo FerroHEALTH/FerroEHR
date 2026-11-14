@@ -468,8 +468,11 @@ fn link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
 }
 
 /// The record `row` holds, read as a `T`: its canonical form with its link
-/// joined.
-fn stored<T: serde::de::DeserializeOwned>(row: &PgRow) -> Result<T, AccessLogError> {
+/// joined. The row holds `chain_seq`, `content` and the link's columns.
+///
+/// # Errors
+/// [`AccessLogError::Unreadable`] when the record does not read.
+pub(crate) fn stored<T: serde::de::DeserializeOwned>(row: &PgRow) -> Result<T, AccessLogError> {
     let chain_seq: i64 = row.try_get("chain_seq")?;
     let unreadable = |source| AccessLogError::Unreadable { chain_seq, source };
     let content: String = row.try_get("content")?;

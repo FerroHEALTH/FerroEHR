@@ -29,16 +29,18 @@ use ferroehr::telemetry::indicators::AuditChainHealth;
 use ferrohealth_health::document::State;
 use ferrohealth_health::registry::HealthIndicator;
 
+/// A party read: an access outside the access log, so the store keeps it as
+/// an `audit_event` record, the form these tests hold to its tamper evidence.
 fn read_event(at: Timestamp, subject: &str) -> AuditEvent {
     let mut event = AuditEvent::new(
         EventActionCode::Read,
-        ObjectClass::Composition,
+        ObjectClass::Demographic,
         EventOutcome::Success,
     );
     "alice".clone_into(&mut event.user_id);
     event.client_ip = Some("10.0.0.9".to_owned());
     event.object_id = Some(subject.to_owned());
-    event.event_type = Some(EventType::rest("composition_get"));
+    event.event_type = Some(EventType::rest("person_get"));
     event.timestamp = at;
     event
 }

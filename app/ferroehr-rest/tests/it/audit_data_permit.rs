@@ -49,7 +49,7 @@ async fn recorded(
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     loop {
         let rows: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
-            "SELECT purpose, permit FROM audit.audit_event \
+            "SELECT purpose, permit FROM audit.access_trail \
              WHERE operation = $1 ORDER BY chain_seq",
         )
         .bind(operation)

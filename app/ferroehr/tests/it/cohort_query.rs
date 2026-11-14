@@ -525,7 +525,7 @@ async fn every_execution_is_recorded_as_a_linkage_access() {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     let record = loop {
         let found: Option<AccessRow> = sqlx::query_as(
-            "SELECT domain, resource_id, purpose, result_count FROM audit.audit_event \
+            "SELECT domain, resource_id, purpose, result_count FROM audit.access_trail \
              WHERE domain = 'linkage' AND resource_id LIKE 'cohort:%' \
              ORDER BY recorded_at DESC LIMIT 1",
         )

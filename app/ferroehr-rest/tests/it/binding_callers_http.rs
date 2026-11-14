@@ -324,7 +324,7 @@ async fn delegated_record(
 ) -> (Option<String>, Option<String>) {
     for _ in 0..50 {
         let row: Option<(Option<String>, Option<String>)> = sqlx::query_as(
-            "SELECT acting_mode, client_id FROM audit.audit_event \
+            "SELECT acting_mode, client_id FROM audit.access_trail \
              WHERE operation = 'ehr_create' AND principal = $1",
         )
         .bind(principal)

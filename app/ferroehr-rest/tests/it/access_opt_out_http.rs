@@ -234,7 +234,7 @@ async fn trail(pool: &PgPool, resource: &str, expected: usize) -> Vec<(String, S
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<(String, Option<String>, bool)> = sqlx::query_as(
-            "SELECT action, principal, emergency_access FROM audit.audit_event \
+            "SELECT action, principal, emergency_access FROM audit.access_trail \
              WHERE resource_id = $1 ORDER BY chain_seq",
         )
         .bind(resource)
@@ -425,7 +425,7 @@ async fn the_vital_interest_override_reads_the_ehr_and_is_recorded() {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let marked: Option<bool> = sqlx::query_scalar(
-            "SELECT emergency_access FROM audit.audit_event \
+            "SELECT emergency_access FROM audit.access_trail \
              WHERE operation = 'composition_get' AND outcome = 0 AND principal = 'service' \
              ORDER BY chain_seq DESC LIMIT 1",
         )

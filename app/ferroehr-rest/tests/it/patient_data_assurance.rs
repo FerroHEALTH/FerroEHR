@@ -180,7 +180,7 @@ async fn a_delegate_acting_for_a_professional_passes_and_is_recorded() {
     for _ in 0..50 {
         row = sqlx::query(
             "SELECT principal, acting_mode, assurance_level, assurance_value, professional_id, \
-             chain_seq FROM audit.audit_event WHERE operation = 'ehr_get_by_id'",
+             chain_seq FROM audit.access_trail WHERE operation = 'ehr_get_by_id'",
         )
         .fetch_optional(&pool)
         .await

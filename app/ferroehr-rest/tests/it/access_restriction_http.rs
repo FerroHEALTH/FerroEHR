@@ -443,7 +443,7 @@ async fn only_an_emergency_access_reads_restricted_data_and_is_marked() {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let marked: Option<bool> = sqlx::query_scalar(
-            "SELECT emergency_access FROM audit.audit_event \
+            "SELECT emergency_access FROM audit.access_trail \
              WHERE operation = 'composition_get' AND outcome = 0 AND principal = 'medic' \
              ORDER BY chain_seq DESC LIMIT 1",
         )

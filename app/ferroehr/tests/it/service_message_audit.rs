@@ -47,7 +47,7 @@ async fn extract_events(pool: &PgPool) -> Vec<(String, Option<String>)> {
     let mut rows = Vec::new();
     while std::time::Instant::now() < deadline {
         rows = sqlx::query(
-            "SELECT action, resource_id FROM audit.audit_event \
+            "SELECT action, resource_id FROM audit.access_trail \
              WHERE resource_class = 'extract' ORDER BY recorded_at, action",
         )
         .fetch_all(pool)
@@ -118,7 +118,7 @@ async fn an_export_without_audit_configured_records_nothing_and_still_succeeds()
     let extracts = svc.extract_ehrs(ehr).await.expect("extract_ehrs");
     assert_eq!(extracts.len(), 1, "the export itself is unaffected");
 
-    let recorded: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_event")
+    let recorded: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_trail")
         .fetch_one(&pool)
         .await
         .expect("audit count");
@@ -153,16 +153,21 @@ async fn the_extract_records_carry_the_categories_of_the_data() {
 
     for (pool, direction) in [(&src_pool, "export"), (&dst_pool, "import")] {
         assert_eq!(extract_events(pool).await.len(), 1, "{direction}");
-        let row = sqlx::query(
-            "SELECT categories, category_basis, category_evidence FROM audit.audit_event \
-             WHERE resource_class = 'extract'",
+        let chain_seq: i64 = sqlx::query_scalar(
+            "SELECT chain_seq FROM audit.access_trail WHERE resource_class = 'extract'",
         )
         .fetch_one(pool)
         .await
         .expect("the extract record");
-        let categories: Option<serde_json::Value> = row.get("categories");
-        let basis: Option<String> = row.get("category_basis");
-        let evidence: Option<serde_json::Value> = row.get("category_evidence");
+        let (event, _) = ferroehr::system_log::store::AuditStore::new(pool.clone())
+            .record(chain_seq)
+            .await
+            .expect("read the record")
+            .expect("the record is stored");
+        let category = event.category.as_ref();
+        let categories = category.map(|c| serde_json::json!(c.stored_categories()));
+        let basis = category.map(|c| c.read_from.code().to_owned());
+        let evidence = category.map(|c| serde_json::json!(c.stored_evidence()));
         assert_eq!(
             categories,
             Some(serde_json::json!(["none"])),

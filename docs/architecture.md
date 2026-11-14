@@ -280,9 +280,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   resolve a party or a subject through them; `service::linkage` holds those
   crossings and the access record each one owes. The linkage schema that held a
   cross-reference before is gone (`audit/0021_drop_linkage_domain.sql`).
-- **The access log** is the `audit` schema. `audit_event` holds one row per
-  access as the request path writes it today, with the FHIR `AuditEvent`
-  rendered from its columns. `access_log_record` holds the draft openEHR
+- **The access log** is the `audit` schema. An access to EHR data is stored
+  as its `ACCESS_LOG_ENTRY` alone; `audit_event` keeps the records of
+  accesses outside the access log (an authentication, a template or party
+  operation, an application activity), with the FHIR `AuditEvent` rendered
+  from its columns. `access_log_record` holds the draft openEHR
   `ACCESS_LOG_ENTRY` (#5121) as its ITS-JSON canonical form without its link
   (RFC 8785), the search columns its insert trigger derives from that form,
   and its `ACCESS_LOG_LINK`: the content digest over the canonical form and
@@ -314,9 +316,23 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   Every access to EHR data writes one entry per EHR it
   reached, refusals and reads of the log included: the drain builds it from
   the access's `AuditEvent` (`access_log::entry`) and `AuditStore::insert_batch`
-  appends it in the transaction that stores the batch's records, so an access
-  adds no transaction and the store holds a record and its entry or neither.
-  No openEHR spec governs audit storage: our own design.
+  appends it in the transaction that stores the batch, so an access adds no
+  transaction. The entry keeps in its `other_details` the facts its
+  projections carry that the draft's core does not hold, FerroEHR's access
+  details (`access_log::details`, `access_log::recorded`): the audit forms of
+  the action, the outcome and the resource class, the subject of care of the
+  EHR, the authentication facts, the category evidence and the binding. The
+  IHE BALP `AuditEvent`, the DICOM audit message and the EHDS access record
+  are projections of the stored entry (`access_log::projection`): the ITI-81
+  search, the person's own trail and the FHIR Feed read it through
+  `audit.audit_record`, the view of the `audit_event` records and the entries
+  with their index rows in `access_log_search` (the search columns, the
+  search tokens of the projection and the render policy, removed with the
+  entry's content when a tombstone replaces it), and the drain sends the
+  syslog message and the store-off feed's document from the entry it built
+  (`audit/0029_access_log_projections.sql`, `system_log::store::entries`,
+  `system_log::sender::records`). No openEHR spec governs audit storage: our
+  own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
   `[database.party]` and `[database.audit]` each carry a
   `url`/`url_file`, defaulting to the shared `[database].url`, and

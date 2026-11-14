@@ -44,7 +44,22 @@ fn config(arr_url: &str) -> AuditConfig {
     }
 }
 
+/// A party read: an access outside the access log, which the store keeps as
+/// an `audit_event` record with its delivery stamp.
 fn event() -> AuditEvent {
+    let mut e = AuditEvent::new(
+        EventActionCode::Read,
+        ObjectClass::Demographic,
+        EventOutcome::Success,
+    );
+    "alice".clone_into(&mut e.user_id);
+    e.object_id = Some("8fa1::ferroehr::1".to_owned());
+    e.event_type = Some(EventType::rest("person_get"));
+    e
+}
+
+/// A composition read: an access the access log covers, stored as its entry.
+fn access() -> AuditEvent {
     let mut e = AuditEvent::new(
         EventActionCode::Read,
         ObjectClass::Composition,
@@ -110,6 +125,62 @@ async fn stored_records_are_fed_to_the_fhir_arr_and_stamped() {
     )
     .await;
     assert!(delivered, "both records delivered to the ARR and stamped");
+
+    drop(sender);
+    handle.shutdown(Duration::from_secs(2)).await;
+}
+
+/// An access the access log covers is stored as its entry alone, and the
+/// feed delivers the entry's projection: the BALP `AuditEvent` the access
+/// renders, owed until the ARR accepts it (#5127).
+#[tokio::test]
+async fn an_entry_is_fed_as_its_projection() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+
+    let arr = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/fhir/AuditEvent"))
+        .respond_with(ResponseTemplate::new(201))
+        .expect(1)
+        .mount(&arr)
+        .await;
+
+    let cfg = config(&format!("{}/fhir", arr.uri()));
+    let (sender, handle) = sender::start(cfg, None, Some(pool.clone()))
+        .await
+        .expect("start");
+    let _ = sender.emit(access());
+
+    let delivered = eventually(
+        || async {
+            count(&pool, "SELECT count(*) FROM audit.access_log_record").await == 1
+                && count(&pool, "SELECT count(*) FROM audit.fhir_feed_outbox").await == 0
+        },
+        Duration::from_secs(10),
+    )
+    .await;
+    assert!(
+        delivered,
+        "the entry was stored and its projection delivered"
+    );
+    assert_eq!(
+        count(&pool, "SELECT count(*) FROM audit.audit_event").await,
+        0,
+        "the access is stored as its entry alone"
+    );
+    let requests = arr.received_requests().await.expect("the ARR's requests");
+    let posted: serde_json::Value =
+        serde_json::from_slice(&requests.first().expect("one delivery").body).expect("JSON");
+    assert_eq!(posted["resourceType"], "AuditEvent");
+    assert!(
+        posted["subtype"]
+            .as_array()
+            .expect("subtypes")
+            .iter()
+            .any(|subtype| subtype["code"] == "composition_get"),
+        "{posted}"
+    );
 
     drop(sender);
     handle.shutdown(Duration::from_secs(2)).await;

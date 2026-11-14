@@ -21,7 +21,7 @@
 
 use std::collections::BTreeMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// How the caller of a record was bound, or the refusal it was answered with.
@@ -164,7 +164,7 @@ impl BindingCode {
 }
 
 /// A demographic party as a `PARTY_REF` triple.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PartyTriple {
     /// The `PARTY_REF.namespace`.
     pub namespace: String,
@@ -176,7 +176,7 @@ pub struct PartyTriple {
 }
 
 /// An identifier under its issuer: a healthcare provider or a facility.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Identified {
     /// The identifier's issuer.
     pub issuer: String,
@@ -185,7 +185,7 @@ pub struct Identified {
 }
 
 /// Whom a representative acts for, and on which ground.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Representation {
     /// The represented subject's identifier, as asserted.
     pub represented: String,
@@ -196,7 +196,7 @@ pub struct Representation {
 }
 
 /// The federation agreement an external accessor was admitted under.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AgreementRecord {
     /// The agreement's name.
     pub name: String,
@@ -218,7 +218,7 @@ pub struct AgreementRecord {
 }
 
 /// A summary record's count, and the EHR ids the refusals named.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Summary {
     /// How many refusals the record stands for.
     pub count: u64,
@@ -227,9 +227,14 @@ pub struct Summary {
 }
 
 /// The binding outcome of one access record, with the fields it needs.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// Its JSON form is the one the access-log entry keeps among its details
+/// (`crate::access_log::details`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BindingRecord {
     /// How the caller was bound, or the refusal.
+    #[serde(with = "code_text")]
     pub code: BindingCode,
     /// The bound party.
     pub party: Option<PartyTriple>,
@@ -251,6 +256,30 @@ pub struct BindingRecord {
     pub facilities: Vec<Identified>,
     /// What a refusal names beside its code, by name.
     pub detail: BTreeMap<String, Vec<String>>,
+}
+
+/// The serialized form of a [`BindingCode`]: its spelling.
+mod code_text {
+    use super::BindingCode;
+
+    #[expect(
+        clippy::trivially_copy_pass_by_ref,
+        reason = "serde's `with` serializer takes the field by reference"
+    )]
+    pub(super) fn serialize<S: serde::Serializer>(
+        code: &BindingCode,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(code.as_str())
+    }
+
+    pub(super) fn deserialize<'de, D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<BindingCode, D::Error> {
+        let text = <std::borrow::Cow<'de, str> as serde::Deserialize>::deserialize(deserializer)?;
+        BindingCode::parse(&text)
+            .ok_or_else(|| serde::de::Error::custom("a binding code this build does not write"))
+    }
 }
 
 impl BindingRecord {
