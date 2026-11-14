@@ -19,8 +19,8 @@ Eleven groups are added to the openEHR Terminology. The codes are for the termin
 |`ACCESS_DIRECTIVE_SETTINGS._default_access_` (`Group_id_access_default`)
 
 |access directive kind
-|consent, restriction, opt_out, delegation
-|`ACCESS_DIRECTIVE._kind_` (`Group_id_access_directive_kind`)
+|consent, restriction, opt_out, delegation, controller_rule
+|`ACCESS_DIRECTIVE._kind_` (`Group_id_access_directive_kind`); `controller_rule` only in `ACCESS_POLICY._rules_`
 
 |access effect
 |permit, deny

@@ -82,6 +82,13 @@ BPPC records that a patient acknowledged a policy the policy domain publishes, a
 
 An APPC Privacy Consent Document is an XACML 2.0 policy set (APPC ITI TF-3 5.6.2.1.1). XACML places `Effect` on `Rule` alone (XACML 2.0 §5.29, §5.30), so a policy maps to one directive whose `_effect_` is that of its base rule, and a narrower rule of the opposite effect maps to an exception where the policy's rule-combining algorithm lets it decide (deny-overrides for a permit base, permit-overrides for a deny base, first-applicable when the exceptions come first; XACML 2.0 Appendix C). Directives combine across an EHR as the XACML policy-combining deny-overrides (C.1), so a policy set under another policy-combining algorithm is refused. The APPC subject, resource and action attributes map to `_applies_to_`, `_data_` and `_operations_`; a reference to a foundational policy resolves against the catalogue.
 
+== Controller Rules
+
+A rule of `ACCESS_POLICY._rules_` belongs to the controller, not to the subject, so it is never exported as a `Consent`: R5 leaves which "organizational roles have access to what kinds of resources" out of the `Consent` resource (R5 `Consent` §6.2.3).
+
+* *FHIR R5 `Permission`* (https://hl7.org/fhir/R5/permission.html, Trial Use): a policy is one `Permission` with `combining` `deny-overrides`, and each rule one `Permission.rule` whose `type` is the rule's `_effect_`. `_applies_to_` maps to `rule.activity.actor`; a role scope is a `Group` of the performers of that role, because `actor` is a reference only. `_operations_` and `_purposes_` map to `rule.activity.action` and `rule.activity.purpose`, `_data.sensitivities_` to `rule.data.security`, `_data.recorded_` to `rule.data.period`, and `_legal_grounds_` to `Permission.justification.basis`. An exception is a `rule` of the opposite `type` whose activity is narrower. R4 has no `Permission`, so R4 exchange carries no rule.
+* *IHE APPC foundational policy*: a rule is one XACML `Rule` of a policy the policy domain publishes, its subject matched on `urn:oasis:names:tc:xacml:2.0:subject:role` for a role scope (APPC ITI TF-3 5.6.2.1.4.6), under the policy-combining deny-overrides (XACML 2.0 Appendix C.1).
+
 == EHDS
 
 [cols="1,3", options="header"]
@@ -102,4 +109,7 @@ An APPC Privacy Consent Document is an XACML 2.0 policy set (APPC ITI TF-3 5.6.2
 
 |Annex II 3.4
 |`_data.categories_` and `_data.origins_` in directives and classifications.
+
+|Art 11(3) categories of professionals and data
+|`ACCESS_POLICY._rules_`, scoped by role and by the sensitivities the classifications assign, with `_legal_grounds_` naming the Member State's rule.
 |===

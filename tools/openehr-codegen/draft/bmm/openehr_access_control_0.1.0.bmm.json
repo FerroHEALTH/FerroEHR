@@ -98,12 +98,13 @@
         "Gate_keepers_valid": "gate_keepers /= Void implies not gate_keepers.is_empty",
         "Directives_valid": "directives /= Void implies not directives.is_empty",
         "Labels_valid": "labels /= Void implies not labels.is_empty",
-        "Opt_out_unique": "directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1"
+        "Opt_out_unique": "directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1",
+        "Directives_not_controller_rules": "directives /= Void implies directives.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))"
       }
     },
     "ACCESS_DIRECTIVE": {
       "name": "ACCESS_DIRECTIVE",
-      "documentation": "One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.",
+      "documentation": "One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation; or one rule of a controller's `ACCESS_POLICY` for every EHR it keeps. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.",
       "ancestors": [
         "LOCATABLE"
       ],
@@ -111,7 +112,7 @@
         "kind": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "kind",
-          "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
+          "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
           "is_mandatory": true,
           "type": "DV_CODED_TEXT"
         },
@@ -287,6 +288,14 @@
             "_type": "P_BMM_SIMPLE_TYPE",
             "type": "Boolean"
           }
+        },
+        "is_controller_rule": {
+          "name": "is_controller_rule",
+          "documentation": "True when `_kind_` is the `controller_rule` code of the `access directive kind` group.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "Boolean"
+          }
         }
       },
       "invariants": {
@@ -318,7 +327,7 @@
         "role": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "role",
-          "documentation": "A functional role the caller holds, coded as the role's capability or the caller's token states it, such as a professional role code.",
+          "documentation": "A role the caller performs: the caller matches when it is the `performer` of a `ROLE` in force (its `time_validity` holds the date of the access and its versioned object is not deleted) whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code.",
           "type": "DV_CODED_TEXT"
         },
         "relationship": {
@@ -479,7 +488,7 @@
     },
     "ACCESS_POLICY": {
       "name": "ACCESS_POLICY",
-      "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.",
+      "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, holds the controller's own rules on which callers may perform which operations on which kinds of data, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.",
       "ancestors": [
         "LOCATABLE"
       ],
@@ -524,6 +533,19 @@
           "is_mandatory": true,
           "type": "Boolean"
         },
+        "rules": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "rules",
+          "documentation": "The controller's rules for every EHR it keeps: which callers may perform which operations on which kinds of data, such as the rules a Member State lays down under EHDS Art. 11(3). Each is an `ACCESS_DIRECTIVE` of kind `controller_rule`. A deny rule that applies refuses whatever the subject's directives permit; a permit rule acts only on sensitivity, and a permit exception only narrows the deny rule it sits in.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_DIRECTIVE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
         "catalogue": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "catalogue",
@@ -563,7 +585,10 @@
         "Catalogue_identified": "catalogue /= Void implies catalogue.for_all (d | d.identifiers /= Void)",
         "Classifications_valid": "classifications /= Void implies not classifications.is_empty",
         "Catalogue_valid": "catalogue /= Void implies not catalogue.is_empty",
-        "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty"
+        "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty",
+        "Rules_valid": "rules /= Void implies not rules.is_empty",
+        "Rules_kind": "rules /= Void implies rules.for_all (r | r.is_controller_rule and (r.exceptions = Void or r.exceptions.for_all (e | e.is_controller_rule)))",
+        "Catalogue_not_controller_rules": "catalogue /= Void implies catalogue.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))"
       }
     },
     "ACCESS_CLASSIFICATION": {

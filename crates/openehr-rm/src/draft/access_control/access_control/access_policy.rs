@@ -20,7 +20,7 @@ use openehr_base::v1_3::base_types::identification::uid_based_id::UidBasedId;
 
 /// The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps.
 ///
-/// It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.
+/// It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, holds the controller's own rules on which callers may perform which operations on which kinds of data, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.
 #[doc(alias = "ACCESS_POLICY")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessPolicy {
@@ -53,6 +53,10 @@ pub struct AccessPolicy {
     pub relationship_grace: Option<DvDuration>,
     /// Whether an access to clinical data must declare a purpose of use.
     pub purpose_required: bool,
+    /// The controller's rules for every EHR it keeps: which callers may perform which operations on which kinds of data, such as the rules a Member State lays down under EHDS Art.
+    ///
+    /// 11(3). Each is an `ACCESS_DIRECTIVE` of kind `controller_rule`. A deny rule that applies refuses whatever the subject's directives permit; a permit rule acts only on sensitivity, and a permit exception only narrows the deny rule it sits in.
+    pub rules: Option<openehr_base::containers::NonEmptyVec<AccessDirective>>,
     /// Named directives a subject can accept by an identifier, such as an IHE BPPC policy or a national consent choice. Each carries at least one identifier.
     pub catalogue: Option<openehr_base::containers::NonEmptyVec<AccessDirective>>,
     /// The restrictions a Member State law lays on the subject's view of the access log under EHDS Article 9(3).

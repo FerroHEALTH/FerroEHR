@@ -7,7 +7,12 @@
 4+^h|*Draft, not part of an RM release*
 
 |[[latest_issue]]0.1.0
+|`ACCESS_POLICY._rules_`: the controller's own rules for every EHR, as `ACCESS_DIRECTIVE` instances of the new kind `controller_rule`, with the invariants that keep the kind out of an EHR's settings and the catalogue. `ACCESS_ACTOR_SCOPE._role_` is read from the coded `_name_` of the `ROLE`s the caller performs. Mappings to FHIR R5 `Permission` and IHE APPC foundational policies.
+|FerroEHR
+|[[latest_issue_date]]14 Nov 2026
+
+|0.1.0
 |Initial draft: the `access_control` package with the `access_directives` scheme of `ACCESS_CONTROL_SETTINGS` and the versioned `ACCESS_POLICY`, the decision procedure, the terminology groups, ITS-REST resources and the mappings to FHIR `Consent`, IHE BPPC and IHE APPC.
 |FerroEHR
-|[[latest_issue_date]]13 Nov 2026
+|13 Nov 2026
 |===
