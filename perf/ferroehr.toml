@@ -2,10 +2,16 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 # The server configuration of the performance gate (scripts/perf/gate.sh):
-# the shipped defaults with one Basic user for the request set, bound through
+# the shipped defaults with two Basic users for the request set, bound through
 # SCIM as the development configuration binds its users, and the EHR index
 # kept local, so the gate measures FerroEHR and no FerroPIX. The background
-# workers run as the defaults start them.
+# workers run as the defaults start them. The administrator seeds the access
+# policy, the care relationships and the EHRs' directives through the ADMIN
+# and demographic routes, and the clinician reads and writes under them, so
+# every clinical group runs the access evaluator with care relationships and
+# clearances in force (#5590). The access log signs each link with the OpenPGP
+# key scripts/perf/gate.sh generates for the run and mounts where
+# [record.signing] names it.
 
 [deployment]
 profile = "sandbox"
@@ -41,15 +47,24 @@ jwks_file = "/etc/ferroehr/scim-jwks.json"
 user = "ferroehr"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
+# clinician / clinician (Argon2id), the professional the clinical groups run
+# as: no administrator, so a care relationship and a clearance decide.
+[[auth.basic.users]]
+user = "clinician"
+password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJQZXJmU2FsdA$3pUvm08CX3uvjvMBwkvqIWbox3KtS9Ih8+IB6CAPfY4"
+
 [authz.rbac]
 enabled = false
 first_admin = "ferroehr"
 
 # The operations the gate grants in the CDR: its provisioning client's
-# scim_provision before it provisions the Basic user, then that user's
-# scopes and roles (scripts/scim-provision.sh).
+# scim_provision before it provisions the Basic users, then their scopes and
+# roles (scripts/scim-provision.sh), and the administrator's care relationship
+# and access policy writes; access_service lets an opt-out be committed, and
+# access_demographic carries the clinician's clearance.
 [authz.grants]
-allowed = ["commit_composition", "scim_provision", "hold_roles", "hold_scopes"]
+allowed = ["commit_composition", "scim_provision", "hold_roles", "hold_scopes",
+  "write_care_relationship", "write_access_policy", "access_service", "access_demographic"]
 
 [authz.party_binding]
 provider = { issuer = "urn:oid:2.999.7.9", id = "perf" }
@@ -58,6 +73,16 @@ provider = { issuer = "urn:oid:2.999.7.9", id = "perf" }
 user = "ferroehr"
 key_issuer = "urn:ferroehr:basic-user"
 key = "ferroehr"
+
+[[authz.party_binding.basic_user]]
+user = "clinician"
+key_issuer = "urn:ferroehr:basic-user"
+key = "clinician"
+
+# The ADMIN group, through which the gate commits the access policy and each
+# EHR's directives.
+[api]
+admin = true
 
 # The URL clients reach the server at, which every SCIM location names.
 [server]
@@ -69,3 +94,8 @@ public_base_url = "http://127.0.0.1:58080"
 
 [record]
 subject_index = "local"
+
+[record.signing]
+mode = "pgp"
+key_file = "/etc/ferroehr/signing.asc"
+key_passphrase_file = "/etc/ferroehr/signing-passphrase"
