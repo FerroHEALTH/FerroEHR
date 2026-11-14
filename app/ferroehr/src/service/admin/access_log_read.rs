@@ -15,7 +15,7 @@ use jiff::Timestamp;
 
 use crate::access_log::search::LogQuery;
 use crate::access_log::store::{AccessLogError, AccessLogStore};
-use crate::access_log::view::withheld;
+use crate::access_log::view::{LogReader, withheld};
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
@@ -26,15 +26,6 @@ use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
-
-/// Who reads an EHR's access log, which decides what of it they read.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LogReader {
-    /// The subject of care or their representative, under EHDS Art. 9(2).
-    Person,
-    /// A reviewer of the log (EHDS Annex II 3.3).
-    Reviewer,
-}
 
 impl FerroEhrService {
     /// The records of `ehr`'s access log `query` selects, newest first, for
@@ -168,7 +159,7 @@ impl FerroEhrService {
     /// # Errors
     /// `conflict` when the local audit store, which holds the access log, is
     /// off.
-    pub(super) fn access_log_store(&self) -> Result<AccessLogStore, ServiceError> {
+    pub(in crate::service) fn access_log_store(&self) -> Result<AccessLogStore, ServiceError> {
         let Some(audit_store) = &self.audit_store else {
             return Err(ServiceError::conflict(
                 "the local audit store is off, so this server keeps no access log",
@@ -183,7 +174,7 @@ impl FerroEhrService {
 }
 
 /// The service error of a failed access-log read.
-fn log_failure(error: AccessLogError) -> ServiceError {
+pub(in crate::service) fn log_failure(error: AccessLogError) -> ServiceError {
     match error {
         AccessLogError::Interleaved { .. } => ServiceError::precondition(error.to_string()),
         other => ServiceError::internal("the access-log store", other),

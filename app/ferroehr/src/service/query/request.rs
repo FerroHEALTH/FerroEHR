@@ -60,6 +60,10 @@ pub struct AqlQueryRequest {
     /// Whether the executor should collect the touched EHR-id / template-id
     /// sets for the ABAC query post-check (our own extension).
     pub collect_attributes: bool,
+    /// What the caller may read of the access log, which decides whether and
+    /// how a query over `ACCESS_LOG_ENTRY` runs; the default refuses it. No
+    /// openEHR spec governs AQL over the access log: our own design (#5131).
+    pub log_standing: crate::access_log::view::LogStanding,
 }
 
 impl AqlQueryRequest {
@@ -128,6 +132,18 @@ pub struct QueryOutcome {
     /// The statement that ran, named by its stored name and the digest of its
     /// text, for the access log, which never carries the text.
     pub statement: Option<crate::system_log::event::QueryNaming>,
+    /// Set when the query read the access log, which records it as a read of
+    /// the log (the draft's recording rule 4) rather than an access to EHR
+    /// data.
+    pub log_read: Option<LogRead>,
+}
+
+/// A query's read of the access log, as its access-log entry names it.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct LogRead {
+    /// The EHR whose log was read: the person's own, or the one EHR every
+    /// served entry is about; `None` for a read across EHRs.
+    pub ehr_id: Option<String>,
 }
 
 impl QueryOutcome {
@@ -147,6 +163,7 @@ impl QueryOutcome {
             served_ehr_content: BTreeMap::new(),
             domain: crate::aql::ir::QueryDomain::Clinical,
             statement: None,
+            log_read: None,
         }
     }
 

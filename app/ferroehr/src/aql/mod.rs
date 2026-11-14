@@ -15,6 +15,7 @@
 //!
 //! Entry point: [`plan`].
 
+pub mod access_log;
 mod analyze;
 pub mod constraints;
 pub mod error;

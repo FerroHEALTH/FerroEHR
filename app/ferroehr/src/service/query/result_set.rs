@@ -199,18 +199,5 @@ pub(super) fn result_set_json(
 /// population query, the opposite of what was asked — so no column metadata
 /// exists to report, and the honest document is the empty one.
 pub(crate) fn empty_result_set(aql: &str) -> Value {
-    result_set_json(
-        aql,
-        aql,
-        None,
-        QueryResult {
-            columns: Vec::new(),
-            rows: Vec::new(),
-            served_ehrs: Vec::new(),
-            served_origins: Vec::new(),
-            origin_count: 0,
-            served_content: Vec::new(),
-            constraints: crate::system_log::categories::QueryConstraints::default(),
-        },
-    )
+    result_set_json(aql, aql, None, QueryResult::of_rows(Vec::new(), Vec::new()))
 }

@@ -88,6 +88,7 @@ pub(crate) async fn serve(
         subject_scope,
         collect,
         ehr_access,
+        log_standing: crate::api::access_log_query::standing(&state),
     };
 
     let outcome = match execution {
@@ -120,6 +121,20 @@ pub(crate) async fn serve(
     }
 
     let mut resp = response::respond_result_set(&parts.headers, &outcome.result_set);
+    if let Some(log_read) = &outcome.log_read {
+        // A query over the access log is a read of the log, and its record writes its
+        // own access-log entry (the draft's recording rule 4), naming the EHR whose log
+        // was read when there is one.
+        resp.extensions_mut()
+            .insert(crate::system_log::middleware::AuditObject {
+                ehr_id: log_read.ehr_id.clone(),
+                result_count: Some(outcome.served_rows),
+                query: outcome.statement.clone(),
+                entry: ferroehr::system_log::event::EntryScope::LogRead,
+                ..crate::system_log::middleware::AuditObject::default()
+            });
+        return Ok(resp);
+    }
     // A query rooted at a demographic class reads the party domain, and its
     // record is filed there with no clinical category, as a Demographic API
     // read is (no openEHR spec governs access logging: our own design).
