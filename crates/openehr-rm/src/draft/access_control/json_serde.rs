@@ -1723,6 +1723,9 @@ impl ::serde::Serialize
         if self.relationship_grace.is_some() {
             __n += 1;
         }
+        if self.rules.as_ref().is_some_and(|__v| !__v.is_empty()) {
+            __n += 1;
+        }
         if self.catalogue.as_ref().is_some_and(|__v| !__v.is_empty()) {
             __n += 1;
         }
@@ -1777,6 +1780,11 @@ impl ::serde::Serialize
             "purpose_required",
             &self.purpose_required,
         )?;
+        if let Some(__v) = &self.rules
+            && !__v.is_empty()
+        {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "rules", __v)?;
+        }
         if let Some(__v) = &self.catalogue
             && !__v.is_empty()
         {
@@ -1814,6 +1822,7 @@ impl<'de> ::serde::Deserialize<'de>
             "name",
             "purpose_required",
             "relationship_grace",
+            "rules",
             "uid",
         ];
         enum __Field {
@@ -1832,6 +1841,7 @@ impl<'de> ::serde::Deserialize<'de>
             __F11,
             __F12,
             __F13,
+            __F14,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -1865,9 +1875,10 @@ impl<'de> ::serde::Deserialize<'de>
                             }
                             "relationship_grace" => ::core::result::Result::Ok(__Field::__F9),
                             "purpose_required" => ::core::result::Result::Ok(__Field::__F10),
-                            "catalogue" => ::core::result::Result::Ok(__Field::__F11),
-                            "log_restrictions" => ::core::result::Result::Ok(__Field::__F12),
-                            "details" => ::core::result::Result::Ok(__Field::__F13),
+                            "rules" => ::core::result::Result::Ok(__Field::__F11),
+                            "catalogue" => ::core::result::Result::Ok(__Field::__F12),
+                            "log_restrictions" => ::core::result::Result::Ok(__Field::__F13),
+                            "details" => ::core::result::Result::Ok(__Field::__F14),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -1905,7 +1916,8 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s10: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s11: ::core::option::Option<_> = None;
                 let mut __s12: ::core::option::Option<_> = None;
-                let mut __s13: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s13: ::core::option::Option<_> = None;
+                let mut __s14: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -2013,7 +2025,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F11 => {
                             if __s11.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("catalogue"),
+                                    ::serde::de::Error::duplicate_field("rules"),
                                 );
                             }
                             __s11 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2021,7 +2033,7 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F12 => {
                             if __s12.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("log_restrictions"),
+                                    ::serde::de::Error::duplicate_field("catalogue"),
                                 );
                             }
                             __s12 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
@@ -2029,10 +2041,18 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F13 => {
                             if __s13.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("details"),
+                                    ::serde::de::Error::duplicate_field("log_restrictions"),
                                 );
                             }
                             __s13 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F14 => {
+                            if __s14.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("details"),
+                                );
+                            }
+                            __s14 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -2059,9 +2079,10 @@ impl<'de> ::serde::Deserialize<'de>
                         purpose_required: __s10
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("purpose_required"))?,
-                        catalogue: __s11,
-                        log_restrictions: __s12,
-                        details: __s13.flatten(),
+                        rules: __s11,
+                        catalogue: __s12,
+                        log_restrictions: __s13,
+                        details: __s14.flatten(),
                     },
                 )
             }

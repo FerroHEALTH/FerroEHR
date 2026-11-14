@@ -48,6 +48,24 @@ fn is_opt_out(directive: &AccessDirective) -> bool {
     DirectiveKind::OptOut.is(&directive.kind)
 }
 
+/// `ACCESS_DIRECTIVE.is_controller_rule`: the kind is the `controller_rule`
+/// code.
+fn is_controller_rule(directive: &AccessDirective) -> bool {
+    DirectiveKind::ControllerRule.is(&directive.kind)
+}
+
+/// Whether `directive` and each of its exceptions are controller rules, all
+/// of them when `rules` and none of them otherwise.
+fn all_rules_or_none(directive: &AccessDirective, rules: bool) -> bool {
+    is_controller_rule(directive) == rules
+        && directive
+            .exceptions
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .all(|e| is_controller_rule(e) == rules)
+}
+
 /// Whether `coded`, when present, is a term of the group `T`.
 fn absent_or<T: Term>(coded: Option<&DvCodedText>) -> bool {
     coded.is_none_or(|coded| T::read_coded(coded).is_ok())
@@ -71,14 +89,19 @@ pub fn check_settings(settings: &AccessDirectiveSettings) -> Result<(), Violatio
         "ACCESS_DIRECTIVE_SETTINGS",
         "Opt_out_unique",
     );
+    check.hold(
+        directives.iter().all(|d| all_rules_or_none(d, false)),
+        "ACCESS_DIRECTIVE_SETTINGS",
+        "Directives_not_controller_rules",
+    );
     for directive in directives {
         directive_rules(&mut check, directive);
     }
     check.finish()
 }
 
-/// Checks every invariant of an `ACCESS_POLICY` and of the classifications
-/// and catalogue entries it holds.
+/// Checks every invariant of an `ACCESS_POLICY` and of the classifications,
+/// rules and catalogue entries it holds.
 ///
 /// # Errors
 /// [`Violations`] naming each invariant the policy breaks.
@@ -105,10 +128,21 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
         "ACCESS_POLICY",
         "Catalogue_identified",
     );
+    check.hold(
+        catalogue.iter().all(|d| all_rules_or_none(d, false)),
+        "ACCESS_POLICY",
+        "Catalogue_not_controller_rules",
+    );
+    let rules = policy.rules.as_deref().unwrap_or_default();
+    check.hold(
+        rules.iter().all(|r| all_rules_or_none(r, true)),
+        "ACCESS_POLICY",
+        "Rules_kind",
+    );
     for classification in policy.classifications.as_deref().unwrap_or_default() {
         classification_rules(&mut check, classification);
     }
-    for directive in catalogue {
+    for directive in catalogue.iter().chain(rules) {
         directive_rules(&mut check, directive);
     }
     for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {

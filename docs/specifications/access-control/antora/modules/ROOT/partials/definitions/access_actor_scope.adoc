@@ -16,7 +16,7 @@ a|A party in the demographic service: a `PERSON` or `AGENT` matches itself; an `
 
 h|*0..1*
 |*role*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|A functional role the caller holds, coded as the role's capability or the caller's token states it, such as a professional role code.
+a|A role the caller performs: the caller matches when it is the `performer` of a `ROLE` in force (its `time_validity` holds the date of the access and its versioned object is not deleted) whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code.
 
 h|*0..1*
 |*relationship*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
