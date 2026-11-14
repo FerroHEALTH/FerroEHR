@@ -65,6 +65,7 @@ pub mod error;
 pub mod extensions;
 pub mod identifier_protection;
 pub mod ids;
+pub mod instance;
 pub mod licence;
 pub mod manufacturer;
 pub mod origins;

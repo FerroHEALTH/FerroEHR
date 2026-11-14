@@ -31,6 +31,7 @@ use ferroehr::db::domain::{Domain, DomainPools};
 use ferroehr::error::ServiceError;
 use ferroehr::extensions::outbox::{self, OutboxGate};
 use ferroehr::ids::EhrId;
+use ferroehr::instance::{Fingerprint, Instances};
 use ferroehr::manufacturer::MANUFACTURER;
 use ferroehr::report::Report;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
@@ -938,6 +939,20 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         verify_on_read = ?signer.verify_on_read(),
         "version signing configured"
     );
+    // Every instance of the deployment shares the key and the configuration;
+    // a difference is reported in health from the start (#5589).
+    let instances = Arc::new(Instances::new(
+        pool.clone(),
+        Fingerprint::of(&config, &signer).context("fingerprinting the configuration")?,
+    ));
+    instances
+        .compare()
+        .await
+        .context("comparing this instance with the deployment's others")?;
+    instances.spawn_heartbeat();
+    indicators.push(Arc::new(indicators::InstancesHealth::new(Arc::clone(
+        &instances,
+    ))));
     let access_log = access_log::build(&config, pools.audit.clone(), Arc::clone(&signer))?;
     // NOTE: our own design, the drain appends every access's entry through the checkpoints'
     // store, which signs links under an OpenPGP key; no request has run before this.
@@ -1075,6 +1090,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     .await
     .context("serving ferroehr-rest")?;
     tracing::info!(?drained, "the listeners drained");
+    if let Err(error) = instances.leave().await {
+        tracing::warn!(error = %error, "this instance's row could not be deleted");
+    }
 
     if let Some(held) = binding_lease {
         held.release().await;

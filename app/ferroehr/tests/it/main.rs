@@ -87,6 +87,7 @@ mod federation_agreements;
 mod federation_node;
 mod fixtures;
 mod import_concurrency;
+mod instances;
 mod item_tag_fixture;
 mod latest_head_fan_out;
 mod legal_marks;

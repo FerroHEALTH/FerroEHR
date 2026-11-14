@@ -68,7 +68,7 @@ impl FerroEhrConfig {
             // NOTE: our own design (#5589), every policy listener listens on the clinical or
             // the party database, so an audit listener DSN would connect nothing.
             errors.push(ConfigError::semantic(
-                "database.audit.listen_url is not used: no policy listener listens on the audit                  domain; set database.listen_url, database.clinical.listen_url or                  database.party.listen_url"
+                "database.audit.listen_url is not used: no policy listener listens on the audit domain"
                     .to_owned(),
             ));
         }

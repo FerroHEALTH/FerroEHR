@@ -17,6 +17,7 @@
 use std::sync::Arc;
 
 use crate::db::acquire::acquire;
+use crate::instance::{Agreement, Instances};
 use crate::policy_register::listen::Listened;
 use crate::system_log::chain_check::{ChainCheck, ChainCheckState};
 use crate::system_log::config::AuditPosture;
@@ -337,6 +338,67 @@ impl HealthIndicator for PolicyListenersHealth {
                      until the listener connects again",
                     lost.join(", ")
                 ))
+            }
+        })
+    }
+}
+
+/// `instances` — whether every live instance of the deployment signs with
+/// this instance's key and runs its configuration ([`Instances`]).
+///
+/// An instance with another key writes access-log links the others cannot
+/// vouch for, so a difference is shown from the start rather than found when
+/// a chain fails to verify. Each instance keeps serving, so the indicator
+/// reads `DEGRADED` and never takes the instance out of rotation. No openEHR
+/// spec governs the process model: our own design (#5589).
+#[derive(Debug)]
+pub struct InstancesHealth {
+    instances: Arc<Instances>,
+}
+
+impl InstancesHealth {
+    /// Constructs over this instance among the deployment's instances.
+    #[must_use]
+    pub fn new(instances: Arc<Instances>) -> Self {
+        Self { instances }
+    }
+}
+
+impl HealthIndicator for InstancesHealth {
+    fn name(&self) -> &'static str {
+        "instances"
+    }
+
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            match self.instances.agreement() {
+                Agreement::Agrees { .. } => Outcome::up(),
+                Agreement::Unread => {
+                    Outcome::degraded("this instance has not compared itself with the others")
+                }
+                Agreement::Unknown => Outcome::degraded(
+                    "the instances could not be compared: the instance table did not answer",
+                ),
+                Agreement::Differs(differences) => {
+                    let named: Vec<String> = differences
+                        .iter()
+                        .map(|difference| {
+                            let what = match (difference.signing_key, difference.configuration) {
+                                (true, true) => "another signing key and configuration",
+                                (true, false) => "another signing key",
+                                _ => "another configuration",
+                            };
+                            format!(
+                                "instance {} (FerroEHR {}) runs {what}",
+                                difference.instance, difference.version
+                            )
+                        })
+                        .collect();
+                    Outcome::degraded(format!(
+                        "{}; every instance must share the signing key and the configuration",
+                        named.join("; ")
+                    ))
+                }
             }
         })
     }
