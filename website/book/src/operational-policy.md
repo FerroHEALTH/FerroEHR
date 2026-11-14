@@ -1858,9 +1858,8 @@ patient can accept by reference, such as an IHE BPPC policy, and the
 `log_restrictions` of the access log's subject view your Member State's law
 lays down under EHDS Art. 9(3) ([Audit](audit.md#restricting-the-subject-view-ehds-art-93)).
 It is an `ACCESS_POLICY` of FerroEHR's draft access control package, written
-against the default archetype `openEHR-EHR-ACCESS_POLICY.controller.v1`
-(`v1.1.0` carries the log restrictions), which every boot stores, or against
-one of your own. Break-glass and the default floor
+against the default archetype `openEHR-EHR-ACCESS_POLICY.controller.v1`,
+which every boot stores, or against one of your own. Break-glass and the default floor
 stay in `ferroehr.toml`; the policy can only tighten them. Until you write
 one, nothing is tightened.
 

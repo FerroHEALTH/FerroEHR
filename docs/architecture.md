@@ -1121,7 +1121,7 @@ policy can only tighten them.
   view and the stored entry are unchanged. A write that changes them writes a
   `LogMeaning` access-log entry naming the write (the access log's recording
   rule 7), refused before the commit under a closed fail mode. The default
-  archetype carries them from `v1.1.0`; `v1.0.0` stays shipped.
+  archetype constrains them.
 
 ## Templates, validation, FLAT
 
