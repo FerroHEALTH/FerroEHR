@@ -91,6 +91,7 @@ fn request() -> RequestAccess {
     let caller = Caller {
         kind: CallerKind::Professional,
         party: Some(NURSE.to_owned()),
+        own_ehr: None,
         acts_for: Vec::new(),
         roles: Vec::new(),
         facts: ferroehr::party_binding::grants::caller::CallerFacts::default(),
@@ -155,7 +156,7 @@ fn main() {
         let mut admitted = 0usize;
         for read in &sample {
             for cared in [true, false] {
-                admitted += usize::from(access.judge(Some(read), cared).admits_any());
+                admitted += usize::from(access.judge(None, Some(read), cared).admits_any());
             }
         }
         let decision_ns = started

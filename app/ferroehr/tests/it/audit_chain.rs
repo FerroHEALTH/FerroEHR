@@ -667,10 +667,14 @@ const VERSION_2_COLUMNS: [&str; 13] = [
 /// The column version 3 adds to version 2's list (`0026_token_attributes.sql`).
 const VERSION_3_COLUMNS: [&str; 1] = ["token_attributes"];
 
-/// The digest of version 3 lists every column of the record but the unhashed
+/// The column version 4 drops from version 3's list
+/// (`0032_drop_access_organisation.sql`).
+const VERSION_4_DROPPED: [&str; 1] = ["organisation"];
+
+/// The digest of version 4 lists every column of the record but the unhashed
 /// three, so a migration that adds a column fails here until a version lists
-/// it; versions 1 and 2 keep the lists the rows written before them are
-/// hashed over.
+/// it; versions 1 to 3 keep the lists the rows written before them are hashed
+/// over.
 #[tokio::test]
 async fn the_digest_covers_every_column() {
     let testdb = testkit::db().await.expect("testkit database");
@@ -697,12 +701,16 @@ async fn the_digest_covers_every_column() {
         .collect();
     expected.sort();
     assert_eq!(
-        listed(3).await,
+        listed(4).await,
         expected,
         "every column of audit.audit_event outside {UNHASHED_COLUMNS:?} must be in the \
          chain digest: list a new column in a new version of audit.audit_event_digest_columns"
     );
-    let version_2: Vec<String> = expected
+    let mut version_3 = expected;
+    version_3.extend(VERSION_4_DROPPED.map(str::to_owned));
+    version_3.sort();
+    assert_eq!(listed(3).await, version_3, "version 3 is the 0026 list");
+    let version_2: Vec<String> = version_3
         .into_iter()
         .filter(|name| !VERSION_3_COLUMNS.contains(&name.as_str()))
         .collect();
@@ -715,7 +723,7 @@ async fn the_digest_covers_every_column() {
 }
 
 /// A store holding version-1 records verifies after the migration, new
-/// records are version 3, and a version-1 insert after a version-3 record is
+/// records are version 4, and a version-1 insert after a version-4 record is
 /// refused.
 #[tokio::test]
 async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade() {
@@ -775,7 +783,7 @@ async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade()
             .fetch_all(&pool)
             .await
             .expect("versions");
-    assert_eq!(versions, vec![1, 3]);
+    assert_eq!(versions, vec![1, 4]);
     // The checkpoint the seed left is stale after the rewrite; verify from genesis.
     sqlx::query("DELETE FROM audit.audit_chain_checkpoint")
         .execute(&pool)
@@ -795,7 +803,7 @@ async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade()
     .fetch_one(&pool)
     .await
     .expect("the newest version");
-    assert_eq!(newest, 3, "a new record is version 3");
+    assert_eq!(newest, 4, "a new record is version 4");
     // A copy of the newest record stated as version 1 is refused by the chain writer.
     let mut tx = pool.begin().await.expect("tx");
     let downgrade = sqlx::query(
@@ -817,7 +825,7 @@ async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade()
     .execute(&mut *tx)
     .await;
     tx.rollback().await.expect("rollback");
-    let refusal = downgrade.expect_err("a version-1 insert after version 3 is refused");
+    let refusal = downgrade.expect_err("a version-1 insert after version 4 is refused");
     assert!(
         refusal.to_string().contains("refusing a downgrade"),
         "{refusal}"

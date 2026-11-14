@@ -199,6 +199,7 @@ fn access(
         Caller {
             kind: CallerKind::Professional,
             party: Some(party.to_string()),
+            own_ehr: None,
             acts_for,
             roles: Vec::new(),
             facts,

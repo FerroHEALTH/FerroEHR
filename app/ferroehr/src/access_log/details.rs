@@ -53,8 +53,6 @@ pub enum Detail {
     ClientId,
     /// The `jti` of the caller's token.
     TokenId,
-    /// The organisation the caller acted for, as the token named it.
-    Organisation,
     /// A role the caller held, one element each.
     Role,
     /// The pseudonymisation domain, when it is not the resource class's own.
@@ -102,7 +100,7 @@ pub enum Detail {
 
 impl Detail {
     /// Every detail, in the order the tree holds them.
-    pub const ALL: [Self; 29] = [
+    pub const ALL: [Self; 28] = [
         Self::EventAction,
         Self::ResourceClass,
         Self::OutcomeIndicator,
@@ -110,7 +108,6 @@ impl Detail {
         Self::Issuer,
         Self::ClientId,
         Self::TokenId,
-        Self::Organisation,
         Self::Role,
         Self::Domain,
         Self::EhrId,
@@ -145,7 +142,6 @@ impl Detail {
             Self::Issuer => "at0005",
             Self::ClientId => "at0006",
             Self::TokenId => "at0007",
-            Self::Organisation => "at0008",
             Self::Role => "at0009",
             Self::Domain => "at0010",
             Self::EhrId => "at0011",
@@ -181,7 +177,6 @@ impl Detail {
             Self::Issuer => "issuer",
             Self::ClientId => "client id",
             Self::TokenId => "token id",
-            Self::Organisation => "organisation",
             Self::Role => "role",
             Self::Domain => "domain",
             Self::EhrId => "ehr id",

@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The coarse authorization class of an operation, its resource kind and the
-//! patient-scope enforcement mode, as the operation table
-//! (`crate::api::operation`) records them per id.
+//! The coarse authorization class of an operation, as the operation table
+//! (`crate::api::operation`) records it per id.
 //!
 //! Every generated operation is explicitly classified; one without a row fails
 //! the total-coverage guard tests below.
@@ -28,36 +27,6 @@ pub enum OperationClass {
     Admin,
 }
 
-/// The resource family a clinical operation acts on, as its row in the
-/// operation table (`crate::api::operation`) records it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ResourceKind {
-    /// An EHR (create / get / get-by-subject).
-    Ehr,
-    /// An `EHR_STATUS` or a versioned-EHR_STATUS read.
-    EhrStatus,
-    /// A COMPOSITION or a versioned-composition read.
-    Composition,
-    /// A CONTRIBUTION.
-    Contribution,
-    /// An AQL query execution (ad-hoc or stored).
-    Query,
-    /// A DIRECTORY/FOLDER.
-    Directory,
-}
-
-/// Whether an operation is checked against the patient scope, and when.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Mode {
-    /// Not checked here (definition/demographic/admin — RBAC only —, and
-    /// query, whose scope and check live in the query path).
-    Skip,
-    /// Checked before the backend call.
-    Pre,
-    /// Checked after the backend call, on a successful response.
-    Post,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -65,10 +34,6 @@ mod tests {
 
     fn class_of(op: &str) -> Option<OperationClass> {
         operation(op).and_then(|o| o.class)
-    }
-
-    fn kind_of(op: &str) -> Option<ResourceKind> {
-        operation(op).and_then(|o| o.kind)
     }
 
     /// The write class the read-only gate applies: an operation without a row
@@ -140,56 +105,6 @@ mod tests {
         assert_eq!(class_of("no_such_operation"), None);
     }
 
-    #[test]
-    fn kind_derivation_prefix_rules() {
-        assert_eq!(kind_of("ehr_create"), Some(ResourceKind::Ehr));
-        assert_eq!(kind_of("ehr_get_by_subject"), Some(ResourceKind::Ehr));
-        assert_eq!(kind_of("ehr_tags_get"), Some(ResourceKind::Ehr));
-        assert_eq!(kind_of("ehr_status_update"), Some(ResourceKind::EhrStatus));
-        assert_eq!(
-            kind_of("versioned_ehr_status_get"),
-            Some(ResourceKind::EhrStatus)
-        );
-        assert_eq!(
-            kind_of("composition_create"),
-            Some(ResourceKind::Composition)
-        );
-        assert_eq!(
-            kind_of("versioned_composition_get"),
-            Some(ResourceKind::Composition)
-        );
-        assert_eq!(
-            kind_of("contribution_create"),
-            Some(ResourceKind::Contribution)
-        );
-        assert_eq!(
-            kind_of("query_execute_adhoc_query"),
-            Some(ResourceKind::Query)
-        );
-        // The cohort extension takes the prefix rule, so the patient scope
-        // covers it too.
-        assert_eq!(kind_of("query_execute_cohort"), Some(ResourceKind::Query));
-        assert_eq!(kind_of("directory_create"), Some(ResourceKind::Directory));
-        // RBAC-only families have no resource kind.
-        assert_eq!(kind_of("definition_template_adl1.4_upload"), None);
-        assert_eq!(kind_of("person_get"), None);
-        assert_eq!(kind_of("admin_ehr_delete"), None);
-    }
-
-    /// Every generated operation without a [`ResourceKind`] belongs to an
-    /// RBAC-only family (`definition_*`, `demographic_*`, `admin_*`).
-    #[test]
-    fn every_kindless_route_is_rbac_only() {
-        for op in all_route_ops() {
-            if kind_of(op).is_none() {
-                assert!(
-                    op.starts_with("definition_") || op.starts_with("admin_") || is_demographic(op),
-                    "op {op} has no ResourceKind but is not a known RBAC-only family"
-                );
-            }
-        }
-    }
-
     /// Every generated operation id classifies write/read via a positive verb
     /// rule — no op falls through to [`is_write`]'s fail-safe default. A new,
     /// unrecognized generated op fails this test until [`write_verb`] handles it.
@@ -253,19 +168,5 @@ mod tests {
         assert!(!is_write("versioned_party_revision_history"));
         // Fail-safe: an unrecognized op is treated as a write.
         assert!(is_write("no_such_operation"));
-    }
-
-    /// The demographic-API op families (RBAC-only).
-    fn is_demographic(op: &str) -> bool {
-        const PREFIXES: [&str; 7] = [
-            "agent_",
-            "group_",
-            "organisation_",
-            "person_",
-            "role_",
-            "versioned_party_",
-            "demographic_",
-        ];
-        PREFIXES.iter().any(|p| op.starts_with(p))
     }
 }

@@ -109,7 +109,7 @@ pub struct Principal {
     /// role — see [`Self::scopes`].
     pub roles: Vec<String>,
     /// The retained, validated JWT claim set (Bearer only; empty for Basic), so
-    /// the patient scope and the SMART gate read claims without re-parsing the
+    /// the SMART gate reads claims without re-parsing the
     /// token.
     pub claims: serde_json::Map<String, serde_json::Value>,
     /// Which mechanism authenticated the caller.
@@ -790,7 +790,6 @@ mod tests {
                 ..AppConfig::default()
             },
             None,
-            None,
             memory(),
             test_support::standing(),
         )
@@ -870,29 +869,23 @@ mod tests {
         for bearer in [false, true] {
             let config =
                 introspecting_through(&issuer.base_url, bearer, Some(issuer.ca_file.clone()));
-            Authenticator::new(&config, None, None, memory(), test_support::standing())
+            Authenticator::new(&config, None, memory(), test_support::standing())
                 .await
                 .unwrap_or_else(|e| panic!("bearer={bearer}: read trusting the roots file: {e}"));
             let untrusted = introspecting_through(&issuer.base_url, bearer, None);
-            let refused =
-                Authenticator::new(&untrusted, None, None, memory(), test_support::standing())
-                    .await
-                    .expect_err("the platform roots alone do not trust the private authority");
+            let refused = Authenticator::new(&untrusted, None, memory(), test_support::standing())
+                .await
+                .expect_err("the platform roots alone do not trust the private authority");
             assert!(
                 refused.contains("could not be read"),
                 "bearer={bearer}: {refused}"
             );
             let no_certificate =
                 introspecting_through(&issuer.base_url, bearer, Some(empty.clone()));
-            let refused = Authenticator::new(
-                &no_certificate,
-                None,
-                None,
-                memory(),
-                test_support::standing(),
-            )
-            .await
-            .expect_err("a roots file without a certificate refuses the start");
+            let refused =
+                Authenticator::new(&no_certificate, None, memory(), test_support::standing())
+                    .await
+                    .expect_err("a roots file without a certificate refuses the start");
             assert!(refused.contains("tls"), "bearer={bearer}: {refused}");
         }
     }
@@ -946,15 +939,9 @@ mod tests {
     }
 
     async fn basic_only() -> Arc<Authenticator> {
-        Authenticator::new(
-            &basic_config(60),
-            None,
-            None,
-            memory(),
-            test_support::standing(),
-        )
-        .await
-        .expect("a Basic-only authenticator")
+        Authenticator::new(&basic_config(60), None, memory(), test_support::standing())
+            .await
+            .expect("a Basic-only authenticator")
     }
 
     async fn bearer_only() -> Arc<Authenticator> {
@@ -963,7 +950,6 @@ mod tests {
                 auth: test_support::bearer_auth(),
                 ..AppConfig::default()
             },
-            None,
             None,
             memory(),
             test_support::standing(),
@@ -993,15 +979,10 @@ mod tests {
     #[tokio::test]
     async fn a_cached_credential_never_admits_a_wrong_password() {
         for ttl in [60, 0] {
-            let auth = Authenticator::new(
-                &basic_config(ttl),
-                None,
-                None,
-                memory(),
-                test_support::standing(),
-            )
-            .await
-            .unwrap();
+            let auth =
+                Authenticator::new(&basic_config(ttl), None, memory(), test_support::standing())
+                    .await
+                    .unwrap();
             let h = headers("Basic YWxpY2U6cHc="); // alice:pw
             let first = auth.authenticate(&h).await.expect("first verifies");
             let second = auth.authenticate(&h).await.expect("second verifies");
@@ -1288,7 +1269,6 @@ mod tests {
                 ..AppConfig::default()
             },
             None,
-            None,
             memory(),
             test_support::standing(),
         )
@@ -1531,15 +1511,9 @@ mod tests {
             ..AppConfig::default()
         };
         let layer = AuthLayer {
-            authenticator: Authenticator::new(
-                &config,
-                None,
-                None,
-                memory(),
-                test_support::standing(),
-            )
-            .await
-            .expect("authenticator"),
+            authenticator: Authenticator::new(&config, None, memory(), test_support::standing())
+                .await
+                .expect("authenticator"),
             authz: None,
             patient_data: None,
             smart: Arc::new(SmartRoutes::new(
@@ -1640,7 +1614,7 @@ mod tests {
         };
         config.auth.smart.discovery = true;
         config.auth.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
-        Authenticator::new(&config, None, None, memory(), test_support::standing()).await
+        Authenticator::new(&config, None, memory(), test_support::standing()).await
     }
 
     /// SMART App Launch 2.2.0, Conformance, §Metadata requires a

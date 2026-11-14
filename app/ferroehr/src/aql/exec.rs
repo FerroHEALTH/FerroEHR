@@ -23,9 +23,8 @@ use uuid::Uuid;
 use super::error::{AqlError, ExecError};
 use super::ir::{Params, QueryIr};
 use super::sql::{CellKind, ColumnSpec, SqlCtx};
-use super::subject::EhrSubject;
 use crate::db::acquire::lease;
-use crate::ids::{EhrId, VoId};
+use crate::ids::VoId;
 use crate::storage::node_repo::SubtreeAnchor;
 
 /// One `RESULT_SET` column's metadata (`schemas/query/ResultSetColumn`).
@@ -368,73 +367,6 @@ fn fill_whole_object_cells(
             *cell = value;
         }
     }
-}
-
-/// The distinct EHR ids and EHR subjects an AQL query touches.
-///
-/// Collected for the patient-scope query post-check (no openEHR spec governs
-/// the patient scope — our own extension), independent of the query's
-/// projection.
-#[derive(Debug, Clone, Default)]
-pub struct QueryScope {
-    /// Distinct touched EHR ids (as strings).
-    pub ehr_ids: Vec<String>,
-    /// The distinct subjects of the touched EHRs, from which the query
-    /// post-check folds its patient attribute
-    /// ([`super::subject::TouchedSubjects::fold`]).
-    pub subjects: Vec<EhrSubject>,
-}
-
-/// Run the scope-collection query for `ir` and return the distinct EHR ids
-/// and EHR subjects it touches. Empty when the query binds no EHR
-/// source and no VO root.
-///
-/// # Errors
-/// [`AqlError::Sql`] if the scope query cannot be lowered; [`AqlError::Exec`] if
-/// the database rejects it.
-pub async fn collect_scope(
-    pool: &PgPool,
-    ir: &QueryIr,
-    params: &Params,
-    ctx: &SqlCtx,
-) -> Result<QueryScope, AqlError> {
-    let Some(scope) = super::sql::build_scope(ir, params, ctx)? else {
-        return Ok(QueryScope::default());
-    };
-    // `persistent(false)` for the same reason as `execute` above: dynamic
-    // SQL, unnamed statement, custom plan per execution.
-    let mut lease = lease(pool).await.map_err(ExecError::from)?;
-    let rows = lease
-        .run(|conn| {
-            sqlx::query_with(sqlx::AssertSqlSafe(scope.sql), scope.values)
-                .persistent(false)
-                .fetch_all(conn)
-        })
-        .await
-        .map_err(ExecError::from)?;
-    drop(lease);
-    let mut ehr_ids = std::collections::BTreeSet::new();
-    // A NULL cell is a left binding whose branch did not match; a cell that
-    // fails to decode is a defect and fails the collection, never a silently
-    // narrower scope.
-    for row in &rows {
-        for ehr_col in &scope.ehr_columns {
-            let ehr: Option<Uuid> = row.try_get(ehr_col.as_str()).map_err(ExecError::from)?;
-            if let Some(e) = ehr {
-                ehr_ids.insert(EhrId(e));
-            }
-        }
-    }
-    let ehr_ids: Vec<EhrId> = ehr_ids.into_iter().collect();
-    let subjects = super::subject::ehr_subjects(pool, &ehr_ids).await?;
-    Ok(QueryScope {
-        ehr_ids: ehr_ids.iter().map(ToString::to_string).collect(),
-        subjects: subjects
-            .into_values()
-            .collect::<std::collections::BTreeSet<_>>()
-            .into_iter()
-            .collect(),
-    })
 }
 
 /// The `index`-th generated SQL alias of a `RESULT_SET` column, as a typed

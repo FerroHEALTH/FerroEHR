@@ -3,10 +3,10 @@
 
 //! The execution of the `query` API group — ad-hoc + stored AQL execution
 //! (ITS-REST 1.1.0 QUERY API). Every operation runs the same frame: the
-//! patient-scope pre-filter (`extensions::access::patient_scope`), its ad-hoc ([`super::adhoc`]), stored
-//! ([`super::stored`]) or cohort ([`super::cohort`]) execution path, then
-//! the patient-scope post-check, and renders the assembled `RESULT_SET` (with its
-//! spec-mandated `ETag`) via [`super::response`].
+//! access evaluator's condition, its ad-hoc ([`super::adhoc`]), stored
+//! ([`super::stored`]) or cohort ([`super::cohort`]) execution path, and
+//! renders the assembled `RESULT_SET` (with its spec-mandated `ETag`) via
+//! [`super::response`].
 //!
 //! Spec: the six released operations, their parameter lists, and their
 //! `RESULT_SET` response are `query-codegen.openapi.yaml` +
@@ -43,23 +43,8 @@ pub(crate) enum Execution {
     Cohort,
 }
 
-impl Execution {
-    /// The operation id the PEP and the access record name this execution by.
-    const fn op(self) -> &'static str {
-        match self {
-            Self::Adhoc => "query_execute_adhoc_query",
-            Self::AdhocBody => "query_execute_adhoc_query_body",
-            Self::Stored => "query_execute_stored_query",
-            Self::StoredBody => "query_execute_stored_query_body",
-            Self::StoredVersion => "query_execute_stored_query_version",
-            Self::StoredVersionBody => "query_execute_stored_query_version_body",
-            Self::Cohort => "query_execute_cohort",
-        }
-    }
-}
-
 /// Run one query operation along `execution`: the access scope first,
-/// then the execution, the patient-scope post-check and the rendered `RESULT_SET`.
+/// then the execution and the rendered `RESULT_SET`.
 ///
 /// # Errors
 /// The refusals of the execution path and of the result-set rendering.
@@ -68,14 +53,6 @@ pub(crate) async fn serve(
     parts: RequestParts,
     execution: Execution,
 ) -> Result<Response, RestError> {
-    let op = execution.op();
-    // The patient scope: the subject pre-filter + collection flag. A missing
-    // configured patient claim is a ready 403.
-    let (subject_scope, collect) =
-        match crate::extensions::access::patient_scope::query_pre(&state, op) {
-            Ok(prep) => prep,
-            Err(deny) => return Ok(deny),
-        };
     // EHR_ACCESS: the access evaluator's verdict the path routes apply, held
     // over every row the query could reach (RM ehr `ehr_access.adoc`
     // §`EHR_ACCESS` Class).
@@ -84,8 +61,6 @@ pub(crate) async fn serve(
         Err(deny) => return Ok(*deny),
     };
     let scope = QueryScope {
-        subject_scope,
-        collect,
         ehr_access,
         log_standing: crate::api::access_log_query::standing(&state),
     };
@@ -97,9 +72,9 @@ pub(crate) async fn serve(
         Execution::StoredBody => stored::post(&state, &parts, &scope).await?,
         Execution::StoredVersion => stored::version_get(&state, &parts, &scope).await?,
         Execution::StoredVersionBody => stored::version_post(&state, &parts, &scope).await?,
-        // The cohort extension: the same patient-scope pre-filter, post-check, rendering
-        // and access extensions as the released operations, over a scope
-        // resolved across the pseudonymisation boundary rather than supplied.
+        // The cohort extension: the same access condition, rendering and access
+        // extensions as the released operations, over a scope resolved across
+        // the pseudonymisation boundary rather than supplied.
         Execution::Cohort => {
             let outcome = cohort::execute(&state, &parts, &scope).await?;
             let suppressed = outcome.suppressed;
@@ -113,11 +88,6 @@ pub(crate) async fn serve(
             query
         }
     };
-
-    // The patient-scope query post-check over the touched subjects.
-    if let Err(deny) = crate::extensions::access::patient_scope::query_post(&state, op, &outcome) {
-        return Ok(deny);
-    }
 
     let mut resp = response::respond_result_set(&parts.headers, &outcome.result_set);
     if let Some(log_read) = &outcome.log_read {

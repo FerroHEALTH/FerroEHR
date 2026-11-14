@@ -77,7 +77,7 @@ flowchart LR
     subgraph Server["FerroEHR process"]
       B1["B1 network + protocol"]
       B2["B2 authentication"]
-      B3["B3 authorization<br/>EHR_ACCESS - RBAC - patient scope - SMART"]
+      B3["B3 authorization<br/>EHR_ACCESS - RBAC - SMART"]
       B4["B4 content validation"]
       B5["B5 instance separation"]
     end
@@ -182,9 +182,7 @@ allowed, which is what makes an optional stage safe to leave off:
    overrides any grant. (The `/management/*` surface is *not* in this
    classification: it is governed endpoint-by-endpoint by its own configuration,
    and an endpoint you do not name is not mounted at all.)
-4. **The patient scope** (off by default) holds every caller to the EHR whose
-   subject the `[auth] patient_claim` names, on direct routes and in queries.
-5. **SMART scopes** (off by default) are AND-composed onto the decisions
+4. **SMART scopes** (off by default) are AND-composed onto the decisions
    before them.
 
 Deny-by-default throughout, and **fail-closed in both senses**: no stage permits

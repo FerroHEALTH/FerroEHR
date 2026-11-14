@@ -121,6 +121,7 @@ impl Reader {
         let caller = Caller {
             kind: self.kind,
             party: self.party.clone(),
+            own_ehr: None,
             acts_for: Vec::new(),
             roles: Vec::new(),
             facts: self.facts.clone(),

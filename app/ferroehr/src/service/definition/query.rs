@@ -240,7 +240,6 @@ impl FerroEhrService {
                 system_id: self.effective_system_id(),
                 ehr_ids: Vec::new(),
                 ehr_scope_kind: crate::aql::sql::EhrScopeKind::Named,
-                subject_scope: None,
                 ehr_access: crate::access_eval::condition::AccessCondition::default(),
                 limit,
                 offset: None,

@@ -37,13 +37,9 @@
 //!   `w{ctr}_n` and one-row `b{ctr}_one` / `w{ctr}_one`, the head probe
 //!   `b{ctr}_n_pin_head` of a versioned `OR` branch, and the streaming
 //!   source's inner `n{sid}_s` (`aql::sql::from`, `aql::sql::value`,
-//!   `aql::sql::select`), plus the two fixed `ehr` aliases of the patient-scope
-//!   rule, `subject_row` and `subject_other` (`aql::sql::subject`).
+//!   `aql::sql::select`).
 //! * **Output-column aliases** — `col{i}` / `col{i}_{vo,sv,num,cap}` from the
-//!   SELECT index (`aql::sql::select`), `scope_ehr_{i}`
-//!   from one index over the EHR sources and the VO roots
-//!   (`aql::sql::build_scope`), the literal `subject_shared`
-//!   of the subject lookup (`aql::sql::subject::lookup`), `access_ehr_{i}` /
+//!   SELECT index (`aql::sql::select`), `access_ehr_{i}` /
 //!   `access_vo_{i}` / `access_sv_{i}` from the same index
 //!   (`aql::sql::select::build_access_ehr_columns` and
 //!   `build_access_version_columns`, the hidden columns the access log reads
@@ -72,7 +68,6 @@
 //! `[a-zA-Z][a-zA-Z0-9_]*`, so a quote, semicolon, comment sequence or jsonpath
 //! metacharacter in a path position is a lex failure, not a payload.
 
-use crate::fixtures::plan_ok;
 use std::sync::Arc;
 
 use sea_query::Value;
@@ -83,7 +78,6 @@ use ferroehr::aql::error::{AnalysisError, AqlError, AqlFeatureError};
 use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
 use ferroehr::aql::plan;
-use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::aql::sql::{PreparedQuery, SqlCtx};
 use openehr_query::parser::parse_str;
 
@@ -128,7 +122,6 @@ fn ctx() -> SqlCtx {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: None,
         offset: None,
@@ -655,10 +648,8 @@ const ALIAS_PATTERNS: &[&str] = &[
     r"^esv[0-9]+_mark$",
     r"^xv[0-9]+_mark$",
     r"^col[0-9]+(_(vo|sv|num|cap))?$",
-    r"^scope_(ehr|template)_[0-9]+$",
     r"^access_(ehr|vo|sv)_[0-9]+$",
     r"^hit$",
-    r"^subject_(row|other|shared)$",
 ];
 
 #[test]
@@ -676,36 +667,7 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
     for query in CORPUS {
         let prepared = build(query, &Params::default());
         statements.push(((*query).to_owned(), prepared.sql));
-        // The scope query (the patient-scope post-check) is a second emitted statement.
-        let ir = plan_ok(query);
-        if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &ctx())
-            .unwrap_or_else(|e| panic!("scope build failed for {query:?}: {e}"))
-        {
-            statements.push((format!("{query} [scope]"), scope.sql));
-        }
-        // The patient scope adds the subject-identity conditions to both
-        // statements, so each is scanned under a scoped context too, with and
-        // without a configured patient namespace.
-        for namespace in [None, Some("nl.example.patients".to_owned())] {
-            let scoped = SqlCtx {
-                subject_scope: Some(SubjectScope {
-                    id: "patient-1".to_owned(),
-                    namespace,
-                }),
-                ..ctx()
-            };
-            let prepared = build_with(query, &Params::default(), &scoped);
-            statements.push((format!("{query} [patient scope]"), prepared.sql));
-            if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &scoped)
-                .unwrap_or_else(|e| panic!("scope build failed for {query:?}: {e}"))
-            {
-                statements.push((format!("{query} [patient scope, scope]"), scope.sql));
-            }
-        }
     }
-    // The subject lookup the direct-route gate and the post-check read.
-    let (lookup, _) = ferroehr::aql::sql::subject::lookup(&[uuid::Uuid::nil()]);
-    statements.push(("subject lookup".to_owned(), lookup));
     for payload in HOSTILE {
         for (position, query) in PARAM_POSITIONS {
             let prepared = build(query, &one_param("p", payload));
@@ -770,9 +732,8 @@ fn the_sort_direction_is_a_closed_two_valued_choice() {
 
 // ── (7) the execution context ────────────────────────────────────────────────
 
-/// The context values the access layer supplies (`system_id`, the ABAC patient
-/// scope) are bound too, so a hostile value there cannot alter the statement
-/// either. No openEHR spec governs the ABAC scope — it is our own extension.
+/// The context value the access layer supplies (`system_id`) is bound too, so
+/// a hostile value there cannot alter the statement either.
 #[test]
 fn hostile_execution_context_values_bind() {
     let query = "SELECT e/system_id, c/name/value FROM EHR e CONTAINS COMPOSITION c";
@@ -780,10 +741,6 @@ fn hostile_execution_context_values_bind() {
     for payload in HOSTILE {
         let mut hostile_ctx = ctx();
         hostile_ctx.system_id = (*payload).to_owned();
-        hostile_ctx.subject_scope = Some(SubjectScope {
-            id: (*payload).to_owned(),
-            namespace: Some((*payload).to_owned()),
-        });
         let hostile = build_with(query, &Params::default(), &hostile_ctx);
         assert!(
             !hostile.sql.contains(MARKER),
@@ -796,23 +753,16 @@ fn hostile_execution_context_values_bind() {
                 .any(|v| v.contains(MARKER)),
             "the context value {payload:?} is not among the bound values"
         );
-        // The subject scope adds its own subquery, so only the benign
-        // statement's prefix is comparable; the direction that matters is that
-        // the payload changes nothing structural between two hostile builds.
         let mut second_ctx = ctx();
         second_ctx.system_id = format!("{payload}{payload}");
-        second_ctx.subject_scope = Some(SubjectScope {
-            id: format!("{payload}{payload}"),
-            namespace: Some(format!("{payload}{payload}")),
-        });
         let second = build_with(query, &Params::default(), &second_ctx);
         assert_eq!(
             hostile.sql, second.sql,
             "the SQL structure depends on a context value's content"
         );
-        assert!(
-            benign.sql.len() < hostile.sql.len(),
-            "the scope subquery is expected to be additive"
+        assert_eq!(
+            benign.sql, hostile.sql,
+            "a hostile context value changes the statement's text"
         );
     }
 }

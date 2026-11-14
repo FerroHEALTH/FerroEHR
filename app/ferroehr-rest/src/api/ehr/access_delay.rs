@@ -10,8 +10,7 @@
 //! one who releases it, so beside the Admin-class
 //! `POST /admin/access-delay/release` this route lets any caller who may
 //! write the EHR release one composition of it: it carries the clinical
-//! authentication class, the `EHR_ACCESS` gate, the patient-scope check of a composition
-//! update and the SMART `composition-` create grant of an EHR-scoped write. A
+//! authentication class, the `EHR_ACCESS` gate and the SMART `composition-` create grant of an EHR-scoped write. A
 //! caller that acts for the person is refused, since the person cannot
 //! release what is held from them. No openEHR ITS-REST operation governs it.
 
@@ -30,7 +29,7 @@ use crate::overview::version_id::{parse_ehr_id, parse_vo_id};
 use crate::state::AppState;
 
 /// The operation id of the release; its `composition_` prefix and `_update`
-/// verb make the patient-scope check a composition update and the RBAC class a write.
+/// verb make the RBAC class a write.
 pub(crate) const RELEASE: &str = "composition_access_delay_update";
 
 /// The clinical access-delay route, mounted beside the openEHR base path.

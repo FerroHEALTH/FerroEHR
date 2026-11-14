@@ -106,7 +106,7 @@ async fn app_auditing(audit: AuditConfig) -> (testkit::TestDb, PgPool, Router) {
     .await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
-    let authz = AuthzHandle::build(&authz, &config.api.base_path, None).map(Arc::new);
+    let authz = AuthzHandle::build(&authz, &config.api.base_path).map(Arc::new);
     let app = common::build_full(config, Arc::new(svc), authz, Observability::default()).await;
     (db, pool, app)
 }

@@ -11,7 +11,7 @@
 //!
 //! The quarantined spec-silent designs, each flagged at its own module:
 //!
-//! - [`access`] — authn (Basic/OAuth2/OIDC) + RBAC authz + the patient scope and the PEP.
+//! - [`access`] — authn (Basic/OAuth2/OIDC) + RBAC authz + the PEP.
 //!   ITS-REST places authorization out of band
 //!   (`docs/specs/openehr/ITS-REST/specifications/docs/overview/Requests_and_responses.md`
 //!   §Authentication and authorization); the `401`/`403`/`WWW-Authenticate`

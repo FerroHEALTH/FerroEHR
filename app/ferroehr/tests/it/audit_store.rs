@@ -497,7 +497,8 @@ async fn access_fields_round_trip_on_both_write_paths() {
     );
 }
 
-/// The accessing organisation survives the round trip on both write paths.
+/// The provider the party binding attributes an access to survives the round
+/// trip on both write paths.
 ///
 /// EHDS Annex II 3.2(a) asks which healthcare provider the access happened on
 /// behalf of, beside the natural person of 3.2(b)
@@ -505,43 +506,53 @@ async fn access_fields_round_trip_on_both_write_paths() {
 /// their columns independently, so a field added to one and forgotten in the
 /// other is lost exactly on the batched path a loaded server uses.
 #[tokio::test]
-async fn the_accessing_organisation_round_trips_on_both_write_paths() {
+async fn the_accessing_provider_round_trips_on_both_write_paths() {
+    use ferroehr::system_log::binding::{BindingRecord, Identified};
+
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let store = store_over(&pool);
+    let acting_for = |id: &str| {
+        Some(BindingRecord::system(Some(Identified {
+            issuer: "urn:oid:2.16.528.1.1007.3.3".to_owned(),
+            id: id.to_owned(),
+        })))
+    };
 
     let mut single = read_event("2026-07-10T08:30:00Z".parse().unwrap());
-    single.organisation = Some("zh-noordwest".to_owned());
+    single.binding = acting_for("zh-noordwest");
     store
         .insert(&single, Some("patient-42"))
         .await
         .expect("insert");
 
     let mut batched = read_event("2026-07-10T08:31:00Z".parse().unwrap());
-    batched.organisation = Some("huisartsenpost-zuid".to_owned());
-    // A record with no organisation resolved: the column stays NULL rather
-    // than carrying the previous row's value or a placeholder.
+    batched.binding = acting_for("huisartsenpost-zuid");
+    // A record with no provider: the column stays NULL rather than carrying
+    // the previous row's value or a placeholder.
     let anonymous = read_event("2026-07-10T08:32:00Z".parse().unwrap());
     store
         .insert_batch(&[record(&batched, None), record(&anonymous, None)], &[])
         .await
         .expect("insert batch");
 
-    let rows =
-        sqlx::query("SELECT organisation, principal FROM audit.audit_event ORDER BY recorded_at")
-            .fetch_all(&pool)
-            .await
-            .expect("three rows");
+    let rows = sqlx::query(
+        "SELECT provider ->> 'id' AS provider, principal FROM audit.audit_event \
+         ORDER BY recorded_at",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("three rows");
     assert_eq!(rows.len(), 3, "one row per written record");
     assert_eq!(
-        rows[0].get::<Option<String>, _>("organisation").as_deref(),
+        rows[0].get::<Option<String>, _>("provider").as_deref(),
         Some("zh-noordwest"),
-        "the per-event path records the organisation"
+        "the per-event path records the provider"
     );
     assert_eq!(
-        rows[1].get::<Option<String>, _>("organisation").as_deref(),
+        rows[1].get::<Option<String>, _>("provider").as_deref(),
         Some("huisartsenpost-zuid"),
-        "the batched path records the organisation"
+        "the batched path records the provider"
     );
     assert_eq!(
         rows[1].get::<Option<String>, _>("principal").as_deref(),
@@ -549,22 +560,9 @@ async fn the_accessing_organisation_round_trips_on_both_write_paths() {
         "the batched row's other columns stay aligned with their own record"
     );
     assert_eq!(
-        rows[2].get::<Option<String>, _>("organisation"),
+        rows[2].get::<Option<String>, _>("provider"),
         None,
-        "an unresolved organisation is recorded as absent, never guessed"
-    );
-
-    // The served FHIR document carries the same fact as the column: the
-    // organisation as an agent of its own, a logical reference to an
-    // Organization (FHIR R4 `Reference.type` and `Reference.identifier`).
-    let stored = served(&store).await.remove(0);
-    let agents = stored["agent"].as_array().expect("the agent list");
-    assert!(
-        agents.iter().any(|agent| {
-            agent["who"]["type"] == "Organization"
-                && agent["who"]["identifier"]["value"] == "zh-noordwest"
-        }),
-        "the stored document must carry the organisation agent: {stored}"
+        "an unattributed access is recorded as absent, never guessed"
     );
 }
 
@@ -882,7 +880,6 @@ fn every_kind_of_record(
     let mut classified = read_event(at("2026-07-10T08:30:00.123456Z"));
     classified.issuer = Some("https://idp.example.org".to_owned());
     classified.client_id = Some("portal".to_owned());
-    classified.organisation = Some("zh-noordwest".to_owned());
     classified.roles = vec!["clinician".to_owned()];
     classified.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
     classified.subject_namespace = Some("urn:oid:2.999.1.1".to_owned());

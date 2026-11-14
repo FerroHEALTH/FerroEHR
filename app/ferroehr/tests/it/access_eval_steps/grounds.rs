@@ -62,6 +62,14 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
     })
 }
 
+/// The subject of [`EHR`], through its patient context.
+fn subject_of_ehr() -> Caller {
+    Caller {
+        own_ehr: Some(EhrId(uuid(EHR))),
+        ..caller(CallerKind::Subject, GUARDIAN)
+    }
+}
+
 /// The decision `access` records for the EHR with `settings`, after it
 /// answered `item`.
 fn decide_on(
@@ -116,7 +124,7 @@ fn a_role_ground_names_each_capability_and_role() {
 /// The subject reading their own record rests on `subject of care`.
 #[test]
 fn the_subject_reads_under_subject_of_care() {
-    let access = request(caller(CallerKind::Subject, GUARDIAN), read(None), None);
+    let access = request(subject_of_ehr(), read(None), None);
     let (_, decision) = decide_on(&access, None, &Item::Ehr);
     assert_eq!(
         of_kind(&decision, "subject of care").len(),
@@ -423,7 +431,7 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
 /// rests on `subject of care` either way (#5581).
 #[test]
 fn a_query_served_ehr_with_no_settings_names_the_grounds_of_a_direct_read() {
-    let subject = || request(caller(CallerKind::Subject, GUARDIAN), read(None), None);
+    let subject = || request(subject_of_ehr(), read(None), None);
     let (_, direct) = decide_on(&subject(), None, &Item::Ehr);
     let queried = subject();
     queried.judge_unsettled(EhrId(uuid(EHR)));

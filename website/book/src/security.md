@@ -234,12 +234,13 @@ hours) if prompt revocation matters, and use refresh tokens for session length.
 
 ## Authorization
 
-Authorization has three composable layers. The per-EHR `EHR_ACCESS` gate with
+Authorization has two composable layers. The per-EHR `EHR_ACCESS` gate with
 the access evaluator is the openEHR-grounded base and is always on; the coarse
-role layer is active when authentication is enabled; the patient scope is
-opt-in. A request must clear every active layer. Deployments serving SMART apps can
-enable a fourth, token-scope layer on top; see
-[SMART App Launch](smart-app-launch.md).
+role layer is active when authentication is enabled. A request must clear every
+active layer. Deployments serving SMART apps can enable a third, token-scope
+layer on top; see [SMART App Launch](smart-app-launch.md). The access
+evaluator alone confines a patient to their own EHR
+([a patient's own EHR](#a-patients-own-ehr)).
 
 ### Per-EHR access control (`EHR_ACCESS`)
 
@@ -265,9 +266,9 @@ control.
 > Under `restricted`, the admin role still reaches a setting-less EHR. That is
 > deliberate: a plain deny would make such a record unreachable by everyone
 > (including the operator who would author the settings that fix it) which is an
-> outage rather than a control. Bind callers to patients with the
-> [patient scope](#the-patient-scope) below; this key decides only the default
-> disposition.
+> outage rather than a control. A patient reaches only their own EHR
+> ([a patient's own EHR](#a-patients-own-ehr)); this key decides only the
+> default disposition.
 
 Committing settings of the `access_directives` scheme switches that EHR to
 explicit policy, and those settings **always win over the server default**,
@@ -630,9 +631,9 @@ the marker is the RM's own.
   The SMART scope grammar reserves `patient/` for "applications acting in the
   context of a specific patient/EHR" and `user/` for those acting for a
   logged-in practitioner, so a clinician's app uses `user/` scopes and keeps
-  every professional right. The patient claim (`[auth] patient_claim`) does
-  not make a caller the person, because a professional's token in a patient's context carries it
-  too. The rule is the FerroHEALTH family's strict answer, shared through
+  every professional right. A patient claim in the token does not make a
+  caller the person, because a professional's token in a patient's context
+  carries it too. The rule is the FerroHEALTH family's strict answer, shared through
   `ferrohealth-smart`; the Art. 3(3) delay below asks its broad one.
 - **Who counts as the representative.** A person bound to their own `PERSON`
   who acts for the patient through a representation relationship FerroEHR has
@@ -696,8 +697,8 @@ default, so the person's access stays immediate.
   amended, and a professional holds an amendment by hand if it needs
   explaining. A composition the person commits is never held from them.
 - **Who it is held from.** A request that may be the person's own: a bearer
-  token carrying a SMART `patient/` grant, or the patient claim
-  (`[auth] patient_claim`). A token that carries either is treated as the
+  token that `ferrohealth-smart` classifies as the person or a representative,
+  or a representative the patient portal binds. Such a token is treated as the
   person's, whatever `user/` or `system/` grant it also carries, so a mixed
   token is withheld from rather than shown the data too early. The rule is the
   FerroHEALTH family's, shared with the other products through
@@ -710,8 +711,8 @@ default, so the person's access stays immediate.
 - **Releasing it.** The treating professional releases a composition once it
   has been explained, from the clinical surface with
   `POST /ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release`.
-  The route takes the checks of a write to that EHR: its `EHR_ACCESS` gate, the
-  patient scope and the SMART `composition-` update grant. A request that may be the person's is refused with **403**. The
+  The route takes the checks of a write to that EHR: its `EHR_ACCESS` gate and
+  the SMART `composition-` update grant. A request that may be the person's is refused with **403**. The
   controller releases with
   `POST /ferroehr/rest/extensions/v1/admin/access-delay/release`, and holds
   one by hand with `POST /ferroehr/rest/extensions/v1/admin/access-delay`, for
@@ -815,43 +816,35 @@ repository's from-source development stack ships one such account
 can be tried out; the downloadable quickstart file has neither (one user, no
 role gate).
 
-### The patient scope
+### A patient's own EHR
 
-A deployment whose callers each act for one patient, such as a patient portal
-behind its own identity provider, binds each caller to that patient with an
-access-token claim. Fine-grained decisions about who may read what are the
-[access evaluator](#access-directives)'s, over the subject's directives and the
-access policy, and take no key; the patient scope is an authentication binding
-on top of them.
+A caller is the patient, the `subject` caller kind of the
+[access evaluator](#access-directives), through a SMART App Launch
+patient-context credential: a bearer token with a `patient/` scope and no
+`user/` or `system/` one, from an issuer in
+[`[auth.smart] patient_issuers`](smart-app-launch.md#launch-context-binding-to-one-ehr).
+The patient's own EHR is the `ehrId` of that token's launch context
+(ITS-REST SMART App Launch §Context Selection). The evaluator skips every step
+of the decision procedure for the patient on their own EHR (EHDS Art. 3) and
+refuses them every other EHR with **`403`** `refused-consent-required`. No key
+turns this on or off, and a representative comes in as a delegation of the
+subject's directives.
 
-| Key | Environment variable | Default | Meaning |
-|---|---|---|---|
-| `[auth] patient_claim` | `FERROEHR__AUTH__PATIENT_CLAIM` | unset | The access-token claim naming the patient a caller is bound to. Unset or blank, no patient scope applies. |
-| `[auth] patient_namespace` | `FERROEHR__AUTH__PATIENT_NAMESPACE` | unset | The subject namespace (`EHR_STATUS.subject.external_ref.namespace`) the claim's ids are issued in. |
-
-With `patient_claim` set, every caller is held to the EHR whose subject the
-claim names:
-
-- A token without the claim is refused with **`403`**.
-- An operation on another patient's EHR is refused with **`403`** before it
-  runs, or, for a read whose EHR only the result names, after. That covers the
+- An operation on another patient's EHR is refused with **`403`**, whether the
+  EHR is named in the path, the body or only in the result. That covers the
   EHR, `EHR_STATUS`, COMPOSITION, CONTRIBUTION and DIRECTORY operations and
-  their item tags. The EHR Extract import routes are checked as EHR writes and
-  the export routes as EHR reads; an export by manifest
-  (`POST /message/export`) holds every EHR it names, and one EHR of another
-  patient refuses the whole export.
-- An AQL query reads only the rows of the caller's patient, whatever the query
-  scopes or projects, including a query that reads only the `ehr` row.
-- A subject-less EHR is in no patient's scope. Without `patient_namespace`, the
-  claim names a subject by its id alone, so an EHR whose subject id another
-  namespace also holds is refused, on a direct route and in a query. With
-  `patient_namespace` set, the claim names the pair of namespace and id.
+  their item tags, and the EHR Extract import and export routes; an export by
+  manifest (`POST /message/export`) holds every EHR it names, and one EHR of
+  another patient refuses the whole export.
+- An AQL query reads only the rows of the patient's own EHR, whatever the query
+  scopes or projects, including a query that reads only the `ehr` row, and its
+  counts and pages see only those rows.
+- A patient-context token whose launch context names no EHR reaches none.
 
-> [!WARNING]
-> The patient scope is **fail-closed**: a gate reached without an
-> authenticated caller refuses, and a subject lookup that fails is a **`500`**,
-> or a **`503`** with `Retry-After` when no database connection could be
-> obtained. It is never read as a permit.
+The SMART layer holds the same launch context on top: a `patient/` grant
+reaches only the EHR its `ehrId` names. The `[auth] patient_claim` and
+`[auth] patient_namespace` keys of earlier releases are gone; a configuration
+that sets either is refused as naming unknown keys.
 
 ## Response security headers
 

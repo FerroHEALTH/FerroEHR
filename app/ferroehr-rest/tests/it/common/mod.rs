@@ -156,7 +156,6 @@ pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>
     first_party(&service, &config).await;
     let authenticator = Authenticator::new(
         &config,
-        None,
         Some(Arc::new(source)),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
         standing(&service),

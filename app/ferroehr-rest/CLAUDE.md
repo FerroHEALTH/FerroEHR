@@ -66,8 +66,11 @@ copy of any of it.
   `authn::gates`, the RBAC gate and the SMART route check run after it, and
   `authn::party`, the login binding, which also confines a bound
   representative to its subject's EHR (#5086);
-  `authz/` = the RBAC gate and the authorization handle; `patient_scope.rs` = the
-  `[auth] patient_claim` binding; `pep.rs` = the policy-enforcement point; `ehr_access.rs`. Token checking, Basic
+  `authz/` = the RBAC gate and the authorization handle; `pep.rs` = the
+  policy-enforcement point; `ehr_access.rs` = the access evaluator at the
+  request seam, which alone confines a patient to their own EHR (#5586);
+  `caller.rs` = the caller kind, the `subject` of the EHR its SMART patient
+  context names. Token checking, Basic
   verification and the SMART scope grammar come from `ferrohealth-smart`;
   never hand-rolled. 401 (unauthenticated) vs 403 (unauthorized) per
   ITS-REST. Rules: `.claude/rules/auth.md`.

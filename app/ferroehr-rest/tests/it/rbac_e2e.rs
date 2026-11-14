@@ -71,8 +71,7 @@ const USERS: &[(&str, &[&str])] = &[("user", &["USER"]), ("root", &["ADMIN"]), (
 fn authz(enabled: bool) -> Option<Arc<AuthzHandle>> {
     let mut cfg = AuthzConfig::default();
     cfg.rbac.enabled = enabled;
-    // RBAC-only: no patient scope.
-    AuthzHandle::build(&cfg, &rest_config().api.base_path, None).map(Arc::new)
+    AuthzHandle::build(&cfg, &rest_config().api.base_path).map(Arc::new)
 }
 
 /// A real service over a fresh DB, optionally wired with an ATNA audit sender.

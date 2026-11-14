@@ -57,7 +57,6 @@ async fn authenticator(
             ..AppConfig::default()
         },
         None,
-        None,
         memory(),
         test_support::standing(),
     )
