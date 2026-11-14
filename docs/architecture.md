@@ -988,7 +988,13 @@ and `hold_scopes` grants of its `PERSON`, granted onto the caller with
 `Caller::with_granted_scope` and `with_granted_roles`, and `[authz.rbac]
 first_admin` names the one Basic user holding `admin_role` and the product
 scope from the file, the trust anchor that writes the first policy parties.
-**Our own design.**
+Beside an `[[auth.party]]` table a Basic user is a person's credential
+(`PartyBinding::check_basic`), so `first_admin` must map to the key of a
+`PERSON`, and the deployment starts with the operator grant
+(`ferroehr party-binding grant`, `party_binding::grants::bootstrap`): the
+SCIM client's `scim_provision`, then SCIM provisions the staff and the
+administrator's `PERSON`. No HTTP route grants an operation before an
+administrator exists (#5620). **Our own design.**
 
 **The grant ceiling.** `[authz.grants] allowed` bounds the operations the
 party store may grant, so a compromised administrator account cannot grant

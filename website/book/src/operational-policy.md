@@ -546,8 +546,25 @@ ferroehr party-binding grant --basic-user clinician --operation hold_scopes \
 
 Every later grant is an administrator's write through the Demographic API.
 `[authz.rbac] first_admin` is that administrator in a deployment whose people
-sign in with HTTP Basic: it holds `admin_role` and the product scope before
-any policy party exists.
+sign in with HTTP Basic and no `[[auth.party]]` table binds logins: it holds
+`admin_role` and the product scope before any policy party exists.
+
+No HTTP route grants an operation before an administrator exists. A
+deployment whose staff sign in through a `persons` issuer bound by an
+`[[auth.party]]` table starts in this order:
+
+1. The operator grants the SCIM client `scim_provision` with
+   `ferroehr party-binding grant`, as above.
+2. The SCIM client provisions the staff, the administrator among them.
+3. The administrator signs in in one of two ways. The first is a token of an
+   issuer `[authz.rbac] role_issuers` lists, carrying `admin_role`. The
+   second is `first_admin`, mapped with `[[authz.party_binding.basic_user]]`
+   to the key of the `PERSON` the SCIM client provisioned. A Basic user beside
+   an `[[auth.party]]` table must map to a key, so an unmapped `first_admin`
+   refuses the start, and a mapped one is refused as unbound until its
+   `PERSON` exists.
+4. The administrator writes every other policy party through the Demographic
+   API.
 
 ### The grant ceiling
 
