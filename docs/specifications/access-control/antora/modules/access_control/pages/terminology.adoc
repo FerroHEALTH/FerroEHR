@@ -14,7 +14,7 @@ The groups of this package and of the Access Log Information Model are coded in 
 Terminology identifier:: `openehr_access`, the value of `Terminology_id_access` in the invariants of both packages
 Name:: openEHR access (draft)
 
-The identifier is a `TERMINOLOGY_ID` of the form BASE gives (xref:BASE:base_types:identification.adoc[Identification], `TERMINOLOGY_ID`), and of the form openEHR gives its own code sets, such as `openehr_normal_statuses`. It carries no version part, since a code never changes meaning. The `openehr_` prefix is openEHR's namespace: the identifier is proposed and is not assigned. If openEHR adopts the groups, they move into the openEHR Terminology with numeric codes, `Terminology_id_access` becomes `openehr`, and `openehr_access` is retired. Until then each code is its own rubric, and a code that appears in more than one group is one concept.
+The identifier is a `TERMINOLOGY_ID` of the form BASE gives (xref:BASE:base_types:identification.adoc[Identification], `TERMINOLOGY_ID`), and of the form openEHR gives its own code sets, such as `openehr_normal_statuses`. It carries no version part, since a code never changes meaning. An archetype binds a code of it in its `term_bindings` by the URI `http://openehr.org/openehr_access/id/<code>`, on the model of openEHR's own `http://openehr.org/id/<code>`; the URI is proposed with the identifier. The `openehr_` prefix is openEHR's namespace: the identifier is proposed and is not assigned. If openEHR adopts the groups, they move into the openEHR Terminology with numeric codes, `Terminology_id_access` becomes `openehr`, and `openehr_access` is retired. Until then each code is its own rubric, and a code that appears in more than one group is one concept.
 
 == Codes from HL7 Code Systems
 
@@ -103,6 +103,10 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |represents
 |The `_name_` or `_details_` of a `PARTY_RELATIONSHIP` whose source represents its target, the subject; the openEHR `subject_relationship` code beside it says how, such as 264 guardian or 254 parent
 
+|group kind
+|care_team
+|The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `v3-RoleClass::MBR`
+
 |access refusal
 |refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
@@ -112,7 +116,7 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |`ACCESS_LOG_RESTRICTION._withheld_` (`Group_id_access_log_withheld`): the `_party_`, `_provider_`, `_roles_` and `_groups_` of an `ACCESSOR` the subject view withholds (EHDS Art 9(3))
 |===
 
-The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other six are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a clearance, a permitted purpose, a care relationship or a representation by the code in an element's or a relationship's `_name_` or `_details_`. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other seven are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a clearance, a permitted purpose, a care relationship, a care team or a representation by the code in an element's or a relationship's `_name_` or `_details_`. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
 
 A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code, which is that model's reason for an opt-out or a restriction. `ACCESS_LOG_RESTRICTION._accessor_kinds_` is coded in that model's `accessor kind` group, so a restriction names exactly the kinds its entries record. The Access Log Information Model lists its own groups on its Terminology page, in the same terminology.
 

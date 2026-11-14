@@ -72,6 +72,8 @@ pub enum Group {
     /// `care relationship`: the demographic relationships that put a caller
     /// in care of a subject.
     CareRelationship,
+    /// `group kind`: what kind of group a demographic `GROUP` is.
+    GroupKind,
     /// `representation`: the demographic relationship that makes its source
     /// a representative of its target.
     Representation,
@@ -95,7 +97,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 18] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -105,6 +107,7 @@ impl Group {
         Self::AccessSensitivityClearance,
         Self::AccessPermittedPurpose,
         Self::CareRelationship,
+        Self::GroupKind,
         Self::Representation,
         Self::AccessRefusal,
         Self::AccessLogWithheld,
@@ -128,6 +131,7 @@ impl Group {
             Self::AccessSensitivityClearance => "access sensitivity clearance",
             Self::AccessPermittedPurpose => "access permitted purpose",
             Self::CareRelationship => "care relationship",
+            Self::GroupKind => "group kind",
             Self::Representation => "representation",
             Self::AccessRefusal => "access refusal",
             Self::AccessLogWithheld => "access log withheld",
@@ -153,6 +157,7 @@ impl Group {
             Self::AccessSensitivityClearance => phrases::<SensitivityClearance>(),
             Self::AccessPermittedPurpose => phrases::<PermittedPurpose>(),
             Self::CareRelationship => phrases::<CareRelationship>(),
+            Self::GroupKind => phrases::<GroupKind>(),
             Self::Representation => phrases::<Representation>(),
             Self::AccessRefusal => phrases::<Refusal>(),
             Self::AccessLogWithheld => phrases::<Withheld>(),
@@ -449,6 +454,16 @@ group! {
         /// A patient's `PERSON` is under the care of a team `GROUP` or an
         /// organisational unit.
         UnderCareOf => "under_care_of",
+    }
+}
+
+group! {
+    /// What kind of group a demographic `GROUP` is, coded in its `name`: RM
+    /// demographic `party.adoc` makes `type()` the `name` (`Type_valid`).
+    GroupKind in GroupKind {
+        /// The `GROUP` is a care team: a membership (`MBR`) relationship to it puts
+        /// its member in the care of the subjects under its care.
+        CareTeam => "care_team",
     }
 }
 

@@ -35,7 +35,7 @@ use sqlx::PgConnection;
 
 use crate::ids::VoId;
 use crate::storage::error::StorageError;
-use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
+use openehr_rm::draft::access_control::terminology::{TERMINOLOGY_ID_ACCESS, Term};
 
 /// The `TERMINOLOGY_ID` the operation grants, their qualifiers and the
 /// relationship codes are coded in: the draft `openehr_access` terminology.
@@ -111,6 +111,26 @@ pub(crate) fn coded(value: &Value) -> Option<&str> {
     phrase(value)
         .filter(|(terminology, _)| *terminology == TERMINOLOGY)
         .map(|(_, code)| code)
+}
+
+/// The `DV_CODED_TEXT` of the access term `term`, reading `rubric`: the one
+/// place a written code names its terminology.
+pub(crate) fn coded_term<T: Term>(term: T, rubric: &str) -> Value {
+    openehr_its::json::to_canonical_value(&openehr_rm::prelude::DvCodedText {
+        value: rubric.to_owned(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+        defining_code: openehr_rm::prelude::CodePhrase {
+            terminology_id: openehr_base::prelude::TerminologyId {
+                value: term.terminology().to_owned(),
+            },
+            code_string: term.code().to_owned(),
+            preferred_term: None,
+        },
+    })
 }
 
 /// The first value of the tree `value`, itself included, depth first, for

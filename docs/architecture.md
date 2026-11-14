@@ -823,7 +823,7 @@ terminology `openehr_access` that the access control change request proposes
 to openEHR (#5655): `access default`, `access directive kind`, `access
 effect`, `access relationship`, `access caller kind`, `access operation`,
 `access sensitivity clearance`, `access permitted purpose`, `care
-relationship`, `representation`, `access refusal` and `access log withheld`
+relationship`, `group kind` (#5617), `representation`, `access refusal` and `access log withheld`
 (#5570), and the access log's `access action`, `access outcome`, `accessor
 kind`, `access authorisation` and `access refusal reason`. Each is a closed
 set of terms read into a typed term (`Term::read`) by terminology id and
@@ -985,8 +985,23 @@ relationship of another party kind or of its own container is refused
 `LiveGrants::memberships` of the provider its acts-for relationship names,
 which `Capabilities::facts().provider_groups()` carries and the request's
 caller adds to the parties it acts for, one level deep, from the copy held,
-so the regional sharing example adds no transaction. **Our own design:** no
-openEHR spec gives a capability or a relationship an access meaning.
+so the regional sharing example adds no transaction. The care check compares
+what each care relationship says, never its position in `relationships`
+(#5640). On a SCIM User's protected `PERSON`, a version whose only change
+from its predecessor is to its care relationships (the two stored bodies
+compared with every care relationship and the `uid` taken out,
+`grants::caller::only_care_differs`) passes the party protection for a
+holder of `write_care_relationship`, and the care check decides it, so the
+ADT system rosters a provisioned professional (#5617). A SCIM Group created
+with `careTeam` in FerroEHR's Group extension is a care team: its `GROUP`
+is named by the coded `openehr_access::care_team` (group `group kind`) and
+each membership by the coded `v3-RoleClass::MBR`, both bound in the default
+definitions' `term_bindings`, since RM demographic `PARTY.type()` and
+`PARTY_RELATIONSHIP.type()` are the `name` (`Type_valid`); creating
+one needs the client's `write_care_relationship` grant, and its membership
+changes meet the same care check. **Our own design:** no openEHR spec gives a
+capability or a relationship an access meaning, and RFC 7643 §4.2 leaves a
+Group's meaning to the provider.
 
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL

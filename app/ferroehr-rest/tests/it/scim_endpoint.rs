@@ -253,9 +253,11 @@ async fn a_declared_client_holding_its_scope_reads_the_discovery_documents() {
         [
             "urn:ietf:params:scim:schemas:core:2.0:User",
             "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User",
-            "urn:ietf:params:scim:schemas:core:2.0:Group"
+            "urn:ietf:params:scim:schemas:core:2.0:Group",
+            "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group"
         ],
-        "the group and membership sections the mapping leaves unset default to the shipped ones"
+        "the group and membership sections the mapping leaves unset default to the shipped ones, \
+         and the Group carries FerroEHR's Group extension (#5617)"
     );
     let (status, _, body) = get(
         &app,
