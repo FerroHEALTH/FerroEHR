@@ -384,7 +384,10 @@ fn admit_roles(client: &ScimClient, wanted: &[String]) -> Result<(), ScimError> 
              no roles",
         ));
     }
-    match wanted.iter().find(|role| !client.roles.allowed.contains(role)) {
+    match wanted
+        .iter()
+        .find(|role| !client.roles.allowed.contains(role))
+    {
         Some(role) => Err(ScimError::new(
             StatusCode::FORBIDDEN,
             format!("the client's scim_provision grant admits no role {role:?}"),

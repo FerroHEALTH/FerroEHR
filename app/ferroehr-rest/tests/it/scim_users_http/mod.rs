@@ -39,6 +39,7 @@ mod jit;
 mod migration;
 mod records;
 mod refusals;
+mod roles;
 
 /// The deployment's own authorization server, which issues the clients' tokens.
 const MACHINES: &str = "https://as.example";
@@ -74,6 +75,10 @@ const MEMBERSHIP: &str = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1";
 const GROUPS: &str = "urn:example:groups";
 const OTHER_GROUPS: &str = "urn:example:other-groups";
 /// The custom extension FerroEHR's User attributes sit in.
+/// The terminology [`CLIENT`]'s User roles are coded in.
+const ROLES: &str = "urn:example:roles";
+/// The roles [`CLIENT`] may assign.
+const ROLE_CODES: [&str; 2] = ["NURSE", "PHYSICIAN"];
 const EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User";
 
 /// A synthetic ADL 2 archetype `hrid` rooted at `root`, with the formatted,
@@ -385,17 +390,20 @@ async fn app_of(
 
 /// Commits the `scim_provision` grants of the two clients to the CDR:
 /// [`CLIENT`] owning the Users of [`LOGIN`] and [`OTHER`] those of
-/// [`OTHER_LOGIN`], each token holding [`SCOPE`].
+/// [`OTHER_LOGIN`], each token holding [`SCOPE`]. [`CLIENT`] may assign its
+/// Users the roles [`ROLE_CODES`] of [`ROLES`]; [`OTHER`] assigns none.
 async fn grant_clients(service: &FerroEhrService) {
     use crate::policy_fixture::{capability, grant, scope};
     for (client, binding_issuer) in [(CLIENT, LOGIN), (OTHER, OTHER_LOGIN)] {
-        let provisioning = capability(
-            "scim_provision",
-            &[
-                scope("binding_issuer", binding_issuer),
-                scope("token_scope", SCOPE),
-            ],
-        );
+        let mut items = vec![
+            scope("binding_issuer", binding_issuer),
+            scope("token_scope", SCOPE),
+        ];
+        if client == CLIENT {
+            items.push(scope("role_terminology", ROLES));
+            items.extend(ROLE_CODES.iter().map(|role| scope("role", role)));
+        }
+        let provisioning = capability("scim_provision", &items);
         grant(service, MACHINES, client, &[provisioning]).await;
     }
 }

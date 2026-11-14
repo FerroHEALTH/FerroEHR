@@ -112,7 +112,9 @@ impl FerroEhrService {
         write: &RoleWrite<'_>,
     ) -> Result<(), UserWriteError> {
         let today = crate::party_binding::source::today();
-        let read = self.read_party(PartyKind::Person, person, None, None).await?;
+        let read = self
+            .read_party(PartyKind::Person, person, None, None)
+            .await?;
         let held: BTreeMap<String, Held> = self
             .role_parties(&read.body, &today)
             .await?
@@ -172,7 +174,9 @@ impl FerroEhrService {
             let current = self
                 .party_current(PartyKind::Person, person)
                 .await?
-                .ok_or_else(|| ServiceError::exception(format!("the PERSON {person} has no head")))?;
+                .ok_or_else(|| {
+                    ServiceError::exception(format!("the PERSON {person} has no head"))
+                })?;
             let envelope = WriteEnvelope {
                 lifecycle_state: Some(write.person_state.to_owned()),
                 ..WriteEnvelope::default()
@@ -195,17 +199,19 @@ impl FerroEhrService {
 
     /// The next version of the role `role`, of `template`, ended before
     /// `today`.
-    async fn ended(&self, role: &Held, template: &str, today: &str) -> Result<Change, ServiceError> {
+    async fn ended(
+        &self,
+        role: &Held,
+        template: &str,
+        today: &str,
+    ) -> Result<Change, ServiceError> {
         let mut body = role.body.clone();
         let lower = body
             .pointer("/time_validity/lower/value")
             .and_then(Value::as_str)
             .map(str::to_owned);
         if let Some(object) = body.as_object_mut() {
-            object.insert(
-                "time_validity".to_owned(),
-                until(lower.as_deref(), today),
-            );
+            object.insert("time_validity".to_owned(), until(lower.as_deref(), today));
         }
         let state = self.first_state(&body, template).await?;
         let envelope = WriteEnvelope {
@@ -289,7 +295,11 @@ fn in_force(validity: Option<&Value>, today: &str) -> bool {
     let Some(validity) = validity else {
         return true;
     };
-    let bound = |side: &str| validity.pointer(&format!("/{side}/value")).and_then(Value::as_str);
+    let bound = |side: &str| {
+        validity
+            .pointer(&format!("/{side}/value"))
+            .and_then(Value::as_str)
+    };
     let included = |side: &str| {
         validity
             .get(format!("{side}_included"))
@@ -354,7 +364,10 @@ mod tests {
         let ended = until(Some("2026-11-01"), "2026-11-14");
         assert!(in_force(Some(&ended), "2026-11-13"));
         assert!(!in_force(Some(&ended), "2026-11-14"));
-        assert!(!in_force(Some(&until(Some("2026-11-14"), "2026-11-14")), "2026-11-14"));
+        assert!(!in_force(
+            Some(&until(Some("2026-11-14"), "2026-11-14")),
+            "2026-11-14"
+        ));
     }
 
     #[test]
@@ -367,7 +380,10 @@ mod tests {
                 code: "NURSE".to_owned()
             })
         );
-        assert_eq!(role_of(&named(coded(TERMINOLOGY_ID_ACCESS_CONTROL, "NURSE"))), None);
+        assert_eq!(
+            role_of(&named(coded(TERMINOLOGY_ID_ACCESS_CONTROL, "NURSE"))),
+            None
+        );
         assert_eq!(
             role_of(&named(json!({ "_type": "DV_TEXT", "value": "Nurse" }))),
             None
