@@ -4,7 +4,7 @@
 //! The EHR scope and the population gate of a lowered query: every
 //! versioned-object root and every `EHR` source restricted to the EHRs the
 //! query may read (the whole-EHR restriction, the explicit `ehr_ids` scope,
-//! the per-EHR access decision, the patient scope), and the
+//! the per-EHR access decision), and the
 //! `EHR_STATUS.is_queryable` population gate (RM ehr
 //! `org.openehr.rm.ehr.ehr_status.adoc`). No openEHR spec governs the join
 //! mechanics: our own design.
@@ -15,14 +15,14 @@ use uuid::Uuid;
 
 use crate::db::iden::{Ehr, Node};
 
+use super::Builder;
 use super::expr::col;
 use super::from::research_objection_clear;
-use super::{Builder, subject};
 
 impl Builder<'_> {
     /// Restricts every versioned-object root and every EHR source to the EHRs
     /// the query may read: the whole-EHR restriction, the explicit `ehr_ids`
-    /// scope, the per-EHR access decision and the patient scope.
+    /// scope and the per-EHR access decision.
     pub(super) fn apply_ehr_scope(&mut self) {
         // The whole-EHR restriction, at EVERY scope. The per-object predicate
         // covers every version spine (a whole-EHR restriction stamps each
@@ -64,16 +64,6 @@ impl Builder<'_> {
         {
             self.q.and_where(cond);
         }
-        // The patient scope binds the same targets: a query with no
-        // versioned-object root (`FROM EHR e`, an `ehr_status` path, an `OR`
-        // under the EHR) still reads the `ehr` row itself.
-        let subject = roots
-            .iter()
-            .map(|root| self.subject_cond(col(root, Node::EhrId)))
-            .chain(ehrs.iter().map(|alias| self.ehr_subject_cond(alias)));
-        for cond in subject.flatten().collect::<Vec<_>>() {
-            self.q.and_where(cond);
-        }
     }
 
     /// The explicit `ehr_ids` scope on the EHR id `target`, when the query is
@@ -92,39 +82,14 @@ impl Builder<'_> {
         Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
     }
 
-    /// The patient scope on the EHR id `target` of a versioned-object
-    /// root, when one is set: `target` is the id of an `ehr` row
-    /// [`subject::matches`] admits.
-    fn subject_cond(&self, target: Expr) -> Option<Expr> {
-        // NOTE: the patient scope restricts every VO root and EHR source to
-        // the caller's patient EHRs whatever the projection (no openEHR spec
-        // governs this — our own extension).
-        let scope = self.ctx.subject_scope.as_ref()?;
-        let mut sub = Query::select();
-        sub.expr(col(subject::SUBJECT_ROW, Ehr::Id))
-            .from_as(Ehr::Table, Alias::new(subject::SUBJECT_ROW))
-            .and_where(subject::matches(subject::SUBJECT_ROW, scope));
-        Some(target.in_subquery(sub))
-    }
-
-    /// The patient scope on the `ehr` row bound as `alias`, when one is
-    /// set: [`subject::matches`] on that row itself.
-    fn ehr_subject_cond(&self, alias: &str) -> Option<Expr> {
-        let scope = self.ctx.subject_scope.as_ref()?;
-        Some(subject::matches(alias, scope))
-    }
-
     /// Every [`Self::apply_ehr_scope`] condition a versioned-object root puts
     /// on its EHR id `target`, for a root no bound EHR alias covers.
     pub(super) fn root_scope_conds(&self, target: Expr) -> Vec<Expr> {
-        [
-            self.ehr_ids_cond(target.clone()),
-            self.gates.on_ehr_id(&target),
-            self.subject_cond(target),
-        ]
-        .into_iter()
-        .flatten()
-        .collect()
+        let gate = self.gates.on_ehr_id(&target);
+        [self.ehr_ids_cond(target), gate]
+            .into_iter()
+            .flatten()
+            .collect()
     }
 
     /// The population gate of [`Self::gate_vo_root`] for the node `root`, as

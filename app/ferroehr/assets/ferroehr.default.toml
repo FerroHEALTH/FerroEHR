@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 738 keys. A deployment that holds real data sets the 10
+# This file lists 736 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -227,13 +227,6 @@ profile = "sandbox"
 # The product's own scope, a full URI or a string starting with `__`; empty for
 # none. Optional (trust).
 #? product_scope = ""
-# The access-token claim naming the patient a caller is bound to
-# (`FERROEHR__AUTH__PATIENT_CLAIM`). Optional, unset by default (trust).
-#? patient_claim = ""
-# The subject namespace the patient claim's ids are issued in
-# (`EHR_STATUS.subject.external_ref.namespace`, RM ehr master04 §EHR Status).
-# Optional, unset by default (trust).
-#? patient_namespace = ""
 
 # The `[auth.issuer]` tables, each issuer with its own settings.
 #? [[auth.issuer]]

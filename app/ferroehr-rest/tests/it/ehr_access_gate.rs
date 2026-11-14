@@ -529,12 +529,9 @@ async fn a_restricted_default_holds_with_rbac_disabled() {
     authz.rbac.enabled = false;
     authz.rbac.ehr_access_default = ferroehr::config::authz::EhrAccessDefault::Restricted;
     authz.rbac.admin_role = "SUPERADMIN".to_owned();
-    let handle = ferroehr_rest::extensions::access::authz::AuthzHandle::build(
-        &authz,
-        &config.api.base_path,
-        None,
-    )
-    .map(Arc::new);
+    let handle =
+        ferroehr_rest::extensions::access::authz::AuthzHandle::build(&authz, &config.api.base_path)
+            .map(Arc::new);
     assert!(
         handle.as_ref().is_some_and(|h| !h.rbac_active()),
         "a restricted default is carried with the coarse gate off"

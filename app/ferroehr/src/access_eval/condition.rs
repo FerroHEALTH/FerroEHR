@@ -271,10 +271,16 @@ impl RequestAccess {
         })
     }
 
-    /// The verdict for an EHR with `settings`, the caller `cared` for its
-    /// subject or not.
+    /// The verdict for the EHR `ehr_id` with `settings`, the caller `cared`
+    /// for its subject or not; `None` stands for an EHR that is no subject
+    /// caller's own.
     #[must_use]
-    pub fn judge(&self, settings: Option<&EhrAccessSettings>, cared: bool) -> Verdict {
+    pub fn judge(
+        &self,
+        ehr_id: Option<EhrId>,
+        settings: Option<&EhrAccessSettings>,
+        cared: bool,
+    ) -> Verdict {
         let (labels, classifications) = (
             match settings {
                 Some(EhrAccessSettings::Directives(settings)) => {
@@ -300,6 +306,7 @@ impl RequestAccess {
                 settings,
                 server_default: self.server_default,
                 cared,
+                own: ehr_id.is_some() && ehr_id == self.caller.own_ehr,
             },
             scopes: &scopes,
             now: self.now,
@@ -329,7 +336,7 @@ impl RequestAccess {
     /// Judges the EHR `ehr_id` as `entry` reads it, and keeps the verdict for
     /// the rest of the request.
     pub fn judge_ehr(&self, ehr_id: EhrId, entry: &EhrEntry) -> Arc<Verdict> {
-        let judged = self.judgement_of(entry, self.cares_for(entry));
+        let judged = self.judgement_of(ehr_id, entry, self.cares_for(entry));
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
@@ -348,11 +355,11 @@ impl RequestAccess {
         self.cared(&under_care_of)
     }
 
-    /// The judgement of an EHR as `entry` reads it, the caller `cared` for
-    /// its subject or not.
-    fn judgement_of(&self, entry: &EhrEntry, cared: bool) -> Judgement {
+    /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller
+    /// `cared` for its subject or not.
+    fn judgement_of(&self, ehr_id: EhrId, entry: &EhrEntry, cared: bool) -> Judgement {
         Judgement {
-            verdict: Arc::new(self.judge((*entry.settings).as_ref(), cared)),
+            verdict: Arc::new(self.judge(Some(ehr_id), (*entry.settings).as_ref(), cared)),
             settings: Arc::clone(&entry.settings),
             version: entry.version.clone(),
         }
@@ -379,15 +386,17 @@ impl RequestAccess {
             .ok()
             .and_then(|at| index.get(at));
         if let Some((_, entry)) = indexed {
-            return Some(self.judgement_of(entry, self.cares_for(entry)));
+            return Some(self.judgement_of(ehr_id, entry, self.cares_for(entry)));
         }
         let entry = EhrEntry {
             settings: Arc::new(None),
             subject: None,
             version: None,
         };
-        let cared = self.judge(None, true).admits_any() && !self.judge(None, false).admits_any();
-        Some(self.judgement_of(&entry, cared))
+        let at = Some(ehr_id);
+        let cared =
+            self.judge(at, None, true).admits_any() && !self.judge(at, None, false).admits_any();
+        Some(self.judgement_of(ehr_id, &entry, cared))
     }
 
     /// The verdict judged for `ehr_id` in this request.
@@ -415,18 +424,25 @@ impl RequestAccess {
     #[must_use]
     pub fn condition(&self, index: &EhrAccessIndex, cared: Vec<String>) -> AccessCondition {
         *self.reached.lock().unwrap_or_else(PoisonError::into_inner) = Some(Arc::clone(index));
-        let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
-            cared: self.judge(settings, true).bare(),
-            uncared: self.judge(settings, false).bare(),
+        let pair = |ehr_id: Option<EhrId>, settings: Option<&EhrAccessSettings>| VerdictPair {
+            cared: self.judge(ehr_id, settings, true).bare(),
+            uncared: self.judge(ehr_id, settings, false).bare(),
         };
         let mut groups: BTreeMap<VerdictPair, Vec<Uuid>> = BTreeMap::new();
         for (ehr_id, entry) in index.iter() {
             groups
-                .entry(pair((*entry.settings).as_ref()))
+                .entry(pair(Some(*ehr_id), (*entry.settings).as_ref()))
                 .or_default()
                 .push(ehr_id.0);
         }
-        AccessCondition::new(groups, pair(None), cared)
+        // NOTE: our own design (#5586), a subject caller's own EHR with no settings is in
+        // no index, so it is judged on its own beside the default of every other EHR.
+        if let Some(own) = self.caller.own_ehr
+            && index.binary_search_by_key(&own, |(id, _)| *id).is_err()
+        {
+            groups.entry(pair(Some(own), None)).or_default().push(own.0);
+        }
+        AccessCondition::new(groups, pair(None, None), cared)
     }
 }
 

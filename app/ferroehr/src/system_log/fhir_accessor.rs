@@ -36,7 +36,7 @@ pub(super) fn accessor(
         subject: nonempty(&event.user_id, missing),
         client_id: event.client_id.clone(),
         audience: None,
-        provider: event.organisation.clone(),
+        provider: event.provider_id().map(str::to_owned),
         acting: event.actor.mode.map(|mode| match mode {
             ActingMode::Client | ActingMode::Delegated => Acting::Client,
             ActingMode::Person => Acting::Person,

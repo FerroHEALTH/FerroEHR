@@ -49,7 +49,6 @@ batch_columns! {
     event_codes: &'a str,
     operations: Option<&'a str>,
     principals: Option<&'a str>,
-    organisations: Option<&'a str>,
     patient_ids: Option<&'a str>,
     resource_classes: &'a str,
     resource_ids: Option<&'a str>,
@@ -115,7 +114,6 @@ impl<'a> BatchColumns<'a> {
         self.event_codes.push(event_code(event));
         self.operations.push(operation(event));
         self.principals.push(nonempty_opt(&event.user_id));
-        self.organisations.push(event.organisation.as_deref());
         self.patient_ids.push(subject.as_deref());
         self.resource_classes.push(resource_class(event.object));
         self.resource_ids.push(event.object_id.as_deref());

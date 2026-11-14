@@ -212,6 +212,7 @@ pub(super) fn caller(kind: CallerKind, party: &str) -> Caller {
     Caller {
         kind,
         party: Some(party.to_owned()),
+        own_ehr: None,
         acts_for: Vec::new(),
         roles: Vec::new(),
         facts: CallerFacts::default(),
@@ -283,6 +284,8 @@ pub(super) struct Case {
     pub(super) policy: Option<AccessPolicy>,
     pub(super) cared: bool,
     pub(super) now: Option<jiff::Timestamp>,
+    /// The EHR is not the subject caller's own.
+    pub(super) foreign: bool,
 }
 
 impl Case {
@@ -314,6 +317,7 @@ impl Case {
                 settings: self.settings.as_ref(),
                 server_default: self.server_default.unwrap_or(AccessDefault::Open),
                 cared: self.cared,
+                own: !self.foreign,
             },
             scopes: &scopes,
             now: self.now.unwrap_or_else(now),

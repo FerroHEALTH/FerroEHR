@@ -1,25 +1,23 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The policy-enforcement point (PEP) for the ITS-REST surface: the patient
-//! scope and the SMART resource-scope and launch-context gate, driven from the
-//! generic dispatch mount (`crate::api`).
+//! The policy-enforcement point (PEP) for the ITS-REST surface: the SMART
+//! resource-scope and launch-context gate of a COMPOSITION operation, driven
+//! from the generic dispatch mount (`crate::api`).
 //!
-//! The patient scope is our own design ([`crate::extensions::access::patient_scope`]);
-//! no openEHR spec governs it. SMART takes its scope grammar and
-//! launch-context binding from
+//! SMART takes its scope grammar and launch-context binding from
 //! `ITS-REST/docs/smart_app_launch/master08-scopes.adoc` §Resource Scopes and
 //! `master07-*.adoc` §Context Selection, and the 401/403 discipline from
 //! `.../overview/Requests_and_responses.md` §Authentication and authorization.
 //!
-//! The gates AND-compose after the access evaluator and RBAC: patient scope,
-//! then SMART. Pre-checks run before the backend call (op id, path params,
-//! query, body); post-checks run on a successful response, from the
-//! dispatch's [`AuditObject`](crate::system_log::middleware::AuditObject). A
-//! deny is a `403` and a lookup failure a `503` or `500`, each carrying the
-//! [`Principal`] for the ATNA layer. The SMART gate here, run whenever
-//! authentication is on, covers the COMPOSITION operations, whose template
-//! only the body or the stored version names (`crate::smart::routes`).
+//! The gate runs after the access evaluator and RBAC. Pre-checks run before
+//! the backend call (op id, path params, query, body); post-checks run on a
+//! successful response, from the dispatch's
+//! [`AuditObject`](crate::system_log::middleware::AuditObject). A deny is a
+//! `403` and a lookup failure a `503` or `500`, each carrying the
+//! [`Principal`] for the ATNA layer. The gate, run whenever authentication is
+//! on, covers the COMPOSITION operations, whose template only the body or the
+//! stored version names (`crate::smart::routes`).
 #![expect(
     clippy::result_large_err,
     reason = "the Err variant of every decision point in this module is a \
@@ -36,7 +34,6 @@ use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
 use crate::extensions::access::authn::{Principal, current_principal};
-use crate::extensions::access::patient_scope;
 use crate::overview::error::RestError;
 
 use crate::negotiate;
@@ -46,22 +43,8 @@ use ferroehr::versioning::object_version_id::parse_uid_based_id;
 use ferrohealth_smart::guard::Requirement;
 use ferrohealth_smart::openehr::smart_scopes::{Permission, ResourceFamily};
 
-/// Pre-check the request: the patient scope, then the SMART gate of a
-/// COMPOSITION write. `Err(response)` short-circuits the dispatch with a
-/// ready 403/500; `Ok(())` lets it proceed.
-pub(crate) async fn pre_check(
-    state: &AppState,
-    op: &'static str,
-    parts: &RequestParts,
-) -> Result<(), Response> {
-    patient_scope::pre(state, op, parts).await?;
-    smart_pre(state, op, parts).await
-}
-
-/// Post-check a successful response: the patient scope of the EHR the
-/// dispatch recorded, then the SMART gate of a COMPOSITION read.
+/// Post-check a successful response: the SMART gate of a COMPOSITION read.
 pub(crate) async fn post_check(state: &AppState, op: &'static str, resp: Response) -> Response {
-    let resp = patient_scope::post(state, op, resp).await;
     if !resp.status().is_success() {
         return resp;
     }
@@ -94,21 +77,11 @@ fn composition_template(parts: &RequestParts) -> Option<String> {
 }
 
 /// A 403 carrying the principal (audited by the ATNA layer).
-pub(super) fn forbidden(principal: &Principal, detail: &str) -> Response {
+fn forbidden(principal: &Principal, detail: &str) -> Response {
     let mut resp =
         RestError::from(ApiError::Forbidden(format!("access denied: {detail}"))).into_response();
     resp.extensions_mut().insert(principal.clone());
     resp
-}
-
-/// A 403 for a request that reached a gate with no authenticated principal.
-///
-/// Nothing is attached to the response extensions because there is no principal
-/// to attribute: attributing a denial to an identity that never authenticated
-/// would write a false subject into the audit trail, so the ATNA layer records
-/// the denial from the request itself.
-pub(super) fn forbidden_unauthenticated(detail: &str) -> Response {
-    RestError::from(ApiError::Forbidden(format!("access denied: {detail}"))).into_response()
 }
 
 /// A fail-closed refusal carrying the principal: `503` plus `Retry-After` when
@@ -117,7 +90,7 @@ pub(super) fn forbidden_unauthenticated(detail: &str) -> Response {
 ///
 /// `step` names what could not be done and `error` the failure that broke it;
 /// both go to the trace record, and the body carries the curated opaque message.
-pub(super) fn lookup_error(
+fn lookup_error(
     principal: &Principal,
     step: &'static str,
     error: &(dyn std::error::Error + 'static),
@@ -141,9 +114,11 @@ pub(super) fn lookup_error(
 
 /// The SMART gate of a COMPOSITION write, on the template its body names or,
 /// for a delete, the template of the version it deletes (master08 §Resource
-/// Scopes, `composition-<templateId>`). Inert without an authenticated
-/// principal, which only an unauthenticated surface lacks.
-async fn smart_pre(
+/// Scopes, `composition-<templateId>`), checked before the backend call:
+/// `Err(response)` short-circuits the dispatch with a ready 403/500. Inert
+/// without an authenticated principal, which only an unauthenticated surface
+/// lacks.
+pub(crate) async fn pre_check(
     state: &AppState,
     op: &'static str,
     parts: &RequestParts,
@@ -250,69 +225,6 @@ mod tests {
     use ferrohealth_smart::resource::{Access, Caller, Honoured};
 
     use super::*;
-    use crate::extensions::access::authz::classify::{Mode, ResourceKind};
-
-    fn mode_of(op: &str) -> Mode {
-        operation(op).map_or(Mode::Skip, |row| row.pep)
-    }
-
-    /// Every ITS-REST operation the route tables name is either gated
-    /// (`Pre`/`Post`) or belongs to a family the matrix deliberately leaves to
-    /// RBAC: the definition, demographic, admin, query and system groups. An
-    /// EHR-area operation reaching `Skip`, item tags included, fails here.
-    #[test]
-    fn every_route_is_gated_or_rbac_only_by_family() {
-        use openehr_its::rest::generated::{admin, definition, demographic, ehr, query, system};
-        type Group = (
-            &'static str,
-            &'static [(&'static str, &'static str, &'static str)],
-        );
-        let groups: [Group; 6] = [
-            ("admin", admin::ROUTES),
-            ("definition", definition::ROUTES),
-            ("demographic", demographic::ROUTES),
-            ("ehr", ehr::ROUTES),
-            ("query", query::ROUTES),
-            ("system", system::ROUTES),
-        ];
-        for (group, routes) in groups {
-            for (_, _, op) in routes {
-                if mode_of(op) == Mode::Skip {
-                    assert!(
-                        group != "ehr",
-                        "{op} ({group}) falls through to Skip without a decision"
-                    );
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn mode_matrix() {
-        assert_eq!(mode_of("ehr_create"), Mode::Pre);
-        assert_eq!(mode_of("ehr_get_by_subject"), Mode::Pre);
-        assert_eq!(mode_of("composition_create"), Mode::Pre);
-        assert_eq!(mode_of("composition_delete"), Mode::Pre);
-        assert_eq!(mode_of("composition_get"), Mode::Post);
-        assert_eq!(mode_of("versioned_composition_get"), Mode::Post);
-        assert_eq!(mode_of("contribution_create"), Mode::Pre);
-        assert_eq!(mode_of("contribution_get"), Mode::Post);
-        // The contribution-list extension is pre-checked (EHR-scoped read).
-        assert_eq!(mode_of("contribution_list"), Mode::Pre);
-        assert_eq!(
-            operation("contribution_list").and_then(|row| row.kind),
-            Some(ResourceKind::Contribution)
-        );
-        assert_eq!(mode_of("ehr_status_update"), Mode::Pre);
-        assert_eq!(mode_of("versioned_ehr_status_get"), Mode::Pre);
-        assert_eq!(mode_of("directory_create"), Mode::Pre);
-        // Query is handled in the query path, not the generic PEP — the
-        // cohort extension included.
-        assert_eq!(mode_of("query_execute_adhoc_query"), Mode::Skip);
-        assert_eq!(mode_of("query_execute_cohort"), Mode::Skip);
-        assert_eq!(mode_of("ehr_tags_get"), Mode::Pre);
-        assert_eq!(mode_of("definition_template_adl1.4_upload"), Mode::Skip);
-    }
 
     // ── SMART scope + launch-context gate on COMPOSITION operations ────────
     //    (master08 §Resource Scopes; master07 §Context Selection)

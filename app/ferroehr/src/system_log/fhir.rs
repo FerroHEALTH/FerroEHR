@@ -331,7 +331,7 @@ fn exchange(
                     })
                     .collect(),
             )
-            .with_organisation(event.organisation.clone())
+            .with_organisation(event.provider_id().map(str::to_owned))
             .with_provider_identifier(event.actor.professional_id.clone())
             .with_assurance(event.actor.assurance_level.map(|level| Code {
                 system: None,

@@ -62,7 +62,7 @@ use ferrohealth_smart::assurance::AssuranceLevel;
 
 /// The single-record insert, returning the stored row id.
 const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
-     event_code, operation, principal, organisation, patient_id, resource_class, resource_id, \
+     event_code, operation, principal, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
      acting_mode, assurance_level, assurance_value, professional_id, emergency_access, permit, \
@@ -71,15 +71,15 @@ const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, ou
      external_fields, agreement, actor_chain, facilities, binding_detail, summary, \
      token_attributes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, \
      $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, \
-     $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51) \
+     $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50) \
      RETURNING id";
 
 /// The batched insert: one row per element of the parallel column arrays, every
-/// row under the one render policy in `$39`; each record's search tokens arrive
-/// as the text of an `integer[]` in `$40`, since an array of arrays unnests
+/// row under the one render policy in `$38`; each record's search tokens arrive
+/// as the text of an `integer[]` in `$39`, since an array of arrays unnests
 /// element by element.
 const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
-     event_code, operation, principal, organisation, patient_id, resource_class, resource_id, \
+     event_code, operation, principal, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
      acting_mode, assurance_level, assurance_value, professional_id, emergency_access, \
@@ -87,29 +87,29 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
      subject_lookup_failed, category_content, render_policy, search_tokens, binding, guest, \
      party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
      facilities, binding_detail, summary, token_attributes) \
-     SELECT u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, u.c13, \
-     u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, u.c26, \
-     u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, u.c38, \
-     $39::bytea, u.tokens::integer[], u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, u.c48, \
-     u.c49, u.c50, u.c51, u.c52, u.c53 \
+     SELECT u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
+     u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, \
+     u.c26, u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, \
+     $38::bytea, u.tokens::integer[], u.c40, u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
+     u.c48, u.c49, u.c50, u.c51, u.c52 \
      FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
-     $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], \
-     $12::text[], $13::text[], $14::text[], $15::text[], $16::bigint[], $17::text[], \
-     $18::jsonb[], $19::jsonb[], $20::bigint[], $21::jsonb[], $22::text[], \
-     $23::jsonb[], $24::text[], $25::text[], $26::text[], $27::text[], $28::text[], \
-     $29::boolean[], $30::text[]::date[], $31::boolean[], $32::text[], $33::text[], \
-     $34::text[], $35::text[], $36::text[], $37::boolean[], $38::jsonb[], $40::text[], \
-     $41::text[], $42::boolean[], $43::jsonb[], $44::jsonb[], $45::jsonb[], $46::jsonb[], \
-     $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], $51::jsonb[], $52::jsonb[], \
-     $53::jsonb[]) \
-     AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, \
-     c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, c37, \
-     c38, tokens, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, c53)";
+     $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], \
+     $11::text[], $12::text[], $13::text[], $14::text[], $15::bigint[], $16::text[], \
+     $17::jsonb[], $18::jsonb[], $19::bigint[], $20::jsonb[], $21::text[], \
+     $22::jsonb[], $23::text[], $24::text[], $25::text[], $26::text[], $27::text[], \
+     $28::boolean[], $29::text[]::date[], $30::boolean[], $31::text[], $32::text[], \
+     $33::text[], $34::text[], $35::text[], $36::boolean[], $37::jsonb[], $39::text[], \
+     $40::text[], $41::boolean[], $42::jsonb[], $43::jsonb[], $44::jsonb[], $45::jsonb[], \
+     $46::jsonb[], $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], $51::jsonb[], \
+     $52::jsonb[]) \
+     AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, \
+     c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, \
+     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52)";
 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
 #[cfg(feature = "fhir")]
-const RECORD_COLUMNS: [&str; 42] = [
+const RECORD_COLUMNS: [&str; 41] = [
     "chain_seq",
     "recorded_at",
     "stored_at",
@@ -117,7 +117,6 @@ const RECORD_COLUMNS: [&str; 42] = [
     "outcome",
     "operation",
     "principal",
-    "organisation",
     "patient_id",
     "resource_class",
     "resource_id",
@@ -159,7 +158,7 @@ const RECORD_COLUMNS: [&str; 42] = [
 #[cfg(feature = "fhir")]
 const OLDEST_OWED: &str = "SELECT \
      e.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation, \
-     e.principal, e.organisation, e.patient_id, e.resource_class, e.resource_id, \
+     e.principal, e.patient_id, e.resource_class, e.resource_id, \
      e.client_ip, e.token_id, e.domain, e.purpose, e.legal_basis, e.result_count, \
      e.request_id, e.roles, e.origins, e.origin_count, e.category_map_digest, \
      e.acting_mode, e.assurance_level, e.assurance_value, e.professional_id, \
@@ -426,7 +425,6 @@ impl AuditStore {
             .bind(event_code(event))
             .bind(operation(event))
             .bind(nonempty_opt(&event.user_id))
-            .bind(event.organisation.as_deref())
             .bind(subject)
             .bind(resource_class(event.object))
             .bind(event.object_id.as_deref())
@@ -563,7 +561,6 @@ impl AuditStore {
             .bind(c.event_codes)
             .bind(c.operations)
             .bind(c.principals)
-            .bind(c.organisations)
             .bind(c.patient_ids)
             .bind(c.resource_classes)
             .bind(c.resource_ids)
@@ -1374,7 +1371,6 @@ pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), Audi
         .unwrap_or_default();
     event.issuer = row.try_get("issuer")?;
     event.client_id = row.try_get("client_id")?;
-    event.organisation = row.try_get("organisation")?;
     event.roles = strings(row, "roles", chain_seq)?;
     event.client_ip = row.try_get("client_ip")?;
     event.ehr_id = row.try_get("ehr_id")?;

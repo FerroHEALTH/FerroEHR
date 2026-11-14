@@ -84,7 +84,6 @@ async fn a_basic_user_with_no_mapping_builds_no_authenticator() {
     let source: Arc<dyn BindingSource> = Arc::new(svc.party_source("demographic"));
     let built = Authenticator::new(
         &deployment(false),
-        None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
         common::standing(&svc),
@@ -116,7 +115,7 @@ async fn a_mapped_basic_user_commits_as_the_person_carrying_its_key() {
             "POST",
             &format!("/ehr/{ehr}/composition"),
             &credential,
-            &crate::patient_scope_e2e::composition(),
+            &crate::access_evaluator_patient_http::composition(),
         ),
         StatusCode::CREATED,
         "the composition",

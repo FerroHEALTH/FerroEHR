@@ -15,7 +15,7 @@ use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::standing::Standing;
 use ferrohealth_smart::resource::described::{Candidate, DescribeError, describe};
 use ferrohealth_smart::resource::introspection::{IntrospectionSettings, Introspector};
-use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, PatientClaim, ResourceServer, Via};
+use ferrohealth_smart::resource::{Caller, Honoured, IssuerSet, ResourceServer, Via};
 use ferrohealth_smart::sender::proof::ProofCheck;
 use ferrohealth_smart::sender::replay::ReplayStore;
 
@@ -112,9 +112,7 @@ impl Authenticator {
     /// `token_endpoint`. When the SMART discovery document is served, it
     /// describes the issuer `ferrohealth-smart`'s `describe` chooses:
     /// `[auth] described_issuer`, else the one issuer that is not `machines`
-    /// and whose metadata is available. Every
-    /// caller an issuer admits carries `patient_claim`, the live patient
-    /// claim, as the `ferrohealth-smart` `PatientClaim`. The `DPoP` proof
+    /// and whose metadata is available. The `DPoP` proof
     /// check of `[auth.dpop]` compares a proof's `htu` with the server's
     /// public root (`[server] public_base_url` with `server.base_path`) and
     /// the request path, and records each accepted proof in `replay`, which
@@ -133,12 +131,10 @@ impl Authenticator {
     /// issuer `describe` refuses (an `[auth] described_issuer` that names no
     /// issuer the document can describe, or no `described_issuer` and several
     /// or no issuers it can describe), an `[auth.dpop]` table without a public
-    /// root, a `patient_claim` that names no claim,
-    /// or a party binding the shared crate refuses or that has
+    /// root, or a party binding the shared crate refuses or that has
     /// `[[auth.party]]` tables and no `source`.
     pub async fn new(
         config: &AppConfig,
-        patient_claim: Option<&str>,
         source: Option<Arc<dyn BindingSource>>,
         replay: Arc<dyn ReplayStore>,
         standing: Arc<dyn Standing>,
@@ -149,20 +145,10 @@ impl Authenticator {
             .map_err(|e| ferroehr::error::ErrorChain::new(&e).to_string())?;
         let mut gate = Gate::open();
         let mut primary = None;
-        let claim = patient_claim
-            .map(PatientClaim::new)
-            .transpose()
-            .map_err(|e| format!("auth.patient_claim is refused: {e}"))?;
         if resolved.enabled {
             let mut issuers = IssuerSet::new();
             let mut candidates = Vec::new();
-            issuers = introspected(
-                resolved.introspection,
-                claim.as_ref(),
-                issuers,
-                &mut candidates,
-            )
-            .await?;
+            issuers = introspected(resolved.introspection, issuers, &mut candidates).await?;
             let mut supplied = match config.auth.smart.issuer_metadata_file.as_deref() {
                 Some(path) => Some(issuer::issuer_metadata(path).await?),
                 None => None,
@@ -181,9 +167,6 @@ impl Authenticator {
                             ferroehr::error::ErrorChain::new(&e)
                         )
                     })?;
-                }
-                if let Some(claim) = &claim {
-                    server = server.with_extension(claim.clone());
                 }
                 let server = Arc::new(server);
                 candidates.push(Candidate::of_server(
@@ -241,28 +224,23 @@ impl Authenticator {
 }
 
 /// Adds the introspection check of each of `settings` to `issuers`, offering
-/// each issuer to the discovery document as one of `candidates`, every caller
-/// it admits carrying `claim`.
+/// each issuer to the discovery document as one of `candidates`.
 ///
 /// # Errors
 /// A message naming the issuer whose introspection endpoint could not be read.
 async fn introspected(
     settings: Vec<IntrospectionSettings>,
-    claim: Option<&PatientClaim>,
     mut issuers: IssuerSet,
     candidates: &mut Vec<Candidate<Primary>>,
 ) -> Result<IssuerSet, String> {
     for settings in settings {
         let issuer = settings.issuer.clone();
-        let mut introspector = Introspector::discover(settings).await.map_err(|e| {
+        let introspector = Introspector::discover(settings).await.map_err(|e| {
             format!(
                 "the introspection endpoint of {issuer} could not be read: {}",
                 ferroehr::error::ErrorChain::new(&e)
             )
         })?;
-        if let Some(claim) = claim {
-            introspector = introspector.with_extension(claim.clone());
-        }
         let introspector = Arc::new(introspector);
         candidates.push(Candidate::of_introspector(
             &introspector,

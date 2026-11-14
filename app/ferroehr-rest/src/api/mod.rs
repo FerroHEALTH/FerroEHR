@@ -333,12 +333,10 @@ pub(crate) fn api_doc(namespaces: &Namespaces) -> utoipa::openapi::OpenApi {
 /// handlers and `mount` share: the spec-grounded `EHR_ACCESS` gate first (RM
 /// `org.openehr.rm.ehr.ehr_access.adoc` — "All access decisions to data in the
 /// EHR must be made in accordance with the policies and rules in this object"),
-/// then the PEP pre-check of the patient scope and the SMART gate
-/// (short-circuits before the backend on a deny), the operation's handler, the
-/// PEP post-check (may replace a success with `403`/`500`), and finally tag the
-/// response with the matched operation id for the ATNA audit layer. The
-/// patient scope is inert unless `[auth] patient_claim` is set; no openEHR spec
-/// governs it — our own extension.
+/// then the PEP pre-check of the SMART gate (short-circuits before the backend
+/// on a deny), the operation's handler, the PEP post-check (may replace a
+/// success with `403`/`500`), and finally tag the response with the matched
+/// operation id for the ATNA audit layer.
 pub(crate) async fn guarded_dispatch<H, F>(
     state: AppState,
     op: &'static str,

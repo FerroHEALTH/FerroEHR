@@ -52,7 +52,12 @@ fn access_event() -> AuditEvent {
         EventOutcome::Success,
     );
     "dr.jansen".clone_into(&mut e.user_id);
-    e.organisation = Some("zh-noordwest".to_owned());
+    e.binding = Some(ferroehr::system_log::binding::BindingRecord::system(Some(
+        ferroehr::system_log::binding::Identified {
+            issuer: "urn:oid:2.16.528.1.1007.3.3".to_owned(),
+            id: "zh-noordwest".to_owned(),
+        },
+    )));
     e.roles = vec!["USER".to_owned(), "clinician".to_owned()];
     e.origins = vec!["lab.example".to_owned(), "pacs.example".to_owned()];
     e.origin_count = Some(2);
@@ -291,7 +296,8 @@ fn element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only() {
 }
 
 /// (a) "identification of the healthcare provider or other individuals having
-/// accessed" — the organisation, recorded and rendered in FHIR only.
+/// accessed" — the provider the party binding attributes the access to,
+/// recorded and rendered in FHIR as an organisation.
 ///
 /// Read beside (b), this element asks for the ORGANISATION on whose behalf the
 /// access happened, distinct from the natural person (b) names. FHIR R4 takes
@@ -309,7 +315,7 @@ fn element_c_the_priority_category_is_recorded_and_rendered_in_fhir_only() {
 #[test]
 fn element_a_the_accessing_organisation_is_recorded_and_rendered_in_fhir() {
     let event = access_event();
-    assert_eq!(event.organisation.as_deref(), Some("zh-noordwest"));
+    assert_eq!(event.provider_id(), Some("zh-noordwest"));
 
     let agents = fhir_agents(&event);
     let organisation = agents

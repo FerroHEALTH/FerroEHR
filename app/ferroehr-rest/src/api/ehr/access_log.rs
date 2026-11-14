@@ -45,6 +45,10 @@ use crate::overview::error::RestError;
 use crate::overview::version_id::parse_ehr_id;
 use crate::state::AppState;
 
+/// The operation ids of the routes, which the clinical `EHR_ACCESS` gate
+/// leaves to this module's own access control.
+pub(crate) const OPERATIONS: [&str; 2] = ["ehr_access_log_list", "ehr_access_log_get"];
+
 /// The EHR access-log routes, mounted beside the openEHR base path.
 pub(crate) fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()

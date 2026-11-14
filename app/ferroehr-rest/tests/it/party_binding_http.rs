@@ -116,7 +116,6 @@ async fn router_observed(
     common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
-        None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
         common::standing(&svc),
@@ -490,7 +489,6 @@ async fn an_overage_the_identity_provider_throttles_is_unavailable_with_its_retr
     common::first_party(&svc, &config).await;
     let authenticator = Authenticator::new(
         &config,
-        None,
         Some(Arc::new(svc.party_source("demographic"))),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
         common::standing(&svc),

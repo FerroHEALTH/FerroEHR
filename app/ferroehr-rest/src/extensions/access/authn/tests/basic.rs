@@ -34,7 +34,7 @@ async fn valid_basic() {
 
 /// The roles `alice` holds under `config`.
 async fn roles_of_alice(config: &AppConfig) -> Vec<String> {
-    Authenticator::new(config, None, None, memory(), test_support::standing())
+    Authenticator::new(config, None, memory(), test_support::standing())
         .await
         .expect("a Basic-only authenticator")
         .authenticate(&headers("Basic YWxpY2U6cHc="))

@@ -196,7 +196,6 @@ specification governs them: they are FerroEHR's own.
 | `at0005` | issuer | `DV_TEXT` | the issuer of the caller's token |
 | `at0006` | client id | `DV_TEXT` | the client the token was issued to |
 | `at0007` | token id | `DV_TEXT` | the token's `jti` |
-| `at0008` | organisation | `DV_TEXT` | the organisation the token named |
 | `at0009` | role | `DV_TEXT` | a role the caller held, one element each |
 | `at0010` | domain | `DV_TEXT` | the pseudonymisation domain, when it is not the resource class's own |
 | `at0011` | ehr id | `DV_TEXT` | the EHR the request named |
@@ -251,7 +250,7 @@ not classify is a BALP exchange without the EHDS entities. Each row is a test
 | `outcome.delivered` | the `delivered` detail of the `ehds-categories` entity | none, as a detail |
 | `accessor.party` | the `ihe-otherId` typed `PRN` of `agent:user` (BALP 1.1.4 §3:5.7.5.4) | none |
 | `accessor.credential` | `agent:user` `who.identifier` (issuer as `system`, subject as `value`), the token id as its first `policy`, the client as an agent of its own, the assurance as `ihe-assuranceLevel` | the authentication method has no element |
-| `accessor.provider` | an agent naming the organisation | none |
+| `accessor.provider` | an agent naming the provider of the caller's party binding | none |
 | `accessor.roles`, `accessor.kind` | `agent:user` `role`, the acting mode first | none |
 | `accessor.groups`, `accessor.binding`, `accessor.delegation` | details of the `ehds-accessor` entity, one `actor` per actor in the chain's order | no element; details |
 | `ehr_id` | the `ehr` entity, with the subject of care as the patient entity (`entity:patient`, role `1`) | none |
@@ -324,7 +323,6 @@ Each record additionally carries:
 | Field | What it holds |
 |---|---|
 | `domain` | The pseudonymisation domain read: `ehr`, `demographic`, `linkage` for a crossing that resolves a party or a subject to its EHRs, or `system` for an operation that touches no domain. |
-| `organisation` | The organisation a record written before 5.7.2 names, as an access-token claim named it. FerroEHR reads no organisation claim, so a new record leaves it empty; the provider the caller acts for is the binding's `provider`. |
 | `purpose` | The purpose of use the caller declared in the `x-purpose-of-use` header, when the deployment accepts it. |
 | `token_attributes` | The purposes of use and the professional roles the access token states, each with its code system, for an issuer with an `[[auth.attributes]]` table ([where the purpose comes from](#where-the-purpose-of-use-comes-from)). |
 | `emergency_access` | `true` when the declared purpose, or a purpose the token states, is one of `[audit] emergency_purpose_codes`: an [emergency access](#emergency-access-ehds-art-115) (EHDS Art. 11(5)). |

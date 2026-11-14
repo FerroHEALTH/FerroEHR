@@ -37,7 +37,7 @@
 //! A demographic query ([`QueryDomain::Demographic`]) runs the same SQL on the
 //! party pool, whose `search_path` names the `party` schema rendered from the
 //! same DDL. It carries none of the EHR gates (the population gate, the
-//! `ehr_ids` scope, the per-EHR access decision, the patient scope),
+//! `ehr_ids` scope, the per-EHR access decision),
 //! because the `party` schema has no `ehr` relation and a party is no EHR's
 //! content; the restriction mark, the policy-party mark of a caller who is no
 //! administrator (`gates`) and `LATEST_VERSION` ride the head join as for
@@ -63,7 +63,6 @@ mod predicate;
 mod scope;
 mod select;
 mod stream;
-pub mod subject;
 mod value;
 
 use crate::db::iden::{Ehr, Node};
@@ -71,7 +70,7 @@ use crate::ids::EhrId;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use sea_query::{Alias, PostgresQueryBuilder, Query, SelectStatement, Value};
+use sea_query::{PostgresQueryBuilder, Query, SelectStatement, Value};
 use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
 
 use super::error::{AqlError, SqlError};
@@ -95,12 +94,6 @@ pub struct SqlCtx {
     /// Whether a non-empty [`Self::ehr_ids`] is a named target or a subset of
     /// the population, which the population gate still applies to.
     pub ehr_scope_kind: EhrScopeKind,
-    /// The patient scope (no openEHR spec governs this, our own
-    /// extension): when set, every VO root and every EHR source is restricted
-    /// to EHRs whose subject it names ([`subject::SubjectScope`]), so rows the
-    /// caller may not see are never fetched, independent of what the query
-    /// projects.
-    pub subject_scope: Option<subject::SubjectScope>,
     /// The access evaluator's condition for the caller (`EHR_ACCESS`, RM ehr
     /// `ehr_access.adoc`: "All access decisions to data in the EHR must be
     /// made in accordance with the policies and rules in this object"): every
@@ -303,24 +296,6 @@ impl std::fmt::Debug for PreparedQuery {
     }
 }
 
-/// A built scope-collection query for the patient-scope query post-check.
-///
-/// `SELECT DISTINCT` of every bound EHR source's `id` and every bound VO root's
-/// `ehr_id` over the same containment/filter as the main query (no openEHR spec
-/// governs the patient scope — our own extension). Its rows carry the set of
-/// EHRs the query touches — across **all** bound variables and **independent
-/// of the projection**.
-#[derive(Debug)]
-pub struct ScopeQuery {
-    /// The generated SQL.
-    pub sql: String,
-    /// The bound parameter values.
-    pub values: SqlxValues,
-    /// The EHR-id column aliases, one per bound EHR source and per bound VO
-    /// root, the executor reads each result row's touched EHRs from.
-    pub ehr_columns: Vec<String>,
-}
-
 /// A VO "group": the node alias that roots it and the `version` alias its
 /// nodes belong to. Content sources contained within it share the `vo` alias and
 /// interval-join into `node`.
@@ -384,8 +359,8 @@ struct Builder<'a> {
     /// The `version` alias for each entry in `group_roots` (parallel vec).
     group_vos: Vec<String>,
     /// The `(node, version)` left-binding aliases of each `OR` branch operand
-    /// bound as a versioned object of its own: reported to the access log and
-    /// the patient-scope collection like a group root, but never filtered as one,
+    /// bound as a versioned object of its own: reported to the access log like
+    /// a group root, but never filtered as one,
     /// since a `NULL` binding is a row whose branch did not match.
     branch_roots: Vec<(String, String)>,
     /// Fresh-alias counter for anchor subqueries / anti-joins.
@@ -466,8 +441,8 @@ impl<'a> Builder<'a> {
     /// A query that reads only the `ehr` row (`FROM EHR e` with no
     /// containment, or an `ehr_status` path) binds no versioned-object root
     /// and still serves the EHR its row names, so the access log
-    /// ([`ACCESS_EHR_PREFIX`]) and the patient-scope collection both read this
-    /// one list. No openEHR spec governs this: our own design.
+    /// ([`ACCESS_EHR_PREFIX`]) reads this one list. No openEHR spec governs
+    /// this: our own design.
     fn served_ehr_ids(&self) -> Vec<sea_query::Expr> {
         self.ehr_alias
             .values()
@@ -586,54 +561,4 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
         access_ehr_cols,
         access_version_cols,
     })
-}
-
-/// Builds the patient-scope collection query for `ir`, or `None` when there is
-/// nothing to collect.
-///
-/// Nothing is collected for a query that binds neither an EHR source nor a
-/// versioned-object root, nor for a demographic query: a party is in no EHR.
-///
-/// The FROM, the SELECT path bindings and the WHERE are the main query's, so
-/// the collected scope is exactly the rows that query can serve. Every EHR
-/// source contributes its `ehr.id`, so a query that reads only the `ehr` row
-/// (`FROM EHR e`, an `ehr_status` path, an `OR` under the EHR) still reports
-/// the EHRs it touches; every versioned-object root contributes its `ehr_id`.
-///
-/// # Errors
-/// The same refusals as [`build`].
-pub fn build_scope(
-    ir: &QueryIr,
-    params: &Params,
-    ctx: &SqlCtx,
-) -> Result<Option<ScopeQuery>, AqlError> {
-    from::refuse_negated_reads(ir)?;
-    if ir.domain == QueryDomain::Demographic {
-        return Ok(None);
-    }
-    let mut b = Builder::new(ir, params, ctx);
-    b.build_from(&ir.contains)?;
-    b.apply_ehr_scope();
-    b.apply_population_gate();
-    b.bind_select_paths()?;
-    b.build_where()?;
-    let served = b.served_ehr_ids();
-    if served.is_empty() {
-        return Ok(None);
-    }
-    // The row-wise cartesian of the bound EHR sources and roots, DISTINCT-ed,
-    // so every touched EHR across every bound variable is collected.
-    let mut ehr_columns = Vec::with_capacity(served.len());
-    for (i, ehr) in served.into_iter().enumerate() {
-        let ehr_col = format!("scope_ehr_{i}");
-        b.q.expr_as(ehr, Alias::new(ehr_col.as_str()));
-        ehr_columns.push(ehr_col);
-    }
-    b.q.distinct();
-    let (sql, values) = b.q.build_sqlx(PostgresQueryBuilder);
-    Ok(Some(ScopeQuery {
-        sql,
-        values,
-        ehr_columns,
-    }))
 }

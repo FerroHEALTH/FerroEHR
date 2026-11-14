@@ -87,7 +87,7 @@ pub(crate) async fn fixture() -> Fixture {
     .await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
-    let handle = AuthzHandle::build(&authz, &config.api.base_path, None).map(Arc::new);
+    let handle = AuthzHandle::build(&authz, &config.api.base_path).map(Arc::new);
     let app = common::build_full(config, Arc::clone(&svc), handle, Observability::default()).await;
     let fixture = Fixture {
         _db: db,

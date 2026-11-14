@@ -34,7 +34,9 @@
 //!    a gate-keeper (`refused-consent-required`); an EHR with no settings
 //!    takes the server's default.
 //!
-//! The subject reading their own record skips every step (EHDS Art. 3); a
+//! The subject reading their own record skips every step (EHDS Art. 3), and
+//! every other EHR refuses them (`refused-consent-required`): a subject
+//! caller is the subject of the one EHR its patient context names. A
 //! representative is held to steps 1 to 3 and skips 4 to 7. A declared
 //! emergency by the break-glass role lifts steps 4 to 7. No openEHR spec
 //! governs the procedure: our own design (#5487, #5513).
@@ -46,6 +48,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 
 use crate::access_eval::scope::{Item, Polarity, Pred, Scopes, within};
+use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CallerFacts;
 use crate::service::ehr::access_projection::{Validity, validity};
 use crate::service::ehr::access_rule::{SettingsCaller, party_key};
@@ -58,6 +61,10 @@ pub struct Caller {
     pub kind: CallerKind,
     /// The id of the `PERSON` or `AGENT` the caller is bound to.
     pub party: Option<String>,
+    /// The EHR whose subject a [`CallerKind::Subject`] caller is: the EHR of
+    /// its SMART App Launch patient context; `None` for every other caller,
+    /// and for a subject caller with no such EHR, whom every EHR refuses.
+    pub own_ehr: Option<EhrId>,
     /// The ids of the parties the caller acts for or is a member of: its
     /// provider, the `GROUP`s that provider is a member of, its care teams.
     pub acts_for: Vec<String>,
@@ -149,6 +156,8 @@ pub struct Ehr<'a> {
     pub server_default: AccessDefault,
     /// Whether the caller has a live care relationship to its subject.
     pub cared: bool,
+    /// Whether the EHR is the [`Caller::own_ehr`] of a subject caller.
+    pub own: bool,
 }
 
 /// What one step answers for the items it covers.
@@ -322,7 +331,13 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     let caller = judged.caller;
     // NOTE: EHDS Art. 3, the subject reads their own record; only the access delay holds it.
     if caller.kind == CallerKind::Subject {
-        verdict.grounds.subject = true;
+        if judged.ehr.own {
+            verdict.grounds.subject = true;
+        } else {
+            // NOTE: our own design (#5586), SMART master08 §Resource Scopes confines a patient
+            // context to "data within that patient's EHR", so every other EHR refuses it.
+            verdict.otherwise = Outcome::Refused(Refusal::ConsentRequired);
+        }
         return verdict;
     }
     let (directives, held_closed) = match judged.ehr.settings {

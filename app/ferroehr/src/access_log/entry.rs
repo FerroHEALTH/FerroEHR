@@ -435,35 +435,20 @@ fn groups(binding: &BindingRecord) -> Vec<PartyRef> {
         .collect()
 }
 
-/// The provider the caller acted for: the binding's, else the organisation
-/// the token named.
+/// The provider the caller acted for, as the binding names it (EHDS Annex II
+/// 3.2(a)).
 fn provider(event: &AuditEvent) -> Option<PartyIdentified> {
-    let identified = |identifier: DvIdentifier| {
-        PartyIdentified::PartyIdentified(PartyIdentifiedData {
-            external_ref: None,
-            name: None,
-            identifiers: Some(NonEmptyVec::of(identifier)),
-        })
-    };
-    if let Some(Identified { issuer, id }) = event
-        .binding
-        .as_ref()
-        .and_then(|binding| binding.provider.as_ref())
-    {
-        return Some(identified(DvIdentifier {
+    let Identified { issuer, id } = event.binding.as_ref()?.provider.as_ref()?;
+    Some(PartyIdentified::PartyIdentified(PartyIdentifiedData {
+        external_ref: None,
+        name: None,
+        identifiers: Some(NonEmptyVec::of(DvIdentifier {
             issuer: Some(issuer.clone()),
             assigner: None,
             id: id.clone(),
             r#type: Some("provider".to_owned()),
-        }));
-    }
-    event.organisation.as_ref().map(|organisation| {
-        PartyIdentified::PartyIdentified(PartyIdentifiedData {
-            external_ref: None,
-            name: Some(organisation.clone()),
-            identifiers: None,
-        })
-    })
+        })),
+    }))
 }
 
 /// The credential the caller presented, named by its issuer, subject, client

@@ -88,7 +88,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     common::grant_to(&svc, &pool, "portal", Operation::ReadSubjectAudit).await;
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
-    let handle = AuthzHandle::build(&authz, &config.api.base_path, None).map(Arc::new);
+    let handle = AuthzHandle::build(&authz, &config.api.base_path).map(Arc::new);
     let app = common::build_full(config, svc, handle, Observability::default()).await;
     let (status, body) = send(
         &app,
