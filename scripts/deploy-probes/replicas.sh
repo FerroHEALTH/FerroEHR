@@ -83,8 +83,11 @@ probes_replicas() {
   # instance rows of the servers they stopped would be compared for 90
   # seconds, so the two instances start on a database of their own.
   compose_down
+  # The services compose_up brings, the Basic user's provisioning among them:
+  # on the fresh database the user is bound to its demographic party again,
+  # as the quickstart binds it.
   dc "${files[@]}" --profile replicas --profile s3 up -d --wait \
-    ferroehr ferroehr-2 >/dev/null 2>&1
+    ferroehr ferroehr-2 seaweedfs seaweedfs-init ferroehr-provision >/dev/null 2>&1
   if ! wait_http "$SECOND_CDR/health/readiness" 90 || ! wait_http "$CDR/health/readiness" 90; then
     probe_fail "two serving instances" "$(replica_state "${files[@]}")"
     probe_done
