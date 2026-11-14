@@ -237,6 +237,7 @@ Verify the chain works before you need it:
 
 ```sql
 SELECT * FROM audit.verify_audit_chain();
+SELECT * FROM audit.verify_access_log_chain();
 ```
 
 - [ ] `[audit] enabled = true` with a durable sink.
@@ -245,7 +246,8 @@ SELECT * FROM audit.verify_audit_chain();
 - [ ] `fail_mode` is a decision, not a default.
 - [ ] `retention` (or `retention`) is `0` or at or above the floor
       that applies to you.
-- [ ] `audit.verify_audit_chain()` returns no rows on a healthy trail.
+- [ ] `audit.verify_audit_chain()` and `audit.verify_access_log_chain()`
+      return no rows on a healthy trail.
 
 ## 7. Schema preparation runs on its own credential
 

@@ -205,6 +205,10 @@ harness = false
 name = "storage"
 harness = false
 
+[[bench]]
+name = "access_classes"
+harness = false
+
 [lints]
 workspace = true
 

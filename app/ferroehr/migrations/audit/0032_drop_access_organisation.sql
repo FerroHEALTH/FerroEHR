@@ -66,7 +66,7 @@ CREATE OR REPLACE FUNCTION audit.audit_event_digest_columns(p_version smallint) 
         ]) AS v2(columns)
 $$;
 
--- ── the relation the search reads ────────────────────────────────────────────
+-- ── the relations the search reads ──────────────────────────────────────────
 
 CREATE VIEW audit_record AS
     SELECT e.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation,
@@ -78,7 +78,8 @@ CREATE VIEW audit_record AS
            e.subject_namespace, e.subject_lookup_failed, e.category_content,
            e.render_policy, e.token_attributes, e.search_tokens,
            NULL::text AS content, NULL::text AS algorithm, NULL::text AS previous_digest,
-           NULL::text AS content_digest, NULL::text AS digest, NULL::text AS signature
+           NULL::text AS content_digest, NULL::text AS digest, NULL::text AS signature,
+           'system'::text AS chain
       FROM audit_event e
     UNION ALL
     SELECT s.chain_seq, s.recorded_at, r.stored_at, s.action, s.outcome, NULL::text,
@@ -89,14 +90,10 @@ CREATE VIEW audit_record AS
            false, NULL::text, NULL::text, NULL::text, s.ehr_id,
            NULL::text, false, NULL::jsonb,
            s.render_policy, NULL::jsonb, s.search_tokens,
-           r.content, r.algorithm, r.previous_digest, r.content_digest, r.digest, r.signature
+           r.content, r.algorithm, r.previous_digest, r.content_digest, r.digest, r.signature,
+           'access_log'::text
       FROM access_log_search s
       JOIN access_log_record r ON r.chain_seq = s.chain_seq;
-
-COMMENT ON VIEW audit_record IS
-    'Every record the ITI-81 search, the person''s own trail and the FHIR Feed read: an audit_event record by its columns, an access-log entry by its content and link, which its projection is rendered from.';
-
--- ── the access trail in SQL ──────────────────────────────────────────────────
 
 CREATE VIEW access_trail AS
     SELECT e.chain_seq, e.id, e.recorded_at, e.stored_at, e.action, e.outcome,
@@ -110,7 +107,7 @@ CREATE VIEW access_trail AS
            e.binding, e.guest, e.party, e.party_groups, e.provider, e.representation,
            e.external_fields, e.agreement, e.actor_chain, e.facilities, e.binding_detail,
            e.summary, e.token_attributes,
-           NULL::text AS entry_uid
+           NULL::text AS entry_uid, 'system'::text AS chain
       FROM audit_event e
     UNION ALL
     SELECT t.chain_seq, NULL::uuid, t.time_recorded, t.stored_at,
@@ -165,14 +162,16 @@ CREATE VIEW access_trail AS
            nullif(t.binding -> 'detail', '{}'::jsonb),
            (audit.access_detail(t.doc, 'at0028') ->> 'value')::jsonb,
            (audit.access_detail(t.doc, 'at0026') ->> 'value')::jsonb,
-           t.uid
+           t.uid, 'access_log'::text
       FROM (SELECT r.chain_seq, r.uid, r.time_recorded, r.stored_at, r.content::jsonb AS doc,
                    (audit.access_detail(r.content::jsonb, 'at0027') ->> 'value')::jsonb AS binding
               FROM access_log_record r
              WHERE r.record_type = 'ACCESS_LOG_ENTRY') t;
 
+COMMENT ON VIEW audit_record IS
+    'Every record the ITI-81 search, the person''s own trail and the FHIR Feed read: an audit_event record of the system chain by its columns, an access-log entry by its content and link, which its projection is rendered from. A record is named by its chain and position.';
 COMMENT ON VIEW access_trail IS
-    'The access trail in SQL: every audit_event record and every access-log entry with the facts it states, in the audit vocabulary. An entry''s categories are computed by its projection and are no column here.';
+    'The access trail in SQL: every audit_event record and every access-log entry with the facts it states, in the audit vocabulary, each named by its chain and position. An entry''s categories are computed by its projection and are no column here.';
 
 -- ── grants ───────────────────────────────────────────────────────────────────
 

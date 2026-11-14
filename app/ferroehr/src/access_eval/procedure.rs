@@ -38,8 +38,14 @@
 //! every other EHR refuses them (`refused-consent-required`): a subject
 //! caller is the subject of the one EHR its patient context names. A
 //! representative is held to steps 1 to 3 and skips 4 to 7. A declared
-//! emergency by the break-glass role lifts steps 4 to 7. No openEHR spec
-//! governs the procedure: our own design (#5487, #5513).
+//! emergency by the break-glass role lifts steps 4 to 7.
+//!
+//! The same procedure decides a settings class ([`crate::access_eval::class`])
+//! for a query: where it reads a value the class leaves to each EHR, the
+//! verdict holds an atom of that fact ([`EhrFact`], [`crate::access_eval::scope::Held`])
+//! in place of its answer, and a direct read, which knows every value,
+//! answers each at once. No openEHR spec governs the procedure: our own
+//! design (#5487, #5513, #5588).
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::terminology::{
@@ -47,7 +53,8 @@ use openehr_rm::draft::access_control::terminology::{
     Refusal, Relationship, Term,
 };
 
-use crate::access_eval::scope::{Item, Polarity, Pred, Scopes, within};
+use crate::access_eval::class::{DirectiveLayout, keeper};
+use crate::access_eval::scope::{EhrFact, Item, Polarity, Pred, Scopes, within};
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CallerFacts;
 use crate::service::ehr::access_projection::{Validity, validity};
@@ -274,14 +281,23 @@ impl Verdict {
     /// Whether some item could be admitted.
     #[must_use]
     pub fn admits_any(&self) -> bool {
-        for rule in &self.rules {
-            match rule.when.constant() {
-                Some(true) => return rule.then == Outcome::Admit,
-                None if rule.then == Outcome::Admit => return true,
-                Some(false) | None => {}
-            }
+        self.reaches() != Pred::False
+    }
+
+    /// Where some item could be admitted, as a predicate over the facts of
+    /// the EHR alone: constant for one EHR's own settings, and over its facts
+    /// for a settings class.
+    #[must_use]
+    pub fn reaches(&self) -> Pred {
+        let mut reaches = Pred::of(self.otherwise == Outcome::Admit);
+        for rule in self.rules.iter().rev() {
+            reaches = if rule.then == Outcome::Admit {
+                Pred::any(vec![rule.when.maybe(), reaches])
+            } else {
+                Pred::all(vec![Pred::negate(rule.when.always()), reaches])
+            };
         }
-        self.otherwise == Outcome::Admit
+        reaches
     }
 
     /// The items admitted, as one predicate.
@@ -348,6 +364,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         None => (&[][..], false),
     };
     let read = Reader { judged };
+    let placed = |at: usize| judged.scopes.layout().and_then(|l| l.directives.get(at));
     denials(&read, directives, &mut verdict);
     if caller.kind == CallerKind::Representative {
         delegation(&read, directives, &mut verdict);
@@ -361,16 +378,23 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         .iter()
         .enumerate()
         .filter(|(_, d)| kind_and_effect(d) == (DirectiveKind::Consent, Effect::Permit))
-        .filter(|(_, d)| read.binds(DirectiveKind::Consent, d))
-        .map(|(at, d)| Permit {
-            at,
-            directive: d,
-            cover: read.cover(d, Effect::Permit),
+        .filter_map(|(at, d)| {
+            let binds = read.binds(DirectiveKind::Consent, d, placed(at));
+            (binds != Pred::False).then(|| Permit {
+                at,
+                directive: d,
+                certain: binds == Pred::True,
+                cover: Pred::all(vec![binds, read.cover(d, Effect::Permit, placed(at))]),
+            })
         })
         .collect();
-    verdict.grounds.permits = permits.iter().map(|permit| permit.at).collect();
+    verdict.grounds.permits = permits
+        .iter()
+        .filter(|permit| permit.certain)
+        .map(|permit| permit.at)
+        .collect();
     sensitivity(&read, &permits, &mut verdict);
-    let keeper = caller.administrator || caller.settings.is_gate_keeper(judged.ehr.settings);
+    let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
     let live = judged.ehr.cared && !held_closed;
     let default = judged
         .ehr
@@ -379,17 +403,18 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     let care_read = judged.policy.care_required && caller.kind == CallerKind::Professional;
     if care_read || default != AccessDefault::Open {
         verdict.grounds.cared = live;
-        verdict.grounds.keeper = keeper;
+        verdict.grounds.keeper = keeper == Pred::True;
     }
     // Step 5: a care relationship.
-    if care_read && !(live || keeper) {
+    let uncared = Pred::negate(Pred::any(vec![Pred::of(live), keeper.clone()]));
+    if care_read && uncared != Pred::False {
         let naming = permits
             .iter()
             .filter(|permit| permit.directive.applies_to.is_some())
             .map(|permit| permit.cover.clone())
             .collect();
         verdict.rules.push(Rule {
-            when: Pred::negate(Pred::any(naming)),
+            when: Pred::all(vec![uncared, Pred::negate(Pred::any(naming))]),
             then: Outcome::Refused(Refusal::NoCareRelationship),
             by: Vec::new(),
         });
@@ -413,19 +438,33 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     }
     // Step 7: the default disposition.
     let admitted = match default {
-        AccessDefault::Open => true,
-        AccessDefault::Restricted => keeper || live,
+        AccessDefault::Open => Pred::True,
+        AccessDefault::Restricted => Pred::any(vec![keeper, Pred::of(live)]),
         AccessDefault::ConsentRequired => keeper,
     };
-    if !admitted {
-        verdict.rules.push(Rule {
-            by: permits.iter().map(|permit| permit.at).collect(),
-            when: Pred::any(permits.into_iter().map(|permit| permit.cover).collect()),
-            then: Outcome::Admit,
-        });
-        verdict.otherwise = Outcome::Refused(Refusal::ConsentRequired);
-    }
+    disposition(admitted, permits, &mut verdict);
     verdict
+}
+
+/// Step 7: what the default disposition `admitted` does not admit, a permit
+/// may.
+fn disposition(admitted: Pred, permits: Vec<Permit<'_>>, verdict: &mut Verdict) {
+    if admitted == Pred::True {
+        return;
+    }
+    if admitted != Pred::False {
+        verdict.rules.push(Rule {
+            when: admitted,
+            then: Outcome::Admit,
+            by: Vec::new(),
+        });
+    }
+    verdict.rules.push(Rule {
+        by: permits.iter().map(|permit| permit.at).collect(),
+        when: Pred::any(permits.into_iter().map(|permit| permit.cover).collect()),
+        then: Outcome::Admit,
+    });
+    verdict.otherwise = Outcome::Refused(Refusal::ConsentRequired);
 }
 
 /// Steps 1 to 3: every deny directive that binds the caller, in step order
@@ -434,8 +473,13 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
 fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut Verdict) {
     let emergency = read.judged.asked.emergency;
     for (at, directive) in directives.iter().enumerate() {
+        let placed = read.placed(at);
         let (kind, effect) = kind_and_effect(directive);
-        if effect != Effect::Deny || !read.binds(kind, directive) {
+        if effect != Effect::Deny {
+            continue;
+        }
+        let binds = read.binds(kind, directive, placed);
+        if binds == Pred::False {
             continue;
         }
         let (refusal, lifted, lifts) = match kind {
@@ -456,11 +500,13 @@ fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut 
             ),
         };
         if directive.emergency_override && lifts {
-            verdict.lifted.push(lifted);
-            verdict.grounds.lifted.push(at);
+            if binds == Pred::True {
+                verdict.lifted.push(lifted);
+                verdict.grounds.lifted.push(at);
+            }
         } else {
             verdict.rules.push(Rule {
-                when: read.cover(directive, Effect::Deny),
+                when: Pred::all(vec![binds, read.cover(directive, Effect::Deny, placed)]),
                 then: refusal,
                 by: vec![at],
             });
@@ -481,29 +527,41 @@ const fn step(outcome: Outcome) -> u8 {
 /// Step 3 for a representative: one a `delegation` directive names reads
 /// only what an applying delegation permit covers (EHDS Art. 4(2)).
 fn delegation(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut Verdict) {
-    let naming: Vec<(usize, &AccessDirective)> = directives
+    let naming: Vec<(usize, &AccessDirective, Pred)> = directives
         .iter()
         .enumerate()
         .filter(|(_, d)| kind_and_effect(d) == (DirectiveKind::Delegation, Effect::Permit))
-        .filter(|(_, d)| d.applies_to.is_some() && read.actor(d))
+        .filter(|(_, d)| d.applies_to.is_some())
+        .map(|(at, d)| (at, d, read.actor(d, read.placed(at))))
+        .filter(|(_, _, named)| *named != Pred::False)
         .collect();
     if naming.is_empty() {
         return;
     }
-    let applying: Vec<(usize, &AccessDirective)> = naming
+    let applying: Vec<(usize, &AccessDirective, Pred)> = naming
         .iter()
-        .copied()
-        .filter(|(_, d)| read.applies(d, Polarity::Permit))
+        .map(|(at, d, _)| (*at, *d, read.applies(d, Polarity::Permit, read.placed(*at))))
+        .filter(|(_, _, applies)| *applies != Pred::False)
         .collect();
-    verdict.grounds.permits = applying.iter().map(|(at, _)| *at).collect();
+    verdict.grounds.permits = applying
+        .iter()
+        .filter(|(_, _, applies)| *applies == Pred::True)
+        .map(|(at, _, _)| *at)
+        .collect();
     let covered = applying
         .iter()
-        .map(|(_, d)| read.cover(d, Effect::Permit))
+        .map(|(at, d, applies)| {
+            Pred::all(vec![
+                applies.clone(),
+                read.cover(d, Effect::Permit, read.placed(*at)),
+            ])
+        })
         .collect();
+    let named = Pred::any(naming.iter().map(|(_, _, named)| named.clone()).collect());
     verdict.rules.push(Rule {
-        when: Pred::negate(Pred::any(covered)),
+        when: Pred::all(vec![named, Pred::negate(Pred::any(covered))]),
         then: Outcome::Refused(Refusal::ConsentDenied),
-        by: naming.iter().map(|(at, _)| *at).collect(),
+        by: naming.iter().map(|(at, _, _)| *at).collect(),
     });
 }
 
@@ -531,11 +589,13 @@ fn sensitivity(read: &Reader<'_, '_>, permits: &[Permit<'_>], verdict: &mut Verd
     }
 }
 
-/// A consent permit that binds the caller: its position in the settings'
-/// `directives`, the directive, and the items it covers.
+/// A consent permit that may bind the caller: its position in the settings'
+/// `directives`, the directive, whether it binds the caller whatever the
+/// facts, and the items it covers where it binds.
 struct Permit<'a> {
     at: usize,
     directive: &'a AccessDirective,
+    certain: bool,
     cover: Pred,
 }
 
@@ -566,10 +626,32 @@ struct Reader<'j, 'a> {
 }
 
 impl Reader<'_, '_> {
+    /// Where the facts of the directive at `at` sit, for a settings class.
+    fn placed(&self, at: usize) -> Option<&DirectiveLayout> {
+        self.judged
+            .scopes
+            .layout()
+            .and_then(|layout| layout.directives.get(at))
+    }
+
+    /// Whether the caller is a gate-keeper of the EHR.
+    fn keeper(&self) -> Pred {
+        let caller = &self.judged.caller.settings;
+        match self.judged.scopes.layout() {
+            Some(layout) => keeper(layout, caller),
+            None => Pred::of(caller.is_gate_keeper(self.judged.ehr.settings)),
+        }
+    }
+
     /// Whether a directive of `kind` binds the caller: the kind binds the
     /// caller's kind, its `applies_to` names the caller, and it applies to
     /// the request now.
-    fn binds(&self, kind: DirectiveKind, directive: &AccessDirective) -> bool {
+    fn binds(
+        &self,
+        kind: DirectiveKind,
+        directive: &AccessDirective,
+        placed: Option<&DirectiveLayout>,
+    ) -> Pred {
         let caller = self.judged.caller.kind;
         // NOTE: our own design under EHDS Art. 8 and 10: a restriction binds whoever reaches
         // the data for a provider, an opt-out the access services, a delegation a representative.
@@ -582,21 +664,40 @@ impl Reader<'_, '_> {
             DirectiveKind::Consent => caller != CallerKind::Subject,
             DirectiveKind::Delegation => caller == CallerKind::Representative,
         };
+        if !bindable {
+            return Pred::False;
+        }
         let polarity = match kind_and_effect(directive).1 {
             Effect::Deny => Polarity::Deny,
             Effect::Permit => Polarity::Permit,
         };
-        bindable && self.applies(directive, polarity)
+        self.applies(directive, polarity, placed)
     }
 
     /// Whether `directive` applies to the request now: in force, naming the
     /// caller, the operation and the purpose.
-    fn applies(&self, directive: &AccessDirective, polarity: Polarity) -> bool {
+    fn applies(
+        &self,
+        directive: &AccessDirective,
+        polarity: Polarity,
+        placed: Option<&DirectiveLayout>,
+    ) -> Pred {
         let asked = self.judged.asked;
         let in_force = match directive.time_validity.as_ref().map(validity) {
-            None => true,
-            Some(Validity::Within { from, until }) => within(from, until, self.judged.now),
-            Some(Validity::Unreadable) => polarity.unreadable(),
+            None => Pred::True,
+            Some(Validity::Within { from, until }) => match placed {
+                Some(placed) if self.judged.scopes.layout().is_some() => {
+                    let from = from.zip(placed.from).map(|(b, at)| (at, b.included));
+                    let until = until.zip(placed.until).map(|(b, at)| (at, b.included));
+                    if from.is_none() && until.is_none() {
+                        Pred::True
+                    } else {
+                        Pred::Ehr(EhrFact::Within { from, until })
+                    }
+                }
+                _ => Pred::of(within(from, until, self.judged.now)),
+            },
+            Some(Validity::Unreadable) => Pred::of(polarity.unreadable()),
         };
         let operation = directive.operations.as_deref().is_none_or(|operations| {
             operations.iter().any(|coded| {
@@ -611,55 +712,72 @@ impl Reader<'_, '_> {
                     .any(|coded| coded.defining_code.code_string == declared)
             })
         });
-        in_force
-            && operation
-            && purpose
-            && (directive.applies_to.is_none() || self.actor(directive))
+        let actor = if directive.applies_to.is_none() {
+            Pred::True
+        } else {
+            self.actor(directive, placed)
+        };
+        Pred::all(vec![in_force, Pred::of(operation && purpose), actor])
     }
 
     /// Whether an actor scope of `directive` names the caller: every
     /// attribute a scope sets holds.
-    fn actor(&self, directive: &AccessDirective) -> bool {
+    fn actor(&self, directive: &AccessDirective, placed: Option<&DirectiveLayout>) -> Pred {
         let caller = self.judged.caller;
-        directive
-            .applies_to
-            .as_deref()
-            .unwrap_or_default()
-            .iter()
-            .any(|scope| {
-                let party = scope.party.as_ref().is_none_or(|party| {
-                    party_key(party).is_some_and(|key| {
-                        caller.party.as_ref() == Some(&key) || caller.acts_for.contains(&key)
-                    })
-                });
-                let role = scope.role.as_ref().is_none_or(|role| {
-                    caller
-                        .roles
-                        .iter()
-                        .any(|held| held.eq_ignore_ascii_case(&role.defining_code.code_string))
-                });
-                let relationship =
-                    scope
-                        .relationship
-                        .as_ref()
-                        .is_none_or(|coded| match Relationship::read_coded(coded) {
+        let class = self.judged.scopes.layout().is_some();
+        let scopes =
+            directive
+                .applies_to
+                .as_deref()
+                .unwrap_or_default()
+                .iter()
+                .enumerate()
+                .map(|(at, scope)| {
+                    let party = match scope.party.as_ref() {
+                        None => Pred::True,
+                        Some(party) => {
+                            match placed.and_then(|p| p.parties.get(at).copied().flatten()) {
+                                Some(fact) if class => Pred::Ehr(EhrFact::Party(fact)),
+                                _ => Pred::of(party_key(party).is_some_and(|key| {
+                                    caller.party.as_ref() == Some(&key)
+                                        || caller.acts_for.contains(&key)
+                                })),
+                            }
+                        }
+                    };
+                    let role = scope.role.as_ref().is_none_or(|role| {
+                        caller
+                            .roles
+                            .iter()
+                            .any(|held| held.eq_ignore_ascii_case(&role.defining_code.code_string))
+                    });
+                    let relationship = scope.relationship.as_ref().is_none_or(|coded| {
+                        match Relationship::read_coded(coded) {
                             Ok(Relationship::Care) => self.judged.ehr.cared,
                             Ok(Relationship::Representative | Relationship::Proxy) => {
                                 caller.kind == CallerKind::Representative
                             }
                             Err(_) => false,
-                        });
-                let kind = scope
-                    .caller_kind
-                    .as_ref()
-                    .is_none_or(|coded| CallerKind::read_coded(coded) == Ok(caller.kind));
-                party && role && relationship && kind
-            })
+                        }
+                    });
+                    let kind = scope
+                        .caller_kind
+                        .as_ref()
+                        .is_none_or(|coded| CallerKind::read_coded(coded) == Ok(caller.kind));
+                    Pred::all(vec![party, Pred::of(role && relationship && kind)])
+                })
+                .collect();
+        Pred::any(scopes)
     }
 
     /// The items `directive`, of `effect`, covers: its data less what its
     /// applying exceptions, of the opposite effect, cover.
-    fn cover(&self, directive: &AccessDirective, effect: Effect) -> Pred {
+    fn cover(
+        &self,
+        directive: &AccessDirective,
+        effect: Effect,
+        placed: Option<&DirectiveLayout>,
+    ) -> Pred {
         let (own, theirs) = match effect {
             Effect::Deny => (Polarity::Deny, Polarity::Permit),
             Effect::Permit => (Polarity::Permit, Polarity::Deny),
@@ -670,11 +788,25 @@ impl Reader<'_, '_> {
             .as_deref()
             .unwrap_or_default()
             .iter()
-            .filter(|exception| self.applies(exception, theirs))
-            .map(|exception| scopes.data(exception.data.as_deref().unwrap_or_default(), theirs))
+            .enumerate()
+            .map(|(at, exception)| {
+                let placed = placed.and_then(|p| p.exceptions.get(at));
+                Pred::all(vec![
+                    self.applies(exception, theirs, placed),
+                    scopes.data(
+                        exception.data.as_deref().unwrap_or_default(),
+                        theirs,
+                        placed.map(|p| p.data.as_slice()),
+                    ),
+                ])
+            })
             .collect();
         Pred::all(vec![
-            scopes.data(directive.data.as_deref().unwrap_or_default(), own),
+            scopes.data(
+                directive.data.as_deref().unwrap_or_default(),
+                own,
+                placed.map(|p| p.data.as_slice()),
+            ),
             Pred::negate(Pred::any(excepted)),
         ])
     }

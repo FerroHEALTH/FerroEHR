@@ -32,12 +32,15 @@ use std::sync::{Arc, LazyLock};
 use std::sync::{Mutex, PoisonError};
 
 use jiff_sqlx::Timestamp;
-use sqlx::postgres::{PgConnection, PgRow};
+use sqlx::postgres::PgConnection;
+#[cfg(feature = "fhir")]
+use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgPool, Row};
 use uuid::Uuid;
 
 mod access_log;
 mod batch;
+pub mod chains;
 #[cfg(feature = "fhir")]
 mod entries;
 pub(crate) mod lax;
@@ -55,6 +58,8 @@ use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
 use batch::BatchColumns;
+#[cfg(feature = "fhir")]
+use chains::AuditChain;
 use lax::{any_equals, any_is, lax_path};
 use writers::{WritePolicy, Writers};
 
@@ -109,7 +114,8 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
 #[cfg(feature = "fhir")]
-const RECORD_COLUMNS: [&str; 41] = [
+const RECORD_COLUMNS: [&str; 42] = [
+    "chain",
     "chain_seq",
     "recorded_at",
     "stored_at",
@@ -153,11 +159,11 @@ const RECORD_COLUMNS: [&str; 41] = [
     "signature",
 ];
 
-/// The oldest record the FHIR Feed owes past the chain positions in `$1`,
-/// read as [`RECORD_COLUMNS`].
+/// The oldest record the FHIR Feed owes past the outbox ids in `$1`, its
+/// outbox id beside [`RECORD_COLUMNS`].
 #[cfg(feature = "fhir")]
-const OLDEST_OWED: &str = "SELECT \
-     e.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation, \
+const OLDEST_OWED: &str = "SELECT o.id AS owed, \
+     e.chain, e.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation, \
      e.principal, e.patient_id, e.resource_class, e.resource_id, \
      e.client_ip, e.token_id, e.domain, e.purpose, e.legal_basis, e.result_count, \
      e.request_id, e.roles, e.origins, e.origin_count, e.category_map_digest, \
@@ -167,9 +173,9 @@ const OLDEST_OWED: &str = "SELECT \
      e.token_attributes, e.content, e.algorithm, e.previous_digest, e.content_digest, \
      e.digest, e.signature \
      FROM audit.fhir_feed_outbox o \
-     JOIN audit.audit_record e ON e.chain_seq = o.chain_seq \
-     WHERE NOT (o.chain_seq = ANY($1)) \
-     ORDER BY o.chain_seq ASC LIMIT 1";
+     JOIN audit.audit_record e ON e.chain = o.chain AND e.chain_seq = o.chain_seq \
+     WHERE NOT (o.id = ANY($1)) \
+     ORDER BY o.id ASC LIMIT 1";
 
 /// The first date a stored record may be deleted on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -201,7 +207,8 @@ pub struct AuditRecord {
 static INSERT_ONE_OWED: LazyLock<String> = LazyLock::new(|| {
     format!(
         "WITH stored AS ({INSERT_ONE}, chain_seq), \
-         owed AS (INSERT INTO audit.fhir_feed_outbox (chain_seq) SELECT chain_seq FROM stored) \
+         owed AS (INSERT INTO audit.fhir_feed_outbox (chain, chain_seq) \
+         SELECT 'system', chain_seq FROM stored) \
          SELECT id FROM stored"
     )
 });
@@ -211,7 +218,8 @@ static INSERT_ONE_OWED: LazyLock<String> = LazyLock::new(|| {
 static INSERT_BATCH_OWED: LazyLock<String> = LazyLock::new(|| {
     format!(
         "WITH stored AS ({INSERT_BATCH} RETURNING chain_seq) \
-         INSERT INTO audit.fhir_feed_outbox (chain_seq) SELECT chain_seq FROM stored"
+         INSERT INTO audit.fhir_feed_outbox (chain, chain_seq) \
+         SELECT 'system', chain_seq FROM stored ORDER BY chain_seq"
     )
 });
 
@@ -671,25 +679,29 @@ impl AuditStore {
         crate::system_log::render::render(stored, &policy)
     }
 
-    /// The FHIR R4 `AuditEvent` of the record at chain position `chain_seq`,
-    /// rendered from its columns as the ITI-81 search serves it; `None` when
-    /// no record holds that position.
+    /// The FHIR R4 `AuditEvent` of the record at position `chain_seq` of
+    /// `chain`, rendered as the ITI-81 search serves it; `None` when no
+    /// record holds that position.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the SELECT fails, and the rendering errors of
     /// a record that cannot be read back.
     #[cfg(feature = "fhir")]
-    pub async fn rendered(&self, chain_seq: i64) -> Result<Option<serde_json::Value>, AuditError> {
-        match self.row_at(chain_seq).await? {
+    pub async fn rendered(
+        &self,
+        chain: AuditChain,
+        chain_seq: i64,
+    ) -> Result<Option<serde_json::Value>, AuditError> {
+        match self.row_at(chain, chain_seq).await? {
             Some(row) => self.render(&row).await.map(Some),
             None => Ok(None),
         }
     }
 
-    /// The oldest record the FHIR Feed still owes, past the chain positions in
-    /// `skip`, as `(chain_seq, its FHIR document)`, and how many such records
-    /// there are. A record whose document cannot be rendered comes back as its
-    /// chain position with the error, for the feed to hold aside.
+    /// The oldest record the FHIR Feed still owes, past the outbox ids in
+    /// `skip`, as `(its outbox id, its FHIR document)`, and how many such
+    /// records there are. A record whose document cannot be rendered comes
+    /// back as its outbox id with the error, for the feed to hold aside.
     ///
     /// # Errors
     /// [`AuditError::Store`] when a SELECT fails.
@@ -704,7 +716,7 @@ impl AuditStore {
             .fetch_optional(&mut *conn)
             .await?;
         let waiting: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM audit.fhir_feed_outbox WHERE NOT (chain_seq = ANY($1))",
+            "SELECT count(*) FROM audit.fhir_feed_outbox WHERE NOT (id = ANY($1))",
         )
         .bind(skip)
         .fetch_one(&mut *conn)
@@ -712,8 +724,8 @@ impl AuditStore {
         drop(conn);
         let oldest = match row {
             Some(row) => {
-                let chain_seq = row.try_get::<i64, _>("chain_seq")?;
-                Some((chain_seq, self.render(&row).await))
+                let owed = row.try_get::<i64, _>("owed")?;
+                Some((owed, self.render(&row).await))
             }
             None => None,
         };
@@ -733,18 +745,21 @@ impl AuditStore {
         u64::try_from(moved).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
     }
 
-    /// Stamps the record at chain position `chain_seq` as delivered by the
-    /// FHIR Feed and removes it from the outbox, in one statement.
+    /// Removes the record the outbox owes under `owed` from the outbox, and
+    /// stamps it as delivered by the FHIR Feed when it is a record of the
+    /// system chain, in one statement.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the statement fails; the record is then
     /// delivered again, which the repository takes as a second copy.
-    pub async fn mark_fhir_feed_delivered(&self, chain_seq: i64) -> Result<(), AuditError> {
+    pub async fn mark_fhir_feed_delivered(&self, owed: i64) -> Result<(), AuditError> {
         sqlx::query(
-            "WITH delivered AS (DELETE FROM audit.fhir_feed_outbox WHERE chain_seq = $1) \
-             UPDATE audit.audit_event SET delivered_fhir_feed_at = now() WHERE chain_seq = $1",
+            "WITH delivered AS (DELETE FROM audit.fhir_feed_outbox WHERE id = $1 \
+             RETURNING chain, chain_seq) \
+             UPDATE audit.audit_event e SET delivered_fhir_feed_at = now() FROM delivered d \
+             WHERE d.chain = 'system' AND e.chain_seq = d.chain_seq",
         )
-        .bind(chain_seq)
+        .bind(owed)
         .execute(&mut *acquire(&self.pool).await?)
         .await?;
         Ok(())
@@ -781,40 +796,6 @@ impl AuditStore {
         .fetch_one(&mut *acquire(&self.pool).await?)
         .await?;
         u64::try_from(removed).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
-    }
-
-    /// Check the repository's tamper evidence over `scope`, and move the
-    /// verification checkpoint to the newest record when the run finds nothing.
-    ///
-    /// [`VerifyScope::SinceCheckpoint`] recomputes only the records written
-    /// after the newest link an earlier run found intact, so its cost follows
-    /// the records written since rather than the size of the trail; a change to
-    /// a record before that link needs [`VerifyScope::Full`], the pass
-    /// `SELECT * FROM audit.verify_audit_chain()` makes from `psql`. Both check
-    /// the chain head. The run is `audit.verify_audit_chain_incremental`.
-    ///
-    /// An empty result means the trail is intact. Any returned
-    /// [`AuditChainFinding`] names one damaged record or chain boundary and what
-    /// is wrong with it. No openEHR spec governs audit tamper detection: our
-    /// own design. The chain is unkeyed, so it detects modification and
-    /// deletion but cannot stop a party with unrestricted write access from
-    /// recomputing it wholesale.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when the verification query cannot run, which is
-    /// itself a finding, never a pass.
-    pub async fn verify_chain_advancing(
-        &self,
-        scope: VerifyScope,
-    ) -> Result<Vec<AuditChainFinding>, AuditError> {
-        let rows = sqlx::query(
-            "SELECT chain_seq, record_id, recorded_at, finding \
-             FROM audit.verify_audit_chain_incremental($1)",
-        )
-        .bind(scope == VerifyScope::Full)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
-        findings(rows)
     }
 
     /// The RESTful-ATNA ITI-81 retrieval: the FHIR `AuditEvent` documents of
@@ -915,49 +896,9 @@ pub(super) fn newest_first(condition: sea_query::Cond) -> sea_query::SelectState
         .cond_where(condition)
         .order_by(Alias::new("recorded_at"), Order::Desc)
         .order_by(Alias::new("stored_at"), Order::Desc)
+        .order_by(Alias::new("chain"), Order::Desc)
         .order_by(Alias::new("chain_seq"), Order::Desc)
         .to_owned()
-}
-
-/// The findings a verification query returned, in its order.
-fn findings(rows: Vec<PgRow>) -> Result<Vec<AuditChainFinding>, AuditError> {
-    rows.into_iter()
-        .map(|row| {
-            Ok(AuditChainFinding {
-                chain_seq: row.try_get("chain_seq")?,
-                record_id: row.try_get("record_id")?,
-                recorded_at: row
-                    .try_get::<Option<Timestamp>, _>("recorded_at")?
-                    .map(Timestamp::to_jiff),
-                finding: row.try_get("finding")?,
-            })
-        })
-        .collect()
-}
-
-/// How much of the hash chain one verification recomputes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VerifyScope {
-    /// Every record, from the start of the chain.
-    Full,
-    /// The records written after the verification checkpoint.
-    SinceCheckpoint,
-}
-
-/// One damaged record — or one damaged chain boundary — reported by
-/// [`AuditStore::verify_chain_advancing`].
-#[derive(Debug, Clone)]
-pub struct AuditChainFinding {
-    /// The chain position the finding is about; `None` when the chain state
-    /// row itself is missing.
-    pub chain_seq: Option<i64>,
-    /// The damaged record's id, when the finding is about a record that is
-    /// still present rather than about a gap or a boundary.
-    pub record_id: Option<Uuid>,
-    /// The damaged record's event time, when known.
-    pub recorded_at: Option<jiff::Timestamp>,
-    /// What is wrong, in the operator's words.
-    pub finding: String,
 }
 
 /// The ITI-81 retrieval the REST layer resolved: the `date` window, the

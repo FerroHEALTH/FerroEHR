@@ -153,14 +153,16 @@ async fn the_extract_records_carry_the_categories_of_the_data() {
 
     for (pool, direction) in [(&src_pool, "export"), (&dst_pool, "import")] {
         assert_eq!(extract_events(pool).await.len(), 1, "{direction}");
-        let chain_seq: i64 = sqlx::query_scalar(
-            "SELECT chain_seq FROM audit.access_trail WHERE resource_class = 'extract'",
+        let (chain, chain_seq): (String, i64) = sqlx::query_as(
+            "SELECT chain, chain_seq FROM audit.access_trail WHERE resource_class = 'extract'",
         )
         .fetch_one(pool)
         .await
         .expect("the extract record");
+        let chain = ferroehr::system_log::store::chains::AuditChain::named(&chain)
+            .expect("a chain the trail names");
         let (event, _) = ferroehr::system_log::store::AuditStore::new(pool.clone())
-            .record(chain_seq)
+            .record(chain, chain_seq)
             .await
             .expect("read the record")
             .expect("the record is stored");

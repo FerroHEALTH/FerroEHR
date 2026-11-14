@@ -223,24 +223,26 @@ struct Classified {
 async fn classified(pool: &PgPool, operation: &str, resource_class: &str) -> Classified {
     let deadline = std::time::Instant::now() + Duration::from_secs(60);
     loop {
-        let found: Option<i64> = sqlx::query_scalar(
-            "SELECT chain_seq FROM audit.access_trail \
+        let found: Option<(String, i64)> = sqlx::query_as(
+            "SELECT chain, chain_seq FROM audit.access_trail \
              WHERE operation = $1 AND resource_class = $2 \
-             ORDER BY chain_seq DESC LIMIT 1",
+             ORDER BY stored_at DESC, chain_seq DESC LIMIT 1",
         )
         .bind(operation)
         .bind(resource_class)
         .fetch_optional(pool)
         .await
         .expect("read the trail");
-        if let Some(chain_seq) = found {
+        if let Some((chain, chain_seq)) = found {
+            let named = ferroehr::system_log::store::chains::AuditChain::named(&chain)
+                .expect("a chain the trail names");
             let (event, _) = ferroehr::system_log::store::AuditStore::new(pool.clone())
-                .record(chain_seq)
+                .record(named, chain_seq)
                 .await
                 .expect("read the record")
                 .expect("the record is stored");
             let category = event.category.as_ref();
-            let fhir = common::rendered_audit_event(pool, chain_seq).await;
+            let fhir = common::rendered_audit_event(pool, &chain, chain_seq).await;
             return Classified {
                 categories: category.map_or(Value::Null, |c| json!(c.stored_categories())),
                 basis: category.map(|c| c.read_from.code().to_owned()),

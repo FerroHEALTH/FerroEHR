@@ -14,7 +14,7 @@
 use jiff::Timestamp;
 
 use crate::access_log::search::LogQuery;
-use crate::access_log::store::{AccessLogError, AccessLogStore};
+use crate::access_log::store::AccessLogStore;
 use crate::access_log::view::{LogReader, withheld};
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
@@ -26,6 +26,9 @@ use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
+
+/// What a failed access-log read names as the failing store.
+pub(in crate::service) const LOG_STORE: &str = "the access-log store";
 
 impl FerroEhrService {
     /// The records of `ehr`'s access log `query` selects, newest first, for
@@ -48,7 +51,10 @@ impl FerroEhrService {
             ehr_id: Some(ehr.to_string()),
             ..query.clone()
         };
-        let records = log.search(&query).await.map_err(log_failure)?;
+        let records = log
+            .search(&query)
+            .await
+            .map_err(|error| ServiceError::internal(LOG_STORE, error))?;
         if reader == LogReader::Reviewer {
             return Ok(records);
         }
@@ -87,8 +93,10 @@ impl FerroEhrService {
                 format!("the access log of the EHR {ehr} holds no entry {uid}"),
             )
         };
-        let Some(AccessLogRecord::AccessLogEntry(entry)) =
-            log.read(uid).await.map_err(log_failure)?
+        let Some(AccessLogRecord::AccessLogEntry(entry)) = log
+            .read(uid)
+            .await
+            .map_err(|error| ServiceError::internal(LOG_STORE, error))?
         else {
             return Err(unknown());
         };
@@ -117,7 +125,9 @@ impl FerroEhrService {
         query: &LogQuery,
     ) -> Result<Vec<AccessLogRecord>, ServiceError> {
         let log = self.access_log_store()?;
-        log.search(query).await.map_err(log_failure)
+        log.search(query)
+            .await
+            .map_err(|error| ServiceError::internal(LOG_STORE, error))
     }
 
     /// The uid and link of every access-log record from `from` to `to`, both
@@ -134,7 +144,9 @@ impl FerroEhrService {
         to: i64,
     ) -> Result<Vec<(String, AccessLogLink)>, ServiceError> {
         let log = self.access_log_store()?;
-        log.chain(from, to).await.map_err(log_failure)
+        log.chain(from, to)
+            .await
+            .map_err(|error| ServiceError::internal(LOG_STORE, error))
     }
 
     /// `Ok` when an EHR has the id `ehr`.
@@ -170,13 +182,5 @@ impl FerroEhrService {
             .as_ref()
             .and_then(AuditSender::access_log)
             .unwrap_or_else(|| AccessLogStore::new(audit_store.pool.clone())))
-    }
-}
-
-/// The service error of a failed access-log read.
-pub(in crate::service) fn log_failure(error: AccessLogError) -> ServiceError {
-    match error {
-        AccessLogError::Interleaved { .. } => ServiceError::precondition(error.to_string()),
-        other => ServiceError::internal("the access-log store", other),
     }
 }

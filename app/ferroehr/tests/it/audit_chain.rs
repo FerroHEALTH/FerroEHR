@@ -24,7 +24,8 @@ use ferroehr::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
 use ferroehr::system_log::sender;
-use ferroehr::system_log::store::{AuditRecord, AuditStore, VerifyScope};
+use ferroehr::system_log::store::chains::{AuditChain, VerifyScope};
+use ferroehr::system_log::store::{AuditRecord, AuditStore};
 use ferroehr::telemetry::indicators::AuditChainHealth;
 use ferrohealth_health::document::State;
 use ferrohealth_health::registry::HealthIndicator;
@@ -667,7 +668,7 @@ const VERSION_2_COLUMNS: [&str; 13] = [
 const VERSION_3_COLUMNS: [&str; 1] = ["token_attributes"];
 
 /// The column version 4 drops from version 3's list
-/// (`0031_drop_access_organisation.sql`).
+/// (`0032_drop_access_organisation.sql`).
 const VERSION_4_DROPPED: [&str; 1] = ["organisation"];
 
 /// The digest of version 4 lists every column of the record but the unhashed
@@ -1016,7 +1017,7 @@ async fn an_incremental_run_verifies_from_the_checkpoint() {
 
     assert_eq!(checkpoint(&pool).await, None);
     let first = store
-        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .verify_chain_advancing(AuditChain::System, VerifyScope::SinceCheckpoint)
         .await
         .expect("verify");
     assert!(first.is_empty(), "{first:?}");
@@ -1029,14 +1030,14 @@ async fn an_incremental_run_verifies_from_the_checkpoint() {
     .await;
     assert!(
         store
-            .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+            .verify_chain_advancing(AuditChain::System, VerifyScope::SinceCheckpoint)
             .await
             .expect("verify")
             .is_empty(),
         "a record behind the checkpoint is outside an incremental run"
     );
     let full = store
-        .verify_chain_advancing(VerifyScope::Full)
+        .verify_chain_advancing(AuditChain::System, VerifyScope::Full)
         .await
         .expect("verify");
     assert!(
@@ -1059,7 +1060,7 @@ async fn an_incremental_run_verifies_from_the_checkpoint() {
     )
     .await;
     let found = store
-        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .verify_chain_advancing(AuditChain::System, VerifyScope::SinceCheckpoint)
         .await
         .expect("verify");
     assert!(
@@ -1086,7 +1087,7 @@ async fn an_incremental_run_detects_deletions_after_the_checkpoint() {
     seed(&store, 2).await;
     assert!(
         store
-            .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+            .verify_chain_advancing(AuditChain::System, VerifyScope::SinceCheckpoint)
             .await
             .expect("verify")
             .is_empty()
@@ -1095,7 +1096,7 @@ async fn an_incremental_run_detects_deletions_after_the_checkpoint() {
 
     with_triggers_disabled(&pool, "DELETE FROM audit.audit_event WHERE chain_seq = 3").await;
     let middle = store
-        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .verify_chain_advancing(AuditChain::System, VerifyScope::SinceCheckpoint)
         .await
         .expect("verify");
     assert!(
@@ -1107,7 +1108,7 @@ async fn an_incremental_run_detects_deletions_after_the_checkpoint() {
 
     with_triggers_disabled(&pool, "DELETE FROM audit.audit_event WHERE chain_seq = 5").await;
     let end = store
-        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .verify_chain_advancing(AuditChain::System, VerifyScope::SinceCheckpoint)
         .await
         .expect("verify");
     assert!(
@@ -1136,7 +1137,7 @@ async fn an_incremental_run_verifies_across_a_reaped_checkpoint() {
     insert(now - jiff::SignedDuration::from_hours(50 * 24)).await;
     assert!(
         store
-            .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+            .verify_chain_advancing(AuditChain::System, VerifyScope::SinceCheckpoint)
             .await
             .expect("verify")
             .is_empty()
@@ -1156,7 +1157,7 @@ async fn an_incremental_run_verifies_across_a_reaped_checkpoint() {
         3
     );
     let after = store
-        .verify_chain_advancing(VerifyScope::SinceCheckpoint)
+        .verify_chain_advancing(AuditChain::System, VerifyScope::SinceCheckpoint)
         .await
         .expect("verify");
     assert!(after.is_empty(), "{after:?}");

@@ -19,7 +19,13 @@
 //! same lists, so a named object and a query row are judged alike. A bound or
 //! a reference that cannot be read covers everything a deny names and
 //! nothing a permit names ([`Polarity`]), so an unreadable fact is never
-//! read permissively. No openEHR spec governs this: our own design (#5513).
+//! read permissively.
+//!
+//! Read for a settings class ([`crate::access_eval::class`]), a value that
+//! is particular to each EHR is [`Held::Fact`]: a predicate names the fact by
+//! its position and the query reads it from the EHR's projected facts, so one
+//! predicate serves every EHR of the class. No openEHR spec governs this: our
+//! own design (#5513, #5588).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -31,6 +37,7 @@ use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind};
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
+use crate::access_eval::class::{DataLayout, Layout};
 use crate::policy_register::CategoriesInForce;
 use crate::service::ehr::access_projection::{Bound, Validity, validity};
 
@@ -110,21 +117,68 @@ impl CategoryMatch {
     }
 }
 
-/// The instants a `recorded` interval holds; `None` when a bound names no
-/// instant.
+/// A value of one EHR's settings: known here, or the fact at a position of
+/// the EHR's projected facts, which a class leaves to each of its EHRs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Held<T> {
+    /// The value itself.
+    Known(T),
+    /// The position of the fact that holds it.
+    Fact(usize),
+}
+
+impl<T> Held<T> {
+    /// The value, `None` for a fact.
+    #[must_use]
+    pub fn known(&self) -> Option<&T> {
+        match self {
+            Self::Known(value) => Some(value),
+            Self::Fact(_) => None,
+        }
+    }
+}
+
+/// One bound of a `recorded` interval.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Edge {
+    /// The instant.
+    pub at: Held<jiff::Timestamp>,
+    /// Whether the instant itself is inside.
+    pub included: bool,
+}
+
+impl From<Bound> for Edge {
+    fn from(bound: Bound) -> Self {
+        Self {
+            at: Held::Known(bound.at),
+            included: bound.included,
+        }
+    }
+}
+
+/// The instants a `recorded` interval holds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Recorded {
     /// The lower bound; `None` when unbounded.
-    pub from: Option<Bound>,
+    pub from: Option<Edge>,
     /// The upper bound; `None` when unbounded.
-    pub until: Option<Bound>,
+    pub until: Option<Edge>,
 }
 
 impl Recorded {
-    /// Whether `at` is inside.
+    /// Whether `at` is inside; `None` when a bound is a fact.
     #[must_use]
-    pub fn holds(&self, at: jiff::Timestamp) -> bool {
-        within(self.from, self.until, at)
+    pub fn holds(&self, at: jiff::Timestamp) -> Option<bool> {
+        let bound = |edge: Option<Edge>| match edge {
+            None => Some(None),
+            Some(edge) => edge.at.known().map(|known| {
+                Some(Bound {
+                    at: *known,
+                    included: edge.included,
+                })
+            }),
+        };
+        Some(within(bound(self.from)?, bound(self.until)?, at))
     }
 }
 
@@ -141,7 +195,7 @@ pub fn within(from: Option<Bound>, until: Option<Bound>, at: jiff::Timestamp) ->
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DataMatch {
     /// `objects`, as versioned-object ids.
-    pub objects: Option<Vec<Uuid>>,
+    pub objects: Option<Held<Vec<Uuid>>>,
     /// `templates`, case-folded.
     pub templates: Option<Vec<String>>,
     /// `archetypes`, case-folded.
@@ -149,7 +203,7 @@ pub struct DataMatch {
     /// `categories`, each through the category map.
     pub categories: Option<Vec<CategoryMatch>>,
     /// `origins`.
-    pub origins: Option<Vec<String>>,
+    pub origins: Option<Held<Vec<String>>>,
     /// `recorded`.
     pub recorded: Option<Recorded>,
 }
@@ -160,17 +214,18 @@ impl DataMatch {
         self == &Self::default()
     }
 
-    /// Whether `object` is covered.
+    /// Whether `object` is covered; a fact, which only a query reads, is
+    /// read by `polarity`.
     fn holds(&self, object: &Object<'_>, polarity: Polarity) -> bool {
         let template = object.template.map(str::to_lowercase);
         let archetype = object.archetype.map(str::to_lowercase);
-        self.objects
+        self.objects.as_ref().is_none_or(|ids| {
+            ids.known()
+                .map_or(polarity.unreadable(), |ids| ids.contains(&object.vo_id))
+        }) && self
+            .templates
             .as_ref()
-            .is_none_or(|ids| ids.contains(&object.vo_id))
-            && self
-                .templates
-                .as_ref()
-                .is_none_or(|t| template.as_ref().is_some_and(|x| t.contains(x)))
+            .is_none_or(|t| template.as_ref().is_some_and(|x| t.contains(x)))
             && self
                 .archetypes
                 .as_ref()
@@ -179,15 +234,18 @@ impl DataMatch {
                 .categories
                 .as_ref()
                 .is_none_or(|c| c.iter().any(|category| category.holds(object)))
-            && self.origins.as_ref().is_none_or(|o| {
-                object.origins.map_or(polarity.unreadable(), |origins| {
-                    origins.iter().any(|x| o.contains(x))
+            && self
+                .origins
+                .as_ref()
+                .is_none_or(|o| match (object.origins, o.known()) {
+                    (Some(origins), Some(o)) => origins.iter().any(|x| o.contains(x)),
+                    _ => polarity.unreadable(),
                 })
-            })
             && self.recorded.as_ref().is_none_or(|r| {
                 object
                     .recorded
-                    .map_or(polarity.unreadable(), |at| r.holds(at))
+                    .and_then(|at| r.holds(at))
+                    .unwrap_or(polarity.unreadable())
             })
     }
 }
@@ -208,6 +266,27 @@ pub enum Pred {
     /// The objects a data scope covers, with the polarity an unreadable
     /// commit time is read with; never the EHR itself.
     Data(Arc<DataMatch>, Polarity),
+    /// A fact of the EHR as a whole, which only a query of a settings class
+    /// reads; it holds for every item of the EHR or for none.
+    Ehr(EhrFact),
+}
+
+/// A fact of one EHR, named by its position in the EHR's projected facts,
+/// that a class verdict leaves to the query.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum EhrFact {
+    /// The request's moment is inside the bounds the facts hold, each with
+    /// whether its instant is inside.
+    Within {
+        /// The lower bound's fact.
+        from: Option<(usize, bool)>,
+        /// The upper bound's fact.
+        until: Option<(usize, bool)>,
+    },
+    /// The party the fact names is the caller or a party it acts for.
+    Party(usize),
+    /// The party the fact names is the party the caller is bound to.
+    Keeper(usize),
 }
 
 impl Pred {
@@ -260,6 +339,40 @@ impl Pred {
         }
     }
 
+    /// What the predicate holds for some item, as a predicate over the
+    /// facts of the EHR alone: an item scope may hold.
+    #[must_use]
+    pub fn maybe(&self) -> Self {
+        match self {
+            Self::True | Self::Data(..) => Self::True,
+            Self::False => Self::False,
+            Self::Ehr(fact) => Self::Ehr(*fact),
+            Self::Not(inner) => Self::negate(inner.always()),
+            Self::All(preds) => Self::all(preds.iter().map(Self::maybe).collect()),
+            Self::Any(preds) => Self::any(preds.iter().map(Self::maybe).collect()),
+        }
+    }
+
+    /// What the predicate holds for every item, as a predicate over the
+    /// facts of the EHR alone: an item scope may not hold.
+    #[must_use]
+    pub fn always(&self) -> Self {
+        match self {
+            Self::True => Self::True,
+            Self::False | Self::Data(..) => Self::False,
+            Self::Ehr(fact) => Self::Ehr(*fact),
+            Self::Not(inner) => Self::negate(inner.maybe()),
+            Self::All(preds) => Self::all(preds.iter().map(Self::always).collect()),
+            Self::Any(preds) => Self::any(preds.iter().map(Self::always).collect()),
+        }
+    }
+
+    /// The constant `value`.
+    #[must_use]
+    pub const fn of(value: bool) -> Self {
+        if value { Self::True } else { Self::False }
+    }
+
     /// The value the predicate has for every item, `None` when it depends
     /// on the item.
     #[must_use]
@@ -276,7 +389,9 @@ impl Pred {
     pub fn holds(&self, item: &Item<'_>) -> bool {
         match self {
             Self::True => true,
-            Self::False => false,
+            // NOTE: our own design (#5588), a direct read resolves every fact, so only a
+            // query reads one; read in memory it covers nothing.
+            Self::False | Self::Ehr(_) => false,
             Self::Not(inner) => !inner.holds(item),
             Self::All(preds) => preds.iter().all(|pred| pred.holds(item)),
             Self::Any(preds) => preds.iter().any(|pred| pred.holds(item)),
@@ -340,14 +455,17 @@ impl CategoryIndex {
 }
 
 /// The data facts one EHR's directives are read against: the category map,
-/// the EHR's labels and the controller's classifications.
+/// the EHR's labels and the controller's classifications, and, for a
+/// settings class, where each fact of its EHRs sits.
 #[derive(Debug, Clone, Default)]
 pub struct Scopes {
     categories: CategoryIndex,
     /// The objects labelled with each sensitivity.
-    labels: BTreeMap<ForeignCode, Vec<Uuid>>,
+    labels: BTreeMap<ForeignCode, Held<Vec<Uuid>>>,
     /// Each classification's data and the sensitivities it gives them.
     classifications: Vec<(Pred, Vec<ForeignCode>)>,
+    /// The facts of a settings class; `None` for one EHR's own settings.
+    layout: Option<Arc<Layout>>,
 }
 
 impl Scopes {
@@ -370,16 +488,48 @@ impl Scopes {
                 by_code.entry(code).or_default().push(vo_id);
             }
         }
+        let labels = by_code
+            .into_iter()
+            .map(|(code, objects)| (code, Held::Known(objects)))
+            .collect();
+        Self::with(categories, labels, classifications, None)
+    }
+
+    /// The scopes of every EHR of a settings class laid out as `layout`,
+    /// whose labelled objects are facts, under the controller's
+    /// `classifications`, read through `categories`.
+    #[must_use]
+    pub fn of_class(
+        categories: CategoryIndex,
+        layout: Arc<Layout>,
+        classifications: &[AccessClassification],
+    ) -> Self {
+        let labels = layout
+            .labels
+            .iter()
+            .map(|(code, fact)| (code.clone(), Held::Fact(*fact)))
+            .collect();
+        Self::with(categories, labels, classifications, Some(layout))
+    }
+
+    /// The scopes of `labels` under `classifications`, laid out as `layout`.
+    fn with(
+        categories: CategoryIndex,
+        labels: BTreeMap<ForeignCode, Held<Vec<Uuid>>>,
+        classifications: &[AccessClassification],
+        layout: Option<Arc<Layout>>,
+    ) -> Self {
         let mut scopes = Self {
             categories,
-            labels: by_code,
+            labels,
             classifications: Vec::new(),
+            layout,
         };
         scopes.classifications = classifications
             .iter()
             .map(|classification| {
                 (
-                    scopes.scope(&classification.data, Polarity::Deny, false),
+                    scopes.scope(&classification.data, Polarity::Deny, false, None),
                     sensitivities(&classification.sensitivities),
                 )
             })
@@ -407,13 +557,7 @@ impl Scopes {
     pub fn sensitive(&self, code: &ForeignCode) -> Pred {
         let mut preds = Vec::new();
         if let Some(objects) = self.labels.get(code) {
-            preds.push(Pred::Data(
-                Arc::new(DataMatch {
-                    objects: Some(objects.clone()),
-                    ..DataMatch::default()
-                }),
-                Polarity::Deny,
-            ));
+            preds.push(labelled(objects, Polarity::Deny));
         }
         for (pred, codes) in &self.classifications {
             if codes.contains(code) {
@@ -423,16 +567,33 @@ impl Scopes {
         Pred::any(preds)
     }
 
-    /// The items `scopes` cover, the whole EHR when empty.
+    /// The layout of the settings class these scopes read; `None` for one
+    /// EHR's own settings.
     #[must_use]
-    pub fn data(&self, scopes: &[AccessDataScope], polarity: Polarity) -> Pred {
+    pub fn layout(&self) -> Option<&Layout> {
+        self.layout.as_deref()
+    }
+
+    /// The items `scopes` cover, the whole EHR when empty; `layout` places
+    /// their facts when these scopes read a settings class.
+    #[must_use]
+    pub fn data(
+        &self,
+        scopes: &[AccessDataScope],
+        polarity: Polarity,
+        layout: Option<&[DataLayout]>,
+    ) -> Pred {
         if scopes.is_empty() {
             return Pred::True;
         }
         Pred::any(
             scopes
                 .iter()
-                .map(|scope| self.scope(scope, polarity, true))
+                .enumerate()
+                .map(|(at, scope)| {
+                    let placed = layout.and_then(|layout| layout.get(at));
+                    self.scope(scope, polarity, true, placed)
+                })
                 .collect(),
         )
     }
@@ -441,7 +602,13 @@ impl Scopes {
     /// sensitivities through the labels and classifications, which a
     /// classification's own scope does not, so classifications never refer
     /// to each other.
-    fn scope(&self, scope: &AccessDataScope, polarity: Polarity, with_sensitivity: bool) -> Pred {
+    fn scope(
+        &self,
+        scope: &AccessDataScope,
+        polarity: Polarity,
+        with_sensitivity: bool,
+        placed: Option<&DataLayout>,
+    ) -> Pred {
         let objects = scope.objects.as_deref().map(|objects| {
             objects
                 .iter()
@@ -454,9 +621,21 @@ impl Scopes {
             .objects
             .as_deref()
             .is_some_and(|all| objects.as_ref().is_some_and(|read| read.len() < all.len()));
+        let fact = |known: Option<Bound>, at: Option<usize>| {
+            known.map(|bound| match at {
+                Some(at) => Edge {
+                    at: Held::Fact(at),
+                    included: bound.included,
+                },
+                None => Edge::from(bound),
+            })
+        };
         let recorded = match scope.recorded.as_ref().map(validity) {
             None => None,
-            Some(Validity::Within { from, until }) => Some(Recorded { from, until }),
+            Some(Validity::Within { from, until }) => Some(Recorded {
+                from: fact(from, placed.and_then(|p| p.from)),
+                until: fact(until, placed.and_then(|p| p.until)),
+            }),
             Some(Validity::Unreadable) => {
                 return if polarity.unreadable() {
                     Pred::True
@@ -466,7 +645,9 @@ impl Scopes {
             }
         };
         let data = DataMatch {
-            objects: objects.filter(|_| !(unplaced && polarity.unreadable())),
+            objects: objects
+                .filter(|_| !(unplaced && polarity.unreadable()))
+                .map(|objects| held(objects, placed.and_then(|p| p.objects))),
             templates: scope
                 .templates
                 .as_deref()
@@ -482,7 +663,10 @@ impl Scopes {
                     .map(|code| self.categories.category(&code))
                     .collect()
             }),
-            origins: scope.origins.as_deref().map(<[String]>::to_vec),
+            origins: scope
+                .origins
+                .as_deref()
+                .map(|origins| held(origins.to_vec(), placed.and_then(|p| p.origins))),
             recorded,
         };
         let sensitivity = match scope.sensitivities.as_deref() {
@@ -496,15 +680,7 @@ impl Scopes {
                 sensitivities(codes)
                     .iter()
                     .filter_map(|code| self.labels.get(code))
-                    .map(|objects| {
-                        Pred::Data(
-                            Arc::new(DataMatch {
-                                objects: Some(objects.clone()),
-                                ..DataMatch::default()
-                            }),
-                            polarity,
-                        )
-                    })
+                    .map(|objects| labelled(objects, polarity))
                     .collect(),
             ),
             None => Pred::True,
@@ -516,6 +692,22 @@ impl Scopes {
         };
         Pred::all(vec![rows, sensitivity])
     }
+}
+
+/// `known`, or the fact at `at` when the class leaves it to each EHR.
+fn held<T>(known: T, at: Option<usize>) -> Held<T> {
+    at.map_or(Held::Known(known), Held::Fact)
+}
+
+/// The objects `objects` labels, read with `polarity`.
+fn labelled(objects: &Held<Vec<Uuid>>, polarity: Polarity) -> Pred {
+    Pred::Data(
+        Arc::new(DataMatch {
+            objects: Some(objects.clone()),
+            ..DataMatch::default()
+        }),
+        polarity,
+    )
 }
 
 /// The sensitivity codes of `coded`, each of the jurisdiction's terminology;

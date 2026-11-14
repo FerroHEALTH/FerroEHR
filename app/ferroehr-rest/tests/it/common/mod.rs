@@ -1186,11 +1186,13 @@ pub(crate) fn log_filter() -> ferroehr_rest::extensions::management::LogFilter {
     filter.clone()
 }
 
-/// The FHIR `AuditEvent` the audit store serves for the record at chain
-/// position `chain_seq`, rendered from its columns.
-pub(crate) async fn rendered_audit_event(pool: &PgPool, chain_seq: i64) -> Value {
+/// The FHIR `AuditEvent` the audit store serves for the record at position
+/// `chain_seq` of the chain named `chain`, as `audit.access_trail` names it.
+pub(crate) async fn rendered_audit_event(pool: &PgPool, chain: &str, chain_seq: i64) -> Value {
+    use ferroehr::system_log::store::chains::AuditChain;
+    let chain = AuditChain::named(chain).expect("a chain the trail names");
     ferroehr::system_log::store::AuditStore::new(pool.clone())
-        .rendered(chain_seq)
+        .rendered(chain, chain_seq)
         .await
         .expect("render the stored audit record")
         .expect("the audit record is stored")
@@ -1203,7 +1205,7 @@ pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
     use ferroehr::system_log::store::{AuditSearchFilter, AuditStore};
     let mut texts: Vec<String> = sqlx::query_scalar(
         "SELECT concat_ws(' ', issuer, client_id, ehr_id, subject_namespace, \
-         category_content::text) FROM audit.access_trail ORDER BY chain_seq",
+         category_content::text) FROM audit.access_trail ORDER BY chain, chain_seq",
     )
     .fetch_all(pool)
     .await

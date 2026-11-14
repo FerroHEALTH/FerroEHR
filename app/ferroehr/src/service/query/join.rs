@@ -191,7 +191,7 @@ impl FerroEhrService {
                 .map_err(Failure::analysis)?,
             ..party_ctx
         };
-        aql::exec::execute(
+        let result = aql::exec::execute(
             &self.pool,
             &halves.clinical,
             job.params,
@@ -199,7 +199,11 @@ impl FerroEhrService {
             self.spec_profile,
         )
         .await
-        .map_err(Failure::exec)
+        .map_err(Failure::exec)?;
+        Box::pin(self.judge_served_ehrs(&result))
+            .await
+            .map_err(Failure::analysis)?;
+        Ok(result)
     }
 
     /// Builds the served page's rows from the two halves, records the party
@@ -257,6 +261,7 @@ impl FerroEhrService {
                 .collect(),
             rows,
             served_ehrs: served,
+            settled_ehrs: clinical.settled_ehrs.clone(),
             served_origins: Vec::new(),
             origin_count: 0,
             served_content: Vec::new(),

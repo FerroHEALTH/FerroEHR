@@ -144,11 +144,6 @@ pub struct AuditSender {
 #[derive(Debug)]
 struct SenderInner {
     tx: mpsc::Sender<AuditEvent>,
-    #[cfg_attr(
-        not(feature = "fhir"),
-        expect(dead_code, reason = "the drain's, for entries")
-    )]
-    context: AuditContext,
     enabled: bool,
     suppress_login_events: bool,
     fail_mode: FailMode,
@@ -575,7 +570,7 @@ pub async fn start(
     let join = tokio::spawn(drain(
         rx,
         sinks,
-        ctx.clone(),
+        ctx,
         Arc::clone(&classifiers),
         resolver,
         config.resolve_subject,
@@ -585,7 +580,6 @@ pub async fn start(
     let sender = AuditSender {
         inner: Arc::new(SenderInner {
             tx,
-            context: ctx,
             enabled: config.enabled,
             suppress_login_events: config.suppress_login_events,
             purpose_header: config.purpose_header.to_ascii_lowercase(),
@@ -954,7 +948,6 @@ mod tests {
             .push(rx);
         AuditSender {
             inner: Arc::new(SenderInner {
-                context: AuditContext::default(),
                 tx,
                 enabled: true,
                 suppress_login_events: true,

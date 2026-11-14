@@ -132,18 +132,55 @@ impl FerroEhrService {
         Ok(present)
     }
 
-    /// The condition a query of the running request applies: every EHR with
-    /// settings judged from the copied index, every other by the default;
-    /// unrestricted outside a request.
+    /// The condition a query of the running request applies: every settings
+    /// class judged from the copied classes, every EHR with no settings by
+    /// the default; unrestricted outside a request.
     ///
     /// # Errors
-    /// `service_overloaded` (`503`) when the index cannot be read.
+    /// `service_overloaded` (`503`) when the classes cannot be read.
     pub async fn request_access_condition(&self) -> Result<AccessCondition, ServiceError> {
         let Some(access) = current() else {
             return Ok(AccessCondition::default());
         };
-        let index = self.ehr_access_settings_index().await?;
-        Ok(access.condition(&index, access.cared_subjects()))
+        let classes = self.ehr_access_classes().await?;
+        Ok(access.condition(&classes, access.cared_subjects()))
+    }
+
+    /// Judges every EHR the query `result` of the running request served
+    /// that the request has not judged; nothing outside a request. An EHR
+    /// that carried settings is judged from the per-EHR copy, the EHRs it
+    /// does not hold read in one statement; any other by the default. The
+    /// access record of each then names the grounds a direct read names
+    /// (#5581).
+    ///
+    /// # Errors
+    /// As [`Self::ehr_access_entries`].
+    pub async fn judge_served_ehrs(
+        &self,
+        result: &crate::aql::exec::QueryResult,
+    ) -> Result<(), ServiceError> {
+        let Some(access) = current() else {
+            return Ok(());
+        };
+        let settled: Vec<EhrId> = result
+            .settled_ehrs
+            .iter()
+            .map(|ehr| EhrId(*ehr))
+            .filter(|ehr_id| access.judgement(*ehr_id).is_none())
+            .collect();
+        for (ehr, _) in &result.served_ehrs {
+            let ehr_id = EhrId(*ehr);
+            if !result.settled_ehrs.contains(ehr) && access.judgement(ehr_id).is_none() {
+                access.judge_unsettled(ehr_id);
+            }
+        }
+        if settled.is_empty() {
+            return Ok(());
+        }
+        for (ehr_id, entry) in self.ehr_access_entries(&settled).await? {
+            access.judge_ehr(ehr_id, &entry);
+        }
+        Ok(())
     }
 }
 

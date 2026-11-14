@@ -36,12 +36,14 @@
               approval 2026-11-02, #4767)"
 )]
 
+mod access_classes;
 mod access_delay_sinks;
 mod access_eval_aql;
 mod access_eval_examples;
 mod access_eval_steps;
 mod access_event_fail_closed;
 mod access_log_aql;
+mod access_log_chain_split;
 mod access_log_checkpoint;
 mod access_log_retention;
 mod access_log_store;
@@ -108,6 +110,7 @@ mod persistence;
 mod policy_elements;
 mod policy_fixtures;
 mod policy_grants;
+mod policy_listeners;
 mod policy_parties;
 mod policy_parties_aql;
 mod privacy_leak;

@@ -29,6 +29,7 @@
 //! gives one, and FHIR `Consent` leaves enforcement out of scope
 //! (`docs/specs/fhir-consent/` §6.2.3).
 
+pub mod class;
 pub mod condition;
 pub mod procedure;
 pub mod record;

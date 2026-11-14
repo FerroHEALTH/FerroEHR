@@ -289,10 +289,20 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (RFC 8785), the search columns its insert trigger derives from that form,
   and its `ACCESS_LOG_LINK`: the content digest over the canonical form and
   the digest over the previous digest, the sequence and the content digest.
-  Both tables continue one hash chain under one cursor and one head
-  (`audit_chain_state`), each `audit_event` row keeps verifying under its
-  `digest_version`, and `audit.verify_audit_chain()` and its incremental form
-  walk both in position order. An entry changes only by its replacement with
+  The two tables are two hash chains (#5573, our own design): the access log
+  holds only the accesses to EHR data, one chain per system from 1 with no
+  gaps, under its own head (`access_log_chain_state`), verified by
+  `audit.verify_access_log_chain()` and its incremental form; `audit_event`,
+  the system chain, keeps its head (`audit_chain_state`), its retention gaps
+  and `audit.verify_audit_chain()`. Writers of a chain serialise on its head
+  row, which holds across replicas, and the scheduled chain check verifies
+  both. The split ran once in `audit/0031_access_log_own_chain.sql`: the
+  positions the access log held in the shared chain became recorded gaps of
+  the system chain, and the access log was renumbered and linked again from
+  its own genesis, its link signatures and checkpoints of the shared chain
+  removed. A record of the ITI-81 search, the person's trail and the FHIR
+  Feed's outbox is named by its chain and position (`audit_record.chain`,
+  `fhir_feed_outbox`). An entry changes only by its replacement with
   its own tombstone, which keeps its uid, time and link, so the chain verifies
   after its content is gone (`audit/0027_access_log_record.sql`,
   `access_log::store`). Each entry states its retention when it is written
@@ -302,8 +312,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `retain_until` by its tombstone, in any order of expiry
   (`access_log::expiry`); an erasure a law orders takes the same path through
   `POST /admin/access-log/erase`, which writes the access-log entry recording
-  the erasure in the tombstone's own transaction, after the audit sender has
-  said it would take the record, so the log holds both or neither. Every entry
+  the erasure, with its index row and the FHIR Feed's debt, in the
+  tombstone's own transaction through the audit store
+  (`AuditStore::erase_entry`), after the audit sender has said it would take
+  the record, so the log holds both or neither and the act is stored once,
+  as its entry; the record the act then emits as `EntryScope::Written` only
+  reaches the forwarding sinks. Every entry
   is built by `access_log::entry` from an `AuditEvent`: the drain's per-access
   entries, the erasure's, and the import's (`access_log::transfer`). An AQL
   statement attributes each served row to the EHR of every bound `EHR` source
@@ -317,13 +331,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   seals the head every five minutes when it grew; without one nothing is
   signed or sealed, and no key of `[audit.access_log]` switches either
   (#5562, our own design). `AccessLogStore::append_in` locks the head
-  (`audit.audit_chain_reserve()`), computes the links its rows will get by
+  (`audit.access_log_chain_reserve()`), computes the links its rows will get by
   the chain rule the insert trigger applies, signs each digest and writes the
   signature in the same `INSERT`, refusing the transaction when the trigger
   gave another link (`audit/0029_access_log_link_signed_at_insert.sql`).
   `access_log::checkpoint` seals and verifies (the chain through
-  `audit.verify_audit_chain()`, the checkpoint and the link signatures beside
-  it), `access_log::chain` verifies a span of links apart from the database
+  `audit.verify_access_log_chain()`, the checkpoint and the link signatures
+  beside it). The system chain is sealed on the same schedule with the same
+  key (`system_log::seal`, `audit_chain_seal`, `ferroehr audit-chain seal`
+  and `verify`). `access_log::chain` verifies a span of links apart from the database
   (an export), and `access_log::transfer` exports one EHR's records with the
   span and checkpoint and imports another system's into
   `access_log_imported_*`, outside this system's chain
@@ -529,19 +545,28 @@ which is what makes an optional stage safe to disable:
    them.
    The commit of an `EHR_ACCESS` version also
    projects the settings in its own transaction (RM Common IM change control:
-   every change is a version in a contribution) into `access_settings`, one
-   `access_directive` row per directive and exception (kind, effect, actor
-   party, role, relationship, caller kind, operation, purpose, category,
-   sensitivity, validity) and one `access_label` row per label
-   (`service::ehr::access_projection`); a trigger on `access_settings`
-   notifies `ferroehr_ehr_access` with the EHR id, and the first boot and
+   every change is a version in a contribution) into `access_settings`: the
+   settings, their **class** and their **facts**
+   (`service::ehr::access_projection`, `access_eval::class`, #5588). The
+   class is the settings with what the decision does not read left out and
+   every value particular to the EHR replaced by a fixed one: the instants of
+   a validity or a `recorded` interval, the party of an actor scope or a
+   gate-keeper, the objects and origins of a data scope, and the objects each
+   sensitivity labels. The facts are those values, in the order of a
+   depth-first walk. A value the decision cannot read stays in the class. One
+   `access_class` row holds each distinct class, so every opt-out from a date
+   shares one. A trigger on `access_settings` notifies `ferroehr_ehr_access`
+   with the EHR id, one on `access_class` with `class`, and the first boot and
    `party-binding refill` rebuild the rows. Each replica copies an EHR's
-   settings on first read and drops the copy on that notification
-   (`policy_register::listen::Listened` with a `Subscriber`); while the
-   listener is down it reads the projection per request, and a projection
-   that cannot be read is `503`. No openEHR spec governs the projection or
-   the copy: our own design (#5509). The copy also holds the EHR's subject,
-   and a commit that changes it notifies the same channel.
+   settings on first read, at most 4096 EHRs, and drops the copy on that
+   notification (`policy_register::listen::Listened` with a `Subscriber`);
+   beside them it copies the classes, dropped on `class`. Nothing on a
+   replica holds every EHR that carries settings, so its memory does not
+   grow with them. While the listener is down it reads the projection per
+   request, and a projection that cannot be read is `503`. No openEHR spec
+   governs the projection, the classes or the copy: our own design (#5509,
+   #5588). The copy also holds the EHR's subject, and a commit that changes
+   it notifies the same channel.
 
    **The access evaluator** (`access_eval`, #5513) decides every EHR a
    request reaches by a fixed procedure over three fact sets held in memory:
@@ -585,10 +610,15 @@ which is what makes an optional stage safe to disable:
    sensitivities), so one verdict answers a named object, the EHR itself,
    and every row of a query: the version reads, contributions, exports, the
    subject lookup and the write guard judge each object by its head row
-   (`storage::access_facts`), and a query renders the verdicts of every EHR
-   with settings, and the default for every other, as a condition on the
-   head row and the EHR id of its one SQL statement (`aql::sql::access`), so
-   `COUNT`, `LIMIT` and paging count only readable rows. The request path
+   (`storage::access_facts`), and a query renders the verdict of every
+   settings class, of an EHR held closed and the default for an EHR with no
+   settings as a condition on the head row and the EHR id of its one SQL
+   statement (`aql::sql::access`), so `COUNT`, `LIMIT` and paging count only
+   readable rows. A class verdict holds an atom wherever it reads a fact of
+   the class (`scope::Held`, `scope::EhrFact`), which the SQL reads from the
+   EHR's `access_settings.facts`, so one evaluator decides a direct read and a
+   query alike, and an EHR of a class the condition does not hold contributes
+   no row. The request path
    adds no transaction: every fact is a copy, and a named object is read by
    its head row only when the verdict depends on the object. The procedure,
    its order and its codes are our own design; RM EHR IM §EHR Access only
@@ -606,13 +636,13 @@ which is what makes an optional stage safe to disable:
    reads the versions back from the stored entry
    (`access_log::recorded`) into `agent[user].policy` of the EHDS record. A query's
    condition groups verdicts with their grounds stripped (`Verdict::bare`),
-   so recording adds no SQL and no transaction. The settings index the
-   condition is built from holds each EHR as a direct read finds it, with its
-   subject and `EHR_ACCESS` version uid (#5581), so the record of an EHR a
-   query served is judged from the same entry and names the grounds a direct
-   read names; an EHR with no settings is in no index, and its care ground is
-   inferred from which of its two verdicts could have served the row (our own
-   design).
+   so recording adds no SQL. Each served row says whether its EHR carries
+   settings (a hidden column beside the access-EHR column), and the record of
+   a served EHR that does is judged from the per-EHR copy, with its subject
+   and `EHR_ACCESS` version uid (#5581), so it names the grounds a direct read
+   names; the EHRs the copy does not hold are read in one statement. A served
+   EHR with no settings needs no read, and its care ground is inferred from
+   which of its two verdicts could have served the row (our own design).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an

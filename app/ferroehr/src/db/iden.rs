@@ -16,7 +16,7 @@
 //! by the clinical migration set, and nothing under `aql/sql/` names a column
 //! any other way.
 //!
-//! It covers the five relations the generator reads and nothing else. A
+//! It covers the relations the generator reads and nothing else. A
 //! relation reached only through a static, compile-time-checked `sqlx::query!`
 //! needs no entry, because that query is checked against the live schema
 //! already; an entry it could not use would be a second, unchecked copy of the
@@ -185,6 +185,24 @@ pub enum VersionRow {
     /// the generated column; every join from a version row to its node rows
     /// reads it (#4415).
     ContentKey,
+}
+
+/// `access_settings` — the projected `EHR_ACCESS` settings of each EHR that
+/// carries them, with their settings class and facts.
+#[derive(Debug, Clone, Copy, sea_query::Iden)]
+pub enum AccessSettings {
+    /// The `access_settings` table itself.
+    #[iden = "access_settings"]
+    Table,
+    /// `ehr_id` — the EHR.
+    EhrId,
+    /// `held_closed` — the stored settings do not read, so the EHR is held
+    /// closed.
+    HeldClosed,
+    /// `class_id` — the settings class; `NULL` when held closed.
+    ClassId,
+    /// `facts` — the values the class sets aside, as a JSON array.
+    Facts,
 }
 
 /// `vo_head` — the one mutable row per versioned object.
@@ -361,6 +379,10 @@ mod tests {
             "node",
             include_str!("../../migrations/clinical/0004_node.sql"),
         ),
+        (
+            "access_settings",
+            include_str!("../../migrations/clinical/0040_access_projection.sql"),
+        ),
     ];
 
     /// The later clinical migrations that add columns to those relations with
@@ -373,6 +395,7 @@ mod tests {
         include_str!("../../migrations/clinical/0031_node_compact.sql"),
         include_str!("../../migrations/clinical/0032_version_content.sql"),
         include_str!("../../migrations/clinical/0034_head_content_key.sql"),
+        include_str!("../../migrations/clinical/0042_access_classes.sql"),
     ];
 
     /// Whether a later migration adds `col` to `table`.
@@ -551,6 +574,17 @@ mod tests {
                 ],
             ),
             (Node::Table.to_string(), node_columns()),
+            (AccessSettings::Table.to_string(), access_settings_columns()),
+        ]
+    }
+
+    /// The `access_settings` columns the catalog names.
+    fn access_settings_columns() -> Vec<String> {
+        vec![
+            AccessSettings::EhrId.to_string(),
+            AccessSettings::HeldClosed.to_string(),
+            AccessSettings::ClassId.to_string(),
+            AccessSettings::Facts.to_string(),
         ]
     }
 
@@ -576,6 +610,7 @@ mod tests {
         assert_eq!(VoHead::Table.to_string(), "vo_head");
         assert_eq!(Node::Table.to_string(), "node");
         assert_eq!(VoAttestation::Table.to_string(), "vo_attestation");
+        assert_eq!(AccessSettings::Table.to_string(), "access_settings");
     }
 
     #[test]

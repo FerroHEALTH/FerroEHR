@@ -19,6 +19,7 @@ use ferroehr::access_log::checkpoint::Checkpoints;
 use ferroehr::access_log::transfer::{ImportRecord, LogExport};
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::support::today_utc;
+use ferroehr::system_log::store::chains::AuditChainFinding;
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr::versioning::signature::trust::TrustedCertificates;
 use sqlx::PgPool;
@@ -168,12 +169,10 @@ pub async fn run(
 )]
 async fn verify(checkpoints: &Checkpoints, file: Option<&Path>) -> anyhow::Result<()> {
     let given = match file {
-        Some(path) => {
-            let text = tokio::fs::read_to_string(path)
-                .await
-                .with_context(|| format!("reading the checkpoint {}", path.display()))?;
-            Some(serde_json::from_str(&text).context("the checkpoint does not read")?)
-        }
+        Some(path) => Some(
+            serde_json::from_str(&kept(path, "checkpoint").await?)
+                .context("the checkpoint does not read")?,
+        ),
         None => None,
     };
     let verification = checkpoints.verify(given).await?;
@@ -187,7 +186,31 @@ async fn verify(checkpoints: &Checkpoints, file: Option<&Path>) -> anyhow::Resul
     for finding in &verification.findings {
         println!("finding: {finding}");
     }
-    for finding in &verification.chain {
+    print_chain(&verification.chain);
+    anyhow::ensure!(verification.intact(), "the access log does not verify");
+    println!("the access log verifies");
+    Ok(())
+}
+
+/// The JSON text of a checkpoint or seal kept outside this system, read from
+/// `path`; `what` names it in an error.
+///
+/// # Errors
+/// The file does not read.
+pub(crate) async fn kept(path: &Path, what: &str) -> anyhow::Result<String> {
+    tokio::fs::read_to_string(path)
+        .await
+        .with_context(|| format!("reading the {what} {}", path.display()))
+}
+
+/// Print each finding of a chain's verification with its position.
+#[expect(
+    clippy::print_stdout,
+    reason = "the verify subcommands' PURPOSE is console output (.claude/rules/reliability.md \
+              §tools)"
+)]
+pub(crate) fn print_chain(findings: &[AuditChainFinding]) {
+    for finding in findings {
         println!(
             "chain finding at {}: {}",
             finding
@@ -196,9 +219,6 @@ async fn verify(checkpoints: &Checkpoints, file: Option<&Path>) -> anyhow::Resul
             finding.finding
         );
     }
-    anyhow::ensure!(verification.intact(), "the access log does not verify");
-    println!("the access log verifies");
-    Ok(())
 }
 
 #[cfg(test)]

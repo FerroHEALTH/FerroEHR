@@ -21,6 +21,7 @@ use crate::error::refusal::Missing;
 use crate::error::refusal::Refusal;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
+use crate::system_log::AuditError;
 use crate::system_log::event::{
     AuditEvent, EntryScope, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
@@ -80,27 +81,36 @@ impl FerroEhrService {
                 "audit trail unavailable (fail-closed)",
             )));
         }
-        #[cfg(feature = "fhir")]
-        let recorded = self.audit.as_ref().and_then(|sender| {
-            let mut named = event.clone();
-            named.object_id = Some(uid.to_owned());
-            sender.entry_for(&named)
-        });
-        #[cfg(not(feature = "fhir"))]
-        let recorded = None;
-        let now = jiff::Timestamp::now();
-        let Some(tombstone) = log
-            .tombstone(uid, dv_date_time(&now), grounds, recorded)
-            .await
-            .map_err(refused)?
-        else {
-            return Err(ServiceError::conflict(format!(
+        let time_removed = dv_date_time(&jiff::Timestamp::now());
+        let removed = || {
+            ServiceError::conflict(format!(
                 "the access-log entry {uid} has been removed already"
-            )));
+            ))
         };
+        #[cfg(feature = "fhir")]
+        let erased = match &self.audit {
+            Some(sender) => {
+                let mut named = event.clone();
+                named.object_id = Some(uid.to_owned());
+                sender
+                    .erase_entry(uid, time_removed.clone(), grounds.clone(), &named)
+                    .await
+            }
+            None => None,
+        };
+        #[cfg(not(feature = "fhir"))]
+        let erased: Option<Result<Option<AccessLogTombstone>, AuditError>> = None;
+        let tombstone = match erased {
+            Some(erased) => erased.map_err(unrecorded)?,
+            None => log
+                .tombstone(uid, time_removed, grounds)
+                .await
+                .map_err(refused)?,
+        }
+        .ok_or_else(removed)?;
         event.entry = EntryScope::Written;
-        // NOTE: our own design, the erasure's access-log entry was written with its tombstone, so
-        // a record the queue refuses after the fact leaves the act recorded.
+        // NOTE: our own design, the erasure's access-log entry was written with its tombstone and
+        // is stored once; the emitted record only reaches the forwarding sinks.
         let _outcome = self.emit(event);
         Ok(tombstone)
     }
@@ -121,6 +131,14 @@ impl FerroEhrService {
         event.entry = EntryScope::LogChange;
         self.stamp_one_access(&mut event);
         event
+    }
+}
+
+/// The service error of a failed erasure through the audit store.
+fn unrecorded(error: AuditError) -> ServiceError {
+    match error {
+        AuditError::AccessLog(error) => refused(error),
+        other => ServiceError::internal("the audit store", other),
     }
 }
 

@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The scheduled checkpoint of the access log (#5129): one run per
-//! [`INTERVAL`] seals the head of the chain when it moved since the last
-//! checkpoint, whenever the keyring holds an `OpenPGP` key (#5562).
+//! The scheduled checkpoint of the access log (#5129) and the seal of the
+//! system chain beside it (#5573).
+//!
+//! One run per [`INTERVAL`] seals the head of each chain when it moved since
+//! its last seal, whenever the keyring holds an `OpenPGP` key (#5562).
 //!
 //! A run that cannot seal logs at `ERROR` and counts nothing as sealed; the
 //! next run tries again. No openEHR spec governs log signing: our own design.
@@ -41,6 +43,14 @@ pub async fn scheduled(checkpoints: Checkpoints, interval: Duration) {
             Err(error) => tracing::error!(
                 error = %error,
                 "the access-log checkpoint could not be sealed"
+            ),
+        }
+        match checkpoints.system_seals().seal().await {
+            Ok(Some(seal)) => tracing::debug!(sequence = seal.sequence, "system chain sealed"),
+            Ok(None) => tracing::debug!("system chain seal: the chain is empty"),
+            Err(error) => tracing::error!(
+                error = %error,
+                "the system chain could not be sealed"
             ),
         }
     }

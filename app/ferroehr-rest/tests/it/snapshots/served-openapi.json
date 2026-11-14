@@ -568,7 +568,7 @@
             }
           },
           "400": {
-            "description": "A bound is missing or outside its form, the span is longer than 10000, or it holds `audit_event` records, which only this database verifies.",
+            "description": "A bound is missing or outside its form, or the span is longer than 10000.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -946,16 +946,6 @@
           },
           "409": {
             "description": "No checkpoint covers the records and the keyring holds no OpenPGP key to seal one.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "The span holds `audit_event` records, which cannot be verified apart from this database.",
             "content": {
               "application/problem+json": {
                 "schema": {

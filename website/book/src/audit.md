@@ -1012,10 +1012,12 @@ Four controls sit on top of it, and they are separate on purpose:
   self-migrating server owns the schema and can therefore turn the enforcement
   off.
 - **Verification is a query you can run yourself.** It recomputes every digest,
-  re-walks every link, and checks both ends of the chain:
+  re-walks every link, and checks both ends of the chain, one query per
+  chain:
 
   ```sql
-  SELECT * FROM audit.verify_audit_chain();
+  SELECT * FROM audit.verify_audit_chain();       -- the system chain
+  SELECT * FROM audit.verify_access_log_chain();  -- the access log
   ```
 
   An empty result means the trail is intact. Any row names one record (its
@@ -1030,7 +1032,9 @@ Four controls sit on top of it, and they are separate on purpose:
   it off). Each run verifies the records written since the newest link an
   earlier run found intact, and the chain head, so its cost follows the
   records written since rather than the size of the trail
-  (`audit.verify_audit_chain_incremental()`). A full pass
+  (`audit.verify_audit_chain_incremental()` and
+  `audit.verify_access_log_chain_incremental()`, each from its own cursor).
+  A full pass
   runs every `[audit.store] full_verify_interval` (default `604800`,
   one week; `0` leaves it to the query above) and after every run that found
   damage, so damage to an older record stays reported. A run that finds damage logs at `ERROR`, one summary line with the
@@ -1056,8 +1060,16 @@ Four controls sit on top of it, and they are separate on purpose:
 
 ## Checkpoints and the transfer of a log
 
-The records of the openEHR access log (`audit.access_log_record`) are chained
-with the `audit_event` records above. A chain proves order and completeness
+The records of the openEHR access log (`audit.access_log_record`) form a
+chain of their own: the access log holds only the accesses to EHR data, one
+chain from position 1 with no gaps, apart from the `audit_event` records
+above, which form the system chain (an authentication, a template, party or
+application operation). Each chain has its own head, its own verification
+and its own signing; writers of one chain wait on its head in the database,
+so every replica writes the same chain. `SELECT * FROM
+audit.verify_access_log_chain();` verifies the access log as
+`audit.verify_audit_chain()` verifies the system chain, and the scheduled
+check runs both. A chain proves order and completeness
 against someone who cannot rewrite its whole tail. A **checkpoint** closes
 that case: an `ACCESS_LOG_CHECKPOINT` names the position and digest of the
 head of the chain and is signed with the deployment's OpenPGP key, in the
@@ -1107,13 +1119,19 @@ is our own design.
   `system_id`, links and `retain_until` apart from its own chain, and records
   the import as an `import` entry of its own log, built like every other
   entry and naming the system as its accessor. An import repeated stores
-  nothing twice. An access to EHR data is stored as its entry alone, so a
-  span holds an `audit_event` record only where an access outside the
-  access log (an authentication, a template or party operation, an
-  application activity) was recorded between the EHR's entries, or where
-  the span reaches records written before entries were the record. Such an
-  export is refused, since only the database that wrote those records can
-  recompute their links.
+  nothing twice. The span holds the links of the other EHRs' entries between
+  the EHR's own, without their content, and never a record outside the
+  access log, so an export is never refused for what else the server
+  recorded meanwhile.
+- **The system chain is sealed too.** The same schedule and key seal the
+  head of the system chain (`audit.audit_chain_seal`).
+  `ferroehr audit-chain seal` seals one on demand and prints it, and
+  `ferroehr audit-chain verify [--seal <file>]` recomputes the system chain,
+  checks the seal's signature and that the link at its position is the one
+  it fixes, and exits 1 when the chain does not verify.
+- **The erasure is recorded once.** `POST /admin/access-log/erase` writes the
+  tombstone and the entry that records the erasure in one transaction; the
+  erasure is not written a second time as an `audit_event` record.
 
 ## Retrieving audit records (ITI-81)
 

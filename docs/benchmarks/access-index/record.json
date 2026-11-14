@@ -1,0 +1,30 @@
+{
+  "issue": 5588,
+  "environment": {
+    "hardware_class": "Apple M5 Pro laptop",
+    "memory_gb": 48,
+    "build": "release",
+    "memory_measure": "physical footprint of a fresh process (macOS footprint)"
+  },
+  "population": "EHRs alternating an opt-out from a date particular to each EHR with a mental-health restriction from such a date, each kept by a gate-keeper particular to the EHR",
+  "before": {
+    "measured_at_commit": "e9d837518236cbbbd76611ac1c8ce7dac3346655",
+    "what": "the whole-set EhrAccessIndex: every EHR with settings parsed and held, and the per-request condition judging each twice",
+    "decision_ns": 440,
+    "rows": [
+      { "ehrs": 10000, "index_bytes": 99614720, "settings_text_bytes": 12735000, "reload_parse_ms": 34 },
+      { "ehrs": 100000, "index_bytes": 993001472, "settings_text_bytes": 127350000, "reload_parse_ms": 386 },
+      { "ehrs": 1000000, "index_bytes": 10099884032, "settings_text_bytes": 1273500000, "reload_parse_ms": 3581 }
+    ]
+  },
+  "after": {
+    "what": "settings classes and facts (app/ferroehr/benches/access_classes.rs), and the per-EHR copy capped at copy_capacity entries",
+    "copy_capacity": 4096,
+    "entry_bytes": 9961,
+    "rows": [
+      { "ehrs": 10000, "classes": 2, "class_json_bytes": 2545, "classify_ns_per_commit": 22833, "fact_bytes_per_ehr": 63, "decision_ns": 501, "condition_ns": 18584 },
+      { "ehrs": 100000, "classes": 2, "class_json_bytes": 2545, "classify_ns_per_commit": 20328, "fact_bytes_per_ehr": 63, "decision_ns": 640, "condition_ns": 14083 },
+      { "ehrs": 1000000, "classes": 2, "class_json_bytes": 2545, "classify_ns_per_commit": 19906, "fact_bytes_per_ehr": 63, "decision_ns": 407, "condition_ns": 10667 }
+    ]
+  }
+}

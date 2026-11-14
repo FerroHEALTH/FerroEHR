@@ -38,7 +38,7 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::service::admin::access_log_read::log_failure;
+use crate::service::admin::access_log_read::LOG_STORE;
 use crate::service::query::request::{AqlQueryRequest, LogRead, QueryOutcome};
 
 use super::budget::{apply_result_ceiling, compose_paging};
@@ -102,7 +102,7 @@ impl FerroEhrService {
         let records = self
             .within_budget(run)
             .await?
-            .map_err(|error| Failure::analysis(log_failure(error)))?;
+            .map_err(|error| Failure::analysis(ServiceError::internal(LOG_STORE, error)))?;
         let mut entries: Vec<AccessLogRecord> = records
             .into_iter()
             .filter(|record| matches!(record, AccessLogRecord::AccessLogEntry(_)))

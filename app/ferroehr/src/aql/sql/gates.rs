@@ -28,7 +28,6 @@
 //! restriction stays invisible to a provider (EHDS Art. 8) in every query
 //! shape. Who reads the settings is our own design (#5508).
 
-use sea_query::extension::postgres::PgFunc;
 use sea_query::{Expr, ExprTrait as _};
 
 use super::expr::col;
@@ -94,13 +93,12 @@ impl<'a> Gates<'a> {
         }
         // NOTE: EHDS Art. 8, an EHR_ACCESS whose settings the caller may not read
         // contributes no row, so a restriction stays invisible (our own design).
-        if let EhrAccessReaders::Only(ehr_ids) = self.access_settings {
-            let ids: Vec<uuid::Uuid> = ehr_ids.iter().map(|id| id.0).collect();
+        if let EhrAccessReaders::Only(keepers) = self.access_settings {
             let other_kind = col(h, VoHead::Kind).ne(Expr::val("EHR_ACCESS"));
-            predicates.push(if ids.is_empty() {
+            predicates.push(if keepers.groups.is_empty() {
                 other_kind
             } else {
-                other_kind.or(col(h, VoHead::EhrId).eq(Expr::from(PgFunc::any(Expr::val(ids)))))
+                other_kind.or(super::access::keeper_reads(keepers, h))
             });
         }
         predicates

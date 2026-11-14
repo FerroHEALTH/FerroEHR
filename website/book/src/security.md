@@ -381,15 +381,25 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   repair is refused with `409` for an EHR that is not held; such an EHR
   changes its settings with a CONTRIBUTION.
 - **Every replica decides by the committed settings:** the commit of an
-  `EHR_ACCESS` version writes the EHR's settings, one row per directive and
-  exception and one row per sensitivity label into side tables in the same
-  transaction, and notifies every replica when it commits. Each replica holds
-  a copy of each EHR's settings and drops it on that notification, so a
-  revoked gate-keeper or directive decides the next request on every replica.
-  While a replica's listener is down it reads the settings on every request,
-  and a settings store that cannot answer is `503`. The first boot fills the
-  side tables from the stored versions, and `ferroehr party-binding refill`
-  rebuilds them.
+  `EHR_ACCESS` version writes the EHR's settings into a side table in the
+  same transaction, as a settings class and its facts, and notifies every
+  replica when it commits. The class is what the EHR's settings share with
+  others, and the facts are what is particular to the EHR: instants, parties,
+  objects and origins. Every opt-out from a date shares one class. Each
+  replica holds a copy of the settings of the EHRs it read most recently and
+  of every class, and drops an entry on that notification, so a revoked
+  gate-keeper or directive decides the next request on every replica. A query
+  reads each EHR's class and facts in its own SQL, so its counts and pages
+  stay exact. An EHR of a class the replica has not copied yet contributes no
+  row. While a replica's listener is down it reads the settings on every
+  request, and a settings store that cannot answer is `503`. The first boot
+  fills the side table from the stored versions, and
+  `ferroehr party-binding refill` rebuilds it.
+- **What a replica holds does not grow with the EHRs that carry settings:**
+  at most 4096 EHRs' settings and the settings classes. The measured sizes
+  and times, against the whole-set copy this replaced:
+
+{{#include ../generated/access-index-bench.md}}
 - **The access evaluator decides every request:** see
   [Access directives](#access-directives) below.
 - **The default definition:** every boot stores the archetype

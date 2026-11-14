@@ -14,7 +14,10 @@
 //!
 //! No openEHR spec governs health probes — our own operational design.
 
+use std::sync::Arc;
+
 use crate::db::acquire::acquire;
+use crate::policy_register::listen::Listened;
 use crate::system_log::chain_check::{ChainCheck, ChainCheckState};
 use crate::system_log::config::AuditPosture;
 use crate::system_log::sender::{AuditSender, DeliveryStatus};
@@ -270,16 +273,70 @@ impl HealthIndicator for AuditChainHealth {
                             || "chain state".to_owned(),
                             |seq| format!("position {seq}"),
                         );
-                        format!("; first at {position}: {}", finding.finding)
+                        format!(
+                            "; first in the {} chain at {position}: {}",
+                            finding.chain.as_str(),
+                            finding.finding
+                        )
                     });
                     Outcome::degraded(format!(
                         "hash chain DAMAGED at {at}: {total} finding(s){first}; see \
-                         audit.verify_audit_chain()"
+                         audit.verify_audit_chain() and audit.verify_access_log_chain()"
                     ))
                 }
                 ChainCheckState::Unverifiable { at, reason } => Outcome::degraded(format!(
                     "the hash chain could not be verified at {at}: {reason}"
                 )),
+            }
+        })
+    }
+}
+
+/// `policy_listeners` — reports whether each policy copy's LISTEN connection
+/// is up.
+///
+/// A replica holds the `EHR_ACCESS` settings, the policy grants, the
+/// operational-policy registers and the access policy in memory, each kept
+/// fresh by a notification channel. While a listener is down, every request
+/// reads that policy from the store, so every decision stays correct and only
+/// latency changes. The indicator therefore reads `DEGRADED`, naming each lost
+/// listener, and never takes the instance out of rotation. No openEHR spec
+/// governs this: our own design (#5594).
+#[derive(Debug)]
+pub struct PolicyListenersHealth {
+    listeners: Vec<(&'static str, Arc<Listened>)>,
+}
+
+impl PolicyListenersHealth {
+    /// Constructs over each policy copy's listener, by the name the
+    /// indicator reports it under.
+    #[must_use]
+    pub fn new(listeners: Vec<(&'static str, Arc<Listened>)>) -> Self {
+        Self { listeners }
+    }
+}
+
+impl HealthIndicator for PolicyListenersHealth {
+    fn name(&self) -> &'static str {
+        "policy_listeners"
+    }
+
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            let lost: Vec<&str> = self
+                .listeners
+                .iter()
+                .filter(|(_, listened)| !listened.is_listening())
+                .map(|(name, _)| *name)
+                .collect();
+            if lost.is_empty() {
+                Outcome::up()
+            } else {
+                Outcome::degraded(format!(
+                    "listener lost: {}; every request reads that policy from the database \
+                     until the listener connects again",
+                    lost.join(", ")
+                ))
             }
         })
     }

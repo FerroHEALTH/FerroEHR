@@ -52,6 +52,7 @@
   - [Try it in Codespaces](installation/codespaces.md)
   - [Docker Compose](installation/compose.md)
   - [Kubernetes & Helm](installation/kubernetes.md)
+  - [Running several instances](installation/several-instances.md)
   - [Cluster hardening](installation/kubernetes-hardening.md)
     - [The cluster: hosts, control plane, access](installation/hardening-cluster.md)
     - [Images: build, provenance, scanning](installation/hardening-supply-chain.md)

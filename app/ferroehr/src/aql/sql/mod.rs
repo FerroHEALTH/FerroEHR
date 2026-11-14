@@ -134,9 +134,9 @@ pub enum EhrAccessReaders {
     /// Every EHR's: an administrator, or the subject in their own EHR.
     #[default]
     Every,
-    /// Only these EHRs': those whose settings name the caller a gate-keeper;
-    /// an empty list reads none.
-    Only(Vec<EhrId>),
+    /// Only the EHRs whose settings name the caller a gate-keeper, judged
+    /// per settings class.
+    Only(Arc<crate::access_eval::class::Keepers>),
 }
 
 /// Whether a demographic query serves the policy parties
@@ -248,6 +248,10 @@ pub struct PreparedQuery {
     /// Empty when the plan cannot carry them (see [`ACCESS_EHR_PREFIX`]); the
     /// executor then reports no per-EHR breakdown rather than a wrong one.
     pub access_ehr_cols: Vec<String>,
+    /// The SQL aliases of the hidden columns that say, beside each access-EHR
+    /// column, whether its EHR carries `EHR_ACCESS` settings
+    /// ([`ACCESS_SETTLED_PREFIX`]).
+    pub access_settled_cols: Vec<String>,
     /// The SQL aliases of the hidden version-locator columns, one
     /// `(vo_id, sys_version)` pair per bound VO root, appended beside the
     /// access-EHR columns so the origins of the served data can be aggregated
@@ -273,6 +277,14 @@ pub struct PreparedQuery {
 /// **No openEHR spec governs this — our own design/extension.**
 pub const ACCESS_EHR_PREFIX: &str = "access_ehr_";
 
+/// The alias prefix of the hidden column of whether an EHR carries settings.
+///
+/// It sits beside each access-EHR column and says whether that EHR carries
+/// `EHR_ACCESS` settings, so the access record of an EHR a query served reads
+/// its settings only when it has some (#5588). Same two excluded shapes. No
+/// openEHR spec governs this: our own design.
+pub const ACCESS_SETTLED_PREFIX: &str = "access_set_";
+
 /// The alias prefix of the hidden per-root `vo_id` locator column.
 ///
 /// Appended beside the access-EHR columns with [`ACCESS_SV_PREFIX`], so the
@@ -291,6 +303,7 @@ impl std::fmt::Debug for PreparedQuery {
             .field("value_count", &self.values.0.0.len())
             .field("columns", &self.columns)
             .field("access_ehr_cols", &self.access_ehr_cols)
+            .field("access_settled_cols", &self.access_settled_cols)
             .field("access_version_cols", &self.access_version_cols)
             .finish()
     }
@@ -541,10 +554,10 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     }
     b.bind_select_paths()?;
     let columns = b.build_select()?;
-    let access_ehr_cols = if clinical {
+    let (access_ehr_cols, access_settled_cols) = if clinical {
         b.build_access_ehr_columns(ir)
     } else {
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
     let access_version_cols = b.build_access_version_columns(ir);
     b.build_where()?;
@@ -559,6 +572,7 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
         values,
         columns,
         access_ehr_cols,
+        access_settled_cols,
         access_version_cols,
     })
 }
