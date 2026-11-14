@@ -23,7 +23,7 @@ use openehr_base::v1_3::base_types::identification::uid_based_id::UidBasedId;
 
 /// One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art.
 ///
-/// 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.
+/// 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation; or one rule of a controller's `ACCESS_POLICY` for every EHR it keeps. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.
 #[doc(alias = "ACCESS_DIRECTIVE")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessDirective {
@@ -46,9 +46,7 @@ pub struct AccessDirective {
     pub archetype_details: Option<Archetyped>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
     pub feeder_audit: Option<FeederAudit>,
-    /// What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation`.
-    ///
-    /// The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).
+    /// What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).
     pub kind: DvCodedText,
     /// Whether the directive permits or denies the access it applies to, coded in the `access effect` group: `permit` or `deny`.
     pub effect: DvCodedText,

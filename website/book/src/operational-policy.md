@@ -1847,7 +1847,9 @@ The controller's access policy states what holds for every EHR this FerroEHR
 keeps: which kinds of data carry which sensitivity (`classifications`),
 whether a professional's clinical access needs a care relationship
 (`care_relationship_required`, with a `relationship_grace`) and a declared
-purpose (`purpose_required`), the `catalogue` of named directives a
+purpose (`purpose_required`), the controller's own `rules` on which callers
+may do what with which kinds of data (each an `ACCESS_DIRECTIVE` of kind
+`controller_rule`, EHDS Art. 11(3)), the `catalogue` of named directives a
 patient can accept by reference, such as an IHE BPPC policy, and the
 `log_restrictions` of the access log's subject view your Member State's law
 lays down under EHDS Art. 9(3) ([Audit](audit.md#restricting-the-subject-view-ehds-art-93)).
@@ -1862,7 +1864,10 @@ one, nothing is tightened.
 - **Whole, over a version.** Name the version you replace in `If-Match`, or
   create the first with `If-None-Match: *`. A stale condition is `412`.
 - **Checked when written.** A body that is no canonical-JSON `ACCESS_POLICY`
-  or breaks an invariant of the draft model is refused whole with `400`.
+  or breaks an invariant of the draft model is refused whole with `400`, as
+  is a rule of another kind than `controller_rule`, a catalogue entry of that
+  kind, and a rule naming a role, purpose, sensitivity, category or legal
+  ground in `ferroehr-operations`.
 - **Effective without a restart**, as the registers above.
 - **Read by the access evaluator** on every request: a classification gives
   the data it covers its sensitivities (step 4), and the two requirements
