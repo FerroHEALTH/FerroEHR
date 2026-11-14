@@ -18,7 +18,7 @@
 //! a background task or a test, nothing is published and nothing is
 //! withheld. No openEHR spec governs this: our own design (#5513, #5588).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
@@ -31,7 +31,7 @@ use uuid::Uuid;
 
 use crate::access_eval::class::{Class, Classes};
 use crate::access_eval::procedure::{
-    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
+    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide, rules_of,
 };
 use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
@@ -55,7 +55,7 @@ pub struct RequestAccess {
     operation: OperationClass,
     purpose: Option<String>,
     emergency: Emergency,
-    policy: Option<Arc<AccessPolicy>>,
+    pub(super) policy: Option<Arc<AccessPolicy>>,
     categories: CategoryIndex,
     server_default: AccessDefault,
     now: jiff::Timestamp,
@@ -63,7 +63,7 @@ pub struct RequestAccess {
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
     recorded: Recorded,
     stale: Option<Arc<StaleCopies>>,
-    written: Mutex<BTreeSet<Uuid>>,
+    pub(super) written: Mutex<BTreeSet<Uuid>>,
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -192,23 +192,6 @@ impl RequestAccess {
         self
     }
 
-    /// Notes that this request committed a version of the object `vo_id`,
-    /// which its response is built from.
-    pub fn wrote(&self, vo_id: Uuid) {
-        self.written
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .insert(vo_id);
-    }
-
-    /// Whether this request committed a version of the object `vo_id`.
-    fn written(&self, vo_id: Uuid) -> bool {
-        self.written
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .contains(&vo_id)
-    }
-
     /// The caller.
     #[must_use]
     pub fn caller(&self) -> &Caller {
@@ -316,13 +299,6 @@ impl RequestAccess {
         Policy::of(self.policy.as_deref())
     }
 
-    /// The controller's access policy in force when the request began;
-    /// `None` when no version is committed.
-    #[must_use]
-    pub fn policy_in_force(&self) -> Option<&AccessPolicy> {
-        self.policy.as_deref()
-    }
-
     /// The moment the request began.
     #[must_use]
     pub fn now(&self) -> jiff::Timestamp {
@@ -425,11 +401,7 @@ impl RequestAccess {
                 emergency: self.emergency,
             },
             policy: self.policy(),
-            rules: self
-                .policy
-                .as_deref()
-                .and_then(|policy| policy.rules.as_deref())
-                .unwrap_or_default(),
+            rules: rules_of(self.policy.as_deref()),
             ehr: Ehr {
                 settings,
                 server_default: self.server_default,

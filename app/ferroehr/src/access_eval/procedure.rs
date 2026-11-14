@@ -66,6 +66,7 @@
 //! design (#5487, #5513, #5588, #5621).
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
+use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, DirectiveKind, Effect, OperationClass, Refusal,
 };
@@ -177,11 +178,7 @@ pub struct Policy {
 impl Policy {
     /// The requirements of `policy`; none when no version is committed.
     #[must_use]
-    pub fn of(
-        policy: Option<
-            &openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy,
-        >,
-    ) -> Self {
+    pub fn of(policy: Option<&AccessPolicy>) -> Self {
         let Some(policy) = policy else {
             return Self::default();
         };
@@ -198,6 +195,15 @@ impl Policy {
             purpose_required: policy.purpose_required,
         }
     }
+}
+
+/// The controller's rules of `policy` (`ACCESS_POLICY.rules`); none when no
+/// version is committed.
+#[must_use]
+pub fn rules_of(policy: Option<&AccessPolicy>) -> &[AccessDirective] {
+    policy
+        .and_then(|policy| policy.rules.as_deref())
+        .unwrap_or_default()
 }
 
 /// The EHR the decision is about.
