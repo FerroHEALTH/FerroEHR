@@ -39,7 +39,7 @@ pub enum Deviation {
     ValuePathSubAttribute,
     /// A provider extension URN in the IANA-assigned `urn:ietf:params:scim`
     /// namespace without a registration, which the client requires for a
-    /// custom attribute: FerroEHR's User and Group extensions.
+    /// custom attribute.
     UnregisteredExtensionUrn,
     /// The client never sends a null, so a value it clears never reaches the
     /// provider; nothing in a request shows this, and the provider keeps the

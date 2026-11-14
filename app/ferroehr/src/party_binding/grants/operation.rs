@@ -32,7 +32,7 @@ use crate::party_binding::grants::admission::{
 };
 use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS};
 use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, GroupKind, PermittedPurpose, SensitivityClearance, Term,
+    CareRelationship, PermittedPurpose, SensitivityClearance, Term,
 };
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
@@ -170,7 +170,6 @@ fn names_no_operation(code: &str) -> bool {
         || SensitivityClearance::CODES.contains(&code)
         || PermittedPurpose::CODES.contains(&code)
         || CareRelationship::CODES.contains(&code)
-        || GroupKind::CODES.contains(&code)
 }
 
 /// One operation a capability may grant.
@@ -423,7 +422,6 @@ mod tests {
         assert!(is_qualifier(NO_SUBJECT_NAMESPACE));
         assert!(is_qualifier("sensitivity_clearance") && is_qualifier("permitted_purpose"));
         assert!(is_qualifier("member_of") && is_qualifier("under_care_of"));
-        assert!(is_qualifier("care_team"));
     }
 
     #[test]

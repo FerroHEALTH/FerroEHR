@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"A team of healthcare professionals, such as a care team or a department, whose members are the professionals' PERSONs. A SCIM Group is provisioned as one.">
-            use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: the team's identifiers and its group kind in details and its name in identities, every element optional so a team provisioned with only a name is complete. Each member's PERSON holds a membership PARTY_RELATIONSHIP to the team.">
+            use = <"Adapted from the openEHR CKM archetypes the derived_from entry names: the team's identifiers in details and its name in identities, every element optional so a team provisioned with only a name is complete. Each member's PERSON holds a membership PARTY_RELATIONSHIP to the team.">
             copyright = <"© openEHR Foundation">
         >
     >
@@ -30,9 +30,6 @@ definition
                 items matches {
                     ELEMENT[id3] occurrences matches {0..*} matches {
                         value matches { DV_IDENTIFIER[id7] }
-                    }
-                    ELEMENT[id9] occurrences matches {0..1} matches {
-                        value matches { DV_CODED_TEXT[id10] }
                     }
                 }
             }
@@ -61,6 +58,5 @@ terminology
             ["id4"] = <text = <"Name"> description = <"The name the team is known by.">>
             ["id5"] = <text = <"Items"> description = <"The structure of the name.">>
             ["id6"] = <text = <"Name"> description = <"The name of the team as it is displayed.">>
-            ["id9"] = <text = <"Group kind"> description = <"What kind of group the team is: care_team of FerroEHR's terminology ferroehr-operations when it is a care team, whose members' member_of relationships put them in the care of its patients.">>
         >
     >

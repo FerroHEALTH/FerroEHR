@@ -7,15 +7,11 @@ of groups (`[authz.party_binding.group]` and
 SCIM can provision Groups:
 
 1. `openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls`: the `GROUP` of a care
-   team, named by `[authz.party_binding.group] template_id`, with an
-   optional coded group kind in its details, `care_team` of
-   `ferroehr-operations` when SCIM creates it as a care team.
+   team, named by `[authz.party_binding.group] template_id`.
 2. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1.0.0.adls`: the
    membership a member's `PERSON` holds to the team's `GROUP`, named by
    `[authz.party_binding.membership] archetype_id` in its interface form,
-   `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`, with an optional
-   care relationship code in its details, `member_of` when the team is a
-   care team.
+   `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`.
 3. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0.adls`: an example
    care-team membership a professional's `PERSON` holds to the team's
    `GROUP`, whose details carry `member_of` of FerroEHR's terminology

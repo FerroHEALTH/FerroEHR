@@ -18,14 +18,12 @@
 )]
 
 use openehr_base::prelude::{HierObjectId, ObjectId, PartyRef};
-use openehr_rm::draft::access_control::terminology::{CareRelationship, Term};
 use openehr_rm::prelude::{DvIdentifier, DvUri, DvUriData};
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 use serde_json::{Map, Value};
 
 use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
-use crate::party_binding::policy_mark::TERMINOLOGY;
 use crate::service::FerroEhrService;
 
 /// The RM attributes of the demographic model that hold a list.
@@ -275,22 +273,19 @@ impl FerroEhrService {
     /// Returns a membership of the `GROUP` `group` held by the `PERSON`
     /// `member`: an inline `PARTY_RELATIONSHIP` of `archetype_id` whose
     /// `source` is the member and whose `target` is the group, each named
-    /// under `namespace`, carrying the `member_of` care relationship code when
-    /// the group is a care team (#5617).
+    /// under `namespace`.
     ///
     /// RM demographic master02 §Party Relationships: a relationship is stored
     /// in the version of its source.
     ///
     /// # Errors
     /// The [`Self::web_template`] refusals when the archetype does not
-    /// resolve, and the `422` of an archetype whose `details` draw no one
-    /// `DV_CODED_TEXT` for the code of a care team's membership.
+    /// resolve.
     pub async fn membership_body(
         &self,
         archetype_id: &str,
         (group, member): (VoId, VoId),
         namespace: &str,
-        care_team: bool,
     ) -> Result<Value, ServiceError> {
         let wt = self.web_template(archetype_id).await?;
         let mut body = new_party(&wt);
@@ -298,78 +293,7 @@ impl FerroEhrService {
             object.insert("source".to_owned(), party_ref(namespace, "PERSON", member));
             object.insert("target".to_owned(), party_ref(namespace, "GROUP", group));
         }
-        if care_team {
-            with_details_code(
-                &mut body,
-                &wt,
-                archetype_id,
-                CareRelationship::MemberOf.code(),
-            )?;
-        }
         Ok(body)
-    }
-
-    /// Writes `code` of FerroEHR's terminology into `body`, a party of the
-    /// template or archetype `id`, at the one `ELEMENT` of its `details`
-    /// whose value the template draws as a `DV_CODED_TEXT`.
-    ///
-    /// # Errors
-    /// The [`Self::web_template`] refusals, and a `422` naming `id` when its
-    /// `details` draw no such `ELEMENT` or more than one.
-    pub(super) async fn write_details_code(
-        &self,
-        body: &mut Value,
-        id: &str,
-        code: &str,
-    ) -> Result<(), ServiceError> {
-        let wt = self.web_template(id).await?;
-        with_details_code(body, &wt, id, code)
-    }
-}
-
-/// Writes `code` of FerroEHR's terminology into `body` at the one `ELEMENT`
-/// of the `details` of `wt`, the template or archetype `id`, whose value it
-/// draws as a `DV_CODED_TEXT`; the code is read back by its value anywhere in
-/// `details`, never by this path.
-fn with_details_code(
-    body: &mut Value,
-    wt: &WebTemplate,
-    id: &str,
-    code: &str,
-) -> Result<(), ServiceError> {
-    let mut paths = Vec::new();
-    coded_details(&wt.tree, &mut paths);
-    let [path] = paths.as_slice() else {
-        return Err(ServiceError::content_invalid(Violation::new(format!(
-            "{id} draws {} DV_CODED_TEXT ELEMENTs in its details, so it has no one place for \
-             the code {TERMINOLOGY}::{code}: a definition that carries it draws exactly one",
-            paths.len()
-        ))));
-    };
-    let value = serde_json::json!({
-        "_type": "DV_CODED_TEXT",
-        "value": code,
-        "defining_code": {
-            "_type": "CODE_PHRASE",
-            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY },
-            "code_string": code
-        }
-    });
-    set(body, wt, path, value)
-}
-
-/// Pushes onto `paths` the path of each `ELEMENT` under `node` in `details`
-/// whose value the template draws as a `DV_CODED_TEXT`.
-fn coded_details(node: &WebTemplateNode, paths: &mut Vec<String>) {
-    let path = super::mapping::plain(&node.aql_path);
-    if base_type(&node.rm_type) == "DV_CODED_TEXT"
-        && path.starts_with("/details")
-        && let Some(element) = path.strip_suffix("/value")
-    {
-        paths.push(element.to_owned());
-    }
-    for child in &node.children {
-        coded_details(child, paths);
     }
 }
 

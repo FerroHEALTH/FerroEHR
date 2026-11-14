@@ -62,16 +62,6 @@ impl FerroEhrService {
             return Ok(None);
         };
         expect_version(&group, expected)?;
-        let care_team = group.care_team();
-        if state.care_team != care_team {
-            return Err(ServiceError::content_invalid(
-                Violation::new(
-                    "whether a Group is a care team is set at its creation and never changed \
-                     (RFC 7643 §2.2, immutable)",
-                )
-                .with_path("careTeam"),
-            ));
-        }
         if !matches!(
             group.row.lifecycle_state.as_str(),
             state::COMPLETE | state::INCOMPLETE
@@ -123,16 +113,10 @@ impl FerroEhrService {
             ));
         }
         for member in added {
-            let change = self
-                .membership_change(writer, (id, care_team), member, true)
-                .await?;
-            changes.extend(change);
+            changes.extend(self.membership_change(writer, id, member, true).await?);
         }
         for member in removed {
-            let change = self
-                .membership_change(writer, (id, care_team), member, false)
-                .await?;
-            changes.extend(change);
+            changes.extend(self.membership_change(writer, id, member, false).await?);
         }
         if changes.is_empty() {
             return Ok(Some(group));
@@ -168,12 +152,8 @@ impl FerroEhrService {
             Kind::Group,
             Some(self.group_tree(id).await?),
         )];
-        let care_team = group.care_team();
         for member in &group.members {
-            let change = self
-                .membership_change(writer, (id, care_team), *member, false)
-                .await?;
-            changes.extend(change);
+            changes.extend(self.membership_change(writer, id, *member, false).await?);
         }
         let commit = ScimCommit::new(writer.client.binding_issuer, change_type::DELETED);
         self.commit_scim(commit, changes)

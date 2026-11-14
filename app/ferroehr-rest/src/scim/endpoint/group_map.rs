@@ -20,7 +20,6 @@ use ferroehr::service::demographic::group_provision::{GroupState, GroupWriter, P
 use serde_json::{Map, Value, json};
 
 use crate::config::AppConfig;
-use crate::scim::endpoint::schemas::{CARE_TEAM, GROUP_EXTENSION_URN};
 use crate::scim::endpoint::{ScimClient, schemas};
 use crate::scim::protocol::error::{ScimError, ScimType};
 use crate::scim::protocol::etag::EntityTag;
@@ -91,20 +90,11 @@ pub(crate) fn client_of(client: &ScimClient) -> GroupClient<'_> {
     }
 }
 
-/// The full representation of `group` (RFC 7643 §4.2, §3.1), its members,
-/// `careTeam` in FerroEHR's Group extension when it is a care team, and
-/// `meta` under `base_url`.
+/// The full representation of `group` (RFC 7643 §4.2, §3.1), its members
+/// and `meta` under `base_url`.
 pub(crate) fn representation(group: &ProvisionedGroup, base_url: &str) -> Value {
     let mut object = Map::new();
-    // NOTE: RFC 7643 §3, "schemas" names the schemas whose attributes are present,
-    // so a Group that is no care team, its careTeam unassigned, names the core one.
-    let care_team = group.care_team();
-    let schemas = if care_team {
-        json!([urn::CORE_GROUP, GROUP_EXTENSION_URN])
-    } else {
-        json!([urn::CORE_GROUP])
-    };
-    object.insert("schemas".to_owned(), schemas);
+    object.insert("schemas".to_owned(), json!([urn::CORE_GROUP]));
     object.insert("id".to_owned(), Value::from(group.row.party.to_string()));
     if let Some(external_id) = &group.row.external_id {
         object.insert("externalId".to_owned(), Value::from(external_id.clone()));
@@ -125,9 +115,6 @@ pub(crate) fn representation(group: &ProvisionedGroup, base_url: &str) -> Value 
         })
         .collect();
     object.insert("members".to_owned(), Value::Array(members));
-    if care_team {
-        object.insert(GROUP_EXTENSION_URN.to_owned(), json!({ CARE_TEAM: true }));
-    }
     let mut meta = Map::new();
     meta.insert("resourceType".to_owned(), Value::from("Group"));
     meta.insert("created".to_owned(), Value::from(group.created.to_string()));
@@ -155,9 +142,8 @@ pub(crate) fn entity_tag(group: &ProvisionedGroup) -> Option<EntityTag> {
 ///
 /// # Errors
 /// A `400` `invalidValue` when `displayName` is missing or not a string, the
-/// `externalId` is not a string, `careTeam` is not a boolean, or a member
-/// names a Group (by its `type` or `$ref`) or no id at all: nested Groups are
-/// refused.
+/// `externalId` is not a string, or a member names a Group (by its `type` or
+/// `$ref`) or no id at all: nested Groups are refused.
 pub(crate) fn state(resource: &Resource) -> Result<GroupState, ScimError> {
     let display_name = match resource.get(Container::Core, "displayName") {
         Some(Value::String(name)) if !name.trim().is_empty() => name.clone(),
@@ -178,16 +164,6 @@ pub(crate) fn state(resource: &Resource) -> Result<GroupState, ScimError> {
             ));
         }
     };
-    let care_team = match resource.get(Container::Extension(GROUP_EXTENSION_URN), CARE_TEAM) {
-        None | Some(Value::Null) => false,
-        Some(Value::Bool(care_team)) => *care_team,
-        Some(_) => {
-            return Err(ScimError::bad_request(
-                ScimType::InvalidValue,
-                "A Group's careTeam is a boolean.",
-            ));
-        }
-    };
     let listed = resource
         .get(Container::Core, "members")
         .and_then(Value::as_array)
@@ -201,7 +177,6 @@ pub(crate) fn state(resource: &Resource) -> Result<GroupState, ScimError> {
         display_name,
         external_id,
         members,
-        care_team,
     })
 }
 
