@@ -61,13 +61,8 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_audit(sender)
         .with_audit_store(AuditStore::new(pool.clone()));
-    let authz = AuthzHandle::build(
-        &AuthzConfig::default(),
-        &config().api.base_path,
-        None,
-        common::null_resolvers(),
-    )
-    .map(Arc::new);
+    let authz =
+        AuthzHandle::build(&AuthzConfig::default(), &config().api.base_path, None).map(Arc::new);
     let app = common::build_full(config(), Arc::new(svc), authz, Observability::default()).await;
     (db, pool, app)
 }

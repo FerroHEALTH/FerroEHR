@@ -234,10 +234,10 @@ hours) if prompt revocation matters, and use refresh tokens for session length.
 
 ## Authorization
 
-Authorization has three composable layers. The per-EHR `EHR_ACCESS` gate is
-the openEHR-specified base and is always on; the coarse role layer is active
-when authentication is enabled; the fine-grained attribute layer is opt-in.
-A request must clear every active layer. Deployments serving SMART apps can
+Authorization has three composable layers. The per-EHR `EHR_ACCESS` gate with
+the access evaluator is the openEHR-grounded base and is always on; the coarse
+role layer is active when authentication is enabled; the patient scope is
+opt-in. A request must clear every active layer. Deployments serving SMART apps can
 enable a fourth, token-scope layer on top; see
 [SMART App Launch](smart-app-launch.md).
 
@@ -265,8 +265,9 @@ control.
 > Under `restricted`, the admin role still reaches a setting-less EHR. That is
 > deliberate: a plain deny would make such a record unreachable by everyone
 > (including the operator who would author the settings that fix it) which is an
-> outage rather than a control. Bind callers to patients with the ABAC layer
-> below; this key decides only the default disposition.
+> outage rather than a control. Bind callers to patients with the
+> [patient scope](#the-patient-scope) below; this key decides only the default
+> disposition.
 
 Committing settings of the `access_directives` scheme switches that EHR to
 explicit policy, and those settings **always win over the server default**,
@@ -599,8 +600,8 @@ the marker is the RM's own.
   The SMART scope grammar reserves `patient/` for "applications acting in the
   context of a specific patient/EHR" and `user/` for those acting for a
   logged-in practitioner, so a clinician's app uses `user/` scopes and keeps
-  every professional right. The ABAC patient claim does not make a caller the
-  person, because a professional's token in a patient's context carries it
+  every professional right. The patient claim (`[auth] patient_claim`) does
+  not make a caller the person, because a professional's token in a patient's context carries it
   too. The rule is the FerroHEALTH family's strict answer, shared through
   `ferrohealth-smart`; the Art. 3(3) delay below asks its broad one.
 - **Who counts as the representative.** A person bound to their own `PERSON`
@@ -665,8 +666,8 @@ default, so the person's access stays immediate.
   amended, and a professional holds an amendment by hand if it needs
   explaining. A composition the person commits is never held from them.
 - **Who it is held from.** A request that may be the person's own: a bearer
-  token carrying a SMART `patient/` grant, or the ABAC patient claim
-  (`authz.abac.patient_claim`). A token that carries either is treated as the
+  token carrying a SMART `patient/` grant, or the patient claim
+  (`[auth] patient_claim`). A token that carries either is treated as the
   person's, whatever `user/` or `system/` grant it also carries, so a mixed
   token is withheld from rather than shown the data too early. The rule is the
   FerroHEALTH family's, shared with the other products through
@@ -680,8 +681,7 @@ default, so the person's access stays immediate.
   has been explained, from the clinical surface with
   `POST /ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_composition/{versioned_object_uid}/access-delay/release`.
   The route takes the checks of a write to that EHR: its `EHR_ACCESS` gate, the
-  ABAC check of a composition update and the SMART `composition-` update
-  grant. A request that may be the person's is refused with **403**. The
+  patient scope and the SMART `composition-` update grant. A request that may be the person's is refused with **403**. The
   controller releases with
   `POST /ferroehr/rest/extensions/v1/admin/access-delay/release`, and holds
   one by hand with `POST /ferroehr/rest/extensions/v1/admin/access-delay`, for
@@ -765,7 +765,7 @@ Disabling RBAC restores authentication-only behaviour.
 > at-least-one-role check pass for every OIDC token, since `openid` alone
 > satisfied it. If your callers rely on a scope naming a role, move that role
 > into one of the role claims above. Scopes remain on the principal and still
-> drive SMART scope enforcement and ABAC policy.
+> drive SMART scope enforcement.
 
 > [!NOTE]
 > The downloadable Compose quickstart deliberately runs with RBAC **off** and a
@@ -785,97 +785,43 @@ repository's from-source development stack ships one such account
 can be tried out; the downloadable quickstart file has neither (one user, no
 role gate).
 
-### ABAC (attribute-based, fine-grained)
+### The patient scope
 
-For attribute-level decisions ("may this user touch this patient's data,
-under this organisation, for this template?") enable ABAC. A policy decision
-point is consulted per clinical operation with resolved attributes. An
-enabled ABAC block that cannot be built (a Cedar register in force that does
-not validate) aborts server startup:
-a configuration that promises fine-grained authorization never silently runs
-without it.
+A deployment whose callers each act for one patient, such as a patient portal
+behind its own identity provider, binds each caller to that patient with an
+access-token claim. Fine-grained decisions about who may read what are the
+[access evaluator](#access-directives)'s, over the subject's directives and the
+access policy, and take no key; the patient scope is an authentication binding
+on top of them.
 
-| Environment variable | Default | Meaning |
-|---|---|---|
-| `FERROEHR__AUTHZ__ABAC__ENABLED` | `false` | master ABAC switch |
-| `FERROEHR__AUTHZ__ABAC__ENGINE` | `cedar` | `cedar`, the embedded engine and the only value |
-| `FERROEHR__AUTHZ__ABAC__ORGANIZATION_CLAIM` | `organization_id` | JWT claim for the organisation attribute |
-| `FERROEHR__AUTHZ__ABAC__PATIENT_CLAIM` | `patient_id` | JWT claim for the patient attribute (enables the subject gate) |
-| `FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY` | `false` | also submit DIRECTORY (FOLDER) operations to the policy engine |
+| Key | Environment variable | Default | Meaning |
+|---|---|---|---|
+| `[auth] patient_claim` | `FERROEHR__AUTH__PATIENT_CLAIM` | unset | The access-token claim naming the patient a caller is bound to. Unset or blank, no patient scope applies. |
+| `[auth] patient_namespace` | `FERROEHR__AUTH__PATIENT_NAMESPACE` | unset | The subject namespace (`EHR_STATUS.subject.external_ref.namespace`) the claim's ids are issued in. |
 
-The policy engine is the embedded **Cedar** engine. Its policy set is the [Cedar admin register](operational-policy.md#the-cedar-policy-register),
-written through the admin API and validated when it is written against a
-shipped schema built from the resource-kind and access-mode sets themselves (a
-set that does not validate is refused and the set in force keeps deciding), and
-it needs no external service. Until the register is written the set is empty
-and permits nothing. FerroEHR calls no external policy server:
-`[authz.abac.remote]` and `[authz.abac.policy.<kind>]` are unknown tables and
-refuse boot.
+With `patient_claim` set, every caller is held to the EHR whose subject the
+claim names:
 
-A policy sees the **caller**, not just the request: the authenticated subject,
-its roles (as the role layer above resolved them), its scopes, the resolved
-organization and patient, the resource's patient, template, category and
-origin, and the operation id. So a rule can be written about one caller, a role,
-a scope, or a single operation; the [shipped example policy](https://github.com/FerroHEALTH/FerroEHR/tree/main/app/ferroehr-rest/examples/policies)
-shows a role-keyed break-glass permit and a scope-keyed write restriction.
-
-An item tag is checked as the object it tags: a tag read where the read of its
-EHR, `EHR_STATUS` or composition is checked, and a tag write or delete where
-its target's write is, with the same patient and the tagged composition's
-template, category and origin. The action is the tag request's own, so a tag
-put on a composition asks for `composition.update` and a tag delete for
-`composition.delete`.
-
-**Category and origin** (EHDS Annex II 3.4 asks for access rights that take
-the origins and categories of the data into account). On a composition read,
-write or delete, a contribution and a query, `resource.category` holds each
-EHDS category of the data, spelt as the access record spells it: the
-`<system>|<code>` token of a priority or national category,
-[audit category register](installation/config-audit.md#the-audit-category-register) classifying
-the template, then the root archetype; `none`; or `unclassified`.
-`resource.origin` holds each origin the data came from, as the version recorded
-it at commit: a `FEEDER_AUDIT` originating-system id, the registered origin of
-the committing client, or this server's `system_id`
-([keying on an origin](compliance/retention.md#keying-a-period-on-an-origin)
-declares the register). A write is decided on what its body names: its
-template's category and the origin the commit will stamp. A FLAT or STRUCTURED
-write is converted only after the check, so it carries the category its
-template header implies and no origin attribute.
-
-```cedar
-// Laboratory reports fed by the lab are readable by the lab's own staff only.
-forbid (principal, action == Action::"composition.read", resource)
-when {
-  resource has category && resource has origin &&
-  resource.category == "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs|Laboratory-Reports" &&
-  resource.origin == "lab.example" &&
-  !(principal has organization && principal.organization == "lab")
-};
-```
-
-A request whose `patient`, `template`, `category` or `origin` resolves to several values is evaluated
-over the full cartesian product of them, and **every** combination must permit;
-the first deny short-circuits. A request that resolves to no combination at all
-permits vacuously, because there is nothing to decide about.
+- A token without the claim is refused with **`403`**.
+- An operation on another patient's EHR is refused with **`403`** before it
+  runs, or, for a read whose EHR only the result names, after. That covers the
+  EHR, `EHR_STATUS`, COMPOSITION, CONTRIBUTION and DIRECTORY operations and
+  their item tags. The EHR Extract import routes are checked as EHR writes and
+  the export routes as EHR reads; an export by manifest
+  (`POST /message/export`) holds every EHR it names, and one EHR of another
+  patient refuses the whole export.
+- An AQL query reads only the rows of the caller's patient, whatever the query
+  scopes or projects, including a query that reads only the `ehr` row.
+- A subject-less EHR is in no patient's scope. Without `patient_namespace`, the
+  claim names a subject by its id alone, so an EHR whose subject id another
+  namespace also holds is refused, on a direct route and in a query. With
+  `patient_namespace` set, the claim names the pair of namespace and id.
 
 > [!WARNING]
-> Authorization is **fail-closed in two distinct senses**, and the difference
-> shows up in the status code.
->
-> Nothing permits by omission: a gate reached without an authenticated caller
-> refuses, and Cedar is deny-by-default with `forbid` overriding `permit`. A denied decision is a **`403`**.
->
-> And a stage that cannot **decide** is never read as a decision. A policy
-> that errors during evaluation is a **`500`**: never a silent permit, and never a
-> `403`, which would claim a decision was made. (Cedar skips a policy that
-> errors and reports it in its diagnostics; ignoring those would let an erroring
-> `forbid` quietly stop forbidding.)
->
-> When a patient claim is configured, a local subject gate also rejects access to
-> another patient's EHR before any policy call. The EHR Extract import routes
-> are checked as EHR writes, and the export routes as EHR reads. An export by
-> manifest (`POST /message/export`) holds every EHR it names to that gate, and
-> one EHR of another patient refuses the whole export.
+> The patient scope is **fail-closed**: a gate reached without an
+> authenticated caller refuses, and a subject lookup that fails is a **`500`**,
+> or a **`503`** with `Retry-After` when no database connection could be
+> obtained. It is never read as a permit.
 
 ## Response security headers
 

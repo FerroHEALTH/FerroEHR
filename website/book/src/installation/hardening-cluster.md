@@ -247,7 +247,7 @@ endpoint permits **arbitrary command execution in any container on the node**.
 For this deployment, spelled out: an attacker reaching an unauthenticated kubelet
 gets a process-level foothold in a running CDR: the ability to read the database
 DSN out of the mounted secret files, to read patient data straight from memory,
-and to do so **beneath** the layer where authentication, RBAC, ABAC and the ATNA
+and to do so **beneath** the layer where authentication, RBAC, the access evaluator and the ATNA
 audit trail operate, so none of them see it and none of them can stop it.
 Non-root, a read-only root filesystem, an empty capability set and a private user
 namespace raise the cost of what happens next; they do not prevent the entry.

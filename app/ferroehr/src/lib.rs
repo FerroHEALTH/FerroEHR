@@ -39,7 +39,7 @@
 //! - [`support`] — the support period of this release, which every identity
 //!   surface states.
 //! - [`policy_register`] — the operational-policy admin registers (the audit
-//!   category map, the access delay and the Cedar policy set), versioned and
+//!   category map and the access delay), versioned and
 //!   read on every request.
 //! - [`access_policy`] — the controller's `ACCESS_POLICY` in force, kept
 //!   fresh by `LISTEN`/`NOTIFY`.

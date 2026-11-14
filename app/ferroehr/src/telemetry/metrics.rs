@@ -37,8 +37,6 @@ pub const SCOPE: &str = "ferroehr";
 pub const AUTH_FAILURES: &str = "auth_failures";
 /// Login-binding refusals (`issuer`, `outcome`).
 pub const BINDING_REFUSALS: &str = "binding_refusals";
-/// Cedar authorization decisions (`result`).
-pub const AUTHZ_CEDAR_DECISIONS: &str = "authz_cedar_decisions";
 /// Database pool connections (`state`), sampled as a gauge.
 pub const DB_POOL_CONNECTIONS: &str = "db_pool_connections";
 /// Database connection-acquire latency.
@@ -127,8 +125,6 @@ pub struct Metrics {
     pub auth_failures: Counter<u64>,
     /// Login-binding refusals by issuer and outcome.
     pub binding_refusals: Counter<u64>,
-    /// Cedar authorization decisions.
-    pub authz_cedar_decisions: Counter<u64>,
     /// Database connection-acquire latency, seconds.
     pub db_pool_acquire_duration: Histogram<f64>,
     /// Service transactions by outcome.
@@ -183,10 +179,6 @@ impl Metrics {
             binding_refusals: meter
                 .u64_counter(BINDING_REFUSALS)
                 .with_description("Login-binding refusals by issuer and outcome")
-                .build(),
-            authz_cedar_decisions: meter
-                .u64_counter(AUTHZ_CEDAR_DECISIONS)
-                .with_description("Cedar authorization decisions by result")
                 .build(),
             db_pool_acquire_duration: meter
                 .f64_histogram(DB_POOL_ACQUIRE_DURATION)
@@ -344,7 +336,6 @@ mod tests {
         let names = [
             AUTH_FAILURES,
             BINDING_REFUSALS,
-            AUTHZ_CEDAR_DECISIONS,
             DB_POOL_CONNECTIONS,
             DB_POOL_ACQUIRE_DURATION,
             DB_TRANSACTIONS,

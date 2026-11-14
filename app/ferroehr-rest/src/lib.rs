@@ -36,7 +36,7 @@
 //! [`AppState::with_backend`], and the tests over a mock.
 //!
 //! Authentication is HTTP Basic plus OAuth2/OIDC bearer, applied as one
-//! middleware over the API router, with the coarse RBAC gate and the ABAC PEP
+//! middleware over the API router, with the coarse RBAC gate and the PEP
 //! composing on top when wired ([`extensions::access`]). Auth is out of band per
 //! `overview/Requests_and_responses.md` §Authentication.
 
@@ -74,6 +74,7 @@ use tokio::net::TcpListener;
 use crate::config::AppConfig;
 use crate::extensions::access::authn::Authenticator;
 use crate::extensions::access::authz::AuthzHandle;
+use crate::extensions::access::patient_scope::PatientScope;
 use crate::extensions::management::Observability;
 use crate::router::{management_router, router};
 use crate::state::AppState;
@@ -156,8 +157,8 @@ async fn build_authenticator(
     standing: Arc<dyn Standing>,
 ) -> Result<Arc<Authenticator>, ServeError> {
     let claim = authz
-        .and_then(AuthzHandle::abac)
-        .and_then(|abac| abac.patient_claim.as_deref());
+        .and_then(AuthzHandle::patient)
+        .map(PatientScope::claim);
     let authenticator = Authenticator::new(config, claim, source, replay, standing)
         .await
         .map_err(ServeError::Auth)?;
@@ -461,8 +462,8 @@ mod tests {
     use super::*;
 
     /// The configured `[auth] role_claims` reach the authenticator with
-    /// no authorization handle wired (RBAC, ABAC and the per-EHR default all
-    /// off), so a role under a custom claim path is extracted.
+    /// no authorization handle wired (RBAC, the patient scope and the per-EHR
+    /// default all off), so a role under a custom claim path is extracted.
     #[tokio::test]
     async fn configured_role_claims_apply_without_an_authz_handle() {
         let config = AppConfig {

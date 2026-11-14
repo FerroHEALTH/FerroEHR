@@ -49,7 +49,7 @@ pub(crate) fn holds_only_system_scopes(scopes: &[SmartScope]) -> bool {
 /// A `patient/` scope is "for applications acting in the context of a specific
 /// patient/EHR", a `user/` one for those "acting on behalf of a logged-in user
 /// (e.g., a practitioner)" (ITS-REST `docs/smart_app_launch/master08-scopes.adoc`
-/// §Resource Scopes). The ABAC patient claim alone does not count, as a
+/// §Resource Scopes). The patient claim alone does not count, as a
 /// professional's token in a patient's context carries it too.
 // NOTE: EHDS Art. 5, the owner's ruling of 2026-10-31: authorship errs toward the
 // professional, the strict answer of the family crate.

@@ -4,12 +4,14 @@
 //! Authorization configuration ([`AuthzConfig`]).
 //!
 //! The `[authz]` section of the one server configuration tree, with no loader of
-//! its own. No openEHR spec governs RBAC or ABAC, so this is our own design.
+//! its own. No openEHR spec governs RBAC, so this is our own design.
 //!
-//! Two sections: the coarse RBAC keys (`rbac.*`, always evaluated when auth is
-//! enabled) and the opt-in ABAC keys (`abac.*`, master switch `abac.enabled`,
-//! default `false`). Every field has a default, so an all-defaults
-//! [`AuthzConfig`] is valid (RBAC on, `ADMIN`/`USER` roles, ABAC off).
+//! The coarse RBAC keys (`rbac.*`, always evaluated when auth is enabled), the
+//! assurance floor, the party binding and the grant ceiling. Access decisions
+//! on clinical data are the access evaluator's, over the `access_directives`
+//! of each `EHR_ACCESS` and the controller's `ACCESS_POLICY`, and take no key
+//! here. Every field has a default, so an all-defaults [`AuthzConfig`] is
+//! valid (RBAC on, `ADMIN`/`READONLY` roles).
 //!
 //! NOTE: the management surface is NOT governed here — `[management]`
 //! (`[management.endpoints]`, one level per endpoint) is its single authority,
@@ -133,96 +135,6 @@ impl RbacConfig {
     }
 }
 
-/// The ABAC policy engine selector (`abac.engine`). `cedar`, the embedded
-/// engine, is its one value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(rename_all = "snake_case")]
-pub enum AbacEngineKind {
-    /// Embedded Cedar (`cedar-policy`), its policy set from the Cedar admin
-    /// register.
-    #[default]
-    Cedar,
-}
-
-/// The fine-grained attribute-based access-control settings.
-///
-/// Master switch `enabled` defaults to `false`, so an all-defaults config
-/// preserves today's authentication-plus-RBAC behaviour until an operator
-/// opts in. The table keeps `enabled` where other optional features use the
-/// table's presence, because `organization_claim` applies while it is off:
-/// the access log records the organisation a caller acts for.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(default, deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
-pub struct AbacConfig {
-    /// Master ABAC switch (default `false`).
-    pub enabled: bool,
-    /// Which PDP engine to use (default `cedar`).
-    pub engine: AbacEngineKind,
-    /// The JWT claim carrying the caller's organization (default
-    /// `organization_id`); resolved opportunistically (absent → no attribute).
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-    pub organization_claim: String,
-    /// The JWT claim carrying the patient id (default `patient_id`); its presence
-    /// enables the local subject gate. Set to empty to disable the gate.
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-    pub patient_claim: String,
-    /// The subject namespace patient-claim ids are issued in
-    /// (`EHR_STATUS.subject.external_ref.namespace`, RM ehr master04 §EHR
-    /// Status), default unset.
-    ///
-    /// Set, a claim names the EHR subject whose (id, namespace) pair equals
-    /// (claim, this value). Unset, a claim names the subject holding that id
-    /// only when no other namespace holds the same id, and matches nothing
-    /// otherwise. No openEHR spec governs the claim — our own extension.
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-    pub patient_namespace: Option<String>,
-    /// Whether DIRECTORY (FOLDER) operations are submitted to the policy
-    /// engine (default `false`). No openEHR spec governs authorization — our
-    /// own design/extension.
-    pub check_directory: bool,
-}
-
-impl Default for AbacConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            engine: AbacEngineKind::Cedar,
-            organization_claim: "organization_id".to_owned(),
-            patient_claim: "patient_id".to_owned(),
-            patient_namespace: None,
-            check_directory: false,
-        }
-    }
-}
-
-impl AbacConfig {
-    /// The patient claim, or `None` when blank (the subject gate is then off).
-    #[must_use]
-    pub fn patient_claim(&self) -> Option<&str> {
-        let c = self.patient_claim.trim();
-        (!c.is_empty()).then_some(c)
-    }
-
-    /// The patient namespace, or `None` when unset or blank.
-    #[must_use]
-    pub fn patient_namespace(&self) -> Option<&str> {
-        self.patient_namespace
-            .as_deref()
-            .map(str::trim)
-            .filter(|ns| !ns.is_empty())
-    }
-
-    /// The organization claim, or `None` when blank.
-    #[must_use]
-    pub fn organization_claim(&self) -> Option<&str> {
-        let c = self.organization_claim.trim();
-        (!c.is_empty()).then_some(c)
-    }
-}
-
 /// The ceiling on what the policy grants may grant (`[authz.grants]`).
 ///
 /// A grant is an operation of FerroEHR's operation terminology
@@ -267,16 +179,14 @@ impl GrantsConfig {
     }
 }
 
-/// Authorization configuration: the coarse RBAC gate plus the opt-in ABAC
-/// policy layer.
+/// Authorization configuration: the coarse RBAC gate, the assurance floor, the
+/// party binding and the grant ceiling.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct AuthzConfig {
     /// Role-based access control.
     pub rbac: RbacConfig,
-    /// Attribute-based access control (opt-in).
-    pub abac: AbacConfig,
     /// The authentication assurance a patient-data request must carry
     /// (`[authz.assurance]`, off by default).
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
@@ -363,49 +273,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn abac_disabled_by_default() {
-        let c = AuthzConfig::default();
-        assert!(!c.abac.enabled);
-        assert_eq!(c.abac.engine, AbacEngineKind::Cedar);
-        assert!(c.validate().is_ok());
-    }
-
-    /// DIRECTORY gating is its own switch, off by default.
-    #[test]
-    fn check_directory_defaults_off() {
-        assert!(!AbacConfig::default().check_directory);
-        let cedar = AuthzConfig {
-            abac: AbacConfig {
-                enabled: true,
-                check_directory: true,
-                ..AbacConfig::default()
-            },
-            ..AuthzConfig::default()
-        };
-        assert!(cedar.validate().is_ok());
-    }
-
-    /// The Cedar engine takes its policy set from the Cedar register, so it
-    /// needs no configuration of its own, and `[authz.abac.cedar]` is an
-    /// unknown table.
-    #[test]
-    fn cedar_needs_no_configuration() {
-        let c = AuthzConfig {
-            abac: AbacConfig {
-                enabled: true,
-                engine: AbacEngineKind::Cedar,
-                ..AbacConfig::default()
-            },
-            ..AuthzConfig::default()
-        };
-        assert_eq!(c.validate(), Ok(()));
-        assert!(
-            toml::from_str::<AbacConfig>("[cedar]\npolicy_dir = \"/etc/ferroehr\"").is_err(),
-            "[authz.abac.cedar] is no longer a configuration table"
-        );
-    }
-
     /// Every section here carries a container-level `#[serde(default)]`, which
     /// serde fills from the struct's own [`Default`] — so the `Default` impl is
     /// the single source of defaults and no field needs its own default
@@ -414,27 +281,32 @@ mod tests {
     #[test]
     fn a_partial_table_falls_back_to_the_default_impl() {
         let parsed: AuthzConfig =
-            toml::from_str("[rbac]\nadmin_role = \"OPERATOR\"\n\n[abac]\nenabled = true\n")
+            toml::from_str("[rbac]\nadmin_role = \"OPERATOR\"\n\n[grants]\nallowed = []\n")
                 .expect("partial authz table");
 
         let default = AuthzConfig::default();
         // The specified keys took the file's values.
         assert_eq!(parsed.rbac.admin_role, "OPERATOR");
-        assert!(parsed.abac.enabled);
+        assert_eq!(parsed.grants.allowed, []);
         // Every unmentioned key came from the Default impl, not from
         // `<field type>::default()` (which would be `false`/`0`/empty).
         assert_eq!(parsed.rbac.enabled, default.rbac.enabled);
         assert_eq!(parsed.rbac.readonly_role, default.rbac.readonly_role);
-        assert_eq!(parsed.abac.engine, default.abac.engine);
         assert_eq!(
-            parsed.abac.organization_claim,
-            default.abac.organization_claim
+            parsed.rbac.emergency_access_role,
+            default.rbac.emergency_access_role
         );
-        assert_eq!(parsed.abac.patient_claim, default.abac.patient_claim);
         assert_eq!(
-            parsed.abac.patient_namespace,
-            default.abac.patient_namespace
+            parsed.rbac.ehr_access_default,
+            default.rbac.ehr_access_default
         );
-        assert_eq!(parsed.abac.check_directory, default.abac.check_directory);
+    }
+
+    /// `[authz.abac]` is gone with every key it held: the access evaluator
+    /// takes no switch, engine or claim (#5515).
+    #[test]
+    fn the_abac_table_is_unknown() {
+        let err = toml::from_str::<AuthzConfig>("[abac]\n").expect_err("an unknown table");
+        assert!(err.to_string().contains("unknown field `abac`"), "{err}");
     }
 }

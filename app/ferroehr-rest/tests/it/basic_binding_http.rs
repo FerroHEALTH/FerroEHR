@@ -116,7 +116,7 @@ async fn a_mapped_basic_user_commits_as_the_person_carrying_its_key() {
             "POST",
             &format!("/ehr/{ehr}/composition"),
             &credential,
-            &crate::abac_e2e::composition(),
+            &crate::patient_scope_e2e::composition(),
         ),
         StatusCode::CREATED,
         "the composition",

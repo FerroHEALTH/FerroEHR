@@ -119,13 +119,7 @@ async fn app() -> (
     config.rbac.emergency_access_role = Some("EMERGENCY".to_owned());
     let mut authz = AuthzConfig::default();
     authz.rbac.enabled = true;
-    let authz = AuthzHandle::build(
-        &authz,
-        &config.api.base_path,
-        None,
-        common::null_resolvers(),
-    )
-    .map(Arc::new);
+    let authz = AuthzHandle::build(&authz, &config.api.base_path, None).map(Arc::new);
     let app = common::build_full(config, Arc::clone(&svc), authz, Observability::default()).await;
     let (status, body) = send(
         &app,

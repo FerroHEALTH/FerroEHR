@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The subject-identity rule of the ABAC patient scope, as SQL.
+//! The subject-identity rule of the patient scope, as SQL.
 //!
 //! A patient claim carries a subject id, while an EHR subject is the pair
 //! (`subject_id`, `subject_namespace`) (RM ehr master04 §EHR Status:
@@ -48,13 +48,13 @@ pub(super) fn shared(alias: &str) -> Expr {
     Expr::exists(other)
 }
 
-/// The ABAC patient scope of a query: the subject id the patient claim
+/// The patient scope of a query: the subject id the patient claim
 /// carries, and the configured patient namespace it is read in, if any.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubjectScope {
     /// The subject id the claim carries.
     pub id: String,
-    /// The configured patient namespace (`[authz.abac] patient_namespace`).
+    /// The configured patient namespace (`[auth] patient_namespace`).
     pub namespace: Option<String>,
 }
 

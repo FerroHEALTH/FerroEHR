@@ -18,7 +18,7 @@ secured by the chart's own hardening.
 > Several controls here are ones **no application-level hardening can compensate
 > for**. If the kubelet accepts anonymous requests, or anything untrusted can read
 > etcd, then every control this project ships (non-root, read-only rootfs, dropped
-> capabilities, RBAC, ABAC, the audit trail) is bypassable, because the attacker
+> capabilities, RBAC, the access evaluator, the audit trail) is bypassable, because the attacker
 > is beneath the layer they operate in. Those are marked where they appear.
 
 Claims about what the chart renders are checked against the chart's own render

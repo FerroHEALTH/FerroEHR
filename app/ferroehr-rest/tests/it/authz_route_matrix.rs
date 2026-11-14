@@ -587,7 +587,6 @@ fn authz() -> Option<Arc<AuthzHandle>> {
         &AuthzConfig::default(),
         &matrix_config().api.base_path,
         None,
-        common::null_resolvers(),
     )
     .map(Arc::new)
 }

@@ -214,7 +214,7 @@ Two consequences to plan for:
 
 Three routes behind the same switch, for `admin_role` only, carry the
 operational policy that is data rather than configuration: the audit category
-map, the EHDS Art. 3(3) access delay and the Cedar policy set. What each
+map and the EHDS Art. 3(3) access delay. What each
 register holds is on [Operational policy](operational-policy.md#the-admin-registers).
 
 | Route | Body or header | Success |
@@ -223,7 +223,7 @@ register holds is on [Operational policy](operational-policy.md#the-admin-regist
 | `PUT {ext}/admin/registers/{register}` | `If-Match: "<version>"` and the whole register document | **200**: the new version, as the read answers it, with its `ETag`; the next request on every replica runs under it |
 | `GET {ext}/admin/registers/{register}/history` | — | **200** `{"register", "versions": [...]}`: every version, newest first, ending with version 0 |
 
-`{register}` is `audit-categories`, `access-delay` or `cedar-policies`, and any
+`{register}` is `audit-categories` or `access-delay`, and any
 other name is **404**. A write without `If-Match` is **400**, and one whose
 `If-Match` is no longer the newest version is **412**: read the register again
 and write over the version it answers. A document that does not hold is

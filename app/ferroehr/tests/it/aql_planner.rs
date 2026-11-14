@@ -2682,9 +2682,9 @@ fn scope_ctx() -> SqlCtx {
     }
 }
 
-/// The ABAC scope collection reports the EHRs a query touches from its EHR
-/// sources too, so a query reading only the `ehr` row reaches the post-check
-/// PDP (our own extension; no openEHR spec governs ABAC).
+/// The scope collection reports the EHRs a query touches from its EHR sources
+/// too, so a query reading only the `ehr` row reaches the patient-scope
+/// post-check (our own extension; no openEHR spec governs the patient scope).
 #[test]
 fn the_scope_collection_reports_ehr_sources() {
     for q in [
@@ -2715,7 +2715,6 @@ fn the_scope_collection_reports_ehr_sources() {
         scope.ehr_columns,
         vec!["scope_ehr_0".to_owned(), "scope_ehr_1".to_owned()]
     );
-    assert_eq!(scope.template_columns, vec!["scope_template_1".to_owned()]);
 }
 /// The branch bindings are reported to the access log: one EHR column and one
 /// version locator per bound branch, beside the EHR source's own column.
@@ -2921,19 +2920,6 @@ fn exists_is_path_level() {
         2,
         "the assignment EXISTS plus the operand's own"
     );
-}
-
-/// An `e/ehr_status/...` path joins the EHR's current `EHR_STATUS`, whose
-/// template the scope collection reports beside the EHR's id.
-#[test]
-fn the_scope_collection_reports_the_ehr_status_template() {
-    let ir = plan_ok("SELECT e/ehr_status/subject FROM EHR e");
-    let scope = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &scope_ctx())
-        .unwrap_or_else(|e| panic!("scope build failed: {e}"))
-        .unwrap_or_else(|| panic!("an EHR source is something to collect"));
-    assert_eq!(scope.ehr_columns, vec!["scope_ehr_0".to_owned()]);
-    assert_eq!(scope.template_columns, vec!["scope_template_1".to_owned()]);
-    assert!(scope.sql.contains(r#""template_id" AS "scope_template_1""#),);
 }
 
 /// With a configured patient namespace the claim names the (id, namespace)

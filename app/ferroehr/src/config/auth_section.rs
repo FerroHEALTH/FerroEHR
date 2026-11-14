@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[auth]` table: the shared `ferrohealth-smart` section and the tables
-//! FerroEHR keeps beside it: `[auth.smart]` and `[auth.scim]`.
+//! The `[auth]` table: the shared `ferrohealth-smart` section and what
+//! FerroEHR keeps beside it: `[auth.smart]`, `[auth.scim]` and the patient
+//! binding `patient_claim` and `patient_namespace`.
 //!
 //! `ferrohealth-smart` owns every other key of `[auth]`, `[auth.idp.entra]`
-//! included, and reads it with `deny_unknown_fields`; `config::beside` reads the
-//! two tables beside it. The section is read as the crate's
+//! included, and reads it with `deny_unknown_fields`; `config::beside` reads
+//! FerroEHR's keys beside it. The section is read as the crate's
 //! `ProductStandingSection`, without the client lists the policy grants
 //! answer (`party_binding::grants::standing`), so `scopeless_subjects` and an
 //! issuer's `first_party_clients` and `delegates` are unknown keys. No
@@ -26,6 +27,10 @@ use crate::config::smart::SmartConfig;
 const SMART: &str = "smart";
 /// The key of the SCIM service provider table inside `[auth]`.
 const SCIM: &str = "scim";
+/// The key of the patient claim inside `[auth]`.
+const PATIENT_CLAIM: &str = "patient_claim";
+/// The key of the patient claim's subject namespace inside `[auth]`.
+const PATIENT_NAMESPACE: &str = "patient_namespace";
 
 /// The `[auth]` table.
 #[derive(Debug, Clone, Default, Serialize)]
@@ -45,6 +50,45 @@ pub struct AuthConfig {
     /// clients; absent, `/scim/v2/` is not served.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scim: Option<ScimConfig>,
+    /// The access-token claim naming the patient a caller is bound to
+    /// (`FERROEHR__AUTH__PATIENT_CLAIM`).
+    ///
+    /// When set, the patient scope holds every caller to the EHR whose subject
+    /// the claim names: a request that names another patient's EHR is refused
+    /// `403`, an AQL query reads only that patient's rows, and a token without
+    /// the claim is refused `403`. Unset or blank, no patient scope applies.
+    /// No openEHR spec governs the claim: our own extension.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
+    pub patient_claim: Option<String>,
+    /// The subject namespace the patient claim's ids are issued in
+    /// (`EHR_STATUS.subject.external_ref.namespace`, RM ehr master04 §EHR
+    /// Status).
+    ///
+    /// Set, the claim names a subject by the pair of namespace and id. Unset,
+    /// it names a subject by its id alone, and an EHR whose subject id another
+    /// namespace also holds is refused. No openEHR spec governs the claim: our
+    /// own extension.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
+    pub patient_namespace: Option<String>,
+}
+
+impl AuthConfig {
+    /// The patient claim, or `None` when unset or blank (no patient scope).
+    #[must_use]
+    pub fn patient_claim(&self) -> Option<&str> {
+        trimmed(self.patient_claim.as_deref())
+    }
+
+    /// The patient namespace, or `None` when unset or blank.
+    #[must_use]
+    pub fn patient_namespace(&self) -> Option<&str> {
+        trimmed(self.patient_namespace.as_deref())
+    }
+}
+
+/// `value` trimmed, or `None` when absent or blank.
+fn trimmed(value: Option<&str>) -> Option<&str> {
+    value.map(str::trim).filter(|value| !value.is_empty())
 }
 
 impl<'de> Deserialize<'de> for AuthConfig {
@@ -69,24 +113,32 @@ impl<'de> Visitor<'de> for AuthVisitor {
             shared: Box::new(shared.0),
             smart: own.smart.unwrap_or_default(),
             scim: own.scim,
+            patient_claim: own.patient_claim,
+            patient_namespace: own.patient_namespace,
         })
     }
 }
 
-/// FerroEHR's own tables of `[auth]`, as read.
+/// FerroEHR's own keys of `[auth]`, as read.
 #[derive(Default)]
 struct Own {
     /// `[auth.smart]`.
     smart: Option<SmartConfig>,
     /// `[auth.scim]`.
     scim: Option<ScimConfig>,
+    /// `patient_claim`.
+    patient_claim: Option<String>,
+    /// `patient_namespace`.
+    patient_namespace: Option<String>,
 }
 
 impl beside::Own for Own {
     const TABLE: &'static str = "[auth]";
 
     fn own(key: &str) -> Option<&'static str> {
-        [SMART, SCIM].into_iter().find(|own| *own == key)
+        [SMART, SCIM, PATIENT_CLAIM, PATIENT_NAMESPACE]
+            .into_iter()
+            .find(|own| *own == key)
     }
 
     fn read<'de, A: MapAccess<'de>>(
@@ -94,10 +146,11 @@ impl beside::Own for Own {
         key: &'static str,
         map: &mut A,
     ) -> Result<(), A::Error> {
-        if key == SMART {
-            read_once(map, &mut self.smart, SMART)
-        } else {
-            read_once(map, &mut self.scim, SCIM)
+        match key {
+            SMART => read_once(map, &mut self.smart, SMART),
+            PATIENT_CLAIM => read_once(map, &mut self.patient_claim, PATIENT_CLAIM),
+            PATIENT_NAMESPACE => read_once(map, &mut self.patient_namespace, PATIENT_NAMESPACE),
+            _ => read_once(map, &mut self.scim, SCIM),
         }
     }
 }
@@ -151,6 +204,25 @@ mod tests {
             let err = toml::from_str::<AuthConfig>(body).expect_err("a removed key");
             assert!(err.to_string().contains("unknown field"), "{body}: {err}");
         }
+    }
+
+    #[test]
+    fn the_patient_binding_is_read_beside_the_crate_s_keys() {
+        let auth: AuthConfig = toml::from_str(
+            "realm = \"r\"\npatient_claim = \" patient_id \"\npatient_namespace = \"nl.bsn\"\n",
+        )
+        .expect("parses");
+        assert_eq!(auth.shared.realm, "r");
+        assert_eq!(auth.patient_claim(), Some("patient_id"));
+        assert_eq!(auth.patient_namespace(), Some("nl.bsn"));
+        let unset = AuthConfig::default();
+        assert_eq!(unset.patient_claim(), None, "no patient scope by default");
+        assert_eq!(unset.patient_namespace(), None);
+        let blank: AuthConfig = toml::from_str("patient_claim = \"  \"\n").expect("parses");
+        assert_eq!(blank.patient_claim(), None, "a blank claim is no claim");
+        assert!(
+            toml::from_str::<AuthConfig>("patient_claim = \"a\"\npatient_claim = \"b\"\n").is_err()
+        );
     }
 
     #[test]

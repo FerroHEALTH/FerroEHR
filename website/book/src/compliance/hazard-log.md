@@ -121,8 +121,8 @@ someone else's record and the real one goes unseen.
 
 **Control:** the principal comes from the authenticated credential; a `401`
 records the caller as unknown and never fabricates one. The organisation is
-read from the same token claim the ABAC layer reads, and stays empty when
-there is no claim or the caller used Basic. The EHR comes from the resource
+the provider of the caller's party binding, read from the CDR, and is never
+taken from a token claim. The EHR comes from the resource
 the dispatch resolved, or from the request path where none exists. An AQL
 execution records each served EHR separately. A token's issuer classifies
 its caller: the record carries the acting mode (`person`, or `client` for a

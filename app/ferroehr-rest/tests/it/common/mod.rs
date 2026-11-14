@@ -26,7 +26,6 @@ use ferroehr::party_binding::grants::standing::GrantStanding;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authn::Authenticator;
-use ferroehr_rest::extensions::access::authz::{AuthzResolvers, ResolveError};
 use ferroehr_rest::state::AppState;
 use ferrohealth_smart::config::{AuthSection, BasicSection, BasicUser, IssuerEntry};
 use ferrohealth_smart::kind::IssuerKind;
@@ -709,16 +708,6 @@ pub(crate) fn bearer(claims: &Value) -> String {
     .expect("the committed test key");
     let token = encode(&header, &claims, &key).expect("encode");
     format!("Bearer {token}")
-}
-
-/// Resolvers that resolve nothing — the shape a suite uses when its subject and
-/// template attributes are irrelevant to what it asserts.
-pub(crate) fn null_resolvers() -> AuthzResolvers {
-    AuthzResolvers {
-        subject: Arc::new(|_| Box::pin(async { Ok::<_, ResolveError>(None) })),
-        content_of_version: Arc::new(|_, _| Box::pin(async { Ok::<_, ResolveError>(None) })),
-        content: Arc::default(),
-    }
 }
 
 /// Auditing on, recording to the local audit store with no retention or

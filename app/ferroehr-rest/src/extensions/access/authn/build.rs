@@ -113,7 +113,7 @@ impl Authenticator {
     /// describes the issuer `ferrohealth-smart`'s `describe` chooses:
     /// `[auth] described_issuer`, else the one issuer that is not `machines`
     /// and whose metadata is available. Every
-    /// caller an issuer admits carries `patient_claim`, the live ABAC patient
+    /// caller an issuer admits carries `patient_claim`, the live patient
     /// claim, as the `ferrohealth-smart` `PatientClaim`. The `DPoP` proof
     /// check of `[auth.dpop]` compares a proof's `htu` with the server's
     /// public root (`[server] public_base_url` with `server.base_path`) and
@@ -152,7 +152,7 @@ impl Authenticator {
         let claim = patient_claim
             .map(PatientClaim::new)
             .transpose()
-            .map_err(|e| format!("authz.abac.patient_claim is refused: {e}"))?;
+            .map_err(|e| format!("auth.patient_claim is refused: {e}"))?;
         if resolved.enabled {
             let mut issuers = IssuerSet::new();
             let mut candidates = Vec::new();

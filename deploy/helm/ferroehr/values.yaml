@@ -715,7 +715,8 @@ config:
   auth:
     enabled: true
 
-  # [authz] — coarse RBAC (on with auth) + ABAC (off). Under config.authz:
+  # [authz] — coarse RBAC (on with auth), the party binding and the grant
+  # ceiling. Under config.authz:
     # The party binding. `provider` (issuer and id, in NL the URA) is required
     # once auth admits a credential: every access record of a bound person and
     # every version a person commits name it (EHDS Art. 13(4), Annex II 3.2(a)).
@@ -808,8 +809,7 @@ config:
   # alongside ferroehr.toml. Use for file-shaped material an in-TOML `*_file`
   # key points at: the PGP key (record.signing.key_file), ATNA PEMs, a JWKS
   # file (auth.jwks_file), the commercial licence token
-  # (deployment.licence_file). The Cedar policy set is an admin register,
-  # written through the admin API, and no file.
+  # (deployment.licence_file).
   files: {}
   # signing.asc: |
   #   -----BEGIN PGP PRIVATE KEY BLOCK-----

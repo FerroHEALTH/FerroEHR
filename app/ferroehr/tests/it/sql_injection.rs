@@ -40,9 +40,9 @@
 //!   `aql::sql::select`), plus the two fixed `ehr` aliases of the patient-scope
 //!   rule, `subject_row` and `subject_other` (`aql::sql::subject`).
 //! * **Output-column aliases** — `col{i}` / `col{i}_{vo,sv,num,cap}` from the
-//!   SELECT index (`aql::sql::select`), `scope_ehr_{i}` / `scope_template_{i}`
-//!   from one index over the EHR sources, the VO roots and the joined
-//!   `EHR_STATUS` roots (`aql::sql::build_scope`), the literal `subject_shared`
+//!   SELECT index (`aql::sql::select`), `scope_ehr_{i}`
+//!   from one index over the EHR sources and the VO roots
+//!   (`aql::sql::build_scope`), the literal `subject_shared`
 //!   of the subject lookup (`aql::sql::subject::lookup`), `access_ehr_{i}` /
 //!   `access_vo_{i}` / `access_sv_{i}` from the same index
 //!   (`aql::sql::select::build_access_ehr_columns` and
@@ -676,14 +676,14 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
     for query in CORPUS {
         let prepared = build(query, &Params::default());
         statements.push(((*query).to_owned(), prepared.sql));
-        // The scope query (the ABAC post-check) is a second emitted statement.
+        // The scope query (the patient-scope post-check) is a second emitted statement.
         let ir = plan_ok(query);
         if let Some(scope) = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &ctx())
             .unwrap_or_else(|e| panic!("scope build failed for {query:?}: {e}"))
         {
             statements.push((format!("{query} [scope]"), scope.sql));
         }
-        // The ABAC patient scope adds the subject-identity conditions to both
+        // The patient scope adds the subject-identity conditions to both
         // statements, so each is scanned under a scoped context too, with and
         // without a configured patient namespace.
         for namespace in [None, Some("nl.example.patients".to_owned())] {

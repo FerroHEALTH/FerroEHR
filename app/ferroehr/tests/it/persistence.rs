@@ -78,7 +78,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 12);
-    assert_eq!(applied("clinical").await, 40);
+    assert_eq!(applied("clinical").await, 41);
     assert_eq!(applied("party").await, 39);
     assert_eq!(applied("audit").await, 30);
 
@@ -1048,7 +1048,7 @@ async fn query_subject_scope_filters_and_collects_projection_independently() {
     assert_eq!(row_count(&all.result_set), 2, "both compositions visible");
 
     // Scoped to SUBJ-A + collection on: only A's row is fetched, and the touched
-    // EHR/template sets are collected despite the projection.
+    // EHR set is collected despite the projection.
     let scoped = service
         .execute_aql(
             aql,
@@ -1063,7 +1063,6 @@ async fn query_subject_scope_filters_and_collects_projection_independently() {
         .expect("scoped query");
     assert_eq!(row_count(&scoped.result_set), 1, "only SUBJ-A row fetched");
     assert_eq!(scoped.ehr_ids, vec![ehr_a.to_string()]);
-    assert_eq!(scoped.template_ids, vec!["org.openehr::t_a.v1".to_owned()]);
 }
 
 /// The number of `rows` in an ITS-REST `RESULT_SET`.

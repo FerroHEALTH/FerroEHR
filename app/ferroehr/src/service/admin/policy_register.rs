@@ -16,7 +16,7 @@ use sqlx::Connection as _;
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::policy_register::access_delay::AccessDelayRegister;
-use crate::policy_register::{CedarPolicies, LiveRegisters, Register};
+use crate::policy_register::{LiveRegisters, Register};
 use crate::service::FerroEhrService;
 use crate::storage::policy_register as store;
 use crate::system_log::categories::{CategoryMapConfig, MapSource};
@@ -45,7 +45,6 @@ impl RegisterVersion {
         let document = match register {
             Register::AuditCategories => serde_json::to_string(&CategoryMapConfig::default()),
             Register::AccessDelay => serde_json::to_string(&AccessDelayRegister::default()),
-            Register::CedarPolicies => serde_json::to_string(&CedarPolicies::default()),
         }?;
         Ok(Self {
             register,
@@ -153,8 +152,7 @@ impl FerroEhrService {
     ///   register's, or does not hold: a category map that does not compile,
     ///   classifies nothing under the `no_category_map` floor, or drops a
     ///   category the access delay names; an access delay with an unusable
-    ///   limit or a category the map does not name; a Cedar policy set that
-    ///   does not parse or validate.
+    ///   limit or a category the map does not name.
     /// - `version_mismatch` (`412`) — `replaces` is not the newest version.
     /// - `service_overloaded` (`503`) — the register store does not answer.
     /// - `exception` — a database fault (rolled back).
@@ -168,7 +166,6 @@ impl FerroEhrService {
         let canonical = match register {
             Register::AuditCategories => self.checked_categories(document)?.1,
             Register::AccessDelay => self.checked_delay(document)?,
-            Register::CedarPolicies => self.checked_cedar(document)?,
         };
         let committer = crate::versioning::committer::current_committer()
             .map_or_else(|| UNAUTHENTICATED.to_owned(), |identity| identity.subject);
@@ -246,24 +243,6 @@ impl FerroEhrService {
             return Err(ServiceError::precondition(errors.join("; ")));
         }
         Ok(serde_json::to_string(&register)?)
-    }
-
-    /// The Cedar `document` written canonically, when its policy set parses
-    /// and validates against the engine's schema.
-    fn checked_cedar(&self, document: &str) -> Result<String, ServiceError> {
-        let policies: CedarPolicies = parse(Register::CedarPolicies, document)?;
-        let Some(check) = self.registers.cedar_check() else {
-            return Err(ServiceError::exception(
-                "no Cedar schema is installed to validate the policy set against",
-            ));
-        };
-        check(&policies.policies).map_err(|reason| {
-            ServiceError::precondition(format!(
-                "the Cedar policy set does not parse or validate, and the set in force stays: \
-                 {reason}"
-            ))
-        })?;
-        Ok(serde_json::to_string(&policies)?)
     }
 }
 

@@ -25,7 +25,7 @@
 //!   the repair of an EHR held closed by settings that do not parse; our own
 //!   extension.
 //! - [`policy_register`] — the operational-policy admin registers (the audit
-//!   category map, the access delay and the Cedar policy set); our own
+//!   category map and the access delay); our own
 //!   extension.
 //! - [`access_policy`] — the controller's versioned `ACCESS_POLICY`; our own
 //!   extension.

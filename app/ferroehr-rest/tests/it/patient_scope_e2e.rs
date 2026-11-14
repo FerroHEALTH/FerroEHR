@@ -1,27 +1,26 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! End-to-end ABAC PEP over the real axum app: the fine-grained layer through the
-//! assembled router (auth → RBAC → dispatch → ABAC pre/post checks → backend)
-//! over the **real** `FerroEhrService` (the scripted `Mock` is gone).
+//! End-to-end patient scope over the real axum app: the `[auth] patient_claim`
+//! gate through the assembled router (auth → RBAC → dispatch → patient-scope
+//! pre/post checks → backend) over the **real** `FerroEhrService`.
 //!
 //! Drives the router with `tower`'s `oneshot`, a bearer token carrying the
-//! `patient_id` claim, an in-memory subject resolver, and a permit-all PDP
-//! engine — so the *patient gate* is what denies. It asserts: a composition
-//! create for another patient's EHR is a **pre-check 403** (and the ATNA layer
-//! records the deny); a create for the caller's own EHR clears the gate; a
-//! composition read for another patient's EHR is a **post-check 403**; a read of
-//! the caller's own EHR is served; a missing patient claim is a 403; and
-//! disabling ABAC restores today's behaviour.
+//! `patient_id` claim and an in-memory subject lookup. It asserts: a
+//! composition create for another patient's EHR is a **pre-check 403** (and
+//! the ATNA layer records the deny); a create for the caller's own EHR clears
+//! the scope; a composition read for another patient's EHR is a **post-check
+//! 403**; a read of the caller's own EHR is served; a missing patient claim is
+//! a 403; and no configured claim leaves the scope off.
 //!
 //! The own-patient success paths need real data, so each test seeds its EHR(s)
 //! and (for reads) a committed composition through an **auth-off seed app over
 //! the same service** (bypassing the gate under test), then drives the gated
-//! assertions through the ABAC app.
+//! assertions through the scoped app. No openEHR spec governs the patient
+//! scope: our own extension.
 use std::sync::Arc;
 use std::time::Duration;
 
-use async_trait::async_trait;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::aql::subject::EhrSubject;
@@ -29,18 +28,12 @@ use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::rest::ApiConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
-use ferroehr::storage::version_repo::meta::VersionContent;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
-use ferroehr_rest::extensions::access::authz::content::ContentRules;
-use ferroehr_rest::extensions::access::authz::request::{
-    CATEGORY, ORIGIN, PATIENT, ResourceKind, TEMPLATE,
-};
-use ferroehr_rest::extensions::access::authz::{AuthzHandle, AuthzResolvers, ResolveError};
+use ferroehr_rest::extensions::access::authz::AuthzHandle;
+use ferroehr_rest::extensions::access::patient_scope::{PatientScope, ResolveError, SubjectFn};
 use ferroehr_rest::extensions::management::Observability;
-use ferrohealth_authz::engine::{AuthzError, PolicyEngine};
-use ferrohealth_authz::request::{Attr, Decision};
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
 use testkit::syslog_tls::SyslogTlsListener;
@@ -73,7 +66,7 @@ pub(crate) fn composition() -> Value {
             "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-COMPOSITION.encounter.v1" },
             "rm_version": "1.2.0"
         },
-        "name": { "_type": "DV_TEXT", "value": "abac test" },
+        "name": { "_type": "DV_TEXT", "value": "patient scope test" },
         "language": {
             "_type": "CODE_PHRASE",
             "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ISO_639-1" },
@@ -97,36 +90,10 @@ pub(crate) fn composition() -> Value {
     })
 }
 
-// ── a permit-all PDP engine: the patient gate is what denies here ─────────────
-
-/// A permit naming no policy.
-fn permit() -> Decision {
-    Decision::Permit {
-        policies: Vec::new(),
-    }
-}
-
-/// A deny naming no policy.
-fn deny() -> Decision {
-    Decision::Deny {
-        policies: Vec::new(),
-    }
-}
-
-#[derive(Debug)]
-struct PermitAll;
-
-#[async_trait]
-impl PolicyEngine for PermitAll {
-    async fn decide(
-        &self,
-        _req: &ferrohealth_authz::request::Request<'_>,
-    ) -> Result<Decision, AuthzError> {
-        Ok(permit())
-    }
-}
-
 // ── config + app assembly ─────────────────────────────────────────────────────
+
+/// The claim every scoped app reads the patient from.
+const PATIENT_CLAIM: &str = "patient_id";
 
 fn rest_config() -> AppConfig {
     AppConfig {
@@ -136,13 +103,6 @@ fn rest_config() -> AppConfig {
             ..Default::default()
         },
         auth: common::issuer_auth(ISSUER, AUDIENCE),
-        // Lifted the way the binary lifts it, from the one setting, so this
-        // follows a change to the default claim name instead of pinning a
-        // second copy of it.
-        audit_organization_claim: AuthzConfig::default()
-            .abac
-            .organization_claim()
-            .map(str::to_owned),
         ..Default::default()
     }
 }
@@ -162,66 +122,29 @@ fn unique(id: &str) -> EhrSubject {
     }
 }
 
-/// The in-memory subject resolver: EHR → patient subject.
-fn resolvers() -> AuthzResolvers {
-    AuthzResolvers {
-        subject: Arc::new(|ehr_id: String| {
-            Box::pin(async move {
-                let subject = match ehr_id.as_str() {
-                    EHR_OWN => Some(unique(PATIENT_OWN)),
-                    EHR_OTHER => Some(unique(PATIENT_OTHER)),
-                    _ => None,
-                };
-                Ok::<_, ResolveError>(subject)
-            })
-        }),
-        content_of_version: Arc::new(|_vo: String, _v: Option<String>| {
-            Box::pin(async move {
-                Ok::<_, ResolveError>(Some(VersionContent {
-                    template_id: Some("org.openehr::t.v1".to_owned()),
-                    ..VersionContent::default()
-                }))
-            })
-        }),
-        content: Arc::default(),
-    }
+/// The in-memory subject lookup: EHR → patient subject.
+fn lookup() -> SubjectFn {
+    Arc::new(|ehr_id: String| {
+        Box::pin(async move {
+            let subject = match ehr_id.as_str() {
+                EHR_OWN => Some(unique(PATIENT_OWN)),
+                EHR_OTHER => Some(unique(PATIENT_OTHER)),
+                _ => None,
+            };
+            Ok::<_, ResolveError>(subject)
+        })
+    })
 }
 
-/// The same subject map, with the template attribute resolved from the REAL
-/// service — i.e. from the `version.template_id` the commit routes stamp.
-fn service_resolvers(svc: Arc<FerroEhrService>) -> AuthzResolvers {
-    AuthzResolvers {
-        content_of_version: Arc::new(move |vo: String, version: Option<String>| {
-            let svc = Arc::clone(&svc);
-            Box::pin(async move {
-                let vo_id = vo
-                    .parse::<ferroehr::ids::VoId>()
-                    .map_err(|e| ResolveError::new("vo id", e))?;
-                svc.content_of_version(vo_id, version.as_deref())
-                    .await
-                    .map_err(|e| ResolveError::new("content of version", e))
-            })
-        }),
-        ..resolvers()
-    }
+/// The authorization handle: RBAC by default, with the patient scope over
+/// `subject` read in `namespace` when `scoped`.
+fn handle(scoped: bool, namespace: Option<&str>, subject: SubjectFn) -> Option<Arc<AuthzHandle>> {
+    let scope = scoped.then(|| PatientScope::new(PATIENT_CLAIM, namespace, subject));
+    AuthzHandle::build(&AuthzConfig::default(), &rest_config().api.base_path, scope).map(Arc::new)
 }
 
-fn authz(abac_enabled: bool) -> Option<Arc<AuthzHandle>> {
-    let mut cfg = AuthzConfig::default();
-    cfg.abac.enabled = abac_enabled;
-    let engine: Option<Arc<dyn PolicyEngine>> =
-        abac_enabled.then(|| -> Arc<dyn PolicyEngine> { Arc::new(PermitAll) });
-    AuthzHandle::build(&cfg, &rest_config().api.base_path, engine, resolvers()).map(Arc::new)
-}
-
-/// An ABAC handle with a caller-chosen PDP engine and resolvers.
-fn authz_with(
-    engine: Arc<dyn PolicyEngine>,
-    resolvers: AuthzResolvers,
-) -> Option<Arc<AuthzHandle>> {
-    let mut cfg = AuthzConfig::default();
-    cfg.abac.enabled = true;
-    AuthzHandle::build(&cfg, &rest_config().api.base_path, Some(engine), resolvers).map(Arc::new)
+fn authz(scoped: bool) -> Option<Arc<AuthzHandle>> {
+    handle(scoped, None, lookup())
 }
 
 /// A real service over a fresh DB, optionally wired with an ATNA audit sender.
@@ -234,15 +157,9 @@ async fn service(audit: Option<AuditSender>) -> (testkit::TestDb, Arc<FerroEhrSe
     (pg, Arc::new(svc))
 }
 
-/// The ABAC app over `svc`.
-async fn abac_app(svc: Arc<FerroEhrService>, abac_enabled: bool) -> Router {
-    common::build_full(
-        rest_config(),
-        svc,
-        authz(abac_enabled),
-        Observability::default(),
-    )
-    .await
+/// The app over `svc`, with the patient scope when `scoped`.
+async fn scoped_app(svc: Arc<FerroEhrService>, scoped: bool) -> Router {
+    common::build_full(rest_config(), svc, authz(scoped), Observability::default()).await
 }
 
 // ── seeding through an auth-off app over the same service ───────────────────────
@@ -363,15 +280,6 @@ fn bearer(patient: Option<&str>) -> String {
     common::bearer(&claims(patient))
 }
 
-/// The same token plus the `organization_id` claim — the claim
-/// `[authz.abac] organization_claim` names by default, which is also the one
-/// the audit trail records the accessing organisation from.
-fn bearer_with_organisation(patient: Option<&str>, organisation: &str) -> String {
-    let mut claims = claims(patient);
-    claims["organization_id"] = json!(organisation);
-    common::bearer(&claims)
-}
-
 fn request(method: &str, path: &str, token: &str) -> Request<Body> {
     Request::builder()
         .method(method)
@@ -401,25 +309,13 @@ async fn probe(app: &Router, method: &str, path: &str, patient: Option<&str>) ->
     status(app, request(method, path, &bearer(patient))).await
 }
 
-/// The app whose PDP permits only requests carrying the IPS template attribute,
-/// resolved from the REAL service.
-async fn template_scoped_app(svc: Arc<FerroEhrService>) -> Router {
-    common::build_full(
-        rest_config(),
-        Arc::clone(&svc),
-        authz_with(Arc::new(RequireIpsTemplate), service_resolvers(svc)),
-        Observability::default(),
-    )
-    .await
-}
-
 // ── tests ─────────────────────────────────────────────────────────────────────
 
 #[tokio::test]
 async fn create_for_other_patient_is_pre_check_forbidden() {
     // The pre-check denies before dispatch (no data needed).
     let (_pg, svc) = service(None).await;
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
     let s = probe(
         &app,
         "POST",
@@ -439,7 +335,7 @@ async fn create_for_own_patient_clears_the_gate() {
     let (_pg, svc, seed) = service_and_seed_app().await;
     seed_ehr(&seed, EHR_OWN).await;
 
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
     let s = probe(
         &app,
         "POST",
@@ -464,7 +360,7 @@ async fn read_of_other_patient_is_post_check_forbidden() {
     seed_ehr(&seed, EHR_OTHER).await;
     let uid = seed_composition(&seed, EHR_OTHER).await;
 
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
     let s = probe(
         &app,
         "GET",
@@ -485,7 +381,7 @@ async fn read_of_own_patient_is_served() {
     seed_ehr(&seed, EHR_OWN).await;
     let uid = seed_composition(&seed, EHR_OWN).await;
 
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
     let s = probe(
         &app,
         "GET",
@@ -499,7 +395,7 @@ async fn read_of_own_patient_is_served() {
 #[tokio::test]
 async fn missing_patient_claim_is_forbidden() {
     let (_pg, svc) = service(None).await;
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
     let s = probe(&app, "POST", &format!("/ehr/{EHR_OWN}/composition"), None).await;
     assert_eq!(
         s,
@@ -509,12 +405,12 @@ async fn missing_patient_claim_is_forbidden() {
 }
 
 #[tokio::test]
-async fn abac_disabled_restores_behaviour() {
-    // ABAC off → no gate → a create for any EHR is served (auth+RBAC only).
+async fn no_patient_claim_leaves_the_scope_off() {
+    // No patient claim configured → no scope → a create for any EHR is served (auth+RBAC only).
     let (_pg, svc, seed) = service_and_seed_app().await;
     seed_ehr(&seed, EHR_OTHER).await;
 
-    let app = abac_app(svc, false).await;
+    let app = scoped_app(svc, false).await;
     let s = probe(
         &app,
         "POST",
@@ -527,14 +423,14 @@ async fn abac_disabled_restores_behaviour() {
 }
 
 #[tokio::test]
-async fn abac_deny_is_audited() {
-    // A 403 from the ABAC gate carries the Principal, so the ATNA layer records a
+async fn a_patient_scope_deny_is_audited() {
+    // A 403 from the patient scope carries the Principal, so the ATNA layer records a
     // failure audit for the denied caller. The emitter ships a DICOM record
     // over syslog/TLS; we assert on the frames: a minor-failure outcome
     // (`EventOutcomeIndicator="4"`) attributed to `svc`.
     let (mut socket, sender) = audit_capture().await;
     let (_pg, svc) = service(Some(sender)).await;
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
 
     let s = probe(
         &app,
@@ -552,418 +448,6 @@ async fn abac_deny_is_audited() {
     assert!(
         xml.contains(r#"UserID="svc""#),
         "attributed to `svc`: {xml}"
-    );
-}
-
-/// The accessing organisation reaches the stored access record, and only from
-/// the claim the deployment configured.
-///
-/// EHDS Annex II 3.2(a) asks which healthcare provider an access happened on
-/// behalf of (<https://eur-lex.europa.eu/eli/reg/2025/327/oj>). The middleware
-/// resolves it from `[authz.abac] organization_claim` — the same claim the
-/// policy layer decides on — so a caller whose token carries none leaves the
-/// column NULL rather than being attributed to anyone.
-#[tokio::test]
-async fn the_accessing_organisation_reaches_the_stored_record() {
-    let (_pg, pool) = common::migrated_pool().await;
-    let cfg = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention: None,
-            sgb_v_309_controller: false,
-            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-        },
-        suppress_login_events: true,
-        fail_mode: FailMode::Open,
-        queue_capacity: 64,
-        ..AuditConfig::default()
-    };
-    let (sender, _handle) = start(cfg, None, Some(pool.clone()))
-        .await
-        .expect("audit start");
-    let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-            .with_audit(sender),
-    );
-    let seed = common::build_with(seed_config(), Arc::clone(&svc)).await;
-    seed_ehr(&seed, EHR_OWN).await;
-    let app = abac_app(Arc::clone(&svc), true).await;
-
-    for token in [
-        bearer_with_organisation(Some(PATIENT_OWN), "zh-noordwest"),
-        bearer(Some(PATIENT_OWN)),
-    ] {
-        let req = Request::builder()
-            .method("GET")
-            .uri(format!("{BASE}/ehr/{EHR_OWN}"))
-            .header("authorization", token)
-            .body(Body::empty())
-            .expect("request");
-        assert_eq!(status(&app, req).await, StatusCode::OK);
-    }
-
-    // The drain writes off the request path, so the assertion waits for the
-    // two records rather than assuming they have landed.
-    let mut recorded: Vec<Option<String>> = Vec::new();
-    for _ in 0..60 {
-        recorded = sqlx::query_scalar::<_, Option<String>>(
-            "SELECT organisation FROM audit.access_trail WHERE principal = 'svc' \
-             ORDER BY recorded_at, stored_at",
-        )
-        .fetch_all(&pool)
-        .await
-        .expect("audit rows");
-        if recorded.len() >= 2 {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
-
-    assert_eq!(
-        recorded,
-        vec![Some("zh-noordwest".to_owned()), None],
-        "the organisation is recorded from the configured claim, and absent \
-         when the token carries none"
-    );
-}
-
-/// The same claim, with the ABAC gate switched off.
-///
-/// The claim name is an ABAC setting, but the organisation is a fact about the
-/// caller rather than a decision about them: a deployment that runs no policy
-/// layer still has to answer EHDS Annex II 3.2(a). Reading the claim off the
-/// live gate made the whole column go blank whenever ABAC was off, silently,
-/// which is what this pins.
-#[tokio::test]
-async fn the_accessing_organisation_is_recorded_with_the_abac_gate_off() {
-    let (_pg, pool) = common::migrated_pool().await;
-    let cfg = AuditConfig {
-        enabled: true,
-        store: StoreConfig {
-            enabled: true,
-            retention: None,
-            sgb_v_309_controller: false,
-            verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-        },
-        suppress_login_events: true,
-        fail_mode: FailMode::Open,
-        queue_capacity: 64,
-        ..AuditConfig::default()
-    };
-    let (sender, _handle) = start(cfg, None, Some(pool.clone()))
-        .await
-        .expect("audit start");
-    let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-            .with_audit(sender),
-    );
-    let seed = common::build_with(seed_config(), Arc::clone(&svc)).await;
-    seed_ehr(&seed, EHR_OWN).await;
-    let app = abac_app(Arc::clone(&svc), false).await;
-
-    let req = Request::builder()
-        .method("GET")
-        .uri(format!("{BASE}/ehr/{EHR_OWN}"))
-        .header(
-            "authorization",
-            bearer_with_organisation(Some(PATIENT_OWN), "zh-noordwest"),
-        )
-        .body(Body::empty())
-        .expect("request");
-    assert_eq!(status(&app, req).await, StatusCode::OK);
-
-    let mut recorded: Vec<Option<String>> = Vec::new();
-    for _ in 0..60 {
-        recorded = sqlx::query_scalar::<_, Option<String>>(
-            "SELECT organisation FROM audit.access_trail WHERE principal = 'svc' \
-             ORDER BY recorded_at, stored_at",
-        )
-        .fetch_all(&pool)
-        .await
-        .expect("audit rows");
-        if !recorded.is_empty() {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
-
-    assert_eq!(
-        recorded,
-        vec![Some("zh-noordwest".to_owned())],
-        "the organisation must be recorded whether or not the ABAC gate is on"
-    );
-}
-
-// ── the template attribute binds on direct-route compositions ────────────────
-
-/// The `template_id` the vendored IPS operational template declares.
-const IPS_TEMPLATE_ID: &str = "International Patient Summary";
-
-/// A PDP that permits ONLY when the request carries the IPS template attribute
-/// — a template-scoped rule. With `version.template_id` unstamped the
-/// attribute resolves to `None` and the rule silently stops binding, which is
-/// exactly the defect this pins.
-#[derive(Debug)]
-struct RequireIpsTemplate;
-
-#[async_trait]
-impl PolicyEngine for RequireIpsTemplate {
-    async fn decide(
-        &self,
-        req: &ferrohealth_authz::request::Request<'_>,
-    ) -> Result<Decision, AuthzError> {
-        let bound = match req.attributes().get(TEMPLATE) {
-            Some(Attr::One(t)) => t == IPS_TEMPLATE_ID,
-            Some(Attr::Set(set)) => set.iter().any(|t| t == IPS_TEMPLATE_ID),
-            None => false,
-        };
-        Ok(if bound { permit() } else { deny() })
-    }
-}
-
-/// Upload the IPS OPT and commit one of its compositions through the DIRECT
-/// composition route; return the committed version uid.
-async fn seed_templated_composition(seed: &Router, ehr_id: &str) -> String {
-    let upload = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/definition/template/adl1.4"))
-        .header("content-type", "application/xml")
-        .body(Body::from(common::ips_opt_xml()))
-        .expect("request");
-    let (status, body) = common::send_body(seed, upload).await;
-    assert_eq!(status, StatusCode::CREATED, "IPS OPT upload: {body}");
-
-    post_composition(
-        seed,
-        ehr_id,
-        common::ips_canonical_composition().to_string(),
-    )
-    .await
-}
-
-#[tokio::test]
-async fn template_scoped_rule_binds_on_a_direct_route_composition() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
-    let uid = seed_templated_composition(&seed, EHR_OWN).await;
-
-    let app = template_scoped_app(svc).await;
-
-    let s = probe(
-        &app,
-        "GET",
-        &format!("/ehr/{EHR_OWN}/composition/{uid}"),
-        Some(PATIENT_OWN),
-    )
-    .await;
-    assert_eq!(
-        s,
-        StatusCode::OK,
-        "the template-scoped rule must bind: the direct-route commit stamps \
-         version.template_id, so the post-check resolves the attribute"
-    );
-}
-
-#[tokio::test]
-async fn template_scoped_rule_does_not_bind_a_templateless_composition() {
-    // The refusing twin: a composition carrying no `archetype_details.template_id`
-    // genuinely has no template attribute, so the same rule denies — the
-    // resolver answering `None` must mean "no template", never "unstamped".
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
-    let uid = seed_composition(&seed, EHR_OWN).await;
-
-    let app = template_scoped_app(svc).await;
-
-    let s = probe(
-        &app,
-        "GET",
-        &format!("/ehr/{EHR_OWN}/composition/{uid}"),
-        Some(PATIENT_OWN),
-    )
-    .await;
-    assert_eq!(
-        s,
-        StatusCode::FORBIDDEN,
-        "a templateless composition carries no template attribute, so the \
-         template-scoped rule must deny"
-    );
-}
-
-// ── the category and origin attributes (EHDS Annex II 3.4) ───────────────────
-
-/// A PDP that permits only when every value of the category attribute is
-/// `category` and every value of the origin attribute is `origin`: access
-/// rights keyed on the category and the origin of the data.
-#[derive(Debug)]
-struct RequireContent {
-    category: String,
-    origin: String,
-}
-
-#[async_trait]
-impl PolicyEngine for RequireContent {
-    async fn decide(
-        &self,
-        req: &ferrohealth_authz::request::Request<'_>,
-    ) -> Result<Decision, AuthzError> {
-        let only = |name: &str, want: &str| match req.attributes().get(name) {
-            Some(Attr::One(value)) => value == want,
-            Some(Attr::Set(values)) => values.iter().all(|value| value == want),
-            None => false,
-        };
-        Ok(
-            if only(CATEGORY, &self.category) && only(ORIGIN, &self.origin) {
-                permit()
-            } else {
-                deny()
-            },
-        )
-    }
-}
-
-/// The app whose PDP is `engine`, with the content resolved from the REAL
-/// service and IPS mapped to the patient summaries.
-async fn content_scoped_app(svc: Arc<FerroEhrService>, engine: RequireContent) -> Router {
-    let categories: ferroehr::system_log::categories::CategoryMapConfig =
-        serde_json::from_value(json!({ "templates": { IPS_TEMPLATE_ID: ["Patient-Summaries"] } }))
-            .expect("the map parses");
-    let newest = svc
-        .policy_register(ferroehr::policy_register::Register::AuditCategories)
-        .await
-        .expect("read the category register")
-        .version;
-    svc.put_policy_register(
-        ferroehr::policy_register::Register::AuditCategories,
-        newest,
-        &serde_json::to_string(&categories).expect("the map serializes"),
-    )
-    .await
-    .expect("the category register takes the map");
-    let resolvers = AuthzResolvers {
-        content: Arc::new(ContentRules {
-            registers: Some(Arc::clone(svc.policy_registers())),
-            ..ContentRules::default()
-        }),
-        ..service_resolvers(Arc::clone(&svc))
-    };
-    common::build_full(
-        rest_config(),
-        Arc::clone(&svc),
-        authz_with(Arc::new(engine), resolvers),
-        Observability::default(),
-    )
-    .await
-}
-
-/// The category token a stored record carries for `code`.
-fn category_token(code: &str) -> String {
-    format!(
-        "http://hl7.eu/fhir/health-data-api/CodeSystem/eehrxf-document-priority-category-cs|{code}"
-    )
-}
-
-/// A rule on the category and the origin binds on a composition read: the
-/// post-check classifies the stored version through the category map and reads
-/// the origins it recorded at commit, so the patient-summary rule permits and
-/// a laboratory rule refuses.
-#[tokio::test]
-async fn category_and_origin_rules_bind_on_a_composition_read() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
-    let uid = seed_templated_composition(&seed, EHR_OWN).await;
-    let path = format!("/ehr/{EHR_OWN}/composition/{uid}");
-    let direct = ferroehr::service::DEFAULT_SYSTEM_ID.to_owned();
-
-    let summaries = content_scoped_app(
-        Arc::clone(&svc),
-        RequireContent {
-            category: category_token("Patient-Summaries"),
-            origin: direct.clone(),
-        },
-    )
-    .await;
-    assert_eq!(
-        probe(&summaries, "GET", &path, Some(PATIENT_OWN)).await,
-        StatusCode::OK,
-        "a rule on the patient summaries from this server permits the read"
-    );
-
-    let laboratory = content_scoped_app(
-        Arc::clone(&svc),
-        RequireContent {
-            category: category_token("Laboratory-Reports"),
-            origin: direct,
-        },
-    )
-    .await;
-    assert_eq!(
-        probe(&laboratory, "GET", &path, Some(PATIENT_OWN)).await,
-        StatusCode::FORBIDDEN,
-        "a rule on the laboratory reports refuses a patient summary"
-    );
-
-    let elsewhere = content_scoped_app(
-        svc,
-        RequireContent {
-            category: category_token("Patient-Summaries"),
-            origin: "lab.example".to_owned(),
-        },
-    )
-    .await;
-    assert_eq!(
-        probe(&elsewhere, "GET", &path, Some(PATIENT_OWN)).await,
-        StatusCode::FORBIDDEN,
-        "a rule on another origin refuses data this server created"
-    );
-}
-
-/// A composition write is decided on the content its body names: the category
-/// its template carries and the origin the commit will stamp, its
-/// `FEEDER_AUDIT` system when it names one and this server when it does not.
-#[tokio::test]
-async fn category_and_origin_rules_bind_on_a_composition_write() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
-    seed_templated_composition(&seed, EHR_OWN).await;
-    let app = content_scoped_app(
-        svc,
-        RequireContent {
-            category: category_token("Patient-Summaries"),
-            origin: "lab.example".to_owned(),
-        },
-    )
-    .await;
-    let write = |body: Value| {
-        Request::builder()
-            .method("POST")
-            .uri(common::full(&format!("/ehr/{EHR_OWN}/composition")))
-            .header("authorization", bearer(Some(PATIENT_OWN)))
-            .header("content-type", "application/json")
-            .body(Body::from(body.to_string()))
-            .expect("request")
-    };
-
-    let mut fed = common::ips_canonical_composition();
-    fed["feeder_audit"] = json!({
-        "_type": "FEEDER_AUDIT",
-        "originating_system_audit": {
-            "_type": "FEEDER_AUDIT_DETAILS",
-            "system_id": "lab.example"
-        }
-    });
-    assert_ne!(
-        status(&app, write(fed)).await,
-        StatusCode::FORBIDDEN,
-        "a patient summary fed by the lab clears a rule on the lab's patient summaries"
-    );
-    assert_eq!(
-        status(&app, write(common::ips_canonical_composition())).await,
-        StatusCode::FORBIDDEN,
-        "a direct commit originates at this server, which the rule does not name"
     );
 }
 
@@ -1031,7 +515,7 @@ async fn query_first_column(app: &Router, aql: &str, patient: &str) -> Vec<Value
         .collect()
 }
 
-/// The ABAC patient scope filters the HTTP query result to the caller's EHRs
+/// The patient scope filters the HTTP query result to the caller's EHRs
 /// for every query shape, including a query with no versioned-object root,
 /// which reads the `ehr` row alone (our own extension; no openEHR spec governs
 /// the patient scope).
@@ -1043,8 +527,8 @@ async fn query_is_filtered_to_the_callers_patient() {
     seed_composition(&seed, EHR_OWN).await;
     seed_composition(&seed, EHR_OTHER).await;
 
-    let gated = abac_app(Arc::clone(&svc), true).await;
-    let open = abac_app(svc, false).await;
+    let gated = scoped_app(Arc::clone(&svc), true).await;
+    let open = scoped_app(svc, false).await;
     for aql in [
         "SELECT e/ehr_id/value FROM EHR e",
         "SELECT e/ehr_id/value, e/ehr_status/subject FROM EHR e",
@@ -1056,7 +540,7 @@ async fn query_is_filtered_to_the_callers_patient() {
         let control = query_first_column(&open, aql, PATIENT_OWN).await;
         assert!(
             control.contains(&json!(EHR_OTHER)),
-            "{aql}: with ABAC off the other EHR is served: {control:?}"
+            "{aql}: with no patient scope the other EHR is served: {control:?}"
         );
         let served = query_first_column(&gated, aql, PATIENT_OWN).await;
         assert!(!served.is_empty(), "{aql}: the caller's EHR is served");
@@ -1069,122 +553,33 @@ async fn query_is_filtered_to_the_callers_patient() {
     assert_eq!(count, vec![json!(1)], "one EHR is in the caller's scope");
 }
 
-/// A PDP that refuses every query touching `PATIENT_OWN`'s data and permits the
-/// rest, so the post-check is what denies.
-#[derive(Debug)]
-struct DenyOwnPatientQueries;
-
-#[async_trait]
-impl PolicyEngine for DenyOwnPatientQueries {
-    async fn decide(
-        &self,
-        req: &ferrohealth_authz::request::Request<'_>,
-    ) -> Result<Decision, AuthzError> {
-        let touches_own = match req.attributes().get(PATIENT) {
-            Some(Attr::One(p)) => p == PATIENT_OWN,
-            Some(Attr::Set(set)) => set.iter().any(|p| p == PATIENT_OWN),
-            None => false,
-        };
-        Ok(
-            if req.resource_type() == ResourceKind::Query.resource_type() && touches_own {
-                deny()
-            } else {
-                permit()
-            },
-        )
-    }
-}
-
-/// Run `aql` through `POST /query/aql` as a caller whose token carries
-/// `patient`, returning the status only.
-async fn query_status(app: &Router, aql: &str, patient: &str) -> StatusCode {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/query/aql"))
-        .header("authorization", bearer(Some(patient)))
-        .header("content-type", "application/json")
-        .body(Body::from(json!({ "q": aql }).to_string()))
-        .expect("request");
-    status(app, req).await
-}
-
-/// A query that reads only the `ehr` row still reaches the post-check PDP: the
-/// scope collection reports the EHRs it touches from its EHR source, so a deny
-/// rule applies to `SELECT e/ehr_id/value FROM EHR e` as it does to a query
-/// over compositions (our own extension; no openEHR spec governs ABAC).
-#[tokio::test]
-async fn the_query_post_check_applies_to_an_ehr_only_query() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr_for(&seed, EHR_OWN, PATIENT_OWN).await;
-    seed_ehr_for(&seed, EHR_OTHER, PATIENT_OTHER).await;
-    seed_composition(&seed, EHR_OWN).await;
-
-    let app = common::build_full(
-        rest_config(),
-        svc,
-        authz_with(Arc::new(DenyOwnPatientQueries), resolvers()),
-        Observability::default(),
-    )
-    .await;
-    for aql in [
-        "SELECT e/ehr_id/value FROM EHR e",
-        "SELECT e/time_created/value FROM EHR e",
-        "SELECT e/ehr_status/subject FROM EHR e",
-        "SELECT e/ehr_id/value FROM EHR e CONTAINS (COMPOSITION c1 OR EHR_STATUS s1)",
-        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
-    ] {
-        assert_eq!(
-            query_status(&app, aql, PATIENT_OWN).await,
-            StatusCode::FORBIDDEN,
-            "{aql}: the PDP deny applies"
-        );
-        assert_eq!(
-            query_status(&app, aql, PATIENT_OTHER).await,
-            StatusCode::OK,
-            "{aql}: another patient's query is permitted"
-        );
-    }
-}
-
 const EHR_SHARED_A: &str = "aaaaaaaa-0000-4000-8000-000000000001";
 const EHR_SHARED_B: &str = "aaaaaaaa-0000-4000-8000-000000000002";
 const EHR_ANONYMOUS: &str = "aaaaaaaa-0000-4000-8000-000000000003";
 const EHR_UNIQUE: &str = "aaaaaaaa-0000-4000-8000-000000000004";
 
-/// An ABAC app whose subject resolver reads the database through
+/// A scoped app whose subject lookup reads the database through
 /// `ferroehr::aql::subject::ehr_subject`, as the binary wires it, plus the
 /// auth-off seed app over the same service; `patient_namespace` is the
-/// `[authz.abac] patient_namespace` setting.
+/// `[auth] patient_namespace` setting.
 async fn db_resolved_apps(patient_namespace: Option<&str>) -> (testkit::TestDb, Router, Router) {
     let (pg, pool) = common::migrated_pool().await;
     let svc = Arc::new(FerroEhrService::new(
         &ferroehr::db::domain::DomainPools::from_shared(&pool),
     ));
     let seed = common::build_with(seed_config(), Arc::clone(&svc)).await;
-    let resolvers = AuthzResolvers {
-        subject: Arc::new(move |ehr_id: String| {
-            let pool = pool.clone();
-            Box::pin(async move {
-                let id = ehr_id
-                    .parse::<ferroehr::ids::EhrId>()
-                    .map_err(|e| ResolveError::new("ehr id", e))?;
-                ferroehr::aql::subject::ehr_subject(&pool, id)
-                    .await
-                    .map_err(|e| ResolveError::new("ehr subject lookup", ServiceError::from(e)))
-            })
-        }),
-        ..resolvers()
-    };
-    let mut cfg = AuthzConfig::default();
-    cfg.abac.enabled = true;
-    cfg.abac.patient_namespace = patient_namespace.map(str::to_owned);
-    let handle = AuthzHandle::build(
-        &cfg,
-        &rest_config().api.base_path,
-        Some(Arc::new(PermitAll)),
-        resolvers,
-    )
-    .map(Arc::new);
+    let subject: SubjectFn = Arc::new(move |ehr_id: String| {
+        let pool = pool.clone();
+        Box::pin(async move {
+            let id = ehr_id
+                .parse::<ferroehr::ids::EhrId>()
+                .map_err(|e| ResolveError::new("ehr id", e))?;
+            ferroehr::aql::subject::ehr_subject(&pool, id)
+                .await
+                .map_err(|e| ResolveError::new("ehr subject lookup", ServiceError::from(e)))
+        })
+    });
+    let handle = handle(true, patient_namespace, subject);
     let app = common::build_full(rest_config(), svc, handle, Observability::default()).await;
     (pg, seed, app)
 }
@@ -1238,56 +633,69 @@ async fn the_direct_route_gate_refuses_ambiguous_and_subject_less_ehrs() {
     );
 }
 
-/// Run `aql` through `POST /query/aql` with a token that carries no patient
-/// claim, returning the status only.
-async fn unscoped_query_status(app: &Router, aql: &str) -> StatusCode {
-    let req = Request::builder()
-        .method("POST")
-        .uri(format!("{BASE}/query/aql"))
-        .header("authorization", bearer(None))
-        .header("content-type", "application/json")
-        .body(Body::from(json!({ "q": aql }).to_string()))
-        .expect("request");
-    status(app, req).await
-}
-
-/// With no patient claim configured, the query post-check's patient attribute
-/// is the set of the touched EHRs' subjects, so a patient-keyed PDP rule fires
-/// on a query that reads only the `ehr` row (our own extension; no openEHR spec
-/// governs ABAC).
+/// Without a configured namespace, a query reads none of the EHRs whose
+/// subject id two namespaces hold, as the direct routes refuse the EHRs
+/// themselves: the id names neither subject (our own extension; no openEHR
+/// spec governs the patient claim).
 #[tokio::test]
-async fn a_patient_keyed_rule_applies_to_the_touched_subjects_without_a_claim() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr_for(&seed, EHR_OWN, PATIENT_OWN).await;
-    seed_ehr_for(&seed, EHR_OTHER, PATIENT_OTHER).await;
+async fn a_query_over_an_id_held_under_two_namespaces_reads_nothing() {
+    let (_pg, seed, app) = db_resolved_apps(None).await;
+    seed_ehr_in(&seed, EHR_SHARED_A, "test.patients", "PATIENT-X").await;
+    seed_ehr_in(&seed, EHR_SHARED_B, "other.patients", "PATIENT-X").await;
+    seed_ehr_in(&seed, EHR_UNIQUE, "test.patients", "PATIENT-U").await;
 
-    let mut cfg = AuthzConfig::default();
-    cfg.abac.enabled = true;
-    cfg.abac.patient_claim = String::new();
-    let handle = AuthzHandle::build(
-        &cfg,
-        &rest_config().api.base_path,
-        Some(Arc::new(DenyOwnPatientQueries)),
-        resolvers(),
-    )
-    .map(Arc::new);
-    let app = common::build_full(rest_config(), svc, handle, Observability::default()).await;
-
+    let served = query_first_column(&app, "SELECT e/ehr_id/value FROM EHR e", "PATIENT-X").await;
     assert_eq!(
-        unscoped_query_status(&app, "SELECT e/ehr_id/value FROM EHR e").await,
-        StatusCode::FORBIDDEN,
-        "the query touches PATIENT_OWN's EHR, which the rule denies"
+        served,
+        Vec::<Value>::new(),
+        "the bare id names neither subject"
     );
-    let other_only =
-        format!("SELECT e/ehr_id/value FROM EHR e WHERE e/ehr_id/value = '{EHR_OTHER}'");
+    let served = query_first_column(&app, "SELECT e/ehr_id/value FROM EHR e", "PATIENT-U").await;
+    assert_eq!(served, vec![json!(EHR_UNIQUE)], "a unique id reads its EHR");
+}
+
+/// A DIRECTORY operation is held to the patient scope as every other
+/// EHR-scoped operation is: there is no switch that leaves it out.
+#[tokio::test]
+async fn a_directory_of_another_patient_is_refused() {
+    let (_pg, svc, seed) = service_and_seed_app().await;
+    seed_ehr(&seed, EHR_OTHER).await;
+    seed_ehr(&seed, EHR_OWN).await;
+    let app = scoped_app(svc, true).await;
+
+    let folder = json!({
+        "_type": "FOLDER",
+        "archetype_node_id": "openEHR-EHR-FOLDER.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-FOLDER.generic.v1" },
+            "rm_version": "1.1.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "root" }
+    })
+    .to_string();
+    let directory = |ehr: &str, patient: &str| {
+        Request::builder()
+            .method("POST")
+            .uri(common::full(&format!("/ehr/{ehr}/directory")))
+            .header("authorization", bearer(Some(patient)))
+            .header("content-type", "application/json")
+            .body(Body::from(folder.clone()))
+            .expect("request")
+    };
     assert_eq!(
-        unscoped_query_status(&app, &other_only).await,
-        StatusCode::OK,
-        "a query touching only PATIENT_OTHER's EHR is permitted"
+        status(&app, directory(EHR_OTHER, PATIENT_OWN)).await,
+        StatusCode::FORBIDDEN,
+        "a directory create in another patient's EHR is refused"
+    );
+    assert_eq!(
+        status(&app, directory(EHR_OWN, PATIENT_OWN)).await,
+        StatusCode::CREATED,
+        "a directory create in the caller's own EHR is served"
     );
 }
 
-/// With `[authz.abac] patient_namespace` set, the claim names the (id,
+/// With `[auth] patient_namespace` set, the claim names the (id,
 /// namespace) pair: an id held under two namespaces reaches exactly the EHR
 /// under the configured one, on a direct route and through a query.
 #[tokio::test]
@@ -1358,9 +766,9 @@ async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
     let uid = seed_composition(&seed, EHR_OTHER).await;
     let vo = uid.split("::").next().expect("object id").to_owned();
     let status_id = status_vo(&seed, EHR_OTHER).await;
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
 
-    // Each tag operation beside the target operation whose ABAC mode it takes.
+    // Each tag operation beside the target operation whose patient-scope mode it takes.
     let pairs = [
         (
             "composition tag read",
@@ -1431,7 +839,7 @@ async fn an_item_tag_of_the_callers_patient_is_served() {
     let uid = seed_composition(&seed, EHR_OWN).await;
     let vo = uid.split("::").next().expect("object id").to_owned();
     let status_id = status_vo(&seed, EHR_OWN).await;
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
 
     let served = [
         ("PUT", format!("/ehr/{EHR_OWN}/composition/{vo}/tags")),
@@ -1454,41 +862,6 @@ async fn an_item_tag_of_the_callers_patient_is_served() {
             s.is_success(),
             "a {method} of an own tag is served, got {s}"
         );
-    }
-}
-
-#[tokio::test]
-async fn a_template_scoped_rule_binds_on_a_composition_tag_as_on_the_composition() {
-    let (_pg, svc, seed) = service_and_seed_app().await;
-    seed_ehr(&seed, EHR_OWN).await;
-    let ips = seed_templated_composition(&seed, EHR_OWN).await;
-    let ips_vo = ips.split("::").next().expect("object id").to_owned();
-    let bare = seed_composition(&seed, EHR_OWN).await;
-    let bare_vo = bare.split("::").next().expect("object id").to_owned();
-    let app = template_scoped_app(svc).await;
-
-    // The rule permits the IPS composition's read and refuses the
-    // templateless one's; each tag operation follows its target.
-    for (vo, uid, want) in [
-        (&ips_vo, &ips, StatusCode::OK),
-        (&bare_vo, &bare, StatusCode::FORBIDDEN),
-    ] {
-        let target = format!("/ehr/{EHR_OWN}/composition/{uid}");
-        assert_eq!(tag_probe(&app, "GET", &target, PATIENT_OWN).await, want);
-        let tags = format!("/ehr/{EHR_OWN}/composition/{vo}/tags");
-        let refused = want == StatusCode::FORBIDDEN;
-        for (method, path) in [
-            ("PUT", tags.clone()),
-            ("GET", tags.clone()),
-            ("DELETE", format!("{tags}/reviewed")),
-        ] {
-            let s = tag_probe(&app, method, &path, PATIENT_OWN).await;
-            assert_eq!(
-                s == StatusCode::FORBIDDEN,
-                refused,
-                "a {method} of a composition tag follows the target read ({want}), got {s}"
-            );
-        }
     }
 }
 
@@ -1527,11 +900,11 @@ fn manifest_export(ehr_ids: &[&str], patient: &str) -> Request<Body> {
 /// Both EHR Extract export routes pass the patient gate a direct EHR read
 /// passes: an export of another patient's EHR is refused with `403`, through
 /// its path or through a manifest that also names the caller's own EHR.
-/// Before, neither route reached the ABAC policy-enforcement point.
+/// Before, neither route reached the patient scope.
 #[tokio::test]
 async fn an_export_of_another_patients_ehr_is_forbidden() {
     let (_pg, svc) = service(None).await;
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
 
     assert_eq!(
         probe(
@@ -1556,7 +929,7 @@ async fn an_export_of_another_patients_ehr_is_forbidden() {
 async fn an_export_of_the_own_patients_ehr_is_served() {
     let (_pg, svc, seed) = service_and_seed_app().await;
     seed_ehr(&seed, EHR_OWN).await;
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
 
     assert_eq!(
         probe(
@@ -1591,14 +964,14 @@ fn import(path: &str, name: &str, patient: Option<&str>) -> Request<Body> {
         .expect("request")
 }
 
-/// Both EHR Extract import routes pass the ABAC pre-check a direct write
+/// Both EHR Extract import routes pass the patient-scope pre-check a direct write
 /// passes: an import into another patient's EHR is refused with `403`, and so
 /// is either import for a token without the configured patient claim. Before,
-/// neither route reached the ABAC policy-enforcement point.
+/// neither route reached the patient scope.
 #[tokio::test]
 async fn an_import_outside_the_patient_scope_is_forbidden() {
     let (_pg, svc) = service(None).await;
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
 
     assert_eq!(
         status(
@@ -1630,7 +1003,7 @@ async fn an_import_outside_the_patient_scope_is_forbidden() {
 async fn an_import_into_the_own_patients_ehr_lands() {
     let (_pg, svc, seed) = service_and_seed_app().await;
     seed_ehr(&seed, EHR_OWN).await;
-    let app = abac_app(svc, true).await;
+    let app = scoped_app(svc, true).await;
 
     let (code, body) = common::send_body(
         &app,

@@ -190,7 +190,7 @@ impl FerroEhrService {
 
         let exec_start = Instant::now();
         // `[record.query] timeout` bounds the DB execution so an over-long query is
-        // `408` rather than hanging to the global request timeout. The ABAC
+        // `408` rather than hanging to the global request timeout. The patient-
         // scope collection stays a separate statement — the main query is paged,
         // so folding the sets in would scope only the served page — but runs
         // concurrently under the same budget (our own extension).
@@ -235,7 +235,6 @@ impl FerroEhrService {
         outcome.domain = ir.domain;
         if let Some(scope) = scope {
             outcome.ehr_ids = scope.ehr_ids;
-            outcome.template_ids = scope.template_ids;
             outcome.subjects = scope.subjects;
         }
         Ok(outcome)

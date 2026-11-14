@@ -60,13 +60,8 @@ async fn replica(pool: &PgPool, listening: bool, granted: bool) -> (Arc<FerroEhr
     if granted {
         common::grant_to(&svc, pool, "root", Operation::WriteAccessPolicy).await;
     }
-    let handle = AuthzHandle::build(
-        &AuthzConfig::default(),
-        &config.api.base_path,
-        None,
-        common::null_resolvers(),
-    )
-    .map(Arc::new);
+    let handle =
+        AuthzHandle::build(&AuthzConfig::default(), &config.api.base_path, None).map(Arc::new);
     let app = common::build_full(config, Arc::clone(&svc), handle, Observability::default()).await;
     (svc, app)
 }

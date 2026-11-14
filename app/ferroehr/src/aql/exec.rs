@@ -337,24 +337,23 @@ fn fill_whole_object_cells(
     }
 }
 
-/// The distinct EHR ids, template ids and EHR subjects an AQL query touches.
+/// The distinct EHR ids and EHR subjects an AQL query touches.
 ///
-/// Collected for the ABAC query post-check (no openEHR spec governs ABAC — our
-/// own access-control extension), independent of the query's projection.
+/// Collected for the patient-scope query post-check (no openEHR spec governs
+/// the patient scope — our own extension), independent of the query's
+/// projection.
 #[derive(Debug, Clone, Default)]
 pub struct QueryScope {
     /// Distinct touched EHR ids (as strings).
     pub ehr_ids: Vec<String>,
-    /// Distinct touched template ids.
-    pub template_ids: Vec<String>,
     /// The distinct subjects of the touched EHRs, from which the query
     /// post-check folds its patient attribute
     /// ([`super::subject::TouchedSubjects::fold`]).
     pub subjects: Vec<EhrSubject>,
 }
 
-/// Run the scope-collection query for `ir` and return the distinct EHR ids,
-/// template ids and EHR subjects it touches. Empty when the query binds no EHR
+/// Run the scope-collection query for `ir` and return the distinct EHR ids
+/// and EHR subjects it touches. Empty when the query binds no EHR
 /// source and no VO root.
 ///
 /// # Errors
@@ -382,7 +381,6 @@ pub async fn collect_scope(
         .map_err(ExecError::from)?;
     drop(lease);
     let mut ehr_ids = std::collections::BTreeSet::new();
-    let mut template_ids = std::collections::BTreeSet::new();
     // A NULL cell is a left binding whose branch did not match; a cell that
     // fails to decode is a defect and fails the collection, never a silently
     // narrower scope.
@@ -393,20 +391,11 @@ pub async fn collect_scope(
                 ehr_ids.insert(EhrId(e));
             }
         }
-        for template_col in &scope.template_columns {
-            let template: Option<String> = row
-                .try_get(template_col.as_str())
-                .map_err(ExecError::from)?;
-            if let Some(t) = template {
-                template_ids.insert(t);
-            }
-        }
     }
     let ehr_ids: Vec<EhrId> = ehr_ids.into_iter().collect();
     let subjects = super::subject::ehr_subjects(pool, &ehr_ids).await?;
     Ok(QueryScope {
         ehr_ids: ehr_ids.iter().map(ToString::to_string).collect(),
-        template_ids: template_ids.into_iter().collect(),
         subjects: subjects
             .into_values()
             .collect::<std::collections::BTreeSet<_>>()

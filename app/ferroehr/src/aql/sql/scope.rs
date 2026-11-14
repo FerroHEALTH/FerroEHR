@@ -4,7 +4,7 @@
 //! The EHR scope and the population gate of a lowered query: every
 //! versioned-object root and every `EHR` source restricted to the EHRs the
 //! query may read (the whole-EHR restriction, the explicit `ehr_ids` scope,
-//! the per-EHR access decision, the ABAC patient scope), and the
+//! the per-EHR access decision, the patient scope), and the
 //! `EHR_STATUS.is_queryable` population gate (RM ehr
 //! `org.openehr.rm.ehr.ehr_status.adoc`). No openEHR spec governs the join
 //! mechanics: our own design.
@@ -22,7 +22,7 @@ use super::{Builder, subject};
 impl Builder<'_> {
     /// Restricts every versioned-object root and every EHR source to the EHRs
     /// the query may read: the whole-EHR restriction, the explicit `ehr_ids`
-    /// scope, the per-EHR access decision and the ABAC patient scope.
+    /// scope, the per-EHR access decision and the patient scope.
     pub(super) fn apply_ehr_scope(&mut self) {
         // The whole-EHR restriction, at EVERY scope. The per-object predicate
         // covers every version spine (a whole-EHR restriction stamps each
@@ -64,7 +64,7 @@ impl Builder<'_> {
         {
             self.q.and_where(cond);
         }
-        // The ABAC patient scope binds the same targets: a query with no
+        // The patient scope binds the same targets: a query with no
         // versioned-object root (`FROM EHR e`, an `ehr_status` path, an `OR`
         // under the EHR) still reads the `ehr` row itself.
         let subject = roots
@@ -92,11 +92,11 @@ impl Builder<'_> {
         Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
     }
 
-    /// The ABAC patient scope on the EHR id `target` of a versioned-object
+    /// The patient scope on the EHR id `target` of a versioned-object
     /// root, when one is set: `target` is the id of an `ehr` row
     /// [`subject::matches`] admits.
     fn subject_cond(&self, target: Expr) -> Option<Expr> {
-        // NOTE: the ABAC patient scope restricts every VO root and EHR source to
+        // NOTE: the patient scope restricts every VO root and EHR source to
         // the caller's patient EHRs whatever the projection (no openEHR spec
         // governs this — our own extension).
         let scope = self.ctx.subject_scope.as_ref()?;
@@ -107,7 +107,7 @@ impl Builder<'_> {
         Some(target.in_subquery(sub))
     }
 
-    /// The ABAC patient scope on the `ehr` row bound as `alias`, when one is
+    /// The patient scope on the `ehr` row bound as `alias`, when one is
     /// set: [`subject::matches`] on that row itself.
     fn ehr_subject_cond(&self, alias: &str) -> Option<Expr> {
         let scope = self.ctx.subject_scope.as_ref()?;
