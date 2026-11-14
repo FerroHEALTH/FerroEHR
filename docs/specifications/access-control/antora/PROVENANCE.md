@@ -2,7 +2,7 @@
 
 This tree is the computable part of the draft openEHR change of the ABAC
 design (`docs/plans/abac-openehr.md`, tracker issue #5487), laid out as the
-access log draft is (`docs/plans/access-log/antora/PROVENANCE.md`), so it
+access log draft is (`docs/specifications/access-log/antora/PROVENANCE.md`), so it
 drops into the openEHR RM specification repository beside
 `openehr_rm_1.2.0.bmm.json`. It is FerroEHR's own text under BUSL-1.1,
 written for submission to openEHR; nothing here has been submitted.
@@ -20,7 +20,7 @@ written for submission to openEHR; nothing here has been submitted.
 The module follows the layout the access log draft records: the
 `openEHR/antora-openehr` migration guide and the `ehr_extract` module of
 `openEHR/specifications-RM` at the commits named in
-`docs/plans/access-log/antora/PROVENANCE.md`. The pages `terminology.adoc`
+`docs/specifications/access-log/antora/PROVENANCE.md`. The pages `terminology.adoc`
 and `its_rest.adoc` propose changes to the TERM and ITS-REST components;
 each says so in a note, and on submission each moves to its own component.
 `change_request.adoc` is the text of the problem report and the Change
