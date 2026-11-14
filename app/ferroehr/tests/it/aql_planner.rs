@@ -2558,15 +2558,27 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
         rooted.access_ehr_cols,
         vec!["access_ehr_0".to_owned(), "access_ehr_1".to_owned()]
     );
-    for q in [
-        "SELECT DISTINCT e/ehr_id/value FROM EHR e",
-        "SELECT COUNT(e/ehr_id/value) FROM EHR e",
-    ] {
-        assert!(
-            prepare(q, Vec::new(), None).access_ehr_cols.is_empty(),
-            "{q}"
-        );
-    }
+    assert!(
+        prepare(
+            "SELECT DISTINCT e/ehr_id/value FROM EHR e",
+            Vec::new(),
+            None
+        )
+        .access_ehr_cols
+        .is_empty(),
+        "an extra column would change which rows are distinct"
+    );
+    // NOTE: EHDS Art. 9(1), every EHR an aggregate read is accessed, so the aggregate
+    // names them as an array of the distinct EHRs beside its own columns (#5639).
+    let counted = prepare("SELECT COUNT(e/ehr_id/value) FROM EHR e", Vec::new(), None);
+    assert_eq!(counted.access_ehr_cols, vec!["access_ehr_0".to_owned()]);
+    assert!(counted.access_aggregated);
+    assert!(
+        counted.sql.contains(r#"array_agg(DISTINCT "e0"."id")"#),
+        "the aggregate names the EHRs it read: {}",
+        counted.sql
+    );
+    assert!(counted.access_version_cols.is_empty());
 }
 
 /// A LIMIT does not move an OR read onto the streaming shape: the bindings

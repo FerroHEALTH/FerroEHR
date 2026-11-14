@@ -81,6 +81,12 @@ impl FerroEhrService {
         let id = ehr_id.to_string();
         event.ehr_id = Some(id.clone());
         event.object_id = Some(id);
+        // NOTE: EHDS Annex II 3.2 and Art. 9 (`docs/law/eu/ehds/text.html`), the record of an
+        // export names the request and the bound accessor, as the adapter's records do (#5638).
+        let origin = crate::system_log::access_context::current_origin();
+        event.request_id = origin.request_id;
+        event.client_ip = origin.client_address;
+        event.binding = crate::system_log::access_context::current_binding();
         event.purpose = crate::system_log::access_context::current_purpose();
         event.permit = crate::system_log::access_context::current_permit();
         event.category = content.and_then(|content| self.audit_classify(&content, action));
