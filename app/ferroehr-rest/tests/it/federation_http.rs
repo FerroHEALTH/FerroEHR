@@ -324,7 +324,7 @@ async fn an_external_person_reads_its_token_bound_patient_within_its_agreement()
     let admin = professional(Some(&mine), &json!({ "roles": ["ADMIN"] }));
     let (status, body) = common::send_body(
         &app,
-        common::req("GET", common::full("/admin/access-opt-out"))
+        common::req("GET", common::full("/admin/ehr-access"))
             .auth(&admin)
             .accept("application/json")
             .build(),
@@ -471,9 +471,12 @@ async fn an_opted_out_ehr_reads_as_absent_to_every_external_caller() {
     let overriding = agreement(Accessor::Person).overriding();
     let (_db, svc, app) = serve(vec![overriding, agreement(Accessor::Organisation)]).await;
     let target = ehr(&svc).await;
-    svc.record_access_opt_out(target, None)
-        .await
-        .expect("the opt-out records");
+    common::commit_access_settings(
+        &svc,
+        target,
+        common::directive_settings(&[common::access_directive("opt_out", &[])]),
+    )
+    .await;
     let target = target.to_string();
     let person = professional(Some(&target), &json!({}));
     assert_eq!(
@@ -496,9 +499,12 @@ async fn an_opted_out_ehr_reads_as_absent_to_every_external_caller() {
     // Without opt_out_override the person stays refused.
     let (_db, svc, strict) = serve(vec![agreement(Accessor::Person)]).await;
     let target = ehr(&svc).await;
-    svc.record_access_opt_out(target, None)
-        .await
-        .expect("the opt-out records");
+    common::commit_access_settings(
+        &svc,
+        target,
+        common::directive_settings(&[common::access_directive("opt_out", &[])]),
+    )
+    .await;
     let target = target.to_string();
     let person = professional(Some(&target), &json!({}));
     assert_eq!(
