@@ -39,20 +39,22 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
     common::audited_app(SUBJECT, "root").await
 }
 
-/// The `(purpose, permit)` of every stored record of `operation`, polled until
-/// `expected` records have landed.
+/// The `(purpose, permit)` of every stored record of `operation` on
+/// `resource_class`, polled until `expected` records have landed.
 async fn recorded(
     pool: &PgPool,
     operation: &str,
+    resource_class: &str,
     expected: usize,
 ) -> Vec<(Option<String>, Option<String>)> {
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     loop {
         let rows: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
             "SELECT purpose, permit FROM audit.audit_event \
-             WHERE operation = $1 ORDER BY chain_seq",
+             WHERE operation = $1 AND resource_class = $2 ORDER BY chain_seq",
         )
         .bind(operation)
+        .bind(resource_class)
         .fetch_all(pool)
         .await
         .expect("read the trail");
@@ -70,7 +72,8 @@ async fn recorded(
 
 /// A population query (no `ehr_id`) declared under a permit, one without a
 /// permit and one with a value that is not an identifier are recorded with
-/// the permit, without one, and without one.
+/// the permit, without one, and without one: the statement's record and the
+/// record of the EHR it served (#5564).
 #[tokio::test]
 async fn a_population_query_is_recorded_with_its_purpose_and_permit() {
     let (_db, pool, app, _ehr) = app().await;
@@ -89,14 +92,18 @@ async fn a_population_query_is_recorded_with_its_purpose_and_permit() {
         let (status, body) = common::send_body(&app, query(permit)).await;
         assert_eq!(status, StatusCode::OK, "population query: {body}");
     }
-    assert_eq!(
-        recorded(&pool, "query_execute_adhoc_query_body", 3).await,
-        vec![
-            (Some("RESEARCH".to_owned()), Some(PERMIT_ID.to_owned())),
-            (Some("RESEARCH".to_owned()), None),
-            (Some("RESEARCH".to_owned()), None),
-        ]
-    );
+    let expected = vec![
+        (Some("RESEARCH".to_owned()), Some(PERMIT_ID.to_owned())),
+        (Some("RESEARCH".to_owned()), None),
+        (Some("RESEARCH".to_owned()), None),
+    ];
+    for class in ["query", "ehr"] {
+        assert_eq!(
+            recorded(&pool, "query_execute_adhoc_query_body", class, 3).await,
+            expected,
+            "the {class} records"
+        );
+    }
 }
 
 /// An export declared under a permit is recorded with the purpose and the
@@ -117,7 +124,7 @@ async fn an_export_is_recorded_with_its_purpose_and_permit() {
         assert_eq!(status, StatusCode::OK, "export: {body}");
     }
     assert_eq!(
-        recorded(&pool, "message_export_ehrs", 2).await,
+        recorded(&pool, "message_export_ehrs", "application_activity", 2).await,
         vec![
             (Some("RESEARCH".to_owned()), Some(PERMIT_ID.to_owned())),
             (Some("RESEARCH".to_owned()), None),
