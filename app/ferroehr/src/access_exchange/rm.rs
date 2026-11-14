@@ -19,6 +19,7 @@ use openehr_rm::v1_2::data_types::basic::data_value::DataValue;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use openehr_rm::v1_2::data_types::quantity::dv_interval::DvInterval;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
+use openehr_rm::v1_2::data_types::text::dv_text::DvText;
 
 use crate::access_log::entry::coded;
 use crate::versioning::audit::{dv_date_time_text, dv_text};
@@ -45,6 +46,14 @@ pub(crate) fn members<T>(values: Option<&NonEmptyVec<T>>) -> &[T] {
 /// `term` of the access control terminology as a `DV_CODED_TEXT`.
 pub(crate) fn term<T: Term>(term: T) -> DvCodedText {
     coded(TERMINOLOGY_ID_ACCESS_CONTROL, term.code(), term.code())
+}
+
+/// The text of `text`, plain or coded.
+pub(crate) fn text_of(text: &DvText) -> &str {
+    match text {
+        DvText::DvText(plain) => &plain.value,
+        DvText::DvCodedText(coded) => &coded.value,
+    }
 }
 
 /// The other effect.

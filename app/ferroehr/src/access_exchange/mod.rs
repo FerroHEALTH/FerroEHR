@@ -31,6 +31,7 @@ pub mod bppc;
 #[cfg(feature = "fhir")]
 pub mod fhir;
 mod rm;
+mod xml;
 
 /// The format a refusal is about.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
