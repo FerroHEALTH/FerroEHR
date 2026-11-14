@@ -747,9 +747,8 @@ async fn apply_change(
         return Ok((existing, Uuid::nil()));
     }
     let party_facts = resolved.party_facts.take();
-    // Boxed: the resolved write and the folded commit hold the whole
-    // version in their state, which would otherwise put every caller's
-    // future over the size the lint allows.
+    // Boxed: the resolved write and the folded commit hold the whole version in their state,
+    // which would otherwise put every caller's future over the size the lint allows.
     let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
     Box::pin(project::committed(
         tx,
