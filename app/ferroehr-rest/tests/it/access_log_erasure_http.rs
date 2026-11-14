@@ -121,16 +121,16 @@ fn ordered() -> Value {
     json!([coded("local", "court-order")])
 }
 
-/// The `(action, principal)` of the access records of `operation`, polled
+/// The `(action, principal)` of the access records on `resource`, polled
 /// until one has landed.
-async fn trail(pool: &PgPool, operation: &str) -> Vec<(String, String)> {
+async fn trail(pool: &PgPool, resource: &str) -> Vec<(String, String)> {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<(String, Option<String>)> = sqlx::query_as(
             "SELECT action, principal FROM audit.access_trail \
-             WHERE operation = $1 ORDER BY chain, chain_seq",
+             WHERE resource_id = $1 ORDER BY chain, chain_seq",
         )
-        .bind(operation)
+        .bind(resource)
         .fetch_all(pool)
         .await
         .expect("read the trail");
@@ -142,7 +142,7 @@ async fn trail(pool: &PgPool, operation: &str) -> Vec<(String, String)> {
         }
         assert!(
             std::time::Instant::now() < deadline,
-            "no record of {operation} landed"
+            "no record on {resource} landed"
         );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
@@ -178,7 +178,7 @@ async fn an_administrator_erases_an_entry_by_its_tombstone() {
             .expect("read"),
         Some(AccessLogRecord::AccessLogTombstone(_))
     ));
-    let trail = trail(&pool, "admin_access_log_erase").await;
+    let trail = trail(&pool, UID).await;
     assert_eq!(trail, [("D".to_owned(), "root".to_owned())]);
     let (entries, rows): (i64, i64) = sqlx::query_as(
         "SELECT (SELECT count(*) FROM audit.access_trail \
