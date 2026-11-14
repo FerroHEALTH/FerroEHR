@@ -2,48 +2,47 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! Which clinical outbox events the feed publishes: those the access
-//! evaluator lets an access service of the system kind read.
+//! evaluator lets the reader of the feed read.
 //!
 //! An event names the EHR and the contribution it announces, which a reader
 //! downstream can act on, so it is published only where the EHR's
-//! `EHR_ACCESS` settings admit a read by a caller of `CallerKind::System`
-//! with no party, role, purpose or care relationship: every directive that
-//! binds such a caller and denies the data is honoured, its data scope,
-//! validity and exceptions included (RM ehr `ehr_access.adoc` §`EHR_ACCESS`
-//! Class: "All access decisions to data in the EHR must be made in accordance
-//! with the policies and rules in this object"). An event whose verdict
-//! depends on the data is published only when every object its contribution
-//! committed a version of is admitted, each judged by its trunk head as a read
-//! judges it; an erasure, which names no contribution, is judged on the EHR
-//! itself. Settings that do not read hold the EHR closed. The caller, the
-//! judgement of a contribution as a whole and the paging past what is left
-//! out are our own design (#5587).
+//! `EHR_ACCESS` settings, the access policy and the server's default admit a
+//! read of that data by the caller who reads the feed, judged as the request
+//! judges any read of the EHR: its kind, party binding, roles, capabilities,
+//! acts-for groups and declared purpose (RM ehr `ehr_access.adoc`
+//! §`EHR_ACCESS` Class: "All access decisions to data in the EHR must be made
+//! in accordance with the policies and rules in this object"). An event whose
+//! verdict depends on the data is published only when every object its
+//! contribution committed a version of is admitted, each judged by its trunk
+//! head as a read judges it; an erasure, which names no contribution, is
+//! judged on the EHR itself. Settings that do not read hold the EHR closed.
+//! Outside a request nothing is withheld, as everywhere the evaluator reads
+//! ([`crate::access_eval::condition`]). The judgement of a contribution as a
+//! whole and the paging past what is left out are our own design (#5587).
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
-use openehr_rm::draft::access_control::terminology::{CallerKind, OperationClass};
 use uuid::Uuid;
 
 use super::FeedEvent;
-use crate::access_eval::condition::{Asking, RequestAccess};
-use crate::access_eval::procedure::{Caller, Emergency, Outcome, Verdict};
+use crate::access_eval::condition::{EhrEntry, current};
+use crate::access_eval::procedure::{Outcome, Verdict};
 use crate::access_eval::scope::Item;
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
-use crate::party_binding::grants::caller::CallerFacts;
 use crate::service::FerroEhrService;
-use crate::service::ehr::access_rule::SettingsCaller;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_facts::HeadFacts;
-use crate::storage::access_projection::StoredSettings;
+use crate::storage::access_projection::{Stored, StoredSettings};
 
 /// The message of the `503` of access settings that cannot be read.
 const UNANSWERED: &str = "the EHR access settings of the outbox events could not be read";
 
 impl FerroEhrService {
-    /// The events of `events` the access evaluator lets an access service of
-    /// the system kind read, in their order.
+    /// The events of `events` the access evaluator lets the running request's
+    /// caller read, in their order; every event outside a request.
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the access settings cannot be read,
@@ -58,19 +57,18 @@ impl FerroEhrService {
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect();
+        let Some(access) = current() else {
+            return Ok(events);
+        };
         if ehr_ids.is_empty() {
             return Ok(events);
         }
-        let access = self.outbox_access();
         let stored = crate::storage::access_projection::settings_of_many(&self.pool, &ehr_ids)
             .await
             .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
-        let verdicts: BTreeMap<EhrId, Verdict> = stored
+        let verdicts: BTreeMap<EhrId, Arc<Verdict>> = stored
             .into_iter()
-            .map(|(ehr_id, stored)| {
-                let settings = settings_of(ehr_id, stored.settings);
-                (ehr_id, access.judge(settings.as_ref(), false))
-            })
+            .map(|(ehr_id, stored)| (ehr_id, access.judge_ehr(ehr_id, &entry_of(ehr_id, stored))))
             .collect();
         let contributions: Vec<Uuid> = events
             .iter()
@@ -78,7 +76,7 @@ impl FerroEhrService {
                 event
                     .ehr_id
                     .and_then(|ehr_id| verdicts.get(&ehr_id))
-                    .is_some_and(Verdict::item_dependent)
+                    .is_some_and(|verdict| verdict.item_dependent())
             })
             .filter_map(|event| event.contribution_id)
             .collect();
@@ -96,34 +94,12 @@ impl FerroEhrService {
             .filter(|event| admitted(event, &verdicts, &objects))
             .collect())
     }
-
-    /// The evaluator of the feed: an access service of the system kind
-    /// reading, with no party, role, purpose, emergency or care relationship,
-    /// under the access policy, the category map and the default in force.
-    fn outbox_access(&self) -> RequestAccess {
-        let caller = Caller {
-            kind: CallerKind::System,
-            party: None,
-            acts_for: Vec::new(),
-            roles: Vec::new(),
-            facts: CallerFacts::default(),
-            administrator: false,
-            settings: SettingsCaller::new(false, false, None),
-        };
-        let asking = Asking {
-            operation: OperationClass::Read,
-            purpose: None,
-            emergency: Emergency::default(),
-        };
-        let (in_force, _) = self.access_in_force(self.ehr_access_default);
-        RequestAccess::new(caller, asking, in_force)
-    }
 }
 
-/// The settings `stored` holds for `ehr_id`; settings that do not read hold
-/// the EHR closed.
-fn settings_of(ehr_id: EhrId, stored: StoredSettings) -> Option<EhrAccessSettings> {
-    match stored {
+/// The EHR `ehr_id` as `stored` reads it; settings that do not read hold the
+/// EHR closed.
+fn entry_of(ehr_id: EhrId, stored: Stored) -> EhrEntry {
+    let settings = match stored.settings {
         StoredSettings::None => None,
         StoredSettings::HeldClosed => Some(EhrAccessSettings::HeldClosed),
         StoredSettings::Settings(text) => Some(
@@ -133,6 +109,17 @@ fn settings_of(ehr_id: EhrId, stored: StoredSettings) -> Option<EhrAccessSetting
                 EhrAccessSettings::HeldClosed
             }),
         ),
+    };
+    // NOTE: our own design, the local source names each party by its container's UUID,
+    // so a subject id that is no UUID names no PERSON of this store.
+    let subject = stored
+        .subject
+        .as_deref()
+        .and_then(|subject| subject.parse::<Uuid>().ok());
+    EhrEntry {
+        version: settings.as_ref().and(stored.version),
+        settings: Arc::new(settings),
+        subject,
     }
 }
 
@@ -141,7 +128,7 @@ fn settings_of(ehr_id: EhrId, stored: StoredSettings) -> Option<EhrAccessSetting
 /// names none; an EHR that was not judged admits nothing.
 fn admitted(
     event: &FeedEvent,
-    verdicts: &BTreeMap<EhrId, Verdict>,
+    verdicts: &BTreeMap<EhrId, Arc<Verdict>>,
     objects: &BTreeMap<Uuid, Vec<HeadFacts>>,
 ) -> bool {
     let Some(ehr_id) = event.ehr_id else {

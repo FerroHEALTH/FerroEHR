@@ -186,10 +186,6 @@ pub struct FerroEhrService {
     /// [`Self::new`] so a bare service (tests, embeddings) never silently drops
     /// an event; the binary sets the real gate via [`Self::with_outbox_gate`].
     pub(crate) outbox_gate: crate::extensions::outbox::OutboxGate,
-    /// The disposition of an EHR with no settings, as the event outbox judges
-    /// its events (`[authz.rbac] ehr_access_default`); open in [`Self::new`],
-    /// and set by the binary via [`Self::with_ehr_access_default`].
-    pub(crate) ehr_access_default: openehr_rm::draft::access_control::terminology::AccessDefault,
     /// `[record.versioning] idempotent_resend` (#4415); the binary sets it via
     /// [`Self::with_skip_identical_resend`].
     skip_identical_resend: bool,
@@ -309,7 +305,6 @@ impl FerroEhrService {
             query_timeout: None,
             query_result_ceiling: None,
             outbox_gate: crate::extensions::outbox::OutboxGate::Always,
-            ehr_access_default: openehr_rm::draft::access_control::terminology::AccessDefault::Open,
             skip_identical_resend: false,
             created_ehr_repr: moka::future::Cache::builder()
                 .max_capacity(4096)
@@ -580,23 +575,6 @@ impl FerroEhrService {
     #[must_use]
     pub fn with_outbox_gate(mut self, gate: crate::extensions::outbox::OutboxGate) -> Self {
         self.outbox_gate = gate;
-        self
-    }
-
-    /// Set the disposition of an EHR with no settings that the event outbox
-    /// judges its events under, the one the request path reads from
-    /// `[authz.rbac] ehr_access_default`. No openEHR spec governs it: our own
-    /// design (#5587).
-    #[must_use]
-    pub fn with_ehr_access_default(
-        mut self,
-        default: crate::config::authz::EhrAccessDefault,
-    ) -> Self {
-        use openehr_rm::draft::access_control::terminology::AccessDefault;
-        self.ehr_access_default = match default {
-            crate::config::authz::EhrAccessDefault::Open => AccessDefault::Open,
-            crate::config::authz::EhrAccessDefault::Restricted => AccessDefault::Restricted,
-        };
         self
     }
 

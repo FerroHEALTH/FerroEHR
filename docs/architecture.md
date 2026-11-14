@@ -539,13 +539,14 @@ which is what makes an optional stage safe to disable:
    EHR in its body, so it reaches an EHR a restriction hides) or by a
    gate-keeper. A data scope that names an object by a reference naming no
    versioned object is refused at commit (`400`), since nothing could place
-   it. The event outbox has no request to judge, so it judges each event
-   with the same evaluator as an access service of the system kind, against
-   the EHR's settings when the feed is read: an event a directive denies to
-   that caller is never published, and an event whose verdict depends on the
-   data is published only when every object its contribution wrote is
-   admitted (`extensions::outbox::judge`, #5587). The caller and this rule
-   are our own design; no specification governs them.
+   it. The event outbox feed is judged as the request that reads it: each
+   event is judged for the feed's reader like any read of that EHR's data,
+   so a directive that denies the reader, an access policy it does not meet
+   or the default of an EHR with no settings withholds it, and an event whose
+   verdict depends on the data is published only when every object its
+   contribution wrote is admitted (`extensions::outbox::judge`, #5587). The
+   judgement of a contribution as a whole is our own design; no
+   specification governs it.
    The commit of an `EHR_ACCESS` version also
    projects the settings in its own transaction (RM Common IM change control:
    every change is a version in a contribution) into `access_settings`: the

@@ -22,9 +22,10 @@
 //! when it is read: a restriction of processing (GDPR Art. 18(2) leaves only
 //! storage) or an unoverridden research objection (GDPR Art. 21(6),
 //! `docs/law/eu/gdpr/text.html`). The feed then serves only the events the
-//! access evaluator lets an access service of the system kind read, judged
-//! against each EHR's own `EHR_ACCESS` settings ([`judge`]), so nothing a
-//! directive denies is published. A row left out is served once the mark is
+//! access evaluator lets the request's caller, the feed's reader, read of
+//! each EHR, as it judges any read of that EHR's data
+//! ([`FerroEhrService::outbox_events`]), so nothing a directive denies the
+//! reader is published. A row left out is served once the mark is
 //! lifted or the directive no longer denies it, while the reader's cursor has
 //! not passed it.
 //!
@@ -525,7 +526,11 @@ impl FerroEhrService {
 
     /// Up to `limit` events of `domain`'s outbox after `reader`'s cursor, in
     /// `seq` order, leaving out every clinical event the access evaluator
-    /// would not let an access service of the system kind read ([`judge`]).
+    /// would not let the running request's caller read: a directive that
+    /// binds it and denies the data, the access policy it does not meet, or
+    /// the default of an EHR with no settings. Each event is judged on the
+    /// objects its contribution wrote, an erasure on its EHR; outside a
+    /// request nothing is left out.
     ///
     /// The rows left out do not shorten the page: the read goes on past them
     /// until it holds `limit` events or reaches the tail.
