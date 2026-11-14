@@ -30,6 +30,7 @@ use serde_json::{Value, json};
 
 use crate::common;
 
+mod care_teams;
 mod default_definitions;
 mod entra;
 mod groups;
