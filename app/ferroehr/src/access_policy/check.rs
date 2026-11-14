@@ -8,9 +8,10 @@
 //! the class invariants of the draft BMM
 //! ([`check_policy`]), the root rules of a
 //! `LOCATABLE` and of the `controller`, and that each sensitivity and
-//! category a classification names, and each legal ground of a restriction of
-//! the access log's subject view, comes from the jurisdiction's terminology
-//! ([`ForeignCode`]).
+//! category a classification names, each role, purpose, sensitivity,
+//! category and legal ground a controller rule names, and each legal ground
+//! of a restriction of the access log's subject view, comes from the
+//! jurisdiction's terminology ([`ForeignCode`]).
 //!
 //! The draft package is FerroEHR's change proposal and no openEHR release:
 //! our own design over our own model (#5512).
@@ -23,6 +24,7 @@
 
 use serde_json::Value;
 
+use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::invariants::check_policy;
 use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind, NotForeign};
@@ -58,9 +60,10 @@ pub enum PolicyDefect {
     /// `archetype_details` names an archetype of another RM class.
     #[error("archetype_details names {0:?}, which is no archetype of an ACCESS_POLICY")]
     ArchetypeClass(String),
-    /// A sensitivity or category of a classification, or a legal ground of a
-    /// log restriction, is coded in FerroEHR's own terminology, which holds
-    /// none.
+    /// A sensitivity or category of a classification, a role, purpose,
+    /// sensitivity, category or legal ground of a controller rule, or a legal
+    /// ground of a log restriction, is coded in FerroEHR's own terminology,
+    /// which holds none.
     #[error(transparent)]
     NotForeign(#[from] NotForeign),
     /// The controller is not an `ORGANISATION`.
@@ -101,6 +104,12 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
             ForeignCode::read(ForeignKind::Category, category)?;
         }
     }
+    for rule in policy.rules.as_deref().unwrap_or_default() {
+        rule_codes(rule)?;
+        for exception in rule.exceptions.as_deref().unwrap_or_default() {
+            rule_codes(exception)?;
+        }
+    }
     for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {
         for ground in &restriction.legal_grounds {
             ForeignCode::read(ForeignKind::LegalGround, ground)?;
@@ -110,4 +119,32 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
         return Err(PolicyDefect::Controller(policy.controller.r#type.clone()));
     }
     Ok(policy)
+}
+
+/// Reads every role, purpose, sensitivity, category and legal ground `rule`
+/// names, none of which FerroEHR's terminology holds.
+///
+/// # Errors
+/// [`NotForeign`] for the first one coded in FerroEHR's terminology.
+fn rule_codes(rule: &AccessDirective) -> Result<(), NotForeign> {
+    for scope in rule.applies_to.as_deref().unwrap_or_default() {
+        if let Some(role) = &scope.role {
+            ForeignCode::read(ForeignKind::Role, role)?;
+        }
+    }
+    for purpose in rule.purposes.as_deref().unwrap_or_default() {
+        ForeignCode::read(ForeignKind::Purpose, purpose)?;
+    }
+    for data in rule.data.as_deref().unwrap_or_default() {
+        for sensitivity in data.sensitivities.as_deref().unwrap_or_default() {
+            ForeignCode::read(ForeignKind::Sensitivity, sensitivity)?;
+        }
+        for category in data.categories.as_deref().unwrap_or_default() {
+            ForeignCode::read(ForeignKind::Category, category)?;
+        }
+    }
+    for ground in rule.legal_grounds.as_deref().unwrap_or_default() {
+        ForeignCode::read(ForeignKind::LegalGround, ground)?;
+    }
+    Ok(())
 }

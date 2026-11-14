@@ -52,4 +52,7 @@ h|
 h|
 2+a|__Opt_out_unique__: `directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1`
 
+h|
+2+a|__Directives_not_controller_rules__: `directives /= Void implies directives.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))`
+
 |===

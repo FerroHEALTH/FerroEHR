@@ -92,6 +92,9 @@ impl Reader<'_, '_> {
             ),
             DirectiveKind::Consent => caller != CallerKind::Subject,
             DirectiveKind::Delegation => caller == CallerKind::Representative,
+            // NOTE: draft BMM `Directives_not_controller_rules`, an EHR's settings hold no
+            // controller rule, so none in them binds anyone.
+            DirectiveKind::ControllerRule => false,
         };
         if !bindable {
             return Pred::False;

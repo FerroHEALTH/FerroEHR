@@ -137,6 +137,41 @@ fn regional_sharing() -> Value {
     )
 }
 
+/// The nurse rule: the controller denies the nurse role the commit of the
+/// diagnosis template, under a national provision.
+fn nurse_rule() -> Value {
+    directive(
+        "Nurses do not record diagnoses",
+        "controller_rule",
+        "deny",
+        json!({
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
+                "role": coded("urn:example:roles", "nurse", "NURSE") }],
+            "operations": [term("write")],
+            "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["diagnosis.v1"] }],
+            "legal_grounds": [coded("urn:example:national-law", "Art. 4", "4")]
+        }),
+    )
+}
+
+/// The psychiatry rule: the controller clears the psychiatrist role for
+/// psychiatric data, read for treatment.
+fn psychiatry_rule() -> Value {
+    directive(
+        "Psychiatry reads psychiatric notes",
+        "controller_rule",
+        "permit",
+        json!({
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
+                "role": coded("urn:example:roles", "psychiatrist", "PSYCHIATRIST") }],
+            "operations": [term("read")],
+            "purposes": [coded("http://terminology.hl7.org/CodeSystem/v3-ActReason", "treatment", "TREAT")],
+            "data": [{ "_type": "ACCESS_DATA_SCOPE",
+                "sensitivities": [coded("http://terminology.hl7.org/CodeSystem/v3-ActCode", "PSY", "PSY")] }]
+        }),
+    )
+}
+
 /// Ms A's settings: consent required, herself as gate-keeper, the three
 /// directives of the worked examples (her regional consent copied from the
 /// catalogue with the signed form as evidence) and one sensitivity label.
@@ -182,8 +217,9 @@ fn log_restriction() -> Value {
 }
 
 /// The hospital's policy: the ward's care relationship with a 14-day grace,
-/// the HIV classification of `lab_hiv.v1`, the regional catalogue entry, and
-/// one restriction of the subject's view of the access log.
+/// the HIV classification of `lab_hiv.v1`, the nurse and psychiatry rules,
+/// the regional catalogue entry, and one restriction of the subject's view of
+/// the access log.
 fn policy() -> Value {
     let mut p = locatable(
         "openEHR-EHR-ACCESS_POLICY.hospital.v1",
@@ -203,6 +239,7 @@ fn policy() -> Value {
             "care_relationship_required": true,
             "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
             "purpose_required": true,
+            "rules": [nurse_rule(), psychiatry_rule()],
             "catalogue": [regional_sharing()],
             "log_restrictions": [log_restriction()]
         })
@@ -254,6 +291,7 @@ fn every_class_round_trips() {
     round_trip::<AccessLabel>(&s["labels"][0]);
     round_trip::<AccessPolicy>(&p);
     round_trip::<AccessClassification>(&p["classifications"][0]);
+    round_trip::<AccessDirective>(&p["rules"][0]);
     round_trip::<AccessLogRestriction>(&p["log_restrictions"][0]);
     let versioned = json!({
         "_type": "VERSIONED_ACCESS_POLICY",
@@ -318,7 +356,19 @@ type Breaking = (&'static str, fn(&mut Value));
 
 #[test]
 fn each_settings_invariant_refuses_settings_that_break_it() {
-    let cases: [Breaking; 11] = [
+    let cases: [Breaking; 13] = [
+        (
+            "ACCESS_DIRECTIVE_SETTINGS.Directives_not_controller_rules",
+            |s| {
+                s["directives"][0]["kind"] = term("controller_rule");
+            },
+        ),
+        (
+            "ACCESS_DIRECTIVE_SETTINGS.Directives_not_controller_rules",
+            |s| {
+                s["directives"][1]["exceptions"][0]["kind"] = term("controller_rule");
+            },
+        ),
         ("ACCESS_DIRECTIVE_SETTINGS.Default_access_valid", |s| {
             s["default_access"] = term("closed");
         }),
@@ -375,7 +425,17 @@ fn each_settings_invariant_refuses_settings_that_break_it() {
 
 #[test]
 fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
-    let cases: [Breaking; 7] = [
+    let cases: [Breaking; 10] = [
+        ("ACCESS_POLICY.Rules_kind", |p| {
+            p["rules"][0]["kind"] = term("consent");
+        }),
+        ("ACCESS_POLICY.Rules_kind", |p| {
+            let exception = directive("Except the ward", "consent", "permit", json!({}));
+            p["rules"][0]["exceptions"] = json!([exception]);
+        }),
+        ("ACCESS_POLICY.Catalogue_not_controller_rules", |p| {
+            p["catalogue"][0]["kind"] = term("controller_rule");
+        }),
         ("ACCESS_POLICY.Is_archetype_root", |p| {
             p.as_object_mut()
                 .expect("an object")
@@ -493,14 +553,14 @@ fn each_optional_list_is_absent_or_non_empty() {
         s["directives"][1]["data"][0][list] = json!([]);
         refused.push(serde_json::from_value::<AccessDirectiveSettings>(s).is_err());
     }
-    for list in ["classifications", "catalogue", "log_restrictions"] {
+    for list in ["classifications", "rules", "catalogue", "log_restrictions"] {
         let mut p = policy();
         p[list] = json!([]);
         refused.push(serde_json::from_value::<AccessPolicy>(p).is_err());
     }
     assert_eq!(
         refused,
-        vec![true; 20],
+        vec![true; 21],
         "every empty optional list is refused"
     );
 }
