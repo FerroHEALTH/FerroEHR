@@ -26,6 +26,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use crate::access_eval::condition::EhrEntry;
 use crate::aql::sql::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
@@ -75,6 +76,7 @@ impl FerroEhrService {
             let entry = EhrEntry {
                 settings: Arc::new(None),
                 subject,
+                version: None,
             };
             self.ehr_access.insert(ehr_id, entry).await;
         }
@@ -189,6 +191,7 @@ impl FerroEhrService {
             ),
         };
         Ok(EhrEntry {
+            version: settings.as_ref().and(stored.version),
             settings: Arc::new(settings),
             subject,
         })
@@ -356,17 +359,6 @@ impl FerroEhrService {
             })
             .collect())
     }
-}
-
-/// One EHR as the access evaluator reads it from this replica's copy: its
-/// current `EHR_ACCESS` settings and the `PERSON` its `EHR_STATUS` names.
-#[derive(Debug, Clone)]
-pub struct EhrEntry {
-    /// The settings; `None` when the EHR's `EHR_ACCESS` carries none.
-    pub settings: Arc<Option<EhrAccessSettings>>,
-    /// The subject's `PERSON` container; `None` when the status names no
-    /// party of this store.
-    pub subject: Option<uuid::Uuid>,
 }
 
 /// The message of the `503` of a projection that cannot be read.

@@ -9,6 +9,7 @@ use crate::system_log::event::{ActingMode, ActorAuthentication};
 use base64::Engine;
 use ferrohealth_smart::assurance::AssuranceLevel as Level;
 use jiff::Timestamp;
+use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use secrecy::ExposeSecret as _;
 
 mod purposes;
@@ -591,6 +592,38 @@ fn the_declared_permit_follows_the_token_id_as_a_policy() {
         agent(&classified_without, "john doe")["policy"],
         serde_json::json!(["jti-1"]),
         "{classified_without}"
+    );
+}
+
+/// The versions of the policies the access decision rests on follow the
+/// data permit at `agent[user].policy`, the record's authorisation reference
+/// (FHIR R4 `AuditEvent.agent.policy`).
+#[test]
+fn the_decision_policies_follow_the_permit() {
+    let mut e = event(
+        EventActionCode::Read,
+        ObjectClass::Composition,
+        EventOutcome::Success,
+    );
+    e.permit = Some("hdab-nl/2026/0042".to_owned());
+    let versions = ["ehr-access::cdr::2".to_owned(), "policy::cdr::3".to_owned()];
+    let grounds: Vec<_> = [
+        ("EHR_ACCESS", &versions[0]),
+        ("ACCESS_POLICY", &versions[1]),
+    ]
+    .into_iter()
+    .map(|(name, version)| AccessAuthorisation {
+        name: Some(name.to_owned()),
+        version: Some(version.clone()),
+        ..crate::access_log::entry::authorisation("consent")
+    })
+    .collect();
+    e.decided = crate::access_eval::record::Decision::of_recorded(&grounds);
+    let rendered = json(&e, Some("patient-42"));
+    assert_eq!(
+        agent(&rendered, "john doe")["policy"],
+        serde_json::json!(["hdab-nl/2026/0042", versions[0], versions[1]]),
+        "{rendered}"
     );
 }
 

@@ -234,6 +234,9 @@ pub(crate) fn stored(
         .and_then(|authorisation| authorisation.reference.as_ref())
         .map(|reference| reference.id.clone());
     event.emergency_access = entry.is_emergency;
+    event.decided = crate::access_eval::record::Decision::of_recorded(
+        entry.authorisations.as_deref().unwrap_or_default(),
+    );
     event.query = entry.query.as_ref().and_then(|query| {
         Some(QueryNaming {
             language: query_language(query.language.as_deref()?),
