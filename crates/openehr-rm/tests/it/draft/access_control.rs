@@ -476,6 +476,49 @@ fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
     }
 }
 
+/// Each `DV_DATE_TIME` and `DV_DURATION` the settings and the policy hold
+/// keeps its RM `Value_valid`: a value that is no ISO 8601 date-time or
+/// duration is refused (RM Data Types, `DV_DATE_TIME` and `DV_DURATION`
+/// §Invariants).
+#[test]
+fn each_date_time_and_duration_is_iso_8601() {
+    let cases: [Breaking; 4] = [
+        ("DV_DATE_TIME.Value_valid", |s| {
+            s["directives"][1]["time_validity"]["lower"]["value"] = json!("T00:00:00Z");
+        }),
+        ("DV_DATE_TIME.Value_valid", |s| {
+            s["directives"][0]["instructed"]["value"] = json!("yesterday");
+        }),
+        ("DV_DATE_TIME.Value_valid", |s| {
+            s["directives"][1]["exceptions"][0]["time_validity"] = json!({ "_type": "DV_INTERVAL",
+                "upper": { "_type": "DV_DATE_TIME", "value": "2026-13-01T00:00:00Z" },
+                "lower_unbounded": true, "upper_unbounded": false,
+                "lower_included": false, "upper_included": true });
+        }),
+        ("DV_DATE_TIME.Value_valid", |s| {
+            s["directives"][1]["data"][0]["recorded"] = json!({ "_type": "DV_INTERVAL",
+                "lower": { "_type": "DV_DATE_TIME", "value": "01-11-2026T00:00:00Z" },
+                "lower_unbounded": false, "upper_unbounded": true,
+                "lower_included": true, "upper_included": false });
+        }),
+    ];
+    for (invariant, breaking) in cases {
+        let mut s = settings();
+        breaking(&mut s);
+        assert_eq!(
+            named(check_settings(&read(s))),
+            vec![invariant.to_owned()],
+            "{invariant}"
+        );
+    }
+    let mut p = policy();
+    p["relationship_grace"]["value"] = json!("14 days");
+    assert!(
+        named(check_policy(&read(p))).contains(&"DV_DURATION.Value_valid".to_owned()),
+        "a grace that is no ISO 8601 duration"
+    );
+}
+
 #[test]
 fn each_optional_list_is_absent_or_non_empty() {
     let settings_lists: [&[&str]; 13] = [

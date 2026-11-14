@@ -55,7 +55,7 @@ Twelve groups are added to the openEHR Terminology. The codes are for the termin
 |The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `member_of`
 
 |access refusal
-|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
 
 |access log withheld
