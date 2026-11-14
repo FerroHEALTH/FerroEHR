@@ -162,7 +162,7 @@ async fn commit(app: &Router, pool: &PgPool, ehr: &str) -> String {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let stored: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM audit.audit_event WHERE resource_id LIKE $1 || '::%'",
+            "SELECT count(*) FROM audit.access_trail WHERE resource_id LIKE $1 || '::%'",
         )
         .bind(&vo)
         .fetch_one(pool)

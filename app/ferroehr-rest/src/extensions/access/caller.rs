@@ -10,10 +10,12 @@
 //! `federation` issuer; EHDS Art. 10), a system client, and every other
 //! caller a professional. Its party, clearances, permitted purposes and care
 //! teams are the 5.7.1 demographic facts the request already holds
-//! (`ferroehr::party_binding::grants`). The purpose is the declared code the
-//! audit layer accepted, and an emergency is that code being one of
-//! `[audit] emergency_purpose_codes`, with `[authz.rbac] emergency_access_role`
-//! for the break-glass steps (EHDS Art. 11(5)). No openEHR spec governs the
+//! (`ferroehr::party_binding::grants`), and it acts for its care teams, the
+//! provider its client acts for and the `GROUP`s that provider is a member
+//! of (RM demographic `PARTY_RELATIONSHIP`, coded `member_of`; #5575). The
+//! purpose is the declared code the audit layer accepted, and an emergency
+//! is that code being one of `[audit] emergency_purpose_codes`, with
+//! `[authz.rbac] emergency_access_role` for the break-glass steps (EHDS Art. 11(5)). No openEHR spec governs the
 //! caller's kind or its facts: our own design (#5513).
 
 use std::sync::Arc;
@@ -26,6 +28,7 @@ use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::grants::operation::Operation;
 use ferrohealth_smart::kind::CallerKind as SmartKind;
 use openehr_rm::draft::access_control::terminology::{AccessDefault, CallerKind, OperationClass};
+use uuid::Uuid;
 
 use super::authn::{Principal, current_principal};
 use crate::api::operation::{Verb, operation};
@@ -62,6 +65,13 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
     {
         acts_for.push(provider.party.to_string());
     }
+    acts_for.extend(
+        capabilities
+            .facts()
+            .provider_groups()
+            .iter()
+            .map(Uuid::to_string),
+    );
     let caller = Caller {
         kind,
         party: settings.party().map(str::to_owned),

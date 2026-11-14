@@ -633,9 +633,10 @@ signed checkpoints, whenever the system holds a signing key.**
   `other_details`, and the chain links. These serve review and integrity,
   and some of them identify staff systems (our own design).
 - **Restrictions.** Art 9(3) lets a Member State restrict the right "in
-  exceptional circumstances". A deployment declares the restriction (for
-  example, the person's name withheld for an accessor class) and the
-  subject view applies it; the full entry is unchanged. An access to a
+  exceptional circumstances". A deployment declares the restriction in the
+  controller's `ACCESS_POLICY` (`log_restrictions`: the accessor kinds, the
+  accessor members withheld, the legal grounds; #5570) and the subject view
+  applies it; the full entry is unchanged. An access to a
   resource held from the person under Art 3(3) is withheld from their view
   until the hold ends, as `ehds-logging`'s `withheld` module does today.
 - **Their own reads.** The subject's reads of their own log are recorded

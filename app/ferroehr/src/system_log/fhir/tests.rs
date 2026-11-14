@@ -9,6 +9,7 @@ use crate::system_log::event::{ActingMode, ActorAuthentication};
 use base64::Engine;
 use ferrohealth_smart::assurance::AssuranceLevel as Level;
 use jiff::Timestamp;
+use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use secrecy::ExposeSecret as _;
 
 mod purposes;
@@ -606,7 +607,18 @@ fn the_decision_policies_follow_the_permit() {
     );
     e.permit = Some("hdab-nl/2026/0042".to_owned());
     let versions = ["ehr-access::cdr::2".to_owned(), "policy::cdr::3".to_owned()];
-    e.decided = crate::access_eval::record::Decision::of_policies(versions.to_vec());
+    let grounds: Vec<_> = [
+        ("EHR_ACCESS", &versions[0]),
+        ("ACCESS_POLICY", &versions[1]),
+    ]
+    .into_iter()
+    .map(|(name, version)| AccessAuthorisation {
+        name: Some(name.to_owned()),
+        version: Some(version.clone()),
+        ..crate::access_log::entry::authorisation("consent")
+    })
+    .collect();
+    e.decided = crate::access_eval::record::Decision::of_recorded(&grounds);
     let rendered = json(&e, Some("patient-42"));
     assert_eq!(
         agent(&rendered, "john doe")["policy"],

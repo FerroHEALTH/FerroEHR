@@ -1430,6 +1430,270 @@ impl<'de> ::serde::Deserialize<'de>
 }
 
 impl ::serde::Serialize
+    for crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction
+{
+    fn serialize<__S: ::serde::Serializer>(
+        &self,
+        __serializer: __S,
+    ) -> ::core::result::Result<__S::Ok, __S::Error> {
+        let mut __n = 6usize;
+        if self.uid.is_some() {
+            __n += 1;
+        }
+        if self.links.as_ref().is_some_and(|__v| !__v.is_empty()) {
+            __n += 1;
+        }
+        if self.archetype_details.is_some() {
+            __n += 1;
+        }
+        if self.feeder_audit.is_some() {
+            __n += 1;
+        }
+        let mut __st =
+            ::serde::Serializer::serialize_struct(__serializer, "ACCESS_LOG_RESTRICTION", __n)?;
+        ::serde::ser::SerializeStruct::serialize_field(
+            &mut __st,
+            "_type",
+            "ACCESS_LOG_RESTRICTION",
+        )?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "name", &self.name)?;
+        ::serde::ser::SerializeStruct::serialize_field(
+            &mut __st,
+            "archetype_node_id",
+            &self.archetype_node_id,
+        )?;
+        if let Some(__v) = &self.uid {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "uid", __v)?;
+        }
+        if let Some(__v) = &self.links
+            && !__v.is_empty()
+        {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "links", __v)?;
+        }
+        if let Some(__v) = &self.archetype_details {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "archetype_details", __v)?;
+        }
+        if let Some(__v) = &self.feeder_audit {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "feeder_audit", __v)?;
+        }
+        ::serde::ser::SerializeStruct::serialize_field(
+            &mut __st,
+            "accessor_kinds",
+            &self.accessor_kinds,
+        )?;
+        ::serde::ser::SerializeStruct::serialize_field(&mut __st, "withheld", &self.withheld)?;
+        ::serde::ser::SerializeStruct::serialize_field(
+            &mut __st,
+            "legal_grounds",
+            &self.legal_grounds,
+        )?;
+        ::serde::ser::SerializeStruct::end(__st)
+    }
+}
+
+impl<'de> ::serde::Deserialize<'de>
+    for crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction
+{
+    fn deserialize<__D: ::serde::Deserializer<'de>>(
+        __deserializer: __D,
+    ) -> ::core::result::Result<Self, __D::Error> {
+        const __FIELDS: &[&str] = &[
+            "accessor_kinds",
+            "archetype_details",
+            "archetype_node_id",
+            "feeder_audit",
+            "legal_grounds",
+            "links",
+            "name",
+            "uid",
+            "withheld",
+        ];
+        enum __Field {
+            __Type,
+            __F0,
+            __F1,
+            __F2,
+            __F3,
+            __F4,
+            __F5,
+            __F6,
+            __F7,
+            __F8,
+        }
+        impl<'de> ::serde::Deserialize<'de> for __Field {
+            fn deserialize<__D: ::serde::Deserializer<'de>>(
+                __deserializer: __D,
+            ) -> ::core::result::Result<Self, __D::Error> {
+                struct __KeyVisitor;
+                impl<'de> ::serde::de::Visitor<'de> for __KeyVisitor {
+                    type Value = __Field;
+                    fn expecting(
+                        &self,
+                        __f: &mut ::core::fmt::Formatter<'_>,
+                    ) -> ::core::fmt::Result {
+                        __f.write_str("an object member name")
+                    }
+                    fn visit_str<__E: ::serde::de::Error>(
+                        self,
+                        __v: &str,
+                    ) -> ::core::result::Result<__Field, __E> {
+                        match __v {
+                            "_type" => ::core::result::Result::Ok(__Field::__Type),
+                            "name" => ::core::result::Result::Ok(__Field::__F0),
+                            "archetype_node_id" => ::core::result::Result::Ok(__Field::__F1),
+                            "uid" => ::core::result::Result::Ok(__Field::__F2),
+                            "links" => ::core::result::Result::Ok(__Field::__F3),
+                            "archetype_details" => ::core::result::Result::Ok(__Field::__F4),
+                            "feeder_audit" => ::core::result::Result::Ok(__Field::__F5),
+                            "accessor_kinds" => ::core::result::Result::Ok(__Field::__F6),
+                            "withheld" => ::core::result::Result::Ok(__Field::__F7),
+                            "legal_grounds" => ::core::result::Result::Ok(__Field::__F8),
+                            _ => ::core::result::Result::Err(
+                                ::openehr_base::serde_support::unknown_field(
+                                    __v,
+                                    "ACCESS_LOG_RESTRICTION",
+                                    __FIELDS,
+                                ),
+                            ),
+                        }
+                    }
+                }
+                ::serde::Deserializer::deserialize_identifier(__deserializer, __KeyVisitor)
+            }
+        }
+        struct __Visitor;
+        impl<'de> ::serde::de::Visitor<'de> for __Visitor {
+            type Value = crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
+            fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                __f.write_str("an openEHR `ACCESS_LOG_RESTRICTION` object")
+            }
+            fn visit_map<__A: ::serde::de::MapAccess<'de>>(
+                self,
+                mut __map: __A,
+            ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let mut __seen_type = false;
+                let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s3: ::core::option::Option<_> = None;
+                let mut __s4: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s5: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s6: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s7: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s8: ::core::option::Option<::core::option::Option<_>> = None;
+                while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
+                    match __key {
+                        __Field::__Type => {
+                            if __seen_type {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("_type"),
+                                );
+                            }
+                            __seen_type = true;
+                            ::serde::de::MapAccess::next_value_seed(
+                                &mut __map,
+                                ::openehr_base::serde_support::ExpectedType(
+                                    "ACCESS_LOG_RESTRICTION",
+                                ),
+                            )?;
+                        }
+                        __Field::__F0 => {
+                            if __s0.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("name"),
+                                );
+                            }
+                            __s0 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F1 => {
+                            if __s1.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("archetype_node_id"),
+                                );
+                            }
+                            __s1 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F2 => {
+                            if __s2.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("uid"),
+                                );
+                            }
+                            __s2 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F3 => {
+                            if __s3.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("links"),
+                                );
+                            }
+                            __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F4 => {
+                            if __s4.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("archetype_details"),
+                                );
+                            }
+                            __s4 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F5 => {
+                            if __s5.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("feeder_audit"),
+                                );
+                            }
+                            __s5 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F6 => {
+                            if __s6.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("accessor_kinds"),
+                                );
+                            }
+                            __s6 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F7 => {
+                            if __s7.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("withheld"),
+                                );
+                            }
+                            __s7 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F8 => {
+                            if __s8.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("legal_grounds"),
+                                );
+                            }
+                            __s8 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                    }
+                }
+                ::core::result::Result::Ok(crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction {
+name: __s0.flatten().ok_or_else(|| ::serde::de::Error::missing_field("name"))?,
+archetype_node_id: __s1.flatten().ok_or_else(|| ::serde::de::Error::missing_field("archetype_node_id"))?,
+uid: __s2.flatten(),
+links: __s3,
+archetype_details: __s4.flatten(),
+feeder_audit: __s5.flatten(),
+accessor_kinds: __s6.flatten().ok_or_else(|| ::serde::de::Error::missing_field("accessor_kinds"))?,
+withheld: __s7.flatten().ok_or_else(|| ::serde::de::Error::missing_field("withheld"))?,
+legal_grounds: __s8.flatten().ok_or_else(|| ::serde::de::Error::missing_field("legal_grounds"))?,
+})
+            }
+        }
+        ::serde::Deserializer::deserialize_struct(
+            __deserializer,
+            "ACCESS_LOG_RESTRICTION",
+            __FIELDS,
+            __Visitor,
+        )
+    }
+}
+
+impl ::serde::Serialize
     for crate::draft::access_control::access_control::access_policy::AccessPolicy
 {
     fn serialize<__S: ::serde::Serializer>(
@@ -1460,6 +1724,13 @@ impl ::serde::Serialize
             __n += 1;
         }
         if self.catalogue.as_ref().is_some_and(|__v| !__v.is_empty()) {
+            __n += 1;
+        }
+        if self
+            .log_restrictions
+            .as_ref()
+            .is_some_and(|__v| !__v.is_empty())
+        {
             __n += 1;
         }
         if self.details.is_some() {
@@ -1511,6 +1782,11 @@ impl ::serde::Serialize
         {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "catalogue", __v)?;
         }
+        if let Some(__v) = &self.log_restrictions
+            && !__v.is_empty()
+        {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "log_restrictions", __v)?;
+        }
         if let Some(__v) = &self.details {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "details", __v)?;
         }
@@ -1534,6 +1810,7 @@ impl<'de> ::serde::Deserialize<'de>
             "details",
             "feeder_audit",
             "links",
+            "log_restrictions",
             "name",
             "purpose_required",
             "relationship_grace",
@@ -1554,6 +1831,7 @@ impl<'de> ::serde::Deserialize<'de>
             __F10,
             __F11,
             __F12,
+            __F13,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -1588,7 +1866,8 @@ impl<'de> ::serde::Deserialize<'de>
                             "relationship_grace" => ::core::result::Result::Ok(__Field::__F9),
                             "purpose_required" => ::core::result::Result::Ok(__Field::__F10),
                             "catalogue" => ::core::result::Result::Ok(__Field::__F11),
-                            "details" => ::core::result::Result::Ok(__Field::__F12),
+                            "log_restrictions" => ::core::result::Result::Ok(__Field::__F12),
+                            "details" => ::core::result::Result::Ok(__Field::__F13),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -1625,7 +1904,8 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s9: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s10: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s11: ::core::option::Option<_> = None;
-                let mut __s12: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s12: ::core::option::Option<_> = None;
+                let mut __s13: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -1741,10 +2021,18 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F12 => {
                             if __s12.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("details"),
+                                    ::serde::de::Error::duplicate_field("log_restrictions"),
                                 );
                             }
                             __s12 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F13 => {
+                            if __s13.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("details"),
+                                );
+                            }
+                            __s13 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -1772,7 +2060,8 @@ impl<'de> ::serde::Deserialize<'de>
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("purpose_required"))?,
                         catalogue: __s11,
-                        details: __s12.flatten(),
+                        log_restrictions: __s12,
+                        details: __s13.flatten(),
                     },
                 )
             }
@@ -3167,6 +3456,7 @@ impl ::serde::Serialize for crate::draft::access_control::common::archetyped::lo
         match self {
 crate::draft::access_control::common::archetyped::locatable::Locatable::AccessClassification(__x) => ::serde::Serialize::serialize(__x, __serializer),
 crate::draft::access_control::common::archetyped::locatable::Locatable::AccessDirective(__x) => ::serde::Serialize::serialize(__x, __serializer),
+crate::draft::access_control::common::archetyped::locatable::Locatable::AccessLogRestriction(__x) => ::serde::Serialize::serialize(__x, __serializer),
 crate::draft::access_control::common::archetyped::locatable::Locatable::AccessPolicy(__x) => ::serde::Serialize::serialize(__x, __serializer),
 crate::draft::access_control::common::archetyped::locatable::Locatable::Action(__x) => ::serde::Serialize::serialize(__x, __serializer),
 crate::draft::access_control::common::archetyped::locatable::Locatable::Activity(__x) => ::serde::Serialize::serialize(__x, __serializer),
@@ -3219,6 +3509,7 @@ impl<'de> ::serde::Deserialize<'de>
         const __TAGS: &[&str] = &[
             "ACCESS_CLASSIFICATION",
             "ACCESS_DIRECTIVE",
+            "ACCESS_LOG_RESTRICTION",
             "ACCESS_POLICY",
             "ACTION",
             "ACTIVITY",
@@ -3282,6 +3573,7 @@ impl<'de> ::serde::Deserialize<'de>
                         match __t {
 "ACCESS_CLASSIFICATION" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::locatable::Locatable::AccessClassification(::serde::Deserialize::deserialize(__rest)?)),
 "ACCESS_DIRECTIVE" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::locatable::Locatable::AccessDirective(::serde::Deserialize::deserialize(__rest)?)),
+"ACCESS_LOG_RESTRICTION" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::locatable::Locatable::AccessLogRestriction(::serde::Deserialize::deserialize(__rest)?)),
 "ACCESS_POLICY" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::locatable::Locatable::AccessPolicy(::serde::Deserialize::deserialize(__rest)?)),
 "ACTION" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::locatable::Locatable::Action(::serde::Deserialize::deserialize(__rest)?)),
 "ACTIVITY" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::locatable::Locatable::Activity(::serde::Deserialize::deserialize(__rest)?)),
@@ -3322,20 +3614,20 @@ impl<'de> ::serde::Deserialize<'de>
 "POINT_EVENT" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::locatable::Locatable::PointEvent(::serde::Deserialize::deserialize(__rest)?)),
 "ROLE" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::locatable::Locatable::Role(::serde::Deserialize::deserialize(__rest)?)),
 "SECTION" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::locatable::Locatable::Section(::serde::Deserialize::deserialize(__rest)?)),
-__other => ::core::result::Result::Err(::openehr_base::serde_support::unexpected_type("LOCATABLE", __other, "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INTERVAL_EVENT, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION")),
+__other => ::core::result::Result::Err(::openehr_base::serde_support::unexpected_type("LOCATABLE", __other, "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_LOG_RESTRICTION, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INTERVAL_EVENT, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION")),
 }
                     }
                     Some(::openehr_base::serde_support::TagMatch::Unknown(__other)) => {
                         ::core::result::Result::Err(::openehr_base::serde_support::unexpected_type(
                             "LOCATABLE",
                             &__other,
-                            "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INTERVAL_EVENT, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION",
+                            "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_LOG_RESTRICTION, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INTERVAL_EVENT, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION",
                         ))
                     }
                     None => {
                         ::core::result::Result::Err(::openehr_base::serde_support::missing_type(
                             "LOCATABLE",
-                            "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INTERVAL_EVENT, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION",
+                            "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_LOG_RESTRICTION, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INTERVAL_EVENT, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION",
                         ))
                     }
                 }
@@ -3353,6 +3645,7 @@ impl ::serde::Serialize for crate::draft::access_control::common::archetyped::pa
         match self {
 crate::draft::access_control::common::archetyped::pathable::Pathable::AccessClassification(__x) => ::serde::Serialize::serialize(__x, __serializer),
 crate::draft::access_control::common::archetyped::pathable::Pathable::AccessDirective(__x) => ::serde::Serialize::serialize(__x, __serializer),
+crate::draft::access_control::common::archetyped::pathable::Pathable::AccessLogRestriction(__x) => ::serde::Serialize::serialize(__x, __serializer),
 crate::draft::access_control::common::archetyped::pathable::Pathable::AccessPolicy(__x) => ::serde::Serialize::serialize(__x, __serializer),
 crate::draft::access_control::common::archetyped::pathable::Pathable::Action(__x) => ::serde::Serialize::serialize(__x, __serializer),
 crate::draft::access_control::common::archetyped::pathable::Pathable::Activity(__x) => ::serde::Serialize::serialize(__x, __serializer),
@@ -3408,6 +3701,7 @@ impl<'de> ::serde::Deserialize<'de>
         const __TAGS: &[&str] = &[
             "ACCESS_CLASSIFICATION",
             "ACCESS_DIRECTIVE",
+            "ACCESS_LOG_RESTRICTION",
             "ACCESS_POLICY",
             "ACTION",
             "ACTIVITY",
@@ -3474,6 +3768,7 @@ impl<'de> ::serde::Deserialize<'de>
                         match __t {
 "ACCESS_CLASSIFICATION" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::pathable::Pathable::AccessClassification(::serde::Deserialize::deserialize(__rest)?)),
 "ACCESS_DIRECTIVE" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::pathable::Pathable::AccessDirective(::serde::Deserialize::deserialize(__rest)?)),
+"ACCESS_LOG_RESTRICTION" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::pathable::Pathable::AccessLogRestriction(::serde::Deserialize::deserialize(__rest)?)),
 "ACCESS_POLICY" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::pathable::Pathable::AccessPolicy(::serde::Deserialize::deserialize(__rest)?)),
 "ACTION" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::pathable::Pathable::Action(::serde::Deserialize::deserialize(__rest)?)),
 "ACTIVITY" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::pathable::Pathable::Activity(::serde::Deserialize::deserialize(__rest)?)),
@@ -3517,20 +3812,20 @@ impl<'de> ::serde::Deserialize<'de>
 "POINT_EVENT" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::pathable::Pathable::PointEvent(::serde::Deserialize::deserialize(__rest)?)),
 "ROLE" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::pathable::Pathable::Role(::serde::Deserialize::deserialize(__rest)?)),
 "SECTION" => ::core::result::Result::Ok(crate::draft::access_control::common::archetyped::pathable::Pathable::Section(::serde::Deserialize::deserialize(__rest)?)),
-__other => ::core::result::Result::Err(::openehr_base::serde_support::unexpected_type("PATHABLE", __other, "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EVENT_CONTEXT, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INSTRUCTION_DETAILS, INTERVAL_EVENT, ISM_TRANSITION, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION")),
+__other => ::core::result::Result::Err(::openehr_base::serde_support::unexpected_type("PATHABLE", __other, "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_LOG_RESTRICTION, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EVENT_CONTEXT, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INSTRUCTION_DETAILS, INTERVAL_EVENT, ISM_TRANSITION, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION")),
 }
                     }
                     Some(::openehr_base::serde_support::TagMatch::Unknown(__other)) => {
                         ::core::result::Result::Err(::openehr_base::serde_support::unexpected_type(
                             "PATHABLE",
                             &__other,
-                            "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EVENT_CONTEXT, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INSTRUCTION_DETAILS, INTERVAL_EVENT, ISM_TRANSITION, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION",
+                            "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_LOG_RESTRICTION, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EVENT_CONTEXT, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INSTRUCTION_DETAILS, INTERVAL_EVENT, ISM_TRANSITION, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION",
                         ))
                     }
                     None => {
                         ::core::result::Result::Err(::openehr_base::serde_support::missing_type(
                             "PATHABLE",
-                            "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EVENT_CONTEXT, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INSTRUCTION_DETAILS, INTERVAL_EVENT, ISM_TRANSITION, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION",
+                            "ACCESS_CLASSIFICATION, ACCESS_DIRECTIVE, ACCESS_LOG_RESTRICTION, ACCESS_POLICY, ACTION, ACTIVITY, ADDRESS, ADMIN_ENTRY, AGENT, CAPABILITY, CLUSTER, COMPOSITION, CONTACT, EHR_ACCESS, EHR_STATUS, ELEMENT, EVALUATION, EVENT_CONTEXT, EXTRACT, EXTRACT_ACTION_REQUEST, EXTRACT_CHAPTER, EXTRACT_ENTITY_CHAPTER, EXTRACT_FOLDER, EXTRACT_REQUEST, FOLDER, GENERIC_CONTENT_ITEM, GENERIC_ENTRY, GROUP, HISTORY, INSTRUCTION, INSTRUCTION_DETAILS, INTERVAL_EVENT, ISM_TRANSITION, ITEM_LIST, ITEM_SINGLE, ITEM_TABLE, ITEM_TREE, OBSERVATION, OPENEHR_CONTENT_ITEM, ORGANISATION, PARTY_IDENTITY, PARTY_RELATIONSHIP, PERSON, POINT_EVENT, ROLE, SECTION",
                         ))
                     }
                 }

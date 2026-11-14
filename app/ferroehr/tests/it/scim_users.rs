@@ -830,7 +830,7 @@ async fn a_deletion_erases_the_contacts_and_keeps_the_attribution_minimum() {
     drop(svc);
     handle.shutdown(std::time::Duration::from_secs(5)).await;
     let recorded: Vec<(String, Option<String>)> =
-        sqlx::query_as("SELECT action, principal FROM audit.audit_event WHERE resource_id = $1")
+        sqlx::query_as("SELECT action, principal FROM audit.access_trail WHERE resource_id = $1")
             .bind(format!("party:{id}#contacts"))
             .fetch_all(&db.pool())
             .await

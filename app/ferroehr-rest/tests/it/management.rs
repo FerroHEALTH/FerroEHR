@@ -779,7 +779,7 @@ async fn a_management_request_is_recorded_in_the_audit_trail() {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     let row = loop {
         let found: Option<(String, Option<String>, String)> = sqlx::query_as(
-            "SELECT operation, principal, domain FROM audit.audit_event \
+            "SELECT operation, principal, domain FROM audit.access_trail \
              WHERE operation = 'management_info' ORDER BY recorded_at DESC LIMIT 1",
         )
         .fetch_optional(&pool)
@@ -790,7 +790,7 @@ async fn a_management_request_is_recorded_in_the_audit_trail() {
         }
         if std::time::Instant::now() >= deadline {
             let landed: Vec<Option<String>> =
-                sqlx::query_scalar("SELECT operation FROM audit.audit_event ORDER BY recorded_at")
+                sqlx::query_scalar("SELECT operation FROM audit.access_trail ORDER BY recorded_at")
                     .fetch_all(&pool)
                     .await
                     .expect("read the trail");

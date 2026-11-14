@@ -21,14 +21,18 @@
 //!   `GET /admin/access-log`, reads the full view;
 //! - any other caller is refused with `403`.
 //!
-//! Every read, refused and failed ones included, writes its own access-log
-//! entry naming the log it read.
+//! The subject view withholds what the controller's access policy restricts
+//! under EHDS Art. 9(3) (`ACCESS_POLICY.log_restrictions`, #5570), read from
+//! the policy in force, which a policy write brings up to date on the next
+//! request with no restart. Every read, refused and failed ones included,
+//! writes its own access-log entry naming the log it read.
 
 use axum::response::Response;
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use ferroehr::access_log::view::Restrictions;
 use ferroehr::service::admin::access_log_read::LogReader;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
@@ -137,7 +141,11 @@ async fn list(state: &AppState, parts: &RequestParts) -> Response {
             .backend()
             .ehr_access_log(ehr_id, &filter, reader)
             .await?;
-        Ok((page(&records, &filter, reader)?, Some(records.len())))
+        let restrictions = restrictions(state);
+        Ok((
+            page(&records, &filter, reader, &restrictions)?,
+            Some(records.len()),
+        ))
     }
     .await;
     recorded(
@@ -160,12 +168,22 @@ async fn get(state: &AppState, parts: &RequestParts) -> Response {
             .backend()
             .ehr_access_log_entry(ehr_id, uid, reader)
             .await?;
-        let body = record_view(&AccessLogRecord::AccessLogEntry(entry), reader)?
-            .ok_or_else(|| unknown_entry(uid))?;
+        let body = record_view(
+            &AccessLogRecord::AccessLogEntry(entry),
+            reader,
+            &restrictions(state),
+        )?
+        .ok_or_else(|| unknown_entry(uid))?;
         Ok((body, Some(1)))
     }
     .await;
     recorded(&parts.headers, answered, Some(ehr), Some(uid), None)
+}
+
+/// The EHDS Art. 9(3) restrictions of the subject view in the controller's
+/// access policy in force, which the request brought up to date before it ran.
+fn restrictions(state: &AppState) -> Restrictions {
+    Restrictions::of(state.backend().access_policy().in_force().policy.as_deref())
 }
 
 /// Who the current caller reads the log of `ehr` as.

@@ -96,15 +96,14 @@ ever names an identity that did not authenticate.
 
 ## The openEHR access-log entry
 
-Beside each record, every access to EHR data also writes an openEHR
-access-log entry: an `ACCESS_LOG_ENTRY` of the draft
-`org.openehr.rm.access_log` 0.1.0 model, FerroEHR's proposal to openEHR,
-which no openEHR release defines yet. Reads, writes, AQL queries, exports,
-refusals and reads of the access log itself each write one. An access that
-reaches several EHRs writes one entry per EHR, and the entries of one request
-share its request id, so a population query writes one entry for each EHR
-that contributed a row, a statement that projects only the EHR
-(`SELECT e/ehr_id/value FROM EHR e`) included.
+Every access to EHR data is recorded as an openEHR access-log entry: an
+`ACCESS_LOG_ENTRY` of the draft `org.openehr.rm.access_log` 0.1.0 model,
+FerroEHR's proposal to openEHR, which no openEHR release defines yet. Reads,
+writes, AQL queries, exports, refusals and reads of the access log itself each
+write one. An access that reaches several EHRs writes one entry per EHR, and
+the entries of one request share its request id, so a population query writes
+one entry for each EHR that contributed a row, a statement that projects
+only the EHR (`SELECT e/ehr_id/value FROM EHR e`) included.
 
 The administrative routes that touch an EHR write entries the same way, one
 per EHR they touched: the physical EHR delete, one EHR or in bulk; the
@@ -149,16 +148,153 @@ the entry says why. An override in an emergency sets `is_emergency`, so the
 person sees it in their access log (EHDS Art. 9 and 11(5)). The EHDS record
 writes the versions the grounds name after the data permit at
 `agent[user].policy`, "the policy or plan that authorized the activity being
-recorded" (FHIR R4 `AuditEvent.agent.policy`), and the store keeps them in the
-`decision_policies` column. Which grounds are named is FerroEHR's own design.
+recorded" (FHIR R4 `AuditEvent.agent.policy`), read from the entry's grounds
+when the record is rendered. Which grounds are named is FerroEHR's own design.
 
-The entry is written in the same database transaction as the record it
-accompanies, so the store holds both or neither, and an access whose record
-the store cannot take is refused under `fail_mode = "closed"` exactly as
-before. Entries are kept in `audit.access_log_record`, chained with the
-records under one hash chain (see [Tamper evidence](#tamper-evidence)), and
-each states the date it is kept until and why. The store requires
-`[audit.store]`; with the store off no entry is written.
+**The entry is the record.** The store keeps an access to EHR data as its
+entry alone, in `audit.access_log_record`, chained under one hash chain (see
+[Tamper evidence](#tamper-evidence)), and each entry states the date it is
+kept until and why. The FHIR `AuditEvent` the ITI-81 search and the ITI-20
+FHIR feed serve, the DICOM message the syslog sink sends and the EHDS access
+record are projections of the stored entry: each is written from what the
+log keeps and from nothing else, and none is stored as a second record.
+`audit.audit_event` keeps the records of accesses outside the access log: an
+authentication, a template or party operation, an application activity.
+
+The entry is written in one database transaction with the rest of its batch,
+and an access whose entry the store cannot take is refused under
+`fail_mode = "closed"`. The store requires `[audit.store]`; with the store off
+the drain still builds each entry and sends its projections to the syslog
+sink and the FHIR feed, and keeps nothing.
+
+### FerroEHR's access details
+
+The draft's core attributes are openEHR's: the action, the outcome, the
+accessor, the items, the query, the authorisations, the channel. The facts
+the BALP `AuditEvent`, the DICOM message and the EHDS access record carry
+that the core holds no attribute for are kept in the entry's
+`other_details`, which the draft gives to the fields a jurisdiction adds: one
+`ITEM_TREE` under the archetype id
+`openEHR-EHR-ITEM_TREE.ferroehr_access_details.v0`, one `ELEMENT` per fact,
+named by its at-code. They are part of the entry, so the hash chain covers
+them, and a tombstone removes them with the rest of its content. No openEHR
+specification governs them: they are FerroEHR's own.
+
+| at-code | Name | Value | Holds |
+|---|---|---|---|
+| `at0001` | event action | `DV_TEXT` | the DICOM `EventActionCode`: `C`, `R`, `U`, `D` or `E` |
+| `at0002` | resource class | `DV_TEXT` | the class of resource the access addressed |
+| `at0003` | outcome indicator | `DV_COUNT` | the DICOM `EventOutcomeIndicator`: `0`, `4` or `8` |
+| `at0004` | principal | `DV_TEXT` | the login the access was made under |
+| `at0005` | issuer | `DV_TEXT` | the issuer of the caller's token |
+| `at0006` | client id | `DV_TEXT` | the client the token was issued to |
+| `at0007` | token id | `DV_TEXT` | the token's `jti` |
+| `at0008` | organisation | `DV_TEXT` | the organisation the token named |
+| `at0009` | role | `DV_TEXT` | a role the caller held, one element each |
+| `at0010` | domain | `DV_TEXT` | the pseudonymisation domain, when it is not the resource class's own |
+| `at0011` | ehr id | `DV_TEXT` | the EHR the request named |
+| `at0012` | subject | `DV_IDENTIFIER` | the subject of care of the EHR, as `EHR_STATUS.subject` names it, with its namespace as the issuer |
+| `at0013` | subject lookup failed | `DV_BOOLEAN` | set when the subject could not be looked up |
+| `at0014` | object id | `DV_TEXT` | the object the request named; none for a read of the log, whose search the entry names by digest |
+| `at0015` | purpose | `DV_TEXT` | the purpose of use the caller declared |
+| `at0016` | legal basis | `DV_TEXT` | the legal basis the deployment attributes |
+| `at0017` | result count | `DV_COUNT` | how many records the access served |
+| `at0018` | origin | `DV_TEXT` | an origin of the data, one element each |
+| `at0019` | origin count | `DV_COUNT` | how many distinct origins the data had |
+| `at0020` | category map digest | `DV_TEXT` | the category map the access was classified through |
+| `at0021` | category content | `DV_PARSABLE` (`application/json`) | what the classification read |
+| `at0022` | acting mode | `DV_TEXT` | how the credential acted |
+| `at0023` | assurance level | `DV_TEXT` | the assurance level of the authentication |
+| `at0024` | assurance value | `DV_TEXT` | the claim value the level was read from |
+| `at0025` | professional id | `DV_TEXT` | the identifier of the natural person who accessed |
+| `at0026` | token attributes | `DV_PARSABLE` (`application/json`) | the purposes and roles the token stated |
+| `at0027` | binding | `DV_PARSABLE` (`application/json`) | the party binding with every field |
+| `at0028` | summary | `DV_PARSABLE` (`application/json`) | the count and EHRs of a summary of refusals |
+| `at0029` | event type | `DV_TEXT` | the DICOM `EventTypeCode` of an authentication record: `110122` Login, `110123` Logout |
+
+The subject of care is kept so the BALP `entity:patient` and the
+`patient` search parameter name the patient as they did when the access
+was recorded, whatever happens to the EHR after. An entry imported from
+another system ([Checkpoints and the transfer of a log](#checkpoints-and-the-transfer-of-a-log))
+keeps that system's details, and FerroEHR projects none of it.
+
+To read the trail with SQL, `audit.access_trail` holds every record of
+either form with the facts it states, in the audit vocabulary
+(`operation`, `principal`, `binding`, `party` and the rest), an entry's read
+from its content. `audit.access_detail(content::jsonb, 'at0022')` reads one
+access detail of an entry. The categories a classification computes are no
+column there: the projection writes them.
+
+### The projections and their losses
+
+Each projection reads one stored entry and writes one target record.
+"Loss" means the target has no place for the value; the entry keeps it. The
+FHIR R4 `AuditEvent` follows IHE BALP 1.1.4; an access the category map did
+not classify is a BALP exchange without the EHDS entities. Each row is a test
+(`access_log::projection` in the source).
+
+**To the FHIR R4 `AuditEvent` (IHE BALP 1.1.4).**
+
+| Entry | `AuditEvent` | Loss |
+|---|---|---|
+| `action` | `action` (`C`, `R`, `U`, `D`, `E`), `type` `rest` and the FHIR interaction as the first `subtype`; an export or import is `type` Export or Import | the openEHR action has no code system of its own: `export` and `import` fold into `R` and `C` |
+| `operation` | a `subtype` in `urn:openehr:its-rest:operation` | none |
+| `time_recorded` | `recorded` | `occurred`: no `period` is written |
+| `outcome.result` | `outcome`: `0` granted, `4` refused or a minor failure, `8` a serious failure | refused and a minor failure share `4`; `outcomeDesc` states the outcome in words and no reason code |
+| `outcome.delivered` | the `delivered` detail of the `ehds-categories` entity | none, as a detail |
+| `accessor.party` | the `ihe-otherId` typed `PRN` of `agent:user` (BALP 1.1.4 §3:5.7.5.4) | none |
+| `accessor.credential` | `agent:user` `who.identifier` (issuer as `system`, subject as `value`), the token id as its first `policy`, the client as an agent of its own, the assurance as `ihe-assuranceLevel` | the authentication method has no element |
+| `accessor.provider` | an agent naming the organisation | none |
+| `accessor.roles`, `accessor.kind` | `agent:user` `role`, the acting mode first | none |
+| `accessor.groups`, `accessor.binding`, `accessor.delegation` | details of the `ehds-accessor` entity, one `actor` per actor in the chain's order | no element; details |
+| `ehr_id` | the `ehr` entity, with the subject of care as the patient entity (`entity:patient`, role `1`) | none |
+| `items` | `entity:data` (type `2`, role `4`) naming the version in `urn:openehr:object-id`; the categories and the template and archetype ids as details of `ehds-categories` | the RM type and the paths have no element |
+| `items.origins` | one `origin` entity each | no element; entities |
+| `query` | `entity:query` (role `24`), a stored query by its name | the text digest is not written |
+| `purposes` | `purposeOfEvent` and `agent:user` `purposeOfUse` | none |
+| `authorisations` | a permit as a `policy` of `agent:user` after the token id; an agreement in the `ehds-relayed` entity; a representation in `ehds-accessor` | legal grounds have no element; details |
+| `is_emergency` | the `ehds-emergency-access` entity naming the purposes that marked it | the mark becomes an entity |
+| `channel.request_id`, `channel.client_address` | the `X-Request-Id` entity; the client agent's `network.address` | none |
+| `system_id` | `source.observer.identifier`; `source.site` from `[audit] enterprise_site_id` | none |
+| `security_labels` | the `securityLabel` of the entity they label | no `meta.security` is written |
+| `retention` | details of `ehds-categories` | no element; details |
+| `link`, checkpoints | nothing | the chain does not travel; verify it on the openEHR side |
+| `other_details` | the values it holds, where the rows above put them | the tree itself is not written |
+
+**To the DICOM PS3.15 A.5 audit message (the syslog sink).**
+
+| Entry | DICOM element | Loss |
+|---|---|---|
+| `action` | `EventActionCode`; `EventID` Patient Record (110110), Query (110112), Export (110106), Import (110107) | as in R4 |
+| `operation` | `EventTypeCode` in `openEHR-ITS-REST` | none |
+| `time_recorded` | `EventDateTime` | `occurred` |
+| `outcome` | `EventOutcomeIndicator`, `EventOutcomeDescription` | the reason's code |
+| `accessor.credential` | the requestor's `UserID` (the subject, or the professional a client acts for) | the issuer, the token id, the assurance |
+| `accessor.roles` | `RoleIDCode` in `urn:ferroehr:role` | none |
+| `accessor.party`, `binding`, `groups`, `delegation` | details of the `ehds-accessor` participant object | no element; details |
+| `accessor.provider` | nothing | lost |
+| `system_id` | `AuditSourceID`, with `AuditEnterpriseSiteID` from the deployment | none |
+| `channel.client_address` | `NetworkAccessPointID`, type `2` | none |
+| `ehr_id` | the patient participant (type `1`, role `1`) names the subject of care | the `ehr_id` itself is not written |
+| `items` | a System Object (type `2`, ID type URI) naming the version | the categories, origins, template and archetype |
+| `query` | the query object of the Query event | the text digest |
+| `purposes`, `authorisations`, `is_emergency` | nothing in the A.5.1 schema | lost |
+| `retention`, `security_labels`, `link`, `other_details` | nothing | lost |
+
+**To the EHDS access record (`ehds-logging` `AccessRecord`).**
+
+| `AccessRecord` | Entry | Loss |
+|---|---|---|
+| `action` | `action` | export and import fold into `Read` and `Create` |
+| `recorded` | `time_recorded` | none |
+| `outcome`, `outcome_description` | `outcome.result` and the outcome indicator | a refusal shares `MinorFailure` with a minor failure |
+| `accessor` (issuer, subject, client, token id, acting, roles, assurance, provider, party, groups, binding, actors, represents, relayed, purposes, policies) | `accessor`, `purposes`, `authorisations` and the access details | none |
+| `subject.ehrs` | `ehr_id`, with the subject of care found | one record per entry; the entries of a request share its request id |
+| `categories` | `items.categories`, computed again through the category map that classified the access | none |
+| `delivered`, `origins`, `origin_count` | `outcome.delivered`, `items.origins`, the origin count | none |
+| `request` (id, operation, resource, stored query, client address, correlation) | `channel`, `operation`, `items`, `query` | the query text is never carried |
+| `retention`, `labels`, `emergency` | `retention`, the categories and origins, `is_emergency` | none |
+| none | `link` | the chain |
 
 ## Reads are logged too, per record
 
@@ -701,7 +837,8 @@ value outside its form, is a `400`.
   categories, the purposes and the emergency mark, and leaves out the
   credential, the delegation chain, the binding outcome, the channel, the
   query text and its digest, the security labels, `other_details` and the
-  link. An entry about a composition held from the person under EHDS Art.
+  link, and the accessor members a
+  [restriction](#restricting-the-subject-view-ehds-art-93) withholds. An entry about a composition held from the person under EHDS Art.
   3(3) is left out until the hold ends, as in the [subject-scoped ITI-81
   read](#while-a-composition-is-held-from-the-person). Any other EHR answers
   `404`, the same as an unknown one, so its existence is not disclosed.
@@ -718,6 +855,50 @@ of these resources, refused and failed ones included, writes an access-log
 entry whose item names the log it read (`ACCESS_LOG_RECORD` for an entry,
 `ACCESS_LOG` for an EHR's whole log), with the filter named by its digest. A
 tombstone keeps no EHR, so a removed entry is read through the review.
+
+### Restricting the subject view (EHDS Art. 9(3))
+
+EHDS Art. 9(3) lets a Member State restrict the person's right to see who
+accessed their data "in exceptional circumstances". If your law does, declare
+the restriction in the controller's
+[access policy](operational-policy.md), never in `ferroehr.toml`: each entry
+of `log_restrictions` names the accessor kinds it applies to (the `accessor
+kind` rubrics of the log, such as `person` or `external person`), the
+accessor members the subject view withholds (`accessor_party`,
+`accessor_provider`, `accessor_roles`, `accessor_groups`, in
+`ferroehr-operations`), and the provisions that lay it down, coded in your
+jurisdiction's terminology. FerroEHR ships no country's restriction.
+
+```json
+"log_restrictions": [{
+  "_type": "ACCESS_LOG_RESTRICTION",
+  "name": { "_type": "DV_TEXT", "value": "External accessor withheld" },
+  "archetype_node_id": "id11",
+  "accessor_kinds": [{ "_type": "DV_CODED_TEXT", "value": "external person",
+    "defining_code": { "_type": "CODE_PHRASE",
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+      "code_string": "external person" } }],
+  "withheld": [{ "_type": "DV_CODED_TEXT", "value": "accessor_party",
+    "defining_code": { "_type": "CODE_PHRASE",
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+      "code_string": "accessor_party" } }],
+  "legal_grounds": [{ "_type": "DV_CODED_TEXT", "value": "your national provision",
+    "defining_code": { "_type": "CODE_PHRASE",
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "urn:example:national-law" },
+      "code_string": "art-x" } }]
+}]
+```
+
+- The subject and their representative get the subject view of an entry
+  whose accessor is of a named kind without the withheld members. A reviewer
+  reads the full entry, and the stored entry never changes.
+- A policy write applies on the next request on every replica, with no
+  restart.
+- A write that changes the restrictions changes what the log means, so it
+  writes an access-log entry of its own (operation
+  `admin_access_policy_write`), and the policy history keeps every version.
+  Under `[audit] fail_mode = "closed"`, such a write is refused with `503`
+  while the audit trail cannot take the entry.
 
 ```bash
 # Who accessed my record this month? (the patient portal's token)
@@ -926,9 +1107,13 @@ is our own design.
   `system_id`, links and `retain_until` apart from its own chain, and records
   the import as an `import` entry of its own log, built like every other
   entry and naming the system as its accessor. An import repeated stores
-  nothing twice. An export whose span holds `audit_event` records is refused,
-  since only the database that wrote those records can recompute their
-  links.
+  nothing twice. An access to EHR data is stored as its entry alone, so a
+  span holds an `audit_event` record only where an access outside the
+  access log (an authentication, a template or party operation, an
+  application activity) was recorded between the EHR's entries, or where
+  the span reaches records written before entries were the record. Such an
+  export is refused, since only the database that wrote those records can
+  recompute their links.
 
 ## Retrieving audit records (ITI-81)
 
@@ -960,7 +1145,9 @@ parameter on an element of the document (`address` and the `.identifier`,
 `entity-type`, `entity-role`, `type` and `subtype` parameters) matches the
 search tokens the store takes from the record's rendered document when it
 writes the record (`audit.audit_search_token`, `audit.audit_search_set` and
-the record's `search_tokens`), so the search finds what the served document
+the record's `search_tokens`, for an entry its row in
+`audit.access_log_search`, which goes with the entry's content when a
+tombstone replaces it), so the search finds what the served document
 says and renders only the page it serves. An `entity.identifier` that carries
 the record's request id or the object it names (the version uid of a create)
 is read from the record's own column instead, so a request adds no row to

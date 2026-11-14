@@ -63,16 +63,18 @@ fn record(event: &AuditEvent, subject: Option<&str>) -> AuditRecord {
     }
 }
 
+/// A party read: an access outside the access log, so the store keeps it in
+/// the `audit_event` form whose columns these tests hold.
 fn read_event(at: Timestamp) -> AuditEvent {
     let mut e = AuditEvent::new(
         EventActionCode::Read,
-        ObjectClass::Composition,
+        ObjectClass::Demographic,
         EventOutcome::Success,
     );
     "alice".clone_into(&mut e.user_id);
     e.client_ip = Some("10.0.0.9".to_owned());
     e.object_id = Some("8fa1::ferroehr::1".to_owned());
-    e.event_type = Some(EventType::rest("composition_get"));
+    e.event_type = Some(EventType::rest("person_get"));
     e.token_id = Some("jti-1".to_owned());
     e.timestamp = at;
     e
@@ -105,7 +107,7 @@ async fn insert_persists_the_columns_and_serves_the_rendered_document() {
     assert_eq!(row.get::<String, _>("event_code"), "110110");
     assert_eq!(
         row.get::<Option<String>, _>("operation").as_deref(),
-        Some("composition_get")
+        Some("person_get")
     );
     assert_eq!(
         row.get::<Option<String>, _>("principal").as_deref(),
@@ -115,7 +117,7 @@ async fn insert_persists_the_columns_and_serves_the_rendered_document() {
         row.get::<Option<String>, _>("patient_id").as_deref(),
         Some("patient-42")
     );
-    assert_eq!(row.get::<String, _>("resource_class"), "composition");
+    assert_eq!(row.get::<String, _>("resource_class"), "demographic");
     assert_eq!(
         row.get::<Option<String>, _>("resource_id").as_deref(),
         Some("8fa1::ferroehr::1")
@@ -142,7 +144,7 @@ async fn insert_persists_the_columns_and_serves_the_rendered_document() {
     assert_eq!(stored["resourceType"], "AuditEvent");
     assert_eq!(
         stored["meta"]["profile"][0],
-        "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientRead"
+        "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.Read"
     );
 }
 
@@ -465,7 +467,7 @@ async fn access_fields_round_trip_on_both_write_paths() {
 
     assert_eq!(
         rows[0].get::<Option<String>, _>("domain").as_deref(),
-        Some("clinical")
+        Some("party")
     );
     assert_eq!(
         rows[0].get::<Option<String>, _>("purpose").as_deref(),

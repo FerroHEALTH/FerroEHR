@@ -243,7 +243,8 @@ fn an_emergency_override_is_marked_with_what_it_lifted() {
 
     let mut event = event_of(&access);
     event.emergency_access = true;
-    let entry = entry_of(&event, "cdr.example.org", horizon_retention(None)).expect("an entry");
+    let entry =
+        entry_of(&event, None, "cdr.example.org", horizon_retention(None)).expect("an entry");
     assert!(entry.is_emergency);
     let kinds: Vec<&str> = entry
         .authorisations
@@ -402,7 +403,8 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
 
         let event = event_of(&access);
         assert_eq!(event.decision, AccessDecision::Refused, "{code}");
-        let entry = entry_of(&event, "cdr.example.org", horizon_retention(None)).expect("an entry");
+        let entry =
+            entry_of(&event, None, "cdr.example.org", horizon_retention(None)).expect("an entry");
         assert_eq!(entry.outcome.result.value, "refused", "{code}");
         let reason = entry.outcome.reason.as_ref().expect("the reason");
         assert_eq!(reason.defining_code.code_string, code);

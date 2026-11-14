@@ -8,7 +8,9 @@
 //! grants. An admission and a discharge decide the next request on another
 //! replica, a replica reads only the facts of the parties that changed, with
 //! one indexed read, and only a caller holding `write_care_relationship` (or
-//! an administrator) changes a care relationship. No openEHR spec gives a
+//! an administrator) changes a care relationship. A provider
+//! `ORGANISATION`'s `member_of` relationship is its membership of a `GROUP`
+//! (#5575), held and guarded the same way. No openEHR spec gives a
 //! capability or a relationship an access meaning: our own design.
 
 use std::future::Future;
@@ -126,6 +128,26 @@ fn team() -> Value {
     })
 }
 
+/// A provider `ORGANISATION` holding `relationships`.
+fn organisation(relationships: &[Value]) -> Value {
+    let archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.hospital.v1";
+    let mut body = json!({
+        "_type": "ORGANISATION", "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype } },
+        "name": text("Hospital"),
+        "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "at0001",
+            "name": text("name"),
+            "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("name"),
+                "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("name"),
+                            "value": text("Hospital") }] } }]
+    });
+    if !relationships.is_empty() {
+        body["relationships"] = Value::Array(relationships.to_vec());
+    }
+    body
+}
+
 /// A replica over `pool`, as the server installs it.
 async fn replica(pool: &sqlx::PgPool) -> FerroEhrService {
     granting(FerroEhrService::new(
@@ -154,25 +176,19 @@ async fn as_client<F: Future>(svc: &FerroEhrService, client_id: &str, fut: F) ->
     with_capabilities(granted, with_committer(Some(caller), Box::pin(fut))).await
 }
 
-/// Commits `body` as the next version of the `PERSON` `vo` after `uid` as the
-/// client `client_id`; the new version's uid.
+/// Commits `body` as the next version of the party of `kind` `vo` after `uid`
+/// as the client `client_id`; the new version's uid.
 async fn update_as(
     svc: &FerroEhrService,
     client_id: &str,
-    (vo, uid): (VoId, &str),
+    (kind, vo, uid): (PartyKind, VoId, &str),
     body: &Value,
 ) -> Result<String, ServiceError> {
     let mut write = WriteRequest::new(crate::typed_body::typed(body));
     write.lifecycle_state = Some("532".to_owned());
     write.preceding = Some(uid.parse().expect("an OBJECT_VERSION_ID"));
     let updated = as_client(svc, client_id, async {
-        Box::pin(svc.party_update(
-            PartyKind::Person,
-            object(vo.to_string()),
-            if_match(uid),
-            write,
-        ))
-        .await
+        Box::pin(svc.party_update(kind, object(vo.to_string()), if_match(uid), write)).await
     })
     .await?;
     Ok(updated.meta.expect("a version").uid)
@@ -256,9 +272,14 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         "Dr D",
         &[care("member_of", doctor, ward, &interval(&day(-30), None))],
     );
-    update_as(&one, "adt", (doctor, &doctor_uid), &roster)
-        .await
-        .expect("the ADT system writes the membership");
+    update_as(
+        &one,
+        "adt",
+        (PartyKind::Person, doctor, &doctor_uid),
+        &roster,
+    )
+    .await
+    .expect("the ADT system writes the membership");
     two.grants().refresh().await.expect("the copy reads");
     let held = two.grants().revision();
     let now = jiff::Timestamp::now();
@@ -268,7 +289,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
     let admitted = update_as(
         &one,
         "adt",
-        (patient, &uid),
+        (PartyKind::Person, patient, &uid),
         &person(
             "Mr E",
             &[care(
@@ -299,7 +320,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
     update_as(
         &one,
         "adt",
-        (patient, &admitted),
+        (PartyKind::Person, patient, &admitted),
         &person(
             "Mr E",
             &[care(
@@ -346,16 +367,103 @@ async fn only_a_write_care_relationship_grant_changes_a_care_relationship() {
             &interval(&day(0), None),
         )],
     );
-    let refused = update_as(&svc, "registry", (patient, &uid), &admitted)
-        .await
-        .expect_err("a client without the grant is refused");
+    let refused = update_as(
+        &svc,
+        "registry",
+        (PartyKind::Person, patient, &uid),
+        &admitted,
+    )
+    .await
+    .expect_err("a client without the grant is refused");
     assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
-    let renamed = update_as(&svc, "registry", (patient, &uid), &person("Mr E.", &[]))
+    let renamed = update_as(
+        &svc,
+        "registry",
+        (PartyKind::Person, patient, &uid),
+        &person("Mr E.", &[]),
+    )
+    .await
+    .expect("a version that leaves the care relationships alone commits");
+    update_as(
+        &svc,
+        "adt",
+        (PartyKind::Person, patient, &renamed),
+        &admitted,
+    )
+    .await
+    .expect("the ADT system writes the care relationship");
+}
+
+#[tokio::test]
+async fn a_providers_group_membership_is_guarded_and_held_on_another_replica() {
+    let db = testkit::db().await.expect("testkit database");
+    let (one, two) = (replica(&db.pool()).await, replica(&db.pool()).await);
+    granted(&one, "registry", &[capability("access_demographic", &[])]).await;
+    granted(&one, "adt", &[capability("write_care_relationship", &[])]).await;
+    let (region, _) = create(&one, PartyKind::Group, &team())
         .await
-        .expect("a version that leaves the care relationships alone commits");
-    update_as(&svc, "adt", (patient, &renamed), &admitted)
+        .expect("the GROUP commits");
+    let (hospital, uid) = create(&one, PartyKind::Organisation, &organisation(&[]))
         .await
-        .expect("the ADT system writes the care relationship");
+        .expect("the ORGANISATION commits");
+    let membership = |validity: &Value| {
+        let mut relationship = care("member_of", hospital, region, validity);
+        relationship["source"] = party_ref("ORGANISATION", hospital);
+        organisation(&[relationship])
+    };
+    let joined = membership(&interval(&day(-30), None));
+    let refused = update_as(
+        &one,
+        "registry",
+        (PartyKind::Organisation, hospital, &uid),
+        &joined,
+    )
+    .await
+    .expect_err("a client without the grant is refused");
+    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+    two.grants().refresh().await.expect("the copy reads");
+    let held = two.grants().revision();
+    let joined_uid = update_as(
+        &one,
+        "adt",
+        (PartyKind::Organisation, hospital, &uid),
+        &joined,
+    )
+    .await
+    .expect("the grant writes the membership");
+    two.grants()
+        .refresh_if_stale()
+        .await
+        .expect("the copy reads");
+    let now = jiff::Timestamp::now();
+    assert_eq!(two.grants().memberships(hospital.0, now), vec![region.0]);
+    assert_eq!(
+        two.grants().revision(),
+        held,
+        "a membership moves the facts revision alone"
+    );
+    assert_eq!(
+        two.grants().facts_of(hospital.0, now).care_teams().len(),
+        1,
+        "the membership is the ORGANISATION's own fact"
+    );
+    update_as(
+        &one,
+        "adt",
+        (PartyKind::Organisation, hospital, &joined_uid),
+        &membership(&interval(&day(-30), Some(&day(-1)))),
+    )
+    .await
+    .expect("the grant ends the membership");
+    two.grants()
+        .refresh_if_stale()
+        .await
+        .expect("the copy reads");
+    assert_eq!(
+        two.grants().memberships(hospital.0, jiff::Timestamp::now()),
+        Vec::<uuid::Uuid>::new(),
+        "an ended membership admits nothing on the next request"
+    );
 }
 
 #[tokio::test]

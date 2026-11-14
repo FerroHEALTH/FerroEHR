@@ -280,9 +280,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   resolve a party or a subject through them; `service::linkage` holds those
   crossings and the access record each one owes. The linkage schema that held a
   cross-reference before is gone (`audit/0021_drop_linkage_domain.sql`).
-- **The access log** is the `audit` schema. `audit_event` holds one row per
-  access as the request path writes it today, with the FHIR `AuditEvent`
-  rendered from its columns. `access_log_record` holds the draft openEHR
+- **The access log** is the `audit` schema. An access to EHR data is stored
+  as its `ACCESS_LOG_ENTRY` alone; `audit_event` keeps the records of
+  accesses outside the access log (an authentication, a template or party
+  operation, an application activity), with the FHIR `AuditEvent` rendered
+  from its columns. `access_log_record` holds the draft openEHR
   `ACCESS_LOG_ENTRY` (#5121) as its ITS-JSON canonical form without its link
   (RFC 8785), the search columns its insert trigger derives from that form,
   and its `ACCESS_LOG_LINK`: the content digest over the canonical form and
@@ -329,8 +331,22 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   Every access to EHR data writes one entry per EHR it
   reached, refusals and reads of the log included: the drain builds it from
   the access's `AuditEvent` (`access_log::entry`) and `AuditStore::insert_batch`
-  appends it in the transaction that stores the batch's records, so an access
-  adds no transaction and the store holds a record and its entry or neither.
+  appends it in the transaction that stores the batch, so an access adds no
+  transaction. The entry keeps in its `other_details` the facts its
+  projections carry that the draft's core does not hold, FerroEHR's access
+  details (`access_log::details`, `access_log::recorded`): the audit forms of
+  the action, the outcome and the resource class, the subject of care of the
+  EHR, the authentication facts, the category evidence and the binding. The
+  IHE BALP `AuditEvent`, the DICOM audit message and the EHDS access record
+  are projections of the stored entry (`access_log::projection`): the ITI-81
+  search, the person's own trail and the FHIR Feed read it through
+  `audit.audit_record`, the view of the `audit_event` records and the entries
+  with their index rows in `access_log_search` (the search columns, the
+  search tokens of the projection and the render policy, removed with the
+  entry's content when a tombstone replaces it), and the drain sends the
+  syslog message and the store-off feed's document from the entry it built
+  (`audit/0030_access_log_projections.sql`, `system_log::store::entries`,
+  `system_log::sender::records`).
   The log is read over ITS-REST (#5130): `GET {ext}/ehr/{ehr_id}/access_log`
   and its `/{uid}` serve the subject view (`access_log::view`) to the
   patient token's launch-context EHR and a bound representative's
@@ -338,7 +354,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `GET {ext}/admin/access-log`, `/chain` and `/checkpoint` serve the review.
   `access_log::search` pages the records over the trigger's search columns,
   `service::admin::access_log_read` holds the EHR check and the EHDS Art.
-  3(3) holds the person's view leaves out, and every read writes its own
+  3(3) holds the person's view leaves out, the subject view withholds what
+  the access policy's Art. 9(3) `log_restrictions` name (#5570), and every
+  read writes its own
   `LogRead` entry naming the log it read.
   No openEHR spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
@@ -552,8 +570,9 @@ which is what makes an optional stage safe to disable:
    code with the step and the directive or policy that decided it (EHDS
    Annex II 3.2, Art. 8). The adapter publishes the request's evaluator on
    the response, the audit layer stamps each record with the decision on its
-   EHR, and the versions go to `agent[user].policy` of the EHDS record and
-   the `audit_event.decision_policies` column (digest version 4). A query's
+   EHR into its entry's `authorisations` and `outcome`, and every projection
+   reads the versions back from the stored entry
+   (`access_log::recorded`) into `agent[user].policy` of the EHDS record. A query's
    condition groups verdicts with their grounds stripped (`Verdict::bare`),
    so recording adds no SQL and no transaction.
 3. **RBAC** — the coarse operation class (public / clinical / admin /
@@ -678,8 +697,8 @@ it codes since #5540)
 adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
 `access default`, `access directive kind`, `access effect`, `access
 relationship`, `access caller kind`, `access operation`, `access
-sensitivity clearance`, `access permitted purpose`, `care relationship` and
-`access refusal`, each a closed set of rubrics read into a typed term
+sensitivity clearance`, `access permitted purpose`, `care relationship`,
+`access refusal` and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
 (`Term::read`), with a value of another terminology or a code outside its
 group refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the clearance, purpose and care relationship codes
@@ -826,8 +845,14 @@ only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
 the care delivery environment evaluates "care deliverer"). A care
 relationship of another party kind or of its own container is refused
-`422`. **Our own design:** no openEHR spec gives a capability or a
-relationship an access meaning.
+`422`. An `ORGANISATION`'s `member_of` relationship is its membership of a
+`GROUP` (#5575): written as its own facts on the commit of the
+`ORGANISATION` under the same grant rule, and resolved for a client by
+`LiveGrants::memberships` of the provider its acts-for relationship names,
+which `Capabilities::facts().provider_groups()` carries and the request's
+caller adds to the parties it acts for, one level deep, from the copy held,
+so the regional sharing example adds no transaction. **Our own design:** no
+openEHR spec gives a capability or a relationship an access meaning.
 
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL
@@ -1132,7 +1157,9 @@ that hold for every EHR the controller keeps: the sensitivity of kinds of data
 (`classifications`), whether clinical access needs a care relationship
 (`care_relationship_required`, `relationship_grace`) and a declared purpose
 (`purpose_required`), and the `catalogue` of named directives a subject accepts
-by reference (IHE BPPC). BASE Architecture Overview §Security Policy leaves
+by reference (IHE BPPC), and the `log_restrictions` of the access log's
+subject view a Member State law lays down under EHDS Art. 9(3) (#5570).
+BASE Architecture Overview §Security Policy leaves
 privacy levels to "standards or agreements within jurisdictions of use", which
 the classifications carry. Break-glass and the default floor stay in TOML; the
 policy can only tighten them.
@@ -1173,6 +1200,16 @@ policy can only tighten them.
   group reads the head (one indexed read) and installs a new version. With
   nothing stale a request touches no database; while the listener is down
   every request reads; a store that cannot answer is `503`.
+- **Restrictions of the subject view (#5570).** Each `ACCESS_LOG_RESTRICTION`
+  names the `accessor kind` rubrics of the access log it applies to, the
+  `ACCESSOR` members it withholds (`access log withheld`) and its legal
+  grounds (jurisdiction codes). `access_log::view::Restrictions` reads them
+  from the policy in force and `subject_view` drops those members from an
+  entry of a named kind for the subject and their representative; the full
+  view and the stored entry are unchanged. A write that changes them writes a
+  `LogMeaning` access-log entry naming the write (the access log's recording
+  rule 7), refused before the commit under a closed fail mode. The default
+  archetype constrains them.
 
 ## Templates, validation, FLAT
 

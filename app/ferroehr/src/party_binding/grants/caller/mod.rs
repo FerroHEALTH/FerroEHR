@@ -21,6 +21,13 @@
 //! Roles: the evaluation of "care deliverer" into identities "must be done in
 //! each care delivery environment, not in the EHR").
 //!
+//! A `PARTY_RELATIONSHIP` of an `ORGANISATION` coded [`CareRelationship::MemberOf`]
+//! is its membership of a `GROUP`, such as the providers of a region (RM
+//! demographic `org.openehr.rm.demographic.group.adoc`), written under the
+//! same grant. A client acting for that `ORGANISATION` acts for the `GROUP`
+//! too ([`CallerFacts::provider_groups`]): one level of membership, our own
+//! design (#5575).
+//!
 //! [`store`] writes the facts in each commit's transaction and stamps the
 //! parties whose facts changed, and [`crate::party_binding::grants::live`]
 //! holds them on each replica beside the grants, so a request reads them with
@@ -166,7 +173,9 @@ fn foreign_code(kind: ForeignKind, value: Option<&Value>) -> Result<ForeignCode,
 
 /// Pushes onto `facts` the care relationships `body`, a party of `kind`,
 /// holds, and why one cannot be read: a care relationship is a relationship
-/// of a `PERSON`, its source, to a party of this store, its target.
+/// of a `PERSON`, its source, to a party of this store, its target, and a
+/// `member_of` of an `ORGANISATION` is its membership of a `GROUP`, such as
+/// the providers of a region.
 pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
     if kind == Kind::PartyRelationship {
         if let Some(care) = care_kind(body) {
@@ -187,8 +196,9 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
             .pointer("/target/id/value")
             .and_then(Value::as_str)
             .and_then(container);
-        let refusal = match (kind, target) {
-            (Kind::Person, Some(team)) => {
+        let refusal = match (kind, care, target) {
+            (Kind::Person, _, Some(team))
+            | (Kind::Organisation, FactKind::MemberOf, Some(team)) => {
                 facts.facts.push(CallerFact {
                     ordinal: i32::try_from(ordinal).unwrap_or(i32::MAX),
                     kind: care,
@@ -199,8 +209,13 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
                 });
                 continue;
             }
-            (Kind::Person, None) => "targets no party of this store by its container",
-            _ => "is a relationship of a PERSON, its source",
+            (Kind::Person, _, None) | (Kind::Organisation, FactKind::MemberOf, None) => {
+                "targets no party of this store by its container"
+            }
+            (Kind::Organisation, _, _) => {
+                "is a relationship of a PERSON, its source; an ORGANISATION holds only member_of"
+            }
+            _ => "is a relationship of a PERSON, or a member_of of an ORGANISATION, its source",
         };
         facts.unread.push(format!(
             "relationships[{ordinal}]: a {TERMINOLOGY}::{} relationship {refusal}",
@@ -233,14 +248,16 @@ pub(crate) fn check_content(facts: Option<&Facts>) -> Result<(), ServiceError> {
     }
 }
 
-/// The care relationships of a committed `PERSON` before its commit writes
-/// them, which [`CareBefore::check`] compares with what it wrote.
+/// The care relationships of a committed `PERSON`, or the memberships of a
+/// committed `ORGANISATION`, before its commit writes them, which
+/// [`CareBefore::check`] compares with what it wrote.
 #[derive(Debug)]
 pub(crate) struct CareBefore(Option<(Uuid, Vec<String>)>);
 
 impl CareBefore {
     /// The stored care relationships of the party `committed` writes, when
-    /// it is a `PERSON`, read on its commit transaction `tx`.
+    /// it is a `PERSON` or an `ORGANISATION`, read on its commit transaction
+    /// `tx`.
     ///
     /// # Errors
     /// A storage failure.
@@ -248,11 +265,11 @@ impl CareBefore {
         tx: &mut sqlx::PgConnection,
         committed: &crate::versioning::change::Committed,
     ) -> Result<Self, ServiceError> {
-        if committed.kind != Kind::Person {
+        if !matches!(committed.kind, Kind::Person | Kind::Organisation) {
             return Ok(Self(None));
         }
-        let person = committed.vo_id.0;
-        Ok(Self(Some((person, store::care(tx, person).await?))))
+        let party = committed.vo_id.0;
+        Ok(Self(Some((party, store::care(tx, party).await?))))
     }
 
     /// Refuses the commit when it changed the care relationships and its
@@ -265,30 +282,31 @@ impl CareBefore {
         tx: &mut sqlx::PgConnection,
         mapping: &BindingMapping,
     ) -> Result<(), ServiceError> {
-        let Some((person, before)) = self.0 else {
+        let Some((party, before)) = self.0 else {
             return Ok(());
         };
-        if store::care(tx, person).await? == before {
+        if store::care(tx, party).await? == before {
             return Ok(());
         }
-        check_care_writer(mapping, person)
+        check_care_writer(mapping, party)
     }
 }
 
-/// Refuses a commit that changed the care relationships of the `PERSON`
-/// `person` when its caller holds no [`Operation::WriteCareRelationship`]
-/// grant and is no administrator of `mapping`.
+/// Refuses a commit that changed the care relationships or memberships of
+/// the party `party` when its caller holds no
+/// [`Operation::WriteCareRelationship`] grant and is no administrator of
+/// `mapping`.
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) naming the grant.
-fn check_care_writer(mapping: &BindingMapping, person: Uuid) -> Result<(), ServiceError> {
+fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), ServiceError> {
     if Capabilities::current().holds(Operation::WriteCareRelationship)
         || crate::party_binding::protect::administrator(mapping)
     {
         return Ok(());
     }
     Err(ServiceError::not_permitted(format!(
-        "this version changes the care relationships of PERSON {person} ({TERMINOLOGY}::{} or \
+        "this version changes the care relationships of party {party} ({TERMINOLOGY}::{} or \
          {TERMINOLOGY}::{}): only a caller holding the {} grant, such as the care delivery \
          environment's ADT system, or an administrator writes them",
         FactKind::MemberOf.code(),
@@ -376,13 +394,15 @@ impl CareTeam {
 /// What the access evaluator reads about one caller beside its grants.
 ///
 /// They are the sensitivities and purposes the capabilities in force clear
-/// and permit, and the care teams the caller is a member of on the request's
-/// date.
+/// and permit, the care teams the caller is a member of on the request's
+/// date, and the `GROUP`s the provider a client acts for is a member of on
+/// that date.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CallerFacts {
     clearances: Vec<ForeignCode>,
     purposes: Vec<ForeignCode>,
     care_teams: Vec<CareTeam>,
+    provider_groups: Vec<Uuid>,
 }
 
 impl CallerFacts {
@@ -404,7 +424,18 @@ impl CallerFacts {
             clearances,
             purposes,
             care_teams,
+            provider_groups: Vec::new(),
         }
+    }
+
+    /// These facts with `groups`, the `GROUP`s the client's provider is a
+    /// member of, sorted and distinct.
+    #[must_use]
+    pub fn with_provider_groups(mut self, mut groups: Vec<Uuid>) -> Self {
+        groups.sort_unstable();
+        groups.dedup();
+        self.provider_groups = groups;
+        self
     }
 
     /// The sensitivity codes the caller's capabilities in force clear.
@@ -438,6 +469,14 @@ impl CallerFacts {
     #[must_use]
     pub fn care_teams(&self) -> &[CareTeam] {
         &self.care_teams
+    }
+
+    /// The containers of the `GROUP`s the provider a client acts for is a
+    /// member of on the request's date, by a `member_of` relationship of the
+    /// provider `ORGANISATION`.
+    #[must_use]
+    pub fn provider_groups(&self) -> &[Uuid] {
+        &self.provider_groups
     }
 }
 
@@ -574,6 +613,38 @@ mod tests {
             GrantFacts::of(Kind::PartyRelationship, &relationship("represents", TEAM)).unread,
             Vec::<String>::new()
         );
+    }
+
+    #[test]
+    fn an_organisations_member_of_is_its_membership_of_a_group() {
+        let body = json!({"_type": "ORGANISATION", "relationships": [
+            relationship("member_of", TEAM),
+            relationship("under_care_of", TEAM),
+            relationship("member_of", "1.2.840.113619")
+        ]});
+        let facts = GrantFacts::of(Kind::Organisation, &body);
+        let group = Uuid::parse_str(TEAM).expect("a uuid");
+        let read: Vec<(i32, FactKind, FactValue)> = facts
+            .facts
+            .iter()
+            .map(|fact| (fact.ordinal, fact.kind, fact.value.clone()))
+            .collect();
+        assert_eq!(read, vec![(0, FactKind::MemberOf, FactValue::Team(group))]);
+        assert_eq!(facts.unread.len(), 2, "{:?}", facts.unread);
+        assert!(
+            facts.unread[0].starts_with("relationships[1]")
+                && facts.unread[0].contains("holds only member_of"),
+            "an ORGANISATION is never under care: {:?}",
+            facts.unread
+        );
+        assert!(facts.unread[1].starts_with("relationships[2]"));
+    }
+
+    #[test]
+    fn provider_groups_are_sorted_and_distinct() {
+        let (a, b) = (Uuid::from_u128(2), Uuid::from_u128(1));
+        let facts = CallerFacts::default().with_provider_groups(vec![a, b, a]);
+        assert_eq!(facts.provider_groups(), &[b, a]);
     }
 
     #[test]

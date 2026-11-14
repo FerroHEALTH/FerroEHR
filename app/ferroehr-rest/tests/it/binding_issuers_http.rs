@@ -269,7 +269,7 @@ async fn bound_providers(
 ) -> Vec<(Option<String>, Option<String>)> {
     for _ in 0..50 {
         let rows: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
-            "SELECT provider ->> 'issuer', provider ->> 'id' FROM audit.audit_event \
+            "SELECT provider ->> 'issuer', provider ->> 'id' FROM audit.access_trail \
              WHERE binding = 'bound' AND party ->> 'id' = $1 ORDER BY recorded_at",
         )
         .bind(person)

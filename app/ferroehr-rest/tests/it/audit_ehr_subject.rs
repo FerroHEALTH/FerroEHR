@@ -58,7 +58,7 @@ async fn stored(pool: &PgPool, expected: usize, matches: impl Fn(&Row) -> bool) 
     loop {
         let rows: Vec<Row> = sqlx::query_as(
             "SELECT operation, resource_class, resource_id, principal, patient_id \
-             FROM audit.audit_event ORDER BY chain_seq",
+             FROM audit.access_trail ORDER BY chain_seq",
         )
         .fetch_all(pool)
         .await

@@ -29,16 +29,18 @@ use ferroehr::telemetry::indicators::AuditChainHealth;
 use ferrohealth_health::document::State;
 use ferrohealth_health::registry::HealthIndicator;
 
+/// A party read: an access outside the access log, so the store keeps it as
+/// an `audit_event` record, the form these tests hold to its tamper evidence.
 fn read_event(at: Timestamp, subject: &str) -> AuditEvent {
     let mut event = AuditEvent::new(
         EventActionCode::Read,
-        ObjectClass::Composition,
+        ObjectClass::Demographic,
         EventOutcome::Success,
     );
     "alice".clone_into(&mut event.user_id);
     event.client_ip = Some("10.0.0.9".to_owned());
     event.object_id = Some(subject.to_owned());
-    event.event_type = Some(EventType::rest("composition_get"));
+    event.event_type = Some(EventType::rest("person_get"));
     event.timestamp = at;
     event
 }
@@ -664,12 +666,9 @@ const VERSION_2_COLUMNS: [&str; 13] = [
 /// The column version 3 adds to version 2's list (`0026_token_attributes.sql`).
 const VERSION_3_COLUMNS: [&str; 1] = ["token_attributes"];
 
-/// The column version 4 adds to version 3's list (`0030_decision_policies.sql`).
-const VERSION_4_COLUMNS: [&str; 1] = ["decision_policies"];
-
-/// The digest of version 4 lists every column of the record but the unhashed
+/// The digest of version 3 lists every column of the record but the unhashed
 /// three, so a migration that adds a column fails here until a version lists
-/// it; versions 1 to 3 keep the lists the rows written before them are
+/// it; versions 1 and 2 keep the lists the rows written before them are
 /// hashed over.
 #[tokio::test]
 async fn the_digest_covers_every_column() {
@@ -697,17 +696,12 @@ async fn the_digest_covers_every_column() {
         .collect();
     expected.sort();
     assert_eq!(
-        listed(4).await,
+        listed(3).await,
         expected,
         "every column of audit.audit_event outside {UNHASHED_COLUMNS:?} must be in the \
          chain digest: list a new column in a new version of audit.audit_event_digest_columns"
     );
-    let version_3: Vec<String> = expected
-        .into_iter()
-        .filter(|name| !VERSION_4_COLUMNS.contains(&name.as_str()))
-        .collect();
-    assert_eq!(listed(3).await, version_3, "version 3 is the 0026 list");
-    let version_2: Vec<String> = version_3
+    let version_2: Vec<String> = expected
         .into_iter()
         .filter(|name| !VERSION_3_COLUMNS.contains(&name.as_str()))
         .collect();
@@ -720,7 +714,7 @@ async fn the_digest_covers_every_column() {
 }
 
 /// A store holding version-1 records verifies after the migration, new
-/// records are version 4, and a version-1 insert after a version-4 record is
+/// records are version 3, and a version-1 insert after a version-3 record is
 /// refused.
 #[tokio::test]
 async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade() {
@@ -780,7 +774,7 @@ async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade()
             .fetch_all(&pool)
             .await
             .expect("versions");
-    assert_eq!(versions, vec![1, 4]);
+    assert_eq!(versions, vec![1, 3]);
     // The checkpoint the seed left is stale after the rewrite; verify from genesis.
     sqlx::query("DELETE FROM audit.audit_chain_checkpoint")
         .execute(&pool)
@@ -800,7 +794,7 @@ async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade()
     .fetch_one(&pool)
     .await
     .expect("the newest version");
-    assert_eq!(newest, 4, "a new record is version 4");
+    assert_eq!(newest, 3, "a new record is version 3");
     // A copy of the newest record stated as version 1 is refused by the chain writer.
     let mut tx = pool.begin().await.expect("tx");
     let downgrade = sqlx::query(
@@ -822,7 +816,7 @@ async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade()
     .execute(&mut *tx)
     .await;
     tx.rollback().await.expect("rollback");
-    let refusal = downgrade.expect_err("a version-1 insert after version 4 is refused");
+    let refusal = downgrade.expect_err("a version-1 insert after version 3 is refused");
     assert!(
         refusal.to_string().contains("refusing a downgrade"),
         "{refusal}"

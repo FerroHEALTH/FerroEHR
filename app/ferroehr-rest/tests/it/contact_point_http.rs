@@ -343,7 +343,7 @@ async fn a_contact_point_request_without_its_trc_patient_is_refused_before_the_i
     );
     crate::party_binding_http::refusal_rows(&db.pool(), "refused-trc-missing", 1).await;
     let resolutions: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM audit.audit_event WHERE domain = 'linkage'")
+        sqlx::query_scalar("SELECT count(*) FROM audit.access_trail WHERE domain = 'linkage'")
             .fetch_one(&db.pool())
             .await
             .expect("query");
@@ -513,7 +513,7 @@ async fn a_contact_points_access_record_carries_its_assertion_ids_and_never_the_
     let mut row = None;
     for _ in 0..50 {
         row = sqlx::query_scalar::<_, String>(
-            "SELECT to_jsonb(e)::text FROM audit.audit_event e \
+            "SELECT to_jsonb(e)::text FROM audit.access_trail e \
              WHERE binding = 'external' AND operation = 'ehr_get_by_id'",
         )
         .fetch_optional(&pool)

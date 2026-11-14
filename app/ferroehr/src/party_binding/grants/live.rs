@@ -363,7 +363,31 @@ impl LiveGrants {
                 ))
             })
             .collect();
-        Capabilities::new(client, grants).with_facts(self.facts_of(performer, now))
+        let groups = client
+            .as_ref()
+            .and_then(|client| client.provider.as_ref())
+            .map_or_else(Vec::new, |provider| self.memberships(provider.party, now));
+        let facts = self.facts_of(performer, now).with_provider_groups(groups);
+        Capabilities::new(client, grants).with_facts(facts)
+    }
+
+    /// The `GROUP`s the `ORGANISATION` `organisation` is a member of at
+    /// `now`, from the copy held: each `member_of` relationship of its live
+    /// head that holds on the date of `now` in UTC.
+    #[must_use]
+    pub fn memberships(&self, organisation: Uuid, now: jiff::Timestamp) -> Vec<Uuid> {
+        let held = self.held_facts();
+        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+        held.by_party
+            .get(&organisation)
+            .into_iter()
+            .flat_map(|rows| rows.iter())
+            .filter(|row| row.kind == FactKind::MemberOf && row.term.holds(today, now))
+            .filter_map(|row| match row.value {
+                FactValue::Team(group) => Some(group),
+                FactValue::Code(_) => None,
+            })
+            .collect()
     }
 
     /// The caller facts of the party `party` at `now`, from the copy held:

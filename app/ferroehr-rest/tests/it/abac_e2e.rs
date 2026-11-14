@@ -609,7 +609,7 @@ async fn the_accessing_organisation_reaches_the_stored_record() {
     let mut recorded: Vec<Option<String>> = Vec::new();
     for _ in 0..60 {
         recorded = sqlx::query_scalar::<_, Option<String>>(
-            "SELECT organisation FROM audit.audit_event WHERE principal = 'svc' \
+            "SELECT organisation FROM audit.access_trail WHERE principal = 'svc' \
              ORDER BY recorded_at, stored_at",
         )
         .fetch_all(&pool)
@@ -678,7 +678,7 @@ async fn the_accessing_organisation_is_recorded_with_the_abac_gate_off() {
     let mut recorded: Vec<Option<String>> = Vec::new();
     for _ in 0..60 {
         recorded = sqlx::query_scalar::<_, Option<String>>(
-            "SELECT organisation FROM audit.audit_event WHERE principal = 'svc' \
+            "SELECT organisation FROM audit.access_trail WHERE principal = 'svc' \
              ORDER BY recorded_at, stored_at",
         )
         .fetch_all(&pool)

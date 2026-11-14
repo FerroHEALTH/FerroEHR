@@ -67,8 +67,9 @@ impl GrantHead<'_> {
 /// Replaces the grant rows and the caller facts of `head`, a party of `kind`,
 /// on its commit transaction `tx`; moves the revision and notifies when they
 /// changed. An `ACTOR` holds client rows, an `ORGANISATION` its provider row
-/// too, a `PERSON` its care relationships, and a `ROLE` capability rows and
-/// its clearances and purposes; every other kind holds none.
+/// and its `GROUP` memberships too, a `PERSON` its care relationships, and a
+/// `ROLE` capability rows and its clearances and purposes; every other kind
+/// holds none.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, the unique violation of
@@ -79,7 +80,10 @@ pub(crate) async fn write(
     head: GrantHead<'_>,
 ) -> Result<(), StorageError> {
     let changed = match kind {
-        Kind::Organisation => write_clients(tx, head).await? | write_provider(tx, head).await?,
+        Kind::Organisation => {
+            super::caller::store::write(tx, head, Some(head.vo_id), None).await?;
+            write_clients(tx, head).await? | write_provider(tx, head).await?
+        }
         Kind::Person => {
             super::caller::store::write(tx, head, Some(head.vo_id), None).await?;
             write_clients(tx, head).await?

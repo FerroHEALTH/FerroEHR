@@ -8,6 +8,7 @@
 
 use crate::draft::access_control::access_control::access_classification::AccessClassification;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
+use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::v1_2::common::archetyped::archetyped::Archetyped;
 use crate::v1_2::common::archetyped::feeder_audit::FeederAudit;
 use crate::v1_2::common::archetyped::link::Link;
@@ -19,7 +20,7 @@ use openehr_base::v1_3::base_types::identification::uid_based_id::UidBasedId;
 
 /// The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps.
 ///
-/// It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, and lists the named directives a subject can accept by reference. Kept in its own versioned container, outside any EHR and outside the demographic service.
+/// It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.
 #[doc(alias = "ACCESS_POLICY")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessPolicy {
@@ -54,6 +55,10 @@ pub struct AccessPolicy {
     pub purpose_required: bool,
     /// Named directives a subject can accept by an identifier, such as an IHE BPPC policy or a national consent choice. Each carries at least one identifier.
     pub catalogue: Option<openehr_base::containers::NonEmptyVec<AccessDirective>>,
+    /// The restrictions a Member State law lays on the subject's view of the access log under EHDS Article 9(3).
+    ///
+    /// Each names the kinds of accessor and the attributes of the accessor the subject view withholds; the full entry is unchanged.
+    pub log_restrictions: Option<openehr_base::containers::NonEmptyVec<AccessLogRestriction>>,
     /// Further archetyped detail. The decision procedure never reads it.
     pub details: Option<ItemStructure>,
 }

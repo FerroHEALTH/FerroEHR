@@ -7,6 +7,5 @@
   `refused-*` code as the entry's `outcome.reason` and the step with the
   directive or policy that decided it, the `404` of an opt-out or a
   restriction included, whose response says nothing. The EHDS `AuditEvent`
-  writes the versions after the data permit at `agent[user].policy`, kept in
-  the new `audit_event.decision_policies` column (chain digest version 4). No
-  configuration key is added or removed.
+  projected from the entry writes the versions after the data permit at
+  `agent[user].policy`. No configuration key is added or removed.

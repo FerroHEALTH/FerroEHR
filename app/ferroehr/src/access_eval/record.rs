@@ -150,17 +150,34 @@ pub struct Decision {
 }
 
 impl Decision {
-    /// The decision a stored record names by the versions of its policies
-    /// alone, as the store reads it back; `None` when it names none.
+    /// The decision a stored entry's `authorisations` hold, as every
+    /// projection reads it back: the grounds defined in an `EHR_ACCESS` or
+    /// the `ACCESS_POLICY`, and their versions; `None` when it holds none.
     #[must_use]
-    pub fn of_policies(policies: Vec<String>) -> Option<Box<Self>> {
-        (!policies.is_empty()).then(|| {
-            Box::new(Self {
-                policies,
-                ..Self::default()
-            })
-        })
+    pub fn of_recorded(authorisations: &[AccessAuthorisation]) -> Option<Box<Self>> {
+        let grounds: Vec<AccessAuthorisation> = authorisations
+            .iter()
+            .filter(|ground| matches!(ground.name.as_deref(), Some(EHR_ACCESS | ACCESS_POLICY)))
+            .cloned()
+            .collect();
+        let decision = Self {
+            policies: policies_of(&grounds),
+            grounds,
+            refused: None,
+        };
+        (!decision.grounds.is_empty()).then(|| Box::new(decision))
     }
+}
+
+/// The versions `grounds` name, in order and without repeats.
+fn policies_of(grounds: &[AccessAuthorisation]) -> Vec<String> {
+    let mut policies: Vec<String> = Vec::new();
+    for version in grounds.iter().filter_map(|ground| ground.version.as_ref()) {
+        if !policies.contains(version) {
+            policies.push(version.clone());
+        }
+    }
+    policies
 }
 
 impl RequestAccess {
@@ -177,16 +194,10 @@ impl RequestAccess {
         if let Some(judged) = &judged {
             self.verdict_grounds(judged, refused.is_none(), &mut grounds);
         }
-        let mut policies: Vec<String> = Vec::new();
-        for version in grounds.iter().filter_map(|ground| ground.version.as_ref()) {
-            if !policies.contains(version) {
-                policies.push(version.clone());
-            }
-        }
         Decision {
             refused,
+            policies: policies_of(&grounds),
             grounds,
-            policies,
         }
     }
 
@@ -414,6 +425,46 @@ fn role_reference(role: Uuid) -> DvIdentifier {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::system_log::event::{EventActionCode, EventOutcome, ObjectClass};
+
+    /// The versions the stored entry's grounds name come back as the
+    /// policies every projection writes after the data permit, and a ground
+    /// defined elsewhere names none.
+    #[test]
+    fn the_stored_entry_gives_back_the_policies_of_its_grounds() {
+        let mut event = AuditEvent::new(
+            EventActionCode::Read,
+            ObjectClass::Composition,
+            EventOutcome::Success,
+        );
+        "dr-b".clone_into(&mut event.user_id);
+        event.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
+        event.permit = Some("hdab-nl/2026/0042".to_owned());
+        let ground = |name: &str, version: &str| AccessAuthorisation {
+            name: Some(name.to_owned()),
+            version: Some(version.to_owned()),
+            ..authorisation("consent")
+        };
+        let grounds = [
+            ground(EHR_ACCESS, "ehr-access::cdr::2"),
+            ground("agreement-of-the-region", "4"),
+            ground(ACCESS_POLICY, "policy::cdr::3"),
+            ground(EHR_ACCESS, "ehr-access::cdr::2"),
+        ];
+        event.decided = Some(Box::new(Decision {
+            refused: None,
+            policies: policies_of(&grounds),
+            grounds: grounds.to_vec(),
+        }));
+        let retention = crate::access_log::entry::horizon_retention(None);
+        let entry =
+            crate::access_log::entry::entry_of(&event, None, "cdr", retention).expect("an entry");
+        let stored = crate::access_log::recorded::stored(&entry, 1).expect("it reads back");
+        assert_eq!(
+            stored.event.policies(),
+            ["hdab-nl/2026/0042", "ehr-access::cdr::2", "policy::cdr::3"]
+        );
+    }
 
     /// Every refusal code belongs to the step that answers it.
     #[test]
