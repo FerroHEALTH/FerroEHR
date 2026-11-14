@@ -358,7 +358,9 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   of the `instructed_by` party, in the directive or any of its exceptions. A
   reference of another type than the party it names is refused the same
   way, and so is an id that is no UUID, since the evaluator could never
-  match it to a caller. An import may name a party its own demographics
+  match it to a caller. A gate-keeper whose `external_ref` names such a
+  party is refused the same way, naming the gate-keeper, since it would lock
+  the settings to nobody. An import may name a party its own demographics
   chapter carries, and an archive load one its demographic records carry.
   An import and an archive load check only the head `EHR_ACCESS` version,
   the one in force: an earlier version is the unchanged record of what was

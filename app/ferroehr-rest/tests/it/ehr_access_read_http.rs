@@ -297,8 +297,8 @@ async fn a_read_of_the_directives_is_recorded() {
 /// with `422` naming the directive and the party, for each kind of
 /// reference: an actor scope, the instructing party as `PARTY_IDENTIFIED` and
 /// as `PARTY_RELATED`, a reference in an exception, a reference whose type
-/// does not match the party, and an id that is no UUID. Nothing is
-/// committed.
+/// does not match the party, and an id that is no UUID; a gate-keeper naming
+/// one is refused the same way. Nothing is committed.
 #[tokio::test]
 async fn a_directive_naming_an_unknown_party_is_refused() {
     let (_db, pool, svc, app) = Box::pin(app()).await;
@@ -357,6 +357,21 @@ async fn a_directive_naming_an_unknown_party_is_refused() {
         assert!(body.contains(place), "{place} named: {body}");
         assert!(body.contains(&party), "{party} named: {body}");
     }
+    let mut kept_by_nobody = settings_of(&pool, &["root"], &[]).await;
+    kept_by_nobody["gate_keepers"]
+        .as_array_mut()
+        .expect("gate-keepers")
+        .push(json!({ "_type": "PARTY_IDENTIFIED", "external_ref": party_ref("PERSON", NOBODY) }));
+    let (status, body) = contribute(&app, &ehr, &kept_by_nobody).await;
+    assert_eq!(
+        status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "a gate-keeper: {body}"
+    );
+    assert!(
+        body.contains("gate_keepers[1]") && body.contains(NOBODY),
+        "{body}"
+    );
     let (_, _, history) = read_json(
         &app,
         &format!("{EXT}/ehr/{ehr}/versioned_ehr_access/revision_history"),

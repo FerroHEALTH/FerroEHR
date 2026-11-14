@@ -510,8 +510,9 @@ which is what makes an optional stage safe to disable:
    same `guarded_dispatch`; a read that carries the settings is canonical
    JSON only, since canonical XML maps no class of the scheme. Every write
    path (CONTRIBUTION, the controller's commit, EHR Extract import, archive
-   load) refuses with `422` a directive whose actor-scope `party` or
-   `instructed_by.external_ref`, in the directive or an exception, names no
+   load) refuses with `422` a gate-keeper whose `external_ref`, or a
+   directive whose actor-scope `party` or `instructed_by.external_ref`, in
+   the directive or an exception, names no
    party of the demographic store of its type, nor one the import's
    demographics chapter or the archive's demographic records carry
    (`service::ehr::access_parties`); `PARTY_SELF` needs no lookup. An import

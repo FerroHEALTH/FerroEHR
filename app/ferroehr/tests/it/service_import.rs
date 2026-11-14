@@ -429,8 +429,9 @@ async fn import_ehr_refuses_access_settings_that_do_not_parse() {
 /// An extract whose head `EHR_ACCESS` version, the one the import puts in
 /// force, has a directive naming a party neither this CDR nor the extract
 /// holds is refused with the `422` a CONTRIBUTION writing it gets, naming the
-/// directive and the party; the same directive in an earlier version, the
-/// record of what was in force then, imports (#5517).
+/// directive and the party, and so is a head gate-keeper naming one; the same
+/// directive and gate-keeper in an earlier version, the record of what was in
+/// force then, import (#5517).
 #[tokio::test]
 async fn import_ehr_refuses_a_head_directive_naming_an_unknown_party() {
     const NOBODY: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f99";
@@ -484,8 +485,13 @@ async fn import_ehr_refuses_a_head_directive_naming_an_unknown_party() {
             item["item"]["extract_version_count"] = json!(2);
         }
     }
-    // The extract with the EHR_ACCESS version of trunk `trunk` naming nobody.
-    let naming_in = |trunk: &str| -> Extract {
+    let kept_by_nobody = json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS",
+        "default_access": term("open"),
+        "gate_keepers": [{ "_type": "PARTY_IDENTIFIED", "external_ref": {
+            "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+            "id": { "_type": "HIER_OBJECT_ID", "value": NOBODY } } }] });
+    // The extract with the EHR_ACCESS version of trunk `trunk` carrying `settings`.
+    let carrying_in = |trunk: &str, settings: &Value| -> Extract {
         let mut raw = exported.clone();
         let mut found = false;
         for item in raw["chapters"][0]["items"]
@@ -496,7 +502,7 @@ async fn import_ehr_refuses_a_head_directive_naming_an_unknown_party() {
                 for version in item["item"]["versions"].as_array_mut().expect("versions") {
                     let uid = version["uid"]["value"].as_str().expect("a version uid");
                     if uid.ends_with(&format!("::{trunk}")) {
-                        version["data"]["settings"] = naming_nobody.clone();
+                        version["data"]["settings"] = settings.clone();
                         found = true;
                     }
                 }
@@ -513,7 +519,7 @@ async fn import_ehr_refuses_a_head_directive_naming_an_unknown_party() {
     let refused = svc
         .import_ehr(
             Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
-            naming_in("2"),
+            carrying_in("2", &naming_nobody),
         )
         .await
         .expect_err("a head directive naming nobody is refused");
@@ -527,9 +533,25 @@ async fn import_ehr_refuses_a_head_directive_naming_an_unknown_party() {
         "the directive and the attribute are named: {detail}"
     );
     assert!(detail.contains(NOBODY), "the party is named: {detail}");
+    let refused = svc
+        .import_ehr(
+            Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
+            carrying_in("2", &kept_by_nobody),
+        )
+        .await
+        .expect_err("a head gate-keeper naming nobody is refused");
+    let detail = format!("{refused:?}");
+    assert!(
+        matches!(&refused, ServiceError::Unprocessable { .. })
+            && detail.contains("gate_keepers[0]")
+            && detail.contains(NOBODY),
+        "a 422 naming the gate-keeper: {detail}"
+    );
+    let mut both = naming_nobody.clone();
+    both["gate_keepers"] = kept_by_nobody["gate_keepers"].clone();
     svc.import_ehr(
         Some(ferroehr::ids::EhrId(uuid::Uuid::now_v7())),
-        naming_in("1"),
+        carrying_in("1", &both),
     )
     .await
     .expect("an earlier version naming nobody imports");

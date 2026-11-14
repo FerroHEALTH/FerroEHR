@@ -4,15 +4,17 @@
 //! The parties an `EHR_ACCESS` directive names, checked where the directive
 //! is committed.
 //!
+//! The settings name parties in their gate-keepers and in their directives.
 //! A directive names parties in two places: the actor scopes it applies to
 //! (`ACCESS_ACTOR_SCOPE.party`, a `PARTY_REF`) and the party who instructed
 //! it (`instructed_by`, a `PARTY_IDENTIFIED` or `PARTY_RELATED` with an
 //! `external_ref`), in the directive and in each of its exceptions. The
 //! access evaluator matches a caller against those references by the id it
 //! reads off them ([`party_key`]), so a reference that names no party of the
-//! demographic store can never match anyone and the directive would hold for
-//! nobody. Each write path therefore refuses it with `422`, naming the
-//! directive and the party: the CONTRIBUTION and the controller's commit
+//! demographic store can never match anyone: the directive would hold for
+//! nobody, and a gate-keeper would lock the settings to nobody. Each write
+//! path therefore refuses it with `422`, naming the directive or gate-keeper
+//! and the party: the CONTRIBUTION and the controller's commit
 //! through [`FerroEhrService::validate_for_commit`], an EHR Extract import and
 //! an archive load through [`FerroEhrService::check_directive_parties`] on
 //! the head version, the one they put in force. A
@@ -48,12 +50,14 @@ use crate::versioning::audit::text_value;
 /// demographic records of an archive.
 pub(in crate::service) type Landing = BTreeMap<VoId, String>;
 
-/// One party reference of a directive.
+/// One party reference of the settings.
 struct Named<'a> {
-    /// The path of the directive in the settings.
+    /// What holds the reference: `directive` or `gate-keeper`.
+    holder: &'static str,
+    /// The path of the holder in the settings.
     directive: String,
-    /// The directive's name.
-    name: &'a str,
+    /// The directive's name; `None` for a gate-keeper.
+    name: Option<&'a str>,
     /// The attribute of the directive that holds the reference.
     attribute: String,
     /// The reference.
@@ -62,7 +66,7 @@ struct Named<'a> {
 
 impl FerroEhrService {
     /// Validates an `EHR_ACCESS` about to be committed: its RM structure and
-    /// settings ([`validate_ehr_access`]), then every party its directives
+    /// settings ([`validate_ehr_access`]), then every party its settings
     /// name ([`Self::check_directive_parties`]).
     ///
     /// # Errors
@@ -83,16 +87,17 @@ impl FerroEhrService {
         }
     }
 
-    /// Refuses `settings` whose directives name a party that neither the
-    /// demographic store nor `landing` holds as a party of the referenced
-    /// type.
+    /// Refuses `settings` whose directives or gate-keepers name a party that
+    /// neither the demographic store nor `landing` holds as a party of the
+    /// referenced type. A gate-keeper naming nobody would lock the settings
+    /// to nobody, the same defect as a directive naming nobody.
     ///
     /// The settings have passed the scheme's checks
     /// ([`check_written_settings`](crate::service::ehr::access_settings::check_written_settings)).
     ///
     /// # Errors
     /// [`ServiceError::Unprocessable`] (`422`) naming the first such
-    /// directive, the attribute and the party; a [`ServiceError::BadRequest`]
+    /// directive or gate-keeper, the attribute and the party; a [`ServiceError::BadRequest`]
     /// for settings that do not read as the scheme; the storage error of a
     /// party read.
     pub(in crate::service) async fn check_directive_parties(
@@ -103,6 +108,23 @@ impl FerroEhrService {
         let read = serde_json::from_value::<AccessDirectiveSettings>(settings.clone())
             .map_err(|e| ServiceError::bad_request("EHR_ACCESS.settings do not read", e))?;
         let mut named = Vec::new();
+        for (index, keeper) in read
+            .gate_keepers
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .enumerate()
+        {
+            if let Some(party) = external_ref(keeper) {
+                named.push(Named {
+                    holder: "gate-keeper",
+                    directive: format!("gate_keepers[{index}]"),
+                    name: None,
+                    attribute: "external_ref".to_owned(),
+                    party,
+                });
+            }
+        }
         for (index, directive) in read
             .directives
             .as_deref()
@@ -150,26 +172,19 @@ fn collect<'a>(path: &str, directive: &'a AccessDirective, named: &mut Vec<Named
     {
         if let Some(party) = &scope.party {
             named.push(Named {
+                holder: "directive",
                 directive: path.to_owned(),
-                name,
+                name: Some(name),
                 attribute: format!("applies_to[{index}].party"),
                 party,
             });
         }
     }
-    let instructed_by = match &directive.instructed_by {
-        Some(PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(data))) => {
-            data.external_ref.as_ref()
-        }
-        Some(PartyProxy::PartyIdentified(PartyIdentified::PartyRelated(data))) => {
-            data.external_ref.as_ref()
-        }
-        Some(PartyProxy::PartySelf(_)) | None => None,
-    };
-    if let Some(party) = instructed_by {
+    if let Some(party) = directive.instructed_by.as_ref().and_then(external_ref) {
         named.push(Named {
+            holder: "directive",
             directive: path.to_owned(),
-            name,
+            name: Some(name),
             attribute: "instructed_by.external_ref".to_owned(),
             party,
         });
@@ -185,6 +200,20 @@ fn collect<'a>(path: &str, directive: &'a AccessDirective, named: &mut Vec<Named
     }
 }
 
+/// The party a `PARTY_IDENTIFIED` or `PARTY_RELATED` references; `None` for
+/// one that references none and for `PARTY_SELF`, which names the subject.
+fn external_ref(proxy: &PartyProxy) -> Option<&PartyRef> {
+    match proxy {
+        PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(data)) => {
+            data.external_ref.as_ref()
+        }
+        PartyProxy::PartyIdentified(PartyIdentified::PartyRelated(data)) => {
+            data.external_ref.as_ref()
+        }
+        PartyProxy::PartySelf(_) => None,
+    }
+}
+
 /// Whether a reference of `party`'s type may name a party of RM type
 /// `rm_type`: the type itself, `PARTY`, or `ACTOR` for any party but a `ROLE`
 /// (BASE `party_ref.adoc`, `PARTY_REF.type`).
@@ -196,17 +225,20 @@ fn of_type(party: &PartyRef, rm_type: &str) -> bool {
     }
 }
 
-/// The `422` of a directive that names a party the demographic store does
-/// not hold.
+/// The `422` of a directive or gate-keeper that names a party the
+/// demographic store does not hold.
 fn unknown_party(reference: &Named<'_>) -> ServiceError {
     let id = party_key(reference.party).unwrap_or_else(|| {
         "with an id that is neither a HIER_OBJECT_ID nor a GENERIC_ID".to_owned()
     });
+    let name = reference
+        .name
+        .map_or_else(String::new, |name| format!(" ({name:?})"));
     ServiceError::content_invalid(
         Violation::new(format!(
-            "EHR_ACCESS directive {} ({:?}) names the {} {id} at {}, which the demographic \
-             store does not hold",
-            reference.directive, reference.name, reference.party.r#type, reference.attribute
+            "EHR_ACCESS {} {}{name} names the {} {id} at {}, which the demographic store does \
+             not hold",
+            reference.holder, reference.directive, reference.party.r#type, reference.attribute
         ))
         .with_path(format!(
             "/settings/{}/{}",

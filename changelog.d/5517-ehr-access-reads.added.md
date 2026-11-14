@@ -9,7 +9,7 @@
   `application/json` only.
 - Every write of `EHR_ACCESS` settings (CONTRIBUTION, the controller's
   commit, EHR Extract import and archive load) refuses with `422` a
-  directive that names a party the demographic service does not hold,
-  naming the directive and the party.
+  directive or a gate-keeper that names a party the demographic service
+  does not hold, naming the directive or gate-keeper and the party.
   An import and an archive load check only the head `EHR_ACCESS` version,
   the one in force, so a party erased since never blocks a faithful restore.

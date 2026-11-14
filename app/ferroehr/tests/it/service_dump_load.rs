@@ -1667,10 +1667,10 @@ fn store_access_settings(dir: &str, settings: &Value) {
 /// An archive whose head `EHR_ACCESS` version, the one in force, has a
 /// directive naming a party neither the target CDR nor the archive holds is
 /// refused with the `422` a CONTRIBUTION writing it gets, naming the party
-/// and the EHR, and nothing of it is written. The same directive in an
-/// earlier version, the record of what was in force then, loads, as does a
-/// head naming a party the archive carries, although the load writes the
-/// party after the EHR (#5517).
+/// and the EHR, and nothing of it is written; so is a head gate-keeper
+/// naming one. The same directive and gate-keeper in an earlier version, the
+/// record of what was in force then, load, as does a head naming a party the
+/// archive carries, although the load writes the party after the EHR (#5517).
 #[tokio::test]
 async fn an_archive_whose_head_directive_names_an_unknown_party_is_refused() {
     const NOBODY: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f99";
@@ -1731,8 +1731,31 @@ async fn an_archive_whose_head_directive_names_an_unknown_party_is_refused() {
         "a refused load commits nothing"
     );
 
+    let mut kept_by_nobody = naming(&person.0.to_string());
+    kept_by_nobody["gate_keepers"] = json!([{ "_type": "PARTY_IDENTIFIED", "external_ref": {
+        "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+        "id": { "_type": "HIER_OBJECT_ID", "value": NOBODY } } }]);
+    store_access_settings_of(&dir, 2, &kept_by_nobody);
+    let err = target
+        .load_ehrs(dir.clone())
+        .await
+        .expect_err("a head gate-keeper naming nobody is refused");
+    let detail = format!("{err:?}");
+    assert!(
+        matches!(err, ServiceError::Unprocessable { .. })
+            && detail.contains("gate_keepers[0]")
+            && detail.contains(NOBODY),
+        "a 422 naming the gate-keeper: {detail}"
+    );
+    assert!(
+        !ehr_row_exists(&dst_pool, ehr.into()).await,
+        "a refused load commits nothing"
+    );
+
+    let mut older = naming(NOBODY);
+    older["gate_keepers"] = kept_by_nobody["gate_keepers"].clone();
     store_access_settings_of(&dir, 2, &naming(&person.0.to_string()));
-    store_access_settings_of(&dir, 1, &naming(NOBODY));
+    store_access_settings_of(&dir, 1, &older);
     let reports = target
         .load_ehrs(dir.clone())
         .await

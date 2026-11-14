@@ -112,7 +112,11 @@ impl FerroEhrService {
             .map(|party| (party.vo_id, party.kind.as_str().to_owned()))
             .collect();
         for container in containers.iter().filter(|c| c.kind == Kind::EhrAccess) {
-            let head = container.versions.iter().max_by_key(|v| v.replay_order());
+            // NOTE: the import replays a container's versions in this order, so the last is its head.
+            let head = container
+                .versions
+                .iter()
+                .max_by_key(|v| (v.lineage(), v.tree.columns()));
             if let Some(settings) = head
                 .and_then(|v| v.data.get("settings"))
                 .filter(|s| !s.is_null())
