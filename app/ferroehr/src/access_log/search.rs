@@ -156,7 +156,7 @@ impl AccessLogStore {
     }
 
     /// The records the statement `sql`, bound to `values`, selects with the
-    /// columns [`stored`] reads, in its order: the statement an AQL query over
+    /// record columns [`Self::search`] reads, in its order: the statement an AQL query over
     /// the access log runs (`crate::aql::access_log::sql`).
     ///
     /// # Errors
