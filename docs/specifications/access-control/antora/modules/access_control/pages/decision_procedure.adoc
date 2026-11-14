@@ -16,6 +16,7 @@ The scheme `access_directives` fixes how an access is decided from the facts of 
 * The *labels* of a datum are the sensitivities of the `ACCESS_LABEL` instances that target it and of the `ACCESS_POLICY` classifications whose scope it falls in.
 * A caller is *cleared* for a sensitivity when one of its capabilities carries that sensitivity as a clearance code.
 * A caller has a *live care relationship* to the subject when it is a member of a care-team `GROUP` (or acts for an organisational unit) that the subject's `PERSON` is under the care of, within the validity of both relationships plus the policy's `_relationship_grace_`.
+* The *subject's `PERSON`* is the `PERSON` the `EHR_STATUS._subject_._external_ref_` names: a reference in the namespace the system names its own parties under names that `PERSON` directly, and any other reference, such as a pseudonym an identity source issued, names the `PERSON` whose `_details_` carry an `ELEMENT` named by the `record subject` code whose `DV_IDENTIFIER` value has that reference's namespace as `_issuer_` and its id as `_id_` (Demographic IM §2.1.3). A reference no `PERSON` declares names none, and every relationship read from the subject's `PERSON` is then absent.
 
 == Procedure
 

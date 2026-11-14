@@ -28,6 +28,7 @@ use uuid::Uuid;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::caller::store::{Changed, FactRow};
+use crate::party_binding::grants::caller::subject::SubjectRow;
 use crate::party_binding::grants::caller::{self, CallerFacts, CareTeam, FactKind, FactValue};
 use crate::party_binding::grants::capabilities::{
     Actor, Capabilities, Client, ClientState, Credentials, Grant, Provider,
@@ -36,7 +37,10 @@ use crate::party_binding::grants::operation::{GrantCeiling, Operation};
 use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
 use crate::party_binding::grants::trust::{AgreementPosture, FederationTrust};
 use crate::policy_register::listen::Listened;
+use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
+
+mod subjects;
 
 tokio::task_local! {
     /// Set when a commit of the running request changed a grant row.
@@ -96,23 +100,47 @@ struct HeldFacts {
     revision: Option<i64>,
     /// The facts about each party.
     by_party: BTreeMap<Uuid, Arc<[FactRow]>>,
+    /// The record subjects each `PERSON` declares.
+    subjects_of: BTreeMap<Uuid, Arc<[SubjectRow]>>,
+    /// The `PERSON` that declares each record subject.
+    person_by_subject: BTreeMap<EhrSubject, Uuid>,
 }
 
 impl HeldFacts {
     /// These facts with `changed` applied: each party read holds the facts
-    /// read, and a party read with none holds none.
-    fn with(&self, changed: Changed) -> Self {
+    /// and the record subjects read, and a party read with none holds none.
+    fn with(&self, mut changed: Changed) -> Self {
         let mut by_party = self.by_party.clone();
+        let mut subjects_of = self.subjects_of.clone();
+        let mut person_by_subject = self.person_by_subject.clone();
         for (party, facts) in changed.parties {
             if facts.is_empty() {
                 by_party.remove(&party);
             } else {
                 by_party.insert(party, facts.into());
             }
+            for gone in subjects_of
+                .remove(&party)
+                .iter()
+                .flat_map(|rows| rows.iter())
+            {
+                if person_by_subject.get(&gone.subject) == Some(&party) {
+                    person_by_subject.remove(&gone.subject);
+                }
+            }
+            let Some(came) = changed.subjects.remove(&party) else {
+                continue;
+            };
+            for row in &came {
+                person_by_subject.insert(row.subject.clone(), party);
+            }
+            subjects_of.insert(party, came.into());
         }
         Self {
             revision: Some(changed.revision),
             by_party,
+            subjects_of,
+            person_by_subject,
         }
     }
 }
@@ -121,6 +149,9 @@ impl HeldFacts {
 /// ceiling it honours the grants under.
 pub struct LiveGrants {
     pool: PgPool,
+    /// The `PARTY_REF.namespace` this CDR names its parties under
+    /// (`[authz.party_binding] namespace`).
+    namespace: RwLock<Arc<str>>,
     ceiling: RwLock<Arc<GrantCeiling>>,
     federation: RwLock<Arc<FederationTrust>>,
     held: RwLock<Arc<Held>>,
@@ -147,6 +178,11 @@ impl LiveGrants {
         Self {
             listened: Arc::new(Listened::new(CHANNEL)),
             pool,
+            namespace: RwLock::new(Arc::from(
+                crate::config::binding::PartyBindingConfig::default()
+                    .namespace
+                    .as_str(),
+            )),
             ceiling: RwLock::new(Arc::new(GrantCeiling::default())),
             federation: RwLock::new(Arc::default()),
             held: RwLock::new(Arc::default()),
@@ -164,6 +200,25 @@ impl LiveGrants {
     #[must_use]
     pub fn ceiling(&self) -> Arc<GrantCeiling> {
         self.ceiling
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    /// Name this CDR's parties under `namespace`, `[authz.party_binding]
+    /// namespace`: a subject reference under it names a `PERSON` by its
+    /// container ([`Self::person_of`]).
+    pub fn set_namespace(&self, namespace: &str) {
+        *self
+            .namespace
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = Arc::from(namespace);
+    }
+
+    /// The namespace this CDR names its parties under.
+    #[must_use]
+    pub fn namespace(&self) -> Arc<str> {
+        self.namespace
             .read()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
@@ -432,64 +487,6 @@ impl LiveGrants {
             }
         }
         CallerFacts::new(clearances, purposes, care_teams)
-    }
-
-    /// The care teams and units the subject `subject` is under the care of,
-    /// from the copy held: each `under_care_of` relationship of its live
-    /// `PERSON` head with the dates it holds, whether or not it holds today,
-    /// so the evaluator judges a discharge and the grace after it.
-    #[must_use]
-    pub fn under_care_of(&self, subject: Uuid) -> Vec<CareTeam> {
-        let held = self.held_facts();
-        let mut out: Vec<CareTeam> = held
-            .by_party
-            .get(&subject)
-            .into_iter()
-            .flat_map(|rows| rows.iter())
-            .filter(|row| row.kind == FactKind::UnderCareOf)
-            .filter(|row| matches!(row.term.lifecycle_state.as_str(), "532" | "553"))
-            .filter_map(|row| match (row.value.clone(), row.term.dates) {
-                (FactValue::Team(team), Some(dates)) => Some(CareTeam::new(team, dates)),
-                _ => None,
-            })
-            .collect();
-        out.sort();
-        out.dedup();
-        out
-    }
-
-    /// The subjects under the care of any of `teams` on `day`, with `grace`
-    /// after each relationship ends, from the copy held: the patients a
-    /// member of those teams has a live care relationship to
-    /// ([`CareTeam::live_on`]), sorted.
-    #[must_use]
-    pub fn cared_for_by(
-        &self,
-        teams: &[Uuid],
-        day: jiff::civil::Date,
-        grace: jiff::Span,
-    ) -> Vec<Uuid> {
-        if teams.is_empty() {
-            return Vec::new();
-        }
-        let held = self.held_facts();
-        held.by_party
-            .iter()
-            .filter(|(_, rows)| {
-                rows.iter().any(|row| {
-                    row.kind == FactKind::UnderCareOf
-                        && matches!(row.term.lifecycle_state.as_str(), "532" | "553")
-                        && match (&row.value, row.term.dates) {
-                            (FactValue::Team(team), Some(dates)) => {
-                                teams.contains(team)
-                                    && CareTeam::new(*team, dates).live_on(day, grace)
-                            }
-                            _ => false,
-                        }
-                })
-            })
-            .map(|(subject, _)| *subject)
-            .collect()
     }
 
     /// Every federation agreement in force at `now`, once per client

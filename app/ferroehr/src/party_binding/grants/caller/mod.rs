@@ -42,6 +42,7 @@
 )]
 
 pub mod store;
+pub mod subject;
 
 use serde_json::Value;
 use uuid::Uuid;
@@ -292,8 +293,8 @@ impl CareBefore {
     }
 }
 
-/// Refuses a commit that changed the care relationships or memberships of
-/// the party `party` when its caller holds no
+/// Refuses a commit that changed the care relationships, memberships or
+/// record subjects of the party `party` when its caller holds no
 /// [`Operation::WriteCareRelationship`] grant and is no administrator of
 /// `mapping`.
 ///
@@ -307,10 +308,12 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
     }
     Err(ServiceError::not_permitted(format!(
         "this version changes the care relationships of party {party} ({TERMINOLOGY}::{} or \
-         {TERMINOLOGY}::{}): only a caller holding the {} grant, such as the care delivery \
-         environment's ADT system, or an administrator writes them",
+         {TERMINOLOGY}::{}) or the record subjects it declares ({TERMINOLOGY}::{}): only a \
+         caller holding the {} grant, such as the care delivery environment's ADT system, or \
+         an administrator writes them",
         FactKind::MemberOf.code(),
         FactKind::UnderCareOf.code(),
+        openehr_rm::draft::access_control::terminology::RecordSubject::RecordSubject.code(),
         Operation::WriteCareRelationship
     )))
 }

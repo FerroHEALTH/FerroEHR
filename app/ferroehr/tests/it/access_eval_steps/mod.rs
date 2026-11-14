@@ -214,7 +214,7 @@ pub(super) fn caller(kind: CallerKind, party: &str) -> Caller {
     Caller {
         kind,
         party: Some(party.to_owned()),
-        own_ehr: None,
+        own_ehrs: Vec::new(),
         patient_grants_only: false,
         acts_for: Vec::new(),
         roles: Vec::new(),

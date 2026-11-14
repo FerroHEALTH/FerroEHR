@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Row I/O for the caller facts: `binding_caller_fact`, the stamps of
+//! Row I/O for the caller facts: `binding_caller_fact`, the record subjects
+//! of `binding_record_subject` ([`super::subject`]), the stamps of
 //! `binding_caller_fact_party` and the facts revision.
 //!
 //! A commit of a `ROLE`, a `PERSON` or an `ORGANISATION` replaces the facts
-//! its head holds, in its own transaction; when they changed, it moves the facts revision,
+//! its head holds, and a `PERSON` its record subjects, in its own
+//! transaction; when they changed, it moves the facts revision,
 //! stamps each party whose facts changed with it and notifies
 //! [`super::super::store::CHANNEL`], so each replica reads again only the
 //! facts of the parties stamped since its copy ([`FACTS`]). A refill and an
@@ -18,13 +20,17 @@
               `time_validity` fragments the fact rows are derived from"
 )]
 
+use std::collections::BTreeMap;
+
 use serde_json::Value;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
+use super::subject::SubjectRow;
 use super::{CallerFact, FactKind, FactValue};
 use crate::party_binding::grants::derive::Bound;
 use crate::party_binding::grants::store::{CHANNEL, GrantHead, Term};
+use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
@@ -42,6 +48,15 @@ pub const FACTS: &str = "SELECT p.party_id AS stamped, f.holder_id, f.kind, f.te
      LEFT JOIN binding_caller_fact f ON f.party_id = p.party_id \
      WHERE p.revision > $1 \
      ORDER BY p.party_id, f.holder_id, f.ordinal, f.kind";
+
+/// Every record subject of the parties stamped after the facts revision `$1`,
+/// answered from `ix_binding_caller_fact_party_revision` and the primary key
+/// of `binding_record_subject`.
+const SUBJECTS: &str = "SELECT r.holder_id, r.namespace, r.subject_id, r.lifecycle_state \
+     FROM binding_caller_fact_party p \
+     JOIN binding_record_subject r ON r.holder_id = p.party_id \
+     WHERE p.revision > $1 \
+     ORDER BY r.holder_id, r.ordinal";
 
 /// The text of one stored fact, as a commit compares the facts of a head
 /// before and after.
@@ -62,7 +77,8 @@ pub(crate) struct FactRow {
 }
 
 /// The facts read since a facts revision: the revision read, every party
-/// stamped since, and the facts each holds.
+/// stamped since, the facts each holds and the record subjects each
+/// declares.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Changed {
     /// The facts revision the read saw.
@@ -70,6 +86,8 @@ pub(crate) struct Changed {
     /// Every party read, each with its facts; empty facts for a party that
     /// holds none any more.
     pub(crate) parties: Vec<(Uuid, Vec<FactRow>)>,
+    /// The record subjects of each party read that declares any.
+    pub(crate) subjects: BTreeMap<Uuid, Vec<SubjectRow>>,
 }
 
 /// Replaces the facts of `head` on its commit transaction `tx`: the facts
@@ -86,6 +104,47 @@ pub(crate) async fn write(
     party: Option<Uuid>,
     role_validity: Option<&Value>,
 ) -> Result<(), StorageError> {
+    let parties = replace(tx, head, party, role_validity).await?;
+    finish(tx, parties).await
+}
+
+/// Replaces the facts and the record subjects of the `PERSON` `head` on its
+/// commit transaction `tx`, as [`write`] does, stamping the `PERSON` too
+/// when its record subjects changed.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn write_person(
+    tx: &mut PgConnection,
+    head: GrantHead<'_>,
+) -> Result<(), StorageError> {
+    let mut parties = replace(tx, head, Some(head.vo_id), None).await?;
+    if super::subject::replace(tx, head).await? {
+        parties.push(head.vo_id);
+    }
+    finish(tx, parties).await
+}
+
+/// Stamps `parties`, when any, moves the facts revision and notifies.
+async fn finish(tx: &mut PgConnection, mut parties: Vec<Uuid>) -> Result<(), StorageError> {
+    if parties.is_empty() {
+        return Ok(());
+    }
+    parties.sort_unstable();
+    parties.dedup();
+    stamp(tx, &parties).await?;
+    crate::party_binding::grants::live::note_change();
+    Ok(())
+}
+
+/// Replaces the facts of `head` about `party`; every party whose facts
+/// changed.
+async fn replace(
+    tx: &mut PgConnection,
+    head: GrantHead<'_>,
+    party: Option<Uuid>,
+    role_validity: Option<&Value>,
+) -> Result<Vec<Uuid>, StorageError> {
     let statement = format!(
         "DELETE FROM binding_caller_fact WHERE holder_id = $1 \
          RETURNING party_id, {FACT_TEXT} AS fact"
@@ -102,14 +161,9 @@ pub(crate) async fn write(
         _ => Vec::new(),
     };
     if sorted(&gone) == sorted(&came) {
-        return Ok(());
+        return Ok(Vec::new());
     }
-    let mut parties: Vec<Uuid> = gone.iter().chain(&came).map(|(party, _)| *party).collect();
-    parties.sort_unstable();
-    parties.dedup();
-    stamp(tx, &parties).await?;
-    crate::party_binding::grants::live::note_change();
-    Ok(())
+    Ok(gone.iter().chain(&came).map(|(party, _)| *party).collect())
 }
 
 /// The texts of `rows`, sorted.
@@ -219,8 +273,9 @@ async fn stamp(tx: &mut PgConnection, parties: &[Uuid]) -> Result<(), StorageErr
     Ok(())
 }
 
-/// The care relationships the `PERSON` `person` holds, as their texts,
-/// sorted: what a commit compares before and after it writes them.
+/// The care relationships the `PERSON` `person` holds and the record
+/// subjects it declares, as their texts, sorted: what a commit compares
+/// before and after it writes them.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -229,10 +284,12 @@ pub(crate) async fn care(tx: &mut PgConnection, person: Uuid) -> Result<Vec<Stri
         "SELECT {FACT_TEXT} AS fact FROM binding_caller_fact \
          WHERE holder_id = $1 AND target_id IS NOT NULL ORDER BY fact"
     );
-    Ok(sqlx::query_scalar(sqlx::AssertSqlSafe(statement))
+    let mut care: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(statement))
         .bind(person)
         .fetch_all(&mut *tx)
-        .await?)
+        .await?;
+    care.extend(super::subject::texts(tx, person).await?);
+    Ok(care)
 }
 
 /// Deletes every fact a party of `vo_ids` holds or is about, and their
@@ -249,11 +306,16 @@ pub(crate) async fn erase(tx: &mut PgConnection, vo_ids: &[Uuid]) -> Result<bool
     .execute(&mut *tx)
     .await?
     .rows_affected();
+    let subjects = sqlx::query("DELETE FROM binding_record_subject WHERE holder_id = ANY($1)")
+        .bind(vo_ids)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
     sqlx::query("DELETE FROM binding_caller_fact_party WHERE party_id = ANY($1)")
         .bind(vo_ids)
         .execute(&mut *tx)
         .await?;
-    Ok(gone > 0)
+    Ok(gone > 0 || subjects > 0)
 }
 
 /// Reads the facts of every party stamped after `since`, or of every party
@@ -286,7 +348,28 @@ pub(crate) async fn load(
             facts.push(fact);
         }
     }
-    Ok(Changed { revision, parties })
+    let mut subjects: BTreeMap<Uuid, Vec<SubjectRow>> = BTreeMap::new();
+    for row in sqlx::query(SUBJECTS)
+        .bind(since.unwrap_or(-1))
+        .fetch_all(&mut *conn)
+        .await?
+    {
+        subjects
+            .entry(row.try_get("holder_id")?)
+            .or_default()
+            .push(SubjectRow {
+                subject: EhrSubject::new(
+                    row.try_get::<String, _>("namespace")?,
+                    row.try_get::<String, _>("subject_id")?,
+                ),
+                lifecycle_state: row.try_get("lifecycle_state")?,
+            });
+    }
+    Ok(Changed {
+        revision,
+        parties,
+        subjects,
+    })
 }
 
 /// The fact `row` of `holder` holds.

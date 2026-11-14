@@ -1151,6 +1151,34 @@ FerroPIX as the EHR index provider (IHE PIXm, planned in
 [#3380](https://github.com/FerroHEALTH/FerroEHR/issues/3380)) resolves a
 patient identifier to an EHR without putting it in a FerroEHR URL.
 
+### The subject link in the party domain
+
+The access evaluator needs the `PERSON` of an EHR's subject to read its care
+relationships and its representatives. Under `record.subject_index = "pixm"`
+the EHR names its subject by a pseudonym, so the patient's `PERSON` declares
+it: an element of `PARTY.details` named `ferroehr-operations::record_subject`,
+whose `DV_IDENTIFIER` holds the pseudonym and its namespace. An identifier
+another organisation issued belongs in `details` (RM Demographic IM §2.1.3),
+and the cross-reference stays out of the EHR (RM EHR IM §EHR Status). FerroEHR
+projects it into the party table `binding_record_subject` at the commit of the
+`PERSON` and holds it in memory on every replica, so a decision adds no
+database transaction and no call to the identity source.
+
+**This is an accepted trade-off** (owner decision, 2026-11-14,
+[#5634](https://github.com/FerroHEALTH/FerroEHR/issues/5634)). Without the
+element, mapping a pseudonym back to a person needs a steward action in the
+identity source. With it, the party domain maps the pseudonym to the `PERSON`
+for every patient whose `PERSON` carries the element. The clinical side is
+unchanged: it holds the pseudonym alone, and `ferroehr_clinical` still reads
+nothing in `party`. Re-identifying a clinical record still needs both domains,
+so the condition of GDPR Art. 4(5), additional information kept separately,
+holds inside the CDR, and the link sits in the party domain under its own role
+and dump, the "identity cross-reference" BASE Architecture Overview §Anonymity
+describes. Only the `PERSON`s that need care relationships or representation
+need the element, so the exposure is per patient (Art. 25(2)). The evaluator's
+resolution tells the caller nothing, so it writes no `linkage` access event; a
+representative's EHR lookup records one per subject reference it resolves.
+
 ### Declaring the posture
 
 The separations above are each a configuration key, and a deployment that has

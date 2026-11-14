@@ -234,4 +234,7 @@ pub(crate) struct SigningCtx<'a> {
     /// The policy grants in force, whose ceiling a policy `ROLE` commit is
     /// judged against ([`crate::party_binding::grants`]).
     pub(crate) grants: &'a crate::party_binding::grants::live::LiveGrants,
+    /// The clinical-side privacy policy, whose subject rule a `PERSON`'s
+    /// record subject is held to ([`crate::party_binding::grants::caller::subject`]).
+    pub(crate) privacy: &'a crate::privacy::PrivacyPolicy,
 }

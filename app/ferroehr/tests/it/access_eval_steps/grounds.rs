@@ -67,7 +67,7 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
 /// The subject of [`EHR`], through its patient context.
 fn subject_of_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(EHR))),
+        own_ehrs: vec![EhrId(uuid(EHR))],
         ..caller(CallerKind::Subject, GUARDIAN)
     }
 }
@@ -76,7 +76,7 @@ fn subject_of_ehr() -> Caller {
 /// that EHR.
 fn subject_of_other_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(OTHER_EHR))),
+        own_ehrs: vec![EhrId(uuid(OTHER_EHR))],
         ..caller(CallerKind::Subject, GUARDIAN)
     }
 }
@@ -85,7 +85,7 @@ fn subject_of_other_ehr() -> Caller {
 /// representation names.
 fn representative_of_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(EHR))),
+        own_ehrs: vec![EhrId(uuid(EHR))],
         ..caller(CallerKind::Representative, GUARDIAN)
     }
 }
@@ -93,7 +93,7 @@ fn representative_of_ehr() -> Caller {
 /// A representative of the subject of another patient's EHR.
 fn representative_of_other_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(OTHER_EHR))),
+        own_ehrs: vec![EhrId(uuid(OTHER_EHR))],
         ..caller(CallerKind::Representative, GUARDIAN)
     }
 }

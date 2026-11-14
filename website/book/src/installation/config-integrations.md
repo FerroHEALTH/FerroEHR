@@ -93,6 +93,25 @@ subject-id posture by accepting the `open_subject_namespace` gap by name
 ([`deployment.profile`](configuration.md#deploymentprofile)), which boot and
 `GET /management/status` then state.
 
+**Care relationships and representations reach a pseudonymous EHR through
+the patient's `PERSON`.** Under `pixm` an EHR names its subject by the
+pseudonym, which is no party of the CDR's party store, so the patient's
+`PERSON` declares the subject reference it stands for: an element of its
+`details` named `ferroehr-operations::record_subject` whose value is a
+`DV_IDENTIFIER` with `issuer` set to the `[pixm] assigning_authority` and `id`
+to the pseudonym. The registering system writes it in the same demographic
+contribution as the `PERSON`, from the pseudonym ITI-83 answered, and FerroEHR
+asks the identity source nothing for it. A subject reference under
+`[authz.party_binding] namespace` names a `PERSON` by its container, as under
+`local`, and any other reference names the `PERSON` that declares it. One
+reference stands for one `PERSON`. After a PIX merge, one demographic
+contribution moves the merged patient's pseudonym onto the survivor's
+`PERSON`, and both EHRs inherit the survivor's care relationships and
+representatives from the next request. Writing the element needs the
+`write_care_relationship` grant or an administrator, as a care relationship
+does ([The pseudonymisation boundary](../security.md#the-subject-link-in-the-party-domain)
+names what this changes).
+
 **`subject_index` alone switches the index**, in the file or as
 `FERROEHR__RECORD__SUBJECT_INDEX`. A `[pixm]` table kept beside `"local"` is not
 used, and boot names its keys, so a configuration written for the IHE

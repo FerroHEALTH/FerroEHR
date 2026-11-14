@@ -82,9 +82,12 @@ pub(crate) fn standing(state: &AppState) -> LogStanding {
         return LogStanding::Reviewer;
     };
     if delay::acts_for_the_person(&principal) {
-        return confined(&principal)
-            .and_then(|ehr| ehr.parse::<uuid::Uuid>().ok())
-            .map_or(LogStanding::Refused, |ehr| LogStanding::Person(EhrId(ehr)));
+        let own = confined(&principal);
+        return if own.is_empty() {
+            LogStanding::Refused
+        } else {
+            LogStanding::Person(own.into())
+        };
     }
     let authz = state.authz();
     let admitted = authz
@@ -100,12 +103,19 @@ pub(crate) fn standing(state: &AppState) -> LogStanding {
     }
 }
 
-/// The EHR the person's caller is confined to: the represented subject's for
-/// a representative, else the launch context's of the patient's token.
-fn confined(principal: &Principal) -> Option<&str> {
+/// The EHRs the person's caller is confined to: each EHR of the represented
+/// subject for a representative, else the launch context's of the patient's
+/// token.
+fn confined(principal: &Principal) -> Vec<EhrId> {
     match &principal.represented {
-        Some(represented) => represented.ehr_id.as_deref(),
-        None => principal.access.ehr_id(),
+        Some(represented) => represented.ehr_ids.clone(),
+        None => principal
+            .access
+            .ehr_id()
+            .and_then(|ehr| ehr.parse::<uuid::Uuid>().ok())
+            .map(EhrId)
+            .into_iter()
+            .collect(),
     }
 }
 

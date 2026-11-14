@@ -1055,6 +1055,7 @@ pub(crate) async fn commit(
     )
     .await?;
     crate::versioning::party_refs::check(tx, &references).await?;
+    crate::party_binding::grants::caller::subject::settle(tx, [committed.kind]).await?;
     if !committed.skipped {
         write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
     }
@@ -1091,7 +1092,8 @@ pub(crate) fn record_commit(committed: &Committed) {
 /// writers sharing several objects queue instead of deadlocking.
 ///
 /// # Errors
-/// The per-change [`apply_change`] errors; the attestation-completion
+/// The per-change [`apply_change`] errors; the `409` of two `PERSON`s
+/// declaring one record subject; the attestation-completion
 /// `Unprocessable` rejections and the `NotFound` of a missing attestation
 /// target; the storage errors of the contribution/outbox writes.
 pub(crate) async fn commit_contribution(
@@ -1110,9 +1112,8 @@ pub(crate) async fn commit_contribution(
             .filter_map(|(_, change)| change.target_vo_id()),
     )
     .await?;
-    // The CONTRIBUTION's own audit + contribution rows in one round trip (the
-    // per-version `commit_audit`s are inserted per change below). A uid the
-    // client did not supply is minted here, stamped, never by the database.
+    // The CONTRIBUTION's own audit and contribution rows in one round trip; a
+    // uid the client did not supply is minted and stamped here.
     let uid = supplied_uid.unwrap_or_else(|| ctx.stamp.mint());
     let FoldedRows {
         contribution_id,
@@ -1135,10 +1136,9 @@ pub(crate) async fn commit_contribution(
         .collect();
     let mut committed = Vec::with_capacity(changes.len() + attests.len());
     for (version_audit, change) in changes {
-        // Each change writes its own `commit_audit` + `version` under the
-        // shared contribution, always through the folded CTE — the commit
-        // instant is the contribution's transaction timestamp (one `now()`
-        // for the whole set), so the signature is computable up front.
+        // Each change writes its own `commit_audit` + `version` under the shared
+        // contribution through the folded CTE, at the contribution's one `now()`,
+        // so the signature is computable up front.
         let (change_committed, _cid) = apply_change(
             tx,
             CommitScope {
@@ -1156,8 +1156,9 @@ pub(crate) async fn commit_contribution(
         committed.push(change_committed);
     }
     crate::versioning::party_refs::check(tx, &references).await?;
-    // Standalone 666 attestations of existing versions (no new version) —
-    // completed with the contribution's commit-act time.
+    let kinds = committed.iter().map(|c| c.kind);
+    crate::party_binding::grants::caller::subject::settle(tx, kinds).await?;
+    // Standalone 666 attestations of existing versions, at the commit-act time.
     for item in attests {
         restriction::ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id)).await?;
         let full =
@@ -1176,9 +1177,8 @@ pub(crate) async fn commit_contribution(
             .await?,
         );
     }
-    // One PHI-free outbox event for the whole CONTRIBUTION (same transaction),
-    // skipped entirely — including the envelope collection — when no eventing
-    // consumer is configured (our own extension; no openEHR spec governs it).
+    // One PHI-free outbox event for the whole CONTRIBUTION, skipped with no
+    // eventing consumer (our own extension; no openEHR spec governs it).
     if ctx.outbox_enabled {
         let versions = committed.iter().map(Committed::envelope_entry).collect();
         crate::storage::version_repo::commit::write_outbox(

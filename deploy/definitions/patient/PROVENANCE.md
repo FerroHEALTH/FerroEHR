@@ -1,35 +1,23 @@
 # Patient PERSON definition: provenance
 
-Two versions of one ADL 2 archetype of FerroEHR's default demographic
-definitions, which the binary carries and stores at boot when absent:
+One ADL 2 archetype of FerroEHR's default demographic definitions, which
+the binary carries and stores at boot when absent:
+`openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`, named by the default of
+`[authz.party_binding.patient]`.
 
-- `openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0.adls`, named by the default of
-  `[authz.party_binding.patient]`: version 1.0.0 with the optional care
-  relationship (`id32`) added. Adding an optional node is a
-  backward-compatible change, so it takes a new minor version (AM
-  `ARCHETYPE_HRID`: `minor_version` of the `release_version`); its
-  `other_details["revision_history"]` records the change, since the BASE
-  resource model carries no revision history of its own.
-- `openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls`: the version FerroEHR
-  v5.7.1-rc1 published, kept byte for byte, since a published id never
-  changes its content. A deployment that stored it keeps it and receives
-  1.1.0 beside it.
-
-Version 1.1.0, like 1.0.0 before it, is a patient's `PERSON`,
-  the subject of an EHR and the target of a representation relationship. In
-  `details`: its patient identifiers at `/details[id2]/items[id3]`, its date
-  of birth at `/details[id2]/items[id4]` and its sex at
-  `/details[id2]/items[id5]`. In `identities`: its names, each named by its
-  usage, with the full, given and family name at
-  `/identities[id6]/details[id7]/items[id8]`, `id9` and `id10`. In
-  `contacts`: a postal address (`ADDRESS[id12]`) and an electronic address
-  (`ADDRESS[id19]`). In `relationships`: a personal relationship (`id23`),
-  a third-party payer (`id26`) and a healthcare provider (`id29`), the payer
-  and the provider each with the patient identifiers it issues.
-
-No configuration key names it: the party mapping maps professionals. A
-deployment that records its patients as demographic parties writes them
-under it, or under its own.
+It is a patient's `PERSON`, the subject of an EHR and the target of a
+representation relationship. In `details`: its patient identifiers at
+`/details[id2]/items[id3]`, its date of birth at `/details[id2]/items[id4]`,
+its sex at `/details[id2]/items[id5]` and the EHR subject references it
+stands for at `/details[id2]/items[id36]`. In `identities`: its names, each
+named by its usage, with the full, given and family name at
+`/identities[id6]/details[id7]/items[id8]`, `id9` and `id10`. In `contacts`:
+a postal address (`ADDRESS[id12]`) and an electronic address
+(`ADDRESS[id19]`). In `relationships`: a personal relationship (`id23`), a
+third-party payer (`id26`) and a healthcare provider (`id29`), the payer and
+the provider each with the patient identifiers it issues, and the care
+relationships (`id32`) to the teams and units the patient is under the care
+of.
 
 ## Source
 
@@ -69,6 +57,11 @@ one licence.
 - The payer and provider relationships hold their patient identifiers as
   `DV_IDENTIFIER` elements; the personal relationship's type is a `DV_TEXT`,
   since the source's value set is unbound.
+- A record subject element (`id36`) is added, which the CKM source does not
+  have: a `DV_IDENTIFIER` named by the coded `record_subject` of
+  `ferroehr-operations`, holding an `EHR_STATUS` subject reference the
+  `PERSON` stands for, such as a pseudonym. An identifier another
+  organisation issued belongs in `PARTY.details` (RM Demographic IM §2.1.3).
 - A care relationship (`id32`) is added, which the CKM source does not
   have: the patient's relationship to a care team or unit, whose one
   mandatory element is the coded `under_care_of` of FerroEHR's terminology

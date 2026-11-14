@@ -75,6 +75,9 @@ pub(crate) struct GrantFacts {
     /// The caller facts: a `ROLE`'s clearances and permitted purposes, a
     /// `PERSON`'s care relationships, in document order.
     pub(crate) facts: Vec<CallerFact>,
+    /// The EHR subject references a `PERSON` declares in its `details`,
+    /// distinct, in document order.
+    pub(crate) subjects: Vec<caller::subject::DeclaredSubject>,
     /// Why a fact the body carries cannot be read, which its commit refuses.
     pub(crate) unread: Vec<String>,
 }
@@ -130,6 +133,7 @@ impl GrantFacts {
             }
             _ => caller::relationships(kind, body, &mut facts),
         }
+        caller::subject::declared(kind, body, &mut facts);
         facts
     }
 }

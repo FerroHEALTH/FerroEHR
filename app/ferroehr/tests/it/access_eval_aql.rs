@@ -22,6 +22,7 @@ use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::query::request::{AqlQueryRequest, QueryOutcome};
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
+use ferroehr::storage::access_projection::EhrSubject;
 use ferroehr::versioning::committer::CommitterIdentity;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
@@ -203,9 +204,13 @@ impl World {
         all
     }
 
-    /// The subject of EHR `index`.
-    fn subject(&self, index: usize) -> String {
-        self.ehrs[index].1.to_string()
+    /// The subject reference of EHR `index`: its `PERSON` under the CDR's own
+    /// namespace.
+    fn subject(&self, index: usize) -> EhrSubject {
+        EhrSubject::new(
+            ferroehr::config::binding::PartyBindingConfig::default().namespace,
+            self.ehrs[index].1.to_string(),
+        )
     }
 }
 
@@ -214,7 +219,7 @@ struct Ask {
     caller: Caller,
     purpose: Option<&'static str>,
     policy: Option<AccessPolicy>,
-    cared: Vec<String>,
+    cared: Vec<EhrSubject>,
     default: AccessDefault,
 }
 
@@ -229,7 +234,7 @@ impl Ask {
     fn subject(world: &World, own: Option<EhrId>) -> Self {
         let mut ask = Self::of(world, CallerKind::Subject);
         ask.caller.party = None;
-        ask.caller.own_ehr = own;
+        ask.caller.own_ehrs = own.into_iter().collect();
         ask.caller.settings = SettingsCaller::new(false, true, None);
         ask
     }
@@ -240,7 +245,7 @@ impl Ask {
             caller: Caller {
                 kind,
                 party: Some(world.nurse.clone()),
-                own_ehr: None,
+                own_ehrs: Vec::new(),
                 patient_grants_only: false,
                 acts_for: Vec::new(),
                 roles: Vec::new(),

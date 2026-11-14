@@ -28,7 +28,7 @@ use crate::access_eval::condition::{AccessCondition, CallerKeys, ConditionGroups
 use crate::access_eval::scope::{
     CategoryMatch, DataMatch, Edge, EhrFact, Held, Polarity, Pred, Recorded,
 };
-use crate::db::iden::{AccessSettings, Ehr, Node, VersionRow, VoHead};
+use crate::db::iden::{AccessSettings, Node, VersionRow, VoHead};
 
 /// The alias of the root node an archetype probe reads.
 const ROOT: &str = "access_root";
@@ -221,18 +221,30 @@ fn admitted(
 }
 
 /// Whether the subject of the EHR `target` is under the care of the caller:
-/// a `CASE` condition, since an EHR names one subject.
+/// a `CASE` condition, since an EHR names one subject. Its reference matches
+/// a cared one by namespace and id, the id of a reference in this CDR's own
+/// namespace by its container's UUID in any case, as
+/// [`crate::party_binding::grants::live::LiveGrants::person_of`] reads it.
 fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
-    let mut probe = Query::select();
-    probe
-        .expr(Expr::val(1))
-        .from_as(Ehr::Table, Alias::new(CARE))
-        .and_where(col(CARE, Ehr::Id).eq(target))
-        .and_where(
-            Expr::from(Func::lower(col(CARE, Ehr::SubjectId)))
-                .eq(Expr::from(PgFunc::any(Expr::val(condition.cared.to_vec())))),
-        );
-    Expr::exists(probe)
+    let (namespaces, ids): (Vec<String>, Vec<String>) = condition
+        .cared
+        .iter()
+        .map(|subject| (subject.namespace.clone(), subject.id.clone()))
+        .unzip();
+    Expr::cust_with_exprs(
+        "EXISTS (SELECT 1 FROM ehr access_subject, \
+             unnest($2::text[], $3::text[]) AS access_care(namespace, id) \
+             WHERE access_subject.id = $1 AND access_subject.subject_namespace = access_care.namespace \
+             AND CASE WHEN access_care.namespace = $4 \
+                      THEN lower(access_subject.subject_id) = access_care.id \
+                      ELSE access_subject.subject_id = access_care.id END)",
+        [
+            target,
+            Expr::val(namespaces),
+            Expr::val(ids),
+            Expr::val(condition.subject_namespace.to_string()),
+        ],
+    )
 }
 
 /// `pred` on the head row `h`, its facts read with `facts`.
