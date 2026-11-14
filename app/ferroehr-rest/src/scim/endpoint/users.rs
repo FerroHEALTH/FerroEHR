@@ -96,7 +96,11 @@ pub(crate) async fn create(
         }
         let map = &users.inner.map;
         let values = map
-            .values(&users.service, resource, (&client.binding_issuer, client.portal))
+            .values(
+                &users.service,
+                resource,
+                (&client.binding_issuer, client.portal),
+            )
             .await?;
         let user = NewUser {
             template_id: map.template_id(client.portal)?.to_owned(),
@@ -250,7 +254,14 @@ pub(crate) async fn modify(
             let active = active_of(&replaced);
             (replaced, active)
         };
-        write(&users, (issuer, client.portal), user, (&current, &after), active).await
+        write(
+            &users,
+            (issuer, client.portal),
+            user,
+            (&current, &after),
+            active,
+        )
+        .await
     }
     .await;
     let op = if patching {

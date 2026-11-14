@@ -102,6 +102,26 @@ pub(crate) fn coded(value: &Value) -> Option<&str> {
         .flatten()
 }
 
+/// The `DV_CODED_TEXT` of `code` in [`TERMINOLOGY`], reading `rubric`: the
+/// one place a written code names the access control terminology.
+pub(crate) fn coded_term(code: &str, rubric: &str) -> Value {
+    openehr_its::json::to_canonical_value(&openehr_rm::prelude::DvCodedText {
+        value: rubric.to_owned(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+        defining_code: openehr_rm::prelude::CodePhrase {
+            terminology_id: openehr_base::prelude::TerminologyId {
+                value: TERMINOLOGY.to_owned(),
+            },
+            code_string: code.to_owned(),
+            preferred_term: None,
+        },
+    })
+}
+
 /// The first value of the tree `value`, itself included, depth first, for
 /// which `found` answers.
 fn first<T>(value: &Value, found: &mut impl FnMut(&Value) -> Option<T>) -> Option<T> {

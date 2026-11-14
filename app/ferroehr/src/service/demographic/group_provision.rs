@@ -34,15 +34,19 @@
 
 use std::collections::BTreeSet;
 
+use openehr_rm::draft::access_control::terminology::{GroupKind, Term};
 use serde_json::Value;
 
 use crate::db::acquire::acquire;
 use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::party_binding::GroupMapping;
+use crate::party_binding::grants::capabilities::Capabilities;
+use crate::party_binding::grants::operation::Operation;
+use crate::party_binding::policy_mark::{TERMINOLOGY, coded};
 use crate::party_binding::provisioned::{self, GroupClient, GroupFilter, GroupRow};
 use crate::service::FerroEhrService;
-use crate::service::demographic::mapped_write::clear_mapped_value;
+use crate::service::demographic::mapped_write::{clear_mapped_value, name_coded};
 use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::user_write::{ScimCommit, UserWriteError};
 use crate::storage::version_repo;
@@ -71,6 +75,17 @@ pub struct ProvisionedGroup {
     pub body: Value,
 }
 
+impl ProvisionedGroup {
+    /// Whether the Group is a care team: its `GROUP`'s `name`, its type (RM
+    /// demographic `party.adoc`, `Type_valid`), is the coded `care_team` of
+    /// the access control terminology, never read by archetype or path
+    /// (#5617).
+    #[must_use]
+    pub fn care_team(&self) -> bool {
+        self.body.get("name").and_then(coded) == Some(GroupKind::CareTeam.code())
+    }
+}
+
 /// One page of a client's Groups.
 #[derive(Debug, Clone)]
 pub struct GroupPage {
@@ -90,6 +105,10 @@ pub struct GroupState {
     pub external_id: Option<String>,
     /// The members' `PERSON` containers.
     pub members: Vec<VoId>,
+    /// Whether the Group is a care team: its `GROUP` carries
+    /// the coded `care_team` as its `name` and each membership `member_of`
+    /// (#5617). Set at its creation and never changed.
+    pub care_team: bool,
 }
 
 /// The SCIM client a Group write is of.
@@ -169,6 +188,9 @@ impl FerroEhrService {
         state: GroupState,
     ) -> Result<ProvisionedGroup, ServiceError> {
         let mapping = self.scim_group_mapping()?;
+        if state.care_team {
+            require_care_writer()?;
+        }
         let members = distinct(&state.members);
         if members.len() > writer.max_members {
             return Err(too_many(writer.max_members));
@@ -190,7 +212,10 @@ impl FerroEhrService {
             envelope,
         )];
         for member in &members {
-            changes.extend(self.membership_change(writer, id, *member, true).await?);
+            let change = self
+                .membership_change(writer, (id, state.care_team), *member, true)
+                .await?;
+            changes.extend(change);
         }
         let commit = ScimCommit {
             created_group: Some(id),
@@ -209,7 +234,8 @@ impl FerroEhrService {
     }
 
     /// The new version of the `PERSON` `member` that adds (`join`) or drops
-    /// its membership of the `GROUP` `group`; `None` when it already holds
+    /// its membership of the `GROUP` `group`, carrying `member_of` when the
+    /// group is a care team (`care_team`); `None` when it already holds
     /// what is asked, and for a drop from a `PERSON` that is not `complete` or
     /// `incomplete`, whose memberships its deactivation already dropped.
     ///
@@ -223,7 +249,7 @@ impl FerroEhrService {
     pub(super) async fn membership_change(
         &self,
         writer: GroupWriter<'_>,
-        group: VoId,
+        (group, care_team): (VoId, bool),
         member: VoId,
         join: bool,
     ) -> Result<Option<Change>, ServiceError> {
@@ -265,7 +291,12 @@ impl FerroEhrService {
         }
         if join {
             let membership = self
-                .membership_body(mapping.membership, (group, member), writer.namespace)
+                .membership_body(
+                    mapping.membership,
+                    (group, member),
+                    writer.namespace,
+                    care_team,
+                )
                 .await?;
             if let Some(object) = body.as_object_mut() {
                 match object.get_mut("relationships") {
@@ -369,6 +400,9 @@ impl FerroEhrService {
         if state.external_id.is_none() {
             clear_mapped_value(&mut body, external, Some((issued.1, issued.0)));
         }
+        if head.is_none() && state.care_team {
+            name_coded(&mut body, GroupKind::CareTeam.code(), "care team");
+        }
         Ok(body)
     }
 
@@ -417,6 +451,21 @@ impl FerroEhrService {
             .map(|meta| meta.lifecycle_state)
             .ok_or_else(|| ServiceError::exception(format!("the party {id} has no head")))
     }
+}
+
+/// Refuses a care-team Group's creation unless the caller holds the
+/// `write_care_relationship` grant in force, which each of its memberships
+/// needs too (#5617). Our own design.
+pub(super) fn require_care_writer() -> Result<(), ServiceError> {
+    if Capabilities::current().holds(Operation::WriteCareRelationship) {
+        return Ok(());
+    }
+    Err(ServiceError::not_permitted(format!(
+        "a care-team Group carries {TERMINOLOGY}::{} and makes each membership a care \
+         relationship: only a client holding the {} grant creates one",
+        GroupKind::CareTeam.code(),
+        Operation::WriteCareRelationship
+    )))
 }
 
 /// Keeps the inline relationships of `body` that `keep` holds, leaving

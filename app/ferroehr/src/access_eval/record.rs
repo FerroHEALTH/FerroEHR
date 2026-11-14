@@ -51,6 +51,9 @@ pub enum Step {
     /// 0, a representative on an EHR other than the one whose subject it
     /// represents, before the numbered steps.
     Representation,
+    /// 0, a read by a caller whose agreement conditions it on a consent
+    /// decision it names no reference to, before the numbered steps.
+    ConsentReference,
     /// 1, an opt-out (EHDS Art. 10).
     OptOut,
     /// 2, a restriction (EHDS Art. 8).
@@ -81,6 +84,7 @@ impl Step {
             Refusal::ConsentRequired => Self::DefaultDisposition,
             Refusal::NotSubject => Self::Subject,
             Refusal::NotRepresented => Self::Representation,
+            Refusal::ConsentReferenceMissing => Self::ConsentReference,
         }
     }
 
@@ -88,7 +92,7 @@ impl Step {
     #[must_use]
     pub const fn number(self) -> u8 {
         match self {
-            Self::Subject | Self::Representation => 0,
+            Self::Subject | Self::Representation | Self::ConsentReference => 0,
             Self::OptOut => 1,
             Self::Restriction => 2,
             Self::ConsentDeny => 3,
@@ -105,6 +109,7 @@ impl Step {
         match self {
             Self::Subject => "subject",
             Self::Representation => "representation",
+            Self::ConsentReference => "consent reference",
             Self::OptOut => "opt-out",
             Self::Restriction => "restriction",
             Self::ConsentDeny => "consent deny",
@@ -308,6 +313,9 @@ impl RequestAccess {
                 Step::CareRelationship | Step::Purpose => policy(),
                 Step::Subject => "the EHR of the caller's patient context".to_owned(),
                 Step::Representation => "the EHR of the subject the caller represents".to_owned(),
+                Step::ConsentReference => {
+                    "the consent condition of the caller's agreement".to_owned()
+                }
                 Step::DefaultDisposition if settings_of(judged).is_some() => {
                     format!("the default_access of {}", carrier())
                 }
@@ -497,7 +505,9 @@ mod tests {
                 "refused-no-care-relationship" => 5,
                 "refused-purpose-missing" | "refused-purpose-not-permitted" => 6,
                 "refused-consent-required" => 7,
-                "refused-not-subject" | "refused-not-represented" => 0,
+                "refused-not-subject"
+                | "refused-not-represented"
+                | "refused-consent-reference-missing" => 0,
                 other => panic!("an unknown refusal code {other}"),
             };
             assert_eq!(number, expected, "{code}");

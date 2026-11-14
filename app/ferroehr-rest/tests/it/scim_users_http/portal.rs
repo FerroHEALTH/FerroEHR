@@ -28,7 +28,7 @@ use http::StatusCode;
 use serde_json::{Value, json};
 
 use super::default_definitions::{seeded, zero_config};
-use super::{MACHINES, SCOPE, call, patch_op};
+use super::{CLIENT, LOGIN, MACHINES, SCOPE, call, patch_op};
 use crate::common::{self, BASE, EXT};
 use crate::policy_fixture::{capability, grant, scope};
 use crate::portal_representatives_http::{PORTAL, child, representation, token};
@@ -47,14 +47,16 @@ fn config() -> ferroehr_rest::config::AppConfig {
         jwks_file: common::jwks_file().display().to_string(),
         ..common::entry(PORTAL, super::AUDIENCE)
     });
-    config.auth.smart.patient_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(PORTAL)];
+    config.auth.smart.patient_issuers =
+        vec![ferrohealth_secret::secret_url::SecretUrl::new(PORTAL)];
     config
 }
 
 /// The router over a fresh database holding the default definitions, with
-/// the person mapping compiled as the server installs it and the portal's
+/// the person mapping compiled as the server installs it, the portal's
 /// client granted `scim_provision` under the portal issuer and
-/// `access_demographic`.
+/// `access_demographic`, and the hospital's client `scim_provision` under
+/// [`LOGIN`].
 async fn portal() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let config = config();
     let (db, pool) = common::migrated_pool().await;
@@ -71,7 +73,18 @@ async fn portal() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
         &[scope("binding_issuer", PORTAL), scope("token_scope", SCOPE)],
     );
     let demographic = capability("access_demographic", &[]);
-    grant(&service, MACHINES, PORTAL_CLIENT, &[provisioning, demographic]).await;
+    grant(
+        &service,
+        MACHINES,
+        PORTAL_CLIENT,
+        &[provisioning, demographic],
+    )
+    .await;
+    let hospital = capability(
+        "scim_provision",
+        &[scope("binding_issuer", LOGIN), scope("token_scope", SCOPE)],
+    );
+    grant(&service, MACHINES, CLIENT, &[hospital]).await;
     let app = common::router_with(config, Arc::clone(&service)).await;
     (db, service, app)
 }
@@ -101,8 +114,8 @@ async fn read_as_frank(app: &Router, ehr: &str) -> (StatusCode, String) {
 
 /// The current uid and body of the `PERSON` `id`, read by the server.
 async fn head(service: &FerroEhrService, id: &str) -> (String, Value) {
-    let address = ferroehr::versioning::object_version_id::parse_uid_based_id(id)
-        .expect("a container id");
+    let address =
+        ferroehr::versioning::object_version_id::parse_uid_based_id(id).expect("a container id");
     let read = service
         .party_get(PartyKind::Person, address, None)
         .await
@@ -119,6 +132,27 @@ fn next<T: serde::de::DeserializeOwned>(body: &Value, uid: &str) -> WriteRequest
     write
 }
 
+/// A standalone representation from the `PERSON` `source` to the subject
+/// `subject`, of a deployment's own archetype, as the patient authorises a
+/// proxy or an administrator records a guardian.
+fn standalone(source: ferroehr::ids::VoId, subject: ferroehr::ids::VoId) -> Value {
+    let mut relationship = representation(source, subject, "253", None);
+    relationship["archetype_details"] = json!({ "_type": "ARCHETYPED", "rm_version": "1.1.0",
+        "archetype_id": { "_type": "ARCHETYPE_ID",
+            "value": "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.custodian.v2" } });
+    relationship
+}
+
+/// A client-credentials token of `client` for the Demographic API.
+fn system(client: &str) -> String {
+    let exp = jiff::Timestamp::now().as_second() + 3600;
+    common::bearer(
+        &json!({ "iss": MACHINES, "aud": super::AUDIENCE, "exp": exp,
+        "sub": client, "client_id": client,
+        "scope": "system/composition-*.cruds system/aql-*.s" }),
+    )
+}
+
 /// The portal's client provisions Frank in the patient template with no
 /// `ROLE`. His portal login reaches nothing until a representation is
 /// recorded; an administrator records it and he reads Eva's record; the
@@ -128,7 +162,7 @@ async fn the_portal_provisions_a_representative_who_binds_only_through_a_represe
     let (_db, service, app) = portal().await;
     let (eva, ehr) = child(&service).await;
     let user = frank(&app).await;
-    let (uid, body) = head(&service, &user).await;
+    let (_, body) = head(&service, &user).await;
     assert_eq!(
         body["archetype_details"]["template_id"]["value"],
         ferroehr::party_binding::shipped::PATIENT,
@@ -138,21 +172,20 @@ async fn the_portal_provisions_a_representative_who_binds_only_through_a_represe
 
     let (status, refused) = read_as_frank(&app, &ehr).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
-    assert!(refused.contains("refused-representation-unrecorded"), "{refused}");
+    assert!(
+        refused.contains("refused-representation-unrecorded"),
+        "{refused}"
+    );
 
     let frank_id = ferroehr::ids::VoId(user.parse().expect("a container id"));
-    let mut represented = body.clone();
-    let mut relationship = representation(frank_id, eva, "253", None);
-    relationship["source"]["id"]["value"] = json!(user);
-    represented["relationships"] = json!([relationship]);
-    Box::pin(service.party_update(
-        PartyKind::Person,
-        frank_id,
-        Precondition::parse(Some(&uid), None).expect("an If-Match"),
-        next(&represented, &uid),
-    ))
-    .await
-    .expect("the administrator records the representation");
+    let mut write = WriteRequest::<openehr_rm::prelude::PartyRelationship>::new(
+        openehr_its::json::from_canonical_value(&standalone(frank_id, eva))
+            .expect("a PARTY_RELATIONSHIP"),
+    );
+    write.lifecycle_state = Some("532".to_owned());
+    Box::pin(service.party_relationship_create(write))
+        .await
+        .expect("the administrator records the representation");
     let (status, body) = read_as_frank(&app, &ehr).await;
     assert_eq!(status, StatusCode::OK, "{body}");
 
@@ -171,67 +204,44 @@ async fn the_portal_provisions_a_representative_who_binds_only_through_a_represe
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
 }
 
-/// The owning portal client writes no representation: neither inline in
-/// the `PERSON` it provisioned, through the Demographic API, nor as a
-/// `PARTY_RELATIONSHIP` of its own.
+/// The owning portal client writes no representation of its own
+/// representative: its `PARTY_RELATIONSHIP` naming Frank is refused, and
+/// Frank still reaches nothing.
 #[tokio::test]
-async fn the_portal_client_is_refused_every_representation_write() {
+async fn the_portal_client_is_refused_a_representation() {
     let (_db, service, app) = portal().await;
     let (eva, ehr) = child(&service).await;
     let user = frank(&app).await;
     let frank_id = ferroehr::ids::VoId(user.parse().expect("a container id"));
-    let system = |client: &str| {
-        let exp = jiff::Timestamp::now().as_second() + 3600;
-        common::bearer(&json!({ "iss": MACHINES, "aud": super::AUDIENCE, "exp": exp,
-            "sub": client, "client_id": client,
-            "scope": "system/composition-*.cruds system/aql-*.s" }))
-    };
-
-    let (uid, body) = head(&service, &user).await;
-    let mut represented = body;
-    let mut relationship = representation(frank_id, eva, "253", None);
-    relationship["source"]["id"]["value"] = json!(user);
-    represented["relationships"] = json!([relationship.clone()]);
-    let request = common::req("PUT", format!("{BASE}/demographic/person/{user}"))
-        .auth(&system(PORTAL_CLIENT))
-        .accept("application/json")
-        .if_match(format!("\"{uid}\""))
-        .json(represented.to_string())
-        .build();
-    let (status, _, refused) = common::send(&app, request).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "inline: {refused}");
-
     let request = common::req("POST", format!("{EXT}/demographic/party_relationship"))
         .auth(&system(PORTAL_CLIENT))
         .accept("application/json")
-        .json(relationship.to_string())
+        .json(standalone(frank_id, eva).to_string())
         .build();
     let (status, _, refused) = common::send(&app, request).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "standalone: {refused}");
-
+    assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
     let (status, refused) = read_as_frank(&app, &ehr).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
 }
 
-/// Inside a SCIM request of the portal client, a version of the `PERSON` it
-/// owns that adds a representation is refused by the party protection,
-/// whatever route carries it.
+/// Inside a SCIM request, a version of a `PERSON` the client owns that adds,
+/// changes or drops an inline representation is refused by the party
+/// protection, whatever route carries it: here a professional User, whose
+/// template draws an inline representation.
 #[tokio::test]
-async fn a_scim_version_that_adds_a_representation_is_refused() {
+async fn a_scim_version_that_touches_a_representation_is_refused() {
     let (_db, service, app) = portal().await;
     let (eva, _) = child(&service).await;
-    let user = frank(&app).await;
-    let frank_id = ferroehr::ids::VoId(user.parse().expect("a container id"));
+    let (user, _) = super::created(&app, CLIENT, "anna", "anna-login").await;
+    let anna = ferroehr::ids::VoId(user.parse().expect("a container id"));
     let (uid, body) = head(&service, &user).await;
     let mut represented = body;
-    let mut relationship = representation(frank_id, eva, "253", None);
-    relationship["source"]["id"]["value"] = json!(user);
-    represented["relationships"] = json!([relationship]);
+    represented["relationships"] = json!([default_representation(anna, eva)]);
     let refused = Box::pin(ferroehr::party_binding::protect::provisioning(
-        PORTAL.to_owned(),
+        LOGIN.to_owned(),
         service.party_update(
             PartyKind::Person,
-            frank_id,
+            anna,
             Precondition::parse(Some(&uid), None).expect("an If-Match"),
             next(&represented, &uid),
         ),
@@ -242,4 +252,41 @@ async fn a_scim_version_that_adds_a_representation_is_refused() {
         refused.to_string().contains("changes its representations"),
         "{refused}"
     );
+}
+
+/// A representation of the default representation archetype from `source`
+/// to `subject`: its name is its type, and its details carry the
+/// representation code and the openEHR `subject_relationship` code.
+fn default_representation(source: ferroehr::ids::VoId, subject: ferroehr::ids::VoId) -> Value {
+    let archetype = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1";
+    let coded = |terminology: &str, code: &str, value: &str| {
+        json!({ "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+                "code_string": code } })
+    };
+    let reference = |id: ferroehr::ids::VoId| {
+        json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
+                "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() } })
+    };
+    json!({
+        "_type": "PARTY_RELATIONSHIP",
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.1.0" },
+        "name": coded("local", "at10", "Parent"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id3",
+            "name": { "_type": "DV_TEXT", "value": "Details" },
+            "items": [
+                { "_type": "ELEMENT", "archetype_node_id": "id4",
+                    "name": { "_type": "DV_TEXT", "value": "Representation code" },
+                    "value": coded("ferroehr-operations", "represents", "represents") },
+                { "_type": "ELEMENT", "archetype_node_id": "id6",
+                    "name": { "_type": "DV_TEXT", "value": "Relationship" },
+                    "value": coded("openehr", "254", "parent") }
+            ] },
+        "source": reference(source),
+        "target": reference(subject)
+    })
 }

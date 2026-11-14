@@ -44,6 +44,28 @@ fn policy(care: bool) -> Value {
     })
 }
 
+/// A coded value of `terminology`.
+fn coded(terminology: &str, code: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": code,
+        "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+            "code_string": code } })
+}
+
+/// The nurse rule: the role `NURSE` of `urn:example:roles` may not commit
+/// the diagnosis template.
+fn nurse_rule() -> Value {
+    json!({ "_type": "ACCESS_DIRECTIVE",
+        "name": { "_type": "DV_TEXT", "value": "Nurses do not record diagnoses" },
+        "archetype_node_id": "id15",
+        "kind": coded("ferroehr-operations", "controller_rule"),
+        "effect": coded("ferroehr-operations", "deny"),
+        "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "role": coded("urn:example:roles", "NURSE") }],
+        "operations": [coded("ferroehr-operations", "write")],
+        "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["diagnosis.v1"] }],
+        "emergency_override": false })
+}
+
 /// One replica over `pool`.
 fn replica(pool: &sqlx::PgPool) -> FerroEhrService {
     FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
@@ -210,7 +232,18 @@ type Defect = (&'static str, fn(&mut Value));
 #[tokio::test]
 async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
     let (_db, svc) = crate::fixtures::service().await;
-    let cases: [Defect; 8] = [
+    let cases: [Defect; 11] = [
+        ("Rules_kind", |p| {
+            let mut rule = nurse_rule();
+            rule["kind"] = coded("ferroehr-operations", "consent");
+            p["rules"] = json!([rule]);
+        }),
+        ("a rule's role in FerroEHR's own terminology", |p| {
+            let mut rule = nurse_rule();
+            rule["applies_to"][0]["role"] = coded("ferroehr-operations", "NURSE");
+            p["rules"] = json!([rule]);
+        }),
+        ("an empty list of rules", |p| p["rules"] = json!([])),
         ("an undeclared member", |p| p["colour"] = json!("red")),
         ("a missing mandatory member", |p| {
             p.as_object_mut()
@@ -267,6 +300,27 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
     assert!(
         matches!(refused, ServiceError::BadRequest(_)),
         "{refused:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_policy_carries_the_controllers_rules() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let mut body = policy(false);
+    body["rules"] = json!([nurse_rule()]);
+    create(&svc, &body).await;
+    svc.read_access_policy().await.expect("the policy reads");
+    let in_force = svc.access_policy().in_force();
+    let rules = in_force
+        .policy
+        .as_deref()
+        .and_then(|policy| policy.rules.as_deref())
+        .expect("the rules are in force");
+    assert_eq!(rules.len(), 1);
+    assert_eq!(
+        rules[0].applies_to.as_deref().map(<[_]>::len),
+        Some(1),
+        "the rule reads back whole"
     );
 }
 

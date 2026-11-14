@@ -13,7 +13,7 @@
     "role": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "role",
-      "documentation": "A functional role the caller holds, coded as the role's capability or the caller's token states it, such as a professional role code.",
+      "documentation": "A role the caller performs: the caller matches when it is the `performer` of a `ROLE` in force (its `time_validity` holds the date of the access and its versioned object is not deleted) whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code.",
       "type": "DV_CODED_TEXT"
     },
     "relationship": {

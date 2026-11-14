@@ -69,7 +69,8 @@
     "Gate_keepers_valid": "gate_keepers /= Void implies not gate_keepers.is_empty",
     "Directives_valid": "directives /= Void implies not directives.is_empty",
     "Labels_valid": "labels /= Void implies not labels.is_empty",
-    "Opt_out_unique": "directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1"
+    "Opt_out_unique": "directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1",
+    "Directives_not_controller_rules": "directives /= Void implies directives.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))"
   }
 }
 --------

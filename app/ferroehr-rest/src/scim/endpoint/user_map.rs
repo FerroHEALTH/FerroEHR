@@ -266,7 +266,12 @@ impl UserMap {
         let mut values = Vec::with_capacity(wanted.len());
         for (path, value, identifier_type) in wanted {
             let data = service
-                .mapped_text_value(&written.template_id, &path, &value, (issuer, &identifier_type))
+                .mapped_text_value(
+                    &written.template_id,
+                    &path,
+                    &value,
+                    (issuer, &identifier_type),
+                )
                 .await
                 .map_err(|error| service_refusal(&error))?;
             values.push((path, data));

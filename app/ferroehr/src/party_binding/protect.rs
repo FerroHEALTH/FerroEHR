@@ -22,7 +22,10 @@
 //! how a patient authorises a proxy. A SCIM client
 //! writes the ones it owns: a `PERSON` whose binding keys its
 //! `binding_issuer` issues, a professional `ROLE` that `PERSON` performs, and
-//! a `GROUP` it created (RFC 7644 §3: a client manages its own resources). A present
+//! a `GROUP` it created (RFC 7644 §3: a client manages its own resources). A
+//! holder of the `write_care_relationship` grant, the care delivery
+//! environment's ADT system, writes a version of a protected `PERSON` that
+//! changes only its care relationships, which the care check decides (#5617). A present
 //! binding key is immutable: RFC 7643 §2.2 `mutability: "immutable"`, "SHALL
 //! NOT be updated", and only [`rekey`] changes one. An administrator's version
 //! that leaves a protected identifier out is refused, so nothing is carried
@@ -40,6 +43,9 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::Facts;
+use crate::party_binding::grants::caller::only_care_differs;
+use crate::party_binding::grants::capabilities::Capabilities;
+use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::policy_mark::{self, PolicyContent};
 use crate::party_binding::store::parsed;
 use crate::versioning::Kind;
@@ -146,7 +152,9 @@ impl Protected {
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) when a caller who is neither an
 /// administrator nor, inside [`provisioning`], the SCIM client that owns it
-/// writes a protected party, a caller who is no administrator writes a
+/// writes a protected party, other than a `write_care_relationship` holder's
+/// version of a `PERSON` changing only its care relationships, a caller who
+/// is no administrator writes a
 /// policy party, or a write changes a present
 /// binding key outside [`rekey`]; [`ServiceError::Unprocessable`] (`422`)
 /// naming the identifier when an administrator's version leaves a protected
@@ -202,6 +210,9 @@ pub(crate) async fn check(
         Err(_) => false,
     };
     if !(owner || administrator(mapping)) {
+        if care_writer_roster(tx, (kind, vo_id), [current, previous]).await? {
+            return Ok(());
+        }
         return Err(unowned(kind, vo_id));
     }
     if current.is_none() {
@@ -298,6 +309,33 @@ async fn refuse_scim_representation(
         ))),
         _ => Ok(()),
     }
+}
+
+/// Whether the commit of the `PERSON` `vo_id`, whose versions `held` are the
+/// new head and the one before it, is a holder of
+/// [`Operation::WriteCareRelationship`] changing only its care relationships.
+///
+/// Such a version touches nothing the protection guards, so the care check
+/// beside it decides it by that grant: the care delivery environment's ADT
+/// system rosters a provisioned professional (#5617). Our own design.
+async fn care_writer_roster(
+    tx: &mut PgConnection,
+    (kind, vo_id): (Kind, VoId),
+    held: [Option<i32>; 2],
+) -> Result<bool, ServiceError> {
+    let [Some(current), Some(previous)] = held else {
+        return Ok(false);
+    };
+    if kind != Kind::Person || !Capabilities::current().holds(Operation::WriteCareRelationship) {
+        return Ok(false);
+    }
+    let (Some(after), Some(before)) = (
+        body(tx, vo_id, current).await?,
+        body(tx, vo_id, previous).await?,
+    ) else {
+        return Ok(false);
+    };
+    Ok(only_care_differs(&before, &after)?)
 }
 
 /// Judges the write of the standalone `PARTY_RELATIONSHIP` `vo_id`, whose

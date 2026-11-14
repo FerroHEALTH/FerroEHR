@@ -360,7 +360,11 @@ fn provisioning_client(
             binding_issuers.len()
         )));
     };
-    if !gate.key_issuers.iter().any(|issuer| issuer == binding_issuer) {
+    if !gate
+        .key_issuers
+        .iter()
+        .any(|issuer| issuer == binding_issuer)
+    {
         return Err(forbidden(format!(
             "the scim_provision grant names the binding_issuer {binding_issuer:?}, which is \
              neither the identifier_issuer of an [[auth.party]] table nor a patients issuer"

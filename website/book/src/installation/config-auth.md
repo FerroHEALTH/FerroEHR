@@ -51,6 +51,13 @@ no scope are grants on the client's `AGENT` (`sign_in_persons`,
 `act_for_persons`, `access_without_scope`), so the clients from the example
 above sign in only once an administrator grants them.
 
+Beside an `[[auth.party]]` table, a Basic user is a person's credential and
+must map to the key of its `PERSON` with `[[authz.party_binding.basic_user]]`,
+`first_admin` included; an unmapped one refuses the start. Until that
+`PERSON` exists, the user's requests are refused as unbound. Such a deployment
+starts with the operator grant, never with `first_admin`: see
+[The first grant](../operational-policy.md#the-first-grant).
+
 The section keys:
 
 | Key | Type | Default | Description |
@@ -726,7 +733,12 @@ reduced to `userName`, `active` and the SCIM attributes
 `[[authz.party_binding.person.attribute]]` maps, and FerroEHR's extension
 `urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User` with
 `loginIdentifier`, the attribute that feeds the binding key. `/ResourceTypes`
-lists the `User` type at `/Users`.
+lists the `User` type at `/Users`, and the `Group` type at `/Groups` with
+FerroEHR's Group extension
+`urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group` and its
+immutable boolean `careTeam` when Groups are served. Both extension URNs take
+the form Microsoft Entra ID requires of a custom attribute, in the
+`urn:ietf:params:scim` namespace without a registration (RFC 7643 §10.2.1).
 
 ### Users
 
@@ -850,6 +862,18 @@ demographic `GROUP` of the group template:
   stored in the member's own version (RM demographic §Party Relationships).
   No `ROLE` is created for a Group, and a `PERSON` in no Group has
   `relationships` Void.
+- its `careTeam`, in FerroEHR's Group extension, says whether it is a care
+  team: set at creation, `false` when left out, and never changed (**400**
+  `mutability`). A care team is served with `careTeam = true` and the
+  extension in its `schemas`; any other Group is served without either. A
+  care team's `GROUP` is named by the coded `care_team` and each membership
+  by the coded `member_of` (RM demographic `PARTY.type()` is the `name`), so
+  its members are in the care of the patients under the team's care.
+  Creating one and changing its members needs the client's
+  `write_care_relationship` grant beside `scim_provision`, and is **403**
+  without it ([Care teams provisioned over SCIM](../operational-policy.md#care-teams-provisioned-over-scim)).
+  The group template and the membership archetype must admit a
+  `DV_CODED_TEXT` name, as the default definitions do.
 
 A Group belongs to the client that created it; every other client gets
 **404**. A member is a User of the same client: a member naming another
