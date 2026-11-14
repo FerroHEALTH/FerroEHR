@@ -3,7 +3,9 @@
 
 //! The worked examples of the ABAC design, over the evaluator itself.
 
-use openehr_rm::draft::access_control::terminology::{AccessDefault, Refusal};
+use std::sync::Arc;
+
+use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationClass, Refusal};
 use serde_json::json;
 
 use super::*;
@@ -95,12 +97,12 @@ fn the_ward_with_its_grace_period() {
         let access = RequestAccess::new(
             caller,
             Asking {
-                operation: openehr_rm::draft::access_control::terminology::OperationClass::Read,
+                operation: OperationClass::Read,
                 purpose: Some("TREAT".to_owned()),
                 emergency: Emergency::default(),
             },
             InForce {
-                policy: Some(std::sync::Arc::new(ward.clone())),
+                policy: Some(Arc::new(ward.clone())),
                 categories: categories(),
                 server_default: AccessDefault::Open,
                 now: format!("{day}T12:00:00Z").parse().expect("an instant"),

@@ -53,7 +53,7 @@ impl FerroEhrService {
             return Ok(verdict);
         }
         let entry = self.ehr_access_entry(ehr_id).await?;
-        Ok(access.judge_ehr(ehr_id, &entry.settings, entry.subject))
+        Ok(access.judge_ehr(ehr_id, (*entry.settings).as_ref(), entry.subject))
     }
 
     /// What the evaluator reads of each of `vo_ids` this store holds.

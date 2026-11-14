@@ -194,35 +194,14 @@ macro_rules! version_select {
 }
 
 /// Whether `stored` may be served to the current request: the access
-/// evaluator admits it ([`crate::access_eval::condition::admits`]), which
-/// answers an object under an EHDS Art. 8 restriction as absent, and an
-/// object an Art. 3(3) delay withholds is absent to a patient-context request
-/// (`docs/law/eu/ehds/text.html`). No openEHR spec governs either: our own
-/// design/extension.
+/// evaluator admits it ([`crate::storage::access_facts::admits_stored`]), and
+/// an object an EHDS Art. 3(3) delay withholds is absent to a patient-context
+/// request (`docs/law/eu/ehds/text.html`). No openEHR spec governs either:
+/// our own design/extension.
 fn visible(stored: &StoredVersion) -> bool {
-    use crate::access_eval::scope::{Item, Object};
     use crate::system_log::access_context::access_delay_enforced;
-    let origins = stored.origins.as_ref().map(stamped_origins);
-    let item = Item::Object(Object {
-        vo_id: stored.vo_id.0,
-        template: stored.template_id.as_deref(),
-        archetype: stored.root_archetype.as_deref(),
-        origins: origins.as_deref(),
-        recorded: stored.head_committed_at,
-    });
-    crate::access_eval::condition::admits(stored.ehr_id, &item)
+    crate::storage::access_facts::admits_stored(stored)
         && (!stored.person_withheld || !access_delay_enforced())
-}
-
-/// The system ids a `version.origins` stamp names.
-fn stamped_origins(origins: &Value) -> Vec<String> {
-    origins
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(Value::as_str)
-        .map(str::to_owned)
-        .collect()
 }
 
 // ── the rendered statements ──────────────────────────────────────────────────

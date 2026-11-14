@@ -228,9 +228,8 @@ impl Verdict {
         for rule in &self.rules {
             match rule.when.constant() {
                 Some(true) => return rule.then == Outcome::Admit,
-                Some(false) => {}
                 None if rule.then == Outcome::Admit => return true,
-                None => {}
+                Some(false) | None => {}
             }
         }
         self.otherwise == Outcome::Admit
@@ -252,7 +251,7 @@ impl Verdict {
             };
             admitted = Pred::any(vec![
                 then,
-                Pred::all(vec![Pred::not(rule.when.clone()), admitted]),
+                Pred::all(vec![Pred::negate(rule.when.clone()), admitted]),
             ]);
         }
         admitted
@@ -293,51 +292,18 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         None => (&[][..], false),
     };
     let read = Reader { judged };
-    let emergency = judged.asked.emergency;
-    for directive in directives {
-        let (kind, effect) = read.kind_and_effect(directive);
-        if effect != Effect::Deny || !read.binds(kind, directive) {
-            continue;
-        }
-        let (refusal, lifted, lifts) = match kind {
-            DirectiveKind::OptOut => (
-                Outcome::Absent(Refusal::OptOut),
-                Lifted::OptOut,
-                emergency.declared && emergency.opt_out_override,
-            ),
-            DirectiveKind::Restriction => (
-                Outcome::Absent(Refusal::Restricted),
-                Lifted::Restriction,
-                emergency.break_glass(),
-            ),
-            DirectiveKind::Consent | DirectiveKind::Delegation => (
-                Outcome::Refused(Refusal::ConsentDenied),
-                Lifted::Consent,
-                emergency.break_glass(),
-            ),
-        };
-        if directive.emergency_override && lifts {
-            verdict.lifted.push(lifted);
-        } else {
-            verdict.rules.push(Rule {
-                when: read.cover(directive, Effect::Deny),
-                then: refusal,
-            });
-        }
-    }
-    // Steps 1 to 3 put their rules in step order: opt-out, restriction, consent.
-    verdict.rules.sort_by_key(|rule| step(rule.then));
+    denials(&read, directives, &mut verdict);
     if caller.kind == CallerKind::Representative {
         delegation(&read, directives, &mut verdict);
         return verdict;
     }
-    if emergency.break_glass() {
+    if judged.asked.emergency.break_glass() {
         verdict.lifted.push(Lifted::Policy);
         return verdict;
     }
     let permits: Vec<(&AccessDirective, Pred)> = directives
         .iter()
-        .filter(|d| read.kind_and_effect(d) == (DirectiveKind::Consent, Effect::Permit))
+        .filter(|d| kind_and_effect(d) == (DirectiveKind::Consent, Effect::Permit))
         .filter(|d| read.binds(DirectiveKind::Consent, d))
         .map(|d| (d, read.cover(d, Effect::Permit)))
         .collect();
@@ -352,7 +318,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
             .map(|(_, cover)| cover.clone())
             .collect();
         verdict.rules.push(Rule {
-            when: Pred::not(Pred::any(naming)),
+            when: Pred::negate(Pred::any(naming)),
             then: Outcome::Refused(Refusal::NoCareRelationship),
         });
     }
@@ -392,6 +358,45 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     verdict
 }
 
+/// Steps 1 to 3: every deny directive that binds the caller, in step order
+/// (opt-out, restriction, consent), or the mark of an emergency that lifts
+/// it.
+fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut Verdict) {
+    let emergency = read.judged.asked.emergency;
+    for directive in directives {
+        let (kind, effect) = kind_and_effect(directive);
+        if effect != Effect::Deny || !read.binds(kind, directive) {
+            continue;
+        }
+        let (refusal, lifted, lifts) = match kind {
+            DirectiveKind::OptOut => (
+                Outcome::Absent(Refusal::OptOut),
+                Lifted::OptOut,
+                emergency.declared && emergency.opt_out_override,
+            ),
+            DirectiveKind::Restriction => (
+                Outcome::Absent(Refusal::Restricted),
+                Lifted::Restriction,
+                emergency.break_glass(),
+            ),
+            DirectiveKind::Consent | DirectiveKind::Delegation => (
+                Outcome::Refused(Refusal::ConsentDenied),
+                Lifted::Consent,
+                emergency.break_glass(),
+            ),
+        };
+        if directive.emergency_override && lifts {
+            verdict.lifted.push(lifted);
+        } else {
+            verdict.rules.push(Rule {
+                when: read.cover(directive, Effect::Deny),
+                then: refusal,
+            });
+        }
+    }
+    verdict.rules.sort_by_key(|rule| step(rule.then));
+}
+
 /// The step a deny of steps 1 to 3 belongs to.
 const fn step(outcome: Outcome) -> u8 {
     match outcome {
@@ -406,7 +411,7 @@ const fn step(outcome: Outcome) -> u8 {
 fn delegation(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut Verdict) {
     let naming: Vec<&AccessDirective> = directives
         .iter()
-        .filter(|d| read.kind_and_effect(d) == (DirectiveKind::Delegation, Effect::Permit))
+        .filter(|d| kind_and_effect(d) == (DirectiveKind::Delegation, Effect::Permit))
         .filter(|d| d.applies_to.is_some() && read.actor(d))
         .collect();
     if naming.is_empty() {
@@ -418,7 +423,7 @@ fn delegation(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &m
         .map(|d| read.cover(d, Effect::Permit))
         .collect();
     verdict.rules.push(Rule {
-        when: Pred::not(Pred::any(covered)),
+        when: Pred::negate(Pred::any(covered)),
         then: Outcome::Refused(Refusal::ConsentDenied),
     });
 }
@@ -437,7 +442,10 @@ fn sensitivity(read: &Reader<'_, '_>, permits: &[(&AccessDirective, Pred)], verd
             .map(|(_, cover)| cover.clone())
             .collect();
         verdict.rules.push(Rule {
-            when: Pred::all(vec![scopes.sensitive(&code), Pred::not(Pred::any(named))]),
+            when: Pred::all(vec![
+                scopes.sensitive(&code),
+                Pred::negate(Pred::any(named)),
+            ]),
             then: Outcome::Refused(Refusal::Sensitivity),
         });
     }
@@ -454,22 +462,22 @@ fn names_sensitivity(directive: &AccessDirective, code: &ForeignCode) -> bool {
         .any(|coded| ForeignCode::read(ForeignKind::Sensitivity, coded).as_ref() == Ok(code))
 }
 
+/// The kind and effect of `directive`; settings that hold a code outside its
+/// group are held closed before they reach the evaluator, so one that does
+/// not read is read as the consent deny it would refuse as.
+fn kind_and_effect(directive: &AccessDirective) -> (DirectiveKind, Effect) {
+    (
+        DirectiveKind::read_coded(&directive.kind).unwrap_or(DirectiveKind::Consent),
+        Effect::read_coded(&directive.effect).unwrap_or(Effect::Deny),
+    )
+}
+
 /// Reads directives for one decision.
 struct Reader<'j, 'a> {
     judged: &'j Judged<'a>,
 }
 
 impl Reader<'_, '_> {
-    /// The kind and effect of `directive`; settings that hold a code outside
-    /// its group are held closed before they reach the evaluator, so one
-    /// that does not read is read as the consent deny it would refuse as.
-    fn kind_and_effect(&self, directive: &AccessDirective) -> (DirectiveKind, Effect) {
-        (
-            DirectiveKind::read_coded(&directive.kind).unwrap_or(DirectiveKind::Consent),
-            Effect::read_coded(&directive.effect).unwrap_or(Effect::Deny),
-        )
-    }
-
     /// Whether a directive of `kind` binds the caller: the kind binds the
     /// caller's kind, its `applies_to` names the caller, and it applies to
     /// the request now.
@@ -486,7 +494,7 @@ impl Reader<'_, '_> {
             DirectiveKind::Consent => caller != CallerKind::Subject,
             DirectiveKind::Delegation => caller == CallerKind::Representative,
         };
-        let polarity = match self.kind_and_effect(directive).1 {
+        let polarity = match kind_and_effect(directive).1 {
             Effect::Deny => Polarity::Deny,
             Effect::Permit => Polarity::Permit,
         };
@@ -579,7 +587,7 @@ impl Reader<'_, '_> {
             .collect();
         Pred::all(vec![
             scopes.data(directive.data.as_deref().unwrap_or_default(), own),
-            Pred::not(Pred::any(excepted)),
+            Pred::negate(Pred::any(excepted)),
         ])
     }
 }

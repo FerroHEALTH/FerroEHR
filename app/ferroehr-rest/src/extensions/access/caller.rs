@@ -94,7 +94,7 @@ fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilitie
         return CallerKind::Professional;
     };
     let smart = principal.access.caller();
-    if subject || smart.is_some_and(|caller| caller.is_the_person()) {
+    if subject || smart.is_some_and(ferrohealth_smart::resource::Caller::is_the_person) {
         return CallerKind::Subject;
     }
     let represents =

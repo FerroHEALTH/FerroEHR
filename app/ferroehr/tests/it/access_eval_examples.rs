@@ -159,25 +159,26 @@ async fn decided(
             .ehr_verdict(&current, ehr_id)
             .await
             .expect("the verdict");
-        let read = svc.read_composition_raw(ehr_id, vo, None).await.is_ok();
+        let read = Box::pin(svc.read_composition_raw(ehr_id, vo, None))
+            .await
+            .is_ok();
         let request = AqlQueryRequest {
             ehr_access: svc.request_access_condition().await.expect("the condition"),
             ..AqlQueryRequest::default()
         };
-        let rows = svc
-            .execute_aql(
-                "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
-                None,
-                &request,
-            )
-            .await
-            .expect("the query runs")
-            .result_set["rows"]
+        let rows = Box::pin(svc.execute_aql(
+            "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
+            None,
+            &request,
+        ))
+        .await
+        .expect("the query runs")
+        .result_set["rows"]
             .as_array()
             .map_or(0, Vec::len);
         (verdict.outcome(&Item::Ehr), read, rows)
     };
-    with_request_access(access, run).await
+    Box::pin(with_request_access(access, run)).await
 }
 
 /// The request access of the professional bound to `party` holding `facts`,

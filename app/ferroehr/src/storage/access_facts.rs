@@ -11,6 +11,12 @@
 //! a query's condition reads in SQL ([`crate::aql::sql`]). No openEHR spec
 //! governs this: our own design (#5513).
 
+#![expect(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694 family 1): stored canonical fragments: the \
+              version.origins stamp is read as stored"
+)]
+
 use serde_json::Value;
 use sqlx::Row;
 use sqlx::postgres::PgRow;
@@ -49,15 +55,7 @@ impl HeadFacts {
             ehr_id: row.try_get::<Option<Uuid>, _>("access_ehr_id")?.map(EhrId),
             template: row.try_get("access_template")?,
             archetype: row.try_get("access_archetype")?,
-            origins: origins.map(|origins| {
-                origins
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .filter_map(Value::as_str)
-                    .map(str::to_owned)
-                    .collect()
-            }),
+            origins: origins.as_ref().map(stamped),
             recorded: row
                 .try_get::<Option<jiff_sqlx::Timestamp>, _>("access_recorded")?
                 .map(jiff_sqlx::Timestamp::to_jiff),
@@ -81,6 +79,32 @@ impl HeadFacts {
     pub fn admitted(&self) -> bool {
         crate::access_eval::condition::admits(self.ehr_id, &self.item())
     }
+}
+
+/// Whether the running request may read the version `stored`, judged by its
+/// template, root archetype and origins and its object's last commit.
+#[must_use]
+pub fn admits_stored(stored: &crate::storage::version_repo::read::StoredVersion) -> bool {
+    let origins = stored.origins.as_ref().map(stamped);
+    let item = Item::Object(Object {
+        vo_id: stored.vo_id.0,
+        template: stored.template_id.as_deref(),
+        archetype: stored.root_archetype.as_deref(),
+        origins: origins.as_deref(),
+        recorded: stored.head_committed_at,
+    });
+    crate::access_eval::condition::admits(stored.ehr_id, &item)
+}
+
+/// The system ids a `version.origins` stamp names.
+fn stamped(origins: &Value) -> Vec<String> {
+    origins
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect()
 }
 
 /// The facts of each of `vo_ids` this store holds, in id order.

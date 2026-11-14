@@ -6,7 +6,7 @@
 use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, OperationClass, Refusal,
 };
-use serde_json::json;
+use serde_json::{Value, json};
 
 use super::*;
 use crate::access_eval::procedure::{Emergency, Lifted};
@@ -114,8 +114,12 @@ fn step_1_opt_out() {
 /// access services, over its data scope, less its exceptions, while in force,
 /// and yields to the break-glass role only where its override holds.
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one row per case of the step's table"
+)]
 fn step_2_restriction() {
-    let template = |extra: serde_json::Value| {
+    let template = |extra: Value| {
         let mut d = directive(
             "restriction",
             "deny",
@@ -130,7 +134,7 @@ fn step_2_restriction() {
     let lab = object(OTHER, Some("lab_hiv.v1"));
     let except_c = json!({ "exceptions": [directive("consent", "permit",
         &json!({ "applies_to": [{ "party": party("PERSON", DR_C) }] }))] });
-    let rows: Vec<(&str, serde_json::Value, Caller, Asked<'_>, Outcome, Outcome)> = vec![
+    let rows: Vec<(&str, Value, Caller, Asked<'_>, Outcome, Outcome)> = vec![
         (
             "a professional",
             json!({}),
@@ -262,8 +266,7 @@ fn step_2_restriction() {
 /// object lacks.
 #[test]
 fn step_2_data_scope_attributes() {
-    let restriction =
-        |data: serde_json::Value| directive("restriction", "deny", &json!({ "data": [data] }));
+    let restriction = |data: Value| directive("restriction", "deny", &json!({ "data": [data] }));
     let origins = ["lab-system".to_owned()];
     let fed = Item::Object(Object {
         vo_id: uuid(OTHER),
@@ -356,8 +359,8 @@ fn step_2_data_scope_attributes() {
 /// request does not declare is read as matching a deny.
 #[test]
 fn step_3_consent_deny() {
-    let deny = |extra: serde_json::Value| directive("consent", "deny", &extra);
-    let rows: Vec<(&str, serde_json::Value, Caller, Asked<'_>, Outcome)> = vec![
+    let deny = |extra: Value| directive("consent", "deny", &extra);
+    let rows: Vec<(&str, Value, Caller, Asked<'_>, Outcome)> = vec![
         (
             "the party",
             json!({ "applies_to": [{ "party": party("PERSON", DR_B) }] }),
@@ -537,7 +540,7 @@ fn step_4_sensitivity() {
     let rows: Vec<(&str, Case, Caller, [Outcome; 3])> = vec![
         (
             "a label",
-            Case::of(settings("open", &[], &[label.clone()], &[])),
+            Case::of(settings("open", &[], std::slice::from_ref(&label), &[])),
             professional(NURSE),
             [sensitive, Outcome::Admit, Outcome::Admit],
         ),
@@ -563,7 +566,7 @@ fn step_4_sensitivity() {
             "a clearance",
             Case {
                 policy: Some(classified),
-                ..Case::of(settings("open", &[], &[label.clone()], &[]))
+                ..Case::of(settings("open", &[], std::slice::from_ref(&label), &[]))
             },
             with_facts(professional(NURSE), &[hiv], &[], &[]),
             [Outcome::Admit; 3],
@@ -701,6 +704,10 @@ fn step_6_purpose() {
 /// Step 7: the default disposition, and the server's for an EHR with no
 /// settings.
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one row per case of the step's table"
+)]
 fn step_7_default_disposition() {
     let required = Outcome::Refused(Refusal::ConsentRequired);
     let permit = directive(
@@ -736,7 +743,12 @@ fn step_7_default_disposition() {
         ),
         (
             "restricted, a permit",
-            Case::of(settings("restricted", &[permit.clone()], &[], &[])),
+            Case::of(settings(
+                "restricted",
+                std::slice::from_ref(&permit),
+                &[],
+                &[],
+            )),
             false,
             professional(NURSE),
             Outcome::Admit,
@@ -750,7 +762,12 @@ fn step_7_default_disposition() {
         ),
         (
             "restricted, a gate-keeper",
-            Case::of(settings("restricted", &[], &[], &[keeper.clone()])),
+            Case::of(settings(
+                "restricted",
+                &[],
+                &[],
+                std::slice::from_ref(&keeper),
+            )),
             false,
             professional(NURSE),
             Outcome::Admit,
@@ -883,7 +900,12 @@ fn the_first_step_that_refuses_decides() {
         ),
     ];
     for (name, directives, expected) in cases {
-        let case = Case::of(settings("restricted", &directives, &[label.clone()], &[]));
+        let case = Case::of(settings(
+            "restricted",
+            &directives,
+            std::slice::from_ref(&label),
+            &[],
+        ));
         assert_outcome(
             &case.verdict(&professional(NURSE), read(None)),
             &item,

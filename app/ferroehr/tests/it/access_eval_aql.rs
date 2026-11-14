@@ -248,11 +248,11 @@ async fn rows(world: &World, ask: &Ask, aql: &str, page: Option<(i64, i64)>) -> 
             fetch: page.map(|(_, fetch)| fetch),
             ..AqlQueryRequest::default()
         };
-        svc.execute_aql(aql, None, &request)
+        Box::pin(svc.execute_aql(aql, None, &request))
             .await
             .expect("the query runs")
     };
-    let outcome = with_request_access(Arc::clone(&access), run).await;
+    let outcome = Box::pin(with_request_access(Arc::clone(&access), run)).await;
     outcome.result_set["rows"]
         .as_array()
         .cloned()
@@ -311,7 +311,7 @@ fn except(world: &World, without: &[usize], hidden: &[&String]) -> Vec<String> {
 /// every row to a professional.
 #[tokio::test]
 async fn step_1_an_opted_out_ehr_leaves_the_query() {
-    let world = World::new().await;
+    let world = Box::pin(World::new()).await;
     world
         .settings(
             0,
@@ -339,7 +339,7 @@ async fn step_1_an_opted_out_ehr_leaves_the_query() {
 /// exception naming the caller brings it back.
 #[tokio::test]
 async fn step_2_a_restricted_object_leaves_the_query() {
-    let world = World::new().await;
+    let world = Box::pin(World::new()).await;
     let hidden = world.objects(1)[0].clone();
     let restriction = |exceptions: Option<Value>| {
         let mut d = directive(
@@ -357,7 +357,7 @@ async fn step_2_a_restricted_object_leaves_the_query() {
         .await;
     let expected = except(&world, &[], &[&hidden]);
     assert_reads(&world, &Ask::professional(), &expected, "a professional").await;
-    let world2 = World::new().await;
+    let world2 = Box::pin(World::new()).await;
     let hidden2 = world2.objects(1)[0].clone();
     let excepted = directive(
         "restriction",
@@ -383,7 +383,7 @@ async fn step_2_a_restricted_object_leaves_the_query() {
 /// Step 3: a consent deny naming the caller removes its EHR from the query.
 #[tokio::test]
 async fn step_3_a_consent_deny_leaves_the_query() {
-    let world = World::new().await;
+    let world = Box::pin(World::new()).await;
     let deny = directive(
         "consent",
         "deny",
@@ -405,7 +405,7 @@ async fn step_3_a_consent_deny_leaves_the_query() {
 /// row.
 #[tokio::test]
 async fn step_4_a_sensitive_object_leaves_the_query() {
-    let world = World::new().await;
+    let world = Box::pin(World::new()).await;
     let labelled = world.objects(0)[1].clone();
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(&labelled),
                         "sensitivities": [coded("2.16.840.1.113883.5.25", "HIV")] });
@@ -456,7 +456,7 @@ fn policy(members: &Value) -> AccessPolicy {
 /// settings.
 #[tokio::test]
 async fn step_5_only_the_ehrs_in_care_are_queried() {
-    let world = World::new().await;
+    let world = Box::pin(World::new()).await;
     world.settings(1, &settings("open", &[], &[])).await;
     let mut ask = Ask::professional();
     ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
@@ -475,7 +475,7 @@ async fn step_5_only_the_ehrs_in_care_are_queried() {
 /// nothing, and one the caller may declare reads everything.
 #[tokio::test]
 async fn step_6_a_missing_purpose_reads_nothing() {
-    let world = World::new().await;
+    let world = Box::pin(World::new()).await;
     let mut ask = Ask::professional();
     ask.policy = Some(policy(&json!({ "purpose_required": true })));
     assert_reads(&world, &ask, &[], "no purpose").await;
@@ -497,7 +497,7 @@ async fn step_6_a_missing_purpose_reads_nothing() {
 /// settings.
 #[tokio::test]
 async fn step_7_the_default_disposition_bounds_the_query() {
-    let world = World::new().await;
+    let world = Box::pin(World::new()).await;
     let permitted = world.objects(0)[0].clone();
     let permit = directive(
         "consent",

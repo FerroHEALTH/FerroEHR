@@ -31,6 +31,8 @@ use crate::api::RequestParts;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use ferroehr::access_eval::condition::AccessCondition;
+#[cfg(test)]
+use ferroehr::access_eval::condition::ConditionGroups;
 use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::ids::EhrId;
 use ferroehr::service::query::request::AqlQueryRequest;
@@ -552,10 +554,10 @@ mod tests {
                 namespace: Some("nl.example.patients".to_owned()),
             }),
             collect: true,
-            ehr_access: AccessCondition {
+            ehr_access: AccessCondition::from(ConditionGroups {
                 known: vec![withheld.0],
-                ..AccessCondition::default()
-            },
+                ..ConditionGroups::default()
+            }),
         };
         let req = scope.apply(AqlQueryRequest::default());
         assert_eq!(req.subject_scope.as_deref(), Some("patient-1"));
@@ -564,7 +566,7 @@ mod tests {
             Some("nl.example.patients")
         );
         assert!(req.collect_attributes);
-        assert_eq!(req.ehr_access.known, vec![withheld.0]);
+        assert_eq!(scope.ehr_access, req.ehr_access);
     }
 }
 

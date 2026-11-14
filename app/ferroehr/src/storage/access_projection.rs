@@ -177,12 +177,23 @@ pub async fn replace(
     Ok(())
 }
 
+/// One EHR's settings row as stored.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum StoredSettings {
+    /// The EHR has no settings row.
+    #[default]
+    None,
+    /// The EHR is held closed.
+    HeldClosed,
+    /// The settings in canonical JSON text.
+    Settings(String),
+}
+
 /// One EHR's settings row and subject as stored.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Stored {
-    /// The settings: `None` when the EHR has none, and `Some(None)` when it is
-    /// held closed.
-    pub settings: Option<Option<String>>,
+    /// The settings.
+    pub settings: StoredSettings,
     /// The promoted `ehr.subject_id`; `None` for an unknown EHR or a status
     /// naming no subject.
     pub subject: Option<String>,
@@ -204,10 +215,13 @@ pub async fn settings_of(pool: &PgPool, ehr_id: EhrId) -> Result<Stored, Storage
     .fetch_one(&mut *acquire(pool).await?)
     .await?;
     let has_settings: bool = row.try_get("has_settings")?;
+    let settings = match row.try_get::<Option<String>, _>("settings")? {
+        Some(settings) => StoredSettings::Settings(settings),
+        None if has_settings => StoredSettings::HeldClosed,
+        None => StoredSettings::None,
+    };
     Ok(Stored {
-        settings: has_settings
-            .then(|| row.try_get::<Option<String>, _>("settings"))
-            .transpose()?,
+        settings,
         subject: row.try_get("subject_id")?,
     })
 }

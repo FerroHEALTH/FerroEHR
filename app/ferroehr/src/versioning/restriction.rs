@@ -77,29 +77,28 @@ async fn ensure_not_access_restricted_tx(
     let (Some(access), Some(ehr_id)) = (crate::access_eval::condition::current(), ehr_id) else {
         return Ok(());
     };
-    let verdict = match access.verdict(ehr_id) {
-        Some(verdict) => verdict,
-        None => {
-            let body =
-                crate::storage::version_repo::ehr_access::current_ehr_access_body(&mut *tx, ehr_id)
-                    .await?;
-            let settings = match body {
-                Some(body) => {
-                    let access = serde_json::from_str::<serde_json::Value>(&body)
-                        .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
-                    crate::service::ehr::access_settings::EhrAccessSettings::held_or_read(&access)
-                }
-                None => None,
-            };
-            let subject: Option<String> =
-                sqlx::query_scalar("SELECT subject_id FROM ehr WHERE id = $1")
-                    .bind(ehr_id)
-                    .fetch_optional(&mut *tx)
-                    .await?
-                    .flatten();
-            let subject = subject.and_then(|subject| subject.parse::<uuid::Uuid>().ok());
-            access.judge_ehr(ehr_id, &settings, subject)
-        }
+    let verdict = if let Some(verdict) = access.verdict(ehr_id) {
+        verdict
+    } else {
+        let body =
+            crate::storage::version_repo::ehr_access::current_ehr_access_body(&mut *tx, ehr_id)
+                .await?;
+        let settings = match body {
+            Some(body) => {
+                let access = serde_json::from_str::<serde_json::Value>(&body)
+                    .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
+                crate::service::ehr::access_settings::EhrAccessSettings::held_or_read(&access)
+            }
+            None => None,
+        };
+        let subject: Option<String> =
+            sqlx::query_scalar("SELECT subject_id FROM ehr WHERE id = $1")
+                .bind(ehr_id)
+                .fetch_optional(&mut *tx)
+                .await?
+                .flatten();
+        let subject = subject.and_then(|subject| subject.parse::<uuid::Uuid>().ok());
+        access.judge_ehr(ehr_id, settings.as_ref(), subject)
     };
     let facts = match vo_id {
         Some(vo_id) if verdict.item_dependent() => {

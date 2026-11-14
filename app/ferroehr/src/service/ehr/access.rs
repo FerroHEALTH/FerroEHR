@@ -38,7 +38,7 @@ use sqlx::PgConnection;
 
 use crate::policy_register::listen::{Dropping, Listened, Subscriber};
 use crate::service::FerroEhrService;
-use crate::storage::access_projection::CHANNEL;
+use crate::storage::access_projection::{CHANNEL, StoredSettings};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, commit_contribution};
@@ -181,9 +181,9 @@ impl FerroEhrService {
             .as_deref()
             .and_then(|subject| subject.parse::<uuid::Uuid>().ok());
         let settings = match stored.settings {
-            None => None,
-            Some(None) => return Err(unreadable(None)),
-            Some(Some(settings)) => Some(
+            StoredSettings::None => None,
+            StoredSettings::HeldClosed => return Err(unreadable(None)),
+            StoredSettings::Settings(settings) => Some(
                 EhrAccessSettings::from_projected(&settings)
                     .map_err(|error| unreadable(Some(error)))?,
             ),

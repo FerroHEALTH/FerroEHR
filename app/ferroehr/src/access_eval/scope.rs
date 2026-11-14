@@ -89,7 +89,7 @@ pub struct CategoryMatch {
     /// template the map names nowhere.
     pub archetypes: Vec<String>,
     /// Every template the map names, case-folded.
-    pub mapped: Arc<Vec<String>>,
+    pub mapped: Arc<[String]>,
 }
 
 impl CategoryMatch {
@@ -251,7 +251,7 @@ impl Pred {
 
     /// The negation of `pred`, folded.
     #[must_use]
-    pub fn not(pred: Self) -> Self {
+    pub fn negate(pred: Self) -> Self {
         match pred {
             Self::True => Self::False,
             Self::False => Self::True,
@@ -311,7 +311,7 @@ impl CategoryIndex {
             return CategoryMatch {
                 templates: Vec::new(),
                 archetypes: Vec::new(),
-                mapped: Arc::default(),
+                mapped: Arc::from(Vec::new()),
             };
         };
         let token = classifier
@@ -334,7 +334,7 @@ impl CategoryIndex {
         CategoryMatch {
             templates,
             archetypes,
-            mapped: Arc::new(mapped.into_iter().collect()),
+            mapped: mapped.into_iter().collect::<Vec<_>>().into(),
         }
     }
 }

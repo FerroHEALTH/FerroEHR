@@ -200,14 +200,14 @@ impl RequestAccess {
     pub fn judge_ehr(
         &self,
         ehr_id: EhrId,
-        settings: &Option<EhrAccessSettings>,
+        settings: Option<&EhrAccessSettings>,
         subject: Option<Uuid>,
     ) -> Arc<Verdict> {
         let under_care_of = match (&self.grants, subject) {
             (Some(grants), Some(subject)) => grants.under_care_of(subject),
             _ => Vec::new(),
         };
-        let verdict = Arc::new(self.judge(settings.as_ref(), self.cared(&under_care_of)));
+        let verdict = Arc::new(self.judge(settings, self.cared(&under_care_of)));
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
@@ -229,12 +229,11 @@ impl RequestAccess {
     /// is absent, since no decision is never read as permissive.
     #[must_use]
     pub fn outcome(&self, ehr_id: EhrId, item: &Item<'_>) -> Outcome {
-        match self.verdict(ehr_id) {
-            Some(verdict) => verdict.outcome(item),
-            None => {
-                tracing::error!(%ehr_id, "an EHR this request did not judge is withheld");
-                Outcome::Absent(openehr_rm::draft::access_control::terminology::Refusal::Restricted)
-            }
+        if let Some(verdict) = self.verdict(ehr_id) {
+            verdict.outcome(item)
+        } else {
+            tracing::error!(%ehr_id, "an EHR this request did not judge is withheld");
+            Outcome::Absent(openehr_rm::draft::access_control::terminology::Refusal::Restricted)
         }
     }
 
@@ -290,11 +289,11 @@ impl VerdictPair {
     }
 }
 
-/// The access condition of one query: the EHRs grouped by verdict, the
-/// verdict of an EHR with no settings, and the subjects the caller cares
+/// The verdicts a restrictive condition holds: the EHRs grouped by verdict,
+/// the verdict of an EHR with no settings, and the subjects the caller cares
 /// for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct AccessCondition {
+pub struct ConditionGroups {
     /// The EHRs with settings, grouped by their verdicts.
     pub groups: Vec<(Vec<Uuid>, Arc<VerdictPair>)>,
     /// The verdicts of an EHR with no settings; `None` admits every row.
@@ -302,7 +301,22 @@ pub struct AccessCondition {
     /// Every EHR with settings.
     pub known: Vec<Uuid>,
     /// The subjects the caller has a live care relationship to.
-    pub cared: Arc<Vec<String>>,
+    pub cared: Arc<[String]>,
+}
+
+/// The access condition of one query; shared, so a query request stays
+/// small.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AccessCondition {
+    groups: Option<Arc<ConditionGroups>>,
+}
+
+impl From<ConditionGroups> for AccessCondition {
+    fn from(groups: ConditionGroups) -> Self {
+        Self {
+            groups: Some(Arc::new(groups)),
+        }
+    }
 }
 
 impl AccessCondition {
@@ -327,18 +341,22 @@ impl AccessCondition {
         if default_admits && groups.iter().all(|(_, pair)| pair.admits_all()) {
             return Self::unrestricted();
         }
-        Self {
+        ConditionGroups {
             groups,
             default: (!default_admits).then(|| Arc::new(default)),
             known,
-            cared: Arc::new(cared),
+            cared: cared.into(),
         }
+        .into()
     }
 
-    /// Whether the condition admits every row.
+    /// The verdicts of a condition that withholds something; `None` when it
+    /// admits every row.
     #[must_use]
-    pub fn is_unrestricted(&self) -> bool {
-        self.default.is_none() && self.groups.iter().all(|(_, pair)| pair.admits_all())
+    pub fn groups(&self) -> Option<&ConditionGroups> {
+        self.groups.as_deref().filter(|groups| {
+            groups.default.is_some() || groups.groups.iter().any(|(_, pair)| !pair.admits_all())
+        })
     }
 }
 

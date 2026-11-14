@@ -23,7 +23,7 @@ use uuid::Uuid;
 
 use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
-use ferroehr::aql::sql::{EhrAccessScope, EhrScopeKind, SqlCtx};
+use ferroehr::aql::sql::{EhrScopeKind, SqlCtx};
 use ferroehr::config::profile::SpecProfile;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
@@ -190,7 +190,7 @@ async fn query(dsn: &str, case: &Case, ehr: Uuid, plan: &Path) -> anyhow::Result
         },
         ehr_scope_kind: EhrScopeKind::Named,
         subject_scope: None,
-        ehr_access: EhrAccessScope::Unrestricted,
+        ehr_access: ferroehr::access_eval::condition::AccessCondition::unrestricted(),
         limit: Some(case.limit),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),

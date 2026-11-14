@@ -20,7 +20,7 @@ use sea_query::{Alias, Expr, ExprTrait, Func, Query};
 use uuid::Uuid;
 
 use super::expr::{archetype_node_id, col};
-use crate::access_eval::condition::{AccessCondition, VerdictPair};
+use crate::access_eval::condition::{AccessCondition, ConditionGroups, VerdictPair};
 use crate::access_eval::scope::{CategoryMatch, DataMatch, Polarity, Pred, Recorded};
 use crate::db::iden::{Ehr, Node, VersionRow, VoHead};
 
@@ -34,9 +34,7 @@ const CARE: &str = "access_ehr";
 /// The predicate on the head row `h` of a versioned object; `None` when the
 /// condition admits every row.
 pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
-    if condition.is_unrestricted() {
-        return None;
-    }
+    let condition = condition.groups()?;
     let target = col(h, VoHead::EhrId);
     let mut branches = Vec::new();
     for (ids, pair) in &condition.groups {
@@ -75,9 +73,7 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
 /// item of which the caller may read is left out; whether an item is read is
 /// [`on_head`]'s.
 pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Expr> {
-    if condition.is_unrestricted() {
-        return None;
-    }
+    let condition = condition.groups()?;
     let reaches = |pair: &VerdictPair| -> Option<Expr> {
         match (pair.cared.admits_any(), pair.uncared.admits_any()) {
             (true, true) => Some(Expr::val(true)),
@@ -93,15 +89,14 @@ pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Ex
         }
     }
     let default = condition.default.as_deref();
-    match default.map_or(Some(Expr::val(true)), reaches) {
-        Some(reach) => branches.push(not_in_ids(target.clone(), &condition.known).and(reach)),
-        None => {}
+    if let Some(reach) = default.map_or(Some(Expr::val(true)), reaches) {
+        branches.push(not_in_ids(target.clone(), &condition.known).and(reach));
     }
     Some(or_all(branches))
 }
 
 /// The rows of an EHR of `pair` admitted, on head row `h` of EHR `target`.
-fn admitted(condition: &AccessCondition, pair: &VerdictPair, h: &str, target: Expr) -> Expr {
+fn admitted(condition: &ConditionGroups, pair: &VerdictPair, h: &str, target: Expr) -> Expr {
     let (with, without) = (pair.cared.admitted(), pair.uncared.admitted());
     if with == without {
         return pred(&with, h);
@@ -114,7 +109,7 @@ fn admitted(condition: &AccessCondition, pair: &VerdictPair, h: &str, target: Ex
 
 /// Whether the subject of the EHR `target` is under the care of the caller:
 /// a `CASE` condition, since an EHR names one subject.
-fn cared(condition: &AccessCondition, target: Expr) -> Expr {
+fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
     let mut probe = Query::select();
     probe
         .expr(Expr::val(1))
