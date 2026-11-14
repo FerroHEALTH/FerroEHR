@@ -35,15 +35,24 @@ use openehr_rm::draft::access_control::access_control::access_policy::AccessPoli
 /// The archetype of the default access policy definition.
 pub const ARCHETYPE: &str = "openEHR-EHR-ACCESS_POLICY.controller.v1";
 
-/// The default definition of the access policy archetype, which every boot
-/// stores when no definition of its id is stored
-/// ([`crate::service::demographic::default_definitions`]).
-pub const DEFINITIONS: [(&str, &str); 1] = [(
-    "openEHR-EHR-ACCESS_POLICY.controller.v1.0.0.adls",
-    include_str!(
-        "../../assets/definitions/access_policy/openEHR-EHR-ACCESS_POLICY.controller.v1.0.0.adls"
+/// The default definitions of the access policy archetype, each stored at
+/// boot when no definition of its id is stored
+/// ([`crate::service::demographic::default_definitions`]): `v1.1.0` adds the
+/// restrictions of the access log's subject view (EHDS Art. 9(3)).
+pub const DEFINITIONS: [(&str, &str); 2] = [
+    (
+        "openEHR-EHR-ACCESS_POLICY.controller.v1.0.0.adls",
+        include_str!(
+            "../../assets/definitions/access_policy/openEHR-EHR-ACCESS_POLICY.controller.v1.0.0.adls"
+        ),
     ),
-)];
+    (
+        "openEHR-EHR-ACCESS_POLICY.controller.v1.1.0.adls",
+        include_str!(
+            "../../assets/definitions/access_policy/openEHR-EHR-ACCESS_POLICY.controller.v1.1.0.adls"
+        ),
+    ),
+];
 
 /// The channel a policy write notifies and every replica listens on.
 pub const CHANNEL: &str = "ferroehr_access_policy";

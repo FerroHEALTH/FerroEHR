@@ -55,11 +55,14 @@ pub enum Group {
     CareRelationship,
     /// `access refusal`: the code an access refusal is recorded under.
     AccessRefusal,
+    /// `access log withheld`: the attributes of an access-log accessor the
+    /// subject view withholds under EHDS Art. 9(3).
+    AccessLogWithheld,
 }
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 11] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -70,6 +73,7 @@ impl Group {
         Self::AccessPermittedPurpose,
         Self::CareRelationship,
         Self::AccessRefusal,
+        Self::AccessLogWithheld,
     ];
 
     /// The group's rubric, such as `access default`.
@@ -86,6 +90,7 @@ impl Group {
             Self::AccessPermittedPurpose => "access permitted purpose",
             Self::CareRelationship => "care relationship",
             Self::AccessRefusal => "access refusal",
+            Self::AccessLogWithheld => "access log withheld",
         }
     }
 
@@ -103,6 +108,7 @@ impl Group {
             Self::AccessPermittedPurpose => PermittedPurpose::CODES,
             Self::CareRelationship => CareRelationship::CODES,
             Self::AccessRefusal => Refusal::CODES,
+            Self::AccessLogWithheld => Withheld::CODES,
         }
     }
 
@@ -367,6 +373,35 @@ group! {
         PurposeNotPermitted => "refused-purpose-not-permitted",
         /// The EHR needs consent and no permit directive applies.
         ConsentRequired => "refused-consent-required",
+    }
+}
+
+group! {
+    /// The attributes of an access-log `ACCESSOR` the subject view withholds
+    /// (`ACCESS_LOG_RESTRICTION.withheld`, EHDS Art. 9(3)).
+    Withheld in AccessLogWithheld {
+        /// `ACCESSOR.party`: the person or system that accessed.
+        AccessorParty => "accessor_party",
+        /// `ACCESSOR.provider`: the organisation the accessor acted for.
+        AccessorProvider => "accessor_provider",
+        /// `ACCESSOR.roles`: the roles the accessor held.
+        AccessorRoles => "accessor_roles",
+        /// `ACCESSOR.groups`: the groups whose membership the access relied
+        /// on.
+        AccessorGroups => "accessor_groups",
+    }
+}
+
+impl Withheld {
+    /// The member of `ACCESSOR` in its ITS-JSON form the term withholds.
+    #[must_use]
+    pub const fn member(self) -> &'static str {
+        match self {
+            Self::AccessorParty => "party",
+            Self::AccessorProvider => "provider",
+            Self::AccessorRoles => "roles",
+            Self::AccessorGroups => "groups",
+        }
     }
 }
 

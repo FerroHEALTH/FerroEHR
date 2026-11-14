@@ -662,7 +662,8 @@ value outside its form, is a `400`.
   categories, the purposes and the emergency mark, and leaves out the
   credential, the delegation chain, the binding outcome, the channel, the
   query text and its digest, the security labels, `other_details` and the
-  link. An entry about a composition held from the person under EHDS Art.
+  link, and the accessor members a
+  [restriction](#restricting-the-subject-view-ehds-art-93) withholds. An entry about a composition held from the person under EHDS Art.
   3(3) is left out until the hold ends, as in the [subject-scoped ITI-81
   read](#while-a-composition-is-held-from-the-person). Any other EHR answers
   `404`, the same as an unknown one, so its existence is not disclosed.
@@ -679,6 +680,50 @@ of these resources, refused and failed ones included, writes an access-log
 entry whose item names the log it read (`ACCESS_LOG_RECORD` for an entry,
 `ACCESS_LOG` for an EHR's whole log), with the filter named by its digest. A
 tombstone keeps no EHR, so a removed entry is read through the review.
+
+### Restricting the subject view (EHDS Art. 9(3))
+
+EHDS Art. 9(3) lets a Member State restrict the person's right to see who
+accessed their data "in exceptional circumstances". If your law does, declare
+the restriction in the controller's
+[access policy](operational-policy.md), never in `ferroehr.toml`: each entry
+of `log_restrictions` names the accessor kinds it applies to (the `accessor
+kind` rubrics of the log, such as `person` or `external person`), the
+accessor members the subject view withholds (`accessor_party`,
+`accessor_provider`, `accessor_roles`, `accessor_groups`, in
+`ferroehr-operations`), and the provisions that lay it down, coded in your
+jurisdiction's terminology. FerroEHR ships no country's restriction.
+
+```json
+"log_restrictions": [{
+  "_type": "ACCESS_LOG_RESTRICTION",
+  "name": { "_type": "DV_TEXT", "value": "External accessor withheld" },
+  "archetype_node_id": "id11",
+  "accessor_kinds": [{ "_type": "DV_CODED_TEXT", "value": "external person",
+    "defining_code": { "_type": "CODE_PHRASE",
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+      "code_string": "external person" } }],
+  "withheld": [{ "_type": "DV_CODED_TEXT", "value": "accessor_party",
+    "defining_code": { "_type": "CODE_PHRASE",
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+      "code_string": "accessor_party" } }],
+  "legal_grounds": [{ "_type": "DV_CODED_TEXT", "value": "your national provision",
+    "defining_code": { "_type": "CODE_PHRASE",
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "urn:example:national-law" },
+      "code_string": "art-x" } }]
+}]
+```
+
+- The subject and their representative get the subject view of an entry
+  whose accessor is of a named kind without the withheld members. A reviewer
+  reads the full entry, and the stored entry never changes.
+- A policy write applies on the next request on every replica, with no
+  restart.
+- A write that changes the restrictions changes what the log means, so it
+  writes an access-log entry of its own (operation
+  `admin_access_policy_write`), and the policy history keeps every version.
+  Under `[audit] fail_mode = "closed"`, such a write is refused with `503`
+  while the audit trail cannot take the entry.
 
 ```bash
 # Who accessed my record this month? (the patient portal's token)

@@ -331,7 +331,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `GET {ext}/admin/access-log`, `/chain` and `/checkpoint` serve the review.
   `access_log::search` pages the records over the trigger's search columns,
   `service::admin::access_log_read` holds the EHR check and the EHDS Art.
-  3(3) holds the person's view leaves out, and every read writes its own
+  3(3) holds the person's view leaves out, the subject view withholds what
+  the access policy's Art. 9(3) `log_restrictions` name (#5570), and every
+  read writes its own
   `LogRead` entry naming the log it read.
   No openEHR spec governs audit storage: our own design.
 - **One pool and one DSN per storage domain.** `[database.clinical]`,
@@ -600,8 +602,8 @@ it codes since #5540)
 adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
 `access default`, `access directive kind`, `access effect`, `access
 relationship`, `access caller kind`, `access operation`, `access
-sensitivity clearance`, `access permitted purpose`, `care relationship` and
-`access refusal`, each a closed set of rubrics read into a typed term
+sensitivity clearance`, `access permitted purpose`, `care relationship`,
+`access refusal` and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
 (`Term::read`), with a value of another terminology or a code outside its
 group refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the clearance, purpose and care relationship codes
@@ -1054,7 +1056,9 @@ that hold for every EHR the controller keeps: the sensitivity of kinds of data
 (`classifications`), whether clinical access needs a care relationship
 (`care_relationship_required`, `relationship_grace`) and a declared purpose
 (`purpose_required`), and the `catalogue` of named directives a subject accepts
-by reference (IHE BPPC). BASE Architecture Overview §Security Policy leaves
+by reference (IHE BPPC), and the `log_restrictions` of the access log's
+subject view a Member State law lays down under EHDS Art. 9(3) (#5570).
+BASE Architecture Overview §Security Policy leaves
 privacy levels to "standards or agreements within jurisdictions of use", which
 the classifications carry. Break-glass and the default floor stay in TOML; the
 policy can only tighten them.
@@ -1095,6 +1099,16 @@ policy can only tighten them.
   group reads the head (one indexed read) and installs a new version. With
   nothing stale a request touches no database; while the listener is down
   every request reads; a store that cannot answer is `503`.
+- **Restrictions of the subject view (#5570).** Each `ACCESS_LOG_RESTRICTION`
+  names the `accessor kind` rubrics of the access log it applies to, the
+  `ACCESSOR` members it withholds (`access log withheld`) and its legal
+  grounds (jurisdiction codes). `access_log::view::Restrictions` reads them
+  from the policy in force and `subject_view` drops those members from an
+  entry of a named kind for the subject and their representative; the full
+  view and the stored entry are unchanged. A write that changes them writes a
+  `LogMeaning` access-log entry naming the write (the access log's recording
+  rule 7), refused before the commit under a closed fail mode. The default
+  archetype carries them from `v1.1.0`; `v1.0.0` stays shipped.
 
 ## Templates, validation, FLAT
 

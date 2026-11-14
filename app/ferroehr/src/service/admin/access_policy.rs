@@ -14,8 +14,12 @@
 //! replaces, or creates the first one, so a writer that read an older
 //! version is refused (`412`) rather than overwriting a change it never saw.
 //! A body that does not hold is refused whole (`400`) and never reaches the
-//! request path. The draft access control package is no openEHR release and
-//! ITS-REST defines no resource for the policy: our own design/extension.
+//! request path. A write that changes the restrictions of the access log's
+//! subject view (EHDS Art. 9(3)) changes what the log means, so it writes an
+//! access-log entry naming the write and a record naming the version (the
+//! access log's recording rule 7).
+//! The draft access control package is no openEHR release and ITS-REST
+//! defines no resource for the policy: our own design/extension.
 
 #![expect(
     clippy::disallowed_types,
@@ -34,10 +38,14 @@ use uuid::Uuid;
 use crate::access_policy::check::checked;
 use crate::access_policy::{CHANNEL, LivePolicy};
 use crate::db::acquire::acquire;
+use crate::error::refusal::Refusal;
 use crate::error::{ErrorChain, ServiceError};
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::storage::access_policy::{self as store, NewVersion, PolicyRow};
+use crate::system_log::event::{
+    AuditEvent, EntryScope, EventActionCode, EventOutcome, EventType, ObjectClass,
+};
 use crate::versioning::audit::change_type;
 use crate::versioning::lifecycle::state::COMPLETE;
 use crate::versioning::object_version_id::{TreeId, object_version_id, parse_object_version_id};
@@ -47,6 +55,8 @@ use openehr_rm::draft::access_control::access_control::versioned_access_policy::
 
 /// The `AUDIT_DETAILS.description` of a policy version.
 const DESCRIPTION: &str = "access policy written through the access policy resource";
+/// The operation the access-log entry of a change to the log's meaning names.
+const WRITE_OPERATION: &str = "admin_access_policy_write";
 
 /// What a write expects of the stored policy (RFC 9110 §13.1).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -231,7 +241,9 @@ impl FerroEhrService {
     ///   or another one than the policy's; or `If-Match` is no
     ///   `OBJECT_VERSION_ID`.
     /// - `version_mismatch` (`412`) — `precondition` does not hold.
-    /// - `service_overloaded` (`503`) — the policy store does not answer.
+    /// - `service_overloaded` (`503`) — the policy store does not answer, or
+    ///   the write changes the access log's restrictions and its access-log
+    ///   entry is refused under `[audit] fail_mode = "closed"`.
     /// - `exception` — a database fault (rolled back).
     pub async fn put_access_policy(
         &self,
@@ -247,8 +259,10 @@ impl FerroEhrService {
         let mut conn = acquire(self.access_policy.pool()).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let newest = store::lock_newest(&mut tx).await?;
-        let (vo_id, version, change) = match (precondition, &newest) {
-            (PolicyPrecondition::Create, None) => (self.stamp.mint(), 1, change_type::CREATION),
+        let (vo_id, version, change, previous) = match (precondition, &newest) {
+            (PolicyPrecondition::Create, None) => {
+                (self.stamp.mint(), 1, change_type::CREATION, None)
+            }
             (PolicyPrecondition::Create, Some(row)) => {
                 return Err(ServiceError::version_conflict(format!(
                     "an access policy is committed at version {}: name it in If-Match to \
@@ -278,9 +292,19 @@ impl FerroEhrService {
                         "the access policy has no further trunk version",
                     ));
                 };
-                (row.vo_id, next, change_type::MODIFICATION)
+                (row.vo_id, next, change_type::MODIFICATION, Some(owner))
             }
         };
+        let log_meaning_changed = previous
+            .as_ref()
+            .and_then(|previous| previous.log_restrictions.as_ref())
+            != policy.log_restrictions.as_ref();
+        if log_meaning_changed && self.audit.as_ref().is_some_and(|sender| !sender.admits()) {
+            return Err(ServiceError::Unrecorded(Refusal::new(
+                (),
+                "audit trail unavailable (fail-closed)",
+            )));
+        }
         let system_id = self.effective_system_id();
         let time_committed = crate::storage::version_repo::placement::tx_now(&mut tx).await?;
         let commit_audit = openehr_its::json::to_canonical_json(
@@ -311,10 +335,38 @@ impl FerroEhrService {
             .map_err(ServiceError::Database)?;
         tx.commit().await.map_err(ServiceError::Database)?;
         self.read_access_policy().await?;
-        self.access_policy_current().await?.ok_or_else(|| {
+        let written = self.access_policy_current().await?.ok_or_else(|| {
             ServiceError::exception("the access policy version just committed does not read")
-        })
+        })?;
+        if log_meaning_changed {
+            let mut event = log_meaning_event(&written.version_uid, previous.is_none());
+            self.stamp_one_access(&mut event);
+            // NOTE: our own design, the sender admitted the record before the commit, so a record
+            // the queue refuses after it leaves the committed version as the record of the change.
+            let _outcome = self.emit(event);
+        }
+        Ok(written)
     }
+}
+
+/// The record of the version `version_uid`, which changed the restrictions of
+/// the access log's subject view; its access-log entry names the write, and
+/// holds no item, since an item needs an EHR (`Items_need_ehr`).
+fn log_meaning_event(version_uid: &str, creates: bool) -> AuditEvent {
+    let action = if creates {
+        EventActionCode::Create
+    } else {
+        EventActionCode::Update
+    };
+    let mut event = AuditEvent::new(
+        action,
+        ObjectClass::ApplicationActivity,
+        EventOutcome::Success,
+    );
+    event.event_type = Some(EventType::rest(WRITE_OPERATION));
+    event.object_id = Some(version_uid.to_owned());
+    event.entry = EntryScope::LogMeaning;
+    event
 }
 
 /// Refuse a write whose `If-Match` does not name `row`, the newest version.

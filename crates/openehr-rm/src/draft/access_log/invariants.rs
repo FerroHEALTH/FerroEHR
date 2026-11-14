@@ -37,8 +37,10 @@ const ACCESS_ACTION: &[&str] = &[
 ];
 /// The rubrics of the draft `access outcome` group.
 const ACCESS_OUTCOME: &[&str] = &["granted", "partially granted", "refused", "failed"];
-/// The rubrics of the draft `accessor kind` group.
-const ACCESSOR_KIND: &[&str] = &[
+/// The rubrics of the draft `accessor kind` group, which
+/// `ACCESS_LOG_RESTRICTION.accessor_kinds` of the draft access control is
+/// coded in too.
+pub(crate) const ACCESSOR_KIND: &[&str] = &[
     "person",
     "delegated person",
     "subject of care",
@@ -62,7 +64,7 @@ const ACCESS_AUTHORISATION: &[&str] = &[
 
 /// Whether `coded` is a term of the draft openEHR group whose rubrics are
 /// `group`.
-fn in_group(coded: &DvCodedText, group: &[&str]) -> bool {
+pub(crate) fn in_group(coded: &DvCodedText, group: &[&str]) -> bool {
     coded.defining_code.terminology_id.value == "openehr" && group.contains(&coded.value.as_str())
 }
 

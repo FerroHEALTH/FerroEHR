@@ -535,6 +535,10 @@ pub enum EntryScope {
     /// An entry for a change to the access log, such as an erasure, naming
     /// the entry it changed.
     LogChange,
+    /// An entry for a change to what the access log means, such as a new
+    /// restriction of its subject view in the access policy, naming the
+    /// operation that made it; the record names the version.
+    LogMeaning,
     /// No entry: the caller wrote the record's entry itself, in the
     /// transaction of the act it records.
     Written,

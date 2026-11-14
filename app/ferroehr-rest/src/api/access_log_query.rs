@@ -25,7 +25,7 @@ use openehr_its::rest::runtime::ApiError;
 use serde_json::{Value, json};
 
 use ferroehr::access_log::search::{LOG_QUERY, LogQuery};
-use ferroehr::access_log::view::subject_view;
+use ferroehr::access_log::view::{Restrictions, subject_view};
 use ferroehr::service::admin::access_log_read::LogReader;
 use ferroehr::system_log::event::{EntryScope, QueryNaming};
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
@@ -157,7 +157,8 @@ fn malformed(message: String) -> RestError {
     RestError::from(ApiError::BadRequest(message))
 }
 
-/// The page of `records` for `reader`, answered under `filter`'s paging.
+/// The page of `records` for `reader`, answered under `filter`'s paging,
+/// with `restrictions` applied to the subject view.
 ///
 /// # Errors
 /// A `500` when a record has no JSON form.
@@ -165,27 +166,31 @@ pub(crate) fn page(
     records: &[AccessLogRecord],
     filter: &LogQuery,
     reader: LogReader,
+    restrictions: &Restrictions,
 ) -> Result<Value, RestError> {
     let entries = records
         .iter()
-        .filter_map(|record| record_view(record, reader).transpose())
+        .filter_map(|record| record_view(record, reader, restrictions).transpose())
         .collect::<Result<Vec<_>, _>>()?;
     Ok(json!({ "offset": filter.offset, "fetch": filter.fetch, "entries": entries }))
 }
 
 /// `record` as `reader` reads it: the full ITS-JSON record for a reviewer,
-/// the subject view of an entry for the person, and `None` for a tombstone
-/// the person is never served.
+/// the subject view of an entry under `restrictions` for the person, and
+/// `None` for a tombstone the person is never served.
 ///
 /// # Errors
 /// A `500` when the record has no JSON form.
 pub(crate) fn record_view(
     record: &AccessLogRecord,
     reader: LogReader,
+    restrictions: &Restrictions,
 ) -> Result<Option<Value>, RestError> {
     let value = match (record, reader) {
         (_, LogReader::Reviewer) => serde_json::to_value(record),
-        (AccessLogRecord::AccessLogEntry(entry), LogReader::Person) => subject_view(entry),
+        (AccessLogRecord::AccessLogEntry(entry), LogReader::Person) => {
+            subject_view(entry, restrictions)
+        }
         (AccessLogRecord::AccessLogTombstone(_), LogReader::Person) => return Ok(None),
     };
     value.map(Some).map_err(|error| {
