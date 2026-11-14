@@ -826,8 +826,8 @@ levels off once the first tombstones fold, after `2P`:
   kB of indexes each, with signed links);
 - their tombstones, kept another `P` days: `r × P × 1.1 kB`;
 - the gaps: about 0.6 kB each, at least one per checkpoint interval (288 a
-  day, about 62 MB a year), plus one for each run an entry kept longer cut
-  apart. Gaps and checkpoints are kept without end.
+  day), plus one for each run an entry kept longer cut apart. Gaps and
+  checkpoints are kept without end.
 
 The access-path record of #5590 measures 2 518 bytes of row and 3 887 bytes
 stored per entry, 1 079 bytes per tombstone, and 2.08 entries per request at
