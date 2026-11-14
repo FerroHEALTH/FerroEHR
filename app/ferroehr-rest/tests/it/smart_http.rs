@@ -449,12 +449,9 @@ async fn rbac_app(issuer: &str) -> (testkit::TestDb, Router) {
     cfg.rbac.enabled = true;
     let mut authz = ferroehr::config::authz::AuthzConfig::default();
     authz.rbac.enabled = true;
-    let authz = ferroehr_rest::extensions::access::authz::AuthzHandle::build(
-        &authz,
-        &cfg.api.base_path,
-        None,
-    )
-    .map(std::sync::Arc::new);
+    let authz =
+        ferroehr_rest::extensions::access::authz::AuthzHandle::build(&authz, &cfg.api.base_path)
+            .map(std::sync::Arc::new);
     let app = common::build_full(
         cfg,
         service,

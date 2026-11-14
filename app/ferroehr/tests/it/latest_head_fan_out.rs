@@ -127,7 +127,6 @@ fn lowered(aql: &str) -> ferroehr::aql::sql::PreparedQuery {
         system_id: "fan.out.test".to_owned(),
         ehr_ids: Vec::new(),
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: Some(50),
         offset: None,

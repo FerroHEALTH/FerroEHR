@@ -106,7 +106,7 @@ fn the_ward_with_its_grace_period() {
                 grants: None,
             },
         );
-        access.judge(None, access.cared(&mr_e))
+        access.judge(None, None, access.cared(&mr_e))
     };
     let dr_d = || with_facts(professional(NURSE), &[], &[], &[CARDIOLOGY]);
     let dr_f = with_facts(professional(DR_B), &[], &[], &[NEPHROLOGY]);

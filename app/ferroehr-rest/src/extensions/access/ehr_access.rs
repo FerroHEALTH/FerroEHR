@@ -54,6 +54,11 @@ pub(crate) async fn enforce(
     op: &str,
     parts: &RequestParts,
 ) -> Result<(), Box<Response>> {
+    // NOTE: the access-log draft's recording rule 8, an EHR's access log has its own
+    // access control apart from any clinical decision, which its handler applies (#5130).
+    if crate::api::ehr::access_log::OPERATIONS.contains(&op) {
+        return Ok(());
+    }
     let Some(access) = current() else {
         return Ok(());
     };

@@ -621,9 +621,8 @@ mod tests {
         );
     }
 
-    /// The `[auth]` posture keys and the patient binding (`patient_claim`,
-    /// `patient_namespace`) are reachable through the one env grammar — a documented env
-    /// spelling that binds nothing would ship dead.
+    /// The `[auth]` posture keys are reachable through the one env grammar — a
+    /// documented env spelling that binds nothing would ship dead.
     #[test]
     fn env_mapping_auth_and_authz_posture_keys() {
         let c = assemble_ok(
@@ -633,8 +632,6 @@ mod tests {
                 ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
                 ("FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW", "2min"),
                 ("FERROEHR__AUTH__ISSUER__0__PROFILE", "keycloak"),
-                ("FERROEHR__AUTH__PATIENT_CLAIM", "patient_id"),
-                ("FERROEHR__AUTH__PATIENT_NAMESPACE", "nl.example.patients"),
             ]),
             &[],
         );
@@ -646,13 +643,9 @@ mod tests {
             ferrohealth_config::units::Duration::from_mins(2)
         );
         assert_eq!(issuer.profile, ferrohealth_smart::profile::Preset::Keycloak);
-        assert_eq!(c.auth.patient_claim(), Some("patient_id"));
-        assert_eq!(c.auth.patient_namespace(), Some("nl.example.patients"));
 
-        // Unset, both carry their documented defaults.
+        // Unset, the issuers carry their documented defaults.
         let d = assemble_ok(None, &env(&[]), &[]);
-        assert_eq!(d.auth.patient_claim(), None);
-        assert_eq!(d.auth.patient_namespace(), None);
         assert_eq!(d.auth.shared.issuers(), []);
         let entry = ferrohealth_smart::config::IssuerEntry::default();
         assert_eq!(

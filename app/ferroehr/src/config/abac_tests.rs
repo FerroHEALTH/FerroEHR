@@ -7,9 +7,10 @@
 //! and the `[authz.abac.policy.<name>]` bindings it read are gone (#5516), and
 //! so is the embedded Cedar engine with the whole `[authz.abac]` table: its
 //! switch, engine, organisation claim and directory switch, and the Cedar
-//! settings (#5515). The patient binding moved to `[auth] patient_claim` and
-//! `patient_namespace`. FerroEHR is greenfield, so each is refused as any
-//! unknown key is, from the file and from the environment. No openEHR spec
+//! settings (#5515), and the token-claim patient scope with its `[auth]
+//! patient_claim` and `patient_namespace` (#5586). FerroEHR is greenfield, so
+//! each is refused as any unknown key is, from the file and from the
+//! environment. No openEHR spec
 //! governs authorization: our own design.
 
 use super::tests::{env, file_refusal};
@@ -241,6 +242,13 @@ fn every_removed_key_is_unknown_in_the_file() {
     }
 }
 
+/// The refusal of a configuration whose environment sets `var`.
+fn env_refusal(var: &str) -> String {
+    assemble(None, &env(&[(var, "x")]), &[])
+        .expect_err(var)
+        .to_string()
+}
+
 #[test]
 fn every_removed_key_is_unknown_in_the_environment() {
     for (table, array, keys) in REMOVED {
@@ -250,9 +258,7 @@ fn every_removed_key_is_unknown_in_the_environment() {
         }
         for key in *keys {
             let var = format!("FERROEHR__{path}__{}", key.to_uppercase());
-            let refusal = assemble(None, &env(&[(var.as_str(), "x")]), &[])
-                .expect_err(&var)
-                .to_string();
+            let refusal = env_refusal(&var);
             assert!(
                 refusal.contains(&var) || refusal.contains(removed_table(table)),
                 "{var} is refused as unknown: {refusal}"
@@ -299,19 +305,19 @@ fn every_engine_is_unknown() {
     }
 }
 
-/// The patient binding is read under `[auth]`, from the file and from the
-/// environment, and nowhere else.
+/// The token-claim patient scope is removed (#5586): `[auth] patient_claim`
+/// and `patient_namespace` are refused as unknown keys, from the file and
+/// from the environment.
 #[test]
-fn the_patient_binding_moved_under_auth() {
-    let config = assemble(
-        None,
-        &env(&[
-            ("FERROEHR__AUTH__PATIENT_CLAIM", "patient_id"),
-            ("FERROEHR__AUTH__PATIENT_NAMESPACE", "nl.example.patients"),
-        ]),
-        &[],
-    )
-    .expect("the binding under [auth]");
-    assert_eq!(config.auth.patient_claim(), Some("patient_id"));
-    assert_eq!(config.auth.patient_namespace(), Some("nl.example.patients"));
+fn the_removed_patient_binding_is_unknown() {
+    for key in ["patient_claim", "patient_namespace"] {
+        let refusal = file_refusal(&format!("[auth]\n{key} = \"x\"\n"));
+        assert!(refusal.contains(key), "[auth] {key}: {refusal}");
+        let var = format!("FERROEHR__AUTH__{}", key.to_uppercase());
+        let refusal = env_refusal(&var);
+        assert!(
+            refusal.contains(&var) || refusal.contains(key),
+            "{var}: {refusal}"
+        );
+    }
 }

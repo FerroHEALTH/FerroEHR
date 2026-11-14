@@ -170,12 +170,6 @@ impl FerroEhrService {
             system_id: self.effective_system_id(),
             ehr_ids: request.ehr_ids.clone(),
             ehr_scope_kind: request.ehr_scope_kind,
-            subject_scope: request.subject_scope.clone().map(|id| {
-                aql::sql::subject::SubjectScope {
-                    id,
-                    namespace: request.subject_namespace.clone(),
-                }
-            }),
             ehr_access: request.ehr_access.clone(),
             limit,
             offset,
@@ -190,27 +184,15 @@ impl FerroEhrService {
 
         let exec_start = Instant::now();
         // `[record.query] timeout` bounds the DB execution so an over-long query is
-        // `408` rather than hanging to the global request timeout. The patient-
-        // scope collection stays a separate statement — the main query is paged,
-        // so folding the sets in would scope only the served page — but runs
-        // concurrently under the same budget (our own extension).
+        // `408` rather than hanging to the global request timeout.
         // The demographic domain runs the same SQL on the party pool, whose
         // `search_path` names the `party` schema.
         let pool = match ir.domain {
             QueryDomain::Clinical => &self.pool,
             QueryDomain::Demographic => &self.demographic_pool,
         };
-        let run = async {
-            let exec = aql::exec::execute(pool, ir, params, &ctx, self.spec_profile);
-            if request.collect_attributes {
-                let (result, scope) =
-                    tokio::try_join!(exec, aql::exec::collect_scope(pool, ir, params, &ctx))?;
-                Ok((result, Some(scope)))
-            } else {
-                Ok((exec.await?, None))
-            }
-        };
-        let (result, scope) = self.within_budget(run).await?.map_err(Failure::exec)?;
+        let run = aql::exec::execute(pool, ir, params, &ctx, self.spec_profile);
+        let result = self.within_budget(run).await?.map_err(Failure::exec)?;
         record_phase("execute", exec_start);
         Box::pin(self.judge_served_ehrs(&result))
             .await
@@ -236,10 +218,6 @@ impl FerroEhrService {
         outcome.accessed = Some(accessed);
         outcome.served_ehr_content = served_ehr_content;
         outcome.domain = ir.domain;
-        if let Some(scope) = scope {
-            outcome.ehr_ids = scope.ehr_ids;
-            outcome.subjects = scope.subjects;
-        }
         Ok(outcome)
     }
 
@@ -670,7 +648,6 @@ mod tests {
             system_id: "sys.example.com".to_owned(),
             ehr_ids: Vec::new(),
             ehr_scope_kind: crate::aql::sql::EhrScopeKind::Named,
-            subject_scope: None,
             ehr_access: crate::access_eval::condition::AccessCondition::default(),
             limit: None,
             offset: None,
@@ -687,13 +664,6 @@ mod tests {
             "the failure carries the acquire phase, got {failure:?}"
         );
         assert!(sheds(&map_exec_error(failure)));
-        let collected = crate::aql::exec::collect_scope(&pool, &ir, &params, &ctx)
-            .await
-            .expect_err("the scope collection acquires too");
-        assert!(
-            matches!(collected, AqlError::Exec(ExecError::Acquire(_))),
-            "got {collected:?}"
-        );
     }
 
     /// A node-codec read that cannot obtain a connection answers `503` too.

@@ -25,6 +25,44 @@ fn the_subject_skips_every_step() {
     assert_outcome(&verdict, &Item::Ehr, Outcome::Admit, "subject");
 }
 
+/// A subject caller is the subject of the EHR its patient context names
+/// alone: on any other EHR every item is refused, under every disposition,
+/// whatever the EHR's directives permit (#5586).
+#[test]
+fn the_subject_is_refused_on_an_ehr_not_their_own() {
+    let permit_all = directive("consent", "permit", &json!({}));
+    let subject = caller(CallerKind::Subject, NURSE);
+    for default in ["open", "restricted", "consent_required"] {
+        for case in [
+            Case {
+                foreign: true,
+                ..Case::of(settings(
+                    default,
+                    std::slice::from_ref(&permit_all),
+                    &[],
+                    &[],
+                ))
+            },
+            Case {
+                foreign: true,
+                server_default: Some(AccessDefault::Open),
+                ..Case::default()
+            },
+        ] {
+            let verdict = case.verdict(&subject, read(None));
+            for item in [Item::Ehr, object(OBJECT, Some("vital_signs.v1"))] {
+                assert_outcome(
+                    &verdict,
+                    &item,
+                    Outcome::Refused(Refusal::ConsentRequired),
+                    &format!("a subject on another EHR ({default})"),
+                );
+            }
+            assert!(!verdict.grounds.subject, "{default}: {verdict:?}");
+        }
+    }
+}
+
 /// Step 1: an opt-out binds the access services only, reads as absent, and
 /// yields to a declared emergency only where its override holds.
 #[test]

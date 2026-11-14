@@ -17,7 +17,7 @@
 //!   specification requires of this surface.
 //! - **Fine-grained RBAC/ABAC is NOT spec-mandated.** No CNF profile
 //!   (CORE/STANDARD/OPTIONS) carries any authentication/authorization/roles
-//!   requirement. The RBAC layer, the patient scope and the access evaluator
+//!   requirement. The RBAC layer and the access evaluator
 //!   are therefore **our own design**, in the vocabulary of NIST SP 800-162 (ABAC) and ANSI/INCITS
 //!   359 Core RBAC, kept structurally separate from the spec-grounded
 //!   authentication core so the boundary between the two is legible.
@@ -34,32 +34,30 @@
 //!   first in the pre-dispatch chain.
 //! - [`authz`] — our **own enterprise extension** (no openEHR spec governs
 //!   it): the coarse RBAC gate (runs in the authn middleware) and the handle
-//!   that carries it with the patient scope.
-//! - [`patient_scope`] — our own extension: every caller held to the EHR
-//!   whose subject the `[auth] patient_claim` names.
-//! - [`pep`] — the policy-enforcement point: the patient scope **and** the
-//!   spec-grounded **SMART** resource-scope + launch-context gate
+//!   that carries it.
+//! - [`pep`] — the policy-enforcement point: the spec-grounded **SMART**
+//!   resource-scope + launch-context gate
 //!   (`docs/specs/openehr/ITS-REST/docs/smart_app_launch/master08-scopes.adoc`
-//!   §Resource Scopes; `master07-*.adoc` §Context Selection), the latter
-//!   AND-composed after RBAC and the patient scope.
+//!   §Resource Scopes; `master07-*.adoc` §Context Selection), AND-composed
+//!   after RBAC.
 //!
-//! **Layering direction:** the spec-grounded [`ehr_access`] gate is the base;
-//! RBAC → the patient scope → the SMART scope gate compose *on top of* it as
-//! additive restrictions (AND-composition — a request must clear the
-//! `EHR_ACCESS` gate *and* RBAC *and* the patient scope *and* the SMART scope
-//! gate), never the reverse. The specs lead; the enterprise layers build on
-//! them.
+//! **Layering direction:** the spec-grounded [`ehr_access`] gate is the base,
+//! and it alone confines a patient to their own EHR: the access evaluator
+//! refuses a subject caller every EHR but the one its patient context names.
+//! RBAC → the SMART scope gate compose *on top of* it as additive
+//! restrictions (AND-composition — a request must clear the `EHR_ACCESS` gate
+//! *and* RBAC *and* the SMART scope gate), never the reverse. The specs lead;
+//! the enterprise layers build on them.
 //!
 //! The authn↔authz seam is the [`authn::Principal`]: authn resolves it, the `EHR_ACCESS`
-//! gate + the RBAC gate + the patient-scope/SMART PEP all consume it, and the
-//! single 401/403 decision lives in `authn::middleware`.
+//! gate + the RBAC gate + the SMART PEP all consume it, and the single 401/403
+//! decision lives in `authn::middleware`.
 
 pub mod authn;
 pub mod authz;
 pub(crate) mod caller;
 pub(crate) mod delay;
 pub mod ehr_access;
-pub mod patient_scope;
 pub mod pep;
 
 // The authn surface (identity + the request-scoped principal). The middleware

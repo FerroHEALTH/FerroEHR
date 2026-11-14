@@ -16,8 +16,8 @@
 //! shortened half would join to a wrong answer with nothing in the
 //! `RESULT_SET` to say so.
 //!
-//! The clinical query carries the caller's per-EHR access decision and
-//! patient scope as any query does; the party read and the crossing each
+//! The clinical query carries the caller's per-EHR access decision as any
+//! query does; the party read and the crossing each
 //! leave an access record in their own domain.
 
 #![expect(
@@ -76,9 +76,6 @@ pub(super) struct JoinRequest<'a> {
     pub(super) params: &'a Params,
 }
 
-/// What the clinical half answered, with the patient scope it collected.
-type ClinicalAnswer = (QueryResult, Option<aql::exec::QueryScope>);
-
 impl FerroEhrService {
     /// Executes a joined query and assembles its `RESULT_SET`.
     ///
@@ -132,7 +129,6 @@ impl FerroEhrService {
             system_id: self.effective_system_id(),
             ehr_ids: Vec::new(),
             ehr_scope_kind: EhrScopeKind::Named,
-            subject_scope: None,
             ehr_access: crate::access_eval::condition::AccessCondition::default(),
             limit: ceiling.map(|c| c.saturating_add(1)),
             offset: None,
@@ -157,71 +153,57 @@ impl FerroEhrService {
         distinct.dedup();
         let pairs = self.linked_ehrs(&distinct, &job.plan.root).await?;
 
-        let (clinical, scope) = self.run_clinical(job, halves, party_ctx, &pairs).await?;
+        let clinical = self.run_clinical(job, halves, party_ctx, &pairs).await?;
         refuse_above(ceiling, clinical.rows.len(), "clinical")?;
 
         let mut joined = join_rows(&parties, &pairs, &clinical.rows, job.plan.ehr_id)?;
         refuse_above(ceiling, joined.len(), "joined")?;
         sort_rows(&mut joined, job.plan, &party.rows, &clinical.rows);
         let page = cut_page(joined, page);
-        self.assemble(job, halves, &page, (&party, &clinical), scope)
+        self.assemble(job, halves, &page, (&party, &clinical))
     }
 
     /// Runs the clinical half over the EHRs the map names, under the caller's
-    /// per-EHR access decision and patient scope.
+    /// per-EHR access decision.
     async fn run_clinical(
         &self,
         job: &JoinRequest<'_>,
         halves: &Halves,
         party_ctx: SqlCtx,
         pairs: &[(VoId, EhrId)],
-    ) -> Result<ClinicalAnswer, Failure> {
+    ) -> Result<QueryResult, Failure> {
         let mut ehrs: Vec<EhrId> = pairs.iter().map(|(_, ehr)| *ehr).collect();
         ehrs.sort_unstable_by_key(|e| e.0);
         ehrs.dedup();
         // An empty map scopes nothing, and an unscoped clinical query is a
         // population query, the opposite of what was asked, so it never runs.
         if ehrs.is_empty() {
-            return Ok((empty_result(), None));
+            return Ok(empty_result());
         }
         // NOTE: RM `ehr_status.adoc` `is_queryable` ("included in population queries"):
         // the caller named no EHR, so the linked EHRs are a population subset.
         let ctx = SqlCtx {
             ehr_ids: ehrs,
             ehr_scope_kind: EhrScopeKind::PopulationSubset,
-            subject_scope: job.request.subject_scope.clone().map(|id| {
-                aql::sql::subject::SubjectScope {
-                    id,
-                    namespace: job.request.subject_namespace.clone(),
-                }
-            }),
             ehr_access: job.request.ehr_access.clone(),
             access_settings: Box::pin(self.ehr_access_readers())
                 .await
                 .map_err(Failure::analysis)?,
             ..party_ctx
         };
-        let exec = aql::exec::execute(
+        let result = aql::exec::execute(
             &self.pool,
             &halves.clinical,
             job.params,
             &ctx,
             self.spec_profile,
-        );
-        let (result, scope) = if job.request.collect_attributes {
-            let (result, scope) = tokio::try_join!(
-                exec,
-                aql::exec::collect_scope(&self.pool, &halves.clinical, job.params, &ctx)
-            )
-            .map_err(Failure::exec)?;
-            (result, Some(scope))
-        } else {
-            (exec.await.map_err(Failure::exec)?, None)
-        };
+        )
+        .await
+        .map_err(Failure::exec)?;
         Box::pin(self.judge_served_ehrs(&result))
             .await
             .map_err(Failure::analysis)?;
-        Ok((result, scope))
+        Ok(result)
     }
 
     /// Builds the served page's rows from the two halves, records the party
@@ -232,7 +214,6 @@ impl FerroEhrService {
         halves: &Halves,
         page: &[Joined<'_>],
         (party, clinical): (&QueryResult, &QueryResult),
-        scope: Option<aql::exec::QueryScope>,
     ) -> Result<QueryOutcome, Failure> {
         let mut served: Vec<(Uuid, u64)> = Vec::new();
         let mut served_parties: Vec<usize> = Vec::new();
@@ -299,10 +280,6 @@ impl FerroEhrService {
         outcome.served_ehrs = served_ehrs;
         outcome.served_rows = served_rows;
         outcome.accessed = Some(accessed);
-        if let Some(scope) = scope {
-            outcome.ehr_ids = scope.ehr_ids;
-            outcome.subjects = scope.subjects;
-        }
         Ok(outcome)
     }
 

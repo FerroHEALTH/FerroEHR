@@ -453,8 +453,7 @@ each party's class (`version.kind`) and matches the subject reference against
 that class and its demographic RM ancestors. The planner
 marks the IR `QueryDomain::Demographic`, and the same SQL runs on the party
 pool, whose `search_path` names the `party` schema rendered from the same DDL,
-without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`, the patient
-scope). An `EHR` operand directly under the root is the join to the EHR the
+without the EHR gates (population, `ehr_ids`, `EHR_ACCESS`). An `EHR` operand directly under the root is the join to the EHR the
 party is the subject of: `aql::join` cuts the AST into a party half and a
 clinical half, the service runs the party half on the party pool, finds the
 EHRs whose subject names those parties, runs the clinical half scoped to them
@@ -475,8 +474,7 @@ the always-on public health family (`/health`, `/health/liveness`,
 `/health/readiness`), `/rest/status`, the ops-introspection `/management/*`
 surface, item tags (there is no EhrScape surface). **Auth:** Basic +
 OAuth 2.0 bearer tokens via `ferrohealth-smart`; authorization is the
-`access` module in `ferroehr-rest`: RBAC, the access evaluator and the
-patient scope.
+`access` module in `ferroehr-rest`: RBAC and the access evaluator.
 
 ### The access layer (`ferroehr-rest::extensions::access`) — our own design
 
@@ -615,7 +613,14 @@ which is what makes an optional stage safe to disable:
    `refused-purpose-missing` or `refused-purpose-not-permitted`; (7) the
    default disposition, `403` `refused-consent-required`, an EHR with no
    settings taking `[authz.rbac] ehr_access_default`. The subject skips every
-   step (Art. 3), a representative steps 4 to 7. An emergency purpose lifts
+   step on their own EHR (Art. 3) and is refused `refused-consent-required`
+   on every other: a caller is the `subject` kind through a SMART App Launch
+   patient-context credential, and its own EHR is the `ehrId` of that launch
+   context (ITS-REST `master07` §Context Selection; `master08` §Resource
+   Scopes, "Access is restricted to data within that patient's EHR"), so the
+   evaluator alone confines a patient to their EHR on every route, every EHR
+   an Extract names and every row, count and page of a query (#5586, our own
+   design). A representative skips steps 4 to 7. An emergency purpose lifts
    an opt-out for an access service that may override it (Art. 10(2)), and,
    with `[authz.rbac] emergency_access_role`, a restriction or a consent deny
    whose `emergency_override` holds and steps 4 to 7 (Art. 11(5)). A
@@ -665,22 +670,13 @@ which is what makes an optional stage safe to disable:
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
    OAuth2 scope is NOT a role (RFC 6749 §3.3).
-4. **The patient scope** (`extensions::access::patient_scope`) — off by
-   default, on when `[auth] patient_claim` names an access-token claim. It
-   holds every caller to the EHR whose subject the claim names, read in
-   `[auth] patient_namespace` or by id alone, on every EHR-scoped route
-   (DIRECTORY included), every EHR an Extract names and every row of an AQL
-   query (`aql::sql::subject`); an id held under two namespaces names no
-   subject without a namespace. It is an authentication binding, not a
-   policy: our own extension, since no openEHR spec governs a patient claim.
-5. **SMART scopes** — off by default, AND-composed onto the decisions before
+4. **SMART scopes** — off by default, AND-composed onto the decisions before
    it, so it can only narrow. Disabled SMART produces zero wire drift.
 
 **Deny-by-default and fail-closed, in both senses.** No stage permits by
 omission: a gate reached without a principal refuses. And a stage that cannot
 DECIDE is never read as a decision — an unreachable token issuer is `503`, a
-fact the evaluator cannot read never opens data, and a subject lookup of the
-patient scope that fails is `500` or `503`. FerroEHR evaluates no policy
+fact the evaluator cannot read never opens data. FerroEHR evaluates no policy
 language and calls no remote policy decision point (#5487), since either
 would be a second policy world that receives none of the openEHR access
 facts, and ITS-REST 1.1.0 mandates no authorization scheme
@@ -1448,7 +1444,7 @@ adapter (`ferroehr-rest`) calls directly:
 | `openehr-query` | AQL 1.1 lexer + parser + AST | hand-written |
 | `openehr-adl` | ADL 2.4 engine: ADL2/cADL/ODIN parser, AOM2 validation, flattener, OPT2, ADL 1.4→2 conversion | hand-written |
 | `openehr-codegen` | BMM/XSD/OAS → Rust generator (+ `emit-rm-model`) | tooling |
-| `ferroehr-rest` | ITS-REST protocol adapter (axum) + auth + ATNA audit middleware; `access` module = RBAC, the access evaluator and the patient scope; calls the concrete `FerroEhrService` | application |
+| `ferroehr-rest` | ITS-REST protocol adapter (axum) + auth + ATNA audit middleware; `access` module = RBAC and the access evaluator; calls the concrete `FerroEhrService` | application |
 | `ferroehr` | The platform library: storage, service layer (one module per domain area), AQL engine, `versioning` (change control plus the VERSION `signature` signing under `versioning::signature`), validation, templates, the full config tree, telemetry, `privacy`, `system_log`, `licence` (the boot-verified grant in force and the identifier stamp it keys), `usage_report` (FerroEHR's status, route groups and PostgreSQL state store for the `start` and `daily` installation reports that `ferrohealth-usage-report` sends to FerroPULSE, on by default, envelope v2 in FerroHEALTH/FerroPULSE `docs/report-v2.md`, vendored schema in `corpus/ferropulse/`) | application |
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
 | `ferroehr-ext` | Optional integrations behind additive features (`multimedia`): the content-addressed multimedia store | application |

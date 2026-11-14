@@ -163,7 +163,6 @@ async fn router(svc: Arc<FerroEhrService>, config: AppConfig) -> Router {
     let source = Arc::new(svc.party_source("demographic"));
     let authenticator = Authenticator::new(
         &config,
-        None,
         Some(source),
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
         common::standing(&svc),

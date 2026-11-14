@@ -25,7 +25,6 @@ use ferroehr::aql::ir::{ParamValue, Params};
 use ferroehr::aql::lineage::ArchetypeLineage;
 use ferroehr::aql::plan;
 use ferroehr::aql::sql::SqlCtx;
-use ferroehr::aql::sql::subject::SubjectScope;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,7 +38,6 @@ fn build_sql(q: &str) -> String {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: None,
         offset: None,
@@ -1069,7 +1067,6 @@ fn a_fragment_path_ending_on_a_list_names_its_elements() {
             system_id: "sys.example.com".to_owned(),
             ehr_ids: Vec::new(),
             ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-            subject_scope: None,
             ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
             limit: None,
             offset: None,
@@ -1615,7 +1612,6 @@ fn build_sql_limited(q: &str) -> String {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: Some(50),
         offset: None,
@@ -1812,7 +1808,6 @@ fn a_named_ehr_scope_streams_on_its_spine() {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: vec![ferroehr::ids::EhrId(uuid::Uuid::nil())],
         ehr_scope_kind: kind,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: Some(50),
         offset: None,
@@ -2134,7 +2129,6 @@ fn build_err(q: &str) -> AqlError {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: None,
         offset: None,
@@ -2400,7 +2394,6 @@ fn reading_a_not_contains_variable_is_refused() {
 fn prepare(
     q: &str,
     ehr_ids: Vec<ferroehr::ids::EhrId>,
-    subject_scope: Option<&str>,
     limit: Option<i64>,
 ) -> ferroehr::aql::sql::PreparedQuery {
     let ir = plan_ok(q);
@@ -2408,10 +2401,6 @@ fn prepare(
         system_id: "sys.example.com".to_owned(),
         ehr_ids,
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-        subject_scope: subject_scope.map(|id| SubjectScope {
-            id: id.to_owned(),
-            namespace: None,
-        }),
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit,
         offset: None,
@@ -2523,199 +2512,6 @@ fn a_folder_referenced_or_branch_is_readable() {
     );
 }
 
-/// The patient-scope test on the bound `ehr` row `e0`.
-const EHR_SUBJECT: &str = r#""e0"."subject_id" = $"#;
-/// The patient-scope test inside a versioned-object root's subquery.
-const ROOT_SUBJECT: &str = r#""subject_row"."subject_id" = $"#;
-/// The ambiguity guard the patient-scope test on `e0` carries.
-const SUBJECT_GUARD: &str = r#""subject_other"."subject_id" = "e0"."subject_id""#;
-
-/// A branch binding under the EHR is a node of that EHR, so the patient scope
-/// on the EHR row covers it, and a row whose branches all miss stays in scope:
-/// the bindings carry no patient-scope test of their own, which would repeat
-/// the EHR row's.
-#[test]
-fn an_or_branch_under_the_ehr_is_covered_by_the_ehr_patient_scope() {
-    let unscoped = prepare(OR_COMPOSITIONS, Vec::new(), None, None).sql;
-    assert!(!unscoped.contains(r#""subject_id""#));
-    let scoped = prepare(OR_COMPOSITIONS, Vec::new(), Some("patient-1"), None).sql;
-    assert_eq!(
-        scoped.matches(EHR_SUBJECT).count(),
-        1,
-        "the EHR row carries the patient scope"
-    );
-    assert_eq!(
-        scoped.matches(ROOT_SUBJECT).count(),
-        0,
-        "no branch binding repeats it"
-    );
-}
-
-/// A branch binding with no EHR above it carries the patient scope itself.
-#[test]
-fn an_or_branch_without_an_ehr_carries_the_patient_scope() {
-    let scoped = prepare(
-        "SELECT c1/uid/value FROM FOLDER f CONTAINS (COMPOSITION c1 OR COMPOSITION c2)",
-        Vec::new(),
-        Some("patient-1"),
-        None,
-    )
-    .sql;
-    assert_eq!(
-        scoped.matches(ROOT_SUBJECT).count(),
-        2,
-        "the folder root and the unlinked binding"
-    );
-}
-
-/// A query with no versioned-object root reads the `ehr` row alone, so the
-/// ABAC patient scope binds that row (our own extension; no openEHR spec
-/// governs it).
-#[test]
-fn an_ehr_only_query_carries_the_patient_scope() {
-    for q in [
-        "SELECT e/ehr_id/value FROM EHR e",
-        "SELECT e/time_created/value FROM EHR e",
-        "SELECT COUNT(*) FROM EHR e",
-        "SELECT e/ehr_status/subject FROM EHR e",
-    ] {
-        let unscoped = prepare(q, Vec::new(), None, None).sql;
-        assert!(!unscoped.contains(r#""subject_id""#), "{q}");
-        let scoped = prepare(q, Vec::new(), Some("patient-1"), None).sql;
-        assert_eq!(
-            scoped.matches(EHR_SUBJECT).count(),
-            1,
-            "{q}: the EHR row carries the patient scope"
-        );
-        assert_eq!(
-            scoped.matches(SUBJECT_GUARD).count(),
-            1,
-            "{q}: with its ambiguity guard"
-        );
-    }
-}
-
-/// An explicit `ehr_id` scope does not lift the patient scope off the EHR row.
-#[test]
-fn an_ehr_scoped_query_keeps_the_patient_scope() {
-    let scoped = prepare(
-        "SELECT e/ehr_id/value FROM EHR e",
-        vec![ferroehr::ids::EhrId(uuid::Uuid::nil())],
-        Some("patient-1"),
-        None,
-    )
-    .sql;
-    assert!(scoped.contains(EHR_SUBJECT));
-}
-
-/// The patient claim names a subject id with no namespace, so a match is
-/// refused where another namespace holds the same id: every patient-scope
-/// test carries a `NOT EXISTS` over the other holders of the id.
-#[test]
-fn the_patient_scope_refuses_an_id_held_under_two_namespaces() {
-    let scoped = prepare(
-        "SELECT e/ehr_id/value FROM EHR e",
-        Vec::new(),
-        Some("patient-1"),
-        None,
-    )
-    .sql;
-    assert!(
-        scoped.contains("NOT EXISTS(SELECT") && scoped.contains(r#"FROM "ehr" AS "subject_other""#),
-    );
-    assert!(
-        scoped.contains(r#""subject_other"."subject_namespace" <> "e0"."subject_namespace""#),
-        "the guard compares the namespaces"
-    );
-}
-
-/// Every versioned-object root and the EHR row carry the patient scope, on the
-/// flat shape and on the LIMIT-streaming shape alike.
-#[test]
-fn rooted_queries_carry_the_patient_scope_on_both_shapes() {
-    const EHR_COMPOSITION: &str = "SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c";
-    for limit in [None, Some(10)] {
-        let scoped = prepare(EHR_COMPOSITION, Vec::new(), Some("patient-1"), limit).sql;
-        assert_eq!(
-            scoped.matches(EHR_SUBJECT).count(),
-            1,
-            "limit {limit:?}: the EHR row carries the patient scope"
-        );
-        assert_eq!(
-            scoped.matches(ROOT_SUBJECT).count(),
-            1,
-            "limit {limit:?}: and the composition root"
-        );
-    }
-    let streaming = prepare(EHR_COMPOSITION, Vec::new(), Some("patient-1"), Some(10)).sql;
-    assert!(streaming.contains("LATERAL"), "the streaming shape");
-    for q in [
-        "SELECT s/uid/value FROM EHR_STATUS s",
-        "SELECT a/uid/value FROM EHR_ACCESS a",
-        "SELECT f/uid/value FROM FOLDER f",
-        "SELECT c/uid/value FROM COMPOSITION c",
-    ] {
-        for limit in [None, Some(10)] {
-            let scoped = prepare(q, Vec::new(), Some("patient-1"), limit).sql;
-            assert_eq!(
-                scoped.matches(ROOT_SUBJECT).count(),
-                1,
-                "{q} (limit {limit:?}): the root carries the patient scope"
-            );
-        }
-    }
-}
-
-/// An unscoped, unpaged execution context for the scope-collection tests.
-fn scope_ctx() -> SqlCtx {
-    SqlCtx {
-        system_id: "sys.example.com".to_owned(),
-        ehr_ids: Vec::new(),
-        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-        subject_scope: None,
-        ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
-        limit: None,
-        offset: None,
-        archetype_lineage: Arc::new(ArchetypeLineage::default()),
-        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
-    }
-}
-
-/// The scope collection reports the EHRs a query touches from its EHR sources
-/// too, so a query reading only the `ehr` row reaches the patient-scope
-/// post-check (our own extension; no openEHR spec governs the patient scope).
-#[test]
-fn the_scope_collection_reports_ehr_sources() {
-    for q in [
-        "SELECT e/ehr_id/value FROM EHR e",
-        "SELECT e/ehr_status/subject FROM EHR e",
-        "SELECT e/ehr_id/value FROM EHR e CONTAINS (COMPOSITION c1 OR COMPOSITION c2)",
-    ] {
-        let ir = plan_ok(q);
-        let scope = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &scope_ctx())
-            .unwrap_or_else(|e| panic!("scope build failed for {q:?}: {e}"))
-            .unwrap_or_else(|| panic!("{q}: an EHR source is something to collect"));
-        assert_eq!(
-            scope.ehr_columns.first().map(String::as_str),
-            Some("scope_ehr_0"),
-            "{q}: the EHR source's id is collected: {:?}",
-            scope.ehr_columns
-        );
-        assert!(
-            scope.sql.contains(r#""e0"."id" AS "scope_ehr_0""#),
-            "{q}: the scope selects the EHR source's id",
-        );
-    }
-    let ir = plan_ok("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c");
-    let scope = ferroehr::aql::sql::build_scope(&ir, &Params::default(), &scope_ctx())
-        .unwrap_or_else(|e| panic!("scope build failed: {e}"))
-        .unwrap_or_else(|| panic!("a rooted query collects"));
-    assert_eq!(
-        scope.ehr_columns,
-        vec!["scope_ehr_0".to_owned(), "scope_ehr_1".to_owned()]
-    );
-}
 /// The branch bindings are reported to the access log: one EHR column and one
 /// version locator per bound branch, beside the EHR source's own column.
 #[test]
@@ -2723,7 +2519,6 @@ fn or_branch_bindings_are_logged_as_served_roots() {
     let prepared = prepare(
         OR_COMPOSITIONS,
         vec![ferroehr::ids::EhrId(uuid::Uuid::nil())],
-        None,
         None,
     );
     assert_eq!(prepared.access_ehr_cols.len(), 3);
@@ -2741,7 +2536,7 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
         "SELECT e/ehr_status/subject FROM EHR e",
         "SELECT e/ehr_id/value FROM EHR e WHERE e/time_created/value > '2020-01-01'",
     ] {
-        let prepared = prepare(q, Vec::new(), None, Some(20));
+        let prepared = prepare(q, Vec::new(), Some(20));
         assert_eq!(
             prepared.access_ehr_cols,
             vec!["access_ehr_0".to_owned()],
@@ -2757,7 +2552,6 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
     let rooted = prepare(
         "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
         Vec::new(),
-        None,
         Some(20),
     );
     assert_eq!(
@@ -2769,9 +2563,7 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
         "SELECT COUNT(e/ehr_id/value) FROM EHR e",
     ] {
         assert!(
-            prepare(q, Vec::new(), None, None)
-                .access_ehr_cols
-                .is_empty(),
+            prepare(q, Vec::new(), None).access_ehr_cols.is_empty(),
             "{q}"
         );
     }
@@ -2781,7 +2573,7 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
 /// stay implicitly lateral FROM functions of the flat shape.
 #[test]
 fn a_limited_or_branch_read_keeps_the_flat_shape() {
-    let sql = prepare(OR_COMPOSITIONS, Vec::new(), None, Some(10)).sql;
+    let sql = prepare(OR_COMPOSITIONS, Vec::new(), Some(10)).sql;
     assert!(!sql.contains("JOIN LATERAL"));
     assert_eq!(sql.matches("LATERAL((").count(), 4);
 }
@@ -2922,36 +2714,6 @@ fn exists_is_path_level() {
     );
 }
 
-/// With a configured patient namespace the claim names the (id, namespace)
-/// pair exactly, so the patient scope compares both columns and carries no
-/// ambiguity guard (our own extension; no openEHR spec governs the claim).
-#[test]
-fn a_configured_patient_namespace_matches_the_pair_exactly() {
-    let ctx = SqlCtx {
-        subject_scope: Some(SubjectScope {
-            id: "patient-1".to_owned(),
-            namespace: Some("nl.example.patients".to_owned()),
-        }),
-        ..scope_ctx()
-    };
-    for q in [
-        "SELECT e/ehr_id/value FROM EHR e",
-        "SELECT c/uid/value FROM COMPOSITION c",
-    ] {
-        let sql = ferroehr::aql::sql::build(&plan_ok(q), &Params::default(), &ctx)
-            .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
-            .sql;
-        assert!(
-            sql.contains(r#""subject_namespace" = $"#),
-            "{q}: the namespace is compared"
-        );
-        assert!(
-            !sql.contains(r#""subject_other""#),
-            "{q}: no ambiguity guard"
-        );
-    }
-}
-
 /// A demographic root containing its `EHR` splits into a party half and a
 /// clinical half, each planning to its own domain; the order keys follow each
 /// half's columns and every other shape is left to the single-statement
@@ -3087,7 +2849,6 @@ fn build_sql_with(q: &str, params: &Params) -> String {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: None,
         offset: None,

@@ -61,7 +61,6 @@ fn build_sql(q: &str) -> ferroehr::aql::sql::PreparedQuery {
         system_id: "sys.example.com".to_owned(),
         ehr_ids: Vec::new(),
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: None,
         offset: None,

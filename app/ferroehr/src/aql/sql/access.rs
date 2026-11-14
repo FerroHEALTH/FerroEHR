@@ -77,7 +77,8 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
         .default
         .as_deref()
         .map(|pair| admits(pair, none).unwrap_or_else(|| Expr::val(false)));
-    Some(by_settings(target, or_all(branches), default))
+    let held = by_settings(target.clone(), or_all(branches), default);
+    Some(confine(condition, &target, held))
 }
 
 /// The predicate on the EHR id `target` of an EHR a query reads: an EHR no
@@ -119,7 +120,20 @@ pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Ex
         .default
         .as_deref()
         .map(|pair| reaches(pair, none).unwrap_or_else(|| Expr::val(false)));
-    Some(by_settings(target.clone(), or_all(branches), default))
+    let held = by_settings(target.clone(), or_all(branches), default);
+    Some(confine(condition, target, held))
+}
+
+/// `held` on the EHR `target`, and for a subject caller only in the EHRs the
+/// condition confines it to (#5586).
+fn confine(condition: &ConditionGroups, target: &Expr, held: Expr) -> Expr {
+    match &condition.confined {
+        Some(ehrs) => target
+            .clone()
+            .eq(Expr::from(PgFunc::any(Expr::val(ehrs.to_vec()))))
+            .and(held),
+        None => held,
+    }
 }
 
 /// The predicate on the head row `h` that only a gate-keeper `keepers` names

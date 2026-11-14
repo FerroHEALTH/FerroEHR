@@ -23,7 +23,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, OperationClass, Refusal, Term as _,
+    AccessDefault, CallerKind, OperationClass, Refusal, Term as _,
 };
 use opentelemetry::KeyValue;
 use tokio::task_local;
@@ -317,10 +317,21 @@ impl RequestAccess {
         })
     }
 
-    /// The verdict for an EHR with `settings`, the caller `cared` for its
-    /// subject or not.
+    /// The verdict for the EHR `ehr_id` with `settings`, the caller `cared`
+    /// for its subject or not; `None` stands for an EHR that is no subject
+    /// caller's own.
     #[must_use]
-    pub fn judge(&self, settings: Option<&EhrAccessSettings>, cared: bool) -> Verdict {
+    pub fn judge(
+        &self,
+        ehr_id: Option<EhrId>,
+        settings: Option<&EhrAccessSettings>,
+        cared: bool,
+    ) -> Verdict {
+        self.judge_as(self.owns(ehr_id), settings, cared)
+    }
+
+    /// The verdict for an EHR with `settings`, the caller's own when `own`.
+    fn judge_as(&self, own: bool, settings: Option<&EhrAccessSettings>, cared: bool) -> Verdict {
         let labels = match settings {
             Some(EhrAccessSettings::Directives(settings)) => {
                 settings.labels.as_deref().unwrap_or_default()
@@ -328,11 +339,23 @@ impl RequestAccess {
             _ => &[],
         };
         let scopes = Scopes::new(self.categories.clone(), labels, self.classifications());
-        self.decide(settings, cared, &scopes)
+        self.decide(settings, cared, own, &scopes)
+    }
+
+    /// Whether `ehr_id` is the subject caller's own EHR.
+    fn owns(&self, ehr_id: Option<EhrId>) -> bool {
+        ehr_id.is_some() && ehr_id == self.caller.own_ehr
+    }
+
+    /// Whether the caller is a subject caller, whom a query reads only in
+    /// [`Caller::own_ehr`] (`ConditionGroups::confined`).
+    fn confined(&self) -> bool {
+        self.caller.kind == CallerKind::Subject
     }
 
     /// The verdict for every EHR of `class`, the caller `cared` for its
-    /// subject or not, its facts left to the query.
+    /// subject or not, its facts left to the query. A subject caller is
+    /// judged as on its own EHR, the one EHR the condition confines it to.
     #[must_use]
     pub fn judge_class(&self, class: &Class, cared: bool) -> Verdict {
         let scopes = Scopes::of_class(
@@ -340,7 +363,7 @@ impl RequestAccess {
             Arc::clone(&class.layout),
             self.classifications(),
         );
-        self.decide((*class.settings).as_ref(), cared, &scopes)
+        self.decide((*class.settings).as_ref(), cared, self.confined(), &scopes)
     }
 
     /// The controller's classifications.
@@ -356,6 +379,7 @@ impl RequestAccess {
         &self,
         settings: Option<&EhrAccessSettings>,
         cared: bool,
+        own: bool,
         scopes: &Scopes,
     ) -> Verdict {
         decide(&Judged {
@@ -370,6 +394,7 @@ impl RequestAccess {
                 settings,
                 server_default: self.server_default,
                 cared,
+                own,
             },
             scopes,
             now: self.now,
@@ -399,7 +424,7 @@ impl RequestAccess {
     /// Judges the EHR `ehr_id` as `entry` reads it, and keeps the verdict for
     /// the rest of the request.
     pub fn judge_ehr(&self, ehr_id: EhrId, entry: &EhrEntry) -> Arc<Verdict> {
-        let judged = self.judgement_of(entry, self.cares_for(entry));
+        let judged = self.judgement_of(ehr_id, entry, self.cares_for(entry));
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
@@ -418,11 +443,11 @@ impl RequestAccess {
         self.cared(&under_care_of)
     }
 
-    /// The judgement of an EHR as `entry` reads it, the caller `cared` for
-    /// its subject or not.
-    fn judgement_of(&self, entry: &EhrEntry, cared: bool) -> Judgement {
+    /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller
+    /// `cared` for its subject or not.
+    fn judgement_of(&self, ehr_id: EhrId, entry: &EhrEntry, cared: bool) -> Judgement {
         Judgement {
-            verdict: Arc::new(self.judge((*entry.settings).as_ref(), cared)),
+            verdict: Arc::new(self.judge(Some(ehr_id), (*entry.settings).as_ref(), cared)),
             settings: Arc::clone(&entry.settings),
             version: entry.version.clone(),
             revision: entry.revision,
@@ -444,8 +469,10 @@ impl RequestAccess {
             version: None,
             revision: Revision::default(),
         };
-        let cared = self.judge(None, true).admits_any() && !self.judge(None, false).admits_any();
-        let judged = self.judgement_of(&entry, cared);
+        let at = Some(ehr_id);
+        let cared =
+            self.judge(at, None, true).admits_any() && !self.judge(at, None, false).admits_any();
+        let judged = self.judgement_of(ehr_id, &entry, cared);
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
@@ -544,9 +571,10 @@ impl RequestAccess {
     /// class this replica does not hold is withheld.
     #[must_use]
     pub fn condition(&self, classes: &Classes, cared: Vec<String>) -> AccessCondition {
+        let confined = self.confined();
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
-            cared: self.judge(settings, true).bare(),
-            uncared: self.judge(settings, false).bare(),
+            cared: self.judge_as(confined, settings, true).bare(),
+            uncared: self.judge_as(confined, settings, false).bare(),
         };
         let mut groups: BTreeMap<VerdictPair, Vec<i64>> = BTreeMap::new();
         for (id, class) in &classes.classes {
@@ -571,6 +599,9 @@ impl RequestAccess {
             pair(None),
             cared,
             facts,
+            // NOTE: our own design (#5586), a subject caller reads only the EHR its patient
+            // context names, so a query of it reaches no other EHR whatever its class.
+            confined.then(|| self.caller.own_ehr.iter().map(|own| own.0).collect()),
         )
     }
 }
@@ -620,6 +651,9 @@ pub struct ConditionGroups {
     pub cared: Arc<[String]>,
     /// What the facts of a class are read against.
     pub facts: CallerKeys,
+    /// For a subject caller, the EHRs it reaches: its own, or none; `None`
+    /// for every other caller.
+    pub confined: Option<Arc<[Uuid]>>,
 }
 
 /// What the facts of a class are read against: the moment of the request,
@@ -658,6 +692,7 @@ impl AccessCondition {
         default: VerdictPair,
         cared: Vec<String>,
         facts: CallerKeys,
+        confined: Option<Arc<[Uuid]>>,
     ) -> Self {
         let default_admits = default.admits_all();
         let groups: Vec<(Vec<i64>, Arc<VerdictPair>)> = groups
@@ -670,6 +705,7 @@ impl AccessCondition {
             default: (!default_admits).then(|| Arc::new(default)),
             cared: cared.into(),
             facts,
+            confined,
         }
         .into()
     }

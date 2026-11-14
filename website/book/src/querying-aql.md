@@ -594,14 +594,12 @@ then joins, orders and pages the rows. The rules that follow:
 - each half, and the joined rows, may hold at most `record.query.max_result_rows`
   rows; above that the query is a **400** asking you to narrow it, never a
   shortened answer;
-- the clinical half carries your per-EHR access decision and patient scope as
-  any query does, and the party read and the crossing to the EHRs each leave
+- the clinical half carries your per-EHR access decision as any query does, and the party read and the crossing to the EHRs each leave
   an access record in their own domain.
 
 **Who may run it.** The query runs under the authorisation of a Demographic API
 read: the role check that admits a party read admits the query, and the per-EHR
-access decision and the attribute-based patient scope, which govern EHR
-content, do not apply to parties. The SMART `aql-…` scopes that govern every
+access decision, which governs EHR content, does not apply to parties. The SMART `aql-…` scopes that govern every
 query still apply. The query runs on the demographic database credential, and
 its access record is filed under the demographic domain with the number of rows
 served.

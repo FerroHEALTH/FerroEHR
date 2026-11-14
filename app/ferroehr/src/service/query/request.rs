@@ -15,7 +15,6 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::aql::subject::EhrSubject;
 use crate::ids::EhrId;
 
 /// A normalized AQL query request: the paging window, the EHR scope, and the
@@ -45,21 +44,10 @@ pub struct AqlQueryRequest {
     /// must match a parameter name in the query" (`$name` binds, no `$`
     /// prefix).
     pub parameters: BTreeMap<String, Value>,
-    /// The patient-scope subject id (no openEHR spec governs this — our own
-    /// access-control extension): when set, the engine pre-filters every
-    /// VO root and EHR source to EHRs whose subject it names.
-    pub subject_scope: Option<String>,
-    /// The configured patient namespace (`[auth] patient_namespace`) the
-    /// [`Self::subject_scope`] id is read in; `None` reads the id alone and
-    /// refuses one held under several namespaces.
-    pub subject_namespace: Option<String>,
     /// The access evaluator's condition for the caller (`EHR_ACCESS`): the
     /// rows the query may read, applied to every EHR-anchored source whatever
     /// the query scopes or projects.
     pub ehr_access: crate::access_eval::condition::AccessCondition,
-    /// Whether the executor should collect the touched EHR ids and their
-    /// subjects for the patient-scope query post-check (our own extension).
-    pub collect_attributes: bool,
     /// What the caller may read of the access log, which decides whether and
     /// how a query over `ACCESS_LOG_ENTRY` runs; the default refuses it. No
     /// openEHR spec governs AQL over the access log: our own design (#5131).
@@ -80,24 +68,14 @@ impl AqlQueryRequest {
 
 /// The outcome of an AQL execution.
 ///
-/// Carries the assembled `RESULT_SET` (rendered as ITS-REST
-/// canonical JSON) plus — when the caller asked for them
-/// ([`AqlQueryRequest::collect_attributes`]) — the distinct EHR ids and EHR
-/// subjects the query touched, for the patient-scope post-check.
+/// Carries the assembled `RESULT_SET` (rendered as ITS-REST canonical JSON)
+/// and what the access record of the execution names.
 #[derive(Debug, Clone, Default)]
 pub struct QueryOutcome {
     /// The `RESULT_SET` (canonical JSON) the adapter renders.
     pub result_set: Value,
-    /// The distinct EHR ids the query touched (empty unless collected).
-    pub ehr_ids: Vec<String>,
-    /// The distinct subjects of the EHRs the query touched (empty unless
-    /// collected), which the patient-scope post-check holds to the claim.
-    pub subjects: Vec<EhrSubject>,
     /// The EHRs this execution actually SERVED, each with its served-row count.
     ///
-    /// Distinct from [`Self::ehr_ids`], and the difference is the point.
-    /// `ehr_ids` is what the query MATCHED, collected before paging so the
-    /// authorization decision covers everything the statement could reach.
     /// This is what the caller was actually shown, after `LIMIT`, and it is
     /// what the access log records: a legal record of access must not name an
     /// EHR whose content was never disclosed.
@@ -150,8 +128,6 @@ impl QueryOutcome {
     pub fn plain(result_set: Value) -> Self {
         Self {
             result_set,
-            ehr_ids: Vec::new(),
-            subjects: Vec::new(),
             served_ehrs: Vec::new(),
             served_rows: 0,
             served_origins: Vec::new(),

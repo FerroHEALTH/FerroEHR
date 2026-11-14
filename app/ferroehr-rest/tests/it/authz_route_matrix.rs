@@ -609,12 +609,7 @@ fn matrix_config() -> AppConfig {
 
 /// The RBAC gate over the default rule set (`ADMIN` / `READONLY`), no ABAC.
 fn authz() -> Option<Arc<AuthzHandle>> {
-    AuthzHandle::build(
-        &AuthzConfig::default(),
-        &matrix_config().api.base_path,
-        None,
-    )
-    .map(Arc::new)
+    AuthzHandle::build(&AuthzConfig::default(), &matrix_config().api.base_path).map(Arc::new)
 }
 
 /// [`matrix_config`] trusting the shared metadata issuer, which the SMART

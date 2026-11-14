@@ -23,12 +23,10 @@ use std::time::Duration;
 
 use anyhow::Context as _;
 use clap::{Parser, Subcommand};
-use ferroehr::aql::subject::ehr_subject;
 use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentProfile};
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
 use ferroehr::db::domain::{Domain, DomainPools};
-use ferroehr::error::ServiceError;
 use ferroehr::extensions::outbox::{self, OutboxGate};
 use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
@@ -47,7 +45,6 @@ use ferroehr::usage_report::store::PgStore;
 use ferroehr::versioning::signature::signer::Signer;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
-use ferroehr_rest::extensions::access::patient_scope::{PatientScope, ResolveError, SubjectFn};
 use ferroehr_rest::extensions::management::{LogFilter, Observability};
 use ferrohealth_health::lifecycle::Lifecycle;
 use ferrohealth_health::registry::{HealthIndicator, Registry};
@@ -453,34 +450,23 @@ fn assemble_service(
 }
 
 /// Wires authorization, active only when authentication is enabled: the RBAC
-/// gate, the patient scope over the DB-backed subject lookup, and the per-EHR
-/// access default.
+/// gate and the per-EHR access default.
 ///
-/// `None` when authentication is off, or when the RBAC gate is off, no
-/// patient claim is configured and the per-EHR default is `open`. The boot
-/// line names which of the three caused the handle, so a `restricted` default
-/// alone reads as the reason.
-fn wire_authz(
-    config: &ferroehr::config::FerroEhrConfig,
-    pool: &PgPool,
-) -> Option<Arc<AuthzHandle>> {
+/// `None` when authentication is off, or when the RBAC gate is off and the
+/// per-EHR default is `open`. The boot line names which of the two caused the
+/// handle, so a `restricted` default alone reads as the reason.
+fn wire_authz(config: &ferroehr::config::FerroEhrConfig) -> Option<Arc<AuthzHandle>> {
     if !config.auth.shared.enabled {
         return None;
     }
-    let authz = build_authz(config, subject_lookup(pool.clone()));
+    let authz = build_authz(config);
     if let Some(handle) = &authz {
         let ehr_access_default = handle.ehr_access_default();
-        if handle.rbac_active() || handle.patient_scope_active() {
-            tracing::info!(
-                rbac = handle.rbac_active(),
-                patient_scope = handle.patient_scope_active(),
-                ?ehr_access_default,
-                "authorization enabled"
-            );
+        if handle.rbac_active() {
+            tracing::info!(rbac = true, ?ehr_access_default, "authorization enabled");
         } else {
             tracing::info!(
                 rbac = false,
-                patient_scope = false,
                 ?ehr_access_default,
                 "authorization enabled for the restricted per-EHR access default only"
             );
@@ -1052,7 +1038,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         env_snapshot,
     };
 
-    let authz = wire_authz(&config, &pool);
+    let authz = wire_authz(&config);
 
     let app_config = AppConfig::from(&config);
 
@@ -1119,41 +1105,14 @@ async fn start_audit(
 }
 
 /// Builds the full authorization handle the binary serves with: the RBAC gate
-/// and, when `[auth] patient_claim` is set, the patient scope over `subject`.
+/// and the configured `[authz.rbac]` keys.
 ///
-/// `None` when neither is active and the per-EHR default is `open`. The patient
-/// scope and RBAC are our own extension — no openEHR spec governs them
-/// (ITS-REST places authorization out of band).
+/// `None` when the RBAC gate is off and the per-EHR default is `open`. RBAC is
+/// our own extension: no openEHR spec governs it (ITS-REST places
+/// authorization out of band).
 #[must_use]
-pub fn build_authz(
-    config: &ferroehr::config::FerroEhrConfig,
-    subject: SubjectFn,
-) -> Option<Arc<AuthzHandle>> {
-    let patient = config
-        .auth
-        .patient_claim()
-        .map(|claim| PatientScope::new(claim, config.auth.patient_namespace(), subject));
-    AuthzHandle::build(&config.authz, &config.api.base_path, patient).map(Arc::new)
-}
-
-/// The DB-backed EHR subject lookup of the patient scope: the EHR subject as
-/// the AQL patient scope addresses it (`ferroehr::aql::subject::ehr_subject`).
-///
-/// Failures are typed [`ResolveError`]s — the PEP fails closed on them, never
-/// silently permits; a lookup that cannot obtain a connection carries the
-/// `service_overloaded` call status, which the PEP answers with `503`.
-#[must_use]
-pub fn subject_lookup(pool: PgPool) -> SubjectFn {
-    Arc::new(move |ehr_id: String| {
-        let pool = pool.clone();
-        Box::pin(async move {
-            let id = Uuid::parse_str(&ehr_id)
-                .map_err(|e| ResolveError::new(format!("ehr id {ehr_id}"), e))?;
-            ehr_subject(&pool, EhrId(id))
-                .await
-                .map_err(|e| ResolveError::new("ehr subject lookup", ServiceError::from(e)))
-        })
-    })
+pub fn build_authz(config: &ferroehr::config::FerroEhrConfig) -> Option<Arc<AuthzHandle>> {
+    AuthzHandle::build(&config.authz, &config.api.base_path).map(Arc::new)
 }
 
 /// The subject of an EHR for the Patient-Number participant object and the

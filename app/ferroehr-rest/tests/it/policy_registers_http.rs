@@ -41,8 +41,7 @@ async fn replica(pool: &PgPool) -> (Arc<FerroEhrService>, Router) {
         &[("dr", &["USER"]), ("root", &["ADMIN"])],
     )
     .await;
-    let handle =
-        AuthzHandle::build(&AuthzConfig::default(), &config.api.base_path, None).map(Arc::new);
+    let handle = AuthzHandle::build(&AuthzConfig::default(), &config.api.base_path).map(Arc::new);
     listening(&svc, pool).await;
     let app = common::build_full(config, Arc::clone(&svc), handle, Observability::default()).await;
     (svc, app)

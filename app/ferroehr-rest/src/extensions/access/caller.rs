@@ -23,6 +23,7 @@ use std::sync::Arc;
 use ferroehr::access_eval::condition::{Asking, RecordFacts, RequestAccess};
 use ferroehr::access_eval::procedure::{Caller, Emergency};
 use ferroehr::config::authz::EhrAccessDefault;
+use ferroehr::ids::EhrId;
 use ferroehr::party_binding::grants::agreement::Accessor;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::grants::operation::Operation;
@@ -77,6 +78,7 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
     let caller = Caller {
         kind,
         party: settings.party().map(str::to_owned),
+        own_ehr: own_ehr(principal, kind),
         acts_for,
         administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
         roles,
@@ -136,6 +138,17 @@ fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilitie
         return CallerKind::System;
     }
     CallerKind::Professional
+}
+
+/// The EHR whose subject a subject caller is: the EHR of its SMART App
+/// Launch patient context (`ehrId`, ITS-REST `master07` §Context Selection).
+fn own_ehr(principal: Option<&Principal>, kind: CallerKind) -> Option<EhrId> {
+    if kind != CallerKind::Subject {
+        return None;
+    }
+    // NOTE: our own design (#5586), a launch context that names no EHR id names no EHR, so
+    // the evaluator refuses the subject caller on every EHR.
+    principal?.access.ehr_id()?.parse().ok()
 }
 
 /// The class of `op`: a query, an export, a read or a write.

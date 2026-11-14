@@ -12,7 +12,7 @@ use super::Projection;
 use crate::access_log::entry::{entry_of, horizon_retention};
 use crate::access_log::store::canonical_form;
 use crate::system_log::access_binding::tests::{organisation, representative, system};
-use crate::system_log::binding::{BindingCode, BindingRecord, PartyTriple, Summary};
+use crate::system_log::binding::{BindingCode, BindingRecord, Identified, PartyTriple, Summary};
 use crate::system_log::categories::{
     AccessedContent, CategoryMapConfig, ContentIds, QueryConstraints,
 };
@@ -67,7 +67,6 @@ pub(super) fn classified_read(policy: &CompiledPolicy) -> AuditEvent {
     event.issuer = Some("https://login.example.org".to_owned());
     event.client_id = Some("ward-app".to_owned());
     event.token_id = Some("jti-7f3e".to_owned());
-    event.organisation = Some("Example Hospital".to_owned());
     event.roles = vec!["clinician".to_owned()];
     event.client_ip = Some("10.216.24.150".to_owned());
     event.ehr_id = Some(EHR.to_owned());
@@ -112,7 +111,10 @@ pub(super) fn classified_read(policy: &CompiledPolicy) -> AuditEvent {
         },
         false,
         vec!["c1a9e0e4-0d8f-4d9c-9b51-3f6a2f1b7c11".to_owned()],
-        None,
+        Some(Identified {
+            issuer: "urn:oid:2.16.528.1.1007.3.3".to_owned(),
+            id: "Example Hospital".to_owned(),
+        }),
         true,
     ));
     event.timestamp = "2026-11-13T10:15:30.123456Z".parse().expect("an instant");
