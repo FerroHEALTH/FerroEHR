@@ -660,7 +660,7 @@ async fn judged(pools: &DomainPools, config: &FerroEhrConfig) -> anyhow::Result<
 }
 
 /// The connect options of the `LISTEN` sessions of `domain`
-/// ([`ferroehr::db::listen_options`]).
+/// ([`ferroehr::db::domain::listen_options`]).
 ///
 /// # Errors
 /// The listener DSN does not parse.
@@ -668,6 +668,6 @@ pub(crate) fn listen_options(
     config: &FerroEhrConfig,
     domain: Domain,
 ) -> anyhow::Result<sqlx::postgres::PgConnectOptions> {
-    ferroehr::db::listen_options(&config.database, domain)
+    ferroehr::db::domain::listen_options(&config.database, domain)
         .with_context(|| format!("reading the {domain} listener DSN"))
 }

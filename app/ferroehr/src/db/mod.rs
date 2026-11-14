@@ -38,9 +38,9 @@ pub mod acquire;
 pub mod domain;
 pub mod iden;
 pub mod parent_statistics;
+mod session;
 
 use std::path::PathBuf;
-use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use sqlx::migrate::Migrator;
@@ -444,43 +444,6 @@ pub enum SchemaMismatch {
 
 // ── Pool ─────────────────────────────────────────────────────────────────────
 
-/// How often a backend running a statement checks that its client is still
-/// connected, so a statement whose connection [`acquire::Lease`] closed stops
-/// within this interval instead of running to its end.
-const CLIENT_CONNECTION_CHECK: &str = "SET client_connection_check_interval = 1000";
-
-/// Everything a freshly-opened physical connection needs before it serves a
-/// query: the domain's search path, the client-connection check and the
-/// statement-timeout backstop.
-///
-/// One implementation for every pool, so a domain cannot drop a setting.
-/// Dropping the timeout in particular silently disarms the DB-side
-/// runaway-query guard, and a broken control must never look like a policy
-/// outcome.
-async fn open_session(
-    conn: &mut PgConnection,
-    search_path: &'static str,
-    statement_timeout: Option<&str>,
-) -> Result<(), sqlx::Error> {
-    sqlx::query(search_path).execute(&mut *conn).await?;
-    // NOTE: PostgreSQL docs §20.3.1, `client_connection_check_interval`:
-    // a backend whose client closed the connection stops its running query at the next check.
-    sqlx::query(CLIENT_CONNECTION_CHECK)
-        .execute(&mut *conn)
-        .await?;
-    if let Some(statement_timeout) = statement_timeout {
-        // A session-level SET on the physical connection, surviving every
-        // checkout, where `SET LOCAL` would last one transaction.
-        // `AssertSqlSafe` is audited: PostgreSQL's `SET` takes no bind
-        // placeholder and the value is a `u64` from our own configuration,
-        // never client input.
-        sqlx::query(sqlx::AssertSqlSafe(statement_timeout.to_owned()))
-            .execute(&mut *conn)
-            .await?;
-    }
-    Ok(())
-}
-
 /// The pool options for one domain: sizing + acquire timeout from settings,
 /// the domain's session setup on every physical connection, and no per-checkout
 /// liveness ping. Connection retirement stays on the `sqlx` defaults (an idle
@@ -512,9 +475,9 @@ fn pool_options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
             // Cloned per call: `after_connect` takes an `Fn`, so the captured
             // value cannot be moved out of it.
             let statement_timeout = statement_timeout.clone();
-            Box::pin(
-                async move { open_session(conn, search_path, statement_timeout.as_deref()).await },
-            )
+            Box::pin(async move {
+                session::open_session(conn, search_path, statement_timeout.as_deref()).await
+            })
         })
 }
 
@@ -557,17 +520,6 @@ pub async fn connect_domains(settings: &DbConfig) -> Result<DomainPools, DbError
         party: connect_domain(settings, Domain::Party).await?,
         audit: connect_domain(settings, Domain::Audit).await?,
     })
-}
-
-/// The connect options of the `LISTEN` sessions of `domain`'s policy
-/// listeners, on [`DbConfig::listen_dsn`].
-///
-/// # Errors
-///
-/// Returns [`DbError::Sqlx`] when the DSN does not parse as a `PostgreSQL`
-/// URL.
-pub fn listen_options(settings: &DbConfig, domain: Domain) -> Result<PgConnectOptions, DbError> {
-    Ok(PgConnectOptions::from_str(settings.listen_dsn(domain))?)
 }
 
 /// A pool for `domain` over the DSN an existing pool already holds, for a

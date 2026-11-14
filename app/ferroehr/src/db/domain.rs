@@ -435,6 +435,20 @@ impl DomainGroup<'_> {
     }
 }
 
+/// The connect options of the `LISTEN` sessions of `domain`'s policy
+/// listeners, on [`DbConfig::listen_dsn`].
+///
+/// # Errors
+///
+/// Returns [`crate::db::DbError::Sqlx`] when the DSN does not parse as a `PostgreSQL`
+/// URL.
+pub fn listen_options(
+    settings: &DbConfig,
+    domain: Domain,
+) -> Result<sqlx::postgres::PgConnectOptions, crate::db::DbError> {
+    Ok(std::str::FromStr::from_str(settings.listen_dsn(domain))?)
+}
+
 /// The three connection pools the server runs on, one per storage domain.
 ///
 /// They differ in `search_path` always, and in credential when the deployment

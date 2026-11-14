@@ -16,7 +16,7 @@
 //! the notification counts as received. Each listener holds a connection of
 //! its own, never one of the request pools, so the pools may run through a
 //! transaction-mode pooler that would end a `LISTEN`
-//! ([`crate::db::listen_options`]). No openEHR spec governs operational
+//! ([`crate::db::domain::listen_options`]). No openEHR spec governs operational
 //! policy: our own design.
 
 use std::fmt;
