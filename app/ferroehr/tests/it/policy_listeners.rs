@@ -74,4 +74,8 @@ async fn a_killed_listener_degrades_health_until_it_reconnects() {
     );
     wait_until(every, "every listener connects again").await;
     assert_eq!(health.check().await.state(), State::Up);
+    // NOTE: our own design (#5591), the `policy_listener_losses` counter reads these counts.
+    for (name, listened) in &listeners {
+        assert!(listened.losses() >= 1, "{name} counts its lost session");
+    }
 }

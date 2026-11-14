@@ -20,7 +20,7 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
 use std::time::Duration;
 
 use sqlx::PgPool;
@@ -64,6 +64,24 @@ pub struct Listened {
     wake: tokio::sync::Notify,
     /// The copy each notification's payload is dropped from, if any.
     subscriber: Option<Arc<dyn Subscriber>>,
+    /// What the operator metrics read of this listener.
+    counts: ListenerCounts,
+}
+
+/// The counts the operator metrics read of one listener
+/// ([`crate::telemetry::access_path`]). No openEHR spec governs them: our own
+/// design (#5591).
+#[derive(Debug, Default)]
+struct ListenerCounts {
+    /// The connections lost after the listener had connected.
+    losses: AtomicU64,
+    /// The reads made because a notification marked the copy stale.
+    reads_notified: AtomicU64,
+    /// The reads made because the listener was down.
+    reads_unlistened: AtomicU64,
+    /// The Unix time in milliseconds of the newest notification; `0` before
+    /// the first.
+    last_notified_ms: AtomicI64,
 }
 
 impl Listened {
@@ -79,6 +97,7 @@ impl Listened {
             notified: AtomicU64::new(0),
             wake: tokio::sync::Notify::new(),
             subscriber: None,
+            counts: ListenerCounts::default(),
         }
     }
 
@@ -121,7 +140,51 @@ impl Listened {
     /// Whether a notification is pending or the listener is down, so the next
     /// request must read; the pending notification is taken.
     pub(crate) fn must_read(&self) -> bool {
-        !self.listening.load(Ordering::Acquire) || self.stale.swap(false, Ordering::AcqRel)
+        if self.unlistened() {
+            return true;
+        }
+        let stale = self.stale.swap(false, Ordering::AcqRel);
+        if stale {
+            self.counts.reads_notified.fetch_add(1, Ordering::Relaxed);
+        }
+        stale
+    }
+
+    /// Whether the listener is down, so this request reads the store; such a
+    /// read is counted.
+    pub(crate) fn unlistened(&self) -> bool {
+        let down = !self.listening.load(Ordering::Acquire);
+        if down {
+            self.counts.reads_unlistened.fetch_add(1, Ordering::Relaxed);
+        }
+        down
+    }
+
+    /// The connections lost after the listener had connected.
+    #[must_use]
+    pub fn losses(&self) -> u64 {
+        self.counts.losses.load(Ordering::Relaxed)
+    }
+
+    /// The reads made because a notification marked the copy stale, and
+    /// those made because the listener was down.
+    #[must_use]
+    pub fn reads(&self) -> (u64, u64) {
+        (
+            self.counts.reads_notified.load(Ordering::Relaxed),
+            self.counts.reads_unlistened.load(Ordering::Relaxed),
+        )
+    }
+
+    /// The moment of the newest notification; `None` before the first.
+    #[must_use]
+    pub fn last_notified(&self) -> Option<jiff::Timestamp> {
+        match self.counts.last_notified_ms.load(Ordering::Relaxed) {
+            0 => None,
+            // NOTE: a stored instant is one this process read from the clock, so it is
+            // always in range; one that were not reads as no notification.
+            ms => jiff::Timestamp::from_millisecond(ms).ok(),
+        }
     }
 
     /// Mark the copy stale, so the next request reads it.
@@ -180,6 +243,10 @@ async fn listen(state: Arc<Listened>) {
                         Ok(Some(notification)) => {
                             state.drop_notified(notification.payload()).await;
                             state.mark_stale();
+                            state
+                                .counts
+                                .last_notified_ms
+                                .store(jiff::Timestamp::now().as_millisecond(), Ordering::Relaxed);
                             state.notified.fetch_add(1, Ordering::AcqRel);
                             state.wake.notify_waiters();
                         }
@@ -191,6 +258,7 @@ async fn listen(state: Arc<Listened>) {
                     }
                 }
                 state.listening.store(false, Ordering::Release);
+                state.counts.losses.fetch_add(1, Ordering::Relaxed);
                 state.drop_all().await;
             }
             Err(error) => {

@@ -28,6 +28,7 @@ use jiff::Timestamp;
 
 use crate::system_log::store::AuditStore;
 use crate::system_log::store::chains::{AuditChainFinding, VerifyScope};
+use crate::telemetry::access_path;
 
 /// How many findings one run keeps for the health surface and logs one by one;
 /// the total is always reported in full.
@@ -92,6 +93,7 @@ impl ChainCheck {
     /// or `unverifiable`); an intact trail is logged at `DEBUG`.
     pub async fn run_scope(&self, store: &AuditStore, scope: VerifyScope) -> ChainCheckState {
         let at = Timestamp::now();
+        let started = std::time::Instant::now();
         let state = match store.verify_chains_advancing(scope).await {
             Ok(findings) if findings.is_empty() => {
                 tracing::debug!(?scope, "audit hash chain verified intact");
@@ -132,9 +134,39 @@ impl ChainCheck {
                 }
             }
         };
+        measured(scope, started, &state);
         *self.state.write().unwrap_or_else(PoisonError::into_inner) = state.clone();
         state
     }
+}
+
+/// Record one run over `scope`, begun at `started`, that ended in `state`:
+/// its duration and result, the time it finished and whether the chains
+/// read intact. No openEHR spec governs the metrics: our own design (#5591).
+fn measured(scope: VerifyScope, started: std::time::Instant, state: &ChainCheckState) {
+    let metrics = access_path::metrics();
+    let result = match state {
+        ChainCheckState::Pending | ChainCheckState::Intact { .. } => "intact",
+        ChainCheckState::Damaged { .. } => "damaged",
+        ChainCheckState::Unverifiable { .. } => "unverifiable",
+    };
+    let scope = match scope {
+        VerifyScope::Full => "full",
+        VerifyScope::SinceCheckpoint => "since_checkpoint",
+    };
+    metrics.chain_verification_duration.record(
+        access_path::seconds_since(started),
+        &[
+            opentelemetry::KeyValue::new("scope", scope),
+            opentelemetry::KeyValue::new("result", result),
+        ],
+    );
+    metrics
+        .chain_last_verification
+        .record(access_path::unix_now(), &[]);
+    metrics
+        .chain_intact
+        .record(u64::from(result == "intact"), &[]);
 }
 
 /// Adds `count` to the findings counter under `kind`.

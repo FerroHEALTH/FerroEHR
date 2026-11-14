@@ -261,6 +261,15 @@ impl AuditSender {
         self.inner.legal_basis.as_deref()
     }
 
+    /// The records waiting in the queue for the drain.
+    #[must_use]
+    pub fn queued(&self) -> usize {
+        self.inner
+            .tx
+            .max_capacity()
+            .saturating_sub(self.inner.tx.capacity())
+    }
+
     /// Enqueue an event (non-blocking). Never awaits, never blocks the request.
     ///
     /// A full queue (or a stopped drain) is metered and mapped through the
