@@ -23,6 +23,9 @@
 //! included, whose response says nothing (EHDS Art. 8). Which grounds are
 //! named, and how a directive is identified, is our own design (#5514).
 
+use std::collections::{BTreeMap, BTreeSet};
+use std::sync::{Mutex, PoisonError};
+
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::terminology::{DirectiveKind, Refusal, Term as _};
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
@@ -30,7 +33,8 @@ use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use uuid::Uuid;
 
 use crate::access_eval::condition::{Judgement, Noted, RequestAccess};
-use crate::access_eval::procedure::Lifted;
+use crate::access_eval::procedure::{Lifted, Verdict};
+use crate::access_eval::scope::Item;
 use crate::access_log::entry::authorisation;
 use crate::ids::EhrId;
 use crate::service::ehr::access_settings::EhrAccessSettings;
@@ -215,7 +219,8 @@ impl RequestAccess {
         let mut grounds = self.role_grounds();
         let refused = noted.map(|(_, noted)| self.refused(&noted, judged.as_ref()));
         if let Some(judged) = &judged {
-            self.verdict_grounds(judged, refused.is_none(), &mut grounds);
+            let covering = ehr_id.and_then(|ehr_id| self.lifted_covers().of(ehr_id));
+            self.verdict_grounds(judged, refused.is_none(), covering.as_ref(), &mut grounds);
         }
         Decision {
             refused,
@@ -248,11 +253,14 @@ impl RequestAccess {
     }
 
     /// The grounds `judged` rests on: those that admitted it when
-    /// `admitted`, and each emergency override.
+    /// `admitted`, and each emergency override; when the request admitted
+    /// objects of the EHR, only the lifted denies at the positions
+    /// `covering` them (#5630).
     fn verdict_grounds(
         &self,
         judged: &Judgement,
         admitted: bool,
+        covering: Option<&BTreeSet<usize>>,
         grounds: &mut Vec<AccessAuthorisation>,
     ) {
         let verdict = &judged.verdict;
@@ -284,7 +292,9 @@ impl RequestAccess {
             found
                 .lifted
                 .iter()
-                .filter_map(|at| directive(*at, Some("emergency"))),
+                .map(|(at, _)| *at)
+                .filter(|at| covering.is_none_or(|covering| covering.contains(at)))
+                .filter_map(|at| directive(at, Some("emergency"))),
         );
         grounds.extend(
             found
@@ -391,6 +401,44 @@ impl RequestAccess {
     }
 }
 
+/// For each EHR with a lifted deny where the request admitted an object, the
+/// positions of the lifted denies whose data scope covered such an object:
+/// the access record names a lifted deny only for the data it lifted (EHDS
+/// Art. 11(5) and Art. 9(1); our own design, #5630).
+#[derive(Debug, Default)]
+pub(crate) struct LiftedCovers(Mutex<BTreeMap<EhrId, BTreeSet<usize>>>);
+
+impl LiftedCovers {
+    /// Note which denies `verdict` lifted on `ehr_id` cover the admitted
+    /// `item`; the EHR itself is no object, and a request naming no EHR
+    /// names no lift, so neither notes anything.
+    pub(crate) fn note(&self, ehr_id: Option<EhrId>, verdict: &Verdict, item: &Item<'_>) {
+        let Some(ehr_id) = ehr_id else {
+            return;
+        };
+        if verdict.grounds.lifted.is_empty() || !matches!(item, Item::Object(_)) {
+            return;
+        }
+        let mut covers = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        let covered = covers.entry(ehr_id).or_default();
+        for (at, cover) in &verdict.grounds.lifted {
+            if cover.holds(item) {
+                covered.insert(*at);
+            }
+        }
+    }
+
+    /// The positions noted for `ehr_id`; `None` when the request admitted no
+    /// object of it, so the record names every deny the EHR's verdict lifted.
+    pub(crate) fn of(&self, ehr_id: EhrId) -> Option<BTreeSet<usize>> {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&ehr_id)
+            .cloned()
+    }
+}
+
 /// Stamp `event` with the decision `access` gave the EHR it names.
 ///
 /// The record carries the grounds, the policies they are defined in, and the
@@ -407,6 +455,13 @@ pub fn stamp(event: &mut AuditEvent, access: &RequestAccess) {
     let decision = access.decision(ehr_id);
     if decision.refused.is_some() {
         event.decision = AccessDecision::Refused;
+        // NOTE: EHDS Art. 9(1), a refused request that named its EHR outside its path, such
+        // as a query's scope, is recorded against that EHR (#5639).
+        if event.ehr_id.is_none()
+            && let Some((Some(refused_on), _)) = access.noted(None)
+        {
+            event.ehr_id = Some(refused_on.to_string());
+        }
     }
     event.decided = Some(Box::new(decision));
 }

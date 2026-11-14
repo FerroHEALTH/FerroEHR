@@ -33,6 +33,7 @@ use crate::access_eval::class::{Class, Classes};
 use crate::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
 };
+use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
@@ -129,6 +130,7 @@ pub struct Judgement {
 struct Recorded {
     facts: RecordFacts,
     refusals: Mutex<BTreeMap<Option<EhrId>, Noted>>,
+    lifted: LiftedCovers,
 }
 
 /// The facts of a request the access record names that the decision does
@@ -245,6 +247,11 @@ impl RequestAccess {
         self.emergency
     }
 
+    /// The lifted denies that covered an object this request admitted.
+    pub(crate) fn lifted_covers(&self) -> &LiftedCovers {
+        &self.recorded.lifted
+    }
+
     /// The facts the access record names that the decision does not read.
     #[must_use]
     pub fn record_facts(&self) -> &RecordFacts {
@@ -290,7 +297,10 @@ impl RequestAccess {
         let rule = verdict.rule_for(item);
         let outcome = rule.map_or(verdict.otherwise, |rule| rule.then);
         let refusal = match outcome {
-            Outcome::Admit => return outcome,
+            Outcome::Admit => {
+                self.recorded.lifted.note(ehr_id, verdict, item);
+                return outcome;
+            }
             Outcome::Absent(refusal) | Outcome::Refused(refusal) => refusal,
         };
         self.recorded
@@ -560,7 +570,11 @@ impl RequestAccess {
     #[must_use]
     pub fn outcome(&self, ehr_id: EhrId, item: &Item<'_>) -> Outcome {
         if let Some(verdict) = self.verdict(ehr_id) {
-            verdict.outcome(item)
+            let outcome = verdict.outcome(item);
+            if outcome == Outcome::Admit {
+                self.recorded.lifted.note(Some(ehr_id), &verdict, item);
+            }
+            outcome
         } else {
             tracing::error!(%ehr_id, "an EHR this request did not judge is withheld");
             Outcome::Absent(Refusal::Restricted)

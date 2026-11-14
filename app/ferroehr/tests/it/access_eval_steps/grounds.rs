@@ -293,6 +293,39 @@ fn an_emergency_override_is_marked_with_what_it_lifted() {
     );
 }
 
+/// An emergency lifts a consent deny over the mental-health template; a read
+/// of another template names no `emergency` ground of that directive, only
+/// the `ACCESS_POLICY` of the lifted steps 4 to 7, and a read of the
+/// mental-health note names it (EHDS Art. 11(5) and Art. 9(1), #5630).
+#[test]
+fn the_emergency_grounds_name_only_the_directives_covering_the_data_read() {
+    let deny = directive(
+        "consent",
+        "deny",
+        &json!({ "emergency_override": true,
+                 "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["Mental health note"] }] }),
+    );
+    let lifted = |template: &str| {
+        let access = request(professional(DR_B), break_glass(read(Some("ETREAT"))), None);
+        let item = object(OBJECT, Some(template));
+        let (outcome, decision) = decide_on(
+            &access,
+            Some(settings("open", std::slice::from_ref(&deny), &[], &[])),
+            &item,
+        );
+        assert_eq!(outcome, Outcome::Admit, "{template}");
+        of_kind(&decision, "emergency")
+            .iter()
+            .map(|ground| ground.name.clone().unwrap_or_default())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(lifted("HIV result"), ["ACCESS_POLICY"]);
+    assert_eq!(
+        lifted("Mental health note"),
+        ["EHR_ACCESS", "ACCESS_POLICY"]
+    );
+}
+
 /// `entry` with the link the store gives it, so its invariants hold.
 fn linked(mut entry: AccessLogEntry) -> AccessLogEntry {
     entry.link = AccessLogLink {
