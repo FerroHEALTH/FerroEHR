@@ -162,10 +162,23 @@ the party's `vo_id`), and a `versions` list of entries whose `change_type` is
 
 A commit to an EHR that carries a restriction (GDPR Art. 18) or an
 unoverridden research objection (Art. 21(6)) writes no event. A read also leaves
-out the rows of an EHR that carries such a mark, or an EHDS Art. 8 access
-restriction of the EHR or of an object the commit touched, at the moment it is
-read. Such a row is served once the mark is lifted, as long as the reader's
-cursor has not passed it.
+out the rows of an EHR that carries such a mark at the moment it is read.
+
+The feed then serves only the events its reader may read, judged as any
+read of that EHR's data is judged: the reader's kind, its party binding, roles,
+capabilities and acts-for groups, and the purpose of use it declares in the
+`[audit] purpose_header`. A directive that binds the reader and denies the
+data withholds the event, with its data scope, validity and exceptions; so
+does an access policy the reader does not meet, such as `purpose_required`
+with no permitted purpose declared, and `[authz.rbac] ehr_access_default =
+"restricted"` for an EHR with no settings. When the decision depends on the
+data, an event is served only if every object its contribution wrote is
+admitted. An erasure is judged on the EHR itself.
+
+A row left out is served once the mark is lifted or the directive no longer
+denies it, as long as the reader's cursor has not passed it. A page is never
+cut short by what it leaves out: the read goes on past those rows until it
+holds the page or reaches the tail.
 
 ## Moving from FerroEHR's own RabbitMQ publisher
 

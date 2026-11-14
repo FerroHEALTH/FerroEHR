@@ -57,13 +57,6 @@ pub enum Ehr {
     /// `research_objection_ground` — the controller's recorded public-interest
     /// ground for overriding the objection; `NULL` while it stands.
     ResearchObjectionGround,
-    /// `access_restricted_at` — when an EHDS Art. 8 restriction of access by
-    /// health professionals was recorded for the whole EHR; `NULL` =
-    /// unrestricted.
-    AccessRestrictedAt,
-    /// `opted_out_at` — when an EHDS Art. 10 opt-out from access through the
-    /// access services was recorded for the EHR; `NULL` = none stands.
-    OptedOutAt,
 }
 
 /// `commit_audit` — `AUDIT_DETAILS` of every committed change.
@@ -237,9 +230,6 @@ pub enum VoHead {
     /// `restricted_at` — when restriction of processing was recorded for this
     /// object; `NULL` = unrestricted.
     RestrictedAt,
-    /// `access_restricted_at` — when an EHDS Art. 8 restriction of access was
-    /// recorded for this object or its whole EHR; `NULL` = unrestricted.
-    AccessRestrictedAt,
     /// `person_withheld_until` — until when an EHDS Art. 3(3) delay withholds
     /// this object from the person; `NULL` or past = not withheld.
     PersonWithheldUntil,
@@ -388,10 +378,8 @@ mod tests {
     /// The later clinical migrations that add columns to those relations with
     /// `ALTER TABLE … ADD COLUMN`.
     const ALTERS: &[&str] = &[
-        include_str!("../../migrations/clinical/0015_access_restriction.sql"),
         include_str!("../../migrations/clinical/0019_node_values.sql"),
         include_str!("../../migrations/clinical/0028_node_header.sql"),
-        include_str!("../../migrations/clinical/0029_access_opt_out.sql"),
         include_str!("../../migrations/clinical/0031_node_compact.sql"),
         include_str!("../../migrations/clinical/0032_version_content.sql"),
         include_str!("../../migrations/clinical/0034_head_content_key.sql"),
@@ -497,8 +485,6 @@ mod tests {
                     Ehr::RestrictedAt.to_string(),
                     Ehr::ResearchObjectedAt.to_string(),
                     Ehr::ResearchObjectionGround.to_string(),
-                    Ehr::AccessRestrictedAt.to_string(),
-                    Ehr::OptedOutAt.to_string(),
                 ],
             ),
             (
@@ -555,7 +541,6 @@ mod tests {
                     VoHead::TemplateId.to_string(),
                     VoHead::CommittedAt.to_string(),
                     VoHead::RestrictedAt.to_string(),
-                    VoHead::AccessRestrictedAt.to_string(),
                     VoHead::RetentionHoldAt.to_string(),
                     VoHead::ArchivedAt.to_string(),
                     VoHead::ArchiveReason.to_string(),
