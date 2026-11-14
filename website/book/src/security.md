@@ -358,6 +358,16 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
   (`ehr-access-repair:<versioned object uid>`) naming the administrator. The
   repair is refused with `409` for an EHR that is not held; such an EHR
   changes its settings with a CONTRIBUTION.
+- **Every replica decides by the committed settings:** the commit of an
+  `EHR_ACCESS` version writes the EHR's settings, one row per directive and
+  exception and one row per sensitivity label into side tables in the same
+  transaction, and notifies every replica when it commits. Each replica holds
+  a copy of each EHR's settings and drops it on that notification, so a
+  revoked gate-keeper or directive decides the next request on every replica.
+  While a replica's listener is down it reads the settings on every request,
+  and a settings store that cannot answer is `503`. The first boot fills the
+  side tables from the stored versions, and `ferroehr party-binding refill`
+  rebuilds them.
 - **The default definition:** every boot stores the archetype
   `openEHR-EHR-EHR_ACCESS.access_directives.v1.0.0` when no definition of its
   id is stored, and never over a stored one. It constrains the settings to

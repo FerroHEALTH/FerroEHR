@@ -48,7 +48,7 @@ impl SettingsCaller {
         let committer = crate::versioning::committer::current_committer()
             .and_then(|identity| crate::versioning::committer::bound::server_committer(&identity));
         let subject = matches!(committer, Some(PartyProxy::PartySelf(_)));
-        let party = committer.as_ref().and_then(reference).and_then(key);
+        let party = committer.as_ref().and_then(reference).and_then(party_key);
         Self {
             administrator,
             subject,
@@ -79,10 +79,9 @@ impl SettingsCaller {
             .iter()
             .any(|keeper| match keeper {
                 PartyProxy::PartySelf(_) => self.subject,
-                PartyProxy::PartyIdentified(_) => self
-                    .party
-                    .as_ref()
-                    .is_some_and(|party| reference(keeper).and_then(key).as_ref() == Some(party)),
+                PartyProxy::PartyIdentified(_) => self.party.as_ref().is_some_and(|party| {
+                    reference(keeper).and_then(party_key).as_ref() == Some(party)
+                }),
             })
     }
 
@@ -136,7 +135,7 @@ fn reference(proxy: &PartyProxy) -> Option<&PartyRef> {
 /// party.
 // NOTE: our own design, the local party source names each party by its container's
 // UUID, unique across namespaces, so the id alone identifies the party.
-fn key(reference: &PartyRef) -> Option<String> {
+pub(crate) fn party_key(reference: &PartyRef) -> Option<String> {
     match &reference.id {
         ObjectId::HierObjectId(id) => Some(id.value().to_owned()),
         ObjectId::GenericId(id) => Some(id.value.clone()),

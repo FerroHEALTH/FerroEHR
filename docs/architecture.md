@@ -479,7 +479,20 @@ which is what makes an optional stage safe to disable:
    whole EHR, a directive holds until its validity ends, and one that no
    emergency may lift is refused `400` until the evaluator reads
    `emergency_override`. The projection and its rules are our own design;
-   no specification governs them.
+   no specification governs them. The commit of an `EHR_ACCESS` version also
+   projects the settings in its own transaction (RM Common IM change control:
+   every change is a version in a contribution) into `access_settings`, one
+   `access_directive` row per directive and exception (kind, effect, actor
+   party, role, relationship, caller kind, operation, purpose, category,
+   sensitivity, validity) and one `access_label` row per label
+   (`service::ehr::access_projection`); a trigger on `access_settings`
+   notifies `ferroehr_ehr_access` with the EHR id, and the first boot and
+   `party-binding refill` rebuild the rows. Each replica copies an EHR's
+   settings on first read and drops the copy on that notification
+   (`policy_register::listen::Listened` with a `Subscriber`); while the
+   listener is down it reads the projection per request, and a projection
+   that cannot be read is `503`. No openEHR spec governs the projection or
+   the copy: our own design (#5509).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
