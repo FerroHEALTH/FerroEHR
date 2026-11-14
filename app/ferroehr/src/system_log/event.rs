@@ -87,6 +87,12 @@ pub enum ObjectClass {
     Authentication,
 }
 
+/// The code system of the ITS-REST operation ids a record writes as its
+/// operation subtype.
+// NOTE: no specification governs this: our own design; no external code system names the
+// openEHR REST operations, and the DICOM rendering names them `openEHR-ITS-REST`.
+pub const OPERATION_SYSTEM: &str = "urn:openehr:its-rest:operation";
+
 /// The concrete kind of event within its `EventID` family — rendered as the
 /// DICOM `EventTypeCode` (DICOM PS3.15 §A.5 `EventIdentification`).
 #[derive(Debug, Clone, PartialEq, Eq)]
