@@ -16,8 +16,8 @@ use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::party_binding::derive::Facts;
 use crate::service::ehr::access_projection::AccessCommit;
-use crate::versioning::{Kind, SigningCtx};
 use crate::versioning::change::Committed;
+use crate::versioning::{Kind, SigningCtx};
 
 /// What the hooks of one written version read beside the version itself,
 /// captured before the change was resolved.

@@ -348,9 +348,10 @@ impl CareTeam {
     pub fn live_on(&self, day: jiff::civil::Date, grace: jiff::Span) -> bool {
         let begun = self.dates.lower.is_none_or(|lower| lower <= day);
         // NOTE: our own design, a grace that does not add to the end date admits nothing after it.
-        let open = self.dates.upper.is_none_or(|upper| {
-            day < upper || upper.checked_add(grace).is_ok_and(|end| day < end)
-        });
+        let open = self
+            .dates
+            .upper
+            .is_none_or(|upper| day < upper || upper.checked_add(grace).is_ok_and(|end| day < end));
         begun && open
     }
 }
@@ -370,7 +371,8 @@ pub struct CallerFacts {
 impl CallerFacts {
     /// The facts holding `clearances`, `purposes` and `care_teams`, each
     /// sorted and distinct.
-    pub(crate) fn new(
+    #[must_use]
+    pub fn new(
         mut clearances: Vec<ForeignCode>,
         mut purposes: Vec<ForeignCode>,
         mut care_teams: Vec<CareTeam>,

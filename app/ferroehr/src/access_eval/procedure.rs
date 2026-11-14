@@ -118,7 +118,9 @@ impl Policy {
     /// The requirements of `policy`; none when no version is committed.
     #[must_use]
     pub fn of(
-        policy: Option<&openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy>,
+        policy: Option<
+            &openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy,
+        >,
     ) -> Self {
         let Some(policy) = policy else {
             return Self::default();
@@ -343,8 +345,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     let keeper = caller.administrator || caller.settings.is_gate_keeper(judged.ehr.settings);
     let live = judged.ehr.cared && !held_closed;
     // Step 5: a care relationship.
-    if judged.policy.care_required && caller.kind == CallerKind::Professional && !(live || keeper)
-    {
+    if judged.policy.care_required && caller.kind == CallerKind::Professional && !(live || keeper) {
         let naming = permits
             .iter()
             .filter(|(d, _)| d.applies_to.is_some())
@@ -514,7 +515,10 @@ impl Reader<'_, '_> {
                     .any(|coded| coded.defining_code.code_string == declared)
             })
         });
-        in_force && operation && purpose && (directive.applies_to.is_none() || self.actor(directive))
+        in_force
+            && operation
+            && purpose
+            && (directive.applies_to.is_none() || self.actor(directive))
     }
 
     /// Whether an actor scope of `directive` names the caller: every

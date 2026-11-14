@@ -46,9 +46,7 @@ impl HeadFacts {
         let origins: Option<Value> = row.try_get("access_origins")?;
         Ok(Self {
             vo_id,
-            ehr_id: row
-                .try_get::<Option<Uuid>, _>("access_ehr_id")?
-                .map(EhrId),
+            ehr_id: row.try_get::<Option<Uuid>, _>("access_ehr_id")?.map(EhrId),
             template: row.try_get("access_template")?,
             archetype: row.try_get("access_archetype")?,
             origins: origins.map(|origins| {

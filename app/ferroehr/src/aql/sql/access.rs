@@ -60,10 +60,12 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
             Some(not_in_ids(target.clone(), &held))
         }
         Some(pair) if pair.admits_none() => None,
-        Some(pair) => Some(
-            not_in_ids(target.clone(), &condition.known)
-                .and(admitted(condition, pair, h, target.clone())),
-        ),
+        Some(pair) => Some(not_in_ids(target.clone(), &condition.known).and(admitted(
+            condition,
+            pair,
+            h,
+            target.clone(),
+        ))),
     };
     branches.extend(others);
     Some(or_all(branches))
@@ -141,7 +143,6 @@ fn pred(pred: &Pred, h: &str) -> Expr {
     }
 }
 
-
 /// The rows one data scope covers.
 fn data_match(data: &DataMatch, polarity: Polarity, h: &str) -> Expr {
     let mut atoms: Vec<Expr> = Vec::new();
@@ -155,9 +156,7 @@ fn data_match(data: &DataMatch, polarity: Polarity, h: &str) -> Expr {
         atoms.push(archetype_in(h, archetypes));
     }
     if let Some(categories) = &data.categories {
-        atoms.push(or_all(
-            categories.iter().map(|c| category(h, c)).collect(),
-        ));
+        atoms.push(or_all(categories.iter().map(|c| category(h, c)).collect()));
     }
     if let Some(origins) = &data.origins {
         atoms.push(origin_in(h, origins, polarity));

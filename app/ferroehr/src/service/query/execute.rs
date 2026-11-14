@@ -318,7 +318,11 @@ impl FerroEhrService {
         // evaluator answers as absent is named by no query.
         let mut present = std::collections::HashSet::with_capacity(existing.len());
         for id in existing {
-            if !self.ehr_hidden_from_request(id).await.map_err(Failure::analysis)? {
+            if !self
+                .ehr_hidden_from_request(id)
+                .await
+                .map_err(Failure::analysis)?
+            {
                 present.insert(id.0);
             }
         }

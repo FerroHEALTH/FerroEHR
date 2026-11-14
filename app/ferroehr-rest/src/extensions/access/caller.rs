@@ -45,17 +45,21 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
     let kind = kind(principal, settings.subject(), &capabilities);
     let roles = principal.map_or_else(Vec::new, |p| p.roles.clone());
     let authz = state.authz();
-    let (server_default, admin_role) = authz.as_deref().map_or(
-        (EhrAccessDefault::Open, "ADMIN".to_owned()),
-        |handle| (handle.ehr_access_default(), handle.admin_role().to_owned()),
-    );
+    let (server_default, admin_role) = authz
+        .as_deref()
+        .map_or((EhrAccessDefault::Open, "ADMIN".to_owned()), |handle| {
+            (handle.ehr_access_default(), handle.admin_role().to_owned())
+        });
     let mut acts_for: Vec<String> = capabilities
         .facts()
         .care_teams()
         .iter()
         .map(|team| team.team().to_string())
         .collect();
-    if let Some(provider) = capabilities.client().and_then(|client| client.provider.as_ref()) {
+    if let Some(provider) = capabilities
+        .client()
+        .and_then(|client| client.provider.as_ref())
+    {
         acts_for.push(provider.party.to_string());
     }
     let caller = Caller {
@@ -93,8 +97,8 @@ fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilitie
     if subject || smart.is_some_and(|caller| caller.is_the_person()) {
         return CallerKind::Subject;
     }
-    let represents = smart
-        .is_some_and(|caller| matches!(caller.kind(), SmartKind::Representative { .. }));
+    let represents =
+        smart.is_some_and(|caller| matches!(caller.kind(), SmartKind::Representative { .. }));
     if represents || principal.represented.is_some() {
         return CallerKind::Representative;
     }
@@ -143,14 +147,14 @@ fn emergency(
         });
     // NOTE: an external person may override only where its agreement sets
     // opt_out_override, and an organisation never; our own design under EHDS Art. 10(2).
-    let overridable = principal.is_some_and(|p| match super::authn::declared::admitted(&p.access) {
-        Some(agreement) => agreement.opt_out_override && agreement.accessor == Accessor::Person,
-        None => kind == CallerKind::AccessService,
-    });
+    let overridable =
+        principal.is_some_and(|p| match super::authn::declared::admitted(&p.access) {
+            Some(agreement) => agreement.opt_out_override && agreement.accessor == Accessor::Person,
+            None => kind == CallerKind::AccessService,
+        });
     // NOTE: EHDS Art. 10(2) admits "a healthcare provider or health professional", so a
     // caller acting for the person is never admitted by the override.
-    let opt_out_override =
-        overridable && !principal.is_some_and(super::delay::acts_for_the_person);
+    let opt_out_override = overridable && !principal.is_some_and(super::delay::acts_for_the_person);
     Emergency {
         declared,
         break_glass,

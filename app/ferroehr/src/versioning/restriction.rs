@@ -80,10 +80,9 @@ async fn ensure_not_access_restricted_tx(
     let verdict = match access.verdict(ehr_id) {
         Some(verdict) => verdict,
         None => {
-            let body = crate::storage::version_repo::ehr_access::current_ehr_access_body(
-                &mut *tx, ehr_id,
-            )
-            .await?;
+            let body =
+                crate::storage::version_repo::ehr_access::current_ehr_access_body(&mut *tx, ehr_id)
+                    .await?;
             let settings = match body {
                 Some(body) => {
                     let access = serde_json::from_str::<serde_json::Value>(&body)
@@ -111,9 +110,10 @@ async fn ensure_not_access_restricted_tx(
         }
         _ => None,
     };
-    let outcome = facts
-        .as_ref()
-        .map_or_else(|| verdict.outcome(&Item::Ehr), |facts| verdict.outcome(&facts.item()));
+    let outcome = facts.as_ref().map_or_else(
+        || verdict.outcome(&Item::Ehr),
+        |facts| verdict.outcome(&facts.item()),
+    );
     match (outcome, vo_id) {
         (Outcome::Admit, _) => Ok(()),
         (Outcome::Absent(_), Some(vo_id)) if facts.is_some() => Err(ServiceError::not_found(
@@ -129,4 +129,3 @@ async fn ensure_not_access_restricted_tx(
         ))),
     }
 }
-

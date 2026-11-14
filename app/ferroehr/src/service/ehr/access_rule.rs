@@ -49,6 +49,13 @@ impl SettingsCaller {
             .and_then(|identity| crate::versioning::committer::bound::server_committer(&identity));
         let subject = matches!(committer, Some(PartyProxy::PartySelf(_)));
         let party = committer.as_ref().and_then(reference).and_then(party_key);
+        Self::new(administrator, subject, party)
+    }
+
+    /// The caller who is an administrator or not, the record's person or
+    /// not, and bound to the party `party`.
+    #[must_use]
+    pub fn new(administrator: bool, subject: bool, party: Option<String>) -> Self {
         Self {
             administrator,
             subject,

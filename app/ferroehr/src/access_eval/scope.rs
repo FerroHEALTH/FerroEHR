@@ -31,8 +31,8 @@ use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind};
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
-use crate::service::ehr::access_projection::{Bound, Validity, validity};
 use crate::policy_register::CategoriesInForce;
+use crate::service::ehr::access_projection::{Bound, Validity, validity};
 
 /// How a fact that cannot be read is read: as covering for a deny, as not
 /// covering for a permit.
@@ -180,9 +180,9 @@ impl DataMatch {
                 .as_ref()
                 .is_none_or(|c| c.iter().any(|category| category.holds(object)))
             && self.origins.as_ref().is_none_or(|o| {
-                object
-                    .origins
-                    .map_or(polarity.unreadable(), |origins| origins.iter().any(|x| o.contains(x)))
+                object.origins.map_or(polarity.unreadable(), |origins| {
+                    origins.iter().any(|x| o.contains(x))
+                })
             })
             && self.recorded.as_ref().is_none_or(|r| {
                 object

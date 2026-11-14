@@ -179,7 +179,13 @@ impl RequestAccess {
     /// `PERSON` container id.
     #[must_use]
     pub fn cared_subjects(&self) -> Vec<String> {
-        let teams: Vec<Uuid> = self.caller.facts.care_teams().iter().map(CareTeam::team).collect();
+        let teams: Vec<Uuid> = self
+            .caller
+            .facts
+            .care_teams()
+            .iter()
+            .map(CareTeam::team)
+            .collect();
         self.grants.as_ref().map_or_else(Vec::new, |grants| {
             grants
                 .cared_for_by(&teams, self.today(), self.policy().grace)
@@ -247,7 +253,10 @@ impl RequestAccess {
         };
         let mut groups: BTreeMap<VerdictPair, Vec<Uuid>> = BTreeMap::new();
         for (ehr_id, settings) in index {
-            groups.entry(pair(Some(settings))).or_default().push(ehr_id.0);
+            groups
+                .entry(pair(Some(settings)))
+                .or_default()
+                .push(ehr_id.0);
         }
         AccessCondition::new(groups, pair(None), cared)
     }
@@ -304,7 +313,11 @@ impl AccessCondition {
     }
 
     /// The condition of `groups`, `default` for every other EHR.
-    fn new(groups: BTreeMap<VerdictPair, Vec<Uuid>>, default: VerdictPair, cared: Vec<String>) -> Self {
+    fn new(
+        groups: BTreeMap<VerdictPair, Vec<Uuid>>,
+        default: VerdictPair,
+        cared: Vec<String>,
+    ) -> Self {
         let known = groups.values().flatten().copied().collect::<Vec<_>>();
         let default_admits = default.admits_all();
         let groups: Vec<(Vec<Uuid>, Arc<VerdictPair>)> = groups
