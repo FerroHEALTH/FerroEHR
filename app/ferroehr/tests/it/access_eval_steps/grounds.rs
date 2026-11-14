@@ -90,15 +90,15 @@ fn decide_on(
 ) -> (Outcome, Decision) {
     let ehr_id = EhrId(uuid(EHR));
     let version = settings.as_ref().map(|_| EHR_ACCESS_VERSION.to_owned());
-    let verdict = access.judge_ehr(
-        ehr_id,
-        &EhrEntry {
-            settings: Arc::new(settings),
-            subject: None,
-            version,
-            revision: ferroehr::storage::access_projection::Revision::default(),
-        },
-    );
+    let entry = EhrEntry {
+        settings: Arc::new(settings),
+        subject: None,
+        version,
+        revision: ferroehr::storage::access_projection::Revision::default(),
+    };
+    // NOTE: an EHR with no subject reads no care relationship, so the judgement awaits nothing.
+    let verdict = futures::executor::block_on(access.judge_ehr(ehr_id, &entry))
+        .expect("an EHR with no subject reads no care relationship");
     let outcome = access.note(ehr_id, &verdict, item);
     (outcome, access.decision(Some(ehr_id)))
 }

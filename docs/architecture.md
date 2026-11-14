@@ -936,9 +936,18 @@ only the facts of the parties stamped since its copy, one indexed read
 small read and the request path still adds no transaction. A refill and an
 erasure move the grant revision, which reads every fact again.
 `Capabilities::facts()` gives a request's caller its clearances, purposes
-and care teams in force; `LiveGrants::under_care_of` gives a subject's care
-relationships with their dates, so the evaluator applies the grace after a
-discharge. A `PERSON` version that changes its care relationships commits
+and care teams in force. The replica's copy holds the facts of callers
+alone: a patient's `under_care_of` relationships grow with the record, so
+`grants::care::CareCopy` holds them in two bounded caches (#5615), a
+subject's relationships (`LiveGrants::under_care_of`, at most
+`care::SUBJECTS` subjects) and a care team's patients
+(`LiveGrants::cared_for_by`, teams holding at most `care::CENSUS` patients
+together, read by `ix_binding_caller_fact_care_team` of migration
+`party/0041`). Each is read on a miss, one indexed statement, and dropped
+when the facts read of a notification stamps a party it holds or a team the
+party is now under the care of; a grant reload and a listener that connects
+or loses its connection drop both. The relationships carry their dates, so
+the evaluator applies the grace after a discharge. A `PERSON` version that changes its care relationships commits
 only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
 the care delivery environment evaluates "care deliverer"). A care

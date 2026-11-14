@@ -98,15 +98,13 @@ async fn ensure_not_access_restricted_tx(
             None => None,
         };
         let (subject, version) = Box::pin(subject_and_access_version(&mut *tx, ehr_id)).await?;
-        access.judge_ehr(
-            ehr_id,
-            &crate::access_eval::condition::EhrEntry {
-                version: settings.as_ref().and(version),
-                settings: std::sync::Arc::new(settings),
-                subject,
-                revision: seen,
-            },
-        )
+        let entry = crate::access_eval::condition::EhrEntry {
+            version: settings.as_ref().and(version),
+            settings: std::sync::Arc::new(settings),
+            subject,
+            revision: seen,
+        };
+        Box::pin(access.judge_ehr(ehr_id, &entry)).await?
     };
     let facts = match vo_id {
         Some(vo_id) if verdict.item_dependent() => {
