@@ -339,6 +339,20 @@ impl CareTeam {
     pub fn holds_on(&self, day: jiff::civil::Date) -> bool {
         self.dates.holds(day)
     }
+
+    /// Whether it admits access on `day`: it has begun, and it holds or ended
+    /// less than `grace` before `day` (BASE Architecture Overview
+    /// `master07-security.adoc` §Security Policy, "Time-limitation of
+    /// access": the episode of care "plus some further time").
+    #[must_use]
+    pub fn live_on(&self, day: jiff::civil::Date, grace: jiff::Span) -> bool {
+        let begun = self.dates.lower.is_none_or(|lower| lower <= day);
+        // NOTE: our own design, a grace that does not add to the end date admits nothing after it.
+        let open = self.dates.upper.is_none_or(|upper| {
+            day < upper || upper.checked_add(grace).is_ok_and(|end| day < end)
+        });
+        begun && open
+    }
 }
 
 /// What the access evaluator reads about one caller beside its grants.

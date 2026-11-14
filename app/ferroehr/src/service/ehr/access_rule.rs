@@ -68,6 +68,12 @@ impl SettingsCaller {
         self.subject
     }
 
+    /// The id of the demographic party the caller is bound to.
+    #[must_use]
+    pub fn party(&self) -> Option<&str> {
+        self.party.as_deref()
+    }
+
     /// Whether a gate-keeper of `settings` names the caller: `PARTY_SELF`
     /// names the subject, and any other `PARTY_PROXY` names the party its
     /// `external_ref` references.

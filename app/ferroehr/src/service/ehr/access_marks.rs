@@ -13,14 +13,16 @@
 //! with the `EHR_ACCESS` (RM ehr `ehr_access.adoc` §`EHR_ACCESS` Class) and
 //! travels in an EHR Extract.
 //!
-//! Every `EHR_ACCESS` commit, import, archive load and repair projects the
-//! directives in force onto the marks of [`crate::storage::access_marks`] in
-//! its own transaction ([`project`]), and every boot projects every stored
-//! `EHR_ACCESS` again. The projection never reads a directive more
-//! permissively than it is written: a data scope it cannot place covers the
-//! whole EHR, and a directive whose validity has not begun, or that names
-//! callers, operations, purposes or exceptions, holds for every caller the
-//! request seam binds.
+//! A request is judged by the access evaluator, which reads every attribute of
+//! a directive for the caller who asks ([`crate::access_eval`]). The marks of
+//! [`crate::storage::access_marks`] serve the readers that have no caller to
+//! judge: the event outbox withholds what they mark. Every `EHR_ACCESS`
+//! commit, import, archive load and repair projects the directives in force
+//! onto them in its own transaction ([`project`]), and every boot projects
+//! every stored `EHR_ACCESS` again. With no caller, the projection reads a
+//! directive as binding everyone: a data scope it cannot place covers the
+//! whole EHR, and a directive's callers, operations, purposes and exceptions
+//! narrow nothing.
 //!
 //! No openEHR spec governs either right, the directives or the projection: our
 //! own design (#5487).
@@ -39,10 +41,6 @@ use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_marks::{self, Marks};
-use crate::system_log::event::EventActionCode;
-
-/// The name the access record gives an override of the opt-out.
-const OPT_OUT_OVERRIDE: &str = "access-opt-out-override";
 
 /// The marks the settings of one EHR imply at `now`.
 ///
@@ -81,13 +79,8 @@ pub(crate) fn marks_of(settings: Option<&EhrAccessSettings>, now: jiff::Timestam
 }
 
 /// Why the projection refuses `settings`, naming the first defect: a
-/// `restriction` or `opt_out` directive no emergency may lift
-/// (`emergency_override` false), or a restriction whose data scope holds a
-/// reference that names no versioned object.
-///
-/// The request seam lifts both marks for a declared emergency (EHDS Art. 10(2)
-/// and Art. 11(5)) and cannot yet tell a directive that forbids it, so such a
-/// directive is refused rather than read as lifted.
+/// restriction whose data scope holds a reference that names no versioned
+/// object, which neither the marks nor the evaluator could place.
 #[must_use]
 pub(crate) fn refused(settings: &EhrAccessSettings) -> Option<String> {
     let EhrAccessSettings::Directives(settings) = settings else {
@@ -96,16 +89,6 @@ pub(crate) fn refused(settings: &EhrAccessSettings) -> Option<String> {
     let directives = settings.directives.as_deref().unwrap_or_default();
     for (index, directive) in directives.iter().enumerate() {
         let restriction = DirectiveKind::Restriction.is(&directive.kind);
-        if !directive.emergency_override
-            && (restriction || DirectiveKind::OptOut.is(&directive.kind))
-        {
-            // TODO(#5513): honour emergency_override false once the evaluator reads directives.
-            return Some(format!(
-                "directives[{index}]: a restriction or opt_out directive must set \
-                 emergency_override true; this server lifts both for a declared emergency \
-                 (EHDS Art. 10(2) and Art. 11(5))"
-            ));
-        }
         let scopes = directive.data.as_deref().unwrap_or_default();
         for (at, scope) in scopes.iter().enumerate().filter(|_| restriction) {
             let objects = scope.objects.as_deref().unwrap_or_default();
@@ -188,7 +171,7 @@ fn id_text(object: &ObjectRef) -> Option<&str> {
 
 /// The versioned-object id an `OBJECT_REF` names, by its id or the head of its
 /// version id; `None` for a reference to anything else.
-fn object_id(object: &ObjectRef) -> Option<uuid::Uuid> {
+pub(crate) fn object_id(object: &ObjectRef) -> Option<uuid::Uuid> {
     id_text(object)
         .and_then(|text| VoId::from_uid_head(text).ok())
         .map(|vo_id| vo_id.0)
@@ -272,94 +255,6 @@ impl FerroEhrService {
             tx.commit().await?;
         }
         Ok(bodies.len())
-    }
-
-    /// Whether the EHR `ehr_id` carries a whole-EHR EHDS Art. 8 restriction;
-    /// `false` for an unknown EHR.
-    ///
-    /// # Errors
-    /// `exception` — a database fault.
-    pub async fn is_ehr_access_restricted(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        Ok(access_marks::is_ehr_access_restricted(&self.pool, ehr_id).await?)
-    }
-
-    /// Whether the versioned object `vo_id` carries an EHDS Art. 8
-    /// restriction, its own or its EHR's; `false` for an unknown object.
-    ///
-    /// # Errors
-    /// `exception` — a database fault.
-    pub async fn is_object_access_restricted(&self, vo_id: VoId) -> Result<bool, ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
-        Ok(access_marks::is_access_restricted(&mut conn, vo_id).await?)
-    }
-
-    /// Whether the EHR `ehr_id` carries the EHDS Art. 10 opt-out mark; `false`
-    /// for an unknown EHR.
-    ///
-    /// # Errors
-    /// `exception` — a database fault.
-    pub async fn is_ehr_opted_out(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
-        Ok(access_marks::is_opted_out(&self.pool, ehr_id).await?)
-    }
-
-    /// The EHR that owns `vo_id` when that EHR carries the EHDS Art. 10
-    /// opt-out mark; `None` for an unknown object, a party object, or an EHR
-    /// with no opt-out.
-    ///
-    /// # Errors
-    /// `exception` — a database fault.
-    pub async fn opted_out_owner(&self, vo_id: VoId) -> Result<Option<EhrId>, ServiceError> {
-        let owner = crate::storage::version_repo::meta::vo_owner(&self.pool, vo_id)
-            .await?
-            .flatten();
-        match owner {
-            Some(ehr_id) if self.is_ehr_opted_out(ehr_id).await? => Ok(Some(ehr_id)),
-            _ => Ok(None),
-        }
-    }
-
-    /// Whether the EHR `ehr_id` reads as absent to the current request, under
-    /// the EHDS Art. 8 restriction or the Art. 10 opt-out it enforces; `false`
-    /// for an unknown EHR.
-    ///
-    /// # Errors
-    /// [`ServiceError::Storage`] or a pool fault when the marks cannot be read.
-    pub(crate) async fn ehr_hidden_from_request(
-        &self,
-        ehr_id: EhrId,
-    ) -> Result<bool, ServiceError> {
-        use crate::system_log::access_context::{
-            access_opt_out_enforced, access_restriction_enforced,
-        };
-        let (restricted, opted_out) = (access_restriction_enforced(), access_opt_out_enforced());
-        if !restricted && !opted_out {
-            return Ok(false);
-        }
-        let mut conn = acquire(&self.pool).await?;
-        Ok(access_marks::ehr_hidden(&mut conn, ehr_id, restricted, opted_out).await?)
-    }
-
-    /// Record that an access-service caller reached each opted-out EHR among
-    /// `ehr_ids` under the EHDS Art. 10(2) override, once per EHR; an EHR
-    /// with no opt-out records nothing.
-    ///
-    /// Each record carries the declared purpose, which gives it the emergency
-    /// mark, beside the access record of the request itself.
-    ///
-    /// # Errors
-    /// `exception` when a mark cannot be read; `service_overloaded` when an
-    /// access record was refused under `[audit] fail_mode = "closed"`.
-    pub async fn record_access_opt_out_overrides(
-        &self,
-        ehr_ids: &[EhrId],
-    ) -> Result<(), ServiceError> {
-        let named: std::collections::BTreeSet<EhrId> = ehr_ids.iter().copied().collect();
-        for ehr_id in named {
-            if self.is_ehr_opted_out(ehr_id).await? {
-                self.emit_mark_access(EventActionCode::Execute, ehr_id, None, OPT_OUT_OVERRIDE)?;
-            }
-        }
-        Ok(())
     }
 }
 
@@ -507,20 +402,18 @@ mod tests {
         assert!(marks.restricted_ehr && marks.opted_out);
     }
 
+    /// A directive no emergency may lift projects like any other: the
+    /// evaluator honours `emergency_override` for each caller (#5513).
     #[test]
-    fn a_directive_no_emergency_lifts_is_refused() {
+    fn a_directive_no_emergency_lifts_is_projected() {
         let mut absolute = directive("opt_out", &json!({}));
         absolute["emergency_override"] = json!(false);
-        let mut consent = directive("consent", &json!({}));
-        consent["emergency_override"] = json!(false);
-        let named = settings(&[consent, directive("restriction", &json!({})), absolute]);
-        let defect = refused(&named).expect("refused");
-        assert!(defect.starts_with("directives[2]: "), "{defect}");
-        assert!(defect.contains("emergency_override"), "{defect}");
-        assert_eq!(
-            refused(&settings(&[directive("restriction", &json!({}))])),
-            None
-        );
+        let mut restriction = directive("restriction", &json!({}));
+        restriction["emergency_override"] = json!(false);
+        let named = settings(&[restriction, absolute]);
+        assert_eq!(refused(&named), None);
+        let marks = marks_of(Some(&named), now());
+        assert!(marks.restricted_ehr && marks.opted_out);
     }
 
     /// A restriction naming an object by an id that names no versioned object

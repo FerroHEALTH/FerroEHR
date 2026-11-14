@@ -81,7 +81,7 @@ use openehr_its::rest::routes::{Param, ParamLocation, PathParam, RouteMatch};
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::extensions::access::{delay, ehr_access, opt_out, pep, restriction};
+use crate::extensions::access::{caller, delay, ehr_access, pep};
 #[cfg(feature = "fhir")]
 use crate::extensions::fhir;
 use crate::extensions::terminology;
@@ -354,61 +354,42 @@ where
             .insert(crate::system_log::middleware::AuditOpId(op));
         return resp;
     }
-    // NOTE: EHDS Art. 8 (`docs/law/eu/ehds/text.html`), restricted data reads as
-    // absent to every operation but the controller's own and an emergency access.
-    let enforced = restriction::applies(&state, op);
     // NOTE: EHDS Art. 3(3) (`docs/law/eu/ehds/text.html`), data a professional has not
     // released reads as absent to a patient-context request on a deployment that delays.
     let delayed = delay::applies(&state, op);
-    // NOTE: EHDS Art. 10 (`docs/law/eu/ehds/text.html`), an opted-out EHR reads as absent to
-    // an access-service caller unless it declares a vital interest under Art. 10(2).
-    let opted_out = opt_out::applies(&state, op);
+    // NOTE: our own design (#5513), every operation but the controller's own is judged by
+    // the access evaluator, which holds the EHDS Art. 8 restriction and Art. 10 opt-out.
+    let access = caller::request_access(&state, op);
     let guarded = Box::pin(async move {
-        match ehr_access::enforce(&state, &parts).await {
-            Ok(()) => {
-                if enforced {
-                    match restriction::refuse_restricted(&state, op, &parts).await {
-                        Ok(Some(absent)) => return absent,
-                        Ok(None) => {}
-                        Err(fault) => return *fault,
-                    }
-                }
-                if delayed {
-                    match delay::refuse_withheld(&state, op, &parts).await {
-                        Ok(Some(absent)) => return absent,
-                        Ok(None) => {}
-                        Err(fault) => return *fault,
-                    }
-                }
-                match opt_out::refuse_opted_out(&state, op, &parts, opted_out).await {
-                    Ok(Some(absent)) => return absent,
-                    Ok(None) => {}
-                    Err(fault) => return *fault,
-                }
-                match pep::pre_check(&state, op, &parts).await {
-                    Ok(()) => {
-                        let resp = handler(state.clone(), parts)
-                            .await
-                            .unwrap_or_else(IntoResponse::into_response);
-                        pep::post_check(&state, op, resp).await
-                    }
-                    Err(deny) => deny,
-                }
+        if let Err(deny) = ehr_access::enforce(&state, op, &parts).await {
+            return *deny;
+        }
+        if delayed {
+            match delay::refuse_withheld(&state, op, &parts).await {
+                Ok(Some(absent)) => return absent,
+                Ok(None) => {}
+                Err(fault) => return *fault,
             }
-            Err(deny) => *deny,
+        }
+        // TODO(#5515): remove the Cedar policy-enforcement point; it runs only on a request
+        // the access evaluator admitted, and no Cedar permit lifts an evaluator refusal.
+        match pep::pre_check(&state, op, &parts).await {
+            Ok(()) => {
+                let resp = handler(state.clone(), parts)
+                    .await
+                    .unwrap_or_else(IntoResponse::into_response);
+                pep::post_check(&state, op, resp).await
+            }
+            Err(deny) => deny,
         }
     });
-    let mut resp = ferroehr::system_log::access_context::with_access_restriction(
-        enforced,
-        ferroehr::system_log::access_context::with_access_delay(
-            delayed,
-            ferroehr::system_log::access_context::with_access_opt_out(
-                opted_out == opt_out::OptOut::Enforced,
-                guarded,
-            ),
-        ),
-    )
-    .await;
+    let delayed_guard = ferroehr::system_log::access_context::with_access_delay(delayed, guarded);
+    let mut resp = match access {
+        Some(access) => {
+            ferroehr::access_eval::condition::with_request_access(access, delayed_guard).await
+        }
+        None => delayed_guard.await,
+    };
     resp.extensions_mut()
         .insert(crate::system_log::middleware::AuditOpId(op));
     resp

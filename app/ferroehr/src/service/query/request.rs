@@ -53,10 +53,10 @@ pub struct AqlQueryRequest {
     /// [`Self::subject_scope`] id is read in; `None` reads the id alone and
     /// refuses one held under several namespaces.
     pub subject_namespace: Option<String>,
-    /// The caller's per-EHR access decision (`EHR_ACCESS`): the EHRs the query
-    /// may read rows from, applied to every EHR-anchored source whatever the
-    /// query scopes or projects.
-    pub ehr_access: crate::aql::sql::EhrAccessScope,
+    /// The access evaluator's condition for the caller (`EHR_ACCESS`): the
+    /// rows the query may read, applied to every EHR-anchored source whatever
+    /// the query scopes or projects.
+    pub ehr_access: crate::access_eval::condition::AccessCondition,
     /// Whether the executor should collect the touched EHR-id / template-id
     /// sets for the ABAC query post-check (our own extension).
     pub collect_attributes: bool,

@@ -128,7 +128,7 @@ fn lowered(aql: &str) -> ferroehr::aql::sql::PreparedQuery {
         ehr_ids: Vec::new(),
         ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
         subject_scope: None,
-        ehr_access: ferroehr::aql::sql::EhrAccessScope::Unrestricted,
+        ehr_access: ferroehr::access_eval::condition::AccessCondition::unrestricted(),
         limit: Some(50),
         offset: None,
         archetype_lineage: Arc::new(ArchetypeLineage::default()),

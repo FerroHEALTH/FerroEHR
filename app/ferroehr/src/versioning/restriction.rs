@@ -53,38 +53,80 @@ pub(crate) async fn ensure_not_restricted_tx(
     crate::versioning::access_delay::ensure_not_withheld_tx(tx, vo_id).await
 }
 
-/// Refuse, as though the target did not exist, a write to data under an EHDS
-/// Art. 8 access restriction, whose fact is "not visible to healthcare
-/// providers", or to an EHR whose person opted out under Art. 10, while the
-/// request enforces either (`docs/law/eu/ehds/text.html`). No openEHR spec
-/// governs either: our own design/extension.
+/// Refuse a write the access evaluator refuses for the running request: as
+/// though the target did not exist under an EHDS Art. 8 restriction or an
+/// Art. 10 opt-out, whose fact is "not visible to healthcare providers"
+/// (`docs/law/eu/ehds/text.html`), and with its `refused-*` code under every
+/// other step. The EHR the request did not judge yet is judged from the rows
+/// the commit's transaction reads; an object of a verdict that depends on the
+/// object is judged by its head row. No openEHR spec governs this: our own
+/// design (#5513).
 ///
 /// # Errors
 /// [`ServiceError::NotFound`] (`ehr_id_does_not_exist` or
-/// `versioned_object_does_not_exist`) when either grain is marked;
-/// [`ServiceError::Database`] if the marks cannot be read.
+/// `versioned_object_does_not_exist`) for an absent target,
+/// [`ServiceError::Forbidden`] naming the refusal code, and
+/// [`ServiceError::Database`] if a fact cannot be read.
 async fn ensure_not_access_restricted_tx(
     tx: &mut PgConnection,
     ehr_id: Option<EhrId>,
     vo_id: Option<VoId>,
 ) -> Result<(), ServiceError> {
-    let restricted = crate::system_log::access_context::access_restriction_enforced();
-    let opted_out = crate::system_log::access_context::access_opt_out_enforced();
-    if let Some(ehr_id) = ehr_id.filter(|_| restricted || opted_out)
-        && crate::storage::access_marks::ehr_hidden(&mut *tx, ehr_id, restricted, opted_out).await?
-    {
-        return Err(ServiceError::not_found(
-            Missing::Ehr,
-            format!("EHR {ehr_id}"),
-        ));
-    }
-    if let Some(vo_id) = vo_id.filter(|_| restricted)
-        && crate::storage::access_marks::is_access_restricted(&mut *tx, vo_id).await?
-    {
-        return Err(ServiceError::not_found(
+    use crate::access_eval::procedure::Outcome;
+    use crate::access_eval::scope::Item;
+    let (Some(access), Some(ehr_id)) = (crate::access_eval::condition::current(), ehr_id) else {
+        return Ok(());
+    };
+    let verdict = match access.verdict(ehr_id) {
+        Some(verdict) => verdict,
+        None => {
+            let body = crate::storage::version_repo::ehr_access::current_ehr_access_body(
+                &mut *tx, ehr_id,
+            )
+            .await?;
+            let settings = match body {
+                Some(body) => {
+                    let access = serde_json::from_str::<serde_json::Value>(&body)
+                        .map_err(|e| ServiceError::internal("read a stored EHR_ACCESS body", e))?;
+                    crate::service::ehr::access_settings::EhrAccessSettings::held_or_read(&access)
+                }
+                None => None,
+            };
+            let subject: Option<String> =
+                sqlx::query_scalar("SELECT subject_id FROM ehr WHERE id = $1")
+                    .bind(ehr_id)
+                    .fetch_optional(&mut *tx)
+                    .await?
+                    .flatten();
+            let subject = subject.and_then(|subject| subject.parse::<uuid::Uuid>().ok());
+            access.judge_ehr(ehr_id, &settings, subject)
+        }
+    };
+    let facts = match vo_id {
+        Some(vo_id) if verdict.item_dependent() => {
+            crate::storage::access_facts::of_objects(&mut *tx, &[vo_id])
+                .await?
+                .into_iter()
+                .next()
+        }
+        _ => None,
+    };
+    let outcome = facts
+        .as_ref()
+        .map_or_else(|| verdict.outcome(&Item::Ehr), |facts| verdict.outcome(&facts.item()));
+    match (outcome, vo_id) {
+        (Outcome::Admit, _) => Ok(()),
+        (Outcome::Absent(_), Some(vo_id)) if facts.is_some() => Err(ServiceError::not_found(
             Missing::VersionedObject,
             format!("versioned object {vo_id}"),
-        ));
+        )),
+        (Outcome::Absent(_), _) => Err(ServiceError::not_found(
+            Missing::Ehr,
+            format!("EHR {ehr_id}"),
+        )),
+        (Outcome::Refused(code), _) => Err(ServiceError::not_permitted(format!(
+            "{code}: the access directives of EHR {ehr_id} refuse this write"
+        ))),
     }
-    Ok(())
 }
+

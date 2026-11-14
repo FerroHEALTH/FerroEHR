@@ -15,14 +15,14 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::ids::{EhrId, VoId};
+use crate::storage::access_facts::HeadFacts;
 use crate::storage::error::StorageError;
 
 /// Which access marks a read honours besides the restriction register, which
-/// it always honours.
+/// it always honours, and the access evaluator's decision, which it always
+/// applies ([`crate::storage::access_facts`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Enforced {
-    /// The EHDS Art. 8 access restriction (`vo_head.access_restricted_at`).
-    pub access_restriction: bool,
     /// The EHDS Art. 3(3) delay of the person's own access
     /// (`vo_head.person_withheld_until`).
     pub access_delay: bool,
@@ -38,21 +38,26 @@ pub async fn ehr_objects(
     ehr_id: EhrId,
     enforced: Enforced,
 ) -> Result<Vec<(VoId, String)>, StorageError> {
-    let rows = sqlx::query(
-        "SELECT version.vo_id, version.kind FROM version \
+    let rows = sqlx::query(concat!(
+        "SELECT version.vo_id, version.kind, ",
+        head_facts!(),
+        " FROM version \
          JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
          WHERE version.ehr_id = $1 AND h.restricted_at IS NULL \
-         AND (NOT $2 OR h.access_restricted_at IS NULL) \
-         AND (NOT $3 OR (h.person_withheld_until > now()) IS NOT TRUE) ORDER BY version.vo_id",
-    )
+         AND (NOT $2 OR (h.person_withheld_until > now()) IS NOT TRUE) ORDER BY version.vo_id"
+    ))
     .bind(ehr_id)
-    .bind(enforced.access_restriction)
     .bind(enforced.access_delay)
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
-    rows.iter()
-        .map(|r| Ok((r.try_get("vo_id")?, r.try_get("kind")?)))
-        .collect()
+    let mut objects = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let vo_id: VoId = row.try_get("vo_id")?;
+        if HeadFacts::read(row, vo_id)?.admitted() {
+            objects.push((vo_id, row.try_get("kind")?));
+        }
+    }
+    Ok(objects)
 }
 
 /// The kind of the version container `vo_id` of `ehr_id`, or `None` when the
@@ -66,19 +71,23 @@ pub async fn ehr_object_kind(
     vo_id: VoId,
     enforced: Enforced,
 ) -> Result<Option<String>, StorageError> {
-    Ok(sqlx::query_scalar(
-        "SELECT version.kind FROM version \
+    let row = sqlx::query(concat!(
+        "SELECT version.kind, ",
+        head_facts!(),
+        " FROM version \
          JOIN vo_head h ON h.vo_id = version.vo_id AND h.trunk_head_sys_version = version.sys_version \
          WHERE version.vo_id = $1 AND version.ehr_id = $2 AND h.restricted_at IS NULL \
-         AND (NOT $3 OR h.access_restricted_at IS NULL) \
-         AND (NOT $4 OR (h.person_withheld_until > now()) IS NOT TRUE)",
-    )
+         AND (NOT $3 OR (h.person_withheld_until > now()) IS NOT TRUE)"
+    ))
     .bind(vo_id)
     .bind(ehr_id)
-    .bind(enforced.access_restriction)
     .bind(enforced.access_delay)
     .fetch_optional(&mut *acquire(pool).await?)
-    .await?)
+    .await?;
+    match row {
+        Some(row) if HeadFacts::read(&row, vo_id)?.admitted() => Ok(Some(row.try_get("kind")?)),
+        _ => Ok(None),
+    }
 }
 
 /// The `sys_version`s of a version container, in order, each flagged with
