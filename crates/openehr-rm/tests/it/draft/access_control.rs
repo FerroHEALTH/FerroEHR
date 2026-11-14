@@ -22,6 +22,7 @@ use openehr_rm::draft::access_control::access_control::access_data_scope::Access
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use openehr_rm::draft::access_control::access_control::access_label::AccessLabel;
+use openehr_rm::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::access_control::versioned_access_policy::VersionedAccessPolicy;
 use openehr_rm::draft::access_control::common::archetyped::locatable::Locatable;
@@ -156,8 +157,33 @@ fn settings() -> Value {
     })
 }
 
+/// A term of the access log's openEHR `accessor kind` group, its code the
+/// rubric.
+fn accessor_kind(rubric: &str) -> Value {
+    coded("openehr", rubric, rubric)
+}
+
+/// A restriction of the subject view under a national provision: the name of
+/// a person of another organisation withheld.
+fn log_restriction() -> Value {
+    let mut r = locatable("at0003", "External accessor withheld");
+    r.extend(
+        json!({
+            "_type": "ACCESS_LOG_RESTRICTION",
+            "accessor_kinds": [accessor_kind("external person")],
+            "withheld": [term("accessor_party")],
+            "legal_grounds": [coded("urn:example:national-law", "Art. 15e(3)", "15e-3")]
+        })
+        .as_object()
+        .expect("an object")
+        .clone(),
+    );
+    Value::Object(r)
+}
+
 /// The hospital's policy: the ward's care relationship with a 14-day grace,
-/// the HIV classification of `lab_hiv.v1`, and the regional catalogue entry.
+/// the HIV classification of `lab_hiv.v1`, the regional catalogue entry, and
+/// one restriction of the subject's view of the access log.
 fn policy() -> Value {
     let mut p = locatable(
         "openEHR-EHR-ACCESS_POLICY.hospital.v1",
@@ -177,7 +203,8 @@ fn policy() -> Value {
             "care_relationship_required": true,
             "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
             "purpose_required": true,
-            "catalogue": [regional_sharing()]
+            "catalogue": [regional_sharing()],
+            "log_restrictions": [log_restriction()]
         })
         .as_object()
         .expect("an object")
@@ -227,6 +254,7 @@ fn every_class_round_trips() {
     round_trip::<AccessLabel>(&s["labels"][0]);
     round_trip::<AccessPolicy>(&p);
     round_trip::<AccessClassification>(&p["classifications"][0]);
+    round_trip::<AccessLogRestriction>(&p["log_restrictions"][0]);
     let versioned = json!({
         "_type": "VERSIONED_ACCESS_POLICY",
         "uid": { "_type": "HIER_OBJECT_ID", "value": "5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8" },
@@ -347,7 +375,7 @@ fn each_settings_invariant_refuses_settings_that_break_it() {
 
 #[test]
 fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
-    let cases: [Breaking; 5] = [
+    let cases: [Breaking; 7] = [
         ("ACCESS_POLICY.Is_archetype_root", |p| {
             p.as_object_mut()
                 .expect("an object")
@@ -369,6 +397,12 @@ fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
         }),
         ("ACCESS_DATA_SCOPE.Not_empty", |p| {
             p["classifications"][0]["data"] = json!({ "_type": "ACCESS_DATA_SCOPE" });
+        }),
+        ("ACCESS_LOG_RESTRICTION.Accessor_kinds_valid", |p| {
+            p["log_restrictions"][0]["accessor_kinds"] = json!([accessor_kind("visitor")]);
+        }),
+        ("ACCESS_LOG_RESTRICTION.Withheld_valid", |p| {
+            p["log_restrictions"][0]["withheld"] = json!([term("accessor_credential")]);
         }),
     ];
     for (invariant, breaking) in cases {
@@ -416,14 +450,14 @@ fn each_optional_list_is_absent_or_non_empty() {
         s["directives"][1]["data"][0][list] = json!([]);
         refused.push(serde_json::from_value::<AccessDirectiveSettings>(s).is_err());
     }
-    for list in ["classifications", "catalogue"] {
+    for list in ["classifications", "catalogue", "log_restrictions"] {
         let mut p = policy();
         p[list] = json!([]);
         refused.push(serde_json::from_value::<AccessPolicy>(p).is_err());
     }
     assert_eq!(
         refused,
-        vec![true; 19],
+        vec![true; 20],
         "every empty optional list is refused"
     );
 }

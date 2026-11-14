@@ -8,7 +8,8 @@
 //! the class invariants of the draft BMM
 //! ([`check_policy`]), the root rules of a
 //! `LOCATABLE` and of the `controller`, and that each sensitivity and
-//! category a classification names comes from the jurisdiction's terminology
+//! category a classification names, and each legal ground of a restriction of
+//! the access log's subject view, comes from the jurisdiction's terminology
 //! ([`ForeignCode`]).
 //!
 //! The draft package is FerroEHR's change proposal and no openEHR release:
@@ -57,8 +58,9 @@ pub enum PolicyDefect {
     /// `archetype_details` names an archetype of another RM class.
     #[error("archetype_details names {0:?}, which is no archetype of an ACCESS_POLICY")]
     ArchetypeClass(String),
-    /// A sensitivity or category of a classification is coded in FerroEHR's
-    /// own terminology, which holds none.
+    /// A sensitivity or category of a classification, or a legal ground of a
+    /// log restriction, is coded in FerroEHR's own terminology, which holds
+    /// none.
     #[error(transparent)]
     NotForeign(#[from] NotForeign),
     /// The controller is not an `ORGANISATION`.
@@ -97,6 +99,11 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
         }
         for category in data.categories.as_deref().unwrap_or_default() {
             ForeignCode::read(ForeignKind::Category, category)?;
+        }
+    }
+    for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {
+        for ground in &restriction.legal_grounds {
+            ForeignCode::read(ForeignKind::LegalGround, ground)?;
         }
     }
     if policy.controller.r#type != CONTROLLER_TYPE {

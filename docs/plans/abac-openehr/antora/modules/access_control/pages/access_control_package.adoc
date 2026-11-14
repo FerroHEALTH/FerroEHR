@@ -6,7 +6,7 @@ include::partial$draft_notice.adoc[]
 
 == Overview
 
-An `ACCESS_DIRECTIVE_SETTINGS` is the `_settings_` of one `EHR_ACCESS`, and `EHR_ACCESS.scheme()` returns `access_directives` for it. It holds the default disposition of the EHR, the gate-keepers, the `ACCESS_DIRECTIVE` instances the subject gave and the `ACCESS_LABEL` instances on single objects. An `ACCESS_POLICY`, kept in a `VERSIONED_ACCESS_POLICY`, holds the controller's facts. `ACCESS_ACTOR_SCOPE` and `ACCESS_DATA_SCOPE` describe callers and data, and are used by directives, labels and classifications alike.
+An `ACCESS_DIRECTIVE_SETTINGS` is the `_settings_` of one `EHR_ACCESS`, and `EHR_ACCESS.scheme()` returns `access_directives` for it. It holds the default disposition of the EHR, the gate-keepers, the `ACCESS_DIRECTIVE` instances the subject gave and the `ACCESS_LABEL` instances on single objects. An `ACCESS_POLICY`, kept in a `VERSIONED_ACCESS_POLICY`, holds the controller's facts, the restrictions of the access log's subject view among them. `ACCESS_ACTOR_SCOPE` and `ACCESS_DATA_SCOPE` describe callers and data, and are used by directives, labels and classifications alike.
 
 == Design
 
@@ -54,6 +54,10 @@ The kinds carry the rights of the subject:
 
 `ACCESS_POLICY._controller_` names the `ORGANISATION` whose policy it is. `_care_relationship_required_` makes a professional's clinical access depend on a live care relationship to the subject, and `_relationship_grace_` extends the relationship after it ends for follow-up (Security Policy, "Time-limitation of access"). `_purpose_required_` makes a declared purpose of use mandatory. `_catalogue_` lists named directives a subject accepts by an identifier, such as an IHE BPPC policy or a national consent choice; accepting one copies its directive into the subject's settings, with the signed acknowledgement as `_evidence_`.
 
+=== Restrictions of the Access Log's Subject View
+
+EHDS Art 9(2) gives the person access to who accessed their data, and Art 9(3) lets a Member State restrict that right "in exceptional circumstances". `ACCESS_POLICY._log_restrictions_` declares the restrictions the controller's law lays down. Each `ACCESS_LOG_RESTRICTION` names the kinds of accessor it applies to, in the `accessor kind` group the Access Log Information Model codes `ACCESSOR._kind_` in, the attributes of `ACCESSOR` the subject view withholds, in the `access log withheld` group (xref:terminology.adoc[Terminology]), and the provisions that lay it down, in the terminology the jurisdiction names. A system serves the subject view of an entry whose accessor is of a named kind to the subject and their representative without those attributes; the entry itself is unchanged, and a reviewer reads it whole. A change to the restrictions changes what the log means, so a system records it in the log. The package carries no country's restriction.
+
 == Class Descriptions
 
 include::ROOT:partial$classes/access_directive_settings.adoc[]
@@ -69,5 +73,7 @@ include::ROOT:partial$classes/access_label.adoc[]
 include::ROOT:partial$classes/access_policy.adoc[]
 
 include::ROOT:partial$classes/access_classification.adoc[]
+
+include::ROOT:partial$classes/access_log_restriction.adoc[]
 
 include::ROOT:partial$classes/versioned_access_policy.adoc[]

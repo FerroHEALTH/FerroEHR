@@ -81,12 +81,16 @@ const LOG: &str = "ACCESS_LOG";
 pub const LOG_SEARCH: &str = "FHIR search";
 
 /// Whether `event` writes an access-log entry: an access to EHR data, a
-/// refusal no operation record of its request covers, or a read of the log.
+/// refusal no operation record of its request covers, a read of the log, or a
+/// change to the log or to what it means.
 #[must_use]
 pub fn writes_entry(event: &AuditEvent) -> bool {
     match event.entry {
         EntryScope::ByDomain => event.domain == AccessDomain::Ehr,
-        EntryScope::Refusal | EntryScope::LogRead | EntryScope::LogChange => true,
+        EntryScope::Refusal
+        | EntryScope::LogRead
+        | EntryScope::LogChange
+        | EntryScope::LogMeaning => true,
         EntryScope::Written => false,
     }
 }

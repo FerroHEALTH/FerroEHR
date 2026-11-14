@@ -8,6 +8,7 @@
 
 use crate::draft::access_control::access_control::access_classification::AccessClassification;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
+use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
 use crate::draft::access_control::ehr_extract::common::extract::Extract;
 use crate::draft::access_control::ehr_extract::common::extract_chapter::ExtractChapter;
@@ -64,6 +65,8 @@ pub enum Pathable {
     AccessClassification(AccessClassification),
     /// The `ACCESS_DIRECTIVE` subtype of `PATHABLE`.
     AccessDirective(AccessDirective),
+    /// The `ACCESS_LOG_RESTRICTION` subtype of `PATHABLE`.
+    AccessLogRestriction(AccessLogRestriction),
     /// The `ACCESS_POLICY` subtype of `PATHABLE`.
     AccessPolicy(AccessPolicy),
     /// The `ACTION` subtype of `PATHABLE`.

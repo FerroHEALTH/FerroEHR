@@ -8,7 +8,7 @@ NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminolo
 
 == Groups
 
-Ten groups are added to the openEHR Terminology. The codes are for the terminology editors to assign; until then each rubric serves as its code, as it does in FerroEHR's `ferroehr-operations` terminology, which defines these groups today. If openEHR adopts them, `Terminology_id_access_control` in the invariants is `openehr`; until then a system names the terminology it documents for them.
+Eleven groups are added to the openEHR Terminology. The codes are for the terminology editors to assign; until then each rubric serves as its code, as it does in FerroEHR's `ferroehr-operations` terminology, which defines these groups today. If openEHR adopts them, `Terminology_id_access_control` in the invariants is `openehr`; until then a system names the terminology it documents for them.
 
 [cols="2,3,3", options="header"]
 |===
@@ -53,11 +53,15 @@ Ten groups are added to the openEHR Terminology. The codes are for the terminolo
 |access refusal
 |refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
+
+|access log withheld
+|accessor_party, accessor_provider, accessor_roles, accessor_groups
+|`ACCESS_LOG_RESTRICTION._withheld_` (`Group_id_access_log_withheld`): the `_party_`, `_provider_`, `_roles_` and `_groups_` of an `ACCESSOR` the subject view withholds (EHDS Art 9(3))
 |===
 
-The first five groups have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other five are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a clearance, a permitted purpose or a care relationship by the code in an element's or a relationship's `_name_`. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other five are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a clearance, a permitted purpose or a care relationship by the code in an element's or a relationship's `_name_`. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
 
-A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code; `refused-opt-out` and `refused-restricted` correspond to its `opted out` and `restricted by the subject` reasons.
+A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code; `refused-opt-out` and `refused-restricted` correspond to its `opted out` and `restricted by the subject` reasons. `ACCESS_LOG_RESTRICTION._accessor_kinds_` is coded in that model's own `accessor kind` group, so a restriction names exactly the kinds its entries record.
 
 == Codes from Other Terminologies
 

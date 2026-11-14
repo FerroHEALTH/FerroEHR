@@ -334,6 +334,7 @@ group is FerroEHR's own design.
 | `access permitted purpose` | `permitted_purpose` | The `name` of a credentials element whose value is a purpose-of-use code |
 | `care relationship` | `member_of`, `under_care_of` | The `name` of a `PARTY_RELATIONSHIP` |
 | `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-purpose-not-permitted`, `refused-consent-required` | The access record of a refusal |
+| `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
 Two grants of the operation table belong to access control:
 `write_care_relationship` and `write_access_policy`.
@@ -1852,11 +1853,13 @@ The controller's access policy states what holds for every EHR this FerroEHR
 keeps: which kinds of data carry which sensitivity (`classifications`),
 whether a professional's clinical access needs a care relationship
 (`care_relationship_required`, with a `relationship_grace`) and a declared
-purpose (`purpose_required`), and the `catalogue` of named directives a
-patient can accept by reference, such as an IHE BPPC policy. It is an
-`ACCESS_POLICY` of FerroEHR's draft access control package, written against
-the default archetype `openEHR-EHR-ACCESS_POLICY.controller.v1`, which every
-boot stores, or against one of your own. Break-glass and the default floor
+purpose (`purpose_required`), the `catalogue` of named directives a
+patient can accept by reference, such as an IHE BPPC policy, and the
+`log_restrictions` of the access log's subject view your Member State's law
+lays down under EHDS Art. 9(3) ([Audit](audit.md#restricting-the-subject-view-ehds-art-93)).
+It is an `ACCESS_POLICY` of FerroEHR's draft access control package, written
+against the default archetype `openEHR-EHR-ACCESS_POLICY.controller.v1`,
+which every boot stores, or against one of your own. Break-glass and the default floor
 stay in `ferroehr.toml`; the policy can only tighten them. Until you write
 one, nothing is tightened.
 

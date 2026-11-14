@@ -13,7 +13,7 @@ description
     details = <
         ["en"] = <
             language = <[ISO_639-1::en]>
-            purpose = <"The access policy of the controller of the data FerroEHR keeps: the sensitivity of kinds of data, whether clinical access needs a care relationship and a declared purpose, and the named directives a subject can accept by reference.">
+            purpose = <"The access policy of the controller of the data FerroEHR keeps: the sensitivity of kinds of data, whether clinical access needs a care relationship and a declared purpose, the named directives a subject can accept by reference, and the restrictions a Member State law lays on the subject's view of the access log.">
             use = <"The default archetype of the FerroEHR access policy. A deployment that names its own classifications, value sets or catalogue specialises it or writes its own ACCESS_POLICY archetype. ACCESS_POLICY is a class of FerroEHR's draft access control package, which is no openEHR release.">
             copyright = <"© Cadasto B.V.">
         >
@@ -50,6 +50,19 @@ definition
                 }
             }
         }
+        log_restrictions matches {
+            ACCESS_LOG_RESTRICTION[id11] occurrences matches {0..*} matches {
+                accessor_kinds matches {
+                    DV_CODED_TEXT[id12] occurrences matches {1..*}
+                }
+                withheld matches {
+                    DV_CODED_TEXT[id13] occurrences matches {1..*}
+                }
+                legal_grounds matches {
+                    DV_CODED_TEXT[id14] occurrences matches {1..*}
+                }
+            }
+        }
         details existence matches {0..1} matches {
             ITEM_TREE[id10]
         }
@@ -68,5 +81,9 @@ terminology
             ["id8"] = <text = <"Effect"> description = <"Whether the directive permits or denies.">>
             ["id9"] = <text = <"Identifier"> description = <"An identifier of the directive, such as an IHE BPPC policy.">>
             ["id10"] = <text = <"Details"> description = <"Further detail the decision procedure never reads.">>
+            ["id11"] = <text = <"Log restriction"> description = <"A restriction of the subject's view of the access log under EHDS Article 9(3).">>
+            ["id12"] = <text = <"Accessor kind"> description = <"A kind of accessor the restriction applies to, in the access log's accessor kind group.">>
+            ["id13"] = <text = <"Withheld"> description = <"An attribute of the accessor the subject view withholds.">>
+            ["id14"] = <text = <"Legal ground"> description = <"A provision of the Member State law that lays the restriction down, in the terminology the jurisdiction names.">>
         >
     >
