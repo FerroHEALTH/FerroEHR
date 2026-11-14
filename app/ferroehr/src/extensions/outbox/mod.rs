@@ -246,8 +246,9 @@ type FeedRow = (
     Option<uuid::Uuid>,
 );
 
-/// Up to `limit` rows of `domain`'s outbox after the active `reader`'s
-/// cursor, in `seq` order; `None` when the reader is unknown or inactive.
+/// Up to `limit` rows of `domain`'s outbox after the active `reader`'s cursor
+/// and after `after`, in `seq` order; `None` when the reader is unknown or
+/// inactive.
 ///
 /// The rows are not yet judged by the access evaluator: the feed serves them
 /// through [`FerroEhrService::outbox_events`], which leaves out what a
@@ -258,18 +259,6 @@ type FeedRow = (
 /// [`OutboxError::Acquire`] when no connection can be obtained, and
 /// [`OutboxError::Database`] when the registry or the outbox cannot be read.
 pub async fn read(
-    pool: &PgPool,
-    domain: OutboxDomain,
-    reader: &str,
-    limit: i64,
-) -> Result<Option<Vec<FeedEvent>>, OutboxError> {
-    read_after(pool, domain, reader, None, limit).await
-}
-
-/// Up to `limit` rows of `domain`'s outbox after the active `reader`'s cursor
-/// and after `after`, in `seq` order; `None` when the reader is unknown or
-/// inactive.
-async fn read_after(
     pool: &PgPool,
     domain: OutboxDomain,
     reader: &str,
@@ -559,7 +548,7 @@ impl FerroEhrService {
         let mut served = Vec::new();
         let mut after = None;
         loop {
-            let page = read_after(pool, domain, reader, after, limit)
+            let page = read(pool, domain, reader, after, limit)
                 .await?
                 .ok_or_else(|| unknown_reader(reader))?;
             let full = page.len() >= wanted && wanted > 0;
