@@ -91,10 +91,13 @@ async fn a_write_a_directive_refuses_is_never_stored() {
     .await;
     let (status, body) = commit(&app, &ehr, "nurse").await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    assert!(
-        refusal(&body).1.contains("refused-consent-denied"),
-        "{body}"
+    let (member, detail) = refusal(&body);
+    assert_eq!(
+        member,
+        json!("refused-consent-denied"),
+        "a write refusal carries the refusal member a read refusal carries: {body}"
     );
+    assert!(detail.starts_with("refused-consent-denied"), "{body}");
     assert_eq!(compositions(&app, &ehr).await, 1, "nothing was stored");
     let refused = crate::access_log_http::entries(&pool, 1, |stored| {
         stored.result.as_deref() == Some("refused")

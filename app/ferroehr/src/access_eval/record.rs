@@ -319,9 +319,7 @@ impl RequestAccess {
 
     /// The rules of the access policy in force.
     fn rules(&self) -> &[AccessDirective] {
-        self.policy_in_force()
-            .and_then(|policy| policy.rules.as_deref())
-            .unwrap_or_default()
+        crate::access_eval::procedure::rules_of(self.policy.as_deref())
     }
 
     /// The ground the rule at `at` of the access policy gives, of `kind`.
