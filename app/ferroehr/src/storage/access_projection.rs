@@ -255,20 +255,45 @@ pub(crate) fn version_of(row: &sqlx::postgres::PgRow) -> Result<Option<String>, 
     }
 }
 
-/// Every EHR's settings row, as `(ehr_id, settings)`, a held-closed EHR's
-/// settings `None`, ordered by EHR.
+/// One EHR's settings row as the settings index holds it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexedSettings {
+    /// The EHR.
+    pub ehr_id: EhrId,
+    /// The settings in canonical JSON text; `None` for a held-closed EHR.
+    pub settings: Option<String>,
+    /// The promoted `ehr.subject_id`; `None` for a status naming no subject.
+    pub subject: Option<String>,
+    /// The uid of the `EHR_ACCESS` version the row was projected from.
+    pub version: Option<String>,
+}
+
+/// Every EHR's settings row with its subject and the uid of the
+/// `EHR_ACCESS` version it was projected from, ordered by EHR.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, and the acquire failure
 /// when no connection can be had.
-pub async fn every_settings(pool: &PgPool) -> Result<Vec<(EhrId, Option<String>)>, StorageError> {
+pub async fn every_settings(pool: &PgPool) -> Result<Vec<IndexedSettings>, StorageError> {
     let rows = sqlx::query(
-        "SELECT ehr_id, settings::text AS settings FROM access_settings ORDER BY ehr_id",
+        "SELECT s.ehr_id, s.settings::text AS settings, e.subject_id, \
+                s.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, v.branch_version \
+         FROM access_settings s \
+         LEFT JOIN ehr e ON e.id = s.ehr_id \
+         LEFT JOIN version v ON v.vo_id = s.vo_id AND v.sys_version = s.sys_version \
+         ORDER BY s.ehr_id",
     )
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
     rows.iter()
-        .map(|row| Ok((row.try_get("ehr_id")?, row.try_get("settings")?)))
+        .map(|row| {
+            Ok(IndexedSettings {
+                ehr_id: row.try_get("ehr_id")?,
+                settings: row.try_get("settings")?,
+                subject: row.try_get("subject_id")?,
+                version: version_of(row)?,
+            })
+        })
         .collect()
 }
 

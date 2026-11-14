@@ -583,7 +583,13 @@ which is what makes an optional stage safe to disable:
    reads the versions back from the stored entry
    (`access_log::recorded`) into `agent[user].policy` of the EHDS record. A query's
    condition groups verdicts with their grounds stripped (`Verdict::bare`),
-   so recording adds no SQL and no transaction.
+   so recording adds no SQL and no transaction. The settings index the
+   condition is built from holds each EHR as a direct read finds it, with its
+   subject and `EHR_ACCESS` version uid (#5581), so the record of an EHR a
+   query served is judged from the same entry and names the grounds a direct
+   read names; an EHR with no settings is in no index, and its care ground is
+   inferred from which of its two verdicts could have served the row (our own
+   design).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an

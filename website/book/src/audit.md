@@ -139,6 +139,13 @@ whose `name` and `version` name the document the ground is defined in:
 | `treatment relationship` | the decision read a live care relationship | `ACCESS_POLICY` and the uid of its version |
 | `emergency` | an emergency lifted a directive or steps 4 to 7 | the directive it lifted, or the `ACCESS_POLICY` version |
 
+The entry of each EHR an AQL query served names the same grounds a read of
+that EHR alone names. The query's condition is built from this replica's copy
+of every EHR's settings, which holds each EHR's subject and the uid of its
+`EHR_ACCESS` version beside the settings, so the record adds no database read.
+For an EHR with no settings, which the copy does not hold, a care relationship
+is named when only a caller in care could have been served its rows.
+
 A refusal names its code in `outcome.reason`, in the `ferroehr-operations`
 terminology, and in `outcome.description` the step that refused and the
 directive or policy of that step, such as `step 2 (restriction): directive 1
