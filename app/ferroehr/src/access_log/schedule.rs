@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The scheduled checkpoint of the access log (#5129): one run per interval
-//! seals the head of the chain when it moved since the last checkpoint.
+//! The scheduled checkpoint of the access log (#5129): one run per
+//! [`INTERVAL`] seals the head of the chain when it moved since the last
+//! checkpoint, whenever the keyring holds an `OpenPGP` key (#5562).
 //!
 //! A run that cannot seal logs at `ERROR` and counts nothing as sealed; the
 //! next run tries again. No openEHR spec governs log signing: our own design.
@@ -10,6 +11,14 @@
 use std::time::Duration;
 
 use crate::access_log::checkpoint::Checkpoints;
+
+/// The time between two scheduled checkpoints: five minutes.
+///
+/// A checkpoint fixes the tail against a rewrite of the whole chain after it;
+/// a run on a log that did not grow writes nothing, and one that did costs
+/// one signature and one row.
+// NOTE: our own design (#5562), no spec fixes the interval; a day holds at most 288 checkpoints.
+pub const INTERVAL: Duration = Duration::from_mins(5);
 
 /// One seal per `interval`, the first after one interval.
 #[expect(
