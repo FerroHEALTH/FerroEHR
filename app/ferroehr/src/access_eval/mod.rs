@@ -32,6 +32,3 @@
 pub mod condition;
 pub mod procedure;
 pub mod scope;
-
-#[cfg(test)]
-mod tests;

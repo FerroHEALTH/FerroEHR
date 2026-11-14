@@ -23,17 +23,16 @@ use openehr_rm::draft::access_control::terminology::{
 use serde_json::{Value, json};
 use uuid::Uuid;
 
-use crate::access_eval::procedure::{
+use ferroehr::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide,
 };
-use crate::access_eval::scope::{CategoryIndex, Item, Object, Scopes};
-use crate::party_binding::grants::caller::{CallerFacts, CareTeam};
-use crate::party_binding::grants::store::Dates;
-use crate::party_binding::policy_mark::TERMINOLOGY;
-use crate::policy_register::CategoriesInForce;
-use crate::service::ehr::access_rule::SettingsCaller;
-use crate::service::ehr::access_settings::EhrAccessSettings;
-use crate::system_log::categories::CategoryMapConfig;
+use ferroehr::access_eval::scope::{CategoryIndex, Item, Object, Scopes};
+use ferroehr::party_binding::grants::caller::{CallerFacts, CareTeam};
+use ferroehr::party_binding::policy_mark::TERMINOLOGY;
+use ferroehr::policy_register::CategoriesInForce;
+use ferroehr::service::ehr::access_rule::SettingsCaller;
+use ferroehr::service::ehr::access_settings::EhrAccessSettings;
+use ferroehr::system_log::categories::CategoryMapConfig;
 
 /// Dr B, the ex-partner.
 pub(super) const DR_B: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f81";
@@ -153,7 +152,7 @@ pub(super) fn settings(
     if !gate_keepers.is_empty() {
         s["gate_keepers"] = json!(gate_keepers);
     }
-    crate::service::ehr::access_settings::check_written_settings(&s)
+    ferroehr::service::ehr::access_settings::check_written_settings(&s)
         .expect("the test settings hold every invariant");
     EhrAccessSettings::from_ehr_access(&json!({ "_type": "EHR_ACCESS", "settings": s }))
         .expect("the settings read")
@@ -230,7 +229,7 @@ pub(super) fn with_facts(
 ) -> Caller {
     let teams = teams
         .iter()
-        .map(|team| CareTeam::new(uuid(team), dates("2026-11-01", None)))
+        .map(|team| care_team(team, "2026-11-01", None))
         .collect();
     caller.facts = CallerFacts::new(clearances.to_vec(), purposes.to_vec(), teams);
     caller.acts_for = caller
@@ -242,12 +241,13 @@ pub(super) fn with_facts(
     caller
 }
 
-/// The dates `[lower, upper)`.
-pub(super) fn dates(lower: &str, upper: Option<&str>) -> Dates {
-    Dates {
-        lower: Some(lower.parse().expect("a date")),
-        upper: upper.map(|upper| upper.parse().expect("a date")),
-    }
+/// A care relationship to `team` over the dates `[lower, upper)`.
+pub(super) fn care_team(team: &str, lower: &str, upper: Option<&str>) -> CareTeam {
+    CareTeam::spanning(
+        uuid(team),
+        Some(lower.parse().expect("a date")),
+        upper.map(|upper| upper.parse().expect("a date")),
+    )
 }
 
 /// `text` as a UUID.

@@ -315,6 +315,23 @@ impl CareTeam {
         Self { team, dates }
     }
 
+    /// The relationship to `team` from the date `from` until the first date
+    /// it no longer holds, `until`, each `None` when unbounded.
+    #[must_use]
+    pub fn spanning(
+        team: Uuid,
+        from: Option<jiff::civil::Date>,
+        until: Option<jiff::civil::Date>,
+    ) -> Self {
+        Self::new(
+            team,
+            Dates {
+                lower: from,
+                upper: until,
+            },
+        )
+    }
+
     /// The container of the care team `GROUP` or the organisational unit.
     #[must_use]
     pub fn team(&self) -> Uuid {

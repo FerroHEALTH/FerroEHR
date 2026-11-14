@@ -8,7 +8,7 @@ use openehr_rm::draft::access_control::terminology::{CallerKind, OperationClass}
 use serde_json::{Value, json};
 
 use super::*;
-use crate::access_eval::procedure::{Emergency, Lifted};
+use ferroehr::access_eval::procedure::{Emergency, Lifted};
 
 /// The subject reads their own record whatever the directives say (EHDS Art. 3).
 #[test]

@@ -9,8 +9,8 @@ use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationCla
 use serde_json::json;
 
 use super::*;
-use crate::access_eval::condition::{Asking, InForce, RequestAccess};
-use crate::access_eval::procedure::{Emergency, Lifted};
+use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess};
+use ferroehr::access_eval::procedure::{Emergency, Lifted};
 
 /// The ex-partner: a consent deny naming Dr B refuses him, and lifts for his
 /// declared emergency with the break-glass role, which marks the access.
@@ -89,10 +89,7 @@ fn mental_health_except_the_psychiatrist() {
 fn the_ward_with_its_grace_period() {
     let ward = policy(&json!({ "care_relationship_required": true,
         "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" } }));
-    let mr_e = [CareTeam::new(
-        uuid(CARDIOLOGY),
-        dates("2026-11-03", Some("2026-11-11")),
-    )];
+    let mr_e = [care_team(CARDIOLOGY, "2026-11-03", Some("2026-11-11"))];
     let judge = |caller: Caller, day: &str| {
         let access = RequestAccess::new(
             caller,
