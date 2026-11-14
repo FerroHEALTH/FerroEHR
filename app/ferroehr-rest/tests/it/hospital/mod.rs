@@ -17,6 +17,7 @@
 pub(crate) mod abac;
 pub(crate) mod build;
 pub(crate) mod ledger;
+mod matrix;
 pub(crate) mod world;
 
 mod probe;

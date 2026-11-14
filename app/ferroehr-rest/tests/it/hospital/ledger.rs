@@ -112,6 +112,7 @@ impl Ledger {
                 .iter()
                 .filter(|(id, _)| id.as_deref() == Some(noted.request_id.as_str()))
                 .map(|(_, entry)| entry)
+                .filter(|entry| entry.get("ehr_id").is_some())
                 .collect();
             assert_eq!(
                 mine.len(),
