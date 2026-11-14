@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Builds the hospital world through its public routes: SCIM for the staff,
+//! Builds the hospital world through its public routes: the operator's
+//! grant of the first SCIM client, SCIM for the staff with their role codes,
 //! their care teams and the patient's representative, the Demographic API for
-//! the clients, the providers, the professionals' clearances and the care
-//! relationships, ITS-REST for the record and its `EHR_ACCESS`, and the admin
-//! API for the controller's `ACCESS_POLICY`.
+//! the clients, the providers and the care relationships, ITS-REST for the
+//! record and Eva's own `EHR_ACCESS`, and the admin API for the controller's
+//! `ACCESS_POLICY` with its rules (#5621).
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -16,9 +17,13 @@ use http::StatusCode;
 use serde_json::{Value, json};
 
 use crate::common::{self, BASE, EXT};
+use ferroehr::party_binding::grants::bootstrap::{ClientGrant, PersonGrant};
+use ferroehr::party_binding::grants::operation::Operation;
+use ferroehr::service::FerroEhrService;
+
 use crate::hospital::world::{
-    CONFIDENTIALITY, DEVICES, Doc, ENCOUNTER, LAB_TEMPLATE, LOGIN, MENTAL_HEALTH, OPERATOR,
-    PATIENTS, PORTAL_SCIM, PROVIDERS, Provisioned, ROOT, SCIM, SCIM_SCOPE, STAFF, Staff, TEAMS,
+    CONFIDENTIALITY, DEVICES, Doc, ENCOUNTER, LAB_TEMPLATE, LOGIN, MACHINES, MENTAL_HEALTH, ROLES,
+    PATIENTS, PORTAL_SCIM, PROVIDERS, Provisioned, ROOT, SCIM, SCIM_SCOPE, STAFF, TEAMS,
     VITALS, World, admit, call, capability, client, coded_in, config, create_party, day, named,
     party_ref, patient_body, provider, read_party, region, replica, roster, router, scim, term,
     text, update_party,
@@ -51,19 +56,21 @@ pub(crate) async fn world() -> World {
         .expect("the audit sender");
     let svc = Arc::new(replica(&config, &pool, Some(sender)).await);
     let app = router(&config, &svc).await;
-    client(&app, OPERATOR, (SCIM, None), &[scim_grant(LOGIN)]).await;
+    bootstrap(&svc).await;
     let mut people = BTreeMap::new();
-    people.insert(ROOT, user(&app, SCIM, ROOT, "IT administrator").await);
-    clients(&app).await;
+    let root = STAFF.iter().find(|staff| staff.name == ROOT).expect("root");
+    people.insert(ROOT, user(&app, SCIM, ROOT, (root.display, Some(root.role))).await);
+    grant_policy_writer(&svc, &people[ROOT].person).await;
+    let mut agents = clients(&app).await;
     for staff in STAFF.iter().filter(|staff| staff.name != ROOT) {
         people.insert(
             staff.name,
-            user(&app, SCIM, staff.name, staff.display).await,
+            user(&app, SCIM, staff.name, (staff.display, Some(staff.role))).await,
         );
     }
     people.insert(
         "frank",
-        user(&app, PORTAL_SCIM, "frank-login", "Frank Visser").await,
+        user(&app, PORTAL_SCIM, "frank-login", ("Frank Visser", None)).await,
     );
     let mut teams = BTreeMap::new();
     for team in TEAMS {
@@ -74,15 +81,12 @@ pub(crate) async fn world() -> World {
             .collect();
         teams.insert(team, group(&app, team, &members).await);
     }
-    for staff in STAFF {
-        clear(&app, &people[staff.name], &staff).await;
-    }
     let region = region(&app, "Regional health network").await;
     let hospital = provider(&app, "sint-example", &[]).await;
     let member = provider(&app, "member-clinic", &[&region]).await;
     let outside = provider(&app, "outside-clinic", &[]).await;
     let lab = provider(&app, "lab", &[]).await;
-    system_clients(&app, (&member, &outside, &lab)).await;
+    agents.extend(system_clients(&app, (&member, &outside, &lab)).await);
     let (eva, eva_version) = create_party(&app, ROOT, "person", &patient_body(&[])).await;
     let ehr = ehr_of(&app, &eva).await;
     let other_ehr = ehr_of(&app, &people["gina"].person).await;
@@ -90,10 +94,10 @@ pub(crate) async fn world() -> World {
         _db: db,
         _drain: drain,
         pool,
-        svc,
         app,
         config,
         people,
+        agents,
         teams,
         region,
         eva,
@@ -133,18 +137,18 @@ pub(crate) async fn world() -> World {
             answer.body
         );
     }
-    world.policy = policy(&world.app, &hospital, None).await;
+    world.policy = policy(&world, &hospital, None).await;
     directives(&mut world, None).await;
     world
 }
 
-/// The SCIM User `user_name` of `client`, keyed by its own name, and the
-/// professional `ROLE` it performs.
+/// The SCIM User `user_name` of `client`, keyed by its own name, named
+/// `display` and holding the role code `role` (#5621, #5625).
 pub(crate) async fn user(
     app: &axum::Router,
     client: &str,
     user_name: &str,
-    display: &str,
+    (display, role): (&str, Option<&str>),
 ) -> Provisioned {
     let body = json!({
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User", EXTENSION],
@@ -153,15 +157,15 @@ pub(crate) async fn user(
         "name": { "formatted": display },
         EXTENSION: { "loginIdentifier": user_name }
     });
+    let mut body = body;
+    if let Some(role) = role {
+        body["roles"] = json!([{ "value": role }]);
+    }
     let (status, created) = scim(app, client, "POST", "/Users", Some(&body)).await;
     assert_eq!(status, StatusCode::CREATED, "{user_name}: {created}");
-    let person = created["id"].as_str().expect("an id").to_owned();
-    let (_, read) = read_party(app, "person", &person).await;
-    let role = read["roles"][0]["id"]["value"]
-        .as_str()
-        .unwrap_or_else(|| panic!("{user_name} performs a ROLE: {read}"))
-        .to_owned();
-    Provisioned { person, role }
+    Provisioned {
+        person: created["id"].as_str().expect("an id").to_owned(),
+    }
 }
 
 /// The SCIM Group `name` of the hospital's client with `members`; its id.
@@ -177,54 +181,39 @@ async fn group(app: &axum::Router, name: &str, members: &[&str]) -> String {
     created["id"].as_str().expect("an id").to_owned()
 }
 
-/// The capability carrying the clearances and the permitted purposes of
-/// `staff`.
-pub(crate) fn facts(staff: &Staff) -> Value {
-    let mut items: Vec<Value> = staff
-        .clearances
-        .iter()
-        .map(|code| named("sensitivity_clearance", &coded_in(CONFIDENTIALITY, code)))
-        .collect();
-    items.extend(staff.purposes.iter().map(|code| {
-        named(
-            "permitted_purpose",
-            &coded_in(crate::hospital::world::PURPOSE_OF_USE, code),
-        )
-    }));
-    capability("access_demographic", &items)
+/// The operator grants the hospital's SCIM client, as `ferroehr
+/// party-binding grant` does before any person is provisioned (#5620): it
+/// provisions the logins of [`LOGIN`] and assigns the staff's role codes.
+async fn bootstrap(svc: &FerroEhrService) {
+    let mut elements = vec![
+        ("binding_issuer".to_owned(), LOGIN.to_owned()),
+        ("token_scope".to_owned(), SCIM_SCOPE.to_owned()),
+        ("role_terminology".to_owned(), ROLES.to_owned()),
+    ];
+    let mut roles: Vec<&str> = STAFF.iter().map(|staff| staff.role).collect();
+    roles.sort_unstable();
+    roles.dedup();
+    elements.extend(roles.into_iter().map(|role| ("role".to_owned(), role.to_owned())));
+    svc.grant_client(&ClientGrant {
+        issuer: MACHINES.to_owned(),
+        client_id: SCIM.to_owned(),
+        operation: Operation::ScimProvision,
+        elements,
+    })
+    .await
+    .expect("the operator grants the SCIM client");
 }
 
-/// The capabilities of `staff`: their facts, and for `root` the grant to
-/// write the controller's policy.
-fn privileges(staff: &Staff) -> Vec<Value> {
-    let mut held = vec![facts(staff)];
-    if staff.name == ROOT {
-        held.push(capability("write_access_policy", &[]));
-    }
-    held
-}
-
-/// `root` adds the clearances, purposes and grants of `staff` to the
-/// professional `ROLE` SCIM provisioned for them.
-async fn clear(app: &axum::Router, provisioned: &Provisioned, staff: &Staff) {
-    let (version, mut role) = read_party(app, "role", &provisioned.role).await;
-    role["capabilities"] = Value::Array(privileges(staff));
-    let answer = update_party(app, ROOT, ("role", &provisioned.role, &version), &role).await;
-    assert_eq!(
-        answer.status,
-        StatusCode::OK,
-        "{}'s ROLE: {}",
-        staff.name,
-        answer.body
-    );
-}
-
-/// The permitted purpose of treatment.
-fn treatment() -> Value {
-    named(
-        "permitted_purpose",
-        &coded_in(crate::hospital::world::PURPOSE_OF_USE, "TREAT"),
-    )
+/// The operator grants `root`'s `PERSON` the writing of the controller's
+/// policy, as `ferroehr party-binding grant` does.
+async fn grant_policy_writer(svc: &FerroEhrService, person: &str) {
+    svc.grant_person(&PersonGrant {
+        person: person.parse().expect("a container"),
+        operation: Operation::WriteAccessPolicy,
+        elements: Vec::new(),
+    })
+    .await
+    .expect("the operator grants the policy writer");
 }
 
 /// The grant to provision the Users whose binding keys `binding_issuer`
@@ -239,10 +228,11 @@ fn scim_grant(binding_issuer: &str) -> Value {
     )
 }
 
-/// The portal's SCIM client and the ADT system, granted by `root`.
-async fn clients(app: &axum::Router) {
+/// The portal's SCIM client and the ADT system, granted by `root`; their
+/// `AGENT`s.
+async fn clients(app: &axum::Router) -> BTreeMap<&'static str, String> {
     client(app, ROOT, (PORTAL_SCIM, None), &[scim_grant(PATIENTS)]).await;
-    client(
+    let adt = client(
         app,
         ROOT,
         ("adt", None),
@@ -252,21 +242,28 @@ async fn clients(app: &axum::Router) {
         ],
     )
     .await;
+    BTreeMap::from([("adt", adt)])
 }
 
 /// The lab system, the regional exchange's clients of a member provider and
-/// of a provider outside the region, and the access service.
-async fn system_clients(app: &axum::Router, (member, outside, lab): (&str, &str, &str)) {
-    let query = capability("query_system_wide", &[treatment()]);
-    client(app, ROOT, ("hie-member", Some(member)), &[query.clone()]).await;
-    client(app, ROOT, ("hie-outside", Some(outside)), &[query.clone()]).await;
-    client(
-        app,
-        ROOT,
-        ("access-service", Some(member)),
-        &[query.clone(), capability("access_service", &[treatment()])],
-    )
-    .await;
+/// of a provider outside the region, and the access service; their `AGENT`s.
+async fn system_clients(
+    app: &axum::Router,
+    (member, outside, lab): (&str, &str, &str),
+) -> BTreeMap<&'static str, String> {
+    let query = capability("query_system_wide", &[]);
+    let mut agents = BTreeMap::new();
+    for (id, provider, held) in [
+        ("hie-member", member, vec![query.clone()]),
+        ("hie-outside", outside, vec![query.clone()]),
+        (
+            "access-service",
+            member,
+            vec![query.clone(), capability("access_service", &[])],
+        ),
+    ] {
+        agents.insert(id, client(app, ROOT, (id, Some(provider)), &held).await);
+    }
     let commits = capability(
         "commit_composition",
         &[
@@ -275,10 +272,10 @@ async fn system_clients(app: &axum::Router, (member, outside, lab): (&str, &str,
             named("device_identifier_issuer", &text(DEVICES)),
             json!({ "_type": "CLUSTER", "archetype_node_id": "at0031", "name": term("facility"),
                     "items": [named("issuer", &text(PROVIDERS)), named("identifier", &text("lab"))] }),
-            treatment(),
         ],
     );
-    client(app, ROOT, ("lab", Some(lab)), &[commits, query]).await;
+    agents.insert("lab", client(app, ROOT, ("lab", Some(lab)), &[commits, query]).await);
+    agents
 }
 
 /// `root` creates the EHR whose subject is the `PERSON` `person`; its id.
@@ -505,11 +502,8 @@ async fn represent(world: &World) {
 /// results restricted, and the professional who accessed withheld from the
 /// patient's view of her log under a national provision of EHDS Art. 9(3);
 /// its version.
-pub(crate) async fn policy(
-    app: &axum::Router,
-    controller: &str,
-    preceding: Option<&str>,
-) -> String {
+pub(crate) async fn policy(world: &World, controller: &str, preceding: Option<&str>) -> String {
+    let app = &world.app;
     let archetype = ferroehr::access_policy::ARCHETYPE;
     let classification = |name: &str, scope: Value, code: &str| {
         json!({ "_type": "ACCESS_CLASSIFICATION", "name": text(name),
@@ -531,6 +525,7 @@ pub(crate) async fn policy(
             classification("Lab results", json!({ "_type": "ACCESS_DATA_SCOPE",
                 "templates": [LAB_TEMPLATE] }), "R"),
         ],
+        "rules": rules(world),
         "care_relationship_required": true,
         "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
         "purpose_required": true,
@@ -557,6 +552,68 @@ pub(crate) async fn policy(
         "the policy: {status} {answer}"
     );
     common::etag_uid(&headers)
+}
+
+/// An actor scope naming the role code `role` of [`ROLES`].
+fn role_scope(role: &str) -> Value {
+    json!([{ "_type": "ACCESS_ACTOR_SCOPE", "role": coded_in(ROLES, role) }])
+}
+
+/// The purpose-of-use codes `codes`.
+fn purposes_of(codes: &[&str]) -> Value {
+    codes
+        .iter()
+        .map(|code| coded_in(crate::hospital::world::PURPOSE_OF_USE, code))
+        .collect()
+}
+
+/// The controller's rules (#5621): per staff role, the purposes it may
+/// declare and the sensitivities it is cleared for; the nurse's ban on
+/// writing the diagnosis summary under the national rule of EHDS Art. 11(3);
+/// and each system client's purpose of treatment.
+fn rules(world: &World) -> Value {
+    let rule = |effect: &str, extra: &Value| directive("controller_rule", effect, extra);
+    let mut seen: Vec<&str> = Vec::new();
+    let mut rules = Vec::new();
+    for staff in STAFF {
+        if seen.contains(&staff.role) {
+            continue;
+        }
+        seen.push(staff.role);
+        rules.push(rule(
+            "permit",
+            &json!({ "applies_to": role_scope(staff.role), "purposes": purposes_of(staff.purposes) }),
+        ));
+        if !staff.clearances.is_empty() {
+            let cleared: Vec<Value> = staff
+                .clearances
+                .iter()
+                .map(|code| coded_in(CONFIDENTIALITY, code))
+                .collect();
+            rules.push(rule(
+                "permit",
+                &json!({ "applies_to": role_scope(staff.role),
+                         "data": [{ "_type": "ACCESS_DATA_SCOPE", "sensitivities": cleared }] }),
+            ));
+        }
+    }
+    rules.push(rule(
+        "deny",
+        &json!({
+            "applies_to": role_scope("nurse"),
+            "operations": [term("write")],
+            "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": [LAB_TEMPLATE] }],
+            "legal_grounds": [coded_in("urn:sint-example:national-law", "art-11-3")]
+        }),
+    ));
+    for agent in ["hie-member", "hie-outside", "access-service", "lab"] {
+        rules.push(rule(
+            "permit",
+            &json!({ "applies_to": naming("AGENT", &world.agents[agent]),
+                     "purposes": purposes_of(&["TREAT"]) }),
+        ));
+    }
+    Value::Array(rules)
 }
 
 /// A directive of `kind` and `effect` with `extra` members.
@@ -641,16 +698,15 @@ pub(crate) fn eva_directives(world: &World, consent: Option<(i64, i64)>, extra: 
     })
 }
 
-/// `root`, the controller's administrator acting on Eva's instruction,
-/// commits `settings` as the next `EHR_ACCESS` version of her EHR through an
-/// ITS-REST CONTRIBUTION; the answer.
+/// Eva commits `settings` as the next `EHR_ACCESS` version of her EHR
+/// through an ITS-REST CONTRIBUTION, as its subject (#5636); the answer.
 pub(crate) async fn commit_settings(
     world: &World,
     settings: &Value,
 ) -> crate::hospital::world::Answer {
     let preceding = current_access(world).await;
     let committer = json!({ "_type": "PARTY_IDENTIFIED",
-        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": crate::hospital::world::PERSONS, "id": ROOT }] });
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": PATIENTS, "id": "eva-login" }] });
     let contribution = json!({
         "_type": "CONTRIBUTION",
         "versions": [{
@@ -675,10 +731,10 @@ pub(crate) async fn commit_settings(
     });
     call(
         &world.app,
-        ROOT,
+        &format!("eva:{}", world.ehr),
         "POST",
         &format!("{BASE}/ehr/{}/contribution", world.ehr),
-        Some("HOPERAT"),
+        None,
         Some(&contribution),
     )
     .await
@@ -703,14 +759,14 @@ pub(crate) async fn settle(world: &mut World, settings: &Value) {
     world.access = current_access(world).await;
 }
 
-/// The current version of Eva's `EHR_ACCESS`, as `root` reads it.
+/// The current version of Eva's `EHR_ACCESS`, as she reads it.
 async fn current_access(world: &World) -> String {
     let answer = call(
         &world.app,
-        ROOT,
+        &format!("eva:{}", world.ehr),
         "GET",
         &format!("{EXT}/ehr/{}/ehr_access", world.ehr),
-        Some("HOPERAT"),
+        None,
         None,
     )
     .await;

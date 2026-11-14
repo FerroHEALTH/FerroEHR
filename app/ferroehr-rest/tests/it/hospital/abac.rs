@@ -128,7 +128,7 @@ async fn dr_jansen_reads_the_cardiology_data() {
 
 /// Discharged from Cardiology, Eva stays readable to Dr. Jansen within the
 /// 14-day grace the policy gives, and past it she is refused
-/// `refused-no-care-relationship` at step 5.
+/// `refused-no-care-relationship` at step 6.
 #[tokio::test]
 async fn past_the_grace_dr_jansen_is_refused_without_a_care_relationship() {
     let mut world = Box::pin(world()).await;
@@ -168,7 +168,7 @@ async fn past_the_grace_dr_jansen_is_refused_without_a_care_relationship() {
         &world,
         "past the grace",
         &answer,
-        Expect::refused("refused-no-care-relationship", 5),
+        Expect::refused("refused-no-care-relationship", 6),
     );
     let (rows, _) = queried(&world, "jansen", Some("TREAT")).await;
     assert!(rows.is_empty(), "the query leaves the record out: {rows:?}");
@@ -190,7 +190,7 @@ async fn nurse_de_vries_reads_vitals_but_not_the_hiv_result() {
         &world,
         "the HIV result",
         &answer,
-        Expect::refused("refused-sensitivity", 4),
+        Expect::refused("refused-sensitivity", 5),
     );
     let (rows, _) = queried(&world, "devries", Some("TREAT")).await;
     assert!(
@@ -295,7 +295,7 @@ async fn dr_bakker_breaks_the_glass_and_the_log_marks_the_emergency() {
         &world,
         "an ordinary purpose",
         &answer,
-        Expect::refused("refused-no-care-relationship", 5),
+        Expect::refused("refused-no-care-relationship", 6),
     );
     let answer = read(&world, "bakker", &world.hiv, Some("ETREAT")).await;
     answered(&answer, StatusCode::OK, None);
@@ -394,7 +394,7 @@ async fn the_regional_exchange_reads_under_the_consent_until_it_lapses() {
         &world,
         "an outsider",
         &answer,
-        Expect::refused("refused-consent-required", 7),
+        Expect::refused("refused-consent-required", 8),
     );
     let lapsed = eva_directives(&world, Some((-400, -35)), &[]);
     settle(&mut world, &lapsed).await;
@@ -408,7 +408,7 @@ async fn the_regional_exchange_reads_under_the_consent_until_it_lapses() {
         &world,
         "a lapsed consent",
         &answer,
-        Expect::refused("refused-consent-required", 7),
+        Expect::refused("refused-consent-required", 8),
     );
     ledger.verify(&world).await;
 }

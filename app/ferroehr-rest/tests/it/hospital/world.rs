@@ -49,9 +49,9 @@ pub(crate) const SCIM_SCOPE: &str = "ferroehr/scim";
 /// The hospital's SCIM client, and the patient portal's.
 pub(crate) const SCIM: &str = "scim-hospital";
 pub(crate) const PORTAL_SCIM: &str = "scim-portal";
-/// The deployment's operator, `[authz.rbac] first_admin`: the Basic user who
-/// grants the hospital's SCIM client before any person is provisioned.
-pub(crate) const OPERATOR: &str = "operator";
+/// The terminology the hospital codes its roles in, which its SCIM client
+/// sends as the values of a User's `roles` (RFC 7643 §4.1.2).
+pub(crate) const ROLES: &str = "urn:sint-example:roles";
 /// The header the default configuration reads the declared purpose from.
 pub(crate) const PURPOSE: &str = "x-purpose-of-use";
 /// The HL7 v3 `ActCode` confidentiality terminology: `R` restricted, `V`
@@ -75,13 +75,16 @@ pub(crate) const MENTAL_HEALTH: &str = "openEHR-EHR-COMPOSITION.mental_health_no
 pub(crate) const LAB_TEMPLATE: &str = "International Patient Summary";
 
 /// One member of staff: the SCIM `userName`, the binding key, the roles
-/// their token carries, the SCIM Groups they join, the clearances and
-/// purposes their professional `ROLE` grants.
+/// their token carries for the coarse RBAC gate, the code of the role SCIM
+/// assigns them in the CDR (a `ROLE` whose `name` it is, #5621), the SCIM
+/// Groups they join, and the clearances and purposes the controller's rules
+/// give that role.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Staff {
     pub(crate) name: &'static str,
     pub(crate) display: &'static str,
     pub(crate) roles: &'static [&'static str],
+    pub(crate) role: &'static str,
     pub(crate) groups: &'static [&'static str],
     pub(crate) clearances: &'static [&'static str],
     pub(crate) purposes: &'static [&'static str],
@@ -93,6 +96,7 @@ pub(crate) const STAFF: [Staff; 7] = [
         name: ROOT,
         display: "IT administrator",
         roles: &["USER", "ADMIN"],
+        role: "it-administrator",
         groups: &[],
         clearances: &[],
         purposes: &["HOPERAT"],
@@ -101,6 +105,7 @@ pub(crate) const STAFF: [Staff; 7] = [
         name: "jansen",
         display: "Dr. Anna Jansen",
         roles: &["USER"],
+        role: "cardiologist",
         groups: &["Cardiology"],
         clearances: &["R"],
         purposes: &["TREAT"],
@@ -109,6 +114,7 @@ pub(crate) const STAFF: [Staff; 7] = [
         name: "devries",
         display: "Bram de Vries",
         roles: &["USER"],
+        role: "nurse",
         groups: &["Ward 3"],
         clearances: &[],
         purposes: &["TREAT"],
@@ -117,6 +123,7 @@ pub(crate) const STAFF: [Staff; 7] = [
         name: "smit",
         display: "Dr. Carla Smit",
         roles: &["USER"],
+        role: "psychiatrist",
         groups: &["Psychiatry"],
         clearances: &["R", "V"],
         purposes: &["TREAT"],
@@ -125,6 +132,7 @@ pub(crate) const STAFF: [Staff; 7] = [
         name: "bakker",
         display: "Dr. Dirk Bakker",
         roles: &["USER", "EMERGENCY"],
+        role: "emergency-physician",
         groups: &[],
         clearances: &[],
         purposes: &["TREAT", "ETREAT"],
@@ -133,6 +141,7 @@ pub(crate) const STAFF: [Staff; 7] = [
         name: "gina",
         display: "Gina Mulder",
         roles: &["USER"],
+        role: "nurse",
         groups: &["Ward 3"],
         clearances: &[],
         purposes: &["TREAT"],
@@ -141,9 +150,10 @@ pub(crate) const STAFF: [Staff; 7] = [
         name: "hans",
         display: "Hans, privacy officer",
         roles: &["USER", "ADMIN"],
+        role: "privacy-officer",
         groups: &[],
         clearances: &[],
-        purposes: &["TREAT"],
+        purposes: &["HOPERAT"],
     },
 ];
 
@@ -151,11 +161,10 @@ pub(crate) const STAFF: [Staff; 7] = [
 pub(crate) const TEAMS: [&str; 3] = ["Cardiology", "Ward 3", "Psychiatry"];
 
 /// What SCIM provisioned for one person: the User id, which is the
-/// `PERSON`'s container, and the professional `ROLE` it performs.
+/// `PERSON`'s container.
 #[derive(Debug, Clone)]
 pub(crate) struct Provisioned {
     pub(crate) person: String,
-    pub(crate) role: String,
 }
 
 /// One composition of the record: its versioned object and its version.
@@ -170,11 +179,12 @@ pub(crate) struct World {
     pub(crate) _db: testkit::TestDb,
     pub(crate) _drain: AuditHandle,
     pub(crate) pool: PgPool,
-    pub(crate) svc: Arc<FerroEhrService>,
     pub(crate) app: Router,
     pub(crate) config: AppConfig,
     /// Each member of staff and the representative, by name.
     pub(crate) people: BTreeMap<&'static str, Provisioned>,
+    /// Each system client's `AGENT`, by client id.
+    pub(crate) agents: BTreeMap<&'static str, String>,
     /// Each care team's `GROUP`, by name.
     pub(crate) teams: BTreeMap<&'static str, String>,
     /// The regional `GROUP` the member provider belongs to.
@@ -310,7 +320,6 @@ pub(crate) fn config() -> AppConfig {
     };
     config.rbac.role_issuers = vec![SecretUrl::new(PERSONS)];
     config.rbac.emergency_access_role = Some("EMERGENCY".to_owned());
-    common::first_admin_only(&mut config, OPERATOR);
     config
 }
 
@@ -375,12 +384,9 @@ fn exp() -> i64 {
 /// The credential of the caller `name`: a member of staff's Keycloak token
 /// (any other name a new member of staff's, holding `USER`),
 /// the patient's or her representative's portal token naming her EHR
-/// (`eva:<ehr>`, `frank:<ehr>`), a system client's app-only token
-/// (`client:<id>`), or the operator's Basic credential.
+/// (`eva:<ehr>`, `frank:<ehr>`), or a system client's app-only token
+/// (`client:<id>`).
 pub(crate) fn credential(name: &str) -> String {
-    if name == OPERATOR {
-        return common::basic_credential(OPERATOR);
-    }
     if let Some(client) = name.strip_prefix("client:") {
         return common::bearer(&json!({
             "iss": MACHINES, "aud": AUDIENCE, "exp": exp(), "sub": client,

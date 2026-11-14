@@ -191,10 +191,11 @@ fn check(noted: &Noted, entry: &Value) {
         described.starts_with(&format!("step {step} (")),
         "{label}: the step: {described}"
     );
+    // NOTE: the procedure of #5621, step 4 the controller's rules, steps 5 to 7 the policy, 8 the default.
     let decided = match step {
         1..=3 => format!("of EHR_ACCESS {}", noted.access),
-        4..=6 => format!("ACCESS_POLICY {}", noted.policy),
-        7 => format!("EHR_ACCESS {}", noted.access),
+        4..=7 => format!("ACCESS_POLICY {}", noted.policy),
+        8 => format!("EHR_ACCESS {}", noted.access),
         _ => "patient context".to_owned(),
     };
     assert!(

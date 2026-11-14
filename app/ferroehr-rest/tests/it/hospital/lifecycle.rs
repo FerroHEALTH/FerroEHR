@@ -17,10 +17,7 @@ use crate::hospital::build::{
     composition, directive, eva_directives, lab_result, naming, settle, world,
 };
 use crate::hospital::ledger::{Expect, Ledger};
-use crate::hospital::world::{
-    ROOT, SCIM, STAFF, VITALS, World, call, capability, day, named, patch_op, read_party, roster,
-    scim, text, update_party,
-};
+use crate::hospital::world::{SCIM, VITALS, World, call, day, patch_op, roster, scim};
 
 /// SCIM sets the User of `name` `active` or not.
 async fn set_active(world: &World, name: &str, active: bool) {
@@ -87,22 +84,13 @@ async fn a_nurse_reads_the_vital_signs() {
     ledger.verify(&world).await;
 }
 
-/// The nurse's role lets her commit the vital signs template and no other:
-/// her commit of a vital signs record is accepted and her commit of the
-/// diagnosis summary is refused `403` (#5624).
+/// The controller's rule bans the nurse role from writing the diagnosis
+/// summary: her commit of a vital signs record is accepted, and her commit of
+/// the summary is refused `refused-policy-denied` at step 4 (#5621, #5624).
 #[tokio::test]
 async fn a_nurse_cannot_commit_a_diagnosis_template_her_role_does_not_allow() {
     let world = Box::pin(world()).await;
-    let role = &world.people["devries"].role;
-    let (version, mut body) = read_party(&world.app, "role", role).await;
-    let mut capabilities = body["capabilities"].as_array().cloned().unwrap_or_default();
-    capabilities.push(capability(
-        "commit_composition",
-        &[named("template", &text(VITALS))],
-    ));
-    body["capabilities"] = Value::Array(capabilities);
-    let answer = update_party(&world.app, ROOT, ("role", role, &version), &body).await;
-    assert_eq!(answer.status, StatusCode::OK, "her role: {}", answer.body);
+    let mut ledger = Ledger::default();
     let commit = |body: Value| {
         let world = &world;
         async move {
@@ -118,44 +106,34 @@ async fn a_nurse_cannot_commit_a_diagnosis_template_her_role_does_not_allow() {
         }
     };
     let vitals = commit(composition(VITALS, "Vital signs", "Bram de Vries")).await;
-    assert_eq!(
-        vitals.status,
-        StatusCode::CREATED,
-        "her vital signs: {}",
-        vitals.body
-    );
+    assert_eq!(vitals.status, StatusCode::CREATED, "her vital signs: {}", vitals.body);
     let mut diagnosis = lab_result();
     diagnosis["composer"] = json!({ "_type": "PARTY_IDENTIFIED", "name": "Bram de Vries" });
     let refused = commit(diagnosis).await;
-    assert_eq!(
-        refused.status,
-        StatusCode::FORBIDDEN,
-        "a diagnosis: {}",
-        refused.body
-    );
+    answered(&refused, StatusCode::FORBIDDEN, Some("refused-policy-denied"));
+    ledger.note(&world, "the diagnosis summary", &refused, Expect::refused("refused-policy-denied", 4));
+    ledger.verify(&world).await;
 }
 
-/// SCIM removes the nurse's role and her next request is refused (#5625).
+/// SCIM removes the nurse's role code from her User, which ends her
+/// `ROLE`, and on the next request she declares a purpose no rule of a role
+/// she performs permits: `refused-purpose-not-permitted` at step 7 (#5621,
+/// #5625).
 #[tokio::test]
 async fn a_role_removed_through_scim_stops_working_on_the_next_request() {
     let world = Box::pin(world()).await;
-    let path = format!("/Users/{}", world.people["devries"].person);
-    let grant =
-        patch_op(json!([{ "op": "add", "path": "roles", "value": [{ "value": "nurse" }] }]));
-    let (status, answer) = scim(&world.app, SCIM, "PATCH", &path, Some(&grant)).await;
-    assert_eq!(status, StatusCode::OK, "the role: {answer}");
+    let mut ledger = Ledger::default();
     let answer = read(&world, "devries", &world.vitals, Some("TREAT")).await;
     answered(&answer, StatusCode::OK, None);
+    ledger.note(&world, "a nurse", &answer, TREATMENT);
+    let path = format!("/Users/{}", world.people["devries"].person);
     let remove = patch_op(json!([{ "op": "remove", "path": "roles[value eq \"nurse\"]" }]));
-    let (status, answer) = scim(&world.app, SCIM, "PATCH", &path, Some(&remove)).await;
-    assert_eq!(status, StatusCode::OK, "the removal: {answer}");
+    let (status, scimmed) = scim(&world.app, SCIM, "PATCH", &path, Some(&remove)).await;
+    assert_eq!(status, StatusCode::OK, "the removal: {scimmed}");
     let answer = read(&world, "devries", &world.vitals, Some("TREAT")).await;
-    assert_eq!(
-        answer.status,
-        StatusCode::FORBIDDEN,
-        "the next request: {}",
-        answer.body
-    );
+    answered(&answer, StatusCode::FORBIDDEN, Some("refused-purpose-not-permitted"));
+    ledger.note(&world, "no longer a nurse", &answer, Expect::refused("refused-purpose-not-permitted", 7));
+    ledger.verify(&world).await;
 }
 
 /// A User SCIM deactivates is refused everywhere on the next request, and
@@ -183,8 +161,8 @@ async fn a_deleted_user_is_refused_everywhere() {
     refused_everywhere(&world, "devries", "deleted").await;
 }
 
-/// A User SCIM creates signs in on the next request, and once the ADT system
-/// rosters her on Ward 3 she reads the vital signs.
+/// A User SCIM creates with the nurse role signs in on the next request, and
+/// once the ADT system rosters her on Ward 3 she reads the vital signs.
 #[tokio::test]
 async fn a_user_scim_creates_reads_on_the_next_request() {
     let mut world = Box::pin(world()).await;
@@ -196,7 +174,8 @@ async fn a_user_scim_creates_reads_on_the_next_request() {
         "before: {}",
         before.body
     );
-    let provisioned = crate::hospital::build::user(&world.app, SCIM, "nieuw", "Nina Nieuw").await;
+    let provisioned =
+        crate::hospital::build::user(&world.app, SCIM, "nieuw", ("Nina Nieuw", Some("nurse"))).await;
     world.people.insert("nieuw", provisioned);
     let answer = read(&world, "nieuw", &world.vitals, Some("TREAT")).await;
     answered(
@@ -208,17 +187,8 @@ async fn a_user_scim_creates_reads_on_the_next_request() {
         &world,
         "not rostered",
         &answer,
-        Expect::refused("refused-no-care-relationship", 5),
+        Expect::refused("refused-no-care-relationship", 6),
     );
-    let role = &world.people["nieuw"].role;
-    let (version, mut body) = read_party(&world.app, "role", role).await;
-    let nurse = STAFF
-        .iter()
-        .find(|staff| staff.name == "devries")
-        .expect("a nurse");
-    body["capabilities"] = json!([crate::hospital::build::facts(nurse)]);
-    let cleared = update_party(&world.app, ROOT, ("role", role, &version), &body).await;
-    assert_eq!(cleared.status, StatusCode::OK, "her role: {}", cleared.body);
     let rostered = roster(&world, "client:adt", "nieuw", &["Ward 3"], (&day(-1), None)).await;
     assert_eq!(
         rostered.status,

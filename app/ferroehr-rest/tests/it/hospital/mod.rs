@@ -24,4 +24,3 @@ mod matrix;
 mod replicas;
 pub(crate) mod world;
 
-mod probe;
