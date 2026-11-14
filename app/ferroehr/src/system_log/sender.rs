@@ -41,8 +41,8 @@
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 use backon::{ExponentialBuilder, Retryable};
@@ -55,10 +55,8 @@ use tokio::task::JoinHandle;
 
 use super::event::{AuditEvent, EmitOutcome};
 
-#[cfg(feature = "fhir")]
-use crate::access_log::entry::for_store;
 use crate::system_log::AuditError;
-use crate::system_log::categories::{CategoryMapConfig, Classifier};
+use crate::system_log::categories::CategoryMapConfig;
 use crate::system_log::chain_check::ChainCheck;
 use crate::system_log::config::{AuditConfig, FailMode, Retention, StoreConfig};
 use crate::system_log::message::AuditContext;
@@ -68,6 +66,12 @@ use crate::system_log::syslog::SyslogRoute;
 
 mod admission;
 mod categories;
+mod records;
+
+use categories::Classifiers;
+#[cfg(feature = "fhir")]
+use records::submit_to_feed_spool;
+use records::{render_batch, submit_to_syslog};
 
 /// The patient subject of an EHR: `EHR_STATUS.subject.external_ref`'s id and
 /// namespace.
@@ -160,7 +164,7 @@ struct SenderInner {
     emergency: ehds_logging::emergency::EmergencyPurposes,
     legal_basis: Option<String>,
     /// The compiled category register every record is classified through.
-    categories: RwLock<Arc<Classifier>>,
+    categories: Arc<Classifiers>,
     store: Option<AuditStore>,
     /// Whether the local store is currently accepting writes (`true` when the
     /// store is disabled — health then rides on the queue alone). Written by
@@ -559,6 +563,7 @@ pub async fn start(
     } = policy.compile()?;
 
     let store_healthy = Arc::new(AtomicBool::new(true));
+    let classifiers = Arc::new(Classifiers::new(categories));
     let (tx, rx) = mpsc::channel(config.queue_capacity.max(1));
     let sinks = Sinks {
         store: store.clone(),
@@ -571,6 +576,7 @@ pub async fn start(
         rx,
         sinks,
         ctx.clone(),
+        Arc::clone(&classifiers),
         resolver,
         config.resolve_subject,
         Arc::clone(&store_healthy),
@@ -587,7 +593,7 @@ pub async fn start(
             purpose_codes: config.purpose_codes.clone(),
             emergency,
             legal_basis: config.legal_basis.clone(),
-            categories: RwLock::new(Arc::new(categories)),
+            categories: classifiers,
             store,
             fail_mode: config.fail_mode,
             store_healthy,
@@ -678,6 +684,7 @@ async fn drain(
     mut rx: mpsc::Receiver<AuditEvent>,
     sinks: Sinks,
     ctx: AuditContext,
+    classifiers: Arc<Classifiers>,
     resolver: Option<SubjectResolver>,
     resolve_subject: bool,
     store_healthy: Arc<AtomicBool>,
@@ -706,6 +713,7 @@ async fn drain(
         let drained = render_batch(
             &mut batch,
             &ctx,
+            &classifiers,
             &subject_cache,
             resolve_subject.then_some(&unavailable),
             &sinks,
@@ -715,7 +723,7 @@ async fn drain(
         // The store is the durability anchor and is written first.
         write_to_store(&sinks, &drained.records, &ctx, &store_healthy).await;
         if let Some(route) = &sinks.syslog {
-            submit_to_syslog(route, &drained.records, &ctx).await;
+            submit_to_syslog(route, &drained.records, &ctx, &classifiers).await;
         }
         #[cfg(feature = "fhir")]
         if let Some(forwarder) = &sinks.feed_spool {
@@ -762,86 +770,6 @@ async fn memoize_subjects(
         cache.insert(ehr_id, subject).await;
     }
     unavailable
-}
-
-/// Drains the batch into records, attaching each event's memoized subject (or
-/// marking its lookup failed when its EHR is in `unavailable`) and, when the
-/// store-off FHIR feed is on, its rendered `AuditEvent` document.
-/// `unavailable` is `None` when subjects are not resolved at all.
-///
-/// The store renders its documents from its columns when they are read, so
-/// with the store on nothing is rendered here. Every event time is cut to the
-/// microsecond the store keeps, so a document rendered now and one rendered
-/// from the store name the same instant.
-async fn render_batch(
-    batch: &mut Vec<AuditEvent>,
-    ctx: &AuditContext,
-    subject_cache: &SubjectCache,
-    unavailable: Option<&BTreeSet<String>>,
-    sinks: &Sinks,
-) -> Drained {
-    #[cfg(feature = "fhir")]
-    let render_fhir = renders_for_feed(sinks);
-    #[cfg(not(feature = "fhir"))]
-    let _: (&Sinks, &AuditContext) = (sinks, ctx);
-    let mut records: Vec<AuditRecord> = Vec::with_capacity(batch.len());
-    #[cfg(feature = "fhir")]
-    let mut rendered: Vec<Option<serde_json::Value>> = Vec::with_capacity(batch.len());
-    for event in batch.drain(..) {
-        let mut event = event;
-        event.timestamp = stored_instant(event.timestamp);
-        let resolved = match (unavailable, &event.ehr_id) {
-            (Some(failed), Some(ehr_id)) if failed.contains(ehr_id) => {
-                event.subject_lookup_failed = true;
-                None
-            }
-            (Some(_), Some(ehr_id)) => subject_cache.get(ehr_id).await.flatten(),
-            _ => None,
-        };
-        event
-            .subject_namespace
-            .clone_from(&resolved.as_ref().and_then(|s| s.namespace.clone()));
-        let subject = resolved.map(|s| s.id);
-        #[cfg(feature = "fhir")]
-        rendered.push(
-            render_fhir
-                .then(|| {
-                    crate::system_log::fhir::render_audit_event(&event, ctx, subject.as_deref())
-                })
-                .flatten(),
-        );
-        #[cfg(feature = "fhir")]
-        let entry = sinks.store.as_ref().and_then(|_| for_store(&event, ctx));
-        #[cfg(not(feature = "fhir"))]
-        let entry = None;
-        records.push(AuditRecord {
-            event,
-            subject,
-            entry,
-        });
-    }
-    Drained {
-        records,
-        #[cfg(feature = "fhir")]
-        rendered,
-    }
-}
-
-/// Whether the drain renders documents for the store-off FHIR feed's spool.
-#[cfg(feature = "fhir")]
-fn renders_for_feed(sinks: &Sinks) -> bool {
-    sinks.feed_spool.is_some()
-}
-
-/// `at` cut to the microsecond `timestamptz` keeps; `at` itself when it is
-/// already that fine.
-fn stored_instant(at: jiff::Timestamp) -> jiff::Timestamp {
-    at.round(
-        jiff::TimestampRound::new()
-            .smallest(jiff::Unit::Microsecond)
-            .mode(jiff::RoundMode::Trunc),
-    )
-    .unwrap_or(at)
 }
 
 /// Writes the batch to the local Audit Record Repository in one multi-row
@@ -904,61 +832,6 @@ async fn store_whole_batch(
                 .atna_audit_send_failed
                 .add(count, &[opentelemetry::KeyValue::new("sink", "store")]);
             tracing::warn!("ATNA audit store batch write failed: {e}");
-        }
-    }
-}
-
-/// Stores every record's DICOM PS3.15 §A.5 XML frame in the syslog spool,
-/// which the forwarder delivers.
-async fn submit_to_syslog(route: &SyslogRoute, records: &[AuditRecord], ctx: &AuditContext) {
-    for AuditRecord { event, subject, .. } in records {
-        let xml = match crate::system_log::message::to_xml(event, ctx, subject.as_deref()) {
-            Ok(xml) => xml,
-            Err(e) => {
-                crate::telemetry::metrics::metrics()
-                    .atna_audit_serialize_failed
-                    .add(1, &[]);
-                tracing::warn!("ATNA audit message serialization failed: {e}");
-                continue;
-            }
-        };
-        if let Err(e) = route.submit(event.timestamp, &xml).await {
-            crate::telemetry::metrics::metrics()
-                .atna_audit_dropped
-                .add(1, &[opentelemetry::KeyValue::new("sink", "syslog")]);
-            tracing::warn!(
-                "ATNA audit syslog spool refused a record, which syslog never receives: {e}"
-            );
-        }
-    }
-}
-
-/// Stores every rendered document in the store-off FHIR feed's spool, which
-/// the forwarder delivers.
-#[cfg(feature = "fhir")]
-async fn submit_to_feed_spool(
-    forwarder: &Forwarder<Spool>,
-    rendered: &[Option<serde_json::Value>],
-) {
-    for rendered in rendered {
-        let Some(document) = rendered else {
-            continue;
-        };
-        let bytes = match serde_json::to_vec(document) {
-            Ok(bytes) => bytes,
-            Err(e) => {
-                crate::telemetry::metrics::metrics()
-                    .atna_audit_serialize_failed
-                    .add(1, &[]);
-                tracing::warn!("ATNA audit FHIR document serialization failed: {e}");
-                continue;
-            }
-        };
-        if let Err(e) = forwarder.submit(secrecy::SecretSlice::from(bytes)).await {
-            crate::telemetry::metrics::metrics()
-                .atna_audit_dropped
-                .add(1, &[opentelemetry::KeyValue::new("sink", "fhir_feed")]);
-            tracing::warn!("ATNA audit FHIR feed spool refused a record: {e}");
         }
     }
 }
@@ -1096,7 +969,9 @@ mod tests {
                 ])
                 .expect("one declared purpose"),
                 legal_basis: None,
-                categories: RwLock::new(Arc::new(Classifier::default())),
+                categories: Arc::new(Classifiers::new(
+                    crate::system_log::categories::Classifier::default(),
+                )),
                 store: None,
                 fail_mode,
                 store_healthy: Arc::new(AtomicBool::new(store_healthy)),

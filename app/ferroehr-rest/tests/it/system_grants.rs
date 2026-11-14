@@ -112,6 +112,77 @@ pub(crate) async fn system_client(
     provider: Option<(&str, &str)>,
     capabilities: &[Value],
 ) -> VoId {
+    let hospital = match provider {
+        Some(identifier) => Some(provider_organisation(svc, identifier, &[]).await),
+        None => None,
+    };
+    acting_client(svc, clients, hospital, capabilities).await
+}
+
+/// Commits, as the server, a `GROUP` of a deployment's own archetype named
+/// `name`; its container.
+pub(crate) async fn group(svc: &FerroEhrService, name: &str) -> VoId {
+    let archetype = "openEHR-DEMOGRAPHIC-GROUP.region.v1";
+    let body = json!({
+        "_type": "GROUP", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": text(name),
+        "identities": identities(name)
+    });
+    create(svc, PartyKind::Group, &body).await.0
+}
+
+/// Commits, as the server, a provider `ORGANISATION` identified by
+/// `(issuer, id)`, a member of each `GROUP` of `groups` by a relationship
+/// coded `member_of`; its container.
+pub(crate) async fn provider_organisation(
+    svc: &FerroEhrService,
+    (issuer, id): (&str, &str),
+    groups: &[VoId],
+) -> VoId {
+    let archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.hospital.v1";
+    let mut organisation = json!({
+        "_type": "ORGANISATION", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": text("Hospital"),
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0001", "name": text("details"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0002", "name": text("provider"),
+                "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id,
+                           "type": "healthcare-provider" } }] },
+        "identities": identities("Hospital")
+    });
+    let (hospital, uid) = create(svc, PartyKind::Organisation, &organisation).await;
+    if !groups.is_empty() {
+        let memberships: Vec<Value> = groups
+            .iter()
+            .map(|group| {
+                json!({ "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at0050",
+                        "name": coded("member_of"),
+                        "source": reference("ORGANISATION", hospital),
+                        "target": reference("GROUP", *group) })
+            })
+            .collect();
+        organisation["relationships"] = Value::Array(memberships);
+        Box::pin(svc.party_update(
+            PartyKind::Organisation,
+            hospital,
+            Precondition::parse(Some(uid.as_str()), None).expect("a well-formed If-Match"),
+            write(&organisation, Some(&uid)),
+        ))
+        .await
+        .expect("the ORGANISATION is a member of its groups");
+    }
+    hospital
+}
+
+/// Commits, as the server, an `AGENT` carrying each client identifier of
+/// `clients` (`(issuer, client_id)`), acting for the provider `ORGANISATION`
+/// `provider` when given, and a `ROLE` it performs holding `capabilities`;
+/// the `AGENT`'s container.
+pub(crate) async fn acting_client(
+    svc: &FerroEhrService,
+    clients: &[(&str, &str)],
+    provider: Option<VoId>,
+    capabilities: &[Value],
+) -> VoId {
     let identifiers: Vec<Value> = clients
         .iter()
         .map(|(issuer, client_id)| {
@@ -129,18 +200,7 @@ pub(crate) async fn system_client(
         "identities": identities("integration engine")
     });
     let (vo, uid) = create(svc, PartyKind::Agent, &agent).await;
-    if let Some((issuer, id)) = provider {
-        let archetype = "openEHR-DEMOGRAPHIC-ORGANISATION.hospital.v1";
-        let organisation = json!({
-            "_type": "ORGANISATION", "archetype_node_id": archetype,
-            "archetype_details": archetyped(archetype), "name": text("Hospital"),
-            "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0001", "name": text("details"),
-                "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0002", "name": text("provider"),
-                    "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id,
-                               "type": "healthcare-provider" } }] },
-            "identities": identities("Hospital")
-        });
-        let (hospital, _) = create(svc, PartyKind::Organisation, &organisation).await;
+    if let Some(hospital) = provider {
         agent["relationships"] = json!([{
             "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at0040", "name": coded("acts_for"),
             "source": reference("AGENT", vo), "target": reference("ORGANISATION", hospital)

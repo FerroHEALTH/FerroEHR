@@ -49,7 +49,7 @@ async fn read(app: &Router, ehr: &str, credential: &str) -> StatusCode {
 async fn summaries(pool: &sqlx::PgPool, binding: &str) -> Vec<Value> {
     for _ in 0..90 {
         let rows: Vec<Value> = sqlx::query_scalar(
-            "SELECT summary FROM audit.audit_event \
+            "SELECT summary FROM audit.access_trail \
              WHERE binding = $1 AND summary IS NOT NULL ORDER BY recorded_at",
         )
         .bind(binding)

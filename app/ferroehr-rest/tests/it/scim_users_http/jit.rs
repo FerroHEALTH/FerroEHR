@@ -255,7 +255,7 @@ async fn versions(pool: &sqlx::PgPool, party: uuid::Uuid) -> Vec<(String, String
 async fn bindings(pool: &sqlx::PgPool, code: &str, count: usize) -> usize {
     for _ in 0..100 {
         let found: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM audit.audit_event WHERE binding = $1")
+            sqlx::query_scalar("SELECT count(*) FROM audit.access_trail WHERE binding = $1")
                 .bind(code)
                 .fetch_one(pool)
                 .await
@@ -361,7 +361,7 @@ async fn a_provisional_record_names_the_declared_provider() {
     }
     assert_eq!(bindings(&pool, "provisional", 2).await, 2);
     let providers: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
-        "SELECT provider ->> 'issuer', provider ->> 'id' FROM audit.audit_event \
+        "SELECT provider ->> 'issuer', provider ->> 'id' FROM audit.access_trail \
          WHERE binding = 'provisional'",
     )
     .fetch_all(&pool)

@@ -1,0 +1,13 @@
+=== ACCESS_LOG_RESTRICTION Class
+
+[tabs]
+====
+Definition::
++
+include::ROOT:partial$definitions/access_log_restriction.adoc[]
+
+BMM::
++
+include::ROOT:partial$BMMs/access_log_restriction.adoc[]
+
+====

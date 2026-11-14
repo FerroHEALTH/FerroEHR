@@ -8,7 +8,10 @@
 //! subject of care, signing in through the patient portal, and their parent,
 //! as the actor of the child's token (#5446), read the subject view of the
 //! child's EHR and nothing of any other; a professional the admin class does
-//! not admit is refused; and every read of the log writes its own entry.
+//! not admit is refused; every read of the log writes its own entry; and an
+//! EHDS Art. 9(3) restriction in the controller's access policy withholds the
+//! accessor it names from the subject view alone, from the next request on
+//! (#5570).
 //! No openEHR spec governs the access log: our own design on the draft
 //! `org.openehr.rm.access_log` 0.1.0.
 
@@ -16,7 +19,10 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use axum::Router;
+use ferroehr::access_policy::ARCHETYPE;
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::service::FerroEhrService;
+use ferroehr::service::admin::access_policy::PolicyPrecondition;
 use ferroehr::system_log::store::AuditStore;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
@@ -37,6 +43,7 @@ struct Fixture {
     _db: testkit::TestDb,
     _drain: ferroehr::system_log::sender::AuditHandle,
     pool: PgPool,
+    svc: Arc<FerroEhrService>,
     app: Router,
     /// The child's EHR, which the parent represents.
     ehr: String,
@@ -87,11 +94,12 @@ async fn fixture() -> Fixture {
         common::null_resolvers(),
     )
     .map(Arc::new);
-    let app = common::build_full(config, svc, handle, Observability::default()).await;
+    let app = common::build_full(config, Arc::clone(&svc), handle, Observability::default()).await;
     let fixture = Fixture {
         _db: db,
         _drain: drain,
         pool,
+        svc,
         app,
         ehr,
         elsewhere,
@@ -391,4 +399,162 @@ async fn each_read_of_the_log_is_recorded() {
             .any(|entry| log_read_by(entry, "subject of care")),
         "include_self shows them: {page}"
     );
+}
+
+/// A code of `terminology`, its rubric the code.
+fn coded(terminology: &str, code: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": code,
+        "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+            "code_string": code } })
+}
+
+/// An access policy over the default archetype; with `restricted`, it
+/// withholds the party and the provider of a `person` accessor from the
+/// subject view under a national provision.
+fn policy(restricted: bool) -> Value {
+    let mut policy = json!({
+        "_type": "ACCESS_POLICY",
+        "name": { "_type": "DV_TEXT", "value": "Access policy" },
+        "archetype_node_id": ARCHETYPE,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": ARCHETYPE },
+            "rm_version": "1.2.0" },
+        "controller": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
+        "care_relationship_required": false,
+        "purpose_required": false
+    });
+    if restricted {
+        let control = openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+        policy["log_restrictions"] = json!([{ "_type": "ACCESS_LOG_RESTRICTION",
+            "name": { "_type": "DV_TEXT", "value": "Professional withheld" },
+            "archetype_node_id": "id11",
+            "accessor_kinds": [coded("openehr", "person")],
+            "withheld": [coded(control, "accessor_party"), coded(control, "accessor_provider")],
+            "legal_grounds": [coded("urn:example:national-law", "art-9-3")] }]);
+    }
+    policy
+}
+
+/// The `person` entries and the `subject of care` entries of the subject
+/// view of the child's log, its own reads included.
+async fn subject_view_by_kind(fx: &Fixture, credential: &str) -> (Vec<Value>, Vec<Value>) {
+    let (status, page) = get(&fx.app, &log_of(&fx.ehr, "?include_self=true"), credential).await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    let of = |kind: &str| -> Vec<Value> {
+        entries(&page)
+            .iter()
+            .filter(|entry| entry["accessor"]["kind"]["value"] == json!(kind))
+            .cloned()
+            .collect()
+    };
+    (of("person"), of("subject of care"))
+}
+
+/// A restriction the policy declares withholds the accessor's party and
+/// provider from the subject view of a `person` accessor's entries, for the
+/// subject and their representative, from the next request on, with the
+/// policy written on another replica and its notification keeping this one
+/// fresh; the subject's own entries and a reviewer's full view keep the
+/// party, and a policy with no restriction withholds nothing again.
+#[tokio::test]
+async fn an_art_9_3_restriction_applies_to_the_subject_view_alone() {
+    let fx = fixture().await;
+    let credential = patient(&fx.ehr);
+    let (_, _) = get(&fx.app, &log_of(&fx.ehr, ""), &credential).await;
+    stored(&fx.pool, 1, |entry| log_read_by(entry, "subject of care")).await;
+    let (people, own) = subject_view_by_kind(&fx, &credential).await;
+    assert!(!people.is_empty() && !own.is_empty(), "{people:?} {own:?}");
+    assert!(
+        people
+            .iter()
+            .all(|entry| entry["accessor"].get("party").is_some()),
+        "no restriction, no change: {people:?}"
+    );
+
+    let listened = fx.svc.access_policy().listened();
+    listened.spawn_listener();
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !listened.is_listening() {
+        assert!(Instant::now() < deadline, "the listener connects");
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let seen = listened.notifications();
+    let writer = common::binding_service(&fx.pool);
+    let first = writer
+        .put_access_policy(&PolicyPrecondition::Create, &policy(true))
+        .await
+        .expect("the restricting policy commits")
+        .version_uid;
+    assert!(
+        listened.notified_after(seen, Duration::from_secs(10)).await,
+        "the commit notifies"
+    );
+
+    for reader in [patient(&fx.ehr), parent(&fx.ehr)] {
+        let (people, own) = subject_view_by_kind(&fx, &reader).await;
+        assert!(!people.is_empty(), "{people:?}");
+        for entry in &people {
+            assert!(entry["accessor"].get("party").is_none(), "{entry}");
+            assert!(entry["accessor"].get("provider").is_none(), "{entry}");
+            assert_eq!(
+                entry["accessor"]["kind"]["value"],
+                json!("person"),
+                "{entry}"
+            );
+            assert!(entry.get("time_recorded").is_some(), "{entry}");
+        }
+        assert!(
+            own.iter()
+                .all(|entry| entry["accessor"].get("party").is_some()),
+            "another accessor kind keeps its party: {own:?}"
+        );
+        let uid = people[0]["uid"]["value"].as_str().expect("a uid");
+        let (status, one) = get(&fx.app, &log_of(&fx.ehr, &format!("/{uid}")), &reader).await;
+        assert_eq!(status, StatusCode::OK, "{one}");
+        assert!(one["accessor"].get("party").is_none(), "{one}");
+    }
+
+    let (status, page) = get(&fx.app, &log_of(&fx.ehr, ""), &root()).await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    let reviewed: Vec<&Value> = entries(&page)
+        .iter()
+        .filter(|entry| entry["accessor"]["kind"]["value"] == json!("person"))
+        .collect();
+    assert!(!reviewed.is_empty(), "{page}");
+    assert!(
+        reviewed
+            .iter()
+            .all(|entry| entry["accessor"].get("party").is_some() && entry.get("link").is_some()),
+        "the full view is unchanged: {page}"
+    );
+
+    fx.svc
+        .put_access_policy(&PolicyPrecondition::Replace(first), &policy(false))
+        .await
+        .expect("the policy without a restriction commits");
+    let (people, _) = subject_view_by_kind(&fx, &credential).await;
+    assert!(
+        people
+            .iter()
+            .all(|entry| entry["accessor"].get("party").is_some()),
+        "the restriction is lifted on the next request: {people:?}"
+    );
+    let changes = stored(&fx.pool, 1, |entry| {
+        entry["operation"]["value"] == json!("admin_access_policy_write")
+    })
+    .await;
+    assert_eq!(
+        changes.len(),
+        1,
+        "the write on this replica changed the log's meaning: {changes:?}"
+    );
+    assert_eq!(
+        changes[0]["action"]["value"],
+        json!("update"),
+        "{}",
+        changes[0]
+    );
+    assert!(changes[0].get("ehr_id").is_none(), "{}", changes[0]);
 }

@@ -495,11 +495,12 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
     assert_eq!(findings(&pool).await, Vec::new());
 }
 
-/// A read event of the `audit_event` form, written at `at`.
+/// A party read written at `at`: an access outside the access log, which the
+/// store keeps in the `audit_event` form.
 fn legacy_event(at: Timestamp) -> AuditEvent {
     let mut event = AuditEvent::new(
         EventActionCode::Read,
-        ObjectClass::Composition,
+        ObjectClass::Demographic,
         EventOutcome::Success,
     );
     "alice".clone_into(&mut event.user_id);

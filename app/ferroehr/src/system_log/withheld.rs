@@ -28,7 +28,7 @@ use crate::system_log::message::AuditContext;
 use crate::system_log::render::classified;
 use crate::system_log::search::condition::search_condition;
 use crate::system_log::search::resolve_criteria;
-use crate::system_log::store::{AuditSearchFilter, AuditStore, newest_first, stored_record};
+use crate::system_log::store::{AuditSearchFilter, AuditStore, newest_first};
 
 impl AuditStore {
     /// The EHR ids the records `filter` selects name, each once.
@@ -42,7 +42,7 @@ impl AuditStore {
         let (sql, values) = Query::select()
             .distinct()
             .column(Alias::new("ehr_id"))
-            .from((Alias::new("audit"), Alias::new("audit_event")))
+            .from((Alias::new("audit"), Alias::new("audit_record")))
             .cond_where(search_condition(filter, &resolved))
             .and_where(Expr::col(Alias::new("ehr_id")).is_not_null())
             .build_sqlx(PostgresQueryBuilder);
@@ -83,9 +83,8 @@ impl AuditStore {
         let mut shown = 0_usize;
         let mut documents = Vec::new();
         for row in &rows {
-            let (digest, stored) = stored_record(row)?;
-            let policy = self.policy(stored.chain_seq, &digest).await?;
-            let (event, subject) = classified(stored, &policy)?;
+            let (policy, stored) = self.record_of(row).await?;
+            let (event, subject) = classified(stored, &policy.categories)?;
             if !shows(holds, &event, &policy.context, subject.as_deref(), now)? {
                 continue;
             }

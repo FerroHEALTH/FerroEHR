@@ -33,9 +33,23 @@ const PURPOSE: &str = "x-purpose-of-use";
 /// The `persons` issuer of Dr B, whose role claims grant the emergency role.
 const MEDICS: &str = "https://medics.example";
 
+/// The `machines` issuer of the regional providers' system clients.
+const MACHINES: &str = "https://machines.example";
+/// The SMART scopes of a system client that reads compositions and queries
+/// across EHRs.
+const SYSTEM_SCOPES: &str = "system/composition-*.rs system/aql-*.s";
+
 /// The credential of `name`: Dr B's token of [`MEDICS`], holding the
-/// emergency role, or a Basic user's.
+/// emergency role, an app-only token of [`MACHINES`] for `client:<id>`, or a
+/// Basic user's.
 fn credential(name: &str) -> String {
+    if let Some(client) = name.strip_prefix("client:") {
+        return crate::caller_kinds_http::bearer(
+            MACHINES,
+            &crate::caller_kinds_http::audience(MACHINES),
+            &json!({ "sub": client, "client_id": client, "scope": SYSTEM_SCOPES }),
+        );
+    }
     if name == "drb" {
         let exp = jiff::Timestamp::now().as_second() + 3600;
         return common::bearer(&json!({
@@ -48,8 +62,8 @@ fn credential(name: &str) -> String {
 
 /// An audited app with `ETREAT` an emergency purpose and `EMERGENCY` the
 /// emergency access role; Basic users for the administrator, a nurse and a
-/// psychiatrist, each bound to a `PERSON`; Dr B of [`MEDICS`]; and the IPS
-/// template uploaded.
+/// psychiatrist, each bound to a `PERSON`; Dr B of [`MEDICS`]; the system
+/// clients of [`MACHINES`]; and the IPS template uploaded.
 async fn app() -> (
     testkit::TestDb,
     PgPool,
@@ -91,6 +105,14 @@ async fn app() -> (
             jwks_file: common::jwks_file().display().to_string(),
             ..common::entry(MEDICS, "ferroehr")
         });
+    config
+        .auth
+        .shared
+        .issuer
+        .push(crate::caller_kinds_http::machines(
+            MACHINES,
+            ferrohealth_smart::profile::Preset::Rfc9068,
+        ));
     common::bind_issuer(&mut config, MEDICS);
     common::bind_subjects(&pool, &[(MEDICS, "drb")]).await;
     config.rbac.role_issuers = vec![ferrohealth_secret::secret_url::SecretUrl::new(MEDICS)];
@@ -409,4 +431,54 @@ async fn an_absolute_restriction_holds_in_an_emergency() {
     let read = format!("{BASE}/ehr/{ehr}/composition/{vo}");
     let (status, body) = send(&app, "GET", &read, "drb", Some("ETREAT"), None).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+}
+
+/// Regional sharing by BPPC: the subject's permit, copied from the region's
+/// opt-in policy, names the regional `GROUP` under `consent_required`
+/// settings. A system client acting for a member `ORGANISATION` reads the
+/// record and queries it; a client of a provider outside the region is
+/// refused with the default's code and queries nothing (IHE BPPC; RM
+/// Demographic IM `PARTY_RELATIONSHIP`, coded `member_of`; our own design,
+/// #5575).
+#[tokio::test]
+async fn regional_sharing_admits_a_client_of_a_member_organisation() {
+    use crate::system_grants::{acting_client, group, provider_organisation};
+    let (_db, _pool, svc, app) = Box::pin(app()).await;
+    let (ehr, vo) = ehr_with_composition(&app).await;
+    let region = group(&svc, "Regional health network").await;
+    let member = provider_organisation(&svc, ("urn:oid:2.999.7", "member"), &[region]).await;
+    let outside = provider_organisation(&svc, ("urn:oid:2.999.7", "outside"), &[]).await;
+    common::allowing(&svc, &[Operation::QuerySystemWide]);
+    let queries = [crate::system_grants::capability("query_system_wide", &[])];
+    acting_client(&svc, &[(MACHINES, "member-lab")], Some(member), &queries).await;
+    acting_client(&svc, &[(MACHINES, "outside-lab")], Some(outside), &queries).await;
+    let permit = directive(
+        "consent",
+        "permit",
+        &json!({
+            "applies_to": [{ "party": { "_type": "PARTY_REF", "namespace": "demographic",
+                "type": "GROUP", "id": { "_type": "HIER_OBJECT_ID", "value": region.to_string() } } }],
+            "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "urn:oid:2.999.7.1",
+                              "id": "regional-opt-in", "type": "BPPC" }]
+        }),
+    );
+    let mut settings = common::access_settings("consent_required", &[]);
+    settings["directives"] = json!([permit]);
+    common::commit_access_settings(&svc, ehr.parse().expect("an EHR id"), settings).await;
+    svc.grants().refresh().await.expect("the copy reads");
+    let read = format!("{BASE}/ehr/{ehr}/composition/{vo}");
+    let (status, body) = send(&app, "GET", &read, "client:member-lab", None, None).await;
+    assert_eq!(status, StatusCode::OK, "a member's client reads: {body}");
+    assert_eq!(queried(&app, "client:member-lab", None).await, vec![vo]);
+    let (status, body) = send(&app, "GET", &read, "client:outside-lab", None, None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert_eq!(
+        refusal(&body).0,
+        json!("refused-consent-required"),
+        "{body}"
+    );
+    assert!(
+        queried(&app, "client:outside-lab", None).await.is_empty(),
+        "the query"
+    );
 }

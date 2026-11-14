@@ -302,7 +302,7 @@ async fn drive(app: &Router, subject: &str, method: &str, path: &str) {
 /// The stored records of `subjects`, as operation ids keyed by principal.
 async fn records(pool: &PgPool, subjects: &[String]) -> BTreeMap<String, Vec<Option<String>>> {
     let rows: Vec<(String, Option<String>)> = sqlx::query_as(
-        "SELECT principal, operation FROM audit.audit_event WHERE principal = ANY($1)",
+        "SELECT principal, operation FROM audit.access_trail WHERE principal = ANY($1)",
     )
     .bind(subjects)
     .fetch_all(pool)
@@ -428,7 +428,7 @@ async fn the_access_record_carries_the_request_id_the_client_received() {
     let deadline = Instant::now() + Duration::from_secs(30);
     let stored: Option<String> = loop {
         let row: Option<(Option<String>,)> =
-            sqlx::query_as("SELECT request_id FROM audit.audit_event WHERE principal = $1")
+            sqlx::query_as("SELECT request_id FROM audit.access_trail WHERE principal = $1")
                 .bind(subject)
                 .fetch_optional(&pool)
                 .await

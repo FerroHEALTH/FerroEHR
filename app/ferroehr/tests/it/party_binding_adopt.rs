@@ -194,7 +194,7 @@ async fn adoption_gives_each_prepared_person_its_role_in_one_contribution() {
     drop(svc);
     handle.shutdown(std::time::Duration::from_secs(5)).await;
     let recorded: Vec<(String, Option<String>)> = sqlx::query_as(
-        "SELECT resource_id, principal FROM audit.audit_event \
+        "SELECT resource_id, principal FROM audit.access_trail \
          WHERE resource_id LIKE '%#professional-role:%' ORDER BY resource_id",
     )
     .fetch_all(&db.pool())

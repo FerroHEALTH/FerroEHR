@@ -147,6 +147,11 @@ pub enum AuditError {
     /// The access-log entries of a batch could not be appended.
     #[error("the access-log entries could not be written")]
     AccessLog(#[from] crate::access_log::store::AccessLogError),
+    /// A stored access-log entry does not read as the audit record its
+    /// projections are written from.
+    #[cfg(feature = "fhir")]
+    #[error("the access-log entry does not read as an audit record")]
+    Recorded(#[from] crate::access_log::recorded::RecordedError),
     /// A batch named a retention end count other than its record count.
     #[error("{ends} retention ends for {records} audit records")]
     RetentionEnds {

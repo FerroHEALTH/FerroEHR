@@ -647,7 +647,7 @@ async fn records(pool: &sqlx::PgPool, party: &str, expected: usize) -> Vec<(Stri
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     loop {
         let rows: Vec<(Option<String>, String)> = sqlx::query_as(
-            "SELECT principal, action FROM audit.audit_event WHERE resource_id = $1 \
+            "SELECT principal, action FROM audit.access_trail WHERE resource_id = $1 \
              ORDER BY chain_seq",
         )
         .bind(party)

@@ -407,6 +407,7 @@ assigned, as in the access log draft:
 | `access caller kind` | `professional`, `access_service`, `subject`, `representative`, `system` |
 | `access sensitivity clearance` | the element whose value is a sensitivity code |
 | `care relationship` (demographic) | `member_of`, `under_care_of` |
+| `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups`: what `ACCESS_POLICY.log_restrictions` withholds from the access log's subject view under EHDS Art 9(3) (#5570) |
 | operation (from #5433) | adds `read`, `write`, `export`, `query` as directive-level operation classes, and `write_care_relationship`, `write_access_policy` as grants |
 
 Sensitivity, category and purpose codes are not FerroEHR's: they come from

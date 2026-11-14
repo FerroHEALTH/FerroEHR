@@ -1140,7 +1140,7 @@ async fn a_subject_join_is_recorded_in_the_party_and_linkage_domains() {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
         let count = loop {
             let found: Option<Option<i64>> = sqlx::query_scalar(
-                "SELECT result_count FROM audit.audit_event \
+                "SELECT result_count FROM audit.access_trail \
                  WHERE domain = $1 AND resource_id = $2 ORDER BY recorded_at DESC LIMIT 1",
             )
             .bind(domain)

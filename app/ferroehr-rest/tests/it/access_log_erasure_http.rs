@@ -132,7 +132,7 @@ async fn trail(pool: &PgPool, resource: &str) -> Vec<(String, String)> {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<(String, Option<String>)> = sqlx::query_as(
-            "SELECT action, principal FROM audit.audit_event \
+            "SELECT action, principal FROM audit.access_trail \
              WHERE resource_id = $1 ORDER BY chain_seq",
         )
         .bind(resource)

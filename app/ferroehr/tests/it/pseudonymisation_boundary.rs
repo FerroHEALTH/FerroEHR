@@ -1810,9 +1810,11 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
     .expect("the clinical pool connects on its own credential");
 
     let store = AuditStore::new(clinical.clone());
+    // A party read is kept as an `audit_event` record, a composition read as
+    // its access-log entry with its search index row: the role writes both.
     let mut event = AuditEvent::new(
         EventActionCode::Read,
-        ObjectClass::Composition,
+        ObjectClass::Demographic,
         EventOutcome::Success,
     );
     "alice".clone_into(&mut event.user_id);
@@ -1820,6 +1822,16 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         .insert(&event, None)
         .await
         .expect("the clinical role inserts an access record");
+    let mut access = AuditEvent::new(
+        EventActionCode::Read,
+        ObjectClass::Composition,
+        EventOutcome::Success,
+    );
+    "alice".clone_into(&mut access.user_id);
+    store
+        .insert(&access, None)
+        .await
+        .expect("the clinical role inserts an access-log entry");
     let seq: i64 = sqlx::query_scalar("SELECT chain_seq FROM audit.audit_event WHERE id = $1")
         .bind(id)
         .fetch_one(&clinical)
@@ -1849,6 +1861,11 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         .await
         .expect("the clinical reader reads the trail");
     assert_eq!(count, 1);
+    let entries: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.audit_record")
+        .fetch_one(&reader)
+        .await
+        .expect("the clinical reader reads every record");
+    assert_eq!(entries, 2);
     let rewrite = sqlx::query("UPDATE audit.audit_event SET principal = 'bob' WHERE id = $1")
         .bind(id)
         .execute(&clinical)
