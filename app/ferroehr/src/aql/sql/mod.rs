@@ -566,7 +566,10 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     if ir.distinct {
         b.q.distinct();
     }
-    let (sql, values) = b.q.build_sqlx(PostgresQueryBuilder);
+    let (sql, values) = match access::census(&ctx.ehr_access) {
+        Some(census) => b.q.with(census).build_sqlx(PostgresQueryBuilder),
+        None => b.q.build_sqlx(PostgresQueryBuilder),
+    };
     Ok(PreparedQuery {
         sql,
         values,
