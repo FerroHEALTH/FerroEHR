@@ -43,6 +43,7 @@ mod access_delay_trail;
 mod access_log_erasure_http;
 mod access_log_http;
 mod access_log_management_http;
+mod access_log_reads_http;
 mod access_opt_out_http;
 mod access_policy_http;
 mod access_restriction_http;
