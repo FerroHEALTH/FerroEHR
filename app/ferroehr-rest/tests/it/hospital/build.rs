@@ -27,11 +27,11 @@ use crate::hospital::world::{
 /// The extension FerroEHR's User attributes sit in.
 const EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User";
 
-/// The world: every party, the record, the policy and the directives.
-pub(crate) async fn world() -> World {
-    let config = config();
-    let (db, pool) = common::migrated_pool().await;
-    let audit = AuditConfig {
+/// The audit configuration of every replica: the purposes of use the
+/// hospital declares, `ETREAT` its emergency purpose, recorded to the local
+/// store.
+pub(crate) fn audit() -> AuditConfig {
+    AuditConfig {
         purpose_codes: vec![
             "TREAT".to_owned(),
             "ETREAT".to_owned(),
@@ -39,8 +39,14 @@ pub(crate) async fn world() -> World {
         ],
         emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
-    };
-    let (sender, drain) = start(audit, None, Some(pool.clone()))
+    }
+}
+
+/// The world: every party, the record, the policy and the directives.
+pub(crate) async fn world() -> World {
+    let config = config();
+    let (db, pool) = common::migrated_pool().await;
+    let (sender, drain) = start(audit(), None, Some(pool.clone()))
         .await
         .expect("the audit sender");
     let svc = Arc::new(replica(&config, &pool, Some(sender)).await);
@@ -134,7 +140,12 @@ pub(crate) async fn world() -> World {
 
 /// The SCIM User `user_name` of `client`, keyed by its own name, and the
 /// professional `ROLE` it performs.
-async fn user(app: &axum::Router, client: &str, user_name: &str, display: &str) -> Provisioned {
+pub(crate) async fn user(
+    app: &axum::Router,
+    client: &str,
+    user_name: &str,
+    display: &str,
+) -> Provisioned {
     let body = json!({
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User", EXTENSION],
         "userName": user_name,
@@ -158,7 +169,7 @@ async fn group(app: &axum::Router, name: &str, members: &[&str]) -> String {
     let body = json!({
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
         "displayName": name,
-        "externalId": name.to_lowercase().replace(' ', "-"),
+        "externalId": crate::hospital::world::external_id(name),
         "members": members.iter().map(|id| json!({ "value": id })).collect::<Vec<_>>(),
     });
     let (status, created) = scim(app, SCIM, "POST", "/Groups", Some(&body)).await;
@@ -490,8 +501,10 @@ async fn represent(world: &World) {
 
 /// The controller's policy of `controller`, written by `root` over
 /// `preceding` (`None` creates it): a care relationship with a 14-day grace
-/// and a purpose required, the mental-health note very restricted and the
-/// lab's results restricted; its version.
+/// and a purpose required, the mental-health note very restricted, the lab's
+/// results restricted, and the professional who accessed withheld from the
+/// patient's view of her log under a national provision of EHDS Art. 9(3);
+/// its version.
 pub(crate) async fn policy(
     app: &axum::Router,
     controller: &str,
@@ -520,7 +533,16 @@ pub(crate) async fn policy(
         ],
         "care_relationship_required": true,
         "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
-        "purpose_required": true
+        "purpose_required": true,
+        "log_restrictions": [{ "_type": "ACCESS_LOG_RESTRICTION",
+            "name": text("Professionals withheld"),
+            "archetype_node_id": "id11",
+            "accessor_kinds": [coded_in("openehr", "person")],
+            "withheld": [
+                coded_in(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL, "accessor_party"),
+                coded_in(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL, "accessor_provider")
+            ],
+            "legal_grounds": [coded_in("urn:sint-example:national-law", "art-9-3")] }]
     });
     let mut req = common::req("PUT", format!("{EXT}/admin/access_policy"))
         .auth(crate::hospital::world::credential(ROOT))

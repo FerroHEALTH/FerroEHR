@@ -15,9 +15,13 @@
 //! (`docs/law/eu/ehds/text.html`).
 
 pub(crate) mod abac;
+mod access_log;
 pub(crate) mod build;
+mod discovery;
 pub(crate) mod ledger;
+mod lifecycle;
 mod matrix;
+mod replicas;
 pub(crate) mod world;
 
 mod probe;

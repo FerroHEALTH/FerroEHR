@@ -283,6 +283,8 @@ pub(crate) fn config() -> AppConfig {
         issuer: SecretUrl::new(PERSONS),
         identifier_issuer: LOGIN.to_owned(),
         identifier_type: "login".to_owned(),
+        group_claim: "groups".to_owned(),
+        group_identifier_issuer: format!("{LOGIN}/groups"),
         ..PartySection::default()
     };
     let mut auth = common::auth(AuthSection {
@@ -370,7 +372,8 @@ fn exp() -> i64 {
     jiff::Timestamp::now().as_second() + 3600
 }
 
-/// The credential of the caller `name`: a member of staff's Keycloak token,
+/// The credential of the caller `name`: a member of staff's Keycloak token
+/// (any other name a new member of staff's, holding `USER`),
 /// the patient's or her representative's portal token naming her EHR
 /// (`eva:<ehr>`, `frank:<ehr>`), a system client's app-only token
 /// (`client:<id>`), or the operator's Basic credential.
@@ -392,13 +395,21 @@ pub(crate) fn credential(name: &str) -> String {
             "roles": ["PATIENT"],
         }));
     }
-    let staff = STAFF
+    let (roles, groups): (&[&str], &[&str]) = STAFF
         .iter()
         .find(|staff| staff.name == name)
-        .unwrap_or_else(|| panic!("no caller {name}"));
+        .map_or((&["USER"], &[]), |staff| (staff.roles, staff.groups));
+    let groups: Vec<String> = groups.iter().map(|team| external_id(team)).collect();
     common::bearer(&json!({
-        "iss": PERSONS, "aud": AUDIENCE, "exp": exp(), "sub": name, "roles": staff.roles,
+        "iss": PERSONS, "aud": AUDIENCE, "exp": exp(), "sub": name, "roles": roles,
+        "groups": groups,
     }))
+}
+
+/// The `externalId` of the SCIM Group of `team`, which the staff's tokens
+/// name in their `groups` claim.
+pub(crate) fn external_id(team: &str) -> String {
+    team.to_lowercase().replace(' ', "-")
 }
 
 // ── requests ──────────────────────────────────────────────────────────────────
