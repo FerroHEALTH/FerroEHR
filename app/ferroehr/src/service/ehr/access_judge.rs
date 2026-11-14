@@ -8,7 +8,7 @@
 //! ([`crate::access_policy::LivePolicy`]), the category map
 //! ([`crate::policy_register`]), the caller facts and care relationships
 //! ([`crate::party_binding::grants::live::LiveGrants`]) and each EHR's
-//! settings and subject ([`super::access`]), so a decision reads no table
+//! settings and subject (`service::ehr::access`), so a decision reads no table
 //! while the copies are current. No openEHR spec governs this: our own
 //! design (#5513).
 

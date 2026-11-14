@@ -30,7 +30,7 @@
 //!   be made in accordance with the policies and rules in this object" — RM
 //!   `org.openehr.rm.ehr.ehr_access.adoc`): the access evaluator over the
 //!   subject's directives, the caller's facts and the access policy, whose
-//!   caller and request [`caller`] reads. Always-on and foundational; runs
+//!   caller and request `caller` reads. Always-on and foundational; runs
 //!   first in the pre-dispatch chain.
 //! - [`authz`] — our **own enterprise extensions** (no openEHR spec governs
 //!   them): the coarse

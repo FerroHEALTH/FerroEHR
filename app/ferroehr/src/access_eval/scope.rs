@@ -15,7 +15,7 @@
 //! `ACCESS_LABEL`s and the controller's `ACCESS_CLASSIFICATION`s.
 //!
 //! One [`Pred`] is evaluated two ways: here against an [`Item`] in memory,
-//! and in SQL against a query's row ([`crate::aql::sql::access`]), over the
+//! and in SQL against a query's row (`aql::sql::access`), over the
 //! same lists, so a named object and a query row are judged alike. A bound or
 //! a reference that cannot be read covers everything a deny names and
 //! nothing a permit names ([`Polarity`]), so an unreadable fact is never

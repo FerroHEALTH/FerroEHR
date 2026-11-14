@@ -5,7 +5,7 @@
 //! store: its EHR, the template and root archetype of its trunk head, the
 //! systems that head came from and when it was committed.
 //!
-//! A read selects [`head_facts!`] beside its own columns, on the head row it
+//! A read selects `head_facts!` beside its own columns, on the head row it
 //! already joins as `h`, so judging an object adds no statement
 //! ([`crate::access_eval::condition::admits`]). The same attributes are what
 //! a query's condition reads in SQL ([`crate::aql::sql`]). No openEHR spec
@@ -44,7 +44,7 @@ pub struct HeadFacts {
 }
 
 impl HeadFacts {
-    /// The facts of `vo_id` a row selecting [`head_facts!`] holds.
+    /// The facts of `vo_id` a row selecting `head_facts!` holds.
     ///
     /// # Errors
     /// [`StorageError::Database`] when a column does not decode.

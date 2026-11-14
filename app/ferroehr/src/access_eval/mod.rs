@@ -24,7 +24,7 @@
 //! [`procedure::Verdict`]: an ordered list of rules over the data of the
 //! EHR ([`scope::Pred`]), whose first match decides, so one verdict answers a
 //! named object, the EHR itself, and, rendered as SQL, every row of a query
-//! ([`crate::aql::sql::access`]). The decision procedure, its order and its
+//! (`aql::sql::access`). The decision procedure, its order and its
 //! refusal codes are our own design (#5487, #5513): no openEHR specification
 //! gives one, and FHIR `Consent` leaves enforcement out of scope
 //! (`docs/specs/fhir-consent/` §6.2.3).
