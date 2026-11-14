@@ -71,18 +71,17 @@ pub struct Checkpoints {
 impl Checkpoints {
     /// The checkpoints of the log in the audit pool `pool`, sealed for
     /// `system_id` with `signer`'s key; `trusted` verifies what other
-    /// systems signed, and `sign_links` has the entries this writes carry a
-    /// signed link.
+    /// systems signed. Whenever the keyring holds an `OpenPGP` key the
+    /// entries this writes carry a signed link (#5562).
     #[must_use]
     pub fn new(
         pool: PgPool,
         system_id: String,
         signer: Arc<Signer>,
         trusted: Arc<TrustedCertificates>,
-        sign_links: bool,
     ) -> Self {
         let store = AccessLogStore::new(pool.clone());
-        let store = if sign_links {
+        let store = if signer.holds_key() {
             store.with_link_signer(Arc::clone(&signer))
         } else {
             store
@@ -96,6 +95,13 @@ impl Checkpoints {
         }
     }
 
+    /// Whether the keyring holds the `OpenPGP` key checkpoints and links are
+    /// signed with; without one nothing is sealed or signed.
+    #[must_use]
+    pub fn seals(&self) -> bool {
+        self.signer.holds_key()
+    }
+
     /// The system whose log these checkpoints seal.
     #[must_use]
     pub fn system_id(&self) -> &str {
@@ -107,7 +113,8 @@ impl Checkpoints {
         &self.pool
     }
 
-    /// The access-log store over the same pool, signing links as configured.
+    /// The access-log store over the same pool, signing links whenever the
+    /// keyring holds a key.
     #[must_use]
     pub fn store(&self) -> &AccessLogStore {
         &self.store
