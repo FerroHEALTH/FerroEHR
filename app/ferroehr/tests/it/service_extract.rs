@@ -21,6 +21,7 @@
 use crate::fixtures::{find_by_xtype, seed_extract_ehr};
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::{Malformed, Missing};
+use ferroehr::service::ehr::object::EhrObject;
 use serde_json::{Value, json};
 
 use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
@@ -86,7 +87,7 @@ async fn export_ehrs_carries_every_versioned_object_latest_only() {
     // the read surface's current EHR_STATUS — one shape since commit-time uid
     // stamping (#439).
     let current = svc
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("read");

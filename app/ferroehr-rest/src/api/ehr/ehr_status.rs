@@ -25,11 +25,13 @@ use openehr_its::rest::generated::ehr::{
 use openehr_rm::prelude::EhrStatus;
 
 use ferroehr::error::ServiceError;
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::response::ServiceResponse;
 
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 use crate::api::RequestParts;
+use crate::api::ehr::EhrObjectType;
 use crate::api::item_tags;
 use crate::negotiate;
 use crate::overview::error::RestError;
@@ -37,54 +39,57 @@ use crate::overview::negotiate::resource::Tree;
 use crate::overview::version_id::{parse_ehr_id, parse_version_uid, require_if_match};
 use crate::state::AppState;
 
-/// The `ehr_status_get_by_version_id` operation.
-pub(crate) async fn get_by_version_id(
+/// The `ehr_status_get_by_version_id` operation, and the read of the same
+/// shape the `EHR_ACCESS` extension serves for `T`.
+pub(crate) async fn get_by_version_id<T: EhrObjectType>(
     state: AppState,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    // EHR_STATUS is not templated → no Simplified-Formats mapping; reject a
-    // simplified Content-Type/Accept uniformly (see `formats::dispatch`).
+    // EHR_STATUS and EHR_ACCESS are not templated → no Simplified-Formats
+    // mapping; reject a simplified Content-Type/Accept uniformly.
     crate::formats::dispatch::guard_non_templated(h)?;
+    super::refuse_unmapped_xml::<T>(h)?;
     let p = parts.decode(
         EhrStatusGetByVersionIdParams::from_request,
         EhrStatusGetByVersionIdParams::PARAMS,
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let (vo_id, version) = super::version_components(&parse_version_uid(&p.version_uid)?)?;
-    // A bare EHR_STATUS carries no `commit_audit`, so `Last-Modified`
+    // The bare object carries no `commit_audit`, so `Last-Modified`
     // (Requests_and_responses.md §"ETag and Last-Modified") comes from
     // the version metadata rather than the served body.
     let resp = state
         .backend()
-        .ehr_status_at_version(ehr_id, ferroehr::ids::VoId(vo_id), &version)
+        .ehr_object_at_version(ehr_id, T::OBJECT, ferroehr::ids::VoId(vo_id), &version)
         .await?;
-    // A DV_MULTIMEDIA committed in an EHR_STATUS is externalized by
-    // the generic versioning path, so this is where it comes back.
+    // A DV_MULTIMEDIA committed in the object is externalized by the
+    // generic versioning path, so this is where it comes back.
     let mut resp = resp;
     resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
     // The addressed version_uid must equal the served version's full
     // three-part identity, case-insensitively (overview `Resources.md`
     // §Identifier types; BASE master05 §Composite Identifiers and Case).
     super::ensure_served_version(&p.version_uid, &resp.body)?;
-    Ok(negotiate::resource::read_rm::<EhrStatus>(
+    Ok(negotiate::resource::read_rm::<T>(
         h,
         &resp,
         openehr_its::xml::LOCATABLE_ROOT,
     ))
 }
 
-/// The `ehr_status_get_at_time` operation.
-pub(crate) async fn get_at_time(
+/// The `ehr_status_get_at_time` operation, and the read of the same shape the
+/// `EHR_ACCESS` extension serves for `T`.
+pub(crate) async fn get_at_time<T: EhrObjectType>(
     state: AppState,
     parts: RequestParts,
 ) -> Result<Response, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    // EHR_STATUS is not templated → no Simplified-Formats mapping; reject a
-    // simplified Content-Type/Accept uniformly (see `formats::dispatch`).
+    // Not templated, as on the by-version read.
     crate::formats::dispatch::guard_non_templated(h)?;
+    super::refuse_unmapped_xml::<T>(h)?;
     let p = parts.decode(
         EhrStatusGetAtTimeParams::from_request,
         EhrStatusGetAtTimeParams::PARAMS,
@@ -94,11 +99,11 @@ pub(crate) async fn get_at_time(
     // carries the `Last-Modified` instant.
     let resp = state
         .backend()
-        .ehr_status(ehr_id, p.version_at_time)
+        .ehr_object(ehr_id, T::OBJECT, p.version_at_time)
         .await?;
     let mut resp = resp;
     resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-    Ok(negotiate::resource::read_rm::<EhrStatus>(
+    Ok(negotiate::resource::read_rm::<T>(
         h,
         &resp,
         openehr_its::xml::LOCATABLE_ROOT,
@@ -146,7 +151,11 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
             .await?;
             let repr =
                 if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
-                    state.backend().ehr_status(ehr_id, None).await?.body
+                    state
+                        .backend()
+                        .ehr_object(ehr_id, EhrObject::Status, None)
+                        .await?
+                        .body
                 } else {
                     Value::Null
                 };

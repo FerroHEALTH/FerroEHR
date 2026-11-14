@@ -31,6 +31,7 @@ use uuid::Uuid;
 
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::versioning::signature::signer::Signer;
 
 /// The tables a clone writes, in an order the foreign keys accept, each with
@@ -298,7 +299,7 @@ async fn envelopes(
                 .body
             }
             "EHR_STATUS" => {
-                svc.ehr_status_version_envelope(EhrId(ehr), VoId(vo), &tree)
+                svc.ehr_object_version_envelope(EhrId(ehr), EhrObject::Status, VoId(vo), &tree)
                     .await
                     .with_context(|| format!("read the EHR_STATUS envelope of {vo}"))?
                     .body

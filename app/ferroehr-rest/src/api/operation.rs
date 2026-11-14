@@ -168,7 +168,9 @@ macro_rules! operations {
 /// `VERSIONED_OBJECT`. An `ITEM_TAG` operation is audited under its parent's
 /// class and ABAC-checked in the mode of its parent's read (`GET`) or write
 /// (`PUT`, `DELETE`): our own design, since RM ehr `master04-ehr_package.adoc`
-/// §Tags puts tags outside change control. `options` is RBAC-classified for
+/// §Tags puts tags outside change control. The `EHR_ACCESS` extension reads are
+/// checked as reads of the EHR that holds the object, since no ABAC kind names
+/// `EHR_ACCESS`: our own design. `options` is RBAC-classified for
 /// totality only: the router mounts the manifest above the authentication
 /// layer.
 static OPERATIONS: &[Operation] = operations! {
@@ -223,6 +225,8 @@ static OPERATIONS: &[Operation] = operations! {
     "directory_get_at_time" => Read, Clinical, Directory, Pre, Directory, None;
     "directory_get_by_version_id" => Read, Clinical, Directory, Pre, Directory, None;
     "directory_update" => Update, Clinical, Directory, Pre, Directory, None;
+    "ehr_access_get_at_time" => Read, None, Ehr, Pre, Ehr, None;
+    "ehr_access_get_by_version_id" => Read, None, Ehr, Pre, Ehr, None;
     "ehr_create" => Create, Clinical, Ehr, Pre, Ehr, None;
     "ehr_create_with_id" => Create, Clinical, Ehr, Pre, Ehr, None;
     "ehr_get_by_id" => Read, Clinical, Ehr, Pre, Ehr, None;
@@ -302,6 +306,10 @@ static OPERATIONS: &[Operation] = operations! {
     "versioned_composition_revision_history" => Read, Clinical, Composition, Post, Composition, Read;
     "versioned_composition_version_get_at_time" => Read, Clinical, Composition, Post, Composition, Read;
     "versioned_composition_version_get_by_id" => Read, Clinical, Composition, Post, Composition, Read;
+    "versioned_ehr_access_get" => Read, None, Ehr, Pre, Ehr, None;
+    "versioned_ehr_access_revision_history" => Read, None, Ehr, Pre, Ehr, None;
+    "versioned_ehr_access_version_get_at_time" => Read, None, Ehr, Pre, Ehr, None;
+    "versioned_ehr_access_version_get_by_id" => Read, None, Ehr, Pre, Ehr, None;
     "versioned_ehr_status_get" => Read, Clinical, EhrStatus, Pre, Ehr, None;
     "versioned_ehr_status_revision_history" => Read, Clinical, EhrStatus, Pre, Ehr, None;
     "versioned_ehr_status_version_get_at_time" => Read, Clinical, EhrStatus, Pre, Ehr, None;

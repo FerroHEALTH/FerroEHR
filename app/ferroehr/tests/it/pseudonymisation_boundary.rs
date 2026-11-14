@@ -24,6 +24,7 @@
 //! `demographic` and nowhere else, that the boot self-check refuses a
 //! database whose grants cross the boundary and passes once they do not.
 
+use ferroehr::service::ehr::object::EhrObject;
 use ferroehr::service::version_update::WriteRequest;
 use sqlx::{Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;
@@ -859,7 +860,7 @@ fn protection_engine(
 async fn ehr_naming_party(svc: &FerroEhrService, party: &str) -> EhrId {
     let ehr = crate::fixtures::create_ehr(svc).await;
     let mut status = svc
-        .ehr_status(ehr, None)
+        .ehr_object(ehr, EhrObject::Status, None)
         .await
         .map(|r| r.body)
         .expect("status get");

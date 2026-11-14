@@ -42,7 +42,7 @@ const SYSTEM_SCOPES: &str = "system/composition-*.rs system/aql-*.s";
 /// The credential of `name`: Dr B's token of [`MEDICS`], holding the
 /// emergency role, an app-only token of [`MACHINES`] for `client:<id>`, or a
 /// Basic user's.
-fn credential(name: &str) -> String {
+pub(crate) fn credential(name: &str) -> String {
     if let Some(client) = name.strip_prefix("client:") {
         return crate::caller_kinds_http::bearer(
             MACHINES,
@@ -64,7 +64,7 @@ fn credential(name: &str) -> String {
 /// emergency access role; Basic users for the administrator, a nurse and a
 /// psychiatrist, each bound to a `PERSON`; Dr B of [`MEDICS`]; the system
 /// clients of [`MACHINES`]; and the IPS template uploaded.
-async fn app() -> (
+pub(crate) async fn app() -> (
     testkit::TestDb,
     PgPool,
     Arc<ferroehr::service::FerroEhrService>,
@@ -142,7 +142,7 @@ async fn app() -> (
 
 /// Sends `method uri` as `user`, with an optional declared purpose and body,
 /// asking for the full problem details.
-async fn send(
+pub(crate) async fn send(
     app: &Router,
     method: &str,
     uri: &str,
@@ -171,7 +171,7 @@ async fn send(
 
 /// An EHR with one IPS composition, as the administrator; the EHR and the
 /// composition's versioned-object id.
-async fn ehr_with_composition(app: &Router) -> (String, String) {
+pub(crate) async fn ehr_with_composition(app: &Router) -> (String, String) {
     let (status, body) = send(app, "POST", &format!("{BASE}/ehr"), "root", None, None).await;
     assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
     let ehr = serde_json::from_str::<Value>(&body).expect("EHR json")["ehr_id"]["value"]
@@ -211,7 +211,7 @@ fn term(code: &str) -> Value {
 }
 
 /// A directive of `kind` and `effect` with `extra` members.
-fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
+pub(crate) fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
     let mut d = json!({
         "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": kind },
@@ -227,13 +227,13 @@ fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
 }
 
 /// An actor scope naming the `PERSON` `person`.
-fn naming(person: uuid::Uuid) -> Value {
+pub(crate) fn naming(person: uuid::Uuid) -> Value {
     json!([{ "party": { "_type": "PARTY_REF", "namespace": "demographic", "type": "PERSON",
                         "id": { "_type": "HIER_OBJECT_ID", "value": person.to_string() } } }])
 }
 
 /// The `refusal` member and the `detail` of a problem body.
-fn refusal(body: &str) -> (Value, String) {
+pub(crate) fn refusal(body: &str) -> (Value, String) {
     let problem: Value = serde_json::from_str(body).expect("a problem body");
     (
         problem["refusal"].clone(),

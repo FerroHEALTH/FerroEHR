@@ -305,6 +305,32 @@ const CLINICAL_READ: &[(&str, &str)] = &[
         "GET",
         "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/access_log/{uid}",
     ),
+    // The EHR_ACCESS reads (#5517), an extension spelled at its full path: a
+    // clinical read of the EHR, which the access evaluator then judges.
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/ehr_access",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/ehr_access/{version_uid}",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_ehr_access",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_ehr_access/revision_history",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_ehr_access/version",
+    ),
+    (
+        "GET",
+        "/ferroehr/rest/extensions/v1/ehr/{ehr_id}/versioned_ehr_access/version/{version_uid}",
+    ),
 ];
 
 /// Clinical writes (relative to their namespace). The `/message` imports sit here

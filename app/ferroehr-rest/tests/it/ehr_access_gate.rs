@@ -123,7 +123,12 @@ fn access_contribution(ehr: &Value, scheme: &Value) -> Value {
 
 /// The CONTRIBUTION `user` commits of `scheme` over the `EHR_ACCESS` version
 /// `preceding` of the EHR `ehr` names.
-fn access_contribution_over(ehr: &Value, scheme: &Value, preceding: u32, user: &str) -> Value {
+pub(crate) fn access_contribution_over(
+    ehr: &Value,
+    scheme: &Value,
+    preceding: u32,
+    user: &str,
+) -> Value {
     let access_vo = ehr["ehr_access"]["id"]["value"]
         .as_str()
         .expect("EHR.ehr_access.id.value");

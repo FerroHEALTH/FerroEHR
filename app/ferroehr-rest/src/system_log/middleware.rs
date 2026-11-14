@@ -384,7 +384,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
 ///
 /// Item tags and revision histories are marked by the operation, whatever the
 /// handler attached; then the handler's own content decides; then the resource
-/// class marks the EHR itself and its directory. `EHR`, `EHR_STATUS`, the
+/// class marks the EHR itself and its directory. `EHR`, `EHR_STATUS`, `EHR_ACCESS`, the
 /// directory `FOLDER`, item tags and revision histories hold no
 /// priority-category data. `None` for an operation outside the clinical
 /// domain, or one that touched no classifiable content. No openEHR spec
@@ -405,6 +405,9 @@ fn accessed_content(
     }
     if op.starts_with("versioned_ehr_status") {
         return Some(AccessedContent::ResourceKind(ResourceKind::EhrStatus));
+    }
+    if op.starts_with("versioned_ehr_access") {
+        return Some(AccessedContent::ResourceKind(ResourceKind::EhrAccess));
     }
     match (content, object_class) {
         (Some(content), _) => Some(content),
