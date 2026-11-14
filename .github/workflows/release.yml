@@ -1186,6 +1186,9 @@ jobs:
       - name: The performance gate
         env:
           PERF_OUT: perf-gate
+          # The population query reads 20 000 seeded EHRs, and the summary
+          # counts the access-log entries it wrote per statement (#5564).
+          PERF_POPULATION: "20000"
           PREVIOUS: ${{ steps.previous.outputs.tag }}
         run: |
           set -euo pipefail

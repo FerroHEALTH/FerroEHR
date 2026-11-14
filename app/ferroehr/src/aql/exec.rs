@@ -210,11 +210,21 @@ fn served_ehrs(rows: &[PgRow], access_cols: &[String]) -> Result<Vec<(Uuid, u64)
     // population page of a hundred thousand rows from as many EHRs stays linear
     // (a probe per row made the 100 000-EHR cohort of #3159 take fifty seconds).
     let mut served: indexmap::IndexMap<Uuid, u64> = indexmap::IndexMap::new();
+    let mut in_row: Vec<Uuid> = Vec::with_capacity(access_cols.len());
     for row in rows {
+        // The `EHR` source and its roots name the same EHR in one row, which
+        // is one served row of that EHR.
+        in_row.clear();
         for name in access_cols {
             let ehr: Option<Uuid> = row.try_get(name.as_str()).map_err(ExecError::from)?;
-            let Some(ehr) = ehr else { continue };
-            let count = served.entry(ehr).or_insert(0);
+            if let Some(ehr) = ehr
+                && !in_row.contains(&ehr)
+            {
+                in_row.push(ehr);
+            }
+        }
+        for ehr in &in_row {
+            let count = served.entry(*ehr).or_insert(0);
             *count = count.saturating_add(1);
         }
     }

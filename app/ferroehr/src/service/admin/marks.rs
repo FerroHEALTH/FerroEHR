@@ -279,6 +279,8 @@ impl FerroEhrService {
     ///   ground.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
+    /// - `service_overloaded` — the access record was refused under
+    ///   `[audit] fail_mode = "closed"`.
     pub async fn put_retention_anchor(
         &self,
         ehr_id: EhrId,
@@ -297,6 +299,7 @@ impl FerroEhrService {
                 ))
             })?;
         tx.commit().await.map_err(ServiceError::Database)?;
+        self.emit_mark_access(EventActionCode::Update, ehr_id, None, "retention-anchor")?;
         Ok(())
     }
 
@@ -310,19 +313,29 @@ impl FerroEhrService {
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — the object is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
+    /// - `service_overloaded` — the access record was refused under
+    ///   `[audit] fail_mode = "closed"`.
     pub async fn set_retention_hold(&self, vo_id: VoId, held: bool) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
-        let found = marks::set_retention_hold(&mut tx, vo_id, held)
+        let Some(owner) = marks::set_retention_hold(&mut tx, vo_id, held)
             .await
-            .map_err(ServiceError::Storage)?;
-        if !found {
+            .map_err(ServiceError::Storage)?
+        else {
             return Err(ServiceError::not_found(
                 Missing::VersionedObject,
                 format!("no versioned object {vo_id}"),
             ));
-        }
+        };
         tx.commit().await.map_err(ServiceError::Database)?;
+        if let Some(ehr_id) = owner {
+            let action = if held {
+                EventActionCode::Create
+            } else {
+                EventActionCode::Delete
+            };
+            self.emit_mark_access(action, ehr_id, Some(vo_id), "retention-hold")?;
+        }
         Ok(())
     }
 

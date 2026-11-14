@@ -20,20 +20,21 @@ use sqlx::{Connection, Row};
 
 use crate::access_log::chain::{self, ChainFinding, Span};
 use crate::access_log::checkpoint::Checkpoints;
+use crate::access_log::entry;
 use crate::access_log::store::{AccessLogError, canonical_form};
 use crate::db::acquire::acquire;
-use crate::versioning::audit::dv_date_time;
+use crate::system_log::event::{
+    AccessDecision, AccessDomain, ActingMode, AuditEvent, EntryScope, EventActionCode,
+    EventOutcome, ObjectClass,
+};
 use openehr_base::containers::NonEmptyVec;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
-use openehr_rm::draft::access_log::access_log::access_channel::AccessChannel;
 use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
-use openehr_rm::draft::access_log::access_log::access_outcome::AccessOutcome;
 use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention;
-use openehr_rm::draft::access_log::access_log::accessor::Accessor;
 use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
@@ -70,14 +71,17 @@ impl LogExport {
 
 /// Who imported a log, and how long the record of the import is kept: what
 /// the entry of the import states beside the import itself.
+///
+/// The entry is built from `caller` by [`entry::entry_of`], the one path every
+/// access-log entry takes, so an import is recorded as every other access is.
 #[derive(Debug, Clone)]
 pub struct ImportRecord {
-    /// Who asked for the import.
-    pub accessor: Accessor,
+    /// The access record of whoever asked for the import: its caller fields
+    /// (`user_id`, `issuer`, `actor`, `binding`, `request_id`, `client_ip`).
+    /// The import itself states the action, the class and the EHR.
+    pub caller: AuditEvent,
     /// How long the import's entry is kept, and why.
     pub retention: AccessRetention,
-    /// The request that carried the import, when one did.
-    pub request_id: Option<String>,
 }
 
 impl ImportRecord {
@@ -92,17 +96,15 @@ impl ImportRecord {
     #[must_use]
     pub fn by_operator(system_id: &str, today: jiff::civil::Date) -> Self {
         let retain_until = today.saturating_add(jiff::Span::new().years(3));
+        let mut caller = AuditEvent::new(
+            EventActionCode::Create,
+            ObjectClass::Extract,
+            EventOutcome::Success,
+        );
+        system_id.clone_into(&mut caller.user_id);
+        caller.actor.mode = Some(ActingMode::System);
         Self {
-            accessor: Accessor {
-                kind: coded("openehr", "system"),
-                party: named_party(system_id),
-                provider: None,
-                roles: None,
-                groups: None,
-                binding: None,
-                credential: None,
-                delegation: None,
-            },
+            caller,
             retention: AccessRetention {
                 retain_until: Some(DvDate {
                     normal_status: None,
@@ -114,7 +116,6 @@ impl ImportRecord {
                 }),
                 grounds: NonEmptyVec::of(coded("local", "ehds-art-9-2")),
             },
-            request_id: None,
         }
     }
 }
@@ -397,53 +398,32 @@ pub(crate) fn named_party(name: &str) -> PartyProxy {
     }))
 }
 
-/// The entry of this system's log that records the import of `ehr_id`'s log.
+/// The entry of this system's log that records the import of `ehr_id`'s log:
+/// the caller's access record, as an import of that EHR's extract, through
+/// [`entry::entry_of`].
+#[expect(
+    clippy::expect_used,
+    reason = "the event is an access to EHR data by construction (an EXTRACT under \
+              `EntryScope::ByDomain`), which `entry::writes_entry` always admits"
+)]
 fn import_entry(
     system_id: &str,
     ehr_id: &str,
     record: ImportRecord,
 ) -> Result<AccessLogEntry, AccessLogError> {
-    let id = |value: String| {
-        HierObjectId::new(value.clone())
-            .map_err(|source| AccessLogError::Identifier { value, source })
-    };
-    Ok(AccessLogEntry {
-        uid: id(uuid::Uuid::now_v7().to_string())?,
-        system_id: system_id.to_owned(),
-        time_recorded: dv_date_time(&jiff::Timestamp::now()),
-        // NOTE: the chain gives the link when the entry is appended; this one is replaced.
-        link: AccessLogLink {
-            sequence: 1,
-            algorithm: chain::ALGORITHM.to_owned(),
-            previous_digest: String::new(),
-            content_digest: String::new(),
-            digest: String::new(),
-            signature: None,
-        },
-        occurred: None,
-        action: coded("openehr", "import"),
-        operation: None,
-        outcome: AccessOutcome {
-            result: coded("openehr", "granted"),
-            reason: None,
-            description: None,
-            delivered: None,
-        },
-        accessor: record.accessor,
-        ehr_id: Some(id(ehr_id.to_owned())?),
-        items: None,
-        query: None,
-        purposes: None,
-        authorisations: None,
-        is_emergency: false,
-        channel: record.request_id.map(|request_id| AccessChannel {
-            interface: None,
-            request_id: Some(request_id),
-            correlation_id: None,
-            client_address: None,
-        }),
-        security_labels: None,
-        retention: record.retention,
-        other_details: None,
-    })
+    HierObjectId::new(ehr_id.to_owned()).map_err(|source| AccessLogError::Identifier {
+        value: ehr_id.to_owned(),
+        source,
+    })?;
+    let mut event = record.caller;
+    event.action = EventActionCode::Create;
+    event.object = ObjectClass::Extract;
+    event.domain = AccessDomain::of(ObjectClass::Extract);
+    event.entry = EntryScope::ByDomain;
+    event.decision = AccessDecision::Admitted;
+    event.outcome = EventOutcome::Success;
+    event.ehr_id = Some(ehr_id.to_owned());
+    event.object_id = None;
+    Ok(entry::entry_of(&event, system_id, record.retention)
+        .expect("an import of an EHR's extract should write an access-log entry"))
 }

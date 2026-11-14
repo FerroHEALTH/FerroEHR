@@ -133,7 +133,8 @@ over this tree's `perf/plan.toml`, with each arm's seeded ids:
 - **Load, in pairs:** the request set, sent at a fixed rate to both servers
   at once, four pairs, the base leading in the first and the head in the
   next. It covers EHR create and read, composition commit and read, the
-  lab-results AQL query with and without `ORDER BY`, a template upload, and two
+  lab-results AQL query with and without `ORDER BY`, a population query
+  (`SELECT e/ehr_id/value FROM EHR e LIMIT 20`), a template upload, and two
   demographic reads. Each group's p50, p95 and p99 latency, the throughput,
   the peak memory, the CPU time per request and the transactions per request
   of the head are judged against the base's.
@@ -145,6 +146,15 @@ same job, never against a stored number (#5095). The release's
 the head and the previous published release as the base: its images, pulled
 from GHCR, run under the tree of its tag's commit. No baseline is stored
 anywhere.
+
+Each arm's seed adds `PERF_POPULATION` EHRs through its own server (2 000 in
+the pull-request gate, 20 000 in the release's), so the population query
+serves its whole `LIMIT` from a populated store and writes one access-log
+entry per EHR it served. After the load the gate counts those entries in each
+arm's store and adds a table to the summary: the statements, the per-EHR
+entries and the entries per statement of the head and the base, beside the
+group's latency, CPU and transactions per request (#5564). A base whose store
+has no access log reads `none`.
 
 The job first runs `gate.sh self-test`. It polls a table with no wait during
 the idle phase, and the self-test passes only when the gate fails that run on
