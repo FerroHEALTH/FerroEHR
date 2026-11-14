@@ -214,7 +214,7 @@ async fn a_bound_professionals_attestation_stores_the_servers_committer() {
             &format!("/ehr/{ehr}/contribution"),
             &credential,
             &contribution(
-                &crate::patient_scope_e2e::composition(),
+                &crate::access_evaluator_patient_http::composition(),
                 &placeholder(ISSUER, CLINICIAN),
                 true,
             ),

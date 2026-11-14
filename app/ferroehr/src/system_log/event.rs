@@ -143,14 +143,6 @@ pub struct AuditEvent {
     pub client_id: Option<String>,
     /// Whether the source participant is the requestor (always true here).
     pub user_is_requestor: bool,
-    /// The organisation the requesting user acted for, when the deployment
-    /// resolves one from the caller's identity token.
-    ///
-    /// The ACCESSING organisation, not the reporting site: the audit source's
-    /// enterprise site id ([`super::message::AuditContext`]) names the node
-    /// that emitted the record and answers a different question. `None` when
-    /// no organisation was resolved — never a guess.
-    pub organisation: Option<String>,
     /// The roles the requesting user held when the access happened (#3239):
     /// the RFC 9068 §2.2.3.1 claim carriers for a bearer, the user definition
     /// for Basic. NEN 7513 asks for the role or authority under which the
@@ -444,6 +436,17 @@ impl AuditEvent {
             .collect()
     }
 
+    /// The id of the healthcare provider the access is attributed to, as the
+    /// party binding names it (EHDS Annex II 3.2(a)); `None` when the binding
+    /// names none.
+    #[must_use]
+    pub fn provider_id(&self) -> Option<&str> {
+        self.binding
+            .as_ref()
+            .and_then(|binding| binding.provider.as_ref())
+            .map(|provider| provider.id.as_str())
+    }
+
     /// The roles the record renders: the roles the caller held, then the
     /// professional roles the access token states.
     #[must_use]
@@ -498,7 +501,6 @@ impl AuditEvent {
             issuer: None,
             client_id: None,
             user_is_requestor: true,
-            organisation: None,
             roles: Vec::new(),
             client_ip: None,
             ehr_id: None,

@@ -3,65 +3,36 @@
 
 //! The binary's authorization construction seam
 //! ([`ferroehr_server::build_authz`]): the shipped run path builds the RBAC
-//! gate AND, when `[auth] patient_claim` is set, the patient scope (the
-//! mis-wiring #1815 caught: the binary once constructed an RBAC-only handle
-//! unconditionally).
+//! gate with the configured `[authz.rbac]` keys (the mis-wiring #1815 caught:
+//! the binary once constructed a handle that dropped a configured gate).
 //!
 //! Offline by design, like the rest of this crate's suite: handle
-//! CONSTRUCTION touches no database — the subject lookup is an inert stub
-//! here, and the DB-backed enforcement path is proven end to end where it
-//! lives (`app/ferroehr-rest/tests/it/patient_scope_e2e.rs`). The patient
-//! scope is our own extension — no openEHR spec governs it (ITS-REST places
-//! authorization out of band).
-
-use std::sync::Arc;
+//! CONSTRUCTION touches no database. A patient is confined to their own EHR
+//! by the access evaluator (#5586), which no handle carries. RBAC is our own
+//! extension: no openEHR spec governs it (ITS-REST places authorization out
+//! of band).
 
 use ferroehr::config::FerroEhrConfig;
-use ferroehr_rest::extensions::access::patient_scope::{PatientScope, ResolveError, SubjectFn};
+use ferroehr::config::authz::EhrAccessDefault;
 
 use ferroehr_server::build_authz;
 
-/// An inert subject lookup: construction under test, resolution out of scope.
-fn inert_lookup() -> SubjectFn {
-    Arc::new(|_| Box::pin(async { Ok::<_, ResolveError>(None) }))
-}
-
-/// `[auth] patient_claim` set → the handle the binary serves with carries a
-/// LIVE patient scope on the configured claim (the regression assertion).
+/// The default config (RBAC on) builds a handle with the RBAC gate.
 #[test]
-fn a_patient_claim_makes_the_scope_live_on_the_built_handle() {
-    let mut config = FerroEhrConfig::default();
-    config.auth.patient_claim = Some("patient_id".to_owned());
-    let handle = build_authz(&config, inert_lookup()).expect("RBAC default-on → a handle");
-    assert!(handle.rbac_active(), "the RBAC gate is on by default");
-    assert!(
-        handle.patient_scope_active(),
-        "a patient claim must produce a live patient scope on the served handle"
-    );
-    assert_eq!(
-        handle.patient().map(PatientScope::claim),
-        Some("patient_id")
-    );
-}
-
-/// The default config (RBAC on, no patient claim) builds a handle with the
-/// RBAC gate only.
-#[test]
-fn default_config_builds_an_rbac_only_handle() {
-    let handle =
-        build_authz(&FerroEhrConfig::default(), inert_lookup()).expect("RBAC is on by default");
+fn default_config_builds_an_rbac_handle() {
+    let handle = build_authz(&FerroEhrConfig::default()).expect("RBAC is on by default");
     assert!(handle.rbac_active());
-    assert!(
-        !handle.patient_scope_active(),
-        "no patient scope unless a claim is configured"
-    );
 }
 
-/// A blank claim is no claim: no patient scope.
+/// The RBAC gate off with an `open` per-EHR default leaves nothing to
+/// enforce; a `restricted` default alone still builds a handle.
 #[test]
-fn a_blank_patient_claim_builds_no_scope() {
+fn a_handle_is_built_only_when_something_is_enforced() {
     let mut config = FerroEhrConfig::default();
-    config.auth.patient_claim = Some("  ".to_owned());
-    let handle = build_authz(&config, inert_lookup()).expect("RBAC is on by default");
-    assert!(!handle.patient_scope_active());
+    config.authz.rbac.enabled = false;
+    assert!(build_authz(&config).is_none(), "nothing to enforce");
+    config.authz.rbac.ehr_access_default = EhrAccessDefault::Restricted;
+    let handle = build_authz(&config).expect("a restricted default needs a handle");
+    assert!(!handle.rbac_active());
+    assert_eq!(handle.ehr_access_default(), EhrAccessDefault::Restricted);
 }

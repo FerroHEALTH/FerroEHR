@@ -74,7 +74,6 @@ use tokio::net::TcpListener;
 use crate::config::AppConfig;
 use crate::extensions::access::authn::Authenticator;
 use crate::extensions::access::authz::AuthzHandle;
-use crate::extensions::access::patient_scope::PatientScope;
 use crate::extensions::management::Observability;
 use crate::router::{management_router, router};
 use crate::state::AppState;
@@ -111,7 +110,7 @@ pub async fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = authenticator_over(&config, None, &backend).await?;
+    let authenticator = authenticator_over(&config, &backend).await?;
     let state = AppState::with_backend(config, backend);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -132,7 +131,7 @@ pub async fn build_full(
     authz: Option<Arc<AuthzHandle>>,
     observability: Observability,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator = authenticator_over(&config, authz.as_deref(), &backend).await?;
+    let authenticator = authenticator_over(&config, &backend).await?;
     let state = AppState::with_parts(config, backend, authz, observability);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -151,15 +150,11 @@ pub async fn build_full(
 /// [`ServeError::Auth`] if `[auth]` is refused or an issuer cannot be read.
 async fn build_authenticator(
     config: &AppConfig,
-    authz: Option<&AuthzHandle>,
     source: Option<Arc<dyn BindingSource>>,
     replay: Arc<dyn ReplayStore>,
     standing: Arc<dyn Standing>,
 ) -> Result<Arc<Authenticator>, ServeError> {
-    let claim = authz
-        .and_then(AuthzHandle::patient)
-        .map(PatientScope::claim);
-    let authenticator = Authenticator::new(config, claim, source, replay, standing)
+    let authenticator = Authenticator::new(config, source, replay, standing)
         .await
         .map_err(ServeError::Auth)?;
     if config.auth.smart.discovery
@@ -189,12 +184,10 @@ async fn build_authenticator(
 /// As [`build_authenticator`].
 async fn authenticator_over(
     config: &AppConfig,
-    authz: Option<&AuthzHandle>,
     backend: &Arc<FerroEhrService>,
 ) -> Result<Arc<Authenticator>, ServeError> {
     build_authenticator(
         config,
-        authz,
         Some(party_source(config, backend)),
         Arc::new(PgReplayStore::of(backend)),
         Arc::new(GrantStanding::new(Arc::clone(backend.grants()))),
@@ -274,7 +267,7 @@ pub async fn serve_on<F>(
 where
     F: Future<Output = ()> + Send + 'static,
 {
-    let authenticator = authenticator_over(&config, authz.as_deref(), &backend).await?;
+    let authenticator = authenticator_over(&config, &backend).await?;
     let section = config.server.clone();
     let state = AppState::with_parts(config, backend, authz, observability);
     let lifecycle = state.observability().lifecycle.clone();
@@ -462,8 +455,7 @@ mod tests {
     use super::*;
 
     /// The configured `[auth] role_claims` reach the authenticator with
-    /// no authorization handle wired (RBAC, the patient scope and the per-EHR
-    /// default all off), so a role under a custom claim path is extracted.
+    /// no authorization handle wired (RBAC and the per-EHR default both off), so a role under a custom claim path is extracted.
     #[tokio::test]
     async fn configured_role_claims_apply_without_an_authz_handle() {
         let config = AppConfig {
@@ -476,7 +468,6 @@ mod tests {
         };
         let authenticator = build_authenticator(
             &config,
-            None,
             None,
             Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
             test_support::standing(),

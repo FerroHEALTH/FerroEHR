@@ -224,12 +224,23 @@ impl Ask {
         Self::of(world, CallerKind::Professional)
     }
 
+    /// The subject of `own`, through a patient context naming that EHR, or
+    /// naming none.
+    fn subject(world: &World, own: Option<EhrId>) -> Self {
+        let mut ask = Self::of(world, CallerKind::Subject);
+        ask.caller.party = None;
+        ask.caller.own_ehr = own;
+        ask.caller.settings = SettingsCaller::new(false, true, None);
+        ask
+    }
+
     /// A caller of `kind` bound to the nurse of `world`.
     fn of(world: &World, kind: CallerKind) -> Self {
         Self {
             caller: Caller {
                 kind,
                 party: Some(world.nurse.clone()),
+                own_ehr: None,
                 acts_for: Vec::new(),
                 roles: Vec::new(),
                 facts: CallerFacts::default(),
@@ -810,4 +821,148 @@ async fn an_ehr_of_a_class_the_condition_does_not_hold_is_withheld() {
         "the new class is withheld"
     );
     assert_reads(&world, &ask, &world.every(), "the classes read again").await;
+}
+
+/// The first column of every row of `aql` `ask` reads.
+async fn first_column(world: &World, ask: &Ask, aql: &str) -> Vec<Value> {
+    rows(world, ask, aql, None)
+        .await
+        .iter()
+        .map(|row| row[0].clone())
+        .collect()
+}
+
+/// A subject caller's query reads only the rows of their own EHR, for every
+/// query shape, including one with no versioned-object root, which reads the
+/// `ehr` row alone; a professional reads every EHR (#5586).
+#[tokio::test]
+async fn a_patient_query_reads_only_their_own_ehr() {
+    let world = Box::pin(World::new()).await;
+    world
+        .settings(
+            1,
+            &settings("open", &[directive("consent", "permit", &json!({}))], &[]),
+        )
+        .await;
+    let (own, other) = (world.ehrs[0].0, world.ehrs[1].0);
+    let patient = Ask::subject(&world, Some(own));
+    let open = Ask::professional(&world);
+    for aql in [
+        "SELECT e/ehr_id/value FROM EHR e",
+        "SELECT e/ehr_id/value, e/ehr_status/subject FROM EHR e",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS EHR_STATUS s",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS COMPOSITION c",
+        "SELECT e/ehr_id/value, c/name/value FROM EHR e CONTAINS COMPOSITION c LIMIT 10",
+        "SELECT e/ehr_id/value FROM EHR e CONTAINS (COMPOSITION c1 OR EHR_STATUS s1)",
+    ] {
+        let control = first_column(&world, &open, aql).await;
+        assert!(
+            control.contains(&json!(other.0.to_string())),
+            "{aql}: with no patient context the other EHR is served: {control:?}"
+        );
+        let served = first_column(&world, &patient, aql).await;
+        assert!(!served.is_empty(), "{aql}: the caller's EHR is served");
+        assert!(
+            served.iter().all(|id| *id == json!(own.0.to_string())),
+            "{aql}: only the caller's EHR is served: {served:?}"
+        );
+    }
+    let count = first_column(&world, &patient, "SELECT COUNT(*) FROM EHR e").await;
+    assert_eq!(count, vec![json!(1)], "one EHR is in the caller's scope");
+    assert_reads(&world, &patient, &world.objects(0), "the subject of EHR 0").await;
+    let settled = Ask::subject(&world, Some(other));
+    assert_reads(&world, &settled, &world.objects(1), "the subject of EHR 1").await;
+}
+
+/// A subject caller whose patient context names no EHR, or an EHR that does
+/// not exist, reads nothing; a caller in the context of an EHR reads it
+/// (#5586).
+#[tokio::test]
+async fn a_patient_query_outside_any_own_ehr_reads_nothing() {
+    let world = Box::pin(World::new()).await;
+    let aql = "SELECT e/ehr_id/value FROM EHR e";
+    for (case, own) in [
+        ("no EHR", None),
+        (
+            "an EHR that does not exist",
+            Some(EhrId(uuid::Uuid::now_v7())),
+        ),
+    ] {
+        let ask = Ask::subject(&world, own);
+        assert_eq!(
+            first_column(&world, &ask, aql).await,
+            Vec::<Value>::new(),
+            "{case}: the patient context names no stored EHR"
+        );
+        assert_reads(&world, &ask, &[], case).await;
+    }
+    let unique = world.ehrs[2].0;
+    let served = first_column(&world, &Ask::subject(&world, Some(unique)), aql).await;
+    assert_eq!(
+        served,
+        vec![json!(unique.0.to_string())],
+        "a patient context reads its EHR"
+    );
+}
+
+/// Two EHRs whose subjects share an id under two namespaces are two
+/// patients: the subject of one reads exactly that EHR, whichever namespace
+/// it is under (#5586).
+#[tokio::test]
+async fn a_shared_subject_id_names_no_other_ehr() {
+    let world = Box::pin(World::new()).await;
+    let shared = |namespace: &str| {
+        ferroehr::service::ehr_index::types::SubjectRef::person("PATIENT-X", namespace)
+    };
+    let ehr_a = crate::fixtures::create_ehr_subject(&world.svc, &shared("test.patients")).await;
+    let ehr_b = crate::fixtures::create_ehr_subject(&world.svc, &shared("other.patients")).await;
+    let aql = "SELECT e/ehr_id/value FROM EHR e";
+    for ehr in [ehr_a, ehr_b] {
+        let served = first_column(&world, &Ask::subject(&world, Some(ehr)), aql).await;
+        assert_eq!(served, vec![json!(ehr.0.to_string())]);
+    }
+}
+
+/// A subject caller is refused every EHR an operation names that is not
+/// their own, in its path, its body or its result, and admitted to their
+/// own: the judgement the service reads where data leave the store (#5586).
+#[tokio::test]
+async fn a_patient_is_refused_every_ehr_but_their_own() {
+    let world = Box::pin(World::new()).await;
+    world
+        .settings(
+            2,
+            &settings("open", &[directive("consent", "permit", &json!({}))], &[]),
+        )
+        .await;
+    let own = world.ehrs[0].0;
+    let ask = Ask::subject(&world, Some(own));
+    let access = request_of(&ask);
+    let ehrs: Vec<EhrId> = world.ehrs.iter().map(|(ehr, _, _)| *ehr).collect();
+    Box::pin(with_request_access(
+        Arc::clone(&access),
+        world.svc.judge_request_ehrs(&ehrs),
+    ))
+    .await
+    .expect("the EHRs are judged");
+    let item = ferroehr::access_eval::scope::Item::Ehr;
+    for ehr in &ehrs {
+        let admitted =
+            access.outcome(*ehr, &item) == ferroehr::access_eval::procedure::Outcome::Admit;
+        assert_eq!(admitted, *ehr == own, "{ehr:?}");
+    }
+    let nobody = request_of(&Ask::subject(&world, None));
+    Box::pin(with_request_access(
+        Arc::clone(&nobody),
+        world.svc.judge_request_ehrs(&ehrs),
+    ))
+    .await
+    .expect("the EHRs are judged");
+    for ehr in &ehrs {
+        assert_ne!(
+            nobody.outcome(*ehr, &item),
+            ferroehr::access_eval::procedure::Outcome::Admit,
+            "a patient context naming no EHR reaches none"
+        );
+    }
 }

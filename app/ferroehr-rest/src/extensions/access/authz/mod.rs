@@ -4,8 +4,7 @@
 //! Authorization for the `FerroEHR` CDR.
 //!
 //! The coarse role gate inside the protocol adapter, authorization being an
-//! adapter concern by design, and the per-server handle that carries it with
-//! the patient scope.
+//! adapter concern by design, and the per-server handle that carries it.
 //!
 //! No openEHR spec governs this: ITS-REST `Requests_and_responses.md`
 //! §Authentication and authorization mandates no scheme, so everything here is
@@ -18,13 +17,13 @@
 //!
 //! This module also carries the per-server authorization handle wired onto
 //! [`AppState`](crate::state::AppState), which the binary builds from
-//! `ferroehr::config::authz::AuthzConfig` and the `[auth]` patient binding.
+//! `ferroehr::config::authz::AuthzConfig`.
 //!
 //! ## Module map
 //! - `config`: the `ferroehr::config::authz::AuthzConfig` serde struct (the
 //!   `[authz]` section of the one server config tree) and boot validation.
 //! - [`roles`]: the RBAC gate decision over the caller's roles.
-//! - [`classify`]: `operation_id → OperationClass` / `ResourceKind` / `Mode`
+//! - [`classify`]: `operation_id → OperationClass`
 //!   (total-coverage-guarded).
 
 pub mod classify;
@@ -33,7 +32,6 @@ pub mod roles;
 use crate::api::operation::{Operation, operation};
 use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::{RbacDecision, authorize, authorize_readonly};
-use crate::extensions::access::patient_scope::PatientScope;
 use ferroehr::config::authz::{AuthzConfig, EhrAccessDefault, RbacConfig};
 
 use std::collections::HashMap;
@@ -43,13 +41,12 @@ use http::Method;
 /// The per-server authorization handle.
 ///
 /// `None` on [`AppState`](crate::state::AppState) means authorization is off
-/// (authentication-only behaviour). Carries the coarse RBAC gate and/or the
-/// patient scope, plus the `[authz.rbac]` keys the per-EHR `EHR_ACCESS` gate
-/// reads whether or not the RBAC gate is on.
+/// (authentication-only behaviour). Carries the coarse RBAC gate, plus the
+/// `[authz.rbac]` keys the per-EHR `EHR_ACCESS` gate reads whether or not the
+/// RBAC gate is on.
 #[derive(Debug)]
 pub struct AuthzHandle {
     rbac: Option<RbacGate>,
-    patient: Option<PatientScope>,
     /// The configured `[authz.rbac]` keys, kept whatever `rbac.enabled` says:
     /// `ehr_access_default` and `admin_role` are read by the per-EHR gate,
     /// which runs without the coarse gate.
@@ -59,32 +56,23 @@ pub struct AuthzHandle {
 impl AuthzHandle {
     /// Builds the full handle the binary serves with.
     ///
-    /// The handle carries the RBAC gate when `rbac.enabled`, the patient
-    /// scope when `patient` is `Some` (`[auth] patient_claim` is set), and the
+    /// The handle carries the RBAC gate when `rbac.enabled`, and the
     /// configured `[authz.rbac]` keys in every case. It is `None` only when
-    /// there is nothing to enforce: the RBAC gate off, no patient scope and
+    /// there is nothing to enforce: the RBAC gate off and
     /// `rbac.ehr_access_default` open, so `AppState` stays empty (auth-only).
     /// A `restricted` default alone yields a handle: the per-EHR default
     /// applies with the coarse gate off.
     #[must_use]
-    pub fn build(
-        config: &AuthzConfig,
-        base_path: &str,
-        patient: Option<PatientScope>,
-    ) -> Option<Self> {
+    pub fn build(config: &AuthzConfig, base_path: &str) -> Option<Self> {
         let rbac = config
             .rbac
             .enabled
             .then(|| RbacGate::new(config.rbac.clone(), base_path));
-        if rbac.is_none()
-            && patient.is_none()
-            && config.rbac.ehr_access_default == EhrAccessDefault::Open
-        {
+        if rbac.is_none() && config.rbac.ehr_access_default == EhrAccessDefault::Open {
             return None;
         }
         Some(Self {
             rbac,
-            patient,
             rules: config.rbac.clone(),
         })
     }
@@ -113,24 +101,11 @@ impl AuthzHandle {
         &self.rules.admin_role
     }
 
-    /// The patient scope, when `[auth] patient_claim` is set.
-    #[must_use]
-    pub fn patient(&self) -> Option<&PatientScope> {
-        self.patient.as_ref()
-    }
-
     /// Whether the coarse RBAC gate is live on this handle (boot logging +
     /// wiring tests).
     #[must_use]
     pub fn rbac_active(&self) -> bool {
         self.rbac.is_some()
-    }
-
-    /// Whether the patient scope is live on this handle (boot logging +
-    /// wiring tests).
-    #[must_use]
-    pub fn patient_scope_active(&self) -> bool {
-        self.patient.is_some()
     }
 }
 
@@ -433,15 +408,11 @@ mod tests {
     fn handle_absent_when_rbac_disabled() {
         let mut cfg = AuthzConfig::default();
         cfg.rbac.enabled = false;
-        let handle = AuthzHandle::build(&cfg, BASE, None);
+        let handle = AuthzHandle::build(&cfg, BASE);
         assert!(handle.is_none());
         let default =
-            AuthzHandle::build(&AuthzConfig::default(), BASE, None).expect("RBAC on by default");
+            AuthzHandle::build(&AuthzConfig::default(), BASE).expect("RBAC on by default");
         assert!(default.rbac_active());
-        assert!(
-            !default.patient_scope_active(),
-            "no patient claim configured → no patient scope on the handle"
-        );
     }
 
     /// A `restricted` per-EHR default is carried with the RBAC gate off, with
@@ -453,32 +424,9 @@ mod tests {
         cfg.rbac.enabled = false;
         cfg.rbac.ehr_access_default = EhrAccessDefault::Restricted;
         cfg.rbac.admin_role = "SUPERADMIN".to_owned();
-        let handle =
-            AuthzHandle::build(&cfg, BASE, None).expect("a restricted default needs a handle");
+        let handle = AuthzHandle::build(&cfg, BASE).expect("a restricted default needs a handle");
         assert!(!handle.rbac_active(), "the coarse gate stays off");
-        assert!(!handle.patient_scope_active());
         assert_eq!(handle.ehr_access_default(), EhrAccessDefault::Restricted);
         assert_eq!(handle.admin_role(), "SUPERADMIN");
-    }
-
-    /// A configured patient scope alone yields a handle, with the coarse gate
-    /// off and the per-EHR default open.
-    #[test]
-    fn a_patient_scope_alone_yields_a_handle() {
-        let mut cfg = AuthzConfig::default();
-        cfg.rbac.enabled = false;
-        let scope = PatientScope::new(
-            "patient_id",
-            None,
-            std::sync::Arc::new(|_| Box::pin(async { Ok(None) })),
-        );
-        let handle =
-            AuthzHandle::build(&cfg, BASE, Some(scope)).expect("a patient scope needs a handle");
-        assert!(!handle.rbac_active());
-        assert!(handle.patient_scope_active());
-        assert_eq!(
-            handle.patient().map(PatientScope::claim),
-            Some("patient_id")
-        );
     }
 }

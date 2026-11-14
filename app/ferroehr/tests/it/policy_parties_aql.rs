@@ -488,7 +488,6 @@ async fn plan_of(
         system_id: "policy.parties.test".to_owned(),
         ehr_ids: Vec::new(),
         ehr_scope_kind: EhrScopeKind::Named,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: ir.limit,
         offset: None,

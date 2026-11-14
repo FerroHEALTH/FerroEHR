@@ -753,7 +753,6 @@ mod tests {
         let Err(message) = super::super::Authenticator::new(
             &config,
             None,
-            None,
             replay,
             crate::test_support::standing(),
         )

@@ -327,7 +327,7 @@ rather than inherit from a quickstart. See
 | `[database]` | PostgreSQL connection, pool, migrations | [Server, database & telemetry](config-server.md) |
 | `[telemetry]` | The console, the request log and the OpenTelemetry export | [Server, database & telemetry](config-server.md) |
 | `[usage_report]` | The daily installation report to FerroPULSE, on by default; what it sends is on the [Usage report](../usage-report.md) page | [Server, database & telemetry](config-server.md#usage_report) |
-| `[auth]`, `[authz]` | Authentication (Basic, OAuth2/OIDC), the patient scope and RBAC | [Authentication & access](config-auth.md) |
+| `[auth]`, `[authz]` | Authentication (Basic, OAuth2/OIDC) and RBAC | [Authentication & access](config-auth.md) |
 | `[management]` | The ops-introspection surface | [Authentication & access](config-auth.md) |
 | `[auth.smart]` | SMART App Launch discovery and scope enforcement | [Authentication & access](config-auth.md) |
 | `[record.signing]` | VERSION signing and read-time verification | [Authentication & access](config-auth.md) |

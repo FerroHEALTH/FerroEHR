@@ -80,7 +80,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(applied("ext").await, 12);
     assert_eq!(applied("clinical").await, 43);
     assert_eq!(applied("party").await, 39);
-    assert_eq!(applied("audit").await, 31);
+    assert_eq!(applied("audit").await, 32);
 
     let tables = |schema: &'static str| {
         let pool = pool.clone();
@@ -994,82 +994,6 @@ async fn template_id_is_read_back_from_version() {
             .expect("unknown ok"),
         None
     );
-}
-
-/// Projection-independence regression (EHRbase v1 read these attributes off the
-/// SELECT columns): the ABAC query subject-scope pre-filter restricts rows to
-/// the caller's patient EHRs, and the executor collects the touched
-/// EHR/template sets, **even when the query projects neither `ehr_id`/`value`
-/// nor a template path**.
-#[tokio::test]
-async fn query_subject_scope_filters_and_collects_projection_independently() {
-    use ferroehr::service::FerroEhrService;
-    use ferroehr::service::query::request::AqlQueryRequest;
-
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-
-    // Two EHRs with distinct subjects, each holding one composition (same corpus
-    // body) under a distinct template id.
-    let (vo_a, ehr_a) = seed_version(&pool).await;
-    let (vo_b, ehr_b) = seed_version(&pool).await;
-    for (ehr, vo, subject, template) in [
-        (ehr_a, vo_a, "SUBJ-A", "org.openehr::t_a.v1"),
-        (ehr_b, vo_b, "SUBJ-B", "org.openehr::t_b.v1"),
-    ] {
-        sqlx::query("UPDATE ehr SET subject_id = $2 WHERE id = $1")
-            .bind(ehr)
-            .bind(subject)
-            .execute(&pool)
-            .await
-            .expect("set subject");
-        // version.template_id has an FK into template_store — seed first.
-        seed_template(&pool, template).await;
-        sqlx::query("UPDATE version SET template_id = $2 WHERE vo_id = $1")
-            .bind(vo)
-            .bind(template)
-            .execute(&pool)
-            .await
-            .expect("set template");
-        let rows = decompose(corpus_sample()).expect("decompose");
-        insert_nodes(&pool, vo, 1, ehr, &rows).await;
-    }
-
-    let service = FerroEhrService::new(&db::domain::DomainPools::from_shared(&pool));
-    // The projection is `c/name/value` — neither ehr_id nor a template path.
-    let aql = "SELECT c/name/value FROM COMPOSITION c";
-
-    // Unscoped: both compositions are visible (control).
-    let all = service
-        .execute_aql(aql, None, &AqlQueryRequest::default())
-        .await
-        .expect("unscoped query");
-    assert_eq!(row_count(&all.result_set), 2, "both compositions visible");
-
-    // Scoped to SUBJ-A + collection on: only A's row is fetched, and the touched
-    // EHR set is collected despite the projection.
-    let scoped = service
-        .execute_aql(
-            aql,
-            None,
-            &AqlQueryRequest {
-                subject_scope: Some("SUBJ-A".to_owned()),
-                collect_attributes: true,
-                ..Default::default()
-            },
-        )
-        .await
-        .expect("scoped query");
-    assert_eq!(row_count(&scoped.result_set), 1, "only SUBJ-A row fetched");
-    assert_eq!(scoped.ehr_ids, vec![ehr_a.to_string()]);
-}
-
-/// The number of `rows` in an ITS-REST `RESULT_SET`.
-fn row_count(result_set: &Value) -> usize {
-    result_set
-        .get("rows")
-        .and_then(Value::as_array)
-        .map_or(0, Vec::len)
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────

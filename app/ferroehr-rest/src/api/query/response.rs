@@ -32,23 +32,16 @@ use crate::negotiate;
 use crate::overview::error::RestError;
 use ferroehr::access_eval::condition::AccessCondition;
 use ferroehr::access_log::view::LogStanding;
-use ferroehr::aql::sql::subject::SubjectScope;
 use ferroehr::ids::EhrId;
 use ferroehr::service::query::request::AqlQueryRequest;
 
-/// The access pre-filter derived from the request: the patient
-/// subject-scope id, the touched-EHR collection flag, and the caller's
-/// per-EHR `EHR_ACCESS` decision.
+/// The access pre-filter derived from the request: the caller's per-EHR
+/// `EHR_ACCESS` decision and what the caller may read of the access log.
 ///
-/// All three are applied uniformly to every normalized [`AqlQueryRequest`]
+/// Both are applied uniformly to every normalized [`AqlQueryRequest`]
 /// before execution. No openEHR spec governs how they reach a query — our own
 /// access-control extension.
 pub(super) struct QueryScope {
-    /// The patient scope, if a scoped principal is configured.
-    pub(super) subject_scope: Option<SubjectScope>,
-    /// Whether the executor must collect the touched EHRs and their subjects for the
-    /// patient-scope post-check.
-    pub(super) collect: bool,
     /// The rows the access evaluator lets the query read.
     pub(super) ehr_access: AccessCondition,
     /// What the caller may read of the access log (#5131).
@@ -56,16 +49,10 @@ pub(super) struct QueryScope {
 }
 
 impl QueryScope {
-    /// Stamps the patient scope, the collection flag and the per-EHR access
-    /// decision onto a normalized request.
+    /// Stamps the per-EHR access decision and the access-log standing onto a
+    /// normalized request.
     pub(super) fn apply(&self, mut request: AqlQueryRequest) -> AqlQueryRequest {
-        request.subject_scope = self.subject_scope.as_ref().map(|s| s.id.clone());
-        request.subject_namespace = self
-            .subject_scope
-            .as_ref()
-            .and_then(|s| s.namespace.clone());
         request.ehr_access.clone_from(&self.ehr_access);
-        request.collect_attributes = self.collect;
         request.log_standing = self.log_standing;
         request
     }
@@ -550,17 +537,12 @@ mod tests {
     }
 
     #[test]
-    fn query_scope_apply_stamps_subject_collect_and_ehr_access() {
+    fn query_scope_apply_stamps_ehr_access_and_log_standing() {
         let pair = std::sync::Arc::new(VerdictPair {
             cared: Verdict::admit(),
             uncared: Verdict::admit(),
         });
         let scope = QueryScope {
-            subject_scope: Some(SubjectScope {
-                id: "patient-1".to_owned(),
-                namespace: Some("nl.example.patients".to_owned()),
-            }),
-            collect: true,
             ehr_access: AccessCondition::from(ConditionGroups {
                 groups: vec![(vec![1], std::sync::Arc::clone(&pair))],
                 closed: pair,
@@ -571,16 +553,11 @@ mod tests {
                     parties: Vec::new().into(),
                     keeper: None,
                 },
+                confined: None,
             }),
             log_standing: LogStanding::Reviewer,
         };
         let req = scope.apply(AqlQueryRequest::default());
-        assert_eq!(req.subject_scope.as_deref(), Some("patient-1"));
-        assert_eq!(
-            req.subject_namespace.as_deref(),
-            Some("nl.example.patients")
-        );
-        assert!(req.collect_attributes);
         assert_eq!(scope.ehr_access, req.ehr_access);
         assert_eq!(req.log_standing, LogStanding::Reviewer);
     }

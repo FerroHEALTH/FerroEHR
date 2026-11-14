@@ -79,7 +79,6 @@ pub fn details(event: &AuditEvent, subject: Option<&str>) -> Option<ItemStructur
     tree.text(Detail::Issuer, event.issuer.as_deref());
     tree.text(Detail::ClientId, event.client_id.as_deref());
     tree.text(Detail::TokenId, event.token_id.as_deref());
-    tree.text(Detail::Organisation, event.organisation.as_deref());
     tree.texts(Detail::Role, event.roles.iter().map(String::as_str));
     if event.domain != AccessDomain::of(event.object) {
         tree.text(Detail::Domain, Some(event.domain.as_str()));
@@ -272,7 +271,6 @@ fn accessor_and_access(event: &mut AuditEvent, details: &Details<'_>) -> Result<
     event.issuer = text(Detail::Issuer)?;
     event.client_id = text(Detail::ClientId)?;
     event.token_id = text(Detail::TokenId)?;
-    event.organisation = text(Detail::Organisation)?;
     event.roles = details.texts(Detail::Role)?;
     if let Some(domain) = text(Detail::Domain)? {
         event.domain = access_domain(Some(&domain)).ok_or(RecordedError::Value(Detail::Domain))?;

@@ -189,7 +189,6 @@ async fn query(dsn: &str, case: &Case, ehr: Uuid, plan: &Path) -> anyhow::Result
             Vec::new()
         },
         ehr_scope_kind: EhrScopeKind::Named,
-        subject_scope: None,
         ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
         limit: Some(case.limit),
         offset: None,
