@@ -120,11 +120,37 @@ The entry names who accessed (the bound party, the groups, the provider, the
 binding outcome and the credential by its issuer, subject, client and token
 id), what (the EHR, the version or object, its categories and origins), why
 (the declared purposes), under which authorisation (the agreement, the
-representation, a data permit, the emergency mark), the outcome (`granted`,
-`refused` or `failed`) and the request. It carries no data value of the EHR:
+representation, a data permit, the emergency mark, and the grounds of the
+access decision below), the outcome (`granted`, `refused` or `failed`) and
+the request. It carries no data value of the EHR:
 a query is named by its stored name or the SHA-256 of its text, never the
 text, and a read of the access log through ITI-81 is named by the digest of
 its search.
+
+**The grounds of the access decision.** The access evaluator's decision on
+the EHR is in the entry's `authorisations`, each an `ACCESS_AUTHORISATION`
+whose `name` and `version` name the document the ground is defined in:
+
+| Kind | When | What it names |
+|---|---|---|
+| `role` | always | each grant the caller held, by its operation code (`name`) and the `ROLE` that carries it (`reference`); each role the caller held |
+| `subject of care` | the person reads their own record | |
+| `consent` | a consent permit admitted the access, or the caller is a gate-keeper of the settings | `EHR_ACCESS` and the uid of its version; the directive by its uid, its first identifier or its position from 1, and its legal grounds |
+| `representation` | a `delegation` permit admitted a representative | as `consent` |
+| `treatment relationship` | the decision read a live care relationship | `ACCESS_POLICY` and the uid of its version |
+| `emergency` | an emergency lifted a directive or steps 4 to 7 | the directive it lifted, or the `ACCESS_POLICY` version |
+
+A refusal names its code in `outcome.reason`, in the `ferroehr-operations`
+terminology, and in `outcome.description` the step that refused and the
+directive or policy of that step, such as `step 2 (restriction): directive 1
+of EHR_ACCESS 5a1c…::cdr.example.org::2`. This holds for the `404` of an
+opt-out or a restriction too: the response says nothing (EHDS Art. 8), and
+the entry says why. An override in an emergency sets `is_emergency`, so the
+person sees it in their access log (EHDS Art. 9 and 11(5)). The EHDS record
+writes the versions the grounds name after the data permit at
+`agent[user].policy`, "the policy or plan that authorized the activity being
+recorded" (FHIR R4 `AuditEvent.agent.policy`), and the store keeps them in the
+`decision_policies` column. Which grounds are named is FerroEHR's own design.
 
 The entry is written in the same database transaction as the record it
 accompanies, so the store holds both or neither, and an access whose record

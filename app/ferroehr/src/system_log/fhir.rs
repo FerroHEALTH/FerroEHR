@@ -320,7 +320,7 @@ fn exchange(
             .with_issuer(event.issuer.clone())
             .with_client_id(event.client_id.clone())
             .with_token_id(event.token_id.clone())
-            .with_policies(event.permit.iter().cloned().collect())
+            .with_policies(event.policies())
             .with_purposes(
                 event
                     .purpose_codings()

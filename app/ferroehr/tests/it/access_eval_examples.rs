@@ -301,17 +301,19 @@ async fn the_ward_with_its_grace_period() {
         ("Dr D on 25 November", doctors[0], "2026-11-25", refused),
         ("Dr F", doctors[1], "2026-11-05", refused),
     ] {
-        let (outcome, read, rows) = decided(
-            &svc,
-            access(&svc, doctor, ward.clone(), noon(day)),
-            ehr_id,
-            vo,
-        )
-        .await;
+        let judged = access(&svc, doctor, ward.clone(), noon(day));
+        let (outcome, read, rows) = decided(&svc, Arc::clone(&judged), ehr_id, vo).await;
         let admitted = expected == Outcome::Admit;
         assert_eq!(outcome, expected, "{name}");
         assert_eq!(read, admitted, "{name}: the composition read");
         assert_eq!(rows, usize::from(admitted), "{name}: the query");
+        // NOTE: EHDS Annex II 3.2, the access record names the care relationship it rests on.
+        let cared = judged
+            .decision(Some(ehr_id))
+            .grounds
+            .iter()
+            .any(|ground| ground.kind.value == "treatment relationship");
+        assert_eq!(cared, admitted, "{name}: the treatment relationship ground");
     }
 }
 

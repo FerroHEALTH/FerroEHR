@@ -162,13 +162,35 @@ pub enum Outcome {
     Refused(Refusal),
 }
 
-/// One step's rule: the items it covers and what it answers for them.
+/// One step's rule: the items it covers, what it answers for them, and the
+/// directives it rests on.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Rule {
     /// The items covered.
     pub when: Pred,
     /// The answer.
     pub then: Outcome,
+    /// The positions in the settings' `directives` of the directives the rule
+    /// rests on; empty for a rule of the access policy or the default
+    /// disposition.
+    pub by: Vec<usize>,
+}
+
+/// What a verdict rests on beside its rules, which the access record names
+/// (EHDS Annex II 3.2).
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Grounds {
+    /// The subject reads their own record (EHDS Art. 3).
+    pub subject: bool,
+    /// The positions in the settings' `directives` of the permits that bind
+    /// the caller.
+    pub permits: Vec<usize>,
+    /// The positions of the denies an emergency lifted.
+    pub lifted: Vec<usize>,
+    /// The verdict reads a live care relationship to the subject.
+    pub cared: bool,
+    /// The verdict reads the caller as a gate-keeper or the controller.
+    pub keeper: bool,
 }
 
 /// A directive or a step an emergency lifted, which marks the access.
@@ -194,6 +216,8 @@ pub struct Verdict {
     pub otherwise: Outcome,
     /// What an emergency lifted.
     pub lifted: Vec<Lifted>,
+    /// What the verdict rests on beside its rules.
+    pub grounds: Grounds,
 }
 
 impl Verdict {
@@ -204,16 +228,32 @@ impl Verdict {
             rules: Vec::new(),
             otherwise: Outcome::Admit,
             lifted: Vec::new(),
+            grounds: Grounds::default(),
         }
+    }
+
+    /// The verdict without what it rests on, so verdicts that answer alike
+    /// compare equal and one SQL condition serves them all.
+    #[must_use]
+    pub fn bare(mut self) -> Self {
+        self.grounds = Grounds::default();
+        for rule in &mut self.rules {
+            rule.by.clear();
+        }
+        self
+    }
+
+    /// The rule that decides `item`; `None` when no rule covers it and the
+    /// default answer stands.
+    #[must_use]
+    pub fn rule_for(&self, item: &Item<'_>) -> Option<&Rule> {
+        self.rules.iter().find(|rule| rule.when.holds(item))
     }
 
     /// The answer for `item`.
     #[must_use]
     pub fn outcome(&self, item: &Item<'_>) -> Outcome {
-        self.rules
-            .iter()
-            .find(|rule| rule.when.holds(item))
-            .map_or(self.otherwise, |rule| rule.then)
+        self.rule_for(item).map_or(self.otherwise, |rule| rule.then)
     }
 
     /// Whether the answer depends on the item.
@@ -282,6 +322,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     let caller = judged.caller;
     // NOTE: EHDS Art. 3, the subject reads their own record; only the access delay holds it.
     if caller.kind == CallerKind::Subject {
+        verdict.grounds.subject = true;
         return verdict;
     }
     let (directives, held_closed) = match judged.ehr.settings {
@@ -301,25 +342,41 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         verdict.lifted.push(Lifted::Policy);
         return verdict;
     }
-    let permits: Vec<(&AccessDirective, Pred)> = directives
+    let permits: Vec<Permit<'_>> = directives
         .iter()
-        .filter(|d| kind_and_effect(d) == (DirectiveKind::Consent, Effect::Permit))
-        .filter(|d| read.binds(DirectiveKind::Consent, d))
-        .map(|d| (d, read.cover(d, Effect::Permit)))
+        .enumerate()
+        .filter(|(_, d)| kind_and_effect(d) == (DirectiveKind::Consent, Effect::Permit))
+        .filter(|(_, d)| read.binds(DirectiveKind::Consent, d))
+        .map(|(at, d)| Permit {
+            at,
+            directive: d,
+            cover: read.cover(d, Effect::Permit),
+        })
         .collect();
+    verdict.grounds.permits = permits.iter().map(|permit| permit.at).collect();
     sensitivity(&read, &permits, &mut verdict);
     let keeper = caller.administrator || caller.settings.is_gate_keeper(judged.ehr.settings);
     let live = judged.ehr.cared && !held_closed;
+    let default = judged
+        .ehr
+        .settings
+        .map_or(judged.ehr.server_default, EhrAccessSettings::default_access);
+    let care_read = judged.policy.care_required && caller.kind == CallerKind::Professional;
+    if care_read || default != AccessDefault::Open {
+        verdict.grounds.cared = live;
+        verdict.grounds.keeper = keeper;
+    }
     // Step 5: a care relationship.
-    if judged.policy.care_required && caller.kind == CallerKind::Professional && !(live || keeper) {
+    if care_read && !(live || keeper) {
         let naming = permits
             .iter()
-            .filter(|(d, _)| d.applies_to.is_some())
-            .map(|(_, cover)| cover.clone())
+            .filter(|permit| permit.directive.applies_to.is_some())
+            .map(|permit| permit.cover.clone())
             .collect();
         verdict.rules.push(Rule {
             when: Pred::negate(Pred::any(naming)),
             then: Outcome::Refused(Refusal::NoCareRelationship),
+            by: Vec::new(),
         });
     }
     // Step 6: a purpose.
@@ -335,14 +392,11 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
             verdict.rules.push(Rule {
                 when: Pred::True,
                 then: Outcome::Refused(refusal),
+                by: Vec::new(),
             });
         }
     }
     // Step 7: the default disposition.
-    let default = judged
-        .ehr
-        .settings
-        .map_or(judged.ehr.server_default, EhrAccessSettings::default_access);
     let admitted = match default {
         AccessDefault::Open => true,
         AccessDefault::Restricted => keeper || live,
@@ -350,7 +404,8 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
     };
     if !admitted {
         verdict.rules.push(Rule {
-            when: Pred::any(permits.into_iter().map(|(_, cover)| cover).collect()),
+            by: permits.iter().map(|permit| permit.at).collect(),
+            when: Pred::any(permits.into_iter().map(|permit| permit.cover).collect()),
             then: Outcome::Admit,
         });
         verdict.otherwise = Outcome::Refused(Refusal::ConsentRequired);
@@ -363,7 +418,7 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
 /// it.
 fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut Verdict) {
     let emergency = read.judged.asked.emergency;
-    for directive in directives {
+    for (at, directive) in directives.iter().enumerate() {
         let (kind, effect) = kind_and_effect(directive);
         if effect != Effect::Deny || !read.binds(kind, directive) {
             continue;
@@ -387,10 +442,12 @@ fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut 
         };
         if directive.emergency_override && lifts {
             verdict.lifted.push(lifted);
+            verdict.grounds.lifted.push(at);
         } else {
             verdict.rules.push(Rule {
                 when: read.cover(directive, Effect::Deny),
                 then: refusal,
+                by: vec![at],
             });
         }
     }
@@ -409,28 +466,35 @@ const fn step(outcome: Outcome) -> u8 {
 /// Step 3 for a representative: one a `delegation` directive names reads
 /// only what an applying delegation permit covers (EHDS Art. 4(2)).
 fn delegation(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut Verdict) {
-    let naming: Vec<&AccessDirective> = directives
+    let naming: Vec<(usize, &AccessDirective)> = directives
         .iter()
-        .filter(|d| kind_and_effect(d) == (DirectiveKind::Delegation, Effect::Permit))
-        .filter(|d| d.applies_to.is_some() && read.actor(d))
+        .enumerate()
+        .filter(|(_, d)| kind_and_effect(d) == (DirectiveKind::Delegation, Effect::Permit))
+        .filter(|(_, d)| d.applies_to.is_some() && read.actor(d))
         .collect();
     if naming.is_empty() {
         return;
     }
-    let covered = naming
+    let applying: Vec<(usize, &AccessDirective)> = naming
         .iter()
-        .filter(|d| read.applies(d, Polarity::Permit))
-        .map(|d| read.cover(d, Effect::Permit))
+        .copied()
+        .filter(|(_, d)| read.applies(d, Polarity::Permit))
+        .collect();
+    verdict.grounds.permits = applying.iter().map(|(at, _)| *at).collect();
+    let covered = applying
+        .iter()
+        .map(|(_, d)| read.cover(d, Effect::Permit))
         .collect();
     verdict.rules.push(Rule {
         when: Pred::negate(Pred::any(covered)),
         then: Outcome::Refused(Refusal::ConsentDenied),
+        by: naming.iter().map(|(at, _)| *at).collect(),
     });
 }
 
 /// Step 4: data whose sensitivity the caller is not cleared for, unless an
 /// applying permit names that sensitivity.
-fn sensitivity(read: &Reader<'_, '_>, permits: &[(&AccessDirective, Pred)], verdict: &mut Verdict) {
+fn sensitivity(read: &Reader<'_, '_>, permits: &[Permit<'_>], verdict: &mut Verdict) {
     let scopes = read.judged.scopes;
     for code in scopes.sensitivity_codes() {
         if read.judged.caller.facts.clears(&code) {
@@ -438,8 +502,8 @@ fn sensitivity(read: &Reader<'_, '_>, permits: &[(&AccessDirective, Pred)], verd
         }
         let named = permits
             .iter()
-            .filter(|(d, _)| names_sensitivity(d, &code))
-            .map(|(_, cover)| cover.clone())
+            .filter(|permit| names_sensitivity(permit.directive, &code))
+            .map(|permit| permit.cover.clone())
             .collect();
         verdict.rules.push(Rule {
             when: Pred::all(vec![
@@ -447,8 +511,17 @@ fn sensitivity(read: &Reader<'_, '_>, permits: &[(&AccessDirective, Pred)], verd
                 Pred::negate(Pred::any(named)),
             ]),
             then: Outcome::Refused(Refusal::Sensitivity),
+            by: Vec::new(),
         });
     }
+}
+
+/// A consent permit that binds the caller: its position in the settings'
+/// `directives`, the directive, and the items it covers.
+struct Permit<'a> {
+    at: usize,
+    directive: &'a AccessDirective,
+    cover: Pred,
 }
 
 /// Whether a data scope of `directive` names the sensitivity `code`.

@@ -67,10 +67,10 @@ const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, ou
      issuer, client_id, ehr_id, subject_namespace, subject_lookup_failed, category_content, \
      render_policy, search_tokens, binding, guest, party, party_groups, provider, representation, \
      external_fields, agreement, actor_chain, facilities, binding_detail, summary, \
-     token_attributes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, \
-     $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, \
-     $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51) \
-     RETURNING id";
+     token_attributes, decision_policies) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, \
+     $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, \
+     $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, \
+     $48, $49, $50, $51, $52) RETURNING id";
 
 /// The batched insert: one row per element of the parallel column arrays, every
 /// row under the one render policy in `$39`; each record's search tokens arrive
@@ -84,12 +84,12 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
      retention_ends, retention_stated, permit, issuer, client_id, ehr_id, subject_namespace, \
      subject_lookup_failed, category_content, render_policy, search_tokens, binding, guest, \
      party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
-     facilities, binding_detail, summary, token_attributes) \
+     facilities, binding_detail, summary, token_attributes, decision_policies) \
      SELECT u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, u.c13, \
      u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, u.c26, \
      u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, u.c38, \
      $39::bytea, u.tokens::integer[], u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, u.c48, \
-     u.c49, u.c50, u.c51, u.c52, u.c53 \
+     u.c49, u.c50, u.c51, u.c52, u.c53, u.c54 \
      FROM UNNEST($1::timestamptz[], $2::text[], $3::smallint[], $4::text[], \
      $5::text[], $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], \
      $12::text[], $13::text[], $14::text[], $15::text[], $16::bigint[], $17::text[], \
@@ -99,15 +99,15 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
      $34::text[], $35::text[], $36::text[], $37::boolean[], $38::jsonb[], $40::text[], \
      $41::text[], $42::boolean[], $43::jsonb[], $44::jsonb[], $45::jsonb[], $46::jsonb[], \
      $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], $51::jsonb[], $52::jsonb[], \
-     $53::jsonb[]) \
+     $53::jsonb[], $54::jsonb[]) \
      AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, \
      c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, c37, \
-     c38, tokens, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, c53)";
+     c38, tokens, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, c53, c54)";
 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
 #[cfg(feature = "fhir")]
-const RECORD_COLUMNS: [&str; 36] = [
+const RECORD_COLUMNS: [&str; 37] = [
     "chain_seq",
     "recorded_at",
     "stored_at",
@@ -144,6 +144,7 @@ const RECORD_COLUMNS: [&str; 36] = [
     "category_content",
     "render_policy",
     "token_attributes",
+    "decision_policies",
 ];
 
 /// The oldest record the FHIR Feed owes past the chain positions in `$1`,
@@ -157,7 +158,7 @@ const OLDEST_OWED: &str = "SELECT \
      e.acting_mode, e.assurance_level, e.assurance_value, e.professional_id, \
      e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id, \
      e.subject_namespace, e.subject_lookup_failed, e.category_content, e.render_policy, \
-     e.token_attributes \
+     e.token_attributes, e.decision_policies \
      FROM audit.fhir_feed_outbox o \
      JOIN audit.audit_event e ON e.chain_seq = o.chain_seq \
      WHERE NOT (o.chain_seq = ANY($1)) \
@@ -470,6 +471,7 @@ impl AuditStore {
         }
         let id = query
             .bind(token_attributes_json(event))
+            .bind(decision_policies_json(event))
             .fetch_one(&mut *tx)
             .await?
             .try_get::<Uuid, _>("id")
@@ -617,6 +619,7 @@ impl AuditStore {
             .bind(c.details)
             .bind(c.summaries)
             .bind(c.token_attributes)
+            .bind(c.decision_policies)
             .execute(&mut *conn)
             .await?;
         Ok(())
@@ -1246,6 +1249,12 @@ fn token_attributes_json(event: &AuditEvent) -> Option<serde_json::Value> {
         .and_then(|token| serde_json::to_value(token).ok())
 }
 
+/// The `decision_policies` column value; `NULL` when the decision names none.
+fn decision_policies_json(event: &AuditEvent) -> Option<serde_json::Value> {
+    let decided = event.decided.as_ref().filter(|d| !d.policies.is_empty())?;
+    Some(serde_json::json!(decided.policies))
+}
+
 /// The `origin_count` column value.
 fn origin_count(event: &AuditEvent) -> Option<i64> {
     event
@@ -1409,6 +1418,8 @@ pub(super) fn stored_record(row: &PgRow) -> Result<(Vec<u8>, StoredRecord), Audi
         .transpose()
         .map_err(|_unreadable| unreadable("its token attributes do not read"))?;
     event.permit = row.try_get("permit")?;
+    let policies = strings(row, "decision_policies", chain_seq)?;
+    event.decided = crate::access_eval::record::Decision::of_policies(policies);
     event.emergency_access = row.try_get("emergency_access")?;
     event.legal_basis = row.try_get("legal_basis")?;
     event.result_count = count(row, "result_count", chain_seq)?;

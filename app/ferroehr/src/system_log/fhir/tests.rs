@@ -594,6 +594,27 @@ fn the_declared_permit_follows_the_token_id_as_a_policy() {
     );
 }
 
+/// The versions of the policies the access decision rests on follow the
+/// data permit at `agent[user].policy`, the record's authorisation reference
+/// (FHIR R4 `AuditEvent.agent.policy`).
+#[test]
+fn the_decision_policies_follow_the_permit() {
+    let mut e = event(
+        EventActionCode::Read,
+        ObjectClass::Composition,
+        EventOutcome::Success,
+    );
+    e.permit = Some("hdab-nl/2026/0042".to_owned());
+    let versions = ["ehr-access::cdr::2".to_owned(), "policy::cdr::3".to_owned()];
+    e.decided = crate::access_eval::record::Decision::of_policies(versions.to_vec());
+    let rendered = json(&e, Some("patient-42"));
+    assert_eq!(
+        agent(&rendered, "john doe")["policy"],
+        serde_json::json!(["hdab-nl/2026/0042", versions[0], versions[1]]),
+        "{rendered}"
+    );
+}
+
 /// The ITS-REST operation id is a subtype in its own code system, after
 /// the restful-interaction code (every BALP `RESTful` pattern slices
 /// `subtype` openly), on a classified access and on every other record.

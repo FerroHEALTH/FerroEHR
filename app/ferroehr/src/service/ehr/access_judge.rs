@@ -25,16 +25,20 @@ use crate::service::FerroEhrService;
 
 impl FerroEhrService {
     /// The facts a request that begins now is judged under, an EHR with no
-    /// settings taking `server_default`.
+    /// settings taking `server_default`, with the uid of the access policy
+    /// version among them, which the access record names (`None` when no
+    /// version is committed).
     #[must_use]
-    pub fn access_in_force(&self, server_default: AccessDefault) -> InForce {
-        InForce {
-            policy: self.access_policy().in_force().policy.clone(),
+    pub fn access_in_force(&self, server_default: AccessDefault) -> (InForce, Option<String>) {
+        let policy = self.access_policy().in_force();
+        let in_force = InForce {
+            policy: policy.policy.clone(),
             categories: CategoryIndex::new(self.policy_registers().categories()),
             server_default,
             now: jiff::Timestamp::now(),
             grants: Some(Arc::clone(self.grants())),
-        }
+        };
+        (in_force, policy.uid.clone())
     }
 
     /// The verdict of `access` on `ehr_id`, judged from this replica's copy
@@ -52,8 +56,8 @@ impl FerroEhrService {
         if let Some(verdict) = access.verdict(ehr_id) {
             return Ok(verdict);
         }
-        let entry = self.ehr_access_entry(ehr_id).await?;
-        Ok(access.judge_ehr(ehr_id, (*entry.settings).as_ref(), entry.subject))
+        let entry = Box::pin(self.ehr_access_entry(ehr_id)).await?;
+        Ok(access.judge_ehr(ehr_id, &entry))
     }
 
     /// What the evaluator reads of each of `vo_ids` this store holds.

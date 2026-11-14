@@ -441,6 +441,13 @@ fn stamp_caller(event: &mut AuditEvent) {
     if event.roles.is_empty() {
         event.roles = access_context::current_roles();
     }
+    // NOTE: EHDS Annex II 3.2 (`docs/law/eu/ehds/text.html`), a record of an EHR the
+    // request reached names the grounds the access evaluator gave it.
+    if event.ehr_id.is_some()
+        && let Some(access) = crate::access_eval::condition::current()
+    {
+        crate::access_eval::record::stamp(event, &access);
+    }
     // NOTE: EHDS Art. 9(2)(a) (`docs/law/eu/ehds/text.html`), the record names
     // who accessed the data, and the request's authenticated committer is that.
     if event.user_id.is_empty()

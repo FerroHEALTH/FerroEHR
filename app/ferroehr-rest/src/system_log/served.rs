@@ -106,6 +106,7 @@ fn emit_served_ehr_records(
         event.object_id = Some(ehr_id.clone());
         event.result_count = Some(*rows);
         event.query.clone_from(query);
+        caller.stamp_decision(&mut event);
         event.category = content.get(ehr_id).and_then(|objects| {
             state
                 .backend()

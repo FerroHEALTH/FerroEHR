@@ -243,10 +243,13 @@ pub struct AuditEvent {
     /// The query the access ran, named and never quoted: a stored query by
     /// its name, an ad-hoc one by the digest of its text.
     pub query: Option<QueryNaming>,
-    /// The grounds the access decision rested on, carried into the entry's
-    /// `authorisations` (#5514 fills them).
-    pub grounds:
-        Vec<openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation>,
+    /// What the access evaluator decided ([`crate::access_eval::record`]):
+    /// the grounds the entry's `authorisations` carry, the versions of the
+    /// policies they are defined in, which the `ehds-logging` record writes
+    /// after the data permit, and the refusal with its code, the absent
+    /// answers of an opt-out or a restriction included; `None` for an access
+    /// the evaluator did not judge.
+    pub decided: Option<Box<crate::access_eval::record::Decision>>,
     /// The event time.
     pub timestamp: Timestamp,
 }
@@ -428,6 +431,19 @@ impl AuditEvent {
         codings
     }
 
+    /// The policies the access was authorised under, in order: the data
+    /// permit the caller declared, then the versions of the policies the
+    /// decision grounds are defined in (FHIR R4 `AuditEvent.agent.policy`,
+    /// "the policy or plan that authorized the activity being recorded").
+    #[must_use]
+    pub fn policies(&self) -> Vec<String> {
+        self.permit
+            .iter()
+            .chain(self.decided.iter().flat_map(|decided| &decided.policies))
+            .cloned()
+            .collect()
+    }
+
     /// The roles the record renders: the roles the caller held, then the
     /// professional roles the access token states.
     #[must_use]
@@ -508,7 +524,7 @@ impl AuditEvent {
             decision: AccessDecision::Admitted,
             entry: EntryScope::ByDomain,
             query: None,
-            grounds: Vec::new(),
+            decided: None,
             timestamp: Timestamp::now(),
         }
     }

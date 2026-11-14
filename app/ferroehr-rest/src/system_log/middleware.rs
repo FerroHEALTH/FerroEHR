@@ -39,6 +39,8 @@
               with no RM type (typed-FHIR evaluation tracked separately)"
 )]
 
+use std::sync::Arc;
+
 use axum::extract::{FromRequestParts, RawPathParams, Request, State};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
@@ -46,6 +48,7 @@ use ferrohealth_server::client_address::ClientAddress;
 use http::{HeaderValue, StatusCode, header};
 use openehr_its::rest::runtime::ApiError;
 
+use ferroehr::access_eval::condition::RequestAccess;
 use ferroehr::system_log::access_context;
 use ferroehr::system_log::categories::{AccessedContent, ResourceKind};
 use ferroehr::system_log::event::{
@@ -126,6 +129,9 @@ pub(super) struct Caller<'a> {
     pub(super) principal: Option<&'a Principal>,
     pub(super) actor: Option<&'a ActorAuthentication>,
     pub(super) binding: Option<&'a ferroehr::system_log::binding::BindingRecord>,
+    /// The access evaluator of the request, whose decisions each record
+    /// names ([`ferroehr::access_eval::record`]).
+    pub(super) access: Option<&'a Arc<RequestAccess>>,
 }
 
 impl<'a> Caller<'a> {
@@ -137,6 +143,15 @@ impl<'a> Caller<'a> {
             binding: resp
                 .extensions()
                 .get::<ferroehr::system_log::binding::BindingRecord>(),
+            access: resp.extensions().get::<Arc<RequestAccess>>(),
+        }
+    }
+
+    /// Stamp `event` with the decision the access evaluator gave the EHR it
+    /// names; nothing for a request the evaluator did not judge.
+    pub(super) fn stamp_decision(self, event: &mut AuditEvent) {
+        if let Some(access) = self.access {
+            ferroehr::access_eval::record::stamp(event, access);
         }
     }
 }
@@ -299,6 +314,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             op,
             &path,
         );
+        caller.stamp_decision(&mut event);
         if event.outcome == EventOutcome::Success
             && let Some(accessed) = accessed_content(
                 op,

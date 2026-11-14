@@ -29,6 +29,7 @@ use openehr_base::v1_3::base_types::identification::object_ref::{ObjectRef, Obje
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
 use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
 use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::common::generic::party_self::PartySelf;
@@ -36,6 +37,7 @@ use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
 use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
+use openehr_rm::v1_2::data_types::text::dv_text::{DvText, DvTextData};
 
 use crate::access_log::search::LOG_RECORD;
 use crate::system_log::binding::{BindingCode, BindingRecord, Identified};
@@ -252,10 +254,29 @@ fn outcome(event: &AuditEvent) -> AccessOutcome {
         .then_some(event.result_count)
         .flatten()
         .map(|count| i32::try_from(count).unwrap_or(i32::MAX));
+    let refused = event
+        .decided
+        .as_ref()
+        .and_then(|decided| decided.refused.as_ref());
     AccessOutcome {
         result: coded(OPENEHR, result, result),
-        reason: None,
-        description: None,
+        reason: refused.map(|refused| {
+            coded(
+                TERMINOLOGY_ID_ACCESS_CONTROL,
+                refused.code(),
+                refused.code(),
+            )
+        }),
+        description: refused.map(|refused| {
+            DvText::DvText(DvTextData {
+                value: refused.description(),
+                hyperlink: None,
+                formatting: None,
+                mappings: None,
+                language: None,
+                encoding: None,
+            })
+        }),
         delivered,
     }
 }
@@ -553,19 +574,30 @@ fn query(event: &AuditEvent) -> Option<AccessQuery> {
     })
 }
 
-/// The authorisations the access ran under: the decision grounds the access
-/// decision gave, then the agreement, the representation, the data permit and
-/// the emergency the request carried.
-fn authorisations(event: &AuditEvent) -> Vec<AccessAuthorisation> {
-    let mut authorisations = event.grounds.clone();
-    let kind = |rubric: &str| AccessAuthorisation {
+/// A ground of the draft `access authorisation` group whose rubric is
+/// `rubric`, naming nothing else.
+#[must_use]
+pub(crate) fn authorisation(rubric: &str) -> AccessAuthorisation {
+    AccessAuthorisation {
         kind: coded(OPENEHR, rubric, rubric),
         policy: None,
         name: None,
         version: None,
         reference: None,
         legal_grounds: None,
-    };
+    }
+}
+
+/// The authorisations the access ran under: the decision grounds the access
+/// decision gave, then the agreement, the representation, the data permit and
+/// the emergency the request carried, unless a decision ground marks it.
+fn authorisations(event: &AuditEvent) -> Vec<AccessAuthorisation> {
+    let mut authorisations = event
+        .decided
+        .as_ref()
+        .map(|decided| decided.grounds.clone())
+        .unwrap_or_default();
+    let kind = authorisation;
     let binding = event.binding.as_ref();
     if let Some(agreement) = binding.and_then(|binding| binding.agreement.as_ref()) {
         authorisations.push(AccessAuthorisation {
@@ -590,7 +622,12 @@ fn authorisations(event: &AuditEvent) -> Vec<AccessAuthorisation> {
             ..kind("permit")
         });
     }
-    if event.emergency_access {
+    let marked = |rubric: &str| {
+        authorisations
+            .iter()
+            .any(|ground| ground.kind.value == rubric)
+    };
+    if event.emergency_access && !marked("emergency") {
         authorisations.push(kind("emergency"));
     }
     authorisations

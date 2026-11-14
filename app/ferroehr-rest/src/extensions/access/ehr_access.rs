@@ -22,7 +22,7 @@
 //! its codes are our own design (#5487, #5513).
 
 use axum::response::{IntoResponse, Response};
-use ferroehr::access_eval::condition::{AccessCondition, current};
+use ferroehr::access_eval::condition::{AccessCondition, RequestAccess, current};
 use ferroehr::access_eval::procedure::{Outcome, Verdict};
 use ferroehr::access_eval::scope::Item;
 use ferroehr::error::ServiceError;
@@ -72,7 +72,7 @@ pub(crate) async fn enforce(
         .ehr_verdict(&access, ehr_id)
         .await
         .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
-    if let Some(refusal) = refusal_of(op, principal.as_ref(), ehr_id, &verdict) {
+    if let Some(refusal) = refusal_of(&access, op, principal.as_ref(), ehr_id, &verdict) {
         return Err(Box::new(refusal));
     }
     record_overrides(state, &[ehr_id]).await?;
@@ -108,7 +108,7 @@ async fn enforce_objects(
             .iter()
             .find(|(_, vo_id)| *vo_id == held.vo_id)
             .map_or("", |(raw, _)| raw);
-        match verdict.outcome(&held.item()) {
+        match access.note(ehr_id, &verdict, &held.item()) {
             Outcome::Admit => {}
             Outcome::Absent(_) => return Err(Box::new(object_not_found(op, raw))),
             Outcome::Refused(code) => return Err(Box::new(forbidden(principal, code))),
@@ -137,16 +137,18 @@ pub(crate) async fn enforce_each(
             .ehr_verdict(&access, *ehr_id)
             .await
             .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
-        if let Some(refusal) = refusal_of(op, principal.as_ref(), *ehr_id, &verdict) {
+        if let Some(refusal) = refusal_of(&access, op, principal.as_ref(), *ehr_id, &verdict) {
             return Err(Box::new(refusal));
         }
     }
     record_overrides(state, ehr_ids).await
 }
 
-/// The refusal an EHR-wide `verdict` answers for `ehr_id`; `None` when it
-/// admits some data, which the reads then judge one by one.
+/// The refusal an EHR-wide `verdict` answers for `ehr_id`, noted for the
+/// access record of the request; `None` when it admits some data, which the
+/// reads then judge one by one.
 fn refusal_of(
+    access: &RequestAccess,
     op: &str,
     principal: Option<&Principal>,
     ehr_id: EhrId,
@@ -155,7 +157,7 @@ fn refusal_of(
     if verdict.item_dependent() && verdict.admits_any() {
         return None;
     }
-    match verdict.outcome(&Item::Ehr) {
+    match access.note(ehr_id, verdict, &Item::Ehr) {
         Outcome::Admit => None,
         Outcome::Absent(_) => Some(ehr_not_found(op, ehr_id)),
         Outcome::Refused(code) => Some(forbidden(principal, code)),

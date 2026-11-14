@@ -93,14 +93,15 @@ async fn ensure_not_access_restricted_tx(
             }
             None => None,
         };
-        let subject: Option<String> =
-            sqlx::query_scalar("SELECT subject_id FROM ehr WHERE id = $1")
-                .bind(ehr_id)
-                .fetch_optional(&mut *tx)
-                .await?
-                .flatten();
-        let subject = subject.and_then(|subject| subject.parse::<uuid::Uuid>().ok());
-        access.judge_ehr(ehr_id, settings.as_ref(), subject)
+        let (subject, version) = Box::pin(subject_and_access_version(&mut *tx, ehr_id)).await?;
+        access.judge_ehr(
+            ehr_id,
+            &crate::access_eval::condition::EhrEntry {
+                version: settings.as_ref().and(version),
+                settings: std::sync::Arc::new(settings),
+                subject,
+            },
+        )
     };
     let facts = match vo_id {
         Some(vo_id) if verdict.item_dependent() => {
@@ -111,10 +112,11 @@ async fn ensure_not_access_restricted_tx(
         }
         _ => None,
     };
-    let outcome = facts.as_ref().map_or_else(
-        || verdict.outcome(&Item::Ehr),
-        |facts| verdict.outcome(&facts.item()),
-    );
+    let item = facts.as_ref().map_or(Item::Ehr, |facts| facts.item());
+    let outcome = verdict.outcome(&item);
+    if matches!(outcome, Outcome::Absent(_)) || (named && matches!(outcome, Outcome::Refused(_))) {
+        access.note(ehr_id, &verdict, &item);
+    }
     match (outcome, vo_id) {
         (Outcome::Admit, _) => Ok(()),
         (Outcome::Absent(_), Some(vo_id)) if facts.is_some() => Err(ServiceError::not_found(
@@ -132,4 +134,37 @@ async fn ensure_not_access_restricted_tx(
             "{code}: the access directives of EHR {ehr_id} refuse this write"
         ))),
     }
+}
+
+/// The `PERSON` the EHR `ehr_id` names as its subject and the uid of its
+/// current `EHR_ACCESS` version, read on the commit's own transaction.
+///
+/// # Errors
+/// [`ServiceError::Database`] on a driver failure.
+async fn subject_and_access_version(
+    tx: &mut PgConnection,
+    ehr_id: EhrId,
+) -> Result<(Option<uuid::Uuid>, Option<String>), ServiceError> {
+    use sqlx::Row as _;
+    let row = sqlx::query(
+        "SELECT e.subject_id, h.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, \
+                v.branch_version \
+         FROM ehr e \
+         LEFT JOIN vo_head h ON h.ehr_id = e.id AND h.kind = 'EHR_ACCESS' \
+         LEFT JOIN version v ON v.vo_id = h.vo_id AND v.sys_version = h.trunk_head_sys_version \
+         WHERE e.id = $1",
+    )
+    .bind(ehr_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some(row) = row else {
+        return Ok((None, None));
+    };
+    // NOTE: the local source names each party by its container's UUID, so a subject
+    // id that is no UUID names no PERSON of this store.
+    let subject = row
+        .try_get::<Option<String>, _>("subject_id")?
+        .and_then(|subject| subject.parse::<uuid::Uuid>().ok());
+    let version = crate::storage::access_projection::version_of(&row)?;
+    Ok((subject, version))
 }

@@ -542,7 +542,20 @@ which is what makes an optional stage safe to disable:
    adds no transaction: every fact is a copy, and a named object is read by
    its head row only when the verdict depends on the object. The procedure,
    its order and its codes are our own design; RM EHR IM §EHR Access only
-   requires every decision to follow `EHR_ACCESS`.
+   requires every decision to follow `EHR_ACCESS`. The access record names
+   each decision's grounds (`access_eval::record`, #5514): each rule keeps
+   the positions of the directives it rests on and each verdict what it read
+   (the permits, a care relationship, a gate-keeper, the denies an emergency
+   lifted), which `RequestAccess::decision` renders as draft
+   `ACCESS_AUTHORISATION`s naming the `EHR_ACCESS` and `ACCESS_POLICY`
+   version uids, and a refusal, the `404`s of steps 1 and 2 included, as its
+   code with the step and the directive or policy that decided it (EHDS
+   Annex II 3.2, Art. 8). The adapter publishes the request's evaluator on
+   the response, the audit layer stamps each record with the decision on its
+   EHR, and the versions go to `agent[user].policy` of the EHDS record and
+   the `audit_event.decision_policies` column (digest version 4). A query's
+   condition groups verdicts with their grounds stripped (`Verdict::bare`),
+   so recording adds no SQL and no transaction.
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an

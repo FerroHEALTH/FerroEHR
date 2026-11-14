@@ -455,6 +455,7 @@ pub(super) fn refused(
     fill_common(&mut event, caller, client_ip, timestamp);
     fill_access(&mut event, access, state);
     event.ehr_id = ehr_id;
+    caller.stamp_decision(&mut event);
     let charged = caller.principal.map_or_else(
         || Charged::network(address),
         |principal| Charged::Caller {
