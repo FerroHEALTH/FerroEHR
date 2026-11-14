@@ -13,9 +13,10 @@
 //!
 //! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
 //! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
-//! (`405` with an empty `Allow` when off). The erasure writes an access record
-//! (`ferroehr::service::admin::access_log_erasure`), which the store holds once:
-//! the request's operation record of a done erasure is marked written.
+//! (`405` with an empty `Allow` when off). The erasure writes its access record
+//! (`ferroehr::service::admin::access_log_erasure`) with the tombstone and emits
+//! it to the forwarding sinks, so the response of a done erasure is marked
+//! written and the audit middleware adds no record of its own.
 
 use axum::response::Response;
 use ferroehr::system_log::event::EntryScope;
@@ -90,8 +91,8 @@ async fn erase(state: AppState, parts: RequestParts) -> Result<Response, RestErr
         })?;
     let tombstone = state.backend().erase_access_log_entry(uid, grounds).await?;
     let mut resp = negotiate::body::respond(&parts.headers, StatusCode::OK, &tombstone);
-    // NOTE: our own design (#5597), the erasure stored its record with its tombstone, so the
-    // operation record of the request only reaches the forwarding sinks.
+    // NOTE: our own design (#5602), the erasure wrote and emitted its record, the one record of
+    // the act on every sink, so the middleware writes none.
     resp.extensions_mut().insert(AuditObject {
         uid: Some(uid.to_owned()),
         entry: EntryScope::Written,

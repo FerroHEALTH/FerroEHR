@@ -109,8 +109,8 @@ impl FerroEhrService {
         }
         .ok_or_else(removed)?;
         event.entry = EntryScope::Written;
-        // NOTE: our own design, the erasure's access-log entry was written with its tombstone and
-        // is stored once; the emitted record only reaches the forwarding sinks.
+        // NOTE: our own design (#5602), the entry was stored with the tombstone, so the emitted
+        // record reaches only syslog and the store-off feed, the act's one record on each.
         let _outcome = self.emit(event);
         Ok(tombstone)
     }

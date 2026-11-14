@@ -5,78 +5,28 @@
 //!
 //! ATNA records, per audited access, who did what to which resource with what
 //! outcome, as a DICOM Audit Message (PS3.15 §A.5). The operation's row in
-//! `crate::api::operation` supplies the what-and-which half for one ITS-REST
-//! operation: its `EventActionCode` (§A.5.1) and the resource `ObjectClass`
-//! driving the participant-object rendering in the platform emitter. openEHR is
-//! silent on audit-record shape, so the mapping is our own design over those
-//! external standards.
+//! `crate::api::operation` supplies the what-and-which half for one operation:
+//! its `EventActionCode` (§A.5.1) and the resource `ObjectClass` driving the
+//! participant-object rendering in the platform emitter. openEHR is silent on
+//! audit-record shape, so the mapping is our own design over those external
+//! standards.
 //!
-//! Every operation id in every generated `ROUTES` table is explicitly
-//! classified, and the completeness test fails the build the moment a newly
-//! generated one is not. An id without an audit class (an extension route or a
-//! future operation) resolves through the conservative [`DEFAULT`], so it is
-//! still recorded, attributing the caller and outcome without asserting a false
-//! resource class. An operation is left unaudited only by an explicit
-//! [`Classification::Unaudited`] entry.
+//! Every row names its audit class, and every mounted route's operation has a
+//! row: the completeness tests here and the route-coverage test
+//! (`tests/it/audit_route_coverage.rs`) fail the build on an operation without
+//! one. There is no fallback class: the dispatcher refuses an operation without
+//! a row before its handler runs, and the audit middleware refuses the response
+//! of one that reaches it.
 
 use ferroehr::system_log::event::{EventActionCode, ObjectClass};
 
 use crate::api::operation::{Operation, operation};
 
-/// The audit classification of an ITS-REST operation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Classification {
-    /// The operation emits an audit record with this DICOM action + resource class.
-    Audited {
-        /// The DICOM `EventActionCode` (PS3.15 §A.5.1): `C`/`R`/`U`/`D`/`E`.
-        action: EventActionCode,
-        /// The touched resource class (drives `EventID` + participant objects).
-        object: ObjectClass,
-    },
-    /// The operation is deliberately not audited: a reviewed non-clinical
-    /// opt-out, distinct from an unrecognised operation, which fails closed to
-    /// [`DEFAULT`]. No generated operation uses this, and the completeness test
-    /// asserts the allowlist is empty; it is the seam a future non-clinical
-    /// route would use.
-    Unaudited,
-}
-
-impl Classification {
-    /// Convenience constructor for an audited entry.
-    const fn audited(action: EventActionCode, object: ObjectClass) -> Self {
-        Classification::Audited { action, object }
-    }
-}
-
-/// The fail-closed classification for an operation id absent from the table.
-///
-/// Such an operation is audited as an `Execute` on the generic
-/// `ApplicationActivity` class rather than silently dropped; extension routes
-/// and future operations land here until given an explicit entry.
-pub const DEFAULT: Classification =
-    Classification::audited(EventActionCode::Execute, ObjectClass::ApplicationActivity);
-
-/// Classifies an operation id for the request path: its explicit audit class,
-/// or the fail-closed [`DEFAULT`] when the id has none.
-///
-/// Never yields "unknown": an unrecognised operation is audited under the
-/// generic class rather than dropped.
-#[must_use]
-pub fn classify(op: &str) -> Classification {
-    operation(op).and_then(Operation::audit).unwrap_or(DEFAULT)
-}
-
-/// Returns the `(action, object)` an operation is audited under, or `None` for
-/// an explicit [`Classification::Unaudited`] opt-out.
-///
-/// The entry point the audit middleware calls: an unrecognised id resolves
-/// through [`DEFAULT`], so only a deliberate opt-out suppresses the record.
+/// Returns the `(action, object)` the operation `op` is audited under, or
+/// `None` for an operation without a row in the operation table.
 #[must_use]
 pub fn audit_for(op: &str) -> Option<(EventActionCode, ObjectClass)> {
-    match classify(op) {
-        Classification::Audited { action, object } => Some((action, object)),
-        Classification::Unaudited => None,
-    }
+    operation(op).map(Operation::audit)
 }
 
 #[cfg(test)]
@@ -85,11 +35,6 @@ mod tests {
     use EventActionCode::{Create, Delete, Execute, Read, Update};
     use ObjectClass::{Composition, Contribution, Demographic, Directory, Ehr, Query, Template};
     use ferroehr::system_log::event::AccessDomain;
-
-    /// The explicit audit class of `op`, or `None` when its row names none.
-    fn lookup(op: &str) -> Option<Classification> {
-        operation(op).and_then(Operation::audit)
-    }
 
     /// Every operation id in every generated ITS-REST `ROUTES` table.
     fn all_route_ops() -> Vec<&'static str> {
@@ -165,14 +110,13 @@ mod tests {
         }
     }
 
-    /// Completeness guard: every generated operation id has an **explicit**
-    /// table entry (not merely the fail-closed default). A newly generated,
-    /// unclassified operation fails this test — the coverage discipline.
+    /// Completeness guard: every generated operation id has a row, so an
+    /// audit class. A newly generated, unclassified operation fails this test.
     #[test]
     fn every_generated_operation_is_explicit() {
         let mut missing = Vec::new();
         for op in all_route_ops() {
-            if lookup(op).is_none() {
+            if audit_for(op).is_none() {
                 missing.push(op);
             }
         }
@@ -251,41 +195,12 @@ mod tests {
         );
     }
 
+    /// An operation without a row has no audit class: there is no fallback
+    /// class it could be recorded under.
     #[test]
-    /// Coverage is total: every generated route entry is `Audited` and the
-    /// explicit `Unaudited` allowlist is empty.
-    /// Coverage is total: every generated route entry is `Audited` and the
-    /// explicit `Unaudited` allowlist is empty.
-    fn generated_coverage_is_total_and_audited() {
-        let ops = all_route_ops();
-        let mut unaudited = Vec::new();
-        for op in &ops {
-            if lookup(op) == Some(Classification::Unaudited) {
-                unaudited.push(*op);
-            }
-        }
-        assert!(
-            unaudited.is_empty(),
-            "generated ops explicitly opted out of auditing: {unaudited:?}"
-        );
-        assert!(
-            ops.iter().all(|op| audit_for(op).is_some()),
-            "every generated route entry must produce an audit record"
-        );
-    }
-
-    /// An unrecognised operation id (extension route / future op) fails closed
-    /// to the documented default — it is audited, never silently dropped.
-    #[test]
-    fn unrecognised_operation_fails_closed_to_default() {
-        assert_eq!(classify("terminology_expand_value_set"), DEFAULT);
-        assert_eq!(classify("some_future_extension_op"), DEFAULT);
-        assert_eq!(
-            audit_for("no_such_operation"),
-            Some((Execute, ObjectClass::ApplicationActivity))
-        );
-        // lookup, in contrast, reports the raw table miss.
-        assert_eq!(lookup("no_such_operation"), None);
+    fn an_operation_without_a_row_has_no_audit_class() {
+        assert_eq!(audit_for("no_such_operation"), None);
+        assert_eq!(audit_for("some_future_extension_op"), None);
     }
 
     #[test]

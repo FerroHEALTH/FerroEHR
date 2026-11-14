@@ -1,205 +1,224 @@
 # op	generated	class	is_write	audit	smart_permission	smart_read	smart_write
-admin_access_delay_register	false	-	-	None	-	false	false
-admin_archive_ehrs	false	-	-	None	-	false	false
-admin_archive_parties	false	-	-	None	-	false	false
-admin_config	false	-	-	None	-	false	false
-admin_delay_access	false	-	-	None	-	false	false
-admin_dump	false	-	-	None	-	false	false
-admin_ehr_delete	true	Some(Admin)	true	Some(Audited { action: Delete, object: Ehr })	Delete	false	false
-admin_ehr_delete_all	true	Some(Admin)	true	Some(Audited { action: Delete, object: Ehr })	Delete	false	false
-admin_lift_restriction	false	-	-	None	-	false	false
-admin_load	false	-	-	None	-	false	false
-admin_outbox_ack	false	-	-	Some(Audited { action: Update, object: ApplicationActivity })	-	false	false
-admin_outbox_read	false	-	-	Some(Audited { action: Read, object: ApplicationActivity })	-	false	false
-admin_party_delete	false	-	-	Some(Audited { action: Delete, object: Demographic })	-	false	false
-admin_party_identifiers	false	-	-	Some(Audited { action: Read, object: Demographic })	-	false	false
-admin_put_retention_policy	false	-	-	None	-	false	false
-admin_query_delete	false	-	-	None	-	false	false
-admin_rebuild_version_nodes	false	-	-	None	-	false	false
-admin_release_access_delay	false	-	-	None	-	false	false
-admin_report_composition_version_count	false	-	-	None	-	false	false
-admin_report_contribution_count	false	-	-	None	-	false	false
-admin_report_contributions	false	-	-	None	-	false	false
-admin_report_versioned_composition_count	false	-	-	None	-	false	false
-admin_research_objection	false	-	-	None	-	false	false
-admin_restore_archived_ehrs	false	-	-	None	-	false	false
-admin_restore_archived_parties	false	-	-	None	-	false	false
-admin_restrict_processing	false	-	-	None	-	false	false
-admin_restriction_register	false	-	-	None	-	false	false
-admin_retention_anchor	false	-	-	None	-	false	false
-admin_retention_due	false	-	-	None	-	false	false
-admin_retention_hold	false	-	-	None	-	false	false
-admin_retention_policies	false	-	-	None	-	false	false
-admin_template_delete	false	-	-	None	-	false	false
-admin_verify_storage_parity	false	-	-	None	-	false	false
-agent_create	true	Some(Clinical)	true	Some(Audited { action: Create, object: Demographic })	Create	false	false
-agent_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-agent_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-agent_tags_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-agent_tags_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-agent_tags_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
-agent_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
-audit_event_search	false	-	-	None	-	false	false
-composition_access_delay_update	false	-	-	None	Update	true	false
-composition_create	true	Some(Clinical)	true	Some(Audited { action: Create, object: Composition })	Create	true	true
-composition_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Composition })	Delete	true	true
-composition_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Composition })	Read	true	false
-composition_tags_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Composition })	Delete	false	false
-composition_tags_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Composition })	Read	false	false
-composition_tags_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Composition })	Update	false	false
-composition_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Composition })	Update	true	true
-contribution_create	true	Some(Clinical)	true	Some(Audited { action: Create, object: Contribution })	Create	false	false
-contribution_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Contribution })	Read	false	false
-contribution_list	false	-	-	None	-	false	false
-definition_archetype_adl14_convert	false	-	-	None	-	false	false
-definition_archetype_adl14_delete	false	-	-	None	-	false	false
-definition_archetype_adl14_get	false	-	-	None	-	false	false
-definition_archetype_adl14_list	false	-	-	None	-	false	false
-definition_archetype_adl14_upload	false	-	-	None	-	false	false
-definition_archetype_adl2_count	false	-	-	None	-	false	false
-definition_archetype_adl2_list	false	-	-	None	-	false	false
-definition_artefact_adl2_count	false	-	-	None	-	false	false
-definition_artefact_adl2_delete	false	-	-	None	-	false	false
-definition_artefact_adl2_list	false	-	-	None	-	false	false
-definition_query_list	true	Some(Clinical)	false	Some(Audited { action: Read, object: Query })	Read	false	false
-definition_query_list_all	false	-	-	None	-	false	false
-definition_query_store.yaml	true	Some(Clinical)	true	Some(Audited { action: Create, object: Query })	Create	false	false
-definition_query_version_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Query })	Read	false	false
-definition_query_version_store.yaml	true	Some(Clinical)	true	Some(Audited { action: Create, object: Query })	Create	false	false
-definition_template_adl1.4_example_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Template })	Read	false	false
-definition_template_adl1.4_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Template })	Read	false	false
-definition_template_adl1.4_list	true	Some(Clinical)	false	Some(Audited { action: Read, object: Template })	Read	false	false
-definition_template_adl1.4_upload	true	Some(Clinical)	true	Some(Audited { action: Create, object: Template })	Create	false	false
-definition_template_adl14_convert	false	-	-	Some(Audited { action: Read, object: Template })	-	false	false
-definition_template_adl2_example_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Template })	Read	false	false
-definition_template_adl2_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Template })	Read	false	false
-definition_template_adl2_list	true	Some(Clinical)	false	Some(Audited { action: Read, object: Template })	Read	false	false
-definition_template_adl2_upload	true	Some(Clinical)	true	Some(Audited { action: Create, object: Template })	Create	false	false
-definition_template_adl2_version_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Template })	Read	false	false
+admin_access_delay_register	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_access_log_chain	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_access_log_erase	false	-	-	Some((Delete, ApplicationActivity))	-	false	false
+admin_archive_ehrs	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_archive_parties	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_config	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_delay_access	false	-	-	Some((Create, ApplicationActivity))	-	false	false
+admin_dump	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_ehr_access_commit	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_ehr_access_repair	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_ehr_access_versions	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_ehr_delete	true	Some(Admin)	true	Some((Delete, Ehr))	Delete	false	false
+admin_ehr_delete_all	true	Some(Admin)	true	Some((Delete, Ehr))	Delete	false	false
+admin_export_access_log	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_get_access_log_checkpoint	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_lift_restriction	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_list_access_log	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_load	false	-	-	Some((Create, ApplicationActivity))	-	false	false
+admin_outbox_ack	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_outbox_read	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_party_delete	false	-	-	Some((Delete, Demographic))	-	false	false
+admin_party_identifiers	false	-	-	Some((Read, Demographic))	-	false	false
+admin_put_retention_policy	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_query_delete	false	-	-	Some((Delete, Query))	-	false	false
+admin_rebuild_version_nodes	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_rekey_party	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_release_access_delay	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_report_composition_version_count	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_report_contribution_count	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_report_contributions	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_report_versioned_composition_count	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_research_objection	false	-	-	Some((Create, ApplicationActivity))	-	false	false
+admin_restore_archived_ehrs	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_restore_archived_parties	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_restrict_processing	false	-	-	Some((Create, ApplicationActivity))	-	false	false
+admin_restriction_register	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_retention_anchor	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+admin_retention_due	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_retention_hold	false	-	-	Some((Create, ApplicationActivity))	-	false	false
+admin_retention_policies	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+admin_seal_access_log_checkpoint	false	-	-	Some((Create, ApplicationActivity))	-	false	false
+admin_template_delete	false	-	-	Some((Delete, Template))	-	false	false
+admin_verify_access_log	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+admin_verify_storage_parity	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+agent_create	true	Some(Clinical)	true	Some((Create, Demographic))	Create	false	false
+agent_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+agent_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+agent_tags_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+agent_tags_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+agent_tags_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
+agent_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
+audit_event_search	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+composition_access_delay_update	false	-	-	Some((Update, Composition))	Update	true	false
+composition_create	true	Some(Clinical)	true	Some((Create, Composition))	Create	true	true
+composition_delete	true	Some(Clinical)	true	Some((Delete, Composition))	Delete	true	true
+composition_get	true	Some(Clinical)	false	Some((Read, Composition))	Read	true	false
+composition_tags_delete	true	Some(Clinical)	true	Some((Delete, Composition))	Delete	false	false
+composition_tags_get	true	Some(Clinical)	false	Some((Read, Composition))	Read	false	false
+composition_tags_update	true	Some(Clinical)	true	Some((Update, Composition))	Update	false	false
+composition_update	true	Some(Clinical)	true	Some((Update, Composition))	Update	true	true
+contribution_create	true	Some(Clinical)	true	Some((Create, Contribution))	Create	false	false
+contribution_get	true	Some(Clinical)	false	Some((Read, Contribution))	Read	false	false
+contribution_list	false	-	-	Some((Read, Contribution))	-	false	false
+definition_archetype_adl14_convert	false	-	-	Some((Read, Template))	-	false	false
+definition_archetype_adl14_delete	false	-	-	Some((Delete, Template))	-	false	false
+definition_archetype_adl14_get	false	-	-	Some((Read, Template))	-	false	false
+definition_archetype_adl14_list	false	-	-	Some((Read, Template))	-	false	false
+definition_archetype_adl14_upload	false	-	-	Some((Create, Template))	-	false	false
+definition_archetype_adl2_count	false	-	-	Some((Read, Template))	-	false	false
+definition_archetype_adl2_list	false	-	-	Some((Read, Template))	-	false	false
+definition_artefact_adl2_count	false	-	-	Some((Read, Template))	-	false	false
+definition_artefact_adl2_delete	false	-	-	Some((Delete, Template))	-	false	false
+definition_artefact_adl2_list	false	-	-	Some((Read, Template))	-	false	false
+definition_query_list	true	Some(Clinical)	false	Some((Read, Query))	Read	false	false
+definition_query_list_all	false	-	-	Some((Read, Query))	-	false	false
+definition_query_store.yaml	true	Some(Clinical)	true	Some((Create, Query))	Create	false	false
+definition_query_version_get	true	Some(Clinical)	false	Some((Read, Query))	Read	false	false
+definition_query_version_store.yaml	true	Some(Clinical)	true	Some((Create, Query))	Create	false	false
+definition_template_adl1.4_example_get	true	Some(Clinical)	false	Some((Read, Template))	Read	false	false
+definition_template_adl1.4_get	true	Some(Clinical)	false	Some((Read, Template))	Read	false	false
+definition_template_adl1.4_list	true	Some(Clinical)	false	Some((Read, Template))	Read	false	false
+definition_template_adl1.4_upload	true	Some(Clinical)	true	Some((Create, Template))	Create	false	false
+definition_template_adl14_convert	false	-	-	Some((Read, Template))	-	false	false
+definition_template_adl2_example_get	true	Some(Clinical)	false	Some((Read, Template))	Read	false	false
+definition_template_adl2_get	true	Some(Clinical)	false	Some((Read, Template))	Read	false	false
+definition_template_adl2_list	true	Some(Clinical)	false	Some((Read, Template))	Read	false	false
+definition_template_adl2_upload	true	Some(Clinical)	true	Some((Create, Template))	Create	false	false
+definition_template_adl2_version_get	true	Some(Clinical)	false	Some((Read, Template))	Read	false	false
 demographic_contribution_create	false	-	-	None	-	false	false
 demographic_contribution_get	false	-	-	None	-	false	false
-demographic_tags_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-directory_create	true	Some(Clinical)	true	Some(Audited { action: Create, object: Directory })	Create	false	false
-directory_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Directory })	Delete	false	false
-directory_get_at_time	true	Some(Clinical)	false	Some(Audited { action: Read, object: Directory })	Read	false	false
-directory_get_by_version_id	true	Some(Clinical)	false	Some(Audited { action: Read, object: Directory })	Read	false	false
-directory_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Directory })	Update	false	false
-ehr_create	true	Some(Clinical)	true	Some(Audited { action: Create, object: Ehr })	Create	false	false
-ehr_create_with_id	true	Some(Clinical)	true	Some(Audited { action: Create, object: Ehr })	Create	false	false
-ehr_get_by_id	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
-ehr_get_by_subject	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
-ehr_status_get_at_time	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
-ehr_status_get_by_version_id	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
-ehr_status_tags_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Ehr })	Delete	false	false
-ehr_status_tags_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
-ehr_status_tags_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Ehr })	Update	false	false
-ehr_status_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Ehr })	Update	false	false
-ehr_tags_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
+demographic_tags_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+directory_create	true	Some(Clinical)	true	Some((Create, Directory))	Create	false	false
+directory_delete	true	Some(Clinical)	true	Some((Delete, Directory))	Delete	false	false
+directory_get_at_time	true	Some(Clinical)	false	Some((Read, Directory))	Read	false	false
+directory_get_by_version_id	true	Some(Clinical)	false	Some((Read, Directory))	Read	false	false
+directory_update	true	Some(Clinical)	true	Some((Update, Directory))	Update	false	false
+ehr_access_get_at_time	false	-	-	Some((Read, Ehr))	-	false	false
+ehr_access_get_by_version_id	false	-	-	Some((Read, Ehr))	-	false	false
+ehr_access_log_get	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+ehr_access_log_list	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+ehr_create	true	Some(Clinical)	true	Some((Create, Ehr))	Create	false	false
+ehr_create_with_id	true	Some(Clinical)	true	Some((Create, Ehr))	Create	false	false
+ehr_get_by_id	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
+ehr_get_by_subject	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
+ehr_status_get_at_time	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
+ehr_status_get_by_version_id	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
+ehr_status_tags_delete	true	Some(Clinical)	true	Some((Delete, Ehr))	Delete	false	false
+ehr_status_tags_get	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
+ehr_status_tags_update	true	Some(Clinical)	true	Some((Update, Ehr))	Update	false	false
+ehr_status_update	true	Some(Clinical)	true	Some((Update, Ehr))	Update	false	false
+ehr_tags_get	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
 env_view	false	-	-	None	-	false	false
 family_openapi_json	false	-	-	None	-	false	false
 flamegraph_view	false	-	-	None	-	false	false
-group_create	true	Some(Clinical)	true	Some(Audited { action: Create, object: Demographic })	Create	false	false
-group_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-group_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-group_tags_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-group_tags_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-group_tags_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
-group_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
+group_create	true	Some(Clinical)	true	Some((Create, Demographic))	Create	false	false
+group_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+group_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+group_tags_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+group_tags_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+group_tags_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
+group_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
 health_view	false	-	-	None	-	false	false
 info_view	false	-	-	None	-	false	false
 liveness	false	-	-	None	-	false	false
 loggers_get	false	-	-	None	-	false	false
 loggers_post	false	-	-	None	-	false	false
 loggers_reset	false	-	-	None	-	false	false
-management	false	-	-	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false
-management_env	false	-	-	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false
-management_flamegraph	false	-	-	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false
-management_health	false	-	-	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false
-management_info	false	-	-	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false
-management_loggers_get	false	-	-	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false
-management_loggers_reset	false	-	-	Some(Audited { action: Delete, object: ApplicationActivity })	-	false	false
-management_loggers_set	false	-	-	Some(Audited { action: Update, object: ApplicationActivity })	-	false	false
-management_metrics	false	-	-	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false
-management_prometheus	false	-	-	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false
-management_status	false	-	-	Some(Audited { action: Execute, object: ApplicationActivity })	-	false	false
-message_export_ehr_extracts	false	-	-	None	-	false	false
-message_export_ehrs	false	-	-	None	-	false	false
-message_import_ehr	false	-	-	Some(Audited { action: Create, object: Ehr })	-	false	false
-message_import_ehr_extract	false	-	-	Some(Audited { action: Update, object: Ehr })	-	false	false
+management	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+management_env	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+management_flamegraph	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+management_health	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+management_info	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+management_loggers_get	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+management_loggers_reset	false	-	-	Some((Delete, ApplicationActivity))	-	false	false
+management_loggers_set	false	-	-	Some((Update, ApplicationActivity))	-	false	false
+management_metrics	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+management_prometheus	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+management_status	false	-	-	Some((Execute, ApplicationActivity))	-	false	false
+message_export_ehr_extracts	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+message_export_ehrs	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+message_import_ehr	false	-	-	Some((Create, Ehr))	-	false	false
+message_import_ehr_extract	false	-	-	Some((Update, Ehr))	-	false	false
 metrics_detail	false	-	-	None	-	false	false
 metrics_list	false	-	-	None	-	false	false
 openapi_json	false	-	-	None	-	false	false
-options	true	Some(Clinical)	true	Some(Audited { action: Execute, object: ApplicationActivity })	Read	false	false
-organisation_create	true	Some(Clinical)	true	Some(Audited { action: Create, object: Demographic })	Create	false	false
-organisation_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-organisation_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-organisation_tags_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-organisation_tags_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-organisation_tags_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
-organisation_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
-party_relationship_create	false	-	-	None	-	false	false
-party_relationship_delete	false	-	-	None	-	false	false
-party_relationship_get	false	-	-	None	-	false	false
-party_relationship_revision_history	false	-	-	None	-	false	false
-party_relationship_update	false	-	-	None	-	false	false
-party_relationship_version_get_at_time	false	-	-	None	-	false	false
-party_relationship_version_get_by_id	false	-	-	None	-	false	false
-party_reverse_relationships_get	false	-	-	Some(Audited { action: Read, object: Demographic })	-	false	false
-person_create	true	Some(Clinical)	true	Some(Audited { action: Create, object: Demographic })	Create	false	false
-person_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-person_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-person_tags_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-person_tags_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-person_tags_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
-person_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
+options	true	Some(Clinical)	true	Some((Execute, ApplicationActivity))	Read	false	false
+organisation_create	true	Some(Clinical)	true	Some((Create, Demographic))	Create	false	false
+organisation_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+organisation_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+organisation_tags_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+organisation_tags_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+organisation_tags_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
+organisation_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
+party_relationship_create	false	-	-	Some((Create, Demographic))	-	false	false
+party_relationship_delete	false	-	-	Some((Delete, Demographic))	-	false	false
+party_relationship_get	false	-	-	Some((Read, Demographic))	-	false	false
+party_relationship_revision_history	false	-	-	Some((Read, Demographic))	-	false	false
+party_relationship_update	false	-	-	Some((Update, Demographic))	-	false	false
+party_relationship_version_get_at_time	false	-	-	Some((Read, Demographic))	-	false	false
+party_relationship_version_get_by_id	false	-	-	Some((Read, Demographic))	-	false	false
+party_reverse_relationships_get	false	-	-	Some((Read, Demographic))	-	false	false
+person_create	true	Some(Clinical)	true	Some((Create, Demographic))	Create	false	false
+person_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+person_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+person_tags_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+person_tags_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+person_tags_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
+person_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
 prometheus_text	false	-	-	None	-	false	false
-query_execute_adhoc_query	true	Some(Clinical)	false	Some(Audited { action: Execute, object: Query })	Search	false	false
-query_execute_adhoc_query_body	true	Some(Clinical)	false	Some(Audited { action: Execute, object: Query })	Search	false	false
-query_execute_cohort	false	-	-	Some(Audited { action: Execute, object: Query })	-	false	false
-query_execute_stored_query	true	Some(Clinical)	false	Some(Audited { action: Execute, object: Query })	Search	false	false
-query_execute_stored_query_body	true	Some(Clinical)	false	Some(Audited { action: Execute, object: Query })	Search	false	false
-query_execute_stored_query_version	true	Some(Clinical)	false	Some(Audited { action: Execute, object: Query })	Search	false	false
-query_execute_stored_query_version_body	true	Some(Clinical)	false	Some(Audited { action: Execute, object: Query })	Search	false	false
+query_execute_adhoc_query	true	Some(Clinical)	false	Some((Execute, Query))	Search	false	false
+query_execute_adhoc_query_body	true	Some(Clinical)	false	Some((Execute, Query))	Search	false	false
+query_execute_cohort	false	-	-	Some((Execute, Query))	-	false	false
+query_execute_stored_query	true	Some(Clinical)	false	Some((Execute, Query))	Search	false	false
+query_execute_stored_query_body	true	Some(Clinical)	false	Some((Execute, Query))	Search	false	false
+query_execute_stored_query_version	true	Some(Clinical)	false	Some((Execute, Query))	Search	false	false
+query_execute_stored_query_version_body	true	Some(Clinical)	false	Some((Execute, Query))	Search	false	false
 readiness	false	-	-	None	-	false	false
-role_create	true	Some(Clinical)	true	Some(Audited { action: Create, object: Demographic })	Create	false	false
-role_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-role_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-role_tags_delete	true	Some(Clinical)	true	Some(Audited { action: Delete, object: Demographic })	Delete	false	false
-role_tags_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-role_tags_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
-role_update	true	Some(Clinical)	true	Some(Audited { action: Update, object: Demographic })	Update	false	false
+role_create	true	Some(Clinical)	true	Some((Create, Demographic))	Create	false	false
+role_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+role_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+role_tags_delete	true	Some(Clinical)	true	Some((Delete, Demographic))	Delete	false	false
+role_tags_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+role_tags_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
+role_update	true	Some(Clinical)	true	Some((Update, Demographic))	Update	false	false
 root_health	false	-	-	None	-	false	false
-scim_group_create	false	-	-	Some(Audited { action: Create, object: Demographic })	-	false	false
-scim_group_delete	false	-	-	Some(Audited { action: Delete, object: Demographic })	-	false	false
-scim_group_get	false	-	-	Some(Audited { action: Read, object: Demographic })	-	false	false
-scim_group_list	false	-	-	Some(Audited { action: Execute, object: Demographic })	-	false	false
-scim_group_patch	false	-	-	Some(Audited { action: Update, object: Demographic })	-	false	false
-scim_group_replace	false	-	-	Some(Audited { action: Update, object: Demographic })	-	false	false
-scim_user_create	false	-	-	Some(Audited { action: Create, object: Demographic })	-	false	false
-scim_user_delete	false	-	-	Some(Audited { action: Delete, object: Demographic })	-	false	false
-scim_user_get	false	-	-	Some(Audited { action: Read, object: Demographic })	-	false	false
-scim_user_list	false	-	-	Some(Audited { action: Execute, object: Demographic })	-	false	false
-scim_user_patch	false	-	-	Some(Audited { action: Update, object: Demographic })	-	false	false
-scim_user_replace	false	-	-	Some(Audited { action: Update, object: Demographic })	-	false	false
+scim_group_create	false	-	-	Some((Create, Demographic))	-	false	false
+scim_group_delete	false	-	-	Some((Delete, Demographic))	-	false	false
+scim_group_get	false	-	-	Some((Read, Demographic))	-	false	false
+scim_group_list	false	-	-	Some((Execute, Demographic))	-	false	false
+scim_group_patch	false	-	-	Some((Update, Demographic))	-	false	false
+scim_group_replace	false	-	-	Some((Update, Demographic))	-	false	false
+scim_user_create	false	-	-	Some((Create, Demographic))	-	false	false
+scim_user_delete	false	-	-	Some((Delete, Demographic))	-	false	false
+scim_user_get	false	-	-	Some((Read, Demographic))	-	false	false
+scim_user_list	false	-	-	Some((Execute, Demographic))	-	false	false
+scim_user_patch	false	-	-	Some((Update, Demographic))	-	false	false
+scim_user_replace	false	-	-	Some((Update, Demographic))	-	false	false
 status	false	-	-	None	-	false	false
 status_view	false	-	-	None	-	false	false
 swagger_ui_index	false	-	-	None	-	false	false
-terminology_description	false	-	-	None	-	false	false
-terminology_get_term	false	-	-	None	-	false	false
-terminology_ids	false	-	-	None	-	false	false
-terminology_subsumes	false	-	-	None	-	false	false
-terminology_value_set	false	-	-	None	-	false	false
-terminology_value_set_validate	false	-	-	None	-	false	false
-versioned_composition_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Composition })	Read	true	false
-versioned_composition_revision_history	true	Some(Clinical)	false	Some(Audited { action: Read, object: Composition })	Read	true	false
-versioned_composition_version_get_at_time	true	Some(Clinical)	false	Some(Audited { action: Read, object: Composition })	Read	true	false
-versioned_composition_version_get_by_id	true	Some(Clinical)	false	Some(Audited { action: Read, object: Composition })	Read	true	false
-versioned_ehr_status_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
-versioned_ehr_status_revision_history	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
-versioned_ehr_status_version_get_at_time	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
-versioned_ehr_status_version_get_by_id	true	Some(Clinical)	false	Some(Audited { action: Read, object: Ehr })	Read	false	false
-versioned_party_get	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-versioned_party_relationship_get	false	-	-	None	-	false	false
-versioned_party_revision_history	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-versioned_party_version_get_at_time	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
-versioned_party_version_get_by_id	true	Some(Clinical)	false	Some(Audited { action: Read, object: Demographic })	Read	false	false
+terminology_description	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+terminology_get_term	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+terminology_ids	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+terminology_subsumes	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+terminology_value_set	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+terminology_value_set_validate	false	-	-	Some((Read, ApplicationActivity))	-	false	false
+versioned_composition_get	true	Some(Clinical)	false	Some((Read, Composition))	Read	true	false
+versioned_composition_revision_history	true	Some(Clinical)	false	Some((Read, Composition))	Read	true	false
+versioned_composition_version_get_at_time	true	Some(Clinical)	false	Some((Read, Composition))	Read	true	false
+versioned_composition_version_get_by_id	true	Some(Clinical)	false	Some((Read, Composition))	Read	true	false
+versioned_ehr_access_get	false	-	-	Some((Read, Ehr))	-	false	false
+versioned_ehr_access_revision_history	false	-	-	Some((Read, Ehr))	-	false	false
+versioned_ehr_access_version_get_at_time	false	-	-	Some((Read, Ehr))	-	false	false
+versioned_ehr_access_version_get_by_id	false	-	-	Some((Read, Ehr))	-	false	false
+versioned_ehr_status_get	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
+versioned_ehr_status_revision_history	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
+versioned_ehr_status_version_get_at_time	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
+versioned_ehr_status_version_get_by_id	true	Some(Clinical)	false	Some((Read, Ehr))	Read	false	false
+versioned_party_get	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+versioned_party_relationship_get	false	-	-	Some((Read, Demographic))	-	false	false
+versioned_party_revision_history	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+versioned_party_version_get_at_time	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false
+versioned_party_version_get_by_id	true	Some(Clinical)	false	Some((Read, Demographic))	Read	false	false

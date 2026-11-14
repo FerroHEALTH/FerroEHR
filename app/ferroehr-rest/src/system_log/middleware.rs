@@ -16,10 +16,13 @@
 //! dispatch), [`AuditObject`] (the resource ids, from the `ResourceMeta` the
 //! dispatch holds), [`Principal`] (the caller, republished by the auth
 //! middleware) and [`ActorAuthentication`] (how the caller authenticated and the
-//! natural person behind the credential, from the same middleware). Every generated operation is classified in
-//! [`crate::system_log::classify`], and an id with no explicit entry fails closed
-//! to the audited default rather than being dropped; where no `ResourceMeta`
-//! exists the participant-object id comes from the request path.
+//! natural person behind the credential, from the same middleware). Every
+//! mounted operation is classified in [`crate::system_log::classify`]; the
+//! response of an operation without a class is refused rather than recorded
+//! under a guessed one. Where no `ResourceMeta` exists the participant-object
+//! id comes from the request path. An operation whose act wrote and emitted
+//! its own record ([`EntryScope::Written`]) gets no second operation record,
+//! so each sink carries one record of it.
 //!
 //! A genuine authentication additionally emits a login record (DICOM `EventID`
 //! 110114, `EventTypeCode` 110122) unless `suppress_login_events` is on. Genuine
@@ -66,9 +69,8 @@ use crate::system_log::classify::audit_for;
 ///
 /// The extension routers are mounted through the same `crate::api::mount` as the
 /// generated groups, which inserts this uniformly, so extension traffic arrives
-/// carrying its operation id. Those ids have no explicit entry in
-/// [`crate::system_log::classify`], which fails an unrecognised id closed to the
-/// audited default, so the operation record still fires.
+/// carrying its operation id, each classified in
+/// [`crate::system_log::classify`].
 #[derive(Debug, Clone, Copy)]
 pub struct AuditOpId(pub &'static str);
 
@@ -107,8 +109,9 @@ pub struct AuditObject {
     /// The query the operation ran, named and never quoted.
     pub query: Option<QueryNaming>,
     /// Whether the operation's record writes an access-log entry by its
-    /// domain or as a read of the access log itself, or is stored by the act
-    /// already ([`EntryScope::Written`]).
+    /// domain or as a read of the access log itself, or whether the act wrote
+    /// and emitted the record itself ([`EntryScope::Written`]), so the
+    /// middleware emits none.
     pub entry: EntryScope,
 }
 
@@ -246,34 +249,32 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         .get::<ferrohealth_telemetry::request_log::RequestId>()
         .map(|id| id.id().to_owned());
 
-    // Published for the handler's task scope so a record the SERVICE layer
-    // emits by itself — a pseudonymisation boundary crossing, which no
-    // operation id describes — carries the same declared purpose this
-    // middleware stamps on its own records
-    // (`ferroehr::system_log::access_context`).
-    let resp = access_context::with_declared(purpose.clone(), permit.clone(), next.run(req)).await;
+    let access = AccessContext {
+        request_id,
+        purpose,
+        permit,
+    };
+    let resp = run_published(req, next, &access, client_ip.clone()).await;
     let status = resp.status();
 
     let op = resp.extensions().get::<AuditOpId>().copied();
     let caller = Caller::of(&resp);
     let object = resp.extensions().get::<AuditObject>().cloned();
 
-    let access = AccessContext {
-        request_id,
-        purpose,
-        permit,
-    };
-
     let fresh_auth = resp.extensions().get::<FreshAuthentication>().is_some();
     let refusal = crate::system_log::refusals::is_refusal(&resp);
 
     let mut op_rejected = false;
-    let mut op_recorded = false;
+    // NOTE: our own design (#5602), the act wrote its record and emitted it to every sink, so
+    // a second operation record would be a second record of one event.
+    let written = object
+        .as_ref()
+        .is_some_and(|object| object.entry == EntryScope::Written);
+    let mut op_recorded = written;
 
-    // The operation record: `audit_for` fails an unrecognised op id closed to
-    // the audited default, so only a deliberate opt-out yields `None`.
-    if let Some(AuditOpId(op)) = op
-        && let Some((action, object_class)) = audit_for(op)
+    let classified = op.map(|AuditOpId(op)| (op, audit_for(op)));
+    if let Some((op, Some((action, object_class)))) = classified
+        && !written
     {
         let mut event = AuditEvent::new(action, object_class, outcome_from_status(status));
         // The concrete operation is the `EventTypeCode` (DICOM PS3.15 §A.5
@@ -292,15 +293,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             &path,
         );
         caller.stamp_decision(&mut event);
-        if event.outcome == EventOutcome::Success
-            && let Some(accessed) = accessed_content(
-                op,
-                object_class,
-                object.as_ref().and_then(|o| o.content.clone()),
-            )
-        {
-            event.category = state.backend().audit_classify(&accessed, action);
-        }
+        categorise(&mut event, &state, op, object.as_ref());
         fill_access(&mut event, &access, &state);
         op_rejected = state.backend().emit(event) == EmitOutcome::Rejected;
         op_rejected |= crate::system_log::served::emit(
@@ -330,16 +323,12 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             op_recorded,
         );
     } else if fresh_auth && !state.backend().suppress_login_events() {
-        let mut event = AuditEvent::new(
-            EventActionCode::Execute,
-            ObjectClass::Authentication,
-            EventOutcome::Success,
-        );
-        event.event_type = Some(EventType::Login);
-        fill_common(&mut event, caller, client_ip, timestamp);
-        let _ = state.backend().emit(event);
+        login(&state, caller, client_ip, timestamp);
     }
 
+    if let Some((op, None)) = classified {
+        return unclassified(op);
+    }
     if op_rejected {
         // Fail-closed: an auditable operation whose record cannot be delivered
         // must not be reported as having succeeded. No openEHR spec governs the
@@ -354,6 +343,64 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         return resp;
     }
     resp
+}
+
+/// Run the rest of the stack with the request's origin and declared purpose
+/// and permit published for its task scope, so a record the service layer
+/// emits by itself (a pseudonymisation boundary crossing, or an act that
+/// writes its own record) names them as this middleware's own records do
+/// (`ferroehr::system_log::access_context`).
+async fn run_published(
+    req: Request,
+    next: Next,
+    access: &AccessContext,
+    client_address: Option<String>,
+) -> Response {
+    let origin = access_context::RequestOrigin {
+        request_id: access.request_id.clone(),
+        client_address,
+    };
+    let declared =
+        access_context::with_declared(access.purpose.clone(), access.permit.clone(), next.run(req));
+    access_context::with_origin(origin, declared).await
+}
+
+/// Stamp the EHDS priority category of what a successful operation `op`
+/// touched onto its record (Annex II 3.2(c)).
+fn categorise(event: &mut AuditEvent, state: &AppState, op: &str, object: Option<&AuditObject>) {
+    if event.outcome != EventOutcome::Success {
+        return;
+    }
+    let content = object.and_then(|o| o.content.clone());
+    if let Some(accessed) = accessed_content(op, event.object, content) {
+        event.category = state.backend().audit_classify(&accessed, event.action);
+    }
+}
+
+/// Emit the record of a genuine authentication (DICOM PS3.15 §A.5.1 `EventID`
+/// 110114 with `EventTypeCode` 110122 "Login").
+fn login(state: &AppState, caller: Caller<'_>, client_ip: Option<String>, at: jiff::Timestamp) {
+    let mut event = AuditEvent::new(
+        EventActionCode::Execute,
+        ObjectClass::Authentication,
+        EventOutcome::Success,
+    );
+    event.event_type = Some(EventType::Login);
+    fill_common(&mut event, caller, client_ip, at);
+    let _ = state.backend().emit(event);
+}
+
+/// The refusal of the response of `op`, an operation without an audit
+/// classification: it is never recorded under a guessed class (#5602).
+fn unclassified(op: &str) -> Response {
+    tracing::error!(
+        operation = op,
+        "the operation has no audit classification; its response is refused"
+    );
+    RestError::from(ApiError::Internal(format!(
+        "the operation {op} has no audit classification"
+    )))
+    .into_response()
 }
 
 /// What an operation touched, for the record's EHDS priority category
