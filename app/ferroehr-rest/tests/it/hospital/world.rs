@@ -361,8 +361,10 @@ pub(crate) async fn replica(
 
 /// The router `serve` builds over `svc` for `config`, with the RBAC gate on.
 pub(crate) async fn router(config: &AppConfig, svc: &Arc<FerroEhrService>) -> Router {
-    let mut authz = AuthzConfig::default();
-    authz.rbac = config.rbac.clone();
+    let mut authz = AuthzConfig {
+        rbac: config.rbac.clone(),
+        ..AuthzConfig::default()
+    };
     authz.rbac.enabled = true;
     let handle = AuthzHandle::build(&authz, &config.api.base_path).map(Arc::new);
     common::build_full(
@@ -553,8 +555,9 @@ pub(crate) async fn scim(
 
 /// A SCIM `PatchOp` message of `operations` (RFC 7644 §3.5.2).
 pub(crate) fn patch_op(operations: Value) -> Value {
-    json!({ "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-            "Operations": operations })
+    let mut message = json!({ "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"] });
+    message["Operations"] = operations;
+    message
 }
 
 // ── the demographic API ───────────────────────────────────────────────────────

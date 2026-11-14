@@ -22,8 +22,8 @@ use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
 
 use crate::hospital::world::{
-    CONFIDENTIALITY, DEVICES, Doc, ENCOUNTER, LAB_TEMPLATE, LOGIN, MACHINES, MENTAL_HEALTH, ROLES,
-    PATIENTS, PORTAL_SCIM, PROVIDERS, Provisioned, ROOT, SCIM, SCIM_SCOPE, STAFF, TEAMS,
+    CONFIDENTIALITY, DEVICES, Doc, ENCOUNTER, LAB_TEMPLATE, LOGIN, MACHINES, MENTAL_HEALTH,
+    PATIENTS, PORTAL_SCIM, PROVIDERS, Provisioned, ROLES, ROOT, SCIM, SCIM_SCOPE, STAFF, TEAMS,
     VITALS, World, admit, call, capability, client, coded_in, config, create_party, day, named,
     party_ref, patient_body, provider, read_party, region, replica, roster, router, scim, term,
     text, update_party,
@@ -59,7 +59,10 @@ pub(crate) async fn world() -> World {
     bootstrap(&svc).await;
     let mut people = BTreeMap::new();
     let root = STAFF.iter().find(|staff| staff.name == ROOT).expect("root");
-    people.insert(ROOT, user(&app, SCIM, ROOT, (root.display, Some(root.role))).await);
+    people.insert(
+        ROOT,
+        user(&app, SCIM, ROOT, (root.display, Some(root.role))).await,
+    );
     grant_policy_writer(&svc, &people[ROOT].person).await;
     let mut agents = clients(&app).await;
     for staff in STAFF.iter().filter(|staff| staff.name != ROOT) {
@@ -193,7 +196,11 @@ async fn bootstrap(svc: &FerroEhrService) {
     let mut roles: Vec<&str> = STAFF.iter().map(|staff| staff.role).collect();
     roles.sort_unstable();
     roles.dedup();
-    elements.extend(roles.into_iter().map(|role| ("role".to_owned(), role.to_owned())));
+    elements.extend(
+        roles
+            .into_iter()
+            .map(|role| ("role".to_owned(), role.to_owned())),
+    );
     svc.grant_client(&ClientGrant {
         issuer: MACHINES.to_owned(),
         client_id: SCIM.to_owned(),
@@ -274,7 +281,10 @@ async fn system_clients(
                     "items": [named("issuer", &text(PROVIDERS)), named("identifier", &text("lab"))] }),
         ],
     );
-    agents.insert("lab", client(app, ROOT, ("lab", Some(lab)), &[commits, query]).await);
+    agents.insert(
+        "lab",
+        client(app, ROOT, ("lab", Some(lab)), &[commits, query]).await,
+    );
     agents
 }
 
@@ -414,10 +424,10 @@ async fn content(world: &mut World) {
     )
     .await;
     assert_eq!(answer.status, StatusCode::OK, "{}", answer.body);
-    world.contribution = answer.json()["contribution"]["id"]["value"]
+    answer.json()["contribution"]["id"]["value"]
         .as_str()
         .unwrap_or_else(|| panic!("a contribution: {}", answer.body))
-        .to_owned();
+        .clone_into(&mut world.contribution);
     let folder = json!({
         "_type": "FOLDER", "name": text("Eva's folders"),
         "archetype_node_id": "openEHR-EHR-FOLDER.directory.v1",

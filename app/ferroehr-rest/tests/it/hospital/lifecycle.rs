@@ -106,12 +106,26 @@ async fn a_nurse_cannot_commit_a_diagnosis_template_her_role_does_not_allow() {
         }
     };
     let vitals = commit(composition(VITALS, "Vital signs", "Bram de Vries")).await;
-    assert_eq!(vitals.status, StatusCode::CREATED, "her vital signs: {}", vitals.body);
+    assert_eq!(
+        vitals.status,
+        StatusCode::CREATED,
+        "her vital signs: {}",
+        vitals.body
+    );
     let mut diagnosis = lab_result();
     diagnosis["composer"] = json!({ "_type": "PARTY_IDENTIFIED", "name": "Bram de Vries" });
     let refused = commit(diagnosis).await;
-    answered(&refused, StatusCode::FORBIDDEN, Some("refused-policy-denied"));
-    ledger.note(&world, "the diagnosis summary", &refused, Expect::refused("refused-policy-denied", 4));
+    answered(
+        &refused,
+        StatusCode::FORBIDDEN,
+        Some("refused-policy-denied"),
+    );
+    ledger.note(
+        &world,
+        "the diagnosis summary",
+        &refused,
+        Expect::refused("refused-policy-denied", 4),
+    );
     ledger.verify(&world).await;
 }
 
@@ -131,8 +145,17 @@ async fn a_role_removed_through_scim_stops_working_on_the_next_request() {
     let (status, scimmed) = scim(&world.app, SCIM, "PATCH", &path, Some(&remove)).await;
     assert_eq!(status, StatusCode::OK, "the removal: {scimmed}");
     let answer = read(&world, "devries", &world.vitals, Some("TREAT")).await;
-    answered(&answer, StatusCode::FORBIDDEN, Some("refused-purpose-not-permitted"));
-    ledger.note(&world, "no longer a nurse", &answer, Expect::refused("refused-purpose-not-permitted", 7));
+    answered(
+        &answer,
+        StatusCode::FORBIDDEN,
+        Some("refused-purpose-not-permitted"),
+    );
+    ledger.note(
+        &world,
+        "no longer a nurse",
+        &answer,
+        Expect::refused("refused-purpose-not-permitted", 7),
+    );
     ledger.verify(&world).await;
 }
 
@@ -175,7 +198,8 @@ async fn a_user_scim_creates_reads_on_the_next_request() {
         before.body
     );
     let provisioned =
-        crate::hospital::build::user(&world.app, SCIM, "nieuw", ("Nina Nieuw", Some("nurse"))).await;
+        crate::hospital::build::user(&world.app, SCIM, "nieuw", ("Nina Nieuw", Some("nurse")))
+            .await;
     world.people.insert("nieuw", provisioned);
     let answer = read(&world, "nieuw", &world.vitals, Some("TREAT")).await;
     answered(
