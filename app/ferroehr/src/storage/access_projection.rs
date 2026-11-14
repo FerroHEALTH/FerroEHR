@@ -177,22 +177,53 @@ pub async fn replace(
     Ok(())
 }
 
-/// One EHR's settings row as stored: `None` when the EHR has none, and
-/// `Some(None)` when it is held closed.
+/// One EHR's settings row as stored.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum StoredSettings {
+    /// The EHR has no settings row.
+    #[default]
+    None,
+    /// The EHR is held closed.
+    HeldClosed,
+    /// The settings in canonical JSON text.
+    Settings(String),
+}
+
+/// One EHR's settings row and subject as stored.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Stored {
+    /// The settings.
+    pub settings: StoredSettings,
+    /// The promoted `ehr.subject_id`; `None` for an unknown EHR or a status
+    /// naming no subject.
+    pub subject: Option<String>,
+}
+
+/// One EHR's settings row and its subject, in one statement.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure, and the acquire failure
 /// when no connection can be had.
-pub async fn settings_of(
-    pool: &PgPool,
-    ehr_id: EhrId,
-) -> Result<Option<Option<String>>, StorageError> {
-    let row: Option<Option<String>> =
-        sqlx::query_scalar("SELECT settings::text FROM access_settings WHERE ehr_id = $1")
-            .bind(ehr_id)
-            .fetch_optional(&mut *acquire(pool).await?)
-            .await?;
-    Ok(row)
+pub async fn settings_of(pool: &PgPool, ehr_id: EhrId) -> Result<Stored, StorageError> {
+    let row = sqlx::query(
+        "SELECT e.subject_id, s.ehr_id IS NOT NULL AS has_settings, s.settings::text AS settings \
+         FROM (SELECT $1::uuid AS id) k \
+         LEFT JOIN ehr e ON e.id = k.id \
+         LEFT JOIN access_settings s ON s.ehr_id = k.id",
+    )
+    .bind(ehr_id)
+    .fetch_one(&mut *acquire(pool).await?)
+    .await?;
+    let has_settings: bool = row.try_get("has_settings")?;
+    let settings = match row.try_get::<Option<String>, _>("settings")? {
+        Some(settings) => StoredSettings::Settings(settings),
+        None if has_settings => StoredSettings::HeldClosed,
+        None => StoredSettings::None,
+    };
+    Ok(Stored {
+        settings,
+        subject: row.try_get("subject_id")?,
+    })
 }
 
 /// Every EHR's settings row, as `(ehr_id, settings)`, a held-closed EHR's

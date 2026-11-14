@@ -487,16 +487,14 @@ which is what makes an optional stage safe to disable:
    committed by the controller over `POST /admin/ehr-access` (which names the
    EHR in its body, so it reaches an EHR a restriction hides) or by a
    gate-keeper. Every `EHR_ACCESS` commit, import, archive load and repair
-   projects the directives in force, in its own transaction, onto the marks
-   `ehr.access_restricted_at`, `vo_head.access_restricted_at` and
-   `ehr.opted_out_at`, which the version reads, AQL, the exports and the write
-   guard filter on, and each boot projects every stored `EHR_ACCESS` again
-   (`service::ehr::access_marks`). The projection never reads a directive more
-   permissively than it is written: a data scope beyond objects restricts the
-   whole EHR, a directive holds until its validity ends, and one that no
-   emergency may lift is refused `400` until the evaluator reads
-   `emergency_override`. The projection and its rules are our own design;
-   no specification governs them. The commit of an `EHR_ACCESS` version also
+   also projects the restriction and opt-out directives in force onto the
+   marks `ehr.access_restricted_at`, `vo_head.access_restricted_at` and
+   `ehr.opted_out_at`, which only the event outbox reads: it has no caller to
+   judge, so the marks read every directive as binding everyone, a data scope
+   beyond objects as the whole EHR (`service::ehr::access_marks`). The
+   projection and its rules are our own design; no specification governs
+   them.
+   The commit of an `EHR_ACCESS` version also
    projects the settings in its own transaction (RM Common IM change control:
    every change is a version in a contribution) into `access_settings`, one
    `access_directive` row per directive and exception (kind, effect, actor
@@ -509,15 +507,62 @@ which is what makes an optional stage safe to disable:
    (`policy_register::listen::Listened` with a `Subscriber`); while the
    listener is down it reads the projection per request, and a projection
    that cannot be read is `503`. No openEHR spec governs the projection or
-   the copy: our own design (#5509).
+   the copy: our own design (#5509). The copy also holds the EHR's subject,
+   and a commit that changes it notifies the same channel.
+
+   **The access evaluator** (`access_eval`, #5513) decides every EHR a
+   request reaches by a fixed procedure over three fact sets held in memory:
+   the subject's directives and labels (the copy above), the caller's
+   capabilities, clearances, permitted purposes and care teams
+   (`party_binding::grants::live`, #5511), and the controller's
+   `ACCESS_POLICY` (`access_policy`, #5512). The first step that refuses
+   decides, deny overrides permit, and one level of exceptions narrows each
+   directive: (1) an `opt_out` binding an access service, `404`
+   `refused-opt-out` (EHDS Art. 10); (2) a `restriction` binding a
+   professional, a system or an access service, its data `404`
+   `refused-restricted` (Art. 8); (3) any other deny that applies, `403`
+   `refused-consent-denied`, and a representative a `delegation` names reads
+   only what it permits (Art. 4(2)); (4) a sensitivity from a label or a
+   classification the caller is not cleared for, `403`
+   `refused-sensitivity`; (5) no live care relationship, plus the policy's
+   grace, where the policy requires one, `403`
+   `refused-no-care-relationship` (BASE Architecture Overview §Security
+   Policy, "Time-limitation of access"); (6) no declared purpose, or one the
+   capabilities do not permit, where the policy requires one, `403`
+   `refused-purpose-missing` or `refused-purpose-not-permitted`; (7) the
+   default disposition, `403` `refused-consent-required`, an EHR with no
+   settings taking `[authz.rbac] ehr_access_default`. The subject skips every
+   step (Art. 3), a representative steps 4 to 7. An emergency purpose lifts
+   an opt-out for an access service that may override it (Art. 10(2)), and,
+   with `[authz.rbac] emergency_access_role`, a restriction or a consent deny
+   whose `emergency_override` holds and steps 4 to 7 (Art. 11(5)). A
+   directive applies by `applies_to` (every attribute of an actor scope
+   holds), `operations`, `purposes` and `time_validity`; a fact that cannot
+   be read (a validity bound with no offset, an undeclared purpose, an
+   unstamped origin) is in force for a deny and not for a permit. A verdict
+   is an ordered list of rules over the EHR's data (objects, templates, root
+   archetypes, categories through the category map, origins, commit time,
+   sensitivities), so one verdict answers a named object, the EHR itself,
+   and every row of a query: the version reads, contributions, exports, the
+   subject lookup and the write guard judge each object by its head row
+   (`storage::access_facts`), and a query renders the verdicts of every EHR
+   with settings, and the default for every other, as a condition on the
+   head row and the EHR id of its one SQL statement (`aql::sql::access`), so
+   `COUNT`, `LIMIT` and paging count only readable rows. The request path
+   adds no transaction: every fact is a copy, and a named object is read by
+   its head row only when the verdict depends on the object. The procedure,
+   its order and its codes are our own design; RM EHR IM §EHR Access only
+   requires every decision to follow `EHR_ACCESS`.
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
    OAuth2 scope is NOT a role (RFC 6749 §3.3).
-4. **ABAC** — off by default. The embedded Cedar engine decides over subject attributes (subject, roles, scopes, organization,
-   patient) and resource attributes (patient, template), fanned out over
-   multi-valued attributes as a cartesian product with **all-must-permit** and
-   short-circuit deny.
+4. **ABAC (Cedar)** — off by default, and removed by #5515. The embedded
+   Cedar engine runs only on a request the access evaluator admitted and
+   can only narrow it: it decides over subject attributes (subject, roles,
+   scopes, organization, patient) and resource attributes (patient,
+   template), fanned out over multi-valued attributes as a cartesian product
+   with **all-must-permit** and short-circuit deny.
 5. **SMART scopes** — off by default, AND-composed onto the ABAC decision, so it
    can only narrow. Disabled SMART produces zero wire drift.
 

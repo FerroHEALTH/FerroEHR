@@ -28,7 +28,9 @@
 //! - [`ehr_access`] — the **spec-grounded** access-decision layer, built on the
 //!   `EHR_ACCESS` gateway clause ("All access decisions to data in the EHR must
 //!   be made in accordance with the policies and rules in this object" — RM
-//!   `org.openehr.rm.ehr.ehr_access.adoc`). Always-on and foundational; runs
+//!   `org.openehr.rm.ehr.ehr_access.adoc`): the access evaluator over the
+//!   subject's directives, the caller's facts and the access policy, whose
+//!   caller and request `caller` reads. Always-on and foundational; runs
 //!   first in the pre-dispatch chain.
 //! - [`authz`] — our **own enterprise extensions** (no openEHR spec governs
 //!   them): the coarse
@@ -52,12 +54,11 @@
 
 pub mod authn;
 pub mod authz;
+pub(crate) mod caller;
 pub(crate) mod delay;
 pub mod ehr_access;
-pub(crate) mod opt_out;
 pub(crate) mod patient_scope;
 pub mod pep;
-pub(crate) mod restriction;
 
 // The authn surface (identity + the request-scoped principal). The middleware
 // + `AuthLayer` are `pub(crate)` and installed by the router via `authn::`

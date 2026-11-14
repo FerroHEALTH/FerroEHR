@@ -72,7 +72,25 @@
 //! sign, attest, import policy) and calls these functions with plain inputs,
 //! consuming [`version_repo::read::StoredVersion`] on read.
 
+/// The columns of [`access_facts::HeadFacts`], read off the `vo_head` row
+/// aliased `h`: what the access evaluator judges an object by.
+macro_rules! head_facts {
+    () => {
+        concat!(
+            "h.ehr_id AS access_ehr_id, h.template_id AS access_template, ",
+            "h.committed_at AS access_recorded, ",
+            "(SELECT t.origins FROM version t WHERE t.tier = h.tier AND t.vo_id = h.vo_id ",
+            "AND t.sys_version = h.trunk_head_sys_version) AS access_origins, ",
+            "(SELECT COALESCE(n.data->>'archetype_node_id', ",
+            "ext.node_archetype_node_id(n.archetype, n.rm_version)) FROM node n ",
+            "WHERE n.tier = h.tier AND n.vo_id = h.vo_id ",
+            "AND n.sys_version = h.trunk_head_content_key AND n.num = 0) AS access_archetype"
+        )
+    };
+}
+
 pub mod access_delay;
+pub mod access_facts;
 pub mod access_marks;
 pub mod access_policy;
 pub mod access_projection;

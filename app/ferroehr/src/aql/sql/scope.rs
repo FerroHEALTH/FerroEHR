@@ -17,7 +17,7 @@ use crate::db::iden::{Ehr, Node};
 
 use super::expr::col;
 use super::from::research_objection_clear;
-use super::{Builder, EhrAccessScope, subject};
+use super::{Builder, subject};
 
 impl Builder<'_> {
     /// Restricts every versioned-object root and every EHR source to the EHRs
@@ -33,9 +33,6 @@ impl Builder<'_> {
         // `ehr_id` does not make the content answerable.
         for alias in self.ehr_alias.values().cloned().collect::<Vec<_>>() {
             self.q.and_where(col(&alias, Ehr::RestrictedAt).is_null());
-            for predicate in self.gates.on_ehr(&alias) {
-                self.q.and_where(predicate);
-            }
         }
         // Multi-EHR scoping restricts every VO root and every EHR source. A
         // bare `FROM EHR e` (no CONTAINS) has no VO root — the scope
@@ -54,16 +51,15 @@ impl Builder<'_> {
         {
             self.q.and_where(cond);
         }
-        // The per-EHR access decision (RM ehr `ehr_access.adoc` §`EHR_ACCESS`
-        // Class) and the EHDS Art. 10 opt-out bind every VO root and EHR source
-        // the way the explicit scope does, so no query shape reaches either.
+        // The access evaluator's per-EHR decision (RM ehr `ehr_access.adoc`
+        // §`EHR_ACCESS` Class) binds every VO root and EHR source the way the
+        // explicit scope does, so no query shape reaches an EHR it hides.
         let accessed = roots
             .iter()
             .map(|root| col(root, Node::EhrId))
             .chain(ehrs.iter().map(|alias| col(alias, Ehr::Id)));
         for cond in accessed
-            .flat_map(|t| [self.access_cond(t.clone()), self.gates.on_ehr_id(t)])
-            .flatten()
+            .filter_map(|t| self.gates.on_ehr_id(&t))
             .collect::<Vec<_>>()
         {
             self.q.and_where(cond);
@@ -96,22 +92,6 @@ impl Builder<'_> {
         Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
     }
 
-    /// The caller's per-EHR access decision on the EHR id `target`, when it
-    /// restricts anything (RM ehr `ehr_access.adoc` §`EHR_ACCESS` Class).
-    fn access_cond(&self, target: Expr) -> Option<Expr> {
-        match &self.ctx.ehr_access {
-            EhrAccessScope::Unrestricted => None,
-            EhrAccessScope::Excluding(ids) => {
-                let ids: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
-                Some(target.ne(Expr::from(PgFunc::all(Expr::val(ids)))))
-            }
-            EhrAccessScope::Only(ids) => {
-                let ids: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
-                Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
-            }
-        }
-    }
-
     /// The ABAC patient scope on the EHR id `target` of a versioned-object
     /// root, when one is set: `target` is the id of an `ehr` row
     /// [`subject::matches`] admits.
@@ -139,8 +119,7 @@ impl Builder<'_> {
     pub(super) fn root_scope_conds(&self, target: Expr) -> Vec<Expr> {
         [
             self.ehr_ids_cond(target.clone()),
-            self.access_cond(target.clone()),
-            self.gates.on_ehr_id(target.clone()),
+            self.gates.on_ehr_id(&target),
             self.subject_cond(target),
         ]
         .into_iter()

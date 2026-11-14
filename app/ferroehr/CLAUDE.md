@@ -162,6 +162,15 @@ module.**
   reduction and `subject_withholds` for a path both read its lists, and AQL
   over `ACCESS_LOG_ENTRY` (`aql::access_log`, #5131) reads its columns out of
   `view_of` and never redacts a second way.
+- **Access evaluator** (`src/access_eval/`, #5513): `procedure::decide` is
+  the one decision procedure over the subject's directives, the caller's
+  facts and the access policy, a pure function whose `Verdict` is an ordered
+  list of rules over an EHR's data (`scope::Pred`). `condition` holds the
+  running request's evaluator (task-local) and a query's `AccessCondition`,
+  which `aql::sql::access` renders as SQL; `storage::access_facts` judges an
+  object where it leaves the store. Never decide access anywhere else, and
+  never read a directive, label or policy fact outside these modules: a
+  second reading drifts from the first.
 - **Consume `openehr-*` types directly** — never re-model the RM or re-serialize;
   canonical JSON/XML goes through `openehr-its`.
 - DB tests take their database from the shared harness — `testkit::db()`

@@ -49,6 +49,7 @@
 //! a column spelled as a string here, so a schema rename surfaces as a failing
 //! test rather than a runtime SQL error.
 
+mod access;
 mod archetype;
 mod attestation;
 mod compact;
@@ -100,12 +101,12 @@ pub struct SqlCtx {
     /// caller may not see are never fetched, independent of what the query
     /// projects.
     pub subject_scope: Option<subject::SubjectScope>,
-    /// The per-EHR access decision the caller's principal is held to
-    /// (`EHR_ACCESS`, RM ehr `ehr_access.adoc`: "All access decisions to data
-    /// in the EHR must be made in accordance with the policies and rules in
-    /// this object"): every VO root and EHR source is restricted by it, so an
-    /// EHR the principal may not read contributes no rows.
-    pub ehr_access: EhrAccessScope,
+    /// The access evaluator's condition for the caller (`EHR_ACCESS`, RM ehr
+    /// `ehr_access.adoc`: "All access decisions to data in the EHR must be
+    /// made in accordance with the policies and rules in this object"): every
+    /// VO root and EHR source is restricted by it, so a row the caller may
+    /// not read is never fetched ([`crate::access_eval::condition`]).
+    pub ehr_access: crate::access_eval::condition::AccessCondition,
     /// The effective row limit (AQL `LIMIT`/`TOP` or REST `fetch`, pre-composed).
     pub limit: Option<i64>,
     /// The effective row offset (AQL `OFFSET` or REST `offset`, pre-composed).
@@ -176,24 +177,6 @@ impl PolicyParties {
             Self::Served
         }
     }
-}
-
-/// Which EHRs a query may read rows from under the caller's per-EHR access
-/// decision.
-///
-/// The REST adapter derives it from the `EHR_ACCESS` settings and the
-/// authenticated principal; the SQL generator applies it to every EHR-anchored
-/// source. No openEHR spec governs how the decision reaches a query — our own
-/// design.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub enum EhrAccessScope {
-    /// Every EHR is readable.
-    #[default]
-    Unrestricted,
-    /// Every EHR except these is readable.
-    Excluding(Vec<EhrId>),
-    /// Only these EHRs are readable; an empty list reads none.
-    Only(Vec<EhrId>),
 }
 
 impl SqlCtx {
@@ -460,7 +443,12 @@ impl<'a> Builder<'a> {
             sub_ctr: 0,
             streaming: false,
             presence_only: false,
-            gates: gates::Gates::current(ir.domain, ctx.policy_parties, &ctx.access_settings),
+            gates: gates::Gates::current(
+                ir.domain,
+                ctx.policy_parties,
+                &ctx.access_settings,
+                &ctx.ehr_access,
+            ),
             step_bindings: Vec::new(),
         }
     }

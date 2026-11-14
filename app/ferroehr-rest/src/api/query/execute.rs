@@ -77,9 +77,10 @@ pub(crate) async fn serve(
         Ok(prep) => prep,
         Err(deny) => return Ok(deny),
     };
-    // EHR_ACCESS: the per-EHR decision the path routes apply, held over every
-    // EHR the query could reach (RM ehr `ehr_access.adoc` §`EHR_ACCESS` Class).
-    let ehr_access = match crate::extensions::access::ehr_access::query_scope(&state).await {
+    // EHR_ACCESS: the access evaluator's verdict the path routes apply, held
+    // over every row the query could reach (RM ehr `ehr_access.adoc`
+    // §`EHR_ACCESS` Class).
+    let ehr_access = match crate::extensions::access::ehr_access::query_condition(&state).await {
         Ok(ehr_access) => ehr_access,
         Err(deny) => return Ok(*deny),
     };

@@ -6,15 +6,15 @@
 //! `ehr.access_restricted_at`, `vo_head.access_restricted_at` and
 //! `ehr.opted_out_at` are the projection of the `restriction` and `opt_out`
 //! directives in force in an EHR's current `EHR_ACCESS`, written by [`write()`]
-//! in the transaction of every `EHR_ACCESS` commit; the read paths filter on
-//! them (`docs/law/eu/ehds/text.html` Art. 8 and Art. 10). No openEHR spec
-//! governs either right or the projection: our own design/extension.
+//! in the transaction of every `EHR_ACCESS` commit; the event outbox, which
+//! has no caller for the access evaluator to judge, withholds what they mark
+//! (`docs/law/eu/ehds/text.html` Art. 8 and Art. 10). No openEHR spec governs
+//! either right or the projection: our own design/extension.
 
-use sqlx::{PgConnection, PgPool};
+use sqlx::PgConnection;
 use uuid::Uuid;
 
-use crate::db::acquire::acquire;
-use crate::ids::{EhrId, VoId};
+use crate::ids::EhrId;
 use crate::storage::error::StorageError;
 
 /// The marks one EHR's directives in force imply.
@@ -65,72 +65,4 @@ pub async fn write(
     .execute(&mut *tx)
     .await?;
     Ok(())
-}
-
-/// Whether the whole EHR carries the access-restriction mark; `false` for an
-/// unknown EHR.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn is_ehr_access_restricted(pool: &PgPool, ehr_id: EhrId) -> Result<bool, StorageError> {
-    let restricted: Option<bool> =
-        sqlx::query_scalar("SELECT access_restricted_at IS NOT NULL FROM ehr WHERE id = $1")
-            .bind(ehr_id)
-            .fetch_optional(&mut *acquire(pool).await?)
-            .await?;
-    Ok(restricted.unwrap_or(false))
-}
-
-/// Whether a versioned object carries the access-restriction mark, its own or
-/// its EHR's; `false` for an unknown object.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn is_access_restricted(
-    conn: &mut PgConnection,
-    vo_id: VoId,
-) -> Result<bool, StorageError> {
-    let restricted: Option<bool> =
-        sqlx::query_scalar("SELECT access_restricted_at IS NOT NULL FROM vo_head WHERE vo_id = $1")
-            .bind(vo_id)
-            .fetch_optional(&mut *conn)
-            .await?;
-    Ok(restricted.unwrap_or(false))
-}
-
-/// Whether the EHR carries the opt-out mark; `false` for an unknown EHR.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn is_opted_out(pool: &PgPool, ehr_id: EhrId) -> Result<bool, StorageError> {
-    let opted_out: Option<bool> =
-        sqlx::query_scalar("SELECT opted_out_at IS NOT NULL FROM ehr WHERE id = $1")
-            .bind(ehr_id)
-            .fetch_optional(&mut *acquire(pool).await?)
-            .await?;
-    Ok(opted_out.unwrap_or(false))
-}
-
-/// Whether the EHR reads as absent to the request: restricted as a whole
-/// while `restricted` holds, or opted out while `opted_out` holds; `false`
-/// for an unknown EHR.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn ehr_hidden(
-    conn: &mut PgConnection,
-    ehr_id: EhrId,
-    restricted: bool,
-    opted_out: bool,
-) -> Result<bool, StorageError> {
-    let hidden: Option<bool> = sqlx::query_scalar(
-        "SELECT ($2 AND access_restricted_at IS NOT NULL) OR ($3 AND opted_out_at IS NOT NULL) \
-         FROM ehr WHERE id = $1",
-    )
-    .bind(ehr_id)
-    .bind(restricted)
-    .bind(opted_out)
-    .fetch_optional(&mut *conn)
-    .await?;
-    Ok(hidden.unwrap_or(false))
 }

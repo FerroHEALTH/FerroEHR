@@ -90,7 +90,15 @@ operation.
 
 The caller is authenticated, and the access policy (roles, SMART scopes, EHR
 access, assurance level) refuses the operation. `detail` names the missing
-grant.
+grant. When the EHR's access directives or the access policy refuse, `detail`
+starts with the refusal code (`refused-consent-denied`,
+`refused-consent-required`, `refused-sensitivity`,
+`refused-no-care-relationship`, `refused-purpose-missing`,
+`refused-purpose-not-permitted`; see [Access directives](../security.md)).
+
+With `Prefer: return=representation`: `refusal`, that code. A restriction or an
+opt-out never answers `403`: the data read as absent (`404`), with nothing in
+the body that names them.
 
 ## `processing-restricted`
 

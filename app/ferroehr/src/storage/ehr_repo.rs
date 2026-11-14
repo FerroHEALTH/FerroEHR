@@ -662,15 +662,20 @@ pub async fn update_promoted_columns(
     ehr_id: EhrId,
     columns: PromotedColumns<'_>,
 ) -> Result<(), StorageError> {
+    // NOTE: our own design (#5513), a changed subject notifies every replica's copy of
+    // the EHR's access facts, whose care relationships are its subject's.
     sqlx::query(
-        "UPDATE ehr SET subject_id = $2, subject_namespace = $3, is_queryable = $4, \
-         is_modifiable = $5 WHERE id = $1",
+        "WITH changed AS (UPDATE ehr SET subject_id = $2, subject_namespace = $3, \
+         is_queryable = $4, is_modifiable = $5 WHERE id = $1 \
+         RETURNING OLD.subject_id IS DISTINCT FROM NEW.subject_id AS moved) \
+         SELECT pg_notify($6, $1::text) FROM changed WHERE moved",
     )
     .bind(ehr_id)
     .bind(columns.subject_id)
     .bind(columns.subject_namespace)
     .bind(columns.is_queryable)
     .bind(columns.is_modifiable)
+    .bind(crate::storage::access_projection::CHANNEL)
     .execute(tx)
     .await
     .map_err(|e| match &e {
@@ -705,27 +710,13 @@ pub async fn insert_bare_ehr(
     Ok(inserted > 0)
 }
 
-/// The ids of `ids` that name an EHR this request may see.
-///
-/// An EHR under a whole-EHR access restriction (EHDS Art. 8) or an opt-out
-/// (Art. 10) reads as absent while the request enforces it
-/// (`docs/law/eu/ehds/text.html`).
+/// The ids of `ids` that name an EHR of this store.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
-pub async fn visible_ehr_ids(
-    pool: &PgPool,
-    ids: &[EhrId],
-    restriction_enforced: bool,
-    opt_out_enforced: bool,
-) -> Result<Vec<EhrId>, StorageError> {
-    Ok(sqlx::query_scalar(
-        "SELECT id FROM ehr WHERE id = ANY($1) \
-         AND (NOT $2 OR access_restricted_at IS NULL) AND (NOT $3 OR opted_out_at IS NULL)",
-    )
-    .bind(ids)
-    .bind(restriction_enforced)
-    .bind(opt_out_enforced)
-    .fetch_all(&mut *acquire(pool).await?)
-    .await?)
+pub async fn existing_ehr_ids(pool: &PgPool, ids: &[EhrId]) -> Result<Vec<EhrId>, StorageError> {
+    Ok(sqlx::query_scalar("SELECT id FROM ehr WHERE id = ANY($1)")
+        .bind(ids)
+        .fetch_all(&mut *acquire(pool).await?)
+        .await?)
 }

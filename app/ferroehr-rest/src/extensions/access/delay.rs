@@ -65,14 +65,14 @@ pub(crate) async fn refuse_withheld(
     op: &str,
     parts: &RequestParts,
 ) -> Result<Option<Response>, Box<Response>> {
-    for (raw, vo_id) in super::restriction::named_objects(parts) {
+    for (raw, vo_id) in super::ehr_access::named_objects(parts) {
         let withheld = state
             .backend()
             .is_object_withheld(vo_id)
             .await
             .map_err(|error| Box::new(RestError::from(error).into_response()))?;
         if withheld {
-            return Ok(Some(super::restriction::object_not_found(op, raw)));
+            return Ok(Some(super::ehr_access::object_not_found(op, raw)));
         }
     }
     Ok(None)
