@@ -4,8 +4,8 @@
 //! Row I/O for the caller facts: `binding_caller_fact`, the stamps of
 //! `binding_caller_fact_party` and the facts revision.
 //!
-//! A commit of a `ROLE` or a `PERSON` replaces the facts its head holds, in
-//! its own transaction; when they changed, it moves the facts revision,
+//! A commit of a `ROLE`, a `PERSON` or an `ORGANISATION` replaces the facts
+//! its head holds, in its own transaction; when they changed, it moves the facts revision,
 //! stamps each party whose facts changed with it and notifies
 //! [`super::super::store::CHANNEL`], so each replica reads again only the
 //! facts of the parties stamped since its copy ([`FACTS`]). A refill and an
@@ -51,7 +51,7 @@ const FACT_TEXT: &str = "ROW(kind, ordinal, party_id, terminology_id, code_strin
 /// One stored fact about a party.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct FactRow {
-    /// The `ROLE` or `PERSON` whose head holds it.
+    /// The `ROLE`, `PERSON` or `ORGANISATION` whose head holds it.
     pub(crate) holder: Uuid,
     /// What it is.
     pub(crate) kind: FactKind,
@@ -73,7 +73,8 @@ pub(crate) struct Changed {
 }
 
 /// Replaces the facts of `head` on its commit transaction `tx`: the facts
-/// about `party` (the performer of a `ROLE`, a `PERSON` itself) its live body
+/// about `party` (the performer of a `ROLE`, a `PERSON` or `ORGANISATION`
+/// itself) its live body
 /// holds, under the `ROLE`'s `role_validity`. When they changed, moves the
 /// facts revision, stamps every party whose facts changed and notifies.
 ///

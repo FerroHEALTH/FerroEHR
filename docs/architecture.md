@@ -831,8 +831,14 @@ only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
 the care delivery environment evaluates "care deliverer"). A care
 relationship of another party kind or of its own container is refused
-`422`. **Our own design:** no openEHR spec gives a capability or a
-relationship an access meaning.
+`422`. An `ORGANISATION`'s `member_of` relationship is its membership of a
+`GROUP` (#5575): written as its own facts on the commit of the
+`ORGANISATION` under the same grant rule, and resolved for a client by
+`LiveGrants::memberships` of the provider its acts-for relationship names,
+which `Capabilities::facts().provider_groups()` carries and the request's
+caller adds to the parties it acts for, one level deep, from the copy held,
+so the regional sharing example adds no transaction. **Our own design:** no
+openEHR spec gives a capability or a relationship an access meaning.
 
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL
