@@ -25,7 +25,7 @@ use serde_json::Value;
 use crate::party_binding::derive::container;
 use crate::party_binding::grants::caller::{self, CallerFact};
 use crate::party_binding::grants::operation::{NOT_AFTER, NOT_BEFORE, is_qualifier};
-use crate::party_binding::policy_mark::{ACTS_FOR, CLIENT_ID, carries, coded};
+use crate::party_binding::policy_mark::{ACTS_FOR, CLIENT_ID, TERMINOLOGY, carries, coded};
 use crate::versioning::Kind;
 
 /// A `Not before` or `Not after` bound of a capability's credentials.
@@ -104,7 +104,7 @@ impl GrantFacts {
                     .and_then(Value::as_array)
                     .into_iter()
                     .flatten()
-                    .filter(|relationship| carries(relationship, ACTS_FOR))
+                    .filter(|relationship| carries(relationship, TERMINOLOGY, ACTS_FOR))
                     .find_map(|relationship| {
                         container(relationship.pointer("/target/id/value")?.as_str()?)
                     });

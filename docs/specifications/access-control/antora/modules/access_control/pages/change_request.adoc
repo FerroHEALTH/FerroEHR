@@ -35,7 +35,7 @@ Change description::
 * No existing class changes.
 
 Related changes::
-* SPECTERM: the terminology groups of xref:terminology.adoc[Terminology].
+* SPECTERM: the draft terminology `openehr_access` ("openEHR access (draft)", `Terminology_id_access`) and the groups the access control and access log packages code in it (xref:terminology.adoc[Terminology]); a term with the meaning of a published HL7 code is that code, and the other codes carry their `TERM_MAPPING`s. The identifier is proposed and not assigned, and the groups move into the openEHR Terminology with numeric codes if openEHR adopts them.
 * SPECITS: the `EHR_ACCESS` and `ACCESS_POLICY` resources of xref:its_rest.adoc[ITS-REST Resources], and the ITS-JSON schema of the package.
 * SPECBASE: in the Architecture Overview, Security and Confidentiality, Access Control, Overview, a paragraph naming the published scheme, and the class name corrected to `ACCESS_CONTROL_SETTINGS`.
 
@@ -50,5 +50,6 @@ No openEHR or other specification governs the following; each is this proposal's
 * the order of the procedure's steps and its refusals;
 * care relationships through care-team `GROUP` membership and an under-care-of relationship, with a grace period;
 * sensitivity clearances and permitted purposes as codes on a `CAPABILITY`;
+* the draft terminology `openehr_access`, its groups and its codes;
 * `ACCESS_POLICY` as a versioned root outside the EHR and the demographic service, and its ITS-REST resources;
 * the read and write rule for `EHR_ACCESS`.

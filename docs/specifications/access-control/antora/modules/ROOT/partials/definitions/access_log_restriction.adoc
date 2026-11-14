@@ -15,7 +15,7 @@ h|*Attributes*
 
 h|*1..1*
 |*accessor_kinds*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
-a|The kinds of accessor the restriction applies to, coded in the openEHR Terminology `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.
+a|The kinds of accessor the restriction applies to, coded in the draft `openehr_access` terminology's `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.
 
 h|*1..1*
 |*withheld*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
@@ -26,9 +26,9 @@ h|*1..1*
 a|The provisions of the Member State law that lay the restriction down under EHDS Article 9(3), coded in a terminology the jurisdiction names.
 
 h|*Invariants*
-2+a|__Accessor_kinds_valid__: `accessor_kinds.for_all (k | terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, k.defining_code))`
+2+a|__Accessor_kinds_valid__: `accessor_kinds.for_all (k | terminology (Terminology_id_access).has_code_for_group_id (Group_id_accessor_kind, k.defining_code))`
 
 h|
-2+a|__Withheld_valid__: `withheld.for_all (w | terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_log_withheld, w.defining_code))`
+2+a|__Withheld_valid__: `withheld.for_all (w | terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_log_withheld, w.defining_code))`
 
 |===

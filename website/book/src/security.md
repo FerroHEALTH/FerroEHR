@@ -274,7 +274,7 @@ Committing settings of the `access_directives` scheme switches that EHR to
 explicit policy, and those settings **always win over the server default**,
 in both directions. The settings are an `ACCESS_DIRECTIVE_SETTINGS`, a class
 of FerroEHR's draft access control package, and every coded value is a code
-of the access control groups of FerroEHR's terminology `ferroehr-operations`:
+of the access control groups of the draft openEHR access terminology `openehr_access`:
 
 ```json
 {
@@ -292,7 +292,7 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
     "default_access": {
       "_type": "DV_CODED_TEXT", "value": "restricted",
       "defining_code": { "_type": "CODE_PHRASE",
-        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
         "code_string": "restricted" }
     },
     "gate_keepers": [

@@ -173,10 +173,7 @@ impl Group {
 
 /// The `(terminology id, code)` of every term of `T`.
 fn phrases<T: Term>() -> Vec<(&'static str, &'static str)> {
-    T::ALL
-        .iter()
-        .map(|term| (term.terminology(), term.code()))
-        .collect()
+    T::ALL.iter().map(|term| term.phrase()).collect()
 }
 
 impl fmt::Display for Group {
@@ -229,6 +226,11 @@ pub trait Term: Copy + PartialEq + Sized + 'static {
 
     /// The term's rubric, the text a `DV_CODED_TEXT` of it shows.
     fn rubric(self) -> &'static str;
+
+    /// The term's `(terminology id, code)`.
+    fn phrase(self) -> (&'static str, &'static str) {
+        (self.terminology(), self.code())
+    }
 
     /// Reads the term a `CODE_PHRASE` of `terminology` and `code` names.
     ///

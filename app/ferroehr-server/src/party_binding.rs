@@ -58,7 +58,7 @@ pub enum PartyBindingCmd {
     /// refuses, naming them, the `PERSON`s whose key fails the provenance
     /// rule of `check`.
     Adopt(AdoptArgs),
-    /// Grant an operation of the `ferroehr-operations` terminology to a
+    /// Grant an operation of the `openehr_access` terminology to a
     /// client, on the operator's authority: an `AGENT` carrying the client
     /// identifier, unless an `ACTOR` names the client already, and a `ROLE`
     /// it performs whose capability grants the operation with the scope
@@ -99,7 +99,7 @@ pub struct GrantArgs {
     /// The operation's code, such as `scim_provision`.
     #[arg(long, value_name = "CODE")]
     pub operation: String,
-    /// A scope element of the grant, its code of the operation terminology
+    /// A scope element of the grant, its code of the draft access terminology
     /// and the text it names, such as `binding_issuer=urn:example:login`.
     #[arg(long = "element", value_name = "CODE=TEXT")]
     pub elements: Vec<String>,
@@ -440,7 +440,7 @@ pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<
 pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<Granted> {
     let operation = Operation::of(&args.operation).with_context(|| {
         format!(
-            "{:?} is no operation of the ferroehr-operations terminology",
+            "{:?} is no operation of the openehr_access terminology",
             args.operation
         )
     })?;

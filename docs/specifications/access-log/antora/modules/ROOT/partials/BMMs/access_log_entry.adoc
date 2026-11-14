@@ -21,7 +21,7 @@
     "action": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "action",
-      "documentation": "What the access did to the data, coded in the openEHR Terminology `access action` group.",
+      "documentation": "What the access did to the data, coded in the draft `openehr_access` terminology's `access action` group.",
       "is_mandatory": true,
       "type": "DV_CODED_TEXT"
     },
@@ -137,7 +137,7 @@
     }
   },
   "invariants": {
-    "Action_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_action, action.defining_code)",
+    "Action_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_action, action.defining_code)",
     "Items_need_ehr": "not items.is_empty implies ehr_id /= Void"
   }
 }

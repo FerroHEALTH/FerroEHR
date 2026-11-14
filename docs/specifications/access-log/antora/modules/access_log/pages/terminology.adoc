@@ -4,26 +4,73 @@ include::partial$module_vars.adoc[]
 
 NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminology] (SPECTERM).
 
-Five groups are added to the openEHR Terminology, with constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS` (`Group_id_access_action`, `Group_id_access_outcome`, `Group_id_accessor_kind`, `Group_id_access_authorisation`, `Group_id_access_refusal_reason`). The codes are for the terminology editors to assign; the rubrics are:
+Five groups are added to the draft `openehr_access` terminology, which the Access Control Information Model proposes for both packages (`Terminology_id_access`), with constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS` (`Group_id_access_action`, `Group_id_access_outcome`, `Group_id_accessor_kind`, `Group_id_access_authorisation`, `Group_id_access_refusal_reason`). The identifier is proposed and not assigned; if openEHR adopts the groups, they move into the openEHR Terminology with numeric codes. Until then each code of `openehr_access` is its own rubric. Where an HL7 code system publishes a code with the same meaning, the group's term is that code, carried under the code system's identifier:
 
 [cols="2,5", options="header"]
 |===
-|Group |Rubrics
+|Terminology identifier |Canonical URI
+
+|`audit-event-action`
+|`http://hl7.org/fhir/audit-event-action`
+
+|`extra-security-role-type`
+|`http://terminology.hl7.org/CodeSystem/extra-security-role-type`
+|===
+
+The terms are:
+
+[cols="2,5", options="header"]
+|===
+|Group |Terms
 
 |access action
-|read, query, create, update, delete, export, import
+|`audit-event-action::R` (read), query, `audit-event-action::C` (create), `audit-event-action::U` (update), `audit-event-action::D` (delete), export, import
 
 |access outcome
 |granted, partially granted, refused, failed
 
 |accessor kind
-|person, delegated person, subject of care, representative, external person, organisation, system
+|person, delegated person, `extra-security-role-type::datasubject` (subject of care), representative, external person, organisation, system
 
 |access authorisation
 |role, treatment relationship, agreement, consent, permit, emergency, subject of care, representation, legal obligation
 
 |access refusal reason
-|not authenticated, credential not bound, not authorised, consent absent, opted out, restricted by the subject, rate limited, system failure
+|not authenticated, credential not bound, not authorised, consent absent, rate limited, system failure
 |===
 
-`access refusal reason` is recommended; a system MAY code `ACCESS_OUTCOME._reason_` in its own terminology.
+`access refusal reason` is recommended; a system MAY code `ACCESS_OUTCOME._reason_` in its own terminology. A refusal of the access control decision procedure is recorded with its `access refusal` code of the same terminology, such as `refused-opt-out` for an opt-out and `refused-restricted` for a restriction by the subject, so this group holds no code of its own for either.
+
+A draft code whose closest standard code is broader or narrower stays in `openehr_access`, and the terminology records that code as a `TERM_MAPPING` with its match (RM Data Types, `TERM_MAPPING._match_`):
+
+[cols="2,2,3,1", options="header"]
+|===
+|Group |Code |Mapped to |Match
+
+|access action
+|query
+|`audit-event-action::E`
+|`<`
+
+|access outcome
+|failed
+|`audit-event-outcome::8` (serious failure)
+|`>`
+
+|accessor kind
+|person
+|`extra-security-role-type::humanuser`
+|`>`
+
+|accessor kind
+|delegated person
+|`v3-RoleCode::DELEGATEE`
+|`>`
+
+|accessor kind
+|representative
+|`v3-RoleCode::RESPRSN`
+|`>`
+|===
+
+`audit-event-outcome` is `http://terminology.hl7.org/CodeSystem/audit-event-outcome` and `v3-RoleCode` is `http://terminology.hl7.org/CodeSystem/v3-RoleCode`.

@@ -46,6 +46,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 /// A deny directive of `kind` with `extra` members.
 fn deny(kind: &str, extra: &Value) -> Value {
     let mut directive = json!({
@@ -53,7 +62,7 @@ fn deny(kind: &str, extra: &Value) -> Value {
         "name": { "_type": "DV_TEXT", "value": "Directive" },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term("deny"),
+        "effect": provision("deny"),
         "emergency_override": false
     });
     if let (Some(directive), Some(extra)) = (directive.as_object_mut(), extra.as_object()) {
@@ -338,7 +347,7 @@ async fn under_purpose_required_only_a_reader_with_a_permitted_purpose_gets_even
     reader.facts = CallerFacts::new(
         Vec::new(),
         vec![ForeignCode {
-            terminology: "2.16.840.1.113883.5.8".to_owned(),
+            terminology: "v3-ActReason".to_owned(),
             code: PURPOSE.to_owned(),
         }],
         Vec::new(),

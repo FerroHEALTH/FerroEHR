@@ -14,12 +14,13 @@ SCIM can provision Groups:
    `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1`.
 3. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.member_of.v1.0.0.adls`: an example
    care-team membership a professional's `PERSON` holds to the team's
-   `GROUP`, whose details carry `member_of` of FerroEHR's terminology
-   `ferroehr-operations`.
+   `GROUP`, whose details carry the membership code `MBR` of HL7 v3
+   `RoleClass` (terminology id `v3-RoleClass`).
 4. `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0.adls`: an
    example care relationship a patient's `PERSON` holds to a care team's
    `GROUP` or a unit, with the admission as its `time_validity`, whose details
-   carry `under_care_of` of that terminology.
+   carry `under_care_of` of the draft openEHR access terminology
+   `openehr_access`.
 
 FerroEHR reads a care relationship by its code in any archetype, never by
 the id of the third or fourth file; a deployment may model one in an
@@ -68,7 +69,7 @@ its modification time.
   `Type_validity`).
 - The two care relationships keep that shape and hold, as their one
   mandatory element, the coded care relationship code, after the
-  representation definition; `member_of` keeps the optional role in the team,
+  representation definition; the membership keeps the optional role in the team,
   and `under_care_of` replaces it with an optional discharge time.
 - Every element is optional, so a team provisioned with only a name commits
   `532|complete|`.

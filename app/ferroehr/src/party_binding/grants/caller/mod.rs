@@ -13,7 +13,7 @@
 //! `PARTY_RELATIONSHIP` of a `PERSON` whose `name` or `details` carry a code
 //! of [`CareRelationship`] is a care relationship
 //! (`org.openehr.rm.demographic.party_relationship.adoc`: `source`, `target`,
-//! `time_validity`): the professional is `member_of` a care team, and the
+//! `time_validity`): the professional is a member (HL7 v3 `RoleClass#MBR`) of a care team, and the
 //! patient is `under_care_of` a team or a unit, with the admission as its
 //! `time_validity`. The care delivery environment, such as a hospital's ADT
 //! system, writes them under a [`Operation::WriteCareRelationship`] grant
@@ -81,15 +81,24 @@ impl FactKind {
         Self::UnderCareOf,
     ];
 
-    /// The code of [`TERMINOLOGY`] the kind is read by, as the side table
-    /// stores it.
-    pub(crate) fn code(self) -> &'static str {
+    /// The `(terminology id, code)` the kind is read by.
+    fn term(self) -> (&'static str, &'static str) {
         match self {
-            Self::Clearance => SensitivityClearance::SensitivityClearance.code(),
-            Self::Purpose => PermittedPurpose::PermittedPurpose.code(),
-            Self::MemberOf => CareRelationship::MemberOf.code(),
-            Self::UnderCareOf => CareRelationship::UnderCareOf.code(),
+            Self::Clearance => SensitivityClearance::SensitivityClearance.phrase(),
+            Self::Purpose => PermittedPurpose::PermittedPurpose.phrase(),
+            Self::MemberOf => CareRelationship::MemberOf.phrase(),
+            Self::UnderCareOf => CareRelationship::UnderCareOf.phrase(),
         }
+    }
+
+    /// The terminology id of the code the kind is read by.
+    pub(crate) fn terminology(self) -> &'static str {
+        self.term().0
+    }
+
+    /// The code the kind is read by, as the side table stores it.
+    pub(crate) fn code(self) -> &'static str {
+        self.term().1
     }
 
     /// The kind stored as `code`, `None` for another code.
@@ -153,7 +162,8 @@ pub(crate) fn qualifiers(ordinal: i32, capability: &Value, facts: &mut GrantFact
                 not_after,
             }),
             Err(why) => facts.unread.push(format!(
-                "ROLE.capabilities[{ordinal}].credentials: the {TERMINOLOGY}::{} element {why}",
+                "ROLE.capabilities[{ordinal}].credentials: the {}::{} element {why}",
+                kind.terminology(),
                 kind.code()
             )),
         }
@@ -174,14 +184,15 @@ fn foreign_code(kind: ForeignKind, value: Option<&Value>) -> Result<ForeignCode,
 /// Pushes onto `facts` the care relationships `body`, a party of `kind`,
 /// holds, and why one cannot be read: a care relationship is a relationship
 /// of a `PERSON`, its source, to a party of this store, its target, and a
-/// `member_of` of an `ORGANISATION` is its membership of a `GROUP`, such as
+/// membership (`MBR`) of an `ORGANISATION` is its membership of a `GROUP`, such as
 /// the providers of a region.
 pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
     if kind == Kind::PartyRelationship {
         if let Some(care) = care_kind(body) {
             facts.unread.push(format!(
-                "a {TERMINOLOGY}::{} relationship is held in its source PERSON's \
+                "a {}::{} relationship is held in its source PERSON's \
                  relationships, never as a PARTY_RELATIONSHIP of its own",
+                care.terminology(),
                 care.code()
             ));
         }
@@ -213,12 +224,13 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
                 "targets no party of this store by its container"
             }
             (Kind::Organisation, _, _) => {
-                "is a relationship of a PERSON, its source; an ORGANISATION holds only member_of"
+                "is a relationship of a PERSON, its source; an ORGANISATION holds only a membership"
             }
-            _ => "is a relationship of a PERSON, or a member_of of an ORGANISATION, its source",
+            _ => "is a relationship of a PERSON, or a membership of an ORGANISATION, its source",
         };
         facts.unread.push(format!(
-            "relationships[{ordinal}]: a {TERMINOLOGY}::{} relationship {refusal}",
+            "relationships[{ordinal}]: a {}::{} relationship {refusal}",
+            care.terminology(),
             care.code()
         ));
     }
@@ -229,7 +241,7 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
 fn care_kind(relationship: &Value) -> Option<FactKind> {
     [FactKind::MemberOf, FactKind::UnderCareOf]
         .into_iter()
-        .find(|kind| carries(relationship, kind.code()))
+        .find(|kind| carries(relationship, kind.terminology(), kind.code()))
 }
 
 /// Refuses the committed body `facts` when a caller fact it carries cannot be
@@ -306,10 +318,12 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
         return Ok(());
     }
     Err(ServiceError::not_permitted(format!(
-        "this version changes the care relationships of party {party} ({TERMINOLOGY}::{} or \
-         {TERMINOLOGY}::{}): only a caller holding the {} grant, such as the care delivery \
-         environment's ADT system, or an administrator writes them",
+        "this version changes the care relationships of party {party} ({}::{} or {}::{}): only \
+         a caller holding the {} grant, such as the care delivery environment's ADT system, or \
+         an administrator writes them",
+        FactKind::MemberOf.terminology(),
         FactKind::MemberOf.code(),
+        FactKind::UnderCareOf.terminology(),
         FactKind::UnderCareOf.code(),
         Operation::WriteCareRelationship
     )))
@@ -472,7 +486,7 @@ impl CallerFacts {
     }
 
     /// The containers of the `GROUP`s the provider a client acts for is a
-    /// member of on the request's date, by a `member_of` relationship of the
+    /// member of on the request's date, by a membership (`MBR`) relationship of the
     /// provider `ORGANISATION`.
     #[must_use]
     pub fn provider_groups(&self) -> &[Uuid] {
@@ -506,13 +520,20 @@ mod tests {
 
     const TEAM: &str = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
 
-    fn relationship(code: &str, target: &str) -> Value {
+    /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
+    const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+    /// A patient under the care of a team or unit.
+    const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
+    /// A representation.
+    const REPRESENTS: (&str, &str) = (TERMINOLOGY, "represents");
+
+    fn relationship((terminology, code): (&str, &str), target: &str) -> Value {
         json!({"_type": "PARTY_RELATIONSHIP",
                "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.ward.v4",
                "name": {"_type": "DV_TEXT", "value": "ward"},
                "details": {"_type": "ITEM_TREE", "archetype_node_id": "at2",
                            "items": [element(&json!({"_type": "DV_TEXT", "value": "kind"}),
-                                             &coded(TERMINOLOGY, code))]},
+                                             &coded(terminology, code))]},
                "time_validity": {"_type": "DV_INTERVAL",
                                  "lower": {"_type": "DV_DATE", "value": "2026-11-03"},
                                  "lower_unbounded": false, "upper_unbounded": true},
@@ -526,11 +547,11 @@ mod tests {
             "capabilities": [
                 {"_type": "CAPABILITY", "credentials": {"items": [
                     {"items": [element(&coded(TERMINOLOGY, "sensitivity_clearance"),
-                                       &coded("2.16.840.1.113883.5.25", "PSY"))]},
+                                       &coded("v3-Confidentiality", "PSY"))]},
                     element(&coded(TERMINOLOGY, "permitted_purpose"),
-                            &coded("2.16.840.1.113883.5.8", "TREAT")),
+                            &coded("v3-ActReason", "TREAT")),
                     element(&json!({"_type": "DV_TEXT", "value": "sensitivity_clearance"}),
-                            &coded("2.16.840.1.113883.5.25", "HIV"))
+                            &coded("v3-Confidentiality", "HIV"))
                 ]}},
                 {"_type": "CAPABILITY", "credentials": {"items": [
                     element(&coded(TERMINOLOGY, "sensitivity_clearance"),
@@ -552,12 +573,12 @@ mod tests {
                 (
                     0,
                     FactKind::Clearance,
-                    FactValue::Code(code("2.16.840.1.113883.5.25", "PSY"))
+                    FactValue::Code(code("v3-Confidentiality", "PSY"))
                 ),
                 (
                     0,
                     FactKind::Purpose,
-                    FactValue::Code(code("2.16.840.1.113883.5.8", "TREAT"))
+                    FactValue::Code(code("v3-ActReason", "TREAT"))
                 ),
             ],
             "an element whose name is no code of the terminology clears nothing"
@@ -574,10 +595,10 @@ mod tests {
     #[test]
     fn a_persons_care_relationships_are_read_by_their_code_in_any_archetype() {
         let body = json!({"_type": "PERSON", "relationships": [
-            relationship("member_of", TEAM),
-            relationship("represents", TEAM),
-            relationship("under_care_of", TEAM),
-            relationship("under_care_of", "1.2.840.113619")
+            relationship(MEMBER, TEAM),
+            relationship(REPRESENTS, TEAM),
+            relationship(UNDER_CARE, TEAM),
+            relationship(UNDER_CARE, "1.2.840.113619")
         ]});
         let facts = GrantFacts::of(Kind::Person, &body);
         let team = Uuid::parse_str(TEAM).expect("a uuid");
@@ -599,18 +620,26 @@ mod tests {
     }
 
     #[test]
+    fn a_membership_is_read_by_the_hl7_code_alone() {
+        let body = json!({"_type": "PERSON", "relationships": [
+            relationship((TERMINOLOGY, "member_of"), TEAM),
+            relationship(("v3-RoleCode", "MBR"), TEAM)
+        ]});
+        let facts = GrantFacts::of(Kind::Person, &body);
+        assert_eq!(facts.facts, Vec::new());
+        assert_eq!(facts.unread, Vec::<String>::new());
+    }
+
+    #[test]
     fn a_care_relationship_is_a_persons_and_never_one_of_its_own() {
-        let body = json!({"_type": "GROUP", "relationships": [relationship("member_of", TEAM)]});
+        let body = json!({"_type": "GROUP", "relationships": [relationship(MEMBER, TEAM)]});
         let facts = GrantFacts::of(Kind::Group, &body);
         assert_eq!(facts.facts, Vec::new());
         assert_eq!(facts.unread.len(), 1);
-        let standalone = GrantFacts::of(
-            Kind::PartyRelationship,
-            &relationship("under_care_of", TEAM),
-        );
+        let standalone = GrantFacts::of(Kind::PartyRelationship, &relationship(UNDER_CARE, TEAM));
         assert_eq!(standalone.unread.len(), 1);
         assert_eq!(
-            GrantFacts::of(Kind::PartyRelationship, &relationship("represents", TEAM)).unread,
+            GrantFacts::of(Kind::PartyRelationship, &relationship(REPRESENTS, TEAM)).unread,
             Vec::<String>::new()
         );
     }
@@ -618,9 +647,9 @@ mod tests {
     #[test]
     fn an_organisations_member_of_is_its_membership_of_a_group() {
         let body = json!({"_type": "ORGANISATION", "relationships": [
-            relationship("member_of", TEAM),
-            relationship("under_care_of", TEAM),
-            relationship("member_of", "1.2.840.113619")
+            relationship(MEMBER, TEAM),
+            relationship(UNDER_CARE, TEAM),
+            relationship(MEMBER, "1.2.840.113619")
         ]});
         let facts = GrantFacts::of(Kind::Organisation, &body);
         let group = Uuid::parse_str(TEAM).expect("a uuid");
@@ -633,7 +662,7 @@ mod tests {
         assert_eq!(facts.unread.len(), 2, "{:?}", facts.unread);
         assert!(
             facts.unread[0].starts_with("relationships[1]")
-                && facts.unread[0].contains("holds only member_of"),
+                && facts.unread[0].contains("holds only a membership"),
             "an ORGANISATION is never under care: {:?}",
             facts.unread
         );
@@ -658,15 +687,15 @@ mod tests {
     #[test]
     fn caller_facts_answer_by_terminology_and_code() {
         let facts = CallerFacts::new(
-            vec![code("ActCode", "PSY"), code("ActCode", "PSY")],
-            vec![code("PurposeOfUse", "TREAT")],
+            vec![code("v3-ActCode", "PSY"), code("v3-ActCode", "PSY")],
+            vec![code("v3-ActReason", "TREAT")],
             Vec::new(),
         );
         assert_eq!(facts.clearances().len(), 1);
-        assert!(facts.clears(&code("ActCode", "PSY")));
+        assert!(facts.clears(&code("v3-ActCode", "PSY")));
         assert!(!facts.clears(&code("local", "PSY")));
-        assert!(facts.permits(&code("PurposeOfUse", "TREAT")));
-        assert!(!facts.permits(&code("PurposeOfUse", "HOPERAT")));
+        assert!(facts.permits(&code("v3-ActReason", "TREAT")));
+        assert!(!facts.permits(&code("v3-ActReason", "HOPERAT")));
     }
 
     #[test]

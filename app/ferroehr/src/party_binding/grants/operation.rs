@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! FerroEHR's operation terminology, the codes a capability grants by, and
-//! the ceiling `[authz.grants] allowed` puts on them.
+//! The operations a capability grants by, codes of the draft `openehr_access`
+//! terminology, and the ceiling `[authz.grants] allowed` puts on them.
 //!
 //! A `CAPABILITY` grants an operation when its `credentials` hold, anywhere
 //! in their tree, a `DV_CODED_TEXT` whose `defining_code` names
@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 use crate::party_binding::grants::admission::{
     ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
 };
-use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS};
+use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS, TERMINOLOGY};
 use openehr_rm::draft::access_control::terminology::{
     CareRelationship, PermittedPurpose, SensitivityClearance, Term,
 };
@@ -167,9 +167,9 @@ fn names_no_operation(code: &str) -> bool {
     ]
     .contains(&code)
         || SCOPES.contains(&code)
-        || SensitivityClearance::CODES.contains(&code)
-        || PermittedPurpose::CODES.contains(&code)
-        || CareRelationship::CODES.contains(&code)
+        || SensitivityClearance::read(TERMINOLOGY, code).is_ok()
+        || PermittedPurpose::read(TERMINOLOGY, code).is_ok()
+        || CareRelationship::read(TERMINOLOGY, code).is_ok()
 }
 
 /// One operation a capability may grant.
@@ -236,7 +236,7 @@ pub enum Operation {
     /// Be admitted, as a system caller whose token carries no resource
     /// scope, to every SMART on openEHR requirement.
     AccessWithoutScope,
-    /// Write the `member_of` and `under_care_of` relationships of
+    /// Write the membership (`MBR`) and `under_care_of` relationships of
     /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] through the
     /// Demographic API, as a hospital's ADT system does.
     WriteCareRelationship,
@@ -398,10 +398,11 @@ mod tests {
     fn no_access_control_code_is_a_grant() {
         let grants = Operation::ALL.map(Operation::code);
         for group in Group::ALL {
-            for code in group.codes() {
+            let codes = group.phrases().into_iter();
+            for (_, code) in codes.filter(|(terminology, _)| *terminology == TERMINOLOGY) {
                 // NOTE: own design: an access service caller kind is the caller holding that grant.
                 assert!(
-                    *code == "access_service" || !grants.contains(code),
+                    code == "access_service" || !grants.contains(&code),
                     "{code}"
                 );
             }
@@ -421,7 +422,7 @@ mod tests {
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
         assert!(is_qualifier(NO_SUBJECT_NAMESPACE));
         assert!(is_qualifier("sensitivity_clearance") && is_qualifier("permitted_purpose"));
-        assert!(is_qualifier("member_of") && is_qualifier("under_care_of"));
+        assert!(is_qualifier("under_care_of") && !is_qualifier("member_of"));
     }
 
     #[test]

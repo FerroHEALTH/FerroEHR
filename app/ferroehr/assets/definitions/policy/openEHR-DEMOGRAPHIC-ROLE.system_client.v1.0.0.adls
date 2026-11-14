@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"The ROLE a system AGENT performs: what it may commit into an EHR, which templates, at which facilities, as a relay of other systems or as a device, and which EHRs it may import or export.">
-            use = <"One CAPABILITY per grant. Each element of the credentials carries, as its name, a DV_CODED_TEXT of FerroEHR's operation terminology ferroehr-operations naming what it holds: the operation (a commit_composition, import_ehr, import_ehr_extract or export_ehr_extract value), the templates written (template), the facilities (facility, a cluster of issuer with identifier or identifier_prefix), the origin (origin, a relay or device value), the issuers of the device identifiers it may name (device_identifier_issuer), the subject namespaces of the EHRs an import or export reaches (subject_namespace) and the not_before and not_after instants; time_validity bounds the grant by day. The ROLE is adapted from the openEHR CKM archetype the derived_from entry names. Its CAPABILITY, whose credentials hold an authorization grant, is FerroEHR's own design: the openEHR RM and CKM use CAPABILITY for the professional qualifications of a performer, and no openEHR specification gives it an authorization meaning.">
+            use = <"One CAPABILITY per grant. Each element of the credentials carries, as its name, a DV_CODED_TEXT of the draft openEHR access terminology openehr_access naming what it holds: the operation (a commit_composition, import_ehr, import_ehr_extract or export_ehr_extract value), the templates written (template), the facilities (facility, a cluster of issuer with identifier or identifier_prefix), the origin (origin, a relay or device value), the issuers of the device identifiers it may name (device_identifier_issuer), the subject namespaces of the EHRs an import or export reaches (subject_namespace) and the not_before and not_after instants; time_validity bounds the grant by day. The ROLE is adapted from the openEHR CKM archetype the derived_from entry names. Its CAPABILITY, whose credentials hold an authorization grant, is FerroEHR's own design: the openEHR RM and CKM use CAPABILITY for the professional qualifications of a performer, and no openEHR specification gives it an authorization meaning.">
             copyright = <"© openEHR Foundation">
         >
     >
@@ -96,7 +96,7 @@ terminology
             ["id4"] = <text = <"Full name"> description = <"The name of the role as it is written in full.">>
             ["id6"] = <text = <"Grant"> description = <"One operation the system may perform, with its terms.">>
             ["id8"] = <text = <"Grant"> description = <"What the capability grants, held in its credentials.">>
-            ["id90"] = <text = <"Operation"> description = <"An operation the capability grants, a code of FerroEHR's operation terminology ferroehr-operations.">>
+            ["id90"] = <text = <"Operation"> description = <"An operation the capability grants, a code of the draft openEHR access terminology openehr_access.">>
             ["id9"] = <text = <"Template written"> description = <"The id of a template whose COMPOSITIONs the system may commit.">>
             ["id10"] = <text = <"Facility"> description = <"A facility the system may commit at, named by an identifier or an identifier prefix of an issuer.">>
             ["id11"] = <text = <"Issuer"> description = <"The issuer of the facility identifier.">>
@@ -106,7 +106,7 @@ terminology
             ["id15"] = <text = <"Not before"> description = <"The instant before which the grant does not hold, for a bound finer than the day of time_validity.">>
             ["id16"] = <text = <"Not after"> description = <"The instant after which the grant does not hold, for a bound finer than the day of time_validity.">>
             ["id17"] = <text = <"Authorisation reference"> description = <"The reference of the decision that authorised the grant, such as a change ticket or a processing agreement.">>
-            ["id18"] = <text = <"Origin"> description = <"Where the data the system commits comes from: ferroehr-operations::relay, data other systems recorded, or ferroehr-operations::device, data a device measured.">>
+            ["id18"] = <text = <"Origin"> description = <"Where the data the system commits comes from: openehr_access::relay, data other systems recorded, or openehr_access::device, data a device measured.">>
             ["id19"] = <text = <"Subject namespace"> description = <"The EHR_STATUS.subject.external_ref.namespace of the EHRs an import or export grant reaches.">>
         >
     >

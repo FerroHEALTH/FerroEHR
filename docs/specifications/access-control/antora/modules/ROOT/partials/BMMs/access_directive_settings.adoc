@@ -65,7 +65,7 @@
     }
   },
   "invariants": {
-    "Default_access_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_default, default_access.defining_code)",
+    "Default_access_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_default, default_access.defining_code)",
     "Gate_keepers_valid": "gate_keepers /= Void implies not gate_keepers.is_empty",
     "Directives_valid": "directives /= Void implies not directives.is_empty",
     "Labels_valid": "labels /= Void implies not labels.is_empty",

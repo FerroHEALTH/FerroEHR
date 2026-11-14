@@ -386,7 +386,7 @@ impl LiveGrants {
     }
 
     /// The `GROUP`s the `ORGANISATION` `organisation` is a member of at
-    /// `now`, from the copy held: each `member_of` relationship of its live
+    /// `now`, from the copy held: each membership (`MBR`) relationship of its live
     /// head that holds on the date of `now` in UTC.
     #[must_use]
     pub fn memberships(&self, organisation: Uuid, now: jiff::Timestamp) -> Vec<Uuid> {

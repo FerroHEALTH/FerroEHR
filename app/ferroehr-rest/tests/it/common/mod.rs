@@ -864,12 +864,19 @@ pub(crate) fn access_directive(kind: &str, objects: &[&str]) -> Value {
                     "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                 "code_string": code } })
     };
+    let provision = |code: &str| {
+        let mut value = term(code);
+        value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+        );
+        value
+    };
     let mut directive = serde_json::json!({
         "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": kind },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term("deny"),
+        "effect": provision("deny"),
         "emergency_override": true
     });
     if !objects.is_empty() {

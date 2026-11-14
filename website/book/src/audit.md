@@ -150,7 +150,7 @@ of every EHR's settings, which holds each EHR's subject and the uid of its
 For an EHR with no settings, which the copy does not hold, a care relationship
 is named when only a caller in care could have been served its rows.
 
-A refusal names its code in `outcome.reason`, in the `ferroehr-operations`
+A refusal names its code in `outcome.reason`, in the `openehr_access`
 terminology, and in `outcome.description` the step that refused and the
 directive or policy of that step, such as `step 2 (restriction): directive 1
 of EHR_ACCESS 5a1c…::cdr.example.org::2`. This holds for the `404` of an
@@ -815,7 +815,7 @@ API's and ISO 8601 date-times.
 
 | Method and path | Who | What |
 |---|---|---|
-| `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
+| `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind` (each a term's rubric, such as `read` or `subject of care`), `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
 | `GET /ehr/{ehr_id}/access_log/{uid}` | as above | One entry. |
 | `GET /admin/access-log` | a reviewer | Records across EHRs, entries and tombstones. Filters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`; `offset`, `fetch`. |
 | `GET /admin/access-log/chain` | a reviewer | The `uid` and `link` of each record from `from_sequence` to `to_sequence` (at most 10000), without content, for verification. |
@@ -863,10 +863,12 @@ accessed their data "in exceptional circumstances". If your law does, declare
 the restriction in the controller's
 [access policy](operational-policy.md), never in `ferroehr.toml`: each entry
 of `log_restrictions` names the accessor kinds it applies to (the `accessor
-kind` rubrics of the log, such as `person` or `external person`), the
+kind` terms of the log, such as `person` or `external person` of
+`openehr_access`, or `datasubject` of `extra-security-role-type` for the
+subject of care), the
 accessor members the subject view withholds (`accessor_party`,
 `accessor_provider`, `accessor_roles`, `accessor_groups`, in
-`ferroehr-operations`), and the provisions that lay it down, coded in your
+`openehr_access`), and the provisions that lay it down, coded in your
 jurisdiction's terminology. FerroEHR ships no country's restriction.
 
 ```json
@@ -876,11 +878,11 @@ jurisdiction's terminology. FerroEHR ships no country's restriction.
   "archetype_node_id": "id11",
   "accessor_kinds": [{ "_type": "DV_CODED_TEXT", "value": "external person",
     "defining_code": { "_type": "CODE_PHRASE",
-      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
       "code_string": "external person" } }],
   "withheld": [{ "_type": "DV_CODED_TEXT", "value": "accessor_party",
     "defining_code": { "_type": "CODE_PHRASE",
-      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
       "code_string": "accessor_party" } }],
   "legal_grounds": [{ "_type": "DV_CODED_TEXT", "value": "your national provision",
     "defining_code": { "_type": "CODE_PHRASE",

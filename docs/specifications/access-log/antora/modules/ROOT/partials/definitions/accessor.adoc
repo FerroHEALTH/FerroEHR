@@ -12,7 +12,7 @@ h|*Attributes*
 
 h|*1..1*
 |*kind*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|The kind of accessor, coded in the openEHR Terminology `accessor kind` group: a person, a person through a delegated client, the subject of care, a representative, a person of another organisation, an organisation, or a system acting for nobody.
+a|The kind of accessor, coded in the draft `openehr_access` terminology's `accessor kind` group: a person, a person through a delegated client, the subject of care, a representative, a person of another organisation, an organisation, or a system acting for nobody.
 
 h|*1..1*
 |*party*: `xref:common:generic_package.adoc#_party_proxy_class[PARTY_PROXY]`
@@ -43,6 +43,6 @@ h|*0..1*
 a|The clients and parties that acted between the accessor and the system, outermost first, as the credential named them.
 
 h|*Invariants*
-2+a|__Kind_valid__: `terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, kind.defining_code)`
+2+a|__Kind_valid__: `terminology (Terminology_id_access).has_code_for_group_id (Group_id_accessor_kind, kind.defining_code)`
 
 |===

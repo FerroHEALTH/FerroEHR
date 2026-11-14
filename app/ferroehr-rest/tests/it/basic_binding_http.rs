@@ -183,7 +183,7 @@ async fn a_mapped_basic_user_stays_below_an_assurance_minimum() {
     );
 }
 
-/// A `DV_CODED_TEXT` of the operation terminology.
+/// A `DV_CODED_TEXT` of the draft access terminology.
 fn operation_code(code: &str) -> Value {
     serde_json::json!({ "_type": "DV_CODED_TEXT", "value": code,
         "defining_code": { "_type": "CODE_PHRASE",

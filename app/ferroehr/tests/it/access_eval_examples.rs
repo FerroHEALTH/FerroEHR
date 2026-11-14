@@ -37,7 +37,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 
 /// The HL7 v3 `ActCode` sensitivity terminology id.
-const ACT_CODE: &str = "2.16.840.1.113883.5.25";
+const ACT_CODE: &str = "v3-ActCode";
 
 fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
@@ -55,9 +55,20 @@ fn party_ref(kind: &str, id: VoId) -> Value {
             "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() } })
 }
 
+/// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
+const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+/// A patient under the care of a team or unit.
+const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
+
 /// A care relationship of `code` from `source` to `team`, over the dates
 /// `from` to `until`, each included.
-fn care(code: &str, source: VoId, team: VoId, from: &str, until: Option<&str>) -> Value {
+fn care(
+    (terminology, code): (&str, &str),
+    source: VoId,
+    team: VoId,
+    from: &str,
+    until: Option<&str>,
+) -> Value {
     let mut validity = json!({ "_type": "DV_INTERVAL",
         "lower": { "_type": "DV_DATE", "value": from },
         "lower_unbounded": false, "upper_unbounded": until.is_none(),
@@ -71,7 +82,7 @@ fn care(code: &str, source: VoId, team: VoId, from: &str, until: Option<&str>) -
         "name": text("Ward stay"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
             "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("kind"),
-                        "value": coded(TERMINOLOGY, code) }] },
+                        "value": coded(terminology, code) }] },
         "time_validity": validity,
         "source": party_ref("PERSON", source),
         "target": party_ref("GROUP", team)
@@ -268,7 +279,7 @@ async fn the_ward_with_its_grace_period() {
         let (doctor, uid) = create(&svc, PartyKind::Person, &person(name, &[]))
             .await
             .expect("the professional commits");
-        let roster = person(name, &[care("member_of", doctor, team, "2026-10-01", None)]);
+        let roster = person(name, &[care(MEMBER, doctor, team, "2026-10-01", None)]);
         update_as_adt(&svc, (doctor, &uid), &roster).await;
         doctors.push(doctor);
     }
@@ -276,7 +287,7 @@ async fn the_ward_with_its_grace_period() {
         .await
         .expect("the patient commits");
     let stay = care(
-        "under_care_of",
+        UNDER_CARE,
         patient,
         cardiology,
         "2026-11-03",

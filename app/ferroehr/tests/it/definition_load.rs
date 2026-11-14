@@ -467,7 +467,7 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
                     "items": [element("id34", "Care relationship code", &json!({
                         "_type": "DV_CODED_TEXT", "value": "under_care_of",
                         "defining_code": { "_type": "CODE_PHRASE",
-                            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+                            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                             "code_string": "under_care_of" } }))] },
                 "time_validity": { "_type": "DV_INTERVAL",
                     "lower": { "_type": "DV_DATE", "value": "2026-11-03" },

@@ -12,7 +12,7 @@
 //! teams are the 5.7.1 demographic facts the request already holds
 //! (`ferroehr::party_binding::grants`), and it acts for its care teams, the
 //! provider its client acts for and the `GROUP`s that provider is a member
-//! of (RM demographic `PARTY_RELATIONSHIP`, coded `member_of`; #5575). The
+//! of (RM demographic `PARTY_RELATIONSHIP`, coded HL7 v3 `RoleClass#MBR`; #5575). The
 //! purpose is the declared code the audit layer accepted, and an emergency
 //! is that code being one of `[audit] emergency_purpose_codes`, with
 //! `[authz.rbac] emergency_access_role` for the break-glass steps (EHDS Art. 11(5)). No openEHR spec governs the

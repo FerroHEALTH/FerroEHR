@@ -777,8 +777,8 @@ versioned and a deployment models its own parties from any archetype, so
 FerroEHR never recognises a policy party by archetype id (owner decision on
 #5433, 2026-11-12). A version is a policy party when it holds a `CAPABILITY`
 whose `credentials` hold a `DV_CODED_TEXT` of the operation terminology
-`ferroehr-operations`, a `PARTY_RELATIONSHIP` whose `name` or `details`
-hold `ferroehr-operations::acts_for`, or a `DV_IDENTIFIER` of type
+`openehr_access`, a `PARTY_RELATIONSHIP` whose `name` or `details`
+hold `openehr_access::acts_for`, or a `DV_IDENTIFIER` of type
 `client_id` (`party_binding::policy_mark::policy_content`, the RM's
 `ITEM_STRUCTURE` with a terminology binding). The shipped archetypes
 `openEHR-DEMOGRAPHIC-AGENT.system.v1`,
@@ -799,13 +799,22 @@ design.**
 **The access control terminology**
 (`openehr_rm::draft::access_control::terminology`, #5507, beside the draft
 it codes since #5540)
-adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
-`access default`, `access directive kind`, `access effect`, `access
-relationship`, `access caller kind`, `access operation`, `access
-sensitivity clearance`, `access permitted purpose`, `care relationship`,
-`access refusal` and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
-(`Term::read`), with a value of another terminology or a code outside its
-group refused. The operations gain the grants `write_care_relationship` and
+holds the groups the ABAC design of #5487 reads, coded in the draft
+terminology `openehr_access` that the access control change request proposes
+to openEHR (#5655): `access default`, `access directive kind`, `access
+effect`, `access relationship`, `access caller kind`, `access operation`,
+`access sensitivity clearance`, `access permitted purpose`, `care
+relationship`, `representation`, `access refusal` and `access log withheld`
+(#5570), and the access log's `access action`, `access outcome`, `accessor
+kind`, `access authorisation` and `access refusal reason`. Each is a closed
+set of terms read into a typed term (`Term::read`) by terminology id and
+code. A term whose meaning an HL7 code system publishes is that code under
+the code system's id: `consent-provision-type` `permit` and `deny`,
+`extra-security-role-type` `datasubject` (the subject caller kind and the
+subject-of-care accessor kind), `v3-RoleClass` `MBR` (a care-team
+membership) and `audit-event-action` `C`, `R`, `U`, `D`. A value of a
+terminology the group holds no term of, or a code outside the group, is
+refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the clearance, purpose and care relationship codes
 are qualifiers, never operations. Sensitivity, category, purpose and legal
 ground stay in the terminology the jurisdiction names and are compared by
@@ -857,8 +866,8 @@ Demographic API defines no access rule for its operations.
 the owner's correction on #5433, FerroEHR reads permission from coded
 content and never recognises a grant by archetype or template id, so a
 deployment models its parties from any archetypes. The contract is a
-terminology of our own, `ferroehr-operations`
-(`party_binding::grants::operation`): a `CAPABILITY` grants an operation when
+terminology, the draft `openehr_access`, in groups of FerroEHR's own that
+the change request does not propose (`party_binding::grants::operation`): a `CAPABILITY` grants an operation when
 its `credentials` hold, at any depth, an element whose value is a
 `DV_CODED_TEXT` of that terminology with an operation code
 (`commit_composition`, `import_ehr`, `import_ehr_extract`,
@@ -925,14 +934,15 @@ which the performance gate's transactions-per-request measure refuses
 (#5459).
 
 **Caller facts** (#5511). Beside the grants, the side table holds what the
-access evaluator reads about a caller (migration `party/0039`):
+access evaluator reads about a caller (migration `party/0039`; `party/0041`
+keys a membership by its code, `MBR`):
 `binding_caller_fact`, one row per sensitivity clearance and permitted
 purpose a `CAPABILITY` carries (an element named `sensitivity_clearance` or
-`permitted_purpose` of `ferroehr-operations` whose value is a
+`permitted_purpose` of `openehr_access` whose value is a
 `DV_CODED_TEXT` of the jurisdiction's terminology, read with
 `ForeignCode::read`), and per care relationship a `PERSON` holds (an inline
-`PARTY_RELATIONSHIP` whose `name` or `details` carry `member_of` or
-`under_care_of`, RM demographic `party_relationship.adoc`: `source`,
+`PARTY_RELATIONSHIP` whose `name` or `details` carry a membership, HL7 v3
+`RoleClass#MBR`, or `openehr_access::under_care_of`, RM demographic `party_relationship.adoc`: `source`,
 `target`, `time_validity`), each with the term of its holder. The patient's
 `under_care_of` team ids are projected at the commit of the patient's
 `PERSON`. A commit whose facts changed moves `facts_revision` beside the
@@ -950,7 +960,7 @@ only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
 the care delivery environment evaluates "care deliverer"). A care
 relationship of another party kind or of its own container is refused
-`422`. An `ORGANISATION`'s `member_of` relationship is its membership of a
+`422`. An `ORGANISATION`'s `MBR` relationship is its membership of a
 `GROUP` (#5575): written as its own facts on the commit of the
 `ORGANISATION` under the same grant rule, and resolved for a client by
 `LiveGrants::memberships` of the provider its acts-for relationship names,
@@ -1131,7 +1141,7 @@ export needs an `export_ehr_extract` grant covering the EHR the same way
 is no grant of every EHR. An EHR whose `EHR_STATUS.subject` has no
 `external_ref`, which RM EHR IM allows for an anonymous record, is reached
 only by a `subject_namespace` element holding the coded
-`ferroehr-operations::no_subject_namespace`, which covers those EHRs and no
+`openehr_access::no_subject_namespace`, which covers those EHRs and no
 other (`Capabilities::covers`, #5530). FerroEHR's own extracts rewrite every reference
 namespace to `local` (RM `ehr_extract` `master09-semantics.adoc` §Creation
 Semantics), so a grant over them names `local`. The commit of a system
@@ -1150,7 +1160,7 @@ transaction. There is no data migration role: a migration is an `AGENT` whose
 **Representatives in the patient portal (#5446).** A representation is a
 `PARTY_RELATIONSHIP` from the representative's `PERSON` (its source) to the
 subject's (its target) whose `name` or `details` carry
-`ferroehr-operations::represents`, in any archetype, recognised by the code
+`openehr_access::represents`, in any archetype, recognised by the code
 as the acts-for relationship is (§Party Relationships: a relationship lives in
 its source party). It names its openEHR `subject_relationship` code itself
 and makes no policy party. Besides the inline relationships of the

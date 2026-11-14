@@ -36,7 +36,7 @@ fn policy(care: bool) -> Value {
             "sensitivities": [{ "_type": "DV_CODED_TEXT", "value": "HIV",
                 "defining_code": { "_type": "CODE_PHRASE",
                     "terminology_id": { "_type": "TERMINOLOGY_ID",
-                        "value": "http://terminology.hl7.org/CodeSystem/v3-ActCode" },
+                        "value": "v3-ActCode" },
                     "code_string": "HIV" } }] }],
         "care_relationship_required": care,
         "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
@@ -58,10 +58,13 @@ fn nurse_rule() -> Value {
     json!({ "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": "Nurses do not record diagnoses" },
         "archetype_node_id": "id15",
-        "kind": coded("ferroehr-operations", "controller_rule"),
-        "effect": coded("ferroehr-operations", "deny"),
+        "kind": coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "controller_rule"),
+        "effect": coded(
+            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
+            "deny",
+        ),
         "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "role": coded("urn:example:roles", "NURSE") }],
-        "operations": [coded("ferroehr-operations", "write")],
+        "operations": [coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "write")],
         "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["diagnosis.v1"] }],
         "emergency_override": false })
 }
@@ -235,12 +238,13 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
     let cases: [Defect; 11] = [
         ("Rules_kind", |p| {
             let mut rule = nurse_rule();
-            rule["kind"] = coded("ferroehr-operations", "consent");
+            rule["kind"] = coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "consent");
             p["rules"] = json!([rule]);
         }),
-        ("a rule's role in FerroEHR's own terminology", |p| {
+        ("a rule's role in the draft access terminology", |p| {
             let mut rule = nurse_rule();
-            rule["applies_to"][0]["role"] = coded("ferroehr-operations", "NURSE");
+            rule["applies_to"][0]["role"] =
+                coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "NURSE");
             p["rules"] = json!([rule]);
         }),
         ("an empty list of rules", |p| p["rules"] = json!([])),
@@ -261,9 +265,9 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
                 "namespace": "local", "type": "VERSIONED_COMPOSITION",
                 "id": { "_type": "HIER_OBJECT_ID", "value": HOSPITAL } }]);
         }),
-        ("a sensitivity in FerroEHR's own terminology", |p| {
+        ("a sensitivity in the draft access terminology", |p| {
             p["classifications"][0]["sensitivities"][0]["defining_code"]["terminology_id"]["value"] =
-                json!("ferroehr-operations");
+                json!(ferroehr::party_binding::policy_mark::TERMINOLOGY);
         }),
         ("a controller that is no ORGANISATION", |p| {
             p["controller"]["type"] = json!("PERSON");

@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"The access settings of one EHR in the access_directives scheme: the default disposition, the gate-keepers who change the settings, the subject's directives and the sensitivity labels.">
-            use = <"Holds EHR_ACCESS.settings as an ACCESS_DIRECTIVE_SETTINGS of FerroEHR's draft access control package, which is no openEHR release. FerroEHR reads the settings by their coded attributes in its access control terminology, never by this archetype's id, so a deployment may replace it with its own.">
+            use = <"Holds EHR_ACCESS.settings as an ACCESS_DIRECTIVE_SETTINGS of FerroEHR's draft access control package, which is no openEHR release. FerroEHR reads the settings by their coded attributes in the draft openEHR access terminology openehr_access, never by this archetype's id, so a deployment may replace it with its own.">
             copyright = <"© Cadasto B.V.">
         >
     >
@@ -58,7 +58,7 @@ terminology
         ["en"] = <
             ["id1"] = <text = <"EHR access"> description = <"The access settings of the EHR.">>
             ["id2"] = <text = <"Access directive settings"> description = <"The settings of the access_directives scheme.">>
-            ["id3"] = <text = <"Default access"> description = <"What the EHR admits where no directive applies, a code of the access default group of FerroEHR's access control terminology.">>
+            ["id3"] = <text = <"Default access"> description = <"What the EHR admits where no directive applies, a code of the access default group of the draft openEHR access terminology openehr_access.">>
             ["id4"] = <text = <"Gate-keeper"> description = <"A party who may change the settings, PARTY_SELF for the record's person.">>
             ["id5"] = <text = <"Directive"> description = <"A consent, restriction, opt-out or delegation the subject gives.">>
             ["id6"] = <text = <"Kind"> description = <"The kind of the directive, a code of the access directive kind group.">>

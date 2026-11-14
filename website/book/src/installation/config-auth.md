@@ -398,13 +398,13 @@ the mapping names is refused with `409`.
 
 The parties the binding relies on are protected: a `PERSON` of a mapped
 template carrying a selector identifier, its professional `ROLE`, a
-representation relationship (one carrying `ferroehr-operations::represents`),
+representation relationship (one carrying `openehr_access::represents`),
 and a `GROUP` of the group template. Only an
 administrator (`authz.rbac.admin_role`) writes one through the demographic
 API, including the creation of a party that carries a selector identifier;
 the patient a representation of its own targets writes that one too.
 The policy parties (a party holding a capability coded in
-`ferroehr-operations`, an acts-for relationship or a `client_id` identifier)
+`openehr_access`, an acts-for relationship or a `client_id` identifier)
 are recognised by what they hold and take no key of this mapping; they are an administrator's to write and to read,
 never a SCIM client's: see [Operational policy](../operational-policy.md#who-writes-and-reads-a-policy-party).
 An administrator's version that leaves a protected identifier out is refused
@@ -503,7 +503,7 @@ specification governs it.
 
 Which logins are created is operational policy, so it is CDR data and no
 configuration key: an administrator writes a `ROLE` whose capability grants
-`ferroehr-operations::create_at_login`, naming the issuer and the admission
+`openehr_access::create_at_login`, naming the issuer and the admission
 conditions, through the Demographic API. The grant is read on each first
 login, so a change applies to the next one without a restart. The
 [Operational policy](../operational-policy.md#just-in-time-admission) page
@@ -614,7 +614,7 @@ still holds it is refused at boot as an unknown key.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `allowed` | list of operation codes | `["commit_composition"]` | The operations of the `ferroehr-operations` terminology the policy grants may grant. A `ROLE` committed with a capability that codes an operation this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. An empty list lets the party store grant nothing; an unknown code refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The codes and how a request reads its grants are on [Operational policy](../operational-policy.md#how-a-request-reads-its-grants). |
+| `allowed` | list of operation codes | `["commit_composition"]` | The operations of the `openehr_access` terminology the policy grants may grant. A `ROLE` committed with a capability that codes an operation this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. An empty list lets the party store grant nothing; an unknown code refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The codes and how a request reads its grants are on [Operational policy](../operational-policy.md#how-a-request-reads-its-grants). |
 
 ### `[authz.rbac]`
 

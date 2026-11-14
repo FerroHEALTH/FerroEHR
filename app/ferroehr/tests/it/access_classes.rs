@@ -31,6 +31,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 fn party(id: &str) -> Value {
     json!({ "_type": "PARTY_REF", "namespace": "local", "type": "PERSON",
             "id": { "_type": "HIER_OBJECT_ID", "value": id } })
@@ -51,7 +60,7 @@ fn settings(who: &str, from: &str) -> AccessDirectiveSettings {
             "name": { "_type": "DV_TEXT", "value": format!("permit for {who}") },
             "archetype_node_id": "at0001",
             "kind": term("consent"),
-            "effect": term("permit"),
+            "effect": provision("permit"),
             "emergency_override": false,
             "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "party": party(who) }],
             "data": [{ "_type": "ACCESS_DATA_SCOPE",

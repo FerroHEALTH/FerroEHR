@@ -212,6 +212,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 /// Settings of the default `default` holding `directives`.
 fn settings_with(default: &str, directives: Vec<Value>) -> Value {
     let mut settings = common::access_settings(default, &[]);
@@ -228,7 +237,7 @@ fn consent() -> Value {
         "name": { "_type": "DV_TEXT", "value": "consent" },
         "archetype_node_id": "at0001",
         "kind": term("consent"),
-        "effect": term("permit"),
+        "effect": provision("permit"),
         "emergency_override": false,
         "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("access_service") }]
     })

@@ -57,6 +57,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 /// A coded value of `terminology`.
 fn coded(terminology: &str, code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
@@ -72,7 +81,7 @@ fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
         "name": { "_type": "DV_TEXT", "value": "Directive" },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term(effect),
+        "effect": provision(effect),
         "emergency_override": false
     });
     if let (Some(d), Some(extra)) = (d.as_object_mut(), extra.as_object()) {
@@ -464,7 +473,7 @@ async fn step_4_a_sensitive_object_leaves_the_query() {
     let world = Box::pin(World::new()).await;
     let labelled = world.objects(0)[1].clone();
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(&labelled),
-                        "sensitivities": [coded("2.16.840.1.113883.5.25", "HIV")] });
+                        "sensitivities": [coded("v3-ActCode", "HIV")] });
     world.settings(0, &settings("open", &[], &[label])).await;
     assert_reads(
         &world,
@@ -482,7 +491,7 @@ async fn step_4_a_sensitive_object_leaves_the_query() {
 fn cleared_for_hiv() -> CallerFacts {
     CallerFacts::new(
         vec![ForeignCode {
-            terminology: "2.16.840.1.113883.5.25".to_owned(),
+            terminology: "v3-ActCode".to_owned(),
             code: "HIV".to_owned(),
         }],
         Vec::new(),
@@ -540,7 +549,7 @@ async fn step_6_a_missing_purpose_reads_nothing() {
     ask.caller.facts = CallerFacts::new(
         Vec::new(),
         vec![ForeignCode {
-            terminology: "2.16.840.1.113883.5.8".to_owned(),
+            terminology: "v3-ActReason".to_owned(),
             code: "TREAT".to_owned(),
         }],
         Vec::new(),
@@ -759,7 +768,7 @@ async fn a_shared_class_reads_each_ehrs_labels() {
     let world = Box::pin(World::new()).await;
     let label = |object: &str| {
         json!({ "_type": "ACCESS_LABEL", "target": object_ref(object),
-                "sensitivities": [coded("2.16.840.1.113883.5.25", "HIV")] })
+                "sensitivities": [coded("v3-ActCode", "HIV")] })
     };
     let (first, second) = (world.objects(0)[0].clone(), world.objects(2)[1].clone());
     world

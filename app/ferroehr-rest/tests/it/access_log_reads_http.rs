@@ -424,12 +424,12 @@ fn policy(restricted: bool) -> Value {
         "purpose_required": false
     });
     if restricted {
-        let control = openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+        let access = openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
         policy["log_restrictions"] = json!([{ "_type": "ACCESS_LOG_RESTRICTION",
             "name": { "_type": "DV_TEXT", "value": "Professional withheld" },
             "archetype_node_id": "id11",
-            "accessor_kinds": [coded("openehr", "person")],
-            "withheld": [coded(control, "accessor_party"), coded(control, "accessor_provider")],
+            "accessor_kinds": [coded(access, "person")],
+            "withheld": [coded(access, "accessor_party"), coded(access, "accessor_provider")],
             "legal_grounds": [coded("urn:example:national-law", "art-9-3")] }]);
     }
     policy

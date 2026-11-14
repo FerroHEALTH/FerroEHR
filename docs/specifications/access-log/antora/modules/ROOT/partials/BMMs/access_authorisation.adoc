@@ -7,7 +7,7 @@
     "kind": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "kind",
-      "documentation": "The kind of ground, coded in the openEHR Terminology `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, or a legal obligation.",
+      "documentation": "The kind of ground, coded in the draft `openehr_access` terminology's `access authorisation` group: a role, a treatment relationship, an agreement, a consent decision, a permit, an emergency override, the subject's own access, a representation, or a legal obligation.",
       "is_mandatory": true,
       "type": "DV_CODED_TEXT"
     },
@@ -50,7 +50,7 @@
     }
   },
   "invariants": {
-    "Kind_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)"
+    "Kind_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_authorisation, kind.defining_code)"
   }
 }
 --------

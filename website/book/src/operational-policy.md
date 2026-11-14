@@ -124,11 +124,11 @@ it with, never on its archetype id. A party is a policy party when a version
 of it holds:
 
 - a `CAPABILITY` whose `credentials` hold, anywhere in their tree, a
-  `DV_CODED_TEXT` of FerroEHR's operation terminology, terminology id
-  `ferroehr-operations`, such as `ferroehr-operations::import_ehr`;
+  `DV_CODED_TEXT` of the draft openEHR access terminology, terminology id
+  `openehr_access`, such as `openehr_access::import_ehr`;
 - a `PARTY_RELATIONSHIP`, held inline or written on FerroEHR's own
   relationship routes, whose `name` or `details` hold the code
-  `ferroehr-operations::acts_for`;
+  `openehr_access::acts_for`;
 - a `DV_IDENTIFIER` of type `client_id`, which binds an actor to an OAuth 2.0
   client.
 
@@ -141,7 +141,7 @@ Only a caller holding `[authz.rbac] admin_role` creates, updates or deletes
 one, through its own route or in a `POST /demographic/contribution`. Any
 other caller is answered `403`, and the answer names what makes it one, for
 example `the ROLE … is a policy party, as it holds a capability granting
-ferroehr-operations::import_ehr: only an administrator writes it`. A
+openehr_access::import_ehr: only an administrator writes it`. A
 SCIM client never writes one, even for a `PERSON` it provisioned, and
 neither does a holder of an `access_demographic` grant, so no client grants
 itself a capability. The rule judges the version before the write as well
@@ -194,8 +194,11 @@ template id. You model your parties from any archetypes, and a grant holds
 when the data carries the codes below. The terminology, its codes and the
 client identifier type are the stable contract.
 
-**The operation terminology.** Its `TERMINOLOGY_ID` is
-`ferroehr-operations`. A `CAPABILITY` grants an operation when its
+**The access terminology.** Its `TERMINOLOGY_ID` is `openehr_access`, the
+draft terminology the access control change request proposes to openEHR
+([The access control terminology](#the-access-control-terminology)). The
+operations and the elements that qualify a grant are groups of FerroEHR's
+own in it, which the change request does not propose. A `CAPABILITY` grants an operation when its
 `credentials` hold, at any depth, an element whose value is a
 `DV_CODED_TEXT` with that terminology and the operation's code:
 
@@ -221,7 +224,7 @@ client identifier type are the stable contract.
 | `sign_in_persons` | Be a client the persons of its token issuer sign in through: a person's token through it is the person's own, or their representative's |
 | `act_for_persons` | Act for the persons of its token issuer, as a third-party client or as the RFC 8693 actor a person's token names in `act` |
 | `access_without_scope` | Be admitted, as a system caller whose token carries no resource scope, to every SMART on openEHR requirement |
-| `write_care_relationship` | Write the `member_of` and `under_care_of` care relationships through the Demographic API, as a hospital's ADT system does ([The access control terminology](#the-access-control-terminology)) |
+| `write_care_relationship` | Write the membership (`MBR` of `v3-RoleClass`) and `under_care_of` care relationships through the Demographic API, as a hospital's ADT system does ([The access control terminology](#the-access-control-terminology)) |
 | `write_access_policy` | Write the controller's `ACCESS_POLICY` |
 
 The same terminology names the elements that qualify a grant, by the code
@@ -259,14 +262,13 @@ in the element's `name`:
 | `admit_guests` | A `DV_BOOLEAN`: whether a guest is admitted too |
 | `sensitivity_clearance` | A `DV_CODED_TEXT` of the jurisdiction's sensitivity terminology: a sensitivity the capability clears |
 | `permitted_purpose` | A `DV_CODED_TEXT` of the jurisdiction's purpose-of-use terminology: a purpose the capability lets its holder declare |
-| `member_of` | On a `PARTY_RELATIONSHIP`: the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`; or the source, a provider `ORGANISATION`, is a member of the target `GROUP` |
 | `under_care_of` | On a `PARTY_RELATIONSHIP`: the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
 
 The terms of a federation agreement are named by codes of the same
 terminology ([Federation agreements](#federation-agreements)), and the value of
 an element any of these codes names is that element's value, never an
 operation. A code of another terminology grants nothing, and a code of
-`ferroehr-operations` that no table defines is refused at commit.
+`openehr_access` that no table defines is refused at commit.
 A capability that codes several operations grants each of them. A scope
 element holds a `DV_TEXT`, a `DV_CODED_TEXT` or a `DV_IDENTIFIER`, whose `id`
 is read. A `ROLE` whose `data_origin`, `read_change_feed` or `scim_provision`
@@ -311,28 +313,36 @@ with the rest of the binding side table.
 ### The access control terminology
 
 The access directives of an EHR, the controller's access policy and the
-caller facts they are read against are coded in `ferroehr-operations` too.
-The groups below are the stable contract: the access evaluator and the
-access write checks read these codes and no archetype id, so you model
-consent, restriction and care relationships with your own archetypes and
-bind their coded attributes to these groups. A value of another terminology,
-or a code of `ferroehr-operations` outside the group its attribute is bound
-to, is refused. Each code is the group's rubric until codes are assigned.
-openEHR defines no access control terminology (RM EHR IM,
-`ACCESS_CONTROL_SETTINGS`: "Currently implementation dependent"), so every
-group is FerroEHR's own design.
+caller facts they are read against are coded in the draft `openehr_access`
+terminology, which the access control change request proposes to openEHR
+as "openEHR access (draft)". Where an HL7 code system publishes a code of
+the same meaning, the group's term is that code, under the code system's
+id: `consent-provision-type` (`http://hl7.org/fhir/consent-provision-type`),
+`extra-security-role-type`
+(`http://terminology.hl7.org/CodeSystem/extra-security-role-type`) and
+`v3-RoleClass` (`http://terminology.hl7.org/CodeSystem/v3-RoleClass`). The
+groups below are the stable contract: the access evaluator and the access
+write checks read these codes and no archetype id, so you model consent,
+restriction and care relationships with your own archetypes and bind their
+coded attributes to these groups. A value of a terminology the group holds
+no term of, or a code outside the group, is refused. Each code of
+`openehr_access` is its own rubric until openEHR assigns codes. openEHR
+defines no access control terminology (RM EHR IM, `ACCESS_CONTROL_SETTINGS`:
+"Currently implementation dependent"), so every group is the draft's own
+design.
 
 | Group | Codes | Read from |
 |---|---|---|
 | `access default` | `open`, `restricted`, `consent_required` | `ACCESS_DIRECTIVE_SETTINGS.default_access`: the disposition of an EHR where no directive applies |
 | `access directive kind` | `consent`, `restriction`, `opt_out`, `delegation` | `ACCESS_DIRECTIVE.kind`. A `restriction` (EHDS Art. 8) is always a deny; an `opt_out` (EHDS Art. 10) is a deny of the whole record |
-| `access effect` | `permit`, `deny` | `ACCESS_DIRECTIVE.effect`; a deny overrides a permit |
+| `access effect` | `permit`, `deny` of `consent-provision-type` | `ACCESS_DIRECTIVE.effect`; a deny overrides a permit |
 | `access relationship` | `care`, `representative`, `proxy` | `ACCESS_ACTOR_SCOPE.relationship`: the caller's relationship to the subject |
-| `access caller kind` | `professional`, `access_service`, `subject`, `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
+| `access caller kind` | `professional`, `access_service`, `datasubject` of `extra-security-role-type` (the subject), `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
 | `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
 | `access sensitivity clearance` | `sensitivity_clearance` | The `name` of a credentials element whose value is a sensitivity code |
 | `access permitted purpose` | `permitted_purpose` | The `name` of a credentials element whose value is a purpose-of-use code |
-| `care relationship` | `member_of`, `under_care_of` | The `name` of a `PARTY_RELATIONSHIP` |
+| `care relationship` | `MBR` of `v3-RoleClass`, `under_care_of` | The `name` or `details` of a `PARTY_RELATIONSHIP`: with `MBR`, the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`, or the source, a provider `ORGANISATION`, is a member of the target `GROUP`; with `under_care_of`, the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
+| `representation` | `represents` | The `name` or `details` of a `PARTY_RELATIONSHIP`: the source represents the target, the subject ([Representatives in the patient portal](#representatives-in-the-patient-portal)) |
 | `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-purpose-not-permitted`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
@@ -341,9 +351,9 @@ Two grants of the operation table belong to access control:
 
 **Codes FerroEHR does not own.** Sensitivity, data category, purpose of use
 and legal ground are coded in the terminology your jurisdiction names, such
-as HL7 v3 `Confidentiality` and `ActCode`, the EHDS categories and HL7
-`PurposeOfUse`. FerroEHR compares them by terminology id and code, and refuses
-one coded in `ferroehr-operations`, which holds none.
+as HL7 `v3-Confidentiality` and `v3-ActCode`, the EHDS categories and the
+HL7 `v3-ActReason` purposes of use. FerroEHR compares them by terminology id and code, and refuses
+one coded in `openehr_access`, which holds none.
 
 **Refusals.** `refused-opt-out` and `refused-restricted` answer `404`, as if
 the data did not exist, and appear only in the access record, so that a
@@ -468,10 +478,10 @@ through this capability of a `ROLE` the clerk's `PERSON` performs:
     "items": [
       { "_type": "ELEMENT", "archetype_node_id": "at0022", "name": { "_type": "DV_TEXT", "value": "Operation" },
         "value": { "_type": "DV_CODED_TEXT", "value": "Hold roles",
-          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "hold_roles" } } },
+          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "hold_roles" } } },
       { "_type": "ELEMENT", "archetype_node_id": "at0023",
         "name": { "_type": "DV_CODED_TEXT", "value": "Role",
-          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "role" } },
+          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "role" } },
         "value": { "_type": "DV_TEXT", "value": "WARD_CLERK" } }
     ]
   }
@@ -495,18 +505,18 @@ with no template (the element names carry the codes):
         "name": { "_type": "DV_TEXT", "value": "Operation" },
         "value": { "_type": "DV_CODED_TEXT", "value": "scim_provision",
           "defining_code": { "_type": "CODE_PHRASE",
-            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
             "code_string": "scim_provision" } } },
       { "_type": "ELEMENT", "archetype_node_id": "at0023",
         "name": { "_type": "DV_CODED_TEXT", "value": "binding_issuer",
           "defining_code": { "_type": "CODE_PHRASE",
-            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
             "code_string": "binding_issuer" } },
         "value": { "_type": "DV_TEXT", "value": "urn:example:login" } },
       { "_type": "ELEMENT", "archetype_node_id": "at0024",
         "name": { "_type": "DV_CODED_TEXT", "value": "token_scope",
           "defining_code": { "_type": "CODE_PHRASE",
-            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
             "code_string": "token_scope" } },
         "value": { "_type": "DV_TEXT", "value": "ferroehr/scim" } }
     ] } }
@@ -606,7 +616,7 @@ partner holds on the request, read from the CDR, so a new, changed or ended
 agreement takes effect on the next request.
 
 The agreement's terms are elements of the capability's `credentials`, each
-named by its `ferroehr-operations` code:
+named by its `openehr_access` code:
 
 | Code | Element |
 |---|---|
@@ -711,7 +721,7 @@ versions inside an extract keep their original committers only when a
 `EHR_STATUS.subject` be a `PARTY_SELF` with no `external_ref`, for an
 anonymous record, and a legacy system often holds such EHRs. A grant
 reaches them only through a `subject_namespace` element whose value is the
-`DV_CODED_TEXT` `no_subject_namespace` of `ferroehr-operations`, for the
+`DV_CODED_TEXT` `no_subject_namespace` of `openehr_access`, for the
 import, the extract import and the export alike. That value covers exactly
 those EHRs: a grant naming real namespaces does not reach them, and the
 code reaches no EHR whose subject names a namespace. A grant that names no
@@ -721,11 +731,11 @@ code reaches no EHR whose subject names a namespace. A grant that names no
 { "_type": "ELEMENT", "archetype_node_id": "at0023",
   "name": { "_type": "DV_CODED_TEXT", "value": "Subject namespace",
     "defining_code": { "_type": "CODE_PHRASE",
-      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
       "code_string": "subject_namespace" } },
   "value": { "_type": "DV_CODED_TEXT", "value": "No subject namespace",
     "defining_code": { "_type": "CODE_PHRASE",
-      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
       "code_string": "no_subject_namespace" } } }
 ```
 
@@ -754,8 +764,8 @@ and an import or export grant without a `subject_namespace`.
 
 FerroEHR ships the archetypes below as examples of the model. They carry
 the codes: each `ROLE`'s capability holds an `Operation` element whose value
-is a `ferroehr-operations` code, the acts-for relationship holds
-`ferroehr-operations::acts_for` in its details, and the `AGENT` holds a
+is a `openehr_access` code, the acts-for relationship holds
+`openehr_access::acts_for` in its details, and the `AGENT` holds a
 `client_id` identifier. A party of one of them is a policy party because of
 those codes, as a party of your own archetypes is. No configuration key
 names them.
@@ -781,7 +791,7 @@ examples below write among them. Every write of a policy party is validated agai
 and every change from them are in
 `app/ferroehr/assets/definitions/policy/PROVENANCE.md`.
 
-**The contract.** The `ferroehr-operations` codes and the `client_id`
+**The contract.** The `openehr_access` codes and the `client_id`
 identifier type make a party a policy party, in any archetype, and FerroEHR
 reads the terms of a system client's grant by the codes in its elements'
 names, never by a node id. The archetype ids and the node ids below describe
@@ -797,9 +807,9 @@ credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` th
 | `AGENT.system` | Name | `/identities[id4]/details[id5]/items[id6]` | `DV_TEXT` |
 | `PARTY_RELATIONSHIP.acts_for` | Type (its `name`) | `at10` acts for | `DV_CODED_TEXT` |
 | `PARTY_RELATIONSHIP.acts_for` | Agreement reference | `/details[id3]/items[id4]` | `DV_TEXT` |
-| `PARTY_RELATIONSHIP.acts_for` | Acts-for code, `ferroehr-operations::acts_for` | `/details[id3]/items[id6]` | `DV_CODED_TEXT` |
+| `PARTY_RELATIONSHIP.acts_for` | Acts-for code, `openehr_access::acts_for` | `/details[id3]/items[id6]` | `DV_CODED_TEXT` |
 | every policy `ROLE` | Kind of grant (the capability's `name`) | `/capabilities[id6]/name` | `DV_CODED_TEXT` |
-| every policy `ROLE` | Operation, a `ferroehr-operations` code | `/capabilities[id6]/credentials[id8]/items[id90]` | `DV_CODED_TEXT` |
+| every policy `ROLE` | Operation, a `openehr_access` code | `/capabilities[id6]/credentials[id8]/items[id90]` | `DV_CODED_TEXT` |
 | `ROLE.system_client` | Template written, named `template` | `/capabilities[id6]/credentials[id8]/items[id9]` | `DV_TEXT` |
 | `ROLE.system_client` | Facility, named `facility`: issuer, identifier, identifier prefix, named `issuer`, `identifier`, `identifier_prefix` | `/capabilities[id6]/credentials[id8]/items[id10]/items[id11]`, `[id12]`, `[id13]` | `DV_TEXT` |
 | `ROLE.system_client` | Device identifier issuer, named `device_identifier_issuer` | `/capabilities[id6]/credentials[id8]/items[id14]` | `DV_TEXT` |
@@ -883,7 +893,7 @@ Its grant is a `ROLE` it performs, `POST /demographic/role`, with the
 `AGENT` `5b8e2c91-7d4a-4f3e-8a1c-6e9f0b2d4c73` the first call returned as
 `performer`. Its capability grants `commit_composition` with the origin
 `relay`, the template it writes and the facility it writes at, each element
-named by its `ferroehr-operations` code. A system that also registers
+named by its `openehr_access` code. A system that also registers
 device measurements holds a second capability with the origin `device` and
 its `device_identifier_issuer`.
 
@@ -926,30 +936,30 @@ its `device_identifier_issuer`.
       "items": [
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": { "_type": "DV_CODED_TEXT", "value": "Commit composition", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "commit_composition" } }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Commit composition", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "commit_composition" } }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id18",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Origin", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "origin" } },
-          "value": { "_type": "DV_CODED_TEXT", "value": "Relay", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "relay" } }
+          "name": { "_type": "DV_CODED_TEXT", "value": "Origin", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "origin" } },
+          "value": { "_type": "DV_CODED_TEXT", "value": "Relay", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "relay" } }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id9",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Template written", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "template" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Template written", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "template" } },
           "value": { "_type": "DV_TEXT", "value": "openEHR-EHR-COMPOSITION.report-result.v1" }
         },
         {
           "_type": "CLUSTER", "archetype_node_id": "id10",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Facility", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "facility" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Facility", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "facility" } },
           "items": [
             {
               "_type": "ELEMENT", "archetype_node_id": "id11",
-              "name": { "_type": "DV_CODED_TEXT", "value": "Issuer", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "issuer" } },
+              "name": { "_type": "DV_CODED_TEXT", "value": "Issuer", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "issuer" } },
               "value": { "_type": "DV_TEXT", "value": "urn:oid:2.16.528.1.1007.3.3" }
             },
             {
               "_type": "ELEMENT", "archetype_node_id": "id12",
-              "name": { "_type": "DV_CODED_TEXT", "value": "Identifier", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "identifier" } },
+              "name": { "_type": "DV_CODED_TEXT", "value": "Identifier", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "identifier" } },
               "value": { "_type": "DV_TEXT", "value": "01234567" }
             }
           ]
@@ -1017,7 +1027,7 @@ relationship goes in this second version.
         "_type": "ELEMENT", "archetype_node_id": "id6", "name": { "_type": "DV_TEXT", "value": "Acts-for code" },
         "value": {
           "_type": "DV_CODED_TEXT", "value": "Acts for",
-          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "acts_for" }
+          "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "acts_for" }
         }
       }]
     },
@@ -1093,14 +1103,14 @@ and `ROLE`.
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
           "value": {
             "_type": "DV_CODED_TEXT", "value": "Query system-wide",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "query_system_wide" }
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "query_system_wide" }
           }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
           "value": {
             "_type": "DV_CODED_TEXT", "value": "Access demographic",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "access_demographic" }
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "access_demographic" }
           }
         }
       ]
@@ -1167,29 +1177,29 @@ system's patients. `[authz.grants] allowed` must admit `import_ehr`,
       "items": [
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": { "_type": "DV_CODED_TEXT", "value": "Import EHR", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "import_ehr" } }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Import EHR", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "import_ehr" } }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": { "_type": "DV_CODED_TEXT", "value": "Import EHR extract", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "import_ehr_extract" } }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Import EHR extract", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "import_ehr_extract" } }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": { "_type": "DV_CODED_TEXT", "value": "Export EHR extract", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "export_ehr_extract" } }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Export EHR extract", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "export_ehr_extract" } }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id19",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Subject namespace", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "subject_namespace" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Subject namespace", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "subject_namespace" } },
           "value": { "_type": "DV_TEXT", "value": "nl.legacy-his.patients" }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id15",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Not before", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "not_before" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Not before", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "not_before" } },
           "value": { "_type": "DV_DATE_TIME", "value": "2026-12-05T22:00:00Z" }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id16",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Not after", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "not_after" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Not after", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "not_after" } },
           "value": { "_type": "DV_DATE_TIME", "value": "2026-12-06T05:00:00Z" }
         },
         {
@@ -1223,7 +1233,7 @@ in its `details`; committing it is an administrator's write, because the
 identifier makes it a policy party. The agreement is a `ROLE` of the
 federation partner template the partner performs, with one capability per
 accessor, here `person`. Each term is an element whose `name` is its
-`ferroehr-operations` code, which is how FerroEHR reads it in any archetype
+`openehr_access` code, which is how FerroEHR reads it in any archetype
 (see [Federation agreements](#federation-agreements)).
 
 <!-- policy-example: federation-partner-role -->
@@ -1270,61 +1280,61 @@ accessor, here `person`. Each term is an element whose `name` is its
       "items": [
         {
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
-          "value": { "_type": "DV_CODED_TEXT", "value": "Federated person access", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "federated_person_access" } }
+          "value": { "_type": "DV_CODED_TEXT", "value": "Federated person access", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "federated_person_access" } }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id9",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Agreement name", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "agreement_name" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Agreement name", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "agreement_name" } },
           "value": { "_type": "DV_TEXT", "value": "Regional care network exchange" }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id10",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Agreement version", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "agreement_version" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Agreement version", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "agreement_version" } },
           "value": { "_type": "DV_TEXT", "value": "2.1" }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id11",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Jurisdiction", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "jurisdiction" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Jurisdiction", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "jurisdiction" } },
           "value": { "_type": "DV_TEXT", "value": "DE" }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id12",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Exchange", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "exchange" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Exchange", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "exchange" } },
           "value": { "_type": "DV_TEXT", "value": "patient summary" }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id13",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Purpose", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "purpose" } },
-          "value": { "_type": "DV_CODED_TEXT", "value": "treatment", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "HL7_PurposeOfUse" }, "code_string": "TREAT" } }
+          "name": { "_type": "DV_CODED_TEXT", "value": "Purpose", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "purpose" } },
+          "value": { "_type": "DV_CODED_TEXT", "value": "treatment", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "v3-ActReason" }, "code_string": "TREAT" } }
         },
         {
           "_type": "CLUSTER", "archetype_node_id": "id14", "name": { "_type": "DV_TEXT", "value": "Legal ground" },
           "items": [
             {
               "_type": "ELEMENT", "archetype_node_id": "id15",
-              "name": { "_type": "DV_CODED_TEXT", "value": "GDPR Article 6(1) point", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "gdpr_art_6_1" } },
+              "name": { "_type": "DV_CODED_TEXT", "value": "GDPR Article 6(1) point", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "gdpr_art_6_1" } },
               "value": { "_type": "DV_TEXT", "value": "e" }
             },
             {
               "_type": "ELEMENT", "archetype_node_id": "id16",
-              "name": { "_type": "DV_CODED_TEXT", "value": "GDPR Article 9(2) point", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "gdpr_art_9_2" } },
+              "name": { "_type": "DV_CODED_TEXT", "value": "GDPR Article 9(2) point", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "gdpr_art_9_2" } },
               "value": { "_type": "DV_TEXT", "value": "h" }
             },
             {
               "_type": "ELEMENT", "archetype_node_id": "id17",
-              "name": { "_type": "DV_CODED_TEXT", "value": "National provision", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "national_provision" } },
+              "name": { "_type": "DV_CODED_TEXT", "value": "National provision", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "national_provision" } },
               "value": { "_type": "DV_TEXT", "value": "the provision the agreement names" }
             }
           ]
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id18",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Consent source", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "consent" } },
-          "value": { "_type": "DV_CODED_TEXT", "value": "Local", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "local" } }
+          "name": { "_type": "DV_CODED_TEXT", "value": "Consent source", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "consent" } },
+          "value": { "_type": "DV_CODED_TEXT", "value": "Local", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "local" } }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "id19",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Read scope", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "read_scope" } },
+          "name": { "_type": "DV_CODED_TEXT", "value": "Read scope", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "read_scope" } },
           "value": { "_type": "DV_TEXT", "value": "patient/composition-openEHR-EHR-COMPOSITION.patient_summary.v1.r" }
         },
         {
@@ -1332,12 +1342,12 @@ accessor, here `person`. Each term is an element whose `name` is its
           "items": [
             {
               "_type": "ELEMENT", "archetype_node_id": "id25",
-              "name": { "_type": "DV_CODED_TEXT", "value": "Requests per second", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "requests_per_second" } },
+              "name": { "_type": "DV_CODED_TEXT", "value": "Requests per second", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "requests_per_second" } },
               "value": { "_type": "DV_COUNT", "magnitude": 5 }
             },
             {
               "_type": "ELEMENT", "archetype_node_id": "id26",
-              "name": { "_type": "DV_CODED_TEXT", "value": "Burst", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "burst" } },
+              "name": { "_type": "DV_CODED_TEXT", "value": "Burst", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "burst" } },
               "value": { "_type": "DV_COUNT", "magnitude": 20 }
             }
           ]
@@ -1403,7 +1413,7 @@ configuration grant those.
           "_type": "ELEMENT", "archetype_node_id": "id90", "name": { "_type": "DV_TEXT", "value": "Operation" },
           "value": {
             "_type": "DV_CODED_TEXT", "value": "Read subject audit",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "read_subject_audit" }
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "read_subject_audit" }
           }
         },
         {
@@ -1489,14 +1499,14 @@ one group at assurance substantial or above, from 1 December 2026,
           "_type": "ELEMENT", "archetype_node_id": "at0012", "name": { "_type": "DV_TEXT", "value": "Operation" },
           "value": {
             "_type": "DV_CODED_TEXT", "value": "Create at login",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "create_at_login" }
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "create_at_login" }
           }
         },
         {
           "_type": "ELEMENT", "archetype_node_id": "at0013",
           "name": {
             "_type": "DV_CODED_TEXT", "value": "Login issuer",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "login_issuer" }
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "login_issuer" }
           },
           "value": { "_type": "DV_URI", "value": "https://login.microsoftonline.com/0f1e2d3c-4b5a-4968-8776-655443322110/v2.0" }
         },
@@ -1504,7 +1514,7 @@ one group at assurance substantial or above, from 1 December 2026,
           "_type": "ELEMENT", "archetype_node_id": "at0014",
           "name": {
             "_type": "DV_CODED_TEXT", "value": "Admitted group",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "admit_group" }
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "admit_group" }
           },
           "value": { "_type": "DV_TEXT", "value": "5f2a9c1e-0000-4000-8000-00000000c11a" }
         },
@@ -1512,7 +1522,7 @@ one group at assurance substantial or above, from 1 December 2026,
           "_type": "ELEMENT", "archetype_node_id": "at0015",
           "name": {
             "_type": "DV_CODED_TEXT", "value": "Admitted assurance",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "admit_assurance" }
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "admit_assurance" }
           },
           "value": { "_type": "DV_TEXT", "value": "substantial" }
         }
@@ -1588,25 +1598,25 @@ design:
 Beside its grants, a caller carries the facts the access evaluator reads:
 the sensitivities it is cleared for, the purposes of use it may declare, and
 the care teams it belongs to. A patient carries the teams and units it is
-under the care of. FerroEHR reads each by its code of `ferroehr-operations`
-in any archetype, never by an archetype id, and holds them on every replica
+under the care of. FerroEHR reads each by its code (HL7 v3 `RoleClass` `MBR`
+for a membership, `openehr_access` `under_care_of` for care) in any archetype, never by an archetype id, and holds them on every replica
 beside the grants, so a request reads them with no transaction of its own.
 
 **Clearance and permitted purpose.** A `CAPABILITY` of a `ROLE` clears a
 sensitivity when its `credentials` hold, at any depth, an element whose
 `name` is the `DV_CODED_TEXT` `sensitivity_clearance` and whose value is a
 `DV_CODED_TEXT` of the terminology your jurisdiction names, such as the HL7
-v3 `ActCode` code `PSY`. An element named `permitted_purpose` whose value is
-a purpose-of-use code, such as the HL7 `PurposeOfUse` code `TREAT`, lets the
+`v3-ActCode` code `PSY`. An element named `permitted_purpose` whose value is
+a purpose-of-use code, such as the HL7 `v3-ActReason` code `TREAT`, lets the
 holder declare that purpose. Both hold while the capability does: the
 `ROLE`'s and the `CAPABILITY`'s `time_validity` and the `not_before` and
-`not_after` elements. A value coded in `ferroehr-operations`, or no
+`not_after` elements. A value coded in `openehr_access`, or no
 `DV_CODED_TEXT`, is refused `422` at the commit of the `ROLE`. A `ROLE`
 carrying either is a policy party, which only an administrator writes.
 
 **Care relationships.** A `PARTY_RELATIONSHIP` in a `PERSON`'s
-`relationships` whose `name` or `details` carry `member_of` makes the
-professional a member of the care team its `target` names; one carrying
+`relationships` whose `name` or `details` carry `MBR` of `v3-RoleClass`
+makes the professional a member of the care team its `target` names; one carrying
 `under_care_of` puts the patient in the care of the team or unit its
 `target` names, with the admission as its `time_validity`. The discharge is
 the upper bound of `time_validity`, and the relationship stays, so the
@@ -1619,7 +1629,7 @@ other than a `PERSON`, one whose target is no party of this store, and a
 ([Default demographic definitions](installation/default-demographic-definitions.md)).
 
 **Group memberships of a provider.** A `PARTY_RELATIONSHIP` in an
-`ORGANISATION`'s `relationships` carrying `member_of` makes that provider a
+`ORGANISATION`'s `relationships` carrying `MBR` of `v3-RoleClass` makes that provider a
 member of the `GROUP` its `target` names, such as the providers of a
 regional health network, for as long as its `time_validity` holds. A system
 client acting for the `ORGANISATION` then acts for the `GROUP` too, so a
@@ -1665,7 +1675,7 @@ data the deployment keeps in the CDR. FerroEHR builds in no country's rules.
 
 A representation is a `PARTY_RELATIONSHIP` from the representative's
 `PERSON`, its source, to the subject's `PERSON`, its target, whose `name` or
-`details` carry `ferroehr-operations::represents`. Any archetype may model
+`details` carry `openehr_access::represents`. Any archetype may model
 it; FerroEHR reads the code, never the archetype id. It may also name the
 relationship with a `DV_CODED_TEXT` of the openEHR `subject_relationship`
 group (`254|parent|`, `264|guardian|`, `253|unknown|` for a proxy), which the
@@ -1752,7 +1762,7 @@ curl -X POST "$BASE/ferroehr/rest/extensions/v1/demographic/party_relationship" 
       "items": [
         { "_type": "ELEMENT", "archetype_node_id": "id4", "name": { "_type": "DV_TEXT", "value": "Representation code" },
           "value": { "_type": "DV_CODED_TEXT", "value": "represents",
-            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "represents" } } },
+            "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "represents" } } },
         { "_type": "ELEMENT", "archetype_node_id": "id6", "name": { "_type": "DV_TEXT", "value": "Relationship" },
           "value": { "_type": "DV_CODED_TEXT", "value": "unknown",
             "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" }, "code_string": "253" } } } ] },
@@ -1884,7 +1894,7 @@ one, nothing is tightened.
   or breaks an invariant of the draft model is refused whole with `400`, as
   is a rule of another kind than `controller_rule`, a catalogue entry of that
   kind, and a rule naming a role, purpose, sensitivity, category or legal
-  ground in `ferroehr-operations`.
+  ground in `openehr_access`.
 - **Effective without a restart**, as the registers above.
 - **Read by the access evaluator** on every request: a classification gives
   the data it covers its sensitivities (step 4), and the two requirements

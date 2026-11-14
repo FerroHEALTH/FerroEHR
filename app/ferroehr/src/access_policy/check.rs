@@ -62,7 +62,7 @@ pub enum PolicyDefect {
     ArchetypeClass(String),
     /// A sensitivity or category of a classification, a role, purpose,
     /// sensitivity, category or legal ground of a controller rule, or a legal
-    /// ground of a log restriction, is coded in FerroEHR's own terminology,
+    /// ground of a log restriction, is coded in the draft access terminology,
     /// which holds none.
     #[error(transparent)]
     NotForeign(#[from] NotForeign),
@@ -122,10 +122,10 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
 }
 
 /// Reads every role, purpose, sensitivity, category and legal ground `rule`
-/// names, none of which FerroEHR's terminology holds.
+/// names, none of which the draft access terminology holds.
 ///
 /// # Errors
-/// [`NotForeign`] for the first one coded in FerroEHR's terminology.
+/// [`NotForeign`] for the first one coded in the draft access terminology.
 fn rule_codes(rule: &AccessDirective) -> Result<(), NotForeign> {
     for scope in rule.applies_to.as_deref().unwrap_or_default() {
         if let Some(role) = &scope.role {

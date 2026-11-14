@@ -27,7 +27,7 @@ H_REALM_ISSUER="https://keycloak.localhost:8443/auth/realms/ferroehr"
 H_MACHINES="http://localhost:8180/quickstart"
 H_PATIENTS="http://localhost:8180/patients"
 H_ISSUER_HTTP="http://localhost:${FERROEHR_ISSUER_PORT}"
-H_TERM="ferroehr-operations"
+H_TERM="openehr_access"
 H_PURPOSE="x-purpose-of-use"
 
 # ── The stack ─────────────────────────────────────────────────────────────────
@@ -249,8 +249,17 @@ j_coded() {
     defining_code:{_type:"CODE_PHRASE",terminology_id:{_type:"TERMINOLOGY_ID",value:$t},code_string:$c}}'
 }
 
-# A term of FerroEHR's access control groups.
+# A term of the draft openehr_access groups.
 j_term() { j_coded "$H_TERM" "$1"; }
+
+# An access effect: a code of HL7 FHIR consent-provision-type.
+j_effect() { j_coded consent-provision-type "$1"; }
+
+# A care relationship code: a membership is HL7 v3 RoleClass MBR, any other
+# care code a term of openehr_access.
+j_care_code() {
+  if [[ "$1" == member ]]; then j_coded v3-RoleClass MBR; else j_term "$1"; fi
+}
 
 # A PARTY_REF to the party `id` of RM type `type`.
 j_party() {
@@ -295,11 +304,12 @@ j_named_party() {
           value:{_type:"DV_TEXT",value:$n}}]}}]} + $x'
 }
 
-# A relationship carrying the care code `code` from `source` (of RM type
-# `stype`) to the party `target` (of RM type `ttype`) over `validity`.
+# A relationship carrying the care code `code` (`member`, or a term of
+# openehr_access) from `source` (of RM type `stype`) to the party `target`
+# (of RM type `ttype`) over `validity`.
 j_care() {
   local code="$1" stype="$2" source="$3" ttype="$4" target="$5" validity="$6"
-  jq -nc --argjson k "$(j_term "$code")" --argjson s "$(j_party "$stype" "$source")" \
+  jq -nc --argjson k "$(j_care_code "$code")" --argjson s "$(j_party "$stype" "$source")" \
     --argjson t "$(j_party "$ttype" "$target")" --argjson v "$validity" '{_type:"PARTY_RELATIONSHIP",
     archetype_node_id:"openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.hospital_care.v1",
     name:{_type:"DV_TEXT",value:"care"},
@@ -341,15 +351,15 @@ j_role() {
 }
 
 # The clearance and purpose elements: `sensitivity_clearance` for each HL7 v3
-# Confidentiality code in `clearances` (space separated) and
-# `permitted_purpose` for each PurposeOfUse code in `purposes`.
+# v3-Confidentiality code in `clearances` (space separated) and
+# `permitted_purpose` for each v3-ActReason PurposeOfUse code in `purposes`.
 j_facts() {
   local clearances="$1" purposes="$2" code
   for code in $clearances; do
-    j_qualifier sensitivity_clearance "$(j_coded 2.16.840.1.113883.5.25 "$code")"
+    j_qualifier sensitivity_clearance "$(j_coded v3-Confidentiality "$code")"
   done
   for code in $purposes; do
-    j_qualifier permitted_purpose "$(j_coded 2.16.840.1.113883.1.11.20448 "$code")"
+    j_qualifier permitted_purpose "$(j_coded v3-ActReason "$code")"
   done
 }
 
@@ -544,7 +554,7 @@ hospital_setup() {
   done
   for org in lab_org member_org; do
     h_relate 1 admin organisation "$(hv "$org")" \
-      "[$(j_care member_of ORGANISATION "$(hv "$org")" GROUP "$(hv region)" "$(j_dates "$(h_day -365)")")]" \
+      "[$(j_care member ORGANISATION "$(hv "$org")" GROUP "$(hv region)" "$(j_dates "$(h_day -365)")")]" \
       || h_fail_call "the $org joins the regional GROUP"
   done
 
@@ -564,16 +574,16 @@ hospital_setup() {
   local since
   since="$(j_dates "$(h_day -30)")"
   h_relate 2 admin person "$(hv person_anna)" \
-    "[$(j_care member_of PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$since")]" \
+    "[$(j_care member PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$since")]" \
     || h_fail_call "Dr. Jansen joins Cardiology"
   h_relate 1 admin person "$(hv person_bram)" \
-    "[$(j_care member_of PERSON "$(hv person_bram)" GROUP "$(hv ward3)" "$since")]" \
+    "[$(j_care member PERSON "$(hv person_bram)" GROUP "$(hv ward3)" "$since")]" \
     || h_fail_call "Nurse de Vries joins Ward 3"
   h_relate 2 admin person "$(hv person_gina)" \
-    "[$(j_care member_of PERSON "$(hv person_gina)" GROUP "$(hv ward3)" "$since")]" \
+    "[$(j_care member PERSON "$(hv person_gina)" GROUP "$(hv ward3)" "$since")]" \
     || h_fail_call "Gina joins Ward 3"
   h_relate 1 admin person "$(hv person_carla)" \
-    "[$(j_care member_of PERSON "$(hv person_carla)" GROUP "$(hv psychiatry)" "$since")]" \
+    "[$(j_care member PERSON "$(hv person_carla)" GROUP "$(hv psychiatry)" "$since")]" \
     || h_fail_call "Dr. Smit joins Psychiatry"
 
   # The system clients: the lab acts for the lab, a member of the region;
@@ -581,7 +591,7 @@ hospital_setup() {
   # the access service for the member provider too.
   local query treat
   query="$(j_operation query_system_wide)"
-  treat="$(j_qualifier permitted_purpose "$(j_coded 2.16.840.1.113883.1.11.20448 TREAT)")"
+  treat="$(j_qualifier permitted_purpose "$(j_coded v3-ActReason TREAT)")"
   h_client lab lab-system "$(hv lab_org)" "$(j_capability "$query" "$treat")" \
     "$(j_capability "$(j_operation commit_composition)" \
       "$(j_qualifier template "$(jq -nc --arg t "$H_T_LAB" '{_type:"DV_TEXT",value:$t}')")" \
@@ -654,7 +664,7 @@ hospital_setup() {
 # ── The controller's policy and Eva's directives ──────────────────────────────
 
 # A sensitivity of the HL7 v3 Confidentiality codes.
-j_sensitivity() { j_coded 2.16.840.1.113883.5.25 "$1"; }
+j_sensitivity() { j_coded v3-Confidentiality "$1"; }
 
 # The controller's ACCESS_POLICY: the mental-health note very restricted, the
 # HIV result restricted, a care relationship with a one-day grace and a
@@ -695,7 +705,7 @@ j_instants() {
 j_directive() {
   local kind="$1" effect="$2" name="$3" extra="${4:-}"
   [[ -n "$extra" ]] || extra='{}'
-  jq -nc --arg n "$name" --argjson k "$(j_term "$kind")" --argjson e "$(j_term "$effect")" \
+  jq -nc --arg n "$name" --argjson k "$(j_term "$kind")" --argjson e "$(j_effect "$effect")" \
     --argjson x "$extra" '{_type:"ACCESS_DIRECTIVE",name:{_type:"DV_TEXT",value:$n},
     archetype_node_id:"at0001",kind:$k,effect:$e,emergency_override:true} + $x'
 }
@@ -715,7 +725,7 @@ j_eva_settings() {
       --argjson x "$(j_directive consent permit "Dr. Smit" "{\"applies_to\":$(j_naming PERSON "$(hv person_carla)")}")" \
       '{data:[{templates:[$t]}],exceptions:[$x]}')")"
     "$(j_directive consent permit "Regional sharing" "$(jq -nc --argjson g "$(j_naming GROUP "$(hv region)")" \
-      --argjson p "$(j_coded 2.16.840.1.113883.1.11.20448 TREAT)" \
+      --argjson p "$(j_coded v3-ActReason TREAT)" \
       --argjson v "$(j_instants "$consent_from" "$consent_to")" \
       '{applies_to:$g,purposes:[$p],time_validity:$v,emergency_override:false,
         identifiers:[{_type:"DV_IDENTIFIER",issuer:"urn:oid:2.999.7.1",id:"regional-opt-in",type:"BPPC"}]}')")"
@@ -1291,7 +1301,7 @@ hospital_pixm() {
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \
     "$(j_capability "$(j_operation write_access_policy)")")" || h_fail_call "the controller's policy grant"
   h_relate 2 admin person "$(hv person_anna)" \
-    "[$(j_care member_of PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -30)")")]" \
+    "[$(j_care member PERSON "$(hv person_anna)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -30)")")]" \
     || h_fail_call "Dr. Jansen joins Cardiology"
   h_party person_eva person "$(j_named_party PERSON "Eva Visser")" || h_fail_call "Eva's PERSON"
   H_EVA_CARE="[$(j_care under_care_of PERSON "$(hv person_eva)" GROUP "$(hv cardiology)" "$(j_dates "$(h_day -10)")")]"

@@ -4,7 +4,7 @@
 //! The policy grants (#5435) over a real PostgreSQL 18, every party built on
 //! a deployment's own archetypes with no template: a client resolves to the
 //! `ACTOR` carrying its `client_id` identifier, its grants are the operation
-//! codes of `ferroehr-operations` in the credentials of the `ROLE`s it
+//! codes of `openehr_access` in the credentials of the `ROLE`s it
 //! performs that hold today by the `ROLE`'s and the `CAPABILITY`'s
 //! `time_validity` and now by the `not_before` and `not_after` elements,
 //! `[authz.grants] allowed` refuses an operation above it at commit and never
@@ -143,7 +143,7 @@ fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
-/// A `DV_CODED_TEXT` of the operation terminology.
+/// A `DV_CODED_TEXT` of the draft access terminology.
 fn operation_code(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",
@@ -368,7 +368,7 @@ async fn a_deployments_own_archetypes_grant_by_operation_code() {
     assert_eq!(
         operations,
         vec![Operation::ImportEhr, Operation::ExportEhrExtract],
-        "only the codes of the operation terminology grant, wherever they sit"
+        "only the codes of the draft access terminology grant, wherever they sit"
     );
     let import = granted
         .of(Operation::ImportEhr)
@@ -1043,6 +1043,13 @@ async fn restrict(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId) {
                     "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY },
                     "code_string": code } })
     };
+    let provision = |code: &str| {
+        let mut value = term(code);
+        value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+        );
+        value
+    };
     let body = svc.ehr_read(ehr).await.expect("the EHR").body;
     let access_vo = body["ehr_access"]["id"]["value"]
         .as_str()
@@ -1071,7 +1078,7 @@ async fn restrict(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId) {
                     "directives": [{
                         "_type": "ACCESS_DIRECTIVE", "archetype_node_id": "at0001",
                         "name": text("Mental health restriction"),
-                        "kind": term("restriction"), "effect": term("deny"),
+                        "kind": term("restriction"), "effect": provision("deny"),
                         "emergency_override": true
                     }]
                 }

@@ -57,9 +57,9 @@ pub(super) const OBJECT: &str = "8849182c-82ad-4088-a07f-48ead4180515";
 pub(super) const OTHER: &str = "8849182c-82ad-4088-a07f-48ead4180516";
 
 /// The jurisdiction's sensitivity code system.
-pub(super) const CONFIDENTIALITY: &str = "2.16.840.1.113883.5.25";
+pub(super) const CONFIDENTIALITY: &str = "v3-ActCode";
 /// The jurisdiction's purpose of use code system.
-pub(super) const PURPOSE: &str = "2.16.840.1.113883.5.8";
+pub(super) const PURPOSE: &str = "v3-ActReason";
 /// The national category system of the test map.
 pub(super) const CATEGORIES: &str = "urn:example:categories";
 
@@ -85,6 +85,14 @@ pub(super) fn break_glass(asked: Asked<'_>) -> Asked<'_> {
 /// A term of the access control groups.
 pub(super) fn term(code: &str) -> Value {
     coded(TERMINOLOGY, code)
+}
+
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+pub(super) fn provision(code: &str) -> Value {
+    coded(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
+        code,
+    )
 }
 
 /// A coded value of `terminology`.
@@ -114,7 +122,7 @@ pub(super) fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
         "name": { "_type": "DV_TEXT", "value": "Directive" },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term(effect),
+        "effect": provision(effect),
         "emergency_override": false
     });
     if let (Some(d), Some(extra)) = (d.as_object_mut(), extra.as_object()) {

@@ -1,4 +1,4 @@
-- The `ferroehr-operations` terminology gains the access control groups the
+- The `openehr_access` terminology gains the access control groups the
   access evaluator and the access write checks read: `access default`,
   `access directive kind`, `access effect`, `access relationship`, `access
   caller kind`, `access operation`, `access sensitivity clearance`, `access

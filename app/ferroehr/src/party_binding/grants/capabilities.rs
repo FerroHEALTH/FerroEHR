@@ -147,7 +147,7 @@ impl Grant {
         self.role
     }
 
-    /// Its credentials, read by the elements the operation terminology names.
+    /// Its credentials, read by the elements the draft access terminology names.
     #[must_use]
     pub fn credentials(&self) -> Credentials<'_> {
         Credentials(self.credentials.as_deref())
@@ -158,7 +158,7 @@ impl Grant {
 /// elements [`crate::party_binding::policy_mark::TERMINOLOGY`] names.
 ///
 /// An element or a cluster is read by the code of its `name`, a
-/// `DV_CODED_TEXT` of the operation terminology, wherever it sits in the
+/// `DV_CODED_TEXT` of the draft access terminology, wherever it sits in the
 /// tree, so a check reads a grant's scope (such as `template` or `facility`)
 /// in any archetype that codes it.
 #[derive(Debug, Clone, Copy)]
