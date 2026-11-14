@@ -185,6 +185,7 @@ async fn run(pool: &PgPool, target: Target, out: &Path) -> anyhow::Result<Figure
         display_name: "scaleseed team".to_owned(),
         external_id: Some("scaleseed-team".to_owned()),
         members: members.to_vec(),
+        care_team: false,
     };
     let before = database_bytes(pool).await?;
     let started = Instant::now();

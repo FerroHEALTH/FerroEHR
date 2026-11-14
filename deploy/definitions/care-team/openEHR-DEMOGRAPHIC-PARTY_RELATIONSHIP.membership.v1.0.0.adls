@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"The membership of a person in a team: a PARTY_RELATIONSHIP from the member's PERSON, its source, to the team's GROUP, its target.">
-            use = <"Held in the member's PERSON.relationships. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline: its details and type of relationship, here the member's role in the team, optional.">
+            use = <"Held in the member's PERSON.relationships. Adapted from the PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline: its details and type of relationship, here the member's role in the team, optional. Its name is the relationship's type (RM PARTY_RELATIONSHIP.type() = name): a DV_TEXT for a membership of any group, or the DV_CODED_TEXT member_of of the access control terminology for a care team's membership, which makes it a care relationship.">
             copyright = <"© openEHR Foundation">
         >
     >
@@ -25,6 +25,10 @@ description
 
 definition
     PARTY_RELATIONSHIP[id1] matches {
+        name matches {
+            DV_TEXT[id5]
+            DV_CODED_TEXT[id6]
+        }
         details matches {
             ITEM_TREE[id2] occurrences matches {0..1} matches {
                 items matches {

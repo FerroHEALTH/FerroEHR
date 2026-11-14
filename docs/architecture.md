@@ -366,7 +366,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `audit.audit_record`, the view of the `audit_event` records and the entries
   with their index rows in `access_log_search` (the search columns, the
   search tokens of the projection and the render policy, removed with the
-  entry's content when a tombstone replaces it), and the drain sends the
+  entry's content when a tombstone replaces it). An ITI-81 page reads each
+  chain's first `offset + count` records through its `recorded_at` index,
+  the access log's candidates from `access_log_search` with the records tied
+  on the last instant, and takes the page from their union. The exact total
+  counts the access log on its index rows alone, one per entry
+  (`system_log::store::search_page`, #5646). The drain sends the
   syslog message and the store-off feed's document from the entry it built
   (`audit/0030_access_log_projections.sql`, `system_log::store::entries`,
   `system_log::sender::records`).
@@ -507,15 +512,18 @@ which is what makes an optional stage safe to disable:
    with the policies and rules in this object"). The settings are the
    `access_directives` scheme, an `ACCESS_DIRECTIVE_SETTINGS` of the draft
    access control package, refused whole with `400` at every write unless the
-   draft BMM's invariants and the terminology groups hold (RM EHR IM
+   draft BMM's invariants, the terminology groups and the RM `Value_valid` of
+   each `DV_DATE_TIME` and `DV_DURATION` it holds (#5629) hold (RM EHR IM
    §`ACCESS_CONTROL_SETTINGS` leaves the class "Currently implementation
    dependent": the scheme is our own design). The default archetype
    `access_directives.v1.0.0` constrains the settings to that class, which the
    ADL 2 validator reads from the draft class tables beside RM 1.2.0
-   (`draft_model`, AOM2 master11 RM adaptation). A new version is committed by a
-   gate-keeper the current settings name or by `admin_role` on the subject's
-   instruction (BASE Architecture Overview §Security Policy, "Access control of
-   access settings"); the settings are read only by those callers and the
+   (`draft_model`, AOM2 master11 RM adaptation). A new version is committed by the
+   subject while the current settings name no gate-keeper, by a gate-keeper
+   the current settings name, or by `admin_role` on the subject's instruction
+   (BASE Architecture Overview §Access Control: the gate-keeper is "usually
+   the patient for mentally competent adults"), so naming gate-keepers without
+   `PARTY_SELF` takes the subject's write away (#5636); the settings are read only by those callers and the
    subject, and are absent to anyone else in AQL, an EHR Extract and the
    CONTRIBUTION read, since a restriction stays invisible to a provider (EHDS
    Art. 8). An EHR Extract also carries them for the holder of an
@@ -642,10 +650,31 @@ which is what makes an optional stage safe to disable:
    and on an operation that names none, recorded as step 0 (representation)
    (#5609, our own design under EHDS Art. 4(2)). On that EHR it is held to
    steps 1 to 4, the `delegation` directives of its `EHR_ACCESS` and the
-   controller's rules included, and skips steps 5 to 8. An emergency purpose
-   lifts an opt-out for an access service that may override it
-   (Art. 10(2)), and, with `[authz.rbac] emergency_access_role`, a
-   restriction, a consent deny or a deny rule whose `emergency_override`
+   controller's rules included, and skips steps 5 to 8. A caller acting for
+   someone else is a representative whatever issuer it signed in through, so
+   a `patients` portal login bound to a representative's `PERSON` takes
+   those steps too; only the person themselves is the subject (#5613). The
+   subject and the representative pass the RBAC role gate's Clinical class
+   with no role, since their right comes from who they are (EHDS Art. 3 and
+   4(2), #5633), and the access log's standing reads their EHR from the same
+   evaluator `Caller` (#5614). A read, query or export by a caller admitted
+   under a federation agreement whose `consent` condition applies, naming no
+   consent decision reference, is refused at step 0 with
+   `refused-consent-reference-missing`, a fact of the `Caller` (#5614; the
+   SMART layer checks scopes alone). An EHR id the store does not hold
+   answers `404` before any step refuses, read only when a verdict refuses,
+   so a restriction's `404` is never told apart from it (#5623). A write is
+   judged on the template, root archetype, origins and commit instant of the
+   content it is about to store, inside the commit transaction and before
+   anything is stored (#5626, `versioning::restriction::WriteGate`), by
+   steps 3 to 8: an opt-out and a restriction never judge a write's content,
+   since EHDS Art. 8 restricts who sees data and not its recording, a refused
+   write would stop care being documented and its `404` would hint at the
+   restriction; they decide a write for the EHR alone, and the data written
+   stay covered by them for reading (owner ruling on #5621). An
+   emergency purpose lifts an opt-out for an access service that may
+   override it (Art. 10(2)), and, with `[authz.rbac] emergency_access_role`,
+   a restriction, a consent deny or a deny rule whose `emergency_override`
    holds and steps 5 to 8 (Art. 11(5)).
 
    **Controller rules** (#5621, #5624, #5627; our own design, proposed in
@@ -658,7 +687,7 @@ which is what makes an optional stage safe to disable:
    in step 5, and a rule's permit exception only by narrowing its deny. An
    actor scope's `role` matches the coded `name` of a `ROLE` in force the
    caller performs (RM Demographic IM `PARTY.type()`), held as a caller fact
-   (`FactKind::Role`, migration `party/0041`); a token's role claims stay
+   (`FactKind::Role`, migration `party/0042`); a token's role claims stay
    the coarse RBAC class gate and drive no rule. The `ROLE` is the
    assignment and the rule the permission, the split of the XACML
    Hierarchical RBAC Profile. Clearances and permitted purposes are rules
@@ -667,13 +696,10 @@ which is what makes an optional stage safe to disable:
    permit exception. Which templates a caller commits is a rule as well, for
    every caller: the `template` element of a `commit_composition` grant is
    gone. A federation agreement's `template` elements stay the contract with
-   the partner, and the rules hold for its persons too, deny winning. A write
-   is judged by steps 1 and 2 for the EHR and by steps 3 to 8 for the version
-   it commits (`versioning::restriction::Written`): a restriction and an
-   opt-out limit access to existing data, writing new data is no access to
-   them, so no write reveals one. Where a decision depends on the datum, the
-   route guard judges a named object, and the commit a written version,
-   before any step about the EHR alone decides (#5627). A
+   the partner, and the rules hold for its persons too, deny winning. Where a
+   decision depends on the datum, the route guard judges a named object, and
+   the commit a created version, before any step about the EHR alone decides
+   (#5627). A
    directive applies by `applies_to` (every attribute of an actor scope
    holds), `operations`, `purposes` and `time_validity`; a fact that cannot
    be read (a validity bound with no offset, an undeclared purpose, an
@@ -691,7 +717,12 @@ which is what makes an optional stage safe to disable:
    the class (`scope::Held`, `scope::EhrFact`), which the SQL reads from the
    EHR's `access_settings.facts`, so one evaluator decides a direct read and a
    query alike, and an EHR of a class the condition does not hold contributes
-   no row. The request path
+   no row. The subjects the caller cares for are bound once per statement, as
+   a `jsonb` object keyed by subject id in a `WITH` clause that each care
+   probe reads with `?`, so the planner's estimate and each probe cost the
+   same whatever the census, and only the one parse of the bound object grows
+   with it (#5645). The care relationships stay in the party domain, which the
+   clinical statement does not read. The request path
    adds no transaction: every fact is a copy, and a named object is read by
    its head row only when the verdict depends on the object. The procedure,
    its order and its codes are our own design; RM EHR IM §EHR Access only
@@ -716,6 +747,15 @@ which is what makes an optional stage safe to disable:
    names; the EHRs the copy does not hold are read in one statement. A served
    EHR with no settings needs no read, and its care ground is inferred from
    which of its two verdicts could have served the row (our own design).
+   Every EHR a query touches gets an entry (#5639): an EHR its scope names,
+   whatever its rows hold, and, for an aggregate projection, each EHR whose
+   data the aggregate read, carried per row as a hidden
+   `array_agg(DISTINCT …)` column in the same statement; a refused query is
+   recorded against the EHR it asked for. An emergency's lifted denies carry
+   the items they cover, and an entry naming the objects it admitted names
+   only the lifted denies covering one of them (#5630). A record the service
+   writes itself, such as an EHR Extract export's, names the request and the
+   caller's binding, which the adapter publishes for the request (#5638).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
@@ -831,8 +871,8 @@ it codes since #5540)
 adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
 `access default`, `access directive kind` (with `controller_rule`, #5621),
 `access effect`, `access relationship`, `access caller kind`, `access
-operation`, `care relationship`, `access refusal` (with
-`refused-policy-denied`, #5621) and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
+operation`, `care relationship`, `group kind` (#5617), `access refusal`
+(with `refused-policy-denied`, #5621) and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
 (`Term::read`), with a value of another terminology or a code outside its
 group refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the care relationship codes are qualifiers, never
@@ -954,7 +994,7 @@ which the performance gate's transactions-per-request measure refuses
 (#5459).
 
 **Caller facts** (#5511). Beside the grants, the side table holds what the
-access evaluator reads about a caller (migrations `party/0039`, `party/0041`):
+access evaluator reads about a caller (migrations `party/0039`, `party/0042`):
 `binding_caller_fact`, one row per `ROLE` whose `name` is a `DV_CODED_TEXT`
 of the jurisdiction's terminology (the role its performer holds while the
 `ROLE` is in force, read with `ForeignCode::read`, #5621), and per care
@@ -971,9 +1011,18 @@ only the facts of the parties stamped since its copy, one indexed read
 small read and the request path still adds no transaction. A refill and an
 erasure move the grant revision, which reads every fact again.
 `Capabilities::facts()` gives a request's caller its roles and care teams in
-force; `LiveGrants::under_care_of` gives a subject's care
-relationships with their dates, so the evaluator applies the grace after a
-discharge. A `PERSON` version that changes its care relationships commits
+force. The replica's copy holds the facts of callers
+alone: a patient's `under_care_of` relationships grow with the record, so
+`grants::care::CareCopy` holds them in two bounded caches (#5615), a
+subject's relationships (`LiveGrants::under_care_of`, at most
+`care::SUBJECTS` subjects) and a care team's patients
+(`LiveGrants::cared_for_by`, teams holding at most `care::CENSUS` patients
+together, read by `ix_binding_caller_fact_care_team` of migration
+`party/0041`). Each is read on a miss, one indexed statement, and dropped
+when the facts read of a notification stamps a party it holds or a team the
+party is now under the care of; a grant reload and a listener that connects
+or loses its connection drop both. The relationships carry their dates, so
+the evaluator applies the grace after a discharge. A `PERSON` version that changes its care relationships commits
 only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
 the care delivery environment evaluates "care deliverer"). A care
@@ -984,8 +1033,22 @@ relationship of another party kind or of its own container is refused
 `LiveGrants::memberships` of the provider its acts-for relationship names,
 which `Capabilities::facts().provider_groups()` carries and the request's
 caller adds to the parties it acts for, one level deep, from the copy held,
-so the regional sharing example adds no transaction. **Our own design:** no
-openEHR spec gives a role or a relationship an access meaning.
+so the regional sharing example adds no transaction. The care check compares
+what each care relationship says, never its position in `relationships`
+(#5640). On a SCIM User's protected `PERSON`, a version whose only change
+from its predecessor is to its care relationships (the two stored bodies
+compared with every care relationship and the `uid` taken out,
+`grants::caller::only_care_differs`) passes the party protection for a
+holder of `write_care_relationship`, and the care check decides it, so the
+ADT system rosters a provisioned professional (#5617). A SCIM Group created
+with `careTeam` in FerroEHR's Group extension is a care team: its `GROUP`
+is named by the coded `care_team` (group `group kind`) and each membership by
+the coded `member_of`, since RM demographic `PARTY.type()` and
+`PARTY_RELATIONSHIP.type()` are the `name` (`Type_valid`); creating
+one needs the client's `write_care_relationship` grant, and its membership
+changes meet the same care check. **Our own design:** no openEHR spec gives a
+role or a relationship an access meaning, and RFC 7643 §4.2 leaves a
+Group's meaning to the provider.
 
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL

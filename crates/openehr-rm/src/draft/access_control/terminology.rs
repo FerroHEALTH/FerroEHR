@@ -47,6 +47,8 @@ pub enum Group {
     /// `care relationship`: the demographic relationships that put a caller
     /// in care of a subject.
     CareRelationship,
+    /// `group kind`: what kind of group a demographic `GROUP` is.
+    GroupKind,
     /// `access refusal`: the code an access refusal is recorded under.
     AccessRefusal,
     /// `access log withheld`: the attributes of an access-log accessor the
@@ -56,7 +58,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 10] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -64,6 +66,7 @@ impl Group {
         Self::AccessCallerKind,
         Self::AccessOperation,
         Self::CareRelationship,
+        Self::GroupKind,
         Self::AccessRefusal,
         Self::AccessLogWithheld,
     ];
@@ -79,6 +82,7 @@ impl Group {
             Self::AccessCallerKind => "access caller kind",
             Self::AccessOperation => "access operation",
             Self::CareRelationship => "care relationship",
+            Self::GroupKind => "group kind",
             Self::AccessRefusal => "access refusal",
             Self::AccessLogWithheld => "access log withheld",
         }
@@ -95,6 +99,7 @@ impl Group {
             Self::AccessCallerKind => CallerKind::CODES,
             Self::AccessOperation => OperationClass::CODES,
             Self::CareRelationship => CareRelationship::CODES,
+            Self::GroupKind => GroupKind::CODES,
             Self::AccessRefusal => Refusal::CODES,
             Self::AccessLogWithheld => Withheld::CODES,
         }
@@ -325,6 +330,16 @@ group! {
 }
 
 group! {
+    /// What kind of group a demographic `GROUP` is, coded in its `name`: RM
+    /// demographic `party.adoc` makes `type()` the `name` (`Type_valid`).
+    GroupKind in GroupKind {
+        /// The `GROUP` is a care team: a `member_of` relationship to it puts
+        /// its member in the care of the subjects under its care.
+        CareTeam => "care_team",
+    }
+}
+
+group! {
     /// The code an access refusal is recorded under, one per step of the
     /// decision procedure that can refuse.
     Refusal in AccessRefusal {
@@ -352,6 +367,9 @@ group! {
         /// subject a recorded representation names: it acts for that
         /// subject alone.
         NotRepresented => "refused-not-represented",
+        /// A caller admitted under an agreement that conditions its reads on
+        /// a consent decision asks to read with no reference to one.
+        ConsentReferenceMissing => "refused-consent-reference-missing",
     }
 }
 

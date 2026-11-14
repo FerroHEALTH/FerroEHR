@@ -19,7 +19,9 @@
 //! this: our own design (#5513, #5588).
 
 use sea_query::extension::postgres::PgFunc;
-use sea_query::{Alias, Expr, ExprTrait, Func, Query, SelectStatement};
+use sea_query::{
+    Alias, CommonTableExpression, Expr, ExprTrait, Func, Query, SelectStatement, WithClause,
+};
 use uuid::Uuid;
 
 use super::expr::{archetype_node_id, col};
@@ -38,6 +40,10 @@ const TRUNK: &str = "access_trunk";
 const CARE: &str = "access_ehr";
 /// The alias of the projected settings row of the EHR.
 const SETTINGS: &str = "access_settings_row";
+/// The common table that holds the subjects the caller cares for.
+const CARED: &str = "access_cared";
+/// The one column of [`CARED`]: a `jsonb` object keyed by subject id.
+const SUBJECTS: &str = "subjects";
 
 /// What a predicate is read against: the caller's facts, which a class's
 /// facts are compared with; `None` outside a class.
@@ -57,7 +63,7 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
         } else if pair.admits_none() {
             None
         } else {
-            Some(admitted(condition, pair, h, target.clone(), facts))
+            Some(admitted(pair, h, target.clone(), facts))
         }
     };
     let caller = Facts {
@@ -97,7 +103,7 @@ pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Ex
         Some(Expr::cust_with_exprs(
             "CASE WHEN $1 THEN $2 ELSE $3 END",
             [
-                self::cared(condition, target.clone()),
+                self::cared(target.clone()),
                 pred(&cared, CARE, facts),
                 pred(&uncared, CARE, facts),
             ],
@@ -199,13 +205,7 @@ fn in_classes(ids: &[i64]) -> Expr {
 }
 
 /// The rows of an EHR of `pair` admitted, on head row `h` of EHR `target`.
-fn admitted(
-    condition: &ConditionGroups,
-    pair: &VerdictPair,
-    h: &str,
-    target: Expr,
-    facts: Facts<'_>,
-) -> Expr {
+fn admitted(pair: &VerdictPair, h: &str, target: Expr, facts: Facts<'_>) -> Expr {
     let (with, without) = (pair.cared.admitted(), pair.uncared.admitted());
     if with == without {
         return pred(&with, h, facts);
@@ -213,25 +213,72 @@ fn admitted(
     Expr::cust_with_exprs(
         "CASE WHEN $1 THEN $2 ELSE $3 END",
         [
-            cared(condition, target),
+            cared(target),
             pred(&with, h, facts),
             pred(&without, h, facts),
         ],
     )
 }
 
+/// The `WITH` clause that binds the subjects the caller cares for once per
+/// statement, which every [`cared`] probe reads; `None` when no verdict of
+/// the condition reads care.
+///
+/// The subjects are one `jsonb` object keyed by subject id: the planner
+/// estimates `jsonb ? text` at a fixed selectivity whatever the census, where
+/// it walks a bound array element by element, and a probe is one search of
+/// the object's sorted keys (PostgreSQL 18 §9.16, `jsonb ? text`). No openEHR
+/// spec governs this: our own design (#5645).
+#[expect(
+    clippy::disallowed_types,
+    reason = "the census object is SQL/JSON wire material (the bound operand of jsonb ?), \
+              not an RM value; no generated type models it"
+)]
+pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
+    let condition = condition.groups()?;
+    let pairs = std::iter::once(&condition.closed)
+        .chain(condition.groups.iter().map(|(_, pair)| pair))
+        .chain(condition.default.iter());
+    if pairs.into_iter().all(|pair| pair.cared == pair.uncared) {
+        return None;
+    }
+    let subjects: serde_json::Map<String, serde_json::Value> = condition
+        .cared
+        .iter()
+        .map(|subject| (subject.clone(), serde_json::Value::Bool(true)))
+        .collect();
+    let mut row = Query::select();
+    row.expr_as(
+        Expr::val(serde_json::Value::Object(subjects).to_string()).cast_as(Alias::new("jsonb")),
+        Alias::new(SUBJECTS),
+    );
+    let table = CommonTableExpression::new()
+        .query(row)
+        .table_name(Alias::new(CARED))
+        .to_owned();
+    Some(WithClause::new().cte(table).to_owned())
+}
+
 /// Whether the subject of the EHR `target` is under the care of the caller:
-/// a `CASE` condition, since an EHR names one subject.
-fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
+/// a `CASE` condition, since an EHR names one subject. The subjects are the
+/// [`census`] the statement binds once.
+fn cared(target: Expr) -> Expr {
+    let mut subjects = Query::select();
+    subjects
+        .column(Alias::new(SUBJECTS))
+        .from(Alias::new(CARED));
     let mut probe = Query::select();
     probe
         .expr(Expr::val(1))
         .from_as(Ehr::Table, Alias::new(CARE))
         .and_where(col(CARE, Ehr::Id).eq(target))
-        .and_where(
-            Expr::from(Func::lower(col(CARE, Ehr::SubjectId)))
-                .eq(Expr::from(PgFunc::any(Expr::val(condition.cared.to_vec())))),
-        );
+        .and_where(Expr::cust_with_exprs(
+            "$1 ? $2",
+            [
+                Expr::SubQuery(None, Box::new(subjects.into())),
+                Expr::from(Func::lower(col(CARE, Ehr::SubjectId))),
+            ],
+        ));
     Expr::exists(probe)
 }
 

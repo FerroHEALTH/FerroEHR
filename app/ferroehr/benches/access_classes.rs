@@ -97,6 +97,7 @@ fn request() -> RequestAccess {
         facts: ferroehr::party_binding::grants::caller::CallerFacts::default(),
         administrator: false,
         settings: SettingsCaller::new(false, false, Some(NURSE.to_owned())),
+        lacks_consent_reference: false,
     };
     RequestAccess::new(
         caller,
