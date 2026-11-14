@@ -29,6 +29,10 @@ The steps run in order for each EHR the access reaches. The first step that refu
 |A caller of kind `subject` is the subject of the one EHR its authenticated context names, and a caller whose grants reach only the EHR of its authenticated context reaches that EHR alone. Every other EHR, and an operation on EHR data that names no EHR, MUST be refused to either, whatever any EHR's directives permit. On its own EHR, a caller of another kind takes every further step.
 |`refused-not-subject`
 
+|0. Representation
+|A caller of kind `representative` acts for the subject a recorded representation `PARTY_RELATIONSHIP` names, and reaches the one EHR of that subject alone. Every other EHR, and an operation on EHR data that names no EHR, MUST be refused to it, whatever any EHR's directives permit. On that EHR it takes steps 1 to 3, the `delegation` directives of its `EHR_ACCESS` included.
+|`refused-not-represented`
+
 |1. Opt-out
 |An `opt_out` directive in force binds callers of kind `access_service`. Unless its `_emergency_override_` holds and the caller declares an emergency, and the caller does not act for the subject, the EHR MUST be answered as one that does not exist.
 |`refused-opt-out`, not shown

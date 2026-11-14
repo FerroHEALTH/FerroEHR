@@ -107,11 +107,7 @@ pub(super) fn smart_refusal(
         Need::Demographic(product) | Need::Representation(product) => product,
         Need::Composition(_) => return None,
     };
-    let reason = match crate::smart::routes::check(
-        &requirement,
-        principal,
-        crate::smart::routes::target_ehr(&requirement, matched, uri, req.headers()).as_deref(),
-    ) {
+    let reason = match crate::smart::routes::check(&requirement, principal) {
         Ok(()) => return None,
         Err(reason) => reason,
     };

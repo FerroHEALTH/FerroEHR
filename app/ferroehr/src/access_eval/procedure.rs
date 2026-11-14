@@ -35,11 +35,14 @@
 //!    takes the server's default.
 //!
 //! The subject reading their own record skips every step (EHDS Art. 3). A
-//! confined caller, the subject or one whose grants are `patient/` grants
-//! alone, is refused every EHR but the one its patient context names before
-//! step 1 (`refused-not-subject`); on that EHR a confined professional takes
-//! every step. A
-//! representative is held to steps 1 to 3 and skips 4 to 7. A declared
+//! confined caller is refused every EHR but its own before step 1 (step 0):
+//! the subject, or one whose grants are `patient/` grants alone, every EHR
+//! but the one its patient context names (`refused-not-subject`), and a
+//! representative every EHR but the one whose subject its recorded
+//! representation `PARTY_RELATIONSHIP` names (`refused-not-represented`,
+//! EHDS Art. 4(2)). On its own EHR a confined professional takes every step,
+//! and a representative is held to steps 1 to 3, the `delegation` directives
+//! of that EHR's `EHR_ACCESS` included, and skips 4 to 7. A declared
 //! emergency by the break-glass role lifts steps 4 to 7.
 //!
 //! The same procedure decides a settings class ([`crate::access_eval::class`])
@@ -68,9 +71,11 @@ pub struct Caller {
     pub kind: CallerKind,
     /// The id of the `PERSON` or `AGENT` the caller is bound to.
     pub party: Option<String>,
-    /// The EHR of a [`Self::confined`] caller's SMART App Launch patient
-    /// context, the one EHR it reaches; `None` for every other caller, and
-    /// for a confined caller with no such EHR, whom every EHR refuses.
+    /// The one EHR a [`Self::confined`] caller reaches: the EHR of its SMART
+    /// App Launch patient context, or for a representative the EHR whose
+    /// subject its recorded representation names; `None` for every other
+    /// caller, and for a confined caller with no such EHR, whom every EHR
+    /// refuses.
     pub own_ehr: Option<EhrId>,
     /// Whether the caller's grants on the EHR's data are `patient/` grants
     /// alone, which reach only "data within that patient's EHR" (SMART on
@@ -92,10 +97,23 @@ pub struct Caller {
 
 impl Caller {
     /// Whether the caller reaches only [`Self::own_ehr`]: a subject caller,
-    /// and a caller whose grants are `patient/` grants alone.
+    /// a representative, and a caller whose grants are `patient/` grants
+    /// alone.
     #[must_use]
     pub fn confined(&self) -> bool {
-        self.kind == CallerKind::Subject || self.patient_grants_only
+        matches!(self.kind, CallerKind::Subject | CallerKind::Representative)
+            || self.patient_grants_only
+    }
+
+    /// The refusal of a [`Self::confined`] caller on an EHR other than its
+    /// own (step 0).
+    #[must_use]
+    pub fn not_own(&self) -> Refusal {
+        if self.kind == CallerKind::Representative {
+            Refusal::NotRepresented
+        } else {
+            Refusal::NotSubject
+        }
     }
 }
 
@@ -358,10 +376,10 @@ pub struct Judged<'a> {
 pub fn decide(judged: &Judged<'_>) -> Verdict {
     let mut verdict = Verdict::admit();
     let caller = judged.caller;
-    // NOTE: our own design (#5586, #5606), SMART master08 §Resource Scopes confines a patient
-    // context to "data within that patient's EHR", so every other EHR refuses it.
+    // NOTE: our own design (#5586, #5606, #5609), SMART master08 §Resource Scopes and EHDS
+    // Art. 4(2) hold a patient context or a representative to one EHR, so every other refuses.
     if caller.confined() && !judged.ehr.own {
-        verdict.otherwise = Outcome::Refused(Refusal::NotSubject);
+        verdict.otherwise = Outcome::Refused(caller.not_own());
         return verdict;
     }
     // NOTE: EHDS Art. 3, the subject reads their own record; only the access delay holds it.

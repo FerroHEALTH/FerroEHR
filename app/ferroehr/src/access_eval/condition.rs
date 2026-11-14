@@ -253,11 +253,12 @@ impl RequestAccess {
     /// EHR create or a query with no single-EHR scope, noted for the access
     /// record as [`Self::note`] notes one: a confined caller reaches one EHR,
     /// and a request naming none names no EHR of its own
-    /// (`refused-not-subject`, step 0); any other caller is judged on each
-    /// EHR the operation reaches.
+    /// (`refused-not-subject`, or `refused-not-represented` for a
+    /// representative, step 0); any other caller is judged on each EHR the
+    /// operation reaches.
     pub fn judge_unnamed(&self) -> Outcome {
-        // NOTE: our own design (#5606), the evaluator alone holds a confined caller to the EHR
-        // of its patient context, so a request that names no EHR is judged here.
+        // NOTE: our own design (#5606, #5609), the evaluator alone holds a confined caller to
+        // its one EHR, so a request that names no EHR is judged here.
         if !self.confined() {
             return Outcome::Admit;
         }

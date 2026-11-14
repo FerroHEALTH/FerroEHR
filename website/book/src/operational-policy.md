@@ -333,7 +333,7 @@ group is FerroEHR's own design.
 | `access sensitivity clearance` | `sensitivity_clearance` | The `name` of a credentials element whose value is a sensitivity code |
 | `access permitted purpose` | `permitted_purpose` | The `name` of a credentials element whose value is a purpose-of-use code |
 | `care relationship` | `member_of`, `under_care_of` | The `name` of a `PARTY_RELATIONSHIP` |
-| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-purpose-not-permitted`, `refused-consent-required`, `refused-not-subject` | The access record of a refusal |
+| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-purpose-not-permitted`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
 Two grants of the operation table belong to access control:

@@ -51,7 +51,7 @@ Eleven groups are added to the openEHR Terminology. The codes are for the termin
 |The `_name_` of a `PARTY_RELATIONSHIP`: a professional's membership of a care-team `GROUP`, and the subject being under the care of a team or unit
 
 |access refusal
-|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
 
 |access log withheld
