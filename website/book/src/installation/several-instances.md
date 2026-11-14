@@ -31,7 +31,9 @@ While a listener is down, its copy reads the database on every request. The
 instance keeps serving and every decision stays correct. The health document
 shows the lost listener under `policy_listeners`, which reads `DEGRADED` and
 names each listener until it connects again. A degraded indicator does not
-withdraw readiness, so the instance stays in rotation.
+withdraw readiness, so the instance stays in rotation. The metric
+`policy_listener_up` reads `0` for the lost listener; see [a lost policy
+listener](../operations-access-path.md#a-lost-policy-listener).
 
 ## Connection budget
 
@@ -58,4 +60,5 @@ a row lock on the chain head, and signs each link when an OpenPGP key is
 configured ([version signing](../signing/index.md)). Give every instance the
 same `[record.signing]` key and the same configuration file. An instance with
 another key writes links the others cannot vouch for, and the chain then fails
-to verify.
+to verify; see [a signing key mismatch between
+instances](../operations-access-path.md#a-signing-key-mismatch-between-instances).

@@ -250,14 +250,18 @@ impl LiveGrants {
     /// [`GrantsUnavailable`] when the party store does not answer; the copy
     /// held stays, and the next request reads again.
     pub async fn refresh(&self) -> Result<(), GrantsUnavailable> {
+        let started = std::time::Instant::now();
+        let mut kind = "unchanged";
         let read = async {
             let mut conn = self.pool.acquire().await?;
             let (revision, facts_revision) = store::revisions(&mut conn).await?;
             if Some(revision) != self.revision() {
+                kind = "grants";
                 let _installing = self.installing.lock().await;
                 let loaded = store::load(&mut conn).await?;
                 self.install(loaded);
             } else if Some(facts_revision) != self.facts_revision() {
+                kind = "facts";
                 let _installing = self.installing.lock().await;
                 let since = self.facts_revision();
                 let changed = read_facts(&mut conn, since).await?;
@@ -269,7 +273,17 @@ impl LiveGrants {
             }
             Ok::<(), StorageError>(())
         };
-        match read.await {
+        let read = read.await;
+        crate::telemetry::access_path::metrics()
+            .grants_refresh_duration
+            .record(
+                crate::telemetry::access_path::seconds_since(started),
+                &[
+                    opentelemetry::KeyValue::new("kind", kind),
+                    crate::telemetry::access_path::outcome(&read),
+                ],
+            );
+        match read {
             Ok(()) => Ok(()),
             Err(error) => {
                 self.listened.mark_stale();

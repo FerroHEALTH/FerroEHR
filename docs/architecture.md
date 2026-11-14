@@ -1201,6 +1201,17 @@ and takes its name out of the table's check.
   own costs one transaction per request (measured: 6.5 to 7.5). A stored
   version that stops compiling under a later release leaves the document in
   force and is logged, so a code change never empties a policy.
+- **What an operator sees.** Each listener keeps counts of its own (lost
+  connections, the newest notification, the reads a stale copy or a lost
+  listener caused) that `ferroehr::telemetry::access_path` reads at each
+  collection, labelled by the name the `policy_listeners` health indicator
+  uses. The per-EHR access copy, the evaluator (one decision per EHR a
+  request reached, counted when the request's evaluator scope ends), the
+  access log's appends, signatures, seals and retention, and the chain
+  verification record into the same module. Every label is a closed set
+  written in the crate, never an id. No specification governs the metrics:
+  our own design (#5591); the book's "Access path metrics and runbooks" page
+  is the operator's reference.
 - **Audit records under a changing map.** The audit store keeps one render
   policy per category map and writes each record under the policy of the map
   its digest names, so a record emitted under one map and written after a

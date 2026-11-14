@@ -148,6 +148,28 @@ async fn trail(pool: &PgPool, resource: &str) -> Vec<(String, String)> {
     }
 }
 
+/// Wait until the record of a failed erasure has landed in `audit_event`.
+async fn failed_erasure(pool: &PgPool) {
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        let (failed,): (i64,) = sqlx::query_as(
+            "SELECT count(*) FROM audit.audit_event \
+             WHERE operation = 'admin_access_log_erase' AND outcome <> 0",
+        )
+        .fetch_one(pool)
+        .await
+        .expect("read the failed erasures");
+        if failed > 0 {
+            return;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the record of the failed erasure never landed"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
 /// The administrator's erasure answers the tombstone, which names the
 /// erasure's grounds and keeps the entry's link, the chain still verifies,
 /// and the act is an access record naming the administrator.
@@ -180,22 +202,6 @@ async fn an_administrator_erases_an_entry_by_its_tombstone() {
     ));
     let trail = trail(&pool, UID).await;
     assert_eq!(trail, [("D".to_owned(), "root".to_owned())]);
-    let (entries, rows): (i64, i64) = sqlx::query_as(
-        "SELECT (SELECT count(*) FROM audit.access_trail \
-                  WHERE operation = 'admin_access_log_erase' AND chain = 'access_log' \
-                    AND resource_id = $1), \
-                (SELECT count(*) FROM audit.audit_event \
-                  WHERE operation = 'admin_access_log_erase')",
-    )
-    .bind(UID)
-    .fetch_one(&pool)
-    .await
-    .expect("count the records of the erasure");
-    assert_eq!(
-        (entries, rows),
-        (1, 0),
-        "the erasure is stored once, as its access-log entry naming the erased entry"
-    );
     let findings = AuditStore::new(pool.clone())
         .verify_chains_advancing(VerifyScope::Full)
         .await
@@ -207,6 +213,26 @@ async fn an_administrator_erases_an_entry_by_its_tombstone() {
         status,
         StatusCode::CONFLICT,
         "a tombstone is not erased again: {body}"
+    );
+
+    // The drain writes the queue in order, so once the refused second erasure
+    // has landed every record of the first one has been stored or skipped.
+    failed_erasure(&pool).await;
+    let (entries, rows): (i64, i64) = sqlx::query_as(
+        "SELECT (SELECT count(*) FROM audit.access_trail \
+                  WHERE operation = 'admin_access_log_erase' AND chain = 'access_log' \
+                    AND resource_id = $1), \
+                (SELECT count(*) FROM audit.audit_event \
+                  WHERE operation = 'admin_access_log_erase' AND outcome = 0)",
+    )
+    .bind(UID)
+    .fetch_one(&pool)
+    .await
+    .expect("count the records of the erasure");
+    assert_eq!(
+        (entries, rows),
+        (1, 0),
+        "the erasure is stored once, as its access-log entry naming the erased entry"
     );
 }
 

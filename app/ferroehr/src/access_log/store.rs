@@ -41,6 +41,7 @@ use sqlx::{Connection, PgConnection, PgPool, Row};
 use crate::access_log::chain::link_digest;
 use crate::db::acquire::{AcquireError, acquire};
 use crate::digest::sha256_hex;
+use crate::telemetry::access_path;
 use crate::versioning::signature::signer::{AttestError, Signer};
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
@@ -213,6 +214,25 @@ impl AccessLogStore {
     pub async fn append_in(
         &self,
         conn: &mut PgConnection,
+        entries: Vec<AccessLogEntry>,
+    ) -> Result<Vec<AccessLogEntry>, AccessLogError> {
+        let started = std::time::Instant::now();
+        let count = u64::try_from(entries.len()).unwrap_or(u64::MAX);
+        let appended = self.link_in(conn, entries).await;
+        let metrics = access_path::metrics();
+        let outcome = access_path::outcome(&appended);
+        metrics.log_append_duration.record(
+            access_path::seconds_since(started),
+            std::slice::from_ref(&outcome),
+        );
+        metrics.log_entries.add(count, &[outcome]);
+        appended
+    }
+
+    /// Link and insert `entries` on `conn`, the work of [`Self::append_in`].
+    async fn link_in(
+        &self,
+        conn: &mut PgConnection,
         mut entries: Vec<AccessLogEntry>,
     ) -> Result<Vec<AccessLogEntry>, AccessLogError> {
         let contents = entries
@@ -282,17 +302,25 @@ impl AccessLogStore {
                 .await?;
         let mut sequence: i64 = head.try_get("head_seq")?;
         let mut previous: String = head.try_get("head_digest")?;
-        let mut foreseen = Vec::with_capacity(contents.len());
-        for content in contents {
-            sequence = sequence
-                .checked_add(1)
-                .ok_or(AccessLogError::Unforeseen { sequence })?;
-            let digest = link_digest(&previous, sequence, &sha256_hex(content));
-            let signature = signer.attest(digest.as_bytes())?;
-            previous.clone_from(&digest);
-            foreseen.push((digest, signature));
-        }
-        Ok(foreseen)
+        let started = std::time::Instant::now();
+        let attested = (|| {
+            let mut foreseen = Vec::with_capacity(contents.len());
+            for content in contents {
+                sequence = sequence
+                    .checked_add(1)
+                    .ok_or(AccessLogError::Unforeseen { sequence })?;
+                let digest = link_digest(&previous, sequence, &sha256_hex(content));
+                let signature = signer.attest(digest.as_bytes())?;
+                previous.clone_from(&digest);
+                foreseen.push((digest, signature));
+            }
+            Ok(foreseen)
+        })();
+        access_path::metrics().log_sign_duration.record(
+            access_path::seconds_since(started),
+            &[access_path::outcome(&attested)],
+        );
+        attested
     }
 
     /// The records whose `ehr_id` is `ehr_id`, in chain order, each with its

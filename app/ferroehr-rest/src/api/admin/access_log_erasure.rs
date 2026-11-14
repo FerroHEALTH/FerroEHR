@@ -14,9 +14,11 @@
 //! Gating: mounted under `/admin/`, so the route inherits the group's RBAC
 //! Admin class (`401`/`403`) and the `AppConfig::api.admin` config gate
 //! (`405` with an empty `Allow` when off). The erasure writes an access record
-//! (`ferroehr::service::admin::access_log_erasure`).
+//! (`ferroehr::service::admin::access_log_erasure`), which the store holds once:
+//! the request's operation record of a done erasure is marked written.
 
 use axum::response::Response;
+use ferroehr::system_log::event::EntryScope;
 use http::StatusCode;
 use openehr_base::containers::NonEmptyVec;
 use openehr_its::rest::runtime::ApiError;
@@ -29,6 +31,7 @@ use crate::api::{RequestParts, guarded_handler};
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
+use crate::system_log::middleware::AuditObject;
 
 /// The access-log erasure route: **no ITS-REST contract** (module docs).
 pub(crate) fn access_log_erasure_routes() -> OpenApiRouter<AppState> {
@@ -86,9 +89,13 @@ async fn erase(state: AppState, parts: RequestParts) -> Result<Response, RestErr
             )))
         })?;
     let tombstone = state.backend().erase_access_log_entry(uid, grounds).await?;
-    Ok(negotiate::body::respond(
-        &parts.headers,
-        StatusCode::OK,
-        &tombstone,
-    ))
+    let mut resp = negotiate::body::respond(&parts.headers, StatusCode::OK, &tombstone);
+    // NOTE: our own design (#5597), the erasure stored its record with its tombstone, so the
+    // operation record of the request only reaches the forwarding sinks.
+    resp.extensions_mut().insert(AuditObject {
+        uid: Some(uid.to_owned()),
+        entry: EntryScope::Written,
+        ..AuditObject::default()
+    });
+    Ok(resp)
 }

@@ -23,14 +23,15 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, CallerKind, OperationClass, Refusal,
+    AccessDefault, CallerKind, OperationClass, Refusal, Term as _,
 };
+use opentelemetry::KeyValue;
 use tokio::task_local;
 use uuid::Uuid;
 
 use crate::access_eval::class::{Class, Classes};
 use crate::access_eval::procedure::{
-    Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide,
+    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
 };
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
 use crate::ids::EhrId;
@@ -452,6 +453,53 @@ impl RequestAccess {
         }
     }
 
+    /// Count the request's decisions once it ended: one per EHR it judged or
+    /// refused, refused under the first code noted for it, and each
+    /// directive or step an emergency lifted. The labels are the closed sets
+    /// of the outcome, the `refused-*` code and [`Lifted`], never the EHR.
+    /// No openEHR spec governs the metrics: our own design (#5591).
+    fn count_decisions(&self) {
+        let metrics = crate::telemetry::access_path::metrics();
+        let mut refused: BTreeMap<EhrId, Refusal> = self
+            .recorded
+            .refusals
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .iter()
+            .map(|(ehr_id, noted)| (*ehr_id, noted.refusal))
+            .collect();
+        let verdicts = self.verdicts.lock().unwrap_or_else(PoisonError::into_inner);
+        for (ehr_id, judged) in verdicts.iter() {
+            let decision = match refused.remove(ehr_id) {
+                Some(refusal) => [("outcome", "refused"), ("code", refusal.code())],
+                None => [("outcome", "admitted"), ("code", "none")],
+            };
+            metrics
+                .decisions
+                .add(1, &decision.map(|(key, value)| KeyValue::new(key, value)));
+            for lifted in &judged.verdict.lifted {
+                let lifted = match lifted {
+                    Lifted::OptOut => "opt_out",
+                    Lifted::Restriction => "restriction",
+                    Lifted::Consent => "consent",
+                    Lifted::Policy => "policy",
+                };
+                metrics
+                    .emergency_overrides
+                    .add(1, &[KeyValue::new("lifted", lifted)]);
+            }
+        }
+        for refusal in refused.into_values() {
+            metrics.decisions.add(
+                1,
+                &[
+                    KeyValue::new("outcome", "refused"),
+                    KeyValue::new("code", refusal.code()),
+                ],
+            );
+        }
+    }
+
     /// The condition a query applies, over every EHR of a class among
     /// `classes`, an EHR held closed, and the default for an EHR with no
     /// settings, the caller caring for the subjects `cared`. An EHR of a
@@ -613,12 +661,15 @@ pub fn current() -> Option<Arc<RequestAccess>> {
     REQUEST_ACCESS.try_with(Arc::clone).ok()
 }
 
-/// Run `fut` with `access` as the running request's evaluator.
+/// Run `fut` with `access` as the running request's evaluator, and count
+/// its decisions when it ends.
 pub async fn with_request_access<F>(access: Arc<RequestAccess>, fut: F) -> F::Output
 where
     F: Future,
 {
-    REQUEST_ACCESS.scope(access, fut).await
+    let output = REQUEST_ACCESS.scope(Arc::clone(&access), fut).await;
+    access.count_decisions();
+    output
 }
 
 /// Whether `item` of `ehr_id` may leave the store for the running request:
