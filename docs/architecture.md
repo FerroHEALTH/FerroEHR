@@ -803,7 +803,7 @@ adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
 `access default`, `access directive kind`, `access effect`, `access
 relationship`, `access caller kind`, `access operation`, `access
 sensitivity clearance`, `access permitted purpose`, `care relationship`,
-`access refusal` and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
+`group kind` (#5617), `access refusal` and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
 (`Term::read`), with a value of another terminology or a code outside its
 group refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the clearance, purpose and care relationship codes
@@ -963,8 +963,15 @@ from its predecessor is to its care relationships (the two stored bodies
 compared with every care relationship and the `uid` taken out,
 `grants::caller::only_care_differs`) passes the party protection for a
 holder of `write_care_relationship`, and the care check decides it, so the
-ADT system rosters a provisioned professional (#5617). **Our own design:** no
-openEHR spec gives a capability or a relationship an access meaning.
+ADT system rosters a provisioned professional (#5617). A SCIM Group created
+with `careTeam` in FerroEHR's Group extension is a care team: its `GROUP`
+is named by the coded `care_team` (group `group kind`) and each membership by
+the coded `member_of`, since RM demographic `PARTY.type()` and
+`PARTY_RELATIONSHIP.type()` are the `name` (`Type_valid`); creating
+one needs the client's `write_care_relationship` grant, and its membership
+changes meet the same care check. **Our own design:** no openEHR spec gives a
+capability or a relationship an access meaning, and RFC 7643 §4.2 leaves a
+Group's meaning to the provider.
 
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL

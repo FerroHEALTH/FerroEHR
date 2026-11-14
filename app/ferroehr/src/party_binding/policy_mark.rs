@@ -102,6 +102,20 @@ pub(crate) fn coded(value: &Value) -> Option<&str> {
         .flatten()
 }
 
+/// The `DV_CODED_TEXT` of `code` in [`TERMINOLOGY`], reading `rubric`: the
+/// one place a written code names the access control terminology.
+pub(crate) fn coded_term(code: &str, rubric: &str) -> Value {
+    serde_json::json!({
+        "_type": "DV_CODED_TEXT",
+        "value": rubric,
+        "defining_code": {
+            "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY },
+            "code_string": code
+        }
+    })
+}
+
 /// The first value of the tree `value`, itself included, depth first, for
 /// which `found` answers.
 fn first<T>(value: &Value, found: &mut impl FnMut(&Value) -> Option<T>) -> Option<T> {

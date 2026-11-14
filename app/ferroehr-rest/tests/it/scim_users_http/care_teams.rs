@@ -3,16 +3,19 @@
 
 //! Care teams of SCIM-provisioned professionals, through their real callers
 //! (#5617, #5640): the ADT system writing `member_of` on a SCIM User's
-//! `PERSON` through the Demographic API, and a SCIM client changing the
-//! User's Groups beside that roster.
+//! `PERSON` through the Demographic API, and a SCIM client creating a
+//! care-team Group with FerroEHR's Group extension (`careTeam`).
 //!
 //! The party protection leaves a version that changes only the care
 //! relationships to the `write_care_relationship` grant, held in the CDR. A
-//! Group change compares what the care relationships say, never their
-//! position. No openEHR spec gives a relationship an access meaning or
-//! governs who writes a party: our own design (BASE Architecture Overview
-//! §The Problem of Roles puts the care deliverer with the care delivery
-//! environment).
+//! care-team Group's `GROUP` is named by the coded `care_team` and each
+//! membership by the coded `member_of` (RM demographic `PARTY.type()` and
+//! `PARTY_RELATIONSHIP.type()` are the `name`), written under the same grant. A Group change
+//! compares what the care relationships say, never their position. No openEHR
+//! spec gives a relationship an access meaning or governs who writes a party:
+//! our own design (BASE Architecture Overview §The Problem of Roles puts the
+//! care deliverer with the care delivery environment; RFC 7643 §4.2 leaves a
+//! Group's meaning to the provider).
 
 use std::sync::Arc;
 
@@ -26,12 +29,14 @@ use super::{CLIENT, LOGIN, MACHINES, OTHER, OTHER_LOGIN, SCOPE, call, created, p
 use crate::common::{self, BASE};
 use crate::policy_fixture::{capability, grant, scope};
 
+/// The URN of FerroEHR's Group extension.
+const GROUP_EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group";
 /// The client id of the hospital's ADT system.
 const ADT: &str = "adt";
 
 /// The router over a fresh database holding the default definitions, where
-/// [`CLIENT`] provisions under [`LOGIN`], [`OTHER`] under [`OTHER_LOGIN`],
-/// and [`ADT`] reaches
+/// [`CLIENT`] provisions under [`LOGIN`] and holds `write_care_relationship`,
+/// [`OTHER`] provisions under [`OTHER_LOGIN`] without it, and [`ADT`] reaches
 /// the Demographic API (`access_demographic`) and holds
 /// `write_care_relationship`.
 async fn hospital() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
@@ -149,12 +154,20 @@ fn member_of(member: &str, team: &str) -> Value {
     })
 }
 
-/// The SCIM Group `name` of `client` with `members`; the status and body.
-async fn group(app: &Router, client: &str, name: &str, members: &[&str]) -> (StatusCode, Value) {
+/// The SCIM Group `name` of `client` with `members`, a care team when
+/// `care_team`; the status and body.
+async fn group(
+    app: &Router,
+    client: &str,
+    name: &str,
+    members: &[&str],
+    care_team: bool,
+) -> (StatusCode, Value) {
     let body = json!({
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group", GROUP_EXTENSION],
         "displayName": name,
         "members": members.iter().map(|id| json!({ "value": id })).collect::<Vec<_>>(),
+        GROUP_EXTENSION: { "careTeam": care_team },
     });
     let (status, _, created) = call(app, "POST", "/Groups", client, Some(&body), &[]).await;
     (status, created)
@@ -190,7 +203,7 @@ fn carries_member_of(relationship: &Value) -> bool {
 async fn the_adt_system_rosters_a_scim_user_and_changes_nothing_else() {
     let (_db, _service, app) = hospital().await;
     let (user, _) = created(&app, CLIENT, "bram", "bram-login").await;
-    let (status, ward) = group(&app, CLIENT, "Ward 3", &[]).await;
+    let (status, ward) = group(&app, CLIENT, "Ward 3", &[], false).await;
     assert_eq!(status, StatusCode::CREATED, "{ward}");
     let ward = id_of(&ward);
 
@@ -242,12 +255,97 @@ async fn a_roster_without_the_grant_is_refused() {
     )
     .await;
     let (user, _) = created(&app, CLIENT, "anna", "anna-login").await;
-    let (_, ward) = group(&app, CLIENT, "Cardiology", &[]).await;
+    let (_, ward) = group(&app, CLIENT, "Cardiology", &[], false).await;
     let (_, version, mut person) = read_person(&app, ADT, &user).await;
     person["relationships"] = json!([member_of(&user, &id_of(&ward))]);
     let (status, refused) = write_person(&app, "lab", (&user, &version), &person).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
     assert_eq!(relationships(&app, &user).await, Vec::<Value>::new());
+}
+
+/// A care-team Group: its creation and each membership need the client's
+/// `write_care_relationship` grant; its members' memberships carry
+/// `member_of`; `careTeam` is served and never changes; and removing a member
+/// removes the care relationship.
+#[tokio::test]
+async fn a_care_team_group_writes_member_of_under_the_grant() {
+    let (_db, _service, app) = hospital().await;
+    let (user, _) = created(&app, CLIENT, "carla", "carla-login").await;
+    let (status, team) = group(&app, CLIENT, "Psychiatry", &[&user], true).await;
+    assert_eq!(status, StatusCode::CREATED, "{team}");
+    assert_eq!(team[GROUP_EXTENSION]["careTeam"], json!(true), "{team}");
+    let team = id_of(&team);
+    let held = relationships(&app, &user).await;
+    assert_eq!(held.len(), 1, "{held:?}");
+    assert_eq!(
+        held[0]["name"]["defining_code"]["code_string"], "member_of",
+        "the membership is named by the coded member_of: {held:?}"
+    );
+    let request = common::req("GET", format!("{BASE}/demographic/group/{team}"))
+        .auth(&system_token(ADT))
+        .accept("application/json")
+        .build();
+    let (status, _, read) = common::send(&app, request).await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    let read: Value = serde_json::from_str(&read).expect("a GROUP");
+    assert_eq!(
+        read["name"]["defining_code"]["code_string"], "care_team",
+        "the GROUP is named by the coded care_team: {read}"
+    );
+
+    let flip = patch_op(json!([{ "op": "replace",
+        "path": format!("{GROUP_EXTENSION}:careTeam"), "value": false }]));
+    let (status, _, refused) = call(
+        &app,
+        "PATCH",
+        &format!("/Groups/{team}"),
+        CLIENT,
+        Some(&flip),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{refused}");
+    assert_eq!(refused["scimType"], "mutability", "{refused}");
+
+    let remove = patch_op(json!([{ "op": "remove",
+        "path": format!("members[value eq \"{user}\"]") }]));
+    let (status, _, removed) = call(
+        &app,
+        "PATCH",
+        &format!("/Groups/{team}"),
+        CLIENT,
+        Some(&remove),
+        &[],
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{removed}");
+    assert_eq!(relationships(&app, &user).await, Vec::<Value>::new());
+
+    let (status, _, plain) = call(&app, "GET", &format!("/Groups/{team}"), CLIENT, None, &[]).await;
+    assert_eq!(status, StatusCode::OK, "{plain}");
+    assert_eq!(plain[GROUP_EXTENSION]["careTeam"], json!(true), "{plain}");
+}
+
+/// A client without the grant creates no care-team Group, with or without
+/// members, and its plain Groups write memberships with no care relationship.
+#[tokio::test]
+async fn a_care_team_group_needs_the_grant() {
+    let (_db, _service, app) = hospital().await;
+    let (user, _) = created(&app, OTHER, "dirk", "dirk-login").await;
+    for members in [&[][..], &[user.as_str()][..]] {
+        let (status, refused) = group(&app, OTHER, "Emergency", members, true).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
+        assert!(
+            refused.to_string().contains("write_care_relationship"),
+            "{refused}"
+        );
+    }
+    let (status, plain) = group(&app, OTHER, "Emergency", &[&user], false).await;
+    assert_eq!(status, StatusCode::CREATED, "{plain}");
+    assert!(plain.get(GROUP_EXTENSION).is_none(), "{plain}");
+    let held = relationships(&app, &user).await;
+    assert_eq!(held.len(), 1, "{held:?}");
+    assert!(!carries_member_of(&held[0]), "{held:?}");
 }
 
 /// A SCIM client without the grant changes the plain Groups of a User the
@@ -258,9 +356,9 @@ async fn a_roster_without_the_grant_is_refused() {
 async fn a_group_change_leaves_the_adt_roster_in_place() {
     let (_db, _service, app) = hospital().await;
     let (user, _) = created(&app, OTHER, "gina", "gina-login").await;
-    let (_, first) = group(&app, OTHER, "Night shift", &[&user]).await;
+    let (_, first) = group(&app, OTHER, "Night shift", &[&user], false).await;
     let first = id_of(&first);
-    let (_, ward) = group(&app, OTHER, "Ward 3", &[]).await;
+    let (_, ward) = group(&app, OTHER, "Ward 3", &[], false).await;
     let ward = id_of(&ward);
 
     let (_, version, mut person) = read_person(&app, ADT, &user).await;
@@ -286,7 +384,7 @@ async fn a_group_change_leaves_the_adt_roster_in_place() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "{removed}");
-    let (_, again) = group(&app, OTHER, "Day shift", &[&user]).await;
+    let (_, again) = group(&app, OTHER, "Day shift", &[&user], false).await;
     assert!(again["id"].is_string(), "{again}");
     let held = relationships(&app, &user).await;
     assert_eq!(held.len(), 2, "{held:?}");
