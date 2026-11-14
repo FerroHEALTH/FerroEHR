@@ -8,7 +8,7 @@ NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminolo
 
 == Groups
 
-Nine groups are added to the openEHR Terminology. The codes are for the terminology editors to assign; until then each rubric serves as its code, as it does in FerroEHR's `ferroehr-operations` terminology, which defines these groups today. If openEHR adopts them, `Terminology_id_access_control` in the invariants is `openehr`; until then a system names the terminology it documents for them.
+Ten groups are added to the openEHR Terminology. The codes are for the terminology editors to assign; until then each rubric serves as its code, as it does in FerroEHR's `ferroehr-operations` terminology, which defines these groups today. If openEHR adopts them, `Terminology_id_access_control` in the invariants is `openehr`; until then a system names the terminology it documents for them.
 
 [cols="2,3,3", options="header"]
 |===
@@ -42,6 +42,10 @@ Nine groups are added to the openEHR Terminology. The codes are for the terminol
 |member_of, under_care_of
 |The `_name_` of a `PARTY_RELATIONSHIP`: a professional's membership of a care-team `GROUP`, and the subject being under the care of a team or unit
 
+|group kind
+|care_team
+|The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `member_of`
+
 |access refusal
 |refused-opt-out, refused-restricted, refused-consent-denied, refused-policy-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
@@ -51,7 +55,7 @@ Nine groups are added to the openEHR Terminology. The codes are for the terminol
 |`ACCESS_LOG_RESTRICTION._withheld_` (`Group_id_access_log_withheld`): the `_party_`, `_provider_`, `_roles_` and `_groups_` of an `ACCESSOR` the subject view withholds (EHDS Art 9(3))
 |===
 
-The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other three are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a care relationship by the code in a relationship's `_name_`. A role is no code of these groups: it is the coded `_name_` of a `ROLE`, in the terminology the jurisdiction names, and a sensitivity a caller may read and a purpose it may declare are rules of the controller's policy. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other four are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a care relationship by the code in a relationship's `_name_`, and a care team by the `group kind` code in a `GROUP`'s `_name_`, never by its archetype or a path. The Demographic IM makes a party's type its name (`PARTY.type()`, invariant `Type_valid: type = name`; `PARTY_RELATIONSHIP.type()` likewise) and names "the specialist care team, e.g. cardiology team" as the typical `GROUP` (`GROUP` class), so a coded name says what kind of group or relationship it is; the codes are FerroEHR's design. A role is no code of these groups: it is the coded `_name_` of a `ROLE`, in the terminology the jurisdiction names, and a sensitivity a caller may read and a purpose it may declare are rules of the controller's policy. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
 
 A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code; `refused-opt-out` and `refused-restricted` correspond to its `opted out` and `restricted by the subject` reasons. `ACCESS_LOG_RESTRICTION._accessor_kinds_` is coded in that model's own `accessor kind` group, so a restriction names exactly the kinds its entries record.
 

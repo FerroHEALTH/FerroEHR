@@ -5,6 +5,10 @@
 //! facts, from which every request resolves its caller's capabilities and
 //! facts with no read of its own.
 //!
+//! The care relationships of subjects are no caller facts: the care copy
+//! ([`crate::party_binding::grants::care`]) holds them in caches of a fixed
+//! bound, read on a miss (#5615).
+//!
 //! The copy is read again when a notification on [`CHANNEL`] marks it stale,
 //! when the listener is down, and after a request whose own commit changed a
 //! grant or a fact, so the next request on every replica decides under the
@@ -32,10 +36,11 @@ use crate::party_binding::grants::caller::{self, CallerFacts, CareTeam, FactKind
 use crate::party_binding::grants::capabilities::{
     Actor, Capabilities, Client, ClientState, Credentials, Grant, Provider,
 };
+use crate::party_binding::grants::care::CareCopy;
 use crate::party_binding::grants::operation::{GrantCeiling, Operation};
 use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
 use crate::party_binding::grants::trust::{AgreementPosture, FederationTrust};
-use crate::policy_register::listen::Listened;
+use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
 
 tokio::task_local! {
@@ -69,6 +74,14 @@ pub async fn tracking<F: Future>(fut: F) -> (F::Output, bool) {
 #[derive(Debug, thiserror::Error)]
 #[error("the policy grants could not be read")]
 pub struct GrantsUnavailable(#[from] StorageError);
+
+impl From<GrantsUnavailable> for crate::error::ServiceError {
+    /// A copy that cannot be read answers `503`: the request is refused, never
+    /// decided without the facts it needs.
+    fn from(error: GrantsUnavailable) -> Self {
+        Self::overloaded("the access facts could not be read", error)
+    }
+}
 
 impl GrantsUnavailable {
     /// The store failure.
@@ -129,6 +142,8 @@ pub struct LiveGrants {
     installing: tokio::sync::Mutex<()>,
     /// The listener on [`CHANNEL`].
     listened: Arc<Listened>,
+    /// The subjects' care relationships and the teams' patients held.
+    care: Arc<CareCopy>,
 }
 
 impl fmt::Debug for LiveGrants {
@@ -144,8 +159,11 @@ impl LiveGrants {
     /// on the first request.
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
+        let care = Arc::new(CareCopy::new());
+        let dropping: Arc<dyn Subscriber> = Arc::<CareCopy>::clone(&care);
         Self {
-            listened: Arc::new(Listened::new(CHANNEL)),
+            listened: Arc::new(Listened::with_subscriber(CHANNEL, dropping)),
+            care,
             pool,
             ceiling: RwLock::new(Arc::new(GrantCeiling::default())),
             federation: RwLock::new(Arc::default()),
@@ -265,11 +283,16 @@ impl LiveGrants {
                 let _installing = self.installing.lock().await;
                 let since = self.facts_revision();
                 let changed = read_facts(&mut conn, since).await?;
+                let mut stamped: Vec<Uuid> =
+                    changed.parties.iter().map(|(party, _)| *party).collect();
+                stamped.sort_unstable();
+                let teams = changed.cared_teams.clone();
                 let held = self.held_facts();
                 if held.revision.is_none_or(|held| held < changed.revision) {
                     *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
                         Arc::new(held.with(changed));
                 }
+                self.care.drop_changed(&stamped, &teams).await;
             }
             Ok::<(), StorageError>(())
         };
@@ -330,6 +353,7 @@ impl LiveGrants {
         }
         *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
             Arc::new(HeldFacts::default().with(loaded.facts));
+        self.care.drop_all();
         *self.held.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(Held {
             revision: Some(loaded.revision),
             clients,
@@ -432,62 +456,59 @@ impl LiveGrants {
         CallerFacts::new(roles, care_teams)
     }
 
-    /// The care teams and units the subject `subject` is under the care of,
-    /// from the copy held: each `under_care_of` relationship of its live
-    /// `PERSON` head with the dates it holds, whether or not it holds today,
-    /// so the evaluator judges a discharge and the grace after it.
-    #[must_use]
-    pub fn under_care_of(&self, subject: Uuid) -> Vec<CareTeam> {
-        let held = self.held_facts();
-        let mut out: Vec<CareTeam> = held
-            .by_party
-            .get(&subject)
-            .into_iter()
-            .flat_map(|rows| rows.iter())
-            .filter(|row| row.kind == FactKind::UnderCareOf)
-            .filter(|row| matches!(row.term.lifecycle_state.as_str(), "532" | "553"))
-            .filter_map(|row| match (row.value.clone(), row.term.dates) {
-                (FactValue::Team(team), Some(dates)) => Some(CareTeam::new(team, dates)),
-                _ => None,
-            })
-            .collect();
-        out.sort();
-        out.dedup();
-        out
+    /// The care teams and units the subject `subject` is under the care of:
+    /// each `under_care_of` relationship of its live `PERSON` head with the
+    /// dates it holds, whether or not it holds today, so the evaluator judges
+    /// a discharge and the grace after it; from the care copy, or read on a
+    /// miss.
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when a miss cannot be read.
+    pub async fn under_care_of(&self, subject: Uuid) -> Result<Vec<CareTeam>, GrantsUnavailable> {
+        Ok(self.care.of_subject(&self.pool, subject).await?.to_vec())
     }
 
     /// The subjects under the care of any of `teams` on `day`, with `grace`
-    /// after each relationship ends, from the copy held: the patients a
-    /// member of those teams has a live care relationship to
-    /// ([`CareTeam::live_on`]), sorted.
-    #[must_use]
-    pub fn cared_for_by(
+    /// after each relationship ends: the patients a member of those teams
+    /// has a live care relationship to ([`CareTeam::live_on`]), sorted and
+    /// distinct; from the care copy, or read on a miss.
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when a miss cannot be read.
+    pub async fn cared_for_by(
         &self,
         teams: &[Uuid],
         day: jiff::civil::Date,
         grace: jiff::Span,
-    ) -> Vec<Uuid> {
-        if teams.is_empty() {
-            return Vec::new();
+    ) -> Result<Vec<Uuid>, GrantsUnavailable> {
+        let mut subjects = Vec::new();
+        for team in teams {
+            let census = self.care.of_team(&self.pool, *team).await?;
+            subjects.extend(
+                census
+                    .iter()
+                    .filter(|(_, care)| care.live_on(day, grace))
+                    .map(|(subject, _)| *subject),
+            );
         }
-        let held = self.held_facts();
-        held.by_party
-            .iter()
-            .filter(|(_, rows)| {
-                rows.iter().any(|row| {
-                    row.kind == FactKind::UnderCareOf
-                        && matches!(row.term.lifecycle_state.as_str(), "532" | "553")
-                        && match (&row.value, row.term.dates) {
-                            (FactValue::Team(team), Some(dates)) => {
-                                teams.contains(team)
-                                    && CareTeam::new(*team, dates).live_on(day, grace)
-                            }
-                            _ => false,
-                        }
-                })
-            })
-            .map(|(subject, _)| *subject)
-            .collect()
+        subjects.sort_unstable();
+        subjects.dedup();
+        Ok(subjects)
+    }
+
+    /// How many subjects and care teams the care copy holds, and the patients
+    /// those teams hold together; each bounded
+    /// ([`crate::party_binding::grants::care::SUBJECTS`],
+    /// [`crate::party_binding::grants::care::CENSUS`]).
+    #[must_use]
+    pub fn care_held(&self) -> (u64, u64, u64) {
+        self.care.held()
+    }
+
+    /// How many parties the copy of the caller facts holds facts of.
+    #[must_use]
+    pub fn parties_held(&self) -> usize {
+        self.held_facts().by_party.len()
     }
 
     /// Every federation agreement in force at `now`, once per client

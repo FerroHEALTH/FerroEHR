@@ -329,6 +329,7 @@ group is FerroEHR's own design.
 | `access caller kind` | `professional`, `access_service`, `subject`, `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
 | `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
 | `care relationship` | `member_of`, `under_care_of` | The `name` of a `PARTY_RELATIONSHIP` |
+| `group kind` | `care_team` | The `name` of a `GROUP`: the `GROUP` is a care team ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)) |
 | `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
@@ -1635,7 +1636,27 @@ Problem of Roles). A version of a `PERSON` that adds, changes or removes a
 care relationship commits only for a caller holding the
 `write_care_relationship` grant, such as your hospital's ADT system, or for
 an administrator; anyone else is refused `403`. A version that leaves the
-care relationships as they were needs no grant.
+care relationships as they were needs no grant. FerroEHR compares what each
+care relationship says (its code, target, validity and the lifecycle state
+of its holder), never its position in `relationships`, so removing another
+relationship before it changes none.
+
+The care delivery environment reaches FerroEHR on two channels, and a
+deployment uses either or both:
+
+- **The ADT or rostering system** writes `member_of` and `under_care_of`
+  through the Demographic API. On the `PERSON` of a SCIM User, which the
+  party binding protects, a version whose only change is to its care
+  relationships commits under the grant; any other change it makes stays
+  `403`, so the ADT system rosters a professional and touches nothing the
+  identity provider owns. It reads the `PERSON` to write it, so it sees the
+  professional's binding key and SCIM attributes.
+- **The identity provider** marks a SCIM Group as a care team
+  ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)).
+
+The two never undo each other: a SCIM Group change touches only
+memberships of the membership archetype, and the ADT system's relationships
+are of its own archetype.
 
 **When a change applies.** An admission, a transfer and a discharge decide
 the next request on every replica. The commit stamps the patient whose facts
@@ -1647,6 +1668,30 @@ reading a `ROLE`'s coded name as the role a rule names, reading
 relationships as care relationships and group memberships, the
 `write_care_relationship` rule, and holding them in memory are FerroEHR's
 own design.
+
+### Care teams provisioned over SCIM
+
+A SCIM Group is a care team when its client creates it with
+`careTeam = true` in FerroEHR's Group extension
+`urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group`. RFC 7643
+§4.2 leaves what a Group means to the service provider, and the openEHR
+Demographic IM names "the specialist care team, e.g. cardiology team" as
+the typical `GROUP`, so this reading is FerroEHR's own design. The Demographic
+IM makes a party's type its name (`PARTY.type()`, invariant
+`Type_valid: type = name`, and `PARTY_RELATIONSHIP.type()` likewise), so its
+`GROUP` is named by the coded `care_team` and each member's membership by the
+coded `member_of`, and the evaluator counts the member in the team's care on
+the next request. FerroEHR reads the kind by that code, never by the template
+or a path. `careTeam` is immutable (RFC 7643 §2.2): a
+Group never changes kind with its members in it.
+
+Creating a care-team Group, and every membership change of one, needs the
+client's `write_care_relationship` grant in the CDR beside its
+`scim_provision` grant; without it the request is refused `403` naming the
+grant. A membership from SCIM has no `time_validity`, since RFC 7643 has
+none: it holds until the client removes the member or the Group. Plain
+Groups, with `careTeam` left out or `false`, carry no care relationship and
+need no grant.
 
 ## Representatives in the patient portal
 

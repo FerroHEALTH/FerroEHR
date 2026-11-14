@@ -96,8 +96,11 @@ pub(crate) enum PgpVerdict {
     Malformed,
 }
 
-/// A loaded `OpenPGP` signing key: the armored secret key (which also carries the
-/// public key) plus the passphrase that unlocks it. Never logged/serialised.
+/// A loaded `OpenPGP` signing key, never logged or serialised.
+///
+/// It holds the secret key (which also carries the public key) whose signing
+/// component was unlocked once at load, so a signature never derives the key
+/// from the passphrase again (#5616).
 pub struct PgpKey {
     secret: SignedSecretKey,
     /// The component chosen to sign: a subkey ([`signing_subkey_index`]),
@@ -114,7 +117,6 @@ pub struct PgpKey {
     /// versions signed before a rotation keep verifying. Public keys by
     /// construction: a retired certificate can never sign again.
     retired: Vec<SignedPublicKey>,
-    password: Password,
 }
 
 /// The component of the certificate that signs.
@@ -177,28 +179,37 @@ impl PgpKey {
         passphrase: Option<&ferrohealth_secret::secret::Secret>,
         retired: Vec<SignedPublicKey>,
     ) -> Result<Self, KeyError> {
-        let (secret, _headers) = SignedSecretKey::from_string(armored).map_err(KeyError::Parse)?;
+        let (mut secret, _headers) =
+            SignedSecretKey::from_string(armored).map_err(KeyError::Parse)?;
         let public = secret.to_public_key();
-        // The secret is exposed HERE and nowhere earlier: `pgp`'s `Password` is
-        // the one consumer that needs the plaintext, so the value stays inside
-        // its `secrecy`-backed wrapper — which zeroizes on drop — until this
-        // line.
-        let password = match passphrase {
-            Some(secret) => Password::from(secret.expose()),
-            None => Password::empty(),
-        };
         let now = Timestamp::now();
         let signing = match signing_subkey_index(&secret, now) {
             Some(index) => SigningComponent::Subkey(index),
             None if primary_may_sign_at(&secret, now) => SigningComponent::Primary,
             None => return Err(KeyError::NoSigningComponent),
         };
+        // The secret is exposed HERE and nowhere earlier: `pgp`'s `Password` is
+        // the one consumer that needs the plaintext, so the value stays inside
+        // its `secrecy`-backed wrapper, which zeroizes on drop, until the
+        // signing component is unlocked with it and it is dropped.
+        let password = match passphrase {
+            Some(secret) => Password::from(secret.expose()),
+            None => Password::empty(),
+        };
+        // NOTE: RFC 9580 §3.7, the S2K derivation is deliberately slow, so it runs once here.
+        let unlocked = match signing {
+            SigningComponent::Subkey(index) => secret
+                .secret_subkeys
+                .get_mut(index)
+                .map_or(Ok(()), |subkey| subkey.key.remove_password(&password)),
+            SigningComponent::Primary => secret.primary_key.remove_password(&password),
+        };
+        unlocked.map_err(|error| KeyError::Unusable(PgpSignError(error)))?;
         let key = Self {
             secret,
             signing,
             public,
             retired,
-            password,
         };
         // NOTE: RUSTSEC-2026-0387; refused before the boot check, so no signature is made with it.
         let algorithm = key.signing_algorithm();
@@ -263,14 +274,14 @@ impl PgpKey {
             SigningComponent::Subkey(index) => DetachedSignature::sign_binary_data(
                 OsRng,
                 &self.signing_subkey(index).key,
-                &self.password,
+                &Password::empty(),
                 HASH,
                 data,
             ),
             SigningComponent::Primary => DetachedSignature::sign_binary_data(
                 OsRng,
                 &self.secret.primary_key,
-                &self.password,
+                &Password::empty(),
                 HASH,
                 data,
             ),
@@ -640,6 +651,46 @@ pub(crate) fn verify_against_certificate(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A passphrase-locked key is unlocked once, when it is loaded: its
+    /// signing component holds plain secret parameters, so no signature
+    /// derives the key again, and what it signs still verifies (#5616).
+    #[test]
+    fn a_locked_key_is_unlocked_once_at_load() {
+        let mut builder = pgp::composed::SecretKeyParamsBuilder::default();
+        builder
+            .key_type(pgp::composed::KeyType::Ed25519Legacy)
+            .can_sign(true)
+            .passphrase(Some("correct horse".to_owned()))
+            .primary_user_id("ferroehr-signing test <test@ferroehr.local>".into());
+        let locked = builder
+            .build()
+            .expect("key params")
+            .generate(OsRng)
+            .expect("a key");
+        assert!(matches!(
+            locked.primary_key.secret_params(),
+            pgp::types::SecretParams::Encrypted(_)
+        ));
+        let armored = locked
+            .to_armored_string(ArmorOptions::default())
+            .expect("armor");
+        let passphrase = ferrohealth_secret::secret::Secret::new("correct horse");
+        let key =
+            PgpKey::from_parts(&armored, Some(&passphrase), Vec::new()).expect("the key loads");
+        assert_eq!(key.signing, SigningComponent::Primary);
+        assert!(matches!(
+            key.secret.primary_key.secret_params(),
+            pgp::types::SecretParams::Plain(_)
+        ));
+        let signature = key.sign(b"payload").expect("a signature");
+        assert_eq!(key.verify(b"payload", &signature), PgpVerdict::Valid);
+        let wrong = ferrohealth_secret::secret::Secret::new("wrong");
+        assert!(matches!(
+            PgpKey::from_parts(&armored, Some(&wrong), Vec::new()),
+            Err(KeyError::Unusable(_))
+        ));
+    }
 
     /// Every RFC 9580 §9.1 RSA codepoint classifies as RSA — including the two
     /// deprecated single-purpose ones, which an older certificate still uses

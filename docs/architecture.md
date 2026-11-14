@@ -682,7 +682,7 @@ which is what makes an optional stage safe to disable:
    in step 5, and a rule's permit exception only by narrowing its deny. An
    actor scope's `role` matches the coded `name` of a `ROLE` in force the
    caller performs (RM Demographic IM `PARTY.type()`), held as a caller fact
-   (`FactKind::Role`, migration `party/0041`); a token's role claims stay
+   (`FactKind::Role`, migration `party/0042`); a token's role claims stay
    the coarse RBAC class gate and drive no rule. The `ROLE` is the
    assignment and the rule the permission, the split of the XACML
    Hierarchical RBAC Profile. Clearances and permitted purposes are rules
@@ -852,8 +852,8 @@ it codes since #5540)
 adds the groups the ABAC design of #5487 reads to `ferroehr-operations`:
 `access default`, `access directive kind` (with `controller_rule`, #5621),
 `access effect`, `access relationship`, `access caller kind`, `access
-operation`, `care relationship`, `access refusal` (with
-`refused-policy-denied`, #5621) and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
+operation`, `care relationship`, `group kind` (#5617), `access refusal`
+(with `refused-policy-denied`, #5621) and `access log withheld` (#5570), each a closed set of rubrics read into a typed term
 (`Term::read`), with a value of another terminology or a code outside its
 group refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the care relationship codes are qualifiers, never
@@ -975,7 +975,7 @@ which the performance gate's transactions-per-request measure refuses
 (#5459).
 
 **Caller facts** (#5511). Beside the grants, the side table holds what the
-access evaluator reads about a caller (migrations `party/0039`, `party/0041`):
+access evaluator reads about a caller (migrations `party/0039`, `party/0042`):
 `binding_caller_fact`, one row per `ROLE` whose `name` is a `DV_CODED_TEXT`
 of the jurisdiction's terminology (the role its performer holds while the
 `ROLE` is in force, read with `ForeignCode::read`, #5621), and per care
@@ -992,9 +992,18 @@ only the facts of the parties stamped since its copy, one indexed read
 small read and the request path still adds no transaction. A refill and an
 erasure move the grant revision, which reads every fact again.
 `Capabilities::facts()` gives a request's caller its roles and care teams in
-force; `LiveGrants::under_care_of` gives a subject's care
-relationships with their dates, so the evaluator applies the grace after a
-discharge. A `PERSON` version that changes its care relationships commits
+force. The replica's copy holds the facts of callers
+alone: a patient's `under_care_of` relationships grow with the record, so
+`grants::care::CareCopy` holds them in two bounded caches (#5615), a
+subject's relationships (`LiveGrants::under_care_of`, at most
+`care::SUBJECTS` subjects) and a care team's patients
+(`LiveGrants::cared_for_by`, teams holding at most `care::CENSUS` patients
+together, read by `ix_binding_caller_fact_care_team` of migration
+`party/0041`). Each is read on a miss, one indexed statement, and dropped
+when the facts read of a notification stamps a party it holds or a team the
+party is now under the care of; a grant reload and a listener that connects
+or loses its connection drop both. The relationships carry their dates, so
+the evaluator applies the grace after a discharge. A `PERSON` version that changes its care relationships commits
 only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
 the care delivery environment evaluates "care deliverer"). A care
@@ -1005,8 +1014,22 @@ relationship of another party kind or of its own container is refused
 `LiveGrants::memberships` of the provider its acts-for relationship names,
 which `Capabilities::facts().provider_groups()` carries and the request's
 caller adds to the parties it acts for, one level deep, from the copy held,
-so the regional sharing example adds no transaction. **Our own design:** no
-openEHR spec gives a role or a relationship an access meaning.
+so the regional sharing example adds no transaction. The care check compares
+what each care relationship says, never its position in `relationships`
+(#5640). On a SCIM User's protected `PERSON`, a version whose only change
+from its predecessor is to its care relationships (the two stored bodies
+compared with every care relationship and the `uid` taken out,
+`grants::caller::only_care_differs`) passes the party protection for a
+holder of `write_care_relationship`, and the care check decides it, so the
+ADT system rosters a provisioned professional (#5617). A SCIM Group created
+with `careTeam` in FerroEHR's Group extension is a care team: its `GROUP`
+is named by the coded `care_team` (group `group kind`) and each membership by
+the coded `member_of`, since RM demographic `PARTY.type()` and
+`PARTY_RELATIONSHIP.type()` are the `name` (`Type_valid`); creating
+one needs the client's `write_care_relationship` grant, and its membership
+changes meet the same care check. **Our own design:** no openEHR spec gives a
+role or a relationship an access meaning, and RFC 7643 §4.2 leaves a
+Group's meaning to the provider.
 
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL

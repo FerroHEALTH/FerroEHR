@@ -56,6 +56,7 @@ use crate::party_binding::grants::derive::{Bound, GrantFacts};
 use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::grants::store::Dates;
 use crate::party_binding::policy_mark::{TERMINOLOGY, carries};
+use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 use openehr_rm::draft::access_control::terminology::{
     CareRelationship, ForeignCode, ForeignKind, Term,
@@ -214,6 +215,34 @@ fn care_kind(relationship: &Value) -> Option<FactKind> {
     [FactKind::MemberOf, FactKind::UnderCareOf]
         .into_iter()
         .find(|kind| carries(relationship, kind.code()))
+}
+
+/// Whether the stored `PERSON` bodies `before` and `after`, two versions of
+/// one party, differ only in their care relationships: each with its `uid`
+/// and every relationship carrying a [`CareRelationship`] code taken out is
+/// the same tree.
+///
+/// The party protection leaves such a version to [`check_care_writer`], so a
+/// caller holding [`Operation::WriteCareRelationship`] rosters a provisioned
+/// professional and changes nothing else (#5617). Our own design.
+///
+/// # Errors
+/// [`StorageError::BodyDecode`] when a stored body is no JSON.
+pub(crate) fn only_care_differs(before: &str, after: &str) -> Result<bool, StorageError> {
+    let without_care = |body: &str| -> Result<Value, StorageError> {
+        let mut value: Value = serde_json::from_str(body).map_err(StorageError::BodyDecode)?;
+        if let Some(object) = value.as_object_mut() {
+            object.remove("uid");
+            if let Some(Value::Array(relationships)) = object.get_mut("relationships") {
+                relationships.retain(|relationship| care_kind(relationship).is_none());
+                if relationships.is_empty() {
+                    object.remove("relationships");
+                }
+            }
+        }
+        Ok(value)
+    };
+    Ok(without_care(before)? == without_care(after)?)
 }
 
 /// Refuses the committed body `facts` when a caller fact it carries cannot be
