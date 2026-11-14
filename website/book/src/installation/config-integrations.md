@@ -97,7 +97,8 @@ subject-id posture by accepting the `open_subject_namespace` gap by name
 the patient's `PERSON`.** Under `pixm` an EHR names its subject by the
 pseudonym, which is no party of the CDR's party store, so the patient's
 `PERSON` declares the subject reference it stands for: an element of its
-`details` named `ferroehr-operations::record_subject` whose value is a
+`details` named by the `record_subject` code of FerroEHR's operation
+terminology whose value is a
 `DV_IDENTIFIER` with `issuer` set to the `[pixm] assigning_authority` and `id`
 to the pseudonym. The registering system writes it in the same demographic
 contribution as the `PERSON`, from the pseudonym ITI-83 answered, and FerroEHR

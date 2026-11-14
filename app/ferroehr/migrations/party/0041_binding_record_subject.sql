@@ -7,8 +7,8 @@
 -- under record.subject_index = "pixm".
 --
 -- A PERSON declares a reference by an ELEMENT anywhere in its PARTY.details
--- named by the code record_subject of FerroEHR's terminology
--- (ferroehr-operations), whose value is a DV_IDENTIFIER: issuer is the
+-- named by the code record_subject of FerroEHR's operation terminology,
+-- whose value is a DV_IDENTIFIER: issuer is the
 -- reference's namespace (EHR_STATUS.subject.external_ref.namespace) and id
 -- the reference's id. An identifier another organisation issued is recorded
 -- in PARTY.details (RM Demographic IM §2.1.3), and the cross-reference stays
@@ -46,4 +46,4 @@ CREATE TABLE binding_record_subject (
         CHECK (lifecycle_state IN ('532', '553', '800', '801'))
 );
 
-COMMENT ON TABLE binding_record_subject IS 'The EHR subject references each PERSON head that is not deleted declares by a ferroehr-operations::record_subject element of its details. Derived from the party versions in each commit''s transaction; no openEHR spec governs reading them as the link from an EHR to its subject''s PERSON, our own design.';
+COMMENT ON TABLE binding_record_subject IS 'The EHR subject references each PERSON head that is not deleted declares by a record_subject element of its details, a code of FerroEHR''s operation terminology. Derived from the party versions in each commit''s transaction; no openEHR spec governs reading them as the link from an EHR to its subject''s PERSON, our own design.';

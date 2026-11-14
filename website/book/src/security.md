@@ -1156,7 +1156,8 @@ patient identifier to an EHR without putting it in a FerroEHR URL.
 The access evaluator needs the `PERSON` of an EHR's subject to read its care
 relationships and its representatives. Under `record.subject_index = "pixm"`
 the EHR names its subject by a pseudonym, so the patient's `PERSON` declares
-it: an element of `PARTY.details` named `ferroehr-operations::record_subject`,
+it: an element of `PARTY.details` named by the `record_subject` code of
+FerroEHR's operation terminology,
 whose `DV_IDENTIFIER` holds the pseudonym and its namespace. An identifier
 another organisation issued belongs in `details` (RM Demographic IM §2.1.3),
 and the cross-reference stays out of the EHR (RM EHR IM §EHR Status). FerroEHR

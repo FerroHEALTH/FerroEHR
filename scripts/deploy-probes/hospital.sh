@@ -448,8 +448,8 @@ h_rerelate() {
 }
 
 # Declares the EHR subject reference `id` under `namespace` on the PERSON
-# `person` through instance `n` as `who`: a ferroehr-operations::record_subject
-# element of its details, as the registering system writes it (#5634).
+# `person` through instance `n` as `who`: a record_subject element of its
+# details, coded in the probe's terminology ($H_TERM), as the registering system writes it (#5634).
 h_declare_subject() {
   local n="$1" who="$2" person="$3" namespace="$4" id="$5" body version element
   h_call "$n" admin GET "/demographic/person/$person"

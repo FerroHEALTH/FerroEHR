@@ -966,7 +966,8 @@ subject with `LiveGrants::person_of`, from the namespace and the id of
 so both are compared): a reference under `[authz.party_binding] namespace`
 whose id is a UUID names that `PERSON` container; any other names the
 `complete` or `incomplete` `PERSON` that declares it by an element of its
-`PARTY.details` named `record_subject` of `ferroehr-operations` whose value is
+`PARTY.details` named by the `record_subject` code of FerroEHR's operation
+terminology whose value is
 a `DV_IDENTIFIER` (`issuer` the namespace, `id` the id; RM Demographic IM
 §2.1.3 puts an identifier another organisation issued in `details`, RM EHR IM
 §EHR Status puts the cross-reference outside the EHR); otherwise there is

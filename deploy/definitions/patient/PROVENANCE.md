@@ -58,8 +58,8 @@ one licence.
   `DV_IDENTIFIER` elements; the personal relationship's type is a `DV_TEXT`,
   since the source's value set is unbound.
 - A record subject element (`id36`) is added, which the CKM source does not
-  have: a `DV_IDENTIFIER` named by the coded `record_subject` of
-  `ferroehr-operations`, holding an `EHR_STATUS` subject reference the
+  have: a `DV_IDENTIFIER` named by the coded `record_subject` of FerroEHR's
+  operation terminology, holding an `EHR_STATUS` subject reference the
   `PERSON` stands for, such as a pseudonym. An identifier another
   organisation issued belongs in `PARTY.details` (RM Demographic IM §2.1.3).
 - A care relationship (`id32`) is added, which the CKM source does not
