@@ -176,12 +176,7 @@ impl FerroEhrService {
                 None => ServiceError::internal(message, HeldClosed),
             }
         };
-        // NOTE: the local source names each party by its container's UUID, so a subject
-        // id that is no UUID names no PERSON of this store and has no care relationship.
-        let subject = stored
-            .subject
-            .as_deref()
-            .and_then(|subject| subject.parse::<uuid::Uuid>().ok());
+        let subject = subject_of(stored.subject.as_deref());
         let settings = match stored.settings {
             StoredSettings::None => None,
             StoredSettings::HeldClosed => return Err(unreadable(None)),
@@ -325,27 +320,31 @@ impl FerroEhrService {
         Ok(EhrAccessReaders::Only(
             index
                 .iter()
-                .filter(|(_, settings)| caller.is_gate_keeper(Some(settings)))
+                .filter(|(_, entry)| caller.is_gate_keeper((*entry.settings).as_ref()))
                 .map(|(ehr_id, _)| *ehr_id)
                 .collect(),
         ))
     }
 
-    /// The miss path of [`Self::ehr_access_settings_index`].
-    async fn load_ehr_access_index(&self) -> Result<Vec<(EhrId, EhrAccessSettings)>, ServiceError> {
+    /// The miss path of [`Self::ehr_access_settings_index`]: each EHR with
+    /// settings as [`Self::ehr_access_entry`] reads it, so a query's access
+    /// record names the grounds a direct read names (#5581).
+    async fn load_ehr_access_index(&self) -> Result<Vec<(EhrId, EhrEntry)>, ServiceError> {
         let stored = crate::storage::access_projection::every_settings(&self.pool)
             .await
             .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
-        Ok(stored
+        let mut index: Vec<(EhrId, EhrEntry)> = stored
             .into_iter()
-            .map(|(ehr_id, settings)| {
-                let read = settings
+            .map(|row| {
+                let ehr_id = row.ehr_id;
+                let read = row
+                    .settings
                     .as_deref()
                     .map(EhrAccessSettings::from_projected)
                     .transpose();
-                match read {
-                    Ok(Some(settings)) => (ehr_id, settings),
-                    Ok(None) => (ehr_id, EhrAccessSettings::HeldClosed),
+                let settings = match read {
+                    Ok(Some(settings)) => settings,
+                    Ok(None) => EhrAccessSettings::HeldClosed,
                     Err(error) => {
                         let cause: &(dyn std::error::Error + 'static) = &error;
                         tracing::error!(
@@ -353,12 +352,27 @@ impl FerroEhrService {
                             error = cause,
                             "EHR_ACCESS settings do not parse; no query reaches the EHR"
                         );
-                        (ehr_id, EhrAccessSettings::HeldClosed)
+                        EhrAccessSettings::HeldClosed
                     }
-                }
+                };
+                let entry = EhrEntry {
+                    settings: Arc::new(Some(settings)),
+                    subject: subject_of(row.subject.as_deref()),
+                    version: row.version,
+                };
+                (ehr_id, entry)
             })
-            .collect())
+            .collect();
+        index.sort_unstable_by_key(|(ehr_id, _)| *ehr_id);
+        Ok(index)
     }
+}
+
+/// The `PERSON` container a stored `ehr.subject_id` names.
+fn subject_of(stored: Option<&str>) -> Option<uuid::Uuid> {
+    // NOTE: the local source names each party by its container's UUID, so a subject
+    // id that is no UUID names no PERSON of this store and has no care relationship.
+    stored.and_then(|subject| subject.parse::<uuid::Uuid>().ok())
 }
 
 /// The message of the `503` of a projection that cannot be read.
@@ -504,7 +518,7 @@ impl EhrAccessCache {
         init: Fut,
     ) -> Result<EhrAccessIndex, Arc<ServiceError>>
     where
-        Fut: Future<Output = Result<Vec<(EhrId, EhrAccessSettings)>, ServiceError>>,
+        Fut: Future<Output = Result<Vec<(EhrId, EhrEntry)>, ServiceError>>,
     {
         let seen = self.drops.load(Ordering::Acquire);
         let loaded = self

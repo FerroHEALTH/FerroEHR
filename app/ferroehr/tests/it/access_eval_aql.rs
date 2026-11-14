@@ -20,7 +20,7 @@ use ferroehr::party_binding::BindingMapping;
 use ferroehr::party_binding::grants::caller::CallerFacts;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
-use ferroehr::service::query::request::AqlQueryRequest;
+use ferroehr::service::query::request::{AqlQueryRequest, QueryOutcome};
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr::versioning::committer::CommitterIdentity;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
@@ -244,9 +244,9 @@ impl Ask {
     }
 }
 
-/// The rows of `aql` `ask` reads, from `offset`, at most `fetch`.
-async fn rows(world: &World, ask: &Ask, aql: &str, page: Option<(i64, i64)>) -> Vec<Value> {
-    let access = Arc::new(RequestAccess::new(
+/// The evaluator of a query `ask` runs.
+fn request_of(ask: &Ask) -> Arc<RequestAccess> {
+    Arc::new(RequestAccess::new(
         ask.caller.clone(),
         Asking {
             operation: OperationClass::Query,
@@ -260,7 +260,18 @@ async fn rows(world: &World, ask: &Ask, aql: &str, page: Option<(i64, i64)>) -> 
             now: jiff::Timestamp::now(),
             grants: None,
         },
-    ));
+    ))
+}
+
+/// The outcome of `aql` run by `access` as `ask`, from `offset`, at most
+/// `fetch`.
+async fn run_query(
+    world: &World,
+    ask: &Ask,
+    access: &Arc<RequestAccess>,
+    aql: &str,
+    page: Option<(i64, i64)>,
+) -> QueryOutcome {
     let svc = &world.svc;
     let run = async {
         let index = svc
@@ -277,7 +288,12 @@ async fn rows(world: &World, ask: &Ask, aql: &str, page: Option<(i64, i64)>) -> 
             .await
             .expect("the query runs")
     };
-    let outcome = Box::pin(with_request_access(Arc::clone(&access), run)).await;
+    Box::pin(with_request_access(Arc::clone(access), run)).await
+}
+
+/// The rows of `aql` `ask` reads, from `offset`, at most `fetch`.
+async fn rows(world: &World, ask: &Ask, aql: &str, page: Option<(i64, i64)>) -> Vec<Value> {
+    let outcome = run_query(world, ask, &request_of(ask), aql, page).await;
     outcome.result_set["rows"]
         .as_array()
         .cloned()
@@ -561,4 +577,63 @@ async fn step_7_the_default_disposition_bounds_the_query() {
         "a restricted server default",
     )
     .await;
+}
+
+/// An EHR a query reaches only through its condition is recorded with the
+/// grounds a direct read of it records: the permit, with the uid of the
+/// `EHR_ACCESS` version that carries it, read from the copied index (#5581).
+#[tokio::test]
+async fn a_query_served_ehr_names_the_grounds_of_a_direct_read() {
+    let world = Box::pin(World::new()).await;
+    let permit = directive(
+        "consent",
+        "permit",
+        &json!({ "applies_to": [{ "caller_kind": term("professional") }],
+                 "legal_grounds": [coded("urn:example:law", "gdpr-9-2-h")] }),
+    );
+    world
+        .settings(0, &settings("consent_required", &[permit], &[]))
+        .await;
+    let (ask, ehr_id) = (Ask::professional(), world.ehrs[0].0);
+
+    let queried = request_of(&ask);
+    let outcome = run_query(&world, &ask, &queried, COMPOSITIONS, None).await;
+    assert!(
+        outcome
+            .served_ehrs
+            .iter()
+            .any(|(served, _)| *served == ehr_id.0.to_string()),
+        "the query serves the EHR"
+    );
+    assert!(
+        queried.judgement(ehr_id).is_none(),
+        "the query reaches the EHR only through its condition"
+    );
+
+    let direct = request_of(&ask);
+    Box::pin(with_request_access(
+        Arc::clone(&direct),
+        world.svc.judge_request_ehrs(&[ehr_id]),
+    ))
+    .await
+    .expect("the EHR is judged");
+
+    let (queried, direct) = (
+        queried.decision(Some(ehr_id)),
+        direct.decision(Some(ehr_id)),
+    );
+    assert!(queried.refused.is_none(), "{queried:?}");
+    assert_eq!(queried.grounds, direct.grounds);
+    assert_eq!(queried.policies, direct.policies);
+    let consent = queried
+        .grounds
+        .iter()
+        .find(|ground| ground.kind.value == "consent")
+        .expect("the permit is a ground");
+    let version = consent.version.as_deref().expect("the EHR_ACCESS version");
+    assert!(
+        version.ends_with(&format!("::{DEFAULT_SYSTEM_ID}::2")),
+        "{version}"
+    );
+    assert_eq!(queried.policies, [version]);
 }

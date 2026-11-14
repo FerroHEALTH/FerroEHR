@@ -182,13 +182,18 @@ fn policies_of(grounds: &[AccessAuthorisation]) -> Vec<String> {
 
 impl RequestAccess {
     /// What the access record of this request names for `ehr_id`; with no
-    /// EHR, for the EHR the request was first refused on.
+    /// EHR, for the EHR the request was first refused on. An EHR a query
+    /// reached only through its condition names the grounds a direct read of
+    /// it names.
     #[must_use]
     pub fn decision(&self, ehr_id: Option<EhrId>) -> Decision {
         let noted = self.noted(ehr_id);
         let judged = ehr_id
             .or(noted.as_ref().map(|(ehr_id, _)| *ehr_id))
-            .and_then(|ehr_id| self.judgement(ehr_id));
+            .and_then(|ehr_id| {
+                self.judgement(ehr_id)
+                    .or_else(|| self.reached_judgement(ehr_id))
+            });
         let mut grounds = self.role_grounds();
         let refused = noted.map(|(_, noted)| self.refused(&noted, judged.as_ref()));
         if let Some(judged) = &judged {
