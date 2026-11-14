@@ -59,7 +59,7 @@ pub struct Caller {
     /// The id of the `PERSON` or `AGENT` the caller is bound to.
     pub party: Option<String>,
     /// The ids of the parties the caller acts for or is a member of: its
-    /// provider, its care teams.
+    /// provider, the `GROUP`s that provider is a member of, its care teams.
     pub acts_for: Vec<String>,
     /// The functional roles the caller holds, upper-case.
     pub roles: Vec<String>,
