@@ -100,7 +100,7 @@ pub struct ScimClient {
 /// `role_terminology` and the `role` elements of its `scim_provision`
 /// grants. No openEHR spec or RFC 7643 gives `roles` a meaning: our own
 /// design.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RoleCeiling {
     /// The terminology the roles are coded in; `None` when the grants admit
     /// no role.

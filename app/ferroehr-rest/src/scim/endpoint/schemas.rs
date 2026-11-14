@@ -65,7 +65,7 @@ pub(crate) fn discovery(
     let mut enterprise = Vec::new();
     let mut extension = Vec::new();
     let ours = EXTENSION_URN;
-    let intrinsic = ["userName", "active"].into_iter().map(str::to_owned);
+    let intrinsic = ["userName", "active", "roles"].into_iter().map(str::to_owned);
     let mapped = binding
         .person()
         .attribute
