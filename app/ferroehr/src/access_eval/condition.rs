@@ -23,7 +23,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, CallerKind, OperationClass, Refusal, Term as _,
+    AccessDefault, OperationClass, Refusal, Term as _,
 };
 use opentelemetry::KeyValue;
 use tokio::task_local;
@@ -123,11 +123,11 @@ pub struct Judgement {
 
 /// What the access record of a request names beside the verdicts: the
 /// capabilities in force, the version of the access policy, and the
-/// refusals each EHR answered.
+/// refusals each EHR answered, and the one a request naming no EHR answered.
 #[derive(Debug, Default)]
 struct Recorded {
     facts: RecordFacts,
-    refusals: Mutex<BTreeMap<EhrId, Noted>>,
+    refusals: Mutex<BTreeMap<Option<EhrId>, Noted>>,
 }
 
 /// The facts of a request the access record names that the decision does
@@ -246,6 +246,27 @@ impl RequestAccess {
     /// refusal for the access record of the request (EHDS Annex II 3.2): the
     /// first refusal of an EHR is the one its record names.
     pub fn note(&self, ehr_id: EhrId, verdict: &Verdict, item: &Item<'_>) -> Outcome {
+        self.note_under(Some(ehr_id), verdict, item)
+    }
+
+    /// The answer to a request of this caller that names no EHR, such as an
+    /// EHR create or a query with no single-EHR scope, noted for the access
+    /// record as [`Self::note`] notes one: a confined caller reaches one EHR,
+    /// and a request naming none names no EHR of its own
+    /// (`refused-not-subject`, step 0); any other caller is judged on each
+    /// EHR the operation reaches.
+    pub fn judge_unnamed(&self) -> Outcome {
+        // NOTE: our own design (#5606), the evaluator alone holds a confined caller to the EHR
+        // of its patient context, so a request that names no EHR is judged here.
+        if !self.confined() {
+            return Outcome::Admit;
+        }
+        let verdict = self.judge_as(false, None, false);
+        self.note_under(None, &verdict, &Item::Ehr)
+    }
+
+    /// [`Self::note`] under `ehr_id`, `None` for a request naming no EHR.
+    fn note_under(&self, ehr_id: Option<EhrId>, verdict: &Verdict, item: &Item<'_>) -> Outcome {
         let rule = verdict.rule_for(item);
         let outcome = rule.map_or(verdict.otherwise, |rule| rule.then);
         let refusal = match outcome {
@@ -265,16 +286,19 @@ impl RequestAccess {
     }
 
     /// The refusal noted for `ehr_id`; with no EHR, the first refusal of the
-    /// request.
+    /// request, with the EHR it was noted for (`None` for a request naming no
+    /// EHR).
     #[must_use]
-    pub fn noted(&self, ehr_id: Option<EhrId>) -> Option<(EhrId, Noted)> {
+    pub fn noted(&self, ehr_id: Option<EhrId>) -> Option<(Option<EhrId>, Noted)> {
         let refusals = self
             .recorded
             .refusals
             .lock()
             .unwrap_or_else(PoisonError::into_inner);
         match ehr_id {
-            Some(ehr_id) => refusals.get(&ehr_id).map(|noted| (ehr_id, noted.clone())),
+            Some(ehr_id) => refusals
+                .get(&Some(ehr_id))
+                .map(|noted| (Some(ehr_id), noted.clone())),
             None => refusals
                 .iter()
                 .next()
@@ -347,10 +371,10 @@ impl RequestAccess {
         ehr_id.is_some() && ehr_id == self.caller.own_ehr
     }
 
-    /// Whether the caller is a subject caller, whom a query reads only in
+    /// Whether the caller is confined, whom a query reads only in
     /// [`Caller::own_ehr`] (`ConditionGroups::confined`).
     fn confined(&self) -> bool {
-        self.caller.kind == CallerKind::Subject
+        self.caller.confined()
     }
 
     /// The verdict for every EHR of `class`, the caller `cared` for its
@@ -525,7 +549,7 @@ impl RequestAccess {
     /// No openEHR spec governs the metrics: our own design (#5591).
     fn count_decisions(&self) {
         let metrics = crate::telemetry::access_path::metrics();
-        let mut refused: BTreeMap<EhrId, Refusal> = self
+        let mut refused: BTreeMap<Option<EhrId>, Refusal> = self
             .recorded
             .refusals
             .lock()
@@ -535,7 +559,7 @@ impl RequestAccess {
             .collect();
         let verdicts = self.verdicts.lock().unwrap_or_else(PoisonError::into_inner);
         for (ehr_id, judged) in verdicts.iter() {
-            let decision = match refused.remove(ehr_id) {
+            let decision = match refused.remove(&Some(*ehr_id)) {
                 Some(refusal) => [("outcome", "refused"), ("code", refusal.code())],
                 None => [("outcome", "admitted"), ("code", "none")],
             };
@@ -599,7 +623,7 @@ impl RequestAccess {
             pair(None),
             cared,
             facts,
-            // NOTE: our own design (#5586), a subject caller reads only the EHR its patient
+            // NOTE: our own design (#5586), a confined caller reads only the EHR its patient
             // context names, so a query of it reaches no other EHR whatever its class.
             confined.then(|| self.caller.own_ehr.iter().map(|own| own.0).collect()),
         )

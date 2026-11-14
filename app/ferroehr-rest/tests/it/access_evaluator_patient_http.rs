@@ -37,14 +37,14 @@ use crate::common::BASE;
 /// The issuer of the professionals' tokens.
 const ISSUER: &str = "https://issuer.example";
 /// The issuer of the person's own tokens: a `patients` issuer of its own.
-const PATIENTS: &str = "https://patients.example";
+pub(crate) const PATIENTS: &str = "https://patients.example";
 /// The audience every fixture token is minted for.
-const AUDIENCE: &str = "ferroehr";
+pub(crate) const AUDIENCE: &str = "ferroehr";
 /// The subject every fixture token carries.
-const SUBJECT: &str = "svc";
+pub(crate) const SUBJECT: &str = "svc";
 // Two EHRs, the caller's own and another patient's.
-const EHR_OWN: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
-const EHR_OTHER: &str = "11111111-2222-3333-4444-555555555555";
+pub(crate) const EHR_OWN: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+pub(crate) const EHR_OTHER: &str = "11111111-2222-3333-4444-555555555555";
 
 // ── fixtures ───────────────────────────────────────────────────────────────────
 
@@ -87,7 +87,7 @@ pub(crate) fn composition() -> Value {
 
 /// The professionals' and the patients' issuers trusted, each one's
 /// `patient/` grants counted (`[auth.smart] patient_issuers`).
-fn rest_config() -> AppConfig {
+pub(crate) fn rest_config() -> AppConfig {
     let mut config = common::api_config(false);
     config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
     config.auth.smart.patient_issuers = vec![
@@ -127,7 +127,7 @@ async fn service_and_seed_app() -> (testkit::TestDb, Arc<FerroEhrService>, Route
 // ── seeding through an auth-off app over the same service ───────────────────────
 
 /// Create an EHR with a chosen id (`PUT /ehr/{id}` → 201).
-async fn seed_ehr(seed: &Router, ehr_id: &str) {
+pub(crate) async fn seed_ehr(seed: &Router, ehr_id: &str) {
     let req = Request::builder()
         .method("PUT")
         .uri(format!("{BASE}/ehr/{ehr_id}"))
@@ -254,7 +254,7 @@ async fn record_matching(socket: &mut SyslogTlsListener, matches: fn(&str) -> bo
 
 /// The person's token: every `patient/` grant on the EHR's data and its
 /// queries, in the launch context of `launch`, or of no EHR.
-fn patient(launch: Option<&str>) -> String {
+pub(crate) fn patient(launch: Option<&str>) -> String {
     let mut claims = json!({
         "sub": SUBJECT, "iss": PATIENTS, "aud": AUDIENCE,
         "exp": jiff::Timestamp::now().as_second() + 3600,
@@ -296,14 +296,14 @@ fn request(method: &str, path: &str, token: &str, body: &Value) -> Request<Body>
 /// What one request answers: its status, and the `access refusal` code its
 /// problem body names (`null` where it names none).
 #[derive(Debug, PartialEq)]
-struct Answer {
-    status: StatusCode,
-    refusal: Value,
+pub(crate) struct Answer {
+    pub(crate) status: StatusCode,
+    pub(crate) refusal: Value,
 }
 
 /// The answer to a subject caller on an EHR other than its own: `403` with
 /// `refused-not-subject` (#5605).
-fn not_subject() -> Answer {
+pub(crate) fn not_subject() -> Answer {
     Answer {
         status: StatusCode::FORBIDDEN,
         refusal: json!("refused-not-subject"),
@@ -312,7 +312,7 @@ fn not_subject() -> Answer {
 
 /// The answer to `req`, asked with `Prefer: return=representation` so a
 /// refusal's problem body names its code.
-async fn status(app: &Router, mut req: Request<Body>) -> Answer {
+pub(crate) async fn status(app: &Router, mut req: Request<Body>) -> Answer {
     req.headers_mut().insert(
         "prefer",
         http::HeaderValue::from_static("return=representation"),
@@ -453,6 +453,32 @@ async fn a_patient_context_naming_no_ehr_is_forbidden() {
         not_subject(),
         "a patient context naming no EHR is denied"
     );
+}
+
+/// The SMART `patient` claim is no openEHR launch context: master07 §Context
+/// Selection names `ehrId` for the EHR, so a token carrying `patient` alone
+/// makes its caller the subject of no EHR.
+#[tokio::test]
+async fn the_patient_claim_is_no_launch_context() {
+    let (_pg, svc) = service(None).await;
+    let app = gated_app(svc).await;
+    let token = common::bearer(&json!({
+        "sub": SUBJECT, "iss": PATIENTS, "aud": AUDIENCE,
+        "exp": jiff::Timestamp::now().as_second() + 3600,
+        "scope": "patient/composition-*.crud patient/aql-*.s",
+        "patient": EHR_OWN,
+    }));
+    let s = status(
+        &app,
+        request(
+            "POST",
+            &format!("/ehr/{EHR_OWN}/composition"),
+            &token,
+            &own_composition(),
+        ),
+    )
+    .await;
+    assert_eq!(s, not_subject(), "a `patient` claim names no EHR");
 }
 
 /// A professional is held to no patient context: a create for any EHR is
@@ -626,8 +652,8 @@ async fn a_directory_of_another_patient_is_refused() {
             .expect("request")
     };
     assert_eq!(
-        status(&app, directory(EHR_OTHER, EHR_OWN)).await.status,
-        StatusCode::FORBIDDEN,
+        status(&app, directory(EHR_OTHER, EHR_OWN)).await,
+        not_subject(),
         "a directory create in another patient's EHR is refused"
     );
     assert_eq!(
@@ -770,15 +796,13 @@ async fn an_item_tag_of_another_patient_is_refused_as_its_target_is() {
     ];
     for (label, (target_method, target), (tag_method, tag)) in pairs {
         assert_eq!(
-            tag_probe(&app, target_method, &target, EHR_OWN)
-                .await
-                .status,
-            StatusCode::FORBIDDEN,
+            tag_probe(&app, target_method, &target, EHR_OWN).await,
+            not_subject(),
             "the target of the {label} is refused for another patient's EHR"
         );
         assert_eq!(
-            tag_probe(&app, tag_method, &tag, EHR_OWN).await.status,
-            StatusCode::FORBIDDEN,
+            tag_probe(&app, tag_method, &tag, EHR_OWN).await,
+            not_subject(),
             "the {label} is refused as its target is"
         );
     }
@@ -819,7 +843,7 @@ async fn an_item_tag_of_the_callers_patient_is_served() {
 
 /// A `POST /message/export` manifest naming `ehr_ids`, for the person in the
 /// launch context of `launch`.
-fn manifest_export(ehr_ids: &[&str], launch: &str) -> Request<Body> {
+pub(crate) fn manifest_export(ehr_ids: &[&str], launch: &str) -> Request<Body> {
     let entities: Vec<Value> = ehr_ids
         .iter()
         .map(|id| json!({ "_type": "EXTRACT_ENTITY_MANIFEST", "extract_id_key": id, "ehr_id": id }))
@@ -864,25 +888,20 @@ async fn an_export_of_another_patients_ehr_is_forbidden() {
             &format!("/message/export/{EHR_OTHER}"),
             Some(EHR_OWN)
         )
-        .await
-        .status,
-        StatusCode::FORBIDDEN,
+        .await,
+        not_subject(),
         "the path export of another patient's EHR is refused"
     );
     assert_eq!(
-        status(&app, manifest_export(&[EHR_OWN, EHR_OTHER], EHR_OWN))
-            .await
-            .status,
-        StatusCode::FORBIDDEN,
+        status(&app, manifest_export(&[EHR_OWN, EHR_OTHER], EHR_OWN)).await,
+        not_subject(),
         "a manifest naming another patient's EHR is refused whole"
     );
 }
 
-/// A path export of the caller's own EHR is served. A manifest export names
-/// no EHR in its path, so the SMART layer refuses it to a `patient/` grant
-/// before the evaluator runs (`master07` §Context Selection); the
-/// evaluator's admission of a manifest naming only the caller's own EHR is
-/// `access_eval_aql::a_patient_is_refused_every_ehr_but_their_own`.
+/// An export of the caller's own EHR is served, through its path or through
+/// a manifest that names it alone: the SMART layer checks the grant's family
+/// and permission, and the evaluator admits the caller's own EHR (#5606).
 #[tokio::test]
 async fn an_export_of_the_own_patients_ehr_is_served() {
     let (_pg, svc, seed) = service_and_seed_app().await;
@@ -900,6 +919,12 @@ async fn an_export_of_the_own_patients_ehr_is_served() {
         .status,
         StatusCode::OK,
         "the path export of the own EHR is served"
+    );
+    let (code, body) = common::send_body(&app, manifest_export(&[EHR_OWN], EHR_OWN)).await;
+    assert_eq!(
+        code,
+        StatusCode::OK,
+        "a manifest naming the own EHR: {body}"
     );
 }
 
@@ -937,9 +962,8 @@ async fn an_import_outside_the_patient_context_is_forbidden() {
                 Some(EHR_OWN)
             )
         )
-        .await
-        .status,
-        StatusCode::FORBIDDEN,
+        .await,
+        not_subject(),
         "an import into another patient's EHR is refused"
     );
     for path in [
@@ -947,10 +971,8 @@ async fn an_import_outside_the_patient_context_is_forbidden() {
         format!("/message/import/{EHR_OWN}"),
     ] {
         assert_eq!(
-            status(&app, import(&path, "ehr_extract.v1.json", None))
-                .await
-                .status,
-            StatusCode::FORBIDDEN,
+            status(&app, import(&path, "ehr_extract.v1.json", None)).await,
+            not_subject(),
             "{path} needs a patient context naming the EHR"
         );
     }

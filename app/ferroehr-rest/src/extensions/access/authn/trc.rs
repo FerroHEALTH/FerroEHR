@@ -34,15 +34,11 @@ use crate::overview::error::RestError;
 use crate::overview::problem::Kind;
 use crate::smart::routes::{Need, target_ehr};
 
-/// The mark of a contact point's caller held to the EHR of its TRC patient,
-/// which stands in for the launch context the token does not carry.
+/// The EHR of a contact point's caller's TRC patient, which stands in for
+/// the launch context its token does not carry: the evaluator holds the
+/// caller to it (`crate::extensions::access::caller`).
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct TrcBound;
-
-/// Whether the caller of `access` is held to the EHR of its TRC patient.
-pub(crate) fn is_bound(access: &Access) -> bool {
-    access.extension::<TrcBound>().is_some()
-}
+pub(crate) struct TrcPatientEhr(pub(crate) ferroehr::ids::EhrId);
 
 /// What the TRC confinement reads of a request: whether its route serves
 /// patient data, and the EHR it addresses.
@@ -111,8 +107,8 @@ pub(super) fn patient_context<'a>(
 }
 
 /// Holds a contact point's caller of `principal` to the EHR of its TRC
-/// patient on a patient-data request of `shape`, marking it [`TrcBound`];
-/// the refusal, or `None` for a request it admits or any other caller.
+/// patient on a patient-data request of `shape`, carrying that EHR as
+/// [`TrcPatientEhr`]; the refusal, or `None` for a request it admits or any other caller.
 ///
 /// A token without the binding is refused as
 /// `ERROR_SEC_DATA_INTEGRITY_NOT_ENSURED` (MyHealth@EU Requirements Catalogue
@@ -174,12 +170,14 @@ async fn confine(
         .target
         .as_deref()
         .zip(resolved)
-        .is_some_and(|(target, ehr)| target.eq_ignore_ascii_case(&ehr.to_string()));
-    if held {
-        principal.access = Access::Caller(Arc::new(Caller::clone(caller).with_extension(TrcBound)));
-        return None;
-    }
-    Some(mismatch(principal, not_found))
+        .filter(|(target, ehr)| target.eq_ignore_ascii_case(&ehr.to_string()));
+    let Some((_, ehr)) = held else {
+        return Some(mismatch(principal, not_found));
+    };
+    principal.access = Access::Caller(Arc::new(
+        Caller::clone(caller).with_extension(TrcPatientEhr(ehr)),
+    ));
+    None
 }
 
 /// The EHR index subject of the TRC patient `patient`, a `PERSON` whose

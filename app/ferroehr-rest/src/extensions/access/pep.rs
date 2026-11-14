@@ -324,55 +324,33 @@ mod tests {
         assert!(smart_composition(&every, "composition_get", None, Some("ehr-1")).is_ok());
     }
 
-    /// master07 §Context Selection: a `patient/` grant from a bound issuer
-    /// reaches the EHR the token's `ehrId` names, and no other.
+    /// A `patient/` grant from a bound issuer meets the `composition-`
+    /// requirement by its family and permission alone, whichever EHR the
+    /// request names: the access evaluator holds the caller to the EHR of its
+    /// launch context (`master07 §Context Selection`, #5606), which
+    /// `access_evaluator_patient_http` pins end to end.
     #[test]
-    fn smart_patient_scope_binds_the_launch_context_ehr() {
+    fn smart_patient_scope_is_checked_for_its_family_and_permission() {
         let bound = Honoured {
             backend: false,
             patient: true,
         };
-        let p = principal_honoured(
-            "patient/composition-*.r",
-            &serde_json::json!({ "ehrId": "ehr-1" }),
-            bound,
-        );
-        assert!(smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_ok());
-        assert!(
-            smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-2")).is_err()
-        );
-    }
-
-    /// A `patient/` grant whose token names no `ehrId` reaches nothing.
-    #[test]
-    fn smart_patient_scope_requires_a_launch_context_claim() {
-        let bound = Honoured {
-            backend: false,
-            patient: true,
-        };
-        let p = principal_honoured("patient/composition-*.r", &serde_json::json!({}), bound);
-        assert!(
-            smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_err()
-        );
-    }
-
-    /// The SMART `patient` claim is no openEHR launch context: master07
-    /// §Context Selection names `ehrId` for the EHR, so a token carrying only
-    /// `patient` binds no EHR.
-    #[test]
-    fn smart_the_patient_claim_is_no_ehr_launch_context() {
-        let bound = Honoured {
-            backend: false,
-            patient: true,
-        };
-        let p = principal_honoured(
-            "patient/composition-*.r",
-            &serde_json::json!({ "patient": "ehr-1" }),
-            bound,
-        );
-        assert!(
-            smart_composition(&p, "composition_get", Some("Vitals.v1"), Some("ehr-1")).is_err()
-        );
+        for claims in [
+            serde_json::json!({ "ehrId": "ehr-1" }),
+            serde_json::json!({}),
+            serde_json::json!({ "patient": "ehr-1" }),
+        ] {
+            let p = principal_honoured("patient/composition-*.r", &claims, bound);
+            for ehr in [Some("ehr-1"), Some("ehr-2"), None] {
+                assert!(
+                    smart_composition(&p, "composition_get", Some("Vitals.v1"), ehr).is_ok(),
+                    "{claims}: the read grant meets a read of {ehr:?}"
+                );
+                let create = smart_composition(&p, "composition_create", Some("Vitals.v1"), ehr)
+                    .expect_err("a read grant does not meet a create");
+                assert_eq!(create.status(), StatusCode::FORBIDDEN);
+            }
+        }
     }
 
     /// A `patient/` grant from an issuer FerroEHR has not bound grants nothing.

@@ -241,6 +241,7 @@ impl Ask {
                 kind,
                 party: Some(world.nurse.clone()),
                 own_ehr: None,
+                patient_grants_only: false,
                 acts_for: Vec::new(),
                 roles: Vec::new(),
                 facts: CallerFacts::default(),

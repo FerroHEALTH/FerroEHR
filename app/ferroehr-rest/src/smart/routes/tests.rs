@@ -198,22 +198,28 @@ fn a_user_grant_meets_its_family_and_not_another() {
 }
 
 /// master07 §Context Selection: a `patient/` grant counts only for a bound
-/// issuer, and only on the EHR the token's `ehrId` names.
+/// issuer, and meets a requirement by its family and permission on any EHR;
+/// the access evaluator holds it to the EHR the token's `ehrId` names (#5606).
 #[test]
-fn a_patient_grant_reaches_the_launch_context_ehr_alone() {
+fn a_patient_grant_is_checked_for_its_family_and_permission_alone() {
     let bound = Honoured {
         backend: false,
         patient: true,
     };
     let patient = principal("patient/composition-*.r", None, bound);
-    assert!(check(&ehr_data(Permission::Read), &patient, Some("ehr-1")).is_ok());
-    assert!(check(&ehr_data(Permission::Read), &patient, Some("ehr-2")).is_err());
-    assert!(check(&ehr_data(Permission::Read), &patient, None).is_err());
+    for target in [Some("ehr-1"), Some("ehr-2"), None] {
+        assert!(check(&ehr_data(Permission::Read), &patient, target).is_ok());
+        assert!(check(&ehr_data(Permission::Create), &patient, target).is_err());
+        assert!(
+            check(&routes().product(), &patient, target).is_err(),
+            "a patient grant meets no product-scope surface"
+        );
+    }
     let unbound = principal("patient/composition-*.r", None, Honoured::default());
     assert!(check(&ehr_data(Permission::Read), &unbound, Some("ehr-1")).is_err());
-    // A user/ grant beside it widens the reach (the union of the grants).
-    let both = principal("patient/composition-*.r user/composition-*.r", None, bound);
-    assert!(check(&ehr_data(Permission::Read), &both, Some("ehr-2")).is_ok());
+    // A user/ grant beside it widens the permissions (the union of the grants).
+    let both = principal("patient/composition-*.r user/composition-*.c", None, bound);
+    assert!(check(&ehr_data(Permission::Create), &both, Some("ehr-2")).is_ok());
 }
 
 /// A subject granted `access_without_scope` whose token carries no

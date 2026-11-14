@@ -41,6 +41,7 @@ mod access_delay_http;
 mod access_delay_trail;
 mod access_evaluator_http;
 mod access_evaluator_patient_http;
+mod access_evaluator_patient_routes_http;
 mod access_log_aql_http;
 mod access_log_erasure_http;
 mod access_log_http;

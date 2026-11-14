@@ -28,9 +28,14 @@ use ferroehr::party_binding::grants::agreement::Accessor;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::grants::operation::Operation;
 use ferrohealth_smart::kind::CallerKind as SmartKind;
+use ferrohealth_smart::openehr;
+use ferrohealth_smart::openehr::smart_scopes::{
+    Compartment, Permission, ResourceFamily, SmartScope,
+};
 use openehr_rm::draft::access_control::terminology::{AccessDefault, CallerKind, OperationClass};
 use uuid::Uuid;
 
+use super::authn::trc::TrcPatientEhr;
 use super::authn::{Principal, current_principal};
 use crate::api::operation::{Verb, operation};
 use crate::state::AppState;
@@ -75,10 +80,15 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
             .iter()
             .map(Uuid::to_string),
     );
+    let patient_grants_only = patient_grants_only(principal, op);
     let caller = Caller {
         kind,
         party: settings.party().map(str::to_owned),
-        own_ehr: own_ehr(principal, kind),
+        own_ehr: own_ehr(
+            principal,
+            kind == CallerKind::Subject || patient_grants_only,
+        ),
+        patient_grants_only,
         acts_for,
         administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
         roles,
@@ -140,15 +150,52 @@ fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilitie
     CallerKind::Professional
 }
 
-/// The EHR whose subject a subject caller is: the EHR of its SMART App
-/// Launch patient context (`ehrId`, ITS-REST `master07` §Context Selection).
-fn own_ehr(principal: Option<&Principal>, kind: CallerKind) -> Option<EhrId> {
-    if kind != CallerKind::Subject {
+/// The EHR a `confined` caller reaches: the EHR of its SMART App Launch
+/// patient context (`ehrId`, ITS-REST `master07` §Context Selection), or,
+/// for a contact point's caller, the EHR of its TRC patient, which stands in
+/// for the launch context its token does not carry (eHDSI XCA Profile 8.0.1
+/// §4.2.1).
+fn own_ehr(principal: Option<&Principal>, confined: bool) -> Option<EhrId> {
+    if !confined {
         return None;
     }
+    let access = &principal?.access;
+    if let Some(TrcPatientEhr(ehr)) = access.extension::<TrcPatientEhr>() {
+        return Some(*ehr);
+    }
     // NOTE: our own design (#5586), a launch context that names no EHR id names no EHR, so
-    // the evaluator refuses the subject caller on every EHR.
-    principal?.access.ehr_id()?.parse().ok()
+    // the evaluator refuses the confined caller on every EHR.
+    access.ehr_id()?.parse().ok()
+}
+
+/// Whether the caller's grants on the EHR data `op` reaches are `patient/`
+/// grants alone (SMART on openEHR `master08` §Resource Scopes): it holds one
+/// for the operation's family and permission, and no other grant covers
+/// every resource of them. A grant of another compartment on some templates
+/// leaves the caller confined, so no template it names widens its reach.
+fn patient_grants_only(principal: Option<&Principal>, op: &str) -> bool {
+    let Some((principal, caller)) =
+        principal.and_then(|p| p.access.caller().map(|caller| (p, caller)))
+    else {
+        return false;
+    };
+    let (family, permission) = match operation(op) {
+        Some(row) if row.verb == Verb::Search => (ResourceFamily::Aql, Permission::Search),
+        Some(row) => (ResourceFamily::Composition, row.permission()),
+        None => return false,
+    };
+    let scopes = caller.openehr_scopes();
+    let patient = |scope: &SmartScope| matches!(scope, SmartScope::Resource(resource) if resource.compartment == Compartment::Patient);
+    let holds = scopes.iter().any(|scope| {
+        matches!(scope, SmartScope::Resource(resource)
+            if resource.compartment == Compartment::Patient
+                && resource.resource.family() == family
+                && resource.permissions.contains(permission))
+    });
+    let wide = openehr::covering(&scopes, family, permission, None, principal.honoured)
+        .iter()
+        .any(|scope| !patient(scope));
+    holds && !wide
 }
 
 /// The class of `op`: a query, an export, a read or a write.

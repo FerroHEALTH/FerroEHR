@@ -14,7 +14,9 @@
 //! Before dispatch it judges, by the fixed decision procedure
 //! (`ferroehr::access_eval`), the EHR an operation's path names, every EHR a
 //! manifest export names (`enforce_each`), and each object the path names
-//! when the verdict depends on the object. A restriction or an opt-out
+//! when the verdict depends on the object. It alone holds a confined caller to
+//! the EHR of its patient context: on the single EHR a query or an import
+//! names outside its path, and on an operation that names no EHR (#5606). A restriction or an opt-out
 //! answers `404`, as an unknown target does, with nothing in the body that
 //! names it (EHDS Art. 8, third paragraph); every other refusal answers `403`
 //! with its `refused-*` code. A query carries the same verdicts as a
@@ -28,13 +30,16 @@ use ferroehr::access_eval::scope::Item;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Missing;
 use ferroehr::ids::{EhrId, VoId};
+use ferroehr::system_log::event::ObjectClass;
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::draft::access_control::terminology::{Refusal, Term as _};
 use uuid::Uuid;
 
 use crate::api::RequestParts;
+use crate::api::operation::{Verb, operation};
 use crate::extensions::access::authn::{Principal, current_principal};
 use crate::overview::error::RestError;
+use crate::overview::params::query_param;
 use crate::overview::problem::Detail;
 use crate::state::AppState;
 
@@ -63,12 +68,10 @@ pub(crate) async fn enforce(
         return Ok(());
     };
     let principal = current_principal();
-    let Some(ehr_id) = parts
-        .path
-        .get("ehr_id")
-        .and_then(|raw| Uuid::parse_str(raw).ok())
-        .map(EhrId)
-    else {
+    let Some(raw) = parts.path.get("ehr_id") else {
+        return enforce_unnamed(state, &access, op, parts, principal.as_ref()).await;
+    };
+    let Ok(ehr_id) = Uuid::parse_str(raw).map(EhrId) else {
         // A malformed ehr_id is not ours to reject: the dispatch returns 400/404.
         return Ok(());
     };
@@ -86,6 +89,85 @@ pub(crate) async fn enforce(
         return enforce_objects(state, op, principal.as_ref(), &objects).await;
     }
     Ok(())
+}
+
+/// How an operation whose path names no EHR addresses one.
+#[derive(Debug, PartialEq, Eq)]
+enum Addressed {
+    /// The operation reaches no EHR's data, or the evaluator judges each EHR
+    /// its dispatch reaches.
+    Elsewhere,
+    /// The operation names its EHRs in its body, each judged before any is
+    /// read ([`enforce_each`]).
+    Body,
+    /// The single EHR a query or an import names outside its path, raw, if
+    /// any (ITS-REST `query/Request.md` §About the `ehr_id` parameter).
+    Scope(Option<String>),
+    /// The operation reaches EHR data and names no EHR: an EHR create, a
+    /// lookup by subject.
+    None,
+}
+
+/// How `op` addresses an EHR when its path names none.
+fn addressed(op: &str, parts: &RequestParts) -> Addressed {
+    let query_scope = || query_param(parts.query.as_deref(), "ehr_id");
+    let searches = operation(op)
+        .is_some_and(|row| row.verb == Verb::Search && row.audit == ObjectClass::Query);
+    match op {
+        _ if searches => Addressed::Scope(query_scope().or_else(|| {
+            parts
+                .headers
+                .get("openehr-ehr-id")
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_owned)
+        })),
+        "message_import_ehr" => Addressed::Scope(query_scope()),
+        "message_export_ehr_extracts" => Addressed::Body,
+        "ehr_create" | "ehr_get_by_subject" => Addressed::None,
+        _ => Addressed::Elsewhere,
+    }
+}
+
+/// Enforce the evaluator on a request of `op` whose path names no EHR: a
+/// confined caller is judged on the single EHR its query or import names, and
+/// refused `refused-not-subject` when it names none (step 0); every other
+/// caller is judged on each EHR the dispatch reaches.
+async fn enforce_unnamed(
+    state: &AppState,
+    access: &RequestAccess,
+    op: &str,
+    parts: &RequestParts,
+    principal: Option<&Principal>,
+) -> Result<(), Box<Response>> {
+    if !access.caller().confined() {
+        return Ok(());
+    }
+    let scope = match addressed(op, parts) {
+        Addressed::Elsewhere | Addressed::Body => return Ok(()),
+        Addressed::Scope(scope) => scope,
+        Addressed::None => None,
+    };
+    let Some(raw) = scope else {
+        return match access.judge_unnamed() {
+            Outcome::Admit => Ok(()),
+            Outcome::Absent(code) | Outcome::Refused(code) => {
+                Err(Box::new(forbidden(principal, code)))
+            }
+        };
+    };
+    let Ok(ehr_id) = Uuid::parse_str(&raw).map(EhrId) else {
+        // A malformed scope is not ours to reject: the dispatch returns 400.
+        return Ok(());
+    };
+    let verdict = state
+        .backend()
+        .ehr_verdict(access, ehr_id)
+        .await
+        .map_err(|e| Box::new(unavailable(principal, e)))?;
+    match refusal_of(access, op, principal, ehr_id, &verdict) {
+        Some(refusal) => Err(Box::new(refusal)),
+        None => Ok(()),
+    }
 }
 
 /// Judge each object `objects` names by the verdict of its own EHR: the

@@ -195,7 +195,7 @@ impl RequestAccess {
     pub fn decision(&self, ehr_id: Option<EhrId>) -> Decision {
         let noted = self.noted(ehr_id);
         let judged = ehr_id
-            .or(noted.as_ref().map(|(ehr_id, _)| *ehr_id))
+            .or(noted.as_ref().and_then(|(ehr_id, _)| *ehr_id))
             .and_then(|ehr_id| self.judgement(ehr_id));
         let mut grounds = self.role_grounds();
         let refused = noted.map(|(_, noted)| self.refused(&noted, judged.as_ref()));
