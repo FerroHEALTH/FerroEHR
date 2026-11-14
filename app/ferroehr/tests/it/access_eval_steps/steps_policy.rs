@@ -13,10 +13,6 @@ use super::*;
 /// Step 5: data whose label or classification no applying permit, a
 /// directive or a rule of the policy, names are refused `refused-sensitivity`.
 #[test]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one row per case of the step's table"
-)]
 fn step_5_sensitivity() {
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(OBJECT),
                         "sensitivities": [coded(CONFIDENTIALITY, "HIV")] });

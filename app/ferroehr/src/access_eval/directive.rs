@@ -91,11 +91,10 @@ impl Reader<'_, '_> {
                 caller,
                 CallerKind::Professional | CallerKind::System | CallerKind::AccessService
             ),
-            DirectiveKind::Consent => caller != CallerKind::Subject,
-            DirectiveKind::Delegation => caller == CallerKind::Representative,
             // NOTE: our own design (#5621), a rule of the policy binds every caller but the
             // subject, whose own right of access (EHDS Art. 3) is not the controller's to deny.
-            DirectiveKind::ControllerRule => caller != CallerKind::Subject,
+            DirectiveKind::Consent | DirectiveKind::ControllerRule => caller != CallerKind::Subject,
+            DirectiveKind::Delegation => caller == CallerKind::Representative,
         };
         if !bindable {
             return Pred::False;

@@ -441,22 +441,9 @@ pub fn decide(judged: &Judged<'_>) -> Verdict {
         .filter(|permit| permit.certain)
         .map(|permit| permit.at)
         .collect();
-    let rule_permits: Vec<Permit<'_>> = judged
-        .rules
-        .iter()
-        .enumerate()
-        .filter(|(_, rule)| kind_and_effect(rule).1 == Effect::Permit)
-        .filter_map(|(at, rule)| {
-            let binds = read.binds(DirectiveKind::ControllerRule, rule, None);
-            (binds != Pred::False).then(|| Permit {
-                at,
-                directive: rule,
-                certain: binds == Pred::True,
-                cover: Pred::all(vec![binds, read.cover(rule, Effect::Permit, None)]),
-            })
-        })
-        .collect();
-    sensitivity(&read, permits.iter().chain(&rule_permits), &mut verdict);
+    let rule_permits = rule_permits(&read);
+    let naming: Vec<&Permit<'_>> = permits.iter().chain(&rule_permits).collect();
+    sensitivity(&read, &naming, &mut verdict);
     let keeper = Pred::any(vec![Pred::of(caller.administrator), read.keeper()]);
     let live = judged.ehr.cared && !held_closed;
     let default = judged
@@ -621,6 +608,25 @@ fn delegation(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &m
     });
 }
 
+/// The permit rules of the controller's policy that may bind the caller.
+fn rule_permits<'a>(read: &Reader<'_, 'a>) -> Vec<Permit<'a>> {
+    read.judged
+        .rules
+        .iter()
+        .enumerate()
+        .filter(|(_, rule)| kind_and_effect(rule).1 == Effect::Permit)
+        .filter_map(|(at, rule)| {
+            let binds = read.binds(DirectiveKind::ControllerRule, rule, None);
+            (binds != Pred::False).then(|| Permit {
+                at,
+                directive: rule,
+                certain: binds == Pred::True,
+                cover: Pred::all(vec![binds, read.cover(rule, Effect::Permit, None)]),
+            })
+        })
+        .collect()
+}
+
 /// Step 4: every deny rule of the controller's policy that binds the
 /// caller, or the mark of an emergency that lifts it. A rule binds every
 /// caller but the subject, whatever the subject's directives permit.
@@ -651,15 +657,11 @@ fn controller_denials(read: &Reader<'_, '_>, verdict: &mut Verdict) {
 
 /// Step 5: data whose sensitivity no applying permit, a directive of the
 /// EHR or a rule of the policy, names.
-fn sensitivity<'p>(
-    read: &Reader<'_, '_>,
-    permits: impl Iterator<Item = &'p Permit<'p>> + Clone,
-    verdict: &mut Verdict,
-) {
+fn sensitivity(read: &Reader<'_, '_>, permits: &[&Permit<'_>], verdict: &mut Verdict) {
     let scopes = read.judged.scopes;
     for code in scopes.sensitivity_codes() {
         let named = permits
-            .clone()
+            .iter()
             .filter(|permit| names_sensitivity(permit.directive, &code))
             .map(|permit| permit.cover.clone())
             .collect();

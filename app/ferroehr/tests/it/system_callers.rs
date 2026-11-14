@@ -16,7 +16,7 @@
 use serde_json::{Value, json};
 
 use crate::committer_binding::{ISSUER, KEY, bound, placeholder, professional, service};
-use crate::fixtures::{attestation_by, ckm_example, deleting};
+use crate::fixtures::{attestation_by, ckm_example};
 use crate::system_grants::{
     DEVICES, FACILITIES, MACHINES, System, run, system, system_client, writes,
 };
