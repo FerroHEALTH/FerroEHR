@@ -74,10 +74,14 @@ probes_replicas() {
 
   probe "P-REPLICA-BOOT" "$PROBE_WORKING" "deployment" "#5589" \
     "a second instance on the same database and key boots, and both report the instances agree"
-  dc "${files[@]}" --profile replicas --profile s3 up -d --wait \
+  # The overlay publishes the second instance's port on the identity issuer,
+  # so Compose recreates the issuer, and every service in its network
+  # namespace must be recreated with it: FerroPIX left in the old namespace is
+  # unreachable on localhost, and FerroEHR refuses to boot without it.
+  dc "${files[@]}" --profile replicas --profile s3 up -d --wait --always-recreate-deps \
     ferroehr ferroehr-2 >/dev/null 2>&1
   if ! wait_http "$SECOND_CDR/health/readiness" 90 || ! wait_http "$CDR/health/readiness" 90; then
-    probe_fail "two serving instances" "$(dc "${files[@]}" logs --tail 5 ferroehr-2 2>&1 | tail -3)"
+    probe_fail "two serving instances" "$(replica_state "${files[@]}")"
     probe_done
     replicas_down
     return 0
@@ -141,7 +145,8 @@ probes_replicas() {
   else
     local mismatch
     mismatch="$(replica_key_overlay "$other" "$PROBE_TMP/replicas-other.yml" ferroehr-2)"
-    dc "${files[@]}" -f "$mismatch" --profile replicas up -d --wait ferroehr-2 >/dev/null 2>&1
+    dc "${files[@]}" -f "$mismatch" --profile replicas --profile s3 up -d --wait \
+      ferroehr-2 >/dev/null 2>&1
     wait_http "$SECOND_CDR/health/readiness" 90 || true
     assert_eq "degraded" "$(indicator_state "$SECOND_CDR" instances)" \
       "the instance with another key compares itself with the first at start"
@@ -153,11 +158,24 @@ probes_replicas() {
   replicas_down
 }
 
+# What a failed boot leaves to read: each container's state and the last
+# lines of each instance's and FerroPIX's log, for the compose `files`.
+replica_state() {
+  local service
+  dc "$@" --profile replicas ps -a --format '{{.Service}} {{.State}} {{.Status}}' 2>&1 | tr '\n' ';'
+  for service in ferroehr ferroehr-2 ferropix; do
+    printf ' %s: ' "$service"
+    dc "$@" --profile replicas logs --no-color --tail 3 "$service" 2>&1 | tr '\n' ' '
+  done
+}
+
 # Stop the second instance and bring the quickstart stack back as the other
-# families expect it.
+# families expect it: the issuer drops the second port, so it is recreated
+# with every service in its namespace again.
 replicas_down() {
   dc -f docker-compose.yml -f docker-compose.replicas.yml --profile replicas \
     rm -sf ferroehr-2 >/dev/null 2>&1 || true
-  compose_up ferroehr seaweedfs seaweedfs-init ferroehr-provision
+  dc -f docker-compose.yml --profile s3 up -d --wait --always-recreate-deps \
+    ferroehr seaweedfs seaweedfs-init ferroehr-provision >/dev/null 2>&1
   wait_http "$CDR/health/readiness" 90 || true
 }
