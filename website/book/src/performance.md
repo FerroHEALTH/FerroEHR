@@ -244,6 +244,25 @@ behind each bound (#4318).
 
 {{#include ../generated/storage-bench.md}}
 
+## The access path at scale
+
+Release 5.7.2 puts the access evaluator, its care relationships and
+clearances, and a signed access-log entry on every clinical request. The
+performance gate (`scripts/perf/gate.sh`), which judges each change against
+its base and each release against the previous one, side by side on one host,
+measures that whole path: its configuration commits an access policy
+that requires a care relationship, makes a clinician a member of a care team
+with a clearance, places every seeded EHR's subject under that team's care
+with five directives on the EHR, and signs each access-log link with an
+OpenPGP key generated for the run. The clinical requests are sent as the
+clinician. The record, `docs/benchmarks/access-path/record.json`, also holds
+the evaluator's micro-benchmark, what one instance holds in memory, the access
+log's storage and the reload load of several instances
+([Running several instances](installation/several-instances.md)). No openEHR
+specification governs these budgets: they are FerroEHR's own.
+
+{{#include ../generated/access-path-bench.md}}
+
 ## The published figures
 
 The figures below are the last ones measured with the earlier generation of

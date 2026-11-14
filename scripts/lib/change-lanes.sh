@@ -69,12 +69,12 @@ ci|server_dockerfile|^(docker/Dockerfile|\.dockerignore)$
 ci|viewer_dockerfile|^(docker/viewer/Dockerfile|\.dockerignore)$
 ci|helm|^(deploy/helm/|\.github/workflows/ci\.yml$)
 ci|chart_boot|^(deploy/helm/|\.github/workflows/ci\.yml$|docker/Dockerfile$|app/ferroehr/src/config/|app/ferroehr/assets/ferroehr\.default\.toml$|app/ferroehr-rest/src/config\.rs$|app/ferroehr/src/report\.rs$)
-ci|perf|^(app/ferroehr(-rest|-server|-ext)?/|crates/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/postgres/|perf/|scripts/perf/gate\.sh$|docs/VERSIONS\.md$|\.github/workflows/ci\.yml$)
+ci|perf|^(app/ferroehr(-rest|-server|-ext)?/|crates/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/postgres/|perf/|scripts/perf/(gate|access-seed|replicas)\.sh$|scripts/scim-provision\.sh$|docs/VERSIONS\.md$|\.github/workflows/ci\.yml$)
 ci|workflows|^\.github/workflows/ci\.yml$
 ci|vex|^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-linkage)\.sh$)
 ci|cache|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.cargo/config\.toml$|^\.github/workflows/ci\.yml$
 ci|semver|^(crates/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|docs/VERSIONS\.md$|scripts/checks/semver\.sh$|scripts/lib/public-deps\.sh$|\.github/workflows/ci\.yml$)
-docs|docs|^(website/|docs/conformance/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs\.yml$|\.github/actions/docs-toolchain/)
+docs|docs|^(website/|docs/conformance/|docs/benchmarks/|scripts/(render|site)/|scripts/lib/veredictum\.sh$|scripts/checks/(docs-claims|conformance-numbers)\.sh$|\.github/workflows/docs\.yml$|\.github/actions/docs-toolchain/)
 sonar|code|^(app/|crates/|tools/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|clippy\.toml$|sonar-project\.properties$|\.github/workflows/sonar\.yml$)
 conformance|conformance|^(app/ferroehr(-rest|-server|-ext)?/|crates/|tools/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/sut-[^/]+\.yml$|docker/ferroehr\.dev\.toml$|docker/postgres/|docker/terminology/|docs/conformance/party/|scripts/conformance\.sh$|scripts/lib/(veredictum|cnf-compose)\.sh$|\.github/workflows/conformance\.yml$)'
 
@@ -213,10 +213,12 @@ the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|msrv,viewer,h
 a VEX document runs the vex lane|ci|security/vex/rust.openvex.json|vex
 the plan runs the gate alone|ci|perf/plan.toml|perf
 the gate script runs the gate alone|ci|scripts/perf/gate.sh|perf
+the access seed runs the gate alone|ci|scripts/perf/access-seed.sh|perf
 the pin table runs the gate and the SemVer judge|ci|docs/VERSIONS.md|perf,semver
 the SemVer judge runs its lane alone|ci|scripts/checks/semver.sh|semver
 the viewer runs no gate|ci|app/ferroehr-viewer/src/lib.rs|code,viewer
 a book page builds the site|docs|website/book/src/index.md|docs
+a benchmark record builds the site|docs|docs/benchmarks/access-path/record.json|docs
 a crate source does not build the site|docs|crates/openehr-rm/src/lib.rs|
 a crate source runs the scan|sonar|crates/openehr-rm/src/lib.rs|code
 a book page runs no scan|sonar|website/book/src/index.md|

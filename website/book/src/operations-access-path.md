@@ -63,6 +63,13 @@ settings classes a query is judged over
 | `access_copy_refills_total` | counter | `copy`, `outcome` | Reads of the settings projection that fill the copy: `ok`, or `failed` (the request answered `503`). |
 | `access_copy_drops_total` | counter | `scope` | Drops: `ehr` (one EHR's settings changed), `classes` (a new class), `every` (a listener connected or was lost, or a refill notification). |
 
+The care relationships of the EHRs' subjects are held beside the grants, in
+two bounded caches: a subject's relationships, and the patients of each care
+team a query's condition names. A miss reads one indexed statement, and the
+`grants` listener's notification drops what it changed. Their bounds and what
+they hold at scale are on the
+[Performance](performance.md#the-access-path-at-scale) page.
+
 The hit ratio is `rate(access_copy_lookups_total{result="hit"}[5m]) /
 rate(access_copy_lookups_total[5m])`. Alert on any rate of
 `access_copy_refills_total{outcome="failed"}`. While the listener is down

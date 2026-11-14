@@ -121,7 +121,10 @@ reload_change() {
     ;;
   facts) access_patient_ehr "$ACCESS_TEAM" >/dev/null ;;
   policy)
-    version=$(call GET "$EXT/admin/access_policy" "" - 200 | jq -er '.uid.value')
+    # The version in force is the read's (weak) ETag.
+    version=$(curl -fsS -o /dev/null -D - -H "authorization: $AUTH" "$SERVER_URL$EXT/admin/access_policy" \
+      | awk 'tolower($1) == "etag:" { sub(/^W\//, "", $2); gsub(/[\r"]/, "", $2); print $2 }')
+    [[ -n "$version" ]] || die "replicas: the access policy read named no version"
     curl -fsS -o /dev/null -X PUT -H "authorization: $AUTH" -H "content-type: application/json" \
       -H "if-match: $version" --data-binary "@$OUT/access-policy.json" \
       "$SERVER_URL$EXT/admin/access_policy" || die "replicas: the policy change was refused"
