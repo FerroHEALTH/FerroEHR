@@ -66,6 +66,7 @@ mod aql_template_like;
 mod audit_chain;
 mod audit_ehds_mapping;
 mod audit_feed;
+mod audit_search_pages;
 mod audit_store;
 mod audit_text;
 mod caller_facts;

@@ -115,7 +115,8 @@ restriction, research-objection, access-delay and access-repair registers and
 the `EHR_ACCESS` settings commit that carries a restriction or an opt-out;
 archiving an EHR and restoring it; its retention anchor and the retention hold
 on one of its objects; the repository dump and load; and the EHR Extract
-export and import. The import of another system's access log (`ferroehr
+export and import. An export's entry names the request it answered, the bound
+party and the provider, as every other access entry does. The import of another system's access log (`ferroehr
 access-log import`) writes its `import` entry through the same path. SCIM
 provisioning touches party data only and writes none.
 
@@ -141,7 +142,7 @@ whose `name` and `version` name the document the ground is defined in:
 | `consent` | a consent permit admitted the access, or the caller is a gate-keeper of the settings | `EHR_ACCESS` and the uid of its version; the directive by its uid, its first identifier or its position from 1, and its legal grounds |
 | `representation` | a `delegation` permit admitted a representative | as `consent` |
 | `treatment relationship` | the decision read a live care relationship | `ACCESS_POLICY` and the uid of its version |
-| `emergency` | an emergency lifted a directive or steps 4 to 7 | the directive it lifted, or the `ACCESS_POLICY` version |
+| `emergency` | an emergency lifted a directive or steps 4 to 7 | the directive it lifted, or the `ACCESS_POLICY` version; an entry naming the objects it delivered names only the directives whose data scope covers one of them |
 
 The entry of each EHR an AQL query served names the same grounds a read of
 that EHR alone names. The query's condition is built from this replica's copy
@@ -341,11 +342,16 @@ served-row count. The served set is read off the rows the caller actually
 received rather than the rows the statement matched: a legal record of access
 must not name an EHR whose content was never disclosed. Each row names the EHR
 of every `EHR` source and every versioned object it was drawn from, so a
-statement that reads only the EHR is attributed too. Two query shapes carry
-no per-EHR breakdown, because the shape makes it underivable —
-`SELECT DISTINCT`, where an extra column changes which rows are distinct, and
-an aggregate projection, where a per-row EHR is not valid SQL. Those record the
-statement and its row count.
+statement that reads only the EHR is attributed too. Every EHR a query
+touches is accessed (EHDS Art. 9(1)): an EHR the query names by its `ehr_id`
+scope gets an access record whatever its rows hold, a `COUNT`, an empty page
+and a page past the end included, and an aggregate projection names, per row,
+every EHR whose data its aggregate read, so a population `COUNT` writes one
+access record per contributing EHR. A query the access evaluator refuses is
+recorded against the EHR it asked for. One shape carries no per-EHR
+breakdown, because the shape makes it underivable: `SELECT DISTINCT`, where an
+extra column changes which rows are distinct. It records the statement and its
+row count.
 
 ### NEN 7513 content, field by field
 
