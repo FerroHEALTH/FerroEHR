@@ -15,6 +15,7 @@
 //! refill runs, and replicas with the new mapping start. No openEHR spec
 //! governs the binding: our own design.
 
+use ferroehr::service::ehr::access_projection::Rebuild;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -39,6 +40,8 @@ pub enum PartyBindingCmd {
     /// party versions under the configured mapping and store its digest. Run
     /// it with every replica stopped: it refuses while a replica's lease is
     /// live. With no mapping configured it rebuilds the policy grants alone.
+    /// It then rebuilds the `EHR_ACCESS` projection from every EHR's current
+    /// `EHR_ACCESS` version.
     Refill,
     /// Report, from the party versions and writing nothing, what binding
     /// will make of them: the keys per issuer, duplicates, inactive and
@@ -190,7 +193,8 @@ pub fn install(
 /// Prepares this replica's party store before it takes traffic.
 ///
 /// Seeds the default policy, demographic and `EHR_ACCESS` definitions,
-/// commits the default `EHR_ACCESS` of every EHR without one, reads the policy
+/// commits the default `EHR_ACCESS` of every EHR without one, fills the
+/// `EHR_ACCESS` projection once and starts its listener, reads the policy
 /// grants, starts their listener and logs the federation agreements in
 /// force, judges the mapping against its
 /// templates, prepares the side table and takes this replica's lease,
@@ -216,6 +220,11 @@ pub async fn prepare(
         .refill_access_marks()
         .await
         .context("projecting the restriction and opt-out directives of every EHR_ACCESS")?;
+    service
+        .rebuild_ehr_access_projection(Rebuild::Fill)
+        .await
+        .context("filling the EHR_ACCESS projection")?;
+    service.ehr_access_listened().spawn_listener();
     service
         .read_grants()
         .await
@@ -309,14 +318,18 @@ pub async fn run(
             let config = ferroehr::config::load(file, sets)?;
             config.validate()?;
             let pools = crate::connect_pool(&config).await?;
-            judged(&pools, &config)
-                .await?
+            let service = judged(&pools, &config).await?;
+            service
                 .refill_binding(LEASE_TTL)
                 .await
                 .context("refilling the party binding side table")?;
+            service
+                .rebuild_ehr_access_projection(Rebuild::Refill)
+                .await
+                .context("refilling the EHR_ACCESS projection")?;
             println!(
-                "the party binding side table and the policy grants are refilled under the \
-                 configured mapping"
+                "the party binding side table, the policy grants and the EHR_ACCESS projection \
+                 are refilled under the configured mapping"
             );
             Ok(())
         }

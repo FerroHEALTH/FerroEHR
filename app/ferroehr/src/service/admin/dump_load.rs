@@ -1682,12 +1682,12 @@ impl FerroEhrService {
             )));
         }
 
-        // Every loaded row went into the hot tier; the ones the record marks
-        // archived belong in the cold one, so a loaded EHR carries the same
-        // tier placement AND the same marker a locally archived one does.
+        // Every loaded row went into the hot tier; the ones the record marks archived go to
+        // the cold one, so a loaded EHR carries the tier and marker a locally archived one does.
         dump_repo::write::restore_archives(&mut tx, &record.archives).await?;
-
+        crate::service::ehr::access_projection::project_current(&mut tx, ehr_id).await?;
         tx.commit().await?;
+        self.invalidate_ehr_access(ehr_id).await;
         Ok(())
     }
 }

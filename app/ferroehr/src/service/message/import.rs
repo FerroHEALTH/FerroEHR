@@ -173,15 +173,13 @@ impl FerroEhrService {
         // `is_modifiable` — are re-derived from the stored current status (RM
         // ehr master04 §EHR Status / §EHR Active Status).
         self.resync_promoted_columns(&mut tx, ehr_id).await?;
-        tx.commit().await.map_err(ServiceError::from)?;
-        // An imported EHR_ACCESS version changes the EHR's access policy, so the
-        // cached settings are evicted (RM ehr master04 §EHR Access); a
-        // bootstrapped default carries none, so that entry is seeded open.
+        // An imported EHR_ACCESS version changes the EHR's access policy (RM ehr
+        // master04 §EHR Access), so its settings are projected and every copy dropped.
         if touches_ehr_access {
-            self.invalidate_ehr_access(ehr_id).await;
-        } else {
-            self.prewarm_ehr_access_open(ehr_id).await;
+            crate::service::ehr::access_projection::project_current(&mut tx, ehr_id).await?;
         }
+        tx.commit().await.map_err(ServiceError::from)?;
+        self.invalidate_ehr_access(ehr_id).await;
         let content = self.landed_content(&landed).await;
         self.emit_extract_audit(ehr_id, EventActionCode::Create, Some(content))?;
         Ok(ehr_id)
@@ -254,10 +252,12 @@ impl FerroEhrService {
         // included (Copying Case 3 append), so the promoted `ehr` columns are
         // re-derived from it (RM ehr master04 §EHR Status / §EHR Active Status).
         self.resync_promoted_columns(&mut tx, an_ehr_id).await?;
+        // An imported EHR_ACCESS version changes the EHR's access policy (RM ehr
+        // master04 §EHR Access), so its settings are projected and every copy dropped.
+        if touches_ehr_access {
+            crate::service::ehr::access_projection::project_current(&mut tx, an_ehr_id).await?;
+        }
         tx.commit().await.map_err(ServiceError::from)?;
-        // An imported EHR_ACCESS version changes the EHR's access policy — evict
-        // the cached settings the access gate consults (RM ehr master04 §EHR
-        // Access; the settings are change-controlled).
         if touches_ehr_access {
             self.invalidate_ehr_access(an_ehr_id).await;
         }
