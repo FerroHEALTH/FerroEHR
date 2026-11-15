@@ -28,7 +28,12 @@
 
 use std::collections::BTreeMap;
 
-use serde_json::{Value, json};
+use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
+use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
+use openehr_rm::v1_2::data_types::quantity::dv_interval::DvInterval;
+use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
+use serde_json::Value;
 
 use crate::error::ServiceError;
 use crate::ids::VoId;
@@ -325,36 +330,64 @@ fn in_force(validity: Option<&Value>, today: &str) -> bool {
 
 /// The `DV_CODED_TEXT` of `code` in `terminology`, its value the code.
 fn coded(terminology: &str, code: &str) -> Value {
-    json!({ "_type": "DV_CODED_TEXT", "value": code,
-            "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
-                "code_string": code } })
+    openehr_its::json::to_canonical_value(&DvCodedText {
+        value: code.to_owned(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+        defining_code: CodePhrase {
+            terminology_id: TerminologyId {
+                value: terminology.to_owned(),
+            },
+            code_string: code.to_owned(),
+            preferred_term: None,
+        },
+    })
+}
+
+/// The `DV_DATE` of the ISO 8601 date `value`.
+fn date(value: &str) -> DvDate {
+    DvDate {
+        normal_status: None,
+        normal_range: None,
+        other_reference_ranges: None,
+        magnitude_status: None,
+        accuracy: None,
+        value: value.to_owned(),
+    }
 }
 
 /// The validity of a role added on `today`: from that date, with no end.
 fn from(today: &str) -> Value {
-    json!({ "_type": "DV_INTERVAL",
-            "lower": { "_type": "DV_DATE", "value": today },
-            "lower_included": true, "lower_unbounded": false, "upper_unbounded": true })
+    openehr_its::json::to_canonical_value(&DvInterval {
+        lower: Some(date(today)),
+        upper: None,
+        lower_unbounded: false,
+        upper_unbounded: true,
+        lower_included: true,
+        upper_included: false,
+    })
 }
 
 /// The validity of a role from `lower` (unbounded when `None`) ended before
 /// `today`.
 fn until(lower: Option<&str>, today: &str) -> Value {
-    match lower {
-        Some(lower) => json!({ "_type": "DV_INTERVAL",
-            "lower": { "_type": "DV_DATE", "value": lower },
-            "upper": { "_type": "DV_DATE", "value": today },
-            "lower_included": true, "upper_included": false,
-            "lower_unbounded": false, "upper_unbounded": false }),
-        None => json!({ "_type": "DV_INTERVAL",
-            "upper": { "_type": "DV_DATE", "value": today },
-            "upper_included": false, "lower_unbounded": true, "upper_unbounded": false }),
-    }
+    openehr_its::json::to_canonical_value(&DvInterval {
+        lower: lower.map(date),
+        upper: Some(date(today)),
+        lower_unbounded: lower.is_none(),
+        upper_unbounded: false,
+        lower_included: lower.is_some(),
+        upper_included: false,
+    })
 }
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
 
     #[test]
