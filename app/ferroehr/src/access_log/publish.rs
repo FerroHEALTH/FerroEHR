@@ -38,8 +38,9 @@ pub const INTERVAL: Duration = Duration::from_secs(30);
 /// Why a checkpoint could not be published.
 #[derive(Debug, thiserror::Error)]
 pub enum PublishError {
-    /// The checkpoint could not be read from the store.
-    #[error("the newest access-log checkpoint could not be read")]
+    /// The checkpoint could not be read from the store, or marked published
+    /// there.
+    #[error("the newest access-log checkpoint could not be read or marked published")]
     Read(#[source] AccessLogError),
     /// The checkpoint has no JSON form.
     #[error("the access-log checkpoint does not serialise")]
@@ -140,6 +141,10 @@ impl Publication {
             return Ok(Some(newest.sequence));
         }
         write_once(directory, &newest).await?;
+        checkpoints
+            .mark_published(newest.sequence)
+            .await
+            .map_err(PublishError::Read)?;
         *self
             .published
             .lock()

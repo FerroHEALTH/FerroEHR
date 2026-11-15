@@ -143,8 +143,8 @@ async fn the_shared_chain_splits_into_two_that_verify() {
         "the records outside the log keep their positions"
     );
     let links: Vec<(i64, String, String, String)> = sqlx::query_as(
-        "SELECT chain_seq, previous_digest, content_digest, digest \
-         FROM audit.access_log_record ORDER BY chain_seq",
+        "SELECT chain_seq, encode(previous_digest, 'hex'), encode(content_digest, 'hex'), \
+         encode(digest, 'hex') FROM audit.access_log_record ORDER BY chain_seq",
     )
     .fetch_all(&pool)
     .await

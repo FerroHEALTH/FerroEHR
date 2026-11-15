@@ -20,9 +20,11 @@ use ferroehr::access_log::chain::{self, ChainFinding};
 use ferroehr::access_log::checkpoint::Checkpoints;
 use ferroehr::access_log::expiry::{Log, expire, fold};
 use ferroehr::access_log::gap::Folded;
+use ferroehr::access_log::publish::Publication;
 use ferroehr::access_log::store::AccessLogStore;
 use ferroehr::access_log::transfer::LogExport;
 use ferroehr::versioning::signature::trust::TrustedCertificates;
+use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 
 use crate::access_log_checkpoint::{generate_key, import_record, keyring, trusting};
@@ -595,4 +597,74 @@ async fn a_gap_and_a_tombstone_leave_only_through_the_fold() {
     }
     assert_eq!(gaps(&pool).await, [(1, 3)]);
     assert_eq!(findings(&pool).await, []);
+}
+
+/// A checkpoint published outside the database before retention folds the
+/// run it sealed still verifies after the fold: the fold keeps it, and the
+/// gap records the link it seals and the digest of its proof. A checkpoint
+/// the gap did not record for that proof does not verify through it (#5727).
+#[tokio::test]
+async fn a_published_checkpoint_verifies_after_its_run_folds() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let (log, _key) = signed_log(&pool);
+    let directory = std::env::temp_dir().join(format!(
+        "ferroehr-gap-publication-{}-{}",
+        std::process::id(),
+        uuid::Uuid::now_v7()
+    ));
+    std::fs::create_dir_all(&directory).expect("the publication directory");
+    let publication = Publication::new(Some(directory.clone()));
+    let all = entries(&["2029-01-01"; 6]);
+    log.store()
+        .append(all[..3].to_vec())
+        .await
+        .expect("the first entries append");
+    assert_eq!(publication.publish(&log).await.expect("publish"), Some(3));
+    log.store()
+        .append(all[3..].to_vec())
+        .await
+        .expect("the rest append");
+
+    expire(log.store(), Log::Local, expiry_run())
+        .await
+        .expect("expire");
+    fold(log.store(), Log::Local, fold_run())
+        .await
+        .expect("fold");
+    assert_eq!(gaps(&pool).await, [(1, 6)], "one gap for the whole run");
+
+    let file = std::fs::read_dir(&directory)
+        .expect("the directory")
+        .next()
+        .expect("one published file")
+        .expect("a directory entry")
+        .path();
+    let published: AccessLogCheckpoint =
+        serde_json::from_str(&std::fs::read_to_string(file).expect("the published file"))
+            .expect("the published checkpoint reads");
+    assert_eq!(published.sequence, 3);
+    let verification = log.verify(Some(published.clone())).await.expect("verify");
+    assert!(verification.intact(), "{verification:?}");
+    assert_eq!(
+        log.at(3).await.expect("read").map(|kept| kept.sequence),
+        Some(3),
+        "the fold keeps the published checkpoint"
+    );
+
+    let mut forged = published;
+    forged.proof = log
+        .at(6)
+        .await
+        .expect("read")
+        .expect("the head's checkpoint")
+        .proof;
+    let verification = log.verify(Some(forged)).await.expect("verify");
+    assert!(
+        verification
+            .findings
+            .contains(&ChainFinding::CheckpointDigest { sequence: 3 }),
+        "a proof the gap did not record names no link: {verification:?}"
+    );
+    std::fs::remove_dir_all(directory).expect("clean up");
 }

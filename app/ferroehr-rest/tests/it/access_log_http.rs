@@ -60,7 +60,9 @@ pub(crate) async fn entries(
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<Columns> = sqlx::query_as(
-            "SELECT r.ehr_id, r.action_code, r.result_code, r.request_id, r.content, sh.content \
+            "SELECT r.ehr_id, r.action_code, r.result_code, \
+             audit.access_log_document(r.content, sh.content) #>> '{channel,request_id}', \
+             r.content, sh.content \
              FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared ORDER BY r.chain_seq",
         )
