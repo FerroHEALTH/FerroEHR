@@ -12,8 +12,9 @@
 //! records outside it (#5573), verified where it is stored by
 //! `audit.verify_access_log_chain()` through
 //! [`AuditStore::verify_chain_advancing`], which accepts a tombstone in place
-//! of its entry; this module adds what a checkpoint adds: its proof, the link
-//! it seals, and the signature of each signed link.
+//! of its entry and a gap in place of a folded run (#5619); this module adds
+//! what a checkpoint adds: its proof, the link it seals, and the signature of
+//! each signed link and gap.
 //!
 //! No openEHR spec governs log signing: our own design
 //! (`docs/plans/access-log.md` §Integrity).
@@ -154,19 +155,19 @@ impl Checkpoints {
     /// an invariant, and the store errors when a statement fails.
     pub async fn seal(&self) -> Result<Option<AccessLogCheckpoint>, AccessLogError> {
         let head = sqlx::query(
-            "SELECT chain_seq, digest FROM audit.access_log_record \
-             ORDER BY chain_seq DESC LIMIT 1",
+            "SELECT head_seq, head_digest FROM audit.access_log_chain_state \
+             WHERE singleton AND head_seq > 0",
         )
         .fetch_optional(&mut *acquire(&self.pool).await?)
         .await?;
         let Some(head) = head else {
             return Ok(None);
         };
-        let sequence: i64 = head.try_get("chain_seq")?;
+        let sequence: i64 = head.try_get("head_seq")?;
         if let Some(sealed) = self.at(sequence).await? {
             return Ok(Some(sealed));
         }
-        let mut checkpoint = self.unsigned(sequence, head.try_get("digest")?);
+        let mut checkpoint = self.unsigned(sequence, head.try_get("head_digest")?);
         checkpoint.proof = self
             .signer
             .attest(canonical_form(&checkpoint)?.as_bytes())?;
@@ -249,8 +250,8 @@ impl Checkpoints {
 
     /// Verify the log against `checkpoint`, or the newest stored one when
     /// none is given: the whole chain, the checkpoint's proof, that the link
-    /// at its sequence is the one it seals, and the signature of every signed
-    /// link.
+    /// at its sequence, a record's or a gap's, is the one it seals, and the
+    /// signature of every signed link and gap.
     ///
     /// A run that finds nothing moves the access log's verification cursor
     /// to the newest record, as a scheduled full pass does.
@@ -291,18 +292,18 @@ impl Checkpoints {
         if !self.signed(canonical_form(checkpoint)?.as_bytes(), &checkpoint.proof) {
             findings.push(ChainFinding::CheckpointProof { sequence });
         }
-        let sealed: Option<String> =
-            sqlx::query_scalar("SELECT digest FROM audit.access_log_record WHERE chain_seq = $1")
-                .bind(sequence)
-                .fetch_optional(&mut *acquire(&self.pool).await?)
-                .await?;
+        let sealed: Option<String> = sqlx::query_scalar("SELECT audit.access_log_link_at($1)")
+            .bind(sequence)
+            .fetch_one(&mut *acquire(&self.pool).await?)
+            .await?;
         if sealed.as_deref() != Some(checkpoint.digest.as_str()) {
             findings.push(ChainFinding::CheckpointDigest { sequence });
         }
         Ok(())
     }
 
-    /// The findings of every signed link whose signature does not verify.
+    /// The findings of every signed link or gap whose signature does not
+    /// verify, a gap at its last position.
     async fn verify_link_signatures(
         &self,
         findings: &mut Vec<ChainFinding>,
@@ -310,8 +311,13 @@ impl Checkpoints {
         let mut after = 0_i64;
         loop {
             let rows = sqlx::query(
-                "SELECT chain_seq, digest, signature FROM audit.access_log_record \
-                 WHERE signature IS NOT NULL AND chain_seq > $1 ORDER BY chain_seq LIMIT $2",
+                "SELECT chain_seq, digest, signature FROM ( \
+                 (SELECT chain_seq, digest, signature FROM audit.access_log_record \
+                  WHERE signature IS NOT NULL AND chain_seq > $1 ORDER BY chain_seq LIMIT $2) \
+                 UNION ALL \
+                 (SELECT last_seq, link, signature FROM audit.access_log_chain_gap \
+                  WHERE signature IS NOT NULL AND last_seq > $1 ORDER BY last_seq LIMIT $2)) \
+                 AS signed (chain_seq, digest, signature) ORDER BY chain_seq LIMIT $2",
             )
             .bind(after)
             .bind(SIGNATURE_PAGE)

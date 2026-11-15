@@ -830,7 +830,7 @@ async fn store_whole_batch(
     }
 }
 
-/// The hourly retention reaper, which also tombstones the expired access-log entries.
+/// The hourly retention reaper, which also runs the access log's retention.
 #[expect(
     clippy::infinite_loop,
     reason = "the retention reaper is a detached background task with no \

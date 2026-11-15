@@ -534,7 +534,7 @@
         "tags": [
           "admin-access-log"
         ],
-        "summary": "The uid and link of each record of a span of the access log's chain,\nwithout their content (`GET /admin/access-log/chain`). **Our own\nextension.**",
+        "summary": "The uid and link of each record of a span of the access log's chain,\nwithout their content, and the gaps of folded tombstones between\n(`GET /admin/access-log/chain`). **Our own extension.**",
         "operationId": "admin_access_log_chain",
         "parameters": [
           {
@@ -560,7 +560,7 @@
         ],
         "responses": {
           "200": {
-            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order.",
+            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order. `gaps`: each run of folded tombstones that holds a position of the span, with the positions it held, the `link` of its last record, that link's `signature` and the `grounds` of its tombstones.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -887,7 +887,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The EHR's records with their links, every link from the first of them to the checkpoint they verify against, and that checkpoint, verified before it is answered. `ferroehr access-log import` reads this document.",
+            "description": "The EHR's records with their links, every link and gap of folded tombstones from the first of them to the checkpoint they verify against, and that checkpoint, verified before it is answered. `ferroehr access-log import` reads this document.",
             "content": {
               "application/json": {
                 "schema": {}

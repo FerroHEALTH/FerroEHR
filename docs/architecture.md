@@ -310,7 +310,23 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   policy computes from its categories and origins, the longest when they
   differ), and the audit store's hourly worker replaces every entry past its
   `retain_until` by its tombstone, in any order of expiry
-  (`access_log::expiry`); an erasure a law orders takes the same path through
+  (`access_log::expiry`). A tombstone is kept one more retention horizon,
+  its entry's own: its `fold_after` is `time_removed` plus the time its entry
+  was kept. After that the same worker folds each run of consecutive
+  tombstones past their end into one `access_log_chain_gap` row through
+  `audit.fold_access_log_tombstones()`, the one path a record leaves the log
+  by (`audit/0033_access_log_chain_gap.sql`, `access_log::gap`): the
+  positions the run held, the link and link signature of its last record and
+  the grounds of its tombstones. The gap row is the record of the fold and
+  is append-only; replicas serialise the fold on a transaction-scoped
+  advisory lock, and the request path takes no part in it. A run is cut after
+  each checkpoint's position, so a checkpoint always names a link the log
+  holds (`audit.access_log_link_at`). The verifier, its incremental form,
+  the checkpoint and signature checks, the export (`LogExport.gaps`), the
+  chain read and an import (`access_log_imported_gap`) walk a gap as one
+  link whose digest is its link; a missing position no gap accounts for is
+  still a deletion (our own design, #5619). An erasure a law orders takes
+  the tombstone path through
   `POST /admin/access-log/erase`, which writes the access-log entry recording
   the erasure, with its index row and the FHIR Feed's debt, in the
   tombstone's own transaction through the audit store
