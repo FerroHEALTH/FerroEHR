@@ -431,10 +431,7 @@ async fn two_wards(svc: &FerroEhrService) -> ([VoId; 2], [VoId; 2]) {
         let (person_id, uid) = create(svc, PartyKind::Person, &person(doctor, &[]))
             .await
             .expect("the professional commits");
-        let roster = person(
-            doctor,
-            &[care(MEMBER, person_id, team, "2026-10-01", None)],
-        );
+        let roster = person(doctor, &[care(MEMBER, person_id, team, "2026-10-01", None)]);
         update_as_adt(svc, (person_id, &uid), &roster).await;
         teams.push(team);
         doctors.push(person_id);
