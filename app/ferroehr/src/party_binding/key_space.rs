@@ -11,8 +11,9 @@
 //! are filled online and it turns `active`. A replica that drops an issuer,
 //! or names it with the other flag, turns it `retiring`, and its rows are
 //! deleted once no live lease lists it so. A key row binds only while its
-//! issuer's key space is `active`, so no replica reads a key space some live
-//! replica does not maintain. No openEHR spec governs the side table: our
+//! issuer's key space is `active`, and an issuer no key space records binds
+//! nothing, so no replica reads a key space some live replica does not
+//! maintain. No openEHR spec governs the side table: our
 //! own design.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -70,17 +71,30 @@ impl KeySpaceState {
     }
 }
 
-/// A login looked up under an issuer whose key space is not `active`.
+/// A login looked up under an issuer whose key space is not `active`, or
+/// that no key space records.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error(
     "the key space of the issuer {issuer:?} is {}, so its binding keys bind no login",
-    state.as_str()
+    state.map_or("not recorded", KeySpaceState::as_str)
 )]
 pub struct KeySpaceClosed {
     /// The issuer.
     pub issuer: String,
-    /// Its key space's state.
-    pub state: KeySpaceState,
+    /// Its key space's state; `None` when no key space records the issuer.
+    pub state: Option<KeySpaceState>,
+}
+
+impl KeySpaceClosed {
+    /// Whether the issuer's keys may bind again without a configuration
+    /// change: its key space is `pending` or `filling`.
+    #[must_use]
+    pub fn opening(&self) -> bool {
+        matches!(
+            self.state,
+            Some(KeySpaceState::Pending | KeySpaceState::Filling)
+        )
+    }
 }
 
 /// One key space as stored.

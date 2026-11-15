@@ -7,7 +7,7 @@
 //! found and the live representation relationships of the representatives
 //! among them. A key row binds only while its issuer's key space is
 //! `active` ([`crate::party_binding::key_space`]), read in the same
-//! statement. No openEHR spec governs the side table or its SQL: our own
+//! statement; an issuer no key space records binds nothing. No openEHR spec governs the side table or its SQL: our own
 //! design.
 
 use sqlx::{PgConnection, Row};
@@ -44,14 +44,19 @@ impl LookupError {
     }
 }
 
-/// The refusal of `issuer` when `space`, the stored state of its key space
-/// (`None` when no key space records it), is not `active`.
+/// The refusal of `issuer` unless `space`, the stored state of its key space
+/// (`None` when no key space records it), is `active`.
 fn open(issuer: &str, space: Option<&str>) -> Result<(), LookupError> {
     match space.map(|name| KeySpaceState::parse(name).ok_or(name)) {
-        None | Some(Ok(KeySpaceState::Active)) => Ok(()),
+        Some(Ok(KeySpaceState::Active)) => Ok(()),
+        None => Err(KeySpaceClosed {
+            issuer: issuer.to_owned(),
+            state: None,
+        }
+        .into()),
         Some(Ok(state)) => Err(KeySpaceClosed {
             issuer: issuer.to_owned(),
-            state,
+            state: Some(state),
         }
         .into()),
         Some(Err(name)) => Err(StorageError::InvalidRows(format!(
@@ -84,8 +89,8 @@ pub struct KeyRow {
 /// from `ix_binding_identifier_lookup` and the key space's primary key.
 ///
 /// # Errors
-/// [`LookupError::Closed`] when `issuer`'s key space is recorded and not
-/// `active`, [`LookupError::Storage`] on a driver failure.
+/// [`LookupError::Closed`] when `issuer`'s key space is not `active` or no
+/// key space records it, [`LookupError::Storage`] on a driver failure.
 pub async fn key_rows(
     conn: &mut PgConnection,
     issuer: &str,
@@ -121,15 +126,17 @@ pub async fn key_rows(
     Ok(out)
 }
 
-/// The lookup statement of [`key_rows`], public so a test can `EXPLAIN` it:
-/// one row with the key space's state and no key row when no row matches or
-/// the key space is not `active`.
+/// The lookup statement of [`key_rows`], public so a test can `EXPLAIN` it.
+///
+/// It answers one row with the key space's state, NULL when none records the
+/// issuer, and no key row when no row matches or the key space is not
+/// `active`.
 pub const LOOKUP: &str = "SELECT s.state AS space, b.party_id, b.lifecycle_state, \
             b.professional @> $4::date AS professional, b.representative, \
             b.retired_at IS NULL AS live \
      FROM (SELECT $1::text AS issuer) q \
      LEFT JOIN binding_key_space s ON s.issuer = q.issuer \
-     LEFT JOIN binding_identifier b ON (s.state IS NULL OR s.state = 'active') \
+     LEFT JOIN binding_identifier b ON s.state = 'active' \
        AND b.selector = 'key' AND b.issuer = q.issuer AND b.identifier_type = $2 \
        AND b.value = $3 AND (b.retired_at IS NULL OR b.deprovisioned_at IS NOT NULL) \
      ORDER BY b.party_id";
@@ -228,8 +235,8 @@ pub async fn representations(
 /// `(party, lifecycle_state)`.
 ///
 /// # Errors
-/// [`LookupError::Closed`] when `issuer`'s key space is recorded and not
-/// `active`, [`LookupError::Storage`] on a driver failure.
+/// [`LookupError::Closed`] when `issuer`'s key space is not `active` or no
+/// key space records it, [`LookupError::Storage`] on a driver failure.
 pub async fn representative_keys(
     conn: &mut PgConnection,
     issuer: &str,
@@ -239,7 +246,7 @@ pub async fn representative_keys(
         "SELECT s.state AS space, b.party_id, b.lifecycle_state \
          FROM (SELECT $1::text AS issuer) q \
          LEFT JOIN binding_key_space s ON s.issuer = q.issuer \
-         LEFT JOIN binding_identifier b ON (s.state IS NULL OR s.state = 'active') \
+         LEFT JOIN binding_identifier b ON s.state = 'active' \
            AND b.selector = 'key' AND b.issuer = q.issuer AND b.retired_at IS NULL \
            AND b.value = CASE WHEN lower(b.identifier_type) IN ('guid', 'uuid') \
                               THEN lower($2) ELSE $2 END \

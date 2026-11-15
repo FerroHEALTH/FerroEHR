@@ -68,6 +68,17 @@ async fn portal() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     )
     .expect("the mapping compiles");
     let service = Arc::new(seeded(&config, &pool).await.with_binding_mapping(mapping));
+    // The replica boots on the configuration that adds the portal issuer, as
+    // the server does: its lease records the key space and its first tend
+    // fills it.
+    service
+        .take_binding_lease(uuid::Uuid::now_v7())
+        .await
+        .expect("the replica boots")
+        .expect("a lease")
+        .tend()
+        .await
+        .expect("the portal issuer's key space fills");
     let provisioning = capability(
         "scim_provision",
         &[scope("binding_issuer", PORTAL), scope("token_scope", SCOPE)],

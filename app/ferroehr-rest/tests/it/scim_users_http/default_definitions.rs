@@ -139,7 +139,10 @@ pub(super) async fn seeded(
         .take_binding_lease(uuid::Uuid::now_v7())
         .await
         .expect("the side table is prepared")
-        .expect("the mapping derives rows");
+        .expect("the mapping derives rows")
+        .release()
+        .await
+        .expect("the preparing replica stops");
     service
 }
 

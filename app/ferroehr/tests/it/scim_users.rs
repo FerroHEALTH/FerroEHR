@@ -136,6 +136,7 @@ fn selectors() -> PersonSelectors {
 /// mapping installed.
 pub(crate) async fn service() -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
+    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false), (OTHER, false)]).await;
     for (hrid, root) in [(PERSON, "PERSON"), (ROLE, "ROLE")] {
         svc.template_adl2_upload(&archetype(hrid, root))
             .await

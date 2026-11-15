@@ -165,7 +165,10 @@ async fn bound(svc: &FerroEhrService, issuer: &str, value: &str) -> Result<Vec<S
             Ok(records.iter().map(|r| r.party().id().to_owned()).collect())
         }
         Ok(other) => Ok(vec![format!("{other:?}")]),
-        Err(LookupError::Closed(closed)) => Err(closed.state.as_str().to_owned()),
+        Err(LookupError::Closed(closed)) => Err(closed
+            .state
+            .map_or("not recorded", KeySpaceState::as_str)
+            .to_owned()),
         Err(e) => panic!("the source fails: {e}"),
     }
 }
@@ -319,7 +322,11 @@ async fn a_removed_issuer_retires_at_once_and_goes_once_no_replica_names_it() {
         [space(LOGIN, false, KeySpaceState::Active)]
     );
     assert_eq!(key_rows(&db, SECOND).await, Vec::<String>::new());
-    assert_eq!(bound(&dropped, SECOND, key).await, Ok(Vec::new()));
+    assert_eq!(
+        bound(&dropped, SECOND, key).await,
+        Err("not recorded".to_owned()),
+        "an issuer no key space records binds nothing"
+    );
 }
 
 #[tokio::test]

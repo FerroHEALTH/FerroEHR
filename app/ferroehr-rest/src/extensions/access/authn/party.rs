@@ -22,10 +22,7 @@ use std::time::Duration;
 
 use ferroehr::config::binding::Providers;
 use ferroehr::error::ServiceError;
-use ferroehr::party_binding::fill::LEASE_RENEWAL;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
-use ferroehr::party_binding::key_space::KeySpaceState;
-use ferroehr::party_binding::lookup::LookupError;
 use ferroehr::party_binding::source::BindingSource;
 use ferroehr::versioning::committer::bound::BoundDetails;
 
@@ -38,6 +35,7 @@ use ferrohealth_smart::resource::{Access, Caller};
 
 use super::AuthError;
 
+pub(super) mod closed;
 mod jit;
 
 /// The party binding of the deployment, with what the committer of a bound
@@ -310,50 +308,7 @@ impl Binding {
         self.shared
             .resolve(caller)
             .await
-            .map_err(|error| unanswered(&error))
-    }
-}
-
-/// What a request is answered when the party source could not answer: the
-/// `403` `refused-unbound` while the login's issuer is retiring, whose keys
-/// bind no login any more; the `503` with a `Retry-After` of one renewal
-/// period while its key space is pending or filling, so a known person is
-/// never given a new `PERSON` before the key space is read; and the `503` of
-/// a store that failed.
-fn unanswered(error: &ferrohealth_smart::party::source::SourceError) -> AuthError {
-    let closed = std::iter::successors(std::error::Error::source(error), |e| e.source())
-        .find_map(|e| e.downcast_ref::<LookupError>())
-        .and_then(LookupError::closed);
-    match closed {
-        Some(closed) if closed.state == KeySpaceState::Retiring => {
-            tracing::warn!(
-                issuer = closed.issuer.as_str(),
-                "the login's binding-key issuer is retiring, so its keys bind no login"
-            );
-            AuthError::PartyRefused {
-                code: "refused-unbound",
-                principal: None,
-                party: None,
-                named: None,
-            }
-        }
-        Some(closed) => {
-            tracing::info!(
-                issuer = closed.issuer.as_str(),
-                state = closed.state.as_str(),
-                "the login's binding-key issuer is not yet active on every replica"
-            );
-            AuthError::PartyUnavailable {
-                retry_after: Some(LEASE_RENEWAL),
-            }
-        }
-        None => {
-            tracing::warn!(
-                error = %ferroehr::error::ErrorChain::new(error),
-                "the party source could not answer"
-            );
-            AuthError::PartyUnavailable { retry_after: None }
-        }
+            .map_err(|error| closed::unanswered(&error))
     }
 }
 
@@ -393,7 +348,7 @@ pub(super) async fn bind(
         }
         Ok(None) => return Ok(access),
         Ok(Some(outcome)) => outcome,
-        Err(error) => return Err(unanswered(&error)),
+        Err(error) => return Err(closed::unanswered(&error)),
     };
     let outcome = match outcome {
         Outcome::Unbound => binding
