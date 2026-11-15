@@ -1243,8 +1243,7 @@ pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
 /// The canonical form of the access-log entry a row stores as `content`
 /// with its `shared` part, joined as the server reads it (#5703).
 pub(crate) fn joined_entry(content: &str, shared: Option<&str>) -> String {
-    let parse =
-        |text: &str| serde_json::from_str::<Value>(text).expect("a stored part");
+    let parse = |text: &str| serde_json::from_str::<Value>(text).expect("a stored part");
     let joined = ferroehr::access_log::stored_form::join(parse(content), shared.map(parse));
     openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json(&joined)
         .expect("the canonical form")

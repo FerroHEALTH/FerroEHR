@@ -71,7 +71,7 @@ pub enum RecordedError {
 ///
 /// A fact the core states as it is, the request id, the client address, the
 /// operation, the query and the authorisations, is not repeated, nor is a
-/// fact [`Core`] reads from the core as the record holds it; every other fact
+/// fact `Core` reads from the core as the record holds it; every other fact
 /// the audit record holds is.
 #[must_use]
 pub fn details(

@@ -125,6 +125,6 @@ fi
 if check "${manifests[@]}"; then
   echo "fhir-package-manifests: ${#manifests[@]} package.json file(s), none names a FHIR package."
 else
-  echo "fhir-package-manifests: keep a FHIR package as its tarball in .vendor-cache/ (scripts/vendor/nl-role-codes.sh)." >&2
+  echo "fhir-package-manifests: keep a FHIR package as its tarball in .vendor-cache/." >&2
   exit 1
 fi

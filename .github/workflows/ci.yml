@@ -922,6 +922,12 @@ jobs:
       - name: spec-citations / The wiring binary runs no SQL of its own
         if: ${{ !cancelled() }}
         run: bash scripts/checks/server-holds-no-sql.sh
+      - name: spec-citations / The country detector catches what it claims to
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/access-decides-no-country.sh --self-test
+      - name: spec-citations / The access decision holds no rule of one country
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/access-decides-no-country.sh
 
       # ---- no-python ---------------------------------------------------
       # No Python anywhere (.claude/rules/rust-style.md §No Python): the tooling
@@ -1683,20 +1689,6 @@ jobs:
           tool: cargo-nextest
       - name: The vendor cache uses a held file at its pin with no download and refuses one off it
         run: bash scripts/vendor/lib/pinned.sh --self-test
-      - id: nl-role-codes
-        name: The pin the cache-only test inputs are kept under
-        run: echo "key=$(bash scripts/vendor/nl-role-codes.sh --cache-key)" >> "$GITHUB_OUTPUT"
-      # The package comes from the cache on a hit, so a registry outage costs
-      # nothing; the script checks every file against its pin either way and
-      # downloads, with retries, only what the cache lacks (#5398).
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .vendor-cache/nl-role-codes
-          key: ${{ steps.nl-role-codes.outputs.key }}
-      - name: Fetch the cache-only test inputs
-        # The UZI role code CodeSystem is cache only (CIBG copyright), so the
-        # Wabvpz tests read it from .vendor-cache/, which this fetches by pin.
-        run: bash scripts/vendor/nl-role-codes.sh --test-inputs
       # The viewer has its own job below, which replays its recorded CDR.
       # --no-tests=pass: empty crates are expected until P17 (nextest exits 4 otherwise)
       # The shard index reaches the command through `env:`, never interpolated

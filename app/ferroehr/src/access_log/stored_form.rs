@@ -27,8 +27,6 @@
 
 use serde_json::{Map, Value};
 
-use crate::access_log::details::Detail;
-
 /// The members of an entry the shared part holds.
 const SHARED: [&str; 8] = [
     "accessor",
@@ -41,28 +39,29 @@ const SHARED: [&str; 8] = [
     "security_labels",
 ];
 
-/// The access details the shared part holds: the caller, the credential, the
+/// The at-codes of the access details the shared part holds
+/// (`crate::access_log::details`): the caller, the credential, the
 /// classification map and the kind of access, the same for every EHR a
 /// request reached.
-const SHARED_DETAILS: [Detail; 18] = [
-    Detail::EventAction,
-    Detail::ResourceClass,
-    Detail::Principal,
-    Detail::Issuer,
-    Detail::ClientId,
-    Detail::TokenId,
-    Detail::Role,
-    Detail::Domain,
-    Detail::Purpose,
-    Detail::LegalBasis,
-    Detail::CategoryMapDigest,
-    Detail::ActingMode,
-    Detail::AssuranceLevel,
-    Detail::AssuranceValue,
-    Detail::ProfessionalId,
-    Detail::TokenAttributes,
-    Detail::Binding,
-    Detail::EventType,
+const SHARED_DETAILS: [&str; 18] = [
+    "at0001", // event action
+    "at0002", // resource class
+    "at0004", // principal
+    "at0005", // issuer
+    "at0006", // client id
+    "at0007", // token id
+    "at0009", // role
+    "at0010", // domain
+    "at0015", // purpose
+    "at0016", // legal basis
+    "at0020", // category map digest
+    "at0022", // acting mode
+    "at0023", // assurance level
+    "at0024", // assurance value
+    "at0025", // professional id
+    "at0026", // token attributes
+    "at0027", // binding
+    "at0029", // event type
 ];
 
 /// The member holding the access details.
@@ -87,7 +86,7 @@ pub struct StoredForm {
 fn shared_detail(item: &Value) -> bool {
     item.get(NODE)
         .and_then(Value::as_str)
-        .is_some_and(|code| SHARED_DETAILS.iter().any(|detail| detail.code() == code))
+        .is_some_and(|code| SHARED_DETAILS.contains(&code))
 }
 
 /// The stored form of the entry whose canonical form, without its link, is
@@ -235,6 +234,34 @@ mod tests {
             ] })
         );
         assert_eq!(join(stored.row, stored.shared), entry);
+    }
+
+    /// The shared at-codes are the codes of the caller's details.
+    #[cfg(feature = "fhir")]
+    #[test]
+    fn the_shared_codes_name_the_callers_details() {
+        use crate::access_log::details::Detail;
+        let shared = [
+            Detail::EventAction,
+            Detail::ResourceClass,
+            Detail::Principal,
+            Detail::Issuer,
+            Detail::ClientId,
+            Detail::TokenId,
+            Detail::Role,
+            Detail::Domain,
+            Detail::Purpose,
+            Detail::LegalBasis,
+            Detail::CategoryMapDigest,
+            Detail::ActingMode,
+            Detail::AssuranceLevel,
+            Detail::AssuranceValue,
+            Detail::ProfessionalId,
+            Detail::TokenAttributes,
+            Detail::Binding,
+            Detail::EventType,
+        ];
+        assert_eq!(shared.map(Detail::code), super::SHARED_DETAILS);
     }
 
     /// A record with no shared member, such as a tombstone, is its row.

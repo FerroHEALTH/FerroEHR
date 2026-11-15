@@ -189,20 +189,6 @@ jobs:
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-llvm-cov,cargo-nextest
-      - id: nl-role-codes
-        name: The pin the cache-only test inputs are kept under
-        run: echo "key=$(bash scripts/vendor/nl-role-codes.sh --cache-key)" >> "$GITHUB_OUTPUT"
-      # The package comes from the cache on a hit, so a registry outage costs
-      # nothing; the script checks every file against its pin either way and
-      # downloads, with retries, only what the cache lacks (#5398).
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .vendor-cache/nl-role-codes
-          key: ${{ steps.nl-role-codes.outputs.key }}
-      - name: Fetch the cache-only test inputs
-        # The UZI role code CodeSystem is cache only (CIBG copyright), so the
-        # Wabvpz tests read it from .vendor-cache/, which this fetches by pin.
-        run: bash scripts/vendor/nl-role-codes.sh --test-inputs
       # The shard index reaches the command through `env:`, never interpolated
       # into the script (the workflow-security rule in reliability.md).
       - run: cargo llvm-cov --no-report nextest --locked --workspace --exclude ferroehr-viewer --all-features --no-tests=pass --profile ci --partition "hash:${SHARD}/${SHARD_COUNT}"
