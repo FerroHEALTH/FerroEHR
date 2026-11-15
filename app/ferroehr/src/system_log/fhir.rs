@@ -117,6 +117,37 @@ fn horizon_end(
 
 /// Renders a resolved [`AuditEvent`] as a FHIR R4 `AuditEvent` document.
 ///
+/// The JSON value of [`to_resource`], for a caller that stores or sends the
+/// record as JSON.
+///
+/// # Errors
+///
+/// As [`to_resource`], and [`AuditError::Render`] when the document cannot be
+/// written as JSON.
+pub fn to_fhir(
+    event: &AuditEvent,
+    ctx: &AuditContext,
+    subject: Option<&str>,
+) -> Result<serde_json::Value, AuditError> {
+    to_resource(event, ctx, subject).and_then(|resource| value_of(&resource))
+}
+
+/// The JSON value of a written `resource`, as [`to_fhir`] renders it.
+///
+/// # Errors
+///
+/// [`AuditError::Render`] when the document cannot be written as JSON.
+pub(crate) fn value_of(
+    resource: &ihe_atna::balp::AuditEventResource,
+) -> Result<serde_json::Value, AuditError> {
+    resource
+        .to_value()
+        .map(ihe_atna::balp::AuditEventValue::into_value)
+        .map_err(|e| AuditError::Render(Box::new(e)))
+}
+
+/// Renders a resolved [`AuditEvent`] as the typed FHIR R4 `AuditEvent`.
+///
 /// A classified access is written as the EHDS access record through
 /// `ehds-logging`; every other record as a BALP exchange through `ihe-atna`.
 /// `subject` is the patient the subject resolver found behind the record's
@@ -124,13 +155,12 @@ fn horizon_end(
 ///
 /// # Errors
 ///
-/// [`AuditError::Render`] when the endpoint the record names is not a URL or
-/// the document cannot be written as JSON.
-pub fn to_fhir(
+/// [`AuditError::Render`] when the endpoint the record names is not a URL.
+pub fn to_resource(
     event: &AuditEvent,
     ctx: &AuditContext,
     subject: Option<&str>,
-) -> Result<serde_json::Value, AuditError> {
+) -> Result<ihe_atna::balp::AuditEventResource, AuditError> {
     let endpoint = endpoint(ctx);
     let observer = Observer {
         source_id: nonempty(&ctx.source_id, &ctx.value_if_missing),
@@ -142,10 +172,7 @@ pub fn to_fhir(
         Some(record) => ehds_logging::balp::exchange_with(&record, &endpoint, &object_ids()?),
         None => exchange(event, ctx, subject, &endpoint),
     };
-    exchange
-        .audit_event_value(&observer)
-        .map(ihe_atna::balp::AuditEventValue::into_value)
-        .map_err(|e| AuditError::Render(Box::new(e)))
+    Ok(exchange.audit_event_resource(&observer))
 }
 
 /// How an access record names the openEHR object ids FerroEHR passes as its
