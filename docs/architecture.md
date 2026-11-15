@@ -916,8 +916,9 @@ to openEHR (#5655): `access default`, `access directive kind` (with
 caller kind`, `access operation`, `care relationship`, `group kind` (#5617),
 `representation`, `access refusal` (with `refused-policy-denied`, #5621) and
 `access log withheld` (#5570), and the access log's `access action`, `access
-outcome`, `accessor kind`, `access authorisation` and `access refusal
-reason`. Each is a closed set of terms read into a typed term (`Term::read`)
+outcome`, `accessor kind`, `access authorisation`, `access refusal
+reason` and `credential binding` (#5660), which codes `ACCESSOR.binding`
+from the party binding outcome (`BindingCode::term`). Each is a closed set of terms read into a typed term (`Term::read`)
 by terminology id and code. A term whose meaning an HL7 code system
 publishes is that code under the code system's id: `consent-provision-type`
 `permit` and `deny`, `extra-security-role-type` `datasubject` (the subject
