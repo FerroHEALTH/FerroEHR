@@ -66,14 +66,14 @@ pub enum Step {
     Restriction,
     /// 3, a consent deny.
     ConsentDeny,
-    /// 4, a deny rule of the controller's policy.
-    ControllerRule,
-    /// 5, a sensitivity no applying permit names.
-    Sensitivity,
-    /// 6, a care relationship the policy requires.
-    CareRelationship,
-    /// 7, a purpose the policy requires.
+    /// 4, a purpose the policy requires.
     Purpose,
+    /// 5, a deny rule of the controller's policy.
+    ControllerRule,
+    /// 6, a sensitivity no applying permit names.
+    Sensitivity,
+    /// 7, a care relationship the policy requires.
+    CareRelationship,
     /// 8, the default disposition.
     DefaultDisposition,
 }
@@ -105,10 +105,10 @@ impl Step {
             Self::OptOut => 1,
             Self::Restriction => 2,
             Self::ConsentDeny => 3,
-            Self::ControllerRule => 4,
-            Self::Sensitivity => 5,
-            Self::CareRelationship => 6,
-            Self::Purpose => 7,
+            Self::Purpose => 4,
+            Self::ControllerRule => 5,
+            Self::Sensitivity => 6,
+            Self::CareRelationship => 7,
             Self::DefaultDisposition => 8,
         }
     }
@@ -123,10 +123,10 @@ impl Step {
             Self::OptOut => "opt-out",
             Self::Restriction => "restriction",
             Self::ConsentDeny => "consent deny",
+            Self::Purpose => "purpose",
             Self::ControllerRule => "controller rule",
             Self::Sensitivity => "sensitivity",
             Self::CareRelationship => "care relationship",
-            Self::Purpose => "purpose",
             Self::DefaultDisposition => "default disposition",
         }
     }
@@ -658,10 +658,10 @@ mod tests {
                 "refused-opt-out" => 1,
                 "refused-restricted" => 2,
                 "refused-consent-denied" => 3,
-                "refused-policy-denied" => 4,
-                "refused-sensitivity" => 5,
-                "refused-no-care-relationship" => 6,
-                "refused-purpose-missing" => 7,
+                "refused-purpose-missing" => 4,
+                "refused-policy-denied" => 5,
+                "refused-sensitivity" => 6,
+                "refused-no-care-relationship" => 7,
                 "refused-consent-required" => 8,
                 "refused-not-subject"
                 | "refused-not-represented"

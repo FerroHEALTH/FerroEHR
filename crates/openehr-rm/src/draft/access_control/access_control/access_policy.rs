@@ -52,7 +52,7 @@ pub struct AccessPolicy {
     pub care_relationship_required: bool,
     /// How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access).
     pub relationship_grace: Option<DvDuration>,
-    /// Whether an access to clinical data must declare a purpose of use.
+    /// Whether an access to clinical data must declare a purpose of use. An access without one is refused before the controller's rules are read, whatever rules the policy holds.
     pub purpose_required: bool,
     /// The controller's rules for every EHR it keeps: which callers may perform which operations on which kinds of data, such as the rules a Member State lays down under EHDS Art.
     ///

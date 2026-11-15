@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! One table per step of the decision procedure and per refusal code:
-//! steps 5 to 8, which read the caller's facts and the access policy, and
+//! steps 6 to 8, which read the caller's facts and the access policy, and
 //! the order of the steps.
 
 use openehr_rm::draft::access_control::terminology::{AccessDefault, CallerKind, Refusal};
@@ -10,10 +10,10 @@ use serde_json::json;
 
 use super::*;
 
-/// Step 5: data whose label or classification no applying permit, a
+/// Step 6: data whose label or classification no applying permit, a
 /// directive or a rule of the policy, names are refused `refused-sensitivity`.
 #[test]
-fn step_5_sensitivity() {
+fn step_6_sensitivity() {
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(OBJECT),
                         "sensitivities": [coded(CONFIDENTIALITY, "HIV")] });
     let classification = json!([{
@@ -110,10 +110,10 @@ fn step_5_sensitivity() {
     }
 }
 
-/// Step 6: where the policy requires one, a professional needs a live care
+/// Step 7: where the policy requires one, a professional needs a live care
 /// relationship, a permit naming them or a gate-keeper entry.
 #[test]
-fn step_6_care_relationship() {
+fn step_7_care_relationship() {
     let required = policy(&json!({ "care_relationship_required": true }));
     let refused = Outcome::Refused(Refusal::NoCareRelationship);
     let naming = directive(
@@ -184,35 +184,6 @@ fn step_6_care_relationship() {
         };
         assert_outcome(&case.verdict(&who, asked), &Item::Ehr, expected, name);
     }
-}
-
-/// Step 7: where the policy requires one, a declared purpose; which purposes a
-/// caller may declare is a rule of step 4.
-#[test]
-fn step_7_purpose() {
-    let required = Case {
-        policy: Some(policy(&json!({ "purpose_required": true }))),
-        ..Case::default()
-    };
-    let nurse = professional(NURSE);
-    let rows = [
-        (
-            "no purpose",
-            read(None),
-            Outcome::Refused(Refusal::PurposeMissing),
-        ),
-        ("a purpose", read(Some("HOPERAT")), Outcome::Admit),
-    ];
-    for (name, asked, expected) in rows {
-        assert_outcome(&required.verdict(&nurse, asked), &Item::Ehr, expected, name);
-    }
-    let guardian = caller(CallerKind::Representative, GUARDIAN);
-    assert_outcome(
-        &required.verdict(&guardian, read(None)),
-        &Item::Ehr,
-        Outcome::Admit,
-        "a representative",
-    );
 }
 
 /// Step 8: the default disposition, and the server's for an EHR with no

@@ -4,7 +4,7 @@
 //! The controller's rules at the wire (#5621, #5624, #5627): a rule of the
 //! `ACCESS_POLICY` names a role, which the caller holds by performing a
 //! `ROLE` whose coded `name` is that role (RM Demographic IM `PARTY.type()`),
-//! and decides as step 4 of the access evaluator for every EHR; a named
+//! and decides as step 5 of the access evaluator for every EHR; a named
 //! datum is judged before any step about its EHR alone. EHDS Art. 11(3) asks
 //! for rules by category of professional and of data. The rules, their step
 //! and the reading of a role are our own design.

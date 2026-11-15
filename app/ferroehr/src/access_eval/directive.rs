@@ -137,8 +137,12 @@ impl Reader<'_, '_> {
                     .map_or(polarity.unreadable(), |op| op == asked.operation)
             })
         });
+        // NOTE: our own design (#5737), `purpose_required` controls a missing purpose, so a rule's
+        // purpose scope matches only a declared one; a subject's deny still covers its absence.
+        let undeclared =
+            polarity.unreadable() && kind_and_effect(directive).0 != DirectiveKind::ControllerRule;
         let purpose = directive.purposes.as_deref().is_none_or(|purposes| {
-            asked.purpose.map_or(polarity.unreadable(), |declared| {
+            asked.purpose.map_or(undeclared, |declared| {
                 purposes
                     .iter()
                     .any(|coded| coded.defining_code.code_string == declared)

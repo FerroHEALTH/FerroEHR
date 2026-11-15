@@ -14,6 +14,7 @@ mod examples;
 mod grounds;
 mod steps;
 mod steps_policy;
+mod steps_purpose;
 mod steps_rules;
 
 use std::sync::Arc;

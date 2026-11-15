@@ -668,16 +668,17 @@ which is what makes an optional stage safe to disable:
    professional, a system or an access service, its data `404`
    `refused-restricted` (Art. 8); (3) any other deny that applies, `403`
    `refused-consent-denied`, and a representative a `delegation` names reads
-   only what it permits (Art. 4(2)); (4) a deny rule of the controller's
+   only what it permits (Art. 4(2)); (4) no declared purpose where the
+   policy requires one, `403` `refused-purpose-missing`, checked as input
+   before any rule is read (#5737); (5) a deny rule of the controller's
    policy that applies, `403` `refused-policy-denied`, which no permit of the
-   subject lifts (Art. 11(3)); (5) a sensitivity from a label or a
-   classification that no applying permit directive or permit rule names,
-   `403` `refused-sensitivity`; (6) no live care relationship, plus the
-   policy's grace, where the policy requires one, `403`
-   `refused-no-care-relationship` (BASE Architecture Overview §Security
-   Policy, "Time-limitation of access"); (7) no declared purpose where the
-   policy requires one, `403` `refused-purpose-missing`, the purposes a
-   caller may declare being a rule of step 4; (8) the default disposition, `403` `refused-consent-required`, an EHR with no
+   subject lifts (Art. 11(3)), a rule's purposes matching only a declared
+   purpose, and the purposes a caller may declare being such a rule; (6) a
+   sensitivity from a label or a classification that no applying permit
+   directive or permit rule names, `403` `refused-sensitivity`; (7) no live
+   care relationship, plus the policy's grace, where the policy requires
+   one, `403` `refused-no-care-relationship` (BASE Architecture Overview
+   §Security Policy, "Time-limitation of access"); (8) the default disposition, `403` `refused-consent-required`, an EHR with no
    settings taking `[authz.rbac] ehr_access_default`. The subject skips every
    step on their own EHR (Art. 3). A confined caller is refused `403`
    `refused-not-subject` on every other EHR, before step 1 (#5605): the
@@ -699,8 +700,8 @@ which is what makes an optional stage safe to disable:
    added query), refused `403` `refused-not-represented` on every other EHR
    and on an operation that names none, recorded as step 0 (representation)
    (#5609, our own design under EHDS Art. 4(2)). On that EHR it is held to
-   steps 1 to 4, the `delegation` directives of its `EHR_ACCESS` and the
-   controller's rules included, and skips steps 5 to 8. A caller acting for
+   steps 1 to 3 and 5, the `delegation` directives of its `EHR_ACCESS` and
+   the controller's rules included, and skips steps 4 and 6 to 8. A caller acting for
    someone else is a representative whatever issuer it signed in through, so
    a `patients` portal login bound to a representative's `PERSON` takes
    those steps too; only the person themselves is the subject (#5613). The
@@ -725,7 +726,7 @@ which is what makes an optional stage safe to disable:
    emergency purpose lifts an opt-out for an access service that may
    override it (Art. 10(2)), and, with `[authz.rbac] emergency_access_role`,
    a restriction, a consent deny or a deny rule whose `emergency_override`
-   holds and steps 5 to 8 (Art. 11(5)).
+   holds and steps 6 to 8 (Art. 11(5)).
 
    **Controller rules** (#5621, #5624, #5627; our own design, proposed in
    the draft specification). `ACCESS_POLICY.rules` holds the controller's
@@ -734,7 +735,7 @@ which is what makes an optional stage safe to disable:
    to take and IHE APPC gives a foundational policy. A deny rule binds every
    caller but the subject (whose own right of access, Art. 3, is not the
    controller's to deny), representatives included; a permit rule acts only
-   in step 5, and a rule's permit exception only by narrowing its deny. An
+   in step 6, and a rule's permit exception only by narrowing its deny. An
    actor scope's `role` matches the coded `name` of a `ROLE` in force the
    caller performs (RM Demographic IM `PARTY.type()`), held as a caller fact
    (`FactKind::Role`, migration `party/0042`); a token's role claims stay
@@ -1400,7 +1401,7 @@ admits nobody. No rule is a country's: the agreement names no jurisdiction,
 the consent source is `registry` or `local`, and a national exclusion such
 as Wabvpz Art. 15f is a deny rule of the controller's `ACCESS_POLICY` over
 the roles and facility types the caller's credential attests, refused at
-step 4 as `refused-policy-denied` with the rule's `legal_grounds` (#5691;
+step 5 as `refused-policy-denied` with the rule's `legal_grounds` (#5691;
 `scripts/checks/access-decides-no-country.sh` refuses a country in the
 access decision). `/management/info`
 reads the agreements in force from the copy on each request. **Our own

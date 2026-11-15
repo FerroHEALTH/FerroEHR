@@ -154,7 +154,7 @@
         "purposes": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "purposes",
-          "documentation": "The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose.",
+          "documentation": "The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose. On a `controller_rule` it applies only to an access that declares one of them, since `ACCESS_POLICY.purpose_required` is the control for an access without one. On a directive of an EHR, a deny also covers an access that declares no purpose, which cannot show it is outside the deny.",
           "type_def": {
             "container_type": "List",
             "type": "DV_CODED_TEXT"
@@ -537,7 +537,7 @@
         "purpose_required": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "purpose_required",
-          "documentation": "Whether an access to clinical data must declare a purpose of use.",
+          "documentation": "Whether an access to clinical data must declare a purpose of use. An access without one is refused before the controller's rules are read, whatever rules the policy holds.",
           "is_mandatory": true,
           "type": "Boolean"
         },

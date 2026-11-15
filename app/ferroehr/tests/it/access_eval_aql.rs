@@ -620,10 +620,10 @@ async fn step_3_a_consent_deny_leaves_the_query() {
     .await;
 }
 
-/// Step 5: a labelled object no permit names contributes no row; a permit
+/// Step 6: a labelled object no permit names contributes no row; a permit
 /// rule naming the caller's role clears it.
 #[tokio::test]
-async fn step_5_a_sensitive_object_leaves_the_query() {
+async fn step_6_a_sensitive_object_leaves_the_query() {
     let world = Box::pin(World::new()).await;
     let labelled = world.objects(0)[1].clone();
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(&labelled),
@@ -685,11 +685,11 @@ fn policy(members: &Value) -> AccessPolicy {
     openehr_its::json::from_canonical_value(&p).expect("the test policy reads")
 }
 
-/// Step 6: where the policy requires a care relationship, a professional
+/// Step 7: where the policy requires a care relationship, a professional
 /// reads only the EHRs of the subjects in their care, with or without
 /// settings.
 #[tokio::test]
-async fn step_6_only_the_ehrs_in_care_are_queried() {
+async fn step_7_only_the_ehrs_in_care_are_queried() {
     let world = Box::pin(World::new()).await;
     world.settings(1, &settings("open", &[], &[])).await;
     let mut ask = Ask::professional(&world);
@@ -803,11 +803,11 @@ async fn a_large_care_census_reads_exactly_the_ehrs_in_care() {
     assert_reads(&world, &ask, &world.every(), "every subject in care").await;
 }
 
-/// Step 7: where the policy requires a purpose, a query without one reads
-/// nothing; step 4: a rule limiting the purposes a professional declares
-/// reads nothing for another purpose.
+/// Step 4: where the policy requires a purpose, a query without one reads
+/// nothing, whatever rules exist; step 5: a rule limiting the purposes a
+/// professional declares reads nothing for another purpose.
 #[tokio::test]
-async fn step_7_a_missing_purpose_reads_nothing() {
+async fn step_4_a_missing_purpose_reads_nothing() {
     let world = Box::pin(World::new()).await;
     let mut ask = Ask::professional(&world);
     ask.policy = Some(policy(&json!({ "purpose_required": true })));
@@ -828,6 +828,8 @@ async fn step_7_a_missing_purpose_reads_nothing() {
     assert_reads(&world, &ask, &world.every(), "a permitted purpose").await;
     ask.purpose = Some("HRESCH");
     assert_reads(&world, &ask, &[], "a purpose the rule denies").await;
+    ask.purpose = None;
+    assert_reads(&world, &ask, &[], "no purpose under the rule").await;
 }
 
 /// Step 8: an EHR that requires consent contributes only the rows a permit

@@ -54,7 +54,9 @@ pub struct AccessDirective {
     pub applies_to: Option<openehr_base::containers::NonEmptyVec<AccessActorScope>>,
     /// The operations the directive applies to, coded in the draft `openehr_access` terminology's `access operation` group (`read`, `write`, `export`, `query`). Empty applies to every operation.
     pub operations: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
-    /// The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose.
+    /// The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts.
+    ///
+    /// Empty applies to every purpose. On a `controller_rule` it applies only to an access that declares one of them, since `ACCESS_POLICY.purpose_required` is the control for an access without one. On a directive of an EHR, a deny also covers an access that declares no purpose, which cannot show it is outside the deny.
     pub purposes: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
     /// The data the directive applies to; data in any one scope is covered. Empty applies to the whole EHR, including data recorded after the directive.
     pub data: Option<openehr_base::containers::NonEmptyVec<AccessDataScope>>,
