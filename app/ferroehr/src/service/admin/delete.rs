@@ -430,6 +430,18 @@ impl FerroEhrService {
 
         tx.commit().await?;
 
+        // The erased PERSON's care goes from the clinical care projection in
+        // this flow; should the delete fail, the stamp the erasure wrote keeps
+        // every query off the projection until the projector applies it.
+        // No openEHR spec governs the projection: our own design (#5699).
+        if let Err(error) = self.forget_care(&[party_id.0]).await {
+            let cause: &(dyn std::error::Error + 'static) = &error;
+            tracing::warn!(
+                error = cause,
+                "the erased party's care rows were not removed yet"
+            );
+        }
+
         // After the commit, so a blob is only collected once nothing can
         // reference it again. The scan covers both domains, so a blob this
         // party shared with a clinical record survives.

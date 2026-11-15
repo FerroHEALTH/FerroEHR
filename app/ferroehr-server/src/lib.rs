@@ -929,7 +929,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let instances = instances::join(pool.clone(), &config, &signer, &mut indicators).await?;
     let access_log = access_log::build(&config, pools.audit.clone(), Arc::clone(&signer))?;
     // NOTE: our own design, the drain appends every access's entry through the checkpoints'
-    // store, which signs links under an OpenPGP key; no request has run before this.
+    // store, which seals each append under an OpenPGP key; no request has run before this.
     if let Some(sender) = &audit_sender {
         let installed = sender.use_access_log(access_log.store().clone());
         tracing::debug!(
@@ -959,7 +959,13 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         assemble_service(&config, &pools, audit_sender, signer, deployment, ehr_index)?
             .with_access_log(access_log.clone()),
     );
-    access_log::spawn_schedule(&access_log);
+    let publication = access_log::spawn_schedule(&config, &access_log);
+    if audit_enabled && config.audit.store.enabled {
+        indicators.push(Arc::new(indicators::AccessLogCheckpointsHealth::new(
+            access_log.seals(),
+            publication,
+        )));
+    }
 
     // The schemas are prepared by now, so a configured identifier scheme the
     // registry does not hold is refused here, not at its first party commit.

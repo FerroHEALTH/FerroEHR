@@ -24,6 +24,7 @@ pub mod gap;
 pub mod imported;
 #[cfg(feature = "fhir")]
 pub mod projection;
+pub mod publish;
 #[cfg(feature = "fhir")]
 pub mod recorded;
 pub mod retention;

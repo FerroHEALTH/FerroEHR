@@ -37,8 +37,9 @@
 # a coded role an access-policy rule lets read HIV data, every seeded EHR's
 # subject under that team's care with five
 # directives on the EHR, and the clinical groups sent as the clinician. Its
-# access log signs every link with an OpenPGP key the gate generates for the
-# run (PERF_SIGNING_KEY), mounted where the tree's configuration names it.
+# access log seals every append in a checkpoint signed with an OpenPGP key the
+# gate generates for the run (PERF_SIGNING_KEY), mounted where the tree's
+# configuration names it.
 # A base that accepts this tree's configuration runs under it as well, so the
 # two arms differ in the code alone (base_config_tree).
 #
@@ -162,7 +163,7 @@ teardown() {
   docker network rm "$NETWORK" >/dev/null 2>&1 || true
 }
 
-# signing_key: the OpenPGP key the access log signs each link with, generated
+# signing_key: the OpenPGP key the access log seals each append with, generated
 # for this run into $OUT/signing (a committed key would be a defect of its
 # own): PERF_SIGNING_KEY's algorithm, its passphrase in a file beside it.
 signing_key() {
@@ -182,8 +183,11 @@ signing_key() {
   printf perf >"$OUT/signing/passphrase"
   GNUPGHOME="$home" gpgconf --kill gpg-agent 2>/dev/null || true
   rm -rf "$home"
+  # The identifier-protection root key, whose clinical lookup subkey digests
+  # the subject references of the care projection (#5699), generated per run.
+  od -An -tx1 -N32 /dev/urandom | tr -d ' \n' >"$OUT/signing/identifier-key"
   # The container runs as the distroless nonroot uid.
-  chmod 644 "$OUT/signing/signing.asc" "$OUT/signing/passphrase"
+  chmod 644 "$OUT/signing/signing.asc" "$OUT/signing/passphrase" "$OUT/signing/identifier-key"
   echo "$algorithm" >"$OUT/signing/algorithm"
 }
 
@@ -220,7 +224,8 @@ up() {
     -v "$tree/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
     -v "$tree/deploy/definitions/professional:/etc/ferroehr/definitions:ro"
     -v "$OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro"
-    -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro")
+    -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro"
+    -v "$OUT/signing/identifier-key:/etc/ferroehr/identifier-key:ro")
   # A base tree whose configuration still names the professional templates
   # predates the default party mapping, and its server stores no default
   # definitions, so they are stored before serve; a newer server stores them
@@ -368,17 +373,20 @@ population_summary() {
   } >>"$1"
 }
 
-# access_log_storage <pg-container>: the access log's entries and the bytes
-# its table holds with its indexes and TOAST, as "<entries> <bytes>", or
-# "none" for a store with no access log.
+# access_log_storage <pg-container>: the access log's entries, its
+# checkpoints and the bytes its record and checkpoint tables hold with their
+# indexes and TOAST, as "<entries> <checkpoints> <bytes>", or "none" for a
+# store with no access log.
 access_log_storage() {
   local -a psql=(docker exec "$1" psql -U postgres -d ferroehr -Atq -c)
   if [[ "$("${psql[@]}" "SELECT to_regclass('audit.access_log_record') IS NOT NULL")" != t ]]; then
     echo none
     return 0
   fi
-  "${psql[@]}" "SELECT count(*) || ' ' || pg_total_relation_size('audit.access_log_record') \
-    FROM audit.access_log_record"
+  "${psql[@]}" "SELECT (SELECT count(*) FROM audit.access_log_record) || ' ' || \
+    (SELECT count(*) FROM audit.access_log_checkpoint) || ' ' || \
+    (pg_total_relation_size('audit.access_log_record') \
+     + pg_total_relation_size('audit.access_log_checkpoint'))"
 }
 
 # storage_summary <summary>: each arm's access-log storage appended to the
@@ -389,16 +397,16 @@ storage_summary() {
     echo
     echo "### The access log's storage"
     echo
-    echo "| arm | entries | stored bytes | per entry |"
-    echo "|---|---:|---:|---:|"
+    echo "| arm | entries | checkpoints | stored bytes | per entry |"
+    echo "|---|---:|---:|---:|---:|"
     for arm in head base; do
       container="$PG"
       [[ "$arm" == base ]] && container="$PG-base"
       counts=$(access_log_storage "$container" 2>/dev/null) || counts="unreadable"
-      if [[ "$counts" =~ ^([0-9]+)\ ([0-9]+)$ ]]; then
-        echo "| $arm | ${BASH_REMATCH[1]} | ${BASH_REMATCH[2]} | $(awk -v b="${BASH_REMATCH[2]}" -v e="${BASH_REMATCH[1]}" 'BEGIN { if (e > 0) printf "%.0f", b / e; else print "-" }') |"
+      if [[ "$counts" =~ ^([0-9]+)\ ([0-9]+)\ ([0-9]+)$ ]]; then
+        echo "| $arm | ${BASH_REMATCH[1]} | ${BASH_REMATCH[2]} | ${BASH_REMATCH[3]} | $(awk -v b="${BASH_REMATCH[3]}" -v e="${BASH_REMATCH[1]}" 'BEGIN { if (e > 0) printf "%.0f", b / e; else print "-" }') |"
       else
-        echo "| $arm | $counts | | |"
+        echo "| $arm | $counts | | | |"
       fi
     done
   } >>"$1"
@@ -504,6 +512,7 @@ base_config_tree() {
     -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro" \
     -v "$OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro" \
     -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro" \
+    -v "$OUT/signing/identifier-key:/etc/ferroehr/identifier-key:ro" \
     "$1" config check >/dev/null 2>&1; then
     echo "perf gate: the base runs under this tree's configuration" >&2
     echo "$ROOT"

@@ -259,3 +259,18 @@ fn the_trusted_key_files_stay_a_key() {
         vec![PathBuf::from("/etc/ferroehr/peer.asc")]
     );
 }
+
+/// `publish_directory` names where the checkpoints are published, and is
+/// unset by default (#5704).
+#[test]
+fn the_publish_directory_is_a_key_unset_by_default() {
+    let unset = assemble_ok(None, &env(&[]), &[]);
+    assert_eq!(unset.audit.access_log.publish_directory, None);
+    let file =
+        toml_file("[audit.access_log]\npublish_directory = \"/var/lib/ferroehr/checkpoints\"\n");
+    let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
+    assert_eq!(
+        c.audit.access_log.publish_directory,
+        Some(PathBuf::from("/var/lib/ferroehr/checkpoints"))
+    );
+}

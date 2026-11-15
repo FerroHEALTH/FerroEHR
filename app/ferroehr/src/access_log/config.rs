@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[audit.access_log]` section: the systems whose exported logs this
-//! deployment accepts (#5129).
+//! The `[audit.access_log]` section: where the log's checkpoints are
+//! published and the systems whose exported logs this deployment accepts
+//! (#5129, #5704).
 //!
 //! Signing the log needs no key of its own here: whenever the keyring
-//! (`[record.signing]` in `pgp` mode) holds an `OpenPGP` key the server signs
-//! each link and seals the chain in signed checkpoints on a built-in
-//! schedule, and without one it signs nothing (#5562). No openEHR spec governs log signing or its
-//! configuration: our own design (`docs/plans/access-log.md` §Integrity).
+//! (`[record.signing]` in `pgp` mode) holds an `OpenPGP` key every append
+//! ends with a signed checkpoint, and without one nothing is sealed (#5562).
+//! No openEHR spec governs log signing or its configuration: our own design
+//! (`docs/plans/access-log.md` §Integrity).
 
 #![cfg_attr(
     feature = "schema",
@@ -27,8 +28,15 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
-#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = {"publish_directory": "infrastructure", "trusted_key_files": "trust"})))]
 pub struct AccessLogConfig {
+    /// A directory outside the database, ideally on write-once storage,
+    /// where the server publishes the newest checkpoint as its own file every
+    /// 30 seconds (`FERROEHR__AUDIT__ACCESS_LOG__PUBLISH_DIRECTORY`). Only a
+    /// published checkpoint shows that the newest entries were removed
+    /// together with the checkpoints that seal them; unset, the
+    /// `access_log_checkpoints` indicator reads `DEGRADED`.
+    pub publish_directory: Option<PathBuf>,
     /// Armored `OpenPGP` public certificates of the systems whose exported
     /// logs this deployment imports
     /// (`FERROEHR__AUDIT__ACCESS_LOG__TRUSTED_KEY_FILES`). An import verifies

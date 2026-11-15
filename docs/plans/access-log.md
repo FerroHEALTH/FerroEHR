@@ -142,10 +142,12 @@ offered to that work (§Proposal path).
 5. **Purpose of use and policy.** FHIR has `purposeOfEvent` (R4) or
    `authorization` (R5) and `agent.policy`; the DICOM A.5.1 schema has no
    element for either. A DICOM projection loses them.
-6. **Integrity.** eHDSI §2.2 asks for a signature on each event; FHIR asks
-   only that servers refuse update and delete; DICOM and BALP say nothing.
-   The design chains every entry, signs each entry's link and signs
-   checkpoints whenever the system holds a signing key (#5562).
+6. **Integrity.** eHDSI §2.2 asks each MyHealth@EU National Contact Point
+   to sign each event with its NCP signature; FHIR asks only that servers
+   refuse update and delete; DICOM and BALP say nothing, and neither the
+   EHDS Regulation nor the GDPR names a signature. The design chains every
+   entry and seals each append in one signed checkpoint whenever the system
+   holds a signing key (#5704).
 7. **The patient identifier.** BALP and FHIR R5 name the patient as a
    `Patient` resource; DICOM names a patient id. openEHR keeps the EHR apart
    from identifying data (BASE §Security Policy, "Anonymity") and identifies
@@ -182,7 +184,7 @@ flowchart LR
     E1["ACCESS_LOG_ENTRY seq n-1"]
     E2["ACCESS_LOG_TOMBSTONE seq n<br/>content removed, link kept"]
     E3["ACCESS_LOG_ENTRY seq n+1"]
-    CP["ACCESS_LOG_CHECKPOINT<br/>signed head"]
+    CP["ACCESS_LOG_CHECKPOINT<br/>signed, one per append"]
     E1 -- "link.digest" --> E2
     E2 -- "link.digest" --> E3
     E3 -. "sealed by" .-> CP
@@ -549,8 +551,17 @@ sequenceDiagram
 
 ## Integrity
 
-**Decision: a hash chain over every record, a signature per entry and
-signed checkpoints, whenever the system holds a signing key.**
+**Decision: a hash chain over every record and one signed checkpoint per
+append, whenever the system holds a signing key; the checkpoints published
+outside the database is the recommended setup (#5704).**
+
+No text this design reads requires a signature on each entry of an EHR
+system's log. EHDS Art 9 and Annex II 3.2 ask for a complete log each
+person can read, and GDPR Art 5(1)(f) and Art 32(1)(b) for integrity by
+measures appropriate to the risk. The eHDSI Audit Trail Profile §2.2 asks
+for a payload signature on each event, and it binds the MyHealth@EU
+National Contact Points, which sign with their NCP certificate; a CDR is no
+NCP. How the log is protected is therefore our own design.
 
 - **The chain.** Each record carries an `ACCESS_LOG_LINK`. `content_digest`
   is the digest of the record serialised without its link: the canonical
@@ -564,25 +575,36 @@ signed checkpoints, whenever the system holds a signing key.**
   middle of the log, since periods differ per category and origin (Annex II
   3.4). A tombstone keeps the uid, the time, and the link with its
   `content_digest`, so the chain still verifies after the content is gone.
-  FerroEHR's chain today reaps only the oldest span and leaves one tombstone
-  (`app/ferroehr/migrations/audit/0003_tamper_chain.sql`), which cannot
-  serve a period per category.
-- **Signed checkpoints.** A hash chain alone proves order and completeness
-  against an attacker who cannot rewrite the whole tail. A signed
-  `ACCESS_LOG_CHECKPOINT` of the head, written on a schedule and on demand,
-  fixes the tail: a verifier holding a checkpoint detects any later rewrite
-  of the records it covers. The `proof` takes the form
-  `ATTESTATION._proof_` uses. Publishing checkpoints outside the system
-  (to FerroSYS, to a timestamping service, to the data protection officer)
-  is a deployment choice (our own design).
-- **A signature per entry** (`ACCESS_LOG_LINK.signature`), as the eHDSI
-  Audit Trail Profile §2.2 asks of each NCP event, is written whenever the
-  keyring holds an OpenPGP key (#5562). The writer locks the head, computes
-  the links its records will get, signs them and stores each signature with
-  its record in one `INSERT`, so signing adds no statement. Measured with
-  the keyring's rPGP signing, a signature costs 13 µs with an Ed25519 key
-  and 1.0 to 5.5 ms with an RSA key of 2048 to 4096 bits; an access writes
-  one entry per EHR it reached, so Ed25519 is the recommended key.
+- **One signed checkpoint per append.** Every append ends, in its own
+  transaction, with an `ACCESS_LOG_CHECKPOINT` of the last link it wrote,
+  signed in the form `ATTESTATION._proof_` uses. An entry is covered by a
+  signature from the moment it commits, so no unsigned window opens, and
+  any replica writes the checkpoint of its own append. Someone who can write
+  the database but holds no key cannot change, remove, insert or reorder a
+  record below a checkpoint without breaking the chain under that
+  checkpoint's signature, which a signature per entry would detect no
+  better. One signature per append replaces one per entry: with an RSA key
+  a signature costs 1.0 to 5.5 ms, and a population query writes one entry
+  per EHR it reached. The first insert of the append's transaction locks
+  the head of the chain until it commits; the checkpoint is signed on the
+  blocking pool while the rest of the transaction is written, so the head
+  is held for one signature at most. `ACCESS_LOG_LINK.signature` stays
+  optional in the draft, and this system writes none.
+- **Publication outside the database.** Someone who can write the database
+  can remove the newest entries together with the checkpoints that seal
+  them, and nothing left in the database shows it. A checkpoint published
+  where that person cannot write does: the log no longer reaches it. The
+  server publishes the newest checkpoint every 30 seconds as its own file,
+  written once, in a directory the deployment places on write-once storage
+  (`[audit.access_log] publish_directory`); without one the
+  `access_log_checkpoints` health indicator reads `DEGRADED`. Publication
+  to FerroAUDIT needs a receiving service there and is not built yet.
+- **A person's proof.** Their entry, the links from it to the checkpoint of
+  its append (`AccessLogStore::links`), and that checkpoint's signature.
+- **Against the server process.** Someone who controls the server process
+  holds the key, under a checkpoint per append as under a signature per
+  entry; the published checkpoints bound what that person can rewrite to
+  what came after the newest one published.
 - **One chain per system.** `sequence` has no gaps within a `system_id`.
   Several writers of one system serialise on the head, as FerroEHR's chain
   cursor does today (`app/ferroehr/migrations/audit/0011_chain_digest_v2.sql`).
@@ -1106,7 +1128,7 @@ Art 36(1), due 26 March 2027), a note would contain:
 | Fail-closed recording | EHDS Annex II 3.2 ("every access event"); our own design against BALP 1:52.4.1.5 |
 | Hash chain over a content digest, tombstones in place | our own design, for Annex II 3.4 |
 | RFC 8785 canonical JSON as the digest input | our own design |
-| Signed checkpoints; optional signature per entry | our own design; eHDSI Audit Trail Profile §2.2 for the per-entry case |
+| One signed checkpoint per append, published outside the database; no signature per entry | our own design (#5704); the eHDSI Audit Trail Profile §2.2 per-event signature binds National Contact Points only |
 | Retention stated on each entry | EHDS Annex II 3.4, Art 9(2) |
 | Every read of the log and every change to the log recorded | DICOM PS3.15 A.5.3.2; NEN 7513 (by Kamerstuk 27529 nr. 228); GDPR Art 32(2) |
 | A permission for the log alone | GDPR Art 32(1)(b); our own design for the separation from clinical rights |

@@ -316,13 +316,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   tombstones past their end into one `access_log_chain_gap` row through
   `audit.fold_access_log_tombstones()`, the one path a record leaves the log
   by (`audit/0033_access_log_chain_gap.sql`, `access_log::gap`): the
-  positions the run held, the link and link signature of its last record and
-  the grounds of its tombstones. The gap row is the record of the fold and
+  positions the run held, the link of its last record and the grounds of its
+  tombstones. The gap row is the record of the fold and
   is append-only; replicas serialise the fold on a transaction-scoped
-  advisory lock, and the request path takes no part in it. A run is cut after
-  each checkpoint's position, so a checkpoint always names a link the log
-  holds (`audit.access_log_link_at`). The verifier, its incremental form,
-  the checkpoint and signature checks, the export (`LogExport.gaps`), the
+  advisory lock, and the request path takes no part in it. A run folds whole,
+  and the checkpoints inside it, before its last position, leave with it;
+  one at its last position names the gap's link (`audit.access_log_link_at`,
+  #5704). The verifier, its incremental form,
+  the checkpoint check, the export (`LogExport.gaps`), the
   chain read and an import (`access_log_imported_gap`) walk a gap as one
   link whose digest is its link; a missing position no gap accounts for is
   still a deletion (our own design, #5619). An erasure a law orders takes
@@ -348,20 +349,28 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   collection reads too), so an EHR-only statement writes its per-EHR
   entries; a management route that touches EHRs records one access per EHR
   from the service (`emit_mark_access`, `emit_extract_audit`).
-  `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s of the
-  head, signed with the version-signing keyring's OpenPGP key. Whenever the
-  keyring holds one, every local link is signed and `access_log::schedule`
-  seals the head every five minutes when it grew; without one nothing is
-  signed or sealed, and no key of `[audit.access_log]` switches either
-  (#5562, our own design). `AccessLogStore::append_in` locks the head
-  (`audit.access_log_chain_reserve()`), computes the links its rows will get by
-  the chain rule the insert trigger applies, signs each digest and writes the
-  signature in the same `INSERT`, refusing the transaction when the trigger
-  gave another link (`audit/0029_access_log_link_signed_at_insert.sql`).
-  `access_log::checkpoint` seals and verifies (the chain through
-  `audit.verify_access_log_chain()`, the checkpoint and the link signatures
-  beside it). The system chain is sealed on the same schedule with the same
-  key (`system_log::seal`, `audit_chain_seal`, `ferroehr audit-chain seal`
+  `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s, by the
+  columns their canonical form is rebuilt from, signed with the
+  version-signing keyring's OpenPGP key. Whenever the keyring holds one,
+  every append ends, in its own transaction, with one checkpoint of the last
+  link it wrote: `AccessLogStore::append_in` inserts the rows, whose first
+  insert locks the head until the transaction ends, begins the checkpoint's
+  signature on the blocking pool and hands back an `Appended` the caller
+  seals before it commits, so the signature runs beside the rest of the
+  transaction (the drain's index rows, tokens and feed debt) and the head is
+  held for one signature at most. No link carries a signature; a checkpoint
+  insert must name the link the log holds at its position
+  (`audit/0037_access_log_batch_checkpoint.sql`, our own design, #5704).
+  Without a key nothing is sealed, and no key of `[audit.access_log]`
+  switches it (#5562). `access_log::publish` writes the newest checkpoint
+  every 30 seconds as its own write-once file under `[audit.access_log]
+  publish_directory`, the copy outside the database that shows a removal of
+  the newest entries with their checkpoints; the `access_log_checkpoints`
+  indicator reads `DEGRADED` without a key, without the directory, or while
+  publication fails. `access_log::checkpoint` seals and verifies (the chain
+  through `audit.verify_access_log_chain()` and the checkpoint beside it).
+  The system chain is sealed every five minutes with the same key
+  (`access_log::schedule`, `system_log::seal`, `audit_chain_seal`, `ferroehr audit-chain seal`
   and `verify`). `access_log::chain` verifies a span of links apart from the database
   (an export), and `access_log::transfer` exports one EHR's records with the
   span and checkpoint and imports another system's into
@@ -762,12 +771,33 @@ which is what makes an optional stage safe to disable:
    the class (`scope::Held`, `scope::EhrFact`), which the SQL reads from the
    EHR's `access_settings.facts`, so one evaluator decides a direct read and a
    query alike, and an EHR of a class the condition does not hold contributes
-   no row. The subjects the caller cares for are bound once per statement, as
-   a `jsonb` object keyed by subject id in a `WITH` clause that each care
-   probe reads with `?`, so the planner's estimate and each probe cost the
-   same whatever the census, and only the one parse of the bound object grows
-   with it (#5645). The care relationships stay in the party domain, which the
-   clinical statement does not read. Before it renders a verdict, the emitter
+   no row. Care is read in one of three forms, chosen per query once the
+   service knows which EHRs it reads (`Care`, #5699). A query pinned to the
+   EHRs it names (an `ehr_id` scope, or `ehr_id/value` held equal in the
+   `EHR` source's predicate or the `WHERE` clause) has each EHR's care
+   decided from the evaluator's copies and binds only the cared EHR ids. Any
+   other query reads the clinical care projection (`clinical/0047_access_care.sql`):
+   the care relationships of the party domain, one row per subject reference
+   and relationship, written by each replica's care projector
+   (`service::ehr::care_projection`), which reads the party domain on the
+   party pool in one repeatable-read snapshot and writes the clinical domain
+   on the clinical pool, so no role reaches both. A row holds the `PERSON`
+   and team container UUIDs, the care dates and the keyed digest
+   (HMAC-SHA-256 under the clinical lookup subkey of the
+   `[privacy.identifier_protection]` root key, the scheme the national
+   identifier's lookup digest uses) of each subject reference that names the
+   `PERSON`; the EHR row carries the keyed digest of its own reference,
+   written with it, and both digest columns are held to 32 octets, so the
+   clinical domain holds no identifier the key does not open. The probe binds
+   the caller's team ids, the day and the grace, one index probe per EHR row.
+   A replica reads the projection only while the facts revision it reflects
+   is at least the one of the facts the replica holds, so a discharge, a
+   removed membership or an erasure is never granted from a stale row: until
+   the projector applies it the query binds the census, the subjects of every
+   patient under the caller's teams as a `jsonb` object in a `WITH` clause
+   (#5645). Erasing a `PERSON` deletes its rows in the erasing flow. Without
+   identifier protection the projection is not written and every query that
+   names no EHR binds the census. Our own design. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the
    disjunction (a fact of the EHR, which may be unknown, is never folded). A

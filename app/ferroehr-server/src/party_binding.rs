@@ -246,6 +246,7 @@ pub async fn prepare(
     service
         .grants()
         .spawn_refresher(std::time::Duration::from_secs(60));
+    service.spawn_care_projector();
     let errors = service
         .party_mapping_errors(&config.authz.party_binding.sections())
         .await?;
