@@ -192,6 +192,9 @@ pub(crate) async fn check(
         return Ok(());
     }
     refuse_policy(mapping, (kind, vo_id), &before, &after)?;
+    if kind == Kind::Person && PROVISIONER.try_with(|_| ()).is_ok() {
+        refuse_scim_representation(tx, mapping, vo_id, previous, facts).await?;
+    }
     let owner = match PROVISIONER.try_with(Clone::clone) {
         Ok(issuer) => {
             let held = [current, previous];
@@ -270,6 +273,42 @@ fn unowned(kind: Kind, vo_id: VoId) -> ServiceError {
          SCIM client that owns it, writes it",
         kind.as_str()
     ))
+}
+
+/// Refuses a SCIM client's version of the `PERSON` `vo_id` that adds,
+/// changes or drops a representation: its stored version `previous` and the
+/// committed `facts` (`None` for a deletion) must hold the same ones.
+///
+/// SCIM provisions an identity, never the authority to act for someone: a
+/// representation is written by the patient it represents or by an
+/// administrator (Regulation (EU) 2025/327 Art. 4(2)), so a portal client's
+/// representative reaches a record only once one of them records it
+/// (#5622). Our own design.
+async fn refuse_scim_representation(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    vo_id: VoId,
+    previous: Option<i32>,
+    facts: Option<&Facts>,
+) -> Result<(), ServiceError> {
+    let before = match previous {
+        Some(sys_version) => match body(tx, vo_id, sys_version).await? {
+            Some(body) => parsed(Kind::Person, &body, mapping)?.representations,
+            None => Vec::new(),
+        },
+        None => Vec::new(),
+    };
+    let after = facts.map(|facts| facts.representations.as_slice());
+    match after {
+        Some(after) if after != before.as_slice() => Err(ServiceError::not_permitted(format!(
+            "this version of PERSON {vo_id} changes its representations ({}::{}): a SCIM client \
+             provisions the identity only, and a representation is written by the patient it \
+             represents or an administrator",
+            policy_mark::TERMINOLOGY,
+            policy_mark::REPRESENTS
+        ))),
+        _ => Ok(()),
+    }
 }
 
 /// Whether the commit of the `PERSON` `vo_id`, whose versions `held` are the
