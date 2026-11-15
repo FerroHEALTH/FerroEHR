@@ -5,13 +5,66 @@
 //!
 //! They are the key rows of one login, the live memberships of the parties
 //! found and the live representation relationships of the representatives
-//! among them. No openEHR spec governs the side table or its SQL: our own
+//! among them. A key row binds only while its issuer's key space is
+//! `active` ([`crate::party_binding::key_space`]), read in the same
+//! statement; an issuer no key space records binds nothing. No openEHR spec governs the side table or its SQL: our own
 //! design.
 
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
+use crate::party_binding::key_space::{KeySpaceClosed, KeySpaceState};
 use crate::storage::error::StorageError;
+
+/// Why the key rows of a login cannot be read.
+#[derive(Debug, thiserror::Error)]
+pub enum LookupError {
+    /// The issuer's key space is not `active`, so its keys bind no login.
+    #[error(transparent)]
+    Closed(#[from] KeySpaceClosed),
+    /// The party store failed.
+    #[error("the binding side table could not be read")]
+    Storage(#[from] StorageError),
+}
+
+impl From<sqlx::Error> for LookupError {
+    fn from(e: sqlx::Error) -> Self {
+        Self::Storage(StorageError::Database(e))
+    }
+}
+
+impl LookupError {
+    /// The closed key space, when that is why.
+    #[must_use]
+    pub fn closed(&self) -> Option<&KeySpaceClosed> {
+        match self {
+            Self::Closed(closed) => Some(closed),
+            Self::Storage(_) => None,
+        }
+    }
+}
+
+/// The refusal of `issuer` unless `space`, the stored state of its key space
+/// (`None` when no key space records it), is `active`.
+fn open(issuer: &str, space: Option<&str>) -> Result<(), LookupError> {
+    match space.map(|name| KeySpaceState::parse(name).ok_or(name)) {
+        Some(Ok(KeySpaceState::Active)) => Ok(()),
+        None => Err(KeySpaceClosed {
+            issuer: issuer.to_owned(),
+            state: None,
+        }
+        .into()),
+        Some(Ok(state)) => Err(KeySpaceClosed {
+            issuer: issuer.to_owned(),
+            state: Some(state),
+        }
+        .into()),
+        Some(Err(name)) => Err(StorageError::InvalidRows(format!(
+            "the key space state {name:?} is not one of four"
+        ))
+        .into()),
+    }
+}
 
 /// One key row the lookup reads: a live row, or the tombstone of a deleted
 /// `PERSON`.
@@ -30,18 +83,21 @@ pub struct KeyRow {
 }
 
 /// The key rows of the identifier `value` of `identifier_type` under
-/// `issuer`, live and tombstoned, with the professional state on `today`
-/// (`YYYY-MM-DD`); answered from `ix_binding_identifier_lookup` alone.
+/// `issuer`, live and tombstoned.
+///
+/// Each carries the professional state on `today` (`YYYY-MM-DD`); answered
+/// from `ix_binding_identifier_lookup` and the key space's primary key.
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure.
+/// [`LookupError::Closed`] when `issuer`'s key space is not `active` or no
+/// key space records it, [`LookupError::Storage`] on a driver failure.
 pub async fn key_rows(
     conn: &mut PgConnection,
     issuer: &str,
     identifier_type: &str,
     value: &str,
     today: &str,
-) -> Result<Vec<KeyRow>, StorageError> {
+) -> Result<Vec<KeyRow>, LookupError> {
     let rows = sqlx::query(LOOKUP)
         .bind(issuer)
         .bind(identifier_type)
@@ -49,10 +105,18 @@ pub async fn key_rows(
         .bind(today)
         .fetch_all(&mut *conn)
         .await?;
+    let space: Option<String> = match rows.first() {
+        Some(row) => row.try_get("space")?,
+        None => None,
+    };
+    open(issuer, space.as_deref())?;
     let mut out = Vec::with_capacity(rows.len());
     for row in rows {
+        let Some(party_id) = row.try_get::<Option<Uuid>, _>("party_id")? else {
+            continue;
+        };
         out.push(KeyRow {
-            party_id: row.try_get("party_id")?,
+            party_id,
             lifecycle_state: row.try_get("lifecycle_state")?,
             professional: row.try_get("professional")?,
             representative: row.try_get("representative")?,
@@ -63,12 +127,19 @@ pub async fn key_rows(
 }
 
 /// The lookup statement of [`key_rows`], public so a test can `EXPLAIN` it.
-pub const LOOKUP: &str = "SELECT party_id, lifecycle_state, professional @> $4::date AS professional, \
-            representative, retired_at IS NULL AS live \
-     FROM binding_identifier \
-     WHERE selector = 'key' AND issuer = $1 AND identifier_type = $2 AND value = $3 \
-       AND (retired_at IS NULL OR deprovisioned_at IS NOT NULL) \
-     ORDER BY party_id";
+///
+/// It answers one row with the key space's state, NULL when none records the
+/// issuer, and no key row when no row matches or the key space is not
+/// `active`.
+pub const LOOKUP: &str = "SELECT s.state AS space, b.party_id, b.lifecycle_state, \
+            b.professional @> $4::date AS professional, b.representative, \
+            b.retired_at IS NULL AS live \
+     FROM (SELECT $1::text AS issuer) q \
+     LEFT JOIN binding_key_space s ON s.issuer = q.issuer \
+     LEFT JOIN binding_identifier b ON s.state = 'active' \
+       AND b.selector = 'key' AND b.issuer = q.issuer AND b.identifier_type = $2 \
+       AND b.value = $3 AND (b.retired_at IS NULL OR b.deprovisioned_at IS NOT NULL) \
+     ORDER BY b.party_id";
 
 /// One live membership: a member, its group and the group's `externalId`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -164,23 +235,39 @@ pub async fn representations(
 /// `(party, lifecycle_state)`.
 ///
 /// # Errors
-/// [`StorageError::Database`] on a driver failure.
+/// [`LookupError::Closed`] when `issuer`'s key space is not `active` or no
+/// key space records it, [`LookupError::Storage`] on a driver failure.
 pub async fn representative_keys(
     conn: &mut PgConnection,
     issuer: &str,
     value: &str,
-) -> Result<Vec<(Uuid, String)>, StorageError> {
-    Ok(sqlx::query_as(
-        "SELECT party_id, lifecycle_state FROM binding_identifier \
-         WHERE selector = 'key' AND issuer = $1 AND retired_at IS NULL \
-           AND value = CASE WHEN lower(identifier_type) IN ('guid', 'uuid') \
-                            THEN lower($2) ELSE $2 END \
-         ORDER BY party_id",
+) -> Result<Vec<(Uuid, String)>, LookupError> {
+    let rows = sqlx::query(
+        "SELECT s.state AS space, b.party_id, b.lifecycle_state \
+         FROM (SELECT $1::text AS issuer) q \
+         LEFT JOIN binding_key_space s ON s.issuer = q.issuer \
+         LEFT JOIN binding_identifier b ON s.state = 'active' \
+           AND b.selector = 'key' AND b.issuer = q.issuer AND b.retired_at IS NULL \
+           AND b.value = CASE WHEN lower(b.identifier_type) IN ('guid', 'uuid') \
+                              THEN lower($2) ELSE $2 END \
+         ORDER BY b.party_id",
     )
     .bind(issuer)
     .bind(value)
     .fetch_all(&mut *conn)
-    .await?)
+    .await?;
+    let space: Option<String> = match rows.first() {
+        Some(row) => row.try_get("space")?,
+        None => None,
+    };
+    open(issuer, space.as_deref())?;
+    let mut out = Vec::with_capacity(rows.len());
+    for row in rows {
+        if let Some(party) = row.try_get::<Option<Uuid>, _>("party_id")? {
+            out.push((party, row.try_get("lifecycle_state")?));
+        }
+    }
+    Ok(out)
 }
 
 /// Whether `representative` has ever represented `subject`.

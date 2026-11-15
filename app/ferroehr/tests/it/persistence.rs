@@ -147,6 +147,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "binding_grant_revision",
             "binding_group_revision",
             "binding_identifier",
+            "binding_key_space",
             "binding_lease",
             "binding_membership",
             "binding_patient_identifier",

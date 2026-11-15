@@ -455,6 +455,8 @@ the replica holds. A discharge, a removed membership or an erasure is never
 granted from a stale row: until the projector catches up, the query sends the
 list of every patient in your teams' care, as it did before. With protection
 off, the projection is not written and every query sends that list, which
-grows with the patients in your teams' care, so turn protection on for a
-deployment that holds many. Rotating the key rebuilds the projection and the
-digests on the next projector run.
+grows with the patients in your teams' care. A production deployment
+configures `[privacy.identifier_protection]` for this reason as well as for
+the identifiers it seals; the census without it is a fallback for a sandbox or
+a deployment that has not set the key yet. Rotating the key rebuilds the
+projection and the digests on the next projector run.

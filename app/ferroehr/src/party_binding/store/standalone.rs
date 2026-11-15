@@ -10,7 +10,7 @@
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use super::{DELETED, head_of, stored_heads, write_persons};
+use super::{DELETED, Scope, head_of, stored_heads, write_persons};
 use crate::error::ServiceError;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::Facts;
@@ -78,7 +78,7 @@ pub(super) async fn reindex(
         return Ok(());
     }
     let persons = stored_heads(tx, mapping, Kind::Person, Some(&sources), None).await?;
-    write_persons(tx, mapping, &persons, false).await
+    write_persons(tx, mapping, &persons, Scope::Heads { tombstones: false }).await
 }
 
 /// Writes the row of every standalone representation container that is not

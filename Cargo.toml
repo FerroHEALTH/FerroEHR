@@ -274,17 +274,17 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # sets it on a `reqwest::ClientBuilder` (feature `reqwest`); `api_headers` is
 # the security header set the stack puts outermost on every response. Verified on
 # crates.io 2026-11-08 (0.6.2).
-ferrohealth-server = { version = "=0.8.4", default-features = false }
+ferrohealth-server = { version = "=0.9.0", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
 # line. Verified on crates.io 2026-10-27 (0.2.2).
-ferrohealth-telemetry = { version = "=0.4.2", features = ["axum", "otlp", "prometheus"] }
+ferrohealth-telemetry = { version = "=0.5.0", features = ["axum", "otlp", "prometheus"] }
 # The family's installation report to FerroPULSE (FerroSYS): envelope v2, the
 # latency window the request log fills (`telemetry`, its `Recorder`), and the
 # start and daily reporter over FerroEHR's PostgreSQL state store. Verified on
 # crates.io 2026-10-27 (0.2.0).
-ferrohealth-usage-report = { version = "=0.4.1", features = ["telemetry"] }
+ferrohealth-usage-report = { version = "=0.5.0", features = ["telemetry"] }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,
@@ -474,8 +474,12 @@ opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio"] }
 # crate directly instead of enabling it. Its `flamegraph` feature is OFF on
 # purpose (#2406): that feature pins `inferno ^0.11`, whose quick-xml 0.26
 # carries RUSTSEC-2026-0194/0195; the SVG render goes through the direct
-# `inferno` dependency below instead, reproducing pprof's own fold.
-pprof = { version = "0.15.0" }
+# `inferno` dependency below instead, reproducing pprof's own fold. Its
+# `frame-pointer` feature walks the frame-pointer chain from the `SIGPROF`
+# handler with every read checked, instead of the platform unwinder, which is
+# not async-signal-safe and trapped on a sample inside SHA-512 (#5723); the
+# builds keep frame pointers through `.cargo/config.toml`.
+pprof = { version = "0.15.0", features = ["frame-pointer"] }
 # Flamegraph SVG renderer, at the quick-xml >= 0.41 line. `nameattr` mirrors
 # the feature pprof's flamegraph feature enabled, so the render is identical.
 inferno = { version = "0.12", features = ["nameattr"] }

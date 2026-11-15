@@ -27,7 +27,8 @@ use uuid::Uuid;
 
 use crate::error::ServiceError;
 use crate::ids::EhrId;
-use crate::party_binding::lookup;
+use crate::party_binding::key_space::KeySpaceClosed;
+use crate::party_binding::lookup::{self, LookupError};
 use crate::service::FerroEhrService;
 use crate::storage::access_projection::EhrSubject;
 
@@ -71,6 +72,9 @@ pub enum PortalLogin {
     },
     /// Two `PERSON`s carry the login.
     Ambiguous,
+    /// The issuer's key space is not `active`, so the side table cannot say
+    /// who carries the login.
+    Closed(KeySpaceClosed),
 }
 
 impl FerroEhrService {
@@ -86,7 +90,11 @@ impl FerroEhrService {
         ehr_id: EhrId,
     ) -> Result<PortalLogin, ServiceError> {
         let mut conn = self.demographic_pool.acquire().await?;
-        let mut found = lookup::representative_keys(&mut conn, issuer, value).await?;
+        let mut found = match lookup::representative_keys(&mut conn, issuer, value).await {
+            Ok(found) => found,
+            Err(LookupError::Closed(closed)) => return Ok(PortalLogin::Closed(closed)),
+            Err(LookupError::Storage(e)) => return Err(e.into()),
+        };
         let (person, state) = match found.len() {
             0 => return Ok(PortalLogin::Unbound),
             1 => match found.pop() {

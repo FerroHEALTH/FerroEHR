@@ -35,6 +35,7 @@ use ferrohealth_smart::resource::{Access, Caller};
 
 use super::AuthError;
 
+pub(super) mod closed;
 mod jit;
 
 /// The party binding of the deployment, with what the committer of a bound
@@ -304,13 +305,10 @@ impl Binding {
                 return Err(AuthError::PartyUnavailable { retry_after: None });
             }
         }
-        self.shared.resolve(caller).await.map_err(|error| {
-            tracing::warn!(
-                error = %ferroehr::error::ErrorChain::new(&error),
-                "the party source could not answer"
-            );
-            AuthError::PartyUnavailable { retry_after: None }
-        })
+        self.shared
+            .resolve(caller)
+            .await
+            .map_err(|error| closed::unanswered(&error))
     }
 }
 
@@ -350,13 +348,7 @@ pub(super) async fn bind(
         }
         Ok(None) => return Ok(access),
         Ok(Some(outcome)) => outcome,
-        Err(error) => {
-            tracing::warn!(
-                error = %ferroehr::error::ErrorChain::new(&error),
-                "the party source could not answer"
-            );
-            return Err(AuthError::PartyUnavailable { retry_after: None });
-        }
+        Err(error) => return Err(closed::unanswered(&error)),
     };
     let outcome = match outcome {
         Outcome::Unbound => binding
