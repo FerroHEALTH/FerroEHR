@@ -247,12 +247,12 @@ behind each bound (#4318).
 ## The access path at scale
 
 Release 5.7.2 puts the access evaluator, its care relationships and
-clearances, and a signed access-log entry on every clinical request. The
+controller rules, and a signed access-log entry on every clinical request. The
 performance gate (`scripts/perf/gate.sh`), which judges each change against
 its base and each release against the previous one, side by side on one host,
 measures that whole path: its configuration commits an access policy
 that requires a care relationship, makes a clinician a member of a care team
-with a clearance, places every seeded EHR's subject under that team's care
+in a role that a controller rule lets read HIV data, places every seeded EHR's subject under that team's care
 with five directives on the EHR, and signs each access-log link with an
 OpenPGP key generated for the run. The clinical requests are sent as the
 clinician. The record, `docs/benchmarks/access-path/record.json`, also holds

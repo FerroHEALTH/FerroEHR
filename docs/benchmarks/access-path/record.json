@@ -15,45 +15,46 @@
         "set": "none",
         "directives": 0,
         "cared": true,
-        "decision_ns_p50": 269,
-        "decision_ns_p99": 500
+        "decision_ns_p50": 906,
+        "decision_ns_p99": 1073
       },
       {
         "set": "none",
         "directives": 0,
         "cared": false,
-        "decision_ns_p50": 317,
-        "decision_ns_p99": 353
+        "decision_ns_p50": 896,
+        "decision_ns_p99": 1032
       },
       {
         "set": "realistic",
         "directives": 5,
         "cared": true,
-        "decision_ns_p50": 1327,
-        "decision_ns_p99": 1539
+        "decision_ns_p50": 2167,
+        "decision_ns_p99": 2468
       },
       {
         "set": "realistic",
         "directives": 5,
         "cared": false,
-        "decision_ns_p50": 1268,
-        "decision_ns_p99": 1618
+        "decision_ns_p50": 2234,
+        "decision_ns_p99": 2550
       },
       {
         "set": "heavy",
         "directives": 16,
         "cared": true,
-        "decision_ns_p50": 3602,
-        "decision_ns_p99": 3736
+        "decision_ns_p50": 4866,
+        "decision_ns_p99": 5619
       },
       {
         "set": "heavy",
         "directives": 16,
         "cared": false,
-        "decision_ns_p50": 3550,
-        "decision_ns_p99": 3804
+        "decision_ns_p50": 4786,
+        "decision_ns_p99": 5633
       }
-    ]
+    ],
+    "policy": "a care relationship with a 14-day grace, a declared purpose, HIV results classified, and a controller rule letting the caller's role read HIV data (#5621)"
   },
   "replica": {
     "tool": "scaleseed replica --teams 500 --staff 5000",

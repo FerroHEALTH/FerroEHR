@@ -9,7 +9,7 @@
 # policy, the care relationships and the EHRs' directives through the ADMIN
 # and demographic routes, and the clinician reads and writes under them, so
 # every clinical group runs the access evaluator with care relationships and
-# clearances in force (#5590). The access log signs each link with the OpenPGP
+# controller rules in force (#5590). The access log signs each link with the OpenPGP
 # key scripts/perf/gate.sh generates for the run and mounts where
 # [record.signing] names it.
 
@@ -48,7 +48,8 @@ user = "ferroehr"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 
 # clinician / clinician (Argon2id), the professional the clinical groups run
-# as: no administrator, so a care relationship and a clearance decide.
+# as: no administrator, so a care relationship and its role's controller
+# rule decide.
 [[auth.basic.users]]
 user = "clinician"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJQZXJmU2FsdA$3pUvm08CX3uvjvMBwkvqIWbox3KtS9Ih8+IB6CAPfY4"
@@ -61,7 +62,7 @@ first_admin = "ferroehr"
 # scim_provision before it provisions the Basic users, then their scopes and
 # roles (scripts/scim-provision.sh), and the administrator's care relationship
 # and access policy writes; access_service lets an opt-out be committed, and
-# access_demographic carries the clinician's clearance.
+# access_demographic is the grant of the clinician's coded ROLE.
 [authz.grants]
 allowed = ["commit_composition", "scim_provision", "hold_roles", "hold_scopes",
   "write_care_relationship", "write_access_policy", "access_service", "access_demographic"]

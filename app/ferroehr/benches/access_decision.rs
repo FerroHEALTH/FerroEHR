@@ -9,10 +9,11 @@
 //! `cargo bench -p ferroehr --bench access_decision` prints one JSON object
 //! per directive set on stdout, the `evaluator` rows of
 //! `docs/benchmarks/access-path/record.json`. The policy requires a care
-//! relationship with a 14-day grace and a declared purpose, and classifies one
-//! archetype as HIV results; the caller is a professional of one care team who
-//! declares treatment and clears HIV. No openEHR spec governs this
-//! measurement: our own design.
+//! relationship with a 14-day grace and a declared purpose, classifies one
+//! archetype as HIV results, and holds a controller rule letting one role read
+//! HIV data; the caller is a professional of one care team in that role who
+//! declares treatment. No openEHR spec governs this measurement: our own
+//! design.
 
 #![expect(
     clippy::expect_used,
@@ -57,6 +58,11 @@ const REPRESENTATIVE: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f86";
 const ACT_CODE: &str = "2.16.840.1.113883.5.25";
 /// The HL7 v3 `ActReason` purpose of use terminology id.
 const ACT_REASON: &str = "2.16.840.1.113883.5.8";
+/// The code system of the professional's functional role.
+const ROLES: &str = "urn:example:roles";
+/// The professional's functional role, which a controller rule lets read HIV
+/// data.
+const INFECTIOUS_DISEASE: &str = "INFECTIOUS_DISEASE";
 /// The category terminology of the fixture.
 const CATEGORIES: &str = "urn:example:categories";
 /// The decisions timed per directive set and care state.
@@ -180,7 +186,11 @@ fn policy() -> AccessPolicy {
             "archetype_node_id": "at0002",
             "data": { "_type": "ACCESS_DATA_SCOPE", "archetypes": [{ "_type": "ARCHETYPE_ID",
                 "value": "openEHR-EHR-OBSERVATION.laboratory_test_result.v1" }] },
-            "sensitivities": [coded(ACT_CODE, "HIV")] }] });
+            "sensitivities": [coded(ACT_CODE, "HIV")] }],
+        "rules": [directive("controller_rule", "permit", &json!({
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "role": coded(ROLES, INFECTIOUS_DISEASE) }],
+            "data": [{ "_type": "ACCESS_DATA_SCOPE", "sensitivities": [coded(ACT_CODE, "HIV")] }],
+            "emergency_override": false }))] });
     openehr_its::json::from_canonical_value(&p).expect("the policy reads")
 }
 
@@ -192,18 +202,16 @@ fn request() -> RequestAccess {
     };
     let team = TEAM.parse().expect("a UUID");
     let facts = CallerFacts::new(
-        vec![code(ACT_CODE, "HIV")],
-        vec![code(ACT_REASON, "TREAT")],
+        vec![code(ROLES, INFECTIOUS_DISEASE)],
         vec![CareTeam::spanning(team, None, None)],
     );
     RequestAccess::new(
         Caller {
             kind: CallerKind::Professional,
             party: Some(NURSE.to_owned()),
-            own_ehr: None,
+            own_ehrs: Vec::new(),
             patient_grants_only: false,
             acts_for: vec![TEAM.to_owned()],
-            roles: vec!["USER".to_owned()],
             facts,
             administrator: false,
             settings: SettingsCaller::new(false, false, Some(NURSE.to_owned())),

@@ -161,11 +161,12 @@ entries and the bytes they take on disk.
 An arm whose tree configures the `clinician` Basic user runs with the access
 path in force (#5590, `scripts/perf/access-seed.sh`): the administrator
 commits an access policy that requires a care relationship, makes the
-clinician a member of a care team with a clearance, and places the subject of
+clinician a member of a care team in a coded role that a controller rule of
+the policy lets read HIV data, and places the subject of
 the read EHR, the write EHR and every population EHR under that team's care,
 each EHR with five directives. The clinical groups (EHR read, composition
 commit and read, the AQL queries, the export) are sent as the clinician, so
-the evaluator judges every one by its care relationship, clearance and
+the evaluator judges every one by its care relationship, role and
 directives; an older base sends them as its administrator. Every arm signs
 its access-log links with an OpenPGP key the gate generates for the run with
 `gpg`: Ed25519 by default, RSA-3072 with `PERF_SIGNING_KEY=rsa3072`.

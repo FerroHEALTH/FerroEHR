@@ -2,7 +2,8 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # The access content of the performance gate (#5590): what puts the access
-# evaluator, its care relationships and clearances, and the signed access log
+# evaluator, its care relationships and controller rules, and the signed
+# access log
 # on every clinical request the plan sends. Sourced by scripts/perf/gate.sh,
 # which defines `call`, `die`, SERVER_URL, BASE, AUTH and OUT; never run
 # directly.
@@ -10,10 +11,11 @@
 # An arm whose tree configures the clinician Basic user gets:
 #   - the administrator's grants to write care relationships and the access
 #     policy, through `ferroehr party-binding grant`;
-#   - an ACCESS_POLICY that requires a care relationship with a 14-day grace
-#     and classifies the lab results the read EHR holds as HIV results;
-#   - a care team GROUP the clinician is `member_of`, and a ROLE whose
-#     capability clears HIV and permits treatment;
+#   - an ACCESS_POLICY that requires a care relationship with a 14-day grace,
+#     classifies the lab results the read EHR holds as HIV results, and holds
+#     a controller rule that lets the clinician's role read HIV data (#5621);
+#   - a care team GROUP the clinician is `member_of`, and a ROLE the
+#     clinician performs, named by that role's code;
 #   - patients `under_care_of` that team, the subjects of the read EHR, the
 #     write EHR and every population EHR;
 #   - on each of those EHRs, settings of five directives: treatment consent
@@ -31,6 +33,9 @@ readonly CLINICIAN_AUTH="Basic Y2xpbmljaWFuOmNsaW5pY2lhbg=="
 readonly ACCESS_TERMINOLOGY=ferroehr-operations
 readonly ACT_CODE=2.16.840.1.113883.5.25
 readonly ACT_REASON=2.16.840.1.113883.5.8
+# The code system and code of the clinician's functional role.
+readonly ROLE_SYSTEM=urn:ferroehr:perf:roles
+readonly ROLE_CODE=INFECTIOUS_DISEASE
 # What access_seed creates: the care team, the professional the mental-health
 # restriction excepts and the subjects' representative (parties the
 # directives name, never callers of the plan).
@@ -93,19 +98,15 @@ care_json() {
      source: ref("PERSON"; $source), target: ref("GROUP"; $team)}'
 }
 
-# The clinician's ROLE: a grant of access_demographic whose credentials clear
-# HIV and permit treatment.
-clearance_role_json() {
-  jq -cn --arg performer "$1" --argjson hiv "$(coded_json "$ACT_CODE" HIV)" \
-    --argjson treat "$(coded_json "$ACT_REASON" TREAT)" \
-    --argjson op "$(coded_json "$ACCESS_TERMINOLOGY" access_demographic)" \
-    --argjson clear "$(coded_json "$ACCESS_TERMINOLOGY" sensitivity_clearance)" \
-    --argjson purpose "$(coded_json "$ACCESS_TERMINOLOGY" permitted_purpose)" '
+# The clinician's ROLE, named by the role's code, granting access_demographic.
+clinician_role_json() {
+  jq -cn --arg performer "$1" --argjson name "$(coded_json "$ROLE_SYSTEM" "$ROLE_CODE")" \
+    --argjson op "$(coded_json "$ACCESS_TERMINOLOGY" access_demographic)" '
     def text($v): {_type: "DV_TEXT", value: $v};
     {_type: "ROLE", archetype_node_id: "openEHR-DEMOGRAPHIC-ROLE.ferroehr_grant.v1",
      archetype_details: {_type: "ARCHETYPED", rm_version: "1.2.0",
        archetype_id: {_type: "ARCHETYPE_ID", value: "openEHR-DEMOGRAPHIC-ROLE.ferroehr_grant.v1"}},
-     name: text("access_demographic"),
+     name: $name,
      identities: [{_type: "PARTY_IDENTITY", archetype_node_id: "at0001", name: text("name"),
        details: {_type: "ITEM_TREE", archetype_node_id: "at0002", name: text("details"),
          items: [{_type: "ELEMENT", archetype_node_id: "at0003", name: text("name"),
@@ -114,16 +115,18 @@ clearance_role_json() {
        id: {_type: "HIER_OBJECT_ID", value: $performer}},
      capabilities: [{_type: "CAPABILITY", name: text("grant"), archetype_node_id: "at0020",
        credentials: {_type: "ITEM_TREE", name: text("terms"), archetype_node_id: "at0023",
-         items: [
-           {_type: "ELEMENT", name: text("operation"), archetype_node_id: "at0021", value: $op},
-           {_type: "ELEMENT", name: $clear, archetype_node_id: "at0040", value: $hiv},
-           {_type: "ELEMENT", name: $purpose, archetype_node_id: "at0040", value: $treat}]}}]}'
+         items: [{_type: "ELEMENT", name: text("operation"), archetype_node_id: "at0021",
+           value: $op}]}}]}'
 }
 
-# The ACCESS_POLICY: a care relationship with a 14-day grace, and the lab
-# results classified as HIV results.
+# The ACCESS_POLICY: a care relationship with a 14-day grace, the lab results
+# classified as HIV results, and a controller rule letting the clinician's
+# role read HIV data.
 policy_json() {
-  jq -cn --arg controller "$1" --argjson hiv "$(coded_json "$ACT_CODE" HIV)" '
+  jq -cn --arg controller "$1" --argjson hiv "$(coded_json "$ACT_CODE" HIV)" \
+    --argjson role "$(coded_json "$ROLE_SYSTEM" "$ROLE_CODE")" \
+    --argjson rule "$(coded_json "$ACCESS_TERMINOLOGY" controller_rule)" \
+    --argjson permit "$(coded_json "$ACCESS_TERMINOLOGY" permit)" '
     def text($v): {_type: "DV_TEXT", value: $v};
     {_type: "ACCESS_POLICY", name: text("Perf gate access policy"),
      archetype_node_id: "openEHR-EHR-ACCESS_POLICY.controller.v1",
@@ -138,7 +141,12 @@ policy_json() {
        archetype_node_id: "at0002",
        data: {_type: "ACCESS_DATA_SCOPE", archetypes: [{_type: "ARCHETYPE_ID",
          value: "openEHR-EHR-OBSERVATION.laboratory_test_result.v1"}]},
-       sensitivities: [$hiv]}]}'
+       sensitivities: [$hiv]}],
+     rules: [{_type: "ACCESS_DIRECTIVE", name: text("The role reads HIV data"),
+       archetype_node_id: "at0003", kind: $rule, effect: $permit,
+       applies_to: [{_type: "ACCESS_ACTOR_SCOPE", role: $role}],
+       data: [{_type: "ACCESS_DATA_SCOPE", sensitivities: [$hiv]}],
+       emergency_override: false}]}'
 }
 
 # The settings every seeded EHR carries: five directives, one gate-keeper.
@@ -259,7 +267,7 @@ access_population() {
 }
 
 # access_seed: the grants, the policy, the team, the clinician's membership
-# and clearance, and the parties the directives name, through ACCESS_FERROEHR
+# and role, and the parties the directives name, through ACCESS_FERROEHR
 # and ACCESS_IDS.
 access_seed() {
   local op clinician version org
@@ -290,5 +298,5 @@ access_seed() {
   put_json "/demographic/person/$clinician" "$version" \
     "$(jq -c --argjson care "$(care_json member_of "$clinician" "$ACCESS_TEAM")" \
       'del(.uid) | .relationships = ((.relationships // []) + [$care])' "$OUT/access-clinician.json")"
-  post_json /demographic/role "$(clearance_role_json "$clinician")" >/dev/null
+  post_json /demographic/role "$(clinician_role_json "$clinician")" >/dev/null
 }

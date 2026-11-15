@@ -34,7 +34,8 @@
 # An arm whose tree configures the clinician Basic user runs with the access
 # path in force (#5590, scripts/perf/access-seed.sh): an access policy that
 # requires a care relationship, the clinician a member of the care team with
-# a clearance, every seeded EHR's subject under that team's care with five
+# a coded role an access-policy rule lets read HIV data, every seeded EHR's
+# subject under that team's care with five
 # directives on the EHR, and the clinical groups sent as the clinician. Its
 # access log signs every link with an OpenPGP key the gate generates for the
 # run (PERF_SIGNING_KEY), mounted where the tree's configuration names it.
