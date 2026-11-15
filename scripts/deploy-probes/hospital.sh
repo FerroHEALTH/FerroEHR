@@ -78,6 +78,7 @@ YAML
   FERROEHR__AUTH__SMART__PATIENT_ISSUERS: http://localhost:8180/patients
   FERROEHR__AUTH__DESCRIBED_ISSUER: https://keycloak.localhost:8443/auth/realms/ferroehr
 YAML
+      hospital_pix_env
     fi
     cat <<'YAML'
 services:
@@ -88,6 +89,9 @@ services:
         "requestMappings":[{"requestParam":"scope","match":"ferroehr/scim",
         "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
         "aud":["ferroehr-scim"],"scope":"$${scope}"}},
+        {"requestParam":"scope","match":"ferroehr/pmir",
+        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
+        "aud":["ferroehr-system"],"scope":"$${scope}"}},
         {"requestParam":"audience","match":"ferroehr-system",
         "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
         "aud":["ferroehr-system"],"scope":"$${scope}"}},
@@ -108,6 +112,7 @@ services:
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 YAML
+    [[ -n "$patients" ]] && hospital_pix_config
   } > "$out"
   printf '%s' "$out"
 }
@@ -1465,4 +1470,6 @@ hospital_pixm() {
     "under pixm, Frank reads Eva's record as her representative"
   h_read 1 "pt:frank:$eva" "$eva" c_vitals "" 200 "" "Frank under pixm (#5634, #5633)"
   probe_done
+
+  hospital_pix_merge
 }
