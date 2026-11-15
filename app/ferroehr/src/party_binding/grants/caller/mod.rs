@@ -44,6 +44,7 @@
 )]
 
 pub mod facts;
+pub mod patient;
 pub mod store;
 pub mod subject;
 

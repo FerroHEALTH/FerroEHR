@@ -383,7 +383,8 @@ impl FerroEhrService {
     /// The EHRs of the subjects the cohort names, each resolved by the
     /// installed provider into the clinical domain (under an IHE identity
     /// source through the forward PIXm translation) and matched against the
-    /// subject of each EHR's `EHR_STATUS`. A subject no EHR belongs to adds
+    /// subject of each EHR's `EHR_STATUS`, with the EHRs of the other record
+    /// subjects of that subject's `PERSON`. A subject no EHR belongs to adds
     /// nothing.
     ///
     /// # Errors
@@ -401,7 +402,7 @@ impl FerroEhrService {
         let mut ehrs = BTreeSet::new();
         for subject in subjects {
             let found = self
-                .subject_ehr(subject)
+                .subject_ehrs(subject)
                 .await
                 .map_err(CohortError::Subject)?;
             ehrs.extend(found);

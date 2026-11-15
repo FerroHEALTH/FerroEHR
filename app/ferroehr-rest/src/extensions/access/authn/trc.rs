@@ -11,12 +11,15 @@
 //! `patient.id` is that binding, as the contact point writes it, `system|value`
 //! (the FHIR R4 search token form), read through the family's one definition,
 //! `ferrohealth_smart::federation::contact::TrcPatientId`. It is resolved to
-//! its EHR through the deployment's EHR index, compared on the value and the
-//! assigning authority, and every patient-data request must name that EHR
-//! before any lookup of its own. An unknown EHR, another patient's EHR, a TRC patient no EHR belongs to
-//! and a request that names no EHR get the one `trc-patient-mismatch`
-//! answer, so the answer discloses nothing. Reading the binding is our own
-//! design on those sources.
+//! the patient's EHRs in the party domain: the patient `PERSON` that carries
+//! the identifier under the assigning authority, then the EHRs its record
+//! subjects name, so admitting a request asks no identity source
+//! ([`ferroehr::service::FerroEhrService::patient_ehrs`]). Every patient-data
+//! request must name one of those EHRs before any lookup of its own. An
+//! unknown EHR, another patient's EHR, a TRC patient no EHR belongs to and a
+//! request that names no EHR get the one `trc-patient-mismatch` answer, so
+//! the answer discloses nothing. Reading the binding is our own design on
+//! those sources.
 
 use std::sync::Arc;
 
@@ -34,9 +37,9 @@ use crate::overview::error::RestError;
 use crate::overview::problem::Kind;
 use crate::smart::routes::{Need, target_ehr};
 
-/// The EHR of a contact point's caller's TRC patient, which stands in for
-/// the launch context its token does not carry: the evaluator holds the
-/// caller to it (`crate::extensions::access::caller`).
+/// The EHR of a contact point's caller's TRC patient the request names,
+/// which stands in for the launch context its token does not carry: the
+/// evaluator holds the caller to it (`crate::extensions::access::caller`).
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TrcPatientEhr(pub(crate) ferroehr::ids::EhrId);
 
@@ -150,7 +153,7 @@ async fn confine(
             Some(principal.clone()),
         ));
     };
-    let resolved = match layer.service.subject_ehr(&subject).await {
+    let resolved = match layer.service.patient_ehrs(&subject).await {
         Ok(resolved) => resolved,
         Err(error) => {
             tracing::warn!(
@@ -166,12 +169,12 @@ async fn confine(
             ));
         }
     };
-    let held = shape
-        .target
-        .as_deref()
-        .zip(resolved)
-        .filter(|(target, ehr)| target.eq_ignore_ascii_case(&ehr.to_string()));
-    let Some((_, ehr)) = held else {
+    let held = shape.target.as_deref().and_then(|target| {
+        resolved
+            .into_iter()
+            .find(|ehr| target.eq_ignore_ascii_case(&ehr.to_string()))
+    });
+    let Some(ehr) = held else {
         return Some(mismatch(principal, not_found));
     };
     principal.access = Access::Caller(Arc::new(
@@ -180,8 +183,8 @@ async fn confine(
     None
 }
 
-/// The EHR index subject of the TRC patient `patient`, a `PERSON` whose
-/// identifier is assigned in the patient's system.
+/// The identifier of the TRC patient `patient`, a `PERSON` whose identifier
+/// is assigned in the patient's system.
 fn subject(patient: &TrcPatientId) -> SubjectRef {
     SubjectRef::person(patient.value(), patient.system())
 }

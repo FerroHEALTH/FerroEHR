@@ -279,6 +279,7 @@ pub(crate) async fn clear(tx: &mut PgConnection) -> Result<(), StorageError> {
         "DELETE FROM binding_provider",
         "DELETE FROM binding_caller_fact",
         "DELETE FROM binding_record_subject",
+        "DELETE FROM binding_patient_identifier",
     ] {
         sqlx::query(statement).execute(&mut *tx).await?;
     }

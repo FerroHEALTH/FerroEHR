@@ -204,11 +204,17 @@ server). Its person agreement names the service it serves in `ehdsi_service`
   `ERROR_SEC_DATA_INTEGRITY_NOT_ENSURED` (MyHealth@EU Requirements Catalogue
   10.0.0 requirement 11.01.02), recorded as `refused-trc-missing`, before
   the EHR index is asked.
-- The patient is resolved to its EHR through the deployment's
-  [EHR index](installation/config-integrations.md#pixm), compared on the value and the
-  assigning authority, and the request must name that EHR: the route's
-  `{ehr_id}`, or a query's `ehr_id`. The EHR stands in for the launch
-  context the token does not carry (eHDSI XCA Profile 8.0.1 §4.2.1).
+- The patient is resolved to its EHRs in the party domain, with no call to
+  the identity source: the patient's `PERSON` carries the identifier at the
+  `[authz.party_binding.patient] identifier` path, compared on the value and
+  the assigning authority (the `DV_IDENTIFIER` issuer), and its EHRs are the
+  ones its own reference and its `record_subject` references name
+  ([The patient's EHRs](installation/config-integrations.md#the-patients-ehrs)).
+  Under `record.subject_index = "local"` an EHR whose `EHR_STATUS` names the
+  identifier itself is found too. The request must name one of those EHRs:
+  the route's `{ehr_id}`, or a query's `ehr_id`. The EHR stands in for the
+  launch context the token does not carry (eHDSI XCA Profile 8.0.1 §4.2.1).
+  An identifier no `PERSON`, or more than one, carries finds no EHR.
 - Another patient's EHR, an EHR the server does not hold, an EHR an
   opted-out patient's record keeps out of reach, a TRC patient no EHR
   belongs to, and a request that names no EHR all get one answer, `404` of

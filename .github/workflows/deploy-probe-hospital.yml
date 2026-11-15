@@ -8,12 +8,13 @@
 # Keycloak, the quickstart's machines issuer and a patient portal's issuer.
 #
 # WHAT IT PROBES (#5673). A pull request, a push, the schedule and a dispatch
-# probe the server built from the tree they check out, packaged the way
-# ci.yml's deploy-probe job packages it, so the scripts and the server are one
-# generation. A completed Containers run on main probes the server image that
-# run published, pinned by digest. The mutable `:main` tag named whatever was
-# last published, and a probe of an image older than its tree read the tree's
-# new grant terminology as no grant (#5673).
+# probe the server and database images built from the tree they check out,
+# packaged the way ci.yml's deploy-probe job packages them, so the scripts and
+# the images are one generation. A completed Containers run on main probes the
+# server and postgres images that run published, each pinned by digest. The
+# mutable `:main` tag named whatever was last published, and a probe of an
+# image older than its tree read the tree's new grant terminology as no grant
+# (#5673).
 #
 # RUN COLOUR. Red while any finding of #5610 is open, and gating nothing: each
 # failing probe names the issue it is tracked by, in the record and the job
@@ -33,6 +34,7 @@ on:
       - docker-compose.keycloak.yml
       - docker-compose.replicas.yml
       - .github/workflows/deploy-probe-hospital.yml
+      - .github/actions/server-binary/**
   pull_request:
     paths:
       - scripts/deploy-probe.sh
@@ -41,6 +43,7 @@ on:
       - docker-compose.keycloak.yml
       - docker-compose.replicas.yml
       - .github/workflows/deploy-probe-hospital.yml
+      - .github/actions/server-binary/**
   # Containers runs on main pushes and dispatches only, so the commit checked
   # out here is main's; the jobs hold read permissions alone.
   workflow_run: # zizmor: ignore[dangerous-triggers] main's commits only, read permissions only
@@ -67,9 +70,9 @@ env:
   FERROEHR__USAGE_REPORT__ENABLED: "false"
 
 jobs:
-  # The server binary of the tree under probe, built as ci.yml's ui-e2e-binary
-  # builds it: the same container, profile and binary cache key, so a tree CI
-  # already built is restored and not compiled.
+  # The server binary of the tree under probe, from the action ci.yml's
+  # ui-e2e-binary runs: the same container, profile and binary cache key, so a
+  # tree CI already built is restored and not compiled.
   binary:
     name: hospital server binary
     if: github.event_name != 'workflow_run'
@@ -84,80 +87,69 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - id: binary-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/server-binary # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
-          path: bin/amd64/ferroehr
-          key: ui-e2e-server-bin-1.99.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr/**', 'app/ferroehr-rest/**', 'app/ferroehr-server/**', 'tools/**') }}
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-        with:
-          shared-key: ui-e2e-server-binary
-          cache-targets: false
-          save-if: false
-      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-      - name: Build the server binary (e2e profile, native)
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-          # ci.yml's ui-e2e-binary writes the compile cache; this lane reads it.
-          SCCACHE_GHA_RW_MODE: READ_ONLY
-          RUSTC_WRAPPER: sccache
-          CARGO_INCREMENTAL: "0"
-          SCCACHE_SKIP_CACHE_CHECK: "true"
-        shell: bash
-        run: |
-          set -euo pipefail
-          cargo build --profile e2e --locked -p ferroehr-server
-          strip target/e2e/ferroehr
-          mkdir -p bin/amd64
-          install -m0755 target/e2e/ferroehr bin/amd64/ferroehr
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: hospital-server-binary
-          path: bin/amd64/ferroehr
-          if-no-files-found: error
-          retention-days: 1
+          artifact-name: hospital-server-binary
 
-  # The server image a successful Containers run on main published, as its
-  # digest. The run tags each image it pushes `sha-<short commit>`
-  # (build-image.yml); a run that built no server image leaves the digest
-  # empty and the probe sits out, since there is nothing new to probe.
-  published-image:
-    name: published server image
+  # The images a successful Containers run on main published, as digests. The
+  # run tags each image it pushes `sha-<short commit>` (build-image.yml). An
+  # image the run did not rebuild is the one `:main` names at this moment,
+  # pinned by its digest; a run that pushed neither leaves nothing new to probe.
+  published-images:
+    name: published images
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
     outputs:
-      digest: ${{ steps.resolve.outputs.digest }}
+      server: ${{ steps.resolve.outputs.server }}
+      postgres: ${{ steps.resolve.outputs.postgres }}
     steps:
       - id: resolve
-        name: Resolve the digest the run published
+        name: Resolve the digests the run published
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
-          ref="ghcr.io/ferrohealth/ferroehr:sha-${HEAD_SHA:0:7}"
-          if ! manifest="$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest}}' 2>/dev/null)"; then
-            echo "::notice::the Containers run of $HEAD_SHA published no server image ($ref); nothing to probe"
+          # digest_of <ref>: the digest <ref> names, or nothing when it names none.
+          digest_of() {
+            local manifest digest
+            manifest="$(docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' 2>/dev/null)" || return 0
+            digest="$(jq -r '.digest // empty' <<<"$manifest")"
+            if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::$1 resolved to no digest: $manifest" >&2
+              return 1
+            fi
+            printf '%s' "$digest"
+          }
+          pushed=0
+          resolved=""
+          for pair in server:ferroehr postgres:ferroehr-postgres; do
+            key="${pair%%:*}" image="${pair#*:}"
+            ref="ghcr.io/ferrohealth/$image"
+            digest="$(digest_of "$ref:sha-${HEAD_SHA:0:7}")"
+            if [[ -n "$digest" ]]; then
+              pushed=1
+              echo "$image: ghcr.io/ferrohealth/$image@$digest, pushed by the Containers run of $HEAD_SHA"
+            else
+              digest="$(digest_of "$ref:main")"
+              [[ -n "$digest" ]] || { echo "::error::$ref:main names no image"; exit 1; }
+              echo "$image: ghcr.io/ferrohealth/$image@$digest, which :main names (the run did not rebuild it)"
+            fi
+            resolved+="$key=$ref@$digest"$'\n'
+          done
+          if [[ "$pushed" -eq 0 ]]; then
+            echo "::notice::the Containers run of $HEAD_SHA published no image; nothing to probe"
             exit 0
           fi
-          digest="$(jq -r '.digest // empty' <<<"$manifest")"
-          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "::error::$ref resolved to no digest: $manifest"
-            exit 1
-          fi
-          echo "Probing ghcr.io/ferrohealth/ferroehr@$digest ($ref)"
-          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          printf '%s' "$resolved" >> "$GITHUB_OUTPUT"
 
   hospital:
     name: deploy-probe (hospital)
-    needs: [binary, published-image]
+    needs: [binary, published-images]
     if: >-
       !cancelled() &&
-      (needs.binary.result == 'success' || needs.published-image.outputs.digest != '')
+      (needs.binary.result == 'success' || needs.published-images.outputs.server != '')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -168,7 +160,7 @@ jobs:
         if: github.event_name != 'workflow_run'
         with:
           persist-credentials: false
-      # The scripts of the commit whose image is probed, so the two are one
+      # The scripts of the commit whose images are probed, so the two are one
       # generation; the trigger admits main's Containers runs alone.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: github.event_name == 'workflow_run'
@@ -181,6 +173,7 @@ jobs:
           name: hospital-server-binary
           path: bin/amd64
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: needs.binary.result == 'success'
       - name: Package the app image (COPY-only, seconds)
         if: needs.binary.result == 'success'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -193,6 +186,7 @@ jobs:
       # The database image of the tree checked out, since its initdb
       # provisions the roles the tree expects.
       - name: Package the postgres image (base + security updates)
+        if: needs.binary.result == 'success'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: docker/postgres
@@ -203,8 +197,8 @@ jobs:
         env:
           PROBE_ONLY: hospital
           PROBE_OUT: docs/conformance/deployment/hospital.json
-          FERROEHR_IMAGE: ${{ needs.published-image.outputs.digest != '' && format('ghcr.io/ferrohealth/ferroehr@{0}', needs.published-image.outputs.digest) || 'ferroehr:deploy-probe' }}
-          FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:deploy-probe
+          FERROEHR_IMAGE: ${{ needs.published-images.outputs.server || 'ferroehr:deploy-probe' }}
+          FERROEHR_POSTGRES_IMAGE: ${{ needs.published-images.outputs.postgres || 'ferroehr-postgres:deploy-probe' }}
         run: bash scripts/deploy-probe.sh
       - name: Summarise the record and check its tracking issues
         if: always()

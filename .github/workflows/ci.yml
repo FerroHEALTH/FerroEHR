@@ -2091,6 +2091,8 @@ jobs:
   # The fourth is `deploy-probe`, on its own lanes, so a change to the
   # deployment harness alone builds the binary its probe runs (#5271);
   # scripts/checks/binary-consumers.sh holds every consumer's lanes here.
+  # The steps are .github/actions/server-binary, which perf-base-binary and the
+  # hospital deploy-probe lane run too, so all three share one cache key (#5673).
   # A push the merge queue verified keeps this job and skips its consumers:
   # it is main's writer of the binary cache and the sccache entries (#4546).
   # The base arm of the performance gate (#5326): the server binary of the
@@ -2132,45 +2134,11 @@ jobs:
           echo "rev=$rev" >> "$GITHUB_OUTPUT"
           mkdir -p perf-base
           git archive "$rev" | tar -x -C perf-base
-      - id: binary-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/server-binary # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
-          path: bin/amd64/ferroehr
-          key: ui-e2e-server-bin-1.99.1-${{ hashFiles('perf-base/Cargo.toml', 'perf-base/Cargo.lock', 'perf-base/rust-toolchain.toml', 'perf-base/.cargo/**', 'perf-base/crates/**', 'perf-base/app/ferroehr/**', 'perf-base/app/ferroehr-rest/**', 'perf-base/app/ferroehr-server/**', 'perf-base/tools/**') }}
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-        with:
-          shared-key: ui-e2e-server-binary
-          cache-targets: false
-          workspaces: perf-base
-      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-      - name: Build the base server binary (e2e profile, native)
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-          SCCACHE_GHA_RW_MODE: READ_ONLY
-          RUSTC_WRAPPER: sccache
-          CARGO_INCREMENTAL: "0"
-          # A throttled cache backend (Azure 503 ServerBusy) failed sccache's
-          # startup probe and with it the build (#5556); skip the probe and use
-          # the configured mode, so a busy cache only costs misses
-          # (github.com/mozilla/sccache, docs/Configuration.md,
-          # SCCACHE_SKIP_CACHE_CHECK).
-          SCCACHE_SKIP_CACHE_CHECK: "true"
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd perf-base
-          cargo build --profile e2e --locked -p ferroehr-server
-          strip target/e2e/ferroehr
-          mkdir -p ../bin/amd64
-          install -m0755 target/e2e/ferroehr ../bin/amd64/ferroehr
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: perf-base-server-binary
-          path: bin/amd64/ferroehr
-          if-no-files-found: error
+          root: perf-base
+          write-cache: "false"
+          artifact-name: perf-base-server-binary
 
   ui-e2e-binary:
     name: ui-e2e server binary
@@ -2204,84 +2172,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Verify toolchain pins (container == rust-toolchain.toml == Dockerfile)
-        shell: bash
-        run: |
-          set -euo pipefail
-          channel=$(grep -E '^channel' rust-toolchain.toml | sed -E 's/.*"(.*)".*/\1/')
-          have=$(rustc --version | awk '{print $2}')
-          arg=$(grep -E '^ARG RUST_VERSION=' docker/Dockerfile | sed -n 1p | cut -d= -f2)
-          echo "rust-toolchain=$channel  container-rustc=$have  Dockerfile ARG=$arg"
-          if [ "$channel" != "$have" ]; then
-            echo "::error::Job container rustc ($have) != rust-toolchain.toml ($channel). Bump the container: tag."
-            exit 1
-          fi
-          if [ "$channel" != "$arg" ]; then
-            echo "::error::docker/Dockerfile RUST_VERSION ($arg) != rust-toolchain.toml ($channel)."
-            exit 1
-          fi
-      # Cache 1 — the binary itself. The key covers every path the server build
-      # reads and nothing else; app/ferroehr-viewer/ is deliberately absent
-      # because the viewer is not in ferroehr-server's dependency graph (that is
-      # ferroehr + ferroehr-rest), which is exactly why a viewer PR can
-      # reuse the binary. Exact key, NO restore-keys: a near-match would package
-      # a binary that does not correspond to this tree
-      # (docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching).
-      - id: binary-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/server-binary # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
         with:
-          path: bin/amd64/ferroehr
-          key: ui-e2e-server-bin-1.99.1-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/**', 'crates/**', 'app/ferroehr/**', 'app/ferroehr-rest/**', 'app/ferroehr-server/**', 'tools/**') }}
-      # Registry cache only, for the reason the ui-e2e job spells out below:
-      # rust-cache's key hashes every manifest, so a lockfile bump rotates a
-      # whole target archive and pays a cold build, while sccache degrades to
-      # partial hits (github.com/Swatinem/rust-cache — with `cache-targets:
-      # false`, "only the cargo registry will be cached").
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-        with:
-          shared-key: ui-e2e-server-binary
-          cache-targets: false
-      - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-      - name: Build the server binary (e2e profile, native)
-        if: steps.binary-cache.outputs.cache-hit != 'true'
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-          # Only main writes (the cache policy above, #3490): a pull-request
-          # entry is readable by that pull request alone, and its writes evicted
-          # main's from the full 10 GB quota (github.com/mozilla/sccache,
-          # docs/Configuration.md, SCCACHE_GHA_RW_MODE).
-          SCCACHE_GHA_RW_MODE: ${{ github.ref == 'refs/heads/main' && 'READ_WRITE' || 'READ_ONLY' }}
-          RUSTC_WRAPPER: sccache
-          # "Incrementally compiled crates cannot be cached"
-          # (github.com/mozilla/sccache#known-caveats).
-          CARGO_INCREMENTAL: "0"
-          # A throttled cache backend (Azure 503 ServerBusy) failed sccache's
-          # startup probe and with it the build (#5556); skip the probe and use
-          # the configured mode, so a busy cache only costs misses
-          # (github.com/mozilla/sccache, docs/Configuration.md,
-          # SCCACHE_SKIP_CACHE_CHECK).
-          SCCACHE_SKIP_CACHE_CHECK: "true"
-        shell: bash
-        run: |
-          set -euo pipefail
-          cargo build --profile e2e --locked -p ferroehr-server
-          strip target/e2e/ferroehr
-          mkdir -p bin/amd64
-          install -m0755 target/e2e/ferroehr bin/amd64/ferroehr
-      # Cache-hit visibility in the job log, the same as the battery job below.
-      - name: sccache statistics
-        if: always() && steps.binary-cache.outputs.cache-hit != 'true'
-        env:
-          SCCACHE_GHA_ENABLED: "true"
-        run: ${SCCACHE_PATH} --show-stats
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ui-e2e-server-binary
-          path: bin/amd64/ferroehr
-          if-no-files-found: error
-          retention-days: 1
+          artifact-name: ui-e2e-server-binary
 
   # ── Viewer + e2e test binaries, prebuilt in parallel (issue #335) ──────────
   # The second half of the compile-nothing-in-the-battery split: the host
