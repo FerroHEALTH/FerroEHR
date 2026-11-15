@@ -14,7 +14,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use serde_json::{Value, json};
+use openehr_rm::prelude::DvIdentifier;
+use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
@@ -390,13 +391,12 @@ impl Work<'_> {
             );
             return Ok(());
         };
-        let value = if identifier_type.is_empty() {
-            json!({ "_type": "DV_IDENTIFIER", "issuer": identifier.system,
-                "id": identifier.value })
-        } else {
-            json!({ "_type": "DV_IDENTIFIER", "issuer": identifier.system,
-                "id": identifier.value, "type": identifier_type })
-        };
+        let value = openehr_its::json::to_canonical_value(&DvIdentifier {
+            issuer: Some(identifier.system.clone()),
+            assigner: None,
+            id: identifier.value.clone(),
+            r#type: (!identifier_type.is_empty()).then_some(identifier_type),
+        });
         let path = self.path.clone();
         let service = self.service;
         if let Some(person) = self.person(holder).await?
