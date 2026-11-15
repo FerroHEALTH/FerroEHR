@@ -99,6 +99,9 @@ pub enum AccessLogError {
     /// A link was to be signed and the keyring could not sign it.
     #[error("the access-log link could not be signed")]
     Sign(#[from] AttestError),
+    /// The task that signs the links ended without an answer.
+    #[error("the task signing the access-log links did not finish")]
+    Signing(#[source] tokio::task::JoinError),
     /// The chain gave a link another digest than the one its signature was
     /// made over, so the transaction is refused.
     #[error("the access-log link at {sequence} is not the link that was signed")]
@@ -209,8 +212,9 @@ impl AccessLogStore {
     ///
     /// # Errors
     /// As [`Self::append`], [`AccessLogError::Sign`] when the keyring cannot
-    /// sign a link, and [`AccessLogError::Unforeseen`] when the chain gave a
-    /// link another digest than the one signed.
+    /// sign a link, [`AccessLogError::Signing`] when the task signing them
+    /// ends without an answer, and [`AccessLogError::Unforeseen`] when the
+    /// chain gave a link another digest than the one signed.
     pub async fn append_in(
         &self,
         conn: &mut PgConnection,
@@ -290,10 +294,12 @@ impl AccessLogStore {
     /// The digests follow the draft's chain rule
     /// ([`crate::access_log::chain::link_digest`]) that the insert trigger
     /// applies, so the `INSERT` that follows stores each signature with its
-    /// row.
+    /// row. The signatures are made on the blocking pool: an RSA signature
+    /// takes milliseconds, and on a runtime worker it would hold back every
+    /// task queued behind the drain.
     async fn foresee(
         conn: &mut PgConnection,
-        signer: &Signer,
+        signer: &Arc<Signer>,
         contents: &[String],
     ) -> Result<Vec<(String, String)>, AccessLogError> {
         let head =
@@ -302,20 +308,28 @@ impl AccessLogStore {
                 .await?;
         let mut sequence: i64 = head.try_get("head_seq")?;
         let mut previous: String = head.try_get("head_digest")?;
+        let mut digests = Vec::with_capacity(contents.len());
+        for content in contents {
+            sequence = sequence
+                .checked_add(1)
+                .ok_or(AccessLogError::Unforeseen { sequence })?;
+            let digest = link_digest(&previous, sequence, &sha256_hex(content));
+            previous.clone_from(&digest);
+            digests.push(digest);
+        }
         let started = std::time::Instant::now();
-        let attested = (|| {
-            let mut foreseen = Vec::with_capacity(contents.len());
-            for content in contents {
-                sequence = sequence
-                    .checked_add(1)
-                    .ok_or(AccessLogError::Unforeseen { sequence })?;
-                let digest = link_digest(&previous, sequence, &sha256_hex(content));
-                let signature = signer.attest(digest.as_bytes())?;
-                previous.clone_from(&digest);
-                foreseen.push((digest, signature));
-            }
-            Ok(foreseen)
-        })();
+        let signer = Arc::clone(signer);
+        let attested = tokio::task::spawn_blocking(move || {
+            digests
+                .into_iter()
+                .map(|digest| {
+                    let signature = signer.attest(digest.as_bytes())?;
+                    Ok((digest, signature))
+                })
+                .collect::<Result<Vec<_>, AccessLogError>>()
+        })
+        .await
+        .unwrap_or_else(|unfinished| Err(AccessLogError::Signing(unfinished)));
         access_path::metrics().log_sign_duration.record(
             access_path::seconds_since(started),
             &[access_path::outcome(&attested)],
