@@ -182,14 +182,16 @@ settings_json() {
            party: person($rep)}]}]}'
 }
 
-# The EHR_STATUS of an EHR whose subject is the PERSON $1.
+# The EHR_STATUS of an EHR whose subject is the PERSON $1, named in this
+# CDR's own demographic namespace, whose references name a PERSON by its
+# container ([authz.party_binding] namespace, by default `demographic`).
 subject_status_json() {
   jq -cn --arg id "$1" '
     {_type: "EHR_STATUS", archetype_node_id: "openEHR-EHR-EHR_STATUS.generic.v1",
      archetype_details: {_type: "ARCHETYPED", rm_version: "1.1.0",
        archetype_id: {_type: "ARCHETYPE_ID", value: "openEHR-EHR-EHR_STATUS.generic.v1"}},
      name: {_type: "DV_TEXT", value: "EHR status"},
-     subject: {_type: "PARTY_SELF", external_ref: {_type: "PARTY_REF", namespace: "local",
+     subject: {_type: "PARTY_SELF", external_ref: {_type: "PARTY_REF", namespace: "demographic",
        type: "PERSON", id: {_type: "HIER_OBJECT_ID", value: $id}}},
      is_queryable: true, is_modifiable: true}'
 }
