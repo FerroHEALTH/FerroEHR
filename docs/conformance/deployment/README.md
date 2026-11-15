@@ -39,7 +39,8 @@ schedule and a dispatch probe the server and database images built from the
 tree they check out; a completed Containers run on main probes the server and
 postgres images that run published, each pinned by its digest, never the
 mutable `:main` tag (#5673). An image the run did not rebuild is the one
-`:main` names when the probe starts, pinned by its digest. A failed call
+`:main` names when the probe starts, pinned by its digest, and a run that
+rebuilt neither image probes those two. A failed call
 prints the lines both instances logged for its request id, and the instances
 log `ferrohealth_smart` at `debug`, so a `401` shows the reason its body leaves
 out. Each failing probe names the issue it is tracked by, and
