@@ -193,7 +193,7 @@ impl FerroEhrService {
     pub async fn person_audit_event_search(
         &self,
         filter: &crate::system_log::store::AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), ServiceError> {
+    ) -> Result<crate::system_log::store::AuditPage, ServiceError> {
         let Some(audit_store) = &self.audit_store else {
             return self.audit_event_search(filter).await;
         };

@@ -1233,8 +1233,11 @@ GET /ferroehr/rest/fhir/r4/AuditEvent
 ```
 
 It returns a FHIR `searchset` Bundle of the matching records' `AuditEvent`
-documents, rendered from the store, newest first, with the full match `total`, a `self` link and a `next` link
-while more pages follow. The query is read by `ihe-atna`, the family's audit
+documents, rendered from the store, newest first, with a `self` link and a
+`next` link while more pages follow. The page carries the full match `total`
+only when the query asks for it with `_total=accurate` or `_total=estimate`
+(FHIR R4 Search §3.1.1.5.2): counting every match reads every record the
+filter selects, and a page alone reads one record past what it serves. The query is read by `ihe-atna`, the family's audit
 crate. At least one `date` parameter is required (RESTful ATNA
 §3.81.4.1.2.1): a query without one is a `400`. Every search parameter
 §3.81.4.1.2.2 says the repository shall support is applied. A parameter
@@ -1277,6 +1280,7 @@ record names, and never one a kept record names.
 | `outcome` | the outcome indicator: `0`, `4`, `8` or `12` (FerroEHR records `0`, `4` and `8`) |
 | `action` | the action code: `C`, `R`, `U`, `D` or `E` |
 | `_count` / `_offset` | paging; page size defaults to 50, capped at 1000; `_count=0` returns the total alone |
+| `_total` | `accurate` or `estimate` adds the full match `total`; `none`, or no `_total`, serves the page without it; any other value is a `400` |
 
 A malformed value is a `400` carrying a FHIR `OperationOutcome` with
 `invalid`; another FHIR R4 `AuditEvent` parameter, which §3.81.4.1.2.2 does
