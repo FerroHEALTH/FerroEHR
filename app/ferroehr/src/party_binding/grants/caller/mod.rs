@@ -44,6 +44,7 @@
 )]
 
 pub mod store;
+pub mod subject;
 
 use serde_json::Value;
 use uuid::Uuid;
@@ -262,12 +263,14 @@ pub(crate) fn check_content(facts: Option<&Facts>) -> Result<(), ServiceError> {
 }
 
 /// Refuses the commit `committed` of a `PERSON` or an `ORGANISATION` when
-/// its version changes what the care relationships or memberships say and
-/// its caller may not ([`check_care_writer`]).
+/// its version changes what the care relationships or memberships say, or
+/// the record subjects it declares, and its caller may not
+/// ([`check_care_writer`]).
 ///
-/// The care relationships `facts`, what the committed body holds, are
-/// compared with those of the last earlier version that holds a body, by
-/// kind, target and `time_validity`, never by position (#5640). A logical
+/// The care relationships and record subjects of `facts`, what the committed
+/// body holds, are compared with those of the last earlier version that
+/// holds a body: a relationship by kind, target and `time_validity`, a
+/// subject by namespace and id, never by position (#5640). A logical
 /// deletion holds no body and changes none: its earlier versions keep them
 /// (RM common `master06-change_control_package.adoc` §Logical Deletion). A
 /// lifecycle state is no relationship content, so a deactivation that keeps
@@ -299,11 +302,13 @@ pub(crate) async fn check_care(
     let before = match before {
         Some(body) => {
             let body: Value = serde_json::from_str(&body).map_err(StorageError::BodyDecode)?;
-            GrantFacts::of(committed.kind, &body).facts
+            GrantFacts::of(committed.kind, &body)
         }
-        None => Vec::new(),
+        None => GrantFacts::default(),
     };
-    if same_care(&before, &after.grants.facts) {
+    if same_care(&before.facts, &after.grants.facts)
+        && same_subjects(&before.subjects, &after.grants.subjects)
+    {
         return Ok(());
     }
     check_care_writer(mapping, committed.vo_id.0)
@@ -323,14 +328,28 @@ fn same_care(before: &[CallerFact], after: &[CallerFact]) -> bool {
     }) && unmatched.is_empty()
 }
 
+/// Whether `before` and `after` declare the same record subjects, by
+/// namespace and id, whatever their order.
+fn same_subjects(before: &[subject::DeclaredSubject], after: &[subject::DeclaredSubject]) -> bool {
+    let sorted = |held: &[subject::DeclaredSubject]| {
+        let mut subjects: Vec<_> = held
+            .iter()
+            .map(|declared| declared.subject.clone())
+            .collect();
+        subjects.sort();
+        subjects
+    };
+    sorted(before) == sorted(after)
+}
+
 /// Whether `relationship` carries a code of [`CareRelationship`] in its
 /// `name` or its `details`: a care relationship, which SCIM never changes.
 pub(crate) fn is_care(relationship: &Value) -> bool {
     care_kind(relationship).is_some()
 }
 
-/// Refuses a commit that changed the care relationships or memberships of
-/// the party `party` when its caller holds no
+/// Refuses a commit that changed the care relationships, memberships or
+/// record subjects of the party `party` when its caller holds no
 /// [`Operation::WriteCareRelationship`] grant and is no administrator of
 /// `mapping`.
 ///
@@ -344,10 +363,12 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
     }
     Err(ServiceError::not_permitted(format!(
         "this version changes the care relationships of party {party} ({TERMINOLOGY}::{} or \
-         {TERMINOLOGY}::{}): only a caller holding the {} grant, such as the care delivery \
-         environment's ADT system, or an administrator writes them",
+         {TERMINOLOGY}::{}) or the record subjects it declares ({TERMINOLOGY}::{}): only a \
+         caller holding the {} grant, such as the care delivery environment's ADT system, or \
+         an administrator writes them",
         FactKind::MemberOf.code(),
         FactKind::UnderCareOf.code(),
+        openehr_rm::draft::access_control::terminology::RecordSubject::RecordSubject.code(),
         Operation::WriteCareRelationship
     )))
 }
@@ -677,6 +698,22 @@ mod tests {
             relationship("member_of", TEAM),
         ]);
         assert!(!same_care(&twice, &both[..1]), "a repeat removed");
+    }
+
+    #[test]
+    fn record_subjects_compare_by_reference_never_by_position() {
+        let declared = |ordinal: i32, id: &str| subject::DeclaredSubject {
+            ordinal,
+            subject: crate::storage::access_projection::EhrSubject::new("pixm", id),
+        };
+        let both = [declared(0, "p-1"), declared(1, "p-2")];
+        let swapped = [declared(0, "p-2"), declared(1, "p-1")];
+        assert!(same_subjects(&both, &swapped));
+        assert!(!same_subjects(&both, &both[..1]));
+        assert!(!same_subjects(
+            &both,
+            &[declared(0, "p-1"), declared(1, "p-3")]
+        ));
     }
 
     #[test]

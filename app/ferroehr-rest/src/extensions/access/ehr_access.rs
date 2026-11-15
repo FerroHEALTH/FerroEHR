@@ -200,7 +200,7 @@ async fn enforce_objects(
         };
         held_any = true;
         let verdict = backend
-            .ehr_verdict_at(&access, ehr_id, held.revision)
+            .ehr_verdict_at(&access, ehr_id, &held.revision)
             .await
             .map_err(fault)?;
         let raw = objects

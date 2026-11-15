@@ -604,7 +604,8 @@ which is what makes an optional stage safe to disable:
    **Staleness fails closed** (#5589). Each copied entry and each verdict a
    request judges carries the revision of the EHR's settings row (the
    `sys_version` of the `EHR_ACCESS` version it was projected from) and the
-   EHR's subject, whose care relationships the decision reads. Every
+   EHR's subject reference (namespace and id, `clinical/0046`), whose
+   `PERSON`'s care relationships the decision reads. Every
    read that leaves the store selects `access_revision(ehr_id)` beside its own
    columns (`head_facts!`, `version_select!`, the EHR summary read; migration
    `clinical/0044`, with a `party/0040` twin answering `NULL` so a statement
@@ -1064,8 +1065,8 @@ which `Capabilities::facts().provider_groups()` carries and the request's
 caller adds to the parties it acts for, one level deep, from the copy held,
 so the regional sharing example adds no transaction. The care check
 (`grants::caller::check_care`) compares what each care relationship of the
-committed body says (kind, target, `time_validity`) with the last earlier
-version holding a body, never its position in `relationships` (#5640) and
+committed body says (kind, target, `time_validity`), and the record subjects
+it declares (namespace, id), with the last earlier version holding a body, never its position in `relationships` (#5640) and
 never the derived `binding_caller_fact` rows, whose lifecycle state and
 deleted-head rule made a SCIM deactivation or deletion read as a care change
 (#5628). A logical deletion holds no body and changes none; a SCIM
@@ -1092,6 +1093,40 @@ one needs the client's `write_care_relationship` grant, and its membership
 changes meet the same care check. **Our own design:** no openEHR spec gives a
 role or a relationship an access meaning, and RFC 7643 §4.2 leaves a
 Group's meaning to the provider.
+
+**Record subjects** (#5634). The evaluator finds the `PERSON` of an EHR's
+subject with `LiveGrants::person_of`, from the namespace and the id of
+`EHR_STATUS.subject.external_ref` (BASE `OBJECT_REF`: both name the service,
+so both are compared): a reference under `[authz.party_binding] namespace`
+whose id is a UUID names that `PERSON` container; any other names the
+`complete` or `incomplete` `PERSON` that declares it by an element of its
+`PARTY.details` named by the `record_subject` code of FerroEHR's operation
+terminology whose value is
+a `DV_IDENTIFIER` (`issuer` the namespace, `id` the id; RM Demographic IM
+§2.1.3 puts an identifier another organisation issued in `details`, RM EHR IM
+§EHR Status puts the cross-reference outside the EHR); otherwise there is
+none and care fails closed. Migration `party/0043` projects the elements into
+`binding_record_subject` at the commit of the `PERSON`, beside its care
+relationships, and stamps the `PERSON`. The care copy (#5615) holds each
+resolution in a bounded cache read on a miss, one indexed statement, and a
+team's census carries its patients' record subjects; the facts notification
+drops every resolution that names a stamped `PERSON` or a reference a stamped
+`PERSON` now declares, so a hit adds no transaction and no identity-source
+call; the unique constraint `(namespace, subject_id)` is deferred to the end
+of the commit (`caller::subject::settle`), so a merge moves a pseudonym from
+one `PERSON` to another in one demographic contribution in either order, and
+a reference two `PERSON`s declare is `409`. An element that is no
+`DV_IDENTIFIER` with an issuer and an id, sits outside a `PERSON`'s `details`,
+names the CDR's own namespace, or names a `[privacy] subject_namespaces`
+namespace with an id the subject rule refuses is `422`; writing one takes
+`write_care_relationship` or an administrator. `cared_for_by` answers the
+subject references of the cared `PERSON`s, which a query's care probe matches
+against `ehr (subject_namespace, subject_id)`, and a representative reaches
+every EHR one of its `PERSON`'s references names (`ehr_ids_for_person`), so
+`Caller::own_ehrs` and the access log's `LogStanding::Person` are sets. The
+access revision (`clinical/0046`) carries the namespace with the id. **Our own
+design:** the element, the projection, its uniqueness, the resolution order
+and the grant.
 
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL

@@ -114,6 +114,7 @@ pub(crate) async fn reindex_committed(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     grants::caller::check_content(facts)?;
+    grants::caller::subject::check(facts, &ctx.grants.namespace(), ctx.privacy)?;
     if committed.kind == Kind::PartyRelationship {
         return standalone::committed(tx, ctx.binding, committed, facts).await;
     }

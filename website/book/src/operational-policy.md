@@ -1719,8 +1719,8 @@ what the care relationships say.
   erasure process does, under the exemptions of GDPR Art. 17(3).
 
 The care check compares what each care relationship says (its kind, target
-and `time_validity`) in the new version with the last version that holds a
-body. A lifecycle state is no relationship content, and a deletion holds no
+and `time_validity`), and each record subject the `PERSON` declares, in the
+new version with the last version that holds a body. A lifecycle state is no relationship content, and a deletion holds no
 body, so neither needs the grant.
 
 The login is refused on its next request on every replica, because each
