@@ -26,7 +26,8 @@ with the performance gate's access seed (`scripts/perf/access-seed.sh`):
 
 The access check and the access log stay on, as in production. On top of
 the gate's seed, the first 500 population EHRs get one composition each, so
-the single-EHR groups read and write across 500 EHRs.
+the single-EHR groups read across 500 EHRs, and the commits go to the next
+500, so a query's answer does not grow while the sweep runs.
 
 The load is `ferrohealth-perf`, the version `docs/VERSIONS.md` pins for the
 gate, run open loop at a constant arrival rate. Each latency counts from the
@@ -112,6 +113,11 @@ image, the instance count, the groups and the rates. It runs the containers
 on one runner with the generator pinned to the first core and the
 containers to the others, and keeps every step as an artifact. A hosted
 runner shares its host with other jobs, so read its knee as a floor.
+
+Run `composition_commit` and the mix last when you sweep several groups on
+one store: their commits grow the store the other groups read. A variant,
+such as a longer `[auth.basic] cache_ttl`, goes in `CAPACITY_SERVER_ENV`
+and belongs in the label of every figure it produced.
 
 The script's header lists every setting: the pool size
 (`CAPACITY_POOL`, the shipped default of 20 connections per instance), the

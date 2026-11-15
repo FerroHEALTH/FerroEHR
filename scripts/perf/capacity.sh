@@ -22,7 +22,8 @@
 # directives, and an Ed25519 key signing the access log. On top of it the
 # first CAPACITY_SPREAD population EHRs get one composition each, so the
 # single-EHR groups read and write across that many EHRs, past the 4096
-# EHRs the access settings cache holds.
+# EHRs the access settings cache holds. The commits go to the next
+# CAPACITY_SPREAD population EHRs, so the reads' answers do not grow.
 #
 # A step passes when every request was answered as expected, the generator
 # kept its schedule and was never saturated, the measured throughput is at
@@ -69,6 +70,9 @@
 #                        (default 256, the quickstart's): past it a request
 #                        is answered 503, so an overloaded step fails on
 #                        refusals instead of the server running out of memory
+#   CAPACITY_SERVER_ENV  further FERROEHR__ settings every instance runs
+#                        with, space-separated KEY=VALUE pairs, for a variant
+#                        the summary must then name
 #   CAPACITY_POPULATION  the patients the seed puts under care (default 20000)
 #   CAPACITY_SPREAD      the EHRs the single-EHR groups spread over (default 500)
 #   CAPACITY_WARMUP      seconds of warm-up per step (default 15)
@@ -220,6 +224,9 @@ up_native() { # <instances>
     FERROEHR__DATABASE__URL="postgres://ferroehr:${PG_SECRET}@127.0.0.1:$CAP_PG_PORT/ferroehr"
     FERROEHR__DATABASE__MAX_CONNECTIONS="$POOL" FERROEHR__USAGE_REPORT__ENABLED=false
     FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS="$MAX_CONCURRENT")
+  local -a kvs=()
+  read -r -a kvs <<<"${CAPACITY_SERVER_ENV:-}"
+  env+=(${kvs[@]+"${kvs[@]}"})
   local targets="" urls=""
   for ((i = 1; i <= count; i++)); do
     env "${env[@]}" FERROEHR__SERVER__LISTEN="127.0.0.1:$((CAP_HTTP_PORT + i))" \
@@ -291,12 +298,18 @@ up_docker() { # <instances>
   instance_config "$CAP_OUT_ABS" /opt/sandbox-posture/basic-users-jwks.json \
     /etc/ferroehr/scim-jwks.json /etc/ferroehr/signing.asc /etc/ferroehr/signing-passphrase \
     /etc/ferroehr/identifier-key
+  local -a extra_env=()
+  local kv
+  local -a kvs=()
+  read -r -a kvs <<<"${CAPACITY_SERVER_ENV:-}"
+  for kv in ${kvs[@]+"${kvs[@]}"}; do extra_env+=(-e "$kv"); done
   local -a process=(--network "$CAP_NET" ${server_cpus[@]+"${server_cpus[@]}"} --read-only --tmpfs /tmp --cap-drop ALL
     --security-opt no-new-privileges:true
     -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml
     -e "FERROEHR__DATABASE__URL=postgres://ferroehr:${PG_SECRET}@${CAP_PG}:5432/ferroehr"
     -e "FERROEHR__DATABASE__MAX_CONNECTIONS=$POOL"
     -e "FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS=$MAX_CONCURRENT"
+    ${extra_env[@]+"${extra_env[@]}"}
     -e FERROEHR__USAGE_REPORT__ENABLED=false
     -v "$CAP_OUT_ABS/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
     -v "$CAPACITY_ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
@@ -335,7 +348,9 @@ down() {
   if [[ "$TOPOLOGY" == docker ]]; then
     docker rm -f "$CAP_LB" >/dev/null 2>&1 || true
     for spec in 1 2 3 4 5 6 7 8; do docker rm -f "$CAP_SERVER-$spec" >/dev/null 2>&1 || true; done
-    docker rm -f "$CAP_PG" >/dev/null 2>&1 || true
+    # -v: the PostgreSQL image declares its data directory a volume, and a
+    # container removed without it leaves that volume behind on the host.
+    docker rm -f -v "$CAP_PG" >/dev/null 2>&1 || true
     docker network rm "$CAP_NET" >/dev/null 2>&1 || true
   else
     for spec in $(cat "$STATE/lb" 2>/dev/null) $(cat "$STATE/servers" 2>/dev/null); do
@@ -442,6 +457,7 @@ seed_capacity() {
   wait || true
   [[ "$(wc -l <"$STATE/spread.tsv" | tr -d ' ')" == "$SPREAD" ]] \
     || cap_die "$(wc -l <"$STATE/spread.tsv" | tr -d ' ') of $SPREAD spread compositions were committed: $(head -c 400 "$PERF_OUT/spread.log")"
+  sed -n "$((SPREAD + 1)),$((2 * SPREAD))p" "$PERF_OUT/access-population.ids" >"$STATE/writes.ids"
   cap_sql "VACUUM ANALYZE" >/dev/null
   echo "capacity: seeded $PERF_POPULATION patients under care, $SPREAD with a composition"
 }
@@ -488,10 +504,12 @@ group_requests() {
     done <"$STATE/spread.tsv"
     ;;
   composition_commit)
-    while IFS=$'\t' read -r ehr uid; do
+    # The next SPREAD population EHRs, never the read set: a commit into an
+    # EHR the single-EHR queries read grows their answers step by step.
+    while read -r ehr; do
       plan_request composition_commit POST "$BASE/ehr/$ehr/composition" 201 "$clinician" \
         "$COMPOSITION" application/json
-    done <"$STATE/spread.tsv"
+    done <"$STATE/writes.ids"
     ;;
   aql_ehr)
     while IFS=$'\t' read -r ehr uid; do
