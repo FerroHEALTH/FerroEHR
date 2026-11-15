@@ -366,7 +366,16 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (an export), and `access_log::transfer` exports one EHR's records with the
   span and checkpoint and imports another system's into
   `access_log_imported_*`, outside this system's chain
-  (`audit/0028_access_log_checkpoint.sql`).
+  (`audit/0028_access_log_checkpoint.sql`). An imported entry ends at the
+  `retain_until` it states and its tombstone is kept as long again; the
+  hourly run then folds, per exporting system and within each span between
+  two imported checkpoints, only the positions before the first imported
+  record still kept (tombstones past their end and the other EHRs' links)
+  into `access_log_imported_gap` through `audit.fold_access_log_imported()`,
+  so every kept imported record stays hash-chained to its checkpoint with or
+  without link signatures (`audit/0034_access_log_imported_retention.sql`,
+  `access_log::imported`, our own design, #5664). `Checkpoints::verify`
+  verifies each imported checkpoint's stored span through `chain::verify`.
   Every access to EHR data writes one entry per EHR it
   reached, refusals and reads of the log included: the drain builds it from
   the access's `AuditEvent` (`access_log::entry`) and `AuditStore::insert_batch`
@@ -1078,9 +1087,23 @@ relationship of another party kind or of its own container is refused
 `LiveGrants::memberships` of the provider its acts-for relationship names,
 which `Capabilities::facts().provider_groups()` carries and the request's
 caller adds to the parties it acts for, one level deep, from the copy held,
-so the regional sharing example adds no transaction. The care check compares
-what each care relationship says, never its position in `relationships`
-(#5640). On a SCIM User's protected `PERSON`, a version whose only change
+so the regional sharing example adds no transaction. The care check
+(`grants::caller::check_care`) compares what each care relationship of the
+committed body says (kind, target, `time_validity`), and the record subjects
+it declares (namespace, id), with the last earlier version holding a body, never its position in `relationships` (#5640) and
+never the derived `binding_caller_fact` rows, whose lifecycle state and
+deleted-head rule made a SCIM deactivation or deletion read as a care change
+(#5628). A logical deletion holds no body and changes none; a SCIM
+deactivation keeps every care relationship and drops only plain Group
+memberships, so revocation needs no grant, and the binding refuses the login
+on its next request (`refused-inactive`, `refused-deprovisioned`) before the
+evaluator runs. A `write_care_relationship` roster whose version changes the
+lifecycle state is no roster (`protect::care_writer_roster`), and an
+`inactive` version takes no update (RM common master06 §Version Lifecycle),
+so the ADT system writes no version of a deactivated professional and cannot
+reactivate one. Its memberships decide nothing while the binding refuses the
+login; a SCIM deletion (master06 §Logical Deletion) or a write after
+reactivation cleans a leaver's roster up. On a SCIM User's protected `PERSON`, a version whose only change
 from its predecessor is to its care relationships (the two stored bodies
 compared with every care relationship and the `uid` taken out,
 `grants::caller::only_care_differs`) passes the party protection for a

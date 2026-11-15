@@ -21,6 +21,7 @@ pub mod details;
 pub mod entry;
 pub mod expiry;
 pub mod gap;
+pub mod imported;
 #[cfg(feature = "fhir")]
 pub mod projection;
 #[cfg(feature = "fhir")]

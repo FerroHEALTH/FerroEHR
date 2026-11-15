@@ -166,9 +166,9 @@ async fn the_portal_provisions_a_representative_who_binds_only_through_a_represe
     assert_eq!(
         body["archetype_details"]["template_id"]["value"],
         ferroehr::party_binding::shipped::PATIENT,
-        "{body}"
+        "the PERSON is of the patient template"
     );
-    assert!(body.get("roles").is_none(), "no professional ROLE: {body}");
+    assert!(body.get("roles").is_none(), "no professional ROLE");
 
     let (status, refused) = read_as_frank(&app, &ehr).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");

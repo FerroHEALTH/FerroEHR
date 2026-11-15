@@ -317,7 +317,10 @@ async fn refuse_scim_representation(
 ///
 /// Such a version touches nothing the protection guards, so the care check
 /// beside it decides it by that grant: the care delivery environment's ADT
-/// system rosters a provisioned professional (#5617). Our own design.
+/// system rosters a provisioned professional (#5617). A version in another
+/// lifecycle state than the one before is no roster: the ADT system neither
+/// reactivates a deactivated login nor revives a deleted one (#5628). Our
+/// own design.
 async fn care_writer_roster(
     tx: &mut PgConnection,
     (kind, vo_id): (Kind, VoId),
@@ -327,6 +330,17 @@ async fn care_writer_roster(
         return Ok(false);
     };
     if kind != Kind::Person || !Capabilities::current().holds(Operation::WriteCareRelationship) {
+        return Ok(false);
+    }
+    let states: i64 = sqlx::query_scalar(
+        "SELECT count(DISTINCT v.lifecycle_state) FROM version v \
+         WHERE v.vo_id = $1 AND v.sys_version = ANY($2)",
+    )
+    .bind(vo_id)
+    .bind([current, previous])
+    .fetch_one(&mut *tx)
+    .await?;
+    if states != 1 {
         return Ok(false);
     }
     let (Some(after), Some(before)) = (

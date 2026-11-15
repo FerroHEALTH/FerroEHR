@@ -317,29 +317,6 @@ async fn stamp(tx: &mut PgConnection, parties: &[Uuid]) -> Result<(), StorageErr
     Ok(())
 }
 
-/// The care relationships the `PERSON` `person` holds and the record
-/// subjects it declares, as their texts, sorted: what a commit compares
-/// before and after it writes them.
-///
-/// A text holds what a relationship says and leaves out its position in
-/// `relationships`, so a version that removes another relationship before
-/// it changes no care relationship (#5640).
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn care(tx: &mut PgConnection, person: Uuid) -> Result<Vec<String>, StorageError> {
-    let mut care: Vec<String> = sqlx::query_scalar(
-        "SELECT ROW(kind, party_id, terminology_id, code_string, target_id, lifecycle_state, \
-                    role_validity, validity, not_before, not_after)::text AS fact \
-         FROM binding_caller_fact WHERE holder_id = $1 AND target_id IS NOT NULL ORDER BY fact",
-    )
-    .bind(person)
-    .fetch_all(&mut *tx)
-    .await?;
-    care.extend(super::subject::texts(tx, person).await?);
-    Ok(care)
-}
-
 /// Deletes every fact a party of `vo_ids` holds or is about, and their
 /// stamps, on the erasure transaction `tx`; whether any fact went. The
 /// caller moves the grant revision, which reads every fact again.

@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use sqlx::postgres::PgRow;
 
+use crate::access_log::expiry::Log;
 use crate::access_log::store::{AccessLogError, AccessLogStore};
 use crate::db::acquire::acquire;
 use crate::versioning::audit::dv_date_time;
@@ -61,28 +62,42 @@ pub struct Folded {
 }
 
 impl AccessLogStore {
-    /// Fold up to `limit` tombstones whose own retention ended before `now`,
-    /// oldest end first, into one gap per run, in one transaction.
+    /// Fold the tombstones of `log` whose own retention ended before `now`
+    /// into one gap per run, in one transaction.
     ///
-    /// The fold is `audit.fold_access_log_tombstones()`, the one path a
-    /// record leaves the log by. Replicas serialise on its advisory lock, so
-    /// two runs never fold the same tombstone; a caller repeats the call
-    /// until fewer than `limit` tombstones come back.
+    /// On the local chain, up to `limit` tombstones fold, oldest end first,
+    /// through `audit.fold_access_log_tombstones()`, the one path a record
+    /// leaves the log by; a caller repeats the call until fewer than `limit`
+    /// come back. On the imported logs, per exporting system and within each
+    /// span between two imported checkpoints, the positions before the first
+    /// record still kept fold in whole runs that hold a tombstone, oldest
+    /// first, up to about `limit` positions, through
+    /// `audit.fold_access_log_imported()` (#5664); a caller repeats the call
+    /// until it writes no gap. Replicas serialise on each function's advisory
+    /// lock, so two runs never fold the same position.
     ///
     /// # Errors
     /// The store errors when the statement fails.
     pub async fn fold_expired(
         &self,
+        log: Log,
         now: jiff::Timestamp,
         limit: u16,
     ) -> Result<Folded, AccessLogError> {
-        let row = sqlx::query(
-            "SELECT folded, gaps FROM audit.fold_access_log_tombstones($1::text::timestamptz, $2)",
-        )
-        .bind(now.to_string())
-        .bind(i32::from(limit))
-        .fetch_one(&mut *acquire(self.pool()).await?)
-        .await?;
+        let statement = match log {
+            Log::Local => {
+                "SELECT folded, gaps FROM audit.fold_access_log_tombstones($1::text::timestamptz, $2)"
+            }
+            Log::Imported => {
+                "SELECT tombstones AS folded, gaps \
+                 FROM audit.fold_access_log_imported($1::text::timestamptz, $2)"
+            }
+        };
+        let row = sqlx::query(statement)
+            .bind(now.to_string())
+            .bind(i32::from(limit))
+            .fetch_one(&mut *acquire(self.pool()).await?)
+            .await?;
         let count = |column: &str| -> Result<u64, AccessLogError> {
             let value: i64 = row.try_get(column)?;
             u64::try_from(value)
