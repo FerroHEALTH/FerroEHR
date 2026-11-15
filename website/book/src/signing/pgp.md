@@ -141,7 +141,14 @@ did not. Protect the process memory as you protect the key file: no core
 dumps, no swap to unencrypted disk, no debugger attached in production.
 
 **Sign with Ed25519.** It is the one algorithm the server signs with that
-has neither a refusal nor a warning.
+has neither a refusal nor a warning, and the only one to use when the
+server carries clinical load. The server signs every committed version and
+every access-log link, so an access log that records an access to each EHR
+a query serves makes several signatures per request. An RSA private-key
+operation costs some hundred times an Ed25519 signature, so under an RSA key
+the CPU per request rises several times over and every write that signs a
+version (an EHR create, a composition commit) is slower. That cost is the
+RSA operation itself and no setting removes it.
 
 **An ECDSA or Ed448 signing key is refused at boot.** The private-key
 arithmetic of both runs on `crypto-bigint` 0.5, whose operations meant to be
