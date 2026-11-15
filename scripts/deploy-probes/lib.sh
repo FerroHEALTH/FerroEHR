@@ -160,6 +160,8 @@ wait_status() {
 http_code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 
 # Emit the report: the human summary, the uncovered ledger, and the JSON record.
+# The record's `image` is PROBE_IMAGE, a JSON object the entry script sets
+# from the running container, or null where none set it.
 probe_report() {
   local out="$1" platform="$2"
   echo
@@ -175,8 +177,8 @@ probe_report() {
 
   mkdir -p "$(dirname "$out")"
   {
-    printf '{"platform":"%s","passed":%d,"failed":%d,"uncovered":%d,"probes":[' \
-      "$platform" "$PROBE_PASS" "$PROBE_FAIL" "$PROBE_SKIP"
+    printf '{"platform":"%s","image":%s,"passed":%d,"failed":%d,"uncovered":%d,"probes":[' \
+      "$platform" "${PROBE_IMAGE:-null}" "$PROBE_PASS" "$PROBE_FAIL" "$PROBE_SKIP"
     local i
     for i in "${!PROBE_ROWS[@]}"; do
       [[ "$i" -gt 0 ]] && printf ','
