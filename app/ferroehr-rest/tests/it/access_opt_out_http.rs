@@ -619,7 +619,7 @@ async fn recording_and_reversing_an_opt_out_each_write_an_entry() {
         assert_eq!(status, StatusCode::OK, "opt-out {reverse}: {body}");
         let written = crate::access_log_http::entries(&pool, step, |s| {
             s.ehr_id.as_deref() == Some(ehr.as_str())
-                && s.action.as_deref() == Some("update")
+                && s.action.as_deref() == Some("U")
                 && s.content.contains("\"ehr-access:ehr-wide\"")
         })
         .await;
