@@ -963,11 +963,11 @@
           "admin-access-log"
         ],
         "summary": "Verify the access log against its newest checkpoint\n(`POST /admin/access-log/verify`). **Our own extension.**",
-        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked. A finding is not a request failure.",
+        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked, and every log imported from another system is verified\nagainst each of its checkpoints. A finding is not a request failure.",
         "operationId": "admin_verify_access_log",
         "responses": {
           "200": {
-            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain.",
+            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain, `imported` each failure of a log imported from another system against one of its checkpoints.",
             "content": {
               "application/json": {
                 "schema": {},
@@ -984,6 +984,13 @@
                     {
                       "chain_seq": 48190,
                       "finding": "record content was modified after it was written"
+                    }
+                  ],
+                  "imported": [
+                    {
+                      "system_id": "cdr-a.example.org",
+                      "checkpoint": 912,
+                      "finding": "the link at 905 does not link to the link before it"
                     }
                   ]
                 }

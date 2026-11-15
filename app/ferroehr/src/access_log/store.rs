@@ -476,7 +476,7 @@ impl AccessLogStore {
 
 /// The tombstone of `entry`, removed at `time_removed` on `grounds`: its uid,
 /// `system_id`, `time_recorded` and link, and nothing else of it.
-fn tombstone_of(
+pub(super) fn tombstone_of(
     entry: AccessLogEntry,
     time_removed: DvDateTime,
     grounds: NonEmptyVec<DvCodedText>,

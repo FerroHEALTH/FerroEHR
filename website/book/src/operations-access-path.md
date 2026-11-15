@@ -105,9 +105,9 @@ controller reviews.
 | `access_log_sign_duration_seconds` | histogram | `outcome` | Time to sign the links of one append, while the head of the chain is locked. Present only with an OpenPGP key. |
 | `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run: `chain` is `access_log` (the checkpoint) or `system` (the system chain's seal); `outcome` is `sealed`, `empty` or `failed`. |
 | `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run that did not fail. `time() - audit_seal_last_success_seconds` is the checkpoint age. |
-| `access_log_tombstones_total` | counter | (none) | Entries the retention run replaced by their tombstones. |
-| `access_log_folded_total` | counter | (none) | Tombstones the retention run folded into gaps of the chain once they were past their own end. |
-| `access_log_gaps_total` | counter | (none) | Gaps the retention run wrote, one per folded run of tombstones. |
+| `access_log_tombstones_total` | counter | `chain` | Entries the retention run replaced by their tombstones, `local` or `imported` from another system. |
+| `access_log_folded_total` | counter | `chain` | Tombstones the retention run folded into gaps of the chain once they were past their own end, `local` or `imported`. |
+| `access_log_gaps_total` | counter | `chain` | Gaps the retention run wrote, one per folded run of tombstones, `local` or `imported`. |
 | `access_log_retention_duration_seconds` | histogram | `outcome` | Each hourly retention run over the access log. |
 | `audit_drain_queue_depth` | gauge | (none) | Records waiting in the audit drain's queue, out of `[audit] queue_capacity`. |
 
