@@ -50,7 +50,7 @@ use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::capabilities::{Credentials, Grant};
 use crate::party_binding::grants::operation::{
     BINDING_ISSUER, DEVICE, DEVICE_IDENTIFIER_ISSUER, FACILITY, FACILITY_PARTS, ORIGIN, Operation,
-    READER, RELAY, ROLE, SUBJECT_NAMESPACE, TOKEN_SCOPE,
+    READER, RELAY, ROLE, ROLE_TERMINOLOGY, SUBJECT_NAMESPACE, TOKEN_SCOPE,
 };
 use crate::party_binding::grants::trust::FederationTrust;
 
@@ -154,7 +154,8 @@ fn check_terms(facts: &Facts) -> Result<(), ServiceError> {
 /// `origin` of [`Operation::DataOrigin`], the `reader` of
 /// [`Operation::ReadChangeFeed`] (a name of the reader registry's grammar),
 /// and the `binding_issuer` of [`Operation::ScimProvision`] with at least one
-/// `token_scope`.
+/// `token_scope`, and its `role_terminology` when it names a `role` its client
+/// may assign.
 ///
 /// # Errors
 /// [`ServiceError::BadRequest`] (`400`) naming the capability's operation
@@ -207,6 +208,9 @@ fn check_elements(facts: &Facts) -> Result<(), ServiceError> {
                         "the capability granting scim_provision names no token_scope: it names \
                          the scope, one token, that the client's access token must hold",
                     ));
+                }
+                if !credentials.texts(ROLE).is_empty() {
+                    one(ROLE_TERMINOLOGY)?;
                 }
             }
             _ => {}
