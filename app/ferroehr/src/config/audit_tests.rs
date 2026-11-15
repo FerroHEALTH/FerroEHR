@@ -16,20 +16,12 @@ use super::tests::{assemble_ok, env, file_refusal, toml_file};
 #[test]
 fn the_removed_store_retention_keys_are_unknown() {
     for (key, value) in [("retention", "\"P5Y\""), ("sgb_v_309_controller", "true")] {
-        let file = toml_file(&format!("[audit.store]\n{key} = {value}\n"));
-        let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err("the removed key");
+        assert_removed_audit_key("store", key, value);
+        let text = file_refusal(&format!("[audit.store]\n{key} = {value}\n"));
         assert!(
-            err.to_string().contains(&format!("unknown field `{key}`")),
-            "{key}: {err}"
+            text.contains(&format!("unknown field `{key}`")),
+            "{key}: {text}"
         );
-        let variable = format!("FERROEHR__AUDIT__STORE__{}", key.to_uppercase());
-        let err = assemble(
-            None,
-            &env(&[(variable.as_str(), value.trim_matches('"'))]),
-            &[],
-        )
-        .expect_err("the removed variable");
-        assert!(err.to_string().contains(&variable), "{variable}: {err}");
     }
 }
 
@@ -50,13 +42,17 @@ fn a_flat_syslog_tls_key_is_refused_as_unknown() {
     }
 }
 
-/// `[audit.access_log] key = value` refused by the file loader and by its
-/// environment variable, each naming `key` (#5562).
-fn assert_removed_access_log_key(key: &str, value: &str) {
-    let file = toml_file(&format!("[audit.access_log]\n{key} = {value}\n"));
+/// `[audit.<table>] key = value` refused by the file loader and by its
+/// environment variable, each naming `key` (#5562, #5660).
+fn assert_removed_audit_key(table: &str, key: &str, value: &str) {
+    let file = toml_file(&format!("[audit.{table}]\n{key} = {value}\n"));
     let err = assemble(Some(file.path()), &env(&[]), &[]).expect_err("the removed key");
     assert!(err.to_string().contains(key), "{key}: {err}");
-    let variable = format!("FERROEHR__AUDIT__ACCESS_LOG__{}", key.to_uppercase());
+    let variable = format!(
+        "FERROEHR__AUDIT__{}__{}",
+        table.to_uppercase(),
+        key.to_uppercase()
+    );
     let err = assemble(
         None,
         &env(&[(variable.as_str(), value.trim_matches('"'))]),
@@ -70,21 +66,21 @@ fn assert_removed_access_log_key(key: &str, value: &str) {
 /// that turned them on is an unknown key (#5562).
 #[test]
 fn the_removed_checkpoints_switch_is_an_unknown_key() {
-    assert_removed_access_log_key("checkpoints", "true");
+    assert_removed_audit_key("access_log", "checkpoints", "true");
 }
 
 /// Checkpoints run on a built-in schedule, so the interval is an unknown
 /// key (#5562).
 #[test]
 fn the_removed_checkpoint_interval_is_an_unknown_key() {
-    assert_removed_access_log_key("checkpoint_interval", "\"1h\"");
+    assert_removed_audit_key("access_log", "checkpoint_interval", "\"1h\"");
 }
 
 /// Links are not signed one by one, so the switch that signed them is an
 /// unknown key (#5562).
 #[test]
 fn the_removed_sign_links_switch_is_an_unknown_key() {
-    assert_removed_access_log_key("sign_links", "true");
+    assert_removed_audit_key("access_log", "sign_links", "true");
 }
 
 /// `trusted_key_files` is trust and stays a key of the section.
