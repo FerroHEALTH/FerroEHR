@@ -30,6 +30,7 @@ pub mod agreement;
 pub mod bootstrap;
 pub mod caller;
 pub mod capabilities;
+pub mod care;
 pub(crate) mod derive;
 pub mod live;
 pub mod operation;

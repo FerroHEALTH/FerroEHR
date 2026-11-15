@@ -1182,8 +1182,9 @@ whose `DV_IDENTIFIER` holds the pseudonym and its namespace. An identifier
 another organisation issued belongs in `details` (RM Demographic IM §2.1.3),
 and the cross-reference stays out of the EHR (RM EHR IM §EHR Status). FerroEHR
 projects it into the party table `binding_record_subject` at the commit of the
-`PERSON` and holds it in memory on every replica, so a decision adds no
-database transaction and no call to the identity source.
+`PERSON`, and each replica holds the resolutions it uses in a bounded cache,
+so a decision on a held subject adds no database transaction, a miss costs one
+indexed read, and no decision calls the identity source.
 
 **This is an accepted trade-off** (owner decision, 2026-11-14,
 [#5634](https://github.com/FerroHEALTH/FerroEHR/issues/5634)). Without the

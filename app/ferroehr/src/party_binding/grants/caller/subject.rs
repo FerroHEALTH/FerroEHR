@@ -62,23 +62,6 @@ pub(crate) struct DeclaredSubject {
     pub(crate) subject: EhrSubject,
 }
 
-/// One stored record subject, as a replica holds it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SubjectRow {
-    /// The reference.
-    pub(crate) subject: EhrSubject,
-    /// The holder head's `version_lifecycle_state` code.
-    pub(crate) lifecycle_state: String,
-}
-
-impl SubjectRow {
-    /// Whether the holder head is `complete` or `incomplete`, the states in
-    /// which its care relationships hold too.
-    pub(crate) fn live(&self) -> bool {
-        matches!(self.lifecycle_state.as_str(), "532" | "553")
-    }
-}
-
 /// Whether `node` is an element named by the record subject code.
 fn names_record_subject(node: &Value) -> bool {
     node.get("name")
@@ -288,6 +271,52 @@ pub(crate) async fn texts(
     .bind(person)
     .fetch_all(&mut *tx)
     .await?)
+}
+
+/// The `complete` or `incomplete` `PERSON` that declares `subject`, read on
+/// `conn` from the unique constraint of `binding_record_subject`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn declaring(
+    conn: &mut PgConnection,
+    subject: &EhrSubject,
+) -> Result<Option<Uuid>, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT holder_id FROM binding_record_subject \
+         WHERE namespace = $1 AND subject_id = $2 AND lifecycle_state IN ('532', '553')",
+    )
+    .bind(&subject.namespace)
+    .bind(&subject.id)
+    .fetch_optional(&mut *conn)
+    .await?)
+}
+
+/// The record subjects each of `persons` declares while it is `complete` or
+/// `incomplete`, read on `conn` from the primary key of
+/// `binding_record_subject`, by `PERSON` and position.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn declared_by(
+    conn: &mut PgConnection,
+    persons: &[Uuid],
+) -> Result<Vec<(Uuid, EhrSubject)>, StorageError> {
+    if persons.is_empty() {
+        return Ok(Vec::new());
+    }
+    let rows: Vec<(Uuid, String, String)> = sqlx::query_as(
+        "SELECT holder_id, namespace, subject_id FROM binding_record_subject \
+         WHERE holder_id = ANY($1) AND lifecycle_state IN ('532', '553') \
+         ORDER BY holder_id, ordinal",
+    )
+    .bind(persons)
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|(person, namespace, id)| (person, EhrSubject::new(namespace, id)))
+        .collect())
 }
 
 #[cfg(test)]

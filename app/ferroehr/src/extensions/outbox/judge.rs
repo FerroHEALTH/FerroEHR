@@ -66,10 +66,14 @@ impl FerroEhrService {
         let stored = crate::storage::access_projection::settings_of_many(&self.pool, &ehr_ids)
             .await
             .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
-        let verdicts: BTreeMap<EhrId, Arc<Verdict>> = stored
-            .into_iter()
-            .map(|(ehr_id, stored)| (ehr_id, access.judge_ehr(ehr_id, &entry_of(ehr_id, stored))))
-            .collect();
+        let mut verdicts: BTreeMap<EhrId, Arc<Verdict>> = BTreeMap::new();
+        for (ehr_id, stored) in stored {
+            let verdict = access
+                .judge_ehr(ehr_id, &entry_of(ehr_id, stored))
+                .await
+                .map_err(|e| ServiceError::overloaded(UNANSWERED, e))?;
+            verdicts.insert(ehr_id, verdict);
+        }
         let contributions: Vec<Uuid> = events
             .iter()
             .filter(|event| {

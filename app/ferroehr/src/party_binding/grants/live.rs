@@ -5,6 +5,10 @@
 //! facts, from which every request resolves its caller's capabilities and
 //! facts with no read of its own.
 //!
+//! The care relationships of subjects are no caller facts: the care copy
+//! ([`crate::party_binding::grants::care`]) holds them in caches of a fixed
+//! bound, read on a miss (#5615).
+//!
 //! The copy is read again when a notification on [`CHANNEL`] marks it stale,
 //! when the listener is down, and after a request whose own commit changed a
 //! grant or a fact, so the next request on every replica decides under the
@@ -28,16 +32,15 @@ use uuid::Uuid;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::caller::store::{Changed, FactRow};
-use crate::party_binding::grants::caller::subject::SubjectRow;
 use crate::party_binding::grants::caller::{self, CallerFacts, CareTeam, FactKind, FactValue};
 use crate::party_binding::grants::capabilities::{
     Actor, Capabilities, Client, ClientState, Credentials, Grant, Provider,
 };
+use crate::party_binding::grants::care::CareCopy;
 use crate::party_binding::grants::operation::{GrantCeiling, Operation};
 use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
 use crate::party_binding::grants::trust::{AgreementPosture, FederationTrust};
-use crate::policy_register::listen::Listened;
-use crate::storage::access_projection::EhrSubject;
+use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
 
 mod subjects;
@@ -74,6 +77,14 @@ pub async fn tracking<F: Future>(fut: F) -> (F::Output, bool) {
 #[error("the policy grants could not be read")]
 pub struct GrantsUnavailable(#[from] StorageError);
 
+impl From<GrantsUnavailable> for crate::error::ServiceError {
+    /// A copy that cannot be read answers `503`: the request is refused, never
+    /// decided without the facts it needs.
+    fn from(error: GrantsUnavailable) -> Self {
+        Self::overloaded("the access facts could not be read", error)
+    }
+}
+
 impl GrantsUnavailable {
     /// The store failure.
     #[must_use]
@@ -100,47 +111,23 @@ struct HeldFacts {
     revision: Option<i64>,
     /// The facts about each party.
     by_party: BTreeMap<Uuid, Arc<[FactRow]>>,
-    /// The record subjects each `PERSON` declares.
-    subjects_of: BTreeMap<Uuid, Arc<[SubjectRow]>>,
-    /// The `PERSON` that declares each record subject.
-    person_by_subject: BTreeMap<EhrSubject, Uuid>,
 }
 
 impl HeldFacts {
     /// These facts with `changed` applied: each party read holds the facts
-    /// and the record subjects read, and a party read with none holds none.
-    fn with(&self, mut changed: Changed) -> Self {
+    /// read, and a party read with none holds none.
+    fn with(&self, changed: Changed) -> Self {
         let mut by_party = self.by_party.clone();
-        let mut subjects_of = self.subjects_of.clone();
-        let mut person_by_subject = self.person_by_subject.clone();
         for (party, facts) in changed.parties {
             if facts.is_empty() {
                 by_party.remove(&party);
             } else {
                 by_party.insert(party, facts.into());
             }
-            for gone in subjects_of
-                .remove(&party)
-                .iter()
-                .flat_map(|rows| rows.iter())
-            {
-                if person_by_subject.get(&gone.subject) == Some(&party) {
-                    person_by_subject.remove(&gone.subject);
-                }
-            }
-            let Some(came) = changed.subjects.remove(&party) else {
-                continue;
-            };
-            for row in &came {
-                person_by_subject.insert(row.subject.clone(), party);
-            }
-            subjects_of.insert(party, came.into());
         }
         Self {
             revision: Some(changed.revision),
             by_party,
-            subjects_of,
-            person_by_subject,
         }
     }
 }
@@ -160,6 +147,8 @@ pub struct LiveGrants {
     installing: tokio::sync::Mutex<()>,
     /// The listener on [`CHANNEL`].
     listened: Arc<Listened>,
+    /// The subjects' care relationships and the teams' patients held.
+    care: Arc<CareCopy>,
 }
 
 impl fmt::Debug for LiveGrants {
@@ -175,8 +164,11 @@ impl LiveGrants {
     /// on the first request.
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
+        let care = Arc::new(CareCopy::new());
+        let dropping: Arc<dyn Subscriber> = Arc::<CareCopy>::clone(&care);
         Self {
-            listened: Arc::new(Listened::new(CHANNEL)),
+            listened: Arc::new(Listened::with_subscriber(CHANNEL, dropping)),
+            care,
             pool,
             namespace: RwLock::new(Arc::from(
                 crate::config::binding::PartyBindingConfig::default()
@@ -320,11 +312,17 @@ impl LiveGrants {
                 let _installing = self.installing.lock().await;
                 let since = self.facts_revision();
                 let changed = read_facts(&mut conn, since).await?;
+                let mut stamped: Vec<Uuid> =
+                    changed.parties.iter().map(|(party, _)| *party).collect();
+                stamped.sort_unstable();
+                let teams = changed.cared_teams.clone();
+                let declared = changed.declared.clone();
                 let held = self.held_facts();
                 if held.revision.is_none_or(|held| held < changed.revision) {
                     *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
                         Arc::new(held.with(changed));
                 }
+                self.care.drop_changed(&stamped, &teams, &declared).await;
             }
             Ok::<(), StorageError>(())
         };
@@ -385,6 +383,7 @@ impl LiveGrants {
         }
         *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
             Arc::new(HeldFacts::default().with(loaded.facts));
+        self.care.drop_all();
         *self.held.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(Held {
             revision: Some(loaded.revision),
             clients,
@@ -487,6 +486,21 @@ impl LiveGrants {
             }
         }
         CallerFacts::new(clearances, purposes, care_teams)
+    }
+
+    /// How many subjects and care teams the care copy holds, and the patients
+    /// those teams hold together; each bounded
+    /// ([`crate::party_binding::grants::care::SUBJECTS`],
+    /// [`crate::party_binding::grants::care::CENSUS`]).
+    #[must_use]
+    pub fn care_held(&self) -> (u64, u64, u64) {
+        self.care.held()
+    }
+
+    /// How many parties the copy of the caller facts holds facts of.
+    #[must_use]
+    pub fn parties_held(&self) -> usize {
+        self.held_facts().by_party.len()
     }
 
     /// Every federation agreement in force at `now`, once per client

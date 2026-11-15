@@ -122,12 +122,13 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError`] when the clinical store cannot answer.
     pub async fn ehr_subject_person(&self, ehr_id: EhrId) -> Result<Option<Uuid>, ServiceError> {
-        Ok(
-            crate::storage::ehr_repo::ehr_subject_columns(&self.pool, ehr_id)
-                .await?
-                .and_then(|(id, namespace)| EhrSubject::stored(namespace, id))
-                .and_then(|subject| self.grants.person_of(&subject)),
-        )
+        let subject = crate::storage::ehr_repo::ehr_subject_columns(&self.pool, ehr_id)
+            .await?
+            .and_then(|(id, namespace)| EhrSubject::stored(namespace, id));
+        match subject {
+            Some(subject) => Ok(self.grants.person_of(&subject).await?),
+            None => Ok(None),
+        }
     }
 
     /// Returns the EHRs whose `EHR_STATUS` subject reference names the
@@ -146,10 +147,11 @@ impl FerroEhrService {
     ) -> Result<Vec<EhrId>, ServiceError> {
         let named = EhrSubject::new(namespace, subject_id);
         let mut refs = vec![named.clone()];
-        if let Some(person) = self.grants.person_of(&named) {
+        if let Some(person) = self.grants.person_of(&named).await? {
             refs.extend(
                 self.grants
                     .subjects_of(person)
+                    .await?
                     .into_iter()
                     .filter(|subject| subject.namespace != *self.grants.namespace()),
             );

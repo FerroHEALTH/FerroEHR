@@ -36,15 +36,15 @@ use crate::access_eval::procedure::{
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
-use crate::party_binding::grants::live::LiveGrants;
+use crate::party_binding::grants::live::{GrantsUnavailable, LiveGrants};
 use crate::service::ehr::access_settings::EhrAccessSettings;
-use crate::storage::access_projection::EhrSubject;
-use crate::storage::access_projection::Revision;
+use crate::storage::access_projection::{EhrSubject, Revision};
 
 task_local! {
     static REQUEST_ACCESS: Arc<RequestAccess>;
 }
 
+mod care;
 /// The evaluator of one request: the caller, what it asks, the policy and
 /// the category map in force when it began, and each EHR's verdict once
 /// judged.
@@ -428,44 +428,24 @@ impl RequestAccess {
         })
     }
 
-    /// The subject references of the `PERSON`s the caller has a live care
-    /// relationship to ([`LiveGrants::cared_for_by`]).
-    #[must_use]
-    pub fn cared_subjects(&self) -> Vec<EhrSubject> {
-        let teams: Vec<Uuid> = self
-            .caller
-            .facts
-            .care_teams()
-            .iter()
-            .map(CareTeam::team)
-            .collect();
-        self.grants.as_ref().map_or_else(Vec::new, |grants| {
-            grants.cared_for_by(&teams, self.today(), self.policy().grace)
-        })
-    }
-
     /// Judges the EHR `ehr_id` as `entry` reads it, and keeps the verdict for
     /// the rest of the request.
-    pub fn judge_ehr(&self, ehr_id: EhrId, entry: &EhrEntry) -> Arc<Verdict> {
-        let judged = self.judgement_of(ehr_id, entry, self.cares_for(entry));
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the subject's care relationships are not
+    /// held and cannot be read.
+    pub async fn judge_ehr(
+        &self,
+        ehr_id: EhrId,
+        entry: &EhrEntry,
+    ) -> Result<Arc<Verdict>, GrantsUnavailable> {
+        let judged = self.judgement_of(ehr_id, entry, self.cares_for(entry).await?);
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .insert(ehr_id, judged);
-        verdict
-    }
-
-    /// Whether the caller has a live care relationship to the `PERSON` the
-    /// subject reference of `entry` names.
-    fn cares_for(&self, entry: &EhrEntry) -> bool {
-        let under_care_of = match (&self.grants, &entry.subject) {
-            (Some(grants), Some(subject)) => grants
-                .person_of(subject)
-                .map_or_else(Vec::new, |person| grants.under_care_of(person)),
-            _ => Vec::new(),
-        };
-        self.cared(&under_care_of)
+        Ok(verdict)
     }
 
     /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller
