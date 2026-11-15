@@ -360,7 +360,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   transaction (the drain's index rows, tokens and feed debt) and the head is
   held for one signature at most. No link carries a signature; a checkpoint
   insert must name the link the log holds at its position
-  (`audit/0035_access_log_batch_checkpoint.sql`, our own design, #5704).
+  (`audit/0036_access_log_batch_checkpoint.sql`, our own design, #5704).
   Without a key nothing is sealed, and no key of `[audit.access_log]`
   switches it (#5562). `access_log::publish` writes the newest checkpoint
   every 30 seconds as its own write-once file under `[audit.access_log]
