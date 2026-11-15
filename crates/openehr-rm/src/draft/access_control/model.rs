@@ -51,6 +51,17 @@ pub static CLASSES: &[RmClass] = &[
                 ref_target: None,
             },
             RmAttribute {
+                name: "organisation_type",
+                declared_type: "DV_CODED_TEXT",
+                formal: None,
+                container: Container::None,
+                is_mandatory: false,
+                type_params: &[],
+                cardinality: None,
+                nonempty: false,
+                ref_target: None,
+            },
+            RmAttribute {
                 name: "caller_kind",
                 declared_type: "DV_CODED_TEXT",
                 formal: None,

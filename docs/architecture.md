@@ -717,7 +717,14 @@ which is what makes an optional stage safe to disable:
    actor scope's `role` matches the coded `name` of a `ROLE` in force the
    caller performs (RM Demographic IM `PARTY.type()`), held as a caller fact
    (`FactKind::Role`, migration `party/0042`); a token's role claims stay
-   the coarse RBAC class gate and drive no rule. The `ROLE` is the
+   the coarse RBAC class gate and drive no rule, except that a caller
+   admitted under a federation agreement adds the roles and facility types
+   its verified credential attests (`professional.hp_professional_role`,
+   `provider.facility_type`), each a code of the system it names, matched by
+   an actor scope's `role` and `organisation_type` (#5691, our own design).
+   An actor scope's `organisation_type` also matches the coded name of the
+   `ORGANISATION` a system client acts for (`FactKind::OrganisationType`,
+   `party/0046`). The `ROLE` is the
    assignment and the rule the permission, the split of the XACML
    Hierarchical RBAC Profile. A SCIM User's `roles` (RFC 7643 §4.1.2) are
    such `ROLE`s (#5625, `service::demographic::user_roles`): each value one
@@ -930,8 +937,8 @@ care-team membership) and `audit-event-action` `C`, `R`, `U`, `D`. A value of
 a terminology the group holds no term of, or a code outside the group, is
 refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the care relationship codes are qualifiers, never
-operations. Role, sensitivity, category, purpose and legal ground stay in the
-terminology the jurisdiction names and are compared by
+operations. Role, organisation type, sensitivity, category, purpose and
+legal ground stay in the terminology the jurisdiction names and are compared by
 terminology id and code (`ForeignCode`). The draft invariants of
 `access_control_invariants` read their groups through it, and the evaluator
 and the `EHR_ACCESS` and `ACCESS_POLICY` write checks read no other code. RM
@@ -1052,7 +1059,9 @@ access evaluator reads about a caller (migrations `party/0039`, `party/0042`;
 `party/0044` keys a membership by its code, `MBR`):
 `binding_caller_fact`, one row per `ROLE` whose `name` is a `DV_CODED_TEXT`
 of the jurisdiction's terminology (the role its performer holds while the
-`ROLE` is in force, read with `ForeignCode::read`, #5621), and per care
+`ROLE` is in force, read with `ForeignCode::read`, #5621), per `ORGANISATION`
+whose `name` is one (its own type, `organisation_type`, `party/0046`, #5691),
+and per care
 relationship a `PERSON` holds (an inline
 `PARTY_RELATIONSHIP` whose `name` or `details` carry a membership, HL7 v3
 `RoleClass#MBR`, or `openehr_access::under_care_of`, RM demographic `party_relationship.adoc`: `source`,
@@ -1366,8 +1375,13 @@ against `ferroehr::config::federation::trust`, what `[auth]` trusts of each
 the EHDS Art. 13(4) and Annex II 3.2(b) rules of an organisation and of a
 `chained` access. The admission judges the agreement again for the caller's
 own issuer, so one that no longer keeps them, after its partner changed,
-admits nobody. No rule is a country's: the jurisdiction is the agreement's
-element and the consent source is `registry` or `local`. `/management/info`
+admits nobody. No rule is a country's: the agreement names no jurisdiction,
+the consent source is `registry` or `local`, and a national exclusion such
+as Wabvpz Art. 15f is a deny rule of the controller's `ACCESS_POLICY` over
+the roles and facility types the caller's credential attests, refused at
+step 4 as `refused-policy-denied` with the rule's `legal_grounds` (#5691;
+`scripts/checks/access-decides-no-country.sh` refuses a country in the
+access decision). `/management/info`
 reads the agreements in force from the copy on each request. **Our own
 design:** no specification gives a capability an authorization meaning or
 governs a data-sharing agreement's form.

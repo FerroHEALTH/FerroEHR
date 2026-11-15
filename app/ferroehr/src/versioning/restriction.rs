@@ -14,7 +14,7 @@ use crate::access_eval::procedure::{Outcome, Verdict};
 use crate::access_eval::scope::Item;
 
 use crate::error::ServiceError;
-use crate::error::refusal::Missing;
+use crate::error::refusal::{Missing, Refused};
 use crate::ids::{EhrId, VoId};
 use crate::storage::access_projection::Revision;
 
@@ -116,7 +116,10 @@ impl WriteGate {
         }
         self.access.note(self.ehr_id, &judged, written);
         Err(ServiceError::refused(
-            code,
+            Refused {
+                code,
+                legal_grounds: self.access.refusal_grounds(Some(self.ehr_id)),
+            },
             format!(
                 "{code}: the access directives of EHR {} refuse this write",
                 self.ehr_id
@@ -215,7 +218,10 @@ async fn ensure_not_access_restricted_tx(
         (Outcome::Refused(_), _) if !named => Ok(Some(gate)),
         (Outcome::Refused(_), None) if deferred => Ok(Some(gate)),
         (Outcome::Refused(code), _) => Err(ServiceError::refused(
-            code,
+            Refused {
+                code,
+                legal_grounds: access.refusal_grounds(Some(ehr_id)),
+            },
             format!("{code}: the access directives of EHR {ehr_id} refuse this write"),
         )),
     }

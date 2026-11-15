@@ -24,7 +24,7 @@ use std::sync::Arc;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::party_binding::grants::caller::CallerFacts;
+use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::party_binding::grants::derive::walk;
 use crate::party_binding::grants::operation::{NO_SUBJECT_NAMESPACE, Operation, SCOPES};
 use crate::party_binding::policy_mark::coded;

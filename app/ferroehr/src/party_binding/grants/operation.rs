@@ -83,10 +83,9 @@ pub const TOKEN_SCOPE: &str = "token_scope";
 
 /// The codes naming the elements of a federation agreement's credentials,
 /// which [`crate::party_binding::grants::agreement::Agreement`] reads.
-pub const AGREEMENT: [&str; 17] = [
+pub const AGREEMENT: [&str; 16] = [
     "agreement_name",
     "agreement_version",
-    "jurisdiction",
     "exchange",
     "purpose",
     "gdpr_art_6_1",
