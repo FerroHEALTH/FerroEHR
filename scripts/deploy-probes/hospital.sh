@@ -1089,12 +1089,11 @@ hospital_rbac() {
 hospital_abac() {
   local eva
   eva="$(hv ehr_eva)"
-  probe "P-HOSP-ABAC-CARE" "$PROBE_WORKING" "server" "#5610 #5735" \
+  probe "P-HOSP-ABAC-CARE" "$PROBE_WORKING" "server" "#5610 #5737" \
     "Dr. Jansen reads the cardiology data she treats Eva for, with a purpose, on both instances"
   h_read 1 kc:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen reads the encounter"
   h_read 2 kc:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen reads the vital signs"
-  # NOTE: a deny rule naming purposes applies to a request that declares none, at step 4 before step 7 (operational-policy.md, Controller rules).
-  h_read 1 kc:anna "$eva" c_encounter "" 403 refused-policy-denied "Dr. Jansen without a purpose"
+  h_read 1 kc:anna "$eva" c_encounter "" 403 refused-purpose-missing "Dr. Jansen without a purpose"
   h_read 2 kc:anna "$eva" c_encounter ETREAT 403 refused-policy-denied \
     "Dr. Jansen with a purpose she may not declare"
   probe_done
