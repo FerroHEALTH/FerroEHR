@@ -78,7 +78,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 12);
-    assert_eq!(applied("clinical").await, 46);
+    assert_eq!(applied("clinical").await, 47);
     assert_eq!(applied("party").await, 45);
     assert_eq!(applied("audit").await, 34);
 
@@ -101,6 +101,8 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(
         tables("clinical").await,
         [
+            "access_care",
+            "access_care_state",
             "access_class",
             "access_delay",
             "access_policy_version",
@@ -285,9 +287,38 @@ async fn only_the_guarded_ehr_columns_name_a_subject_in_the_clinical_domain() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
 
+    // A keyed digest of a subject reference (HMAC-SHA-256, #5699) names no
+    // subject: its key never reaches the database. Such a column is held to
+    // the digest's 32 octets by a check, so it cannot carry an identifier.
+    let digests: Vec<(String, String)> = sqlx::query_as(
+        "SELECT c.table_name, c.column_name FROM information_schema.columns c \
+         WHERE c.table_schema = 'clinical' AND c.column_name LIKE 'subject%' \
+         AND c.data_type = 'bytea' AND EXISTS ( \
+             SELECT 1 FROM information_schema.check_constraints k \
+             JOIN information_schema.constraint_column_usage u \
+               ON u.constraint_schema = k.constraint_schema \
+              AND u.constraint_name = k.constraint_name \
+             WHERE u.table_schema = c.table_schema AND u.table_name = c.table_name \
+             AND u.column_name = c.column_name \
+             AND k.check_clause LIKE '%octet_length(' || c.column_name || ') = 32%') \
+         ORDER BY 1, 2",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("scan the clinical domain for subject digests");
+    assert_eq!(
+        digests,
+        vec![
+            ("access_care".to_owned(), "subject_digest".to_owned()),
+            ("ehr".to_owned(), "subject_digest".to_owned()),
+        ],
+        "the care projection's keyed digests, each held to 32 octets"
+    );
     let columns: Vec<(String, String)> = sqlx::query_as(
         "SELECT table_name, column_name FROM information_schema.columns \
          WHERE table_schema = 'clinical' AND column_name LIKE 'subject%' \
+         AND (table_name, column_name) NOT IN \
+             (('access_care', 'subject_digest'), ('ehr', 'subject_digest')) \
          ORDER BY 1, 2",
     )
     .fetch_all(&pool)

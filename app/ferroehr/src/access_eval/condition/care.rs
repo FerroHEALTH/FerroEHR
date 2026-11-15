@@ -37,6 +37,35 @@ impl RequestAccess {
             .await
     }
 
+    /// The care teams the caller is a member of, by container.
+    #[must_use]
+    pub fn care_team_ids(&self) -> Vec<Uuid> {
+        self.caller
+            .facts
+            .care_teams()
+            .iter()
+            .map(CareTeam::team)
+            .collect()
+    }
+
+    /// Of the EHRs `entries` name, those whose subject the caller has a live
+    /// care relationship to, as [`Self::cares_for`] judges each.
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the care copy misses and cannot read.
+    pub async fn cared_ehrs(
+        &self,
+        entries: &[(crate::ids::EhrId, EhrEntry)],
+    ) -> Result<Vec<Uuid>, GrantsUnavailable> {
+        let mut cared = Vec::new();
+        for (ehr_id, entry) in entries {
+            if self.cares_for(entry).await? {
+                cared.push(ehr_id.0);
+            }
+        }
+        Ok(cared)
+    }
+
     /// Whether the caller has a live care relationship to the `PERSON` the
     /// subject reference of `entry` names; a caller of no care team has none,
     /// and reads nothing for it.

@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use openehr_rm::draft::access_control::terminology::AccessDefault;
 
-use crate::access_eval::condition::{AccessCondition, InForce, RequestAccess, current};
+use crate::access_eval::condition::{AccessCondition, Care, InForce, RequestAccess, current};
 use crate::access_eval::procedure::{Lifted, Outcome, Verdict};
 use crate::access_eval::scope::{CategoryIndex, Item};
 use crate::error::ServiceError;
@@ -174,7 +174,9 @@ impl FerroEhrService {
 
     /// The condition a query of the running request applies: every settings
     /// class judged from the copied classes, every EHR with no settings by
-    /// the default; unrestricted outside a request.
+    /// the default; unrestricted outside a request. Its care is
+    /// [`Care::Unresolved`] until [`Self::resolve_care`] knows which EHRs the
+    /// query reads.
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the classes cannot be read.
@@ -183,8 +185,46 @@ impl FerroEhrService {
             return Ok(AccessCondition::default());
         };
         let classes = self.ehr_access_classes().await?;
-        let cared = access.cared_subjects().await?;
-        Ok(access.condition(&classes, cared))
+        Ok(access.condition(&classes, Care::Unresolved))
+    }
+
+    /// `condition` with the caller's care read for a query whose rows all
+    /// belong to `pinned` when it names them, or to any EHR otherwise.
+    ///
+    /// A condition no verdict of which reads care, or one already resolved,
+    /// stays as it is. For pinned EHRs the care of each is read from the
+    /// evaluator's copies and only the cared ones are bound; otherwise the
+    /// subjects of every patient under the caller's care teams are (#5699).
+    /// No openEHR spec governs this: our own design.
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when the settings copy or the care copy
+    /// cannot be read.
+    pub async fn resolve_care(
+        &self,
+        condition: &AccessCondition,
+        pinned: Option<&[EhrId]>,
+    ) -> Result<AccessCondition, ServiceError> {
+        let unresolved = condition
+            .groups()
+            .is_some_and(|groups| groups.cared == Care::Unresolved);
+        if !unresolved || !condition.reads_care() {
+            return Ok(condition.clone());
+        }
+        let Some(access) = current() else {
+            return Ok(condition.with_care(Care::Census(Vec::new().into())));
+        };
+        let care = match pinned {
+            Some(ehrs) => {
+                let entries = self.ehr_access_entries(ehrs).await?;
+                Care::Ehrs(access.cared_ehrs(&entries).await?.into())
+            }
+            None => match projected_care(&access) {
+                Some(care) if self.care_projection_current() => Care::Projected(care),
+                _ => Care::Census(access.cared_subjects().await?.into()),
+            },
+        };
+        Ok(condition.with_care(care))
     }
 
     /// Judges every EHR the query `result` of the running request served
@@ -292,4 +332,24 @@ impl FerroEhrService {
         }
         Ok(())
     }
+}
+
+/// The probe of the clinical care projection for the caller of `access`, or
+/// `None` when the policy's grace has a unit of time below a day, which a
+/// date cannot carry as [`crate::party_binding::grants::caller::CareTeam::live_on`]
+/// judges it; that query binds the census.
+fn projected_care(access: &RequestAccess) -> Option<crate::access_eval::condition::ProjectedCare> {
+    let grace = access.policy().grace;
+    let calendar = grace.get_hours() == 0
+        && grace.get_minutes() == 0
+        && grace.get_seconds() == 0
+        && grace.get_milliseconds() == 0
+        && grace.get_microseconds() == 0
+        && grace.get_nanoseconds() == 0
+        && !grace.is_negative();
+    calendar.then(|| crate::access_eval::condition::ProjectedCare {
+        teams: access.care_team_ids().into(),
+        day: access.today(),
+        grace: grace.to_string(),
+    })
 }

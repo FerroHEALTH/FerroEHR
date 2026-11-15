@@ -752,12 +752,33 @@ which is what makes an optional stage safe to disable:
    the class (`scope::Held`, `scope::EhrFact`), which the SQL reads from the
    EHR's `access_settings.facts`, so one evaluator decides a direct read and a
    query alike, and an EHR of a class the condition does not hold contributes
-   no row. The subjects the caller cares for are bound once per statement, as
-   a `jsonb` object keyed by subject id in a `WITH` clause that each care
-   probe reads with `?`, so the planner's estimate and each probe cost the
-   same whatever the census, and only the one parse of the bound object grows
-   with it (#5645). The care relationships stay in the party domain, which the
-   clinical statement does not read. Before it renders a verdict, the emitter
+   no row. Care is read in one of three forms, chosen per query once the
+   service knows which EHRs it reads (`Care`, #5699). A query pinned to the
+   EHRs it names (an `ehr_id` scope, or `ehr_id/value` held equal in the
+   `EHR` source's predicate or the `WHERE` clause) has each EHR's care
+   decided from the evaluator's copies and binds only the cared EHR ids. Any
+   other query reads the clinical care projection (`clinical/0047_access_care.sql`):
+   the care relationships of the party domain, one row per subject reference
+   and relationship, written by each replica's care projector
+   (`service::ehr::care_projection`), which reads the party domain on the
+   party pool in one repeatable-read snapshot and writes the clinical domain
+   on the clinical pool, so no role reaches both. A row holds the `PERSON`
+   and team container UUIDs, the care dates and the keyed digest
+   (HMAC-SHA-256 under the clinical lookup subkey of the
+   `[privacy.identifier_protection]` root key, the scheme the national
+   identifier's lookup digest uses) of each subject reference that names the
+   `PERSON`; the EHR row carries the keyed digest of its own reference,
+   written with it, and both digest columns are held to 32 octets, so the
+   clinical domain holds no identifier the key does not open. The probe binds
+   the caller's team ids, the day and the grace, one index probe per EHR row.
+   A replica reads the projection only while the facts revision it reflects
+   is at least the one of the facts the replica holds, so a discharge, a
+   removed membership or an erasure is never granted from a stale row: until
+   the projector applies it the query binds the census, the subjects of every
+   patient under the caller's teams as a `jsonb` object in a `WITH` clause
+   (#5645). Erasing a `PERSON` deletes its rows in the erasing flow. Without
+   identifier protection the projection is not written and every query that
+   names no EHR binds the census. Our own design. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the
    disjunction (a fact of the EHR, which may be unknown, is never folded). A
