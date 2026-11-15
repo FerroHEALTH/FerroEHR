@@ -250,7 +250,8 @@ that states neither the merge nor its revert, an identity two `PERSON`s
 carry, an identifier another identity still holds, or a contribution the
 commit checks refuse, is kept unapplied with its split in force and logged as
 an error. An identity is bound to its `PERSON` when the feed first announces
-it; a merge of two identities the feed never announced is refused.
+it while one `PERSON` carries one of its identifiers; a merge of two
+identities the feed never bound is refused.
 
 | Key | Type | Default | Description |
 |---|---|---|---|

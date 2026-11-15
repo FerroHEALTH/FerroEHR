@@ -37,8 +37,15 @@ hospital_pix_env() {
 YAML
 }
 
-# The FerroPIX configuration of the PMIR leg, as the overlay's config.
+# The FerroPIX release of the PMIR leg, pinned by digest: the first to
+# authenticate its ITI-93 sender (FerroPIX #655) and to state every Patient's
+# `active` and links (FerroPIX #656).
+HP_FERROPIX_IMAGE="ghcr.io/ferrohealth/ferropix:0.0.31@sha256:6681a8e3f923ecc07ceaa3cc7ede679e2c9fd471c25560dad12c82edaafbd6df"
+
+# FerroPIX's image and configuration of the PMIR leg, appended to the
+# overlay's services.
 hospital_pix_config() {
+  printf '  ferropix:\n    image: %s\n' "$HP_FERROPIX_IMAGE"
   cat <<'YAML'
 configs:
   ferropix-config:
@@ -205,6 +212,15 @@ hospital_pix_merge() {
   hp_ehr lisa_dup "$pseudonym" || h_fail_call "the duplicate record's EHR"
   h_commit c_lisa_dup 2 kc:anna "$(hv ehr_lisa_dup)" "$H_T_VITALS" \
     || h_fail_call "vital signs in the duplicate record"
+  # The ADT system feeds both records again now that each PERSON carries its
+  # record's identifier, so FerroPIX announces them and FerroEHR binds each
+  # identity to its PERSON before the merge arrives.
+  for mrn in lisa-0001 lisa-0002; do
+    fed="$(pix_feed "$mrn")"
+    [[ "$fed" = 200 || "$fed" = 201 ]] || probe_fail "200 or 201 for the second feed of $mrn" "$fed"
+  done
+  h_client pix ferropix "$(hv hospital)" "$(j_capability "$(j_operation write_care_relationship)")" \
+    || h_fail_call "FerroPIX's feed client, which writes record subjects"
   hv_set pix_lisa "$(hp_person lisa-0001)"
   hv_set pix_lisa_dup "$(hp_person lisa-0002)"
   [[ -n "$(hv pix_lisa)" && -n "$(hv pix_lisa_dup)" ]] || probe_fail "both FerroPIX persons" "missing"
