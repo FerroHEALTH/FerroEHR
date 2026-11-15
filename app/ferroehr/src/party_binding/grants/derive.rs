@@ -23,7 +23,7 @@
 use serde_json::Value;
 
 use crate::party_binding::derive::container;
-use crate::party_binding::grants::caller::{self, CallerFact};
+use crate::party_binding::grants::caller::{self, CallerFact, FactKind};
 use crate::party_binding::grants::operation::{NOT_AFTER, NOT_BEFORE, Operation, is_qualifier};
 use crate::party_binding::policy_mark::{ACTS_FOR, CLIENT_ID, TERMINOLOGY, carries, coded};
 use crate::versioning::Kind;
@@ -114,11 +114,12 @@ impl GrantFacts {
                     });
                 if kind == Kind::Organisation {
                     facts.identifier = body.get("details").and_then(provider_identifier);
+                    caller::coded_name(body, FactKind::OrganisationType, &mut facts);
                 }
                 caller::relationships(kind, body, &mut facts);
             }
             Kind::Role => {
-                caller::role(body, &mut facts);
+                caller::coded_name(body, FactKind::Role, &mut facts);
                 for (ordinal, capability) in body
                     .get("capabilities")
                     .and_then(Value::as_array)

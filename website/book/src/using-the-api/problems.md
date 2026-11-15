@@ -98,7 +98,10 @@ starts with the refusal code (`refused-consent-denied`,
 `refused-consent-reference-missing`; see
 [Access directives](../security.md)).
 
-With `Prefer: return=representation`: `refusal`, that code. A restriction or an
+With `Prefer: return=representation`: `refusal`, that code, and for
+`refused-policy-denied` `legal_grounds`, the provisions the refusing
+controller rules name, each as `{ "terminology", "code", "value" }`, when
+they name any. A restriction or an
 opt-out never answers `403`: the data read as absent (`404`), with nothing in
 the body that names them.
 
