@@ -32,7 +32,7 @@ a|The demographic `GROUP` parties, such as care teams, whose membership the acce
 
 h|*0..1*
 |*binding*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|How the system bound the credential to `_party_`, or why it could not, coded in a terminology the system names.
+a|How the system bound the credential to `_party_`, or why it could not, coded in the draft `openehr_access` terminology's `credential binding` group.
 
 h|*0..1*
 |*credential*: `xref:access_log:access_log_package.adoc#_access_credential_class[ACCESS_CREDENTIAL]`
@@ -44,5 +44,8 @@ a|The clients and parties that acted between the accessor and the system, outerm
 
 h|*Invariants*
 2+a|__Kind_valid__: `terminology (Terminology_id_access).has_code_for_group_id (Group_id_accessor_kind, kind.defining_code)`
+
+h|
+2+a|__Binding_valid__: `binding /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_credential_binding, binding.defining_code)`
 
 |===

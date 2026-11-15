@@ -94,6 +94,18 @@ impl IdentifierProtection {
         }))
     }
 
+    /// The lookup digest of `value` in each configured scheme, in the
+    /// configured order: what an equality search for an identifier of a
+    /// protected scheme compares, without the value leaving the caller.
+    #[must_use]
+    pub fn lookup_digests(&self, value: &str) -> Vec<(String, Vec<u8>)> {
+        let keys = DomainKeys::derive(&self.root, KeyDomain::Demographic);
+        self.schemes
+            .iter()
+            .map(|scheme| (scheme.clone(), keys.lookup_digest(scheme, value)))
+            .collect()
+    }
+
     /// The first configured scheme the database registry does not hold.
     ///
     /// The boot check behind the rule that an unregistered scheme is a boot

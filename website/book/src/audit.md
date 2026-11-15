@@ -151,6 +151,14 @@ of every EHR's settings, which holds each EHR's subject and the uid of its
 For an EHR with no settings, which the copy does not hold, a care relationship
 is named when only a caller in care could have been served its rows.
 
+`accessor.binding` says how FerroEHR bound the login to the party, or why
+it could not, in the `credential binding` group of the `openehr_access`
+terminology: `bound`, `provisional`, `subject of care`, `external`,
+`organisation` and `system` for a login it bound, and the cause for one it
+refused, such as `unbound`, `party inactive`, `no agreement` or `treatment
+relationship confirmation missing`. The draft terminology page lists every
+code.
+
 A refusal names its code in `outcome.reason`, in the `openehr_access`
 terminology, and in `outcome.description` the step that refused and the
 directive or policy of that step, such as `step 2 (restriction): directive 1
