@@ -90,6 +90,9 @@ pub enum Group {
     CareRelationship,
     /// `group kind`: what kind of group a demographic `GROUP` is.
     GroupKind,
+    /// `record subject`: the demographic element naming an EHR subject
+    /// reference the `PERSON` stands for.
+    RecordSubject,
     /// `representation`: the demographic relationship that makes its source
     /// a representative of its target.
     Representation,
@@ -113,7 +116,7 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 17] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -122,6 +125,7 @@ impl Group {
         Self::AccessOperation,
         Self::CareRelationship,
         Self::GroupKind,
+        Self::RecordSubject,
         Self::Representation,
         Self::AccessRefusal,
         Self::AccessLogWithheld,
@@ -144,6 +148,7 @@ impl Group {
             Self::AccessOperation => "access operation",
             Self::CareRelationship => "care relationship",
             Self::GroupKind => "group kind",
+            Self::RecordSubject => "record subject",
             Self::Representation => "representation",
             Self::AccessRefusal => "access refusal",
             Self::AccessLogWithheld => "access log withheld",
@@ -168,6 +173,7 @@ impl Group {
             Self::AccessOperation => phrases::<OperationClass>(),
             Self::CareRelationship => phrases::<CareRelationship>(),
             Self::GroupKind => phrases::<GroupKind>(),
+            Self::RecordSubject => phrases::<RecordSubject>(),
             Self::Representation => phrases::<Representation>(),
             Self::AccessRefusal => phrases::<Refusal>(),
             Self::AccessLogWithheld => phrases::<Withheld>(),
@@ -459,6 +465,18 @@ group! {
         /// The `GROUP` is a care team: a membership (`MBR`) relationship to it puts
         /// its member in the care of the subjects under its care.
         CareTeam => "care_team",
+    }
+}
+
+group! {
+    /// The element of a `PERSON`'s `details` naming an EHR subject reference.
+    ///
+    /// The reference is one the `PERSON` stands for, such as a pseudonym an
+    /// identity source issued: the element's value is a `DV_IDENTIFIER` whose
+    /// `issuer` is the reference's namespace and whose `id` is its id.
+    RecordSubject in RecordSubject {
+        /// The element naming an `EHR_STATUS` subject reference.
+        RecordSubject => "record_subject",
     }
 }
 

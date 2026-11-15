@@ -370,8 +370,11 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
             .cared_for_by(&[ward.0], today, jiff::Span::new())
             .await
             .expect("the ward's patients read"),
-        vec![patient.0],
-        "the ward's patients are read by the ward"
+        vec![ferroehr::storage::access_projection::EhrSubject::new(
+            "demographic",
+            patient.to_string()
+        )],
+        "the ward's patients are read by the ward, by their subject references"
     );
     // NOTE: #5615, a patient in care is no caller fact, so the replica's copy does not grow with it.
     assert_eq!(two.grants().parties_held(), parties);
@@ -665,4 +668,205 @@ async fn the_boot_after_migration_0042_reads_the_roles_already_stored() {
         "the boot refilled the role: {:?}",
         facts.roles()
     );
+}
+
+/// The pseudonymisation domain of the record subject tests.
+const PIXM: &str = "urn:oid:2.999.7.1";
+
+/// A record subject element of a `PERSON`'s details holding `value` (#5634).
+fn record_subject(value: &Value) -> Value {
+    json!({ "_type": "ELEMENT", "archetype_node_id": "at0010",
+            "name": coded(TERMINOLOGY, "record_subject"), "value": value })
+}
+
+/// A `DV_IDENTIFIER` naming `id` under `issuer`.
+fn pseudonym(issuer: &str, id: &str) -> Value {
+    json!({ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": "PI" })
+}
+
+/// `body` with `items` as its details.
+fn detailed(mut body: Value, items: &[Value]) -> Value {
+    body["details"] = json!({ "_type": "ITEM_TREE", "archetype_node_id": "at0009",
+        "name": text("details"), "items": items });
+    body
+}
+
+/// The subject reference of `id` under the pseudonymisation domain.
+fn pixm_ref(id: &str) -> ferroehr::storage::access_projection::EhrSubject {
+    ferroehr::storage::access_projection::EhrSubject::new(PIXM, id)
+}
+
+#[tokio::test]
+async fn a_record_subject_decides_the_next_request_on_another_replica() {
+    let db = testkit::db().await.expect("testkit database");
+    let (one, two) = (replica(&db.pool()).await, replica(&db.pool()).await);
+    granted(&one, "adt", &[capability("write_care_relationship", &[])]).await;
+    let (patient, uid) = create(&one, PartyKind::Person, &person("Mr E", &[]))
+        .await
+        .expect("the patient commits");
+    let id = uuid::Uuid::now_v7().to_string();
+    two.grants().refresh().await.expect("the copy reads");
+    let held = two.grants().revision();
+    assert_eq!(
+        two.grants()
+            .person_of(&pixm_ref(&id))
+            .await
+            .expect("the subject resolves"),
+        None
+    );
+
+    let declared = update_as(
+        &one,
+        "adt",
+        (PartyKind::Person, patient, &uid),
+        &detailed(
+            person("Mr E", &[]),
+            &[record_subject(&pseudonym(PIXM, &id))],
+        ),
+    )
+    .await
+    .expect("the ADT system declares the pseudonym");
+    two.grants()
+        .refresh_if_stale()
+        .await
+        .expect("the copy reads");
+    assert_eq!(
+        two.grants().revision(),
+        held,
+        "a record subject moves the facts revision alone"
+    );
+    assert_eq!(
+        two.grants()
+            .person_of(&pixm_ref(&id))
+            .await
+            .expect("the subject resolves"),
+        Some(patient.0)
+    );
+    assert_eq!(
+        two.grants()
+            .person_of(&ferroehr::storage::access_projection::EhrSubject::new(
+                "demographic",
+                patient.to_string()
+            ))
+            .await
+            .expect("the subject resolves"),
+        Some(patient.0),
+        "a reference in the CDR's own namespace names the PERSON directly"
+    );
+    assert_eq!(
+        two.grants()
+            .person_of(&ferroehr::storage::access_projection::EhrSubject::new(
+                "local",
+                patient.to_string()
+            ))
+            .await
+            .expect("the subject resolves"),
+        None,
+        "a container id in another namespace names no PERSON"
+    );
+
+    update_as(
+        &one,
+        "adt",
+        (PartyKind::Person, patient, &declared),
+        &person("Mr E", &[]),
+    )
+    .await
+    .expect("the ADT system withdraws the pseudonym");
+    two.grants()
+        .refresh_if_stale()
+        .await
+        .expect("the copy reads");
+    assert_eq!(
+        two.grants()
+            .person_of(&pixm_ref(&id))
+            .await
+            .expect("the subject resolves"),
+        None
+    );
+}
+
+#[tokio::test]
+async fn a_record_subject_is_refused_unless_it_is_a_persons_own_and_its_writer_may() {
+    let db = testkit::db().await.expect("testkit database");
+    let policy =
+        ferroehr::privacy::PrivacyPolicy::compile(&ferroehr::privacy::config::PrivacyConfig {
+            subject_namespaces: vec![PIXM.to_owned()],
+            ..Default::default()
+        })
+        .expect("the privacy policy compiles");
+    let svc = replica(&db.pool())
+        .await
+        .with_privacy(std::sync::Arc::new(policy));
+    granted(&svc, "registry", &[capability("access_demographic", &[])]).await;
+    granted(&svc, "adt", &[capability("write_care_relationship", &[])]).await;
+    let (patient, uid) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
+        .await
+        .expect("the patient commits");
+    let id = uuid::Uuid::now_v7().to_string();
+    let declares = |value: &Value| detailed(person("Mr E", &[]), &[record_subject(value)]);
+    let write = |client: &'static str, body: Value| {
+        let svc = &svc;
+        let uid = uid.clone();
+        async move { update_as(svc, client, (PartyKind::Person, patient, &uid), &body).await }
+    };
+
+    let refused = write("registry", declares(&pseudonym(PIXM, &id)))
+        .await
+        .expect_err("a client without write_care_relationship is refused");
+    assert!(matches!(refused, ServiceError::Forbidden(_)), "{refused:?}");
+    for (why, value) in [
+        ("no DV_IDENTIFIER", text(&id)),
+        ("no issuer", json!({ "_type": "DV_IDENTIFIER", "id": id })),
+        (
+            "the own namespace",
+            pseudonym("demographic", &patient.to_string()),
+        ),
+        (
+            "an id the subject rule refuses",
+            pseudonym(PIXM, "1793131381"),
+        ),
+    ] {
+        let refused = write("adt", declares(&value))
+            .await
+            .expect_err("the record subject is refused");
+        assert!(
+            matches!(refused, ServiceError::Unprocessable { .. }),
+            "{why}: {refused:?}"
+        );
+    }
+    let (hospital, hospital_uid) = create(&svc, PartyKind::Organisation, &organisation(&[]))
+        .await
+        .expect("the ORGANISATION commits");
+    let refused = update_as(
+        &svc,
+        "adt",
+        (PartyKind::Organisation, hospital, &hospital_uid),
+        &detailed(organisation(&[]), &[record_subject(&pseudonym(PIXM, &id))]),
+    )
+    .await
+    .expect_err("an ORGANISATION declares no record subject");
+    assert!(
+        matches!(refused, ServiceError::Unprocessable { .. }),
+        "{refused:?}"
+    );
+
+    write("adt", declares(&pseudonym(PIXM, &id)))
+        .await
+        .expect("the ADT system declares the pseudonym");
+    let (other, other_uid) = create(&svc, PartyKind::Person, &person("Mr F", &[]))
+        .await
+        .expect("the other patient commits");
+    let refused = update_as(
+        &svc,
+        "adt",
+        (PartyKind::Person, other, &other_uid),
+        &detailed(
+            person("Mr F", &[]),
+            &[record_subject(&pseudonym(PIXM, &id))],
+        ),
+    )
+    .await
+    .expect_err("one pseudonym stands for one PERSON");
+    assert!(matches!(refused, ServiceError::Conflict(_)), "{refused:?}");
 }

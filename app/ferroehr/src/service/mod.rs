@@ -402,6 +402,7 @@ impl FerroEhrService {
         let grants = crate::party_binding::grants::live::LiveGrants::new(pool.clone());
         grants.set_ceiling((*self.grants.ceiling()).clone());
         grants.set_federation((*self.grants.federation()).clone());
+        grants.set_namespace(&self.grants.namespace());
         self.grants = Arc::new(grants);
         self.demographic_pool = pool;
         self
@@ -626,6 +627,7 @@ impl FerroEhrService {
             skip_identical_resend: self.skip_identical_resend,
             binding: &self.binding,
             grants: &self.grants,
+            privacy: &self.privacy,
             access_delay: self.registers.access_delay().policy.clone(),
             direct_origin: crate::origins::DirectOrigin::current(&self.system_id),
         }

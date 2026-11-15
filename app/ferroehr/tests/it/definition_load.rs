@@ -119,7 +119,7 @@ async fn a_source_the_upload_refuses_is_refused_and_not_stored() {
 
 /// The default demographic definitions, each under `deploy/definitions/` in
 /// the order the binary seeds them.
-const DEFAULT_SET: [&str; 10] = [
+const DEFAULT_SET: [&str; 9] = [
     "professional/openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0.adls",
     "professional/openEHR-DEMOGRAPHIC-ROLE.healthcare_professional.v1.0.0.adls",
     "care-team/openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0.adls",
@@ -128,7 +128,6 @@ const DEFAULT_SET: [&str; 10] = [
     "care-team/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.under_care_of.v1.0.0.adls",
     "representation/openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1.0.0.adls",
     "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0.adls",
-    "patient/openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0.adls",
     "provider/openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1.0.0.adls",
 ];
 
@@ -413,7 +412,7 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
             .await
             .unwrap_or_else(|e| panic!("{file} loads: {e:?}"));
     }
-    let patient_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0";
+    let patient_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
     let me = "3e7a1d5c-9b2f-4c8e-a6d0-1f4b8e2c7a95";
     let identifier = |issuer: &str, id: &str| json!({ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": "NNNLD" });
     let relationship = |at: &str, tree: &str, item: &str, class: &str, target: &str| {
@@ -437,7 +436,14 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
             "items": [
                 element("id3", "Patient identifier", &identifier("urn:oid:2.16.840.1.113883.2.4.6.3", "123456789")),
                 element("id4", "Date of birth", &json!({ "_type": "DV_DATE", "value": "2015-03-14" })),
-                element("id5", "Sex", &local("at11", "Female"))
+                element("id5", "Sex", &local("at11", "Female")),
+                json!({ "_type": "ELEMENT", "archetype_node_id": "id36",
+                    "name": { "_type": "DV_CODED_TEXT", "value": "record_subject",
+                        "defining_code": { "_type": "CODE_PHRASE",
+                            "terminology_id": { "_type": "TERMINOLOGY_ID",
+                                "value": openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS },
+                            "code_string": "record_subject" } },
+                    "value": identifier("urn:oid:2.999.7.1", "6f1c2b9e-4d3a-4e8f-9b7c-1a2d3e4f5a6b") })
             ] },
         "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "id6", "name": local("at24", "Legal name"),
             "details": { "_type": "ITEM_TREE", "archetype_node_id": "id7", "name": dv_text("Name structure"),

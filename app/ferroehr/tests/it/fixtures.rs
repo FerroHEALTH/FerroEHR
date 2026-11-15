@@ -471,7 +471,10 @@ pub(crate) async fn create_ehr_for_party(
 ) -> EhrId {
     create_ehr_subject(
         svc,
-        &ferroehr::service::ehr_index::types::SubjectRef::person(party.0.to_string(), "local"),
+        &ferroehr::service::ehr_index::types::SubjectRef::person(
+            party.0.to_string(),
+            ferroehr::config::binding::PartyBindingConfig::default().namespace,
+        ),
     )
     .await
 }

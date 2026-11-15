@@ -64,13 +64,15 @@ pub enum LogReader {
 
 /// What a caller may read of the access log, decided from who they are before
 /// any log is named (#5131): the same rules as the log's ITS-REST resources.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum LogStanding {
     /// Neither the person nor a reviewer: the log is refused.
     #[default]
     Refused,
-    /// The subject of care or their representative, confined to this EHR.
-    Person(EhrId),
+    /// The subject of care or their representative, confined to these EHRs:
+    /// the one of a patient's launch context, or each EHR whose subject
+    /// reference names the represented `PERSON`.
+    Person(std::sync::Arc<[EhrId]>),
     /// A reviewer, who reads the whole log in the full view.
     Reviewer,
 }

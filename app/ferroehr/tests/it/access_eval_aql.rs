@@ -22,6 +22,7 @@ use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::query::request::{AqlQueryRequest, QueryOutcome};
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
+use ferroehr::storage::access_projection::EhrSubject;
 use ferroehr::versioning::committer::CommitterIdentity;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
@@ -212,9 +213,13 @@ impl World {
         all
     }
 
-    /// The subject of EHR `index`.
-    fn subject(&self, index: usize) -> String {
-        self.ehrs[index].1.to_string()
+    /// The subject reference of EHR `index`: its `PERSON` under the CDR's own
+    /// namespace.
+    fn subject(&self, index: usize) -> EhrSubject {
+        EhrSubject::new(
+            ferroehr::config::binding::PartyBindingConfig::default().namespace,
+            self.ehrs[index].1.to_string(),
+        )
     }
 }
 
@@ -223,7 +228,7 @@ struct Ask {
     caller: Caller,
     purpose: Option<&'static str>,
     policy: Option<AccessPolicy>,
-    cared: Vec<String>,
+    cared: Vec<EhrSubject>,
     default: AccessDefault,
 }
 
@@ -238,7 +243,7 @@ impl Ask {
     fn subject(world: &World, own: Option<EhrId>) -> Self {
         let mut ask = Self::of(world, CallerKind::Subject);
         ask.caller.party = None;
-        ask.caller.own_ehr = own;
+        ask.caller.own_ehrs = own.into_iter().collect();
         ask.caller.settings = SettingsCaller::new(false, true, None);
         ask
     }
@@ -249,7 +254,7 @@ impl Ask {
             caller: Caller {
                 kind,
                 party: Some(world.nurse.clone()),
-                own_ehr: None,
+                own_ehrs: Vec::new(),
                 patient_grants_only: false,
                 acts_for: Vec::new(),
                 facts: CallerFacts::default(),
@@ -561,12 +566,19 @@ async fn a_large_care_census_reads_exactly_the_ehrs_in_care() {
     world.settings(1, &settings("open", &[], &[])).await;
     let mut ask = Ask::professional(&world);
     ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
-    let others: Vec<String> = (0..5000)
-        .map(|_| uuid::Uuid::now_v7().to_string())
+    let others: Vec<EhrSubject> = (0..5000)
+        .map(|_| {
+            EhrSubject::new(
+                ferroehr::config::binding::PartyBindingConfig::default().namespace,
+                uuid::Uuid::now_v7().to_string(),
+            )
+        })
         .collect();
     ask.cared.clone_from(&others);
     assert_reads(&world, &ask, &[], "a census naming no subject of the store").await;
-    ask.cared.push(world.subject(1).to_uppercase());
+    let upper = world.subject(1);
+    ask.cared
+        .push(EhrSubject::new(upper.namespace, upper.id.to_uppercase()));
     assert_reads(&world, &ask, &[], "a subject named in another case").await;
     ask.cared
         .extend([world.subject(2), world.subject(0), world.subject(2)]);

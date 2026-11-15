@@ -44,6 +44,7 @@
 )]
 
 pub mod store;
+pub mod subject;
 
 use serde_json::Value;
 use uuid::Uuid;
@@ -55,7 +56,7 @@ use crate::party_binding::grants::capabilities::Capabilities;
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
 use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::grants::store::Dates;
-use crate::party_binding::policy_mark::carries;
+use crate::party_binding::policy_mark::{TERMINOLOGY, carries};
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 use openehr_rm::draft::access_control::terminology::{
@@ -324,8 +325,8 @@ impl CareBefore {
     }
 }
 
-/// Refuses a commit that changed the care relationships or memberships of
-/// the party `party` when its caller holds no
+/// Refuses a commit that changed the care relationships, memberships or
+/// record subjects of the party `party` when its caller holds no
 /// [`Operation::WriteCareRelationship`] grant and is no administrator of
 /// `mapping`.
 ///
@@ -338,13 +339,15 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
         return Ok(());
     }
     Err(ServiceError::not_permitted(format!(
-        "this version changes the care relationships of party {party} ({}::{} or {}::{}): only \
-         a caller holding the {} grant, such as the care delivery environment's ADT system, or \
-         an administrator writes them",
+        "this version changes the care relationships of party {party} ({}::{} or {}::{}) or \
+         the record subjects it declares ({TERMINOLOGY}::{}): only a caller holding the {} \
+         grant, such as the care delivery environment's ADT system, or an administrator \
+         writes them",
         CareRelationship::MemberOf.terminology(),
         CareRelationship::MemberOf.code(),
         CareRelationship::UnderCareOf.terminology(),
         CareRelationship::UnderCareOf.code(),
+        openehr_rm::draft::access_control::terminology::RecordSubject::RecordSubject.code(),
         Operation::WriteCareRelationship
     )))
 }
@@ -496,7 +499,6 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::party_binding::policy_mark::TERMINOLOGY;
 
     fn coded(terminology: &str, code: &str) -> Value {
         json!({"_type": "DV_CODED_TEXT", "value": code,

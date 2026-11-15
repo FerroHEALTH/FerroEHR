@@ -31,7 +31,9 @@ use crate::party_binding::grants::admission::{
     ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
 };
 use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS, TERMINOLOGY};
-use openehr_rm::draft::access_control::terminology::{CareRelationship, GroupKind, Term};
+use openehr_rm::draft::access_control::terminology::{
+    CareRelationship, GroupKind, RecordSubject, Term,
+};
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
 /// instant before which a grant does not hold.
@@ -172,6 +174,7 @@ fn names_no_operation(code: &str) -> bool {
         || SCOPES.contains(&code)
         || CareRelationship::read(TERMINOLOGY, code).is_ok()
         || GroupKind::read(TERMINOLOGY, code).is_ok()
+        || RecordSubject::read(TERMINOLOGY, code).is_ok()
 }
 
 /// One operation a capability may grant.
@@ -239,8 +242,9 @@ pub enum Operation {
     /// scope, to every SMART on openEHR requirement.
     AccessWithoutScope,
     /// Write the membership (`MBR`) and `under_care_of` relationships of
-    /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] through the
-    /// Demographic API, as a hospital's ADT system does.
+    /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] and the
+    /// [`openehr_rm::draft::access_control::terminology::RecordSubject`] element of a
+    /// `PERSON` through the Demographic API, as a hospital's ADT system does.
     WriteCareRelationship,
     /// Write the controller's `ACCESS_POLICY`.
     WriteAccessPolicy,
@@ -426,6 +430,7 @@ mod tests {
         assert!(!is_qualifier("sensitivity_clearance") && !is_qualifier("permitted_purpose"));
         assert!(is_qualifier("under_care_of") && !is_qualifier("member_of"));
         assert!(is_qualifier("care_team"));
+        assert!(is_qualifier("record_subject"));
     }
 
     #[test]
