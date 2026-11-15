@@ -106,6 +106,8 @@ controller reviews.
 | `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run: `chain` is `access_log` (the checkpoint) or `system` (the system chain's seal); `outcome` is `sealed`, `empty` or `failed`. |
 | `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run that did not fail. `time() - audit_seal_last_success_seconds` is the checkpoint age. |
 | `access_log_tombstones_total` | counter | (none) | Entries the retention run replaced by their tombstones. |
+| `access_log_folded_total` | counter | (none) | Tombstones the retention run folded into gaps of the chain once they were past their own end. |
+| `access_log_gaps_total` | counter | (none) | Gaps the retention run wrote, one per folded run of tombstones. |
 | `access_log_retention_duration_seconds` | histogram | `outcome` | Each hourly retention run over the access log. |
 | `audit_drain_queue_depth` | gauge | (none) | Records waiting in the audit drain's queue, out of `[audit] queue_capacity`. |
 
@@ -299,14 +301,16 @@ recording while you investigate.
 
 - **Metric:** `access_log_retention_duration_seconds` approaching the hourly
   interval, `access_log_retention_duration_seconds_count{outcome="failed"}`
-  rising, or `access_log_tombstones_total` flat while entries pass their
-  `retain_until`.
+  rising, `access_log_tombstones_total` flat while entries pass their
+  `retain_until`, or `access_log_folded_total` flat while tombstones pass
+  their own end.
 - **What happens:** an entry past its retention stays readable until a run
   replaces it by its tombstone. A failed run keeps the batches it replaced
   and the next run continues.
 - **What to do:**
   1. Read the log for `access-log retention failed` and its error.
   2. Check the audit database's load and locks: retention replaces entries
-     in batches of 500, each in its own transaction.
+     in batches of 500 and folds tombstones in batches of 5000, each in its
+     own transaction.
   3. Size the audit store for the access rate
      ([Storage sizing](operations.md#storage-sizing)).

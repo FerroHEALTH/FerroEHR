@@ -8,8 +8,9 @@
 //! export of an EHR for the replacement of the EHR system, and Art 9(2)
 //! keeps the access information available for three years from each access,
 //! whichever system then holds the EHR (`docs/law/eu/ehds/text.html`). The
-//! export carries the EHR's records with their links, every link from the
-//! first of them to the checkpoint they verify against, and that checkpoint.
+//! export carries the EHR's records with their links, every link and gap
+//! (#5619) from the first of them to the checkpoint they verify against, and
+//! that checkpoint.
 //! The importing system verifies them, keeps their `system_id`, links and
 //! `retain_until` apart from its own chain, and records the import as an
 //! entry of its own log. No openEHR spec governs the transfer: our own
@@ -21,6 +22,7 @@ use sqlx::{Connection, Row};
 use crate::access_log::chain::{self, ChainFinding, Span};
 use crate::access_log::checkpoint::Checkpoints;
 use crate::access_log::entry;
+use crate::access_log::gap::ChainGap;
 use crate::access_log::store::{AccessLogError, canonical_form};
 use crate::db::acquire::acquire;
 use crate::system_log::event::{
@@ -51,8 +53,12 @@ pub struct LogExport {
     /// The EHR's records, entries and tombstones, in chain order, each with
     /// its link.
     pub records: Vec<AccessLogRecord>,
-    /// Every link from the first record's to the checkpoint's, consecutive.
+    /// Every link from the first record's to the checkpoint's sequence but
+    /// those of folded runs, in sequence.
     pub links: Vec<AccessLogLink>,
+    /// Every gap between the links: a run of folded tombstones, which the
+    /// link after it links to.
+    pub gaps: Vec<ChainGap>,
     /// The checkpoint the records verify against.
     pub checkpoint: AccessLogCheckpoint,
 }
@@ -64,6 +70,7 @@ impl LogExport {
         Span {
             records: &self.records,
             links: &self.links,
+            gaps: &self.gaps,
             checkpoint: &self.checkpoint,
         }
     }
@@ -179,9 +186,9 @@ fn sequence(record: &AccessLogRecord) -> i64 {
 }
 
 impl Checkpoints {
-    /// Export the access log of the EHR `ehr_id`: its records, the links to
-    /// the newest checkpoint that covers them, sealing one when none does,
-    /// and that checkpoint, verified before it is returned.
+    /// Export the access log of the EHR `ehr_id`: its records, the links and
+    /// gaps to the newest checkpoint that covers them, sealing one when none
+    /// does, and that checkpoint, verified before it is returned.
     ///
     /// The access log holds only the accesses to EHR data, in a chain of its
     /// own, so the span carries the links of the other EHRs' records between
@@ -204,11 +211,13 @@ impl Checkpoints {
             None => self.seal().await?.ok_or_else(no_records)?,
         };
         let links = store.links(first, checkpoint.sequence).await?;
+        let gaps = store.gaps(first, checkpoint.sequence).await?;
         let export = LogExport {
             system_id: self.system_id().to_owned(),
             ehr_id: ehr_id.to_owned(),
             records,
             links,
+            gaps,
             checkpoint,
         };
         self.verified(&export)?;
@@ -268,6 +277,7 @@ impl Checkpoints {
         let mut conn = acquire(self.pool()).await.map_err(AccessLogError::from)?;
         let mut tx = conn.begin().await.map_err(AccessLogError::from)?;
         store_links(&mut tx, system_id, &export.links).await?;
+        store_gaps(&mut tx, system_id, &export.gaps).await?;
         store_records(&mut tx, system_id, &export.records).await?;
         sqlx::query(
             "INSERT INTO audit.access_log_imported_checkpoint (system_id, sequence, digest, \
@@ -338,6 +348,71 @@ async fn store_links(
         return Err(TransferError::Conflict {
             system_id: system_id.to_owned(),
             sequence: row.try_get("sequence").map_err(AccessLogError::from)?,
+        });
+    }
+    Ok(())
+}
+
+/// Store `gaps` of `system_id`'s chain, keeping any already stored, and
+/// refuse when one already stored at the same first position differs.
+async fn store_gaps(
+    conn: &mut sqlx::PgConnection,
+    system_id: &str,
+    gaps: &[ChainGap],
+) -> Result<(), TransferError> {
+    if gaps.is_empty() {
+        return Ok(());
+    }
+    let firsts: Vec<i64> = gaps.iter().map(|gap| gap.first_sequence).collect();
+    let lasts: Vec<i64> = gaps.iter().map(|gap| gap.last_sequence).collect();
+    let links: Vec<String> = gaps.iter().map(|gap| gap.link.clone()).collect();
+    let signatures: Vec<Option<String>> = gaps.iter().map(|gap| gap.signature.clone()).collect();
+    let grounds = gaps
+        .iter()
+        .map(|gap| serde_json::to_string(&gap.grounds))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(AccessLogError::Canonical)?;
+    let folded: Vec<String> = gaps
+        .iter()
+        .map(|gap| gap.time_folded.value.clone())
+        .collect();
+    sqlx::query(
+        "INSERT INTO audit.access_log_imported_gap (system_id, first_seq, last_seq, link, \
+         signature, grounds, time_folded) \
+         SELECT $1, t.first_seq, t.last_seq, t.link, t.signature, t.grounds::jsonb, \
+         t.time_folded::timestamptz FROM unnest($2::bigint[], $3::bigint[], $4::text[], \
+         $5::text[], $6::text[], $7::text[]) \
+         AS t(first_seq, last_seq, link, signature, grounds, time_folded) \
+         ON CONFLICT (system_id, first_seq) DO NOTHING",
+    )
+    .bind(system_id)
+    .bind(&firsts)
+    .bind(&lasts)
+    .bind(&links)
+    .bind(&signatures)
+    .bind(&grounds)
+    .bind(&folded)
+    .execute(&mut *conn)
+    .await
+    .map_err(AccessLogError::from)?;
+    let differs: Option<i64> = sqlx::query_scalar(
+        "SELECT g.first_seq FROM audit.access_log_imported_gap g \
+         JOIN unnest($2::bigint[], $3::bigint[], $4::text[]) AS t(first_seq, last_seq, link) \
+         ON t.first_seq = g.first_seq \
+         WHERE g.system_id = $1 AND (g.last_seq <> t.last_seq OR g.link <> t.link) \
+         ORDER BY g.first_seq LIMIT 1",
+    )
+    .bind(system_id)
+    .bind(&firsts)
+    .bind(&lasts)
+    .bind(&links)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(AccessLogError::from)?;
+    if let Some(sequence) = differs {
+        return Err(TransferError::Conflict {
+            system_id: system_id.to_owned(),
+            sequence,
         });
     }
     Ok(())

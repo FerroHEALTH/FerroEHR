@@ -175,8 +175,9 @@ impl AccessLogStore {
     /// The uid and link of every access-log record from `from` to `to`, both
     /// included, in chain order, without their content.
     ///
-    /// The access log is one chain with no gaps, so the span holds every
-    /// position between; a missing one is a deletion the verifier reports.
+    /// A position a gap holds has no record (#5619): [`Self::gaps`] answers
+    /// those, and a position neither holds is a deletion the verifier
+    /// reports.
     ///
     /// # Errors
     /// The store errors when the statement fails.
