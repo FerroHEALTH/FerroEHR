@@ -577,6 +577,9 @@ self_test() { # <image> <pg-image>
   echo "perf gate: self-test OK (an idle busy-loop fails idle.transactions_per_second)"
 }
 
+# Sourced by scripts/perf/capacity.sh for the seed and its helpers, the gate
+# dispatches nothing.
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
 [[ "$#" -ge 1 ]] || usage
 command="$1"
 shift
