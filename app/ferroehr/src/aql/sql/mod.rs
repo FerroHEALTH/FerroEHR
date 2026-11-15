@@ -604,10 +604,9 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     // NOTE: our own design (#5699), the service reads care before a statement is built, so an
     // unread care is refused loudly rather than withholding every cared row.
     if ctx.ehr_access.reads_care()
-        && ctx
-            .ehr_access
-            .groups()
-            .is_some_and(|groups| groups.cared == crate::access_eval::condition::Care::Unresolved)
+        && ctx.ehr_access.groups().is_some_and(|groups| {
+            groups.cared == crate::access_eval::condition::care::Care::Unresolved
+        })
     {
         return Err(SqlError::Unsupported(
             "an access condition whose care the service has not read".to_owned(),

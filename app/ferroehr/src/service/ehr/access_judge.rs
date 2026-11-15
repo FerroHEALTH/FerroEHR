@@ -16,7 +16,8 @@ use std::sync::Arc;
 
 use openehr_rm::draft::access_control::terminology::AccessDefault;
 
-use crate::access_eval::condition::{AccessCondition, Care, InForce, RequestAccess, current};
+use crate::access_eval::condition::care::Care;
+use crate::access_eval::condition::{AccessCondition, InForce, RequestAccess, current};
 use crate::access_eval::procedure::{Lifted, Outcome, Verdict};
 use crate::access_eval::scope::{CategoryIndex, Item};
 use crate::error::ServiceError;
@@ -338,7 +339,9 @@ impl FerroEhrService {
 /// `None` when the policy's grace has a unit of time below a day, which a
 /// date cannot carry as [`crate::party_binding::grants::caller::CareTeam::live_on`]
 /// judges it; that query binds the census.
-fn projected_care(access: &RequestAccess) -> Option<crate::access_eval::condition::ProjectedCare> {
+fn projected_care(
+    access: &RequestAccess,
+) -> Option<crate::access_eval::condition::care::ProjectedCare> {
     let grace = access.policy().grace;
     let calendar = grace.get_hours() == 0
         && grace.get_minutes() == 0
@@ -347,7 +350,7 @@ fn projected_care(access: &RequestAccess) -> Option<crate::access_eval::conditio
         && grace.get_microseconds() == 0
         && grace.get_nanoseconds() == 0
         && !grace.is_negative();
-    calendar.then(|| crate::access_eval::condition::ProjectedCare {
+    calendar.then(|| crate::access_eval::condition::care::ProjectedCare {
         teams: access.care_team_ids().into(),
         day: access.today(),
         grace: grace.to_string(),

@@ -12,7 +12,8 @@
 
 use std::sync::Arc;
 
-use ferroehr::access_eval::condition::{Asking, Care, InForce, RequestAccess, with_request_access};
+use ferroehr::access_eval::condition::care::Care;
+use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
 use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::ids::{EhrId, VoId};
@@ -387,7 +388,7 @@ async fn project(
 
 /// The projected care probe of the caller on `day` with `grace`.
 fn projected(day: jiff::civil::Date, grace: &str) -> Care {
-    Care::Projected(ferroehr::access_eval::condition::ProjectedCare {
+    Care::Projected(ferroehr::access_eval::condition::care::ProjectedCare {
         teams: vec![TEAM].into(),
         day,
         grace: grace.to_owned(),
