@@ -27,7 +27,7 @@
 //! is its membership of a `GROUP`, such as the providers of a region (RM
 //! demographic `org.openehr.rm.demographic.group.adoc`), written under the
 //! same grant. A client acting for that `ORGANISATION` acts for the `GROUP`
-//! too ([`CallerFacts::provider_groups`]): one level of membership, our own
+//! too ([`facts::CallerFacts::provider_groups`]): one level of membership, our own
 //! design (#5575).
 //!
 //! [`store`] writes the facts in each commit's transaction and stamps the
@@ -420,7 +420,7 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
 /// One care relationship: the team or unit it targets and the dates its
 /// `time_validity` holds.
 ///
-/// The evaluator reads a caller's from [`CallerFacts::care_teams`] and a
+/// The evaluator reads a caller's from [`facts::CallerFacts::care_teams`] and a
 /// subject's from
 /// [`crate::party_binding::grants::live::LiveGrants::under_care_of`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
