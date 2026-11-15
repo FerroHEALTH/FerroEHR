@@ -113,6 +113,7 @@ mod party_key_spaces;
 mod party_mapping;
 mod party_mapping_templates;
 mod party_reverse_paths;
+mod patient_index;
 mod persistence;
 mod policy_elements;
 mod policy_fixtures;

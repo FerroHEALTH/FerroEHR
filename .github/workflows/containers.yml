@@ -98,7 +98,7 @@ jobs:
         id: filter
         if: steps.everything.outcome == 'skipped'
         with:
-          # The app filter mirrors the ui-e2e-binary cache key in ci.yml (the
+          # The app filter mirrors the binary cache key of .github/actions/server-binary (the
           # inputs the server build reads); viewer mirrors the ui-e2e-console
           # key plus its own Dockerfile and the compose file its smoke lane
           # drives. Shared workspace manifests appear in both — a lockfile bump

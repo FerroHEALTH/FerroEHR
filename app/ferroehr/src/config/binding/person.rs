@@ -493,6 +493,9 @@ impl Sections<'_> {
         if let Some(membership) = self.membership {
             mapping = mapping.with_membership(&membership.archetype_id);
         }
+        if let Some(patient) = self.patient {
+            mapping = mapping.with_patient(&patient.template_id, &patient.identifier)?;
+        }
         Ok(mapping.with_policy())
     }
 

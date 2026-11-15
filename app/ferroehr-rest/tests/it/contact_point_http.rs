@@ -79,14 +79,24 @@ fn eprescription(hours: u32) -> Terms {
 /// authority, over the local EHR index, with the dispensation template held.
 async fn serve(agreement: Terms) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_ehr_index(EhrIndexProvider::Local);
+    let (svc, app) = serve_over(agreement, &pool, svc).await;
+    (db, svc, app)
+}
+
+/// [`serve`] over `svc`, the service on `pool`.
+async fn serve_over(
+    agreement: Terms,
+    pool: &sqlx::PgPool,
+    svc: FerroEhrService,
+) -> (Arc<FerroEhrService>, Router) {
     let (sender, _handle): (_, AuditHandle) =
         start(common::local_audit(), None, Some(pool.clone()))
             .await
             .expect("the audit sender");
     let svc = Arc::new(
-        FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
-            .with_ehr_index(EhrIndexProvider::Local)
-            .with_audit(sender)
+        svc.with_audit(sender)
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),
     );
     let constant = |value: &str| vec![Source::Constant(value.to_owned())];
@@ -143,11 +153,16 @@ async fn serve(agreement: Terms) -> (testkit::TestDb, Arc<FerroEhrService>, Rout
     svc.template_adl14_upload(&common::ips_opt_xml())
         .await
         .expect("upload the IPS template");
-    (db, svc, app)
+    (svc, app)
 }
 
 /// Creates the EHR whose `EHR_STATUS` names `id` under [`NAMESPACE`].
 async fn patient_ehr(svc: &FerroEhrService, id: &str) -> String {
+    ehr_naming(svc, NAMESPACE, id).await
+}
+
+/// Creates the EHR whose `EHR_STATUS` names `id` under `namespace`.
+async fn ehr_naming(svc: &FerroEhrService, namespace: &str, id: &str) -> String {
     let status = json!({
         "_type": "EHR_STATUS",
         "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
@@ -155,7 +170,7 @@ async fn patient_ehr(svc: &FerroEhrService, id: &str) -> String {
             "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-EHR-EHR_STATUS.generic.v1" } },
         "name": { "_type": "DV_TEXT", "value": "EHR Status" },
         "subject": { "_type": "PARTY_SELF", "external_ref": {
-            "_type": "PARTY_REF", "namespace": NAMESPACE, "type": "PERSON",
+            "_type": "PARTY_REF", "namespace": namespace, "type": "PERSON",
             "id": { "_type": "HIER_OBJECT_ID", "value": id } } },
         "is_queryable": true,
         "is_modifiable": true
@@ -536,4 +551,83 @@ async fn a_contact_points_access_record_carries_its_assertion_ids_and_never_the_
     let raw = credential.trim_start_matches("Bearer ");
     let signature = raw.rsplit('.').next().expect("a signed token");
     assert!(!row.contains(signature), "the token is never recorded");
+}
+
+/// The shipped patient template, which the default mapping names.
+const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
+
+/// A patient `PERSON` of [`PATIENT`] carrying `id` under [`NAMESPACE`] at
+/// the patient identifier path.
+fn patient_person(id: &str) -> Value {
+    let archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v1";
+    let named = |value: &str| json!({ "_type": "DV_TEXT", "value": value });
+    json!({
+        "_type": "PERSON", "archetype_node_id": archetype, "name": named("Patient"),
+        "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "template_id": { "_type": "TEMPLATE_ID", "value": PATIENT } },
+        "details": { "_type": "ITEM_TREE", "archetype_node_id": "id2", "name": named("Details"),
+            "items": [{ "_type": "ELEMENT", "archetype_node_id": "id3", "name": named("Identifier"),
+                "value": { "_type": "DV_IDENTIFIER", "issuer": NAMESPACE, "id": id, "type": "NI" } }] },
+        "identities": [{ "_type": "PARTY_IDENTITY", "archetype_node_id": "id6", "name": named("Legal name"),
+            "details": { "_type": "ITEM_TREE", "archetype_node_id": "id7", "name": named("Name"),
+                "items": [{ "_type": "ELEMENT", "archetype_node_id": "id8", "name": named("Full name"),
+                            "value": named("Synthetic Patient") }] } }]
+    })
+}
+
+/// Under `pixm`, a contact point's request is admitted from the patient
+/// `PERSON` that carries its TRC patient, and makes no ITI-83 call (#5648).
+#[tokio::test]
+async fn under_pixm_a_contact_points_request_makes_no_pix_call() {
+    let pix = wiremock::MockServer::start().await;
+    wiremock::Mock::given(wiremock::matchers::any())
+        .respond_with(wiremock::ResponseTemplate::new(503))
+        .mount(&pix)
+        .await;
+    let source = ferroehr::service::ehr_index::ihe::IheIdentitySource::new(
+        &ferroehr::service::ehr_index::config::PixmConfig {
+            endpoint: ferrohealth_smart::config::endpoint::EndpointSection {
+                url: ferrohealth_secret::secret_url::SecretUrl::new(pix.uri()),
+                ..ferrohealth_smart::config::endpoint::EndpointSection::default()
+            },
+            assigning_authority: "urn:oid:2.999.7.1".to_owned(),
+            ..ferroehr::service::ehr_index::config::PixmConfig::default()
+        },
+    )
+    .expect("the identity source builds");
+    let (_db, pool) = common::migrated_pool().await;
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
+        .with_ehr_index(EhrIndexProvider::Ihe(Arc::new(source)));
+    svc.seed_default_definitions()
+        .await
+        .expect("the shipped definitions are seeded");
+    let mapping = ferroehr::party_binding::BindingMapping::default()
+        .with_patient(PATIENT, "/details[id2]/items[id3]")
+        .expect("the patient path compiles");
+    let (svc, app) = serve_over(eprescription(24), &pool, svc.with_binding_mapping(mapping)).await;
+    let created = Box::pin(svc.party_create(
+        ferroehr::service::demographic::types::PartyKind::Person,
+        crate::party_binding_http::write(&patient_person("SYNTHETIC-1"), "532", None),
+    ))
+    .await
+    .expect("the patient commits");
+    let uid = crate::party_binding_http::uid(&created);
+    let person = uid.split("::").next().expect("a version uid");
+    let mine = ehr_naming(&svc, &svc.grants().namespace(), person).await;
+    let theirs = patient_ehr(&svc, "SYNTHETIC-2").await;
+
+    let credential = token(Some("SYNTHETIC-1"), PROVIDER, &json!({}));
+    for _ in 0..3 {
+        let (status, body) = send(&app, "GET", &format!("/ehr/{mine}"), &credential, None).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+    }
+    let (status, body) = send(&app, "GET", &format!("/ehr/{theirs}"), &credential, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    assert!(body.contains("trc-patient-mismatch"), "{body}");
+    assert_eq!(
+        pix.received_requests().await.expect("recorded").len(),
+        0,
+        "no request of a contact point waits on the PIX Manager"
+    );
 }

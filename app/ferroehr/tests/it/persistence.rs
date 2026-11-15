@@ -148,6 +148,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "binding_key_space",
             "binding_lease",
             "binding_membership",
+            "binding_patient_identifier",
             "binding_provider",
             "binding_record_subject",
             "binding_representation",
