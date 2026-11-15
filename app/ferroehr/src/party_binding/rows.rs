@@ -128,6 +128,7 @@ const RETIRE_IDENTIFIERS: &str = concat!(
     wanted_identifiers!(),
     "UPDATE binding_identifier b SET retired_at = now() \
      WHERE b.party_id = ANY($1) AND b.selector = ANY($2) AND b.retired_at IS NULL \
+       AND ($13::text IS NULL OR b.issuer = $13) \
        AND NOT EXISTS (SELECT 1 FROM wanted w WHERE ",
     same_identifier!(),
     ")"
@@ -146,8 +147,9 @@ const INSERT_IDENTIFIERS: &str = concat!(
     same_identifier!(),
     ")"
 );
-/// Writes the identifier rows of `selectors` the parties `parties` should
-/// hold: `rows`, with the key rows' date ranges from `professional`.
+/// Writes the identifier rows of `selectors`, under `issuer` alone when it is
+/// given, the parties `parties` should hold: `rows`, with the key rows' date
+/// ranges from `professional`.
 ///
 /// The retirement runs before the insert, as its own statement, so a value
 /// that moves between rows never meets its old row in a unique index.
@@ -158,7 +160,7 @@ const INSERT_IDENTIFIERS: &str = concat!(
 pub(crate) async fn write_identifiers(
     tx: &mut PgConnection,
     parties: &[Uuid],
-    selectors: &[&str],
+    (selectors, issuer): (&[&str], Option<&str>),
     rows: &[IdentifierRow],
     professional: &[Professional],
 ) -> Result<(), StorageError> {
@@ -166,12 +168,23 @@ pub(crate) async fn write_identifiers(
         return Ok(());
     }
     let columns = IdentifierColumns::of(rows, professional);
-    for statement in [RETIRE_IDENTIFIERS, INSERT_IDENTIFIERS] {
-        columns
-            .bind(sqlx::query(statement).bind(parties).bind(selectors))
-            .execute(&mut *tx)
-            .await?;
-    }
+    columns
+        .bind(
+            sqlx::query(RETIRE_IDENTIFIERS)
+                .bind(parties)
+                .bind(selectors),
+        )
+        .bind(issuer)
+        .execute(&mut *tx)
+        .await?;
+    columns
+        .bind(
+            sqlx::query(INSERT_IDENTIFIERS)
+                .bind(parties)
+                .bind(selectors),
+        )
+        .execute(&mut *tx)
+        .await?;
     Ok(())
 }
 
@@ -225,7 +238,8 @@ impl<'a> IdentifierColumns<'a> {
 }
 
 /// Inserts the tombstones `rows`, the binding keys of deleted `PERSON`s,
-/// retired and deprovisioned, for each party that carries none yet.
+/// retired and deprovisioned, for each party that carries none yet under the
+/// row's issuer.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -245,7 +259,8 @@ pub(crate) async fn insert_tombstones(
          FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[]) \
               AS w(party, issuer, identifier_type, value, lifecycle_state) \
          WHERE NOT EXISTS (SELECT 1 FROM binding_identifier t \
-                           WHERE t.party_id = w.party AND t.deprovisioned_at IS NOT NULL)",
+                           WHERE t.party_id = w.party AND t.issuer = w.issuer \
+                             AND t.deprovisioned_at IS NOT NULL)",
     )
     .bind(rows.iter().map(|r| r.party).collect::<Vec<_>>())
     .bind(rows.iter().map(|r| r.issuer.as_str()).collect::<Vec<_>>())

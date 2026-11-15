@@ -110,6 +110,7 @@ mod party_binding_adopt;
 mod party_binding_check;
 mod party_binding_config;
 mod party_binding_source;
+mod party_key_spaces;
 mod party_mapping;
 mod party_mapping_templates;
 mod party_reverse_paths;

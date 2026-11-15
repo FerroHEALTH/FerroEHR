@@ -234,6 +234,7 @@ pub(crate) fn placeholder(issuer: &str, id: &str) -> Value {
 
 pub(crate) async fn service() -> (testkit::TestDb, FerroEhrService, EhrId) {
     let (db, svc, ehr) = crate::fixtures::setup().await;
+    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
     (db, svc.with_binding_mapping(mapping()), ehr)
 }
 

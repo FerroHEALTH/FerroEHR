@@ -301,6 +301,18 @@ impl FerroEhrService {
             .map(Some)
     }
 
+    /// The key spaces of the binding side table, by issuer
+    /// ([`crate::party_binding::key_space`]).
+    ///
+    /// # Errors
+    /// [`crate::storage::error::StorageError`] when the party store fails.
+    pub async fn binding_key_spaces(
+        &self,
+    ) -> Result<Vec<crate::party_binding::key_space::KeySpace>, crate::storage::error::StorageError>
+    {
+        crate::party_binding::key_space::list(&self.demographic_pool).await
+    }
+
     /// Refills the binding side table under the installed mapping once no
     /// replica's lease was renewed within `ttl` ([`crate::party_binding::fill::refill`]),
     /// or, with no mapping installed, the grant rows alone

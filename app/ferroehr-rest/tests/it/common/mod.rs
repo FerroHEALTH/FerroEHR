@@ -101,8 +101,16 @@ pub(crate) fn full(relative: &str) -> String {
 
 /// A fresh, fully migrated database from the shared harness.
 pub(crate) async fn test_db() -> testkit::TestDb {
-    testkit::db().await.expect("testkit database")
+    let db = testkit::db().await.expect("testkit database");
+    if let Ok(mut pools) = TEST_POOLS.lock() {
+        pools.push(db.pool());
+    }
+    db
 }
+
+/// Every database this test process made through [`test_db`], which
+/// [`first_party`] records the configuration's key spaces in.
+static TEST_POOLS: std::sync::Mutex<Vec<PgPool>> = std::sync::Mutex::new(Vec::new());
 
 /// A fresh, fully-migrated database and its pool. Hold the guard with the
 /// pool.
@@ -280,6 +288,7 @@ pub(crate) fn allowing(service: &FerroEhrService, operations: &[Operation]) {
 /// `config` but the Basic users' own, as a deployment grants the client its
 /// persons sign in through: a person's test token comes through it.
 pub(crate) async fn first_party(service: &FerroEhrService, config: &AppConfig) {
+    open_configured_key_spaces(config).await;
     let issuers: Vec<String> = config
         .auth
         .shared
@@ -569,6 +578,7 @@ pub(crate) async fn grant_basic_users(
     pool: &PgPool,
     users: &[(&str, &[&str])],
 ) {
+    open_key_spaces(pool, &[(BASIC_LOGIN, false)]).await;
     let honoured = [Operation::HoldRoles, Operation::HoldScopes];
     allowing(service, &honoured);
     let committer = binding_service(pool)
@@ -777,6 +787,7 @@ pub(crate) async fn bind_subjects(pool: &PgPool, bound: &[(&str, &str)]) {
     let committer = binding_service(pool);
     for (issuer, sub) in bound {
         let logins = logins_of(issuer);
+        open_key_spaces(pool, &[(logins.as_str(), false)]).await;
         if !bound_already(pool, &logins, sub).await {
             crate::party_binding_http::professional_of(&committer, &logins, sub, "532").await;
         }
@@ -914,6 +925,63 @@ pub(crate) async fn commit_access_settings(svc: &FerroEhrService, ehr_id: EhrId,
     svc.commit_ehr_access_settings(ehr_id, current, settings)
         .await
         .expect("the controller commits the settings");
+}
+
+/// Records each of `issuers` as an `active` key space in `pool`, as a
+/// replica's first fill does for its mapping's key issuers: a key binds only
+/// under an active key space (`ferroehr::party_binding::key_space`), and a
+/// test service takes no lease.
+pub(crate) async fn open_key_spaces(pool: &PgPool, issuers: &[(&str, bool)]) {
+    for (issuer, portal) in issuers {
+        sqlx::query(
+            "INSERT INTO party.binding_key_space (issuer, portal, state) \
+             VALUES ($1, $2, 'active') \
+             ON CONFLICT (issuer) DO UPDATE SET portal = EXCLUDED.portal, state = 'active'",
+        )
+        .bind(issuer)
+        .bind(portal)
+        .execute(pool)
+        .await
+        .expect("the key space is recorded");
+    }
+}
+
+/// Records the key issuers `config` declares, each `[[auth.party]]`
+/// `identifier_issuer` and each `patients` issuer, as `active` key spaces in
+/// every live database of this test process that holds no lease, as a
+/// replica booting on `config` fills them; a database with a lease has its
+/// key spaces kept by its replicas.
+pub(crate) async fn open_configured_key_spaces(config: &AppConfig) {
+    let Ok(resolved) = ferroehr::config::auth::resolve(&config.auth.shared) else {
+        return;
+    };
+    let portal = ferroehr::config::binding::portal_issuers(&resolved);
+    let spaces: Vec<(String, bool)> = ferroehr::config::binding::key_issuers(&resolved)
+        .into_iter()
+        .map(|issuer| {
+            let flag = portal.contains(&issuer);
+            (issuer, flag)
+        })
+        .collect();
+    let pools = TEST_POOLS
+        .lock()
+        .map(|pools| pools.clone())
+        .unwrap_or_default();
+    let spaces: Vec<(&str, bool)> = spaces.iter().map(|(i, p)| (i.as_str(), *p)).collect();
+    for pool in &pools {
+        // A database whose test dropped it answers no query and serves no
+        // request, so it is no database to record the key spaces in.
+        let Ok(leased) =
+            sqlx::query_scalar::<_, bool>("SELECT EXISTS (SELECT 1 FROM party.binding_lease)")
+                .fetch_one(pool)
+                .await
+        else {
+            continue;
+        };
+        if !leased {
+            open_key_spaces(pool, &spaces).await;
+        }
+    }
 }
 
 /// The live `PERSON` in `pool` carrying the key `key` under `issuer`.
