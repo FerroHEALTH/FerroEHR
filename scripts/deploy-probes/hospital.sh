@@ -941,7 +941,7 @@ probes_hospital() {
   probe_done
 
   hospital_discovery
-  probe "P-HOSP-SETUP" "$PROBE_WORKING" "server" "#5610" \
+  probe "P-HOSP-SETUP" "$PROBE_WORKING" "server" "#5610 #5694" \
     "SCIM, the demographic API and ITS-REST set the people, the parties and the record up"
   hospital_setup
   probe_done
@@ -1211,7 +1211,7 @@ ${H_BODY:0:300}"
 # the realm, so Eva and Frank sign in; the discovery document still names
 # the realm.
 hospital_portal_boot() {
-  probe "P-HOSP-PORTAL-BOOT" "$PROBE_WORKING" "deployment" "#5610" \
+  probe "P-HOSP-PORTAL-BOOT" "$PROBE_WORKING" "deployment" "#5610 #5688" \
     "both instances restart with the patient portal's patients issuer beside the realm"
   hospital_files patients
   if ! hospital_restart; then
