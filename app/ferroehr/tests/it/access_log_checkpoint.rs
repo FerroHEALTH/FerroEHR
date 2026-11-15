@@ -73,7 +73,7 @@ pub(crate) fn keyring(key: &SignedSecretKey) -> Arc<Signer> {
 }
 
 /// The certificates trusting `key`'s public certificate.
-fn trusting(key: &SignedSecretKey) -> Arc<TrustedCertificates> {
+pub(crate) fn trusting(key: &SignedSecretKey) -> Arc<TrustedCertificates> {
     let armored = key
         .to_public_key()
         .to_armored_string(ArmorOptions::default())
@@ -115,7 +115,7 @@ async fn append(checkpoints: &Checkpoints, system_id: &str) -> Vec<AccessLogEntr
 
 /// Run `statements` with the table's triggers off, as only its owner can: the
 /// attacker the chain and the checkpoint detect.
-async fn tamper(pool: &PgPool, table: &str, statements: &[&str]) {
+pub(crate) async fn tamper(pool: &PgPool, table: &str, statements: &[&str]) {
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
     sqlx::query(AssertSqlSafe(format!(
@@ -145,7 +145,7 @@ const OPERATOR: &str = "transfer-operator";
 const IMPORT_REQUEST: &str = "01JC2Q7N3X";
 
 /// The record of the import, by an operator, kept three years.
-fn import_record() -> ImportRecord {
+pub(crate) fn import_record() -> ImportRecord {
     let coded = |terminology: &str, value: &str| {
         json!({ "_type": "DV_CODED_TEXT", "value": value,
                 "defining_code": { "_type": "CODE_PHRASE",

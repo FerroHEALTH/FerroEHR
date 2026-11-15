@@ -752,6 +752,30 @@ tombstone's grounds; the erasure is an access record of its own
 entry's period beyond `[audit.store] retention`, which stays the floor every
 period is held to.
 
+**A tombstone is kept as long again, then folds into a gap.** A tombstone
+holds no EHR, no accessor and no purpose, but its content digest is a hash
+of the entry it replaced, and a copy of that entry elsewhere (a forwarded
+BALP `AuditEvent`, an export, a backup) can be matched against it. It is
+kept only while the records after it need it to verify (GDPR Art. 5(1)(e)):
+for one more retention horizon, its entry's own, so a tombstone stays as long
+after its removal as its entry was kept before it. After that, the same
+hourly run folds each run of consecutive tombstones that are all past their
+end into one gap of the chain (`audit.access_log_chain_gap`). The gap keeps
+the positions the run held, the link and link signature of its last record,
+and every ground its tombstones named, and it records when the run was
+folded. The record after the run links to the gap's link, so the chain
+verifies across it. The gap row is the record of the fold: it is never
+changed or removed, and a record that leaves the log any other way is
+reported as tampering. A run is cut after each checkpoint's position, so
+every checkpoint keeps a link to verify against. An entry kept longer pins
+the runs on both sides apart, and each folds on its own. An erasure a law
+orders is a tombstone like any other and folds the same way. Several
+replicas fold on a PostgreSQL advisory lock, so no tombstone is folded twice.
+The metrics are `access_log_folded_total` and `access_log_gaps_total`
+([Access path](operations-access-path.md)). No configuration key sets the
+second horizon. No openEHR specification governs audit retention: our own
+design.
+
 **The default is deliberate.** An access log is the evidence a data subject's right of access is served from, and a repository that silently
 forgets is worse than one that grows — so the software keeps everything until
 an operator says otherwise, rather than choosing a horizon on their behalf.
@@ -793,6 +817,28 @@ on `GET /management/info` under `audit`.
 A record takes about 1.2 KB on disk, so the horizon decides how far the log
 grows ([Storage sizing](operations.md#audit-retention)).
 
+### The access log at steady state
+
+With entries written at a rate of `r` a day and kept for `P` days, the log
+levels off once the first tombstones fold, after `2P`:
+
+- the entries of the last `P` days: `r × P × 3.9 kB` (2.5 kB of row and 1.4
+  kB of indexes each, with signed links);
+- their tombstones, kept another `P` days: `r × P × 1.1 kB`;
+- the gaps: about 0.6 kB each, at least one per checkpoint interval (288 a
+  day), plus one for each run an entry kept longer cut apart. Gaps and
+  checkpoints are kept without end.
+
+The access-path record of #5590 measures 2 518 bytes of row and 3 887 bytes
+stored per entry, 1 079 bytes per tombstone, and 2.08 entries per request at
+20 requests a second, which is 3.59 million entries a day. With the EHDS
+floor of three years (`P` = 1 096 days) that is about 14 GB of entries a day,
+and the log levels off near 15.3 TB of entries and 4.2 TB of tombstones,
+where before it grew by 3.9 GB of tombstones a day for as long as the
+deployment ran. The 0.6 kB of a gap was measured on the same schema with
+signed links (#5619). `VACUUM` reuses the space a fold frees for later rows
+(PostgreSQL 18 docs, Routine Vacuuming, Recovering Disk Space).
+
 ### Getting the log out
 
 Three routes, and they answer different questions.
@@ -824,7 +870,7 @@ API's and ISO 8601 date-times.
 | `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
 | `GET /ehr/{ehr_id}/access_log/{uid}` | as above | One entry. |
 | `GET /admin/access-log` | a reviewer | Records across EHRs, entries and tombstones. Filters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`; `offset`, `fetch`. |
-| `GET /admin/access-log/chain` | a reviewer | The `uid` and `link` of each record from `from_sequence` to `to_sequence` (at most 10000), without content, for verification. |
+| `GET /admin/access-log/chain` | a reviewer | The `uid` and `link` of each record from `from_sequence` to `to_sequence` (at most 10000), without content, and the `gaps` of folded tombstones between, for verification. |
 | `GET /admin/access-log/checkpoint` | a reviewer | The newest stored checkpoint, or the one at `sequence`. |
 
 A list answers `offset`, `fetch` and `entries`, and no total count, since a
@@ -1108,9 +1154,10 @@ is our own design.
 - **Verification.** `ferroehr access-log verify` and
   `POST /admin/access-log/verify` recompute the whole chain (an entry
   replaced by its tombstone verifies through the content digest the
-  tombstone keeps), check the checkpoint's signature and that the link at its
-  position is the one it sealed, and check the signature of every signed
-  link. Each finding is reported; the command exits 1 when the log does not
+  tombstone keeps, and a gap of folded tombstones as one link whose digest
+  is its link), check the checkpoint's signature and that the link at its
+  position, a record's or a gap's, is the one it sealed, and check the
+  signature of every signed link and gap. Each finding is reported; the command exits 1 when the log does not
   verify, and the route answers `200` with `intact: false`.
 - **Signed links.** Each link's digest is signed as the eHDSI Audit Trail
   Profile §2.2 asks of a national contact point. The server locks the head
@@ -1121,12 +1168,12 @@ is our own design.
   access information available when an EHR moves to another system.
   `ferroehr access-log export --ehr-id <id>` and
   `GET /admin/access-log/export?ehr_id=` write the EHR's records with their
-  links, every link from the first of them to the checkpoint they verify
-  against, and that checkpoint, sealing one when none covers them. The
+  links, every link and gap from the first of them to the checkpoint they
+  verify against, and that checkpoint, sealing one when none covers them. The
   receiving system runs `ferroehr access-log import --input <file>`: it
   verifies the export against its checkpoint and the certificates in
   `[audit.access_log] trusted_key_files`, keeps the records with their
-  `system_id`, links and `retain_until` apart from its own chain, and records
+  `system_id`, links, gaps and `retain_until` apart from its own chain, and records
   the import as an `import` entry of its own log, built like every other
   entry and naming the system as its accessor. An import repeated stores
   nothing twice. The span holds the links of the other EHRs' entries between
