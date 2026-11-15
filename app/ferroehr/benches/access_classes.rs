@@ -173,7 +173,10 @@ fn main() {
             .as_nanos()
             .div_euclid(2 * u128::try_from(sample.len().max(1)).unwrap_or(u128::MAX));
         let started = Instant::now();
-        let condition = access.condition(&copy, Vec::new());
+        let condition = access.condition(
+            &copy,
+            ferroehr::access_eval::condition::care::Care::Census(Vec::new().into()),
+        );
         let condition_ns = started.elapsed().as_nanos();
         let row = json!({
             "ehrs": n,
