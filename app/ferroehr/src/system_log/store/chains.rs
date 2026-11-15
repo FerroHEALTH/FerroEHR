@@ -199,7 +199,8 @@ impl AuditStore {
         let mut modified = Vec::new();
         loop {
             let rows = sqlx::query(
-                "SELECT r.chain_seq, r.content, sh.content AS shared, r.content_digest \
+                "SELECT r.chain_seq, r.content, sh.content AS shared, \
+                 encode(r.content_digest, 'hex') AS content_digest \
                  FROM audit.access_log_record r \
                  LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
                  WHERE r.chain_seq > $1 AND r.chain_seq <= $2 \

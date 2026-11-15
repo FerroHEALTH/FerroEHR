@@ -64,6 +64,10 @@ const SHARED_DETAILS: [&str; 18] = [
     "at0029", // event type
 ];
 
+/// The members split below their top level (#5714): the shared part keeps
+/// what repeats, the row the attributes named here, which count one access.
+const SPLIT: [(&str, &[&str]); 2] = [("outcome", &["delivered"]), ("query", &["rows"])];
+
 /// The member holding the access details.
 const DETAILS: &str = "other_details";
 /// The member of the details tree holding its elements.
@@ -98,6 +102,17 @@ pub fn split(members: &Map<String, Value>) -> StoredForm {
     for (name, member) in members {
         if SHARED.contains(&name.as_str()) {
             shared.insert(name.clone(), member.clone());
+        } else if let (Some((_, own_keys)), Value::Object(object)) =
+            (SPLIT.iter().find(|(split, _)| split == name), member)
+        {
+            let (own, common): (Map<String, Value>, Map<String, Value>) = object
+                .clone()
+                .into_iter()
+                .partition(|(key, _)| own_keys.contains(&key.as_str()));
+            shared.insert(name.clone(), Value::Object(common));
+            if !own.is_empty() {
+                row.insert(name.clone(), Value::Object(own));
+            }
         } else if name == DETAILS
             && let Value::Object(tree) = member
         {
@@ -149,6 +164,11 @@ pub fn join(row: Value, shared: Option<Value>) -> Value {
     for (name, member) in common {
         if name == DETAILS {
             members.insert(name, joined_details(member, own_details.clone()));
+        } else if let (Some(Value::Object(own)), Value::Object(mut object)) =
+            (members.remove(&name), member.clone())
+        {
+            object.extend(own);
+            members.insert(name, Value::Object(object));
         } else {
             members.insert(name, member);
         }
@@ -204,7 +224,8 @@ mod tests {
             "accessor": { "kind": "person" },
             "action": { "value": "read" },
             "retention": { "grounds": [] },
-            "outcome": { "result": "granted" },
+            "outcome": { "result": "granted", "delivered": 1 },
+            "query": { "language": "AQL", "text_digest": "d" },
             "other_details": {
                 "_type": "ITEM_TREE",
                 "archetype_node_id": "x",
@@ -225,6 +246,11 @@ mod tests {
         };
         let stored = split(members);
         assert!(stored.row.get("accessor").is_none());
+        assert_eq!(stored.row["outcome"], json!({ "delivered": 1 }));
+        assert!(
+            stored.row.get("query").is_none(),
+            "a query that counts no rows is shared whole"
+        );
         assert_eq!(
             stored.row["other_details"],
             json!({ "items": [

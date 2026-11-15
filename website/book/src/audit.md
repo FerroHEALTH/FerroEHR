@@ -774,11 +774,13 @@ its tombstones named, and it records when the run was
 folded. The record after the run links to the gap's link, so the chain
 verifies across it. The gap row is the record of the fold: it is never
 changed or removed, and a record that leaves the log any other way is
-reported as tampering. A run folds whole: the checkpoints of the appends
-inside it leave with it, since the checkpoints after it seal every link
-below them through the chain, and a checkpoint at the run's last position
-verifies against the gap's link. Verify against a recent checkpoint, since
-an old one whose records folded no longer has its link. An entry kept longer pins
+reported as tampering. A run folds whole. A checkpoint inside the run
+that was never published leaves with it, since the checkpoints after it seal
+every link below them through the chain. A published checkpoint stays, and
+the gap records the link it sealed and the digest of its proof, so a
+checkpoint you kept outside the database verifies after the fold as it did
+before. A checkpoint at the run's last position verifies against the gap's
+link. An entry kept longer pins
 the runs on both sides apart, and each folds on its own. An erasure a law
 orders is a tombstone like any other and folds the same way. Several
 replicas fold on a PostgreSQL advisory lock, so no tombstone is folded twice.

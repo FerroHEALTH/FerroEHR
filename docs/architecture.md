@@ -289,7 +289,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   without its link (RFC 8785, #5703, our own design): the part its caller
   shares (accessor, credential, roles, authorisations, purposes, retention
   and the caller's access details) once in `access_log_shared`, keyed by its
-  SHA-256, and the rest on its row, compressed in place; the search columns
+  SHA-256, and the rest on its row, compressed in place, with its digests as
+  32-byte `bytea`, its uid a `uuid` and no `system_id` or `request_id` column
+  (the content holds both), and the repeating part of its `outcome` and
+  `query` in the shared part, the row keeping only the delivered count and
+  the rows (#5714); the search columns
   its insert trigger derives from both; and its `ACCESS_LOG_LINK`: the
   content digest over the whole canonical form, which the writer computes
   (`access_log::stored_form`), and the digest over the previous digest, the
@@ -331,10 +335,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   positions the run held, the link of its last record and the grounds of its
   tombstones. The gap row is the record of the fold and
   is append-only; replicas serialise the fold on a transaction-scoped
-  advisory lock, and the request path takes no part in it. A run folds whole,
-  and the checkpoints inside it, before its last position, leave with it;
-  one at its last position names the gap's link (`audit.access_log_link_at`,
-  #5704). The verifier, its incremental form,
+  advisory lock, and the request path takes no part in it. A run folds whole.
+  An unpublished checkpoint inside it, before its last position, leaves with
+  it; a published one (`published_at`, set by `access_log::publish`) stays,
+  and the gap's `seals` record its position, the link it sealed and the
+  SHA-256 of its proof, which `audit.access_log_sealed_link` answers for that
+  checkpoint, so a checkpoint published before a fold verifies after it
+  (#5727). One at the run's last position names the gap's link
+  (`audit.access_log_link_at`). The verifier, its incremental form,
   the checkpoint check, the export (`LogExport.gaps`), the
   chain read and an import (`access_log_imported_gap`) walk a gap as one
   link whose digest is its link; a missing position no gap accounts for is

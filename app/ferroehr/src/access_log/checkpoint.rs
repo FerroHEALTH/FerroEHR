@@ -313,6 +313,23 @@ impl Checkpoints {
         self.at(sequence).await
     }
 
+    /// Mark the checkpoint at `sequence` published outside the database, so
+    /// the fold keeps it and the gap that folds its position records the link
+    /// it seals (#5727); a checkpoint already marked stays as it is.
+    ///
+    /// # Errors
+    /// The store errors when the statement fails.
+    pub async fn mark_published(&self, sequence: i64) -> Result<(), AccessLogError> {
+        sqlx::query(
+            "UPDATE audit.access_log_checkpoint SET published_at = now() \
+             WHERE sequence = $1 AND published_at IS NULL",
+        )
+        .bind(sequence)
+        .execute(&mut *acquire(&self.pool).await?)
+        .await?;
+        Ok(())
+    }
+
     /// The stored checkpoint at `sequence`.
     ///
     /// # Errors
@@ -398,10 +415,12 @@ impl Checkpoints {
         if !self.signed(canonical_form(checkpoint)?.as_bytes(), &checkpoint.proof) {
             findings.push(ChainFinding::CheckpointProof { sequence });
         }
-        let sealed: Option<String> = sqlx::query_scalar("SELECT audit.access_log_link_at($1)")
-            .bind(sequence)
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
+        let sealed: Option<String> =
+            sqlx::query_scalar("SELECT audit.access_log_sealed_link($1, $2)")
+                .bind(sequence)
+                .bind(&checkpoint.proof)
+                .fetch_one(&mut *acquire(&self.pool).await?)
+                .await?;
         if sealed.as_deref() != Some(checkpoint.digest.as_str()) {
             findings.push(ChainFinding::CheckpointDigest { sequence });
         }
