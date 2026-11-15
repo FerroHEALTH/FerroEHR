@@ -591,6 +591,25 @@ pub(crate) async fn service() -> (testkit::TestDb, ferroehr::service::FerroEhrSe
     (db, svc)
 }
 
+/// Records each of `issuers` as an `active` key space in `db`, as a
+/// replica's first fill does for its mapping's key issuers: a key binds only
+/// under an active key space (`ferroehr::party_binding::key_space`), and a
+/// test service takes no lease.
+pub(crate) async fn open_key_spaces(db: &testkit::TestDb, issuers: &[(&str, bool)]) {
+    for (issuer, portal) in issuers {
+        sqlx::query(
+            "INSERT INTO party.binding_key_space (issuer, portal, state) \
+             VALUES ($1, $2, 'active') \
+             ON CONFLICT (issuer) DO UPDATE SET portal = EXCLUDED.portal, state = 'active'",
+        )
+        .bind(issuer)
+        .bind(portal)
+        .execute(&db.pool())
+        .await
+        .expect("the key space is recorded");
+    }
+}
+
 /// Create an EHR with no subject and no supplied id; return its id.
 pub(crate) async fn create_ehr(svc: &ferroehr::service::FerroEhrService) -> EhrId {
     Box::pin(svc.create_ehr_meta(WriteRequest::new(None)))

@@ -12,6 +12,7 @@
   - [The AQL engine](concepts/aql-engine.md)
 - [Conformance](conformance.md)
 - [Performance](performance.md)
+  - [Capacity](capacity.md)
 - [Benchmarks](benchmarks.md)
 - [Licensing & legal](licensing.md)
   - [Compliance overview](compliance/index.md)

@@ -26,7 +26,10 @@ use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::Identifier;
 use crate::party_binding::fill::{self, Duplicate};
 use crate::party_binding::provisioned;
-use crate::party_binding::store::{self, HeldSelector};
+use crate::party_binding::store::{
+    self,
+    held::{self, HeldSelector},
+};
 use crate::storage::error::StorageError;
 
 mod provenance;
@@ -387,7 +390,7 @@ async fn read_candidates(
     input: &CheckInput,
     parties: &[Uuid],
 ) -> Result<(Vec<NamedAdministrator>, Vec<Candidate>), CheckError> {
-    let held = store::held_selectors(tx, mapping).await?;
+    let held = held::held_selectors(tx, mapping).await?;
     let duplicates = fill::duplicates(held.clone());
     if !duplicates.is_empty() {
         return Err(CheckError::Duplicate { duplicates });
@@ -426,7 +429,7 @@ async fn run(
     mapping: &BindingMapping,
     input: &CheckInput,
 ) -> Result<Report, CheckError> {
-    let held = store::held_selectors(tx, mapping).await?;
+    let held = held::held_selectors(tx, mapping).await?;
     let keys: Vec<&HeldSelector> = held.iter().filter(|h| h.selector == "key").collect();
     let canonical_of = |issuer: &str, key: &str| canonical(input, issuer, key);
     let administrators = named_administrators(input, &keys)?;

@@ -165,6 +165,7 @@ async fn portal(
         PortalLogin::Unrecorded { person } => ("refused-representation-unrecorded", Some(person)),
         PortalLogin::Inactive { person } => ("refused-inactive", Some(person)),
         PortalLogin::Ambiguous => ("refused-ambiguous", None),
+        PortalLogin::Closed(closed) => return Err(super::party::closed::refusal(&closed)),
     };
     tracing::warn!(
         issuer,

@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use super::{CheckError, CheckInput, Committer, Origin, Provenance};
 use crate::party_binding::BindingMapping;
-use crate::party_binding::store::{self, HeldSelector};
+use crate::party_binding::store::{self, held::HeldSelector};
 use crate::service::demographic::jit;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
