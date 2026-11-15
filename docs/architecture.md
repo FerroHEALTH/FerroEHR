@@ -748,7 +748,12 @@ which is what makes an optional stage safe to disable:
    probe reads with `?`, so the planner's estimate and each probe cost the
    same whatever the census, and only the one parse of the bound object grows
    with it (#5645). The care relationships stay in the party domain, which the
-   clinical statement does not read. The request path
+   clinical statement does not read. Before it renders a verdict, the emitter
+   folds what the SQL would decide alike. A repeated member counts once. A
+   two-valued predicate beside its own negation decides the conjunction or the
+   disjunction (a fact of the EHR, which may be unknown, is never folded). A
+   scope that names an empty list covers nothing. Each `EXISTS` folded away is
+   one subquery fewer to plan (`aql::sql::access::simplified`, #5667). The request path
    adds no transaction: every fact is a copy, and a named object is read by
    its head row only when the verdict depends on the object. The procedure,
    its order and its codes are our own design; RM EHR IM §EHR Access only
@@ -1063,9 +1068,23 @@ relationship of another party kind or of its own container is refused
 `LiveGrants::memberships` of the provider its acts-for relationship names,
 which `Capabilities::facts().provider_groups()` carries and the request's
 caller adds to the parties it acts for, one level deep, from the copy held,
-so the regional sharing example adds no transaction. The care check compares
-what each care relationship says, never its position in `relationships`
-(#5640). On a SCIM User's protected `PERSON`, a version whose only change
+so the regional sharing example adds no transaction. The care check
+(`grants::caller::check_care`) compares what each care relationship of the
+committed body says (kind, target, `time_validity`), and the record subjects
+it declares (namespace, id), with the last earlier version holding a body, never its position in `relationships` (#5640) and
+never the derived `binding_caller_fact` rows, whose lifecycle state and
+deleted-head rule made a SCIM deactivation or deletion read as a care change
+(#5628). A logical deletion holds no body and changes none; a SCIM
+deactivation keeps every care relationship and drops only plain Group
+memberships, so revocation needs no grant, and the binding refuses the login
+on its next request (`refused-inactive`, `refused-deprovisioned`) before the
+evaluator runs. A `write_care_relationship` roster whose version changes the
+lifecycle state is no roster (`protect::care_writer_roster`), and an
+`inactive` version takes no update (RM common master06 §Version Lifecycle),
+so the ADT system writes no version of a deactivated professional and cannot
+reactivate one. Its memberships decide nothing while the binding refuses the
+login; a SCIM deletion (master06 §Logical Deletion) or a write after
+reactivation cleans a leaver's roster up. On a SCIM User's protected `PERSON`, a version whose only change
 from its predecessor is to its care relationships (the two stored bodies
 compared with every care relationship and the `uid` taken out,
 `grants::caller::only_care_differs`) passes the party protection for a
