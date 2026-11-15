@@ -30,6 +30,11 @@ fn request_line(at: &str) {
 /// second after the harness prepared its database.
 #[test]
 #[ignore = "the child half of a_request_line_after_a_query_is_written, run in its own process"]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the parent hands the child its filter in the environment of the process it \
+              spawns; the child reads no FerroEHR configuration"
+)]
 fn console_child() {
     let Ok(filter) = std::env::var(CHILD) else {
         return;
