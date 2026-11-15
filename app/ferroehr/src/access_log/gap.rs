@@ -76,13 +76,30 @@ impl AccessLogStore {
         now: jiff::Timestamp,
         limit: u16,
     ) -> Result<Folded, AccessLogError> {
-        let row = sqlx::query(
+        self.run_fold(
             "SELECT folded, gaps FROM audit.fold_access_log_tombstones($1::text::timestamptz, $2)",
+            now,
+            limit,
         )
-        .bind(now.to_string())
-        .bind(i32::from(limit))
-        .fetch_one(&mut *acquire(self.pool()).await?)
-        .await?;
+        .await
+    }
+
+    /// Run the fold `statement`, which takes the instant and the limit and
+    /// answers `folded` and `gaps`, and return what it removed and wrote.
+    ///
+    /// # Errors
+    /// The store errors when the statement fails.
+    pub(super) async fn run_fold(
+        &self,
+        statement: &'static str,
+        now: jiff::Timestamp,
+        limit: u16,
+    ) -> Result<Folded, AccessLogError> {
+        let row = sqlx::query(statement)
+            .bind(now.to_string())
+            .bind(i32::from(limit))
+            .fetch_one(&mut *acquire(self.pool()).await?)
+            .await?;
         let count = |column: &str| -> Result<u64, AccessLogError> {
             let value: i64 = row.try_get(column)?;
             u64::try_from(value)

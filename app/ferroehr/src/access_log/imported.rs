@@ -36,6 +36,17 @@ use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecor
 use openehr_rm::draft::access_log::invariants::check_tombstone;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 
+/// The imported records joined with their links, in the columns [`stored`]
+/// reads.
+macro_rules! imported_records {
+    () => {
+        "SELECT r.system_id, l.sequence AS chain_seq, r.content, l.algorithm, \
+         l.previous_digest, l.content_digest, l.digest, l.signature \
+         FROM audit.access_log_imported_record r JOIN audit.access_log_imported_link l \
+         ON l.system_id = r.system_id AND l.sequence = r.sequence"
+    };
+}
+
 /// One thing an imported log fails against one of its checkpoints.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ImportedFinding {
@@ -80,15 +91,12 @@ impl AccessLogStore {
     ) -> Result<u64, AccessLogError> {
         let mut conn = acquire(self.pool()).await?;
         let mut tx = conn.begin().await?;
-        let rows = sqlx::query(
-            "SELECT r.system_id, l.sequence AS chain_seq, r.content, l.algorithm, \
-             l.previous_digest, l.content_digest, l.digest, l.signature FROM audit.access_log_imported_record r \
-             JOIN audit.access_log_imported_link l \
-               ON l.system_id = r.system_id AND l.sequence = r.sequence \
-             WHERE r.record_type = 'ACCESS_LOG_ENTRY' AND r.retain_until < $1::text::date \
+        let rows = sqlx::query(concat!(
+            imported_records!(),
+            " WHERE r.record_type = 'ACCESS_LOG_ENTRY' AND r.retain_until < $1::text::date \
              ORDER BY r.retain_until, r.system_id, r.sequence LIMIT $2 \
              FOR UPDATE OF r SKIP LOCKED",
-        )
+        ))
         .bind(today.to_string())
         .bind(i64::from(limit))
         .fetch_all(&mut *tx)
@@ -138,22 +146,13 @@ impl AccessLogStore {
         now: jiff::Timestamp,
         limit: u16,
     ) -> Result<Folded, AccessLogError> {
-        let row = sqlx::query(
-            "SELECT tombstones, gaps FROM audit.fold_access_log_imported($1::text::timestamptz, $2)",
+        self.run_fold(
+            "SELECT tombstones AS folded, gaps \
+             FROM audit.fold_access_log_imported($1::text::timestamptz, $2)",
+            now,
+            limit,
         )
-        .bind(now.to_string())
-        .bind(i32::from(limit))
-        .fetch_one(&mut *acquire(self.pool()).await?)
-        .await?;
-        let count = |column: &str| -> Result<u64, AccessLogError> {
-            let value: i64 = row.try_get(column)?;
-            u64::try_from(value)
-                .map_err(|error| AccessLogError::Store(sqlx::Error::Decode(Box::new(error))))
-        };
-        Ok(Folded {
-            tombstones: count("tombstones")?,
-            gaps: count("gaps")?,
-        })
+        .await
     }
 }
 
@@ -261,13 +260,10 @@ impl Checkpoints {
         .iter()
         .map(gap)
         .collect::<Result<Vec<_>, _>>()?;
-        let records = sqlx::query(
-            "SELECT r.system_id, l.sequence AS chain_seq, r.content, l.algorithm, \
-             l.previous_digest, l.content_digest, l.digest, l.signature FROM audit.access_log_imported_record r \
-             JOIN audit.access_log_imported_link l \
-               ON l.system_id = r.system_id AND l.sequence = r.sequence \
-             WHERE r.system_id = $1 ORDER BY r.sequence",
-        )
+        let records = sqlx::query(concat!(
+            imported_records!(),
+            " WHERE r.system_id = $1 ORDER BY r.sequence"
+        ))
         .bind(system_id)
         .fetch_all(&mut *conn)
         .await?

@@ -37,16 +37,7 @@ const FOLD_BATCH: u16 = 5000;
 /// The errors of [`AccessLogStore::tombstone_expired`]; the batches replaced
 /// before the failing one stay replaced.
 pub async fn expire(store: &AccessLogStore, now: jiff::Timestamp) -> Result<u64, AccessLogError> {
-    let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
-    let removed = dv_date_time(&now);
-    let mut replaced = 0_u64;
-    loop {
-        let batch = store.tombstone_expired(today, &removed, BATCH).await?;
-        replaced = replaced.saturating_add(u64::try_from(batch.len()).unwrap_or(u64::MAX));
-        if batch.len() < usize::from(BATCH) {
-            return Ok(replaced);
-        }
-    }
+    replace_all(store, Log::Local, now).await
 }
 
 /// Replace every imported entry whose retention ended before the UTC date of
@@ -60,15 +51,43 @@ pub async fn expire_imported(
     store: &AccessLogStore,
     now: jiff::Timestamp,
 ) -> Result<u64, AccessLogError> {
+    replace_all(store, Log::Imported, now).await
+}
+
+/// The log a retention run replaces entries in.
+#[derive(Debug, Clone, Copy)]
+enum Log {
+    /// This system's own chain.
+    Local,
+    /// The logs imported from other systems.
+    Imported,
+}
+
+/// Replace the entries of `log` whose retention ended before the UTC date
+/// of `now`, batch by batch until one replaces fewer than [`BATCH`], and
+/// return how many were replaced.
+async fn replace_all(
+    store: &AccessLogStore,
+    log: Log,
+    now: jiff::Timestamp,
+) -> Result<u64, AccessLogError> {
     let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
     let removed = dv_date_time(&now);
     let mut replaced = 0_u64;
     loop {
-        let batch = store
-            .tombstone_expired_imported(today, &removed, BATCH)
-            .await?;
-        replaced = replaced.saturating_add(batch);
-        if batch < u64::from(BATCH) {
+        let count = match log {
+            Log::Local => {
+                let batch = store.tombstone_expired(today, &removed, BATCH).await?;
+                u64::try_from(batch.len()).unwrap_or(u64::MAX)
+            }
+            Log::Imported => {
+                store
+                    .tombstone_expired_imported(today, &removed, BATCH)
+                    .await?
+            }
+        };
+        replaced = replaced.saturating_add(count);
+        if count < u64::from(BATCH) {
             return Ok(replaced);
         }
     }
