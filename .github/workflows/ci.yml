@@ -228,7 +228,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
-          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          QUEUE_BASE_REF: ${{ github.event.merge_group.base_ref }}
           PUSH_BEFORE: ${{ github.event.before }}
           PUSH_SHA: ${{ github.sha }}
         run: |
@@ -237,12 +237,15 @@ jobs:
             base="$PR_BASE"; head="$PR_HEAD"
           elif [ "$EVENT_NAME" = "merge_group" ]; then
             # A merge group is checked out as the queue ref, whose head is
-            # `github.sha` ("GITHUB_SHA: SHA of the merge group" — the
-            # events-that-trigger-workflows reference), sitting on top of the
-            # base-branch tip the group was built from. The delta is therefore
-            # base_sha..github.sha. If that base does not resolve, the fallback
-            # below runs every job rather than gating nothing (#2777).
-            base="$QUEUE_BASE"; head="$PUSH_SHA"
+            # `github.sha` ("GITHUB_SHA: SHA of the merge group"). Its
+            # `base_sha` is the head of the entry queued ahead of it, not the
+            # base branch, so a diff from it reads only the last entry, and a
+            # group whose last entry touches no code gates every earlier
+            # entry's code out (#5741). The base is where the group forked
+            # from the base branch, so the group is tested as a whole. If it
+            # does not resolve, the fallback below runs every job (#2777).
+            base="$(git merge-base "origin/${QUEUE_BASE_REF#refs/heads/}" "$PUSH_SHA" 2>/dev/null || true)"
+            head="$PUSH_SHA"
           else
             base="$PUSH_BEFORE"; head="$PUSH_SHA"
           fi
@@ -498,7 +501,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
-          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          QUEUE_BASE_REF: ${{ github.event.merge_group.base_ref }}
           PUSH_BEFORE: ${{ github.event.before }}
           PUSH_SHA: ${{ github.sha }}
         run: |
@@ -507,13 +510,17 @@ jobs:
             range="$PR_BASE..$PR_HEAD"
             base="$PR_BASE"
           elif [ "$EVENT_NAME" = "merge_group" ]; then
-            # The queued commits, resolved the same way the change filter does
-            # it (#2777). `github.event.before` is absent on this event, so
-            # falling through to the push branch would build the range
-            # `..<sha>` — which git reads as `HEAD..<sha>`, i.e. nothing — and
-            # this guard would pass vacuously on every queued pull request.
-            range="$QUEUE_BASE..$PUSH_SHA"
-            base="$QUEUE_BASE"
+            # Every queued commit, from where the group forked from the base
+            # branch, as the change filter reads it (#2777, #5741): `base_sha`
+            # is the head of the entry ahead, which would scan the last entry
+            # alone. `github.event.before` is absent on this event, so falling
+            # through to the push branch would scan nothing.
+            base="$(git merge-base "origin/${QUEUE_BASE_REF#refs/heads/}" "$PUSH_SHA" 2>/dev/null || true)"
+            if [ -z "$base" ]; then
+              echo "::error::the merge group shares no history with ${QUEUE_BASE_REF}; nothing to scan against" >&2
+              exit 1
+            fi
+            range="$base..$PUSH_SHA"
           else
             range="$PUSH_BEFORE..$PUSH_SHA"
             base="$PUSH_BEFORE"
