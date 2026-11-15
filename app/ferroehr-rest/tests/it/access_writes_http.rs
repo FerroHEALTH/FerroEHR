@@ -163,7 +163,7 @@ async fn a_write_in_a_restricted_category_is_stored_and_not_read_back() {
         .collect();
     assert_eq!(
         actions,
-        vec![(Some("create"), Some("granted"))],
+        vec![(Some("C"), Some("granted"))],
         "the response is recorded as the create, and no read of it but the refused one"
     );
     let refused = &refused[0];

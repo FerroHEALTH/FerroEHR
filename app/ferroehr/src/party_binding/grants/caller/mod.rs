@@ -27,7 +27,7 @@
 //! is its membership of a `GROUP`, such as the providers of a region (RM
 //! demographic `org.openehr.rm.demographic.group.adoc`), written under the
 //! same grant. A client acting for that `ORGANISATION` acts for the `GROUP`
-//! too ([`CallerFacts::provider_groups`]): one level of membership, our own
+//! too ([`facts::CallerFacts::provider_groups`]): one level of membership, our own
 //! design (#5575).
 //!
 //! [`store`] writes the facts in each commit's transaction and stamps the
@@ -43,6 +43,7 @@
               the caller facts are derived from"
 )]
 
+pub mod facts;
 pub mod patient;
 pub mod store;
 pub mod subject;
@@ -70,6 +71,8 @@ use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 pub(crate) enum FactKind {
     /// The performer holds the role the `ROLE`'s coded name names.
     Role,
+    /// The `ORGANISATION` is of the type its coded name names.
+    OrganisationType,
     /// The professional is a member of the care team.
     MemberOf,
     /// The patient is in the care of the team or unit.
@@ -78,22 +81,33 @@ pub(crate) enum FactKind {
 
 impl FactKind {
     /// Every kind, in contract order.
-    const ALL: [Self; 3] = [Self::Role, Self::MemberOf, Self::UnderCareOf];
+    const ALL: [Self; 4] = [
+        Self::Role,
+        Self::OrganisationType,
+        Self::MemberOf,
+        Self::UnderCareOf,
+    ];
 
-    /// The care relationship term the kind is read by; `None` for a role,
-    /// which the `ROLE`'s coded name names in the jurisdiction's terminology.
+    /// The care relationship term the kind is read by; `None` for a role or
+    /// an organisation type, which a party's coded name names in the
+    /// jurisdiction's terminology.
     pub(crate) fn care(self) -> Option<CareRelationship> {
         match self {
-            Self::Role => None,
+            Self::Role | Self::OrganisationType => None,
             Self::MemberOf => Some(CareRelationship::MemberOf),
             Self::UnderCareOf => Some(CareRelationship::UnderCareOf),
         }
     }
 
-    /// The kind as the side table stores it: `role` for a role, and the code
-    /// a care relationship is read by.
+    /// The kind as the side table stores it: `role` for a role,
+    /// `organisation_type` for an organisation type, and the code a care
+    /// relationship is read by.
     pub(crate) fn code(self) -> &'static str {
-        self.care().map_or("role", |care| care.code())
+        match self {
+            Self::Role => "role",
+            Self::OrganisationType => "organisation_type",
+            Self::MemberOf | Self::UnderCareOf => self.care().map_or("", |care| care.code()),
+        }
     }
 
     /// The kind stored as `code`, `None` for another code.
@@ -139,11 +153,20 @@ pub(crate) struct CallerFact {
     pub(crate) not_after: Bound,
 }
 
-/// Pushes onto `facts` the role `body`, a `ROLE`, names: its `name` when that
-/// is a `DV_CODED_TEXT` of a terminology the jurisdiction names. A `ROLE`
-/// named in text, or by a code of [`crate::party_binding::policy_mark::TERMINOLOGY`], which holds no role,
-/// names none.
-pub(crate) fn role(body: &Value, facts: &mut GrantFacts) {
+/// Pushes onto `facts` the fact of `kind` the coded `name` of `body` names.
+///
+/// For a `ROLE` it is the role its performer holds, for an `ORGANISATION` its
+/// own type, when that `name` is a `DV_CODED_TEXT` of a terminology the
+/// jurisdiction names (RM demographic `PARTY.type()`, invariant
+/// `type = name`). A party named in text, or by a code of
+/// [`crate::party_binding::policy_mark::TERMINOLOGY`], names none, and a care
+/// relationship kind names nothing here.
+pub(crate) fn coded_name(body: &Value, kind: FactKind, facts: &mut GrantFacts) {
+    let (class, foreign) = match kind {
+        FactKind::Role => ("ROLE", ForeignKind::Role),
+        FactKind::OrganisationType => ("ORGANISATION", ForeignKind::OrganisationType),
+        FactKind::MemberOf | FactKind::UnderCareOf => return,
+    };
     let Some(name) = body
         .get("name")
         .filter(|name| name.get("_type").and_then(Value::as_str) == Some("DV_CODED_TEXT"))
@@ -154,17 +177,17 @@ pub(crate) fn role(body: &Value, facts: &mut GrantFacts) {
         Ok(coded) => coded,
         Err(error) => {
             facts.unread.push(format!(
-                "ROLE.name: the DV_CODED_TEXT does not read: {error}"
+                "{class}.name: the DV_CODED_TEXT does not read: {error}"
             ));
             return;
         }
     };
-    // NOTE: our own design (#5621), a rule names a role only in a jurisdiction's terminology,
-    // so a ROLE named by an operation code is legitimately no role a rule can match.
-    if let Ok(code) = ForeignCode::read(ForeignKind::Role, &coded) {
+    // NOTE: our own design (#5621, #5691), a rule names a role or an organisation type only in
+    // a jurisdiction's terminology, so a name coded in the access terminology names none.
+    if let Ok(code) = ForeignCode::read(foreign, &coded) {
         facts.facts.push(CallerFact {
             ordinal: 0,
-            kind: FactKind::Role,
+            kind,
             value: FactValue::Code(code),
             validity: None,
             not_before: Bound::Open,
@@ -398,7 +421,7 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
 /// One care relationship: the team or unit it targets and the dates its
 /// `time_validity` holds.
 ///
-/// The evaluator reads a caller's from [`CallerFacts::care_teams`] and a
+/// The evaluator reads a caller's from [`facts::CallerFacts::care_teams`] and a
 /// subject's from
 /// [`crate::party_binding::grants::live::LiveGrants::under_care_of`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -468,72 +491,6 @@ impl CareTeam {
             .upper
             .is_none_or(|upper| day < upper || upper.checked_add(grace).is_ok_and(|end| day < end));
         begun && open
-    }
-}
-
-/// What the access evaluator reads about one caller beside its grants.
-///
-/// They are the roles of the `ROLE`s in force the caller performs, the care
-/// teams it is a member of on the request's date, and the `GROUP`s the
-/// provider a client acts for is a member of on that date.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct CallerFacts {
-    roles: Vec<ForeignCode>,
-    care_teams: Vec<CareTeam>,
-    provider_groups: Vec<Uuid>,
-}
-
-impl CallerFacts {
-    /// The facts holding `roles` and `care_teams`, each sorted and distinct.
-    #[must_use]
-    pub fn new(mut roles: Vec<ForeignCode>, mut care_teams: Vec<CareTeam>) -> Self {
-        roles.sort();
-        roles.dedup();
-        care_teams.sort();
-        care_teams.dedup();
-        Self {
-            roles,
-            care_teams,
-            provider_groups: Vec::new(),
-        }
-    }
-
-    /// These facts with `groups`, the `GROUP`s the client's provider is a
-    /// member of, sorted and distinct.
-    #[must_use]
-    pub fn with_provider_groups(mut self, mut groups: Vec<Uuid>) -> Self {
-        groups.sort_unstable();
-        groups.dedup();
-        self.provider_groups = groups;
-        self
-    }
-
-    /// The roles of the `ROLE`s in force the caller performs.
-    #[must_use]
-    pub fn roles(&self) -> &[ForeignCode] {
-        &self.roles
-    }
-
-    /// Whether the caller performs a `ROLE` in force named `role`, compared
-    /// by terminology id and code (`ACCESS_ACTOR_SCOPE.role`).
-    #[must_use]
-    pub fn performs(&self, role: &DvCodedText) -> bool {
-        ForeignCode::read(ForeignKind::Role, role)
-            .is_ok_and(|code| self.roles.binary_search(&code).is_ok())
-    }
-
-    /// The care teams the caller is a member of on the request's date.
-    #[must_use]
-    pub fn care_teams(&self) -> &[CareTeam] {
-        &self.care_teams
-    }
-
-    /// The containers of the `GROUP`s the provider a client acts for is a
-    /// member of on the request's date, by a membership (`MBR`) relationship of the
-    /// provider `ORGANISATION`.
-    #[must_use]
-    pub fn provider_groups(&self) -> &[Uuid] {
-        &self.provider_groups
     }
 }
 
@@ -624,6 +581,41 @@ mod tests {
             "an operation code names no role"
         );
         assert_eq!(operation.unread, Vec::<String>::new());
+    }
+
+    #[test]
+    fn an_organisation_type_is_read_from_the_coded_name_of_an_organisation() {
+        let organisation = |name: Value| {
+            json!({"_type": "ORGANISATION",
+                   "archetype_node_id": "openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1",
+                   "name": name})
+        };
+        let facts = GrantFacts::of(
+            Kind::Organisation,
+            &organisation(coded("urn:example:organisation-types", "HOSPITAL")),
+        );
+        let read: Vec<(FactKind, FactValue)> = facts
+            .facts
+            .iter()
+            .map(|fact| (fact.kind, fact.value.clone()))
+            .collect();
+        assert_eq!(
+            read,
+            vec![(
+                FactKind::OrganisationType,
+                FactValue::Code(code("urn:example:organisation-types", "HOSPITAL"))
+            )]
+        );
+        let text = GrantFacts::of(
+            Kind::Organisation,
+            &organisation(json!({"_type": "DV_TEXT", "value": "Hospital"})),
+        );
+        assert_eq!(text.facts, Vec::new(), "a name in text names no type");
+        let access = GrantFacts::of(
+            Kind::Organisation,
+            &organisation(coded(TERMINOLOGY, "HOSPITAL")),
+        );
+        assert_eq!(access.facts, Vec::new(), "an access code names no type");
     }
 
     #[test]
@@ -751,31 +743,11 @@ mod tests {
     }
 
     #[test]
-    fn provider_groups_are_sorted_and_distinct() {
-        let (a, b) = (Uuid::from_u128(2), Uuid::from_u128(1));
-        let facts = CallerFacts::default().with_provider_groups(vec![a, b, a]);
-        assert_eq!(facts.provider_groups(), &[b, a]);
-    }
-
-    #[test]
     fn every_kind_reads_back_from_its_code() {
         for kind in FactKind::ALL {
             assert_eq!(FactKind::of(kind.code()), Some(kind));
         }
         assert_eq!(FactKind::of("represents"), None);
-    }
-
-    #[test]
-    fn caller_facts_answer_by_terminology_and_code() {
-        let nurse = code("urn:example:roles", "NURSE");
-        let facts = CallerFacts::new(vec![nurse.clone(), nurse], Vec::new());
-        assert_eq!(facts.roles().len(), 1);
-        let named = |terminology: &str, value: &str| -> DvCodedText {
-            openehr_its::json::from_canonical_value(&coded(terminology, value)).expect("a code")
-        };
-        assert!(facts.performs(&named("urn:example:roles", "NURSE")));
-        assert!(!facts.performs(&named("local", "NURSE")));
-        assert!(!facts.performs(&named("urn:example:roles", "nurse")));
     }
 
     #[test]

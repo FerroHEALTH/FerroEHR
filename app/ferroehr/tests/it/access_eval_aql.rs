@@ -18,7 +18,7 @@ use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::party_binding::BindingMapping;
-use ferroehr::party_binding::grants::caller::CallerFacts;
+use ferroehr::party_binding::grants::caller::facts::CallerFacts;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::query::request::{AqlQueryRequest, QueryOutcome};

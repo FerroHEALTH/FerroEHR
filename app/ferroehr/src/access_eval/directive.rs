@@ -185,6 +185,10 @@ impl Reader<'_, '_> {
                         .role
                         .as_ref()
                         .is_none_or(|role| caller.facts.performs(role));
+                    let organisation = scope
+                        .organisation_type
+                        .as_ref()
+                        .is_none_or(|kind| caller.facts.acts_for_type(kind));
                     let relationship = scope.relationship.as_ref().is_none_or(|coded| {
                         match Relationship::read_coded(coded) {
                             Ok(Relationship::Care) => self.judged.ehr.cared,
@@ -198,7 +202,10 @@ impl Reader<'_, '_> {
                         .caller_kind
                         .as_ref()
                         .is_none_or(|coded| CallerKind::read_coded(coded) == Ok(caller.kind));
-                    Pred::all(vec![party, Pred::of(role && relationship && kind)])
+                    Pred::all(vec![
+                        party,
+                        Pred::of(role && organisation && relationship && kind),
+                    ])
                 })
                 .collect();
         Pred::any(scopes)
