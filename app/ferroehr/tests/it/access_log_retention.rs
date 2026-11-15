@@ -103,7 +103,7 @@ async fn an_expired_entry_becomes_a_tombstone() {
     );
     let content: String = sqlx::query_as::<_, (String, Option<String>)>(
         "SELECT r.content, sh.content FROM audit.access_log_record r \
-         LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared WHERE r.uid = $1",
+         LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared WHERE r.uid = $1::uuid",
     )
     .bind(uid(3))
     .fetch_one(&pool)

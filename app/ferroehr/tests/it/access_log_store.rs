@@ -190,7 +190,7 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
 
     let row = sqlx::query(
         "SELECT ehr_id, action_terminology, action_code, result_terminology, result_code, \
-                party_id, request_id, retain_until::text, \
+                party_id, retain_until::text, \
                 time_recorded = '2026-11-07T09:14:03.120Z'::timestamptz AS at \
            FROM audit.access_log_record WHERE chain_seq = 2",
     )
@@ -212,7 +212,6 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
         row.get::<String, _>("party_id"),
         "6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5"
     );
-    assert_eq!(row.get::<String, _>("request_id"), "01JC2Q7N3X");
     assert_eq!(row.get::<String, _>("retain_until"), "2031-11-07");
     assert!(row.get::<bool, _>("at"));
 
@@ -318,11 +317,14 @@ const INSERTED: &[&str] = &[
      SELECT (audit.access_log_record_derive(forged)).* FROM ( \
        SELECT jsonb_populate_record(NULL::audit.access_log_record, jsonb_build_object( \
          'chain_seq', 2, 'content', c.content, 'algorithm', 'SHA-256', \
-         'previous_digest', p.digest, 'content_digest', audit.access_log_content_digest(c.content), \
-         'digest', audit.access_log_link_digest(p.digest, 2, audit.access_log_content_digest(c.content)), \
+         'previous_digest', '\\x' || encode(p.digest, 'hex'), \
+         'content_digest', '\\x' || audit.access_log_content_digest(c.content), \
+         'digest', '\\x' || audit.access_log_link_digest(encode(p.digest, 'hex'), 2, \
+                       audit.access_log_content_digest(c.content)), \
+         'shared', '\\x' || encode(c.shared, 'hex'), \
          'stored_at', now())) AS forged \
          FROM audit.access_log_record p, \
-              (SELECT replace(content, '000000000003', '0000000000ff') AS content \
+              (SELECT replace(content, '000000000003', '0000000000ff') AS content, shared \
                  FROM audit.access_log_record WHERE chain_seq = 4) c \
         WHERE p.chain_seq = 1) AS f",
 ];

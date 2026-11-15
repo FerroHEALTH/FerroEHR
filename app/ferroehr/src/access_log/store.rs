@@ -145,7 +145,8 @@ pub fn canonical_form(record: &impl serde::Serialize) -> Result<String, AccessLo
 macro_rules! records {
     () => {
         "SELECT r.chain_seq, r.content, sh.content AS shared, r.algorithm, \
-         r.previous_digest, r.content_digest, r.digest \
+         encode(r.previous_digest, 'hex') AS previous_digest, \
+         encode(r.content_digest, 'hex') AS content_digest, encode(r.digest, 'hex') AS digest \
          FROM audit.access_log_record r \
          LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared"
     };
@@ -352,7 +353,9 @@ impl AccessLogStore {
         let (keys, texts): (Vec<String>, Vec<String>) = shared.into_iter().unzip();
         sqlx::query(
             "INSERT INTO audit.access_log_shared (digest, content) \
-             SELECT * FROM unnest($1::text[], $2::text[]) ON CONFLICT (digest) DO NOTHING",
+             SELECT decode(t.digest, 'hex'), t.content \
+             FROM unnest($1::text[], $2::text[]) AS t(digest, content) \
+             ON CONFLICT (digest) DO NOTHING",
         )
         .bind(&keys)
         .bind(&texts)
@@ -361,11 +364,13 @@ impl AccessLogStore {
         // NOTE: the ordinality orders the insert, which is the order the row trigger links the records in.
         let rows = sqlx::query(
             "INSERT INTO audit.access_log_record (content, shared, content_digest) \
-             SELECT t.content, t.shared, t.content_digest \
+             SELECT t.content, decode(t.shared, 'hex'), decode(t.content_digest, 'hex') \
              FROM unnest($1::text[], $2::text[], $3::text[]) WITH ORDINALITY \
              AS t(content, shared, content_digest, n) \
              ORDER BY t.n \
-             RETURNING uid, chain_seq, algorithm, previous_digest, content_digest, digest",
+             RETURNING uid::text AS uid, chain_seq, algorithm, \
+             encode(previous_digest, 'hex') AS previous_digest, \
+             encode(content_digest, 'hex') AS content_digest, encode(digest, 'hex') AS digest",
         )
         .bind(&contents)
         .bind(&parts)
@@ -423,6 +428,10 @@ impl AccessLogStore {
     /// The store errors when the statement fails, and
     /// [`AccessLogError::Unreadable`] when the stored record does not read.
     pub async fn read(&self, uid: &str) -> Result<Option<AccessLogRecord>, AccessLogError> {
+        // NOTE: our own design (#5714); a uid that is no uuid names no record of this log.
+        let Ok(uid) = uuid::Uuid::parse_str(uid) else {
+            return Ok(None);
+        };
         let row = sqlx::query(concat!(records!(), " WHERE r.uid = $1"))
             .bind(uid)
             .fetch_optional(&mut *acquire(&self.pool).await?)
@@ -466,6 +475,10 @@ impl AccessLogStore {
         time_removed: DvDateTime,
         grounds: NonEmptyVec<DvCodedText>,
     ) -> Result<Option<AccessLogTombstone>, AccessLogError> {
+        // NOTE: our own design (#5714); a uid that is no uuid names no entry of this log.
+        let Ok(uid) = uuid::Uuid::parse_str(uid) else {
+            return Ok(None);
+        };
         let row = sqlx::query(concat!(
             records!(),
             " WHERE r.uid = $1 AND r.record_type = 'ACCESS_LOG_ENTRY' FOR UPDATE OF r"
