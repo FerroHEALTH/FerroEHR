@@ -268,9 +268,11 @@ hp_read_until() {
 # The PIX merge and the steward revert, on the pixm stack hospital_pixm set
 # up: Lisa under Cardiology's care, her duplicate record with an EHR of its
 # own, merged into hers and split again.
-hospital_pix_merge() {
-  probe "P-HOSP-PIX-SETUP" "$PROBE_WORKING" "server" "#5693" \
-    "Lisa and her duplicate record, fed to FerroPIX, each with its PERSON and EHR"
+# Lisa and her duplicate record: fed to FerroPIX, each with its patient
+# PERSON and EHR, Lisa under Cardiology's care and the duplicate record holding
+# vital signs. Written in hospital_pixm's setup, before the controller's
+# ACCESS_POLICY holds every write to its rules.
+hospital_pix_patients() {
   local fed mrn pseudonym
   for mrn in lisa-0001 lisa-0002; do
     fed="$(pix_feed "$mrn")"
@@ -289,6 +291,12 @@ hospital_pix_merge() {
   hp_ehr lisa_dup "$pseudonym" || h_fail_call "the duplicate record's EHR"
   h_commit c_lisa_dup 2 kc:anna "$(hv ehr_lisa_dup)" "$H_T_VITALS" \
     || h_fail_call "vital signs in the duplicate record"
+}
+
+hospital_pix_merge() {
+  probe "P-HOSP-PIX-SETUP" "$PROBE_WORKING" "server" "#5693" \
+    "Lisa and her duplicate record, fed to FerroPIX, each with its PERSON and EHR"
+  local fed mrn
   # The ADT system feeds both records again now that each PERSON carries its
   # record's identifier, so FerroPIX announces them and FerroEHR binds each
   # identity to its PERSON before the merge arrives.

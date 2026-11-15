@@ -1515,6 +1515,7 @@ hospital_pixm() {
   local eva
   eva="$(hv ehr_eva)"
   h_commit c_vitals 2 kc:anna "$eva" "$H_T_VITALS" || h_fail_call "the vital signs"
+  hospital_pix_patients
   H_IF_NONE_MATCH='*' h_call 1 kc:ferroehr PUT "$HX/admin/access_policy" "$(j_policy)"
   [[ "$H_CODE" = 201 ]] || h_fail_call "the controller's ACCESS_POLICY"
   probe_done

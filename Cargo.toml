@@ -308,9 +308,9 @@ ferrobridge-term = { version = "0.10.0", default-features = false, features = ["
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
-# crates.io 2026-11-13, on ferrohealth-smart 0.24.
-ihe-atna = { version = "=0.18.1", default-features = false }
-ehds-logging = { version = "=0.18.1", default-features = false }
+# crates.io 2026-11-15 (0.19.0), on ferrohealth-smart 0.24.
+ihe-atna = { version = "=0.19.0", default-features = false }
+ehds-logging = { version = "=0.19.0", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the CDR's ITI-81 page holds each typed BALP `AuditEvent`, and the viewer reads
 # the searchset, each `AuditEvent` and a refusal's `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
@@ -329,10 +329,11 @@ fhir-search = { version = "0.1.131", default-features = false }
 # PIXm Patient Identifier Cross-reference Consumer (ITI-83) the IHE patient
 # identity source of the EHR index is asked through (`[pixm]`), built from
 # ferrohealth-smart's outbound client; `pmir` is the PMIR Patient Identity
-# Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, 0.10.1 reading every
-# Patient's `active` and links and rebuilding a subscription from its stored
-# Location. Verified on crates.io 2026-11-15, on ferrohealth-smart 0.24.
-ihe-iti = { version = "=0.10.1", default-features = false }
+# Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
+# Patient's `active` and links and rebuilds a subscription from its stored
+# Location. Verified on crates.io 2026-11-15 (0.11.0, on ihe-atna 0.19), on
+# ferrohealth-smart 0.24.
+ihe-iti = { version = "=0.11.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
