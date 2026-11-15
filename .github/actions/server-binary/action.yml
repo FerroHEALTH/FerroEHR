@@ -1,0 +1,139 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# .github/actions/server-binary — the server binary every test lane packages.
+#
+# THE build of `ferroehr-server` under the `e2e` profile (the release profile
+# without LTO, #3490) that ci.yml's ui-e2e-binary and perf-base-binary and the
+# hospital deploy-probe lane run, in one place (#5673). It leaves the stripped
+# binary at bin/amd64/ferroehr of the workspace and uploads it as the artifact
+# the caller names.
+#
+# The caller runs it in the rust:*-slim-trixie job container, so the binary
+# links against the glibc of gcr.io/distroless/cc-debian13: glibc runs forward
+# only, and a binary built on a newer runner image would not load there. The
+# caller also pins SOURCE_DATE_EPOCH, since app/ferroehr/build.rs bakes it into
+# the crate and a per-run value makes it uncacheable.
+#
+# Two caches, strongest first:
+#   1. the finished binary, keyed on the exact content of every input the
+#      server build reads, so a tree any lane already built is restored and
+#      nothing compiles. The key is the same for every caller, which is what
+#      lets them share an entry; app/ferroehr-viewer/ is absent because the
+#      viewer is not in ferroehr-server's dependency graph. Exact key, no
+#      restore-keys: a near-match would package a binary of another tree
+#      (docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching).
+#   2. sccache per compilation unit for a miss, with rust-cache keeping the
+#      cargo registry only (github.com/Swatinem/rust-cache, `cache-targets:
+#      false`). Only main writes sccache: a pull-request entry is readable by
+#      that pull request alone, and its writes evicted main's from the 10 GB
+#      quota (github.com/mozilla/sccache, docs/Configuration.md).
+#
+# Requires the repository to be checked out (a local action resolves against
+# the runner's workspace).
+name: Build the server binary
+description: Build ferroehr-server under the e2e profile, restored from the binary cache when the tree was built before, and upload it.
+
+inputs:
+  root:
+    description: >-
+      The directory of the tree to build, relative to the workspace ('' = the
+      workspace itself). perf-base-binary builds the base commit's tree,
+      extracted into perf-base.
+    required: false
+    default: ""
+  write-cache:
+    description: Whether a run on main writes its compile units to sccache ('true' or 'false').
+    required: false
+    default: "true"
+  artifact-name:
+    description: The name of the artifact the binary is uploaded as.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - id: tree
+      name: The tree under build
+      shell: bash
+      env:
+        ROOT: ${{ inputs.root }}
+      run: |
+        set -euo pipefail
+        if [[ -z "$ROOT" ]]; then
+          echo "prefix=" >> "$GITHUB_OUTPUT"
+          echo "workspace=." >> "$GITHUB_OUTPUT"
+        else
+          echo "prefix=$ROOT/" >> "$GITHUB_OUTPUT"
+          echo "workspace=$ROOT" >> "$GITHUB_OUTPUT"
+        fi
+    # The workspace's own pins only: a base tree is checked out to be compared
+    # with this one, and its pins may lag a change that bumps them.
+    - name: Verify toolchain pins (container == rust-toolchain.toml == Dockerfile)
+      if: inputs.root == ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        channel=$(grep -E '^channel' rust-toolchain.toml | sed -E 's/.*"(.*)".*/\1/')
+        have=$(rustc --version | awk '{print $2}')
+        arg=$(grep -E '^ARG RUST_VERSION=' docker/Dockerfile | sed -n 1p | cut -d= -f2)
+        echo "rust-toolchain=$channel  container-rustc=$have  Dockerfile ARG=$arg"
+        if [ "$channel" != "$have" ]; then
+          echo "::error::Job container rustc ($have) != rust-toolchain.toml ($channel). Bump the container: tag."
+          exit 1
+        fi
+        if [ "$channel" != "$arg" ]; then
+          echo "::error::docker/Dockerfile RUST_VERSION ($arg) != rust-toolchain.toml ($channel)."
+          exit 1
+        fi
+    - id: binary-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: bin/amd64/ferroehr
+        key: ui-e2e-server-bin-1.99.1-${{ hashFiles(format('{0}Cargo.toml', steps.tree.outputs.prefix), format('{0}Cargo.lock', steps.tree.outputs.prefix), format('{0}rust-toolchain.toml', steps.tree.outputs.prefix), format('{0}.cargo/**', steps.tree.outputs.prefix), format('{0}crates/**', steps.tree.outputs.prefix), format('{0}app/ferroehr/**', steps.tree.outputs.prefix), format('{0}app/ferroehr-rest/**', steps.tree.outputs.prefix), format('{0}app/ferroehr-server/**', steps.tree.outputs.prefix), format('{0}tools/**', steps.tree.outputs.prefix)) }}
+    - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      if: steps.binary-cache.outputs.cache-hit != 'true'
+      with:
+        shared-key: ui-e2e-server-binary
+        cache-targets: false
+        workspaces: ${{ steps.tree.outputs.workspace }}
+    - uses: mozilla-actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba # v0.0.11
+      if: steps.binary-cache.outputs.cache-hit != 'true'
+    - name: Build the server binary (e2e profile, native)
+      if: steps.binary-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SCCACHE_GHA_ENABLED: "true"
+        SCCACHE_GHA_RW_MODE: ${{ inputs.write-cache == 'true' && github.ref == 'refs/heads/main' && 'READ_WRITE' || 'READ_ONLY' }}
+        RUSTC_WRAPPER: sccache
+        # "Incrementally compiled crates cannot be cached"
+        # (github.com/mozilla/sccache#known-caveats).
+        CARGO_INCREMENTAL: "0"
+        # A throttled cache backend (Azure 503 ServerBusy) failed sccache's
+        # startup probe and with it the build (#5556); skip the probe and use
+        # the configured mode, so a busy cache only costs misses
+        # (github.com/mozilla/sccache, docs/Configuration.md,
+        # SCCACHE_SKIP_CACHE_CHECK).
+        SCCACHE_SKIP_CACHE_CHECK: "true"
+        WORKSPACE_DIR: ${{ steps.tree.outputs.workspace }}
+      run: |
+        set -euo pipefail
+        out="$GITHUB_WORKSPACE/bin/amd64"
+        cd "$WORKSPACE_DIR"
+        cargo build --profile e2e --locked -p ferroehr-server
+        strip target/e2e/ferroehr
+        mkdir -p "$out"
+        install -m0755 target/e2e/ferroehr "$out/ferroehr"
+    # Cache-hit visibility in the job log.
+    - name: sccache statistics
+      if: always() && steps.binary-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SCCACHE_GHA_ENABLED: "true"
+      run: ${SCCACHE_PATH} --show-stats
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: bin/amd64/ferroehr
+        if-no-files-found: error
+        retention-days: 1
