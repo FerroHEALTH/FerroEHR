@@ -137,15 +137,19 @@
     "grounds": [
       {
         "_type": "DV_CODED_TEXT",
-        "value": "national retention period",
+        "value": "Regulation (EU) 2025/327 Art. 9(2): at least three years from each date of access",
         "defining_code": {
           "terminology_id": {
-            "value": "local"
+            "value": "http://data.europa.eu/eli/reg/2025/327/oj"
           },
-          "code_string": "nl-logging-5y"
+          "code_string": "art_9.par_2"
         }
       }
-    ]
+    ],
+    "policy": {
+      "_type": "OBJECT_VERSION_ID",
+      "value": "5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8::cdr.example.org::2"
+    }
   },
   "link": {
     "_type": "ACCESS_LOG_LINK",

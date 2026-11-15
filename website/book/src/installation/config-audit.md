@@ -63,29 +63,18 @@ emergency_purpose_codes = []
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `true` | Persist every record in the `audit` schema, served through the ITI-81 `GET /fhir/r4/AuditEvent` search. |
-| `retention` | calendar period | unset (keep forever) | How long records are kept, an ISO 8601 period of whole years (`"P3Y"`) or days (`"P1830D"`); unset keeps them forever. Applied hourly by the retention reaper. Years are compared exactly against the floors and ceilings, which are written in years, and reaped with calendar arithmetic. A value below the retention floor of a jurisdiction the active `[privacy.identifier_scan]` rules name is a boot error naming both bounds; see [Audit trail](../audit.md#retention-and-who-chooses-it). The name is EHDS Annex II's. |
-| `sgb_v_309_controller` | bool | `false` | Set only if the deploying organisation is, or acts for, one of the controllers SGB V § 307 names for a German telematics-infrastructure application. It caps the horizon at the three-year period of SGB V § 309 Abs. 1, after which Abs. 3 requires deletion without delay, so a declared controller cannot keep records forever. |
 | `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the store's hash chain; `"0s"` turns the schedule off. Each run verifies the records written since the newest link an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
 | `full_verify_interval` | duration | `"7d"` | The time between two scheduled full passes over the hash chain, which also recompute the records before the checkpoint; `"0s"` leaves the full pass to `SELECT * FROM audit.verify_audit_chain()` on demand. A run that found damage is always followed by a full pass. |
 
 The local store is the durability anchor of the whole subsystem: with it on, the
 FHIR feed drains from it, so a down repository loses nothing.
 
-The floors and ceilings are written in calendar years. In every EU Member State
-the floor is three years (EHDS Art. 9(2)), and a longer national floor wins:
-five years in the Netherlands. Switzerland keeps its one-year floor. A
-`retention` value is compared against them exactly. A `retention`
-value is held to the most days the years can span for a floor (`1096` for three
-years, `1830` for the Dutch five, `366` for one) and to the fewest for a ceiling
-(`1095` for the German three). A declared § 309 controller in Germany therefore
-has no `retention` value that passes both the EHDS floor and the § 309
-ceiling, and sets `retention = 3`:
-
-```toml
-[audit.store]
-retention = 3
-sgb_v_309_controller = true
-```
+How long the store and the access log keep a record is the controller's
+access policy (`ACCESS_POLICY.log_retention`), not a configuration key: the
+period, whether EHDS binds the controller, and the floors and ceilings its law
+sets, each with its provision. `retention` and `sgb_v_309_controller` are
+unknown keys and refused at load. See
+[Audit trail](../audit.md#retention-and-who-chooses-it).
 
 ### The audit category register
 

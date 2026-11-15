@@ -23,7 +23,9 @@ use openehr_rm::draft::access_control::access_control::access_directive::AccessD
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use openehr_rm::draft::access_control::access_control::access_label::AccessLabel;
 use openehr_rm::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
+use openehr_rm::draft::access_control::access_control::access_log_retention::AccessLogRetention;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
+use openehr_rm::draft::access_control::access_control::access_retention_bound::AccessRetentionBound;
 use openehr_rm::draft::access_control::access_control::versioned_access_policy::VersionedAccessPolicy;
 use openehr_rm::draft::access_control::common::archetyped::locatable::Locatable;
 use openehr_rm::draft::access_control::common::change_control::versioned_object::VersionedObject;
@@ -222,10 +224,36 @@ fn log_restriction() -> Value {
     Value::Object(r)
 }
 
+/// A floor or ceiling of `period` under the synthetic provision `code`.
+fn bound(period: &str, code: &str) -> Value {
+    json!({ "_type": "ACCESS_RETENTION_BOUND",
+        "period": { "_type": "DV_DURATION", "value": period },
+        "ground": coded("http://data.europa.eu/eli/example/2026/1/oj", code, code) })
+}
+
+/// The access log's retention of a controller in the Union: five years,
+/// within a national floor of four years and a ceiling of ten.
+fn log_retention() -> Value {
+    let mut r = locatable("at0004", "Access log retention");
+    r.extend(
+        json!({
+            "_type": "ACCESS_LOG_RETENTION",
+            "in_union": true,
+            "period": { "_type": "DV_DURATION", "value": "P5Y" },
+            "floors": [bound("P4Y", "art_4")],
+            "ceilings": [bound("P10Y", "art_10")]
+        })
+        .as_object()
+        .expect("an object")
+        .clone(),
+    );
+    Value::Object(r)
+}
+
 /// The hospital's policy: the ward's care relationship with a 14-day grace,
 /// the HIV classification of `lab_hiv.v1`, the nurse and psychiatry rules,
-/// the regional catalogue entry, and one restriction of the subject's view of
-/// the access log.
+/// the regional catalogue entry, one restriction of the subject's view of
+/// the access log, and the log's retention.
 fn policy() -> Value {
     let mut p = locatable(
         "openEHR-EHR-ACCESS_POLICY.hospital.v1",
@@ -247,7 +275,8 @@ fn policy() -> Value {
             "purpose_required": true,
             "rules": [nurse_rule(), psychiatry_rule()],
             "catalogue": [regional_sharing()],
-            "log_restrictions": [log_restriction()]
+            "log_restrictions": [log_restriction()],
+            "log_retention": log_retention()
         })
         .as_object()
         .expect("an object")
@@ -299,6 +328,8 @@ fn every_class_round_trips() {
     round_trip::<AccessClassification>(&p["classifications"][0]);
     round_trip::<AccessDirective>(&p["rules"][0]);
     round_trip::<AccessLogRestriction>(&p["log_restrictions"][0]);
+    round_trip::<AccessLogRetention>(&p["log_retention"]);
+    round_trip::<AccessRetentionBound>(&p["log_retention"]["floors"][0]);
     let versioned = json!({
         "_type": "VERSIONED_ACCESS_POLICY",
         "uid": { "_type": "HIER_OBJECT_ID", "value": "5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8" },
@@ -431,7 +462,7 @@ fn each_settings_invariant_refuses_settings_that_break_it() {
 
 #[test]
 fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
-    let cases: [Breaking; 10] = [
+    let cases: [Breaking; 17] = [
         ("ACCESS_POLICY.Rules_kind", |p| {
             p["rules"][0]["kind"] = term("consent");
         }),
@@ -470,6 +501,36 @@ fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
         ("ACCESS_LOG_RESTRICTION.Withheld_valid", |p| {
             p["log_restrictions"][0]["withheld"] = json!([term("accessor_credential")]);
         }),
+        ("ACCESS_RETENTION_BOUND.Period_valid", |p| {
+            p["log_retention"]["floors"] = json!([bound("P0D", "art_0")]);
+        }),
+        ("ACCESS_LOG_RETENTION.Floor_outside_union", |p| {
+            p["log_retention"]["in_union"] = json!(false);
+            p["log_retention"]
+                .as_object_mut()
+                .expect("an object")
+                .remove("floors");
+        }),
+        ("ACCESS_LOG_RETENTION.Period_union", |p| {
+            p["log_retention"]["period"]["value"] = json!("P1095D");
+            p["log_retention"]["floors"] = json!([bound("P1Y", "art_1")]);
+        }),
+        ("ACCESS_LOG_RETENTION.Period_floors", |p| {
+            p["log_retention"]["floors"] = json!([bound("P6Y", "art_6")]);
+        }),
+        ("ACCESS_LOG_RETENTION.Ceilings_need_period", |p| {
+            p["log_retention"]
+                .as_object_mut()
+                .expect("an object")
+                .remove("period");
+        }),
+        ("ACCESS_LOG_RETENTION.Period_ceilings", |p| {
+            p["log_retention"]["period"]["value"] = json!("P11Y");
+            p["log_retention"]["ceilings"] = json!([bound("P10Y", "art_10")]);
+        }),
+        ("ACCESS_LOG_RETENTION.Period_ceilings", |p| {
+            p["log_retention"]["period"]["value"] = json!("P3653D");
+        }),
     ];
     for (invariant, breaking) in cases {
         let mut p = policy();
@@ -480,6 +541,61 @@ fn each_policy_invariant_refuses_a_policy_that_breaks_it() {
             "{invariant}"
         );
     }
+}
+
+/// A ceiling below a floor leaves no period between them: the period breaks
+/// one of the two as well, and a period kept without end breaks every
+/// ceiling (`Ceilings_need_period`).
+#[test]
+fn a_ceiling_below_a_floor_and_a_ceiling_without_a_period_are_refused() {
+    let mut p = policy();
+    p["log_retention"]["in_union"] = json!(false);
+    p["log_retention"]["period"]["value"] = json!("P2Y");
+    p["log_retention"]["floors"] = json!([bound("P2Y", "art_2")]);
+    p["log_retention"]["ceilings"] = json!([bound("P18M", "art_18")]);
+    assert_eq!(
+        named(check_policy(&read(p.clone()))),
+        vec![
+            "ACCESS_LOG_RETENTION.Period_ceilings".to_owned(),
+            "ACCESS_LOG_RETENTION.Ceilings_floors".to_owned()
+        ]
+    );
+    p["log_retention"]
+        .as_object_mut()
+        .expect("an object")
+        .remove("period");
+    assert_eq!(
+        named(check_policy(&read(p))),
+        vec![
+            "ACCESS_LOG_RETENTION.Ceilings_need_period".to_owned(),
+            "ACCESS_LOG_RETENTION.Ceilings_floors".to_owned()
+        ]
+    );
+}
+
+/// A controller outside the Union keeps the log as long as its own law asks,
+/// under three years too, and a period without end meets every floor.
+#[test]
+fn outside_the_union_a_period_under_three_years_holds() {
+    let mut p = policy();
+    p["log_retention"] = {
+        let mut r = locatable("at0004", "Access log retention");
+        r.extend(
+            json!({ "_type": "ACCESS_LOG_RETENTION", "in_union": false,
+                "period": { "_type": "DV_DURATION", "value": "P1Y" },
+                "floors": [bound("P1Y", "art_4_5")] })
+            .as_object()
+            .expect("an object")
+            .clone(),
+        );
+        Value::Object(r)
+    };
+    assert_eq!(named(check_policy(&read(p.clone()))), Vec::<String>::new());
+    p["log_retention"]
+        .as_object_mut()
+        .expect("an object")
+        .remove("period");
+    assert_eq!(named(check_policy(&read(p))), Vec::<String>::new());
 }
 
 /// Each `DV_DATE_TIME` and `DV_DURATION` the settings and the policy hold

@@ -8,13 +8,16 @@
 
 use crate::v1_2::data_types::quantity::date_time::dv_date::DvDate;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
+use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 
-/// How long an entry is kept, set when it is written from the categories and origins of the data and the laws that apply.
+/// How long an entry is kept, set when it is written from the access policy in force and the laws that bind its controller.
 #[doc(alias = "ACCESS_RETENTION")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessRetention {
     /// The last day the entry is kept; Void when it is kept without end.
     pub retain_until: Option<DvDate>,
-    /// The provisions that set the period, such as a minimum period from the date of access and a national maximum.
+    /// The provisions that set the period, such as a minimum period from the date of access and a national maximum, coded in a terminology the jurisdiction names.
     pub grounds: openehr_base::containers::NonEmptyVec<DvCodedText>,
+    /// The version of the controller's access policy the period was taken from; Void where the entry was kept under no policy, or was imported from another system.
+    pub policy: Option<ObjectVersionId>,
 }

@@ -283,6 +283,13 @@ impl FerroEhrService {
     #[must_use]
     pub fn new(pools: &DomainPools) -> Self {
         let ehr_access = Arc::new(EhrAccessCache::default());
+        let access_policy = Arc::new(crate::access_policy::LivePolicy::new(
+            pools.clinical.clone(),
+        ));
+        let grants = Arc::new(crate::party_binding::grants::live::LiveGrants::new(
+            pools.party.clone(),
+        ));
+        access_policy.attach_grants(Arc::clone(&grants));
         Self {
             demographic_pool: pools.party.clone(),
             pool: pools.clinical.clone(),
@@ -326,15 +333,11 @@ impl FerroEhrService {
             registers: Arc::new(crate::policy_register::LiveRegisters::new(
                 pools.clinical.clone(),
             )),
-            access_policy: Arc::new(crate::access_policy::LivePolicy::new(
-                pools.clinical.clone(),
-            )),
+            access_policy,
             require_category_map: false,
             party_templates: Arc::default(),
             binding: Arc::default(),
-            grants: Arc::new(crate::party_binding::grants::live::LiveGrants::new(
-                pools.party.clone(),
-            )),
+            grants,
             import_policy: Arc::default(),
         }
     }
@@ -487,6 +490,7 @@ impl FerroEhrService {
     #[must_use]
     pub fn with_audit(mut self, sender: AuditSender) -> Self {
         self.registers.attach_audit(sender.clone());
+        self.access_policy.attach_audit(sender.clone());
         self.audit = Some(sender);
         self
     }

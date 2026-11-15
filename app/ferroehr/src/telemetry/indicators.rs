@@ -8,9 +8,10 @@
 //! The binary constructs them over the live handles and registers them into
 //! a [`ferrohealth_health::registry::Registry`] at boot; the HTTP probes live
 //! in the protocol adapter (`ferroehr-rest`). `db` and `migrations` read
-//! `down` when they fail, which withdraws readiness; every other indicator
-//! reads at worst `degraded`, so it reports without taking the instance out
-//! of rotation.
+//! `down` when they fail, which withdraws readiness, and so does
+//! `log_retention` while the access policy's retention does not read; every
+//! other indicator reads at worst `degraded`, so it reports without taking the
+//! instance out of rotation.
 //!
 //! No openEHR spec governs health probes — our own operational design.
 
@@ -339,6 +340,55 @@ impl HealthIndicator for PolicyListenersHealth {
                      until the listener connects again",
                     lost.join(", ")
                 ))
+            }
+        })
+    }
+}
+
+/// `log_retention`: whether the controller's access policy states how long
+/// the access log keeps an entry (`ACCESS_POLICY.log_retention`).
+///
+/// With none stated every entry is kept without end, which meets every floor
+/// a law sets but leaves the period undecided, and GDPR Art. 5(1)(e) makes
+/// that period the controller's to set. So the indicator reads `DEGRADED`,
+/// a warning that never takes the instance out of rotation. When the newest
+/// version's retention does not read it reads `DOWN`, naming the version.
+/// No openEHR spec governs this: our own design (#5660).
+#[derive(Debug)]
+pub struct LogRetentionHealth {
+    policy: Arc<crate::access_policy::LivePolicy>,
+}
+
+impl LogRetentionHealth {
+    /// Constructs over the access policy in force.
+    #[must_use]
+    pub fn new(policy: Arc<crate::access_policy::LivePolicy>) -> Self {
+        Self { policy }
+    }
+}
+
+impl HealthIndicator for LogRetentionHealth {
+    fn name(&self) -> &'static str {
+        "log_retention"
+    }
+
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            let retention = self.policy.retention_in_force();
+            if let Some(version) = retention.unreadable {
+                Outcome::down(format!(
+                    "the access log retention of access policy version {version} does not read; \
+                     records keep the last retention that read and nothing is purged until a \
+                     version that reads is committed"
+                ))
+            } else if retention.last_good.is_declared() {
+                Outcome::up()
+            } else {
+                Outcome::degraded(
+                    "the access policy states no log_retention, so every access-log entry is \
+                     kept without end; GDPR Art. 5(1)(e) makes the period the controller's to \
+                     set in ACCESS_POLICY.log_retention",
+                )
             }
         })
     }

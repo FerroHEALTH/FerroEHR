@@ -94,7 +94,10 @@ jobs:
   # The images a successful Containers run on main published, as digests. The
   # run tags each image it pushes `sha-<short commit>` (build-image.yml). An
   # image the run did not rebuild is the one `:main` names at this moment,
-  # pinned by its digest; a run that pushed neither leaves nothing new to probe.
+  # pinned by its digest, and the Containers filter rebuilds an image whenever
+  # the tree changes its inputs, so that image is the one the commit builds. A
+  # run that rebuilt neither still probes: a skipped probe reported the lane
+  # green on main while the scenario failed.
   published-images:
     name: published images
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
@@ -122,14 +125,12 @@ jobs:
             fi
             printf '%s' "$digest"
           }
-          pushed=0
           resolved=""
           for pair in server:ferroehr postgres:ferroehr-postgres; do
             key="${pair%%:*}" image="${pair#*:}"
             ref="ghcr.io/ferrohealth/$image"
             digest="$(digest_of "$ref:sha-${HEAD_SHA:0:7}")"
             if [[ -n "$digest" ]]; then
-              pushed=1
               echo "$image: ghcr.io/ferrohealth/$image@$digest, pushed by the Containers run of $HEAD_SHA"
             else
               digest="$(digest_of "$ref:main")"
@@ -138,10 +139,6 @@ jobs:
             fi
             resolved+="$key=$ref@$digest"$'\n'
           done
-          if [[ "$pushed" -eq 0 ]]; then
-            echo "::notice::the Containers run of $HEAD_SHA published no image; nothing to probe"
-            exit 0
-          fi
           printf '%s' "$resolved" >> "$GITHUB_OUTPUT"
 
   hospital:

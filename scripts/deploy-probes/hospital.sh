@@ -188,7 +188,7 @@ machine_token() {
 patient_token() {
   curl -s -H 'Host: localhost:8180' -d grant_type=client_credentials \
     -d client_id=hospital-portal -d client_secret=hospital -d login="$1" -d ehr_id="$2" \
-    --data-urlencode scope="openid launch/patient patient/composition-*.rs patient/aql-*.rs" \
+    --data-urlencode scope="openid launch/patient patient/composition-*.crs patient/aql-*.rs" \
     "$H_ISSUER_HTTP/patients/token" | jq -r '.access_token // empty'
 }
 
@@ -249,6 +249,14 @@ h_version() {
 
 # The refusal code a 403 of the last call carries.
 h_refusal() { jq -r '.refusal // empty' <<<"$H_BODY" 2>/dev/null; }
+# The login-binding code of the last answer: a binding refusal is no refusal of
+# the access evaluator, so it carries no `refusal` member and opens `detail`
+# (`refused-unbound: ...`).
+h_binding_refusal() {
+  local detail
+  detail="$(jq -r '.detail // empty' <<<"$H_BODY" 2>/dev/null)"
+  printf '%s' "${detail%%:*}"
+}
 
 # ── JSON ──────────────────────────────────────────────────────────────────────
 
@@ -781,7 +789,7 @@ j_policy() {
     --argjson rules "$(j_rules "$lab")" \
     --arg mental "$H_T_MENTAL" --arg hiv "$H_T_HIV" \
     --argjson v "$(j_sensitivity V)" --argjson r "$(j_sensitivity R)" \
-    --argjson person "$(j_coded openehr person)" --argjson roles "$(j_term accessor_roles)" \
+    --argjson person "$(j_term person)" --argjson roles "$(j_term accessor_roles)" \
     --argjson ground "$(j_coded urn:example:national-law art-9-3)" '{_type:"ACCESS_POLICY",
     name:{_type:"DV_TEXT",value:"Sint Example Ziekenhuis access policy"},archetype_node_id:$a,
     archetype_details:{_type:"ARCHETYPED",archetype_id:{_type:"ARCHETYPE_ID",value:$a},rm_version:"1.2.0"},
@@ -1293,7 +1301,7 @@ h_portal_bound() {
 # logins stop binding on the second instance at once, with no restart of it,
 # and the realm's logins bind on both (#5688).
 hospital_portal_remove() {
-  probe "P-HOSP-PORTAL-REMOVE" "$PROBE_WORKING" "deployment" "#5688" \
+  probe "P-HOSP-PORTAL-REMOVE" "$PROBE_WORKING" "deployment" "#5688 #5731" \
     "removing the patients issuer from one instance stops its logins binding on the other with no restart"
   local eva
   eva="$(hv ehr_eva)"
@@ -1308,7 +1316,7 @@ hospital_portal_remove() {
   fi
   h_call 2 "pt:eva:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
   assert_eq 403 "$H_CODE" "Eva on the instance that still trusts the issuer: ${H_BODY:0:300}"
-  assert_eq refused-unbound "$(h_refusal)" "Eva's refusal on the instance that still trusts the issuer"
+  assert_eq refused-unbound "$(h_binding_refusal)" "Eva's refusal on the instance that still trusts the issuer"
   h_call 2 "pt:frank:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
   assert_eq 403 "$H_CODE" "Frank on the instance that still trusts the issuer: ${H_BODY:0:300}"
   h_call 1 "pt:eva:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
@@ -1324,7 +1332,7 @@ hospital_portal_remove() {
 # The controller's administrator writes the ACCESS_POLICY through the admin
 # API; Hans, the privacy officer, reads it.
 hospital_policy() {
-  probe "P-HOSP-POLICY" "$PROBE_WORKING" "server" "#5610" \
+  probe "P-HOSP-POLICY" "$PROBE_WORKING" "server" "#5610 #5731" \
     "the controller's administrator writes the ACCESS_POLICY and the privacy officer reads it"
   H_IF_NONE_MATCH='*' h_call 2 kc:ferroehr PUT "$HX/admin/access_policy" "$(j_policy "$(hv lab)")"
   [[ "$H_CODE" = 201 ]] || h_fail_call "201 for the controller's ACCESS_POLICY"
@@ -1338,7 +1346,7 @@ hospital_policy() {
 # Eva, her own gate-keeper, records her directives through a CONTRIBUTION
 # with her portal login.
 hospital_directives() {
-  probe "P-HOSP-DIRECTIVES" "$PROBE_WORKING" "server" "#5633 #5636" \
+  probe "P-HOSP-DIRECTIVES" "$PROBE_WORKING" "server" "#5633 #5636 #5731" \
     "Eva records her directives in her EHR_ACCESS through a CONTRIBUTION with her portal login"
   local eva
   eva="$(hv ehr_eva)"
@@ -1366,11 +1374,11 @@ hospital_portal() {
   h_read 2 "pt:eva:$eva" "$gina" c_gina "" 403 refused-not-subject "Eva reads Gina's record"
   probe_done
 
-  probe "P-HOSP-REPRESENTATIVE" "$PROBE_WORKING" "server" "#5633 #5613" \
+  probe "P-HOSP-REPRESENTATIVE" "$PROBE_WORKING" "server" "#5633 #5613 #5731" \
     "Frank reads Eva's record as her representative, held to her directives, and not Gina's"
   h_read 1 "pt:frank:$eva" "$eva" c_vitals "" 200 "" "Frank reads Eva's vital signs"
   h_read 2 "pt:frank:$eva" "$eva" c_mental "" 403 refused-consent-denied "Frank reads Eva's mental-health note"
-  h_read 1 "pt:frank:$eva" "$gina" c_gina "" 403 refused-not-subject "Frank reads Gina's record"
+  h_read 1 "pt:frank:$eva" "$gina" c_gina "" 403 refused-not-represented "Frank reads Gina's record"
   probe_done
 }
 
@@ -1451,7 +1459,7 @@ hospital_pixm() {
   fi
   probe_done
 
-  probe "P-HOSP-PIXM-SETUP" "$PROBE_WORKING" "server" "#5610" \
+  probe "P-HOSP-PIXM-SETUP" "$PROBE_WORKING" "server" "#5610 #5731" \
     "Dr. Jansen, Cardiology, Eva under its care, Frank her representative and Eva's EHR through FerroPIX"
   kc_role CLINICIAN
   kc_user anna Anna Jansen CLINICIAN

@@ -21,15 +21,19 @@
 //! invalidation are our own design/extension.
 
 pub mod check;
+pub mod retention;
 
 use std::fmt;
 use std::sync::{Arc, PoisonError, RwLock};
 
 use sqlx::PgPool;
 
+use crate::party_binding::grants::live::LiveGrants;
 use crate::policy_register::listen::Listened;
 use crate::storage::access_policy as store;
 use crate::storage::error::StorageError;
+use crate::system_log::retention::LogRetention;
+use crate::system_log::sender::AuditSender;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 
 /// The archetype of the default access policy definition.
@@ -79,6 +83,64 @@ pub struct LivePolicy {
     /// The listener on [`CHANNEL`], which says when the policy in force must
     /// be read again.
     listened: Arc<Listened>,
+    /// The audit trail the access log retention in force is handed to.
+    audit: RwLock<Option<AuditSender>>,
+    /// The policy grants whose federation agreements are judged against the
+    /// period of the access log retention in force.
+    grants: RwLock<Option<Arc<LiveGrants>>>,
+    /// The access log retention of the newest version that read, and the
+    /// version whose retention did not.
+    retention: RwLock<RetentionInForce>,
+}
+
+/// The access log retention a replica holds: the one of the newest policy
+/// version that read, and the newest version whose retention did not, while
+/// that version is the newest.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RetentionInForce {
+    /// The retention of the newest version that read.
+    pub last_good: LogRetention,
+    /// The newest version, when its retention does not read: the trail keeps
+    /// recording under [`Self::last_good`] and purges nothing until a version
+    /// reads again.
+    pub unreadable: Option<i32>,
+}
+
+impl RetentionInForce {
+    /// The retention once version `version` (`uid`) is installed with
+    /// `policy`, or `None` when the stored version does not read at all.
+    #[must_use]
+    pub fn after(&self, version: i32, uid: Option<&str>, policy: Option<&AccessPolicy>) -> Self {
+        let read = policy.ok_or(None).and_then(|policy| {
+            retention::log_retention(policy.log_retention.as_ref(), uid).map_err(Some)
+        });
+        match read {
+            Ok(last_good) => Self {
+                last_good,
+                unreadable: None,
+            },
+            Err(error) => {
+                if let Some(error) = error {
+                    tracing::error!(
+                        version,
+                        %error,
+                        "the access log retention of access policy version {version} does not \
+                         read; records keep the last retention that read and nothing is purged"
+                    );
+                } else {
+                    tracing::error!(
+                        version,
+                        "access policy version {version} does not read; records keep the last \
+                         retention that read and nothing is purged"
+                    );
+                }
+                Self {
+                    last_good: self.last_good.clone(),
+                    unreadable: Some(version),
+                }
+            }
+        }
+    }
 }
 
 impl fmt::Debug for LivePolicy {
@@ -99,7 +161,67 @@ impl LivePolicy {
             pool,
             in_force: RwLock::new(Arc::default()),
             installing: tokio::sync::Mutex::new(()),
+            audit: RwLock::new(None),
+            grants: RwLock::new(None),
+            retention: RwLock::default(),
         }
+    }
+
+    /// Judge `grants`' federation agreements against the period of the
+    /// access log retention in force, now and whenever the policy gains a
+    /// version.
+    pub fn attach_grants(&self, grants: Arc<LiveGrants>) {
+        grants.set_federation(
+            (*grants.federation())
+                .clone()
+                .with_holder(self.log_retention().period),
+        );
+        *self.grants.write().unwrap_or_else(PoisonError::into_inner) = Some(grants);
+    }
+
+    /// Hand the access log retention in force to `sender` now and whenever
+    /// the policy gains a version.
+    pub fn attach_audit(&self, sender: AuditSender) {
+        let retention = self.retention_in_force();
+        sender.set_retention(&retention.last_good);
+        sender.hold_purge(retention.unreadable.is_some());
+        *self.audit.write().unwrap_or_else(PoisonError::into_inner) = Some(sender);
+    }
+
+    /// The access log retention of the newest policy version that read; the
+    /// default, every record kept without end under Art. 9(2), while no
+    /// version declares one.
+    #[must_use]
+    pub fn log_retention(&self) -> LogRetention {
+        self.retention_in_force().last_good
+    }
+
+    /// The access log retention this replica holds, with the version whose
+    /// retention did not read, if the newest is one.
+    #[must_use]
+    pub fn retention_in_force(&self) -> RetentionInForce {
+        self.retention
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    /// Bring the policy in force up to date whenever a write is notified, so
+    /// the audit trail takes up a new retention with no request on this
+    /// replica: a detached task that lives as long as the runtime.
+    pub fn spawn_refresher(self: &Arc<Self>) {
+        let live = Arc::clone(self);
+        tokio::spawn(async move {
+            loop {
+                let seen = live.listened.notifications();
+                live.listened
+                    .notified_after(seen, std::time::Duration::from_hours(1))
+                    .await;
+                if let Err(error) = live.refresh_if_stale().await {
+                    tracing::warn!(%error, "the access policy could not be read; retried");
+                }
+            }
+        });
     }
 
     /// The policy in force.
@@ -155,7 +277,7 @@ impl LivePolicy {
         if row.version == self.in_force().version {
             return Ok(());
         }
-        let policy = match openehr_its::json::from_canonical_json::<AccessPolicy>(&row.data) {
+        let read = match openehr_its::json::from_canonical_json::<AccessPolicy>(&row.data) {
             Ok(policy) => Some(Arc::new(policy)),
             Err(error) => {
                 tracing::error!(
@@ -163,22 +285,107 @@ impl LivePolicy {
                     error = %error,
                     "a stored access policy version does not read; the policy in force stays"
                 );
-                self.in_force().policy.clone()
+                None
             }
         };
+        let uid = crate::versioning::object_version_id::object_version_id(
+            crate::ids::VoId(row.vo_id),
+            &row.system_id,
+            crate::versioning::object_version_id::TreeId::trunk(row.version),
+        );
+        let retention = self
+            .retention_in_force()
+            .after(row.version, Some(&uid), read.as_deref());
         let installed = Arc::new(PolicyInForce {
             version: row.version,
-            uid: Some(crate::versioning::object_version_id::object_version_id(
-                crate::ids::VoId(row.vo_id),
-                &row.system_id,
-                crate::versioning::object_version_id::TreeId::trunk(row.version),
-            )),
-            policy,
+            uid: Some(uid),
+            policy: read.or_else(|| self.in_force().policy.clone()),
         });
         *self
             .in_force
             .write()
             .unwrap_or_else(PoisonError::into_inner) = installed;
+        let audit = self
+            .audit
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        *self
+            .retention
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = retention.clone();
+        if let Some(sender) = audit {
+            sender.set_retention(&retention.last_good);
+            sender.hold_purge(retention.unreadable.is_some());
+        }
+        let grants = self
+            .grants
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        if let Some(grants) = grants {
+            grants.set_federation(
+                (*grants.federation())
+                    .clone()
+                    .with_holder(retention.last_good.period),
+            );
+        }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::system_log::config::Retention;
+
+    /// A policy whose log retention keeps entries `period`, in the Union.
+    fn policy(period: &str) -> AccessPolicy {
+        let text = format!(
+            r#"{{"_type": "ACCESS_POLICY",
+            "name": {{"_type": "DV_TEXT", "value": "Access policy"}},
+            "archetype_node_id": "{ARCHETYPE}",
+            "controller": {{"_type": "PARTY_REF", "namespace": "demographic",
+                "type": "ORGANISATION",
+                "id": {{"_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7"}}}},
+            "care_relationship_required": false,
+            "purpose_required": false,
+            "log_retention": {{"_type": "ACCESS_LOG_RETENTION",
+                "name": {{"_type": "DV_TEXT", "value": "Access log retention"}},
+                "archetype_node_id": "id18",
+                "in_union": true,
+                "period": {{"_type": "DV_DURATION", "value": "{period}"}}}}}}"#
+        );
+        openehr_its::json::from_canonical_json(&text).expect("a canonical ACCESS_POLICY")
+    }
+
+    /// A version whose retention reads replaces the one in force; one whose
+    /// retention does not read, or that does not read at all, keeps the last
+    /// retention that read and is named until a version reads again.
+    #[test]
+    fn an_unreadable_retention_keeps_the_last_good_one_and_is_named() {
+        let first = RetentionInForce::default().after(1, Some("uid::cdr::1"), Some(&policy("P5Y")));
+        assert_eq!(first.unreadable, None);
+        assert_eq!(first.last_good.period, Retention::Years(5));
+        assert_eq!(first.last_good.policy.as_deref(), Some("uid::cdr::1"));
+
+        let months = first.after(2, Some("uid::cdr::2"), Some(&policy("P18M")));
+        assert_eq!(
+            months.unreadable,
+            Some(2),
+            "the version that did not read is named"
+        );
+        assert_eq!(
+            months.last_good, first.last_good,
+            "the last good retention stays"
+        );
+
+        let unread = months.after(3, Some("uid::cdr::3"), None);
+        assert_eq!(unread.unreadable, Some(3));
+        assert_eq!(unread.last_good, first.last_good);
+
+        let again = unread.after(4, Some("uid::cdr::4"), Some(&policy("P6Y")));
+        assert_eq!(again.unreadable, None);
+        assert_eq!(again.last_good.period, Retention::Years(6));
     }
 }

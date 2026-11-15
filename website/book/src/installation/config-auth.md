@@ -637,8 +637,9 @@ A federation agreement is CDR data, not a configuration key: a grant of
 party, read on every request and judged when it is written. The configuration
 keeps what the agreements are judged against: the `federation` issuers, their
 `[[auth.federation]]` tables, `[authz.grants] allowed` (which must name both
-codes before an agreement can be written) and `[audit.store] retention`. The
-model, the codes and the rules are on
+codes before an agreement can be written). The period a `chained` agreement
+is held to is the access log retention of the controller's access policy
+(`ACCESS_POLICY.log_retention`). The model, the codes and the rules are on
 [Operational policy](../operational-policy.md#federation-agreements). The
 `[[authz.federation.agreement]]` table is removed, and a configuration that
 still holds it is refused at boot as an unknown key.
