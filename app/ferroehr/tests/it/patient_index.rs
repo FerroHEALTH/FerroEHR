@@ -35,8 +35,8 @@ use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTRO
 const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
 /// The patient's identifier domain, as a TRC's `system` names it.
 const NATIONAL: &str = "urn:oid:2.999.4.1";
-/// A synthetic BSN that passes the eleven-test.
-const SYNTHETIC_BSN: &str = "999990019"; // privacy-allow: synthetic test value, no register issues it
+/// A synthetic identifier of a protected scheme, in no national number's form.
+const SEALED: &str = "SEALED-PATIENT-1";
 
 fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
@@ -376,14 +376,15 @@ async fn a_protected_identifier_is_found_through_its_lookup_digest() {
     let two = pixm_replica(&db, &pix)
         .await
         .with_identifier_protection(engine);
-    let bsn = "urn:oid:2.16.840.1.113883.2.4.6.3";
+    // NOTE: the scheme is the one the protection fixture seals; the issuer is a test domain.
+    let issuer = "urn:oid:2.999.4.2";
     let pseudonym = Uuid::now_v7().to_string();
     let (person, _) = create(
         &one,
         PartyKind::Person,
         &patient(
             "E",
-            &[identifier(bsn, SYNTHETIC_BSN, "nl-bsn")],
+            &[identifier(issuer, SEALED, "nl-bsn")],
             &[identifier(CLINICAL, &pseudonym, "PI")],
         ),
     )
@@ -399,17 +400,17 @@ async fn a_protected_identifier_is_found_through_its_lookup_digest() {
     .await
     .expect("the projection reads");
     assert!(
-        stored.is_some_and(|value| !value.contains(SYNTHETIC_BSN)),
+        stored.is_some_and(|value| !value.contains(SEALED)),
         "the projection holds the sealed row's reference, never the value"
     );
     assert_eq!(
-        two.patient_ehrs(&SubjectRef::person(SYNTHETIC_BSN, bsn))
+        two.patient_ehrs(&SubjectRef::person(SEALED, issuer))
             .await
             .expect("the TRC resolves"),
         vec![ehr]
     );
     assert_eq!(
-        two.patient_ehrs(&SubjectRef::person(SYNTHETIC_BSN, NATIONAL))
+        two.patient_ehrs(&SubjectRef::person(SEALED, NATIONAL))
             .await
             .expect("the TRC resolves"),
         Vec::new(),
