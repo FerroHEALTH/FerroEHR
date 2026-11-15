@@ -9,7 +9,7 @@ use crate::system_log::event::{ActingMode, ActorAuthentication};
 use base64::Engine;
 use ferrohealth_smart::assurance::AssuranceLevel as Level;
 use jiff::Timestamp;
-use openehr_rm::draft::access_control::terminology::Authorisation;
+use openehr_rm::draft::access_control::terminology::log::Authorisation;
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use secrecy::ExposeSecret as _;
 

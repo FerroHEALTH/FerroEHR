@@ -113,6 +113,34 @@ representatives from the next request. Writing the element needs the
 does ([The pseudonymisation boundary](../security.md#the-subject-link-in-the-party-domain)
 names what this changes).
 
+### The patient's EHRs
+
+A lookup through the index reaches every EHR of the patient. ITI-83 turns
+the identifier into the pseudonym of FerroEHR's domain. The EHRs are the one
+whose `EHR_STATUS` names that pseudonym, and the one of each other
+`record_subject` reference of the `PERSON` that declares it. After a PIX
+merge FerroPIX answers the survivor's pseudonym for the merged patient's
+identifier (PIXm 3.1.0 §2:3.83.4.2.2.5 leaves this to policy). Once the
+merge contribution has moved the merged patient's pseudonym onto the
+survivor's `PERSON`, the lookup finds both EHRs. Before that contribution, it
+finds the survivor's EHR alone. A subject cohort reads the same set.
+
+A contact point's TRC patient asks the identity source nothing. Its
+identifier is matched against the identifiers the patient's `PERSON` carries
+at the `[authz.party_binding.patient] identifier` path, by issuer and value,
+and its EHRs are the ones that `PERSON`'s references name. FerroEHR projects
+those identifiers into the party table `binding_patient_identifier` at the
+commit of the `PERSON`. An identifier of a protected scheme
+(`[privacy.identifier_protection]`) is held there as the stored reference, and
+FerroEHR finds it through its lookup digest. So the registering system writes
+the patient's identifiers in the same contribution as its record subjects,
+and a merge contribution moves both onto the survivor's `PERSON`. No request
+of a contact point waits on the PIX Manager, and an unavailable PIX Manager
+does not refuse one. **Our own design:** the projection, the match on issuer
+and value, and the refusal of an identifier two `PERSON`s carry. eHDSI XCA
+Profile 8.0.1 §4.2.1 names the TRC patient and leaves finding its record to
+the data holder.
+
 **`subject_index` alone switches the index**, in the file or as
 `FERROEHR__RECORD__SUBJECT_INDEX`. A `[pixm]` table kept beside `"local"` is not
 used, and boot names its keys, so a configuration written for the IHE

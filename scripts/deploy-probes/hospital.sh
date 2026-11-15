@@ -29,6 +29,9 @@ H_PATIENTS="http://localhost:8180/patients"
 H_ISSUER_HTTP="http://localhost:${FERROEHR_ISSUER_PORT}"
 H_TERM="openehr_access"
 H_PURPOSE="x-purpose-of-use"
+# The hospital's role code system, the jurisdiction terminology its ROLEs are
+# named in.
+H_ROLES="urn:example:hospital-roles"
 
 # ── The stack ─────────────────────────────────────────────────────────────────
 
@@ -353,19 +356,6 @@ j_role() {
     --argjson c "$caps" '{performer:$p,capabilities:$c}')"
 }
 
-# The clearance and purpose elements: `sensitivity_clearance` for each HL7 v3
-# v3-Confidentiality code in `clearances` (space separated) and
-# `permitted_purpose` for each v3-ActReason PurposeOfUse code in `purposes`.
-j_facts() {
-  local clearances="$1" purposes="$2" code
-  for code in $clearances; do
-    j_qualifier sensitivity_clearance "$(j_coded v3-Confidentiality "$code")"
-  done
-  for code in $purposes; do
-    j_qualifier permitted_purpose "$(j_coded v3-ActReason "$code")"
-  done
-}
-
 # ── Setting the hospital up ───────────────────────────────────────────────────
 
 # The ids the setup records, by name: realm subjects, PERSONs, parties, EHRs
@@ -571,13 +561,14 @@ h_client() {
   h_party "${name}_role" role "$(j_role "$client grants" AGENT "$(hv "$name")" "$@")"
 }
 
-# A ROLE of the PERSON of `user` carrying the clearances and purposes given;
-# records it as HV_role_<user>.
+# The ROLE the PERSON of `user` performs, its name coded `code` in the
+# hospital's role code system: the controller rules clear and limit a caller by
+# the roles it performs (#5621). Records it as HV_role_<user>.
 h_facts_role() {
-  local user="$1" clearances="$2" purposes="$3"
-  # shellcheck disable=SC2046 # one JSON element per word is the intent
-  h_party "role_$user" role "$(j_role "$user caller facts" PERSON "$(hv "person_$user")" \
-    "$(j_capability $(j_facts "$clearances" "$purposes"))")"
+  local user="$1" code="$2"
+  h_party "role_$user" role "$(j_named_party ROLE "$user $code" "$(jq -nc \
+    --argjson p "$(j_party PERSON "$(hv "person_$user")")" --argjson n "$(j_role_code "$code")" \
+    '{performer:$p,name:$n}')")"
 }
 
 # Creates the people, the parties, the record and the controller's policy;
@@ -620,13 +611,14 @@ hospital_setup() {
       || h_fail_call "the $org joins the regional GROUP"
   done
 
-  # The callers' facts: clearances and purposes on their ROLEs, care teams
-  # in their PERSONs, written by the administrator.
-  h_facts_role anna "N R" TREAT || h_fail_call "Dr. Jansen's clearances"
-  h_facts_role bram "N" TREAT || h_fail_call "Nurse de Vries's clearances"
-  h_facts_role carla "N R V" TREAT || h_fail_call "Dr. Smit's clearances"
-  h_facts_role dirk "N" "TREAT ETREAT" || h_fail_call "Dr. Bakker's clearances"
-  h_facts_role gina "N" TREAT || h_fail_call "Gina's clearances"
+  # The roles the callers perform, on their ROLEs, and their care teams, in
+  # their PERSONs, written by the administrator. What a role may read or
+  # declare is the controller's rules, in the ACCESS_POLICY (j_policy).
+  h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
+  h_facts_role bram NURSE || h_fail_call "Nurse de Vries's role"
+  h_facts_role carla PSYCHIATRIST || h_fail_call "Dr. Smit's role"
+  h_facts_role dirk EMERGENCY_PHYSICIAN || h_fail_call "Dr. Bakker's role"
+  h_facts_role gina NURSE || h_fail_call "Gina's role"
   # The controller's administrator, the realm's ferroehr user, writes the
   # policy; the policy route asks for its own grant.
   h_call 1 scim GET "/scim/v2/Users?filter=$(jq -rn '"userName eq \"keycloak-ferroehr\""|@uri')"
@@ -651,24 +643,24 @@ hospital_setup() {
   # The system clients: the lab acts for the lab, a member of the region;
   # the HIE client for a member provider; the other for a provider outside;
   # the access service for the member provider too.
-  local query treat
+  # The lab writes its own template alone by a controller rule (j_rules,
+  # #5624), never by its grant.
+  local query
   query="$(j_operation query_system_wide)"
-  treat="$(j_qualifier permitted_purpose "$(j_coded v3-ActReason TREAT)")"
-  h_client lab lab-system "$(hv lab_org)" "$(j_capability "$query" "$treat")" \
+  h_client lab lab-system "$(hv lab_org)" "$(j_capability "$query")" \
     "$(j_capability "$(j_operation commit_composition)" \
-      "$(j_qualifier template "$(jq -nc --arg t "$H_T_LAB" '{_type:"DV_TEXT",value:$t}')")" \
       "$(j_qualifier origin "$(jq -nc '{_type:"DV_TEXT",value:"relay"}')")" \
       "$(jq -nc --argjson n "$(j_term facility)" --argjson i "$(j_term issuer)" \
         --argjson d "$(j_term identifier)" '{_type:"CLUSTER",archetype_node_id:"at0041",name:$n,
         items:[{_type:"ELEMENT",archetype_node_id:"at0042",name:$i,value:{_type:"DV_TEXT",value:"urn:oid:2.999.7.9"}},
           {_type:"ELEMENT",archetype_node_id:"at0043",name:$d,value:{_type:"DV_TEXT",value:"lab-1"}}]}')")" \
     || h_fail_call "the lab system client"
-  h_client hie hie-member "$(hv member_org)" "$(j_capability "$query" "$treat")" \
+  h_client hie hie-member "$(hv member_org)" "$(j_capability "$query")" \
     || h_fail_call "the regional HIE client"
-  h_client outside hie-outside "$(hv outside_org)" "$(j_capability "$query" "$treat")" \
+  h_client outside hie-outside "$(hv outside_org)" "$(j_capability "$query")" \
     || h_fail_call "the client outside the region"
   h_client access access-service "$(hv member_org)" \
-    "$(j_capability "$query" "$treat")" "$(j_capability "$(j_operation access_service)")" \
+    "$(j_capability "$query")" "$(j_capability "$(j_operation access_service)")" \
     || h_fail_call "the access service"
 
   # The patients: Eva under the care of three teams since ten days ago,
@@ -727,14 +719,63 @@ hospital_setup() {
 
 # A sensitivity of the HL7 v3 Confidentiality codes.
 j_sensitivity() { j_coded v3-Confidentiality "$1"; }
+# A role of the hospital's role code system.
+j_role_code() { j_coded "$H_ROLES" "$1"; }
+
+# A controller rule (`ACCESS_POLICY.rules`, #5621) named `name`, of `effect`
+# (consent-provision-type), with the directive members `members`.
+j_rule() {
+  jq -nc --arg n "$1" --argjson k "$(j_term controller_rule)" --argjson e "$(j_effect "$2")" \
+    --argjson m "$3" '{_type:"ACCESS_DIRECTIVE",name:{_type:"DV_TEXT",value:$n},
+    archetype_node_id:"at0004",kind:$k,effect:$e,emergency_override:false} + $m'
+}
+
+# The controller's rules: physicians and psychiatrists are cleared for the
+# restricted (R) HIV results and psychiatrists alone for the very restricted
+# (V) mental-health notes; an emergency purpose is declared under break-glass
+# alone; a nurse does not record a diagnosis; and, with the lab system's
+# AGENT `lab` given, the lab writes its own template alone.
+j_rules() {
+  local lab="${1:-}" physician psychiatrist rules
+  physician="$(jq -nc --argjson c "$(j_role_code PHYSICIAN)" '{_type:"ACCESS_ACTOR_SCOPE",role:$c}')"
+  psychiatrist="$(jq -nc --argjson c "$(j_role_code PSYCHIATRIST)" '{_type:"ACCESS_ACTOR_SCOPE",role:$c}')"
+  rules="$(jq -nc \
+    --argjson cleared_r "$(j_rule "Physicians read HIV results" permit "$(jq -nc --argjson a "$physician" \
+      --argjson p "$psychiatrist" --argjson s "$(j_sensitivity R)" \
+      '{applies_to:[$a,$p],data:[{_type:"ACCESS_DATA_SCOPE",sensitivities:[$s]}]}')")" \
+    --argjson cleared_v "$(j_rule "Psychiatrists read mental-health notes" permit "$(jq -nc \
+      --argjson p "$psychiatrist" --argjson s "$(j_sensitivity V)" \
+      '{applies_to:[$p],data:[{_type:"ACCESS_DATA_SCOPE",sensitivities:[$s]}]}')")" \
+    --argjson emergency "$(j_rule "Emergency treatment under break-glass alone" deny "$(jq -nc \
+      --argjson pro "$(j_term professional)" --argjson sys "$(j_term system)" \
+      --argjson e "$(j_coded v3-ActReason ETREAT)" \
+      '{applies_to:[{_type:"ACCESS_ACTOR_SCOPE",caller_kind:$pro},{_type:"ACCESS_ACTOR_SCOPE",caller_kind:$sys}],
+        purposes:[$e],emergency_override:true}')")" \
+    --argjson nurse "$(j_rule "Nurses do not record diagnoses" deny "$(jq -nc \
+      --argjson c "$(j_role_code NURSE)" --argjson w "$(j_term write)" --arg t "$H_T_DIAGNOSIS" \
+      '{applies_to:[{_type:"ACCESS_ACTOR_SCOPE",role:$c}],operations:[$w],
+        data:[{_type:"ACCESS_DATA_SCOPE",templates:[$t]}]}')")" \
+    '[$cleared_r,$cleared_v,$emergency,$nurse]')"
+  if [[ -n "$lab" ]]; then
+    rules="$(jq -c --argjson lab "$(j_rule "The lab system writes lab results alone" deny "$(jq -nc \
+      --argjson p "$(j_party AGENT "$lab")" --argjson w "$(j_term write)" \
+      --argjson only "$(j_rule "Its lab results" permit "$(jq -nc --arg t "$H_T_LAB" \
+        '{data:[{_type:"ACCESS_DATA_SCOPE",templates:[$t]}]}')")" \
+      '{applies_to:[{_type:"ACCESS_ACTOR_SCOPE",party:$p}],operations:[$w],exceptions:[$only]}')")" \
+      '. + [$lab]' <<<"$rules")"
+  fi
+  printf '%s' "$rules"
+}
 
 # The controller's ACCESS_POLICY: the mental-health note very restricted, the
 # HIV result restricted, a care relationship with a one-day grace and a
-# purpose required, and the subject view withholding the roles of a person
-# who accessed (EHDS Art. 9(3)).
+# purpose required, the subject view withholding the roles of a person who
+# accessed (EHDS Art. 9(3)), and the rules of j_rules, for the lab system's
+# AGENT `lab` when one is given.
 j_policy() {
-  local arch="openEHR-EHR-ACCESS_POLICY.controller.v1"
+  local arch="openEHR-EHR-ACCESS_POLICY.controller.v1" lab="${1:-}"
   jq -nc --arg a "$arch" --argjson c "$(j_party ORGANISATION "$(hv hospital)")" \
+    --argjson rules "$(j_rules "$lab")" \
     --arg mental "$H_T_MENTAL" --arg hiv "$H_T_HIV" \
     --argjson v "$(j_sensitivity V)" --argjson r "$(j_sensitivity R)" \
     --argjson person "$(j_coded openehr person)" --argjson roles "$(j_term accessor_roles)" \
@@ -751,7 +792,8 @@ j_policy() {
     relationship_grace:{_type:"DV_DURATION",value:"P1D"},
     purpose_required:true,
     log_restrictions:[{_type:"ACCESS_LOG_RESTRICTION",name:{_type:"DV_TEXT",value:"Roles withheld"},
-      archetype_node_id:"at0003",accessor_kinds:[$person],withheld:[$roles],legal_grounds:[$ground]}]}'
+      archetype_node_id:"at0003",accessor_kinds:[$person],withheld:[$roles],legal_grounds:[$ground]}],
+    rules:$rules}'
 }
 
 # A DV_INTERVAL<DV_DATE_TIME> from `lower` to `upper` (UTC dates), each a
@@ -941,7 +983,7 @@ probes_hospital() {
   probe_done
 
   hospital_discovery
-  probe "P-HOSP-SETUP" "$PROBE_WORKING" "server" "#5610 #5694" \
+  probe "P-HOSP-SETUP" "$PROBE_WORKING" "server" "#5610" \
     "SCIM, the demographic API and ITS-REST set the people, the parties and the record up"
   hospital_setup
   probe_done
@@ -1003,7 +1045,7 @@ hospital_abac() {
   h_read 1 kc:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen reads the encounter"
   h_read 2 kc:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen reads the vital signs"
   h_read 1 kc:anna "$eva" c_encounter "" 403 refused-purpose-missing "Dr. Jansen without a purpose"
-  h_read 2 kc:anna "$eva" c_encounter ETREAT 403 refused-purpose-not-permitted \
+  h_read 2 kc:anna "$eva" c_encounter ETREAT 403 refused-policy-denied \
     "Dr. Jansen with a purpose she may not declare"
   probe_done
 
@@ -1036,7 +1078,7 @@ hospital_abac() {
     "Dr. Bakker reads the restricted HIV result only with the emergency role and purpose, marked emergency"
   h_read 1 kc:dirk "$eva" c_hiv TREAT 403 refused-sensitivity "Dr. Bakker without an emergency"
   h_read 2 kc:dirk "$eva" c_hiv ETREAT 200 "" "Dr. Bakker declares an emergency"
-  h_read 1 kc:bram "$eva" c_hiv ETREAT 403 refused-purpose-not-permitted \
+  h_read 1 kc:bram "$eva" c_hiv ETREAT 403 refused-policy-denied \
     "a nurse declaring an emergency without the role"
   probe_done
 }
@@ -1128,14 +1170,14 @@ hospital_care_and_consent() {
   probe_done
 
   probe "P-HOSP-ROLE-REMOVED" "$PROBE_WORKING" "server" "#5627" \
-    "a clearance removed on one instance stops working on the next request on the other"
+    "a role removed on one instance withdraws its clearance on the next request on the other"
   h_call 1 admin GET "/demographic/role/$(hv role_anna)"
   local version
   version="$(jq -r '.uid.value // empty' <<<"$H_BODY")"
   h_call 1 admin DELETE "/demographic/role/$version"
-  [[ "$H_CODE" = 204 ]] || h_fail_call "204 for the removal of Dr. Jansen's clearances"
-  h_read 2 kc:anna "$eva" c_hiv TREAT 403 refused-sensitivity "Dr. Jansen after her clearance went"
-  h_facts_role anna "N R" TREAT || h_fail_call "Dr. Jansen's clearances again"
+  [[ "$H_CODE" = 204 ]] || h_fail_call "204 for the removal of Dr. Jansen's role"
+  h_read 2 kc:anna "$eva" c_hiv TREAT 403 refused-sensitivity "Dr. Jansen after her role went"
+  h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role again"
   h_read 1 kc:anna "$eva" c_hiv TREAT 200 "" "Dr. Jansen cleared again"
   probe_done
 }
@@ -1229,7 +1271,7 @@ hospital_portal_boot() {
 hospital_policy() {
   probe "P-HOSP-POLICY" "$PROBE_WORKING" "server" "#5610" \
     "the controller's administrator writes the ACCESS_POLICY and the privacy officer reads it"
-  H_IF_NONE_MATCH='*' h_call 2 kc:ferroehr PUT "$HX/admin/access_policy" "$(j_policy)"
+  H_IF_NONE_MATCH='*' h_call 2 kc:ferroehr PUT "$HX/admin/access_policy" "$(j_policy "$(hv lab)")"
   [[ "$H_CODE" = 201 ]] || h_fail_call "201 for the controller's ACCESS_POLICY"
   h_call 1 kc:hans GET "$HX/admin/access_policy"
   h_assert_code 200 "Hans reads the policy on the other instance: ${H_BODY:0:200}"
@@ -1360,7 +1402,7 @@ hospital_pixm() {
   scim_user 1 anna "Dr. Anna Jansen" || h_fail_call "SCIM creates anna"
   h_party cardiology group "$(j_named_party GROUP Cardiology)" || h_fail_call "the Cardiology team"
   h_party hospital organisation "$(j_named_party ORGANISATION "Sint Example Ziekenhuis")" || h_fail_call "the controller"
-  h_facts_role anna "N R" TREAT || h_fail_call "Dr. Jansen's clearances"
+  h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
   h_call 1 scim GET "/scim/v2/Users?filter=$(jq -rn '"userName eq \"keycloak-ferroehr\""|@uri')"
   hv_set person_controller "$(jq -r '.Resources[0].id // empty' <<<"$H_BODY")"
   h_party role_controller_policy role "$(j_role "controller administrator" PERSON "$(hv person_controller)" \

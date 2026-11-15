@@ -35,9 +35,11 @@ It runs the care-relationship and representation assertions again under the
 default `pixm` subject index. It does not run in the required `deploy-probe`
 job yet: its own lane, `deploy-probe-hospital.yml`, runs it with
 `PROBE_ONLY=hospital` and writes `hospital.json`. A pull request, a push, the
-schedule and a dispatch probe the server built from the tree they check out; a
-completed Containers run on main probes the server image that run published,
-pinned by its digest, never the mutable `:main` tag (#5673). A failed call
+schedule and a dispatch probe the server and database images built from the
+tree they check out; a completed Containers run on main probes the server and
+postgres images that run published, each pinned by its digest, never the
+mutable `:main` tag (#5673). An image the run did not rebuild is the one
+`:main` names when the probe starts, pinned by its digest. A failed call
 prints the lines both instances logged for its request id, and the instances
 log `ferrohealth_smart` at `debug`, so a `401` shows the reason its body leaves
 out. Each failing probe names the issue it is tracked by, and
