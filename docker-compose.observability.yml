@@ -40,7 +40,6 @@ services:
       # The push carries every family the Prometheus surface exposes: one meter
       # provider feeds both, so a metric cannot reach one and not the other.
       FERROEHR__TELEMETRY__OTLP__ENDPOINT: http://otel-lgtm:4317
-      FERROEHR__TELEMETRY__OTLP__METRICS: "false"
       FERROEHR__TELEMETRY__ENVIRONMENT: dev
       # Structured stdout so the bundled log pipeline ingests fields, not text
       # (overrides the root stack's dev-friendly `pretty`).
