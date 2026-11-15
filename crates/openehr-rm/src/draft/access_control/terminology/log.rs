@@ -94,7 +94,7 @@ group! {
 
 group! {
     /// Why an access was refused, partly granted or failed
-    /// (`ACCESS_OUTCOME.reason`), where no [`Refusal`] code names it.
+    /// (`ACCESS_OUTCOME.reason`), where no [`Refusal`](super::Refusal) code names it.
     RefusalReason in AccessRefusalReason {
         /// The caller was not authenticated.
         NotAuthenticated => "not authenticated",
