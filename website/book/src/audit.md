@@ -1192,9 +1192,8 @@ points, which sign with their own certificate.
   interval to set. `ferroehr access-log checkpoint` and
   `POST /admin/access-log/checkpoint` answer the checkpoint of the head, and
   seal one only for a head appended while the keyring held no key.
-- **Use an Ed25519 key.** An RSA signature takes 1 to 5.5 ms against about
-  13 µs for Ed25519, and every other audit write waits while one append
-  holds the head.
+- **Use an Ed25519 key.** An RSA signature is far slower than an Ed25519
+  one, and every other audit write waits while one append holds the head.
 - **Publish the checkpoints outside the database.** Someone who can write
   the database can remove the newest entries together with the checkpoints
   that seal them, and nothing left in the database shows it. A checkpoint
