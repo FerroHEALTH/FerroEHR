@@ -105,8 +105,11 @@ fn a_granted_read_names_the_version_the_party_and_the_request() {
         Some("01JC2Q7N3X")
     );
     assert_eq!(
-        entry.accessor.binding.as_ref().map(|b| b.value.as_str()),
-        Some("bound")
+        entry.accessor.binding.as_ref().map(|b| (
+            b.defining_code.terminology_id.value.as_str(),
+            b.value.as_str()
+        )),
+        Some(("openehr_access", "bound"))
     );
     assert_eq!(
         entry
