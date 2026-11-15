@@ -100,7 +100,7 @@ type Breaking = (&'static str, fn(&mut Value));
 
 #[test]
 fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
-    let cases: [Breaking; 16] = [
+    let cases: [Breaking; 17] = [
         ("ACCESS_LOG_RECORD.System_id_valid", |e| {
             e["system_id"] = json!("");
         }),
@@ -127,6 +127,9 @@ fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
         }),
         ("ACCESSOR.Kind_valid", |e| {
             e["accessor"]["kind"] = coded("openehr_access", "robot", "robot");
+        }),
+        ("ACCESSOR.Binding_valid", |e| {
+            e["accessor"]["binding"] = coded("ferroehr-party-binding", "bound", "bound");
         }),
         ("ACCESS_CREDENTIAL.Issuer_valid", |e| {
             e["accessor"]["credential"]["issuer"] = json!("");
@@ -160,6 +163,16 @@ fn each_entry_invariant_refuses_an_entry_that_breaks_it() {
         breaking(&mut entry);
         assert_eq!(broken(entry), vec![invariant.to_owned()], "{invariant}");
     }
+}
+
+/// A binding of the draft `credential binding` group holds `Binding_valid`,
+/// and an entry without a binding holds it too.
+#[test]
+fn a_binding_of_the_credential_binding_group_holds() {
+    let mut entry = example();
+    entry["accessor"]["binding"] = coded("openehr_access", "party inactive", "party inactive");
+    assert_eq!(broken(entry), Vec::<String>::new());
+    assert_eq!(broken(example()), Vec::<String>::new());
 }
 
 #[test]

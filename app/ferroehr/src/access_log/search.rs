@@ -16,7 +16,8 @@ use jiff::Timestamp;
 use sqlx::Row;
 
 use crate::db::acquire::acquire;
-use openehr_rm::draft::access_control::terminology::{AccessorKind, Action, Outcome, Term};
+use openehr_rm::draft::access_control::terminology::Term;
+use openehr_rm::draft::access_control::terminology::log::{AccessorKind, Action, Outcome};
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
