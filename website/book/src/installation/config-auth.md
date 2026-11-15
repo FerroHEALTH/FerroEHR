@@ -428,10 +428,35 @@ the login until an administrator binds the key again.
 #### Changing the mapping
 
 The side table is filled from the configured mapping and the party
-versions. The first boot fills it and stores the mapping's digest; a replica
-whose mapping digest differs from the stored one refuses to start, naming
-both digests. Each running replica holds a lease it renews every 20 seconds.
-A mapping change is a stop-the-world step:
+versions. The first boot fills it and stores the mapping's digest, which
+covers the templates, the selectors, the role, the group and the membership.
+It leaves out the key issuers: the `identifier_issuer` of each
+`[[auth.party]]` table and each `patients` issuer. Each running replica holds
+a lease it renews every 20 seconds, and the lease lists the key issuers the
+replica derives keys for.
+
+**Adding or removing a key issuer needs no stop and no refill.** Each key
+issuer is a key space with a state:
+
+| State | Its keys bind a login | What happens next |
+|---|---|---|
+| `pending` | No: the login is answered `503` with a `Retry-After` | Once every live replica names the issuer, a replica fills its keys from the party versions |
+| `filling` | No: `503` with a `Retry-After` | The fill runs online in pages and the issuer turns `active` |
+| `active` | Yes | A replica that starts without the issuer turns it `retiring` |
+| `retiring` | No: the login is refused with `403 refused-unbound` | Once no live replica names it, its keys are deleted; once every live replica names it again, it is filled anew |
+
+So a rolling upgrade that adds a `patients` issuer serves every other issuer
+throughout, and the new issuer's logins bind on every replica once the last
+replica without it is replaced. A replica restarted without an issuer stops
+that issuer's logins binding on every replica at once, so revoking an issuer
+needs no downtime. Changing whether an issuer is a `patients` issuer runs as
+a removal followed by an addition. A fill that finds two parties carrying one
+key under the new issuer keeps it `pending`, logs both parties, and looks
+again after five minutes; the other issuers keep binding.
+
+**A change to the templates, selectors, role, group or membership is a
+stop-the-world step.** A replica whose mapping digest differs from the stored
+one refuses to start, naming both digests:
 
 1. Stop every replica. With Helm, scale the deployment to zero first: a
    rolling upgrade would start new replicas beside old ones.

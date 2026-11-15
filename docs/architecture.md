@@ -1000,6 +1000,25 @@ is any `ACTOR` carrying a `DV_IDENTIFIER` of type `client_id` in its
 `details` or `identities`, whose issuer is the token issuer (§Party
 Identification). **Our own design.**
 
+**Key spaces** (#5688). A key row under an issuer depends only on whether
+the mapping lists the issuer and whether it is a `patients` issuer, so each
+key issuer is a key space of its own (`party_binding::key_space`, migration
+`party/0045`). `binding_state` holds the digest of the rest of the mapping,
+which a boot compares and `party-binding refill` alone changes; each
+`binding_lease` lists the key issuers its replica derives keys for; and
+`binding_key_space` records each issuer with its portal flag and state. A
+replica naming a new issuer records it `pending`; once every live lease lists
+it with one flag, a replica's renewal tick wipes its key rows and fills them
+from the party versions in pages under a gate every party commit takes shared,
+and it turns `active`. A live lease that does not list an `active` issuer
+turns it `retiring`; a `retiring` or `pending` one no live lease lists goes
+with its rows, and a `retiring` one every live lease lists again fills anew.
+The lookup reads the key space's state in its one statement and binds only
+under `active`: a closed issuer's login is `503` while pending or filling,
+so just-in-time creation never runs before the keys are read, and
+`refused-unbound` while retiring. Every live replica therefore maintains
+every key space a login is read from. **Our own design.**
+
 The binding side table gains two relations (migration `party/0035`):
 `binding_client`, one row per client identifier of an `ACTOR` head that is
 not deleted, unique per `(issuer, client_id)`, so a second party naming a

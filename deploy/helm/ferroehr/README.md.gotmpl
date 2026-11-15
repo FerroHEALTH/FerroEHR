@@ -181,8 +181,12 @@ config:
 ```
 
 Set the mapping before the first start: the binding side table is filled
-under its digest then, and a server whose mapping differs refuses to start
-until `ferroehr party-binding refill` has run with every replica stopped.
+under its digest then, and a server whose templates, selectors, role, group
+or membership differ refuses to start until `ferroehr party-binding refill`
+has run with every replica stopped. A key issuer (an `[[auth.party]]`
+`identifier_issuer` or a `patients` issuer) added or removed in a rolling
+upgrade needs neither: the replicas fill and retire its keys while they
+serve.
 The whole set is described at
 <https://ferroehr.eu/docs/latest/installation/default-demographic-definitions.html>.
 

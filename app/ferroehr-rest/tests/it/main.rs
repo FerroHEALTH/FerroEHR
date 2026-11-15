@@ -116,6 +116,7 @@ mod message_extension_http;
 mod outbox_http;
 mod overload_http;
 mod party_binding_http;
+mod party_key_space_replicas;
 mod party_reverse_relationships_http;
 mod patient_data_assurance;
 mod policy_fixture;

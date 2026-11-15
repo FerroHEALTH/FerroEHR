@@ -14,6 +14,7 @@
 //! committed naming their `PERSON`. No openEHR spec governs resolving a login
 //! to a party: our own design.
 
+use ferroehr::party_binding::key_space::{KeySpaceClosed, KeySpaceState};
 use ferroehr::service::demographic::portal::PortalLogin;
 use ferroehr::versioning::committer::bound::BoundDetails;
 use ferrohealth_smart::kind::CallerKind;
@@ -165,6 +166,7 @@ async fn portal(
         PortalLogin::Unrecorded { person } => ("refused-representation-unrecorded", Some(person)),
         PortalLogin::Inactive { person } => ("refused-inactive", Some(person)),
         PortalLogin::Ambiguous => ("refused-ambiguous", None),
+        PortalLogin::Closed(closed) => return Err(closed_portal(&closed)),
     };
     tracing::warn!(
         issuer,
@@ -183,6 +185,30 @@ async fn portal(
         }),
         named: None,
     })
+}
+
+/// The refusal of a portal login whose issuer's key space is not `active`:
+/// `refused-unbound` while it retires, and the `503` of one renewal period
+/// while it is pending or filling, so a representative is never taken for
+/// the patient before their key is read.
+fn closed_portal(closed: &KeySpaceClosed) -> AuthError {
+    tracing::warn!(
+        issuer = closed.issuer.as_str(),
+        state = closed.state.as_str(),
+        "the patient-portal login's key space is not active"
+    );
+    if closed.state == KeySpaceState::Retiring {
+        AuthError::PartyRefused {
+            code: "refused-unbound",
+            principal: None,
+            party: None,
+            named: None,
+        }
+    } else {
+        AuthError::PartyUnavailable {
+            retry_after: Some(ferroehr::party_binding::fill::LEASE_RENEWAL),
+        }
+    }
 }
 
 /// The `503` of a store that could not answer, logged as `what`.

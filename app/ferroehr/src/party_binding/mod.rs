@@ -22,6 +22,7 @@ pub mod check;
 pub(crate) mod derive;
 pub mod fill;
 pub mod grants;
+pub mod key_space;
 pub mod lookup;
 pub mod policy;
 pub mod policy_mark;
@@ -568,10 +569,13 @@ impl BindingMapping {
     }
 
     /// Returns the digest of everything the side-table rows are derived
-    /// under: two mappings with one digest derive the same rows.
+    /// under apart from the key issuers: two mappings with one digest and one
+    /// set of [`Self::key_spaces`] derive the same rows.
     ///
     /// It is the SHA-256 of a canonical text of the templates, selectors,
-    /// archetypes and relationship codes, in lower-case hex.
+    /// archetypes and relationship codes, in lower-case hex. A key selector
+    /// adds only whether it holds listed issuers or every issuer, since each
+    /// listed issuer is a key space of its own ([`fill`]).
     #[must_use]
     pub fn digest(&self) -> String {
         let mut text = String::new();
@@ -581,13 +585,18 @@ impl BindingMapping {
         };
         for (template, selectors) in &self.persons {
             for (selector, chosen) in selectors.each() {
+                let issuers = match (selector, chosen.issuers().is_empty()) {
+                    ("key", true) => "*".to_owned(),
+                    ("key", false) => "listed".to_owned(),
+                    _ => chosen.issuers().join(","),
+                };
                 line(&[
                     "person",
                     template,
                     selector,
                     chosen.path(),
                     chosen.identifier_type(),
-                    &chosen.issuers().join(","),
+                    &issuers,
                 ]);
             }
         }
@@ -608,16 +617,72 @@ impl BindingMapping {
         if let Some(membership) = &self.membership {
             line(&["membership", membership]);
         }
-        for issuer in &self.portal_issuers {
-            line(&["portal", issuer]);
-        }
         crate::digest::sha256_hex(&text)
+    }
+
+    /// The key spaces the mapping derives key rows in: each issuer a key
+    /// selector lists, with whether it is a `patients` issuer, under which a
+    /// key is a portal login.
+    #[must_use]
+    pub fn key_spaces(&self) -> BTreeMap<String, bool> {
+        self.persons
+            .values()
+            .flat_map(|selectors| selectors.key.issuers())
+            .map(|issuer| (issuer.clone(), self.is_portal_issuer(issuer)))
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn keyed(issuers: &[&str], portal: &[&str]) -> BindingMapping {
+        let key = IdentifierSelector::new("/details[at0001]/items[at0002]", "guid")
+            .expect("parses")
+            .with_issuers(issuers.iter().copied());
+        BindingMapping::default()
+            .with_person("Person", key)
+            .with_portal_issuers(portal.iter().copied())
+    }
+
+    #[test]
+    fn a_key_issuer_moves_no_digest_and_is_a_key_space() {
+        let one = keyed(&["urn:a"], &[]);
+        let two = keyed(&["urn:a", "https://portal"], &["https://portal"]);
+        assert_eq!(one.digest(), two.digest(), "a key issuer is a key space");
+        assert_eq!(
+            two.key_spaces(),
+            BTreeMap::from([
+                ("https://portal".to_owned(), true),
+                ("urn:a".to_owned(), false)
+            ])
+        );
+        assert_ne!(
+            keyed(&[], &[]).digest(),
+            one.digest(),
+            "a key selector holding every issuer derives other rows than one holding a list"
+        );
+        assert!(keyed(&[], &[]).key_spaces().is_empty());
+    }
+
+    #[test]
+    fn a_selector_or_template_change_moves_the_digest() {
+        let base = keyed(&["urn:a"], &[]);
+        assert_ne!(
+            base.digest(),
+            base.clone().with_professional_role("Role").digest()
+        );
+        let moved = IdentifierSelector::new("/details[at0001]/items[at0003]", "guid")
+            .expect("parses")
+            .with_issuers(["urn:a"]);
+        assert_ne!(
+            base.digest(),
+            BindingMapping::default()
+                .with_person("Person", moved)
+                .digest()
+        );
+    }
 
     #[test]
     fn the_policy_moves_no_digest() {
