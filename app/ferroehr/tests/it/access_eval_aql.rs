@@ -204,8 +204,8 @@ impl World {
     }
 
     /// The subject of EHR `index`.
-    fn subject(&self, index: usize) -> String {
-        self.ehrs[index].1.to_string()
+    fn subject(&self, index: usize) -> uuid::Uuid {
+        self.ehrs[index].1
     }
 }
 
@@ -214,7 +214,7 @@ struct Ask {
     caller: Caller,
     purpose: Option<&'static str>,
     policy: Option<AccessPolicy>,
-    cared: Vec<String>,
+    cared: Vec<uuid::Uuid>,
     default: AccessDefault,
 }
 
@@ -552,13 +552,9 @@ async fn a_large_care_census_reads_exactly_the_ehrs_in_care() {
     world.settings(1, &settings("open", &[], &[])).await;
     let mut ask = Ask::professional(&world);
     ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
-    let others: Vec<String> = (0..5000)
-        .map(|_| uuid::Uuid::now_v7().to_string())
-        .collect();
+    let others: Vec<uuid::Uuid> = (0..5000).map(|_| uuid::Uuid::now_v7()).collect();
     ask.cared.clone_from(&others);
     assert_reads(&world, &ask, &[], "a census naming no subject of the store").await;
-    ask.cared.push(world.subject(1).to_uppercase());
-    assert_reads(&world, &ask, &[], "a subject named in another case").await;
     ask.cared
         .extend([world.subject(2), world.subject(0), world.subject(2)]);
     assert_reads(

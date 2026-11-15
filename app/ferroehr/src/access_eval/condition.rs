@@ -418,7 +418,7 @@ impl RequestAccess {
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the care copy misses and cannot read.
-    pub async fn cared_subjects(&self) -> Result<Vec<String>, GrantsUnavailable> {
+    pub async fn cared_subjects(&self) -> Result<Vec<Uuid>, GrantsUnavailable> {
         let teams: Vec<Uuid> = self
             .caller
             .facts
@@ -429,12 +429,9 @@ impl RequestAccess {
         let Some(grants) = self.grants.as_ref() else {
             return Ok(Vec::new());
         };
-        Ok(grants
+        grants
             .cared_for_by(&teams, self.today(), self.policy().grace)
-            .await?
-            .iter()
-            .map(Uuid::to_string)
-            .collect())
+            .await
     }
 
     /// Judges the EHR `ehr_id` as `entry` reads it, and keeps the verdict for
@@ -601,7 +598,7 @@ impl RequestAccess {
     /// settings, the caller caring for the subjects `cared`. An EHR of a
     /// class this replica does not hold is withheld.
     #[must_use]
-    pub fn condition(&self, classes: &Classes, cared: Vec<String>) -> AccessCondition {
+    pub fn condition(&self, classes: &Classes, cared: Vec<Uuid>) -> AccessCondition {
         let confined = self.confined();
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
             cared: self.judge_as(confined, settings, true).bare(),
@@ -679,7 +676,7 @@ pub struct ConditionGroups {
     /// The verdicts of an EHR with no settings; `None` admits every row.
     pub default: Option<Arc<VerdictPair>>,
     /// The subjects the caller has a live care relationship to.
-    pub cared: Arc<[String]>,
+    pub cared: Arc<[Uuid]>,
     /// What the facts of a class are read against.
     pub facts: CallerKeys,
     /// For a subject caller, the EHRs it reaches: its own, or none; `None`
@@ -721,7 +718,7 @@ impl AccessCondition {
         groups: BTreeMap<VerdictPair, Vec<i64>>,
         closed: VerdictPair,
         default: VerdictPair,
-        cared: Vec<String>,
+        cared: Vec<Uuid>,
         facts: CallerKeys,
         confined: Option<Arc<[Uuid]>>,
     ) -> Self {

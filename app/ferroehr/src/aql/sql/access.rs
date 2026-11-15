@@ -93,7 +93,10 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
 pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Expr> {
     let condition = condition.groups()?;
     let reaches = |pair: &VerdictPair, facts: Facts<'_>| -> Option<Expr> {
-        let (cared, uncared) = (pair.cared.reaches(), pair.uncared.reaches());
+        let (cared, uncared) = (
+            simplified(&pair.cared.reaches()),
+            simplified(&pair.uncared.reaches()),
+        );
         if cared == Pred::False && uncared == Pred::False {
             return None;
         }
@@ -156,7 +159,7 @@ pub(super) fn keeper_reads(keepers: &Keepers, h: &str) -> Expr {
     let branches = keepers
         .groups
         .iter()
-        .map(|(ids, named)| in_classes(ids).and(pred(named, h, facts)))
+        .map(|(ids, named)| in_classes(ids).and(pred(&simplified(named), h, facts)))
         .collect();
     let mut probe = settings_row(col(h, VoHead::EhrId));
     probe.and_where(or_all(branches));
@@ -206,7 +209,10 @@ fn in_classes(ids: &[i64]) -> Expr {
 
 /// The rows of an EHR of `pair` admitted, on head row `h` of EHR `target`.
 fn admitted(pair: &VerdictPair, h: &str, target: Expr, facts: Facts<'_>) -> Expr {
-    let (with, without) = (pair.cared.admitted(), pair.uncared.admitted());
+    let (with, without) = (
+        simplified(&pair.cared.admitted()),
+        simplified(&pair.uncared.admitted()),
+    );
     if with == without {
         return pred(&with, h, facts);
     }
@@ -229,11 +235,6 @@ fn admitted(pair: &VerdictPair, h: &str, target: Expr, facts: Facts<'_>) -> Expr
 /// it walks a bound array element by element, and a probe is one search of
 /// the object's sorted keys (PostgreSQL 18 §9.16, `jsonb ? text`). No openEHR
 /// spec governs this: our own design (#5645).
-#[expect(
-    clippy::disallowed_types,
-    reason = "the census object is SQL/JSON wire material (the bound operand of jsonb ?), \
-              not an RM value; no generated type models it"
-)]
 pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
     let condition = condition.groups()?;
     let pairs = std::iter::once(&condition.closed)
@@ -242,21 +243,30 @@ pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
     if pairs.into_iter().all(|pair| pair.cared == pair.uncared) {
         return None;
     }
-    let subjects: serde_json::Map<String, serde_json::Value> = condition
-        .cared
-        .iter()
-        .map(|subject| (subject.clone(), serde_json::Value::Bool(true)))
-        .collect();
+    // NOTE: our own design (#5667), a subject is a UUID, whose hyphenated lower-case
+    // form needs no JSON escape, so the object is written directly.
+    let mut subjects = String::with_capacity(2 + condition.cared.len() * 44);
+    let mut id = Uuid::encode_buffer();
+    subjects.push('{');
+    for (n, subject) in condition.cared.iter().enumerate() {
+        if n > 0 {
+            subjects.push(',');
+        }
+        subjects.push('"');
+        subjects.push_str(subject.as_hyphenated().encode_lower(&mut id));
+        subjects.push_str("\":true");
+    }
+    subjects.push('}');
     let mut row = Query::select();
     row.expr_as(
-        Expr::val(serde_json::Value::Object(subjects).to_string()).cast_as(Alias::new("jsonb")),
+        Expr::val(subjects).cast_as(Alias::new("jsonb")),
         Alias::new(SUBJECTS),
     );
-    let table = CommonTableExpression::new()
-        .query(row)
-        .table_name(Alias::new(CARED))
-        .to_owned();
-    Some(WithClause::new().cte(table).to_owned())
+    let mut table = CommonTableExpression::new();
+    table.query(row).table_name(Alias::new(CARED));
+    let mut with = WithClause::new();
+    with.cte(table);
+    Some(with)
 }
 
 /// Whether the subject of the EHR `target` is under the care of the caller:
@@ -280,6 +290,78 @@ fn cared(target: Expr) -> Expr {
             ],
         ));
     Expr::exists(probe)
+}
+
+/// `pred` with what its SQL would decide alike folded away: a scope that
+/// names an empty list covers nothing, a repeated conjunct or disjunct counts
+/// once, and a two-valued predicate beside its own negation decides the
+/// conjunction (false) or the disjunction (true).
+///
+/// The folds keep SQL's three values: only a predicate whose SQL is never
+/// unknown ([`two_valued`]) is folded against its negation. The planner
+/// plans every `EXISTS` the condition names, so each one folded away is
+/// planning a query no longer pays for. No openEHR spec governs this: our own
+/// design (#5667).
+fn simplified(pred: &Pred) -> Pred {
+    match pred {
+        Pred::Not(inner) => Pred::negate(simplified(inner)),
+        Pred::All(preds) => folded(Pred::all(preds.iter().map(simplified).collect()), true),
+        Pred::Any(preds) => folded(Pred::any(preds.iter().map(simplified).collect()), false),
+        Pred::Data(data, _) if covers_nothing(data) => Pred::False,
+        Pred::True | Pred::False | Pred::Data(..) | Pred::Ehr(_) => pred.clone(),
+    }
+}
+
+/// `pred`, a conjunction when `all` and a disjunction otherwise, its
+/// repeated members counted once and decided by a two-valued member beside
+/// its negation.
+fn folded(pred: Pred, all: bool) -> Pred {
+    let members = match pred {
+        Pred::All(members) if all => members,
+        Pred::Any(members) if !all => members,
+        other => return other,
+    };
+    let mut kept: Vec<Pred> = Vec::with_capacity(members.len());
+    for member in members {
+        if !kept.contains(&member) {
+            kept.push(member);
+        }
+    }
+    let decided = kept
+        .iter()
+        .any(|member| two_valued(member) && kept.contains(&Pred::negate(member.clone())));
+    match (decided, kept.len(), all) {
+        (true, _, all) => Pred::of(!all),
+        (false, 1, _) => kept.pop().unwrap_or(Pred::of(all)),
+        (false, _, true) => Pred::All(kept),
+        (false, _, false) => Pred::Any(kept),
+    }
+}
+
+/// Whether the SQL of `pred` is never unknown: every data atom is null-safe,
+/// and a fact of the EHR is read from its settings row, where it may be
+/// absent.
+fn two_valued(pred: &Pred) -> bool {
+    match pred {
+        Pred::True | Pred::False | Pred::Data(..) => true,
+        Pred::Ehr(_) => false,
+        Pred::Not(inner) => two_valued(inner),
+        Pred::All(preds) | Pred::Any(preds) => preds.iter().all(two_valued),
+    }
+}
+
+/// Whether the data scope names an empty list of objects, templates,
+/// archetypes or categories, which no object is among.
+fn covers_nothing(data: &DataMatch) -> bool {
+    let empty = |list: Option<usize>| list == Some(0);
+    empty(
+        data.objects
+            .as_ref()
+            .and_then(|objects| objects.known())
+            .map(Vec::len),
+    ) || empty(data.templates.as_ref().map(Vec::len))
+        || empty(data.archetypes.as_ref().map(Vec::len))
+        || empty(data.categories.as_ref().map(Vec::len))
 }
 
 /// `pred` on the head row `h`, its facts read with `facts`.
@@ -401,6 +483,9 @@ fn data_match(data: &DataMatch, polarity: Polarity, h: &str) -> Expr {
 
 /// The template of `h`, case-folded, is one of `templates`.
 fn template_in(h: &str, templates: &[String]) -> Expr {
+    if templates.is_empty() {
+        return Expr::val(false);
+    }
     Expr::from(Func::lower(col(h, VoHead::TemplateId)))
         .eq(Expr::from(PgFunc::any(Expr::val(templates.to_vec()))))
 }
@@ -408,6 +493,9 @@ fn template_in(h: &str, templates: &[String]) -> Expr {
 /// The root archetype of the trunk head of `h`, case-folded, is one of
 /// `archetypes`.
 fn archetype_in(h: &str, archetypes: &[String]) -> Expr {
+    if archetypes.is_empty() {
+        return Expr::val(false);
+    }
     let mut probe = Query::select();
     let root = Expr::cust_with_exprs(
         "lower(COALESCE($1 ->> 'archetype_node_id', $2))",
@@ -526,4 +614,96 @@ fn or_all(branches: Vec<Expr>) -> Expr {
         .into_iter()
         .reduce(ExprTrait::or)
         .unwrap_or_else(|| Expr::val(false))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::simplified;
+    use crate::access_eval::scope::{DataMatch, EhrFact, Polarity, Pred};
+
+    /// The objects of archetype `archetype`, read as a permit reads them.
+    fn of_archetype(archetype: &str) -> Pred {
+        Pred::Data(
+            Arc::new(DataMatch {
+                archetypes: Some(vec![archetype.to_owned()]),
+                ..DataMatch::default()
+            }),
+            Polarity::Permit,
+        )
+    }
+
+    /// The fact at position 0 names a party of the caller.
+    fn party() -> Pred {
+        Pred::Ehr(EhrFact::Party(0))
+    }
+
+    #[test]
+    fn a_data_scope_beside_its_negation_decides_the_conjunction_and_the_disjunction() {
+        let lab = of_archetype("openehr-ehr-observation.laboratory_test_result.v1");
+        let both = Pred::All(vec![lab.clone(), Pred::negate(lab.clone())]);
+        assert_eq!(simplified(&both), Pred::False);
+        assert_eq!(simplified(&Pred::negate(both)), Pred::True);
+        let either = Pred::Any(vec![Pred::negate(lab.clone()), lab]);
+        assert_eq!(simplified(&either), Pred::True);
+    }
+
+    #[test]
+    fn a_fact_of_the_ehr_beside_its_negation_stays_for_the_sql_to_decide() {
+        let both = Pred::All(vec![party(), Pred::negate(party())]);
+        assert_eq!(simplified(&both), both);
+        let either = Pred::Any(vec![party(), Pred::negate(party())]);
+        assert_eq!(simplified(&either), either);
+    }
+
+    #[test]
+    fn a_repeated_member_counts_once_and_the_rest_keep_their_order() {
+        let lab = of_archetype("openehr-ehr-observation.laboratory_test_result.v1");
+        let note = of_archetype("openehr-ehr-evaluation.clinical_synopsis.v1");
+        let repeated = Pred::All(vec![lab.clone(), party(), lab.clone(), note.clone()]);
+        assert_eq!(
+            simplified(&repeated),
+            Pred::All(vec![lab.clone(), party(), note])
+        );
+        assert_eq!(simplified(&Pred::Any(vec![lab.clone(), lab.clone()])), lab);
+    }
+
+    #[test]
+    fn a_scope_naming_an_empty_list_covers_nothing() {
+        for data in [
+            DataMatch {
+                templates: Some(Vec::new()),
+                ..DataMatch::default()
+            },
+            DataMatch {
+                archetypes: Some(Vec::new()),
+                ..DataMatch::default()
+            },
+            DataMatch {
+                categories: Some(Vec::new()),
+                ..DataMatch::default()
+            },
+        ] {
+            let scope = Pred::Data(Arc::new(data), Polarity::Deny);
+            assert_eq!(simplified(&scope), Pred::False);
+            assert_eq!(simplified(&Pred::negate(scope)), Pred::True);
+        }
+        let unset = Pred::Data(Arc::new(DataMatch::default()), Polarity::Deny);
+        assert_eq!(simplified(&unset), unset);
+    }
+
+    #[test]
+    fn the_folds_reach_inside_nested_predicates() {
+        let lab = of_archetype("openehr-ehr-observation.laboratory_test_result.v1");
+        let nested = Pred::All(vec![
+            party(),
+            Pred::negate(Pred::All(vec![lab.clone(), Pred::negate(lab.clone())])),
+            Pred::negate(lab.clone()),
+        ]);
+        assert_eq!(
+            simplified(&nested),
+            Pred::All(vec![party(), Pred::negate(lab)])
+        );
+    }
 }
