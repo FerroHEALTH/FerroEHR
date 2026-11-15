@@ -187,6 +187,9 @@ async fn verify(checkpoints: &Checkpoints, file: Option<&Path>) -> anyhow::Resul
         println!("finding: {finding}");
     }
     print_chain(&verification.chain);
+    for finding in &verification.imported {
+        println!("imported finding: {finding}");
+    }
     anyhow::ensure!(verification.intact(), "the access log does not verify");
     println!("the access log verifies");
     Ok(())
