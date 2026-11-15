@@ -148,7 +148,11 @@ hospital_pix_up() {
   export CURL_CA_BUNDLE="$dir/ca.crt"
   H1="https://localhost:${FERROEHR_PORT}"
   H2="https://localhost:${HOSPITAL_REPLICA_PORT}"
-  hdc up -d --wait --force-recreate --no-deps ferropix >/dev/null 2>&1 || return 1
+  if ! hdc up -d --wait --force-recreate --no-deps ferropix >/dev/null 2>&1; then
+    printf '      log of ferropix:\n'
+    hdc logs --no-color --tail 40 ferropix 2>&1 | sed 's/^/        /'
+    return 1
+  fi
   hospital_restart
 }
 
