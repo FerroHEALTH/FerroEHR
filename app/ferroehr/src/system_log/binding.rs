@@ -180,9 +180,6 @@ impl BindingCode {
             Self::RefusedNoAgreement => CredentialBinding::NoAgreement,
             Self::RefusedScopeBeyondAgreement => CredentialBinding::ScopeBeyondAgreement,
             Self::RefusedCorrelationMissing => CredentialBinding::CorrelationMissing,
-            Self::RefusedWabvpzRole | Self::RefusedWabvpzOrganisationType => {
-                CredentialBinding::AgreementConditionUnmet
-            }
         }
     }
 
@@ -427,20 +424,18 @@ mod tests {
     use super::*;
 
     /// Every outcome is recorded under a term of the draft `credential
-    /// binding` group, every term but `agreement condition unmet` names one
-    /// outcome alone, and only the two Wabvpz refusals share that one.
+    /// binding` group, each term names one outcome alone, and no outcome is
+    /// written as `agreement condition unmet`, which only the entries
+    /// recorded before #5691 carry.
     #[test]
     fn every_outcome_has_its_own_credential_binding_term() {
         use openehr_rm::draft::access_control::terminology::Term;
         let mut terms: Vec<CredentialBinding> = BindingCode::ALL.iter().map(|c| c.term()).collect();
-        let shared = terms
-            .iter()
-            .filter(|term| **term == CredentialBinding::AgreementConditionUnmet)
-            .count();
-        assert_eq!(shared, 2);
+        assert!(!terms.contains(&CredentialBinding::AgreementConditionUnmet));
         terms.sort_by_key(|term| term.code());
         terms.dedup();
-        assert_eq!(terms.len(), CredentialBinding::ALL.len());
+        assert_eq!(terms.len(), BindingCode::ALL.len());
+        assert_eq!(terms.len() + 1, CredentialBinding::ALL.len());
     }
 
     fn party() -> PartyTriple {
