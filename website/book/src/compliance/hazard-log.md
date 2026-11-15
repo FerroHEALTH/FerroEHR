@@ -33,9 +33,9 @@ measures it on every release, is on
 ## The component and the surface it records
 
 The component is, in the code: the FerroHEALTH products' shared crates
-`ehds-logging` 0.18.1 (the Annex II 3.2 access record, the Art. 14(1)
+`ehds-logging` 0.19.0 (the Annex II 3.2 access record, the Art. 14(1)
 categories and their classification, the Art. 9(2) retention floor and the
-emergency mark) and `ihe-atna` 0.18.1 (the BALP and DICOM renderings and the
+emergency mark) and `ihe-atna` 0.19.0 (the BALP and DICOM renderings and the
 ATNA sender), from FerroAUDIT; `ferroehr::system_log` (the access-event model,
 the audit store, what each rendering says and the sinks),
 `ferroehr-rest::system_log` (the middleware that records every API access and
