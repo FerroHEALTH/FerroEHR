@@ -74,6 +74,14 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
   and the schema named in that table — so the acceptance cannot be claimed by a
   comment. **There is deliberately no escape-hatch label:** the checksum makes
   the rule absolute, so an exception would only ever be a broken deployment.
+- **Each domain is numbered 0001 to N, each number once.** Two pull requests
+  that each take the next number pass alone and collide in their merge group,
+  so the second to land renumbers its file to the next free number (an
+  unshipped file may be renamed) and bumps the count in
+  `app/ferroehr/tests/it/persistence.rs`. Enforcement (tier 4):
+  `scripts/checks/migration-numbering.sh`, in the `lint` job on every pull
+  request and merge group, refuses a shared number or a gap and names the
+  files (#5741).
 - Create migrations with the official CLI only:
   `sqlx migrate add --source app/ferroehr/migrations/<schema> --sequential <desc>`,
   written as modern PG 18 SQL (`uuidv7()`, temporal `WITHOUT OVERLAPS`,
