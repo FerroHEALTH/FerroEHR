@@ -67,14 +67,14 @@ is measured.
 A step passes when all of these hold:
 
 - every request was answered with the expected status;
-- the generator kept its schedule (lag p99 at most 10 ms) and never waited
+- the generator kept its schedule (lag p99 at most 10 milliseconds) and never waited
   for a free slot;
 - the answered rate is at least 98 % of the offered rate;
-- every group's p99 is within its SLO: 100 ms for the single-EHR groups,
-  500 ms for the population query, the access-log read and the export.
+- every group's p99 is within its SLO: 100 milliseconds for the single-EHR groups,
+  500 milliseconds for the population query, the access-log read and the export.
 
 The knee is the highest rate that passes; a sweep stops at the first step
-that fails. 100 ms is the response time a person reads as immediate, the
+that fails. 100 milliseconds is the response time a person reads as immediate, the
 budget a chart view built from several reads has to fit in. A population
 query and an access-log review are reporting work, so they get five times
 that.
@@ -104,7 +104,7 @@ beside it, and the generator on the host. Do not run PostgreSQL natively on a
 macOS host with endpoint protection: plain PostgreSQL inserts there stall for
 seconds while the scanner reads the data files, and every write path inherits
 the stall. Do not run the server on the host against PostgreSQL in the VM
-either: each statement then crosses the VM's port forwarder, about 1 ms per
+either: each statement then crosses the VM's port forwarder, about a millisecond per
 round trip.
 
 In GitHub Actions, dispatch **Capacity test** (`perf-capacity.yml`) with the
