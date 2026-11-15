@@ -807,9 +807,10 @@ impl AuditStore {
     }
 
     /// The RESTful-ATNA ITI-81 retrieval: the FHIR `AuditEvent` documents of
-    /// the matching records, newest first, rendered from their columns, plus
-    /// the total match count. The filter is the supported ITI-81
-    /// search-parameter subset ([`AuditSearchFilter`]).
+    /// the matching records, newest first, rendered from their columns,
+    /// whether a match follows the page, and the total match count when
+    /// [`AuditSearchFilter::total`] asks for it. The filter is the supported
+    /// ITI-81 search-parameter subset ([`AuditSearchFilter`]).
     ///
     /// A criterion on a column is applied to that column. A criterion on an
     /// element of the document (`address` and the token parameters) is first
@@ -821,32 +822,42 @@ impl AuditStore {
     /// [`AuditError::Store`] when a query fails, and the rendering errors of a
     /// record that cannot be read back.
     #[cfg(feature = "fhir")]
-    pub async fn search(
-        &self,
-        filter: &AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), AuditError> {
+    pub async fn search(&self, filter: &AuditSearchFilter) -> Result<AuditPage, AuditError> {
         let Some(resolved) =
             crate::system_log::search::resolve_criteria(&self.pool, filter).await?
         else {
-            return Ok((0, Vec::new()));
+            return Ok(AuditPage::empty(filter));
         };
         let (count_sql, count_values, sql, values) =
             search_page::build_search_statements(filter, &resolved);
         // NOTE: an unnamed statement is planned with the token ids it binds (PostgreSQL 18,
         // "PREPARE", plan_cache_mode), so a rare token reaches its index rather than a generic plan.
-        let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
-            .persistent(false)
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
-        let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
+        let total = if filter.total {
+            let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
+                .persistent(false)
+                .fetch_one(&mut *acquire(&self.pool).await?)
+                .await?;
+            Some(total)
+        } else {
+            None
+        };
+        let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
             .persistent(false)
             .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
+        // The page statement reads one record past the page, which says whether a next
+        // page exists without counting the matches.
+        let more = rows.len() > search_page::page_size(filter);
+        rows.truncate(search_page::page_size(filter));
         let mut documents = Vec::with_capacity(rows.len());
         for row in &rows {
             documents.push(self.render(row).await?);
         }
-        Ok((total, documents))
+        Ok(AuditPage {
+            total,
+            documents,
+            more,
+        })
     }
 }
 
@@ -862,6 +873,30 @@ pub(super) fn newest_first(condition: sea_query::Cond) -> sea_query::SelectState
             .cond_where(condition),
     )
     .to_owned()
+}
+
+/// One page of the ITI-81 retrieval.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct AuditPage {
+    /// Every match across all pages, counted only when the filter asks for
+    /// it (FHIR R4 Search §3.1.1.5.2, `_total`; `Bundle.total` is optional).
+    pub total: Option<i64>,
+    /// The page's documents, newest first.
+    pub documents: Vec<serde_json::Value>,
+    /// Whether a match follows the page.
+    pub more: bool,
+}
+
+impl AuditPage {
+    /// The page of a filter that matches nothing.
+    #[must_use]
+    pub fn empty(filter: &AuditSearchFilter) -> Self {
+        Self {
+            total: filter.total.then_some(0),
+            documents: Vec::new(),
+            more: false,
+        }
+    }
 }
 
 /// The ITI-81 retrieval the REST layer resolved: the `date` window, the
@@ -884,6 +919,10 @@ pub struct AuditSearchFilter {
     pub count: i64,
     /// `_offset` — page offset.
     pub offset: i64,
+    /// Whether every match is counted: `_total=accurate` or `estimate`, or
+    /// `_count=0` (FHIR R4 Search §3.1.1.5.2). A page alone reads no more
+    /// records than it serves, so its cost does not grow with the log.
+    pub total: bool,
 }
 
 /// One search parameter of the retrieval: a record matches when any of its

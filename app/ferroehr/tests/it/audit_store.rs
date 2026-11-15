@@ -44,13 +44,14 @@ fn store_over(pool: &sqlx::PgPool) -> AuditStore {
 
 /// Every stored record's FHIR document as the store serves it, oldest first.
 async fn served(store: &AuditStore) -> Vec<serde_json::Value> {
-    let (_, mut documents) = store
+    let mut documents = store
         .search(&AuditSearchFilter {
             count: 1000,
             ..AuditSearchFilter::default()
         })
         .await
-        .expect("search");
+        .expect("search")
+        .documents;
     documents.reverse();
     documents
 }
@@ -1184,14 +1185,16 @@ async fn every_search_parameter_matches_what_the_document_says() {
             .filter(|document| criterion.matches(document))
             .map(ToString::to_string)
             .collect();
-        let (total, found) = store
+        let page = store
             .search(&AuditSearchFilter {
                 count: 1000,
                 criteria: vec![criterion.clone()],
+                total: true,
                 ..AuditSearchFilter::default()
             })
             .await
             .expect("search");
+        let (total, found) = (page.total.expect("a counted search"), page.documents);
         let mut found: Vec<String> = found.iter().map(ToString::to_string).collect();
         expected.sort();
         found.sort();
@@ -1255,14 +1258,16 @@ async fn finds_what_the_documents_say(
         .filter(|document| criterion.matches(document))
         .map(ToString::to_string)
         .collect();
-    let (total, found) = store
+    let page = store
         .search(&AuditSearchFilter {
             count: 1000,
             criteria: vec![criterion.clone()],
+            total: true,
             ..AuditSearchFilter::default()
         })
         .await
         .expect("search");
+    let (total, found) = (page.total.expect("a counted search"), page.documents);
     let mut found: Vec<String> = found.iter().map(ToString::to_string).collect();
     expected.sort();
     found.sort();

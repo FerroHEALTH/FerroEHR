@@ -193,14 +193,14 @@ async fn an_erasure_writes_its_tombstone_and_its_entry_together() {
         .await
         .expect("the erasure");
     let recorded: Vec<(String, Option<String>)> = sqlx::query_as(
-        "SELECT content, action FROM audit.access_log_record \
+        "SELECT content, action_code FROM audit.access_log_record \
          WHERE record_type = 'ACCESS_LOG_ENTRY' AND content LIKE '%admin_access_log_erase%'",
     )
     .fetch_all(&pool)
     .await
     .expect("read the log");
     assert_eq!(recorded.len(), 1, "{recorded:?}");
-    assert_eq!(recorded[0].1.as_deref(), Some("delete"));
+    assert_eq!(recorded[0].1.as_deref(), Some("D"));
     assert!(
         recorded[0].0.contains(&uid),
         "the entry names the erased entry"

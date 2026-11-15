@@ -466,6 +466,56 @@ async fn aql_withholds_an_ehr_the_caller_may_not_read() {
     assert_eq!(ehr_ids_of(&app, aql(population, "bob")).await, both);
 }
 
+/// The access condition's one settings probe per EHR row (#5701) keeps the
+/// rows, the `COUNT` and every page of a population query in agreement, for
+/// an EHR with settings and one without: the caller who may not read the
+/// restricted EHR counts and pages only the open one, its gate-keeper both.
+#[tokio::test]
+async fn the_population_count_and_pages_agree_with_its_rows() {
+    let (_pg, app) = query_app().await;
+    let count = |user: &str| {
+        let app = app.clone();
+        let request = aql("SELECT COUNT(e/ehr_id/value) FROM EHR e", user);
+        async move {
+            let (code, result) = common::send_json(&app, request).await;
+            assert_eq!(code, StatusCode::OK, "{result}");
+            result["rows"][0][0].as_i64().expect("a count")
+        }
+    };
+    let page = |user: &str, offset: usize| {
+        aql(
+            &format!(
+                "SELECT e/ehr_id/value FROM EHR e ORDER BY e/ehr_id/value LIMIT 1 OFFSET {offset}"
+            ),
+            user,
+        )
+    };
+    for (user, readable) in [
+        ("carol", vec![OPEN_EHR_ID.to_owned()]),
+        ("bob", {
+            let mut both = vec![EHR_ID.to_owned(), OPEN_EHR_ID.to_owned()];
+            both.sort();
+            both
+        }),
+    ] {
+        let rows = ehr_ids_of(&app, aql("SELECT e/ehr_id/value FROM EHR e", user)).await;
+        assert_eq!(rows, readable, "{user}: the rows");
+        assert_eq!(
+            count(user).await,
+            i64::try_from(readable.len()).expect("a length"),
+            "{user}: the count"
+        );
+        let mut paged = Vec::new();
+        for offset in 0..=readable.len() {
+            paged.extend(ehr_ids_of(&app, page(user, offset)).await);
+        }
+        assert_eq!(
+            paged, readable,
+            "{user}: the pages, one EHR each, then none"
+        );
+    }
+}
+
 /// The stored-query run path holds the same decision.
 #[tokio::test]
 async fn a_stored_query_withholds_an_ehr_the_caller_may_not_read() {

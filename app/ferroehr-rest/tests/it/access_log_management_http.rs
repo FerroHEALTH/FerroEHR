@@ -43,7 +43,8 @@ async fn send(
     common::send_body(app, request.expect("the request")).await
 }
 
-/// The entries for `ehr` whose action is `action`, polled until there is one.
+/// The entries for `ehr` whose action code is `action`, polled until there is
+/// one.
 async fn of(pool: &PgPool, ehr: &str, action: &str) -> Vec<Stored> {
     entries(pool, 1, |s| {
         s.ehr_id.as_deref() == Some(ehr) && s.action.as_deref() == Some(action)
@@ -79,7 +80,7 @@ async fn an_ehr_delete_writes_a_delete_entry_per_ehr() {
     let (status, body) = send(&app, "DELETE", &format!("/admin/ehr/{ehr}"), None).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "delete: {body}");
     assert_eq!(
-        of(&pool, &ehr, "delete").await[0].result.as_deref(),
+        of(&pool, &ehr, "D").await[0].result.as_deref(),
         Some("granted")
     );
 
@@ -93,7 +94,7 @@ async fn an_ehr_delete_writes_a_delete_entry_per_ehr() {
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "bulk delete: {body}");
     for removed in &bulk {
-        let deleted = of(&pool, removed, "delete").await;
+        let deleted = of(&pool, removed, "D").await;
         assert_eq!(deleted.len(), 1, "one entry per removed EHR: {deleted:?}");
     }
 }
@@ -118,7 +119,7 @@ async fn each_mark_register_writes_an_entry_for_its_ehr() {
     for (path, body, register) in marks {
         let (status, answer) = send(&app, "POST", path, Some(body.to_string())).await;
         assert_eq!(status, StatusCode::NO_CONTENT, "{path}: {answer}");
-        names(&pool, &ehr, &format!("{register}:ehr-wide"), "create").await;
+        names(&pool, &ehr, &format!("{register}:ehr-wide"), "C").await;
     }
 }
 
@@ -135,7 +136,7 @@ async fn archiving_and_restoring_an_ehr_writes_an_entry_for_each_move() {
         let body = json!({ "ehr_ids": [ehr] }).to_string();
         let (status, answer) = send(&app, "POST", path, Some(body)).await;
         assert_eq!(status, StatusCode::NO_CONTENT, "{path}: {answer}");
-        names(&pool, &ehr, &format!("{register}:ehr-wide"), "update").await;
+        names(&pool, &ehr, &format!("{register}:ehr-wide"), "U").await;
     }
 }
 
@@ -163,7 +164,7 @@ async fn the_retention_register_writes_an_entry_for_the_ehr() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "anchor: {answer}");
-    names(&pool, &ehr, "retention-anchor:ehr-wide", "update").await;
+    names(&pool, &ehr, "retention-anchor:ehr-wide", "U").await;
 
     let uid = commit(&app, &ehr).await;
     let vo = uid.split("::").next().expect("a versioned object id");
@@ -176,7 +177,7 @@ async fn the_retention_register_writes_an_entry_for_the_ehr() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT, "hold: {answer}");
-    names(&pool, &ehr, &format!("retention-hold:{vo}"), "create").await;
+    names(&pool, &ehr, &format!("retention-hold:{vo}"), "C").await;
 }
 
 /// The repository dump writes an `export` entry for each EHR it wrote, and the

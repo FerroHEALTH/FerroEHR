@@ -96,9 +96,9 @@ utoipa-swagger-ui = { workspace = true }
 # The ITI-81 query grammar and its searchset Bundle (`extensions::fhir`),
 # behind `fhir`.
 ihe-atna = { workspace = true, features = ["retrieve"], optional = true }
-# The token type of an ITI-81 value (`fhir_search::token::System`), behind
-# `fhir`.
-fhir-search = { workspace = true, optional = true }
+# The token grammar of the access log's coded filters and of an ITI-81 value
+# (`fhir_search::token`).
+fhir-search = { workspace = true }
 
 [dev-dependencies]
 openehr-lang = { path = "../../crates/openehr-lang" }
@@ -138,7 +138,7 @@ proptest = { workspace = true }
 # Forward the optional-integration gates (#1890); default mirrors ferroehr's.
 default = ["fhir", "multimedia"]
 admin-api = []
-fhir = ["ferroehr/fhir", "dep:fhir-search", "dep:ihe-atna"]
+fhir = ["ferroehr/fhir", "dep:ihe-atna"]
 multimedia = ["ferroehr/multimedia"]
 
 [lints]
