@@ -1162,7 +1162,7 @@ pseudonym for the merged identifier (PIXm 3.1.0 §2:3.83.4.2.2.5, FerroPIX
 pseudonym onto the survivor's `PERSON`, so both EHRs answer. That is the
 consumer's handling of a merge (PMIR 1.6.0 §2:3.93.4.1.3). A contact point's
 TRC patient resolves in the party domain alone (`patient_ehrs`): migration
-`party/0044` projects the `DV_IDENTIFIER`s at the `[authz.party_binding.patient]
+`party/0045` projects the `DV_IDENTIFIER`s at the `[authz.party_binding.patient]
 identifier` path of a `PERSON` of the patient template into
 `binding_patient_identifier` at its commit, and one indexed statement finds
 the `PERSON` that carries the TRC identifier by issuer and value. A

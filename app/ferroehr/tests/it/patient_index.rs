@@ -29,7 +29,7 @@ use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 use ferroehr::service::version_update::WriteRequest;
-use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
 
 /// The patient template the default mapping names.
 const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
@@ -61,7 +61,7 @@ fn patient(name: &str, identifiers: &[Value], subjects: &[Value]) -> Value {
         json!({ "_type": "ELEMENT", "archetype_node_id": "id36",
             "name": { "_type": "DV_CODED_TEXT", "value": "record_subject",
                 "defining_code": { "_type": "CODE_PHRASE",
-                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY_ID_ACCESS_CONTROL },
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY_ID_ACCESS },
                     "code_string": "record_subject" } },
             "value": value })
     }));
