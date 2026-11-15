@@ -217,9 +217,10 @@ async fn a_deactivation_keeps_a_care_team_membership_and_drops_a_plain_one() {
     assert_eq!(relationships(&app, &user).await, care);
 }
 
-/// The ADT system cannot undo a revocation: a roster written over a
-/// deactivated User would reactivate its `PERSON`, so it is refused and the
-/// login stays refused.
+/// The ADT system cannot undo a revocation: an `inactive` version takes no
+/// update (RM common master06 §Version Lifecycle) and a roster cannot change
+/// the lifecycle state, so its write over a deactivated User is refused, the
+/// User stays inactive and the login stays refused.
 #[tokio::test]
 async fn the_adt_system_does_not_reactivate_a_deactivated_professional() {
     let (_db, _service, app) = hospital().await;
@@ -235,5 +236,8 @@ async fn the_adt_system_does_not_reactivate_a_deactivated_professional() {
     let (status, refused) = write_person(&app, ADT, (&user, &version), &person).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
     assert_eq!(relationships(&app, &user).await, Vec::<Value>::new());
+    let (status, _, read) = call(&app, "GET", &format!("/Users/{user}"), OTHER, None, &[]).await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    assert_eq!(read["active"], json!(false), "the User stays inactive");
     admitted(&app, key, Some("refused-inactive")).await;
 }

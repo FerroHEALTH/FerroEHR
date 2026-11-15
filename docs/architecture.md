@@ -1073,8 +1073,12 @@ deactivation keeps every care relationship and drops only plain Group
 memberships, so revocation needs no grant, and the binding refuses the login
 on its next request (`refused-inactive`, `refused-deprovisioned`) before the
 evaluator runs. A `write_care_relationship` roster whose version changes the
-lifecycle state is no roster, so the ADT system cannot reactivate a
-deactivated professional. On a SCIM User's protected `PERSON`, a version whose only change
+lifecycle state is no roster (`protect::care_writer_roster`), and an
+`inactive` version takes no update (RM common master06 §Version Lifecycle),
+so the ADT system writes no version of a deactivated professional and cannot
+reactivate one. Its memberships decide nothing while the binding refuses the
+login; a SCIM deletion (master06 §Logical Deletion) or a write after
+reactivation cleans a leaver's roster up. On a SCIM User's protected `PERSON`, a version whose only change
 from its predecessor is to its care relationships (the two stored bodies
 compared with every care relationship and the `uid` taken out,
 `grants::caller::only_care_differs`) passes the party protection for a

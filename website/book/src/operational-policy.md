@@ -1727,9 +1727,18 @@ The login is refused on its next request on every replica, because each
 request reads the binding with no cache: an inactive `PERSON` with
 `refused-inactive`, and a login whose key only a deleted `PERSON` carried
 with `refused-deprovisioned`. The access evaluator never sees the caller, so
-the care relationships it would read do not matter. The ADT system does not
-undo a revocation: a roster it writes over a deactivated `PERSON` would
-reactivate it, so it is refused `403`. All of this is FerroEHR's own design.
+the care relationships it would read do not matter.
+
+The ADT system writes no version of a deactivated `PERSON`: an `inactive`
+version takes no update (RM common master06 §Version Lifecycle: editing
+resumes only through `reactivate` or `retrieve`), and a roster cannot change
+the lifecycle state, so such a write is refused `403` and the `PERSON` stays
+`inactive`. That costs nothing: a deactivated person's memberships decide no
+access, since the login is refused at binding. A leaver's roster is cleaned
+up by the SCIM deletion, a logical `deleted` version that ends every
+relationship while the earlier versions keep the history (master06
+§Logical Deletion), or by the ADT system after the User is reactivated.
+Apart from the cited lifecycle rules, this section is FerroEHR's own design.
 
 ## Representatives in the patient portal
 
