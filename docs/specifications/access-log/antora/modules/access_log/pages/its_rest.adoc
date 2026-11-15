@@ -9,7 +9,7 @@ NOTE: This page proposes an addition to the xref:ITS-REST::index.adoc[openEHR RE
 |Resource |Behaviour
 
 |`GET {baseUrl}/ehr/{ehr_id}/access_log`
-|The entries of one EHR, newest first. Query parameters: `from`, `to` (ISO 8601 date-times), `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`, `offset`, `fetch`. `action`, `outcome` and `accessor_kind` name a term by its rubric, such as `read` or `subject of care`, whichever terminology codes it. `include_self` defaults to false and leaves out the subject's own reads of their log.
+|The entries of one EHR, newest first. Query parameters: `from`, `to` (ISO 8601 date-times), `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`, `offset`, `fetch`. `action`, `outcome` and `accessor_kind` name a term by its coded content, the FHIR token `terminology_id\|code` of its `defining_code`, such as `audit-event-action\|R`, `openehr_access\|query` or `extra-security-role-type\|datasubject`; a value without a terminology, or one naming no term of the attribute's group, is a `400`. `include_self` defaults to false and leaves out the subject's own reads of their log.
 
 |`GET {baseUrl}/ehr/{ehr_id}/access_log/{uid}`
 |One entry or tombstone.

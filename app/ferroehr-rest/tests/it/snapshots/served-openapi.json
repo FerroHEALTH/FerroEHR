@@ -431,7 +431,7 @@
           {
             "name": "outcome",
             "in": "query",
-            "description": "An `access outcome` rubric.",
+            "description": "A term of the `access outcome` group by its coded content, the token `terminology_id|code`, such as `openehr_access|refused`.",
             "required": false,
             "schema": {
               "type": "string"
@@ -6700,7 +6700,7 @@
           {
             "name": "action",
             "in": "query",
-            "description": "An `access action` rubric.",
+            "description": "A term of the `access action` group by its coded content, the token `terminology_id|code`, such as `audit-event-action|R` or `openehr_access|query`.",
             "required": false,
             "schema": {
               "type": "string"
@@ -6709,7 +6709,7 @@
           {
             "name": "outcome",
             "in": "query",
-            "description": "An `access outcome` rubric.",
+            "description": "A term of the `access outcome` group by its coded content, the token `terminology_id|code`, such as `openehr_access|refused`.",
             "required": false,
             "schema": {
               "type": "string"
@@ -6718,7 +6718,7 @@
           {
             "name": "accessor_kind",
             "in": "query",
-            "description": "An `accessor kind` rubric.",
+            "description": "A term of the `accessor kind` group by its coded content, the token `terminology_id|code`, such as `extra-security-role-type|datasubject`.",
             "required": false,
             "schema": {
               "type": "string"
