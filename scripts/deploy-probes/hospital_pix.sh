@@ -175,6 +175,18 @@ hp_token() {
     | jq -r '.access_token // empty'
 }
 
+# Feeds the source record `mrn` to FerroPIX with the name `family`, `given`,
+# as the hospital's ADT system does (IHE ITI-104).
+hp_feed() {
+  local mrn="$1" family="$2" given="$3"
+  curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Host: localhost:8090' \
+    -H "Authorization: Bearer $(hp_token quickstart-source system/Patient.cud)" \
+    -H 'Content-Type: application/fhir+json' \
+    "$HP_PIX/fhir/Patient?identifier=$HP_SOURCE%7C$mrn" \
+    --data-binary "$(jq -nc --arg s "$HP_SOURCE" --arg m "$mrn" --arg f "$family" --arg g "$given" \
+      '{resourceType:"Patient",identifier:[{system:$s,value:$m}],name:[{family:$f,given:[$g]}]}')"
+}
+
 # FerroPIX's person id of the source record `mrn`, read over PDQm (ITI-78).
 hp_person() {
   curl -s -H 'Host: localhost:8090' -H "Authorization: Bearer $(hp_token ferroehr system/Patient.rs)" \
@@ -308,12 +320,12 @@ hospital_pix_merge() {
   probe "P-HOSP-PIX-SETUP" "$PROBE_WORKING" "server" "#5693" \
     "Lisa and her duplicate record, fed to FerroPIX, each with its PERSON and EHR"
   local fed mrn
-  # The ADT system feeds both records again now that each PERSON carries its
-  # record's identifier, so FerroPIX announces them and FerroEHR binds each
-  # identity to its PERSON before the merge arrives.
+  # The ADT system corrects both records' names now that each PERSON carries
+  # its record's identifier: FerroPIX announces each change, and FerroEHR
+  # binds each identity to its PERSON before the merge arrives.
   for mrn in lisa-0001 lisa-0002; do
-    fed="$(pix_feed "$mrn")"
-    [[ "$fed" = 200 || "$fed" = 201 ]] || probe_fail "200 or 201 for the second feed of $mrn" "$fed"
+    fed="$(hp_feed "$mrn" Bos Lisa)"
+    [[ "$fed" = 200 || "$fed" = 201 ]] || probe_fail "200 or 201 for the corrected feed of $mrn" "$fed"
   done
   h_client pix ferropix "$(hv hospital)" "$(j_capability "$(j_operation write_care_relationship)")" \
     || h_fail_call "FerroPIX's feed client, which writes record subjects"
