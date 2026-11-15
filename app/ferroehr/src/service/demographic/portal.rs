@@ -11,9 +11,14 @@
 //! and admits them only while that `PERSON` holds a live representation of
 //! the EHR's subject: a `PARTY_RELATIONSHIP` carrying the representation code
 //! ([`crate::party_binding::policy_mark::REPRESENTS`]) whose `time_validity`
-//! covers today. A login whose `PERSON` has ever represented the subject is
-//! judged only as a representative, so ending or deleting the representation
-//! never leaves the login admitted as the patient (#5532). Who may represent whom, and until when, is the deployment's
+//! covers today. A login a live `PERSON` carries is held to that `PERSON`
+//! (#5622): it is the patient only when that `PERSON` is the EHR's subject,
+//! a representative only through a live representation, and refused
+//! otherwise, so a former representative is never the patient (#5532) and a
+//! provisioned representative with no representation yet reaches nothing.
+//! When the CDR knows who signs in, its facts decide, never the issuer's
+//! claim of the EHR alone; a login no `PERSON` carries is the patient's. Who
+//! may represent whom, and until when, is the deployment's
 //! data, so the national rules on age and legal capacity reach FerroEHR as
 //! the relationships and the validity the deployment records. No openEHR spec
 //! governs resolving a login to a party: our own design.
@@ -34,8 +39,7 @@ const ACTIVE: [&str; 2] = ["532", "553"];
 /// the EHR it names.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PortalLogin {
-    /// No representative's `PERSON` carries the login, or the one that does
-    /// has never represented the EHR's subject: the login is the patient's.
+    /// No `PERSON` carries the login: the login is the patient's.
     Unbound,
     /// The `PERSON` carrying the login is the EHR's subject itself.
     Subject,
@@ -50,10 +54,11 @@ pub enum PortalLogin {
         /// The openEHR `subject_relationship` code.
         relationship: Option<String>,
     },
-    /// The `PERSON` `person` carries the login and has represented the
-    /// subject, but holds no live representation of them now, or the EHR
-    /// names no subject of this store. A former representative is never the
-    /// patient.
+    /// The `PERSON` `person` carries the login and holds no live
+    /// representation of the subject: it never represented them, represents
+    /// someone else, or its representation ended or was deleted; or the EHR
+    /// names no subject of this store. A known person is never the patient
+    /// of another's EHR.
     Unrecorded {
         /// The representative's `PERSON` container.
         person: Uuid,
@@ -96,11 +101,9 @@ impl FerroEhrService {
             return Ok(PortalLogin::Subject);
         }
         let today = crate::party_binding::source::today();
-        let Some((live, relationship)) =
-            lookup::representation_of(&mut conn, person, subject, &today).await?
-        else {
-            return Ok(PortalLogin::Unbound);
-        };
+        let (live, relationship) = lookup::representation_of(&mut conn, person, subject, &today)
+            .await?
+            .unwrap_or((false, None));
         Ok(if !ACTIVE.contains(&state.as_str()) {
             PortalLogin::Inactive { person }
         } else if live {

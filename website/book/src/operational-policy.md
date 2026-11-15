@@ -1741,7 +1741,15 @@ administrator or the patient writes.
 The representative's `PERSON` is of a template
 `[[authz.party_binding.person.template]]` maps and carries a binding key: a
 `DV_IDENTIFIER` whose `issuer` is the token issuer of the patient portal and
-whose `id` is the representative's login there (their `sub`).
+whose `id` is the representative's login there (their `sub`). The portal's
+own SCIM client provisions it: a `scim_provision` grant whose
+`binding_issuer` is the portal's `patients` issuer creates each
+representative as a `PERSON` of the patient template, with no professional
+`ROLE`, and deactivates or deletes it ([Users](installation/config-auth.md#users)).
+SCIM provisions the identity only. The client never writes a representation:
+EHDS Art. 4(2) gives the authorisation to the patient (a) and to the legal
+representative under national law (b), so the patient or an administrator
+records it.
 
 ### Legal capacity
 
@@ -1770,20 +1778,23 @@ context (`ehrId`). A representative signs in one of two ways:
 Either way FerroEHR binds the login, under the token's issuer, to the
 `PERSON` whose binding key it is, and admits the request while that `PERSON`
 holds a live representation of the subject of the EHR's `EHR_STATUS`. The
-request is confined to that EHR. A login whose `PERSON` holds, or has ever
-held, a representation of the EHR's subject is judged only as a
-representative: it is admitted while a representation is live, and refused
-once none is, whether the representation ended or was deleted, so a former
-representative never becomes the patient. On the second path a login no
-representative's `PERSON` has ever carried for that subject is the patient
-themself; on the first path such an actor is refused. A representation that
-is not recorded, has ended or was deleted is refused with `403`
-(`refused-representation-unrecorded`); a representative's `PERSON` that is
-`inactive` or `abandoned` with `refused-inactive`, and a login two `PERSON`s
-carry with `refused-ambiguous`. FerroEHR trusts a `patients` issuer for the
-patient its token names, so the issuer, not FerroEHR, decides which EHR a
-login may name; FerroEHR holds every login it knows as a representative to a
-live representation.
+request is confined to that EHR. A login a live `PERSON` carries is held to
+that `PERSON`: it is the patient only when that `PERSON` is the EHR's
+subject, a representative only while it holds a live representation of the
+subject, and refused otherwise. A representative with no representation yet,
+one whose representation ended or was deleted, and one who represents
+someone else are all refused, so a former representative never becomes the
+patient. When FerroEHR knows who signs in, its own records decide, not the
+issuer's claim of which EHR the login names. A login no `PERSON` carries is
+the patient themself on the second path; on the first path such an actor is
+refused. These outcomes are decided at binding, when FerroEHR resolves who
+the login is, before the access evaluator decides what that caller may
+reach, and each is recorded as a binding outcome: a missing representation
+with `403` (`refused-representation-unrecorded`), a representative's
+`PERSON` that is `inactive` or `abandoned` with `refused-inactive`, and a
+login two `PERSON`s carry with `refused-ambiguous`. FerroEHR trusts a
+`patients` issuer for the patient its token names only when it knows no
+`PERSON` for the login. This is FerroEHR's own design.
 
 Each access is recorded bound to the representative's `PERSON`, naming the
 subject they represent and the relationship (EHDS Annex II 3.2), and a commit

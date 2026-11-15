@@ -37,6 +37,7 @@ mod groups;
 mod groups_entra;
 mod jit;
 mod migration;
+mod portal;
 mod records;
 mod refusals;
 mod roles;

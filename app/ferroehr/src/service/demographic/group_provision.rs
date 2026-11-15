@@ -350,7 +350,8 @@ impl FerroEhrService {
         let today = crate::party_binding::source::today();
         let found: BTreeSet<uuid::Uuid> = {
             let mut conn = acquire(&self.demographic_pool).await?;
-            provisioned::users_among(&mut conn, binding_issuer, &ids, &today)
+            let today = (!self.binding.is_portal_issuer(binding_issuer)).then_some(today.as_str());
+            provisioned::users_among(&mut conn, binding_issuer, &ids, today)
                 .await?
                 .into_iter()
                 .collect()
