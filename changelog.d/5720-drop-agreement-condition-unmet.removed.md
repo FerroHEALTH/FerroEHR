@@ -1,0 +1,1 @@
+- The draft `openehr_access` terminology's `credential binding` group no longer holds `agreement condition unmet`, which no binding outcome writes since the Wabvpz Art. 15f check became controller policy content (#5691). The access log's `ACCESSOR.binding` refuses the code as outside the group.
