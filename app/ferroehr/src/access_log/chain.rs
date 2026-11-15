@@ -12,13 +12,16 @@
 //! digest, one per line, each in lower-case hexadecimal. A tombstone keeps
 //! the content digest of the entry it replaced, so its content digest is
 //! taken as recorded and only its link is recomputed, which is how a log
-//! verifies after retention removed content in its middle.
+//! verifies after retention removed content in its middle. A gap, a run of
+//! tombstones folded after their own retention (#5619), stands for the run
+//! as one link whose digest is its link: the link after it links to that.
 //!
 //! The chain of the local database is verified where it is stored as well,
 //! by `audit.verify_access_log_chain()`, which also matches the newest
 //! record to the head. No openEHR spec governs log integrity: our own
 //! design.
 
+use crate::access_log::gap::ChainGap;
 use crate::access_log::store::{AccessLogError, canonical_form};
 use crate::digest::sha256_hex;
 use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
@@ -42,12 +45,12 @@ pub enum ChainFinding {
     /// The span holds no link.
     #[error("the span holds no link")]
     NoLinks,
-    /// A link does not follow the one before it in sequence.
+    /// A link or gap does not follow the one before it in sequence.
     #[error("the link at {sequence} does not follow the link at {previous}")]
     NotAdjacent {
         /// The link's sequence.
         sequence: i64,
-        /// The sequence of the link before it in the span.
+        /// The last sequence the link or gap before it in the span holds.
         previous: i64,
     },
     /// A link names an algorithm the chain does not use.
@@ -118,22 +121,26 @@ pub enum ChainFinding {
     },
 }
 
-/// A span of one system's log: its records, every link from the first
-/// record's to the checkpoint's, and the checkpoint.
+/// A span of one system's log: its records, every link and gap from the
+/// first record's link to the checkpoint's sequence, and the checkpoint.
 #[derive(Debug, Clone, Copy)]
 pub struct Span<'a> {
     /// The records, entries and tombstones, each with its link.
     pub records: &'a [AccessLogRecord],
-    /// The links, consecutive, the last at the checkpoint's sequence.
+    /// The links, in sequence; with the gaps they hold every position of the
+    /// span.
     pub links: &'a [AccessLogLink],
+    /// The gaps between the links, in sequence.
+    pub gaps: &'a [ChainGap],
     /// The checkpoint the span verifies against.
     pub checkpoint: &'a AccessLogCheckpoint,
 }
 
 /// Verify `span` against its checkpoint.
 ///
-/// Each link recomputes and links to the one before it, the last is the one
-/// the checkpoint seals, the checkpoint and each signed link carry a
+/// Each link recomputes and links to the link or gap before it, each gap
+/// starts after the link or gap before it, the last of them is the one the
+/// checkpoint seals, the checkpoint and each signed link or gap carry a
 /// signature `signed` accepts, and each record carries the span's link at
 /// its sequence over its own content.
 ///
@@ -152,7 +159,7 @@ pub fn verify(
     signed: &dyn Fn(&[u8], &str) -> bool,
 ) -> Result<Vec<ChainFinding>, AccessLogError> {
     let mut findings = Vec::new();
-    verify_links(span.links, signed, &mut findings);
+    verify_links(&held(span), signed, &mut findings);
     verify_checkpoint(span, signed, &mut findings)?;
     for record in span.records {
         verify_record(span, record, &mut findings)?;
@@ -160,44 +167,106 @@ pub fn verify(
     Ok(findings)
 }
 
-/// The findings of the links alone.
-fn verify_links(
-    links: &[AccessLogLink],
-    signed: &dyn Fn(&[u8], &str) -> bool,
-    findings: &mut Vec<ChainFinding>,
-) {
-    let mut before: Option<&AccessLogLink> = None;
-    for link in links {
-        let sequence = link.sequence;
-        if link.algorithm != ALGORITHM {
-            findings.push(ChainFinding::Algorithm {
-                sequence,
-                algorithm: link.algorithm.clone(),
-            });
+/// One position or run of positions a span holds: a link, or a gap that
+/// stands for the run as one link whose digest is its link.
+#[derive(Debug, Clone, Copy)]
+enum Held<'a> {
+    /// A link of a record.
+    Link(&'a AccessLogLink),
+    /// A run of folded tombstones.
+    Gap(&'a ChainGap),
+}
+
+impl Held<'_> {
+    /// The first position held.
+    fn first(self) -> i64 {
+        match self {
+            Held::Link(link) => link.sequence,
+            Held::Gap(gap) => gap.first_sequence,
         }
-        if link.digest != link_digest(&link.previous_digest, sequence, &link.content_digest) {
-            findings.push(ChainFinding::LinkDigest { sequence });
+    }
+
+    /// The last position held.
+    fn last(self) -> i64 {
+        match self {
+            Held::Link(link) => link.sequence,
+            Held::Gap(gap) => gap.last_sequence,
         }
-        if let Some(previous) = before {
-            if previous.sequence.checked_add(1) != Some(sequence) {
-                findings.push(ChainFinding::NotAdjacent {
-                    sequence,
-                    previous: previous.sequence,
-                });
-            } else if link.previous_digest != previous.digest {
-                findings.push(ChainFinding::PreviousDigest { sequence });
-            }
+    }
+
+    /// The link digest the next link follows.
+    fn digest(&self) -> &str {
+        match self {
+            Held::Link(link) => &link.digest,
+            Held::Gap(gap) => &gap.link,
         }
-        if let Some(signature) = &link.signature
-            && !signed(link.digest.as_bytes(), signature)
-        {
-            findings.push(ChainFinding::LinkSignature { sequence });
+    }
+
+    /// The signature of that digest, when it was signed.
+    fn signature(&self) -> Option<&str> {
+        match self {
+            Held::Link(link) => link.signature.as_deref(),
+            Held::Gap(gap) => gap.signature.as_deref(),
         }
-        before = Some(link);
     }
 }
 
-/// The findings of the checkpoint against the last link.
+/// The links and gaps of `span` in sequence.
+fn held(span: Span<'_>) -> Vec<Held<'_>> {
+    let mut held: Vec<Held<'_>> = span
+        .links
+        .iter()
+        .map(Held::Link)
+        .chain(span.gaps.iter().map(Held::Gap))
+        .collect();
+    held.sort_by_key(|item| (item.last(), item.first()));
+    held
+}
+
+/// The findings of the links and gaps alone.
+fn verify_links(
+    held: &[Held<'_>],
+    signed: &dyn Fn(&[u8], &str) -> bool,
+    findings: &mut Vec<ChainFinding>,
+) {
+    let mut before: Option<Held<'_>> = None;
+    for item in held {
+        let sequence = item.first();
+        if let Held::Link(link) = item {
+            if link.algorithm != ALGORITHM {
+                findings.push(ChainFinding::Algorithm {
+                    sequence,
+                    algorithm: link.algorithm.clone(),
+                });
+            }
+            if link.digest != link_digest(&link.previous_digest, sequence, &link.content_digest) {
+                findings.push(ChainFinding::LinkDigest { sequence });
+            }
+        }
+        if let Some(previous) = before {
+            if previous.last().checked_add(1) != Some(sequence) {
+                findings.push(ChainFinding::NotAdjacent {
+                    sequence,
+                    previous: previous.last(),
+                });
+            } else if let Held::Link(link) = item
+                && link.previous_digest != previous.digest()
+            {
+                findings.push(ChainFinding::PreviousDigest { sequence });
+            }
+        }
+        if let Some(signature) = item.signature()
+            && !signed(item.digest().as_bytes(), signature)
+        {
+            findings.push(ChainFinding::LinkSignature {
+                sequence: item.last(),
+            });
+        }
+        before = Some(*item);
+    }
+}
+
+/// The findings of the checkpoint against the last link or gap.
 fn verify_checkpoint(
     span: Span<'_>,
     signed: &dyn Fn(&[u8], &str) -> bool,
@@ -205,15 +274,16 @@ fn verify_checkpoint(
 ) -> Result<(), AccessLogError> {
     let checkpoint = span.checkpoint;
     let sequence = checkpoint.sequence;
-    match span.links.last() {
+    let held = held(span);
+    match held.last() {
         None => findings.push(ChainFinding::NoLinks),
-        Some(last) if last.sequence != sequence => {
+        Some(last) if last.last() != sequence => {
             findings.push(ChainFinding::CheckpointPosition {
-                sequence: last.sequence,
+                sequence: last.last(),
                 checkpoint: sequence,
             });
         }
-        Some(last) if last.digest != checkpoint.digest => {
+        Some(last) if last.digest() != checkpoint.digest => {
             findings.push(ChainFinding::CheckpointDigest { sequence });
         }
         Some(_) => {}
