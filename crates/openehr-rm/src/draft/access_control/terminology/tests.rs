@@ -2,29 +2,7 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::v1_2::data_types::text::code_phrase::CodePhrase;
-use openehr_base::prelude::TerminologyId;
-
 use super::*;
-
-/// A `DV_CODED_TEXT` of `code` in `terminology`.
-fn coded(terminology: &str, code: &str) -> DvCodedText {
-    DvCodedText {
-        value: code.to_owned(),
-        hyperlink: None,
-        formatting: None,
-        mappings: None,
-        language: None,
-        encoding: None,
-        defining_code: CodePhrase {
-            terminology_id: TerminologyId {
-                value: terminology.to_owned(),
-            },
-            code_string: code.to_owned(),
-            preferred_term: None,
-        },
-    }
-}
 
 #[test]
 fn every_group_reads_back_each_term_and_terms_are_unique_in_a_group() {
@@ -114,15 +92,26 @@ fn a_code_outside_its_group_is_refused() {
 #[test]
 fn a_foreign_code_is_of_another_terminology() {
     assert_eq!(
-        ForeignCode::read(ForeignKind::Sensitivity, &coded("v3-Confidentiality", "R")),
+        ForeignCode::read(
+            ForeignKind::Sensitivity,
+            &coded_text("v3-Confidentiality", "R", "R")
+        ),
         Ok(ForeignCode {
             terminology: "v3-Confidentiality".to_owned(),
             code: "R".to_owned()
         })
     );
     assert!(
-        ForeignCode::read(ForeignKind::Purpose, &coded(TERMINOLOGY_ID_ACCESS, "TREAT")).is_err()
+        ForeignCode::read(
+            ForeignKind::Purpose,
+            &coded_text(TERMINOLOGY_ID_ACCESS, "TREAT", "TREAT")
+        )
+        .is_err()
     );
-    assert!(Effect::Deny.is(&coded(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, "deny")));
-    assert!(!Effect::Deny.is(&coded("local", "deny")));
+    assert!(Effect::Deny.is(&coded_text(
+        TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
+        "deny",
+        "deny"
+    )));
+    assert!(!Effect::Deny.is(&coded_text("local", "deny", "deny")));
 }

@@ -28,11 +28,8 @@
 
 use std::collections::BTreeMap;
 
-use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
 use openehr_rm::v1_2::data_types::quantity::dv_interval::DvInterval;
-use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
-use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use serde_json::Value;
 
 use crate::error::ServiceError;
@@ -45,7 +42,7 @@ use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, WriteEnvelope};
 use crate::versioning::contribution::typed_decode_gate;
-use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
+use openehr_rm::draft::access_control::terminology::{TERMINOLOGY_ID_ACCESS, coded_text};
 
 /// A role a User holds: the code of its `ROLE`'s name in its terminology.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -330,21 +327,7 @@ fn in_force(validity: Option<&Value>, today: &str) -> bool {
 
 /// The `DV_CODED_TEXT` of `code` in `terminology`, its value the code.
 fn coded(terminology: &str, code: &str) -> Value {
-    openehr_its::json::to_canonical_value(&DvCodedText {
-        value: code.to_owned(),
-        hyperlink: None,
-        formatting: None,
-        mappings: None,
-        language: None,
-        encoding: None,
-        defining_code: CodePhrase {
-            terminology_id: TerminologyId {
-                value: terminology.to_owned(),
-            },
-            code_string: code.to_owned(),
-            preferred_term: None,
-        },
-    })
+    openehr_its::json::to_canonical_value(&coded_text(terminology, code, code))
 }
 
 /// The `DV_DATE` of the ISO 8601 date `value`.

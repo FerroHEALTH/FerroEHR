@@ -28,16 +28,14 @@ use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
 use openehr_base::v1_3::base_types::identification::object_ref::{ObjectRef, ObjectRefData};
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
-use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
 use openehr_rm::draft::access_control::terminology::{
-    AccessorKind, Action, Authorisation, Outcome, Term,
+    AccessorKind, Action, Authorisation, Outcome, Term, coded_text,
 };
 use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::common::generic::party_self::PartySelf;
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
-use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_rm::v1_2::data_types::text::dv_text::{DvText, DvTextData};
 
@@ -130,7 +128,7 @@ pub fn entry_of(
             signature: None,
         },
         occurred: None,
-        action: term(action(event)),
+        action: Term::coded(action(event)),
         operation: operation(event),
         outcome: outcome(event),
         accessor: accessor(event, system_id),
@@ -143,7 +141,7 @@ pub fn entry_of(
                 .into_iter()
                 .map(|purpose| {
                     let system = purpose.system.as_deref().unwrap_or(LOCAL);
-                    coded(system, &purpose.code, &purpose.code)
+                    coded_text(system, &purpose.code, &purpose.code)
                 })
                 .collect(),
         ),
@@ -188,30 +186,6 @@ pub fn for_store(
     entry_of(event, subject, &ctx.source_id, retention).map(Box::new)
 }
 
-/// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
-fn coded(terminology: &str, code: &str, rubric: &str) -> DvCodedText {
-    DvCodedText {
-        value: rubric.to_owned(),
-        hyperlink: None,
-        formatting: None,
-        mappings: None,
-        language: None,
-        encoding: None,
-        defining_code: CodePhrase {
-            terminology_id: TerminologyId {
-                value: terminology.to_owned(),
-            },
-            code_string: code.to_owned(),
-            preferred_term: None,
-        },
-    }
-}
-
-/// A `DV_CODED_TEXT` of the draft access term `term`, displayed as its rubric.
-fn term<T: Term>(term: T) -> DvCodedText {
-    coded(term.terminology(), term.code(), term.rubric())
-}
-
 /// `values`, or `None` when there are none, as the draft's optional lists are
 /// written.
 fn nonempty<T>(values: Vec<T>) -> Option<Vec<T>> {
@@ -252,7 +226,7 @@ fn action(event: &AuditEvent) -> Action {
 /// FHIR rendering names it by.
 fn operation(event: &AuditEvent) -> Option<DvCodedText> {
     match &event.event_type {
-        Some(EventType::RestOperation(op)) => Some(coded(OPERATION_SYSTEM, op, op)),
+        Some(EventType::RestOperation(op)) => Some(coded_text(OPERATION_SYSTEM, op, op)),
         Some(EventType::Login | EventType::Logout) | None => None,
     }
 }
@@ -276,8 +250,8 @@ fn outcome(event: &AuditEvent) -> AccessOutcome {
         .as_ref()
         .and_then(|decided| decided.refused.as_ref());
     AccessOutcome {
-        result: term(result),
-        reason: refused.map(|refused| term(refused.code)),
+        result: Term::coded(result),
+        reason: refused.map(|refused| Term::coded(refused.code)),
         description: refused.map(|refused| {
             DvText::DvText(DvTextData {
                 value: refused.description(),
@@ -297,7 +271,7 @@ fn accessor(event: &AuditEvent, system_id: &str) -> Accessor {
     let binding = event.binding.as_ref();
     let issuer = event.issuer.as_deref().unwrap_or(system_id);
     Accessor {
-        kind: term(accessor_kind(event)),
+        kind: Term::coded(accessor_kind(event)),
         party: party(event, issuer),
         provider: provider(event),
         roles: nonempty(
@@ -305,7 +279,7 @@ fn accessor(event: &AuditEvent, system_id: &str) -> Accessor {
                 .role_codings()
                 .into_iter()
                 .map(|role| {
-                    coded(
+                    coded_text(
                         role.system.as_deref().unwrap_or(LOCAL),
                         &role.code,
                         &role.code,
@@ -315,7 +289,7 @@ fn accessor(event: &AuditEvent, system_id: &str) -> Accessor {
         ),
         groups: binding.and_then(|binding| nonempty(groups(binding))),
         binding: binding.map(|binding| {
-            coded(
+            coded_text(
                 BINDING_TERMINOLOGY,
                 binding.code.as_str(),
                 binding.code.as_str(),
@@ -464,7 +438,7 @@ fn credential(event: &AuditEvent) -> Option<AccessCredential> {
         assurance: event
             .actor
             .assurance_level
-            .map(|level| coded(LOCAL, level.as_str(), level.as_str())),
+            .map(|level| coded_text(LOCAL, level.as_str(), level.as_str())),
         authentication_method: None,
     })
 }
@@ -497,7 +471,7 @@ fn item(event: &AuditEvent) -> Option<AccessedItem> {
                 .classification
                 .categories()
                 .keys()
-                .map(|category| coded(category.system(), category.code(), category.code()))
+                .map(|category| coded_text(category.system(), category.code(), category.code()))
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
@@ -574,7 +548,7 @@ fn query(event: &AuditEvent) -> Option<AccessQuery> {
 #[must_use]
 pub(crate) fn authorisation(kind: Authorisation) -> AccessAuthorisation {
     AccessAuthorisation {
-        kind: term(kind),
+        kind: Term::coded(kind),
         policy: None,
         name: None,
         version: None,
@@ -601,7 +575,7 @@ fn authorisations(event: &AuditEvent) -> Vec<AccessAuthorisation> {
             legal_grounds: agreement
                 .legal_ground
                 .as_ref()
-                .map(|ground| vec![coded(LOCAL, ground, ground)]),
+                .map(|ground| vec![coded_text(LOCAL, ground, ground)]),
             ..kind(Authorisation::Agreement)
         });
     }
@@ -663,7 +637,7 @@ pub fn horizon_retention(end: Option<Date>) -> AccessRetention {
             accuracy: None,
             value: last.to_string(),
         }),
-        grounds: NonEmptyVec::of(coded(
+        grounds: NonEmptyVec::of(coded_text(
             RETENTION_TERMINOLOGY,
             "store-horizon",
             "the retention horizon of the audit store",

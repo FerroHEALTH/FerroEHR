@@ -26,7 +26,9 @@
 
 use std::fmt;
 
+use crate::v1_2::data_types::text::code_phrase::CodePhrase;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
+use openehr_base::prelude::TerminologyId;
 
 /// The BMMs' `Terminology_id_access`: the draft `openehr_access` terminology,
 /// which holds the access groups' own codes until openEHR adopts them.
@@ -47,6 +49,26 @@ pub const TERMINOLOGY_ID_ROLE_CLASS: &str = "v3-RoleClass";
 /// HL7 FHIR `http://hl7.org/fhir/audit-event-action`, by its code system id:
 /// the create, read, update and delete of an audited access.
 pub const TERMINOLOGY_ID_AUDIT_EVENT_ACTION: &str = "audit-event-action";
+
+/// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
+#[must_use]
+pub fn coded_text(terminology: &str, code: &str, rubric: &str) -> DvCodedText {
+    DvCodedText {
+        value: rubric.to_owned(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+        defining_code: CodePhrase {
+            terminology_id: TerminologyId {
+                value: terminology.to_owned(),
+            },
+            code_string: code.to_owned(),
+            preferred_term: None,
+        },
+    }
+}
 
 /// One group of the draft access terminology.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -223,6 +245,11 @@ pub trait Term: Copy + PartialEq + Sized + 'static {
     /// The term's `(terminology id, code)`.
     fn phrase(self) -> (&'static str, &'static str) {
         (self.terminology(), self.code())
+    }
+
+    /// The term as a `DV_CODED_TEXT`, displayed as its rubric.
+    fn coded(self) -> DvCodedText {
+        coded_text(self.terminology(), self.code(), self.rubric())
     }
 
     /// Reads the term a `CODE_PHRASE` of `terminology` and `code` names.
