@@ -16,7 +16,9 @@
               (.claude/rules/testing.md §Test-fixture construction)"
 )]
 
+mod canonical_fast_path;
 mod canonical_form_rfc8785;
+mod canonical_reference;
 #[cfg(feature = "draft")]
 mod draft;
 mod enforcement_reach;
