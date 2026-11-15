@@ -5,15 +5,19 @@
 //!
 //! It is installed on the service and judged against its templates at boot;
 //! the binding side table is filled or checked under its digest, with this
-//! replica's lease renewed while it runs; and `ferroehr party-binding refill`
-//! is the one path by which the mapping of a deployment changes;
+//! replica's lease renewed and the key spaces tended while it runs;
+//! `ferroehr party-binding refill` is the one path by which the templates,
+//! selectors, role, group or membership of a deployment change;
 //! `ferroehr party-binding check` is the read-only pre-flight of a migration
 //! to binding, the provisional persons just-in-time creation left
 //! incomplete among what it reports.
 //!
-//! A mapping change is a stop-the-world step: every replica stops, the
-//! refill runs, and replicas with the new mapping start. No openEHR spec
-//! governs the binding: our own design.
+//! A change to those is a stop-the-world step: every replica stops, the
+//! refill runs, and replicas with the new mapping start. A key issuer added
+//! or removed is no such change: each is a key space the replicas add,
+//! fill and retire while they serve
+//! ([`ferroehr::party_binding::key_space`]). No openEHR spec governs the
+//! binding: our own design.
 
 use ferroehr::service::ehr::access_projection::Rebuild;
 use std::collections::BTreeMap;
@@ -39,7 +43,9 @@ pub enum PartyBindingCmd {
     /// Rebuild the binding side table, the policy grants included, from the
     /// party versions under the configured mapping and store its digest. Run
     /// it with every replica stopped: it refuses while a replica's lease is
-    /// live. With no mapping configured it rebuilds the policy grants alone.
+    /// live. A key issuer added or removed needs no refill: the running
+    /// replicas fill and retire its key space themselves. With no mapping
+    /// configured it rebuilds the policy grants alone.
     /// It then rebuilds the `EHR_ACCESS` projection from every EHR's current
     /// `EHR_ACCESS` version.
     Refill,
@@ -203,7 +209,8 @@ pub fn install(
 /// grants, starts their listener and logs the federation agreements in
 /// force, judges the mapping against its
 /// templates, prepares the side table and takes this replica's lease,
-/// renewed in the background until it is released.
+/// renewed in the background with the key spaces tended
+/// ([`Lease::tend`]) until it is released.
 ///
 /// # Errors
 /// A default definition the definition store refuses, two `AGENT`s naming
@@ -240,6 +247,7 @@ pub async fn prepare(
     service
         .grants()
         .spawn_refresher(std::time::Duration::from_secs(60));
+    service.spawn_care_projector();
     let errors = service
         .party_mapping_errors(&config.authz.party_binding.sections())
         .await?;
@@ -259,12 +267,13 @@ pub async fn prepare(
     let renewing = Arc::clone(&lease);
     let renewal = tokio::spawn(async move {
         let mut tick = tokio::time::interval(LEASE_RENEWAL);
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
             tick.tick().await;
-            if let Err(e) = renewing.renew().await {
+            if let Err(e) = renewing.tend().await {
                 tracing::warn!(
                     error = %ferroehr::error::ErrorChain::new(&e),
-                    "the party binding lease could not be renewed"
+                    "the party binding lease could not be renewed or its key spaces tended"
                 );
             }
         }

@@ -232,18 +232,26 @@ With the local store on, the feed delivers from the store and loses nothing
 across a repository outage. With the store off it delivers from an in-memory
 spool, so a restart loses what the spool holds.
 
-### `[audit.access_log]`: trusted systems
+### `[audit.access_log]`: publication and trusted systems
 
 | Key | Type | Default | Description |
 |---|---|---|---|
+| `publish_directory` | path | unset | A directory outside the database, ideally on write-once storage, where the server publishes the newest access-log checkpoint every 30 seconds as its own file, created once and never rewritten. Unset, the `access_log_checkpoints` health indicator reads `DEGRADED`. |
 | `trusted_key_files` | list of paths | `[]` | Armored OpenPGP public certificates of the systems whose exported logs this deployment imports. An import is refused when neither these nor the keyring's own key signed its checkpoint. |
 
 Signing the access log needs no key of this section. Whenever
 `[record.signing]` holds an OpenPGP key (`mode = "pgp"` with a `key_file`),
-the server signs each link of the access log and seals it in a signed
-checkpoint every five minutes when it grew; without one it signs nothing.
-Use an Ed25519 key: a link is signed for every entry an access writes, RSA
-signing is far slower, and every audit write waits on it. The key is the one `[record.signing]` configures for version
-signatures, with its retired certificates: one key per deployment, kept in
-the secret store its `key_file` and `key_passphrase_file` name. See the
+every append of the access log ends, in its own transaction, with one signed
+checkpoint of its last link; without one nothing is sealed. Use an Ed25519
+key: every audit write waits while an append holds the head of the chain, and
+RSA signing is far slower. The key is the one `[record.signing]` configures
+for version signatures, with its retired certificates: one key per
+deployment, kept in the secret store its `key_file` and `key_passphrase_file`
+name.
+
+Set `publish_directory` in production. Someone who can write the database
+can remove the newest entries together with the checkpoints that seal them,
+and only a checkpoint published where that person cannot write shows it.
+Mount the directory from write-once storage, or from storage another system
+collects from, and give every instance the same one. See the
 [audit page](../audit.md#checkpoints-and-the-transfer-of-a-log).

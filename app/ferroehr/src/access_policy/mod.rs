@@ -171,7 +171,11 @@ impl LivePolicy {
     /// access log retention in force, now and whenever the policy gains a
     /// version.
     pub fn attach_grants(&self, grants: Arc<LiveGrants>) {
-        grants.set_holder(self.log_retention().period);
+        grants.set_federation(
+            (*grants.federation())
+                .clone()
+                .with_holder(self.log_retention().period),
+        );
         *self.grants.write().unwrap_or_else(PoisonError::into_inner) = Some(grants);
     }
 
@@ -320,7 +324,11 @@ impl LivePolicy {
             .unwrap_or_else(PoisonError::into_inner)
             .clone();
         if let Some(grants) = grants {
-            grants.set_holder(retention.last_good.period);
+            grants.set_federation(
+                (*grants.federation())
+                    .clone()
+                    .with_holder(retention.last_good.period),
+            );
         }
         Ok(())
     }

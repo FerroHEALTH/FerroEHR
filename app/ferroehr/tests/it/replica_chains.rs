@@ -8,9 +8,9 @@
 //! key, as two instances behind a load balancer do. Both commit EHRs, record
 //! accesses to them in the access log, write records of the system chain and
 //! seal both chains concurrently; every writer of a chain serialises on its
-//! head row in PostgreSQL, so afterwards the access log, the system chain,
-//! every signed link, every checkpoint and every seal verify, whichever
-//! replica made them. No openEHR spec governs the process model or audit
+//! head row in PostgreSQL, and every append of the access log seals itself in
+//! its own transaction, so afterwards the access log, the system chain, every
+//! checkpoint and every seal verify, whichever replica made them. No openEHR spec governs the process model or audit
 //! storage: our own design (#5589).
 
 use std::sync::Arc;
@@ -80,8 +80,8 @@ async fn replica(pool: &sqlx::PgPool, signer: &Arc<Signer>) -> Replica {
 }
 
 /// `ROUNDS` rounds of the work of one replica: commit an EHR, record a read
-/// of it in the access log, write a record of the system chain, and every
-/// third round seal both chains.
+/// of it in the access log, which its append seals, write a record of the
+/// system chain, and every third round seal the system chain.
 async fn work(replica: &Replica) {
     for round in 0..ROUNDS {
         let ehr_id = crate::fixtures::create_ehr(&replica.svc).await;
@@ -105,11 +105,6 @@ async fn work(replica: &Replica) {
             .await
             .expect("a record of the system chain");
         if round % 3 == 2 {
-            replica
-                .checkpoints
-                .seal()
-                .await
-                .expect("the access log is sealed");
             replica
                 .checkpoints
                 .system_seals()
@@ -145,12 +140,38 @@ async fn two_replicas_writing_at_once_leave_every_chain_verifying() {
         );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
-    let unsigned: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM audit.access_log_record WHERE signature IS NULL")
-            .fetch_one(&pool)
+    let unsealed: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit.access_log_record r WHERE NOT EXISTS \
+         (SELECT 1 FROM audit.access_log_checkpoint c WHERE c.sequence >= r.chain_seq)",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the unsealed records are counted");
+    assert_eq!(unsealed, 0, "every record is sealed by its own append");
+    let written: Vec<i64> =
+        sqlx::query_scalar("SELECT sequence FROM audit.access_log_checkpoint ORDER BY sequence")
+            .fetch_all(&pool)
             .await
-            .expect("the unsigned links are counted");
-    assert_eq!(unsigned, 0, "every link is signed");
+            .expect("the checkpoints are read");
+    assert!(written.len() >= 2, "both drains seal: {written:?}");
+    for sequence in written {
+        let checkpoint = a
+            .checkpoints
+            .at(sequence)
+            .await
+            .expect("the checkpoint is read")
+            .expect("the checkpoint");
+        for (name, checkpoints) in [("a", &a.checkpoints), ("b", &b.checkpoints)] {
+            let verified = checkpoints
+                .verify(Some(checkpoint.clone()))
+                .await
+                .expect("the access log is verified");
+            assert!(
+                verified.intact(),
+                "replica {name} at {sequence}: {verified:?}"
+            );
+        }
+    }
     let findings = crate::fixtures::verify_chain(&pool)
         .await
         .expect("both chains are verified");

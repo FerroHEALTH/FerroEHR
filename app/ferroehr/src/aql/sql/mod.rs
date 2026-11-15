@@ -530,6 +530,68 @@ fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
             .any(|c| matches!(c.value, super::ir::SelectValue::Aggregate { .. }))
 }
 
+/// The EHR id every row of a query belongs to, or `None`.
+///
+/// Its containment tree is rooted at one `EHR` source, and that source's own
+/// predicate or a top-level conjunct of its `WHERE` clause holds
+/// `ehr_id/value` equal to a string literal or a bound string parameter.
+///
+/// The access evaluator decides care for that one EHR instead of binding the
+/// caller's whole care census into the statement (#5699). No openEHR spec
+/// governs this: our own design.
+#[must_use]
+pub fn pinned_ehr(ir: &QueryIr, params: &Params) -> Option<String> {
+    use crate::aql::ir::{
+        ContainsTree, EhrField, Expr as IrExpr, Operand, PathTarget, Source, TypedLit,
+    };
+    use openehr_query::lexer::CompOp;
+    fn conjunct(filter: &IrExpr, ehr: usize) -> Option<&Operand> {
+        match filter {
+            IrExpr::And(a, b) => conjunct(a, ehr).or_else(|| conjunct(b, ehr)),
+            IrExpr::Compare {
+                lhs:
+                    Operand::Path(PathTarget::Ehr {
+                        source,
+                        field: EhrField::EhrId | EhrField::Whole,
+                    }),
+                op: CompOp::Eq,
+                rhs,
+                ..
+            } if source.0 == ehr => Some(rhs),
+            _ => None,
+        }
+    }
+    let ContainsTree::Operand { source, .. } = &ir.contains else {
+        return None;
+    };
+    let Some(Source::Ehr(ehr)) = ir.sources.get(source.0) else {
+        return None;
+    };
+    let text = |lit: &TypedLit| match lit {
+        TypedLit::String(s) => Some(s.clone()),
+        _ => None,
+    };
+    let param = |name: &str| match params.get(name) {
+        Some(ParamValue::Str(s)) => Some(s.clone()),
+        _ => None,
+    };
+    let in_predicate = ehr
+        .predicates
+        .iter()
+        .filter(|p| p.field == EhrField::EhrId && p.op == CompOp::Eq)
+        .find_map(|p| match &p.value {
+            Bind::Literal(lit) => text(lit),
+            Bind::Param(name) => param(name),
+        });
+    in_predicate.or_else(
+        || match ir.filter.as_ref().and_then(|f| conjunct(f, source.0))? {
+            Operand::Literal(lit) => text(lit),
+            Operand::Param(name) => param(name),
+            _ => None,
+        },
+    )
+}
+
 /// Lowers a planned [`QueryIr`] to SQL.
 ///
 /// # Errors
@@ -539,6 +601,18 @@ fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
 /// the SQL generator does not render.
 pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuery, AqlError> {
     from::refuse_negated_reads(ir)?;
+    // NOTE: our own design (#5699), the service reads care before a statement is built, so an
+    // unread care is refused loudly rather than withholding every cared row.
+    if ctx.ehr_access.reads_care()
+        && ctx.ehr_access.groups().is_some_and(|groups| {
+            groups.cared == crate::access_eval::condition::care::Care::Unresolved
+        })
+    {
+        return Err(SqlError::Unsupported(
+            "an access condition whose care the service has not read".to_owned(),
+        )
+        .into());
+    }
     let mut b = Builder::new(ir, params, ctx);
     // A query aimed at named EHRs, or pinned to one by its own text, reads only
     // those EHRs' versions, which the spine enters through the `ehr_id` index,

@@ -90,7 +90,7 @@ impl AuditSender {
     /// retention of the access policy in force.
     pub fn set_retention(&self, retention: &LogRetention) {
         if let Some(store) = &self.inner.store {
-            store.set_retention(retention);
+            store.change_render_policy(|policy| policy.retention = retention.clone());
         }
         self.inner
             .context

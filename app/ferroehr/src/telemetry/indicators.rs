@@ -17,6 +17,7 @@
 
 use std::sync::Arc;
 
+use crate::access_log::publish::{Publication, PublicationState};
 use crate::db::acquire::acquire;
 use crate::instance::{Agreement, Instances};
 use crate::policy_register::listen::Listened;
@@ -454,9 +455,66 @@ impl HealthIndicator for InstancesHealth {
     }
 }
 
+/// `access_log_checkpoints` — reports whether the access log is sealed and
+/// its checkpoints published outside the database.
+///
+/// Every append seals itself in a checkpoint stored beside the log, so a
+/// change to a sealed entry is detected. Removing the newest entries together
+/// with the checkpoints that seal them is detected only against a checkpoint
+/// published outside the database, which is the recommended setup. The
+/// indicator reads `DEGRADED` without a signing key, without a publication
+/// directory, and while publication fails; the log still records, so it never
+/// takes the instance out of rotation. No openEHR spec governs log
+/// publication: our own design (#5704).
+#[derive(Debug)]
+pub struct AccessLogCheckpointsHealth {
+    seals: bool,
+    publication: Publication,
+}
+
+impl AccessLogCheckpointsHealth {
+    /// Constructs over whether the keyring holds a key that seals the log
+    /// and the publication of its checkpoints.
+    #[must_use]
+    pub fn new(seals: bool, publication: Publication) -> Self {
+        Self { seals, publication }
+    }
+}
+
+impl HealthIndicator for AccessLogCheckpointsHealth {
+    fn name(&self) -> &'static str {
+        "access_log_checkpoints"
+    }
+
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            if !self.seals {
+                return Outcome::degraded(
+                    "no OpenPGP key in the keyring: the access log is not sealed in signed \
+                     checkpoints; configure [record.signing] in pgp mode",
+                );
+            }
+            if self.publication.directory().is_none() {
+                return Outcome::degraded(
+                    "access-log checkpoints are not published outside the database, so removing \
+                     the newest entries goes undetected; set [audit.access_log] \
+                     publish_directory",
+                );
+            }
+            match self.publication.state() {
+                PublicationState::Pending | PublicationState::Published { .. } => Outcome::up(),
+                PublicationState::Failed { at, reason } => Outcome::degraded(format!(
+                    "the access-log checkpoint could not be published at {at}: {reason}"
+                )),
+            }
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{AuditHealth, DbHealth, MigrationsHealth};
+    use super::{AccessLogCheckpointsHealth, AuditHealth, DbHealth, MigrationsHealth};
+    use crate::access_log::publish::Publication;
     use crate::system_log::config::{AuditConfig, AuditPosture, FailMode};
     use ferrohealth_health::document::State;
     use ferrohealth_health::registry::HealthIndicator;
@@ -555,5 +613,27 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// The checkpoints indicator reads DEGRADED without a key and without a
+    /// publication directory, each naming its consequence, and UP with both
+    /// (#5704).
+    #[tokio::test]
+    async fn the_checkpoints_indicator_reads_degraded_until_they_are_published() {
+        let unsealed = AccessLogCheckpointsHealth::new(false, Publication::new(None));
+        let outcome = unsealed.check().await;
+        assert_eq!(outcome.state(), State::Degraded);
+        let detail = outcome.detail().unwrap_or_default();
+        assert!(detail.contains("not sealed"), "{detail}");
+
+        let unpublished = AccessLogCheckpointsHealth::new(true, Publication::new(None));
+        let outcome = unpublished.check().await;
+        assert_eq!(outcome.state(), State::Degraded);
+        let detail = outcome.detail().unwrap_or_default();
+        assert!(detail.contains("publish_directory"), "{detail}");
+
+        let published =
+            AccessLogCheckpointsHealth::new(true, Publication::new(Some(std::env::temp_dir())));
+        assert_eq!(published.check().await.state(), State::Up);
     }
 }

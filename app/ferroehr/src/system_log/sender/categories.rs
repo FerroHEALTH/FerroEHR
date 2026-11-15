@@ -75,7 +75,7 @@ impl AuditSender {
     /// classified through.
     pub fn set_categories(&self, map: &CategoryMapConfig, classifier: Classifier) {
         if let Some(store) = &self.inner.store {
-            store.set_categories(map);
+            store.change_render_policy(|policy| policy.categories = map.clone());
         }
         self.set_context_categories(map);
         self.inner.categories.replace(classifier);

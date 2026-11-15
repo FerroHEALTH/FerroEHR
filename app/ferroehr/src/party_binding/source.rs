@@ -28,7 +28,7 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::live::GrantsUnavailable;
-use crate::party_binding::lookup::{self, KeyRow};
+use crate::party_binding::lookup::{self, KeyRow, LookupError};
 use crate::service::FerroEhrService;
 use crate::service::demographic::jit::ProvisionalPerson;
 use crate::storage::error::StorageError;
@@ -169,8 +169,10 @@ impl LocalPartySource {
     /// date.
     ///
     /// # Errors
-    /// [`StorageError`] when the party pool cannot answer; never an empty
-    /// lookup.
+    /// [`LookupError::Closed`] when `issuer`'s key space is not `active`, so
+    /// the side table cannot say who carries the key, and
+    /// [`LookupError::Storage`] when the party pool cannot answer; never an
+    /// empty lookup.
     pub async fn read(
         &self,
         issuer: &str,
@@ -178,8 +180,8 @@ impl LocalPartySource {
         value: &str,
         group_issuer: Option<&str>,
         today: &str,
-    ) -> Result<Lookup, StorageError> {
-        let mut conn = self.pool.acquire().await?;
+    ) -> Result<Lookup, LookupError> {
+        let mut conn = self.pool.acquire().await.map_err(StorageError::from)?;
         let rows = lookup::key_rows(&mut conn, issuer, identifier_type, value, today).await?;
         let (live, tombstones): (Vec<KeyRow>, Vec<KeyRow>) =
             rows.into_iter().partition(|row| row.live);

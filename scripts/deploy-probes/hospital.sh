@@ -999,6 +999,7 @@ probes_hospital() {
   hospital_scim_lifecycle
   hospital_portal
   hospital_log
+  hospital_portal_remove
   hospital_pixm
 
   hospital_down
@@ -1249,12 +1250,13 @@ ${H_BODY:0:300}"
   probe_done
 }
 
-# Restarts both instances with the patient portal's `patients` issuer beside
-# the realm, so Eva and Frank sign in; the discovery document still names
-# the realm.
+# Restarts both instances, one after the other, with the patient portal's
+# `patients` issuer beside the realm, so Eva and Frank sign in; the
+# discovery document still names the realm. The issuer is a key space the
+# instances fill themselves once both name it, with no refill (#5688).
 hospital_portal_boot() {
   probe "P-HOSP-PORTAL-BOOT" "$PROBE_WORKING" "deployment" "#5610 #5688" \
-    "both instances restart with the patient portal's patients issuer beside the realm"
+    "both instances restart one after the other with the patients issuer and fill its key space with no refill"
   hospital_files patients
   if ! hospital_restart; then
     probe_fail "two serving instances with the portal issuer" "$(replica_state "${HOSPITAL_FILES[@]}")"
@@ -1262,8 +1264,58 @@ hospital_portal_boot() {
     probe_done
     return 1
   fi
+  local eva n
+  eva="$(hv ehr_eva)"
+  for n in 1 2; do
+    h_portal_bound "$n" "pt:eva:$eva" "$eva"
+    assert_eq 200 "$H_CODE" "Eva's portal login binds on instance $n once both name the issuer: ${H_BODY:0:300}"
+  done
   probe_done
   hospital_discovery
+}
+
+# Reads the EHR `ehr` as `who` through instance `n` until the portal
+# issuer's key space is active there: a 503 while it fills, then the answer,
+# for at most a minute.
+h_portal_bound() {
+  local n="$1" who="$2" ehr="$3"
+  for _ in $(seq 1 30); do
+    h_call "$n" "$who" GET "/ehr/$ehr"
+    [[ "$H_CODE" != 503 ]] && return 0
+    sleep 2
+  done
+}
+
+# Restarts the first instance without the `patients` issuer: its portal
+# logins stop binding on the second instance at once, with no restart of it,
+# and the realm's logins bind on both (#5688).
+hospital_portal_remove() {
+  probe "P-HOSP-PORTAL-REMOVE" "$PROBE_WORKING" "deployment" "#5688" \
+    "removing the patients issuer from one instance stops its logins binding on the other with no restart"
+  local eva
+  eva="$(hv ehr_eva)"
+  hospital_files
+  if ! hdc up -d --wait --force-recreate --no-deps ferroehr >/dev/null 2>&1 \
+    || ! wait_http "$H1/health/readiness" 120; then
+    probe_fail "the first instance serving without the patients issuer" \
+      "$(replica_state "${HOSPITAL_FILES[@]}")"
+    h_boot_log
+    probe_done
+    return 0
+  fi
+  h_call 2 "pt:eva:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
+  assert_eq 403 "$H_CODE" "Eva on the instance that still trusts the issuer: ${H_BODY:0:300}"
+  assert_eq refused-unbound "$(h_refusal)" "Eva's refusal on the instance that still trusts the issuer"
+  h_call 2 "pt:frank:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
+  assert_eq 403 "$H_CODE" "Frank on the instance that still trusts the issuer: ${H_BODY:0:300}"
+  h_call 1 "pt:eva:$eva" GET "/ehr/$eva/composition/$(hv c_vitals)"
+  assert_eq 401 "$H_CODE" "Eva on the instance that no longer trusts the issuer: ${H_BODY:0:300}"
+  local n
+  for n in 1 2; do
+    h_call "$n" kc:anna GET "/ehr/$eva/composition/$(hv c_encounter)" "" TREAT
+    assert_eq 200 "$H_CODE" "Dr. Jansen on instance $n after the removal: ${H_BODY:0:300}"
+  done
+  probe_done
 }
 
 # The controller's administrator writes the ACCESS_POLICY through the admin

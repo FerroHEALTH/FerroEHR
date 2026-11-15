@@ -16,3 +16,13 @@
 # — https://doc.rust-lang.org/cargo/reference/config.html#env
 [env]
 INSTA_WORKSPACE_ROOT = { value = ".", relative = true, force = false }
+
+# Frame pointers in every build (#5723): the CPU flamegraph of
+# `/management/flamegraph` walks the frame-pointer chain from its `SIGPROF`
+# handler, because the platform unwinder trusts unwind tables that are exact
+# only at call sites and ended the process on a sample inside SHA-512.
+# macOS arm64 keeps frame pointers by its ABI; Linux needs the flag. A lane
+# that sets `RUSTFLAGS` replaces this list and must carry the flag itself
+# (https://doc.rust-lang.org/cargo/reference/config.html#buildrustflags).
+[build]
+rustflags = ["-C", "force-frame-pointers=yes"]

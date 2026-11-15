@@ -152,6 +152,7 @@ fn config_marked(guests: bool, impersonation_marker: Option<&str>) -> AppConfig 
 /// the test client and the staff realm's [`VIEWER`] are first party, and the
 /// RFC 8693 actors [`GATEWAY`] and [`SUPPORT_ADMIN`] act for persons.
 async fn router(svc: Arc<FerroEhrService>, config: AppConfig) -> Router {
+    common::open_configured_key_spaces(&config).await;
     for (issuer, client, operation) in [
         (ISSUER, common::TEST_CLIENT, Operation::SignInPersons),
         (ISSUER, GATEWAY, Operation::ActForPersons),

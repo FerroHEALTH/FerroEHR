@@ -21,7 +21,7 @@ use openehr_rm::draft::access_control::terminology::log::{AccessorKind, Action, 
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
-use super::store::{AccessLogError, AccessLogStore, link, stored};
+use super::store::{AccessLogError, AccessLogStore, own_link, records, stored};
 
 /// The `ACCESSED_ITEM.rm_type` of an entry that records a read of the access
 /// log itself (rule 4 of the draft's recording rules).
@@ -109,9 +109,9 @@ impl AccessLogStore {
     /// The store errors when the statement fails, and
     /// [`AccessLogError::Unreadable`] when a stored record does not read.
     pub async fn search(&self, query: &LogQuery) -> Result<Vec<AccessLogRecord>, AccessLogError> {
-        let rows = sqlx::query(
-            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest, \
-             signature FROM audit.access_log_record r, LATERAL (SELECT r.content::jsonb AS doc) d \
+        let rows = sqlx::query(concat!(
+            records!(),
+            ", LATERAL (SELECT audit.access_log_document(r.content, sh.content) AS doc) d \
              WHERE ($1::text IS NULL OR r.ehr_id = $1) \
              AND ($2::text IS NULL OR r.time_recorded >= $2::text::timestamptz) \
              AND ($3::text IS NULL OR r.time_recorded <= $3::text::timestamptz) \
@@ -133,8 +133,8 @@ impl AccessLogStore {
                   AND d.doc #>> '{accessor,kind,defining_code,code_string}' IS NOT DISTINCT FROM $19 \
                   AND d.doc @> jsonb_build_object('items', jsonb_build_array( \
                       jsonb_build_object('rm_type', $20::text)))) \
-             ORDER BY r.time_recorded DESC, r.chain_seq DESC OFFSET $21 LIMIT $22",
-        )
+             ORDER BY r.time_recorded DESC, r.chain_seq DESC OFFSET $21 LIMIT $22"
+        ))
         .bind(query.ehr_id.as_deref())
         .bind(query.from.map(|from| from.to_string()))
         .bind(query.to.map(|to| to.to_string()))
@@ -196,7 +196,7 @@ impl AccessLogStore {
         to: i64,
     ) -> Result<Vec<(String, AccessLogLink)>, AccessLogError> {
         let rows = sqlx::query(
-            "SELECT uid, chain_seq, algorithm, previous_digest, content_digest, digest, signature \
+            "SELECT uid, chain_seq, algorithm, previous_digest, content_digest, digest \
              FROM audit.access_log_record WHERE chain_seq BETWEEN $1 AND $2 ORDER BY chain_seq",
         )
         .bind(from)
@@ -205,7 +205,7 @@ impl AccessLogStore {
         .await?;
         let links = rows
             .iter()
-            .map(|row| Ok((row.try_get::<String, _>("uid")?, link(row)?)))
+            .map(|row| Ok((row.try_get::<String, _>("uid")?, own_link(row)?)))
             .collect::<Result<Vec<_>, sqlx::Error>>()?;
         Ok(links)
     }

@@ -27,7 +27,7 @@ BEGIN
       FROM audit_render_policy
      WHERE policy ? 'horizon';
     IF earlier IS NOT NULL THEN
-        RAISE EXCEPTION 'audit.audit_render_policy holds render policies written before migration 0037, which state the removed [audit.store] retention horizon: %', earlier
+        RAISE EXCEPTION 'audit.audit_render_policy holds render policies written before migration 0039, which state the removed [audit.store] retention horizon: %', earlier
             USING ERRCODE = 'object_not_in_prerequisite_state',
                   HINT = 'FerroEHR 5.7.2 starts on an empty audit store: export what you need over ITI-81 with the earlier release, then drop the audit schema and start again. The access log retention is the controller''s ACCESS_POLICY log_retention from now on.';
     END IF;

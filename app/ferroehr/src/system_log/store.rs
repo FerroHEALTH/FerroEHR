@@ -156,11 +156,11 @@ const RECORD_COLUMNS: [&str; 42] = [
     "render_policy",
     "token_attributes",
     "content",
+    "shared",
     "algorithm",
     "previous_digest",
     "content_digest",
     "digest",
-    "signature",
 ];
 
 /// The oldest record the FHIR Feed owes past the outbox ids in `$1`, its
@@ -174,8 +174,8 @@ const OLDEST_OWED: &str = "SELECT o.id AS owed, \
      e.acting_mode, e.assurance_level, e.assurance_value, e.professional_id, \
      e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id, \
      e.subject_namespace, e.subject_lookup_failed, e.category_content, e.render_policy, \
-     e.token_attributes, e.content, e.algorithm, e.previous_digest, e.content_digest, \
-     e.digest, e.signature \
+     e.token_attributes, e.content, e.shared, e.algorithm, e.previous_digest, e.content_digest, \
+     e.digest \
      FROM audit.fhir_feed_outbox o \
      JOIN audit.audit_record e ON e.chain = o.chain AND e.chain_seq = o.chain_seq \
      WHERE NOT (o.id = ANY($1)) \
@@ -301,16 +301,10 @@ impl AuditStore {
         self
     }
 
-    /// This store writing every record from now on with `categories` as its
-    /// category map; a record of an earlier map keeps that map's policy.
-    pub fn set_categories(&self, categories: &crate::system_log::categories::CategoryMapConfig) {
-        self.writing.set_categories(categories);
-    }
-
-    /// This store writing every record from now on under `retention`, the
-    /// access log retention of the access policy in force.
-    pub fn set_retention(&self, retention: &crate::system_log::retention::LogRetention) {
-        self.writing.set_retention(retention);
+    /// This store writing every record from now on under the policy in force
+    /// as `change` alters it; a record of an earlier map keeps that map's.
+    pub fn change_render_policy(&self, change: impl FnOnce(&mut RenderPolicy)) {
+        self.writing.change(change);
     }
 
     /// The digest of `writing`, storing the policy the first time.

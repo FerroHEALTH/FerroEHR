@@ -803,13 +803,16 @@ for one more retention horizon, its entry's own, so a tombstone stays as long
 after its removal as its entry was kept before it. After that, the same
 hourly run folds each run of consecutive tombstones that are all past their
 end into one gap of the chain (`audit.access_log_chain_gap`). The gap keeps
-the positions the run held, the link and link signature of its last record,
-and every ground its tombstones named, and it records when the run was
+the positions the run held, the link of its last record, and every ground
+its tombstones named, and it records when the run was
 folded. The record after the run links to the gap's link, so the chain
 verifies across it. The gap row is the record of the fold: it is never
 changed or removed, and a record that leaves the log any other way is
-reported as tampering. A run is cut after each checkpoint's position, so
-every checkpoint keeps a link to verify against. An entry kept longer pins
+reported as tampering. A run folds whole: the checkpoints of the appends
+inside it leave with it, since the checkpoints after it seal every link
+below them through the chain, and a checkpoint at the run's last position
+verifies against the gap's link. Verify against a recent checkpoint, since
+an old one whose records folded no longer has its link. An entry kept longer pins
 the runs on both sides apart, and each folds on its own. An erasure a law
 orders is a tombstone like any other and folds the same way. Several
 replicas fold on a PostgreSQL advisory lock, so no tombstone is folded twice.
@@ -865,11 +868,14 @@ levels off once the first tombstones fold, after `2P`:
 - the entries of the last `P` days: `r × P × 3.9 kB` (2.5 kB of row and 1.4
   kB of indexes each, with signed links);
 - their tombstones, kept another `P` days: `r × P × 1.1 kB`;
-- the gaps: about 0.6 kB each, at least one per checkpoint interval (288 a
-  day), plus one for each run an entry kept longer cut apart. Gaps and
+- the gaps: about 0.6 kB each, one for each run an entry kept longer cut
+  apart. A checkpoint inside a run leaves with it; gaps and the remaining
   checkpoints are kept without end.
 
-The access-path record of #5590 measures 2 518 bytes of row and 3 887 bytes
+These figures predate the storage of #5703, which keeps the part an
+entry's caller shares once and compresses each row in place; the
+performance gate's summary states the bytes per entry of the tree it
+measures. The access-path record of #5590 measures 2 518 bytes of row and 3 887 bytes
 stored per entry, 1 079 bytes per tombstone, and 2.08 entries per request at
 20 requests a second, which is 3.59 million entries a day. With the EHDS
 floor of three years (`P` = 1 096 days) that is about 14 GB of entries a day,
@@ -1174,42 +1180,59 @@ head of the chain and is signed with the deployment's OpenPGP key, in the
 form an openEHR `ATTESTATION` carries its proof (RM common, Generic Package
 §Attestation). A verifier that holds a checkpoint detects any later rewrite
 of the records it covers. No openEHR specification governs log signing; this
-is our own design.
+is our own design. No law requires a signature on each entry: EHDS Art. 9
+and Annex II 3.2 ask for a complete log each person can read, and GDPR
+Art. 32(1)(b) for integrity appropriate to the risk. The eHDSI Audit Trail
+Profile's per-event signature binds the MyHealth@EU national contact
+points, which sign with their own certificate.
 
 - **The key** is the keyring of [version signing](signing/pgp.md):
   `[record.signing]` in `pgp` mode, with its `retired_key_files` still
-  verifying what an earlier key signed. With that key every link is signed
-  and the log is sealed; a deployment without it signs nothing, and
-  `ferroehr access-log checkpoint` answers that the keyring holds no key.
-- **Use an Ed25519 key.** Each access writes one entry per EHR it reached,
-  and each entry's link is signed in the audit writer's transaction while
-  the head of the chain is locked. RSA signing is far slower than Ed25519,
-  and every other audit write waits on it.
-- **The schedule.** The server seals the head every five minutes when the
-  chain grew since the last checkpoint; a run on a log that did not grow
-  writes nothing. There is no switch and no interval to set.
-  `ferroehr access-log checkpoint` and `POST /admin/access-log/checkpoint`
-  seal one on demand. Keep a copy of a checkpoint somewhere the database
-  owner does not control (a ticket, a timestamping service, the data
-  protection officer's mailbox): that copy is what makes a rewrite of the
-  whole tail detectable.
+  verifying what an earlier key signed. With that key the log is sealed; a
+  deployment without it seals nothing, and `ferroehr access-log checkpoint`
+  answers that the keyring holds no key.
+- **One checkpoint per append.** Every append of the audit writer ends, in
+  its own transaction, with the checkpoint of the last link it wrote, so an
+  entry is covered by a signature from the moment it commits, whichever
+  replica wrote it. A change, removal, insertion or reordering of a record
+  below a checkpoint breaks the chain under that checkpoint's signature. The
+  links carry no signature of their own. A population query that reaches
+  twenty EHRs writes twenty entries and one signature. The checkpoint is
+  signed while the rest of the append's transaction is written, so the head
+  of the chain is held for one signature at most. There is no switch and no
+  interval to set. `ferroehr access-log checkpoint` and
+  `POST /admin/access-log/checkpoint` answer the checkpoint of the head, and
+  seal one only for a head appended while the keyring held no key.
+- **Use an Ed25519 key.** An RSA signature is far slower than an Ed25519
+  one, and every other audit write waits while one append holds the head.
+- **Publish the checkpoints outside the database.** Someone who can write
+  the database can remove the newest entries together with the checkpoints
+  that seal them, and nothing left in the database shows it. A checkpoint
+  kept where that person cannot write does. Set
+  `[audit.access_log] publish_directory` to a directory on write-once
+  storage (an object-lock bucket mounted as a file system, a WORM volume, a
+  directory another system collects from): every 30 seconds the server
+  writes the newest checkpoint there as its own file,
+  `access-log-checkpoint-<sequence>.json`, created once and never
+  rewritten. Replicas publish the same files. This is the recommended
+  setup; without it the `access_log_checkpoints` health indicator reads
+  `DEGRADED`, and it reads `DEGRADED` while a publication fails. To check
+  the log against a published checkpoint, run
+  `ferroehr access-log verify --checkpoint <file>` with the newest file.
 - **Verification.** `ferroehr access-log verify` and
   `POST /admin/access-log/verify` recompute the whole chain (an entry
   replaced by its tombstone verifies through the content digest the
   tombstone keeps, and a gap of folded tombstones as one link whose digest
-  is its link), check the checkpoint's signature and that the link at its
-  position, a record's or a gap's, is the one it sealed, and check the
-  signature of every signed link and gap. They also verify every log
+  is its link), and check the checkpoint's signature and that the link at
+  its position, a record's or a gap's, is the one it sealed. A checkpoint
+  published outside the database whose link the log no longer holds is
+  reported as `the link at <n> is not the link the checkpoint seals`. They
+  also verify every log
   imported from another system against each of its checkpoints: the stored
   links, gaps and records from the checkpoint before it, through the same
   verifier the import runs, under the keyring and
   `[audit.access_log] trusted_key_files`, reported under `imported`. Each finding is reported; the command exits 1 when the log does not
   verify, and the route answers `200` with `intact: false`.
-- **Signed links.** Each link's digest is signed as the eHDSI Audit Trail
-  Profile §2.2 asks of a national contact point. The server locks the head
-  of the chain, computes the links the new records will get, signs them and
-  writes each signature with its record in one `INSERT`; a stored signature
-  never changes.
 - **Moving the log with the EHR.** EHDS Annex II 2.6 and Art 9(2) keep the
   access information available when an EHR moves to another system.
   `ferroehr access-log export --ehr-id <id>` and

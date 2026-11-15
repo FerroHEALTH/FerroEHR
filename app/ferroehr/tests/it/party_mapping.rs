@@ -97,6 +97,7 @@ fn mapping() -> BindingMapping {
 /// A service over a fresh database with `mapping` installed.
 async fn service_with(mapping: BindingMapping) -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
+    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
     (db, svc.with_binding_mapping(mapping))
 }
 

@@ -870,3 +870,142 @@ async fn a_record_subject_is_refused_unless_it_is_a_persons_own_and_its_writer_m
     .expect_err("one pseudonym stands for one PERSON");
     assert!(matches!(refused, ServiceError::Conflict(_)), "{refused:?}");
 }
+
+/// The synthetic root key the care projection tests digest under.
+const CARE_KEY: &str = "0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a";
+
+/// A replica over `pool` with identifier protection under [`CARE_KEY`], so
+/// it projects care (#5699).
+async fn projecting_replica(pool: &sqlx::PgPool) -> FerroEhrService {
+    use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
+    use ferroehr::identifier_protection::engine::IdentifierProtection;
+    let engine = IdentifierProtection::from_config(
+        Some(&IdentifierProtectionConfig {
+            schemes: vec!["nl-bsn".to_owned()],
+            key: None,
+            key_file: None,
+        }),
+        Some(&ferrohealth_secret::secret::Secret::new(CARE_KEY)),
+        pool.clone(),
+    )
+    .expect("the engine builds")
+    .expect("protection is enabled");
+    replica(pool)
+        .await
+        .with_identifier_protection(std::sync::Arc::new(engine))
+}
+
+/// Whether the projection of `pool` says the subject of `ehr` is under the
+/// care of `team` on `day`, read as a query's probe reads it.
+async fn projected_care(
+    pool: &sqlx::PgPool,
+    ehr: ferroehr::ids::EhrId,
+    team: VoId,
+    day: &str,
+) -> bool {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM ehr e JOIN access_care c \
+         ON c.subject_digest = e.subject_digest WHERE e.id = $1 AND c.team_id = $2 \
+         AND (c.care_from IS NULL OR c.care_from <= $3::date) \
+         AND (c.care_until IS NULL OR $3::date < c.care_until))",
+    )
+    .bind(ehr.0)
+    .bind(team.0)
+    .bind(day)
+    .fetch_one(pool)
+    .await
+    .expect("the projection reads")
+}
+
+/// A discharge on one replica keeps the next request on another off the
+/// care projection until it applies the discharge: the projection is read
+/// only while it is as recent as the facts the replica holds, so an ended
+/// relationship is never granted from a stale row; and an erased `PERSON`'s
+/// care leaves the projection in the flow that erases it (#5699).
+#[tokio::test]
+async fn a_discharge_on_one_replica_is_never_read_stale_from_the_projection_on_another() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let (one, two) = (
+        projecting_replica(&pool).await,
+        projecting_replica(&pool).await,
+    );
+    granted(&one, "adt", &[capability("write_care_relationship", &[])]).await;
+    let (ward, _) = create(&one, PartyKind::Group, &team())
+        .await
+        .expect("the GROUP commits");
+    let (patient, uid) = create(&one, PartyKind::Person, &person("Mr E", &[]))
+        .await
+        .expect("the patient commits");
+    let ehr = crate::fixtures::create_ehr_for_party(&one, patient).await;
+    let admitted = update_as(
+        &one,
+        "adt",
+        (PartyKind::Person, patient, &uid),
+        &person(
+            "Mr E",
+            &[care(UNDER_CARE, patient, ward, &interval(&day(-3), None))],
+        ),
+    )
+    .await
+    .expect("the ADT system admits the patient");
+    two.grants().refresh().await.expect("the copy reads");
+    two.project_care().await.expect("the projection is written");
+    assert!(
+        two.care_projection_current(),
+        "the projection holds the admission"
+    );
+    assert!(
+        projected_care(&pool, ehr, ward, &day(0)).await,
+        "the admitted patient is in the ward's care"
+    );
+
+    update_as(
+        &one,
+        "adt",
+        (PartyKind::Person, patient, &admitted),
+        &person(
+            "Mr E",
+            &[care(
+                UNDER_CARE,
+                patient,
+                ward,
+                &interval(&day(-3), Some(&day(-1))),
+            )],
+        ),
+    )
+    .await
+    .expect("the ADT system discharges the patient");
+    // The next request on the other replica reads the facts again, and its
+    // projection no longer holds them.
+    two.grants()
+        .refresh_if_stale()
+        .await
+        .expect("the copy reads");
+    assert!(
+        !two.care_projection_current(),
+        "a projection older than the facts held is read by no query"
+    );
+    assert!(
+        projected_care(&pool, ehr, ward, &day(0)).await,
+        "the stale row still says the patient is in care, which no query reads"
+    );
+    two.project_care()
+        .await
+        .expect("the discharge is projected");
+    assert!(two.care_projection_current());
+    assert!(
+        !projected_care(&pool, ehr, ward, &day(0)).await,
+        "once projected, the discharge decides"
+    );
+
+    one.physical_party_delete(patient)
+        .await
+        .expect("the patient is erased");
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM access_care WHERE person_id = $1")
+        .bind(patient.0)
+        .fetch_one(&pool)
+        .await
+        .expect("the projection reads");
+    assert_eq!(left, 0, "the erasure removes the patient's care with it");
+}

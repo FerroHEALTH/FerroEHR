@@ -10,7 +10,6 @@ use std::sync::{Arc, Mutex, PoisonError, RwLock};
 use tokio::sync::OnceCell;
 
 use super::AuditRecord;
-use crate::system_log::categories::CategoryMapConfig;
 use crate::system_log::event::AuditEvent;
 #[cfg(feature = "fhir")]
 use crate::system_log::render::CompiledPolicy;
@@ -98,23 +97,11 @@ impl Writers {
         *self.current.write().unwrap_or_else(PoisonError::into_inner) = writing;
     }
 
-    /// Write every record from now on under the policy in force with
-    /// `categories` as its category map.
-    pub(super) fn set_categories(&self, categories: &CategoryMapConfig) {
-        let policy = RenderPolicy {
-            categories: categories.clone(),
-            ..self.current().policy.clone()
-        };
-        self.install(policy);
-    }
-
-    /// Write every record from now on under the policy in force with
-    /// `retention` as its access log retention.
-    pub(super) fn set_retention(&self, retention: &crate::system_log::retention::LogRetention) {
-        let policy = RenderPolicy {
-            retention: retention.clone(),
-            ..self.current().policy.clone()
-        };
+    /// Write every record from now on under the policy in force as `change`
+    /// alters it.
+    pub(super) fn change(&self, change: impl FnOnce(&mut RenderPolicy)) {
+        let mut policy = self.current().policy.clone();
+        change(&mut policy);
         self.install(policy);
     }
 

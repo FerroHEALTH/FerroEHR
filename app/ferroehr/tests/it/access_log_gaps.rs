@@ -4,9 +4,9 @@
 //! The fold of expired access-log tombstones into gaps of the chain (#5619)
 //! against a real `PostgreSQL` 18: a tombstone is kept as long again as its
 //! entry was, then each run of tombstones past their end folds into one gap,
-//! and the chain, its incremental verification, every checkpoint, the signed
-//! links, an export and an import all verify across it, while a deletion
-//! outside the fold is still reported.
+//! and the chain, its incremental verification, the checkpoints, an export
+//! and an import all verify across it, while a deletion outside the fold is
+//! still reported.
 //!
 //! No openEHR spec governs audit retention: our own design.
 
@@ -294,11 +294,13 @@ async fn out_of_order_expiry_folds_into_adjacent_gaps() {
     assert_eq!(incremental(&pool).await, []);
 }
 
-/// A run is cut after each checkpoint's position, so every checkpoint still
-/// names a link the log holds and verifies with its proof, and a gap keeps
-/// the signature of its last link, which verifies under the keyring.
+/// A run of tombstones folds whole across the checkpoints of the appends that
+/// wrote it: a checkpoint inside the run leaves with it, and the one at its
+/// last position stays and verifies against the gap's link. A gap of this
+/// system's log carries no signature, since it signs checkpoints and no link
+/// (#5704).
 #[tokio::test]
-async fn a_checkpoint_in_a_run_still_verifies() {
+async fn a_run_folds_across_the_checkpoints_inside_it() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let (log, _key) = signed_log(&pool);
@@ -307,13 +309,20 @@ async fn a_checkpoint_in_a_run_still_verifies() {
         .append(all[..3].to_vec())
         .await
         .expect("the first entries append");
-    let early = log.seal().await.expect("seal").expect("a checkpoint");
+    let early = log
+        .at(3)
+        .await
+        .expect("read")
+        .expect("the first append's checkpoint");
     log.store()
         .append(all[3..].to_vec())
         .await
         .expect("the rest append");
-    let late = log.seal().await.expect("seal").expect("a checkpoint");
-    assert_eq!((early.sequence, late.sequence), (3, 6));
+    let late = log
+        .at(6)
+        .await
+        .expect("read")
+        .expect("the second append's checkpoint");
 
     expire(log.store(), Log::Local, expiry_run())
         .await
@@ -322,30 +331,33 @@ async fn a_checkpoint_in_a_run_still_verifies() {
         .await
         .expect("fold");
     assert_eq!(folded.tombstones, 6);
-    assert_eq!(
-        gaps(&pool).await,
-        [(1, 3), (4, 6)],
-        "cut after the checkpoint"
-    );
+    assert_eq!(gaps(&pool).await, [(1, 6)], "one gap for the whole run");
     assert!(
         log.store()
             .gaps(1, 6)
             .await
             .expect("read the gaps")
             .iter()
-            .all(|gap| gap.signature.is_some()),
-        "each gap keeps its last link's signature"
+            .all(|gap| gap.signature.is_none()),
+        "a gap of this system's log carries no signature"
     );
-
-    for checkpoint in [early, late] {
-        let verification = log.verify(Some(checkpoint)).await.expect("verify");
-        assert!(verification.intact(), "{verification:?}");
-    }
     assert_eq!(
-        log.seal().await.expect("seal").map(|c| c.sequence),
-        Some(6),
+        log.at(early.sequence).await.expect("read"),
+        None,
+        "the checkpoint inside the run leaves with it"
+    );
+    let verification = log.verify(Some(late.clone())).await.expect("verify");
+    assert!(verification.intact(), "{verification:?}");
+    assert_eq!(
+        log.seal().await.expect("seal"),
+        Some(late),
         "the folded head keeps its checkpoint"
     );
+    let refused = sqlx::query("DELETE FROM audit.access_log_checkpoint")
+        .execute(&pool)
+        .await
+        .expect_err("a checkpoint leaves only through the fold");
+    assert!(refused.to_string().contains("append-only"), "{refused}");
 }
 
 /// An export of one EHR whose records have another EHR's folded tombstones
@@ -404,10 +416,10 @@ async fn an_export_spans_a_gap() {
     changed["gaps"][0]["link"] = json!("0".repeat(64));
     let changed: LogExport = serde_json::from_value(changed).expect("the export reads");
     let found = chain::verify(changed.span(), &trusted).expect("verify");
-    assert!(
-        found.contains(&ChainFinding::PreviousDigest { sequence: 4 })
-            && found.contains(&ChainFinding::LinkSignature { sequence: 3 }),
-        "a changed gap breaks the link after it and its signature: {found:?}"
+    assert_eq!(
+        found,
+        [ChainFinding::PreviousDigest { sequence: 4 }],
+        "a changed gap breaks the link after it"
     );
 
     let wire = serde_json::to_string(&export).expect("the export writes");
