@@ -31,9 +31,7 @@ use crate::party_binding::grants::admission::{
     ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
 };
 use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS};
-use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, GroupKind, PermittedPurpose, SensitivityClearance, Term,
-};
+use openehr_rm::draft::access_control::terminology::{CareRelationship, GroupKind, Term};
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
 /// instant before which a grant does not hold.
@@ -140,9 +138,8 @@ pub const SCOPES: [&str; 8] = [
     TOKEN_SCOPE,
 ];
 
-/// Whether `code` names a grant's bound or scope element, a capability's
-/// clearance or permitted purpose element, or the acts-for, representation
-/// or care relationship.
+/// Whether `code` names a grant's bound or scope element, or the acts-for,
+/// representation or care relationship.
 fn names_no_operation(code: &str) -> bool {
     [
         ACTS_FOR,
@@ -167,8 +164,6 @@ fn names_no_operation(code: &str) -> bool {
     ]
     .contains(&code)
         || SCOPES.contains(&code)
-        || SensitivityClearance::CODES.contains(&code)
-        || PermittedPurpose::CODES.contains(&code)
         || CareRelationship::CODES.contains(&code)
         || GroupKind::CODES.contains(&code)
 }
@@ -421,7 +416,7 @@ mod tests {
         assert!(is_qualifier(RELAY) && is_qualifier(DEVICE) && is_qualifier("identifier_prefix"));
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
         assert!(is_qualifier(NO_SUBJECT_NAMESPACE));
-        assert!(is_qualifier("sensitivity_clearance") && is_qualifier("permitted_purpose"));
+        assert!(!is_qualifier("sensitivity_clearance") && !is_qualifier("permitted_purpose"));
         assert!(is_qualifier("member_of") && is_qualifier("under_care_of"));
         assert!(is_qualifier("care_team"));
     }

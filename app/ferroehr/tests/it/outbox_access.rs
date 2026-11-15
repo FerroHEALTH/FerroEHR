@@ -24,7 +24,7 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, CallerKind, ForeignCode, OperationClass,
+    AccessDefault, CallerKind, OperationClass, TERMINOLOGY_ID_ACCESS_CONTROL,
 };
 use serde_json::{Value, json};
 
@@ -83,6 +83,23 @@ fn naming_agent(agent: &str) -> Value {
 
 /// An `ACCESS_POLICY` that requires a declared purpose.
 fn purpose_required() -> AccessPolicy {
+    let coded = |terminology: &str, code: &str| {
+        json!({ "_type": "DV_CODED_TEXT", "value": code,
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+                    "code_string": code } })
+    };
+    let rule = |name: &str, effect: &str| {
+        json!({ "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": name },
+                "archetype_node_id": "at0001",
+                "kind": coded(TERMINOLOGY_ID_ACCESS_CONTROL, "controller_rule"),
+                "effect": coded(TERMINOLOGY_ID_ACCESS_CONTROL, effect), "emergency_override": false })
+    };
+    let mut only = rule("System readers declare operations only", "deny");
+    only["applies_to"] = json!([{ "caller_kind": coded(TERMINOLOGY_ID_ACCESS_CONTROL, "system") }]);
+    let mut operations = rule("Operations", "permit");
+    operations["purposes"] = json!([coded("2.16.840.1.113883.5.8", PURPOSE)]);
+    only["exceptions"] = json!([operations]);
     let policy = json!({
         "_type": "ACCESS_POLICY",
         "name": { "_type": "DV_TEXT", "value": "Policy" },
@@ -90,7 +107,8 @@ fn purpose_required() -> AccessPolicy {
         "controller": { "_type": "PARTY_REF", "namespace": "local", "type": "ORGANISATION",
                         "id": { "_type": "HIER_OBJECT_ID", "value": CONTROLLER } },
         "care_relationship_required": false,
-        "purpose_required": true
+        "purpose_required": true,
+        "rules": [only]
     });
     openehr_its::json::from_canonical_value(&policy).expect("the test policy reads")
 }
@@ -124,7 +142,6 @@ impl Reader {
             own_ehr: None,
             patient_grants_only: false,
             acts_for: Vec::new(),
-            roles: Vec::new(),
             facts: self.facts.clone(),
             administrator: false,
             settings: SettingsCaller::new(false, false, self.party.clone()),
@@ -310,9 +327,10 @@ async fn a_reader_whose_binding_a_directive_denies_gets_no_event() {
     );
 }
 
-/// Under an access policy that requires a purpose, a reader that declares a
-/// purpose its capability permits is served the events, and one that
-/// declares none, or one it may not declare, is served none.
+/// Under an access policy that requires a purpose and limits a system
+/// reader's purposes by a rule, a reader that declares a purpose the rule
+/// permits is served the events, and one that declares none, or one the rule
+/// denies, is served none.
 #[tokio::test]
 async fn under_purpose_required_only_a_reader_with_a_permitted_purpose_gets_events() {
     let db = testkit::db().await.expect("testkit database");
@@ -330,20 +348,13 @@ async fn under_purpose_required_only_a_reader_with_a_permitted_purpose_gets_even
         Vec::new(),
         "a reader that declares no purpose is served nothing"
     );
-    reader.purpose = Some(PURPOSE);
+    reader.purpose = Some("HRESCH");
     assert_eq!(
         served(&svc, &reader, 100).await,
         Vec::new(),
-        "a purpose the reader may not declare serves nothing"
+        "a purpose the rule denies serves nothing"
     );
-    reader.facts = CallerFacts::new(
-        Vec::new(),
-        vec![ForeignCode {
-            terminology: "2.16.840.1.113883.5.8".to_owned(),
-            code: PURPOSE.to_owned(),
-        }],
-        Vec::new(),
-    );
+    reader.purpose = Some(PURPOSE);
     assert_eq!(
         served(&svc, &reader, 100).await.len(),
         2,

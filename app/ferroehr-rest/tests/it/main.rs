@@ -81,6 +81,7 @@ mod composition_validation_http;
 mod connection_bounds;
 mod connection_per_request;
 mod contact_point_http;
+mod controller_rules_http;
 mod credential_separation;
 mod definition_adl2_delete_http;
 mod definition_adl2_http;

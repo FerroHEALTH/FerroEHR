@@ -129,12 +129,12 @@ fn of_kind<'a>(decision: &'a Decision, kind: &str) -> Vec<&'a AccessAuthorisatio
         .collect()
 }
 
-/// The capabilities and roles the caller held are `role` grounds: each
-/// grant by its operation code and `ROLE`, each functional role by its code.
+/// The capabilities the caller held and the roles it performs are `role`
+/// grounds: each grant by its operation code and `ROLE`, each role by its
+/// terminology and code.
 #[test]
 fn a_role_ground_names_each_capability_and_role() {
-    let mut nurse = professional(NURSE);
-    nurse.roles = vec!["NURSE".to_owned()];
+    let nurse = performing(CallerKind::Professional, NURSE, "NURSE");
     let access = request(nurse, read(None), None);
     let (outcome, decision) = decide_on(&access, None, &Item::Ehr);
     assert_eq!(outcome, Outcome::Admit);
@@ -146,7 +146,7 @@ fn a_role_ground_names_each_capability_and_role() {
         (role.id.as_str(), role.r#type.as_deref()),
         (ROLE, Some("ROLE"))
     );
-    assert_eq!(roles[1].name.as_deref(), Some("NURSE"));
+    assert_eq!(roles[1].name.as_deref(), Some("urn:example:roles::NURSE"));
     assert!(decision.refused.is_none());
 }
 
@@ -427,19 +427,21 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             Refusal::PurposeMissing,
             professional(DR_B),
             None,
-            Some(purpose.clone()),
+            Some(purpose),
             settings("open", &[], &[], &[]),
             Item::Ehr,
             "ACCESS_POLICY",
         ),
         (
-            Refusal::PurposeNotPermitted,
-            professional(DR_B),
-            Some("HRESCH"),
-            Some(purpose),
+            Refusal::PolicyDenied,
+            performing(CallerKind::Professional, DR_B, "NURSE"),
+            None,
+            Some(policy(&json!({ "rules": [
+                rule("permit", &json!({})),
+                rule("deny", &json!({ "applies_to": [role_scope("NURSE")] }))] }))),
             settings("open", &[], &[], &[]),
             Item::Ehr,
-            "ACCESS_POLICY",
+            "rule 2 of ACCESS_POLICY",
         ),
         (
             Refusal::ConsentRequired,

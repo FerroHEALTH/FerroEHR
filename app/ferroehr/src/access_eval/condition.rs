@@ -18,7 +18,7 @@
 //! a background task or a test, nothing is published and nothing is
 //! withheld. No openEHR spec governs this: our own design (#5513, #5588).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
@@ -31,7 +31,7 @@ use uuid::Uuid;
 
 use crate::access_eval::class::{Class, Classes};
 use crate::access_eval::procedure::{
-    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
+    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide, rules_of,
 };
 use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
@@ -55,7 +55,7 @@ pub struct RequestAccess {
     operation: OperationClass,
     purpose: Option<String>,
     emergency: Emergency,
-    policy: Option<Arc<AccessPolicy>>,
+    pub(super) policy: Option<Arc<AccessPolicy>>,
     categories: CategoryIndex,
     server_default: AccessDefault,
     now: jiff::Timestamp,
@@ -63,6 +63,7 @@ pub struct RequestAccess {
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
     recorded: Recorded,
     stale: Option<Arc<StaleCopies>>,
+    pub(super) written: Mutex<BTreeSet<Uuid>>,
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -172,6 +173,7 @@ impl RequestAccess {
             verdicts: Mutex::new(BTreeMap::new()),
             recorded: Recorded::default(),
             stale: None,
+            written: Mutex::new(BTreeSet::new()),
         }
     }
 
@@ -399,6 +401,7 @@ impl RequestAccess {
                 emergency: self.emergency,
             },
             policy: self.policy(),
+            rules: rules_of(self.policy.as_deref()),
             ehr: Ehr {
                 settings,
                 server_default: self.server_default,
@@ -574,6 +577,7 @@ impl RequestAccess {
                     Lifted::OptOut => "opt_out",
                     Lifted::Restriction => "restriction",
                     Lifted::Consent => "consent",
+                    Lifted::Rule => "rule",
                     Lifted::Policy => "policy",
                 };
                 metrics
@@ -766,13 +770,19 @@ where
 
 /// Whether `item` of `ehr_id` may leave the store for the running request.
 ///
-/// `seen` is the revision of the EHR's settings row the read found beside
+/// The object a write of this request committed leaves for its response
+/// ([`RequestAccess::wrote`]). `seen` is the revision of the EHR's settings row the read found beside
 /// the item. Always outside a request, and for an object of no EHR; a
 /// verdict judged on another revision admits nothing
 /// ([`RequestAccess::stale`]).
 #[must_use]
 pub fn admits(ehr_id: Option<EhrId>, seen: Revision, item: &Item<'_>) -> bool {
     match (current(), ehr_id) {
+        // NOTE: our own design (owner ruling on #5621), a write's response is built from the
+        // version that request committed, so the writer's own object is no read of stored data.
+        (Some(access), Some(_)) if matches!(item, Item::Object(object) if access.written(object.vo_id)) => {
+            true
+        }
         (Some(access), Some(ehr_id)) => {
             !access.stale(ehr_id, seen) && access.outcome(ehr_id, item) == Outcome::Admit
         }

@@ -94,7 +94,6 @@ fn request() -> RequestAccess {
         own_ehr: None,
         patient_grants_only: false,
         acts_for: Vec::new(),
-        roles: Vec::new(),
         facts: ferroehr::party_binding::grants::caller::CallerFacts::default(),
         administrator: false,
         settings: SettingsCaller::new(false, false, Some(NURSE.to_owned())),

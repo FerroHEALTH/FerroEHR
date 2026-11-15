@@ -77,35 +77,51 @@ pub(crate) struct WriteGate {
 
 impl WriteGate {
     /// Refuse the write of `written`, the object as it will be stored, before
-    /// anything is stored, as a read of it would be refused: a directive whose
-    /// data scope names the template, archetype or origin of a body the store
-    /// does not hold yet refuses it (RM EHR IM §EHR Access; BASE Architecture
-    /// Overview §Access Control decides before the access). Our own design
-    /// (#5626).
+    /// anything is stored, as steps 3 to 8 would refuse a read of it: a
+    /// directive or a controller rule whose data scope names the template,
+    /// archetype or origin of a body the store does not hold yet refuses it
+    /// (RM EHR IM §EHR Access; BASE Architecture Overview §Access Control
+    /// decides before the access). Our own design (#5626, #5621).
+    ///
+    /// An opt-out and a restriction never judge the content: EHDS Art. 8
+    /// restricts who may see data, not its recording, so refusing a
+    /// professional's write would stop care being documented and its `404`
+    /// would hint at the restriction. They decide a write for the EHR alone,
+    /// and the data written stay covered by them for reading.
     ///
     /// # Errors
-    /// [`ServiceError::NotFound`] (`versioned_object_does_not_exist`, naming
-    /// no uid) under a restriction or an opt-out, and
-    /// [`ServiceError::Forbidden`] naming the refusal code under every other
-    /// step of an EHR the request names.
+    /// [`ServiceError::Forbidden`] naming the refusal code under steps 3 to 8
+    /// of an EHR the request names.
     pub(crate) fn admit_written(&self, written: &Item<'_>) -> Result<(), ServiceError> {
-        let outcome = self.verdict.outcome(written);
-        let refused = match outcome {
-            Outcome::Admit => return Ok(()),
-            Outcome::Refused(_) if !self.named => return Ok(()),
-            Outcome::Absent(_) | Outcome::Refused(_) => outcome,
+        // NOTE: EHDS Art. 8 restricts access, not recording (owner ruling on #5621), so the
+        // opt-out and restriction rules leave a write's content to the other steps.
+        let judged = Verdict {
+            rules: self
+                .verdict
+                .rules
+                .iter()
+                .filter(|rule| !matches!(rule.then, Outcome::Absent(_)))
+                .cloned()
+                .collect(),
+            ..(*self.verdict).clone()
         };
-        self.access.note(self.ehr_id, &self.verdict, written);
-        match refused {
-            Outcome::Refused(code) => Err(ServiceError::not_permitted(format!(
+        let Outcome::Refused(code) = judged.outcome(written) else {
+            if let Item::Object(object) = written {
+                self.access.wrote(object.vo_id);
+            }
+            return Ok(());
+        };
+        if !self.named {
+            return Ok(());
+        }
+        self.access.note(self.ehr_id, &judged, written);
+        Err(ServiceError::refused(
+            code,
+            format!(
                 "{code}: the access directives of EHR {} refuse this write",
                 self.ehr_id
-            ))),
-            _ => Err(ServiceError::not_found(
-                Missing::VersionedObject,
-                "versioned object".to_owned(),
-            )),
-        }
+            ),
+        ))
     }
 }
 
@@ -170,7 +186,12 @@ async fn ensure_not_access_restricted_tx(
     };
     let item = facts.as_ref().map_or(Item::Ehr, |facts| facts.item());
     let outcome = verdict.outcome(&item);
-    if matches!(outcome, Outcome::Absent(_)) || (named && matches!(outcome, Outcome::Refused(_))) {
+    // NOTE: our own design (#5627), a create is judged as the datum it writes once resolved,
+    // so no step about the EHR alone decides before a step about that datum.
+    let deferred = vo_id.is_none() && verdict.item_dependent();
+    if matches!(outcome, Outcome::Absent(_))
+        || (named && !deferred && matches!(outcome, Outcome::Refused(_)))
+    {
         access.note(ehr_id, &verdict, &item);
     }
     let gate = WriteGate {
@@ -192,9 +213,11 @@ async fn ensure_not_access_restricted_tx(
         // NOTE: our own design (#5513), a write to an EHR the request does not name, such
         // as the one it creates or imports, is held to steps 1 and 2 only, as before.
         (Outcome::Refused(_), _) if !named => Ok(Some(gate)),
-        (Outcome::Refused(code), _) => Err(ServiceError::not_permitted(format!(
-            "{code}: the access directives of EHR {ehr_id} refuse this write"
-        ))),
+        (Outcome::Refused(_), None) if deferred => Ok(Some(gate)),
+        (Outcome::Refused(code), _) => Err(ServiceError::refused(
+            code,
+            format!("{code}: the access directives of EHR {ehr_id} refuse this write"),
+        )),
     }
 }
 

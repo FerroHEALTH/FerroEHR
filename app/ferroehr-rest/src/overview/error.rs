@@ -32,6 +32,7 @@ use ferroehr::versioning::object_version_id::VersionIdError;
 use openehr_its::rest::runtime::ApiError;
 use openehr_query::lexer::LexError;
 use openehr_query::parser::ParseError;
+use openehr_rm::draft::access_control::terminology::Term as _;
 
 use crate::overview::problem::{Detail, Kind, Position, Refused, Violation};
 
@@ -233,6 +234,10 @@ impl From<ServiceError> for RestError {
             ServiceError::BadRequest(err) => Some(err.clone()),
             _ => None,
         };
+        let evaluator = match &e {
+            ServiceError::Forbidden(err) => err.kind,
+            _ => None,
+        };
         let refused = Self::from(crate::overview::service_error::api_error(e));
         let refused = match aql {
             Some(cause) => refused.with_aql_cause(&cause),
@@ -242,6 +247,10 @@ impl From<ServiceError> for RestError {
             Some(fault) => refused
                 .of_kind(Kind::ArchiveInvalid)
                 .with_detail(Detail::Archive(fault)),
+            None => refused,
+        };
+        let refused = match evaluator {
+            Some(code) => refused.with_detail(Detail::Refusal(code.code())),
             None => refused,
         };
         match kind {

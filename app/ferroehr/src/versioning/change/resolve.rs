@@ -54,7 +54,7 @@ pub(super) async fn resolve_delete(
     )
     .await?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
-    system::admit_delete(tx, kind, vo_id).await?;
+    system::admit_delete(kind)?;
     external::admit_delete(tx, kind, vo_id).await?;
     lifecycle::refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
     retire_protected_identifiers(tx, ctx, kind, vo_id).await?;
@@ -239,11 +239,7 @@ pub(super) async fn resolve_create(
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
     person::refuse_composing_for_others(content.kind, &content.canonical)?;
-    system::admit_content(
-        content.kind,
-        &content.canonical,
-        content.template_id.as_deref(),
-    )?;
+    system::admit_content(content.kind, &content.canonical)?;
     external::admit_content(
         content.kind,
         &content.canonical,
@@ -307,7 +303,7 @@ pub(super) async fn resolve_modify(
     )
     .await?;
     person::refuse_composing_for_others(kind, &content.canonical)?;
-    system::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
+    system::admit_content(kind, &content.canonical)?;
     external::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
     // the transition from the preceding version's state must be legal

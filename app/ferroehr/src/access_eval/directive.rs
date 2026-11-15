@@ -4,8 +4,9 @@
 //! How the decision procedure ([`crate::access_eval::procedure`]) reads a
 //! directive: whether it binds the caller, applies to the request now, names
 //! the caller in an actor scope, and which items it covers less its
-//! exceptions, for one EHR or, through its layout, a settings class. No
-//! openEHR spec governs the reading: our own design (#5513, #5588).
+//! exceptions, for one EHR or, through its layout, a settings class. A role
+//! scope names a role the caller performs in the demographic service. No
+//! openEHR spec governs the reading: our own design (#5513, #5588, #5621).
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::terminology::{
@@ -90,11 +91,10 @@ impl Reader<'_, '_> {
                 caller,
                 CallerKind::Professional | CallerKind::System | CallerKind::AccessService
             ),
-            DirectiveKind::Consent => caller != CallerKind::Subject,
+            // NOTE: our own design (#5621), a rule of the policy binds every caller but the
+            // subject, whose own right of access (EHDS Art. 3) is not the controller's to deny.
+            DirectiveKind::Consent | DirectiveKind::ControllerRule => caller != CallerKind::Subject,
             DirectiveKind::Delegation => caller == CallerKind::Representative,
-            // NOTE: draft BMM `Directives_not_controller_rules`, an EHR's settings hold no
-            // controller rule, so none in them binds anyone.
-            DirectiveKind::ControllerRule => false,
         };
         if !bindable {
             return Pred::False;
@@ -181,12 +181,10 @@ impl Reader<'_, '_> {
                             }
                         }
                     };
-                    let role = scope.role.as_ref().is_none_or(|role| {
-                        caller
-                            .roles
-                            .iter()
-                            .any(|held| held.eq_ignore_ascii_case(&role.defining_code.code_string))
-                    });
+                    let role = scope
+                        .role
+                        .as_ref()
+                        .is_none_or(|role| caller.facts.performs(role));
                     let relationship = scope.relationship.as_ref().is_none_or(|coded| {
                         match Relationship::read_coded(coded) {
                             Ok(Relationship::Care) => self.judged.ehr.cared,

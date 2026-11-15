@@ -8,9 +8,10 @@
 //! and a person acting for them (EHDS Art. 3 and 4(2)), an access service
 //! (an `access_service` grant in the CDR, or a verified caller of a
 //! `federation` issuer; EHDS Art. 10), a system client, and every other
-//! caller a professional. Its party, clearances, permitted purposes and care
-//! teams are the 5.7.1 demographic facts the request already holds
-//! (`ferroehr::party_binding::grants`), and it acts for its care teams, the
+//! caller a professional. Its party, the roles of the `ROLE`s it performs and
+//! its care teams are the demographic facts the request already holds
+//! (`ferroehr::party_binding::grants`); a token's role claims drive no rule.
+//! It acts for its care teams, the
 //! provider its client acts for and the `GROUP`s that provider is a member
 //! of (RM demographic `PARTY_RELATIONSHIP`, coded `member_of`; #5575). The
 //! purpose is the declared code the audit layer accepted, and an emergency
@@ -136,7 +137,6 @@ fn caller_of(
         patient_grants_only,
         acts_for,
         administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
-        roles,
         facts: capabilities.facts().clone(),
         settings,
         lacks_consent_reference: principal.is_some_and(lacks_consent_reference),
