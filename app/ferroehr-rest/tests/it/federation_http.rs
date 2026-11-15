@@ -934,6 +934,79 @@ async fn an_external_persons_write_records_its_committer_and_names_its_provider(
     );
 }
 
+/// The agreement is the contract with the partner and the controller's rules
+/// are the controller's own limits: a deny rule for the access services
+/// refuses a template the agreement lets an external person write, because a
+/// deny overrides (#5621).
+#[tokio::test]
+async fn a_controller_rule_refuses_a_template_the_agreement_allows() {
+    use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+    let write = "patient/composition-*.c";
+    let writer = agreement(Accessor::Person)
+        .also("read_scope", write)
+        .text("template", "International Patient Summary");
+    let (_db, svc, app) = serve(vec![writer]).await;
+    svc.template_adl14_upload(&common::ips_opt_xml())
+        .await
+        .expect("upload the IPS template");
+    let term = |code: &str| {
+        json!({ "_type": "DV_CODED_TEXT", "value": code,
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID",
+                                        "value": TERMINOLOGY_ID_ACCESS_CONTROL },
+                    "code_string": code } })
+    };
+    let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
+    let policy = json!({
+        "_type": "ACCESS_POLICY",
+        "name": { "_type": "DV_TEXT", "value": "Hospital access policy" },
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.2.0" },
+        "controller": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
+        "care_relationship_required": false,
+        "purpose_required": false,
+        "rules": [{ "_type": "ACCESS_DIRECTIVE",
+            "name": { "_type": "DV_TEXT", "value": "No summaries from partners" },
+            "archetype_node_id": "id15", "kind": term("controller_rule"), "effect": term("deny"),
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("access_service") }],
+            "operations": [term("write")],
+            "data": [{ "_type": "ACCESS_DATA_SCOPE",
+                       "templates": ["International Patient Summary"] }],
+            "emergency_override": false }]
+    });
+    svc.put_access_policy(
+        &ferroehr::service::admin::access_policy::PolicyPrecondition::Create,
+        &policy,
+    )
+    .await
+    .expect("the policy commits");
+    svc.read_access_policy().await.expect("the policy reads");
+    let target = ehr(&svc).await.to_string();
+    let credential = professional(
+        Some(&target),
+        &json!({ "scope": format!("{READ} {write}") }),
+    );
+    let mut composition = common::ips_canonical_composition();
+    composition["context"]["health_care_facility"] = json!({
+        "_type": "PARTY_IDENTIFIED", "name": "Remote clinic",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "Registry",
+                          "id": "urn:oid:2.999.7" }] });
+    let (status, body) = common::send_body(
+        &app,
+        common::req("POST", format!("{BASE}/ehr/{target}/composition"))
+            .auth(&credential)
+            .json(composition.to_string())
+            .prefer_representation()
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("refused-policy-denied"), "{body}");
+}
+
 /// An NL agreement of `accessor` for care, conditioned on the local consent.
 fn nl(accessor: Accessor) -> Terms {
     agreement(accessor)

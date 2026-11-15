@@ -16,7 +16,7 @@
 use serde_json::{Value, json};
 
 use crate::committer_binding::{ISSUER, KEY, bound, placeholder, professional, service};
-use crate::fixtures::{attestation_by, ckm_example, deleting};
+use crate::fixtures::{attestation_by, ckm_example};
 use crate::system_grants::{
     DEVICES, FACILITIES, MACHINES, System, run, system, system_client, writes,
 };
@@ -184,13 +184,18 @@ async fn a_relay_client_commits_a_person_act_under_the_client_committer() {
     );
 }
 
+/// A system commit is held to the facilities of its grant; which templates
+/// it writes is a controller rule of the access policy, which the access
+/// evaluator applies to every caller (#5624), so a grant names none.
 #[tokio::test]
-async fn a_system_commit_is_held_to_its_writes_and_its_facilities() {
+async fn a_system_commit_is_held_to_its_facilities() {
     let (_db, svc, ehr) = service().await;
     let (example, template) = example(&svc).await;
     let body = vital_signs(&example, party("Dr A", PROFESSIONALS, "hp-1"), "ward-7");
     let elsewhere = granted(&svc, "elsewhere", "Another template", &["relay"]).await;
-    forbidden(commit(&svc, ehr, Some(&elsewhere), &body).await);
+    commit(&svc, ehr, Some(&elsewhere), &body)
+        .await
+        .expect("a grant's template element limits no commit");
     let lab = granted(&svc, "lab", &template, &["relay"]).await;
     let other_ward = vital_signs(&example, party("Dr A", PROFESSIONALS, "hp-1"), "ward-8");
     unprocessable(
@@ -208,21 +213,6 @@ async fn a_system_commit_is_held_to_its_writes_and_its_facilities() {
         commit(&svc, ehr, Some(&lab), &unlocated).await,
         "COMPOSITION.feeder_audit.originating_system_audit.location",
     );
-    // A deletion of a COMPOSITION outside the writes is refused too.
-    let committed = commit(&svc, ehr, None, &body).await.expect("commits");
-    let uid = format!(
-        "{}::{}::{}",
-        committed.vo_id, committed.creating_system_id, committed.tree
-    )
-    .parse()
-    .expect("an OBJECT_VERSION_ID");
-    let deleted = run(
-        Some(&elsewhere),
-        svc.delete_composition(ehr, &uid, deleting(Some(uid.clone()))),
-    )
-    .await
-    .map_err(ServiceError::flattened);
-    forbidden(deleted);
 }
 
 #[tokio::test]

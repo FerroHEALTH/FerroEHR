@@ -8,7 +8,7 @@ NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminolo
 
 == Groups
 
-Twelve groups are added to the openEHR Terminology. The codes are for the terminology editors to assign; until then each rubric serves as its code, as it does in FerroEHR's `ferroehr-operations` terminology, which defines these groups today. If openEHR adopts them, `Terminology_id_access_control` in the invariants is `openehr`; until then a system names the terminology it documents for them.
+Eleven groups are added to the openEHR Terminology. The codes are for the terminology editors to assign; until then each rubric serves as its code, as it does in FerroEHR's `ferroehr-operations` terminology, which defines these groups today. If openEHR adopts them, `Terminology_id_access_control` in the invariants is `openehr`; until then a system names the terminology it documents for them.
 
 [cols="2,3,3", options="header"]
 |===
@@ -38,14 +38,6 @@ Twelve groups are added to the openEHR Terminology. The codes are for the termin
 |read, write, export, query
 |`ACCESS_DIRECTIVE._operations_`: the classes of operation a directive applies to
 
-|access sensitivity clearance
-|sensitivity_clearance
-|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a sensitivity code the capability clears
-
-|access permitted purpose
-|permitted_purpose
-|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a purpose of use the capability permits
-
 |care relationship
 |member_of, under_care_of
 |The `_name_` of a `PARTY_RELATIONSHIP`: a professional's membership of a care-team `GROUP`, and the subject being under the care of a team or unit
@@ -54,8 +46,12 @@ Twelve groups are added to the openEHR Terminology. The codes are for the termin
 |care_team
 |The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `member_of`
 
+|record subject
+|record_subject
+|The `_name_` of an `ELEMENT` in a `PERSON`'s `PARTY._details_` whose value is a `DV_IDENTIFIER` naming an `EHR_STATUS._subject_` reference the `PERSON` stands for: `_issuer_` is the reference's `_namespace_` and `_id_` its `_id_`, such as a pseudonym an identity source issued. An identifier another organisation issued belongs in `_details_` (Demographic IM §2.1.3), and the cross-reference stays out of the EHR (EHR IM §EHR Status)
+
 |access refusal
-|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-policy-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
 
 |access log withheld
@@ -63,10 +59,10 @@ Twelve groups are added to the openEHR Terminology. The codes are for the termin
 |`ACCESS_LOG_RESTRICTION._withheld_` (`Group_id_access_log_withheld`): the `_party_`, `_provider_`, `_roles_` and `_groups_` of an `ACCESSOR` the subject view withholds (EHDS Art 9(3))
 |===
 
-The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other six are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a clearance, a permitted purpose or a care relationship by the code in an element's or a relationship's `_name_`, and a care team by the `group kind` code in a `GROUP`'s `_name_`, never by its archetype or a path. The Demographic IM makes a party's type its name (`PARTY.type()`, invariant `Type_valid: type = name`; `PARTY_RELATIONSHIP.type()` likewise) and names "the specialist care team, e.g. cardiology team" as the typical `GROUP` (`GROUP` class), so a coded name says what kind of group or relationship it is; the codes are FerroEHR's design. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other five are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a care relationship by the code in a relationship's `_name_`, a record subject by the code in an element's `_name_`, and a care team by the `group kind` code in a `GROUP`'s `_name_`, never by its archetype or a path. The Demographic IM makes a party's type its name (`PARTY.type()`, invariant `Type_valid: type = name`; `PARTY_RELATIONSHIP.type()` likewise) and names "the specialist care team, e.g. cardiology team" as the typical `GROUP` (`GROUP` class), so a coded name says what kind of group or relationship it is; the codes are FerroEHR's design. A role is no code of these groups: it is the coded `_name_` of a `ROLE`, in the terminology the jurisdiction names, and a sensitivity a caller may read and a purpose it may declare are rules of the controller's policy. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
 
 A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code; `refused-opt-out` and `refused-restricted` correspond to its `opted out` and `restricted by the subject` reasons. `ACCESS_LOG_RESTRICTION._accessor_kinds_` is coded in that model's own `accessor kind` group, so a restriction names exactly the kinds its entries record.
 
 == Codes from Other Terminologies
 
-Sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the HL7 v3 `Confidentiality` and `ActCode` sensitivity codes, the EHDS categories, and the HL7 `PurposeOfUse` codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).
+Role, sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the HL7 v3 `Confidentiality` and `ActCode` sensitivity codes, the EHDS categories, and the HL7 `PurposeOfUse` codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).

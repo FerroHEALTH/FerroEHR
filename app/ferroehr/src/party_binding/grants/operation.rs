@@ -32,7 +32,7 @@ use crate::party_binding::grants::admission::{
 };
 use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS};
 use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, GroupKind, PermittedPurpose, SensitivityClearance, Term,
+    CareRelationship, GroupKind, RecordSubject, Term,
 };
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
@@ -104,8 +104,13 @@ pub const AGREEMENT: [&str; 17] = [
 ];
 
 /// The code naming the credentials element whose text is a role a
-/// [`Operation::HoldRoles`] grant gives a Basic user.
+/// [`Operation::HoldRoles`] grant gives a Basic user, or a role code a
+/// [`Operation::ScimProvision`] grant lets its client assign.
 pub const ROLE: &str = "role";
+
+/// The code naming a [`Operation::ScimProvision`] grant's element whose text
+/// is the terminology the client's User `roles` are coded in.
+pub const ROLE_TERMINOLOGY: &str = "role_terminology";
 
 /// The code naming the credentials element whose text is a SMART scope a
 /// [`Operation::HoldScopes`] grant gives a Basic user.
@@ -140,9 +145,8 @@ pub const SCOPES: [&str; 8] = [
     TOKEN_SCOPE,
 ];
 
-/// Whether `code` names a grant's bound or scope element, a capability's
-/// clearance or permitted purpose element, or the acts-for, representation
-/// or care relationship.
+/// Whether `code` names a grant's bound or scope element, or the acts-for,
+/// representation or care relationship.
 fn names_no_operation(code: &str) -> bool {
     [
         ACTS_FOR,
@@ -150,6 +154,7 @@ fn names_no_operation(code: &str) -> bool {
         NOT_BEFORE,
         NOT_AFTER,
         ROLE,
+        ROLE_TERMINOLOGY,
         SCOPE,
         LOGIN_ISSUER,
         ADMIT_IDP,
@@ -167,10 +172,9 @@ fn names_no_operation(code: &str) -> bool {
     ]
     .contains(&code)
         || SCOPES.contains(&code)
-        || SensitivityClearance::CODES.contains(&code)
-        || PermittedPurpose::CODES.contains(&code)
         || CareRelationship::CODES.contains(&code)
         || GroupKind::CODES.contains(&code)
+        || RecordSubject::CODES.contains(&code)
 }
 
 /// One operation a capability may grant.
@@ -238,8 +242,9 @@ pub enum Operation {
     /// scope, to every SMART on openEHR requirement.
     AccessWithoutScope,
     /// Write the `member_of` and `under_care_of` relationships of
-    /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] through the
-    /// Demographic API, as a hospital's ADT system does.
+    /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] and the
+    /// [`openehr_rm::draft::access_control::terminology::RecordSubject`] element of a
+    /// `PERSON` through the Demographic API, as a hospital's ADT system does.
     WriteCareRelationship,
     /// Write the controller's `ACCESS_POLICY`.
     WriteAccessPolicy,
@@ -421,9 +426,10 @@ mod tests {
         assert!(is_qualifier(RELAY) && is_qualifier(DEVICE) && is_qualifier("identifier_prefix"));
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
         assert!(is_qualifier(NO_SUBJECT_NAMESPACE));
-        assert!(is_qualifier("sensitivity_clearance") && is_qualifier("permitted_purpose"));
+        assert!(!is_qualifier("sensitivity_clearance") && !is_qualifier("permitted_purpose"));
         assert!(is_qualifier("member_of") && is_qualifier("under_care_of"));
         assert!(is_qualifier("care_team"));
+        assert!(is_qualifier("record_subject"));
     }
 
     #[test]

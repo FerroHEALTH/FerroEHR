@@ -236,7 +236,7 @@ pub(crate) fn refusal(body: &str) -> (Value, String) {
 }
 
 /// The composition ids an AQL population query returns to `user`.
-async fn queried(app: &Router, user: &str, purpose: Option<&str>) -> Vec<String> {
+pub(crate) async fn queried(app: &Router, user: &str, purpose: Option<&str>) -> Vec<String> {
     let (status, body) = send(
         app,
         "POST",

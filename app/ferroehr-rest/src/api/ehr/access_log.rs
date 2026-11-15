@@ -201,7 +201,11 @@ fn reader(state: &AppState, ehr: &str) -> Result<LogReader, RestError> {
         LogStanding::Reviewer => Ok(LogReader::Reviewer),
         // NOTE: EHDS Art. 9(2), the person reads the log of their own EHR only, and another
         // EHR answers as an unknown one does, so its existence is not disclosed.
-        LogStanding::Person(confined) if confined.to_string().eq_ignore_ascii_case(ehr) => {
+        LogStanding::Person(confined)
+            if confined
+                .iter()
+                .any(|own| own.to_string().eq_ignore_ascii_case(ehr)) =>
+        {
             Ok(LogReader::Person)
         }
         LogStanding::Person(_) => Err(unknown()),

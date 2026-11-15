@@ -441,7 +441,7 @@ fn step_3_consent_deny() {
         (
             "a group the caller is a member of",
             json!({ "applies_to": [{ "party": party("GROUP", CARDIOLOGY) }] }),
-            with_facts(professional(NURSE), &[], &[], &[CARDIOLOGY]),
+            with_facts(professional(NURSE), &[], &[CARDIOLOGY]),
             read(None),
             DENIED,
         ),
@@ -482,11 +482,8 @@ fn step_3_consent_deny() {
         ),
         (
             "an exception",
-            json!({ "exceptions": [directive("consent", "permit", &json!({ "applies_to": [{ "role": coded("local", "PSYCHIATRIST") }] }))] }),
-            Caller {
-                roles: vec!["PSYCHIATRIST".to_owned()],
-                ..professional(NURSE)
-            },
+            json!({ "exceptions": [directive("consent", "permit", &json!({ "applies_to": [role_scope("PSYCHIATRIST")] }))] }),
+            performing(CallerKind::Professional, NURSE, "PSYCHIATRIST"),
             read(None),
             Outcome::Admit,
         ),

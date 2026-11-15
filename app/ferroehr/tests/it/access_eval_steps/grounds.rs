@@ -39,6 +39,8 @@ const EHR_ACCESS_VERSION: &str = "5a1c0b8e-55a6-4d0b-9a63-3f0f6c3c2a11::cdr.exam
 const POLICY_VERSION: &str = "1f2e3d4c-5b6a-4978-8a9b-0c1d2e3f4a5b::cdr.example.org::3";
 /// The `ROLE` whose `CAPABILITY` grants the caller an operation.
 const ROLE: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7fa0";
+/// The uid of a controller rule.
+const RULE_UID: &str = "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f";
 
 /// The request of `caller` asking `asked` under `policy`, naming the grant
 /// of `access_service` by [`ROLE`] and the policy version in its record.
@@ -67,7 +69,7 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
 /// The subject of [`EHR`], through its patient context.
 fn subject_of_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(EHR))),
+        own_ehrs: vec![EhrId(uuid(EHR))],
         ..caller(CallerKind::Subject, GUARDIAN)
     }
 }
@@ -76,7 +78,7 @@ fn subject_of_ehr() -> Caller {
 /// that EHR.
 fn subject_of_other_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(OTHER_EHR))),
+        own_ehrs: vec![EhrId(uuid(OTHER_EHR))],
         ..caller(CallerKind::Subject, GUARDIAN)
     }
 }
@@ -85,7 +87,7 @@ fn subject_of_other_ehr() -> Caller {
 /// representation names.
 fn representative_of_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(EHR))),
+        own_ehrs: vec![EhrId(uuid(EHR))],
         ..caller(CallerKind::Representative, GUARDIAN)
     }
 }
@@ -93,7 +95,7 @@ fn representative_of_ehr() -> Caller {
 /// A representative of the subject of another patient's EHR.
 fn representative_of_other_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(OTHER_EHR))),
+        own_ehrs: vec![EhrId(uuid(OTHER_EHR))],
         ..caller(CallerKind::Representative, GUARDIAN)
     }
 }
@@ -129,12 +131,12 @@ fn of_kind<'a>(decision: &'a Decision, kind: &str) -> Vec<&'a AccessAuthorisatio
         .collect()
 }
 
-/// The capabilities and roles the caller held are `role` grounds: each
-/// grant by its operation code and `ROLE`, each functional role by its code.
+/// The capabilities the caller held and the roles it performs are `role`
+/// grounds: each grant by its operation code and `ROLE`, each role by its
+/// terminology and code.
 #[test]
 fn a_role_ground_names_each_capability_and_role() {
-    let mut nurse = professional(NURSE);
-    nurse.roles = vec!["NURSE".to_owned()];
+    let nurse = performing(CallerKind::Professional, NURSE, "NURSE");
     let access = request(nurse, read(None), None);
     let (outcome, decision) = decide_on(&access, None, &Item::Ehr);
     assert_eq!(outcome, Outcome::Admit);
@@ -146,7 +148,7 @@ fn a_role_ground_names_each_capability_and_role() {
         (role.id.as_str(), role.r#type.as_deref()),
         (ROLE, Some("ROLE"))
     );
-    assert_eq!(roles[1].name.as_deref(), Some("NURSE"));
+    assert_eq!(roles[1].name.as_deref(), Some("urn:example:roles::NURSE"));
     assert!(decision.refused.is_none());
 }
 
@@ -326,6 +328,52 @@ fn the_emergency_grounds_name_only_the_directives_covering_the_data_read() {
     );
 }
 
+/// An emergency lifts a controller deny rule over the mental-health
+/// template; a read of another template names no `emergency` ground of that
+/// rule, and a read of the mental-health note names it by its uid, else its
+/// position (EHDS Art. 11(5) and Art. 9(1), #5676).
+#[test]
+fn the_emergency_grounds_name_only_the_rules_covering_the_data_read() {
+    let deny = |uid: Option<&str>| {
+        let mut rule = rule(
+            "deny",
+            &json!({ "applies_to": [role_scope("NURSE")], "emergency_override": true,
+                     "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["Mental health note"] }] }),
+        );
+        if let Some(uid) = uid {
+            rule["uid"] = json!({ "_type": "HIER_OBJECT_ID", "value": uid });
+        }
+        rule
+    };
+    let lifted = |rule: &Value, template: &str| {
+        let access = request(
+            performing(CallerKind::Professional, NURSE, "NURSE"),
+            break_glass(read(Some("ETREAT"))),
+            Some(policy(&json!({ "rules": [rule] }))),
+        );
+        let item = object(OBJECT, Some(template));
+        let (outcome, decision) = decide_on(&access, None, &item);
+        assert_eq!(outcome, Outcome::Admit, "{template}");
+        of_kind(&decision, "emergency")
+            .iter()
+            .filter_map(|ground| ground.reference.as_ref())
+            .map(|reference| (reference.r#type.clone(), reference.id.clone()))
+            .collect::<Vec<_>>()
+    };
+    let by_position = deny(None);
+    assert_eq!(lifted(&by_position, "HIV result"), []);
+    assert_eq!(
+        lifted(&by_position, "Mental health note"),
+        [(Some("position".to_owned()), "1".to_owned())]
+    );
+    let by_uid = deny(Some(RULE_UID));
+    assert_eq!(lifted(&by_uid, "HIV result"), []);
+    assert_eq!(
+        lifted(&by_uid, "Mental health note"),
+        [(Some("uid".to_owned()), RULE_UID.to_owned())]
+    );
+}
+
 /// `entry` with the link the store gives it, so its invariants hold.
 fn linked(mut entry: AccessLogEntry) -> AccessLogEntry {
     entry.link = AccessLogLink {
@@ -427,19 +475,21 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             Refusal::PurposeMissing,
             professional(DR_B),
             None,
-            Some(purpose.clone()),
+            Some(purpose),
             settings("open", &[], &[], &[]),
             Item::Ehr,
             "ACCESS_POLICY",
         ),
         (
-            Refusal::PurposeNotPermitted,
-            professional(DR_B),
-            Some("HRESCH"),
-            Some(purpose),
+            Refusal::PolicyDenied,
+            performing(CallerKind::Professional, DR_B, "NURSE"),
+            None,
+            Some(policy(&json!({ "rules": [
+                rule("permit", &json!({})),
+                rule("deny", &json!({ "applies_to": [role_scope("NURSE")] }))] }))),
             settings("open", &[], &[], &[]),
             Item::Ehr,
-            "ACCESS_POLICY",
+            "rule 2 of ACCESS_POLICY",
         ),
         (
             Refusal::ConsentRequired,

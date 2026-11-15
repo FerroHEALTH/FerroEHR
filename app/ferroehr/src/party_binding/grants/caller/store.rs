@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Row I/O for the caller facts: `binding_caller_fact`, the stamps of
+//! Row I/O for the caller facts: `binding_caller_fact`, the record subjects
+//! of `binding_record_subject` ([`super::subject`]), the stamps of
 //! `binding_caller_fact_party` and the facts revision.
 //!
 //! A commit of a `ROLE`, a `PERSON` or an `ORGANISATION` replaces the facts
-//! its head holds, in its own transaction; when they changed, it moves the facts revision,
+//! its head holds, and a `PERSON` its record subjects, in its own
+//! transaction; when they changed, it moves the facts revision,
 //! stamps each party whose facts changed with it and notifies
 //! [`super::super::store::CHANNEL`], so each replica reads again only the
 //! facts of the parties stamped since its copy ([`FACTS`]). A refill and an
@@ -25,6 +27,7 @@ use uuid::Uuid;
 use super::{CallerFact, FactKind, FactValue};
 use crate::party_binding::grants::derive::Bound;
 use crate::party_binding::grants::store::{CHANNEL, GrantHead, Term};
+use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
@@ -89,6 +92,14 @@ pub const CARE_OF_TEAM: &str = concat!(
      ORDER BY f.party_id, f.holder_id, f.ordinal"
 );
 
+/// The record subjects the parties stamped after the facts revision `$1`
+/// declare now, whose cached resolution a replica drops; answered from
+/// `ix_binding_caller_fact_party_revision` and the primary key of
+/// `binding_record_subject`.
+const DECLARED: &str = "SELECT r.namespace, r.subject_id FROM binding_caller_fact_party p \
+     JOIN binding_record_subject r ON r.holder_id = p.party_id \
+     WHERE p.revision > $1";
+
 /// The text of one stored fact, as a commit compares the facts of a head
 /// before and after.
 const FACT_TEXT: &str = "ROW(kind, ordinal, party_id, terminology_id, code_string, target_id, \
@@ -119,6 +130,8 @@ pub(crate) struct Changed {
     pub(crate) parties: Vec<(Uuid, Vec<FactRow>)>,
     /// The care teams the stamped subjects are under the care of now.
     pub(crate) cared_teams: Vec<Uuid>,
+    /// The record subjects the stamped parties declare now.
+    pub(crate) declared: Vec<EhrSubject>,
 }
 
 /// Replaces the facts of `head` on its commit transaction `tx`: the facts
@@ -135,6 +148,47 @@ pub(crate) async fn write(
     party: Option<Uuid>,
     role_validity: Option<&Value>,
 ) -> Result<(), StorageError> {
+    let parties = replace(tx, head, party, role_validity).await?;
+    finish(tx, parties).await
+}
+
+/// Replaces the facts and the record subjects of the `PERSON` `head` on its
+/// commit transaction `tx`, as [`write()`] does, stamping the `PERSON` too
+/// when its record subjects changed.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn write_person(
+    tx: &mut PgConnection,
+    head: GrantHead<'_>,
+) -> Result<(), StorageError> {
+    let mut parties = replace(tx, head, Some(head.vo_id), None).await?;
+    if super::subject::replace(tx, head).await? {
+        parties.push(head.vo_id);
+    }
+    finish(tx, parties).await
+}
+
+/// Stamps `parties`, when any, moves the facts revision and notifies.
+async fn finish(tx: &mut PgConnection, mut parties: Vec<Uuid>) -> Result<(), StorageError> {
+    if parties.is_empty() {
+        return Ok(());
+    }
+    parties.sort_unstable();
+    parties.dedup();
+    stamp(tx, &parties).await?;
+    crate::party_binding::grants::live::note_change();
+    Ok(())
+}
+
+/// Replaces the facts of `head` about `party`; every party whose facts
+/// changed.
+async fn replace(
+    tx: &mut PgConnection,
+    head: GrantHead<'_>,
+    party: Option<Uuid>,
+    role_validity: Option<&Value>,
+) -> Result<Vec<Uuid>, StorageError> {
     let statement = format!(
         "DELETE FROM binding_caller_fact WHERE holder_id = $1 \
          RETURNING party_id, {FACT_TEXT} AS fact"
@@ -151,14 +205,9 @@ pub(crate) async fn write(
         _ => Vec::new(),
     };
     if sorted(&gone) == sorted(&came) {
-        return Ok(());
+        return Ok(Vec::new());
     }
-    let mut parties: Vec<Uuid> = gone.iter().chain(&came).map(|(party, _)| *party).collect();
-    parties.sort_unstable();
-    parties.dedup();
-    stamp(tx, &parties).await?;
-    crate::party_binding::grants::live::note_change();
-    Ok(())
+    Ok(gone.iter().chain(&came).map(|(party, _)| *party).collect())
 }
 
 /// The texts of `rows`, sorted.
@@ -168,7 +217,7 @@ fn sorted(rows: &[(Uuid, String)]) -> Vec<&str> {
     texts
 }
 
-/// The code a clearance or a purpose names; `None` for a care relationship.
+/// The code a role names; `None` for a care relationship.
 fn code_of(fact: &CallerFact) -> Option<&ForeignCode> {
     match &fact.value {
         FactValue::Code(code) => Some(code),
@@ -268,8 +317,9 @@ async fn stamp(tx: &mut PgConnection, parties: &[Uuid]) -> Result<(), StorageErr
     Ok(())
 }
 
-/// The care relationships the `PERSON` `person` holds, as their texts,
-/// sorted: what a commit compares before and after it writes them.
+/// The care relationships the `PERSON` `person` holds and the record
+/// subjects it declares, as their texts, sorted: what a commit compares
+/// before and after it writes them.
 ///
 /// A text holds what a relationship says and leaves out its position in
 /// `relationships`, so a version that removes another relationship before
@@ -278,14 +328,16 @@ async fn stamp(tx: &mut PgConnection, parties: &[Uuid]) -> Result<(), StorageErr
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub(crate) async fn care(tx: &mut PgConnection, person: Uuid) -> Result<Vec<String>, StorageError> {
-    Ok(sqlx::query_scalar(
+    let mut care: Vec<String> = sqlx::query_scalar(
         "SELECT ROW(kind, party_id, terminology_id, code_string, target_id, lifecycle_state, \
                     role_validity, validity, not_before, not_after)::text AS fact \
          FROM binding_caller_fact WHERE holder_id = $1 AND target_id IS NOT NULL ORDER BY fact",
     )
     .bind(person)
     .fetch_all(&mut *tx)
-    .await?)
+    .await?;
+    care.extend(super::subject::texts(tx, person).await?);
+    Ok(care)
 }
 
 /// Deletes every fact a party of `vo_ids` holds or is about, and their
@@ -302,11 +354,16 @@ pub(crate) async fn erase(tx: &mut PgConnection, vo_ids: &[Uuid]) -> Result<bool
     .execute(&mut *tx)
     .await?
     .rows_affected();
+    let subjects = sqlx::query("DELETE FROM binding_record_subject WHERE holder_id = ANY($1)")
+        .bind(vo_ids)
+        .execute(&mut *tx)
+        .await?
+        .rows_affected();
     sqlx::query("DELETE FROM binding_caller_fact_party WHERE party_id = ANY($1)")
         .bind(vo_ids)
         .execute(&mut *tx)
         .await?;
-    Ok(gone > 0)
+    Ok(gone > 0 || subjects > 0)
 }
 
 /// Reads the facts of every party stamped after `since`, or of every party
@@ -321,16 +378,27 @@ pub(crate) async fn load(
     since: Option<i64>,
 ) -> Result<Changed, StorageError> {
     let (_, revision) = crate::party_binding::grants::store::revisions(conn).await?;
-    let (rows, cared_teams) = match since {
-        Some(since) => (
-            sqlx::query(FACTS).bind(since).fetch_all(&mut *conn).await?,
-            sqlx::query_scalar(CARED_TEAMS)
+    let (rows, cared_teams, declared) = match since {
+        Some(since) => {
+            let declared: Vec<(String, String)> = sqlx::query_as(DECLARED)
                 .bind(since)
                 .fetch_all(&mut *conn)
-                .await?,
-        ),
+                .await?;
+            (
+                sqlx::query(FACTS).bind(since).fetch_all(&mut *conn).await?,
+                sqlx::query_scalar(CARED_TEAMS)
+                    .bind(since)
+                    .fetch_all(&mut *conn)
+                    .await?,
+                declared
+                    .into_iter()
+                    .map(|(namespace, id)| EhrSubject::new(namespace, id))
+                    .collect(),
+            )
+        }
         None => (
             sqlx::query(HELD_FACTS).fetch_all(&mut *conn).await?,
+            Vec::new(),
             Vec::new(),
         ),
     };
@@ -338,6 +406,7 @@ pub(crate) async fn load(
         revision,
         parties: by_party(rows)?,
         cared_teams,
+        declared,
     })
 }
 

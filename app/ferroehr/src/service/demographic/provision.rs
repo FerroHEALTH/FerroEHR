@@ -51,6 +51,9 @@ pub struct ProvisionedUser {
     pub body: Value,
     /// The template paths an incomplete head lacks; empty otherwise.
     pub missing: Vec<String>,
+    /// The roles the User holds: the coded names of the `ROLE`s in force it
+    /// performs ([`FerroEhrService::user_roles`]).
+    pub roles: Vec<crate::service::demographic::user_roles::UserRole>,
 }
 
 /// One page of a client's Users.
@@ -76,7 +79,8 @@ pub struct NewUser {
 
 impl FerroEhrService {
     /// The User `id` of the client of `binding_issuer`, or `None` when the id
-    /// names no `PERSON` that client owns with a live professional `ROLE`.
+    /// names no `PERSON` that client owns with a live professional `ROLE`, or
+    /// for a portal client no `PERSON` its keys name.
     ///
     /// # Errors
     /// [`ServiceError`] on a storage failure.
@@ -115,7 +119,8 @@ impl FerroEhrService {
         let today = crate::party_binding::source::today();
         let (total, rows) = {
             let mut conn = acquire(&self.demographic_pool).await?;
-            provisioned::users(&mut conn, binding_issuer, filter, &today, page).await?
+            let today = (!self.binding.is_portal_issuer(binding_issuer)).then_some(today.as_str());
+            provisioned::users(&mut conn, binding_issuer, filter, today, page).await?
         };
         let mut users = Vec::with_capacity(rows.len());
         for row in rows {
@@ -129,7 +134,12 @@ impl FerroEhrService {
 
     /// Creates the User `user` for the client of `binding_issuer`: its
     /// `PERSON` and its professional `ROLE` of `role_template`, in one
-    /// demographic CONTRIBUTION under the caller's committer.
+    /// demographic CONTRIBUTION under the caller's committer. A portal
+    /// client, whose `binding_issuer` is a `patients` issuer, creates the
+    /// `PERSON` alone: a portal representative performs no professional
+    /// `ROLE`, and binds only through a live representation, which only the
+    /// patient or an administrator writes (#5622; EHDS Art. 4(2)). Our own
+    /// design.
     ///
     /// # Errors
     /// The [`Self::mapped_party_body`] and [`Self::professional_role_body`]
@@ -143,7 +153,11 @@ impl FerroEhrService {
         role_template: &str,
         user: NewUser,
     ) -> Result<ProvisionedUser, ServiceError> {
-        let (person, parties) = self.person_with_role(role_template, user, None).await?;
+        let (person, parties) = if self.binding.is_portal_issuer(binding_issuer) {
+            self.person_alone(user).await?
+        } else {
+            self.person_with_role(role_template, user, None).await?
+        };
         Box::pin(crate::party_binding::protect::provisioning(
             binding_issuer.to_owned(),
             self.create_parties(parties, "SCIM provisioning: create User", None),
@@ -205,6 +219,24 @@ impl FerroEhrService {
         Ok((person, parties))
     }
 
+    /// The `PERSON` of `user` with no `ROLE`, ready for one CONTRIBUTION: its
+    /// container and the one party.
+    async fn person_alone(&self, user: NewUser) -> Result<(VoId, Vec<NewParty>), ServiceError> {
+        let person_id = self.allocate_party_id();
+        let person = person_id.id();
+        let body = self
+            .mapped_party_body(None, &user.template_id, &user.values)
+            .await?;
+        let lifecycle_state = Some(self.first_state(&body, &user.template_id).await?);
+        let parties = vec![NewParty {
+            id: person_id,
+            kind: PartyKind::Person,
+            lifecycle_state,
+            body,
+        }];
+        Ok((person, parties))
+    }
+
     /// The lifecycle state the first version of `body` commits in:
     /// `532|complete|` when it fits `template_id` in full, `553|incomplete|`
     /// when only the relaxed reading holds.
@@ -241,6 +273,7 @@ impl FerroEhrService {
         } else {
             Vec::new()
         };
+        let roles = self.user_roles(&read.body).await?;
         Ok(ProvisionedUser {
             row,
             version_uid: meta.uid,
@@ -248,6 +281,7 @@ impl FerroEhrService {
             last_modified,
             body: read.body,
             missing,
+            roles,
         })
     }
 

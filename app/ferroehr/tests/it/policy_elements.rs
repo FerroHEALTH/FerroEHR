@@ -65,6 +65,17 @@ async fn a_grant_read_by_one_element_names_it_once() {
             capability("scim_provision", &[scope("token_scope", "ferroehr/scim")]),
             "0 binding_issuer elements",
         ),
+        (
+            capability(
+                "scim_provision",
+                &[
+                    scope("binding_issuer", "urn:example:login"),
+                    scope("token_scope", "ferroehr/scim"),
+                    scope("role", "NURSE"),
+                ],
+            ),
+            "0 role_terminology elements",
+        ),
     ] {
         let error = create(&svc, PartyKind::Role, &role(agent, &[refused]))
             .await

@@ -177,14 +177,18 @@ pub fn install(
     let service = service
         .with_import_policy(ImportPolicy::new(logins))
         .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
+        .with_party_namespace(&config.authz.party_binding.namespace)
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,
             config.audit.store.horizon(),
         ));
     let sections = config.authz.party_binding.sections();
-    let mapping = sections
-        .binding_mapping(&key_issuers, &config.authz.rbac.admin_role)
-        .context("compiling [authz.party_binding]")?;
+    let mapping = ferroehr::config::binding::installed_mapping(
+        &sections,
+        &resolved,
+        &config.authz.rbac.admin_role,
+    )
+    .context("compiling [authz.party_binding]")?;
     Ok(service
         .with_mapped_party_templates(sections.mapped_templates())
         .with_binding_mapping(mapping))

@@ -91,10 +91,9 @@ fn request() -> RequestAccess {
     let caller = Caller {
         kind: CallerKind::Professional,
         party: Some(NURSE.to_owned()),
-        own_ehr: None,
+        own_ehrs: Vec::new(),
         patient_grants_only: false,
         acts_for: Vec::new(),
-        roles: Vec::new(),
         facts: ferroehr::party_binding::grants::caller::CallerFacts::default(),
         administrator: false,
         settings: SettingsCaller::new(false, false, Some(NURSE.to_owned())),

@@ -32,7 +32,7 @@ pub mod shipped;
 pub mod source;
 pub mod store;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::templates::identity::canonical_key;
 
@@ -407,6 +407,10 @@ pub struct BindingMapping {
     admin_role: Option<String>,
     /// Whether the policy parties are recognised and guarded.
     policy: bool,
+    /// The `patients` issuers: a binding key under one is a portal login,
+    /// held with no professional `ROLE` and bound only as a representative
+    /// through a live representation (#5622).
+    portal_issuers: BTreeSet<String>,
 }
 
 impl BindingMapping {
@@ -482,6 +486,34 @@ impl BindingMapping {
     #[must_use]
     pub fn names_policy(&self) -> bool {
         self.policy
+    }
+
+    /// Returns this mapping holding a binding key under each of `issuers`, the
+    /// `patients` issuers, as a portal login: its key row is held with no
+    /// professional `ROLE`, and a SCIM client whose `binding_issuer` is one
+    /// provisions its Users in the patient template with no `ROLE` (#5622).
+    /// Our own design.
+    #[must_use]
+    pub fn with_portal_issuers<I, S>(mut self, issuers: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.portal_issuers = issuers.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// The `patients` issuers, sorted ([`Self::with_portal_issuers`]).
+    #[must_use]
+    pub fn portal_issuers(&self) -> Vec<String> {
+        self.portal_issuers.iter().cloned().collect()
+    }
+
+    /// Whether `issuer` is a `patients` issuer, under which a binding key is
+    /// a portal login.
+    #[must_use]
+    pub fn is_portal_issuer(&self, issuer: &str) -> bool {
+        self.portal_issuers.contains(issuer)
     }
 
     /// The binding-key selector of the person template `template_id`, in any
@@ -575,6 +607,9 @@ impl BindingMapping {
         }
         if let Some(membership) = &self.membership {
             line(&["membership", membership]);
+        }
+        for issuer in &self.portal_issuers {
+            line(&["portal", issuer]);
         }
         crate::digest::sha256_hex(&text)
     }

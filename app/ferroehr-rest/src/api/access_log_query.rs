@@ -85,9 +85,11 @@ pub(crate) fn standing(state: &AppState) -> LogStanding {
         caller.kind,
         CallerKind::Subject | CallerKind::Representative
     ) {
-        return caller
-            .own_ehr
-            .map_or(LogStanding::Refused, LogStanding::Person);
+        return if caller.own_ehrs.is_empty() {
+            LogStanding::Refused
+        } else {
+            LogStanding::Person(caller.own_ehrs.into())
+        };
     }
     let authz = state.authz();
     let admitted = authz

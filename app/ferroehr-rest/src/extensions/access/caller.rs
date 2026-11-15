@@ -8,9 +8,10 @@
 //! and a person acting for them (EHDS Art. 3 and 4(2)), an access service
 //! (an `access_service` grant in the CDR, or a verified caller of a
 //! `federation` issuer; EHDS Art. 10), a system client, and every other
-//! caller a professional. Its party, clearances, permitted purposes and care
-//! teams are the 5.7.1 demographic facts the request already holds
-//! (`ferroehr::party_binding::grants`), and it acts for its care teams, the
+//! caller a professional. Its party, the roles of the `ROLE`s it performs and
+//! its care teams are the demographic facts the request already holds
+//! (`ferroehr::party_binding::grants`); a token's role claims drive no rule.
+//! It acts for its care teams, the
 //! provider its client acts for and the `GROUP`s that provider is a member
 //! of (RM demographic `PARTY_RELATIONSHIP`, coded `member_of`; #5575). The
 //! purpose is the declared code the audit layer accepted, and an emergency
@@ -132,11 +133,10 @@ fn caller_of(
     Caller {
         kind,
         party: settings.party().map(str::to_owned),
-        own_ehr: own_ehr(principal, kind, patient_grants_only),
+        own_ehrs: own_ehrs(principal, kind, patient_grants_only),
         patient_grants_only,
         acts_for,
         administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
-        roles,
         facts: capabilities.facts().clone(),
         settings,
         lacks_consent_reference: principal.is_some_and(lacks_consent_reference),
@@ -188,39 +188,44 @@ fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilitie
     CallerKind::Professional
 }
 
-/// The EHR a confined caller of `kind` reaches: for a representative, the
-/// EHR whose `EHR_STATUS.subject` names the subject its recorded
+/// The EHRs a confined caller of `kind` reaches: for a representative, each
+/// EHR whose `EHR_STATUS.subject` reference names the `PERSON` its recorded
 /// representation `PARTY_RELATIONSHIP` names, which authentication resolved
 /// ([`Principal::represented`]); otherwise the EHR of its SMART App Launch
 /// patient context (`ehrId`, ITS-REST `master07` §Context Selection), or,
 /// for a contact point's caller, the EHR of its TRC patient, which stands in
 /// for the launch context its token does not carry (eHDSI XCA Profile 8.0.1
 /// §4.2.1).
-fn own_ehr(
+fn own_ehrs(
     principal: Option<&Principal>,
     kind: CallerKind,
     patient_grants_only: bool,
-) -> Option<EhrId> {
-    let principal = principal?;
+) -> Vec<EhrId> {
+    let Some(principal) = principal else {
+        return Vec::new();
+    };
     if kind == CallerKind::Representative {
         // NOTE: our own design (#5609), a representative whose subject has no EHR, or one
         // authentication did not resolve, reaches none, so the evaluator refuses it on every EHR.
         return principal
             .represented
             .as_ref()
-            .and_then(|represented| represented.ehr_id.as_deref())
-            .and_then(|ehr| ehr.parse().ok());
+            .map_or_else(Vec::new, |represented| represented.ehr_ids.clone());
     }
     if kind != CallerKind::Subject && !patient_grants_only {
-        return None;
+        return Vec::new();
     }
     let access = &principal.access;
     if let Some(TrcPatientEhr(ehr)) = access.extension::<TrcPatientEhr>() {
-        return Some(*ehr);
+        return vec![*ehr];
     }
     // NOTE: our own design (#5586), a launch context that names no EHR id names no EHR, so
     // the evaluator refuses the confined caller on every EHR.
-    access.ehr_id()?.parse().ok()
+    access
+        .ehr_id()
+        .and_then(|ehr| ehr.parse().ok())
+        .into_iter()
+        .collect()
 }
 
 /// Whether the caller's grants on the EHR data `op` reaches are `patient/`
