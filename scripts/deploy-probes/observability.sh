@@ -117,16 +117,31 @@ observability_family() {
 
   # #2173: metrics reaching the stack AT ALL. The server answering 200 on its
   # own scrape endpoint proved nothing — that was true throughout the defect.
+  # #5672: every series must carry FerroEHR's resource `service.name`, which
+  # the bundled Prometheus promotes to the `service_name` label. The bundle's
+  # collector exports its own metrics into the same store, and its image ships
+  # an eBPF instrumenter (off here) whose HTTP histogram has this very name, so
+  # a match on the metric name alone could pass with nothing from FerroEHR.
   probe "P-OBS-METRICS" "$PROBE_WORKING" "server" "#2173" \
     "FerroEHR metrics arrive in the collector's Prometheus"
   if [[ -z "$prom_uid" ]]; then
     probe_fail "a Prometheus datasource in Grafana" "none found" \
       "the bundled stack provisions it; without it nothing here can be observed"
   else
-    local http_series
-    if ! http_series="$(obs_wait_series "$prom_uid" '{__name__=~"http_server_request_duration.*"}')"; then
-      probe_fail "at least one http_server_request_duration series" "${http_series:-0} after 120s" \
+    local http_series own_series others
+    if ! http_series="$(obs_wait_series "$prom_uid" \
+      '{__name__=~"http_server_request_duration.*", service_name="ferroehr"}')"; then
+      others="$(obs_promql_series "$prom_uid" '{service_name!="", service_name!="ferroehr"}')"
+      probe_fail "an http_server_request_duration series with service_name=ferroehr" \
+        "${http_series:-0} after 120s, beside ${others:-0} series from other services" \
         "the HTTP histogram is one of the families #2175 found never leaving the process"
+    # An instrument only FerroEHR defines (#5591): an observable gauge, so it
+    # is exported on every interval without waiting for traffic.
+    elif ! own_series="$(obs_wait_series "$prom_uid" \
+      'policy_listener_up{service_name="ferroehr"}')"; then
+      probe_fail "a policy_listener_up series with service_name=ferroehr" \
+        "${own_series:-0} after 120s" \
+        "the access-path instruments are FerroEHR's own; only its export can put one there"
     fi
   fi
   probe_done
