@@ -1938,9 +1938,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.18.0"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d23b737a1e05aff691395a74330e96652bc7c41ac71f09b1637ba64ee3e3d8f5"
+checksum = "5dde449ad25daad8e892a2551a393223ad1b5088a4387b98d5aeaa4c8d4c5e10"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -2155,6 +2155,7 @@ dependencies = [
  "ferrohealth-smart",
  "ferrohealth-telemetry",
  "ferrohealth-usage-report",
+ "fhir-types",
  "futures",
  "hmac 0.13.0",
  "http",
@@ -3489,9 +3490,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.18.0"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c226a0463d61c9ea2177b876451a97028b95f26811b204777851bcda58fbe6c"
+checksum = "4897e36b604477672cff17a712a63097726b854792527d9392f92abc5c07f8f7"
 dependencies = [
  "async-trait",
  "base64 0.23.1",

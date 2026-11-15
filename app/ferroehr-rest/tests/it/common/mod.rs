@@ -1236,7 +1236,11 @@ pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
         .await
         .expect("render the stored audit records")
         .documents;
-    texts.extend(documents.iter().map(ToString::to_string));
+    texts.extend(documents.iter().map(|document| {
+        serde_json::to_value(document)
+            .expect("a served document")
+            .to_string()
+    }));
     texts
 }
 

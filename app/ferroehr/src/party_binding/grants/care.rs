@@ -249,7 +249,7 @@ impl Subscriber for CareCopy {
 /// The care relationships `rows` hold: each `under_care_of` relationship of a
 /// live head with the dates it holds, whether or not it holds today, so the
 /// evaluator judges a discharge and the grace after it; sorted and distinct.
-fn care_teams(rows: &[FactRow]) -> Vec<CareTeam> {
+pub(crate) fn care_teams(rows: &[FactRow]) -> Vec<CareTeam> {
     let mut out: Vec<CareTeam> = rows
         .iter()
         .filter(|row| row.kind == FactKind::UnderCareOf)

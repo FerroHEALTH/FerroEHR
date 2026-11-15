@@ -146,13 +146,7 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
     match searched(state, subject_scoped, &filter.store).await {
         Ok(page) => {
             let query = parts.query.as_deref().unwrap_or_default();
-            let Some((mut resp, result_count)) = page_response(&filter, query, page) else {
-                return operation_outcome(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    IssueType::Exception,
-                    "a stored audit record could not be read",
-                );
-            };
+            let (mut resp, result_count) = page_response(&filter, query, page);
             // Reading a person's access log is itself an access about that
             // person: the record of this call names whose log was read and how
             // many records it served, and it writes an access-log entry naming
@@ -180,12 +174,12 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
 
 /// The `searchset` response of `page` for the ITI-81 `query`, and the number
 /// of records its access record names: the total when counted, else the
-/// records served; `None` when a stored document is no FHIR R4 `AuditEvent`.
+/// records served.
 fn page_response(
     filter: &Filter,
     query: &str,
     page: ferroehr::system_log::store::AuditPage,
-) -> Option<(Response, u64)> {
+) -> (Response, u64) {
     let ferroehr::system_log::store::AuditPage {
         total,
         documents,
@@ -195,22 +189,13 @@ fn page_response(
     let matches = if filter.total_only {
         Vec::new()
     } else {
-        match documents
+        documents
             .into_iter()
-            .map(|resource| {
-                serde_json::from_value(resource).map(|resource| Match {
-                    full_url: None,
-                    resource,
-                })
+            .map(|resource| Match {
+                full_url: None,
+                resource,
             })
-            .collect::<Result<Vec<_>, _>>()
-        {
-            Ok(matches) => matches,
-            Err(e) => {
-                tracing::error!(error = %e, "a stored AuditEvent is no FHIR R4 AuditEvent");
-                return None;
-            }
-        }
+            .collect()
     };
     let self_url = format!("AuditEvent?{query}");
     let offset = u64::try_from(filter.store.offset).unwrap_or(0);
@@ -231,7 +216,7 @@ fn page_response(
         bundle.total = None;
     }
     let counted = total.map_or(served, |total| u64::try_from(total).unwrap_or(0));
-    Some((fhir_json(StatusCode::OK, &bundle), counted))
+    (fhir_json(StatusCode::OK, &bundle), counted)
 }
 
 /// The store search of `filter`: the person's own trail for a subject-scoped

@@ -208,6 +208,11 @@ pub struct FerroEhrService {
     /// `[privacy.identifier_protection]` section.
     pub(in crate::service) identifiers:
         Option<Arc<crate::identifier_protection::engine::IdentifierProtection>>,
+    /// The party facts revision the clinical care projection is known to
+    /// reflect on this replica ([`ehr::care_projection`]); a query reads the
+    /// projection only while it is at least the revision of the facts this
+    /// replica holds.
+    pub(in crate::service) care_projected: Arc<ehr::care_projection::Projected>,
     /// The clinical-side data-minimisation policy
     /// ([`crate::privacy`]) every clinical commit body is checked against.
     ///
@@ -309,6 +314,7 @@ impl FerroEhrService {
                 .time_to_live(Duration::from_secs(30))
                 .build(),
             identifiers: None,
+            care_projected: Arc::default(),
             privacy: Arc::new(crate::privacy::PrivacyPolicy::default()),
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),
             ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
