@@ -41,6 +41,9 @@ tokio.workspace = true
 tracing.workspace = true
 uuid.workspace = true
 mimalloc.workspace = true
+# TODO(#5662): temporary, the SDK's own diagnostics for the trace export.
+opentelemetry_sdk = { workspace = true, features = ["internal-logs"] }
+opentelemetry-otlp = { version = "0.33.1", default-features = false, features = ["internal-logs", "grpc-tonic", "trace", "metrics"] }
 
 [lints]
 workspace = true

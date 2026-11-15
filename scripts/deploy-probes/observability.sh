@@ -27,6 +27,7 @@ GRAFANA_AUTH="admin:admin"
 
 obs_up() {
   GRAFANA_PORT="${PROBE_GRAFANA_PORT:-13000}" \
+  FERROEHR__TELEMETRY__FILTER="info,opentelemetry=debug,opentelemetry_sdk=debug,opentelemetry_otlp=debug" \
     dc -f docker-compose.yml -f docker-compose.observability.yml \
        up -d ferroehr otel-lgtm >/dev/null 2>&1
 }
@@ -138,7 +139,7 @@ obs_diag_stop() {
     | jq -r '.traces[] | "\(.startTimeUnixNano | tonumber / 1e9 | todate) \(.rootTraceName)"' 2>&1 | sort | sed 's/^/      /'
   dim "    obs-diag ferroehr log (request lines):"
   dc -f docker-compose.yml -f docker-compose.observability.yml logs --no-color --timestamps ferroehr 2>&1 \
-    | grep -v -i -E 'password|token|secret' | cut -c1-400 | tail -80 | sed 's/^/      /'
+    | grep -i -E 'opentelemetry|"name":|export|batch' | cut -c1-500 | head -150 | sed 's/^/      /'
 }
 
 probes_observability() {
