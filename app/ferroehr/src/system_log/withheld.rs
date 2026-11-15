@@ -23,7 +23,7 @@ use sea_query_sqlx::SqlxBinder as _;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 use crate::system_log::event::AuditEvent;
-use crate::system_log::fhir::{access_record, to_fhir};
+use crate::system_log::fhir::{access_record, to_resource};
 use crate::system_log::message::AuditContext;
 use crate::system_log::render::classified;
 use crate::system_log::search::condition::search_condition;
@@ -89,7 +89,9 @@ impl AuditStore {
                 continue;
             }
             if shown >= skip && documents.len() < take {
-                documents.push(to_fhir(&event, &policy.context, subject.as_deref())?);
+                documents.push(
+                    to_resource(&event, &policy.context, subject.as_deref())?.into_resource(),
+                );
             }
             shown = shown.saturating_add(1);
         }
