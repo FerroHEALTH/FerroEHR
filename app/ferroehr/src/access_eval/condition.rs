@@ -18,7 +18,7 @@
 //! a background task or a test, nothing is published and nothing is
 //! withheld. No openEHR spec governs this: our own design (#5513, #5588).
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
@@ -33,10 +33,12 @@ use crate::access_eval::class::{Class, Classes};
 use crate::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
 };
+use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
+use crate::access_eval::stale::StaleCopies;
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
-use crate::party_binding::grants::live::LiveGrants;
+use crate::party_binding::grants::live::{GrantsUnavailable, LiveGrants};
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_projection::Revision;
 
@@ -61,33 +63,6 @@ pub struct RequestAccess {
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
     recorded: Recorded,
     stale: Option<Arc<StaleCopies>>,
-}
-
-/// The EHRs whose copy on this replica a read found older than the row in
-/// force: the copy drops each before its next read of the EHR.
-///
-/// A replica learns of a change committed on another one by its
-/// notification, which arrives after the commit. A read in between compares
-/// the revision its verdict was judged on with the row it reads, refuses on
-/// a mismatch, and marks the copy here, so the next request reads the row.
-/// No openEHR spec governs this: our own design (#5589).
-#[derive(Debug, Default)]
-pub struct StaleCopies(Mutex<BTreeSet<EhrId>>);
-
-impl StaleCopies {
-    /// Marks the copy of `ehr_id` stale.
-    pub fn mark(&self, ehr_id: EhrId) {
-        self.0
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .insert(ehr_id);
-    }
-
-    /// The EHRs marked since the last call, which are no longer marked.
-    #[must_use]
-    pub fn take(&self) -> BTreeSet<EhrId> {
-        std::mem::take(&mut *self.0.lock().unwrap_or_else(PoisonError::into_inner))
-    }
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -128,6 +103,7 @@ pub struct Judgement {
 struct Recorded {
     facts: RecordFacts,
     refusals: Mutex<BTreeMap<Option<EhrId>, Noted>>,
+    lifted: LiftedCovers,
 }
 
 /// The facts of a request the access record names that the decision does
@@ -226,6 +202,11 @@ impl RequestAccess {
         self.emergency
     }
 
+    /// The lifted denies that covered an object this request admitted.
+    pub(crate) fn lifted_covers(&self) -> &LiftedCovers {
+        &self.recorded.lifted
+    }
+
     /// The facts the access record names that the decision does not read.
     #[must_use]
     pub fn record_facts(&self) -> &RecordFacts {
@@ -271,7 +252,10 @@ impl RequestAccess {
         let rule = verdict.rule_for(item);
         let outcome = rule.map_or(verdict.otherwise, |rule| rule.then);
         let refusal = match outcome {
-            Outcome::Admit => return outcome,
+            Outcome::Admit => {
+                self.recorded.lifted.note(ehr_id, verdict, item);
+                return outcome;
+            }
             Outcome::Absent(refusal) | Outcome::Refused(refusal) => refusal,
         };
         self.recorded
@@ -427,9 +411,11 @@ impl RequestAccess {
     }
 
     /// The subjects the caller has a live care relationship to, by their
-    /// `PERSON` container id.
-    #[must_use]
-    pub fn cared_subjects(&self) -> Vec<String> {
+    /// `PERSON` container id; a caller of no care team reads nothing.
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the care copy misses and cannot read.
+    pub async fn cared_subjects(&self) -> Result<Vec<String>, GrantsUnavailable> {
         let teams: Vec<Uuid> = self
             .caller
             .facts
@@ -437,35 +423,47 @@ impl RequestAccess {
             .iter()
             .map(CareTeam::team)
             .collect();
-        self.grants.as_ref().map_or_else(Vec::new, |grants| {
-            grants
-                .cared_for_by(&teams, self.today(), self.policy().grace)
-                .iter()
-                .map(Uuid::to_string)
-                .collect()
-        })
+        let Some(grants) = self.grants.as_ref() else {
+            return Ok(Vec::new());
+        };
+        Ok(grants
+            .cared_for_by(&teams, self.today(), self.policy().grace)
+            .await?
+            .iter()
+            .map(Uuid::to_string)
+            .collect())
     }
 
     /// Judges the EHR `ehr_id` as `entry` reads it, and keeps the verdict for
     /// the rest of the request.
-    pub fn judge_ehr(&self, ehr_id: EhrId, entry: &EhrEntry) -> Arc<Verdict> {
-        let judged = self.judgement_of(ehr_id, entry, self.cares_for(entry));
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the subject's care relationships are not
+    /// held and cannot be read.
+    pub async fn judge_ehr(
+        &self,
+        ehr_id: EhrId,
+        entry: &EhrEntry,
+    ) -> Result<Arc<Verdict>, GrantsUnavailable> {
+        let judged = self.judgement_of(ehr_id, entry, self.cares_for(entry).await?);
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .insert(ehr_id, judged);
-        verdict
+        Ok(verdict)
     }
 
     /// Whether the caller has a live care relationship to the subject of
-    /// `entry`.
-    fn cares_for(&self, entry: &EhrEntry) -> bool {
+    /// `entry`; a caller of no care team has none, and reads nothing for it.
+    async fn cares_for(&self, entry: &EhrEntry) -> Result<bool, GrantsUnavailable> {
         let under_care_of = match (&self.grants, entry.subject) {
-            (Some(grants), Some(subject)) => grants.under_care_of(subject),
+            (Some(grants), Some(subject)) if !self.caller.facts.care_teams().is_empty() => {
+                grants.under_care_of(subject).await?
+            }
             _ => Vec::new(),
         };
-        self.cared(&under_care_of)
+        Ok(self.cared(&under_care_of))
     }
 
     /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller
@@ -515,7 +513,11 @@ impl RequestAccess {
     #[must_use]
     pub fn outcome(&self, ehr_id: EhrId, item: &Item<'_>) -> Outcome {
         if let Some(verdict) = self.verdict(ehr_id) {
-            verdict.outcome(item)
+            let outcome = verdict.outcome(item);
+            if outcome == Outcome::Admit {
+                self.recorded.lifted.note(Some(ehr_id), &verdict, item);
+            }
+            outcome
         } else {
             tracing::error!(%ehr_id, "an EHR this request did not judge is withheld");
             Outcome::Absent(Refusal::Restricted)

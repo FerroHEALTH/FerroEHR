@@ -44,6 +44,8 @@ pub mod chains;
 #[cfg(feature = "fhir")]
 mod entries;
 pub(crate) mod lax;
+#[cfg(feature = "fhir")]
+mod search_page;
 mod writers;
 
 use crate::access_log::store::AccessLogStore;
@@ -822,7 +824,8 @@ impl AuditStore {
         else {
             return Ok((0, Vec::new()));
         };
-        let (count_sql, count_values, sql, values) = build_search_statements(filter, &resolved);
+        let (count_sql, count_values, sql, values) =
+            search_page::build_search_statements(filter, &resolved);
         // NOTE: an unnamed statement is planned with the token ids it binds (PostgreSQL 18,
         // "PREPARE", plan_cache_mode), so a rare token reaches its index rather than a generic plan.
         let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
@@ -841,64 +844,18 @@ impl AuditStore {
     }
 }
 
-/// Build the ITI-81 retrieval's two statements — the count and the page — from a
-/// filter and the token ids its criteria on the document resolved to, with no
-/// database involved.
-///
-/// Extracted from [`AuditStore::search`] so the SQL is reachable by a test. This
-/// is the server's second runtime dynamic-SQL site after the AQL engine, and the
-/// property that matters is the same one: every IDENTIFIER here — the schema, the
-/// table, every column, the sort direction — is a literal in this function, while
-/// every caller-supplied value goes through `Expr::val` and arrives as a bound
-/// parameter. `limit`/`offset` are clamped integers, never text.
-///
-/// The guard `scripts/checks/sql-string-building.sh` catches string-built SQL but
-/// cannot see an `Alias::new` argument, which is why the closed set is pinned by a
-/// test rather than only by the guard.
-#[cfg(feature = "fhir")]
-fn build_search_statements(
-    filter: &AuditSearchFilter,
-    resolved: &[Option<crate::system_log::search::TokenMatch>],
-) -> (
-    String,
-    sea_query_sqlx::SqlxValues,
-    String,
-    sea_query_sqlx::SqlxValues,
-) {
-    use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder, Query};
-    use sea_query_sqlx::SqlxBinder as _;
-
-    let table = (Alias::new("audit"), Alias::new("audit_record"));
-    let condition = crate::system_log::search::condition::search_condition(filter, resolved);
-
-    let (count_sql, count_values) = Query::select()
-        .expr(Expr::col(sea_query::Asterisk).count())
-        .from(table)
-        .cond_where(condition.clone())
-        .build_sqlx(PostgresQueryBuilder);
-
-    let (sql, values) = newest_first(condition)
-        .limit(u64::try_from(filter.count.clamp(1, 1000)).unwrap_or(50))
-        .offset(u64::try_from(Ord::max(filter.offset, 0)).unwrap_or(0))
-        .build_sqlx(PostgresQueryBuilder);
-
-    (count_sql, count_values, sql, values)
-}
-
 /// The record columns of the records `condition` selects, newest first.
 #[cfg(feature = "fhir")]
 pub(super) fn newest_first(condition: sea_query::Cond) -> sea_query::SelectStatement {
-    use sea_query::{Alias, Order, Query};
+    use sea_query::{Alias, Query};
 
-    Query::select()
-        .columns(RECORD_COLUMNS.map(Alias::new))
-        .from((Alias::new("audit"), Alias::new("audit_record")))
-        .cond_where(condition)
-        .order_by(Alias::new("recorded_at"), Order::Desc)
-        .order_by(Alias::new("stored_at"), Order::Desc)
-        .order_by(Alias::new("chain"), Order::Desc)
-        .order_by(Alias::new("chain_seq"), Order::Desc)
-        .to_owned()
+    search_page::newest_first_of(
+        Query::select()
+            .columns(RECORD_COLUMNS.map(Alias::new))
+            .from((Alias::new("audit"), Alias::new("audit_record")))
+            .cond_where(condition),
+    )
+    .to_owned()
 }
 
 /// The ITI-81 retrieval the REST layer resolved: the `date` window, the

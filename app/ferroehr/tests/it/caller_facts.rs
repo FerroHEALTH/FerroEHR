@@ -289,7 +289,14 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
     let held = two.grants().revision();
     let now = jiff::Timestamp::now();
     assert_eq!(two.grants().facts_of(doctor.0, now).care_teams().len(), 1);
-    assert_eq!(two.grants().under_care_of(patient.0), Vec::new());
+    assert_eq!(
+        two.grants()
+            .under_care_of(patient.0)
+            .await
+            .expect("the care relationships read"),
+        Vec::new()
+    );
+    let parties = two.grants().parties_held();
 
     let admitted = update_as(
         &one,
@@ -312,10 +319,24 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         "an admission moves the facts revision alone"
     );
     let today: jiff::civil::Date = day(0).parse().expect("a date");
-    let cared = two.grants().under_care_of(patient.0);
+    let cared = two
+        .grants()
+        .under_care_of(patient.0)
+        .await
+        .expect("the care relationships read");
     assert_eq!(cared.len(), 1, "the admission decides the next request");
     assert_eq!(cared[0].team(), ward.0);
     assert!(cared[0].holds_on(today));
+    assert_eq!(
+        two.grants()
+            .cared_for_by(&[ward.0], today, jiff::Span::new())
+            .await
+            .expect("the ward's patients read"),
+        vec![patient.0],
+        "the ward's patients are read by the ward"
+    );
+    // NOTE: #5615, a patient in care is no caller fact, so the replica's copy does not grow with it.
+    assert_eq!(two.grants().parties_held(), parties);
 
     update_as(
         &one,
@@ -337,7 +358,11 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         .refresh_if_stale()
         .await
         .expect("the copy reads");
-    let cared = two.grants().under_care_of(patient.0);
+    let cared = two
+        .grants()
+        .under_care_of(patient.0)
+        .await
+        .expect("the care relationships read");
     assert_eq!(cared.len(), 1, "a discharge keeps the relationship it ends");
     assert!(
         !cared[0].holds_on(today),

@@ -29,7 +29,8 @@
 use std::sync::Arc;
 
 use crate::access_eval::class::{Class, Classes, Keepers};
-use crate::access_eval::condition::{EhrEntry, StaleCopies};
+use crate::access_eval::condition::EhrEntry;
+use crate::access_eval::stale::StaleCopies;
 use crate::aql::sql::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
@@ -66,24 +67,26 @@ impl FerroEhrService {
         if access.judgement(ehr_id).is_none() {
             return;
         }
-        match self.load_ehr_access(ehr_id).await {
-            Ok(entry) => {
-                access.judge_ehr(ehr_id, &entry);
-            }
-            Err(error) => {
-                let cause: &(dyn std::error::Error + 'static) = &error;
-                tracing::warn!(
-                    %ehr_id,
-                    error = cause,
-                    "the committed EHR_ACCESS settings could not be read; the request's reads refuse"
-                );
-            }
+        let judged = match self.load_ehr_access(ehr_id).await {
+            Ok(entry) => access
+                .judge_ehr(ehr_id, &entry)
+                .await
+                .map_err(ServiceError::from),
+            Err(error) => Err(error),
+        };
+        if let Err(error) = judged {
+            let cause: &(dyn std::error::Error + 'static) = &error;
+            tracing::warn!(
+                %ehr_id,
+                error = cause,
+                "the committed EHR_ACCESS settings could not be read; the request's reads refuse"
+            );
         }
     }
 
     /// The EHRs whose copy a read of the running request found stale, which
     /// the copy drops before its next read
-    /// ([`crate::access_eval::condition::StaleCopies`]).
+    /// ([`crate::access_eval::stale::StaleCopies`]).
     #[must_use]
     pub fn stale_ehr_access_copies(&self) -> Arc<StaleCopies> {
         self.ehr_access.stale()

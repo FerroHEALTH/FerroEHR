@@ -366,7 +366,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `audit.audit_record`, the view of the `audit_event` records and the entries
   with their index rows in `access_log_search` (the search columns, the
   search tokens of the projection and the render policy, removed with the
-  entry's content when a tombstone replaces it), and the drain sends the
+  entry's content when a tombstone replaces it). An ITI-81 page reads each
+  chain's first `offset + count` records through its `recorded_at` index,
+  the access log's candidates from `access_log_search` with the records tied
+  on the last instant, and takes the page from their union. The exact total
+  counts the access log on its index rows alone, one per entry
+  (`system_log::store::search_page`, #5646). The drain sends the
   syslog message and the store-off feed's document from the entry it built
   (`audit/0030_access_log_projections.sql`, `system_log::store::entries`,
   `system_log::sender::records`).
@@ -681,7 +686,12 @@ which is what makes an optional stage safe to disable:
    the class (`scope::Held`, `scope::EhrFact`), which the SQL reads from the
    EHR's `access_settings.facts`, so one evaluator decides a direct read and a
    query alike, and an EHR of a class the condition does not hold contributes
-   no row. The request path
+   no row. The subjects the caller cares for are bound once per statement, as
+   a `jsonb` object keyed by subject id in a `WITH` clause that each care
+   probe reads with `?`, so the planner's estimate and each probe cost the
+   same whatever the census, and only the one parse of the bound object grows
+   with it (#5645). The care relationships stay in the party domain, which the
+   clinical statement does not read. The request path
    adds no transaction: every fact is a copy, and a named object is read by
    its head row only when the verdict depends on the object. The procedure,
    its order and its codes are our own design; RM EHR IM §EHR Access only
@@ -706,6 +716,15 @@ which is what makes an optional stage safe to disable:
    names; the EHRs the copy does not hold are read in one statement. A served
    EHR with no settings needs no read, and its care ground is inferred from
    which of its two verdicts could have served the row (our own design).
+   Every EHR a query touches gets an entry (#5639): an EHR its scope names,
+   whatever its rows hold, and, for an aggregate projection, each EHR whose
+   data the aggregate read, carried per row as a hidden
+   `array_agg(DISTINCT …)` column in the same statement; a refused query is
+   recorded against the EHR it asked for. An emergency's lifted denies carry
+   the items they cover, and an entry naming the objects it admitted names
+   only the lifted denies covering one of them (#5630). A record the service
+   writes itself, such as an EHR Extract export's, names the request and the
+   caller's binding, which the adapter publishes for the request (#5638).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
    management) against the caller's roles, plus the read-only restriction, which
    overrides any grant. Roles come from the RFC 9068 §2.2.3.1 claim carriers; an
@@ -953,7 +972,7 @@ which the performance gate's transactions-per-request measure refuses
 (#5459).
 
 **Caller facts** (#5511). Beside the grants, the side table holds what the
-access evaluator reads about a caller (migration `party/0039`; `party/0041`
+access evaluator reads about a caller (migration `party/0039`; `party/0042`
 keys a membership by its code, `MBR`):
 `binding_caller_fact`, one row per sensitivity clearance and permitted
 purpose a `CAPABILITY` carries (an element named `sensitivity_clearance` or
@@ -972,9 +991,18 @@ only the facts of the parties stamped since its copy, one indexed read
 small read and the request path still adds no transaction. A refill and an
 erasure move the grant revision, which reads every fact again.
 `Capabilities::facts()` gives a request's caller its clearances, purposes
-and care teams in force; `LiveGrants::under_care_of` gives a subject's care
-relationships with their dates, so the evaluator applies the grace after a
-discharge. A `PERSON` version that changes its care relationships commits
+and care teams in force. The replica's copy holds the facts of callers
+alone: a patient's `under_care_of` relationships grow with the record, so
+`grants::care::CareCopy` holds them in two bounded caches (#5615), a
+subject's relationships (`LiveGrants::under_care_of`, at most
+`care::SUBJECTS` subjects) and a care team's patients
+(`LiveGrants::cared_for_by`, teams holding at most `care::CENSUS` patients
+together, read by `ix_binding_caller_fact_care_team` of migration
+`party/0041`). Each is read on a miss, one indexed statement, and dropped
+when the facts read of a notification stamps a party it holds or a team the
+party is now under the care of; a grant reload and a listener that connects
+or loses its connection drop both. The relationships carry their dates, so
+the evaluator applies the grace after a discharge. A `PERSON` version that changes its care relationships commits
 only for a caller holding `write_care_relationship` or an administrator
 (BASE Architecture Overview `master07-security.adoc` §The Problem of Roles:
 the care delivery environment evaluates "care deliverer"). A care

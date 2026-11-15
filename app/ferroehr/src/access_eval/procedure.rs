@@ -239,8 +239,9 @@ pub struct Grounds {
     /// The positions in the settings' `directives` of the permits that bind
     /// the caller.
     pub permits: Vec<usize>,
-    /// The positions of the denies an emergency lifted.
-    pub lifted: Vec<usize>,
+    /// The positions of the denies an emergency lifted, each with the items
+    /// it covers, so the access record names it only for an item it lifted.
+    pub lifted: Vec<(usize, Pred)>,
     /// The verdict reads a live care relationship to the subject.
     pub cared: bool,
     /// The verdict reads the caller as a gate-keeper or the controller.
@@ -557,7 +558,10 @@ fn denials(read: &Reader<'_, '_>, directives: &[AccessDirective], verdict: &mut 
         if directive.emergency_override && lifts {
             if binds == Pred::True {
                 verdict.lifted.push(lifted);
-                verdict.grounds.lifted.push(at);
+                verdict
+                    .grounds
+                    .lifted
+                    .push((at, read.cover(directive, Effect::Deny, placed)));
             }
         } else {
             verdict.rules.push(Rule {
