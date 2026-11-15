@@ -21,7 +21,7 @@ publish = false
 # terminology client. FHIR R4 resource mapping is FerroBRIDGE's, outside this
 # workspace.
 default = ["fhir", "multimedia"]
-fhir = ["dep:ferrobridge-term", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/smart"]
+fhir = ["dep:ferrobridge-term", "dep:fhir-types", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/smart"]
 multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 # `schemars::JsonSchema` on the configuration tree and every type it reaches,
 # which tools/config-reference renders into the reference page and the default
@@ -134,6 +134,9 @@ rand = "0.8"
 # Feed.
 ihe-atna = { workspace = true, features = ["atna"] }
 ehds-logging.workspace = true
+# The FHIR R4 `AuditEvent` the ITI-81 retrieval serves, typed as `ihe-atna`
+# writes it, so a page is never read back from JSON (`fhir`).
+fhir-types = { workspace = true, optional = true }
 # The IHE patient identity source of the EHR index (`service::ehr_index::ihe`):
 # the PIXm Patient Identifier Cross-reference Consumer (ITI-83), authenticated by
 # the `smart` token authorizer under `[ehr_index.oauth]`; and the PMIR Patient
