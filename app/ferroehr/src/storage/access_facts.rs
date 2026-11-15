@@ -81,7 +81,7 @@ impl HeadFacts {
     /// Whether the running request may read the object.
     #[must_use]
     pub fn admitted(&self) -> bool {
-        crate::access_eval::condition::admits(self.ehr_id, self.revision, &self.item())
+        crate::access_eval::condition::admits(self.ehr_id, &self.revision, &self.item())
     }
 }
 
@@ -97,7 +97,7 @@ pub fn admits_stored(stored: &crate::storage::version_repo::read::StoredVersion)
         origins: origins.as_deref(),
         recorded: stored.head_committed_at,
     });
-    crate::access_eval::condition::admits(stored.ehr_id, stored.access_revision, &item)
+    crate::access_eval::condition::admits(stored.ehr_id, &stored.access_revision, &item)
 }
 
 /// Whether `stored` may be served to the current request.

@@ -163,30 +163,65 @@ pub enum StoredSettings {
     Settings(String),
 }
 
+/// An EHR's subject reference: the `namespace` and the `id.value` of its
+/// `EHR_STATUS.subject.external_ref`.
+///
+/// A reference in this CDR's own demographic namespace names a `PERSON` of
+/// the party store by its container; any other, such as an identity source's
+/// pseudonym, names the `PERSON` that declares it
+/// ([`crate::party_binding::grants::live::LiveGrants::person_of`]). Both are
+/// legal subject references (BASE `OBJECT_REF.namespace`), so they compare
+/// by namespace and id together.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct EhrSubject {
+    /// The `OBJECT_REF.namespace`.
+    pub namespace: String,
+    /// The `OBJECT_REF.id.value`.
+    pub id: String,
+}
+
+impl EhrSubject {
+    /// The reference to `id` under `namespace`.
+    #[must_use]
+    pub fn new(namespace: impl Into<String>, id: impl Into<String>) -> Self {
+        Self {
+            namespace: namespace.into(),
+            id: id.into(),
+        }
+    }
+
+    /// The reference the promoted `ehr.subject_namespace` and
+    /// `ehr.subject_id` columns hold; `None` unless both are set.
+    #[must_use]
+    pub fn stored(namespace: Option<String>, id: Option<String>) -> Option<Self> {
+        Some(Self::new(namespace?, id?))
+    }
+}
+
 /// What a decision on one EHR reads that can change on another replica.
 ///
 /// It is the storage ordinal of the `EHR_ACCESS` version the EHR's settings
-/// row was projected from, and the `PERSON` its `EHR_STATUS` names as
-/// subject, whose care relationships the decision reads.
+/// row was projected from, and the subject reference its `EHR_STATUS` names,
+/// whose `PERSON`'s care relationships the decision reads.
 ///
 /// A read that leaves the store selects it beside its own columns
 /// (`access_revision!`), so a replica compares the revision its copy was
 /// judged on with the rows in force without a statement of its own. The
 /// ordinal grows with every version of the object, so two equal revisions
 /// name one version and one subject. No openEHR spec governs this: our own
-/// design (#5589).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+/// design (#5589, #5634).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Revision {
     /// The ordinal; `None` when the EHR has no settings row.
     pub settings: Option<i32>,
-    /// The subject's `PERSON` container; `None` when the status names no
-    /// party of this store.
-    pub subject: Option<uuid::Uuid>,
+    /// The subject reference; `None` when the status names none.
+    pub subject: Option<EhrSubject>,
 }
 
 impl Revision {
-    /// The revision a row selecting `access_revision!` holds: `<ordinal>/<subject>`
-    /// from the clinical schema, `NULL` from the party schema.
+    /// The revision a row selecting `access_revision!` holds: the JSON array
+    /// `[<ordinal>, <namespace>, <id>]` from the clinical schema, `NULL` from
+    /// the party schema.
     ///
     /// # Errors
     /// [`sqlx::Error`] when the column does not decode or does not read as a
@@ -195,32 +230,16 @@ impl Revision {
         let Some(text) = row.try_get::<Option<String>, _>("access_revision")? else {
             return Ok(Self::default());
         };
-        let (settings, subject) =
-            text.split_once('/')
-                .ok_or_else(|| sqlx::Error::ColumnDecode {
-                    index: "access_revision".to_owned(),
-                    source: "the access revision carries no '/'".into(),
-                })?;
-        let settings = (!settings.is_empty())
-            .then(|| settings.parse::<i32>())
-            .transpose()
-            .map_err(|error| sqlx::Error::ColumnDecode {
+        let (settings, namespace, id): (Option<i32>, Option<String>, Option<String>) =
+            serde_json::from_str(&text).map_err(|error| sqlx::Error::ColumnDecode {
                 index: "access_revision".to_owned(),
                 source: Box::new(error),
             })?;
         Ok(Self {
             settings,
-            subject: subject_of(Some(subject)),
+            subject: EhrSubject::stored(namespace, id),
         })
     }
-}
-
-/// The `PERSON` container a stored `ehr.subject_id` names.
-#[must_use]
-pub fn subject_of(stored: Option<&str>) -> Option<uuid::Uuid> {
-    // NOTE: the local source names each party by its container's UUID, so a subject
-    // id that is no UUID names no PERSON of this store and has no care relationship.
-    stored.and_then(|subject| subject.parse::<uuid::Uuid>().ok())
 }
 
 /// One EHR's settings row and subject as stored.

@@ -93,7 +93,10 @@ impl FerroEhrService {
         // another EHR is a distinct 409 (RM ehr master04 §EHR Status).
         let (subject_id, subject_namespace, is_queryable, is_modifiable) =
             super::status::ehr_promoted_columns(status);
-        let subject = subject_id.and_then(|subject| subject.parse::<uuid::Uuid>().ok());
+        let subject = crate::storage::access_projection::EhrSubject::stored(
+            subject_namespace.map(str::to_owned),
+            subject_id.map(str::to_owned),
+        );
         let time_created = match crate::storage::ehr_repo::insert_ehr(
             &mut tx,
             ehr_id,
@@ -314,7 +317,7 @@ impl FerroEhrService {
             .ok_or_else(|| ServiceError::not_found(Missing::Ehr, format!("EHR {ehr_id}")))?;
         // NOTE: our own design (#5589), a verdict judged on settings older than the row
         // this statement read is refused, as an absent EHR is.
-        if crate::access_eval::condition::stale(ehr_id, read.access_revision) {
+        if crate::access_eval::condition::stale(ehr_id, &read.access_revision) {
             return Err(ServiceError::not_found(
                 Missing::Ehr,
                 format!("EHR {ehr_id}"),

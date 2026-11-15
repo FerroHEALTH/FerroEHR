@@ -169,7 +169,7 @@ async fn a_reviewer_queries_across_ehrs() {
 #[tokio::test]
 async fn the_person_queries_their_own_redacted_entries() {
     let fx = logged().await;
-    let person = request(LogStanding::Person(fx.first));
+    let person = request(LogStanding::Person(vec![fx.first].into()));
     let own = rows(
         &fx.svc,
         "SELECT l, l/ehr_id/value, l/accessor/credential/subject, l/channel \
@@ -205,7 +205,7 @@ async fn the_person_queries_their_own_redacted_entries() {
             None,
             &AqlQueryRequest {
                 ehr_ids: vec![fx.second],
-                ..request(LogStanding::Person(fx.first))
+                ..request(LogStanding::Person(vec![fx.first].into()))
             },
         )
         .await

@@ -53,7 +53,7 @@ impl QueryScope {
     /// normalized request.
     pub(super) fn apply(&self, mut request: AqlQueryRequest) -> AqlQueryRequest {
         request.ehr_access.clone_from(&self.ehr_access);
-        request.log_standing = self.log_standing;
+        request.log_standing = self.log_standing.clone();
         request
     }
 }
@@ -548,6 +548,7 @@ mod tests {
                 closed: pair,
                 default: None,
                 cared: Vec::new().into(),
+                subject_namespace: "demographic".into(),
                 facts: CallerKeys {
                     now: jiff::Timestamp::UNIX_EPOCH,
                     parties: Vec::new().into(),

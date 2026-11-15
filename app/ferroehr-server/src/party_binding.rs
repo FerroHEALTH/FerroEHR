@@ -177,6 +177,7 @@ pub fn install(
     let service = service
         .with_import_policy(ImportPolicy::new(logins))
         .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
+        .with_party_namespace(&config.authz.party_binding.namespace)
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,
             config.audit.store.horizon(),

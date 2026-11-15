@@ -31,6 +31,7 @@ use crate::access_eval::scope::{
     CategoryMatch, DataMatch, Edge, EhrFact, Held, Polarity, Pred, Recorded,
 };
 use crate::db::iden::{AccessSettings, Ehr, Node, VersionRow, VoHead};
+use crate::storage::access_projection::EhrSubject;
 
 /// The alias of the root node an archetype probe reads.
 const ROOT: &str = "access_root";
@@ -63,7 +64,7 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
         } else if pair.admits_none() {
             None
         } else {
-            Some(admitted(pair, h, target.clone(), facts))
+            Some(admitted(condition, pair, h, target.clone(), facts))
         }
     };
     let caller = Facts {
@@ -106,7 +107,7 @@ pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Ex
         Some(Expr::cust_with_exprs(
             "CASE WHEN $1 THEN $2 ELSE $3 END",
             [
-                self::cared(target.clone()),
+                self::cared(condition, target.clone()),
                 pred(&cared, CARE, facts),
                 pred(&uncared, CARE, facts),
             ],
@@ -207,8 +208,15 @@ fn in_classes(ids: &[i64]) -> Expr {
     col(SETTINGS, AccessSettings::ClassId).eq(Expr::from(PgFunc::any(Expr::val(ids.to_vec()))))
 }
 
-/// The rows of an EHR of `pair` admitted, on head row `h` of EHR `target`.
-fn admitted(pair: &VerdictPair, h: &str, target: Expr, facts: Facts<'_>) -> Expr {
+/// The rows of an EHR of `pair` of `condition` admitted, on head row `h` of
+/// EHR `target`.
+fn admitted(
+    condition: &ConditionGroups,
+    pair: &VerdictPair,
+    h: &str,
+    target: Expr,
+    facts: Facts<'_>,
+) -> Expr {
     let (with, without) = (
         simplified(&pair.cared.admitted()),
         simplified(&pair.uncared.admitted()),
@@ -219,7 +227,7 @@ fn admitted(pair: &VerdictPair, h: &str, target: Expr, facts: Facts<'_>) -> Expr
     Expr::cust_with_exprs(
         "CASE WHEN $1 THEN $2 ELSE $3 END",
         [
-            cared(target),
+            cared(condition, target),
             pred(&with, h, facts),
             pred(&without, h, facts),
         ],
@@ -243,17 +251,16 @@ pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
     if pairs.into_iter().all(|pair| pair.cared == pair.uncared) {
         return None;
     }
-    // NOTE: our own design (#5667), a subject is a UUID, whose hyphenated lower-case
-    // form needs no JSON escape, so the object is written from it directly.
+    // NOTE: our own design (#5667), each key is escaped by serde_json as it is written, with
+    // no map to build: jsonb keeps one of a repeated key, so `?` answers as before.
     let keys: Vec<String> = condition
         .cared
         .iter()
-        .map(|subject| format!("\"{}\":true", subject.as_hyphenated()))
+        .map(|subject| format!("{}:true", serde_json::Value::String(census_key(subject))))
         .collect();
-    let subjects = format!("{{{}}}", keys.join(","));
     let mut row = Query::select();
     row.expr_as(
-        Expr::val(subjects).cast_as(Alias::new("jsonb")),
+        Expr::val(format!("{{{}}}", keys.join(","))).cast_as(Alias::new("jsonb")),
         Alias::new(SUBJECTS),
     );
     let mut table = CommonTableExpression::new();
@@ -263,10 +270,20 @@ pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
     Some(with)
 }
 
+/// The key of `subject` in the [`census`]: its namespace and its id joined by
+/// U+001F, which no `OBJECT_REF.namespace` holds (BASE `OBJECT_REF`), as a
+/// [`cared`] probe builds it from the `ehr` row.
+fn census_key(subject: &EhrSubject) -> String {
+    format!("{}\u{1f}{}", subject.namespace, subject.id)
+}
+
 /// Whether the subject of the EHR `target` is under the care of the caller:
 /// a `CASE` condition, since an EHR names one subject. The subjects are the
-/// [`census`] the statement binds once.
-fn cared(target: Expr) -> Expr {
+/// [`census`] the statement binds once, each keyed by [`census_key`]: its
+/// reference matches a cared one by namespace and id, the id of a reference
+/// in this CDR's own namespace by its container's UUID in any case, as
+/// [`crate::party_binding::grants::live::LiveGrants::person_of`] reads it.
+fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
     let mut subjects = Query::select();
     subjects
         .column(Alias::new(SUBJECTS))
@@ -277,10 +294,12 @@ fn cared(target: Expr) -> Expr {
         .from_as(Ehr::Table, Alias::new(CARE))
         .and_where(col(CARE, Ehr::Id).eq(target))
         .and_where(Expr::cust_with_exprs(
-            "$1 ? $2",
+            "$1 ? ($2 || chr(31) || CASE WHEN $2 = $4 THEN lower($3) ELSE $3 END)",
             [
                 Expr::SubQuery(None, Box::new(subjects.into())),
-                Expr::from(Func::lower(col(CARE, Ehr::SubjectId))),
+                col(CARE, Ehr::SubjectNamespace),
+                col(CARE, Ehr::SubjectId),
+                Expr::val(condition.subject_namespace.to_string()),
             ],
         ));
     Expr::exists(probe)
