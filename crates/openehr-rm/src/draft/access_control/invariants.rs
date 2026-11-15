@@ -319,6 +319,7 @@ fn actor_scope_rules(check: &mut Check, scope: &AccessActorScope) {
     check.hold(
         scope.party.is_some()
             || scope.role.is_some()
+            || scope.organisation_type.is_some()
             || scope.relationship.is_some()
             || scope.caller_kind.is_some(),
         "ACCESS_ACTOR_SCOPE",

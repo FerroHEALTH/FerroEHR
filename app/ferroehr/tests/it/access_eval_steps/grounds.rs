@@ -599,3 +599,55 @@ fn a_query_served_ehr_with_no_settings_names_the_grounds_of_a_direct_read() {
     assert_eq!(queried, direct);
     assert_eq!(of_kind(&queried, "subject of care").len(), 1, "{queried:?}");
 }
+
+/// A refusal by a controller rule names the rule as a legal obligation
+/// ground carrying its legal grounds, and the request answers them for the
+/// problem body; a refusal by another step names none (#5691).
+#[test]
+fn a_rule_refusal_carries_the_legal_grounds_of_the_rule() {
+    let ground = coded("urn:example:law", "exchange-1");
+    let rules = policy(&json!({ "rules": [
+        rule("deny", &json!({ "applies_to": [role_scope("NURSE")],
+                              "legal_grounds": [ground] }))] }));
+    let access = request(
+        performing(CallerKind::Professional, DR_B, "NURSE"),
+        read(None),
+        Some(rules),
+    );
+    let (outcome, decision) = decide_on(&access, Some(settings("open", &[], &[], &[])), &Item::Ehr);
+    assert_eq!(outcome, Outcome::Refused(Refusal::PolicyDenied));
+    let obligations = of_kind(&decision, "legal obligation");
+    assert_eq!(obligations.len(), 1, "{decision:?}");
+    let named: Vec<(&str, &str)> = obligations[0]
+        .legal_grounds
+        .iter()
+        .flatten()
+        .map(|g| {
+            (
+                g.defining_code.terminology_id.value.as_str(),
+                g.defining_code.code_string.as_str(),
+            )
+        })
+        .collect();
+    assert_eq!(named, [("urn:example:law", "exchange-1")]);
+    let answered = access.refusal_grounds(Some(EhrId(uuid(EHR))));
+    assert_eq!(answered.len(), 1);
+    assert_eq!(answered[0].defining_code.code_string, "exchange-1");
+
+    let other = request(professional(DR_B), read(None), None);
+    let deny = directive(
+        "consent",
+        "deny",
+        &json!({ "legal_grounds": [coded("urn:example:law", "x")] }),
+    );
+    let (_, decision) = decide_on(
+        &other,
+        Some(settings("open", std::slice::from_ref(&deny), &[], &[])),
+        &Item::Ehr,
+    );
+    assert!(
+        of_kind(&decision, "legal obligation").is_empty(),
+        "{decision:?}"
+    );
+    assert_eq!(other.refusal_grounds(Some(EhrId(uuid(EHR)))).len(), 0);
+}

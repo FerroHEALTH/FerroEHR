@@ -225,7 +225,11 @@ async fn every_page_and_total_matches_the_read_of_the_union_view() {
                     uncounted.documents, counted.documents,
                     "{what}: one page either way"
                 );
-                let documents = uncounted.documents;
+                let documents: Vec<serde_json::Value> = uncounted
+                    .documents
+                    .iter()
+                    .map(|document| serde_json::to_value(document).expect("a served document"))
+                    .collect();
                 let mut want = Vec::with_capacity(want_page.len());
                 for (chain, seq) in &want_page {
                     let chain = AuditChain::named(chain).expect("a chain");

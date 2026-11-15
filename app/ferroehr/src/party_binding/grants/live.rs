@@ -31,8 +31,9 @@ use uuid::Uuid;
 
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
+use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::party_binding::grants::caller::store::{Changed, FactRow};
-use crate::party_binding::grants::caller::{self, CallerFacts, CareTeam, FactKind, FactValue};
+use crate::party_binding::grants::caller::{self, CareTeam, FactKind, FactValue};
 use crate::party_binding::grants::capabilities::{
     Actor, Capabilities, Client, ClientState, Credentials, Grant, Provider,
 };
@@ -42,6 +43,7 @@ use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
 use crate::party_binding::grants::trust::{AgreementPosture, FederationTrust};
 use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
+use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 mod subjects;
 
@@ -438,11 +440,16 @@ impl LiveGrants {
                 ))
             })
             .collect();
-        let groups = client
+        let provider = client
             .as_ref()
             .and_then(|client| client.provider.as_ref())
-            .map_or_else(Vec::new, |provider| self.memberships(provider.party, now));
-        let facts = self.facts_of(performer, now).with_provider_groups(groups);
+            .map(|provider| provider.party);
+        let groups = provider.map_or_else(Vec::new, |party| self.memberships(party, now));
+        let types = provider.map_or_else(Vec::new, |party| self.organisation_types(party));
+        let facts = self
+            .facts_of(performer, now)
+            .with_provider_groups(groups)
+            .with_organisation_types(types);
         Capabilities::new(client, grants).with_facts(facts)
     }
 
@@ -461,6 +468,23 @@ impl LiveGrants {
             .filter_map(|row| match row.value {
                 FactValue::Team(group) => Some(group),
                 FactValue::Code(_) => None,
+            })
+            .collect()
+    }
+
+    /// The types the coded name of the `ORGANISATION` `organisation` names,
+    /// from the copy held.
+    #[must_use]
+    pub fn organisation_types(&self, organisation: Uuid) -> Vec<ForeignCode> {
+        let held = self.held_facts();
+        held.by_party
+            .get(&organisation)
+            .into_iter()
+            .flat_map(|rows| rows.iter())
+            .filter(|row| row.kind == FactKind::OrganisationType)
+            .filter_map(|row| match &row.value {
+                FactValue::Code(code) => Some(code.clone()),
+                FactValue::Team(_) => None,
             })
             .collect()
     }

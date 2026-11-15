@@ -329,13 +329,19 @@
         "role": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "role",
-          "documentation": "A role the caller performs: the caller matches when it is the `performer` of a `ROLE` in force (its `time_validity` holds the date of the access and its versioned object is not deleted) whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code.",
+          "documentation": "A role the caller performs: the caller matches when it is the `performer` of a `ROLE` in force (its `time_validity` holds the date of the access and its versioned object is not deleted) whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code, or when the verified credential of a caller from outside the system, admitted under an agreement, attests a professional role with the same terminology and code.",
           "type": "DV_CODED_TEXT"
         },
         "relationship": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "relationship",
           "documentation": "A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.",
+          "type": "DV_CODED_TEXT"
+        },
+        "organisation_type": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "organisation_type",
+          "documentation": "A type of organisation the caller acts for: the caller matches when it acts for an `ORGANISATION` whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code, or when the verified credential of a caller from outside the system, admitted under an agreement, attests a type of its healthcare facility with the same terminology and code.",
           "type": "DV_CODED_TEXT"
         },
         "caller_kind": {
@@ -346,7 +352,7 @@
         }
       },
       "invariants": {
-        "Not_empty": "party /= Void or role /= Void or relationship /= Void or caller_kind /= Void",
+        "Not_empty": "party /= Void or role /= Void or organisation_type /= Void or relationship /= Void or caller_kind /= Void",
         "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
         "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
       }

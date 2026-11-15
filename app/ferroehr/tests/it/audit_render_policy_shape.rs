@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Audit migration 0036 (#5660): a store that holds a render policy of the
+//! Audit migration 0037 (#5660): a store that holds a render policy of the
 //! shape before it, which states the removed `[audit.store]` retention
 //! horizon, is refused with the digests it found and the remedy; an empty
 //! store passes. No openEHR spec governs audit storage: our own design.
@@ -9,7 +9,7 @@
 use sqlx::PgPool;
 
 /// The migration under test.
-const MIGRATION: &str = include_str!("../../migrations/audit/0036_render_policy_log_retention.sql");
+const MIGRATION: &str = include_str!("../../migrations/audit/0037_render_policy_log_retention.sql");
 
 /// Runs the migration once more over `pool`, as the migrator runs it.
 async fn migrate(pool: &PgPool) -> Result<(), sqlx::Error> {

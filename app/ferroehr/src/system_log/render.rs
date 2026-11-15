@@ -193,9 +193,9 @@ pub(crate) struct StoredRecord {
 pub(crate) fn render(
     stored: StoredRecord,
     policy: &CompiledPolicy,
-) -> Result<serde_json::Value, AuditError> {
+) -> Result<ihe_atna::balp::AuditEventResource, AuditError> {
     let (event, subject) = classified(stored, &policy.categories)?;
-    crate::system_log::fhir::to_fhir(&event, &policy.context, subject.as_deref())
+    crate::system_log::fhir::to_resource(&event, &policy.context, subject.as_deref())
 }
 
 /// The event of `stored` with its classification computed again through

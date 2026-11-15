@@ -256,3 +256,14 @@ fn storage_message(e: &crate::storage::error::StorageError) -> String {
         S::Database(_) | S::Acquire(_) => INTERNAL_MESSAGE.to_owned(),
     }
 }
+
+/// A refusal of the access evaluator: its `refused-*` code and the legal
+/// grounds of the controller rules that decided it, empty for any other
+/// step.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Refused {
+    /// The `refused-*` code.
+    pub code: openehr_rm::draft::access_control::terminology::Refusal,
+    /// The legal grounds the deciding rules name.
+    pub legal_grounds: Vec<openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText>,
+}

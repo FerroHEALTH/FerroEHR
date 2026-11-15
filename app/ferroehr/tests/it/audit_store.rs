@@ -54,6 +54,9 @@ async fn served(store: &AuditStore) -> Vec<serde_json::Value> {
         .documents;
     documents.reverse();
     documents
+        .iter()
+        .map(|document| serde_json::to_value(document).expect("a served document"))
+        .collect()
 }
 
 fn record(event: &AuditEvent, subject: Option<&str>) -> AuditRecord {
@@ -1195,7 +1198,14 @@ async fn every_search_parameter_matches_what_the_document_says() {
             .await
             .expect("search");
         let (total, found) = (page.total.expect("a counted search"), page.documents);
-        let mut found: Vec<String> = found.iter().map(ToString::to_string).collect();
+        let mut found: Vec<String> = found
+            .iter()
+            .map(|document| {
+                serde_json::to_value(document)
+                    .expect("a served document")
+                    .to_string()
+            })
+            .collect();
         expected.sort();
         found.sort();
         assert_eq!(
@@ -1268,7 +1278,14 @@ async fn finds_what_the_documents_say(
         .await
         .expect("search");
     let (total, found) = (page.total.expect("a counted search"), page.documents);
-    let mut found: Vec<String> = found.iter().map(ToString::to_string).collect();
+    let mut found: Vec<String> = found
+        .iter()
+        .map(|document| {
+            serde_json::to_value(document)
+                .expect("a served document")
+                .to_string()
+        })
+        .collect();
     expected.sort();
     found.sort();
     assert_eq!(

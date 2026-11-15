@@ -31,6 +31,7 @@ use openehr_rm::draft::access_control::terminology::log::Authorisation;
 use openehr_rm::draft::access_control::terminology::{DirectiveKind, Refusal, Term as _};
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
 use crate::access_eval::condition::{Judgement, Noted, RequestAccess};
@@ -218,6 +219,18 @@ impl RequestAccess {
             .or(noted.as_ref().and_then(|(ehr_id, _)| *ehr_id))
             .and_then(|ehr_id| self.judgement(ehr_id));
         let mut grounds = self.role_grounds();
+        if let Some((_, noted)) = &noted
+            && Step::of(noted.refusal) == Step::ControllerRule
+        {
+            // NOTE: our own design (#5691), a refusing rule is named as the legal obligation the
+            // controller's rule states, so its legal grounds reach the record.
+            grounds.extend(
+                noted
+                    .by
+                    .iter()
+                    .filter_map(|at| self.rule_ground(*at, Authorisation::LegalObligation)),
+            );
+        }
         let refused = noted.map(|(_, noted)| self.refused(&noted, judged.as_ref()));
         if let Some(judged) = &judged {
             let covering = ehr_id.and_then(|ehr_id| self.lifted_covers().of(ehr_id));
@@ -228,6 +241,26 @@ impl RequestAccess {
             policies: policies_of(&grounds),
             grounds,
         }
+    }
+
+    /// The legal grounds of the controller rules that refused `ehr_id`; with
+    /// no EHR, those of the request's first refusal. Empty for a refusal by
+    /// any other step and for an admitted access.
+    #[must_use]
+    pub fn refusal_grounds(&self, ehr_id: Option<EhrId>) -> Vec<DvCodedText> {
+        let Some((_, noted)) = self.noted(ehr_id) else {
+            return Vec::new();
+        };
+        if Step::of(noted.refusal) != Step::ControllerRule {
+            return Vec::new();
+        }
+        noted
+            .by
+            .iter()
+            .filter_map(|at| self.rules().get(*at))
+            .flat_map(|rule| rule.legal_grounds.as_deref().unwrap_or_default())
+            .cloned()
+            .collect()
     }
 
     /// The capabilities the caller held and the roles it performs.

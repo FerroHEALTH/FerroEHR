@@ -38,6 +38,9 @@ impl ::serde::Serialize
         if self.relationship.is_some() {
             __n += 1;
         }
+        if self.organisation_type.is_some() {
+            __n += 1;
+        }
         if self.caller_kind.is_some() {
             __n += 1;
         }
@@ -53,6 +56,9 @@ impl ::serde::Serialize
         if let Some(__v) = &self.relationship {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "relationship", __v)?;
         }
+        if let Some(__v) = &self.organisation_type {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "organisation_type", __v)?;
+        }
         if let Some(__v) = &self.caller_kind {
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "caller_kind", __v)?;
         }
@@ -66,13 +72,20 @@ impl<'de> ::serde::Deserialize<'de>
     fn deserialize<__D: ::serde::Deserializer<'de>>(
         __deserializer: __D,
     ) -> ::core::result::Result<Self, __D::Error> {
-        const __FIELDS: &[&str] = &["caller_kind", "party", "relationship", "role"];
+        const __FIELDS: &[&str] = &[
+            "caller_kind",
+            "organisation_type",
+            "party",
+            "relationship",
+            "role",
+        ];
         enum __Field {
             __Type,
             __F0,
             __F1,
             __F2,
             __F3,
+            __F4,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -96,7 +109,8 @@ impl<'de> ::serde::Deserialize<'de>
                             "party" => ::core::result::Result::Ok(__Field::__F0),
                             "role" => ::core::result::Result::Ok(__Field::__F1),
                             "relationship" => ::core::result::Result::Ok(__Field::__F2),
-                            "caller_kind" => ::core::result::Result::Ok(__Field::__F3),
+                            "organisation_type" => ::core::result::Result::Ok(__Field::__F3),
+                            "caller_kind" => ::core::result::Result::Ok(__Field::__F4),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -126,6 +140,7 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s3: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s4: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -167,10 +182,18 @@ impl<'de> ::serde::Deserialize<'de>
                         __Field::__F3 => {
                             if __s3.is_some() {
                                 return ::core::result::Result::Err(
-                                    ::serde::de::Error::duplicate_field("caller_kind"),
+                                    ::serde::de::Error::duplicate_field("organisation_type"),
                                 );
                             }
                             __s3 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
+                        __Field::__F4 => {
+                            if __s4.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("caller_kind"),
+                                );
+                            }
+                            __s4 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
                     }
                 }
@@ -178,7 +201,8 @@ impl<'de> ::serde::Deserialize<'de>
 party: __s0.flatten(),
 role: __s1.flatten(),
 relationship: __s2.flatten(),
-caller_kind: __s3.flatten(),
+organisation_type: __s3.flatten(),
+caller_kind: __s4.flatten(),
 })
             }
         }

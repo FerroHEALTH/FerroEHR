@@ -222,3 +222,154 @@ fn step_4_the_refusal_names_the_rule() {
     assert_eq!(deciding.then, POLICY_DENIED);
     assert_eq!(deciding.by, vec![1], "the position in the policy's rules");
 }
+
+/// The organisation types of the tests' synthetic terminology.
+const ORGANISATION_TYPES: &str = "urn:example:organisation-types";
+
+/// "Only an organisation of a care-provider type reaches the records through
+/// the exchange": a deny rule over every access service with a permit
+/// exception per admitted organisation type (#5691).
+fn care_providers_only() -> Value {
+    rule(
+        "deny",
+        &json!({ "applies_to": [{ "caller_kind": term("access_service") }],
+                 "legal_grounds": [coded("urn:example:law", "exchange-1")],
+                 "exceptions": [rule("permit", &json!({ "applies_to": [
+                     { "organisation_type": coded(ORGANISATION_TYPES, "HOSPITAL") },
+                     { "organisation_type": coded(ORGANISATION_TYPES, "GP") }] }))] }),
+    )
+}
+
+/// An access service of an organisation of `types`, performing `roles`.
+fn exchange(roles: &[ForeignCode], types: &[ForeignCode]) -> Caller {
+    let mut who = caller(CallerKind::AccessService, DR_B);
+    who.facts = CallerFacts::default().with_attested(roles.to_vec(), types.to_vec());
+    who
+}
+
+/// A deny rule refuses an access service whose organisation is of no
+/// admitted type, or of none, and admits one of an admitted type; a type of
+/// another terminology is no admitted type.
+#[test]
+fn step_4_a_rule_names_callers_by_the_type_of_their_organisation() {
+    let case = ruled(&[care_providers_only()], None);
+    for (name, types, expected) in [
+        (
+            "a hospital",
+            vec![code(ORGANISATION_TYPES, "HOSPITAL")],
+            Outcome::Admit,
+        ),
+        (
+            "a general practice",
+            vec![code(ORGANISATION_TYPES, "GP")],
+            Outcome::Admit,
+        ),
+        (
+            "an insurer",
+            vec![code(ORGANISATION_TYPES, "INSURER")],
+            POLICY_DENIED,
+        ),
+        ("no organisation type", Vec::new(), POLICY_DENIED),
+        (
+            "a hospital of another terminology",
+            vec![code("local", "HOSPITAL")],
+            POLICY_DENIED,
+        ),
+    ] {
+        assert_outcome(
+            &case.verdict(&exchange(&[], &types), read(None)),
+            &Item::Ehr,
+            expected,
+            name,
+        );
+    }
+    assert_outcome(
+        &case.verdict(&professional(NURSE), read(None)),
+        &Item::Ehr,
+        Outcome::Admit,
+        "a professional is no access service",
+    );
+    let firm = case.verdict(
+        &exchange(&[], &[code(ORGANISATION_TYPES, "INSURER")]),
+        break_glass(read(Some("ETREAT"))),
+    );
+    assert_outcome(
+        &firm,
+        &Item::Ehr,
+        POLICY_DENIED,
+        "an emergency lifts no firm rule",
+    );
+}
+
+/// A local caller's organisation type is the coded name of the provider it
+/// acts for, read as an attested one is.
+#[test]
+fn step_4_an_organisation_type_of_the_cdr_is_read_as_an_attested_one() {
+    let case = ruled(&[care_providers_only()], None);
+    let mut local = caller(CallerKind::AccessService, DR_B);
+    local.facts =
+        CallerFacts::default().with_organisation_types(vec![code(ORGANISATION_TYPES, "GP")]);
+    assert_outcome(
+        &case.verdict(&local, read(None)),
+        &Item::Ehr,
+        Outcome::Admit,
+        "the provider's type",
+    );
+}
+
+/// A deny rule by the role a credential attests, and one by a purpose,
+/// refuse what they name and nothing else; a request declaring no purpose
+/// cannot show it is not the excluded one, so the purpose rule covers it
+/// (#5691).
+#[test]
+fn step_4_a_rule_refuses_an_attested_role_and_a_declared_purpose() {
+    let excluded_role = rule(
+        "deny",
+        &json!({ "applies_to": [{ "caller_kind": term("access_service"),
+                                  "role": coded(ROLES, "OCCUPATIONAL") }] }),
+    );
+    let excluded_purpose = rule(
+        "deny",
+        &json!({ "applies_to": [{ "caller_kind": term("access_service") }],
+                 "purposes": [coded(PURPOSE, "EXAMINATION")] }),
+    );
+    let case = ruled(&[excluded_role, excluded_purpose], None);
+    let hospital = [code(ORGANISATION_TYPES, "HOSPITAL")];
+    for (name, role, purpose, expected) in [
+        (
+            "an attested excluded role",
+            "OCCUPATIONAL",
+            Some("TREAT"),
+            POLICY_DENIED,
+        ),
+        (
+            "another attested role",
+            "PHYSICIAN",
+            Some("TREAT"),
+            Outcome::Admit,
+        ),
+        (
+            "an excluded purpose",
+            "PHYSICIAN",
+            Some("EXAMINATION"),
+            POLICY_DENIED,
+        ),
+        ("no purpose", "PHYSICIAN", None, POLICY_DENIED),
+    ] {
+        assert_outcome(
+            &case.verdict(&exchange(&[code(ROLES, role)], &hospital), read(purpose)),
+            &Item::Ehr,
+            expected,
+            name,
+        );
+    }
+    assert_outcome(
+        &case.verdict(
+            &exchange(&[code("local", "OCCUPATIONAL")], &hospital),
+            read(Some("TREAT")),
+        ),
+        &Item::Ehr,
+        Outcome::Admit,
+        "the role in another terminology",
+    );
+}

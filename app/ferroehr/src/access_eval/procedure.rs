@@ -74,7 +74,7 @@ use openehr_rm::draft::access_control::terminology::{
 use crate::access_eval::directive::{Permit, Reader, kind_and_effect, names_sensitivity};
 use crate::access_eval::scope::{Item, Polarity, Pred, Scopes};
 use crate::ids::EhrId;
-use crate::party_binding::grants::caller::CallerFacts;
+use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::service::ehr::access_rule::SettingsCaller;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 

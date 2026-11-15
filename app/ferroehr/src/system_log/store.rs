@@ -21,8 +21,8 @@
 
 #![expect(
     clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): the store carries an \
-              already-rendered FHIR document, never a typed resource"
+    reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): the store hands the \
+              FHIR Feed an already-rendered FHIR document; the ITI-81 page is typed (#5716)"
 )]
 
 #[cfg(feature = "fhir")]
@@ -56,6 +56,8 @@ use crate::system_log::categories::{ClassifiedContent, MapDigest};
 #[cfg(feature = "fhir")]
 use crate::system_log::event::{AccessDomain, EventActionCode};
 use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
+#[cfg(feature = "fhir")]
+use crate::system_log::fhir::value_of;
 use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
@@ -674,15 +676,17 @@ impl AuditStore {
         Ok(compiled)
     }
 
-    /// The FHIR R4 `AuditEvent` of a stored row, rendered under the policy it
-    /// names.
+    /// The typed FHIR R4 `AuditEvent` of a stored row, rendered under the
+    /// policy it names.
     ///
     /// # Errors
     /// [`AuditError::Unreadable`] and [`AuditError::UnreadableJson`] when the
-    /// row or its policy does not read, [`AuditError::Render`] when the
-    /// document cannot be written.
+    /// row or its policy does not read.
     #[cfg(feature = "fhir")]
-    async fn render(&self, row: &PgRow) -> Result<serde_json::Value, AuditError> {
+    async fn resource(
+        &self,
+        row: &PgRow,
+    ) -> Result<ihe_atna::balp::AuditEventResource, AuditError> {
         let (policy, stored) = self.record_of(row).await?;
         crate::system_log::render::render(stored, &policy)
     }
@@ -701,7 +705,7 @@ impl AuditStore {
         chain_seq: i64,
     ) -> Result<Option<serde_json::Value>, AuditError> {
         match self.row_at(chain, chain_seq).await? {
-            Some(row) => self.render(&row).await.map(Some),
+            Some(row) => value_of(&self.resource(&row).await?).map(Some),
             None => Ok(None),
         }
     }
@@ -733,7 +737,7 @@ impl AuditStore {
         let oldest = match row {
             Some(row) => {
                 let owed = row.try_get::<i64, _>("owed")?;
-                Some((owed, self.render(&row).await))
+                Some((owed, self.resource(&row).await.and_then(|r| value_of(&r))))
             }
             None => None,
         };
@@ -851,7 +855,7 @@ impl AuditStore {
         rows.truncate(search_page::page_size(filter));
         let mut documents = Vec::with_capacity(rows.len());
         for row in &rows {
-            documents.push(self.render(row).await?);
+            documents.push(self.resource(row).await?.into_resource());
         }
         Ok(AuditPage {
             total,
@@ -876,17 +880,19 @@ pub(super) fn newest_first(condition: sea_query::Cond) -> sea_query::SelectState
 }
 
 /// One page of the ITI-81 retrieval.
+#[cfg(feature = "fhir")]
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct AuditPage {
     /// Every match across all pages, counted only when the filter asks for
     /// it (FHIR R4 Search §3.1.1.5.2, `_total`; `Bundle.total` is optional).
     pub total: Option<i64>,
-    /// The page's documents, newest first.
-    pub documents: Vec<serde_json::Value>,
+    /// The page's documents, newest first, as `ihe-atna` wrote them.
+    pub documents: Vec<fhir_types::r4::audit_event::AuditEvent>,
     /// Whether a match follows the page.
     pub more: bool,
 }
 
+#[cfg(feature = "fhir")]
 impl AuditPage {
     /// The page of a filter that matches nothing.
     #[must_use]

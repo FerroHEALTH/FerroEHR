@@ -60,6 +60,11 @@ proptest.workspace = true
 # The test oracle the RFC 8785 canonical form is held byte-equal to.
 serde_json_canonicalizer.workspace = true
 
+# The RFC 8785 writer now and before its fast paths (#5682); not packaged.
+[[bench]]
+name = "canonical_form"
+harness = false
+
 [lints]
 workspace = true
 

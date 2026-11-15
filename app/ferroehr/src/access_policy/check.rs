@@ -143,7 +143,7 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
     Ok(policy)
 }
 
-/// Reads every role, purpose, sensitivity, category and legal ground `rule`
+/// Reads every role, organisation type, purpose, sensitivity, category and legal ground `rule`
 /// names, none of which the draft access terminology holds.
 ///
 /// # Errors
@@ -152,6 +152,9 @@ fn rule_codes(rule: &AccessDirective) -> Result<(), NotForeign> {
     for scope in rule.applies_to.as_deref().unwrap_or_default() {
         if let Some(role) = &scope.role {
             ForeignCode::read(ForeignKind::Role, role)?;
+        }
+        if let Some(kind) = &scope.organisation_type {
+            ForeignCode::read(ForeignKind::OrganisationType, kind)?;
         }
     }
     for purpose in rule.purposes.as_deref().unwrap_or_default() {
