@@ -224,7 +224,7 @@ async fn a_tampered_entry_fails_verification() {
         "audit.access_log_record",
         &[&format!(
             "UPDATE audit.access_log_record SET content = replace(content, \
-             '\"is_emergency\":false', '\"is_emergency\":true') WHERE chain_seq = {target}"
+             '\"was_delivered\":true', '\"was_delivered\":false') WHERE chain_seq = {target}"
         )],
     )
     .await;

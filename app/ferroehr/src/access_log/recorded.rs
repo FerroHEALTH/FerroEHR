@@ -8,13 +8,22 @@
 //! into the entry's `other_details` ([`crate::access_log::details`]), and
 //! `stored` reads the entry back as the record the renderings take: the
 //! core for what it holds (the time, the request, the operation, the query,
-//! the authorisations, the decision) and the details for the rest. Every
+//! the authorisations, the decision) and the details for the rest. A detail
+//! the core already states as the record holds it, such as the principal the
+//! credential names or the count the outcome delivered, is not written, and
+//! `stored` reads it from the core (#5703). Every
 //! projection reads the entry through `stored`, so the BALP `AuditEvent`,
 //! the DICOM message and the EHDS access record are written from what the
 //! log keeps and from nothing else. No openEHR spec governs the audit trail:
 //! our own design.
 
+use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
+use openehr_rm::draft::access_control::terminology::Term as _;
+use openehr_rm::draft::access_control::terminology::log::{Action, Outcome};
+use openehr_rm::draft::access_log::access_log::access_credential::AccessCredential;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
+use openehr_rm::v1_2::common::generic::party_identified::PartyIdentified;
+use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure;
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 
@@ -23,7 +32,7 @@ use crate::system_log::binding::BindingRecord;
 use crate::system_log::categories::{ClassifiedContent, MapDigest};
 use crate::system_log::event::{
     AccessDecision, AccessDomain, ActingMode, AuditEvent, EntryScope, EventActionCode,
-    EventOutcome, EventType, QueryNaming,
+    EventOutcome, EventType, QueryNaming, TokenAttributes,
 };
 use crate::system_log::render::StoredRecord;
 use crate::system_log::store::{access_domain, object_class, resource_class};
@@ -33,6 +42,10 @@ use ferrohealth_smart::assurance::AssuranceLevel;
 const LOGIN: &str = "110122";
 /// The `EventTypeCode` of a logout (DICOM PS3.15 A.5.1, DCM 110123).
 const LOGOUT: &str = "110123";
+/// The `DV_IDENTIFIER.type` of the login the accessing party is named by.
+const LOGIN_TYPE: &str = "login";
+/// The login an entry names when the record named none.
+const UNKNOWN_LOGIN: &str = "UNKNOWN";
 
 /// Why a stored entry does not read back as an audit record.
 #[derive(Debug, thiserror::Error)]
@@ -52,16 +65,26 @@ pub enum RecordedError {
     NoDetails,
 }
 
-/// The details tree of the access `event` records, whose EHR belongs to the
-/// subject of care `subject` when the drain found one.
+/// The details tree of the access `event` records in the entry whose core is
+/// `core`, its EHR belonging to the subject of care `subject` when the drain
+/// found one.
 ///
 /// A fact the core states as it is, the request id, the client address, the
-/// operation, the query and the authorisations, is not repeated; every other
-/// fact the audit record holds is.
+/// operation, the query and the authorisations, is not repeated, nor is a
+/// fact `Core` reads from the core as the record holds it; every other fact
+/// the audit record holds is.
 #[must_use]
-pub fn details(event: &AuditEvent, subject: Option<&str>) -> Option<ItemStructure> {
+pub fn details(
+    event: &AuditEvent,
+    subject: Option<&str>,
+    core: &AccessLogEntry,
+) -> Option<ItemStructure> {
+    let core = Core(core);
+    let token_purposes = event.token.as_ref().map_or(0, |token| token.purposes.len());
     let mut tree = DetailsWriter::default();
-    tree.text(Detail::EventAction, Some(event.action.as_code()));
+    if core.action() != Some(event.action) {
+        tree.text(Detail::EventAction, Some(event.action.as_code()));
+    }
     tree.text(
         Detail::EventType,
         match event.event_type {
@@ -71,19 +94,19 @@ pub fn details(event: &AuditEvent, subject: Option<&str>) -> Option<ItemStructur
         },
     );
     tree.text(Detail::ResourceClass, Some(resource_class(event.object)));
-    tree.count(
-        Detail::OutcomeIndicator,
-        Some(outcome_indicator(event.outcome)),
-    );
-    tree.text(Detail::Principal, Some(&event.user_id));
-    tree.text(Detail::Issuer, event.issuer.as_deref());
-    tree.text(Detail::ClientId, event.client_id.as_deref());
-    tree.text(Detail::TokenId, event.token_id.as_deref());
-    tree.texts(Detail::Role, event.roles.iter().map(String::as_str));
+    if core.outcome() != Some(event.outcome) {
+        tree.count(
+            Detail::OutcomeIndicator,
+            Some(outcome_indicator(event.outcome)),
+        );
+    }
+    credential_details(&mut tree, event, core);
     if event.domain != AccessDomain::of(event.object) {
         tree.text(Detail::Domain, Some(event.domain.as_str()));
     }
-    tree.text(Detail::EhrId, event.ehr_id.as_deref());
+    if core.ehr_id() != event.ehr_id.as_deref() {
+        tree.text(Detail::EhrId, event.ehr_id.as_deref());
+    }
     if let Some(subject) = subject {
         tree.identifier(
             Detail::Subject,
@@ -101,9 +124,13 @@ pub fn details(event: &AuditEvent, subject: Option<&str>) -> Option<ItemStructur
     if event.entry != EntryScope::LogRead {
         tree.text(Detail::ObjectId, event.object_id.as_deref());
     }
-    tree.text(Detail::Purpose, event.purpose.as_deref());
+    if core.purpose(token_purposes) != event.purpose {
+        tree.text(Detail::Purpose, event.purpose.as_deref());
+    }
     tree.text(Detail::LegalBasis, event.legal_basis.as_deref());
-    tree.count(Detail::ResultCount, event.result_count);
+    if core.result_count() != event.result_count {
+        tree.count(Detail::ResultCount, event.result_count);
+    }
     tree.texts(Detail::Origin, event.origins.iter().map(String::as_str));
     tree.count(Detail::OriginCount, event.origin_count);
     let digest = event.category_map_digest.map(|digest| digest.to_string());
@@ -116,10 +143,12 @@ pub fn details(event: &AuditEvent, subject: Option<&str>) -> Option<ItemStructur
             .and_then(|category| serde_json::to_string(&category.content).ok()),
     );
     tree.text(Detail::ActingMode, event.actor.mode.map(ActingMode::as_str));
-    tree.text(
-        Detail::AssuranceLevel,
-        event.actor.assurance_level.map(AssuranceLevel::as_str),
-    );
+    if core.assurance_level() != event.actor.assurance_level {
+        tree.text(
+            Detail::AssuranceLevel,
+            event.actor.assurance_level.map(AssuranceLevel::as_str),
+        );
+    }
     tree.text(
         Detail::AssuranceValue,
         event.actor.assurance_value.as_deref(),
@@ -152,6 +181,27 @@ pub fn details(event: &AuditEvent, subject: Option<&str>) -> Option<ItemStructur
     tree.finish()
 }
 
+/// Writes into `tree` the facts of the caller's credential and roles that
+/// `core` does not state as `event` holds them.
+fn credential_details(tree: &mut DetailsWriter, event: &AuditEvent, core: Core<'_>) {
+    let token_roles = event.token.as_ref().map_or(0, |token| token.roles.len());
+    if core.principal().as_deref() != Some(event.user_id.as_str()) {
+        tree.text(Detail::Principal, Some(&event.user_id));
+    }
+    if core.issuer() != event.issuer.as_deref() {
+        tree.text(Detail::Issuer, event.issuer.as_deref());
+    }
+    if core.client_id() != event.client_id.as_deref() {
+        tree.text(Detail::ClientId, event.client_id.as_deref());
+    }
+    if core.token_id() != event.token_id.as_deref() {
+        tree.text(Detail::TokenId, event.token_id.as_deref());
+    }
+    if core.roles(token_roles) != event.roles {
+        tree.texts(Detail::Role, event.roles.iter().map(String::as_str));
+    }
+}
+
 /// The DICOM `EventOutcomeIndicator` of `outcome` (PS3.15 A.5.1).
 const fn outcome_indicator(outcome: EventOutcome) -> u64 {
     match outcome {
@@ -172,7 +222,11 @@ pub(crate) fn stored(
     entry: &AccessLogEntry,
     chain_seq: i64,
 ) -> Result<StoredRecord, RecordedError> {
-    let details = Details::of(entry.other_details.as_ref())?;
+    let Some(tree) = entry.other_details.as_ref() else {
+        return Err(RecordedError::NoDetails);
+    };
+    let details = Details::of(Some(tree))?;
+    let core = Core(entry);
     let text = |detail| details.text(detail);
     let action = match text(Detail::EventAction)?.as_deref() {
         Some("C") => EventActionCode::Create,
@@ -181,13 +235,18 @@ pub(crate) fn stored(
         Some("D") => EventActionCode::Delete,
         Some("E") => EventActionCode::Execute,
         Some(_) => return Err(RecordedError::Value(Detail::EventAction)),
-        None => return Err(RecordedError::NoDetails),
+        None => core
+            .action()
+            .ok_or(RecordedError::Value(Detail::EventAction))?,
     };
     let outcome = match details.count(Detail::OutcomeIndicator)? {
         Some(0) => EventOutcome::Success,
         Some(4) => EventOutcome::MinorFailure,
         Some(8) => EventOutcome::SeriousFailure,
-        _ => return Err(RecordedError::Value(Detail::OutcomeIndicator)),
+        Some(_) => return Err(RecordedError::Value(Detail::OutcomeIndicator)),
+        None => core
+            .outcome()
+            .ok_or(RecordedError::Value(Detail::OutcomeIndicator))?,
     };
     let object = text(Detail::ResourceClass)?
         .as_deref()
@@ -216,7 +275,7 @@ pub(crate) fn stored(
         .transpose()
         .map_err(|_unreadable| RecordedError::Value(Detail::CategoryMapDigest))?;
     event.category_map_digest = map_digest;
-    accessor_and_access(&mut event, &details)?;
+    accessor_and_access(&mut event, &details, core)?;
     event.request_id = entry
         .channel
         .as_ref()
@@ -265,33 +324,52 @@ pub(crate) fn stored(
 /// # Errors
 /// [`RecordedError::Details`] when a detail does not read, and
 /// [`RecordedError::Value`] for a value this build does not write.
-fn accessor_and_access(event: &mut AuditEvent, details: &Details<'_>) -> Result<(), RecordedError> {
+fn accessor_and_access(
+    event: &mut AuditEvent,
+    details: &Details<'_>,
+    core: Core<'_>,
+) -> Result<(), RecordedError> {
     let text = |detail| details.text(detail);
-    event.user_id = text(Detail::Principal)?.unwrap_or_default();
-    event.issuer = text(Detail::Issuer)?;
-    event.client_id = text(Detail::ClientId)?;
-    event.token_id = text(Detail::TokenId)?;
-    event.roles = details.texts(Detail::Role)?;
+    event.token = details.json::<TokenAttributes>(Detail::TokenAttributes)?;
+    let token_roles = event.token.as_ref().map_or(0, |token| token.roles.len());
+    let token_purposes = event.token.as_ref().map_or(0, |token| token.purposes.len());
+    event.user_id = match text(Detail::Principal)? {
+        Some(principal) => principal,
+        None => core.principal().unwrap_or_default(),
+    };
+    event.issuer = text(Detail::Issuer)?.or_else(|| core.issuer().map(str::to_owned));
+    event.client_id = text(Detail::ClientId)?.or_else(|| core.client_id().map(str::to_owned));
+    event.token_id = text(Detail::TokenId)?.or_else(|| core.token_id().map(str::to_owned));
+    let roles = details.texts(Detail::Role)?;
+    event.roles = if roles.is_empty() {
+        core.roles(token_roles)
+    } else {
+        roles
+    };
     if let Some(domain) = text(Detail::Domain)? {
         event.domain = access_domain(Some(&domain)).ok_or(RecordedError::Value(Detail::Domain))?;
     }
-    event.ehr_id = text(Detail::EhrId)?;
+    event.ehr_id = text(Detail::EhrId)?.or_else(|| core.ehr_id().map(str::to_owned));
     event.subject_lookup_failed = details.flag(Detail::SubjectLookupFailed)?;
     event.object_id = text(Detail::ObjectId)?;
-    event.purpose = text(Detail::Purpose)?;
+    event.purpose = text(Detail::Purpose)?.or_else(|| core.purpose(token_purposes));
     event.legal_basis = text(Detail::LegalBasis)?;
-    event.result_count = details.count(Detail::ResultCount)?;
+    event.result_count = details
+        .count(Detail::ResultCount)?
+        .or_else(|| core.result_count());
     event.origins = details.texts(Detail::Origin)?;
     event.origin_count = details.count(Detail::OriginCount)?;
     event.actor.mode = text(Detail::ActingMode)?
         .map(|mode| acting_mode(&mode).ok_or(RecordedError::Value(Detail::ActingMode)))
         .transpose()?;
-    event.actor.assurance_level = text(Detail::AssuranceLevel)?
-        .map(|level| assurance_level(&level).ok_or(RecordedError::Value(Detail::AssuranceLevel)))
-        .transpose()?;
+    event.actor.assurance_level = match text(Detail::AssuranceLevel)? {
+        Some(level) => {
+            Some(assurance_level(&level).ok_or(RecordedError::Value(Detail::AssuranceLevel))?)
+        }
+        None => core.assurance_level(),
+    };
     event.actor.assurance_value = text(Detail::AssuranceValue)?;
     event.actor.professional_id = text(Detail::ProfessionalId)?;
-    event.token = details.json(Detail::TokenAttributes)?;
     event.binding = details.json::<BindingRecord>(Detail::Binding)?;
     event.summary = details.json(Detail::Summary)?;
     Ok(())
@@ -328,5 +406,122 @@ fn query_language(stored: &str) -> &'static str {
     match stored {
         crate::access_log::entry::LOG_SEARCH => crate::access_log::entry::LOG_SEARCH,
         _ => "AQL",
+    }
+}
+
+/// The facts of an audit record the core of its entry states, read the same
+/// way when the entry is written, to leave the detail out, and when it is
+/// read back, to fill it in (#5703). No openEHR spec governs this: our own
+/// design.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Core<'a>(pub(crate) &'a AccessLogEntry);
+
+impl<'a> Core<'a> {
+    /// The DICOM action the `access action` stands for when it names one
+    /// alone: a create or an import is `C`, an update `U`, a delete `D`, a
+    /// read, a query or an export `R`.
+    fn action(self) -> Option<EventActionCode> {
+        let action = &self.0.action;
+        if Action::Create.is(action) || Action::Import.is(action) {
+            Some(EventActionCode::Create)
+        } else if Action::Update.is(action) {
+            Some(EventActionCode::Update)
+        } else if Action::Delete.is(action) {
+            Some(EventActionCode::Delete)
+        } else if Action::Read.is(action) || Action::Query.is(action) || Action::Export.is(action) {
+            Some(EventActionCode::Read)
+        } else {
+            None
+        }
+    }
+
+    /// The outcome a granted access had; any other result names none alone.
+    fn outcome(self) -> Option<EventOutcome> {
+        Outcome::Granted
+            .is(&self.0.outcome.result)
+            .then_some(EventOutcome::Success)
+    }
+
+    /// The credential the accessor presented.
+    fn credential(self) -> Option<&'a AccessCredential> {
+        self.0.accessor.credential.as_ref()
+    }
+
+    /// The login the credential or the accessing party names.
+    fn principal(self) -> Option<String> {
+        if let Some(credential) = self.credential() {
+            return Some(credential.subject.clone());
+        }
+        let PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)) =
+            &self.0.accessor.party
+        else {
+            return None;
+        };
+        party
+            .identifiers
+            .iter()
+            .flat_map(|identifiers| identifiers.iter())
+            .find(|identifier| identifier.r#type.as_deref() == Some(LOGIN_TYPE))
+            .map(|identifier| identifier.id.clone())
+            .filter(|login| login != UNKNOWN_LOGIN)
+    }
+
+    /// The issuer the credential names.
+    fn issuer(self) -> Option<&'a str> {
+        self.credential()
+            .map(|credential| credential.issuer.as_str())
+    }
+
+    /// The client the credential names.
+    fn client_id(self) -> Option<&'a str> {
+        self.credential()?.client_id.as_deref()
+    }
+
+    /// The token the credential names.
+    fn token_id(self) -> Option<&'a str> {
+        self.credential()?.token_id.as_deref()
+    }
+
+    /// The assurance level the credential names.
+    fn assurance_level(self) -> Option<AssuranceLevel> {
+        let assurance = self.credential()?.assurance.as_ref()?;
+        assurance_level(&assurance.defining_code.code_string)
+    }
+
+    /// The roles the caller held: the accessor's roles before the
+    /// `token_roles` its token stated.
+    fn roles(self, token_roles: usize) -> Vec<String> {
+        let roles = self.0.accessor.roles.as_deref().unwrap_or_default();
+        let held = roles.len().saturating_sub(token_roles);
+        roles
+            .iter()
+            .take(held)
+            .map(|role| role.defining_code.code_string.clone())
+            .collect()
+    }
+
+    /// The purpose the caller declared beside the `token_purposes` its token
+    /// stated: the purpose after them.
+    fn purpose(self, token_purposes: usize) -> Option<String> {
+        self.0
+            .purposes
+            .as_deref()
+            .unwrap_or_default()
+            .get(token_purposes)
+            .map(|purpose| purpose.defining_code.code_string.clone())
+    }
+
+    /// The EHR the entry names.
+    fn ehr_id(self) -> Option<&'a str> {
+        self.0.ehr_id.as_ref().map(HierObjectId::value)
+    }
+
+    /// The count the outcome delivered, or else the rows the query returned.
+    fn result_count(self) -> Option<u64> {
+        self.0
+            .outcome
+            .delivered
+            .or_else(|| self.0.query.as_ref().and_then(|query| query.rows))
+            .and_then(|count| u64::try_from(count).ok())
     }
 }
