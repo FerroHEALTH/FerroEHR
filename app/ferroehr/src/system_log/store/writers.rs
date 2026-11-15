@@ -108,6 +108,16 @@ impl Writers {
         self.install(policy);
     }
 
+    /// Write every record from now on under the policy in force with
+    /// `retention` as its access log retention.
+    pub(super) fn set_retention(&self, retention: &crate::system_log::retention::LogRetention) {
+        let policy = RenderPolicy {
+            retention: retention.clone(),
+            ..self.current().policy.clone()
+        };
+        self.install(policy);
+    }
+
     /// The policy of the map in force.
     pub(super) fn current(&self) -> Arc<WritePolicy> {
         Arc::clone(&self.current.read().unwrap_or_else(PoisonError::into_inner))

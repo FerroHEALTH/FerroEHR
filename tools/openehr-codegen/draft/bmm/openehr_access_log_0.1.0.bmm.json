@@ -755,7 +755,7 @@
     },
     "ACCESS_RETENTION": {
       "name": "ACCESS_RETENTION",
-      "documentation": "How long an entry is kept, set when it is written from the categories and origins of the data and the laws that apply.",
+      "documentation": "How long an entry is kept, set when it is written from the access policy in force and the laws that bind its controller.",
       "properties": {
         "retain_until": {
           "_type": "P_BMM_SINGLE_PROPERTY",
@@ -766,7 +766,7 @@
         "grounds": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "grounds",
-          "documentation": "The provisions that set the period, such as a minimum period from the date of access and a national maximum.",
+          "documentation": "The provisions that set the period, such as a minimum period from the date of access and a national maximum, coded in a terminology the jurisdiction names.",
           "is_mandatory": true,
           "type_def": {
             "container_type": "List",
@@ -776,6 +776,12 @@
             "lower": 1,
             "upper_unbounded": true
           }
+        },
+        "policy": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "policy",
+          "documentation": "The version of the controller's access policy the period was taken from; Void where the entry was kept under no policy, or was imported from another system.",
+          "type": "OBJECT_VERSION_ID"
         }
       }
     }

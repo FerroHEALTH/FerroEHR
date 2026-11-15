@@ -652,7 +652,7 @@ commit with `422`, and the problem names every rule it breaks:
   no `opt_out_override`, takes no consent from a `registry`, and its partner
   is no contact point;
 - a `chained` organisation agreement sets a `requester_log_retention` at
-  least as long as `[audit.store] retention`, and its issuer's
+  least as long as the period of the access policy's `log_retention`, and its issuer's
   `[[auth.federation]]` table maps `correlation_id` from the token, never from
   a constant.
 

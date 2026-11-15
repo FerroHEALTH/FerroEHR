@@ -221,17 +221,14 @@ Decide `fail_mode` deliberately. `open` logs a dropped record and serves the
 request; `closed` refuses an auditable operation with `503` when the record
 cannot be taken. `closed` is the posture that makes "no unaudited access" true.
 
-Retention has a jurisdictional floor. Where one of your active identifier rules
-names a jurisdiction with a registered floor, a shorter horizon is a boot error
-naming the floor. Every EU Member State carries three years from each date of
-access (EHDS Art. 9(2)); the Netherlands five years, from the
-[Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391);
-Switzerland one year (DSV Art. 4 Abs. 5). The floors are in calendar years, so
-state the horizon as `[audit.store] retention`, which is compared
-exactly; a `retention` is held to the most days those years can span
-(1096, 1830 and 366). The [audit trail page](../audit.md#retention-and-who-chooses-it)
-lists the floors with their sources. A deployment in a jurisdiction with no
-floor registered sets its own horizon and records why.
+Decide the access log retention and write it into the access policy
+(`ACCESS_POLICY.log_retention`): whether EHDS binds you, the period, and each
+floor and ceiling your law sets with its provision, such as the five Dutch
+years of the [Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391)
+or the German three-year ceiling of SGB V § 309 Abs. 1. Until you do, every
+entry is kept without end and the `log_retention` readiness indicator reads
+`degraded`. The [audit trail page](../audit.md#retention-and-who-chooses-it)
+sets out the rules a policy write is refused under.
 
 Verify the chain works before you need it:
 

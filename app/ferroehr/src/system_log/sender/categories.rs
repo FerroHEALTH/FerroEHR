@@ -77,6 +77,7 @@ impl AuditSender {
         if let Some(store) = &self.inner.store {
             store.set_categories(map);
         }
+        self.set_context_categories(map);
         self.inner.categories.replace(classifier);
     }
 }

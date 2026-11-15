@@ -23,11 +23,13 @@ use serde_json::json;
 use super::*;
 use ferroehr::access_eval::condition::{Asking, EhrEntry, InForce, RecordFacts, RequestAccess};
 use ferroehr::access_eval::record::{Decision, Step};
-use ferroehr::access_log::entry::{entry_of, horizon_retention};
+use ferroehr::access_log::entry::entry_of;
+use ferroehr::access_log::retention::stated;
 use ferroehr::ids::EhrId;
 use ferroehr::system_log::event::{
     AccessDecision, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
+use ferroehr::system_log::retention::LogRetention;
 
 /// The EHR of the tests.
 const EHR: &str = "7d44b88c-4199-4bad-97dc-d78268e01398";
@@ -278,8 +280,13 @@ fn an_emergency_override_is_marked_with_what_it_lifted() {
 
     let mut event = event_of(&access);
     event.emergency_access = true;
-    let entry =
-        entry_of(&event, None, "cdr.example.org", horizon_retention(None)).expect("an entry");
+    let entry = entry_of(
+        &event,
+        None,
+        "cdr.example.org",
+        stated(None, &LogRetention::default()),
+    )
+    .expect("an entry");
     assert!(entry.is_emergency);
     let kinds: Vec<&str> = entry
         .authorisations
@@ -559,8 +566,13 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
 
         let event = event_of(&access);
         assert_eq!(event.decision, AccessDecision::Refused, "{code}");
-        let entry =
-            entry_of(&event, None, "cdr.example.org", horizon_retention(None)).expect("an entry");
+        let entry = entry_of(
+            &event,
+            None,
+            "cdr.example.org",
+            stated(None, &LogRetention::default()),
+        )
+        .expect("an entry");
         assert_eq!(entry.outcome.result.value, "refused", "{code}");
         let reason = entry.outcome.reason.as_ref().expect("the reason");
         assert_eq!(reason.defining_code.code_string, code);

@@ -75,8 +75,12 @@ An entry projects onto the records other standards define. The projection writes
   "channel": {"_type": "ACCESS_CHANNEL", "request_id": "01JC2Q7N3X"},
   "retention": {"_type": "ACCESS_RETENTION",
     "retain_until": {"_type": "DV_DATE", "value": "2031-11-07"},
-    "grounds": [{"_type": "DV_CODED_TEXT", "value": "national retention period",
-      "defining_code": {"terminology_id": {"value": "local"}, "code_string": "nl-logging-5y"}}]},
+    "grounds": [{"_type": "DV_CODED_TEXT",
+      "value": "Regulation (EU) 2025/327 Art. 9(2): at least three years from each date of access",
+      "defining_code": {"terminology_id": {"value": "http://data.europa.eu/eli/reg/2025/327/oj"},
+        "code_string": "art_9.par_2"}}],
+    "policy": {"_type": "OBJECT_VERSION_ID",
+      "value": "5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8::cdr.example.org::2"}},
   "link": {"_type": "ACCESS_LOG_LINK", "sequence": 48213, "algorithm": "SHA-256",
     "previous_digest": "<64 hex>", "content_digest": "<64 hex>", "digest": "<64 hex>"}
 }

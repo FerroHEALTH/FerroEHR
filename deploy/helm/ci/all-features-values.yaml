@@ -141,11 +141,6 @@ config:
     source_id: ferroehr-prod
     fail_mode: closed
     enterprise_site_id: site-1
-    store:
-      # Five years in days: the default identifier rules name NL, whose
-      # access-log floor is five years (Besluit vaststelling bewaartermijn
-      # logging), and the server refuses a shorter retention at boot.
-      retention: P1830D
     syslog:
       url: tls://arr.example.com:6514
     fhir_feed: {}

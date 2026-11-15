@@ -65,18 +65,19 @@ pub struct Recording {
     pub labels: LabelPolicy,
     /// The purposes of use that mark an emergency access (Art. 11(5)).
     pub emergency: EmergencyPurposes,
-    /// The store horizon, which a record outside the EHDS access record is
-    /// kept for.
-    pub horizon: crate::system_log::config::Retention,
+    /// The access log retention of the access policy in force, whose period
+    /// a record outside the EHDS access record is kept for.
+    pub log: crate::system_log::retention::LogRetention,
 }
 
 /// The first date `event` may be deleted on once stored.
 ///
 /// A classified access states its own end through `ehds-logging`'s retention
 /// policy, by its categories and origins (Regulation (EU) 2025/327 Annex II
-/// 3.4); every other record keeps the store horizon, ending the day after
-/// the date of access plus the horizon, as `ehds-logging` counts an end.
-/// A horizon whose end the calendar cannot hold keeps the record without end.
+/// 3.4); every other record keeps the access policy's period, ending the
+/// day after the date of access plus the period, as `ehds-logging` counts an
+/// end. A period whose end the calendar cannot hold keeps the record without
+/// end.
 #[must_use]
 pub fn record_end(event: &AuditEvent, ctx: &AuditContext) -> crate::system_log::store::RecordEnd {
     use crate::system_log::store::RecordEnd;
@@ -92,7 +93,7 @@ pub fn record_end(event: &AuditEvent, ctx: &AuditContext) -> crate::system_log::
                 )
                 .ends()
         }
-        None => horizon_end(event.timestamp, ctx.recording.horizon),
+        None => horizon_end(event.timestamp, ctx.recording.log.period),
     };
     ends.map_or(RecordEnd::Never, RecordEnd::On)
 }

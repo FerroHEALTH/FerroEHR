@@ -18,7 +18,6 @@ use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
-use crate::config::retention::RetentionPeriod;
 use ferrohealth_config::tls::TlsClientSection;
 
 /// Behaviour when an audit record cannot be enqueued/delivered.
@@ -45,30 +44,6 @@ pub struct StoreConfig {
     /// Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`).
     /// **On by default** (owner posture: compliance out of the box).
     pub enabled: bool,
-    /// How long records are kept, a calendar period (`"P5Y"`, `"P1830D"`);
-    /// unset keeps them forever (`FERROEHR__AUDIT__STORE__RETENTION`).
-    /// Applied hourly by the retention reaper.
-    ///
-    /// The floors and ceilings the horizon answers to are written in years, and
-    /// a day count can only approximate them: three calendar years span 1095
-    /// or 1096 days, so a three-year floor and a three-year ceiling leave no
-    /// day count that satisfies both. A horizon in years is compared exactly
-    /// and reaped with calendar arithmetic. The name is EHDS Annex II's.
-    pub retention: Option<RetentionPeriod>,
-    /// Whether this deployment is one of the controllers SGB V § 307 names for
-    /// a German telematics-infrastructure application
-    /// (`FERROEHR__AUDIT__STORE__SGB_V_309_CONTROLLER`). **Off by default.**
-    ///
-    /// SGB V § 309 Abs. 1 binds "die Verantwortlichen nach § 307" of the
-    /// applications under §§ 327 and 334 Abs. 1, and Abs. 3 then requires the
-    /// log data to be deleted "unverzüglich" once the three-year limitation
-    /// period has run (`docs/law/de/sgb-v/BJNR024820988.xml`). That is a
-    /// CEILING on access-log retention, and it reaches a CDR only when the
-    /// deploying organisation actually is, or acts for, one of those
-    /// controllers — which the software cannot tell from its configuration.
-    /// So the deployment declares it here, beside the horizon it bounds, and the
-    /// DE ceiling applies from then on.
-    pub sgb_v_309_controller: bool,
     /// The time between two scheduled verifications of the store's hash chain
     /// (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL`); `"0s"` turns the schedule
     /// off. Default one hour.
@@ -94,8 +69,6 @@ impl Default for StoreConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            retention: None,
-            sgb_v_309_controller: false,
             // One hour: a run recomputes only the records written since the
             // last one, so the hour bounds how long damage to them goes
             // unreported; a week bounds it for older records.
@@ -105,11 +78,12 @@ impl Default for StoreConfig {
     }
 }
 
-/// The horizon the local store keeps records for.
+/// How long the access log and the local store keep a record, as the
+/// controller's access policy states it (`ACCESS_LOG_RETENTION.period`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "unit", content = "value")]
 pub enum Retention {
-    /// Records are kept forever (no `retention`).
+    /// Records are kept forever (no period).
     #[default]
     Forever,
     /// Records older than this many days are reaped.
@@ -120,25 +94,13 @@ pub enum Retention {
 }
 
 impl Retention {
-    /// The `audit.store.retention` spelling, for messages.
+    /// The period as ISO 8601 writes it, for messages.
     #[must_use]
     pub fn describe(self) -> String {
         match self {
-            Retention::Forever => "no retention (keep forever)".to_owned(),
-            Retention::Days(days) => format!("retention = \"P{days}D\""),
-            Retention::Years(years) => format!("retention = \"P{years}Y\""),
-        }
-    }
-}
-
-impl StoreConfig {
-    /// The horizon this configuration states.
-    #[must_use]
-    pub fn horizon(&self) -> Retention {
-        match self.retention {
-            None => Retention::Forever,
-            Some(RetentionPeriod::Days(days)) => Retention::Days(days),
-            Some(RetentionPeriod::Years(years)) => Retention::Years(years),
+            Retention::Forever => "no period (kept without end)".to_owned(),
+            Retention::Days(days) => format!("P{days}D"),
+            Retention::Years(years) => format!("P{years}Y"),
         }
     }
 }
@@ -430,12 +392,6 @@ pub struct AuditPosture {
     pub fail_mode: FailMode,
     /// Whether the local Audit Record Repository is on.
     pub local_store: bool,
-    /// Days the local store keeps records, when the horizon is stated in
-    /// days; `0` = forever.
-    pub retention_days: u32,
-    /// Calendar years the local store keeps records, when the horizon is stated
-    /// in years.
-    pub retention_years: Option<u32>,
 }
 
 impl AuditPosture {
@@ -446,14 +402,6 @@ impl AuditPosture {
             enabled: config.enabled,
             fail_mode: config.fail_mode,
             local_store: config.store.enabled,
-            retention_days: match config.store.horizon() {
-                Retention::Days(days) => days,
-                Retention::Forever | Retention::Years(_) => 0,
-            },
-            retention_years: match config.store.horizon() {
-                Retention::Years(years) => Some(years),
-                Retention::Forever | Retention::Days(_) => None,
-            },
         }
     }
 
@@ -483,13 +431,9 @@ impl AuditPosture {
     #[must_use]
     pub fn summary(self) -> String {
         let store = if self.local_store {
-            match (self.retention_years, self.retention_days) {
-                (Some(years), _) => format!("local store on, {years}-year retention"),
-                (None, 0) => "local store on, kept forever".to_owned(),
-                (None, days) => format!("local store on, {days}-day retention"),
-            }
+            "local store on"
         } else {
-            "local store off".to_owned()
+            "local store off"
         };
         let mode = match self.fail_mode {
             FailMode::Open => "open",
@@ -508,7 +452,6 @@ mod tests {
         let c = AuditConfig::default();
         assert!(c.enabled, "auditing is on by default (owner posture)");
         assert!(c.store.enabled, "the local store is the default sink");
-        assert_eq!(c.store.retention, None, "keep forever by default");
         assert!(c.syslog.is_none(), "forwarding is opt-in");
         assert!(c.fhir_feed.is_none(), "forwarding is opt-in");
         // RFC 5425 §4.1: syslog over TLS listens on 6514, the one transport
@@ -523,17 +466,6 @@ mod tests {
             FhirFeedConfig::default().endpoint.retry.max_backoff,
             Duration::from_mins(1)
         );
-    }
-
-    /// The store states one horizon: forever, days or years.
-    #[test]
-    fn the_store_states_one_horizon() {
-        let mut store = StoreConfig::default();
-        assert_eq!(store.horizon(), Retention::Forever);
-        store.retention = Some(RetentionPeriod::Days(30));
-        assert_eq!(store.horizon(), Retention::Days(30));
-        store.retention = Some(RetentionPeriod::Years(3));
-        assert_eq!(store.horizon(), Retention::Years(3));
     }
 
     #[test]

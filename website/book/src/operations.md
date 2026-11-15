@@ -697,16 +697,17 @@ audited requests about 10 GB.
 
 ### Audit retention
 
-`[audit.store] retention = 0`, the default, keeps every audit record
-forever, so the access log grows with every request for the life of the
-database. A horizon (`retention`, or `retention` in calendar years)
-makes the reaper delete each record on or after its end date, hourly, and the
-`audit_event` table then levels off at roughly the horizon times the request
-rate. The space of a deleted row is not returned to the operating system:
+An access policy with no `log_retention`, the default, keeps every audit
+record forever, so the access log grows with every request for the life of
+the database. A period (`ACCESS_POLICY.log_retention.period`, in years or
+days) makes the reaper delete each record on or after its end date, hourly,
+and the `audit_event` table then levels off at roughly the period times the
+request rate. The space of a deleted row is not returned to the operating system:
 `VACUUM` marks it free and later records reuse it (PostgreSQL 18 docs,
 [Routine Vacuuming, Recovering Disk Space][pg-vacuum]).
 The reaper also deletes the search tokens no remaining record names. The
-horizon is a legal choice with floors per jurisdiction, set out on the audit page.
+period is the controller's legal choice, within the floors and ceilings it
+declares, set out on the audit page.
 The openEHR access log levels off too: each entry is kept for its own period,
 its tombstone as long again, and then a run of tombstones folds into one gap
 row ([steady-state size](audit.md#the-access-log-at-steady-state)).
@@ -952,6 +953,17 @@ why they are written as your checklist rather than as our claim.
   default `none` and asked for no certificate, and from 5.6.0 such a table is
   refused at load (GHSA-52mf-qg39-4q4j). See
   [`[server.tls]`](installation/config-server.md#servertls-native-tls-and-mutual-tls-client-authentication).
+- **Upgrading to 5.7.2 starts on an empty audit store.** Audit migration
+  0035 refuses a store that holds a render policy written before it, naming
+  each by its digest: those policies state the `[audit.store] retention`
+  horizon this release removes, and a stored record is never rewritten.
+  Export what you need over ITI-81 with the earlier release, drop the `audit`
+  schema, and start again. Then write the access log retention into the
+  controller's access policy (`ACCESS_POLICY.log_retention`,
+  [Audit trail](audit.md#retention-and-who-chooses-it)), and remove
+  `retention` and `sgb_v_309_controller` from `[audit.store]`, which are now
+  refused as unknown keys. Nothing is in production; a 5.7.1-rc1 store holds
+  test data.
 - **Bound the DDL yourself.** Every pooled connection carries the
   `[database] statement_timeout` value (60 seconds by default), and the migration
   step runs on that pool, so a runaway statement is cut off, but there is **no

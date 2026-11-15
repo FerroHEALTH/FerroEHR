@@ -305,6 +305,12 @@ impl AuditStore {
         self.writing.set_categories(categories);
     }
 
+    /// This store writing every record from now on under `retention`, the
+    /// access log retention of the access policy in force.
+    pub fn set_retention(&self, retention: &crate::system_log::retention::LogRetention) {
+        self.writing.set_retention(retention);
+    }
+
     /// The digest of `writing`, storing the policy the first time.
     ///
     /// # Errors

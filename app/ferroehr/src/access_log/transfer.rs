@@ -29,9 +29,7 @@ use crate::system_log::event::{
     AccessDecision, AccessDomain, ActingMode, AuditEvent, EntryScope, EventActionCode,
     EventOutcome, ObjectClass,
 };
-use openehr_base::containers::NonEmptyVec;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
-use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
 use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
@@ -39,9 +37,6 @@ use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecor
 use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention;
 use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
-use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
-use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
-use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 /// One EHR's access log as one system exports it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -97,9 +92,8 @@ impl ImportRecord {
     /// access (`docs/law/eu/ehds/text.html`).
     ///
     /// The accessor is the system itself, since the operator acts at the
-    /// console and presents no credential; its ground is a `local` code,
-    /// since the retention codes are the retention register's (our own
-    /// design).
+    /// console and presents no credential; its ground is Art. 9(2), coded by
+    /// its European Legislation Identifier (our own design).
     #[must_use]
     pub fn by_operator(system_id: &str, today: jiff::civil::Date) -> Self {
         let retain_until = today.saturating_add(jiff::Span::new().years(3));
@@ -112,17 +106,10 @@ impl ImportRecord {
         caller.actor.mode = Some(ActingMode::System);
         Self {
             caller,
-            retention: AccessRetention {
-                retain_until: Some(DvDate {
-                    normal_status: None,
-                    normal_range: None,
-                    other_reference_ranges: None,
-                    magnitude_status: None,
-                    accuracy: None,
-                    value: retain_until.to_string(),
-                }),
-                grounds: NonEmptyVec::of(coded("local", "ehds-art-9-2")),
-            },
+            retention: crate::access_log::retention::stated(
+                retain_until.tomorrow().ok(),
+                &crate::system_log::retention::LogRetention::default(),
+            ),
         }
     }
 }
@@ -462,25 +449,6 @@ async fn store_records(
     .await
     .map_err(AccessLogError::from)?;
     Ok(())
-}
-
-/// A term of `terminology` whose code and rubric are `value`.
-fn coded(terminology: &str, value: &str) -> DvCodedText {
-    DvCodedText {
-        value: value.to_owned(),
-        hyperlink: None,
-        formatting: None,
-        mappings: None,
-        language: None,
-        encoding: None,
-        defining_code: CodePhrase {
-            terminology_id: TerminologyId {
-                value: terminology.to_owned(),
-            },
-            code_string: value.to_owned(),
-            preferred_term: None,
-        },
-    }
 }
 
 /// A party named `name` and identified no further, such as a system.

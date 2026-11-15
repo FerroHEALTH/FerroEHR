@@ -21,15 +21,19 @@
 //! invalidation are our own design/extension.
 
 pub mod check;
+pub mod retention;
 
 use std::fmt;
 use std::sync::{Arc, PoisonError, RwLock};
 
 use sqlx::PgPool;
 
+use crate::party_binding::grants::live::LiveGrants;
 use crate::policy_register::listen::Listened;
 use crate::storage::access_policy as store;
 use crate::storage::error::StorageError;
+use crate::system_log::retention::LogRetention;
+use crate::system_log::sender::AuditSender;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 
 /// The archetype of the default access policy definition.
@@ -79,6 +83,11 @@ pub struct LivePolicy {
     /// The listener on [`CHANNEL`], which says when the policy in force must
     /// be read again.
     listened: Arc<Listened>,
+    /// The audit trail the access log retention in force is handed to.
+    audit: RwLock<Option<AuditSender>>,
+    /// The policy grants whose federation agreements are judged against the
+    /// period of the access log retention in force.
+    grants: RwLock<Option<Arc<LiveGrants>>>,
 }
 
 impl fmt::Debug for LivePolicy {
@@ -99,7 +108,63 @@ impl LivePolicy {
             pool,
             in_force: RwLock::new(Arc::default()),
             installing: tokio::sync::Mutex::new(()),
+            audit: RwLock::new(None),
+            grants: RwLock::new(None),
         }
+    }
+
+    /// Judge `grants`' federation agreements against the period of the
+    /// access log retention in force, now and whenever the policy gains a
+    /// version.
+    pub fn attach_grants(&self, grants: Arc<LiveGrants>) {
+        grants.set_holder(self.log_retention().period);
+        *self.grants.write().unwrap_or_else(PoisonError::into_inner) = Some(grants);
+    }
+
+    /// Hand the access log retention in force to `sender` now and whenever
+    /// the policy gains a version.
+    pub fn attach_audit(&self, sender: AuditSender) {
+        sender.set_retention(&self.log_retention());
+        *self.audit.write().unwrap_or_else(PoisonError::into_inner) = Some(sender);
+    }
+
+    /// The access log retention of the policy in force; the default, every
+    /// record kept without end under Art. 9(2), while the policy declares
+    /// none.
+    #[must_use]
+    pub fn log_retention(&self) -> LogRetention {
+        let in_force = self.in_force();
+        let declared = in_force
+            .policy
+            .as_ref()
+            .and_then(|policy| policy.log_retention.as_ref());
+        match retention::log_retention(declared, in_force.uid.as_deref()) {
+            Ok(retention) => retention,
+            Err(error) => {
+                // NOTE: the commit check refuses such a period, so only a version stored before
+                // that check reaches here; every record is then kept without end, the safe side.
+                tracing::error!(%error, "the access log retention in force does not read");
+                LogRetention::default()
+            }
+        }
+    }
+
+    /// Bring the policy in force up to date whenever a write is notified, so
+    /// the audit trail takes up a new retention with no request on this
+    /// replica: a detached task that lives as long as the runtime.
+    pub fn spawn_refresher(self: &Arc<Self>) {
+        let live = Arc::clone(self);
+        tokio::spawn(async move {
+            loop {
+                let seen = live.listened.notifications();
+                live.listened
+                    .notified_after(seen, std::time::Duration::from_hours(1))
+                    .await;
+                if let Err(error) = live.refresh_if_stale().await {
+                    tracing::warn!(%error, "the access policy could not be read; retried");
+                }
+            }
+        });
     }
 
     /// The policy in force.
@@ -179,6 +244,23 @@ impl LivePolicy {
             .in_force
             .write()
             .unwrap_or_else(PoisonError::into_inner) = installed;
+        let audit = self
+            .audit
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        let retention = self.log_retention();
+        if let Some(sender) = audit {
+            sender.set_retention(&retention);
+        }
+        let grants = self
+            .grants
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        if let Some(grants) = grants {
+            grants.set_holder(retention.period);
+        }
         Ok(())
     }
 }

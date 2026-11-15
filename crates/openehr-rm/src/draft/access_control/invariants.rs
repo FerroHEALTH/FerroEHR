@@ -31,6 +31,7 @@ use crate::draft::access_control::access_control::access_data_scope::AccessDataS
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
 use crate::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
+use crate::draft::access_control::access_control::access_log_retention::AccessLogRetention;
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
 use crate::draft::access_control::terminology::{
     AccessDefault, AccessorKind, CallerKind, DirectiveKind, Effect, Relationship, Term, Withheld,
@@ -160,7 +161,91 @@ pub fn check_policy(policy: &AccessPolicy) -> Result<(), Violations> {
     for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {
         log_restriction_rules(&mut check, restriction);
     }
+    if let Some(retention) = &policy.log_retention {
+        log_retention_rules(&mut check, retention);
+    }
     check.finish()
+}
+
+/// The `ACCESS_LOG_RETENTION` invariants, comparing durations by RM
+/// `DV_DURATION.magnitude`; a duration with no magnitude is refused by its
+/// `Value_valid`, and no comparison over it holds.
+fn log_retention_rules(check: &mut Check, retention: &AccessLogRetention) {
+    const CLASS: &str = "ACCESS_LOG_RETENTION";
+    // NOTE: Regulation (EU) 2025/327 Art. 9(2), "at least three years from each date of access".
+    const UNION_FLOOR: &str = "P3Y";
+    let seconds = |value: &DvDuration| value.magnitude();
+    let floors = retention.floors.as_deref().unwrap_or_default();
+    let ceilings = retention.ceilings.as_deref().unwrap_or_default();
+    for bound in floors.iter().chain(ceilings) {
+        duration(check, &bound.period);
+        check.hold(
+            seconds(&bound.period).is_some_and(|s| s > 0.0),
+            "ACCESS_RETENTION_BOUND",
+            "Period_valid",
+        );
+    }
+    let period = retention.period.as_ref();
+    if let Some(period) = period {
+        duration(check, period);
+    }
+    let period_seconds = period.and_then(seconds);
+    let at_least = |floor: &DvDuration| {
+        period.is_none()
+            || period_seconds
+                .zip(seconds(floor))
+                .is_some_and(|(p, f)| p >= f)
+    };
+    check.hold(
+        retention.in_union || !floors.is_empty(),
+        CLASS,
+        "Floor_outside_union",
+    );
+    let union_floor = DvDuration {
+        normal_status: None,
+        normal_range: None,
+        other_reference_ranges: None,
+        magnitude_status: None,
+        accuracy: None,
+        accuracy_is_percent: None,
+        value: UNION_FLOOR.to_owned(),
+    };
+    check.hold(
+        !retention.in_union || at_least(&union_floor),
+        CLASS,
+        "Period_union",
+    );
+    check.hold(
+        floors.iter().all(|floor| at_least(&floor.period)),
+        CLASS,
+        "Period_floors",
+    );
+    check.hold(
+        ceilings.is_empty() || period.is_some(),
+        CLASS,
+        "Ceilings_need_period",
+    );
+    check.hold(
+        period.is_none()
+            || ceilings.iter().all(|ceiling| {
+                period_seconds
+                    .zip(seconds(&ceiling.period))
+                    .is_some_and(|(p, c)| p <= c)
+            }),
+        CLASS,
+        "Period_ceilings",
+    );
+    check.hold(
+        ceilings.iter().all(|ceiling| {
+            floors.iter().all(|floor| {
+                seconds(&ceiling.period)
+                    .zip(seconds(&floor.period))
+                    .is_some_and(|(c, f)| c >= f)
+            })
+        }),
+        CLASS,
+        "Ceilings_floors",
+    );
 }
 
 fn log_restriction_rules(check: &mut Check, restriction: &AccessLogRestriction) {

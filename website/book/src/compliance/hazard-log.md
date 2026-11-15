@@ -268,10 +268,12 @@ a forwarding sink down.
 **Effect:** the information a patient has a right to for "at least three
 years from each date of access" (EHDS Art. 9(2)) no longer exists.
 
-**Control:** each jurisdiction has a registered retention floor (three years
-in every EU Member State, longer where national law sets more), and a
-configured period below it stops the boot. The reaper deletes only records
-past the horizon, in calendar years where the period is given in years, and
+**Control:** the controller's access policy states the period with the floors
+and ceilings its law sets, and a policy write whose period is under a declared
+floor, or under the three years of Art. 9(2) for a controller in the Union, is
+refused. With no period declared every record is kept without end, and the
+`log_retention` readiness indicator reads degraded. The reaper deletes only
+records past their end, in calendar years where the period is given in years, and
 the chain stays verifiable after it runs. The forwarding outbox keeps
 records until the sink takes them, and the audit drain closes its syslog
 connection with a TLS `close_notify` when it exits, so the records it sent

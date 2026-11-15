@@ -343,6 +343,48 @@ impl HealthIndicator for PolicyListenersHealth {
     }
 }
 
+/// `log_retention`: whether the controller's access policy states how long
+/// the access log keeps an entry (`ACCESS_POLICY.log_retention`).
+///
+/// With none stated every entry is kept without end, which meets every floor
+/// a law sets but leaves the period undecided, and GDPR Art. 5(1)(e) makes
+/// that period the controller's to set. So the indicator reads `DEGRADED`,
+/// a warning that never takes the instance out of rotation. No openEHR spec
+/// governs this: our own design (#5660).
+#[derive(Debug)]
+pub struct LogRetentionHealth {
+    policy: Arc<crate::access_policy::LivePolicy>,
+}
+
+impl LogRetentionHealth {
+    /// Constructs over the access policy in force.
+    #[must_use]
+    pub fn new(policy: Arc<crate::access_policy::LivePolicy>) -> Self {
+        Self { policy }
+    }
+}
+
+impl HealthIndicator for LogRetentionHealth {
+    fn name(&self) -> &'static str {
+        "log_retention"
+    }
+
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            let retention = self.policy.log_retention();
+            if retention.is_declared() {
+                Outcome::up()
+            } else {
+                Outcome::degraded(
+                    "the access policy states no log_retention, so every access-log entry is \
+                     kept without end; GDPR Art. 5(1)(e) makes the period the controller's to \
+                     set in ACCESS_POLICY.log_retention",
+                )
+            }
+        })
+    }
+}
+
 /// `instances` — whether every live instance of the deployment signs with
 /// this instance's key and runs its configuration ([`Instances`]).
 ///

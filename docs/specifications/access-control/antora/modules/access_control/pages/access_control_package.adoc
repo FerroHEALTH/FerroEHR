@@ -71,6 +71,12 @@ The rules, their place in the procedure and the reading of `_role_` from the dem
 
 EHDS Art 9(2) gives the person access to who accessed their data, and Art 9(3) lets a Member State restrict that right "in exceptional circumstances". `ACCESS_POLICY._log_restrictions_` declares the restrictions the controller's law lays down. Each `ACCESS_LOG_RESTRICTION` names the kinds of accessor it applies to, in the `accessor kind` group the Access Log Information Model codes `ACCESSOR._kind_` in, the attributes of `ACCESSOR` the subject view withholds, in the `access log withheld` group (xref:terminology.adoc[Terminology]), and the provisions that lay it down, in the terminology the jurisdiction names. A system serves the subject view of an entry whose accessor is of a named kind to the subject and their representative without those attributes; the entry itself is unchanged, and a reviewer reads it whole. A change to the restrictions changes what the log means, so a system records it in the log. The package carries no country's restriction.
 
+=== Retention of the Access Log
+
+EHDS Art 9(2) requires the access information to "be available for at least three years from each date of access to the data", and national law may set a longer minimum or a maximum. Which law binds the controller, and how long within it the log keeps an entry, is the controller's decision: GDPR Art 5(1)(e) makes the period of storage the controller's to set. `ACCESS_POLICY._log_retention_` states it. `ACCESS_LOG_RETENTION._in_union_` declares whether Regulation (EU) 2025/327 binds the controller, `_period_` how long each entry is kept from the date of access, and `_floors_` and `_ceilings_` the minimum and maximum periods the controller's law sets, each an `ACCESS_RETENTION_BOUND` with the provision that sets it, coded in the terminology the jurisdiction names. The invariants refuse a policy whose period breaks a bound it declares, a period under the three years of Art 9(2) when `_in_union_` holds, a ceiling below a floor, and a ceiling with no period, since an entry kept without end never stays within one.
+
+A system writes each access-log entry with the period and grounds of the policy in force (Access Log Information Model, `ACCESS_RETENTION`): Art 9(2) when `_in_union_` holds, then each declared floor and ceiling, and the version of the policy they came from. With no `_log_retention_` the system keeps each entry without end, which meets every floor, and says the period is undecided. The package carries no country's bounds.
+
 == Class Descriptions
 
 include::ROOT:partial$classes/access_directive_settings.adoc[]
@@ -88,5 +94,9 @@ include::ROOT:partial$classes/access_policy.adoc[]
 include::ROOT:partial$classes/access_classification.adoc[]
 
 include::ROOT:partial$classes/access_log_restriction.adoc[]
+
+include::ROOT:partial$classes/access_log_retention.adoc[]
+
+include::ROOT:partial$classes/access_retention_bound.adoc[]
 
 include::ROOT:partial$classes/versioned_access_policy.adoc[]

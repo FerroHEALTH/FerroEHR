@@ -747,8 +747,6 @@ async fn setting_and_lifting_a_mark_is_recorded_in_the_access_trail() {
         enabled: true,
         store: StoreConfig {
             enabled: true,
-            retention: None,
-            sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
         },

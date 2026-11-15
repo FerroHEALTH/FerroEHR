@@ -843,8 +843,8 @@ async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
 }
 
 /// The policy of [`a_record_renders_the_document_the_drain_rendered`]: a
-/// category map, an emergency purpose and a ten-year horizon, so every part
-/// of the EHDS access record has something to write.
+/// category map, an emergency purpose and an access policy's ten-year log
+/// retention, so every part of the EHDS access record has something to write.
 fn classifying_policy() -> RenderPolicy {
     let config: ferroehr::system_log::config::AuditConfig = toml::from_str(
         r#"
@@ -853,8 +853,6 @@ fn classifying_policy() -> RenderPolicy {
         server_host = "10.42.23.77"
         purpose_codes = ["TREAT", "ETREAT"]
         emergency_purpose_codes = ["ETREAT"]
-        [store]
-        retention = "P10Y"
         "#,
     )
     .expect("parse");
@@ -865,7 +863,16 @@ fn classifying_policy() -> RenderPolicy {
         "#,
     )
     .expect("parse the map");
-    RenderPolicy::of(&config, &categories)
+    RenderPolicy {
+        retention: ferroehr::system_log::retention::LogRetention {
+            in_union: true,
+            period: ferroehr::system_log::config::Retention::Years(10),
+            floors: Vec::new(),
+            ceilings: Vec::new(),
+            policy: Some("5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8::cdr.example.org::1".to_owned()),
+        },
+        ..RenderPolicy::of(&config, &categories)
+    }
 }
 
 /// One event of every rendering path, each field filled that the path reads.

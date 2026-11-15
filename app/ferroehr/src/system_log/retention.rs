@@ -1,161 +1,229 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The bounds a jurisdiction sets on how long an access-log record is kept,
-//! which `[audit.store] retention` is checked against at boot.
+//! How long the access log keeps a record, as the controller's access policy
+//! states it, and the first date each record of a batch may be deleted on.
+//!
+//! The controller declares the period and the bounds its law sets
+//! (`ACCESS_POLICY.log_retention`, [`crate::access_policy`]); FerroEHR carries
+//! no table of national law. The one provision it names itself is Regulation
+//! (EU) 2025/327 Art. 9(2), which binds a controller that declares itself in
+//! the Union. A provision is coded as the controller codes it, and Art. 9(2)
+//! as its European Legislation Identifier (Council conclusions 2012/C 325/02)
+//! with the subdivision as the code: our own design.
+
+use ehds_logging::retention::{Bounds, Period, RetentionPolicy};
+use serde::{Deserialize, Serialize};
 
 use crate::system_log::config::Retention;
 use crate::system_log::message::AuditContext;
 use crate::system_log::store::{AuditRecord, RecordEnd};
 
-/// A bound a jurisdiction sets on how long an access-log record is kept,
-/// written in calendar years as the law writes it, with the provision it rests
-/// on.
-///
-/// A horizon in years (`retention = "P3Y"`) is compared against [`Self::years`]
-/// exactly. A horizon in days is compared conservatively against [`Self::days`]:
-/// for a floor, the most that many calendar years can span; for a ceiling, the
-/// fewest.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The European Legislation Identifier of Regulation (EU) 2025/327.
+pub const EHDS_ELI: &str = "http://data.europa.eu/eli/reg/2025/327/oj";
+
+/// The subdivision of [`EHDS_ELI`] that keeps the access information "for at
+/// least three years from each date of access to the data": Art. 9(2).
+pub const EHDS_FLOOR_CODE: &str = "art_9.par_2";
+
+/// The rubric of [`EHDS_FLOOR_CODE`].
+const EHDS_FLOOR_RUBRIC: &str =
+    "Regulation (EU) 2025/327 Art. 9(2): at least three years from each date of access";
+
+/// A legal provision, coded in the terminology the jurisdiction names.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Provision {
+    /// The terminology id, such as the act's European Legislation Identifier.
+    pub terminology: String,
+    /// The code, such as the subdivision of the act.
+    pub code: String,
+    /// The rubric.
+    pub rubric: String,
+}
+
+impl Provision {
+    /// The provision as `ehds-logging` cites it on the EHDS record:
+    /// `<terminology>#<code>`.
+    fn citation(&self) -> String {
+        format!("{}#{}", self.terminology, self.code)
+    }
+}
+
+/// A floor or ceiling on how long a record is kept, with its provision.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RetentionBound {
-    /// The bound in calendar years.
-    pub years: u32,
-    /// The bound in days a day-counted horizon is held to.
-    pub days: u32,
-    /// The provision, as the boot refusal names it.
-    pub source: &'static str,
+    /// The bound from the date of access.
+    pub period: Retention,
+    /// The provision that sets it.
+    pub ground: Provision,
 }
 
-impl RetentionBound {
-    /// Whether `retention` keeps records at least this long.
+/// How long the access log keeps a record, from the access policy in force.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LogRetention {
+    /// Whether the controller declares Regulation (EU) 2025/327 binds it.
+    pub in_union: bool,
+    /// How long each record is kept from the date of access.
+    pub period: Retention,
+    /// The floors the controller's law sets.
+    pub floors: Vec<RetentionBound>,
+    /// The ceilings the controller's law sets.
+    pub ceilings: Vec<RetentionBound>,
+    /// The `OBJECT_VERSION_ID` of the access policy the period comes from;
+    /// `None` with no `log_retention` in force.
+    pub policy: Option<String>,
+}
+
+impl Default for LogRetention {
+    /// No period declared: every record kept without end, which meets every
+    /// floor, under Art. 9(2).
+    fn default() -> Self {
+        Self {
+            in_union: true,
+            period: Retention::Forever,
+            floors: Vec::new(),
+            ceilings: Vec::new(),
+            policy: None,
+        }
+    }
+}
+
+/// Why a declared retention is no policy `ehds-logging` keeps records under.
+#[derive(Debug, thiserror::Error)]
+pub enum RetentionDefect {
+    /// A controller outside the Union declares no floor, so no record could
+    /// name the ground of its period.
+    #[error(
+        "a controller outside the Union declares the floor its own law sets in \
+         log_retention.floors"
+    )]
+    NoFloorOutsideUnion,
+    /// `ehds-logging` refuses the period within the declared bounds.
+    #[error("the log retention period breaks a bound")]
+    Bounds(#[source] ehds_logging::retention::RetentionError),
+}
+
+impl LogRetention {
+    /// Whether the controller declared the period, rather than leaving every
+    /// record kept without end by default (GDPR Art. 5(1)(e) makes it theirs).
     #[must_use]
-    pub fn admits_as_floor(self, retention: Retention) -> bool {
-        match retention {
-            Retention::Forever => true,
-            Retention::Days(days) => days >= self.days,
-            Retention::Years(years) => years >= self.years,
+    pub fn is_declared(&self) -> bool {
+        self.policy.is_some()
+    }
+
+    /// The provisions the period rests on, in the order a record names them:
+    /// Art. 9(2) in the Union, then each floor and each ceiling.
+    #[must_use]
+    pub fn grounds(&self) -> Vec<Provision> {
+        let union = self.in_union.then(|| Provision {
+            terminology: EHDS_ELI.to_owned(),
+            code: EHDS_FLOOR_CODE.to_owned(),
+            rubric: EHDS_FLOOR_RUBRIC.to_owned(),
+        });
+        union
+            .into_iter()
+            .chain(
+                self.floors
+                    .iter()
+                    .chain(&self.ceilings)
+                    .map(|bound| bound.ground.clone()),
+            )
+            .collect()
+    }
+
+    /// The bounds `ehds-logging` declares the policy within: in the Union
+    /// Art. 9(2), or the longest declared floor where it is longer; outside
+    /// the Union the longest declared floor; and the shortest ceiling.
+    ///
+    /// # Errors
+    /// [`RetentionDefect`] for a controller outside the Union with no floor,
+    /// and for a bound `ehds-logging` refuses.
+    pub fn bounds(&self) -> Result<Bounds, RetentionDefect> {
+        let longest = self
+            .floors
+            .iter()
+            .max_by_key(|bound| most_days(bound.period));
+        let bounds = match (self.in_union, longest) {
+            (true, Some(floor)) if floor_reaches_union(floor.period) => {
+                Bounds::national(period(floor.period), floor.ground.citation())
+                    .map_err(RetentionDefect::Bounds)?
+            }
+            (true, _) => Bounds::union(),
+            (false, Some(floor)) => {
+                Bounds::outside_union(period(floor.period), floor.ground.citation())
+                    .map_err(RetentionDefect::Bounds)?
+            }
+            (false, None) => return Err(RetentionDefect::NoFloorOutsideUnion),
+        };
+        match self
+            .ceilings
+            .iter()
+            .min_by_key(|bound| fewest_days(bound.period))
+        {
+            Some(ceiling) => bounds
+                .with_ceiling(period(ceiling.period), ceiling.ground.citation())
+                .map_err(RetentionDefect::Bounds),
+            None => Ok(bounds),
         }
     }
 
-    /// Whether `retention` keeps records no longer than this.
-    #[must_use]
-    pub fn admits_as_ceiling(self, retention: Retention) -> bool {
-        match retention {
-            Retention::Forever => false,
-            Retention::Days(days) => days <= self.days,
-            Retention::Years(years) => years <= self.years,
-        }
+    /// The `ehds-logging` policy that keeps every record [`Self::period`]
+    /// within [`Self::bounds`]; the access policy declares no period per
+    /// category or origin, so no category map takes part.
+    ///
+    /// # Errors
+    /// [`RetentionDefect`] when the bounds or the period are refused.
+    pub fn policy(&self) -> Result<RetentionPolicy, RetentionDefect> {
+        let none = std::collections::BTreeMap::new();
+        RetentionPolicy::declare_within(
+            &self.bounds()?,
+            period(self.period),
+            &none,
+            &none,
+            &ehds_logging::map::CategoryMap::default(),
+        )
+        .map_err(RetentionDefect::Bounds)
     }
 }
 
-/// The Member States of the European Union, as ISO 3166-1 alpha-2 codes.
-///
-/// EHDS is a Union regulation, "binding in its entirety and directly applicable
-/// in all Member States" (Regulation (EU) 2025/327 Art. 105,
-/// `docs/law/eu/ehds/text.html`). The EEA states outside the Union (Iceland,
-/// Liechtenstein, Norway) are deliberately absent: the act is marked "Text with
-/// EEA relevance", and it reaches them only through an EEA Joint Committee
-/// decision, which the vendored corpus does not carry.
-pub const EU_MEMBER_STATES: [&str; 27] = [
-    "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU", "IE", "IT",
-    "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK",
-];
-
-/// The access-log floor EHDS sets in every Member State.
-///
-/// Art. 9(2): the access information "shall be available for at least three
-/// years from each date of access to the data" (`docs/law/eu/ehds/text.html`).
-/// Art. 105 applies Art. 9 from 26 March 2029 to the priority categories of
-/// Art. 14(1)(a) to (c) and from 26 March 2031 to (d) to (f); the floor is
-/// enforced from now on, which only keeps a log longer. Three calendar years
-/// can span 1096 days, so that is the floor a day-counted horizon is held to.
-const EHDS_FLOOR: RetentionBound = RetentionBound {
-    years: 3,
-    days: 1096,
-    source: "three years from each date of access, EHDS Art. 9(2), Regulation (EU) 2025/327, \
-             applying under Art. 105 from 26 March 2029 to Art. 14(1)(a)-(c) data and from \
-             26 March 2031 to (d)-(f)",
-};
-
-/// The minimum an access-log record must be kept in `jurisdiction`, where one
-/// is registered (#3242, #3625).
-///
-/// Keyed by ISO 3166-1 alpha-2, the same key the identifier rules carry, so a
-/// deployment's jurisdictions are the ones its `[privacy.identifier_scan]`
-/// rules name. A jurisdiction with no registered floor returns `None`: an
-/// unknown requirement is never guessed at. Every EU Member State
-/// ([`EU_MEMBER_STATES`]) carries the EHDS floor, and a national floor wins
-/// where it is longer.
-///
-/// `NL`: five years from the moment the entry is written, Besluit vaststelling
-/// bewaartermijn logging (<https://wetten.overheid.nl/BWBR0042391>, Stcrt.
-/// 2019, 38007) under Art. 5 of the Besluit elektronische gegevensverwerking
-/// door zorgaanbieders (<https://wetten.overheid.nl/BWBR0040238>), which binds
-/// the retention to NEN 7513. Five calendar years never exceed 1830 days, so
-/// that is the floor a day-counted horizon is held to.
-///
-/// `CH`: at least one year, and kept apart from the processing system, for the
-/// logs of a large-scale automated processing of sensitive personal data —
-/// Datenschutzverordnung (DSV, SR 235.11) Art. 4 Abs. 5 as amended on
-/// 1 December 2025 (`docs/law/ch/dpo/text-de.html`,
-/// <https://www.fedlex.admin.ch/eli/cc/2022/568/de>). One calendar year never
-/// exceeds 366 days. Switzerland is outside the Union, so the EHDS floor does
-/// not reach it.
-#[must_use]
-pub fn retention_floor(jurisdiction: &str) -> Option<RetentionBound> {
-    let national = match jurisdiction {
-        "NL" => Some(RetentionBound {
-            years: 5,
-            days: 1830,
-            source: "five years, Besluit vaststelling bewaartermijn logging, \
-                     https://wetten.overheid.nl/BWBR0042391",
-        }),
-        "CH" => Some(RetentionBound {
-            years: 1,
-            days: 366,
-            source: "one year, DSV Art. 4 Abs. 5, \
-                     https://www.fedlex.admin.ch/eli/cc/2022/568/de",
-        }),
-        _ => None,
-    };
-    let union = EU_MEMBER_STATES
-        .contains(&jurisdiction)
-        .then_some(EHDS_FLOOR);
-    match (national, union) {
-        (Some(national), Some(union)) if union.years > national.years => Some(union),
-        (Some(national), _) => Some(national),
-        (None, union) => union,
+/// `retention` as `ehds-logging` writes a period.
+fn period(retention: Retention) -> Period {
+    match retention {
+        Retention::Forever => Period::Indefinite,
+        Retention::Days(days) => Period::Days(days),
+        Retention::Years(years) => Period::Years(u16::try_from(years).unwrap_or(u16::MAX)),
     }
 }
 
-/// The maximum an access-log record may be kept in `jurisdiction`, where one
-/// is registered (#3346).
-///
-/// The mirror of [`retention_floor`], keyed the same way, and empty for
-/// every jurisdiction but one: a rule that caps a log is rare, and an unknown
-/// cap is never guessed at.
-///
-/// `DE`: the access logs of a telematics-infrastructure application under
-/// §§ 327 and 334 Abs. 1 SGB V are kept for the three-year limitation period of
-/// § 195 BGB and then deleted "unverzüglich" — SGB V § 309 Abs. 1 and Abs. 3
-/// (`docs/law/de/sgb-v/BJNR024820988.xml`,
-/// <https://www.gesetze-im-internet.de/sgb_5/__309.html>). Three calendar years
-/// are never fewer than 1095 days, so that is the ceiling a day-counted horizon
-/// is held to. The provision binds "die Verantwortlichen nach § 307", so it
-/// reaches a deployment only once that deployment declares itself one
-/// (`[audit.store] sgb_v_309_controller`), which is why `declared` gates the row
-/// rather than the jurisdiction alone.
-#[must_use]
-pub fn retention_ceiling(jurisdiction: &str, sgb_v_309_controller: bool) -> Option<RetentionBound> {
-    match jurisdiction {
-        "DE" if sgb_v_309_controller => Some(RetentionBound {
-            years: 3,
-            days: 1095,
-            source: "the three-year limitation period of SGB V § 309 Abs. 1, after which Abs. 3 \
-                     requires deletion unverzüglich, \
-                     https://www.gesetze-im-internet.de/sgb_5/__309.html",
-        }),
-        _ => None,
+/// The most days `retention` can span: a calendar year spans 366 at most.
+fn most_days(retention: Retention) -> u64 {
+    match retention {
+        Retention::Forever => u64::MAX,
+        Retention::Days(days) => u64::from(days),
+        Retention::Years(years) => u64::from(years).saturating_mul(366),
+    }
+}
+
+/// The fewest days `retention` can span: a calendar year spans 365 at least.
+fn fewest_days(retention: Retention) -> u64 {
+    match retention {
+        Retention::Forever => u64::MAX,
+        Retention::Days(days) => u64::from(days),
+        Retention::Years(years) => u64::from(years).saturating_mul(365),
+    }
+}
+
+/// Whether a national floor of `retention` keeps records at least as long as
+/// Art. 9(2), so it replaces the Union floor as the ground of the floor.
+fn floor_reaches_union(retention: Retention) -> bool {
+    match retention {
+        Retention::Forever => true,
+        Retention::Years(years) => years >= u32::from(ehds_logging::retention::FLOOR_YEARS),
+        // NOTE: three calendar years span 1096 days at most (Art. 9(2) "from each date of access").
+        Retention::Days(days) => days >= 1096,
     }
 }
 
@@ -176,55 +244,107 @@ pub(crate) fn record_ends(_records: &[AuditRecord], _ctx: &AuditContext) -> Vec<
 
 #[cfg(test)]
 mod tests {
+    use ehds_logging::retention::FloorGround;
+
     use super::*;
 
-    /// Every EU Member State carries the EHDS floor of three years, a longer
-    /// national floor wins, and a state outside the Union keeps its own.
-    #[test]
-    fn the_ehds_floor_reaches_every_member_state_and_a_longer_national_floor_wins() {
-        for state in ["DE", "FI", "SE", "FR", "AT"] {
-            let floor = retention_floor(state).expect(state);
-            assert_eq!((floor.years, floor.days), (3, 1096), "{state}");
-            assert!(floor.source.contains("EHDS Art. 9(2)"), "{state}");
+    fn provision(code: &str) -> Provision {
+        Provision {
+            terminology: "http://data.europa.eu/eli/example/2026/1/oj".to_owned(),
+            code: code.to_owned(),
+            rubric: code.to_owned(),
         }
-        let nl = retention_floor("NL").expect("NL");
-        assert_eq!(
-            (nl.years, nl.days),
-            (5, 1830),
-            "the five Dutch years outlast the three EHDS years"
-        );
-        let ch = retention_floor("CH").expect("CH");
-        assert_eq!(
-            (ch.years, ch.days),
-            (1, 366),
-            "Switzerland is not a Member State"
-        );
-        for outside in ["NO", "GB", "IS", "LI"] {
-            assert_eq!(retention_floor(outside), None, "{outside}");
-        }
-        assert_eq!(EU_MEMBER_STATES.len(), 27);
     }
 
-    /// A horizon in years is compared exactly against a bound in years; a
-    /// horizon in days conservatively, so three years pass a three-year floor
-    /// and a three-year ceiling while no day count passes both.
-    #[test]
-    fn a_horizon_in_years_meets_bounds_in_years_exactly() {
-        let floor = retention_floor("DE").expect("the EHDS floor");
-        let ceiling = retention_ceiling("DE", true).expect("the SGB V ceiling");
-        let three = Retention::Years(3);
-        assert!(floor.admits_as_floor(three) && ceiling.admits_as_ceiling(three));
-        assert!(!floor.admits_as_floor(Retention::Years(2)));
-        assert!(!ceiling.admits_as_ceiling(Retention::Years(4)));
-        for days in 1090..1100 {
-            let horizon = Retention::Days(days);
-            assert!(
-                !(floor.admits_as_floor(horizon) && ceiling.admits_as_ceiling(horizon)),
-                "{days} days cannot satisfy a three-year floor and ceiling at once"
-            );
+    fn bound(period: Retention, code: &str) -> RetentionBound {
+        RetentionBound {
+            period,
+            ground: provision(code),
         }
-        assert!(floor.admits_as_floor(Retention::Forever));
-        assert!(!ceiling.admits_as_ceiling(Retention::Forever));
-        assert_eq!(retention_ceiling("DE", false), None);
+    }
+
+    fn retention(in_union: bool, period: Retention) -> LogRetention {
+        LogRetention {
+            in_union,
+            period,
+            ..LogRetention::default()
+        }
+    }
+
+    /// In the Union the floor is Art. 9(2) unless a declared floor keeps
+    /// records longer, which then grounds the floor; outside the Union the
+    /// longest declared floor does, under three years too.
+    #[test]
+    fn the_floor_is_art_9_2_or_the_longest_declared_floor() {
+        let union = retention(true, Retention::Years(3));
+        assert_eq!(
+            union.bounds().expect("bounds").floor_ground(),
+            &FloorGround::Union
+        );
+        let mut national = retention(true, Retention::Years(5));
+        national.floors = vec![
+            bound(Retention::Years(1), "short"),
+            bound(Retention::Years(5), "long"),
+        ];
+        assert_eq!(
+            national.bounds().expect("bounds").floor_ground(),
+            &FloorGround::National("http://data.europa.eu/eli/example/2026/1/oj#long".to_owned())
+        );
+        let mut outside = retention(false, Retention::Years(1));
+        outside.floors = vec![bound(Retention::Years(1), "art_4_5")];
+        assert!(matches!(
+            outside.bounds().expect("bounds").floor_ground(),
+            FloorGround::OutsideUnion(_)
+        ));
+        outside.policy().expect("one year outside the Union holds");
+        outside.floors.clear();
+        assert!(matches!(
+            outside.bounds(),
+            Err(RetentionDefect::NoFloorOutsideUnion)
+        ));
+    }
+
+    /// A period under Art. 9(2) in the Union, over a ceiling, or kept without
+    /// end under a ceiling is refused, counting calendar years and days as
+    /// `ehds-logging` does.
+    #[test]
+    fn a_period_that_breaks_a_bound_is_refused() {
+        assert!(retention(true, Retention::Days(1095)).policy().is_err());
+        retention(true, Retention::Days(1096))
+            .policy()
+            .expect("1096 days reach three years from every date of access");
+        let mut capped = retention(true, Retention::Years(3));
+        capped.ceilings = vec![bound(Retention::Years(3), "ceiling")];
+        capped
+            .policy()
+            .expect("three years within a three-year ceiling");
+        capped.period = Retention::Days(1096);
+        assert!(
+            capped.policy().is_err(),
+            "1096 days can outlast three years"
+        );
+        capped.period = Retention::Forever;
+        assert!(
+            capped.policy().is_err(),
+            "without end outlasts every ceiling"
+        );
+    }
+
+    /// The grounds name Art. 9(2) in the Union, then each declared floor and
+    /// ceiling; only a policy that states the retention is declared.
+    #[test]
+    fn the_grounds_follow_the_declaration() {
+        let mut log = retention(true, Retention::Years(5));
+        log.floors = vec![bound(Retention::Years(5), "floor")];
+        log.ceilings = vec![bound(Retention::Years(10), "ceiling")];
+        let codes: Vec<String> = log.grounds().into_iter().map(|g| g.code).collect();
+        assert_eq!(codes, [EHDS_FLOOR_CODE, "floor", "ceiling"]);
+        assert_eq!(
+            log.grounds().first().map(|g| g.terminology.as_str()),
+            Some(EHDS_ELI)
+        );
+        assert!(!LogRetention::default().is_declared());
+        log.policy = Some("uid::cdr::1".to_owned());
+        assert!(log.is_declared());
     }
 }

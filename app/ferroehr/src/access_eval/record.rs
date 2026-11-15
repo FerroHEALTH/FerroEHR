@@ -601,7 +601,10 @@ mod tests {
             policies: policies_of(&grounds),
             grounds: grounds.to_vec(),
         }));
-        let retention = crate::access_log::entry::horizon_retention(None);
+        let retention = crate::access_log::retention::stated(
+            None,
+            &crate::system_log::retention::LogRetention::default(),
+        );
         let entry =
             crate::access_log::entry::entry_of(&event, None, "cdr", retention).expect("an entry");
         let stored = crate::access_log::recorded::stored(&entry, 1).expect("it reads back");

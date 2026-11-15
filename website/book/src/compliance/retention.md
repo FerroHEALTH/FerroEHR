@@ -242,32 +242,42 @@ are in the trail beside the reads and writes.
 The trail has a retention question of its own, and it runs the other way:
 the law sets a **floor** below which an access log may not be reaped (three
 years from each date of access in every EU Member State under EHDS Art. 9(2),
-five years in the Netherlands, one year in Switzerland), and one national rule
-sets a **ceiling**. SGB V § 309 Abs. 1 asks the controllers of a German
+five years in the Netherlands, one year in Switzerland), and a national rule
+can set a **ceiling**. SGB V § 309 Abs. 1 asks the controllers of a German
 telematics-infrastructure application to keep access logs for the three-year
 limitation period, and Abs. 3 requires deletion without delay once it has run.
-That provision binds the controllers § 307 names, which no software can infer,
-so the deployment declares it:
+Which of these binds a deployment is the controller's to know, so the
+controller declares the period and each bound in its access policy
+(`ACCESS_POLICY.log_retention`). FerroEHR ships no table of national law; the
+one provision it names itself is EHDS Art. 9(2), for a controller that
+declares itself in the Union. A German § 307 controller writes:
 
-```toml
-[audit.store]
-retention = 3
-sgb_v_309_controller = true
+```json
+"log_retention": {
+  "_type": "ACCESS_LOG_RETENTION",
+  "name": { "_type": "DV_TEXT", "value": "Access log retention" },
+  "archetype_node_id": "id18",
+  "in_union": true,
+  "period": { "_type": "DV_DURATION", "value": "P3Y" },
+  "ceilings": [{
+    "_type": "ACCESS_RETENTION_BOUND",
+    "period": { "_type": "DV_DURATION", "value": "P3Y" },
+    "ground": { "_type": "DV_CODED_TEXT", "value": "SGB V § 309 Abs. 1",
+      "defining_code": { "_type": "CODE_PHRASE",
+        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "https://www.gesetze-im-internet.de/sgb_5/" },
+        "code_string": "__309.abs_1" } }
+  }]
+}
 ```
 
-With the declaration in place, the server refuses at boot any horizon above the
-ceiling, including no `retention` (keep forever), and refuses a
-configuration whose floors and ceilings contradict each other outright, rather
-than silently preferring one.
-
-Germany is a Member State, so the EHDS floor of three years applies there as
-well. Both rules are three calendar years, which is why the horizon above is
-stated in years: `retention = 3` meets the floor and the ceiling exactly,
-and the reaper deletes what is older than the same calendar date three years
-ago. A day count cannot: three calendar years span 1095 or 1096 days, so a
-floor in days has to be 1096 and a ceiling 1095, and with
-`sgb_v_309_controller = true` the server refuses every `retention` value
-and names `retention = 3` as the fix.
+The server refuses the policy write when the period breaks a bound it
+declares, including no `period` (keep forever) under a ceiling, and when a
+ceiling sits below a floor, rather than silently preferring one. Germany is a
+Member State, so the Art. 9(2) floor of three years applies as well. Both
+rules are three calendar years, which is why the period above is stated in
+years: `P3Y` meets the floor and the ceiling exactly. A day count cannot:
+three calendar years span 1095 or 1096 days, so a floor in days has to be
+1096 and a ceiling 1095.
 An openEHR access-log entry carries its own end: it states `retain_until`
 and the grounds of its period when it is written, and once that day has passed
 the server replaces it by a tombstone that keeps the hash chain whole. The

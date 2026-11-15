@@ -105,7 +105,7 @@ The identity fields Art. 30(1)(a) asks for are yours in every case:
 | Categories of personal data | Per access: the accessing person and organisation, the roles held, the object and its domain, the outcome, the declared purpose of use, the configured legal basis and the time. Refusals are recorded too, unattributed where no principal was established |
 | Recipients | *yours*: the local repository, plus any syslog or FHIR-feed Audit Record Repository configured |
 | Third-country transfers | *yours* |
-| Retention | `[audit.store] retention`, `0` meaning forever, reaped hourly otherwise. Where an active identifier rule names a jurisdiction with a registered floor, a shorter value is refused at boot |
+| Retention | the access policy's `log_retention`, absent meaning forever, reaped hourly otherwise. A period that breaks a floor or ceiling the controller declares, or the three years of EHDS Art. 9(2) in the Union, is refused when the policy is written |
 | Security measures | Records are hash-chained and verifiable with `audit.verify_audit_chain()`; the runtime role may insert and stamp delivery and nothing else; the `audit` schema sits outside both pseudonymisation domains; the syslog feed can run over RFC 5425 TLS with a client certificate |
 
 ## 6. Change-event feed (off by default)

@@ -28,7 +28,7 @@ include::partial$module_vars.adoc[]
 
 == Retention
 
-. An entry MUST state its retention when written: `_retain_until_` and the grounds that set it, from the categories and origins of the data and the law that applies.
+. An entry MUST state its retention when written: `_retain_until_` and the grounds that set it, from the controller's access policy and the law that binds the controller, and SHOULD name the version of that policy in `_policy_`.
 . At the end of the period, the system MUST replace the entry by an `ACCESS_LOG_TOMBSTONE` with the same `_uid_`, `_system_id_`, `_time_recorded_` and `_link_`. An erasure ordered by law before then takes the same path.
 . A store that receives entries from another system MUST keep their `_retain_until_` and MAY extend it.
 

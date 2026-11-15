@@ -372,3 +372,68 @@ async fn an_admin_without_the_write_grant_is_refused_a_write() {
     let (status, _, body) = call(&app, "GET", "root", "", None, None).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
 }
+
+/// `policy(false)` with `log_retention`: in the Union, `period`, and a
+/// ceiling of `ceiling` under a synthetic provision.
+fn with_retention(period: Option<&str>, ceiling: &str) -> Value {
+    let mut body = policy(false);
+    let mut retention = json!({
+        "_type": "ACCESS_LOG_RETENTION",
+        "name": { "_type": "DV_TEXT", "value": "Access log retention" },
+        "archetype_node_id": "id18",
+        "in_union": true,
+        "ceilings": [{ "_type": "ACCESS_RETENTION_BOUND",
+            "period": { "_type": "DV_DURATION", "value": ceiling },
+            "ground": { "_type": "DV_CODED_TEXT", "value": "Art. 10",
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID",
+                        "value": "http://data.europa.eu/eli/example/2026/1/oj" },
+                    "code_string": "art_10" } } }]
+    });
+    if let Some(period) = period {
+        retention["period"] = json!({ "_type": "DV_DURATION", "value": period });
+    }
+    body["log_retention"] = retention;
+    body
+}
+
+/// A log retention whose period breaks a bound it declares, as calendar
+/// years count, is refused whole; one that holds is installed with the
+/// policy version it came from, and the period applies from the next write
+/// (#5660).
+#[tokio::test]
+async fn a_log_retention_that_breaks_a_bound_is_refused_and_one_that_holds_applies() {
+    let (_db, pool) = common::migrated_pool().await;
+    let (svc, app) = replica(&pool, false, true).await;
+    assert!(!svc.access_policy().log_retention().is_declared());
+    for refused in [
+        with_retention(Some("P1095D"), "P10Y"),
+        with_retention(Some("P1096D"), "P3Y"),
+        with_retention(None, "P10Y"),
+        with_retention(Some("P18M"), "P10Y"),
+    ] {
+        let (status, _, answer) = call(
+            &app,
+            "PUT",
+            "root",
+            "",
+            Some((header::IF_NONE_MATCH, "*")),
+            Some(&refused),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{refused}: {answer}");
+    }
+    create(&app, &with_retention(Some("P3Y"), "P3Y")).await;
+    svc.read_access_policy().await.expect("read the policy");
+    let retention = svc.access_policy().log_retention();
+    assert_eq!(
+        retention.period,
+        ferroehr::system_log::config::Retention::Years(3)
+    );
+    assert!(retention.is_declared());
+    assert_eq!(
+        retention.policy,
+        svc.access_policy().in_force().uid,
+        "the period names the policy version it came from"
+    );
+}

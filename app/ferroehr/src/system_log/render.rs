@@ -6,8 +6,8 @@
 //!
 //! The store keeps a record's facts in columns and renders its FHIR R4
 //! `AuditEvent` when the record is read or fed. The rendering also depends on
-//! configuration: the audit source, the store horizon a record states as its
-//! retention, the category map an access is classified through, and the
+//! configuration: the audit source, the access log retention of the
+//! controller's access policy, the category map an access is classified through, and the
 //! emergency purposes. [`RenderPolicy`] is that configuration. The store keeps
 //! each distinct policy once (`audit.audit_render_policy`, keyed by the
 //! SHA-256 of its text) and every record names the policy it was written
@@ -28,10 +28,11 @@ use crate::system_log::AuditError;
 use crate::system_log::categories::{CategoryMapConfig, Classifier};
 #[cfg(feature = "fhir")]
 use crate::system_log::categories::{ClassifiedContent, MapDigest};
-use crate::system_log::config::{AuditConfig, Retention};
+use crate::system_log::config::AuditConfig;
 #[cfg(feature = "fhir")]
 use crate::system_log::event::AuditEvent;
 use crate::system_log::message::AuditContext;
+use crate::system_log::retention::LogRetention;
 
 /// What the FHIR `AuditEvent` of a record is rendered under beside the
 /// record itself, as the store keeps it.
@@ -46,9 +47,9 @@ pub struct RenderPolicy {
     pub server_host: String,
     /// `[audit] value_if_missing`.
     pub value_if_missing: String,
-    /// The store horizon, which a record outside the EHDS access record
-    /// states as its retention.
-    pub horizon: Retention,
+    /// The access log retention of the access policy in force, which every
+    /// record states.
+    pub retention: LogRetention,
     /// The audit category register version every access is classified
     /// through.
     pub categories: CategoryMapConfig,
@@ -57,7 +58,8 @@ pub struct RenderPolicy {
 }
 
 impl RenderPolicy {
-    /// The policy `config` states with `categories` as the category map.
+    /// The policy `config` states with `categories` as the category map,
+    /// under the default retention until the access policy states one.
     #[must_use]
     pub fn of(config: &AuditConfig, categories: &CategoryMapConfig) -> Self {
         Self {
@@ -65,7 +67,7 @@ impl RenderPolicy {
             enterprise_site_id: config.enterprise_site_id.clone().unwrap_or_default(),
             server_host: config.server_host.clone().unwrap_or_default(),
             value_if_missing: config.value_if_missing.clone(),
-            horizon: config.store.horizon(),
+            retention: LogRetention::default(),
             categories: categories.clone(),
             emergency_purpose_codes: config.emergency_purpose_codes.clone(),
         }
@@ -88,7 +90,7 @@ impl RenderPolicy {
             server_ip: self.server_host.clone(),
             value_if_missing: self.value_if_missing.clone(),
             #[cfg(feature = "fhir")]
-            recording: recording(self.horizon, &categories, &emergency)?,
+            recording: recording(&self.retention, &categories, &emergency)?,
         };
         Ok(CompiledPolicy {
             context,
@@ -133,51 +135,20 @@ fn emergency_purposes(
     ehds_logging::emergency::EmergencyPurposes::declare(&purposes).map_err(AuditError::Emergency)
 }
 
-/// The policies the EHDS access record is written under: the store's horizon
-/// as the record's retention, the categories' and origins' labels, and the
-/// emergency purposes.
-///
-/// The record states the horizon as configured: years, days, or without end
-/// for `retention_days = 0`. A horizon under the three years of EHDS Art. 9(2)
-/// passes the boot validation only where no Union jurisdiction is in force,
-/// so its record names the deployment's own retention as the ground of its
-/// floor, never Art. 9(2).
+/// The policies the EHDS access record is written under: the access log
+/// retention of the access policy in force, the categories' and origins'
+/// labels, and the emergency purposes.
 ///
 /// # Errors
 /// [`AuditError::Policy`] when `ehds-logging` refuses the retention or the
-/// label policy, which a validated configuration does not cause.
+/// label policy, which a committed access policy does not cause.
 #[cfg(feature = "fhir")]
 fn recording(
-    horizon: Retention,
+    log: &LogRetention,
     categories: &Classifier,
     emergency: &ehds_logging::emergency::EmergencyPurposes,
 ) -> Result<crate::system_log::fhir::Recording, AuditError> {
-    use ehds_logging::retention::{Bounds, FLOOR_YEARS, Period, RetentionPolicy};
-    let none = std::collections::BTreeMap::new();
-    let period = match horizon {
-        Retention::Forever => Period::Indefinite,
-        Retention::Days(days) => Period::Days(days),
-        Retention::Years(years) => Period::Years(u16::try_from(years).unwrap_or(u16::MAX)),
-    };
-    let bounds = if matches!(period, Period::Years(years) if years < FLOOR_YEARS)
-        || matches!(period, Period::Days(days) if days < 1096)
-    {
-        // NOTE: EHDS Art. 9(2) binds the Member States; the boot validation refuses a horizon
-        // under a Union floor, so one under three years runs under no Union jurisdiction.
-        Bounds::outside_union(
-            period,
-            format!(
-                "the audit.store horizon ({}), under no Union jurisdiction",
-                horizon.describe()
-            ),
-        )
-        .map_err(|e| AuditError::Policy(Box::new(e)))?
-    } else {
-        Bounds::union()
-    };
-    let retention =
-        RetentionPolicy::declare_within(&bounds, period, &none, &none, categories.map())
-            .map_err(|e| AuditError::Policy(Box::new(e)))?;
+    let retention = log.policy().map_err(|e| AuditError::Policy(Box::new(e)))?;
     let unlabelled = std::collections::BTreeMap::new();
     let labels =
         ehds_logging::label::LabelPolicy::declare(None, &unlabelled, &unlabelled, categories.map())
@@ -186,7 +157,7 @@ fn recording(
         retention,
         labels,
         emergency: emergency.clone(),
-        horizon,
+        log: log.clone(),
     })
 }
 
@@ -272,8 +243,6 @@ mod tests {
             server_host = "cdr.example.org"
             purpose_codes = ["TREAT", "ETREAT"]
             emergency_purpose_codes = ["ETREAT"]
-            [store]
-            retention = "P10Y"
             "#,
         )
         .expect("parse");
@@ -284,11 +253,17 @@ mod tests {
             "#,
         )
         .expect("parse the map");
-        let policy = RenderPolicy::of(&config, &categories);
+        let mut policy = RenderPolicy::of(&config, &categories);
+        policy.retention = LogRetention {
+            in_union: true,
+            period: crate::system_log::config::Retention::Years(10),
+            floors: Vec::new(),
+            ceilings: Vec::new(),
+            policy: Some("5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8::cdr.example.org::1".to_owned()),
+        };
         let stored = serde_json::to_value(&policy).expect("serialize");
         let again: RenderPolicy = serde_json::from_value(stored).expect("read back");
         assert_eq!(policy, again);
-        assert_eq!(again.horizon, Retention::Years(10));
         policy.compile().expect("compile");
     }
 }

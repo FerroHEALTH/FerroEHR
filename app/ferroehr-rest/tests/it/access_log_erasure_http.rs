@@ -67,7 +67,7 @@ fn entry() -> Value {
         "is_emergency": false,
         "retention": { "_type": "ACCESS_RETENTION",
             "retain_until": { "_type": "DV_DATE", "value": "2031-11-07" },
-            "grounds": [coded("ehds-logging", "eu-2025-327-art-9-2")] },
+            "grounds": [coded("http://data.europa.eu/eli/reg/2025/327/oj", "art_9.par_2")] },
         "link": { "_type": "ACCESS_LOG_LINK", "sequence": 1, "algorithm": "SHA-256",
             "previous_digest": "0".repeat(64), "content_digest": "0".repeat(64),
             "digest": "0".repeat(64) }

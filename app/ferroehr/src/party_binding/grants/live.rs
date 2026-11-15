@@ -225,6 +225,13 @@ impl LiveGrants {
             .unwrap_or_else(PoisonError::into_inner) = Arc::new(trust);
     }
 
+    /// Judge the federation agreements against access records kept for
+    /// `holder`, the period of the access policy's log retention.
+    pub fn set_holder(&self, holder: crate::system_log::config::Retention) {
+        let trust = (*self.federation()).clone().with_holder(holder);
+        self.set_federation(trust);
+    }
+
     /// What the federation agreements are judged against.
     #[must_use]
     pub fn federation(&self) -> Arc<FederationTrust> {

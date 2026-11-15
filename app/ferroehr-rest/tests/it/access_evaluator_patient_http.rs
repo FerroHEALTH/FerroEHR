@@ -212,8 +212,6 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
         enabled: true,
         store: StoreConfig {
             enabled: false,
-            retention: None,
-            sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
         },
