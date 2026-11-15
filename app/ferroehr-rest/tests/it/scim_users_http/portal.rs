@@ -290,3 +290,20 @@ fn default_representation(source: ferroehr::ids::VoId, subject: ferroehr::ids::V
         "target": reference(subject)
     })
 }
+
+/// A patient portal's representative holds no role: the portal client's
+/// User asking for one is refused, as a representative acts only through a
+/// representation.
+#[tokio::test]
+async fn a_portal_representative_holds_no_role() {
+    let (_db, _service, app) = portal().await;
+    let body = json!({
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User", super::EXTENSION],
+        "userName": "frank",
+        "roles": [{ "value": "nurse" }],
+        super::EXTENSION: { "loginIdentifier": FRANK }
+    });
+    let (status, _, refused) = call(&app, "POST", "/Users", PORTAL_CLIENT, Some(&body), &[]).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
+    assert!(refused.to_string().contains("hold no role"), "{refused}");
+}

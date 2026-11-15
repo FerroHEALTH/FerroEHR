@@ -26,7 +26,6 @@ use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
-
 mod defaults;
 pub mod jit;
 pub mod person;

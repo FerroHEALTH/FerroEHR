@@ -130,6 +130,16 @@ struct Gate {
     portal_issuers: Arc<[String]>,
 }
 
+impl Gate {
+    /// Whether `binding_issuer` is a `patients` issuer, so its client
+    /// provisions a patient portal's representatives (#5622).
+    fn portal(&self, binding_issuer: &str) -> bool {
+        self.portal_issuers
+            .iter()
+            .any(|issuer| issuer == binding_issuer)
+    }
+}
+
 /// Why a SCIM endpoint cannot be served.
 #[derive(Debug, thiserror::Error)]
 pub enum EndpointError {
@@ -442,10 +452,7 @@ fn provisioning_client(
         client_id,
         binding_issuer: binding_issuer.to_owned(),
         group_issuer: ferroehr::config::scim::group_issuer(binding_issuer, &gate.parties),
-        portal: gate
-            .portal_issuers
-            .iter()
-            .any(|issuer| issuer == binding_issuer),
+        portal: gate.portal(binding_issuer),
         roles: RoleCeiling {
             terminology,
             allowed,
