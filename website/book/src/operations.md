@@ -954,7 +954,7 @@ why they are written as your checklist rather than as our claim.
   refused at load (GHSA-52mf-qg39-4q4j). See
   [`[server.tls]`](installation/config-server.md#servertls-native-tls-and-mutual-tls-client-authentication).
 - **Upgrading to 5.7.2 starts on an empty audit store.** Audit migration
-  0039 refuses a store that holds a render policy written before it, naming
+  0040 refuses a store that holds a render policy written before it, naming
   each by its digest: those policies state the `[audit.store] retention`
   horizon this release removes, and a stored record is never rewritten.
   Export what you need over ITI-81 with the earlier release, drop the `audit`
