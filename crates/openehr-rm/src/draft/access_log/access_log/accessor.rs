@@ -26,7 +26,7 @@ pub struct Accessor {
     pub roles: Option<Vec<DvCodedText>>,
     /// The demographic `GROUP` parties, such as care teams, whose membership the access relied on.
     pub groups: Option<Vec<PartyRef>>,
-    /// How the system bound the credential to `_party_`, or why it could not, coded in a terminology the system names.
+    /// How the system bound the credential to `_party_`, or why it could not, coded in the draft `openehr_access` terminology's `credential binding` group.
     pub binding: Option<DvCodedText>,
     /// The credential the accessor authenticated with.
     pub credential: Option<AccessCredential>,

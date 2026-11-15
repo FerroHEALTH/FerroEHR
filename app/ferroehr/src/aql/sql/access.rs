@@ -169,31 +169,39 @@ pub(super) fn keeper_reads(keepers: &Keepers, h: &str) -> Expr {
     Expr::exists(probe)
 }
 
-/// Whether the EHR `target` carries `EHR_ACCESS` settings.
+/// Whether the EHR `target` carries `EHR_ACCESS` settings: one probe of the
+/// row by its key, as a scalar subquery, which PostgreSQL runs per row and
+/// never turns into a hashed scan of every settings row (#5701).
 pub(super) fn settled(target: Expr) -> Expr {
-    Expr::exists(settings_row(target))
+    let mut row = settings_row(target);
+    row.clear_selects();
+    row.expr(Expr::val(true));
+    Expr::cust_with_exprs(
+        "COALESCE($1, false)",
+        [Expr::SubQuery(None, Box::new(row.into()))],
+    )
 }
 
 /// For the EHR `target`: with a settings row, `with` over that row; with
 /// none, `default`, or every row when `default` is `None`.
+///
+/// One scalar probe of the settings row by its key decides both: it answers
+/// `with` (an unknown `with` is false) when the row exists and NULL when it
+/// does not, which `default` then replaces. An `EXISTS` beside a `NOT
+/// EXISTS` under an `OR` was planned as two hashed `SubPlans` over every
+/// settings row before the first row came back (#5701). No openEHR spec
+/// governs this: our own design.
 fn by_settings(target: Expr, with: Expr, default: Option<Expr>) -> Expr {
-    match default {
-        // NOTE: our own design (#5588), one probe of the settings row when an EHR with
-        // none admits every row: the row is absent or its class admits.
-        None => {
-            let mut held = settings_row(target);
-            held.and_where(Expr::cust_with_exprs("NOT COALESCE($1, false)", [with]));
-            Expr::exists(held).not()
-        }
-        Some(default) => {
-            let mut held = settings_row(target.clone());
-            held.and_where(with);
-            Expr::exists(settings_row(target))
-                .not()
-                .and(default)
-                .or(Expr::exists(held))
-        }
-    }
+    let mut row = settings_row(target);
+    row.clear_selects();
+    row.expr(Expr::cust_with_exprs("COALESCE($1, false)", [with]));
+    Expr::cust_with_exprs(
+        "COALESCE($1, $2)",
+        [
+            Expr::SubQuery(None, Box::new(row.into())),
+            default.unwrap_or_else(|| Expr::val(true)),
+        ],
+    )
 }
 
 /// The settings row of the EHR `target`.
