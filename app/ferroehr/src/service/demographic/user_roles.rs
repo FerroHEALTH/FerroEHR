@@ -45,7 +45,7 @@ use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, WriteEnvelope};
 use crate::versioning::contribution::typed_decode_gate;
-use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
 
 /// A role a User holds: the code of its `ROLE`'s name in its terminology.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -288,7 +288,7 @@ fn role_of(body: &Value) -> Option<UserRole> {
     let code = name
         .pointer("/defining_code/code_string")
         .and_then(Value::as_str)?;
-    (terminology != TERMINOLOGY_ID_ACCESS_CONTROL).then(|| UserRole {
+    (terminology != TERMINOLOGY_ID_ACCESS).then(|| UserRole {
         terminology: terminology.to_owned(),
         code: code.to_owned(),
     })
@@ -414,10 +414,7 @@ mod tests {
                 code: "NURSE".to_owned()
             })
         );
-        assert_eq!(
-            role_of(&named(coded(TERMINOLOGY_ID_ACCESS_CONTROL, "NURSE"))),
-            None
-        );
+        assert_eq!(role_of(&named(coded(TERMINOLOGY_ID_ACCESS, "NURSE"))), None);
         assert_eq!(
             role_of(&named(json!({ "_type": "DV_TEXT", "value": "Nurse" }))),
             None
