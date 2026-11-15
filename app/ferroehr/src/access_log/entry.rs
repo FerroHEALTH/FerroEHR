@@ -27,9 +27,10 @@ use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
 use openehr_base::v1_3::base_types::identification::object_ref::{ObjectRef, ObjectRefData};
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
-use openehr_rm::draft::access_control::terminology::{
-    AccessorKind, Action, Authorisation, Outcome, Term, coded_text,
+use openehr_rm::draft::access_control::terminology::log::{
+    AccessorKind, Action, Authorisation, Outcome,
 };
+use openehr_rm::draft::access_control::terminology::{Term, coded_text};
 use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::common::generic::party_self::PartySelf;
@@ -60,8 +61,6 @@ use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention
 use openehr_rm::draft::access_log::access_log::accessed_item::AccessedItem;
 use openehr_rm::draft::access_log::access_log::accessor::Accessor;
 
-/// FerroEHR's terminology of the party binding outcomes (#5007).
-pub const BINDING_TERMINOLOGY: &str = "ferroehr-party-binding";
 /// The terminology of a code a caller declared with no system.
 const LOCAL: &str = "local";
 /// The class an entry that changes the access log names the entry it changed
@@ -288,13 +287,7 @@ fn accessor(event: &AuditEvent, system_id: &str) -> Accessor {
                 .collect(),
         ),
         groups: binding.and_then(|binding| nonempty(groups(binding))),
-        binding: binding.map(|binding| {
-            coded_text(
-                BINDING_TERMINOLOGY,
-                binding.code.as_str(),
-                binding.code.as_str(),
-            )
-        }),
+        binding: binding.map(|binding| binding.code.term().coded()),
         credential: credential(event),
         delegation: binding.and_then(|binding| {
             nonempty(
