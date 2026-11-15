@@ -265,6 +265,17 @@ hp_read_until() {
   assert_eq "$expected" "$H_CODE" "$what"
 }
 
+# What both instances and FerroPIX logged of the subscription and the feed,
+# for a probe the feed did not reach.
+hp_feed_log() {
+  local service
+  for service in ferroehr ferroehr-2 ferropix; do
+    printf '      %s on the PMIR feed:\n' "$service"
+    hdc logs --no-color "$service" 2>&1 \
+      | grep -iE 'pmir|iti-93|iti-94|subscription|outbox|feed' | tail -25 | sed 's/^/        /'
+  done
+}
+
 # The PIX merge and the steward revert, on the pixm stack hospital_pixm set
 # up: Lisa under Cardiology's care, her duplicate record with an EHR of its
 # own, merged into hers and split again.
@@ -326,6 +337,7 @@ hospital_pix_merge() {
     "after the merge Dr. Jansen reads the duplicate record under Lisa's care relationship"
   hp_read_until 1 kc:anna "$(hv ehr_lisa_dup)" c_lisa_dup 200 \
     "the merge holds on the other instance"
+  [[ "$H_CODE" = 200 ]] || hp_feed_log
   probe_done
 
   probe "P-HOSP-PIX-REVERT" "$PROBE_WORKING" "server" "#5693" \
