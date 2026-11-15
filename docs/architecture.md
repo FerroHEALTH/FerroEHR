@@ -747,7 +747,12 @@ which is what makes an optional stage safe to disable:
    probe reads with `?`, so the planner's estimate and each probe cost the
    same whatever the census, and only the one parse of the bound object grows
    with it (#5645). The care relationships stay in the party domain, which the
-   clinical statement does not read. The request path
+   clinical statement does not read. Before it renders a verdict, the emitter
+   folds what the SQL would decide alike. A repeated member counts once. A
+   two-valued predicate beside its own negation decides the conjunction or the
+   disjunction (a fact of the EHR, which may be unknown, is never folded). A
+   scope that names an empty list covers nothing. Each `EXISTS` folded away is
+   one subquery fewer to plan (`aql::sql::access::simplified`, #5667). The request path
    adds no transaction: every fact is a copy, and a named object is read by
    its head row only when the verdict depends on the object. The procedure,
    its order and its codes are our own design; RM EHR IM §EHR Access only
