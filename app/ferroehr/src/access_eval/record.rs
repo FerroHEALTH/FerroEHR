@@ -27,7 +27,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
-use openehr_rm::draft::access_control::terminology::{DirectiveKind, Refusal, Term as _};
+use openehr_rm::draft::access_control::terminology::{
+    Authorisation, DirectiveKind, Refusal, Term as _,
+};
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use uuid::Uuid;
@@ -238,7 +240,7 @@ impl RequestAccess {
             .map(|(operation, role)| AccessAuthorisation {
                 name: Some((*operation).to_owned()),
                 reference: Some(role_reference(*role)),
-                ..authorisation("role")
+                ..authorisation(Authorisation::Role)
             });
         let roles = self
             .caller()
@@ -247,7 +249,7 @@ impl RequestAccess {
             .iter()
             .map(|role| AccessAuthorisation {
                 name: Some(format!("{}::{}", role.terminology, role.code)),
-                ..authorisation("role")
+                ..authorisation(Authorisation::Role)
             });
         capabilities.chain(roles).collect()
     }
@@ -267,25 +269,25 @@ impl RequestAccess {
         let found = &verdict.grounds;
         let directives = directives_of((*judged.settings).as_ref());
         let version = judged.version.as_deref();
-        let directive = |at: usize, kind: Option<&'static str>| {
+        let directive = |at: usize, kind: Option<Authorisation>| {
             directives
                 .get(at)
                 .map(|d| directive_ground(d, at, version, kind))
         };
         if admitted {
             if found.subject {
-                grounds.push(authorisation("subject of care"));
+                grounds.push(authorisation(Authorisation::SubjectOfCare));
             }
             grounds.extend(found.permits.iter().filter_map(|at| directive(*at, None)));
             if found.keeper && !self.caller().administrator {
                 grounds.push(AccessAuthorisation {
                     name: Some(EHR_ACCESS.to_owned()),
                     version: version.map(str::to_owned),
-                    ..authorisation("consent")
+                    ..authorisation(Authorisation::Consent)
                 });
             }
             if found.cared {
-                grounds.push(self.policy_ground("treatment relationship"));
+                grounds.push(self.policy_ground(Authorisation::TreatmentRelationship));
             }
         }
         grounds.extend(
@@ -294,7 +296,7 @@ impl RequestAccess {
                 .iter()
                 .map(|(at, _)| *at)
                 .filter(|at| covering.is_none_or(|covering| covering.directives.contains(at)))
-                .filter_map(|at| directive(at, Some("emergency"))),
+                .filter_map(|at| directive(at, Some(Authorisation::Emergency))),
         );
         grounds.extend(
             found
@@ -302,15 +304,15 @@ impl RequestAccess {
                 .iter()
                 .map(|(at, _)| *at)
                 .filter(|at| covering.is_none_or(|covering| covering.rules.contains(at)))
-                .filter_map(|at| self.rule_ground(at, "emergency")),
+                .filter_map(|at| self.rule_ground(at, Authorisation::Emergency)),
         );
         if verdict.lifted.contains(&Lifted::Policy) {
-            grounds.push(self.policy_ground("emergency"));
+            grounds.push(self.policy_ground(Authorisation::Emergency));
         }
     }
 
     /// A ground of `kind` defined in the access policy in force.
-    fn policy_ground(&self, kind: &str) -> AccessAuthorisation {
+    fn policy_ground(&self, kind: Authorisation) -> AccessAuthorisation {
         let version = self.record_facts().policy_version.clone();
         AccessAuthorisation {
             name: version.as_ref().map(|_| ACCESS_POLICY.to_owned()),
@@ -325,7 +327,7 @@ impl RequestAccess {
     }
 
     /// The ground the rule at `at` of the access policy gives, of `kind`.
-    fn rule_ground(&self, at: usize, kind: &str) -> Option<AccessAuthorisation> {
+    fn rule_ground(&self, at: usize, kind: Authorisation) -> Option<AccessAuthorisation> {
         let rule = self.rules().get(at)?;
         Some(AccessAuthorisation {
             reference: Some(identify(rule, at)),
@@ -505,13 +507,13 @@ fn directive_ground(
     directive: &AccessDirective,
     at: usize,
     version: Option<&str>,
-    kind: Option<&'static str>,
+    kind: Option<Authorisation>,
 ) -> AccessAuthorisation {
     let kind = kind.unwrap_or_else(|| {
         if DirectiveKind::read_coded(&directive.kind) == Ok(DirectiveKind::Delegation) {
-            "representation"
+            Authorisation::Representation
         } else {
-            "consent"
+            Authorisation::Consent
         }
     });
     AccessAuthorisation {
@@ -586,7 +588,7 @@ mod tests {
         let ground = |name: &str, version: &str| AccessAuthorisation {
             name: Some(name.to_owned()),
             version: Some(version.to_owned()),
-            ..authorisation("consent")
+            ..authorisation(Authorisation::Consent)
         };
         let grounds = [
             ground(EHR_ACCESS, "ehr-access::cdr::2"),

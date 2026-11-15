@@ -31,8 +31,8 @@
   },
   "invariants": {
     "Not_empty": "party /= Void or role /= Void or relationship /= Void or caller_kind /= Void",
-    "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
-    "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
+    "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
+    "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
   }
 }
 --------

@@ -8,7 +8,7 @@
 //! the identity provider.
 //!
 //! Whether a login is created is policy, held in the CDR: a
-//! `create_at_login` grant of the operation terminology names the issuer and
+//! `create_at_login` grant of the draft access terminology names the issuer and
 //! its admission conditions
 //! ([`crate::party_binding::grants::admission`]), read on every first
 //! login. This table only says how the token is read, and creation needs a

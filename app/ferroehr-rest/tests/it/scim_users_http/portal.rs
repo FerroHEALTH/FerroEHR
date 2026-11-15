@@ -281,7 +281,7 @@ fn default_representation(source: ferroehr::ids::VoId, subject: ferroehr::ids::V
             "items": [
                 { "_type": "ELEMENT", "archetype_node_id": "id4",
                     "name": { "_type": "DV_TEXT", "value": "Representation code" },
-                    "value": coded("ferroehr-operations", "represents", "represents") },
+                    "value": coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "represents", "represents") },
                 { "_type": "ELEMENT", "archetype_node_id": "id6",
                     "name": { "_type": "DV_TEXT", "value": "Relationship" },
                     "value": coded("openehr", "254", "parent") }

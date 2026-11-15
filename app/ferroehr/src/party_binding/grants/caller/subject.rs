@@ -8,7 +8,7 @@
 //! whose care relationships and representations it inherits.
 //!
 //! A `PERSON` declares one by an `ELEMENT` anywhere in its `PARTY.details`
-//! named by the code [`RecordSubject::RecordSubject`] of [`TERMINOLOGY_ID_ACCESS_CONTROL`],
+//! named by the code [`RecordSubject::RecordSubject`] of [`TERMINOLOGY_ID_ACCESS`],
 //! whose value is a `DV_IDENTIFIER`: `issuer` is the reference's namespace
 //! and `id` its id. An identifier another organisation issued, such as an
 //! identity source's pseudonym, is recorded in `details` and never in
@@ -45,9 +45,7 @@ use crate::privacy::PrivacyPolicy;
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
-use openehr_rm::draft::access_control::terminology::{
-    RecordSubject, TERMINOLOGY_ID_ACCESS_CONTROL, Term,
-};
+use openehr_rm::draft::access_control::terminology::{RecordSubject, TERMINOLOGY_ID_ACCESS, Term};
 
 /// The unique constraint of `binding_record_subject` (party/0041).
 const UNIQUE: &str = "uq_binding_record_subject";
@@ -66,7 +64,7 @@ pub(crate) struct DeclaredSubject {
 fn names_record_subject(node: &Value) -> bool {
     node.get("name")
         .and_then(coded)
-        .is_some_and(|code| RecordSubject::read(TERMINOLOGY_ID_ACCESS_CONTROL, code).is_ok())
+        .is_some_and(|code| RecordSubject::read(TERMINOLOGY_ID_ACCESS, code).is_ok())
 }
 
 /// Pushes onto `facts` the record subjects `body`, a party of `kind`,
@@ -92,7 +90,7 @@ pub(crate) fn declared(kind: Kind, body: &Value, facts: &mut GrantFacts) {
                     }
                 }
                 None => facts.unread.push(format!(
-                    "details: a {TERMINOLOGY_ID_ACCESS_CONTROL}::{code} element holds no DV_IDENTIFIER with an \
+                    "details: a {TERMINOLOGY_ID_ACCESS}::{code} element holds no DV_IDENTIFIER with an \
                      issuer and an id"
                 )),
             }
@@ -106,7 +104,7 @@ pub(crate) fn declared(kind: Kind, body: &Value, facts: &mut GrantFacts) {
     });
     if everywhere > in_details {
         facts.unread.push(format!(
-            "a {TERMINOLOGY_ID_ACCESS_CONTROL}::{code} element is held only in the details of a PERSON, never in \
+            "a {TERMINOLOGY_ID_ACCESS}::{code} element is held only in the details of a PERSON, never in \
              another kind of party or outside PARTY.details (RM Demographic IM §2.1.3)"
         ));
     }
@@ -155,7 +153,7 @@ pub(crate) fn check(
             continue;
         };
         return Err(ServiceError::content_invalid(Violation::new(format!(
-            "a {TERMINOLOGY_ID_ACCESS_CONTROL}::{code} element cannot be read: its issuer {namespace:?} {why}"
+            "a {TERMINOLOGY_ID_ACCESS}::{code} element cannot be read: its issuer {namespace:?} {why}"
         ))));
     }
     Ok(())
@@ -244,7 +242,7 @@ pub(crate) async fn settle(
         Refusal::new(
             Clash::State,
             format!(
-                "a {TERMINOLOGY_ID_ACCESS_CONTROL}::{} reference this commit declares is declared by another \
+                "a {TERMINOLOGY_ID_ACCESS}::{} reference this commit declares is declared by another \
                  PERSON: one EHR subject reference stands for one PERSON, so a contribution that \
                  moves it also removes it from the PERSON that held it",
                 RecordSubject::RecordSubject.code()
@@ -309,7 +307,7 @@ mod tests {
     fn element(code: &str, value: &Value) -> Value {
         json!({"_type": "ELEMENT", "archetype_node_id": "id36",
                "name": {"_type": "DV_CODED_TEXT", "value": code,
-                        "defining_code": {"terminology_id": {"value": TERMINOLOGY_ID_ACCESS_CONTROL}, "code_string": code}},
+                        "defining_code": {"terminology_id": {"value": TERMINOLOGY_ID_ACCESS}, "code_string": code}},
                "value": value})
     }
 

@@ -10,7 +10,7 @@
 //! to the `PERSON` whose binding key is that login under the token's issuer
 //! and admits them only while that `PERSON` holds a live representation of
 //! the EHR's subject, a `PARTY_RELATIONSHIP` carrying
-//! `ferroehr-operations::represents`. The patient authorises a proxy by
+//! `openehr_access::represents`. The patient authorises a proxy by
 //! committing such a relationship of its own, and revoking it ends the access
 //! on the next request. No openEHR spec governs resolving a login to a party:
 //! our own design.
@@ -116,7 +116,7 @@ fn person_ref(id: VoId) -> Value {
 
 /// A representation from `source` to `target` of the openEHR
 /// `subject_relationship` code `code`, valid over `validity`: its details
-/// carry `ferroehr-operations::represents`, in an archetype of the
+/// carry `openehr_access::represents`, in an archetype of the
 /// deployment's own.
 pub(crate) fn representation(
     source: VoId,
@@ -138,7 +138,7 @@ pub(crate) fn representation(
             "name": { "_type": "DV_TEXT", "value": "details" },
             "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003",
                 "name": { "_type": "DV_TEXT", "value": "Representation code" },
-                "value": coded("ferroehr-operations", "represents") }] },
+                "value": coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "represents") }] },
         "source": person_ref(source),
         "target": person_ref(target)
     });

@@ -274,7 +274,7 @@ Committing settings of the `access_directives` scheme switches that EHR to
 explicit policy, and those settings **always win over the server default**,
 in both directions. The settings are an `ACCESS_DIRECTIVE_SETTINGS`, a class
 of FerroEHR's draft access control package, and every coded value is a code
-of the access control groups of FerroEHR's terminology `ferroehr-operations`:
+of the access control groups of the draft openEHR access terminology `openehr_access`:
 
 ```json
 {
@@ -292,7 +292,7 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
     "default_access": {
       "_type": "DV_CODED_TEXT", "value": "restricted",
       "defining_code": { "_type": "CODE_PHRASE",
-        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
         "code_string": "restricted" }
     },
     "gate_keepers": [
@@ -1192,7 +1192,7 @@ The access evaluator needs the `PERSON` of an EHR's subject to read its care
 relationships and its representatives. Under `record.subject_index = "pixm"`
 the EHR names its subject by a pseudonym, so the patient's `PERSON` declares
 it: an element of `PARTY.details` named by the `record_subject` code of
-FerroEHR's operation terminology,
+the draft openEHR access terminology `openehr_access`,
 whose `DV_IDENTIFIER` holds the pseudonym and its namespace. An identifier
 another organisation issued belongs in `details` (RM Demographic IM §2.1.3),
 and the cross-reference stays out of the EHR (RM EHR IM §EHR Status). FerroEHR

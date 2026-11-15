@@ -15,7 +15,7 @@
 //! `PARTY_RELATIONSHIP` of a `PERSON` whose `name` or `details` carry a code
 //! of [`CareRelationship`] is a care relationship
 //! (`org.openehr.rm.demographic.party_relationship.adoc`: `source`, `target`,
-//! `time_validity`): the professional is `member_of` a care team, and the
+//! `time_validity`): the professional is a member (HL7 v3 `RoleClass#MBR`) of a care team, and the
 //! patient is `under_care_of` a team or a unit, with the admission as its
 //! `time_validity`. The care delivery environment, such as a hospital's ADT
 //! system, writes them under a [`Operation::WriteCareRelationship`] grant
@@ -79,19 +79,34 @@ impl FactKind {
     /// Every kind, in contract order.
     const ALL: [Self; 3] = [Self::Role, Self::MemberOf, Self::UnderCareOf];
 
-    /// The kind as the side table stores it: the code of [`TERMINOLOGY`] a
-    /// care relationship is read by, and `role` for a role.
-    pub(crate) fn code(self) -> &'static str {
+    /// The care relationship term the kind is read by; `None` for a role,
+    /// which the `ROLE`'s coded name names in the jurisdiction's terminology.
+    pub(crate) fn care(self) -> Option<CareRelationship> {
         match self {
-            Self::Role => "role",
-            Self::MemberOf => CareRelationship::MemberOf.code(),
-            Self::UnderCareOf => CareRelationship::UnderCareOf.code(),
+            Self::Role => None,
+            Self::MemberOf => Some(CareRelationship::MemberOf),
+            Self::UnderCareOf => Some(CareRelationship::UnderCareOf),
         }
+    }
+
+    /// The kind as the side table stores it: `role` for a role, and the code
+    /// a care relationship is read by.
+    pub(crate) fn code(self) -> &'static str {
+        self.care().map_or("role", |care| care.code())
     }
 
     /// The kind stored as `code`, `None` for another code.
     pub(crate) fn of(code: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|kind| kind.code() == code)
+    }
+}
+
+impl From<CareRelationship> for FactKind {
+    fn from(term: CareRelationship) -> Self {
+        match term {
+            CareRelationship::MemberOf => Self::MemberOf,
+            CareRelationship::UnderCareOf => Self::UnderCareOf,
+        }
     }
 }
 
@@ -125,7 +140,7 @@ pub(crate) struct CallerFact {
 
 /// Pushes onto `facts` the role `body`, a `ROLE`, names: its `name` when that
 /// is a `DV_CODED_TEXT` of a terminology the jurisdiction names. A `ROLE`
-/// named in text, or by a code of [`TERMINOLOGY`], which holds no role,
+/// named in text, or by a code of [`crate::party_binding::policy_mark::TERMINOLOGY`], which holds no role,
 /// names none.
 pub(crate) fn role(body: &Value, facts: &mut GrantFacts) {
     let Some(name) = body
@@ -160,24 +175,26 @@ pub(crate) fn role(body: &Value, facts: &mut GrantFacts) {
 /// Pushes onto `facts` the care relationships `body`, a party of `kind`,
 /// holds, and why one cannot be read: a care relationship is a relationship
 /// of a `PERSON`, its source, to a party of this store, its target, and a
-/// `member_of` of an `ORGANISATION` is its membership of a `GROUP`, such as
+/// membership (`MBR`) of an `ORGANISATION` is its membership of a `GROUP`, such as
 /// the providers of a region.
 pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
     if kind == Kind::PartyRelationship {
-        if let Some(care) = care_kind(body) {
+        if let Some(term) = care_kind(body) {
             facts.unread.push(format!(
-                "a {TERMINOLOGY}::{} relationship is held in its source PERSON's \
+                "a {}::{} relationship is held in its source PERSON's \
                  relationships, never as a PARTY_RELATIONSHIP of its own",
-                care.code()
+                term.terminology(),
+                term.code()
             ));
         }
         return;
     }
     let held = body.get("relationships").and_then(Value::as_array);
     for (ordinal, relationship) in held.into_iter().flatten().enumerate() {
-        let Some(care) = care_kind(relationship) else {
+        let Some(code) = care_kind(relationship) else {
             continue;
         };
+        let care = FactKind::from(code);
         let target = relationship
             .pointer("/target/id/value")
             .and_then(Value::as_str)
@@ -199,23 +216,25 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
                 "targets no party of this store by its container"
             }
             (Kind::Organisation, _, _) => {
-                "is a relationship of a PERSON, its source; an ORGANISATION holds only member_of"
+                "is a relationship of a PERSON, its source; an ORGANISATION holds only a membership"
             }
-            _ => "is a relationship of a PERSON, or a member_of of an ORGANISATION, its source",
+            _ => "is a relationship of a PERSON, or a membership of an ORGANISATION, its source",
         };
         facts.unread.push(format!(
-            "relationships[{ordinal}]: a {TERMINOLOGY}::{} relationship {refusal}",
-            care.code()
+            "relationships[{ordinal}]: a {}::{} relationship {refusal}",
+            code.terminology(),
+            code.code()
         ));
     }
 }
 
 /// The care relationship code `relationship` carries in its `name` or its
 /// `details`, the first of [`CareRelationship`] in contract order.
-fn care_kind(relationship: &Value) -> Option<FactKind> {
-    [FactKind::MemberOf, FactKind::UnderCareOf]
-        .into_iter()
-        .find(|kind| carries(relationship, kind.code()))
+fn care_kind(relationship: &Value) -> Option<CareRelationship> {
+    CareRelationship::ALL
+        .iter()
+        .copied()
+        .find(|term| carries(relationship, term.terminology(), term.code()))
 }
 
 /// Whether the stored `PERSON` bodies `before` and `after`, two versions of
@@ -362,12 +381,14 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
         return Ok(());
     }
     Err(ServiceError::not_permitted(format!(
-        "this version changes the care relationships of party {party} ({TERMINOLOGY}::{} or \
-         {TERMINOLOGY}::{}) or the record subjects it declares ({TERMINOLOGY}::{}): only a \
-         caller holding the {} grant, such as the care delivery environment's ADT system, or \
-         an administrator writes them",
-        FactKind::MemberOf.code(),
-        FactKind::UnderCareOf.code(),
+        "this version changes the care relationships of party {party} ({}::{} or {}::{}) or \
+         the record subjects it declares ({TERMINOLOGY}::{}): only a caller holding the {} \
+         grant, such as the care delivery environment's ADT system, or an administrator \
+         writes them",
+        CareRelationship::MemberOf.terminology(),
+        CareRelationship::MemberOf.code(),
+        CareRelationship::UnderCareOf.terminology(),
+        CareRelationship::UnderCareOf.code(),
         openehr_rm::draft::access_control::terminology::RecordSubject::RecordSubject.code(),
         Operation::WriteCareRelationship
     )))
@@ -507,7 +528,7 @@ impl CallerFacts {
     }
 
     /// The containers of the `GROUP`s the provider a client acts for is a
-    /// member of on the request's date, by a `member_of` relationship of the
+    /// member of on the request's date, by a membership (`MBR`) relationship of the
     /// provider `ORGANISATION`.
     #[must_use]
     pub fn provider_groups(&self) -> &[Uuid] {
@@ -541,13 +562,20 @@ mod tests {
 
     const TEAM: &str = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
 
-    fn relationship(code: &str, target: &str) -> Value {
+    /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
+    const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+    /// A patient under the care of a team or unit.
+    const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
+    /// A representation.
+    const REPRESENTS: (&str, &str) = (TERMINOLOGY, "represents");
+
+    fn relationship((terminology, code): (&str, &str), target: &str) -> Value {
         json!({"_type": "PARTY_RELATIONSHIP",
                "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.ward.v4",
                "name": {"_type": "DV_TEXT", "value": "ward"},
                "details": {"_type": "ITEM_TREE", "archetype_node_id": "at2",
                            "items": [element(&json!({"_type": "DV_TEXT", "value": "kind"}),
-                                             &coded(TERMINOLOGY, code))]},
+                                             &coded(terminology, code))]},
                "time_validity": {"_type": "DV_INTERVAL",
                                  "lower": {"_type": "DV_DATE", "value": "2026-11-03"},
                                  "lower_unbounded": false, "upper_unbounded": true},
@@ -600,10 +628,10 @@ mod tests {
     #[test]
     fn a_persons_care_relationships_are_read_by_their_code_in_any_archetype() {
         let body = json!({"_type": "PERSON", "relationships": [
-            relationship("member_of", TEAM),
-            relationship("represents", TEAM),
-            relationship("under_care_of", TEAM),
-            relationship("under_care_of", "1.2.840.113619")
+            relationship(MEMBER, TEAM),
+            relationship(REPRESENTS, TEAM),
+            relationship(UNDER_CARE, TEAM),
+            relationship(UNDER_CARE, "1.2.840.113619")
         ]});
         let facts = GrantFacts::of(Kind::Person, &body);
         let team = Uuid::parse_str(TEAM).expect("a uuid");
@@ -625,18 +653,26 @@ mod tests {
     }
 
     #[test]
+    fn a_membership_is_read_by_the_hl7_code_alone() {
+        let body = json!({"_type": "PERSON", "relationships": [
+            relationship((TERMINOLOGY, "member_of"), TEAM),
+            relationship(("v3-RoleCode", "MBR"), TEAM)
+        ]});
+        let facts = GrantFacts::of(Kind::Person, &body);
+        assert_eq!(facts.facts, Vec::new());
+        assert_eq!(facts.unread, Vec::<String>::new());
+    }
+
+    #[test]
     fn a_care_relationship_is_a_persons_and_never_one_of_its_own() {
-        let body = json!({"_type": "GROUP", "relationships": [relationship("member_of", TEAM)]});
+        let body = json!({"_type": "GROUP", "relationships": [relationship(MEMBER, TEAM)]});
         let facts = GrantFacts::of(Kind::Group, &body);
         assert_eq!(facts.facts, Vec::new());
         assert_eq!(facts.unread.len(), 1);
-        let standalone = GrantFacts::of(
-            Kind::PartyRelationship,
-            &relationship("under_care_of", TEAM),
-        );
+        let standalone = GrantFacts::of(Kind::PartyRelationship, &relationship(UNDER_CARE, TEAM));
         assert_eq!(standalone.unread.len(), 1);
         assert_eq!(
-            GrantFacts::of(Kind::PartyRelationship, &relationship("represents", TEAM)).unread,
+            GrantFacts::of(Kind::PartyRelationship, &relationship(REPRESENTS, TEAM)).unread,
             Vec::<String>::new()
         );
     }
@@ -644,9 +680,9 @@ mod tests {
     #[test]
     fn an_organisations_member_of_is_its_membership_of_a_group() {
         let body = json!({"_type": "ORGANISATION", "relationships": [
-            relationship("member_of", TEAM),
-            relationship("under_care_of", TEAM),
-            relationship("member_of", "1.2.840.113619")
+            relationship(MEMBER, TEAM),
+            relationship(UNDER_CARE, TEAM),
+            relationship(MEMBER, "1.2.840.113619")
         ]});
         let facts = GrantFacts::of(Kind::Organisation, &body);
         let group = Uuid::parse_str(TEAM).expect("a uuid");
@@ -659,7 +695,7 @@ mod tests {
         assert_eq!(facts.unread.len(), 2, "{:?}", facts.unread);
         assert!(
             facts.unread[0].starts_with("relationships[1]")
-                && facts.unread[0].contains("holds only member_of"),
+                && facts.unread[0].contains("holds only a membership"),
             "an ORGANISATION is never under care: {:?}",
             facts.unread
         );
@@ -677,26 +713,23 @@ mod tests {
         };
         let other = "0190a1bc-3a1e-72e4-b7c5-f78a24c01309";
         let both = facts(vec![
-            relationship("member_of", TEAM),
-            relationship("under_care_of", other),
+            relationship(MEMBER, TEAM),
+            relationship(UNDER_CARE, other),
         ]);
         let swapped = facts(vec![
-            relationship("represents", TEAM),
-            relationship("under_care_of", other),
-            relationship("member_of", TEAM),
+            relationship(REPRESENTS, TEAM),
+            relationship(UNDER_CARE, other),
+            relationship(MEMBER, TEAM),
         ]);
         assert!(same_care(&both, &swapped), "order and other relationships");
         assert!(!same_care(&both, &both[..1]), "a relationship removed");
         assert!(!same_care(&both[..1], &both), "a relationship added");
-        let mut ended = relationship("member_of", TEAM);
+        let mut ended = relationship(MEMBER, TEAM);
         ended["time_validity"]["upper"] = json!({"_type": "DV_DATE", "value": "2026-11-14"});
         ended["time_validity"]["upper_unbounded"] = json!(false);
-        let ended = facts(vec![ended, relationship("under_care_of", other)]);
+        let ended = facts(vec![ended, relationship(UNDER_CARE, other)]);
         assert!(!same_care(&both, &ended), "a relationship ended");
-        let twice = facts(vec![
-            relationship("member_of", TEAM),
-            relationship("member_of", TEAM),
-        ]);
+        let twice = facts(vec![relationship(MEMBER, TEAM), relationship(MEMBER, TEAM)]);
         assert!(!same_care(&twice, &both[..1]), "a repeat removed");
     }
 

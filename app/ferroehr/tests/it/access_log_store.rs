@@ -208,10 +208,11 @@ async fn an_entry_that_breaks_an_invariant_is_not_written() {
     assert_eq!(count, 0, "the batch leaves nothing behind");
 }
 
-/// An openEHR-coded term of the draft's groups.
-fn openehr(rubric: &str) -> Value {
+/// A term of the draft `openehr_access` groups, its code the rubric.
+fn access(rubric: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": rubric,
-            "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": rubric } })
+            "defining_code": { "terminology_id": { "value": "openehr_access" },
+                "code_string": rubric } })
 }
 
 /// An entry carries the grounds of its access decision and its emergency
@@ -227,23 +228,23 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
     let mut grounded = serde_json::to_value(entry(1)).expect("the entry writes");
     grounded["is_emergency"] = json!(true);
     grounded["authorisations"] = json!([
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("role") },
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("treatment relationship") },
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("consent"),
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("role") },
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("treatment relationship") },
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("consent"),
           "reference": { "_type": "DV_IDENTIFIER", "issuer": "cdr.example.org",
               "id": "8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::2",
               "type": "EHR_ACCESS" } },
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("agreement"),
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("agreement"),
           "policy": { "_type": "DV_URI", "value": "ehr://cdr.example.org/access_policy/1" },
           "name": "access policy", "version": "3",
-          "legal_grounds": [openehr("legal obligation")] },
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("emergency") }
+          "legal_grounds": [access("legal obligation")] },
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("emergency") }
     ]);
     let grounded: AccessLogEntry =
         serde_json::from_value(grounded).expect("the grounded entry reads");
 
     let mut refused = serde_json::to_value(entry(2)).expect("the entry writes");
-    refused["outcome"] = json!({ "_type": "ACCESS_OUTCOME", "result": openehr("refused"),
+    refused["outcome"] = json!({ "_type": "ACCESS_OUTCOME", "result": access("refused"),
         "reason": { "_type": "DV_CODED_TEXT", "value": "no grant",
             "defining_code": { "terminology_id": { "value": "local" }, "code_string": "no-grant" } },
         "delivered": 0 });

@@ -172,7 +172,7 @@ fn check_elements(facts: &Facts) -> Result<(), ServiceError> {
                 _ => Err(ServiceError::precondition(format!(
                     "the capability granting {} names {} {code} elements: it names exactly \
                      one, a DV_TEXT or a DV_IDENTIFIER in an element whose name is \
-                     ferroehr-operations::{code}",
+                     openehr_access::{code}",
                     capability.code,
                     named.len()
                 ))),

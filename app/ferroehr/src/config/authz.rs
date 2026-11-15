@@ -140,8 +140,8 @@ impl RbacConfig {
 
 /// The ceiling on what the policy grants may grant (`[authz.grants]`).
 ///
-/// A grant is an operation of FerroEHR's operation terminology
-/// (`ferroehr-operations`) coded in the credentials of a `CAPABILITY`, which
+/// A grant is an operation of the draft access terminology
+/// (`openehr_access`) coded in the credentials of a `CAPABILITY`, which
 /// an administrator manages through the Demographic API. This key is the
 /// trust bound the party store cannot raise: a commit of a capability coding
 /// an operation it does not list is refused, and one already stored is never
@@ -156,7 +156,7 @@ pub struct GrantsConfig {
     /// The operations the party store may grant
     /// (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated).
     ///
-    /// The operations are the codes of `ferroehr-operations`
+    /// The operations are the codes of `openehr_access`
     /// ([`crate::party_binding::grants::operation::Operation`]). The default
     /// allows only `commit_composition`, which lets a client write the
     /// templates its grant names and nothing else: every other operation

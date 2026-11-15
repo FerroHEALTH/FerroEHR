@@ -24,7 +24,7 @@ use ferroehr::service::FerroEhrService;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, CallerKind, OperationClass, TERMINOLOGY_ID_ACCESS_CONTROL,
+    AccessDefault, CallerKind, OperationClass, TERMINOLOGY_ID_ACCESS,
 };
 use serde_json::{Value, json};
 
@@ -46,6 +46,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 /// A deny directive of `kind` with `extra` members.
 fn deny(kind: &str, extra: &Value) -> Value {
     let mut directive = json!({
@@ -53,7 +62,7 @@ fn deny(kind: &str, extra: &Value) -> Value {
         "name": { "_type": "DV_TEXT", "value": "Directive" },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term("deny"),
+        "effect": provision("deny"),
         "emergency_override": false
     });
     if let (Some(directive), Some(extra)) = (directive.as_object_mut(), extra.as_object()) {
@@ -92,13 +101,13 @@ fn purpose_required() -> AccessPolicy {
     let rule = |name: &str, effect: &str| {
         json!({ "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": name },
                 "archetype_node_id": "at0001",
-                "kind": coded(TERMINOLOGY_ID_ACCESS_CONTROL, "controller_rule"),
-                "effect": coded(TERMINOLOGY_ID_ACCESS_CONTROL, effect), "emergency_override": false })
+                "kind": coded(TERMINOLOGY_ID_ACCESS, "controller_rule"),
+                "effect": coded(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, effect), "emergency_override": false })
     };
     let mut only = rule("System readers declare operations only", "deny");
-    only["applies_to"] = json!([{ "caller_kind": coded(TERMINOLOGY_ID_ACCESS_CONTROL, "system") }]);
+    only["applies_to"] = json!([{ "caller_kind": coded(TERMINOLOGY_ID_ACCESS, "system") }]);
     let mut operations = rule("Operations", "permit");
-    operations["purposes"] = json!([coded("2.16.840.1.113883.5.8", PURPOSE)]);
+    operations["purposes"] = json!([coded("v3-ActReason", PURPOSE)]);
     only["exceptions"] = json!([operations]);
     let policy = json!({
         "_type": "ACCESS_POLICY",

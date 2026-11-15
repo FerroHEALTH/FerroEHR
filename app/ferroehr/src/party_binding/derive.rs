@@ -155,6 +155,7 @@ impl Facts {
                 facts.targets.extend(target);
                 if crate::party_binding::policy_mark::carries(
                     body,
+                    crate::party_binding::policy_mark::TERMINOLOGY,
                     crate::party_binding::policy_mark::REPRESENTS,
                 ) {
                     facts.representative = body
@@ -196,6 +197,7 @@ impl Facts {
             let is = |of: Option<&String>| of.is_some() && of == archetype.as_ref();
             if crate::party_binding::policy_mark::carries(
                 relationship,
+                crate::party_binding::policy_mark::TERMINOLOGY,
                 crate::party_binding::policy_mark::REPRESENTS,
             ) {
                 self.represents = true;
@@ -539,7 +541,7 @@ mod tests {
                     "value": {"_type": "DV_CODED_TEXT", "value": "represents",
                         "defining_code": {"_type": "CODE_PHRASE",
                             "terminology_id": {"_type": "TERMINOLOGY_ID",
-                                "value": "ferroehr-operations"},
+                                "value": "openehr_access"},
                             "code_string": "represents"}}}]});
         }
         relationship

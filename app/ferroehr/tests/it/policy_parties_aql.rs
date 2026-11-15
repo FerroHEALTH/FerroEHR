@@ -3,7 +3,7 @@
 
 //! AQL over the demographic store leaves the policy parties out for a caller
 //! who is no administrator (#5450), over a real PostgreSQL 18: a party with a
-//! version holding a capability coded in FerroEHR's operation terminology,
+//! version holding a capability coded in the draft access terminology,
 //! an acts-for relationship or a client identifier, in any archetype, and an
 //! acts-for `PARTY_RELATIONSHIP` of its own contribute no row, no count and
 //! no page, under every root class (#5474), through `CONTAINS` and through
@@ -873,11 +873,11 @@ async fn the_mark_is_tested_on_the_head_row_reached_by_its_key() {
     }
 }
 
-/// A `DV_CODED_TEXT` of FerroEHR's operation terminology.
+/// A `DV_CODED_TEXT` of the draft access terminology.
 fn operation(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
         "defining_code": { "_type": "CODE_PHRASE",
-            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
             "code_string": code } })
 }
 

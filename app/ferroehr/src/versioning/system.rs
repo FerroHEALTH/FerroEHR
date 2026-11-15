@@ -10,7 +10,7 @@
 //! version ([`crate::versioning::restriction`]).
 //!
 //! The grants are read from the policy parties per request through
-//! [`Capabilities::current`], by the codes of the operation terminology
+//! [`Capabilities::current`], by the codes of the draft access terminology
 //! (`crate::party_binding::grants::operation`).
 //! EHDS Art. 13(4) (`docs/law/eu/ehds/text.html`) asks the record to
 //! "identify the health professional and healthcare provider that carried out
@@ -61,7 +61,7 @@ fn composing_grants(kind: Kind) -> Result<Option<Arc<Capabilities>>, ServiceErro
         return Err(ServiceError::not_permitted(
             "a system caller commits into an EHR only under a commit_composition grant: a \
              CAPABILITY of a ROLE its client's ACTOR performs, coding \
-             ferroehr-operations::commit_composition",
+             openehr_access::commit_composition",
         ));
     }
     Ok((kind == Kind::Composition).then_some(capabilities))
@@ -223,7 +223,7 @@ fn admit_facility(admitting: &[Credentials<'_>], canonical: &Value) -> Result<()
     Err(ServiceError::content_invalid(
         Violation::new(
             "carries no identifier of a facility a commit_composition grant of the client \
-             covers (ferroehr-operations::facility); the server writes no facility (EHDS \
+             covers (openehr_access::facility); the server writes no facility (EHDS \
              Art. 13(4))",
         )
         .with_path(path),

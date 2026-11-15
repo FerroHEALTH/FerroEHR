@@ -13,7 +13,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::service::FerroEhrService;
 use http::{Request, StatusCode, header};
-use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
 use serde_json::{Value, json};
 
 use crate::access_evaluator_http::{app, credential, ehr_with_composition, queried, refusal, send};
@@ -37,14 +37,22 @@ fn coded(terminology: &str, code: &str) -> Value {
 
 /// A term of the access control groups.
 fn term(code: &str) -> Value {
-    coded(TERMINOLOGY_ID_ACCESS_CONTROL, code)
+    coded(TERMINOLOGY_ID_ACCESS, code)
+}
+
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    coded(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
+        code,
+    )
 }
 
 /// A rule of `effect` with `extra` members.
 fn rule(effect: &str, extra: &Value) -> Value {
     let mut r = json!({ "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": "Rule" }, "archetype_node_id": "id15",
-        "kind": term("controller_rule"), "effect": term(effect), "emergency_override": false });
+        "kind": term("controller_rule"), "effect": provision(effect), "emergency_override": false });
     if let (Some(r), Some(extra)) = (r.as_object_mut(), extra.as_object()) {
         r.extend(extra.clone());
     }

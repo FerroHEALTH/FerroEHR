@@ -441,7 +441,7 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
                     "name": { "_type": "DV_CODED_TEXT", "value": "record_subject",
                         "defining_code": { "_type": "CODE_PHRASE",
                             "terminology_id": { "_type": "TERMINOLOGY_ID",
-                                "value": openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL },
+                                "value": openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS },
                             "code_string": "record_subject" } },
                     "value": identifier("urn:oid:2.999.7.1", "6f1c2b9e-4d3a-4e8f-9b7c-1a2d3e4f5a6b") })
             ] },
@@ -473,7 +473,7 @@ async fn the_patient_the_provider_and_the_professional_credentials_fit_their_def
                     "items": [element("id34", "Care relationship code", &json!({
                         "_type": "DV_CODED_TEXT", "value": "under_care_of",
                         "defining_code": { "_type": "CODE_PHRASE",
-                            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+                            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                             "code_string": "under_care_of" } }))] },
                 "time_validity": { "_type": "DV_INTERVAL",
                     "lower": { "_type": "DV_DATE", "value": "2026-11-03" },

@@ -393,29 +393,30 @@ and the policy can only tighten them.
 
 ### The terminology
 
-The evaluator reads codes from one documented FerroEHR terminology, the one
-#5433 introduces for operations (written `ferroehr-operations` on that
-issue). This design adds groups to it; each code is a rubric until codes are
-assigned, as in the access log draft:
+The evaluator reads codes from the draft terminology `openehr_access`, which
+the change request proposes to openEHR and which also holds the operations of
+#5433 (#5655). A term whose meaning an HL7 code system publishes is that code
+under the code system's id; every other code is a rubric until codes are
+assigned:
 
 | Group | Codes |
 |---|---|
 | `access default` | `open`, `restricted`, `consent_required` |
 | `access directive kind` | `consent`, `restriction`, `opt_out`, `delegation` |
-| `access effect` | `permit`, `deny` |
+| `access effect` | `consent-provision-type` `permit`, `deny` |
 | `access relationship` | `care`, `representative`, `proxy` |
-| `access caller kind` | `professional`, `access_service`, `subject`, `representative`, `system` |
+| `access caller kind` | `professional`, `access_service`, `extra-security-role-type` `datasubject`, `representative`, `system` |
 | `access sensitivity clearance` | the element whose value is a sensitivity code |
-| `care relationship` (demographic) | `member_of`, `under_care_of` |
+| `care relationship` (demographic) | `v3-RoleClass` `MBR`, `under_care_of` |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups`: what `ACCESS_POLICY.log_restrictions` withholds from the access log's subject view under EHDS Art 9(3) (#5570) |
 | operation (from #5433) | adds `read`, `write`, `export`, `query` as directive-level operation classes, and `write_care_relationship`, `write_access_policy` as grants |
 
 Sensitivity, category and purpose codes are not FerroEHR's: they come from
-the terminology the jurisdiction names (HL7 v3 `ActCode` sensitivity and
-`Confidentiality`, the EHDS categories, the HL7 `PurposeOfUse` codes the
-IUA token states). The evaluator compares them by terminology id and code.
-In the BMM the invariants name `Terminology_id_access_control`: `openehr` if
-openEHR adopts the groups, FerroEHR's terminology until then.
+the terminology the jurisdiction names (HL7 `v3-ActCode` sensitivity and
+`v3-Confidentiality`, the EHDS categories, the HL7 `v3-ActReason` purposes of
+use the IUA token states). The evaluator compares them by terminology id and
+code. In the BMM the invariants name `Terminology_id_access`: `openehr` if
+openEHR adopts the groups, `openehr_access` until then.
 
 ### Archetypes a deployment writes
 

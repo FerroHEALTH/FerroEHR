@@ -52,7 +52,7 @@ pub struct AccessDirective {
     pub effect: DvCodedText,
     /// The callers the directive applies to; any one matching scope is enough. Empty applies to every caller the kind can bind.
     pub applies_to: Option<openehr_base::containers::NonEmptyVec<AccessActorScope>>,
-    /// The operations the directive applies to, coded in the operation terminology the system documents (such as `read`, `write`, `export`). Empty applies to every operation.
+    /// The operations the directive applies to, coded in the draft `openehr_access` terminology's `access operation` group (`read`, `write`, `export`, `query`). Empty applies to every operation.
     pub operations: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,
     /// The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose.
     pub purposes: Option<openehr_base::containers::NonEmptyVec<DvCodedText>>,

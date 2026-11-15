@@ -16,6 +16,7 @@ use jiff::Timestamp;
 use sqlx::Row;
 
 use crate::db::acquire::acquire;
+use openehr_rm::draft::access_control::terminology::{AccessorKind, Term as _};
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
@@ -28,9 +29,6 @@ pub const LOG_RECORD: &str = "ACCESS_LOG_RECORD";
 /// The `ACCESS_QUERY.language` of a read of the access log through its
 /// ITS-REST resources, whose filter is the query string.
 pub const LOG_QUERY: &str = "ITS-REST access log filter";
-
-/// The `accessor kind` rubric of the subject of care.
-pub const SUBJECT_OF_CARE: &str = "subject of care";
 
 /// The party a filter names: the `PARTY_REF` of `ACCESSOR.party`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -118,7 +116,7 @@ impl AccessLogStore {
              AND ($3::text IS NULL OR r.time_recorded <= $3::text::timestamptz) \
              AND ($4::text IS NULL OR r.action = $4) \
              AND ($5::text IS NULL OR r.result = $5) \
-             AND ($6::text IS NULL OR d.doc #>> '{accessor,kind,defining_code,code_string}' = $6) \
+             AND ($6::text IS NULL OR d.doc #>> '{accessor,kind,value}' = $6) \
              AND ($7::boolean IS NULL OR (d.doc ->> 'is_emergency')::boolean = $7) \
              AND ($8::text IS NULL OR d.doc #>> '{accessor,party,external_ref,namespace}' = $8) \
              AND ($9::text IS NULL OR d.doc #>> '{accessor,party,external_ref,type}' = $9) \
@@ -127,7 +125,7 @@ impl AccessLogStore {
              AND ($12::text IS NULL OR d.doc #>> '{accessor,credential,subject}' = $12) \
              AND ($13::text IS NULL OR r.request_id = $13) \
              AND NOT ($14::boolean \
-                  AND d.doc #>> '{accessor,kind,defining_code,code_string}' IS NOT DISTINCT FROM $15 \
+                  AND d.doc #>> '{accessor,kind,value}' IS NOT DISTINCT FROM $15 \
                   AND d.doc @> jsonb_build_object('items', jsonb_build_array( \
                       jsonb_build_object('rm_type', $16::text)))) \
              ORDER BY r.time_recorded DESC, r.chain_seq DESC OFFSET $17 LIMIT $18",
@@ -146,7 +144,7 @@ impl AccessLogStore {
         .bind(query.subject.as_deref())
         .bind(query.request_id.as_deref())
         .bind(query.without_own_log_reads)
-        .bind(SUBJECT_OF_CARE)
+        .bind(AccessorKind::SubjectOfCare.rubric())
         .bind(LOG_RECORD)
         .bind(query.offset)
         .bind(query.fetch)

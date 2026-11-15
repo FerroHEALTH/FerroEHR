@@ -98,7 +98,7 @@ async fn party_identifiers(state: AppState, parts: RequestParts) -> Result<Respo
     if !Capabilities::current().holds(Operation::ReadIdentifiers) {
         return Err(RestError::from(ApiError::Forbidden(
             "reading a party's protected identifiers needs a policy grant of \
-             ferroehr-operations::read_identifiers"
+             openehr_access::read_identifiers"
                 .to_owned(),
         )));
     }
