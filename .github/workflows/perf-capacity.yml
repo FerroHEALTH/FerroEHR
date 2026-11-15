@@ -35,7 +35,7 @@ on:
       groups:
         description: "Groups to sweep, space-separated, `mix` for the mix (capacity.sh groups)"
         required: false
-        default: "mix ehr_read composition_read composition_commit aql_ehr aql_population access_log_read party_read"
+        default: "ehr_read composition_read aql_ehr aql_population access_log_read party_read composition_commit mix"
         type: string
       rates:
         description: "Arrival rates of each sweep, rps, lowest first"
