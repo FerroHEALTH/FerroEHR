@@ -144,13 +144,11 @@ dumps, no swap to unencrypted disk, no debugger attached in production.
 has neither a refusal nor a warning, and the only one to use when the
 server carries clinical load. The server signs every committed version and
 every access-log link, so an access log that records an access to each EHR
-a query serves makes several signatures per request. On an Apple M5 Pro an
-Ed25519 signature with its armour takes 0.017 ms and an RSA-3072 signature
-3.9 ms, about 230 times as long. Under the performance gate's request set
-at 20 requests per second, CPU per request was 1.97 ms with an Ed25519 key
-and 10.06 ms with an RSA-3072 key, and every write that signs a version
-(an EHR create, a composition commit) took 3 to 6 ms longer. That cost is
-the RSA private-key operation itself and no setting removes it.
+a query serves makes several signatures per request. An RSA private-key
+operation costs some hundred times an Ed25519 signature, so under an RSA key
+the CPU per request rises several times over and every write that signs a
+version (an EHR create, a composition commit) is slower. That cost is the
+RSA operation itself and no setting removes it.
 
 **An ECDSA or Ed448 signing key is refused at boot.** The private-key
 arithmetic of both runs on `crypto-bigint` 0.5, whose operations meant to be
