@@ -113,6 +113,7 @@ mod item_tag_http;
 mod legal_marks_http;
 mod local_ehr_index_posture;
 mod management;
+mod management_flamegraph_signing;
 mod message_extension_http;
 mod outbox_http;
 mod overload_http;
