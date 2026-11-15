@@ -18,7 +18,7 @@ use sqlx::PgPool;
 
 use ferroehr::access_log::chain::ChainFinding;
 use ferroehr::access_log::checkpoint::Checkpoints;
-use ferroehr::access_log::expiry::{expire_imported, fold_imported};
+use ferroehr::access_log::expiry::{Log, expire, fold};
 use ferroehr::access_log::gap::Folded;
 use ferroehr::access_log::imported::ImportedFinding;
 use ferroehr::access_log::store::AccessLogStore;
@@ -165,14 +165,16 @@ async fn an_imported_span_ages_out_and_still_verifies() {
 
     let store = target.store();
     assert_eq!(
-        expire_imported(store, at("2028-06-01T00:00:00Z"))
+        expire(store, Log::Imported, at("2028-06-01T00:00:00Z"))
             .await
             .expect("expire"),
         0,
         "an imported entry is kept to its own retain_until"
     );
     assert_eq!(
-        expire_imported(store, expiry_run()).await.expect("expire"),
+        expire(store, Log::Imported, expiry_run())
+            .await
+            .expect("expire"),
         2
     );
     assert_eq!(
@@ -192,12 +194,14 @@ async fn an_imported_span_ages_out_and_still_verifies() {
     assert_eq!(target.verify_imported().await.expect("verify"), []);
 
     assert_eq!(
-        fold_imported(store, expiry_run()).await.expect("fold"),
+        fold(store, Log::Imported, expiry_run())
+            .await
+            .expect("fold"),
         Folded::default(),
         "an imported tombstone is kept past its removal"
     );
     assert_eq!(
-        fold_imported(store, fold_run()).await.expect("fold"),
+        fold(store, Log::Imported, fold_run()).await.expect("fold"),
         Folded {
             tombstones: 2,
             gaps: 1
@@ -222,7 +226,9 @@ async fn an_imported_span_ages_out_and_still_verifies() {
         "the imported log verifies across the gap"
     );
     assert_eq!(
-        fold_imported(store, fold_run()).await.expect("fold again"),
+        fold(store, Log::Imported, fold_run())
+            .await
+            .expect("fold again"),
         Folded::default()
     );
     assert_eq!(written.len(), 6);
@@ -281,11 +287,13 @@ async fn a_kept_record_holds_the_tombstones_after_it_without_signatures() {
         .expect("the import verifies");
     let store = target.store();
     assert_eq!(
-        expire_imported(store, expiry_run()).await.expect("expire"),
+        expire(store, Log::Imported, expiry_run())
+            .await
+            .expect("expire"),
         4
     );
     assert_eq!(
-        fold_imported(store, fold_run()).await.expect("fold"),
+        fold(store, Log::Imported, fold_run()).await.expect("fold"),
         Folded {
             tombstones: 2,
             gaps: 1
@@ -300,9 +308,12 @@ async fn a_kept_record_holds_the_tombstones_after_it_without_signatures() {
     assert_eq!(target.verify_imported().await.expect("verify"), []);
 
     let later = at("2041-01-01T00:00:00Z");
-    assert_eq!(expire_imported(store, later).await.expect("expire"), 1);
     assert_eq!(
-        fold_imported(store, at("2057-01-01T00:00:00Z"))
+        expire(store, Log::Imported, later).await.expect("expire"),
+        1
+    );
+    assert_eq!(
+        fold(store, Log::Imported, at("2057-01-01T00:00:00Z"))
             .await
             .expect("fold"),
         Folded {
@@ -344,10 +355,10 @@ async fn a_rewritten_kept_link_is_caught_by_the_tombstone_after_it() {
         .import(&export, import_record())
         .await
         .expect("the import verifies");
-    expire_imported(target.store(), expiry_run())
+    expire(target.store(), Log::Imported, expiry_run())
         .await
         .expect("expire");
-    fold_imported(target.store(), fold_run())
+    fold(target.store(), Log::Imported, fold_run())
         .await
         .expect("fold");
     assert_eq!(gaps(&pool).await, [(1, 1)]);
@@ -407,12 +418,12 @@ async fn a_later_import_after_a_fold_still_verifies() {
         .await
         .expect("the first import");
     assert_eq!(
-        expire_imported(target.store(), expiry_run())
+        expire(target.store(), Log::Imported, expiry_run())
             .await
             .expect("expire"),
         2
     );
-    fold_imported(target.store(), at("2045-01-01T00:00:00Z"))
+    fold(target.store(), Log::Imported, at("2045-01-01T00:00:00Z"))
         .await
         .expect("fold");
     assert_eq!(
@@ -449,12 +460,12 @@ async fn a_later_import_after_a_fold_still_verifies() {
 
     let later = at("2041-01-01T00:00:00Z");
     assert_eq!(
-        expire_imported(target.store(), later)
+        expire(target.store(), Log::Imported, later)
             .await
             .expect("expire"),
         2
     );
-    let folded = fold_imported(target.store(), at("2057-01-01T00:00:00Z"))
+    let folded = fold(target.store(), Log::Imported, at("2057-01-01T00:00:00Z"))
         .await
         .expect("fold");
     assert_eq!(folded.tombstones, 2);
@@ -495,7 +506,7 @@ async fn two_replicas_fold_imported_logs_at_once() {
     }
     let count = u64::from(per_ehr * ehrs);
     assert_eq!(
-        expire_imported(target.store(), expiry_run())
+        expire(target.store(), Log::Imported, expiry_run())
             .await
             .expect("expire"),
         count
@@ -505,7 +516,7 @@ async fn two_replicas_fold_imported_logs_at_once() {
         let mut total = 0_u64;
         loop {
             let batch = store
-                .fold_expired_imported(fold_run(), 25)
+                .fold_expired(Log::Imported, fold_run(), 25)
                 .await
                 .expect("a replica folds");
             total += batch.tombstones;
@@ -555,7 +566,7 @@ async fn an_imported_tombstone_leaves_only_through_the_fold() {
         .import(&export, import_record())
         .await
         .expect("the import verifies");
-    expire_imported(target.store(), expiry_run())
+    expire(target.store(), Log::Imported, expiry_run())
         .await
         .expect("expire");
     for statement in [
@@ -568,7 +579,7 @@ async fn an_imported_tombstone_leaves_only_through_the_fold() {
             "{statement} is refused"
         );
     }
-    fold_imported(target.store(), fold_run())
+    fold(target.store(), Log::Imported, fold_run())
         .await
         .expect("fold");
     for statement in [

@@ -18,7 +18,7 @@ use sqlx::PgPool;
 
 use ferroehr::access_log::chain::{self, ChainFinding};
 use ferroehr::access_log::checkpoint::Checkpoints;
-use ferroehr::access_log::expiry::{expire, fold};
+use ferroehr::access_log::expiry::{Log, expire, fold};
 use ferroehr::access_log::gap::Folded;
 use ferroehr::access_log::store::AccessLogStore;
 use ferroehr::access_log::transfer::LogExport;
@@ -158,21 +158,26 @@ async fn a_run_of_expired_tombstones_folds_into_one_gap() {
         .expect("the entries append");
     assert_eq!(incremental(&pool).await, [], "the log verifies before");
 
-    assert_eq!(expire(&store, expiry_run()).await.expect("expire"), 5);
     assert_eq!(
-        fold(&store, expiry_run()).await.expect("fold"),
+        expire(&store, Log::Local, expiry_run())
+            .await
+            .expect("expire"),
+        5
+    );
+    assert_eq!(
+        fold(&store, Log::Local, expiry_run()).await.expect("fold"),
         Folded::default(),
         "a tombstone is kept past its removal"
     );
     assert_eq!(
-        fold(&store, at("2034-10-30T00:00:00Z"))
+        fold(&store, Log::Local, at("2034-10-30T00:00:00Z"))
             .await
             .expect("fold"),
         Folded::default(),
         "a tombstone is kept as long again as its entry was"
     );
 
-    let folded = fold(&store, fold_run()).await.expect("fold");
+    let folded = fold(&store, Log::Local, fold_run()).await.expect("fold");
     assert_eq!(
         folded,
         Folded {
@@ -205,7 +210,9 @@ async fn a_run_of_expired_tombstones_folds_into_one_gap() {
     );
     assert_eq!(incremental(&pool).await, [], "and incrementally");
     assert_eq!(
-        fold(&store, fold_run()).await.expect("fold again"),
+        fold(&store, Log::Local, fold_run())
+            .await
+            .expect("fold again"),
         Folded::default(),
         "a second run finds nothing"
     );
@@ -252,21 +259,26 @@ async fn out_of_order_expiry_folds_into_adjacent_gaps() {
         .await
         .expect("the entries append");
 
-    assert_eq!(expire(&store, expiry_run()).await.expect("expire"), 3);
-    let folded = fold(&store, fold_run()).await.expect("fold");
+    assert_eq!(
+        expire(&store, Log::Local, expiry_run())
+            .await
+            .expect("expire"),
+        3
+    );
+    let folded = fold(&store, Log::Local, fold_run()).await.expect("fold");
     assert_eq!(folded.gaps, 2, "the pinning entry splits the run");
     assert_eq!(gaps(&pool).await, [(1, 1), (3, 4)]);
     assert_eq!(findings(&pool).await, []);
     assert_eq!(incremental(&pool).await, []);
 
     let later = at("2034-01-01T00:00:00Z");
-    assert_eq!(expire(&store, later).await.expect("expire"), 1);
+    assert_eq!(expire(&store, Log::Local, later).await.expect("expire"), 1);
     assert_eq!(
-        fold(&store, fold_run()).await.expect("fold"),
+        fold(&store, Log::Local, fold_run()).await.expect("fold"),
         Folded::default(),
         "its tombstone is kept as long as it was an entry"
     );
-    let folded = fold(&store, at("2043-01-01T00:00:00Z"))
+    let folded = fold(&store, Log::Local, at("2043-01-01T00:00:00Z"))
         .await
         .expect("fold");
     assert_eq!(
@@ -303,8 +315,12 @@ async fn a_checkpoint_in_a_run_still_verifies() {
     let late = log.seal().await.expect("seal").expect("a checkpoint");
     assert_eq!((early.sequence, late.sequence), (3, 6));
 
-    expire(log.store(), expiry_run()).await.expect("expire");
-    let folded = fold(log.store(), fold_run()).await.expect("fold");
+    expire(log.store(), Log::Local, expiry_run())
+        .await
+        .expect("expire");
+    let folded = fold(log.store(), Log::Local, fold_run())
+        .await
+        .expect("fold");
     assert_eq!(folded.tombstones, 6);
     assert_eq!(
         gaps(&pool).await,
@@ -351,8 +367,12 @@ async fn an_export_spans_a_gap() {
         ])
         .await
         .expect("the entries append");
-    expire(log.store(), expiry_run()).await.expect("expire");
-    fold(log.store(), fold_run()).await.expect("fold");
+    expire(log.store(), Log::Local, expiry_run())
+        .await
+        .expect("expire");
+    fold(log.store(), Log::Local, fold_run())
+        .await
+        .expect("fold");
     assert_eq!(gaps(&pool).await, [(2, 3)]);
 
     let export = log.export(MOVED).await.expect("the export verifies");
@@ -441,12 +461,12 @@ async fn an_erased_entry_folds_like_any_other() {
         .expect("the entry is replaced");
 
     assert_eq!(
-        fold(&store, at("2027-12-31T00:00:00Z"))
+        fold(&store, Log::Local, at("2027-12-31T00:00:00Z"))
             .await
             .expect("fold"),
         Folded::default()
     );
-    let folded = fold(&store, at("2028-01-02T00:00:00Z"))
+    let folded = fold(&store, Log::Local, at("2028-01-02T00:00:00Z"))
         .await
         .expect("fold");
     assert_eq!(
@@ -488,7 +508,9 @@ async fn two_replicas_fold_at_once() {
         .await
         .expect("the entries append");
     assert_eq!(
-        expire(&store, expiry_run()).await.expect("expire"),
+        expire(&store, Log::Local, expiry_run())
+            .await
+            .expect("expire"),
         u64::from(count)
     );
 
@@ -496,7 +518,7 @@ async fn two_replicas_fold_at_once() {
         let mut total = 0_u64;
         loop {
             let batch = store
-                .fold_expired(fold_run(), 25)
+                .fold_expired(Log::Local, fold_run(), 25)
                 .await
                 .expect("a replica folds");
             total += batch.tombstones;
@@ -538,7 +560,9 @@ async fn a_gap_and_a_tombstone_leave_only_through_the_fold() {
         .append(entries(&["2029-01-01"; 3]))
         .await
         .expect("the entries append");
-    expire(&store, expiry_run()).await.expect("expire");
+    expire(&store, Log::Local, expiry_run())
+        .await
+        .expect("expire");
     assert!(
         sqlx::query("DELETE FROM audit.access_log_record WHERE chain_seq = 1")
             .execute(&pool)
@@ -546,7 +570,7 @@ async fn a_gap_and_a_tombstone_leave_only_through_the_fold() {
             .is_err(),
         "a tombstone is not deleted outside the fold"
     );
-    fold(&store, fold_run()).await.expect("fold");
+    fold(&store, Log::Local, fold_run()).await.expect("fold");
     for statement in [
         "UPDATE audit.access_log_chain_gap SET link = repeat('0', 64)",
         "DELETE FROM audit.access_log_chain_gap",

@@ -30,43 +30,24 @@ const BATCH: u16 = 500;
 // NOTE: our own design (#5619), at about 1.1 kB a tombstone one fold reads near 5 MB.
 const FOLD_BATCH: u16 = 5000;
 
-/// Replace every entry whose retention ended before the UTC date of `now` by
-/// its tombstone, removed at `now`, and return how many were replaced.
-///
-/// # Errors
-/// The errors of [`AccessLogStore::tombstone_expired`]; the batches replaced
-/// before the failing one stay replaced.
-pub async fn expire(store: &AccessLogStore, now: jiff::Timestamp) -> Result<u64, AccessLogError> {
-    replace_all(store, Log::Local, now).await
+/// The log a retention run works on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Log {
+    /// This system's own chain.
+    Local,
+    /// The logs imported from other systems (#5664).
+    Imported,
 }
 
-/// Replace every imported entry whose retention ended before the UTC date of
+/// Replace every entry of `log` whose retention ended before the UTC date of
 /// `now` by its tombstone, removed at `now`, and return how many were
 /// replaced.
 ///
 /// # Errors
-/// The errors of [`AccessLogStore::tombstone_expired_imported`]; the batches
-/// replaced before the failing one stay replaced.
-pub async fn expire_imported(
-    store: &AccessLogStore,
-    now: jiff::Timestamp,
-) -> Result<u64, AccessLogError> {
-    replace_all(store, Log::Imported, now).await
-}
-
-/// The log a retention run replaces entries in.
-#[derive(Debug, Clone, Copy)]
-enum Log {
-    /// This system's own chain.
-    Local,
-    /// The logs imported from other systems.
-    Imported,
-}
-
-/// Replace the entries of `log` whose retention ended before the UTC date
-/// of `now`, batch by batch until one replaces fewer than [`BATCH`], and
-/// return how many were replaced.
-async fn replace_all(
+/// The errors of [`AccessLogStore::tombstone_expired`] or
+/// [`AccessLogStore::tombstone_expired_imported`]; the batches replaced
+/// before the failing one stay replaced.
+pub async fn expire(
     store: &AccessLogStore,
     log: Log,
     now: jiff::Timestamp,
@@ -93,40 +74,30 @@ async fn replace_all(
     }
 }
 
-/// Fold every tombstone whose own retention ended by `now` into the gaps of
-/// its runs, and return what was removed and written.
+/// Fold the tombstones of `log` whose own retention ended by `now` into the
+/// gaps of their runs, and return what was removed and written.
+///
+/// On the imported logs only the positions no kept imported record needs
+/// fold.
 ///
 /// # Errors
 /// The errors of [`AccessLogStore::fold_expired`]; the batches folded before
 /// the failing one stay folded.
-pub async fn fold(store: &AccessLogStore, now: jiff::Timestamp) -> Result<Folded, AccessLogError> {
-    let mut total = Folded::default();
-    loop {
-        let batch = store.fold_expired(now, FOLD_BATCH).await?;
-        total.tombstones = total.tombstones.saturating_add(batch.tombstones);
-        total.gaps = total.gaps.saturating_add(batch.gaps);
-        if batch.tombstones < u64::from(FOLD_BATCH) {
-            return Ok(total);
-        }
-    }
-}
-
-/// Fold the imported positions that no kept imported record needs any more
-/// into gaps, and return what was removed and written.
-///
-/// # Errors
-/// The errors of [`AccessLogStore::fold_expired_imported`]; the batches
-/// folded before the failing one stay folded.
-pub async fn fold_imported(
+pub async fn fold(
     store: &AccessLogStore,
+    log: Log,
     now: jiff::Timestamp,
 ) -> Result<Folded, AccessLogError> {
     let mut total = Folded::default();
     loop {
-        let batch = store.fold_expired_imported(now, FOLD_BATCH).await?;
+        let batch = store.fold_expired(log, now, FOLD_BATCH).await?;
         total.tombstones = total.tombstones.saturating_add(batch.tombstones);
         total.gaps = total.gaps.saturating_add(batch.gaps);
-        if batch.gaps == 0 {
+        let done = match log {
+            Log::Local => batch.tombstones < u64::from(FOLD_BATCH),
+            Log::Imported => batch.gaps == 0,
+        };
+        if done {
             return Ok(total);
         }
     }
@@ -136,8 +107,8 @@ pub async fn fold_imported(
 /// tombstones, and the tombstones and gaps of the fold.
 type Ran = (u64, Folded);
 
-/// [`expire`] then [`fold`], and [`expire_imported`] then [`fold_imported`],
-/// as the retention worker runs them: the run is timed under
+/// [`expire`] then [`fold`] on the local chain and then on the imported
+/// logs, as the retention worker runs them: the run is timed under
 /// `access_log_retention_duration`, the entries replaced go to the
 /// `access_log_tombstones` and `atna_audit_reaped` counters, the tombstones
 /// folded and the gaps written to `access_log_folded` and `access_log_gaps`,
@@ -189,10 +160,13 @@ fn count(chain: &'static str, (replaced, folded): Ran) {
 /// One retention run: on the local chain and then on the imported logs, the
 /// entries replaced, then the tombstones folded.
 async fn run(store: &AccessLogStore, now: jiff::Timestamp) -> Result<(Ran, Ran), AccessLogError> {
-    let local = (expire(store, now).await?, fold(store, now).await?);
+    let local = (
+        expire(store, Log::Local, now).await?,
+        fold(store, Log::Local, now).await?,
+    );
     let imported = (
-        expire_imported(store, now).await?,
-        fold_imported(store, now).await?,
+        expire(store, Log::Imported, now).await?,
+        fold(store, Log::Imported, now).await?,
     );
     Ok((local, imported))
 }

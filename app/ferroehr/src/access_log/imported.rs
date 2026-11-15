@@ -24,7 +24,7 @@ use sqlx::{Connection, Row};
 
 use crate::access_log::chain::{self, ChainFinding, Span};
 use crate::access_log::checkpoint::{self, Checkpoints};
-use crate::access_log::gap::{ChainGap, Folded, gap};
+use crate::access_log::gap::{ChainGap, gap};
 use crate::access_log::store::{
     AccessLogError, AccessLogStore, canonical_form, link, stored, tombstone_of,
 };
@@ -128,31 +128,6 @@ impl AccessLogStore {
         }
         tx.commit().await?;
         Ok(u64::try_from(rows.len()).unwrap_or(u64::MAX))
-    }
-
-    /// Fold, per exporting system, the imported positions before the first
-    /// record still kept in each span between two imported checkpoints, as
-    /// of `now`: one gap per run that holds a tombstone, whole runs, oldest
-    /// first, up to about `limit` positions, in one transaction.
-    ///
-    /// The fold is `audit.fold_access_log_imported()`, the one path an
-    /// imported tombstone or link leaves by. Replicas serialise on its
-    /// advisory lock; a caller repeats the call until it writes no gap.
-    ///
-    /// # Errors
-    /// The store errors when the statement fails.
-    pub async fn fold_expired_imported(
-        &self,
-        now: jiff::Timestamp,
-        limit: u16,
-    ) -> Result<Folded, AccessLogError> {
-        self.run_fold(
-            "SELECT tombstones AS folded, gaps \
-             FROM audit.fold_access_log_imported($1::text::timestamptz, $2)",
-            now,
-            limit,
-        )
-        .await
     }
 }
 
