@@ -65,7 +65,6 @@ enum Typed {
 /// The search columns the record row keeps, by the entry path each holds.
 const COLUMNS: &[(&[&str], &str, Typed)] = &[
     (&["uid", "value"], "uid", Typed::Text),
-    (&["system_id"], "system_id", Typed::Text),
     (&["time_recorded", "value"], "time_recorded", Typed::Instant),
     (&["ehr_id", "value"], "ehr_id", Typed::Text),
     (
@@ -99,7 +98,6 @@ const COLUMNS: &[(&[&str], &str, Typed)] = &[
         "party_id",
         Typed::Text,
     ),
-    (&["channel", "request_id"], "request_id", Typed::Text),
     (&["link", "sequence"], "chain_seq", Typed::Integer),
     (&["link", "algorithm"], "algorithm", Typed::Text),
     (&["link", "previous_digest"], "previous_digest", Typed::Text),
@@ -137,16 +135,12 @@ pub fn statement(
     let mut select = Query::select();
     select
         .columns(
-            [
-                "chain_seq",
-                "content",
-                "algorithm",
-                "previous_digest",
-                "content_digest",
-                "digest",
-            ]
-            .map(|name| (Alias::new(RECORD), Alias::new(name))),
+            ["chain_seq", "content", "algorithm"]
+                .map(|name| (Alias::new(RECORD), Alias::new(name))),
         )
+        .expr_as(column("previous_digest"), Alias::new("previous_digest"))
+        .expr_as(column("content_digest"), Alias::new("content_digest"))
+        .expr_as(column("digest"), Alias::new("digest"))
         .expr_as(
             Expr::col((Alias::new(SHARED), Alias::new("content"))),
             Alias::new("shared"),
@@ -197,9 +191,17 @@ pub fn statement(
     Ok(select.build_sqlx(PostgresQueryBuilder))
 }
 
-/// The column `name` of the record table.
+/// The column `name` of the record table, as the entry's path reads it: a
+/// digest in lower-case hexadecimal and the uid as text, though the row keeps
+/// them as bytes and a uuid (#5714).
 fn column(name: &str) -> Expr {
-    Expr::col((Alias::new(RECORD), Alias::new(name)))
+    match name {
+        "previous_digest" | "content_digest" | "digest" => {
+            Expr::cust(format!("encode({RECORD}.{name}, 'hex')"))
+        }
+        "uid" => Expr::cust(format!("{RECORD}.uid::text")),
+        _ => Expr::col((Alias::new(RECORD), Alias::new(name))),
+    }
 }
 
 /// The sort order `descending` names.

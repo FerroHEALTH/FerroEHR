@@ -126,7 +126,7 @@ impl AccessLogStore {
              AND ($13::text IS NULL OR r.party_id = $13) \
              AND ($14::text IS NULL OR d.doc #>> '{accessor,credential,issuer}' = $14) \
              AND ($15::text IS NULL OR d.doc #>> '{accessor,credential,subject}' = $15) \
-             AND ($16::text IS NULL OR r.request_id = $16) \
+             AND ($16::text IS NULL OR d.doc #>> '{channel,request_id}' = $16) \
              AND NOT ($17::boolean \
                   AND d.doc #>> '{accessor,kind,defining_code,terminology_id,value}' \
                       IS NOT DISTINCT FROM $18 \
@@ -196,7 +196,9 @@ impl AccessLogStore {
         to: i64,
     ) -> Result<Vec<(String, AccessLogLink)>, AccessLogError> {
         let rows = sqlx::query(
-            "SELECT uid, chain_seq, algorithm, previous_digest, content_digest, digest \
+            "SELECT uid::text AS uid, chain_seq, algorithm, \
+             encode(previous_digest, 'hex') AS previous_digest, \
+             encode(content_digest, 'hex') AS content_digest, encode(digest, 'hex') AS digest \
              FROM audit.access_log_record WHERE chain_seq BETWEEN $1 AND $2 ORDER BY chain_seq",
         )
         .bind(from)

@@ -115,6 +115,9 @@ runner shares its host with other jobs, so read its knee as a floor.
 
 The script's header lists every setting: the pool size
 (`CAPACITY_POOL`, the shipped default of 20 connections per instance), the
+concurrent-request bound (`CAPACITY_MAX_CONCURRENT`, 256 as in the
+quickstart, so a step past the knee fails on `503` refusals instead of the
+server running out of memory), the
 population, the spread, the warm-up and measured window per step, and the
 SLOs.
 

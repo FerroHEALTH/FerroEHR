@@ -18,6 +18,8 @@
 //! our own design.
 
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
+use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
+use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
 use openehr_rm::draft::access_control::terminology::Term as _;
 use openehr_rm::draft::access_control::terminology::log::{Action, Outcome};
 use openehr_rm::draft::access_log::access_log::access_credential::AccessCredential;
@@ -44,6 +46,8 @@ const LOGIN: &str = "110122";
 const LOGOUT: &str = "110123";
 /// The `DV_IDENTIFIER.type` of the login the accessing party is named by.
 const LOGIN_TYPE: &str = "login";
+/// The type an entry that reads an EHR's whole access log names the log by.
+const LOG_OBJECT: &str = "ACCESS_LOG";
 /// The login an entry names when the record named none.
 const UNKNOWN_LOGIN: &str = "UNKNOWN";
 
@@ -121,7 +125,7 @@ pub fn details(
     tree.flag(Detail::SubjectLookupFailed, event.subject_lookup_failed);
     // NOTE: GDPR Art 5(1)(c) (`docs/law/eu/gdpr/text.html`), a read of the log names its
     // search by digest, so the entry keeps no object the search named.
-    if event.entry != EntryScope::LogRead {
+    if event.entry != EntryScope::LogRead && core.object_id() != event.object_id.as_deref() {
         tree.text(Detail::ObjectId, event.object_id.as_deref());
     }
     if core.purpose(token_purposes) != event.purpose {
@@ -351,7 +355,7 @@ fn accessor_and_access(
     }
     event.ehr_id = text(Detail::EhrId)?.or_else(|| core.ehr_id().map(str::to_owned));
     event.subject_lookup_failed = details.flag(Detail::SubjectLookupFailed)?;
-    event.object_id = text(Detail::ObjectId)?;
+    event.object_id = text(Detail::ObjectId)?.or_else(|| core.object_id().map(str::to_owned));
     event.purpose = text(Detail::Purpose)?.or_else(|| core.purpose(token_purposes));
     event.legal_basis = text(Detail::LegalBasis)?;
     event.result_count = details
@@ -509,6 +513,26 @@ impl<'a> Core<'a> {
             .unwrap_or_default()
             .get(token_purposes)
             .map(|purpose| purpose.defining_code.code_string.clone())
+    }
+
+    /// The object the entry's item names, its version or its local
+    /// reference; none for a read of the log, whose item names the log.
+    fn object_id(self) -> Option<&'a str> {
+        let item = self.0.items.as_deref()?.first()?;
+        if item.rm_type.as_deref() == Some(crate::access_log::search::LOG_RECORD) {
+            return None;
+        }
+        if let Some(version) = &item.version_id {
+            return Some(version.value());
+        }
+        match item.object.as_ref()? {
+            ObjectRef::ObjectRef(object) if object.r#type != LOG_OBJECT => match &object.id {
+                ObjectId::HierObjectId(id) => Some(id.value()),
+                ObjectId::GenericId(id) => Some(&id.value),
+                _ => None,
+            },
+            _ => None,
+        }
     }
 
     /// The EHR the entry names.
