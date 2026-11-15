@@ -21,7 +21,7 @@
 
 use std::collections::BTreeMap;
 
-use openehr_rm::draft::access_control::terminology::CredentialBinding;
+use openehr_rm::draft::access_control::terminology::log::CredentialBinding;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

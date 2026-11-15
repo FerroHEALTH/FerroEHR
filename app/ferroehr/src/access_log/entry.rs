@@ -28,9 +28,10 @@ use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
 use openehr_base::v1_3::base_types::identification::object_ref::{ObjectRef, ObjectRefData};
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
-use openehr_rm::draft::access_control::terminology::{
-    AccessorKind, Action, Authorisation, Outcome, Term, coded_text,
+use openehr_rm::draft::access_control::terminology::log::{
+    AccessorKind, Action, Authorisation, Outcome,
 };
+use openehr_rm::draft::access_control::terminology::{Term, coded_text};
 use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::common::generic::party_self::PartySelf;

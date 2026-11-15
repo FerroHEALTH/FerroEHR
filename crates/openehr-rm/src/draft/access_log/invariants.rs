@@ -17,8 +17,9 @@
 //! value holds when [`crate::draft::access_control::terminology`] reads its
 //! `defining_code` as a term of the invariant's group.
 
-use crate::draft::access_control::terminology::{
-    AccessorKind, Action, Authorisation, CredentialBinding, Outcome, Term,
+use crate::draft::access_control::terminology::Term;
+use crate::draft::access_control::terminology::log::{
+    AccessorKind, Action, Authorisation, CredentialBinding, Outcome,
 };
 use crate::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use crate::draft::access_log::access_log::access_credential::AccessCredential;
