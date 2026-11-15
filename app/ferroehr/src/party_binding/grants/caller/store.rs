@@ -170,8 +170,18 @@ pub(crate) async fn write_person(
     finish(tx, parties).await
 }
 
-/// Stamps `parties`, when any, moves the facts revision and notifies.
-async fn finish(tx: &mut PgConnection, mut parties: Vec<Uuid>) -> Result<(), StorageError> {
+/// Stamps `parties`, when any, moves the facts revision and notifies every
+/// replica, so each drops what it holds about them and reads it again; also
+/// what a received PMIR message
+/// does when it splits an identifier or a record subject off a `PERSON`
+/// ([`crate::service::demographic::identity_feed`]).
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn finish(
+    tx: &mut PgConnection,
+    mut parties: Vec<Uuid>,
+) -> Result<(), StorageError> {
     if parties.is_empty() {
         return Ok(());
     }

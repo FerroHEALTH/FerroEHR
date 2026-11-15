@@ -422,6 +422,8 @@ pub struct BindingMapping {
 pub(crate) struct PatientSelector {
     /// The canonical template id.
     template: String,
+    /// The identifier path as configured.
+    path: String,
     /// The parsed identifier path.
     parsed: Vec<Step>,
 }
@@ -531,9 +533,20 @@ impl BindingMapping {
         };
         self.patient = Some(PatientSelector {
             template: canonical_key(template_id),
+            path: path.to_owned(),
             parsed,
         });
         Ok(self)
+    }
+
+    /// The patient template's canonical id and the path of the `ELEMENT`s
+    /// holding a patient's identifiers, when `[authz.party_binding.patient]`
+    /// maps them.
+    #[must_use]
+    pub fn patient_identifier_path(&self) -> Option<(&str, &str)> {
+        self.patient
+            .as_ref()
+            .map(|patient| (patient.template.as_str(), patient.path.as_str()))
     }
 
     /// The `patients` issuers, sorted ([`Self::with_portal_issuers`]).

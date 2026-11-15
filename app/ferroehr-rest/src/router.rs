@@ -96,7 +96,7 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
 /// checks a connection out of each pool once and keeps it until it answers.
 ///
 /// No openEHR spec governs connection handling: our own design.
-async fn one_connection_per_request(
+pub(crate) async fn one_connection_per_request(
     request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> Response {
@@ -384,6 +384,14 @@ fn mount_public_surface(
             ))
             .layer(axum::middleware::from_fn(one_connection_per_request)),
         );
+    }
+
+    if let Some(feed) =
+        crate::extensions::pmir::router(cfg, authenticator, state.backend_handle(), state.clone())
+    {
+        // NOTE: PMIR 1.6.0 §2:3.93.5, the Registry authenticates by IUA; each message is an
+        // access record of its client, run on one connection per pool like an API request.
+        inner = inner.merge(feed);
     }
 
     match cfg.api.openapi_ui {

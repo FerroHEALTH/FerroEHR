@@ -182,6 +182,10 @@ fn template_declares_every_optional_field_of_the_secret_bearing_sections() {
             accepted_fields::<crate::service::ehr_index::config::PixmConfig>("pixm"),
         ),
         (
+            "pix",
+            accepted_fields::<crate::service::demographic::identity_feed::config::PixConfig>("pix"),
+        ),
+        (
             "record.signing",
             accepted_fields::<crate::versioning::signature::config::SigningConfig>(
                 "record.signing",

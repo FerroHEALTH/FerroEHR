@@ -243,6 +243,13 @@ impl FerroEhrConfig {
                 .into_iter()
                 .map(ConfigError::semantic),
         );
+        if let Some(pix) = &self.pix {
+            errors.extend(
+                pix.problems(self.server.public_root().is_some())
+                    .into_iter()
+                    .map(ConfigError::semantic),
+            );
+        }
     }
 
     /// A cohort predicate is only a selection criterion if the deployment can

@@ -1176,6 +1176,46 @@ refuses no contact point. **Our own design:** the projection, the match on
 issuer and value, the refusal of an ambiguous identifier, and reaching a
 merged patient's EHR through the survivor's `PERSON`.
 
+**The PMIR Patient Identity Consumer** (#5693,
+`service::demographic::identity_feed`). Under `[pix]` FerroEHR subscribes to
+the Patient Identity Registry with ITI-94 (PMIR 1.6.0 §2:3.94), criteria
+`Patient`: a Registry matches criteria against the `Patient` after a change,
+so a narrower criterion would miss the unlink that removes what it matches.
+One replica at a time checks the subscription under an advisory lock and
+adopts the one the Registry lists for the feed route. The Registry posts each
+ITI-93 message (§2:3.93) to `POST {public root}/pmir/feed`, which admits only
+the client `pix.feed_issuer` and `pix.feed_client_id` name, by its IUA token
+(§2:3.93.5). The route reads the message with `ihe_iti::pmir::feed`, which
+keeps the resource ids and identifiers alone, and in one party transaction
+stores it in `pmir_message` by `MessageHeader.id` and enters what it splits
+in `pmir_suppression`: the patient identifiers an update or a delete no longer
+announces, and the record subjects a standing merge moved when a message
+about the merged identity states anything but that merge. The same
+transaction stamps the holders and notifies, so every replica drops its copy,
+and the patient identifier lookup and both record subject reads skip a
+suppressed row. The response leaves after that commit: a split closes at
+receipt, before its contribution commits. One replica then applies the
+messages in arrival order under a lease (`pmir_apply_next`): it locks the
+message row and, in that transaction, commits one demographic CONTRIBUTION as
+the feed's client (its committer and its policy grants, so the commit checks
+hold it to what it may write), records the merges (`pmir_merge`, with the
+record subjects moved) and the bindings (`pmir_identity`), lifts the splits,
+marks the message applied and clears its identifiers, and writes the access
+record naming `pmir-message:<id>`. A merge moves the merged `PERSON`'s
+record subjects onto the survivor's; an unmerge, read from `active` true with
+no `replaced-by` link, moves the recorded ones back; an update makes the
+`PERSON`'s patient identifiers the announced ones, moving an identifier from
+the `PERSON` whose identity gave it up or writing one no `PERSON` carries
+under its domain's `DV_IDENTIFIER` type. A message about a merged identity
+that states no state, an ambiguous binding, a contested identifier or a
+refused commit refuses the message: it keeps its splits and is logged, and
+the next message applies. An identity is bound to the one `PERSON` that
+carries one of its announced identifiers. A redelivery is stored once. **Our
+own design:** all of it (PMIR §2:3.93.4.1.3 leaves the Consumer's handling to
+its capabilities), including acknowledging once stored rather than once
+applied, which reads §2:3.93.4.2.1's "fully processed" as durably accepted
+with its effect on resolution in force.
+
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL
 queries system-wide" (SMART on openEHR `master08-scopes.adoc` §Resource

@@ -1,8 +1,8 @@
 # Integrations
 
-Query execution, the patient identity source and the three optional
-integrations: `[record.query]`, `[pixm]`, `[record.change_feed]`, `[terminology]`,
-`[record.multimedia]`. Everything except the query knobs and the identity source is
+Query execution, the patient identity source and the optional
+integrations: `[record.query]`, `[pixm]`, `[pix]`, `[record.change_feed]`,
+`[terminology]`, `[record.multimedia]`. Everything except the query knobs and the identity source is
 off by default, and a disabled integration contacts nothing and mounts no
 routes. Precedence, the environment-name grammar, and file discovery are on the
 [Configuration reference](configuration.md) index.
@@ -123,7 +123,8 @@ merge FerroPIX answers the survivor's pseudonym for the merged patient's
 identifier (PIXm 3.1.0 §2:3.83.4.2.2.5 leaves this to policy). Once the
 merge contribution has moved the merged patient's pseudonym onto the
 survivor's `PERSON`, the lookup finds both EHRs. Before that contribution, it
-finds the survivor's EHR alone. A subject cohort reads the same set.
+finds the survivor's EHR alone. Under [`[pix]`](#pix) FerroEHR commits that
+contribution itself from FerroPIX's feed. A subject cohort reads the same set.
 
 A contact point's TRC patient asks the identity source nothing. Its
 identifier is matched against the identifiers the patient's `PERSON` carries
@@ -210,6 +211,74 @@ search answers with the demographic `Patient`, which FerroEHR would only
 discard, so asking for it breaks data minimisation
 ([GDPR Art. 5(1)(c)](https://eur-lex.europa.eu/eli/reg/2016/679/oj)), and its
 `$match` is patient matching.
+
+## `[pix]`
+
+**`[pix]` applies FerroPIX's merges, unmerges and links.** FerroEHR becomes
+an IHE PMIR Patient Identity Consumer: it subscribes to the Patient Identity
+Registry with [ITI-94](https://profiles.ihe.net/ITI/PMIR/ITI-94.html) for
+every `Patient`, and the Registry posts each change as an
+[ITI-93](https://profiles.ihe.net/ITI/PMIR/ITI-93.html) message to
+`POST {public_base_url}/pmir/feed`. Any instance answers. The route admits
+only the client `[pix]` names, by the access token it presents (IUA,
+§2:3.93.5); any other caller gets `403`. The table holds the Registry's
+endpoint and that trust alone, and it needs `[server] public_base_url`, under
+which the subscription names the feed route.
+
+What a message does to the patient `PERSON`s:
+
+| The Registry announces | FerroEHR commits |
+|---|---|
+| a merge of A into B | A's `record_subject` references move onto B's `PERSON`, and B's identifiers follow B's announcement |
+| the revert of that merge (A `active` again, no `replaced-by` link) | the moved references go back to A's `PERSON`, and each `PERSON` carries its own identifiers again |
+| a link (an identifier added) | the `PERSON` carries it, moved from the `PERSON` that gave it up, or written in its domain's `DV_IDENTIFIER` type |
+| an unlink (an identifier dropped) | the `PERSON` no longer carries it |
+| a delete | the `PERSON` carries none of its patient identifiers |
+
+**A split closes at receipt.** FerroEHR stores each message before it
+answers, and in the same transaction the identifiers and record subjects an
+unmerge or an unlink splits off a `PERSON` stop resolving on every instance:
+a contact point's TRC patient, the index and the care relationships no longer
+reach the other patient. One instance then applies the messages in arrival
+order, each as one demographic contribution committed as the Registry's
+client, and records it in the access log as `pmir-message:<id>`. A
+redelivered message changes nothing. The Registry's client needs the
+`write_care_relationship` grant, which a record subject takes.
+
+**A message is refused, never guessed.** A message about a merged identity
+that states neither the merge nor its revert, an identity two `PERSON`s
+carry, an identifier another identity still holds, or a contribution the
+commit checks refuse, is kept unapplied with its split in force and logged as
+an error. An identity is bound to its `PERSON` when the feed first announces
+it; a merge of two identities the feed never announced is refused.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `pix.endpoint` | [endpoint table](#the-endpoint-table) | required | The Registry: `url`, its FHIR base (`[base]` of `[base]/Subscription`), `timeout` for one ITI-94 exchange, `retry`, the TLS and the credential the Registry authorizes a subscriber by. |
+| `pix.feed_issuer` | URL | required | The issuer of the access token the Registry presents with each ITI-93 message, one of the `[auth]` issuers. |
+| `pix.feed_client_id` | string | required | The `client_id` of that token. |
+
+```toml
+[server]
+public_base_url = "https://cdr.example.org"
+
+[pix]
+feed_issuer = "https://idp.example.org/realms/hospital"
+feed_client_id = "ferropix"
+
+[pix.endpoint]
+url = "https://pix.example.org/fhir"
+
+[pix.endpoint.credentials.oauth]
+token_endpoint = "https://idp.example.org/realms/hospital/protocol/openid-connect/token"
+client_id = "ferroehr"
+client_secret_file = "/run/secrets/pix-client"
+```
+
+**Our own design:** the subscription criteria, acknowledging once a message
+is stored, the binding of an identity to its `PERSON`, the split at receipt
+and the refusals. PMIR 1.6.0 §2:3.93.4.1.3 leaves a Consumer's handling of a
+message to its capabilities.
 
 ## `[record.change_feed]`
 

@@ -190,7 +190,7 @@ fn remove_at(holder: &mut Value, step: &str, identifier: Option<(&str, &str)>) -
 }
 
 /// A path step as its attribute and its node id predicate.
-fn step_parts(step: &str) -> (&str, Option<&str>) {
+pub(super) fn step_parts(step: &str) -> (&str, Option<&str>) {
     match step.split_once('[') {
         Some((attribute, predicate)) => (attribute, Some(predicate.trim_end_matches(']'))),
         None => (step, None),
@@ -198,7 +198,7 @@ fn step_parts(step: &str) -> (&str, Option<&str>) {
 }
 
 /// Whether `item` carries the node id `node_id` (any item when `None`).
-fn held(item: &Value, node_id: Option<&str>) -> bool {
+pub(super) fn held(item: &Value, node_id: Option<&str>) -> bool {
     node_id.is_none_or(|id| item.get("archetype_node_id").and_then(Value::as_str) == Some(id))
 }
 

@@ -79,7 +79,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 12);
     assert_eq!(applied("clinical").await, 46);
-    assert_eq!(applied("party").await, 45);
+    assert_eq!(applied("party").await, 46);
     assert_eq!(applied("audit").await, 34);
 
     let tables = |schema: &'static str| {
@@ -162,6 +162,11 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "national_identifier",
             "node",
             "party_relationship_target",
+            "pmir_identity",
+            "pmir_merge",
+            "pmir_message",
+            "pmir_subscription",
+            "pmir_suppression",
             "scim_contact_erasure",
             "scim_deactivation",
             "scim_group",
