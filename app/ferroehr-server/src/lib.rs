@@ -65,6 +65,7 @@ pub mod db_cmd;
 pub mod definitions;
 pub mod instances;
 pub mod party_binding;
+mod pmir;
 pub mod policy;
 pub mod process;
 mod usage_report_cmd;
@@ -435,7 +436,13 @@ fn assemble_service(
         .with_identifier_protection_opt(identifiers.map(Arc::new))
         .with_query_config(&config.record.query)
         .with_required_category_map(DeploymentPosture::requires_category_map(config))
-        .with_ehr_index(ehr_index);
+        .with_ehr_index(ehr_index)
+        .with_pmir_identifier_domains(
+            config
+                .pix
+                .as_ref()
+                .map_or(&[][..], |pix| pix.identifier_domain.as_slice()),
+        );
     if let Some(sender) = audit_sender {
         service = service.with_audit(sender);
     }
@@ -985,6 +992,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         .context("mirroring the audit category register into the retention register")?;
     // NOTE: EHDS Art. 3(3), a hold stops withholding at its limit; this only writes the record.
     service.spawn_access_delay_expiries(Duration::from_secs(60));
+    pmir::start(&service, &config).context("starting the PMIR Patient Identity Consumer")?;
     // The commit-event outbox: a commit writes its row only while a change-feed
     // grant names a reader, and every reader no grant names any more is marked
     // inactive, so it holds the prune back no longer.

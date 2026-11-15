@@ -550,6 +550,7 @@ fn app_config() -> AppConfig {
             assurance: ferrohealth_smart::assurance::AssuranceSection::default(),
             spec_profile: ferroehr::config::profile::SpecProfile::default(),
             party_binding: ferroehr::config::binding::PartyBindingConfig::default(),
+            pix: None,
         };
         c.api.admin = true;
         c.auth.smart = SmartConfig {

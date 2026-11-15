@@ -38,6 +38,7 @@ pub mod fhir;
 pub mod health;
 pub mod management;
 pub mod openapi;
+pub mod pmir;
 pub mod terminology;
 
 // The **single spec-version provenance source** every server *identity*

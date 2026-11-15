@@ -32,9 +32,9 @@ use ferroehr::service::version_update::WriteRequest;
 use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
 
 /// The patient template the default mapping names.
-const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
+pub(crate) const PATIENT: &str = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0";
 /// The patient's identifier domain, as a TRC's `system` names it.
-const NATIONAL: &str = "urn:oid:2.999.4.1";
+pub(crate) const NATIONAL: &str = "urn:oid:2.999.4.1";
 /// A synthetic identifier of a protected scheme, in no national number's form.
 const SEALED: &str = "SEALED-PATIENT-1";
 
@@ -42,13 +42,13 @@ fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
-fn identifier(issuer: &str, id: &str, kind: &str) -> Value {
+pub(crate) fn identifier(issuer: &str, id: &str, kind: &str) -> Value {
     json!({ "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": kind })
 }
 
 /// A patient `PERSON` of the shipped template carrying `identifiers` of the
 /// patient's domain and declaring `subjects` as its record subjects.
-fn patient(name: &str, identifiers: &[Value], subjects: &[Value]) -> Value {
+pub(crate) fn patient(name: &str, identifiers: &[Value], subjects: &[Value]) -> Value {
     let archetype = "openEHR-DEMOGRAPHIC-PERSON.patient.v1";
     let mut items: Vec<Value> = identifiers
         .iter()
@@ -82,7 +82,7 @@ fn patient(name: &str, identifiers: &[Value], subjects: &[Value]) -> Value {
 
 /// A replica over `db` with `provider` as its EHR index, the clinical domain
 /// declared as the pseudonym namespace.
-async fn replica(db: &testkit::TestDb, provider: EhrIndexProvider) -> FerroEhrService {
+pub(crate) async fn replica(db: &testkit::TestDb, provider: EhrIndexProvider) -> FerroEhrService {
     let policy =
         ferroehr::privacy::PrivacyPolicy::compile(&ferroehr::privacy::config::PrivacyConfig {
             subject_namespaces: vec![CLINICAL.to_owned()],
@@ -126,7 +126,7 @@ async fn revise(svc: &FerroEhrService, vo: VoId, uid: &str, body: &Value) {
 }
 
 /// `ehrs`, sorted.
-fn sorted(mut ehrs: Vec<EhrId>) -> Vec<EhrId> {
+pub(crate) fn sorted(mut ehrs: Vec<EhrId>) -> Vec<EhrId> {
     ehrs.sort_unstable();
     ehrs
 }

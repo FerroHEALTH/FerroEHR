@@ -131,6 +131,10 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 # The outbound HTTP stand-ins of the issuer, terminology and feed tests.
 wiremock = { workspace = true }
+# The ITI-93 feed route suite writes its messages with the Registry's own
+# notification writer, over the generated FHIR R4 `Patient`.
+ihe-iti = { workspace = true, features = ["pmir-server"] }
+fhir-types.workspace = true
 # The SCIM filter grammar properties (`tests/it/scim_protocol/filter_properties.rs`).
 proptest = { workspace = true }
 # The flamegraph-under-signing test (`tests/it/management_flamegraph_signing.rs`,

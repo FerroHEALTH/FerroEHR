@@ -253,7 +253,9 @@ pub(crate) async fn settle(
 }
 
 /// The `complete` or `incomplete` `PERSON` that declares `subject`, read on
-/// `conn` from the unique constraint of `binding_record_subject`.
+/// `conn` from the unique constraint of `binding_record_subject`, unless a
+/// received PMIR message has split it off that `PERSON`
+/// ([`crate::service::demographic::identity_feed`]).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -262,8 +264,11 @@ pub(crate) async fn declaring(
     subject: &EhrSubject,
 ) -> Result<Option<Uuid>, StorageError> {
     Ok(sqlx::query_scalar(
-        "SELECT holder_id FROM binding_record_subject \
-         WHERE namespace = $1 AND subject_id = $2 AND lifecycle_state IN ('532', '553')",
+        "SELECT r.holder_id FROM binding_record_subject r \
+         WHERE r.namespace = $1 AND r.subject_id = $2 AND r.lifecycle_state IN ('532', '553') \
+         AND NOT EXISTS (SELECT 1 FROM pmir_suppression s WHERE s.kind = 'subject' \
+           AND s.holder_id = r.holder_id AND s.namespace = r.namespace \
+           AND lower(s.value) = lower(r.subject_id))",
     )
     .bind(&subject.namespace)
     .bind(&subject.id)
@@ -273,7 +278,8 @@ pub(crate) async fn declaring(
 
 /// The record subjects each of `persons` declares while it is `complete` or
 /// `incomplete`, read on `conn` from the primary key of
-/// `binding_record_subject`, by `PERSON` and position.
+/// `binding_record_subject`, by `PERSON` and position, leaving out each one a
+/// received PMIR message has split off.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -285,9 +291,12 @@ pub(crate) async fn declared_by(
         return Ok(Vec::new());
     }
     let rows: Vec<(Uuid, String, String)> = sqlx::query_as(
-        "SELECT holder_id, namespace, subject_id FROM binding_record_subject \
-         WHERE holder_id = ANY($1) AND lifecycle_state IN ('532', '553') \
-         ORDER BY holder_id, ordinal",
+        "SELECT r.holder_id, r.namespace, r.subject_id FROM binding_record_subject r \
+         WHERE r.holder_id = ANY($1) AND r.lifecycle_state IN ('532', '553') \
+         AND NOT EXISTS (SELECT 1 FROM pmir_suppression s WHERE s.kind = 'subject' \
+           AND s.holder_id = r.holder_id AND s.namespace = r.namespace \
+           AND lower(s.value) = lower(r.subject_id)) \
+         ORDER BY r.holder_id, r.ordinal",
     )
     .bind(persons)
     .fetch_all(&mut *conn)

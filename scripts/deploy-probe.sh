@@ -63,6 +63,8 @@ PROBE_OUT="${PROBE_OUT:-docs/conformance/deployment/compose.json}"
 . scripts/deploy-probes/replicas.sh
 # shellcheck source=scripts/deploy-probes/hospital.sh
 . scripts/deploy-probes/hospital.sh
+# shellcheck source=scripts/deploy-probes/hospital_pix.sh
+. scripts/deploy-probes/hospital_pix.sh
 # shellcheck source=scripts/deploy-probes/reset.sh
 . scripts/deploy-probes/reset.sh
 

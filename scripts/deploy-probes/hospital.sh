@@ -88,6 +88,9 @@ services:
         "requestMappings":[{"requestParam":"scope","match":"ferroehr/scim",
         "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
         "aud":["ferroehr-scim"],"scope":"$${scope}"}},
+        {"requestParam":"scope","match":"ferroehr/pmir",
+        "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
+        "aud":["ferroehr-system"],"scope":"$${scope}"}},
         {"requestParam":"audience","match":"ferroehr-system",
         "claims":{"sub":"$${clientId}","client_id":"$${clientId}",
         "aud":["ferroehr-system"],"scope":"$${scope}"}},
@@ -1500,9 +1503,10 @@ hospital_pixm() {
   hospital_files patients
   probe "P-HOSP-PIXM-BOOT" "$PROBE_WORKING" "deployment" "#5610" \
     "the stack boots again with the default pixm subject index and the portal issuer"
-  if ! hospital_up; then
+  if ! hospital_up || ! hospital_pix_up; then
     probe_fail "two serving instances on pixm" "$(replica_state "${HOSPITAL_FILES[@]}")"
     h_boot_log
+    hospital_pix_down
     probe_done
     return 0
   fi
@@ -1565,6 +1569,7 @@ hospital_pixm() {
   local eva
   eva="$(hv ehr_eva)"
   h_commit c_vitals 2 kc:anna "$eva" "$H_T_VITALS" || h_fail_call "the vital signs"
+  hospital_pix_patients
   H_IF_NONE_MATCH='*' h_call 1 kc:ferroehr PUT "$HX/admin/access_policy" "$(j_policy)"
   [[ "$H_CODE" = 201 ]] || h_fail_call "the controller's ACCESS_POLICY"
   probe_done
@@ -1579,4 +1584,7 @@ hospital_pixm() {
     "under pixm, Frank reads Eva's record as her representative"
   h_read 1 "pt:frank:$eva" "$eva" c_vitals "" 200 "" "Frank under pixm (#5634, #5633)"
   probe_done
+
+  hospital_pix_merge
+  hospital_pix_down
 }

@@ -139,8 +139,10 @@ ehds-logging.workspace = true
 fhir-types = { workspace = true, optional = true }
 # The IHE patient identity source of the EHR index (`service::ehr_index::ihe`):
 # the PIXm Patient Identifier Cross-reference Consumer (ITI-83), authenticated by
-# the `smart` token authorizer under `[ehr_index.oauth]`.
-ihe-iti = { workspace = true, features = ["pixm"] }
+# the `smart` token authorizer under `[ehr_index.oauth]`; and the PMIR Patient
+# Identity Subscriber and Consumer (`service::demographic::identity_feed`,
+# ITI-94 and ITI-93).
+ihe-iti = { workspace = true, features = ["pixm", "pmir"] }
 
 openehr-base = { path = "../../crates/openehr-base" }
 openehr-term = { path = "../../crates/openehr-term" }
@@ -169,6 +171,11 @@ assert_fs.workspace = true
 # tests (B4): canned `$validate-code`/`$expand`/`$subsumes`/`$lookup` responses
 # + fault injection (timeout, 5xx, malformed) — no network in CI.
 wiremock.workspace = true
+# The PMIR consumer suite builds its ITI-93 messages with the Registry's own
+# notification writer, so each holds to the PMIR profiles as a Supplier sends
+# it, over the generated FHIR R4 `Patient`.
+ihe-iti = { workspace = true, features = ["pmir-server"] }
+fhir-types.workspace = true
 # The usage report suite validates every payload against FerroPULSE's vendored
 # report v2 JSON Schema (`corpus/ferropulse/`).
 jsonschema.workspace = true

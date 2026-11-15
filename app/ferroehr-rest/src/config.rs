@@ -47,6 +47,10 @@ pub struct AppConfig {
     /// `[authz.party_binding]` — the namespace a bound party is named under
     /// and the key each Basic user is bound by.
     pub party_binding: ferroehr::config::binding::PartyBindingConfig,
+    /// `[pix]` — the PMIR Patient Identity Registry whose ITI-93 messages the
+    /// feed route receives; absent, the route is not mounted.
+    pub pix:
+        Option<std::sync::Arc<ferroehr::service::demographic::identity_feed::config::PixConfig>>,
 }
 
 impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
@@ -61,6 +65,7 @@ impl From<&ferroehr::config::FerroEhrConfig> for AppConfig {
             assurance: config.authz.assurance.clone(),
             spec_profile: config.deployment.spec_profile,
             party_binding: config.authz.party_binding.clone(),
+            pix: config.pix.clone().map(std::sync::Arc::new),
         }
     }
 }

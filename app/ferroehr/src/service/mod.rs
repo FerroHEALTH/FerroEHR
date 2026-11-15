@@ -208,6 +208,10 @@ pub struct FerroEhrService {
     /// `[privacy.identifier_protection]` section.
     pub(in crate::service) identifiers:
         Option<Arc<crate::identifier_protection::engine::IdentifierProtection>>,
+    /// The `DV_IDENTIFIER.type` of each patient identifier domain
+    /// `[[pix.identifier_domain]]` names, by `Identifier.system`, which an
+    /// applied PMIR message writes a linked identifier with.
+    pub(in crate::service) pmir_domains: Arc<std::collections::BTreeMap<String, String>>,
     /// The party facts revision the clinical care projection is known to
     /// reflect on this replica ([`ehr::care_projection`]); a query reads the
     /// projection only while it is at least the revision of the facts this
@@ -321,6 +325,7 @@ impl FerroEhrService {
                 .time_to_live(Duration::from_secs(30))
                 .build(),
             identifiers: None,
+            pmir_domains: Arc::default(),
             care_projected: Arc::default(),
             privacy: Arc::new(crate::privacy::PrivacyPolicy::default()),
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),

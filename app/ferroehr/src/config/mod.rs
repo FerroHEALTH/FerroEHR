@@ -112,6 +112,10 @@ pub struct FerroEhrConfig {
     /// `[pixm]` — the IHE PIXm patient identity source the subject index asks
     /// (ITI-83) under `record.subject_index = "pixm"`.
     pub pixm: Option<crate::service::ehr_index::config::PixmConfig>,
+    /// `[pix]` — the PMIR Patient Identity Registry FerroEHR subscribes to
+    /// (ITI-94) and whose merges, unmerges and links it applies (ITI-93);
+    /// absent, no subscription is held.
+    pub pix: Option<crate::service::demographic::identity_feed::config::PixConfig>,
 }
 
 impl Default for FerroEhrConfig {
@@ -144,6 +148,7 @@ impl Default for FerroEhrConfig {
             record: record::RecordConfig::default(),
             terminology: None,
             pixm: None,
+            pix: None,
         }
     }
 }
