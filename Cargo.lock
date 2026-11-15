@@ -1938,9 +1938,9 @@ dependencies = [
 
 [[package]]
 name = "ehds-logging"
-version = "0.18.1"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dde449ad25daad8e892a2551a393223ad1b5088a4387b98d5aeaa4c8d4c5e10"
+checksum = "a4f6d793af4453e2521a7adf1576033af71bb6fcffa346900d5bff7f5c3db3b7"
 dependencies = [
  "async-trait",
  "ihe-atna",
@@ -3547,9 +3547,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-atna"
-version = "0.18.1"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4897e36b604477672cff17a712a63097726b854792527d9392f92abc5c07f8f7"
+checksum = "b2bb45129319109b4f68618e2526952d19749e07350483a5fbda0773f88e3ba2"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -3574,9 +3574,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.9.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31b4ff63936b3bd59f7e1354ab02edea00a4a41fc814bb36aac1cfc6d9849102"
+checksum = "ebb4e744d4b573164dc2d7274aa67fbc521f702bd0758d7d6415fb4d09f34d7f"
 dependencies = [
  "ferrohealth-smart",
  "fhir-search",
@@ -5341,7 +5341,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -6504,7 +6504,7 @@ version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "287f59010008f0d7cf5e3b03196d666c1acc46c8d3e9cf34c28a1a7157601e72"
 dependencies = [
- "heck 0.5.0",
+ "heck 0.4.1",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
