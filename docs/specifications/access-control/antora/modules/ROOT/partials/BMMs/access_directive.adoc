@@ -50,7 +50,7 @@
     "purposes": {
       "_type": "P_BMM_CONTAINER_PROPERTY",
       "name": "purposes",
-      "documentation": "The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose.",
+      "documentation": "The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose. On a `controller_rule` it applies only to an access that declares one of them, since `ACCESS_POLICY.purpose_required` is the control for an access without one. On a directive of an EHR, a deny also covers an access that declares no purpose, which cannot show it is outside the deny.",
       "type_def": {
         "container_type": "List",
         "type": "DV_CODED_TEXT"

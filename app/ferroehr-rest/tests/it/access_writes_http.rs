@@ -185,7 +185,7 @@ fn unique(body: &str, ehr: &str) -> String {
 }
 
 /// Under a policy that requires a care relationship, an EHR id that names no
-/// EHR answers the nurse `404` before step 5 refuses, and a restricted EHR
+/// EHR answers the nurse `404` before step 7 refuses, and a restricted EHR
 /// answers her the same: the two answers have one status and one body but
 /// for the EHR id each names. An EHR she has no care relationship with and
 /// no restriction answers `403 refused-no-care-relationship`.

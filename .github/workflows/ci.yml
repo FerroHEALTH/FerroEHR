@@ -186,6 +186,8 @@ jobs:
       helm: ${{ steps.filter.outputs.helm }}
       chart_boot: ${{ steps.filter.outputs.chart_boot }}
       perf: ${{ steps.filter.outputs.perf }}
+      perf_base: ${{ steps.perf_base.outputs.rev }}
+      perf_base_reason: ${{ steps.perf_base.outputs.reason }}
       deploy: ${{ steps.filter.outputs.deploy }}
       workflows: ${{ steps.filter.outputs.workflows }}
       vex: ${{ steps.filter.outputs.vex }}
@@ -298,6 +300,19 @@ jobs:
       # still runs each rust-cache lane whose entry it must write, every one
       # when the key's inputs moved (the `cache` lane), and otherwise the ones
       # whose entry main no longer holds (the 10 GB quota evicts them).
+      # The perf gate's base arm (#5741): the newest commit on the base
+      # branch's first-parent line whose database suite passed in CI, so a
+      # broken base branch head cannot block the change that repairs it.
+      - id: perf_base
+        if: steps.filter.outputs.perf == 'true' && github.event_name != 'merge_group'
+        shell: bash
+        env:
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          bash scripts/perf/base-rev.sh --self-test
+          bash scripts/perf/base-rev.sh "$(git rev-parse HEAD^1)" 30 | tee -a "$GITHUB_OUTPUT"
       - id: push
         shell: bash
         env:
@@ -1960,6 +1975,14 @@ jobs:
           tags: ferroehr:perf-base
       - name: Build the base postgres image (COPY-only, seconds)
         run: docker buildx build --load -t ferroehr-postgres:perf-base target/perf-base-context/docker/postgres
+      - name: The base the gate measures against, and why
+        env:
+          BASE_REV: ${{ needs.perf-base-binary.outputs.rev }}
+          BASE_REASON: ${{ needs.changes.outputs.perf_base_reason }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/perf
+          printf '# Perf base\n\n%s\n\n%s\n' "$BASE_REV" "$BASE_REASON" | tee target/perf/base.md >> "$GITHUB_STEP_SUMMARY"
       - name: The gate, the head against the base
         env:
           BASE_REV: ${{ needs.perf-base-binary.outputs.rev }}
@@ -2114,8 +2137,8 @@ jobs:
   # A push the merge queue verified keeps this job and skips its consumers:
   # it is main's writer of the binary cache and the sccache entries (#4546).
   # The base arm of the performance gate (#5326): the server binary of the
-  # change's base commit (the first parent of the commit under test, the base
-  # branch's head for a pull request), built exactly as ui-e2e-binary builds
+  # change's base commit (the newest commit on the base branch whose database
+  # suite passed in CI, `changes`' perf_base step, #5741), built exactly as ui-e2e-binary builds
   # the head: the same container, toolchain and e2e profile, so the A/B run
   # compares the change and not two build profiles. The binary cache keys on
   # the base tree's files the way ui-e2e-binary keys on the head's, so a base
@@ -2141,14 +2164,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 2
+          # The green base can lie behind the base branch's head.
+          fetch-depth: 0
       - id: base
         name: The base commit's tree
         shell: bash
+        env:
+          PERF_BASE: ${{ needs.changes.outputs.perf_base }}
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          rev=$(git rev-parse HEAD^1)
+          rev="$PERF_BASE"
+          [ -n "$rev" ] || { echo "::error::changes chose no perf base" >&2; exit 1; }
           echo "rev=$rev" >> "$GITHUB_OUTPUT"
           mkdir -p perf-base
           git archive "$rev" | tar -x -C perf-base

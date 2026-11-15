@@ -245,8 +245,8 @@ fn a_delegation_is_a_representation_ground() {
 }
 
 /// The break-glass role lifting a restriction in an emergency is an
-/// `emergency` ground naming the directive it lifted, and lifting steps 4 to
-/// 7 one naming the `ACCESS_POLICY` version; the entry marks the access as
+/// `emergency` ground naming the directive it lifted, and lifting steps 6 to
+/// 8 one naming the `ACCESS_POLICY` version; the entry marks the access as
 /// an emergency, so the patient sees it (EHDS Art. 11(5)).
 #[test]
 fn an_emergency_override_is_marked_with_what_it_lifted() {
@@ -304,7 +304,7 @@ fn an_emergency_override_is_marked_with_what_it_lifted() {
 
 /// An emergency lifts a consent deny over the mental-health template; a read
 /// of another template names no `emergency` ground of that directive, only
-/// the `ACCESS_POLICY` of the lifted steps 4 to 7, and a read of the
+/// the `ACCESS_POLICY` of the lifted steps 6 to 8, and a read of the
 /// mental-health note names it (EHDS Art. 11(5) and Art. 9(1), #5630).
 #[test]
 fn the_emergency_grounds_name_only_the_directives_covering_the_data_read() {

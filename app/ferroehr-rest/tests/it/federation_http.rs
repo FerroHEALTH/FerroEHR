@@ -1144,7 +1144,7 @@ async fn refused_body(app: &Router, ehr: &str, credential: &str, purpose: Option
 
 /// A controller states an exchange of care providers only as content: an
 /// occupational physician, a medical examination, an organisation of no
-/// admitted type and one asserting none are each refused at step 4 under
+/// admitted type and one asserting none are each refused at step 5 under
 /// `refused-policy-denied` with the provision the rule rests on, and a
 /// hospital's physician reads. Every caller declares its purpose, which the
 /// examination rule reads. With no such policy the same callers read, so no

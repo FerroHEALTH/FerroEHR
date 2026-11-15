@@ -31,7 +31,7 @@ a|The operations the directive applies to, coded in the draft `openehr_access` t
 
 h|*0..1*
 |*purposes*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
-a|The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose.
+a|The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose. On a `controller_rule` it applies only to an access that declares one of them, since `ACCESS_POLICY.purpose_required` is the control for an access without one. On a directive of an EHR, a deny also covers an access that declares no purpose, which cannot show it is outside the deny.
 
 h|*0..1*
 |*data*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_data_scope_class[ACCESS_DATA_SCOPE]>`

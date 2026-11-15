@@ -2005,9 +2005,10 @@ one, nothing is tightened.
   kind, and a rule naming a role, purpose, sensitivity, category or legal
   ground in `openehr_access`.
 - **Effective without a restart**, as the registers above.
-- **Read by the access evaluator** on every request: the rules are step 4,
-  a classification gives the data it covers its sensitivities (step 5), and
-  the two requirements are steps 6 and 7 of the
+- **Read by the access evaluator** on every request: `purpose_required` is
+  step 4, checked before any rule, the rules are step 5, a classification
+  gives the data it covers its sensitivities (step 6), and
+  `care_relationship_required` is step 7 of the
   [decision procedure](security.md#access-directives).
   A `relationship_grace` that is no ISO 8601 duration admits nothing after a
   care relationship ends.
@@ -2028,10 +2029,15 @@ directive has. The `ROLE` parties say who holds a role; the rules say what
 the role may do.
 
 - **A deny rule refuses** what it covers with `403 refused-policy-denied`,
-  whatever the patient's directives permit (step 4). It binds every caller
+  whatever the patient's directives permit (step 5). It binds every caller
   but the patient on their own record, representatives included.
 - **A permit rule clears** the callers it names for the sensitivities its
-  `data` names (step 5) and decides nothing else.
+  `data` names (step 6) and decides nothing else.
+- **A rule's `purposes` match only a declared purpose.** A request that
+  declares none is outside every rule that names purposes. Set
+  `purpose_required` to refuse such a request: it is refused
+  `refused-purpose-missing` before any rule is read, whatever rules you
+  hold.
 - **A deny rule with a permit exception says "only"**: the exception carves
   what it covers out of the deny.
 - **For a write**, the data are the version being committed: its template,
@@ -2062,7 +2068,10 @@ Four rules, as you write them in the policy body (a role code of
 - **Professionals may declare only treatment or emergency treatment:** a
   `deny` rule whose `applies_to` names the caller kind `professional`, with
   one `permit` exception whose `purposes` are `TREAT` and `ETREAT`. A request
-  declaring another purpose, or none, is refused `refused-policy-denied`.
+  declaring another purpose is refused `refused-policy-denied`. A request
+  declaring none is refused `refused-purpose-missing` where the policy sets
+  `purpose_required`, and otherwise `refused-policy-denied`, since the
+  exception names no request without a purpose.
 - **A system client writes only its laboratory templates:** a `deny` rule on
   `write` whose `applies_to` names the client's `AGENT` by `party`, with one
   `permit` exception whose `data` lists the templates.
@@ -2073,9 +2082,9 @@ Four rules, as you write them in the policy body (a role code of
   professional whose token attests an insurer's facility type, or none, is
   refused `refused-policy-denied`. A second `deny` rule naming a `role`, such
   as an occupational physician, or `purposes`, such as a medical
-  examination, keeps those out too. A rule naming `purposes` also refuses a
-  request that declares no purpose, since it cannot show the purpose is
-  another one. Wabvpz Art. 15f is a rule of this kind: you commit it,
+  examination, keeps those out too. A rule naming `purposes` refuses only a
+  request that declares one of them, so set `purpose_required` to refuse a
+  request that declares none. Wabvpz Art. 15f is a rule of this kind: you commit it,
   FerroEHR holds no copy of it.
 
 A rule whose `emergency_override` is true is lifted for the holder of
@@ -2094,7 +2103,8 @@ partner's persons too: a deny rule refuses a template the agreement allows,
 because a deny overrides.
 
 No openEHR specification has a controller rule: the rules, their place as
-step 4, reading a role from the coded name of a `ROLE` and an organisation
+step 5 after the purpose check, matching a rule's purposes only on a
+declared purpose, reading a role from the coded name of a `ROLE` and an organisation
 type from the coded name of an `ORGANISATION`, reading a partner's attested
 roles and facility types as the same facts, and naming a refusing rule's
 legal grounds as a `legal obligation` ground are FerroEHR's own design,
