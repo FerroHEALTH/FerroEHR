@@ -50,11 +50,19 @@ pub(super) fn build_search_statements(
     resolved: &[Option<TokenMatch>],
 ) -> (String, SqlxValues, String, SqlxValues) {
     let condition = crate::system_log::search::condition::search_condition(filter, resolved);
-    let count = u64::try_from(filter.count.clamp(1, 1000)).unwrap_or(50);
+    // One record past the page, which tells the caller whether a next page exists.
+    let count = u64::try_from(page_size(filter))
+        .unwrap_or(50)
+        .saturating_add(1);
     let offset = u64::try_from(Ord::max(filter.offset, 0)).unwrap_or(0);
     let (count_sql, count_values) = total(&condition).build_sqlx(PostgresQueryBuilder);
     let (sql, values) = page(&condition, count, offset).build_sqlx(PostgresQueryBuilder);
     (count_sql, count_values, sql, values)
+}
+
+/// The records a page serves: `_count`, between 1 and 1000.
+pub(super) fn page_size(filter: &AuditSearchFilter) -> usize {
+    usize::try_from(filter.count.clamp(1, 1000)).unwrap_or(50)
 }
 
 /// The number of records `condition` selects: those of the system chain,
