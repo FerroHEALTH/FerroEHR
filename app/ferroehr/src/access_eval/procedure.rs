@@ -85,12 +85,13 @@ pub struct Caller {
     pub kind: CallerKind,
     /// The id of the `PERSON` or `AGENT` the caller is bound to.
     pub party: Option<String>,
-    /// The one EHR a [`Self::confined`] caller reaches: the EHR of its SMART
-    /// App Launch patient context, or for a representative the EHR whose
-    /// subject its recorded representation names; `None` for every other
-    /// caller, and for a confined caller with no such EHR, whom every EHR
-    /// refuses.
-    pub own_ehr: Option<EhrId>,
+    /// The EHRs a [`Self::confined`] caller reaches: the EHR of its SMART
+    /// App Launch patient context, or for a representative each EHR whose
+    /// subject reference names the `PERSON` its recorded representation
+    /// names, which after an identity merge can be more than one; empty for
+    /// every other caller, and for a confined caller with no such EHR, whom
+    /// every EHR refuses.
+    pub own_ehrs: Vec<EhrId>,
     /// Whether the caller's grants on the EHR's data are `patient/` grants
     /// alone, which reach only "data within that patient's EHR" (SMART on
     /// openEHR `master08` §Resource Scopes).
@@ -112,7 +113,7 @@ pub struct Caller {
 }
 
 impl Caller {
-    /// Whether the caller reaches only [`Self::own_ehr`]: a subject caller,
+    /// Whether the caller reaches only [`Self::own_ehrs`]: a subject caller,
     /// a representative, and a caller whose grants are `patient/` grants
     /// alone.
     #[must_use]
@@ -215,7 +216,7 @@ pub struct Ehr<'a> {
     pub server_default: AccessDefault,
     /// Whether the caller has a live care relationship to its subject.
     pub cared: bool,
-    /// Whether the EHR is the [`Caller::own_ehr`] of a confined caller.
+    /// Whether the EHR is one of the [`Caller::own_ehrs`] of a confined caller.
     pub own: bool,
 }
 

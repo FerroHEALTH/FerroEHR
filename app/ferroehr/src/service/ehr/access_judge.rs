@@ -87,10 +87,10 @@ impl FerroEhrService {
         &self,
         access: &RequestAccess,
         ehr_id: EhrId,
-        seen: Revision,
+        seen: &Revision,
     ) -> Result<Arc<Verdict>, ServiceError> {
         match access.judgement(ehr_id) {
-            Some(judged) if judged.revision == seen => Ok(judged.verdict),
+            Some(judged) if judged.revision == *seen => Ok(judged.verdict),
             Some(_) => {
                 self.ehr_access.forget(ehr_id).await;
                 let entry = Box::pin(self.ehr_access_entry(ehr_id)).await?;

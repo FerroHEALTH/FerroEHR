@@ -221,18 +221,24 @@ async fn ensure_not_access_restricted_tx(
     }
 }
 
-/// The `PERSON` the EHR `ehr_id` names as its subject and the uid of its
-/// current `EHR_ACCESS` version, read on the commit's own transaction.
+/// The subject reference the EHR `ehr_id` names and the uid of its current
+/// `EHR_ACCESS` version, read on the commit's own transaction.
 ///
 /// # Errors
 /// [`ServiceError::Database`] on a driver failure.
 async fn subject_and_access_version(
     tx: &mut PgConnection,
     ehr_id: EhrId,
-) -> Result<(Option<uuid::Uuid>, Option<String>), ServiceError> {
+) -> Result<
+    (
+        Option<crate::storage::access_projection::EhrSubject>,
+        Option<String>,
+    ),
+    ServiceError,
+> {
     use sqlx::Row as _;
     let row = sqlx::query(
-        "SELECT e.subject_id, h.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, \
+        "SELECT e.subject_namespace, e.subject_id, h.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, \
                 v.branch_version \
          FROM ehr e \
          LEFT JOIN vo_head h ON h.ehr_id = e.id AND h.kind = 'EHR_ACCESS' \
@@ -245,8 +251,9 @@ async fn subject_and_access_version(
     let Some(row) = row else {
         return Ok((None, None));
     };
-    let subject = crate::storage::access_projection::subject_of(
-        row.try_get::<Option<String>, _>("subject_id")?.as_deref(),
+    let subject = crate::storage::access_projection::EhrSubject::stored(
+        row.try_get("subject_namespace")?,
+        row.try_get("subject_id")?,
     );
     let version = crate::storage::access_projection::version_of(&row)?;
     Ok((subject, version))
