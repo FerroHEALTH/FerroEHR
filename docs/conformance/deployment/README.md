@@ -34,8 +34,13 @@ discovery over HTTP, each change made on one instance and read on the other.
 It runs the care-relationship and representation assertions again under the
 default `pixm` subject index. It does not run in the required `deploy-probe`
 job yet: its own lane, `deploy-probe-hospital.yml`, runs it with
-`PROBE_ONLY=hospital` against the image published from main and writes
-`hospital.json`. Each failing probe names the issue it is tracked by, and
+`PROBE_ONLY=hospital` and writes `hospital.json`. A pull request, a push, the
+schedule and a dispatch probe the server built from the tree they check out; a
+completed Containers run on main probes the server image that run published,
+pinned by its digest, never the mutable `:main` tag (#5673). A failed call
+prints the lines both instances logged for its request id, and the instances
+log `ferrohealth_smart` at `debug`, so a `401` shows the reason its body leaves
+out. Each failing probe names the issue it is tracked by, and
 `scripts/deploy-probes/hospital_summary.sh` refuses a failing probe whose
 tracking issues are all closed, or one that names none. The family moves into
 the required job once its findings land (#5642).
@@ -44,13 +49,18 @@ The **terminology** family does not run there. It needs a licensed SNOMED
 release that may not be fetched onto a shared runner, and it is opt-in locally.
 
 A record is a measurement of **one SUT**, so it is only meaningful with the
-image it was taken against. The harness names that image in its output, and
-the record carries the per-probe outcome plus the layer each failure indicts.
+image it was taken against. The harness reads the image from the running
+container and names it in its output and in the record's `image` (the
+reference, the local image id and the registry digests, empty for an image
+built on the runner), and the record carries the per-probe outcome plus the
+layer each failure indicts.
 
 ## Reading a record
 
 ```json
-{"platform":"compose","passed":9,"failed":1,"uncovered":7,
+{"platform":"compose",
+ "image":{"ref":"ferroehr:deploy-probe","id":"sha256:…","digests":""},
+ "passed":9,"failed":1,"uncovered":7,
  "probes":[{"id":"P-MM-EXPAND","state":"working","outcome":"fail",
             "layer":"server","issue":"#2197","title":"…"}],
  "not_exercised":[{"what":"kubernetes platform","why":"…"}]}
