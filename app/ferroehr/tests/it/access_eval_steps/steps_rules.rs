@@ -201,7 +201,13 @@ fn step_4_an_emergency_lifts_only_an_overridable_rule() {
     let lifted = ruled(&[overridable], None).verdict(&nurse, emergency);
     assert_outcome(&lifted, &diagnosis, Outcome::Admit, "an overridable rule");
     assert!(lifted.lifted.contains(&Lifted::Rule), "{lifted:?}");
-    assert_eq!(lifted.grounds.lifted_rules, vec![0]);
+    let positions: Vec<usize> = lifted
+        .grounds
+        .lifted_rules
+        .iter()
+        .map(|(at, _)| *at)
+        .collect();
+    assert_eq!(positions, vec![0]);
 }
 
 /// A rule's step and its position name the refusal in the verdict.
