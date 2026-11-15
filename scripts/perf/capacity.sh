@@ -64,6 +64,11 @@
 #                        its load stays off the server's
 #   CAPACITY_POOL        each instance's database.max_connections (default 20,
 #                        the shipped default)
+#   CAPACITY_MAX_CONCURRENT
+#                        each instance's server.max_concurrent_requests
+#                        (default 256, the quickstart's): past it a request
+#                        is answered 503, so an overloaded step fails on
+#                        refusals instead of the server running out of memory
 #   CAPACITY_POPULATION  the patients the seed puts under care (default 20000)
 #   CAPACITY_SPREAD      the EHRs the single-EHR groups spread over (default 500)
 #   CAPACITY_WARMUP      seconds of warm-up per step (default 15)
@@ -96,6 +101,7 @@ source "$CAPACITY_ROOT/scripts/perf/gate.sh"
 
 readonly TOPOLOGY="${CAPACITY_TOPOLOGY:-native}"
 readonly POOL="${CAPACITY_POOL:-20}"
+readonly MAX_CONCURRENT="${CAPACITY_MAX_CONCURRENT:-256}"
 readonly SPREAD="${CAPACITY_SPREAD:-500}"
 readonly WARMUP="${CAPACITY_WARMUP:-15}"
 readonly DURATION="${CAPACITY_DURATION:-60}"
@@ -212,7 +218,8 @@ up_native() { # <instances>
     "$PERF_OUT/signing/passphrase" "$PERF_OUT/signing/identifier-key"
   local -a env=(FERROEHR_CONFIG="$CAP_OUT_ABS/ferroehr.toml"
     FERROEHR__DATABASE__URL="postgres://ferroehr:${PG_SECRET}@127.0.0.1:$CAP_PG_PORT/ferroehr"
-    FERROEHR__DATABASE__MAX_CONNECTIONS="$POOL" FERROEHR__USAGE_REPORT__ENABLED=false)
+    FERROEHR__DATABASE__MAX_CONNECTIONS="$POOL" FERROEHR__USAGE_REPORT__ENABLED=false
+    FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS="$MAX_CONCURRENT")
   local targets="" urls=""
   for ((i = 1; i <= count; i++)); do
     env "${env[@]}" FERROEHR__SERVER__LISTEN="127.0.0.1:$((CAP_HTTP_PORT + i))" \
@@ -274,7 +281,9 @@ up_docker() { # <instances>
     -e PG_INIT_USER=ferroehr -e "PG_INIT_PASSWORD=$PG_SECRET" -e PG_INIT_DB=ferroehr \
     "$pg_image" "${pg_args[@]}" >/dev/null
   wait_for "PostgreSQL" 60 docker exec "$CAP_PG" pg_isready -h 127.0.0.1 -U ferroehr -d ferroehr
-  state_put psql "docker exec -i $CAP_PG psql -U postgres -d ferroehr"
+  # No -i: psql takes its statement as an argument, and an attached stdin
+  # would swallow the input of a loop that runs a sweep.
+  state_put psql "docker exec $CAP_PG psql -U postgres -d ferroehr"
   cap_sql "CREATE EXTENSION IF NOT EXISTS pg_stat_statements" >/dev/null
   state_put pg_cpu "container:$(docker inspect -f '{{.Id}}' "$CAP_PG")"
   # A key an earlier `up` generated is kept, so a restored store verifies.
@@ -287,6 +296,7 @@ up_docker() { # <instances>
     -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml
     -e "FERROEHR__DATABASE__URL=postgres://ferroehr:${PG_SECRET}@${CAP_PG}:5432/ferroehr"
     -e "FERROEHR__DATABASE__MAX_CONNECTIONS=$POOL"
+    -e "FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS=$MAX_CONCURRENT"
     -e FERROEHR__USAGE_REPORT__ENABLED=false
     -v "$CAP_OUT_ABS/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
     -v "$CAPACITY_ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
