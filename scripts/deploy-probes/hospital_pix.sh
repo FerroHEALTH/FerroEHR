@@ -41,9 +41,12 @@ hospital_pix_tls() {
   openssl x509 -req -in "$dir/ferroehr.csr" -CA "$dir/ca.crt" -CAkey "$dir/ca.key" \
     -CAcreateserial -days 2 -out "$dir/ferroehr.crt" \
     -extfile <(printf 'subjectAltName=DNS:localhost,IP:127.0.0.1\nextendedKeyUsage=serverAuth\n') 2>/dev/null
+  # FerroPIX's production profile reads every secret from a file: its feed
+  # client's secret at the quickstart issuer, which signs any.
+  printf 'quickstart' > "$dir/feed-secret"
   # NOTE: the containers run as a non-root user; the key is a throwaway of this run.
   chmod 0755 "$dir"
-  chmod 0644 "$dir/ca.crt" "$dir/ferroehr.crt" "$dir/ferroehr.key"
+  chmod 0644 "$dir/ca.crt" "$dir/ferroehr.crt" "$dir/ferroehr.key" "$dir/feed-secret"
 }
 
 # The overlay of the PMIR leg, written to `out` with the TLS material under
@@ -127,7 +130,7 @@ configs:
       [pmir.feed.consumers.credentials.oauth]
       token_endpoint = "http://localhost:8180/quickstart/token"
       client_id = "ferropix"
-      client_secret = "quickstart"
+      client_secret_file = "/run/pmir-tls/feed-secret"
       scope = "ferroehr/pmir"
 
       [usage_report]
