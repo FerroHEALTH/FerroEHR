@@ -79,6 +79,7 @@ mod cohort_subjects;
 mod commit_lock_order;
 mod committer_binding;
 mod committer_check;
+mod console_request_lines;
 mod db_lease;
 mod db_outage;
 mod decommission;

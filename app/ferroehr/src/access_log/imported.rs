@@ -26,7 +26,7 @@ use crate::access_log::chain::{self, ChainFinding, Span};
 use crate::access_log::checkpoint::{self, Checkpoints};
 use crate::access_log::gap::{ChainGap, gap};
 use crate::access_log::store::{
-    AccessLogError, AccessLogStore, canonical_form, link, stored, tombstone_of,
+    AccessLogError, AccessLogStore, canonical_form, signed_link, stored_signed, tombstone_of,
 };
 use crate::db::acquire::acquire;
 use openehr_rm::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
@@ -36,11 +36,12 @@ use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecor
 use openehr_rm::draft::access_log::invariants::check_tombstone;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 
-/// The imported records joined with their links, in the columns [`stored`]
-/// reads.
+/// The imported records joined with their links, in the columns
+/// [`stored_signed`] reads.
 macro_rules! imported_records {
     () => {
-        "SELECT r.system_id, l.sequence AS chain_seq, r.content, l.algorithm, \
+        "SELECT r.system_id, l.sequence AS chain_seq, r.content, NULL::text AS shared, \
+         l.algorithm, \
          l.previous_digest, l.content_digest, l.digest, l.signature \
          FROM audit.access_log_imported_record r JOIN audit.access_log_imported_link l \
          ON l.system_id = r.system_id AND l.sequence = r.sequence"
@@ -105,7 +106,7 @@ impl AccessLogStore {
         let mut sequences = Vec::with_capacity(rows.len());
         let mut contents = Vec::with_capacity(rows.len());
         for row in &rows {
-            let entry: AccessLogEntry = stored(row)?;
+            let entry: AccessLogEntry = stored_signed(row)?;
             let grounds = entry.retention.grounds.clone();
             let tombstone = tombstone_of(entry, time_removed.clone(), grounds);
             check_tombstone(&tombstone)?;
@@ -222,7 +223,7 @@ impl Checkpoints {
         .fetch_all(&mut *conn)
         .await?
         .iter()
-        .map(|row| link(row).map(|link| (link.sequence, link)))
+        .map(|row| signed_link(row).map(|link| (link.sequence, link)))
         .collect::<Result<BTreeMap<_, _>, _>>()?;
         let gaps = sqlx::query(
             "SELECT first_seq, last_seq, link, signature, grounds::text AS grounds, time_folded \
@@ -243,7 +244,7 @@ impl Checkpoints {
         .fetch_all(&mut *conn)
         .await?
         .iter()
-        .map(stored)
+        .map(stored_signed)
         .collect::<Result<Vec<_>, _>>()?;
         Ok(Stored {
             checkpoints,

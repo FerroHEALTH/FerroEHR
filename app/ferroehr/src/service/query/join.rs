@@ -182,10 +182,15 @@ impl FerroEhrService {
         }
         // NOTE: RM `ehr_status.adoc` `is_queryable` ("included in population queries"):
         // the caller named no EHR, so the linked EHRs are a population subset.
+        // NOTE: our own design (#5699), the clinical half reads only the linked EHRs, so care is
+        // read for those and never for the caller's whole census.
+        let ehr_access = Box::pin(self.resolve_care(&job.request.ehr_access, Some(&ehrs)))
+            .await
+            .map_err(Failure::analysis)?;
         let ctx = SqlCtx {
             ehr_ids: ehrs,
             ehr_scope_kind: EhrScopeKind::PopulationSubset,
-            ehr_access: job.request.ehr_access.clone(),
+            ehr_access,
             access_settings: Box::pin(self.ehr_access_readers())
                 .await
                 .map_err(Failure::analysis)?,

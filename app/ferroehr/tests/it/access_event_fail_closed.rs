@@ -196,13 +196,26 @@ async fn an_erasure_writes_its_tombstone_and_its_entry_together() {
         .erase_access_log_entry(&uid, grounds())
         .await
         .expect("the erasure");
-    let recorded: Vec<(String, Option<String>)> = sqlx::query_as(
-        "SELECT content, action_code FROM audit.access_log_record \
-         WHERE record_type = 'ACCESS_LOG_ENTRY' AND content LIKE '%admin_access_log_erase%'",
-    )
-    .fetch_all(&pool)
-    .await
-    .expect("read the log");
+    let recorded: Vec<(String, Option<String>)> =
+        sqlx::query_as::<_, (String, Option<String>, Option<String>)>(
+            "SELECT r.content, sh.content, r.action_code FROM audit.access_log_record r \
+         LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
+         WHERE r.record_type = 'ACCESS_LOG_ENTRY'",
+        )
+        .fetch_all(&pool)
+        .await
+        .map(|rows| {
+            rows.into_iter()
+                .map(|(content, shared, action)| {
+                    (
+                        crate::fixtures::joined_entry(&content, shared.as_deref()),
+                        action,
+                    )
+                })
+                .filter(|(content, _)| content.contains("admin_access_log_erase"))
+                .collect()
+        })
+        .expect("read the log");
     assert_eq!(recorded.len(), 1, "{recorded:?}");
     assert_eq!(recorded[0].1.as_deref(), Some("D"));
     assert!(

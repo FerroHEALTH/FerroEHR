@@ -30,6 +30,7 @@ use tokio::task_local;
 use uuid::Uuid;
 
 use crate::access_eval::class::{Class, Classes};
+use crate::access_eval::condition::care::Care;
 use crate::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide, rules_of,
 };
@@ -46,7 +47,7 @@ task_local! {
     static REQUEST_ACCESS: Arc<RequestAccess>;
 }
 
-mod care;
+pub mod care;
 /// The evaluator of one request: the caller, what it asks, the policy and
 /// the category map in force when it began, and each EHR's verdict once
 /// judged.
@@ -564,10 +565,10 @@ impl RequestAccess {
 
     /// The condition a query applies, over every EHR of a class among
     /// `classes`, an EHR held closed, and the default for an EHR with no
-    /// settings, the caller caring for the subjects `cared`. An EHR of a
-    /// class this replica does not hold is withheld.
+    /// settings, the caller's care read as `care` says. An EHR of a class
+    /// this replica does not hold is withheld.
     #[must_use]
-    pub fn condition(&self, classes: &Classes, cared: Vec<EhrSubject>) -> AccessCondition {
+    pub fn condition(&self, classes: &Classes, care: Care) -> AccessCondition {
         let confined = self.confined();
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
             cared: self.judge_as(confined, settings, true).bare(),
@@ -594,7 +595,7 @@ impl RequestAccess {
             groups,
             pair(Some(&EhrAccessSettings::HeldClosed)),
             pair(None),
-            cared,
+            care,
             self.grants
                 .as_ref()
                 .map_or_else(|| Arc::from(""), |grants| grants.namespace()),
@@ -647,9 +648,8 @@ pub struct ConditionGroups {
     pub closed: Arc<VerdictPair>,
     /// The verdicts of an EHR with no settings; `None` admits every row.
     pub default: Option<Arc<VerdictPair>>,
-    /// The subject references of the `PERSON`s the caller has a live care
-    /// relationship to.
-    pub cared: Arc<[EhrSubject]>,
+    /// Which EHRs' subjects the caller has a live care relationship to.
+    pub cared: Care,
     /// The namespace this CDR names its parties under, whose references name
     /// a `PERSON` by its container.
     pub subject_namespace: Arc<str>,
@@ -694,7 +694,7 @@ impl AccessCondition {
         groups: BTreeMap<VerdictPair, Vec<i64>>,
         closed: VerdictPair,
         default: VerdictPair,
-        cared: Vec<EhrSubject>,
+        cared: Care,
         subject_namespace: Arc<str>,
         facts: CallerKeys,
         confined: Option<Arc<[Uuid]>>,
@@ -708,12 +708,37 @@ impl AccessCondition {
             groups,
             closed: Arc::new(closed),
             default: (!default_admits).then(|| Arc::new(default)),
-            cared: cared.into(),
+            cared,
             subject_namespace,
             facts,
             confined,
         }
         .into()
+    }
+
+    /// Whether a verdict of the condition reads care, so the statement needs
+    /// [`ConditionGroups::cared`] resolved.
+    #[must_use]
+    pub fn reads_care(&self) -> bool {
+        self.groups().is_some_and(|condition| {
+            std::iter::once(&condition.closed)
+                .chain(condition.groups.iter().map(|(_, pair)| pair))
+                .chain(condition.default.iter())
+                .any(|pair| pair.cared != pair.uncared)
+        })
+    }
+
+    /// The condition with its care read as `care`.
+    #[must_use]
+    pub fn with_care(&self, care: Care) -> Self {
+        Self {
+            groups: self.groups.as_deref().map(|condition| {
+                Arc::new(ConditionGroups {
+                    cared: care,
+                    ..condition.clone()
+                })
+            }),
+        }
     }
 
     /// The verdicts of a condition that withholds something; `None` when it

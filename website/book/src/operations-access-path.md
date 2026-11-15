@@ -104,10 +104,10 @@ controller reviews.
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
 | `access_log_entries_total` | counter | `outcome` | Entries written to the access log in a transaction: `ok` or `failed`. The rate of `ok` is the append rate. |
-| `access_log_append_duration_seconds` | histogram | `outcome` | Time to link and insert one transaction's entries, link signing included. |
-| `access_log_sign_duration_seconds` | histogram | `outcome` | Time to sign the links of one append, while the head of the chain is locked. Present only with an OpenPGP key. |
-| `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run: `chain` is `access_log` (the checkpoint) or `system` (the system chain's seal); `outcome` is `sealed`, `empty` or `failed`. |
-| `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run that did not fail. `time() - audit_seal_last_success_seconds` is the checkpoint age. |
+| `access_log_append_duration_seconds` | histogram | `outcome` | Time to link and insert one transaction's entries. |
+| `access_log_sign_duration_seconds` | histogram | `outcome` | Time from the start of an append's checkpoint signature to its end, measured when the transaction stores the checkpoint; it runs beside the rest of the transaction while the head of the chain is locked. Present only with an OpenPGP key. |
+| `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run of the system chain (`chain` is `system`); `outcome` is `sealed`, `empty` or `failed`. The access log needs no schedule: every append seals itself. |
+| `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run of the system chain that did not fail. |
 | `access_log_tombstones_total` | counter | `chain` | Entries the retention run replaced by their tombstones, `local` or `imported` from another system. |
 | `access_log_folded_total` | counter | `chain` | Tombstones the retention run folded into gaps of the chain once they were past their own end, `local` or `imported`. |
 | `access_log_gaps_total` | counter | `chain` | Gaps the retention run wrote, one per folded run of tombstones, `local` or `imported`. |
@@ -211,10 +211,10 @@ recording while you investigate.
   writes, so no access goes unrecorded.
 - **What to do:**
   1. Check `access_log_append_duration_seconds` and
-     `access_log_sign_duration_seconds`. Signing runs on the blocking pool
-     while the head of the chain is locked, so a slow key slows every audit
-     write but holds back no request. An RSA key is far slower than Ed25519
-     ([PGP signing](signing/pgp.md)).
+     `access_log_sign_duration_seconds`. Each append signs one checkpoint on
+     the blocking pool while the head of the chain is locked, so a slow key
+     slows every audit write but holds back no request. An RSA key is far
+     slower than Ed25519 ([PGP signing](signing/pgp.md)).
   2. Check `access_log_entries_total{outcome="failed"}` and the log for the
      error of the failed append: a full disk, a lost audit database or a
      statement timeout.
@@ -239,8 +239,9 @@ recording while you investigate.
      database.
   2. For `damaged`, run `SELECT * FROM audit.verify_audit_chain();` and
      `SELECT * FROM audit.verify_access_log_chain();` to list each finding.
-     Then run `ferroehr access-log verify` to check the newest checkpoint and
-     every link signature.
+     Then run `ferroehr access-log verify` to check the newest checkpoint,
+     and `ferroehr access-log verify --checkpoint <file>` with the newest
+     checkpoint published outside the database.
   3. Compare the findings with a checkpoint kept outside the database
      ([Checkpoints and the transfer of a log](audit.md#checkpoints-and-the-transfer-of-a-log)).
      A record changed or deleted outside retention is a security incident:
@@ -251,23 +252,22 @@ recording while you investigate.
 ### A signing key mismatch between instances
 
 - **Metric:** `instance_mismatches{differs="signing_key"}` above `0` from the
-  moment the second key starts. Links signed before you fixed it show as
-  link-signature findings of `ferroehr access-log verify` while
-  `audit_chain_intact` reads `1`: the digests verify and the signatures do
-  not.
+  moment the second key starts. A checkpoint signed with the other key fails
+  its proof under `ferroehr access-log verify` while `audit_chain_intact`
+  reads `1`: the digests verify and the signature does not.
 - **Health:** `instances` reads `DEGRADED` on every instance and names each
   one that signs with another key, from start
   ([Running several instances](installation/several-instances.md#every-instance-shares-the-same-signing-key-and-configuration)).
-- **What happens:** every instance appends to one chain and signs each link
-  with its own `[record.signing]` key. An instance that verifies with
-  another key reports each link the other signed.
+- **What happens:** every instance appends to one chain and seals each of
+  its appends with its own `[record.signing]` key. An instance that verifies
+  with another key reports each checkpoint the other signed.
 - **What to do:**
   1. Give every instance the same `[record.signing]` key and the same
      configuration file
      ([Running several instances](installation/several-instances.md)).
-  2. Keep the links already signed verifiable: list the public certificate
-     of the key that signed them in `retired_key_files`.
-  3. Run `ferroehr access-log verify` again; it exits 0 when every link
+  2. Keep the checkpoints already signed verifiable: list the public
+     certificate of the key that signed them in `retired_key_files`.
+  3. Run `ferroehr access-log verify` again; it exits 0 when the checkpoint
      verifies. `instances` reads `UP` again once the instance with the other
      key has stopped, and within 90 seconds of its last heartbeat when it
      stopped without removing its row.
@@ -276,30 +276,50 @@ recording while you investigate.
 
 - **Metric:** `audit_seal_duration_seconds_count{outcome="failed"}` and
   `access_log_sign_duration_seconds_count{outcome="failed"}` after the
-  change show a key the server cannot sign with.
+  change show a key the server cannot sign with; an append whose checkpoint
+  cannot be signed is not stored, and `access_log_entries_total` stops.
 - **What to do:**
   1. Add a new signing subkey to the certificate, or move the old
      certificate's public half to `retired_key_files` and configure the new
      key ([Retired keys and rotation](signing/pgp.md#retired-keys-and-rotation)).
-     A link and a checkpoint record no key identifier, so the old key has to
-     stay verifiable.
+     A checkpoint records no key identifier, so the old key has to stay
+     verifiable.
   2. Roll the change to every instance together. Instances that sign with
-     different keys in the meantime write links the others cannot verify
-     until the old public certificate is retired everywhere.
-  3. Seal a checkpoint with `ferroehr access-log checkpoint` and run
-     `ferroehr access-log verify`. Watch `audit_seal_last_success_seconds`
-     move for both chains at the next run.
+     different keys in the meantime write checkpoints the others cannot
+     verify until the old public certificate is retired everywhere.
+  3. Run `ferroehr access-log verify` after the next append. Watch
+     `audit_seal_last_success_seconds` move for the system chain at the next
+     run.
 
-### A seal or checkpoint that keeps failing
+### A system chain seal that keeps failing
 
-- **Metric:** `time() - audit_seal_last_success_seconds{chain="…"}` above
-  fifteen minutes, with `audit_seal_duration_seconds_count{outcome="failed"}`
-  rising.
-- **What to do:** read the log for `the access-log checkpoint could not be
-  sealed` or `the system chain could not be sealed`. A sign error means the
-  keyring lost its OpenPGP key or its passphrase; a store error means the
-  audit database. The next run tries again five minutes later, and
-  `ferroehr access-log checkpoint` seals one on demand.
+- **Metric:** `time() - audit_seal_last_success_seconds{chain="system"}`
+  above fifteen minutes, with
+  `audit_seal_duration_seconds_count{outcome="failed"}` rising.
+- **What to do:** read the log for `the system chain could not be sealed`. A
+  sign error means the keyring lost its OpenPGP key or its passphrase; a
+  store error means the audit database. The next run tries again five
+  minutes later, and `ferroehr audit-chain seal` seals one on demand.
+
+### A checkpoint publication that fails
+
+- **Health:** `access_log_checkpoints` reads `DEGRADED` and names the
+  failure; the log says `the access-log checkpoint could not be published`.
+- **What happens:** the log keeps recording and every append is still
+  sealed in the database. Entries newer than the newest published checkpoint
+  could be removed with their checkpoints without a trace outside the
+  database until publication resumes.
+- **What to do:**
+  1. A write error names the file: check that the directory in
+     `[audit.access_log] publish_directory` is mounted, writable by the
+     server and not full.
+  2. `already holds another checkpoint at the same sequence` means a file
+     there holds a checkpoint this log did not seal at that position. Keep
+     both: run `ferroehr access-log verify --checkpoint <file>` against the
+     file and treat a finding as a security incident
+     ([complaints, incidents and vulnerabilities](compliance/post-market.md)).
+  3. The next run, 30 seconds later, publishes the newest checkpoint, which
+     covers every entry below it.
 
 ### A retention run that falls behind
 

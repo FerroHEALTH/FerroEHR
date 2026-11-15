@@ -292,7 +292,8 @@ impl Checkpoints {
         .execute(&mut *tx)
         .await
         .map_err(AccessLogError::from)?;
-        let mut appended = self.store().append_in(&mut tx, vec![entry]).await?;
+        let appended = self.store().append_in(&mut tx, vec![entry]).await?;
+        let mut appended = appended.seal(&mut tx).await?;
         tx.commit().await.map_err(AccessLogError::from)?;
         let entry = appended.pop().ok_or_else(|| AccessLogError::Unlinked {
             uid: export.ehr_id.clone(),

@@ -26,6 +26,7 @@ use uuid::Uuid;
 
 use super::expr::{archetype_node_id, col};
 use crate::access_eval::class::Keepers;
+use crate::access_eval::condition::care::{Care, ProjectedCare};
 use crate::access_eval::condition::{AccessCondition, CallerKeys, ConditionGroups, VerdictPair};
 use crate::access_eval::scope::{
     CategoryMatch, DataMatch, Edge, EhrFact, Held, Polarity, Pred, Recorded,
@@ -259,10 +260,12 @@ pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
     if pairs.into_iter().all(|pair| pair.cared == pair.uncared) {
         return None;
     }
+    let Care::Census(cared) = &condition.cared else {
+        return None;
+    };
     // NOTE: our own design (#5667), each key is escaped by serde_json as it is written, with
     // no map to build: jsonb keeps one of a repeated key, so `?` answers as before.
-    let keys: Vec<String> = condition
-        .cared
+    let keys: Vec<String> = cared
         .iter()
         .map(|subject| format!("{}:true", serde_json::Value::String(census_key(subject))))
         .collect();
@@ -292,6 +295,15 @@ fn census_key(subject: &EhrSubject) -> String {
 /// in this CDR's own namespace by its container's UUID in any case, as
 /// [`crate::party_binding::grants::live::LiveGrants::person_of`] reads it.
 fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
+    match &condition.cared {
+        Care::Census(_) => {}
+        // NOTE: our own design (#5699), a query pinned to EHRs binds the ones found cared for.
+        Care::Ehrs(ehrs) => {
+            return target.eq(Expr::from(PgFunc::any(Expr::val(ehrs.to_vec()))));
+        }
+        Care::Projected(care) => return projected(care, target),
+        Care::Unresolved => return Expr::val(false),
+    }
     let mut subjects = Query::select();
     subjects
         .column(Alias::new(SUBJECTS))
@@ -311,6 +323,31 @@ fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
             ],
         ));
     Expr::exists(probe)
+}
+
+/// Whether the subject of the EHR `target` is under the care of one of the
+/// caller's teams, read from the clinical care projection by the EHR row's
+/// subject digest: one index probe, binding the team ids, the day and the
+/// grace, with the dates read as
+/// [`crate::party_binding::grants::caller::CareTeam::live_on`] reads them.
+/// No openEHR spec governs this: our own design (#5699).
+fn projected(care: &ProjectedCare, target: Expr) -> Expr {
+    Expr::cust_with_exprs(
+        "EXISTS (SELECT 1 FROM ehr access_care_ehr \
+         JOIN access_care access_care_row \
+           ON access_care_row.subject_digest = access_care_ehr.subject_digest \
+         WHERE access_care_ehr.id = $1 AND access_care_row.team_id = ANY($2) \
+         AND (access_care_row.care_from IS NULL OR access_care_row.care_from <= CAST($3 AS date)) \
+         AND (access_care_row.care_until IS NULL \
+              OR CAST($3 AS date) < access_care_row.care_until \
+              OR CAST($3 AS date) < access_care_row.care_until + CAST($4 AS interval)))",
+        [
+            target,
+            Expr::val(care.teams.to_vec()),
+            Expr::val(care.day.to_string()),
+            Expr::val(care.grace.clone()),
+        ],
+    )
 }
 
 /// `pred` with what its SQL would decide alike folded away: a scope that
