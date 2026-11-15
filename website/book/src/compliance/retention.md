@@ -276,7 +276,10 @@ removes an entry. An erasure a law orders before the end takes the same
 tombstone path through an administrator operation that is itself recorded.
 A tombstone is kept as long again as its entry was and then folds, with the
 tombstones around it that are past their end too, into one recorded gap of
-the chain, so the log stops growing at the retention horizon.
+the chain, so the log stops growing at the retention horizon. An entry
+imported with an EHR from another system ends the same way at the
+`retain_until` it states, and its tombstones fold once no imported record
+still kept needs them to verify.
 Retention of the trail itself is described in
 [Audit](../audit.md#retention-and-who-chooses-it).
 

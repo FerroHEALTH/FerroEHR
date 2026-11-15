@@ -366,7 +366,16 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (an export), and `access_log::transfer` exports one EHR's records with the
   span and checkpoint and imports another system's into
   `access_log_imported_*`, outside this system's chain
-  (`audit/0028_access_log_checkpoint.sql`).
+  (`audit/0028_access_log_checkpoint.sql`). An imported entry ends at the
+  `retain_until` it states and its tombstone is kept as long again; the
+  hourly run then folds, per exporting system and within each span between
+  two imported checkpoints, only the positions before the first imported
+  record still kept (tombstones past their end and the other EHRs' links)
+  into `access_log_imported_gap` through `audit.fold_access_log_imported()`,
+  so every kept imported record stays hash-chained to its checkpoint with or
+  without link signatures (`audit/0034_access_log_imported_retention.sql`,
+  `access_log::imported`, our own design, #5664). `Checkpoints::verify`
+  verifies each imported checkpoint's stored span through `chain::verify`.
   Every access to EHR data writes one entry per EHR it
   reached, refusals and reads of the log included: the drain builds it from
   the access's `AuditEvent` (`access_log::entry`) and `AuditStore::insert_batch`

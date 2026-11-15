@@ -13,7 +13,7 @@ use jiff::Timestamp;
 use serde_json::json;
 use sqlx::PgPool;
 
-use ferroehr::access_log::expiry::expire;
+use ferroehr::access_log::expiry::{Log, expire};
 use ferroehr::access_log::store::{AccessLogStore, canonical_form};
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
@@ -79,7 +79,12 @@ async fn an_expired_entry_becomes_a_tombstone() {
     let pool = testdb.pool();
     let (store, entries) = log(&pool).await;
 
-    assert_eq!(expire(&store, now()).await.expect("the retention runs"), 1);
+    assert_eq!(
+        expire(&store, Log::Local, now())
+            .await
+            .expect("the retention runs"),
+        1
+    );
 
     let expired = &entries[2];
     let Some(AccessLogRecord::AccessLogTombstone(tombstone)) =
@@ -127,7 +132,12 @@ async fn the_chain_still_verifies_after_tombstoning() {
     let (store, _) = log(&pool).await;
     assert_eq!(findings(&pool).await, [], "the log verifies before");
 
-    assert_eq!(expire(&store, now()).await.expect("the middle expires"), 1);
+    assert_eq!(
+        expire(&store, Log::Local, now())
+            .await
+            .expect("the middle expires"),
+        1
+    );
     assert_eq!(
         findings(&pool).await,
         [],
@@ -136,7 +146,7 @@ async fn the_chain_still_verifies_after_tombstoning() {
 
     let later = "2032-01-01T00:00:00Z".parse().expect("an instant");
     assert_eq!(
-        expire(&store, later)
+        expire(&store, Log::Local, later)
             .await
             .expect("the first and second expire"),
         2
@@ -156,11 +166,16 @@ async fn a_tombstone_never_comes_back() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let (store, entries) = log(&pool).await;
-    assert_eq!(expire(&store, now()).await.expect("the retention runs"), 1);
+    assert_eq!(
+        expire(&store, Log::Local, now())
+            .await
+            .expect("the retention runs"),
+        1
+    );
     let before = store.read(&uid(3)).await.expect("read");
 
     assert_eq!(
-        expire(&store, now())
+        expire(&store, Log::Local, now())
             .await
             .expect("the retention runs again"),
         0,

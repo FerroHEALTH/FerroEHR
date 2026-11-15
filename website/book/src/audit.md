@@ -776,6 +776,30 @@ The metrics are `access_log_folded_total` and `access_log_gaps_total`
 second horizon. No openEHR specification governs audit retention: our own
 design.
 
+**An imported entry ends at its own `retain_until` too.** An entry imported
+with an EHR from another system
+([Checkpoints and the transfer of a log](#checkpoints-and-the-transfer-of-a-log))
+keeps the `retain_until` its recording system stated, and the same hourly
+run replaces it by its tombstone once that day has passed, on the entry's
+own grounds. Its tombstone is kept as long again, as a local one is. An
+imported log usually holds one checkpoint, at its end, and the links of the
+other EHRs' records between the moved EHR's own. A gap does not commit to
+the link before it, so a record kept before a gap would be tied to its
+checkpoint only by its own link signature, and by nothing when the
+exporting system signed no link. The fold of an imported log therefore
+takes, per exporting system and within each span between two of its
+imported checkpoints, only the positions before the first record still
+kept: the tombstones past their end and the other EHRs' links alike, one
+gap (`audit.access_log_imported_gap`) per run that holds a tombstone. Every
+kept imported record stays hash-chained to the checkpoint after it whether
+or not its links were signed, and a tombstone after a kept record waits
+until that record has folded too. A later import from the same system can
+bring another EHR's records at positions a gap already holds: they are
+kept, and verify through their own links. A repeated import does not bring
+back a tombstone or an expired entry at a position a gap holds. The
+metrics count both logs, with `chain` = `local` or `imported`. No openEHR
+specification governs this: our own design (#5664).
+
 **The default is deliberate.** An access log is the evidence a data subject's right of access is served from, and a repository that silently
 forgets is worse than one that grows — so the software keeps everything until
 an operator says otherwise, rather than choosing a horizon on their behalf.
@@ -1157,7 +1181,11 @@ is our own design.
   tombstone keeps, and a gap of folded tombstones as one link whose digest
   is its link), check the checkpoint's signature and that the link at its
   position, a record's or a gap's, is the one it sealed, and check the
-  signature of every signed link and gap. Each finding is reported; the command exits 1 when the log does not
+  signature of every signed link and gap. They also verify every log
+  imported from another system against each of its checkpoints: the stored
+  links, gaps and records from the checkpoint before it, through the same
+  verifier the import runs, under the keyring and
+  `[audit.access_log] trusted_key_files`, reported under `imported`. Each finding is reported; the command exits 1 when the log does not
   verify, and the route answers `200` with `intact: false`.
 - **Signed links.** Each link's digest is signed as the eHDSI Audit Trail
   Profile §2.2 asks of a national contact point. The server locks the head

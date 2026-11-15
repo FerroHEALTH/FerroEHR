@@ -187,7 +187,8 @@ guarded_handler! {
     ///
     /// The whole chain is recomputed, tombstones taken as recorded; the
     /// checkpoint's proof, the link it seals and every signed link are
-    /// checked. A finding is not a request failure.
+    /// checked, and every log imported from another system is verified
+    /// against each of its checkpoints. A finding is not a request failure.
     #[utoipa::path(
         post, path = "/admin/access-log/verify", tag = "admin-access-log",
         responses(
@@ -195,13 +196,17 @@ guarded_handler! {
                                           checkpoint was there to verify against and nothing \
                                           failed; `findings` names each failure of the \
                                           checkpoint and the signed links, `chain` each \
-                                          damaged record or boundary of the chain.",
+                                          damaged record or boundary of the chain, \
+                                          `imported` each failure of a log imported from \
+                                          another system against one of its checkpoints.",
              body = serde_json::Value, example = json!({
                  "intact": false,
                  "checkpoint": { "sequence": 48213, "digest": "<64 hex>" },
                  "findings": ["the checkpoint at 48213 is not signed by a trusted key"],
                  "chain": [{ "chain_seq": 48190,
-                             "finding": "record content was modified after it was written" }]
+                             "finding": "record content was modified after it was written" }],
+                 "imported": [{ "system_id": "cdr-a.example.org", "checkpoint": 912,
+                                "finding": "the link at 905 does not link to the link before it" }]
              })),
             AdminRefusal
         )
@@ -410,6 +415,15 @@ fn verification_report(verification: &Verification) -> Value {
             .map(|finding| json!({
                 "chain_seq": finding.chain_seq,
                 "finding": finding.finding,
+            }))
+            .collect::<Vec<_>>(),
+        "imported": verification
+            .imported
+            .iter()
+            .map(|finding| json!({
+                "system_id": finding.system_id,
+                "checkpoint": finding.checkpoint,
+                "finding": finding.finding.to_string(),
             }))
             .collect::<Vec<_>>(),
     })

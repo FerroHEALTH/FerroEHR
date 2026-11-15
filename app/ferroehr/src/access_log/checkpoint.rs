@@ -25,6 +25,7 @@ use jiff::Timestamp;
 use sqlx::{PgPool, Row};
 
 use crate::access_log::chain::{ALGORITHM, ChainFinding};
+use crate::access_log::imported::ImportedFinding;
 use crate::access_log::store::{AccessLogError, AccessLogStore, canonical_form};
 use crate::access_log::transfer::named_party;
 use crate::db::acquire::acquire;
@@ -50,6 +51,9 @@ pub struct Verification {
     pub findings: Vec<ChainFinding>,
     /// What the access log's chain fails, as its verifier reports it.
     pub chain: Vec<AuditChainFinding>,
+    /// What the logs imported from other systems fail against their own
+    /// checkpoints (#5664).
+    pub imported: Vec<ImportedFinding>,
 }
 
 impl Verification {
@@ -57,7 +61,10 @@ impl Verification {
     /// and nothing failed.
     #[must_use]
     pub fn intact(&self) -> bool {
-        self.checkpoint.is_some() && self.findings.is_empty() && self.chain.is_empty()
+        self.checkpoint.is_some()
+            && self.findings.is_empty()
+            && self.chain.is_empty()
+            && self.imported.is_empty()
     }
 }
 
@@ -251,7 +258,9 @@ impl Checkpoints {
     /// Verify the log against `checkpoint`, or the newest stored one when
     /// none is given: the whole chain, the checkpoint's proof, that the link
     /// at its sequence, a record's or a gap's, is the one it seals, and the
-    /// signature of every signed link and gap.
+    /// signature of every signed link and gap; and every log imported from
+    /// another system against each of its checkpoints
+    /// ([`Self::verify_imported`]).
     ///
     /// A run that finds nothing moves the access log's verification cursor
     /// to the newest record, as a scheduled full pass does.
@@ -275,10 +284,12 @@ impl Checkpoints {
             self.verify_checkpoint(checkpoint, &mut findings).await?;
         }
         self.verify_link_signatures(&mut findings).await?;
+        let imported = self.verify_imported().await?;
         Ok(Verification {
             checkpoint,
             findings,
             chain,
+            imported,
         })
     }
 
@@ -341,7 +352,7 @@ impl Checkpoints {
 }
 
 /// The checkpoint stored at `sequence` as `text`.
-fn read(sequence: i64, text: &str) -> Result<AccessLogCheckpoint, AccessLogError> {
+pub(super) fn read(sequence: i64, text: &str) -> Result<AccessLogCheckpoint, AccessLogError> {
     serde_json::from_str(text).map_err(|source| AccessLogError::Unreadable {
         chain_seq: sequence,
         source,

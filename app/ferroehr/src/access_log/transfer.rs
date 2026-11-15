@@ -251,7 +251,8 @@ impl Checkpoints {
     /// checkpoint names another, [`TransferError::OtherEhr`] for an entry of
     /// another EHR, [`TransferError::Unverified`] when it does not verify,
     /// [`TransferError::Conflict`] when a link differs from one already
-    /// imported, and the store and signing errors.
+    /// imported, or a link or gap ends where a stored one ends with another
+    /// digest, and the store and signing errors.
     pub async fn import(
         &self,
         export: &LogExport,
@@ -278,6 +279,7 @@ impl Checkpoints {
         let mut tx = conn.begin().await.map_err(AccessLogError::from)?;
         store_links(&mut tx, system_id, &export.links).await?;
         store_gaps(&mut tx, system_id, &export.gaps).await?;
+        consistent(&mut tx, system_id).await?;
         store_records(&mut tx, system_id, &export.records).await?;
         sqlx::query(
             "INSERT INTO audit.access_log_imported_checkpoint (system_id, sequence, digest, \
@@ -353,8 +355,7 @@ async fn store_links(
     Ok(())
 }
 
-/// Store `gaps` of `system_id`'s chain, keeping any already stored, and
-/// refuse when one already stored at the same first position differs.
+/// Store `gaps` of `system_id`'s chain, keeping any already stored.
 async fn store_gaps(
     conn: &mut sqlx::PgConnection,
     system_id: &str,
@@ -383,7 +384,7 @@ async fn store_gaps(
          t.time_folded::timestamptz FROM unnest($2::bigint[], $3::bigint[], $4::text[], \
          $5::text[], $6::text[], $7::text[]) \
          AS t(first_seq, last_seq, link, signature, grounds, time_folded) \
-         ON CONFLICT (system_id, first_seq) DO NOTHING",
+         ON CONFLICT (system_id, first_seq, last_seq) DO NOTHING",
     )
     .bind(system_id)
     .bind(&firsts)
@@ -395,17 +396,25 @@ async fn store_gaps(
     .execute(&mut *conn)
     .await
     .map_err(AccessLogError::from)?;
+    Ok(())
+}
+
+/// Refuse when a stored link or gap of `system_id`'s chain ends where
+/// another ends with another digest: each position has one link digest,
+/// whichever import brought it and whichever system folded it (#5664).
+async fn consistent(conn: &mut sqlx::PgConnection, system_id: &str) -> Result<(), TransferError> {
     let differs: Option<i64> = sqlx::query_scalar(
-        "SELECT g.first_seq FROM audit.access_log_imported_gap g \
-         JOIN unnest($2::bigint[], $3::bigint[], $4::text[]) AS t(first_seq, last_seq, link) \
-         ON t.first_seq = g.first_seq \
-         WHERE g.system_id = $1 AND (g.last_seq <> t.last_seq OR g.link <> t.link) \
-         ORDER BY g.first_seq LIMIT 1",
+        "SELECT g.last_seq FROM audit.access_log_imported_gap g \
+         WHERE g.system_id = $1 AND ( \
+           EXISTS (SELECT 1 FROM audit.access_log_imported_gap o \
+                    WHERE o.system_id = g.system_id AND o.last_seq = g.last_seq \
+                      AND o.link <> g.link) \
+           OR EXISTS (SELECT 1 FROM audit.access_log_imported_link l \
+                       WHERE l.system_id = g.system_id AND l.sequence = g.last_seq \
+                         AND l.digest <> g.link)) \
+         ORDER BY g.last_seq LIMIT 1",
     )
     .bind(system_id)
-    .bind(&firsts)
-    .bind(&lasts)
-    .bind(&links)
     .fetch_optional(&mut *conn)
     .await
     .map_err(AccessLogError::from)?;
@@ -419,7 +428,9 @@ async fn store_gaps(
 }
 
 /// Store `records` of `system_id`'s chain as their canonical forms, keeping
-/// any already stored.
+/// any already stored. A tombstone or an expired entry at a position a
+/// stored gap already holds is not stored again: its retention ended here,
+/// and a repeated import does not bring its content back (#5664).
 async fn store_records(
     conn: &mut sqlx::PgConnection,
     system_id: &str,
@@ -437,6 +448,11 @@ async fn store_records(
          d.doc #>> '{ehr_id,value}', (d.doc #>> '{retention,retain_until,value}')::date, \
          t.content FROM unnest($2::bigint[], $3::text[]) AS t(sequence, content) \
          CROSS JOIN LATERAL (SELECT t.content::jsonb AS doc) AS d \
+         WHERE NOT ((d.doc ->> '_type' = 'ACCESS_LOG_TOMBSTONE' \
+                     OR (d.doc #>> '{retention,retain_until,value}')::date < current_date) \
+                    AND EXISTS (SELECT 1 FROM audit.access_log_imported_gap g \
+                                 WHERE g.system_id = $1 \
+                                   AND t.sequence BETWEEN g.first_seq AND g.last_seq)) \
          ON CONFLICT (system_id, sequence) DO NOTHING",
     )
     .bind(system_id)
