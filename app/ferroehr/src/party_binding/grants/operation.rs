@@ -102,8 +102,13 @@ pub const AGREEMENT: [&str; 17] = [
 ];
 
 /// The code naming the credentials element whose text is a role a
-/// [`Operation::HoldRoles`] grant gives a Basic user.
+/// [`Operation::HoldRoles`] grant gives a Basic user, or a role code a
+/// [`Operation::ScimProvision`] grant lets its client assign.
 pub const ROLE: &str = "role";
+
+/// The code naming a [`Operation::ScimProvision`] grant's element whose text
+/// is the terminology the client's User `roles` are coded in.
+pub const ROLE_TERMINOLOGY: &str = "role_terminology";
 
 /// The code naming the credentials element whose text is a SMART scope a
 /// [`Operation::HoldScopes`] grant gives a Basic user.
@@ -147,6 +152,7 @@ fn names_no_operation(code: &str) -> bool {
         NOT_BEFORE,
         NOT_AFTER,
         ROLE,
+        ROLE_TERMINOLOGY,
         SCOPE,
         LOGIN_ISSUER,
         ADMIT_IDP,
