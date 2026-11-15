@@ -36,7 +36,7 @@ use uuid::Uuid;
 
 use crate::access_eval::condition::{Judgement, Noted, RequestAccess};
 use crate::access_eval::procedure::{Lifted, Verdict};
-use crate::access_eval::scope::Item;
+use crate::access_eval::scope::{Item, Pred};
 use crate::access_log::entry::authorisation;
 use crate::ids::EhrId;
 use crate::service::ehr::access_settings::EhrAccessSettings;
@@ -256,13 +256,13 @@ impl RequestAccess {
 
     /// The grounds `judged` rests on: those that admitted it when
     /// `admitted`, and each emergency override; when the request admitted
-    /// objects of the EHR, only the lifted denies at the positions
-    /// `covering` them (#5630).
+    /// objects of the EHR, only the lifted denies and rules `covering` them
+    /// (#5630, #5676).
     fn verdict_grounds(
         &self,
         judged: &Judgement,
         admitted: bool,
-        covering: Option<&BTreeSet<usize>>,
+        covering: Option<&Covering>,
         grounds: &mut Vec<AccessAuthorisation>,
     ) {
         let verdict = &judged.verdict;
@@ -295,14 +295,16 @@ impl RequestAccess {
                 .lifted
                 .iter()
                 .map(|(at, _)| *at)
-                .filter(|at| covering.is_none_or(|covering| covering.contains(at)))
+                .filter(|at| covering.is_none_or(|covering| covering.directives.contains(at)))
                 .filter_map(|at| directive(at, Some(Authorisation::Emergency))),
         );
         grounds.extend(
             found
                 .lifted_rules
                 .iter()
-                .filter_map(|at| self.rule_ground(*at, Authorisation::Emergency)),
+                .map(|(at, _)| *at)
+                .filter(|at| covering.is_none_or(|covering| covering.rules.contains(at)))
+                .filter_map(|at| self.rule_ground(at, Authorisation::Emergency)),
         );
         if verdict.lifted.contains(&Lifted::Policy) {
             grounds.push(self.policy_ground(Authorisation::Emergency));
@@ -401,36 +403,53 @@ impl RequestAccess {
     }
 }
 
-/// For each EHR with a lifted deny where the request admitted an object, the
-/// positions of the lifted denies whose data scope covered such an object:
-/// the access record names a lifted deny only for the data it lifted (EHDS
-/// Art. 11(5) and Art. 9(1); our own design, #5630).
+/// The lifted denies and deny rules whose data scope covered an object the
+/// request admitted of one EHR.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Covering {
+    /// Positions in the settings' `directives`.
+    directives: BTreeSet<usize>,
+    /// Positions in the policy's `rules`.
+    rules: BTreeSet<usize>,
+}
+
+/// For each EHR with a lift where the request admitted an object, the lifted
+/// denies and deny rules whose data scope covered such an object: the access
+/// record names a lift only for the data it lifted (EHDS Art. 11(5) and
+/// Art. 9(1); our own design, #5630, #5676).
 #[derive(Debug, Default)]
-pub(crate) struct LiftedCovers(Mutex<BTreeMap<EhrId, BTreeSet<usize>>>);
+pub(crate) struct LiftedCovers(Mutex<BTreeMap<EhrId, Covering>>);
 
 impl LiftedCovers {
-    /// Note which denies `verdict` lifted on `ehr_id` cover the admitted
-    /// `item`; the EHR itself is no object, and a request naming no EHR
-    /// names no lift, so neither notes anything.
+    /// Note which denies and rules `verdict` lifted on `ehr_id` cover the
+    /// admitted `item`; the EHR itself is no object, and a request naming no
+    /// EHR names no lift, so neither notes anything.
     pub(crate) fn note(&self, ehr_id: Option<EhrId>, verdict: &Verdict, item: &Item<'_>) {
         let Some(ehr_id) = ehr_id else {
             return;
         };
-        if verdict.grounds.lifted.is_empty() || !matches!(item, Item::Object(_)) {
+        let found = &verdict.grounds;
+        if found.lifted.is_empty() && found.lifted_rules.is_empty()
+            || !matches!(item, Item::Object(_))
+        {
             return;
         }
+        let covering = |lifted: &[(usize, Pred)]| -> Vec<usize> {
+            lifted
+                .iter()
+                .filter(|(_, cover)| cover.holds(item))
+                .map(|(at, _)| *at)
+                .collect()
+        };
         let mut covers = self.0.lock().unwrap_or_else(PoisonError::into_inner);
         let covered = covers.entry(ehr_id).or_default();
-        for (at, cover) in &verdict.grounds.lifted {
-            if cover.holds(item) {
-                covered.insert(*at);
-            }
-        }
+        covered.directives.extend(covering(&found.lifted));
+        covered.rules.extend(covering(&found.lifted_rules));
     }
 
-    /// The positions noted for `ehr_id`; `None` when the request admitted no
-    /// object of it, so the record names every deny the EHR's verdict lifted.
-    pub(crate) fn of(&self, ehr_id: EhrId) -> Option<BTreeSet<usize>> {
+    /// What was noted for `ehr_id`; `None` when the request admitted no
+    /// object of it, so the record names every lift of the EHR's verdict.
+    pub(crate) fn of(&self, ehr_id: EhrId) -> Option<Covering> {
         self.0
             .lock()
             .unwrap_or_else(PoisonError::into_inner)

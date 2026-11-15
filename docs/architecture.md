@@ -776,9 +776,10 @@ which is what makes an optional stage safe to disable:
    whatever its rows hold, and, for an aggregate projection, each EHR whose
    data the aggregate read, carried per row as a hidden
    `array_agg(DISTINCT …)` column in the same statement; a refused query is
-   recorded against the EHR it asked for. An emergency's lifted denies carry
-   the items they cover, and an entry naming the objects it admitted names
-   only the lifted denies covering one of them (#5630). A record the service
+   recorded against the EHR it asked for. An emergency's lifted denies and
+   lifted controller deny rules carry the items they cover, and an entry
+   naming the objects it admitted names only the lifted denies and rules
+   covering one of them (#5630, #5676). A record the service
    writes itself, such as an EHR Extract export's, names the request and the
    caller's binding, which the adapter publishes for the request (#5638).
 3. **RBAC** — the coarse operation class (public / clinical / admin /
@@ -1044,7 +1045,10 @@ grant revision and stamps every party whose facts changed in
 only the facts of the parties stamped since its copy, one indexed read
 (`grants::caller::store::FACTS`), so an admission costs each replica one
 small read and the request path still adds no transaction. A refill and an
-erasure move the grant revision, which reads every fact again.
+erasure move the grant revision, which reads every fact again. Migration
+`party/0042` returns the grant revision to the never-filled state, so the
+next boot refills the facts of the `ROLE`s already stored before it serves,
+with no command run (#5675).
 `Capabilities::facts()` gives a request's caller its roles and care teams in
 force. The replica's copy holds the facts of callers
 alone: a patient's `under_care_of` relationships grow with the record, so
