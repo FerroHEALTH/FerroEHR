@@ -29,6 +29,8 @@ use crate::ids::EhrId;
 
 /// The alias of the record table in the statement.
 const RECORD: &str = "r";
+/// The alias of the shared part each record names (#5703).
+const SHARED: &str = "sh";
 
 /// Whom a statement reads the log for, and which page of it.
 #[derive(Debug, Clone, Copy)]
@@ -145,9 +147,20 @@ pub fn statement(
             ]
             .map(|name| (Alias::new(RECORD), Alias::new(name))),
         )
+        .expr_as(
+            Expr::col((Alias::new(SHARED), Alias::new("content"))),
+            Alias::new("shared"),
+        )
         .from_as(
             (Alias::new("audit"), Alias::new("access_log_record")),
             Alias::new(RECORD),
+        )
+        .join_as(
+            sea_query::JoinType::LeftJoin,
+            (Alias::new("audit"), Alias::new("access_log_shared")),
+            Alias::new(SHARED),
+            Expr::col((Alias::new(SHARED), Alias::new("digest")))
+                .equals((Alias::new(RECORD), Alias::new("shared"))),
         )
         .and_where(column("record_type").eq("ACCESS_LOG_ENTRY"));
     match scope.ehrs {
@@ -252,11 +265,12 @@ impl Builder<'_> {
             // NOTE: our own design, the link is kept in columns, never in the canonical form.
             _ if path.steps == ["link"] => truth(true),
             Reach::Column(name, _) => column(name).is_not_null(),
-            Reach::Single(steps) => {
-                Expr::cust_with_values("(r.content::jsonb #> $1::text[]) IS NOT NULL", [steps])
-            }
+            Reach::Single(steps) => Expr::cust_with_values(
+                "(audit.access_log_document(r.content, sh.content) #> $1::text[]) IS NOT NULL",
+                [steps],
+            ),
             Reach::Many(jsonpath) => Expr::cust_with_values(
-                "jsonb_path_exists(r.content::jsonb, $1::jsonpath)",
+                "jsonb_path_exists(audit.access_log_document(r.content, sh.content), $1::jsonpath)",
                 [jsonpath],
             ),
         }
@@ -276,11 +290,14 @@ impl Builder<'_> {
             Reach::Withheld => on(Expr::cust("NULL::text"), typed)?,
             Reach::Column(name, column_typed) => on(column(name), column_typed)?,
             Reach::Single(steps) => on(
-                Expr::cust_with_values("(r.content::jsonb #>> $1::text[])", [steps]),
+                Expr::cust_with_values(
+                    "(audit.access_log_document(r.content, sh.content) #>> $1::text[])",
+                    [steps],
+                ),
                 typed,
             )?,
             Reach::Many(jsonpath) => Expr::cust_with_exprs(
-                "EXISTS (SELECT 1 FROM jsonb_path_query(r.content::jsonb, $1::jsonpath) AS m(v) \
+                "EXISTS (SELECT 1 FROM jsonb_path_query(audit.access_log_document(r.content, sh.content), $1::jsonpath) AS m(v) \
                      WHERE $2)",
                 [
                     Expr::val(jsonpath),
@@ -354,7 +371,7 @@ impl Builder<'_> {
         // NOTE: QUERY §LIKE, a date-time matches by its string representation.
         let operand = if typed == Typed::Instant {
             Expr::cust_with_values(
-                "(r.content::jsonb #>> $1::text[])",
+                "(audit.access_log_document(r.content, sh.content) #>> $1::text[])",
                 [format!("{{{}}}", path.steps.join(","))],
             )
         } else {
@@ -383,7 +400,10 @@ impl Builder<'_> {
         match self.reach(path) {
             Reach::Column(name, _) => column(name),
             Reach::Single(steps) => cast(
-                Expr::cust_with_values("(r.content::jsonb #>> $1::text[])", [steps]),
+                Expr::cust_with_values(
+                    "(audit.access_log_document(r.content, sh.content) #>> $1::text[])",
+                    [steps],
+                ),
                 typed,
             ),
             // NOTE: our own design, a key the reader may not see orders as an absent value.

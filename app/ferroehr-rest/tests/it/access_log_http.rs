@@ -39,13 +39,15 @@ pub(crate) struct Stored {
     pub(crate) content: String,
 }
 
-/// The columns of one stored entry, in [`Stored`]'s order.
+/// The columns of one stored entry, in [`Stored`]'s order, with its shared
+/// part.
 type Columns = (
     Option<String>,
     Option<String>,
     Option<String>,
     Option<String>,
     String,
+    Option<String>,
 );
 
 /// The entries stored so far that `keep` selects, polled until there are at
@@ -58,23 +60,29 @@ pub(crate) async fn entries(
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<Columns> = sqlx::query_as(
-            "SELECT ehr_id, action_code, result_code, request_id, content \
-             FROM audit.access_log_record ORDER BY chain_seq",
+            "SELECT r.ehr_id, r.action_code, r.result_code, r.request_id, r.content, sh.content \
+             FROM audit.access_log_record r \
+             LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared ORDER BY r.chain_seq",
         )
         .fetch_all(pool)
         .await
         .expect("read the access log");
         let all = rows.len();
-        let debug_rows: Vec<String> = rows.iter().map(|row| row.4.clone()).collect();
+        let debug_rows: Vec<String> = rows
+            .iter()
+            .map(|row| common::joined_entry(&row.4, row.5.as_deref()))
+            .collect();
         let kept: Vec<Stored> = rows
             .into_iter()
-            .map(|(ehr_id, action, result, request_id, content)| Stored {
-                ehr_id,
-                action,
-                result,
-                request_id,
-                content,
-            })
+            .map(
+                |(ehr_id, action, result, request_id, content, shared)| Stored {
+                    ehr_id,
+                    action,
+                    result,
+                    request_id,
+                    content: common::joined_entry(&content, shared.as_deref()),
+                },
+            )
             .filter(|stored| keep(stored))
             .collect();
         if kept.len() >= expected {

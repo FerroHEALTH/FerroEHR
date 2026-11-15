@@ -285,10 +285,22 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   accesses outside the access log (an authentication, a template or party
   operation, an application activity), with the FHIR `AuditEvent` rendered
   from its columns. `access_log_record` holds the draft openEHR
-  `ACCESS_LOG_ENTRY` (#5121) as its ITS-JSON canonical form without its link
-  (RFC 8785), the search columns its insert trigger derives from that form,
-  and its `ACCESS_LOG_LINK`: the content digest over the canonical form and
-  the digest over the previous digest, the sequence and the content digest.
+  `ACCESS_LOG_ENTRY` (#5121) in two parts of its ITS-JSON canonical form
+  without its link (RFC 8785, #5703, our own design): the part its caller
+  shares (accessor, credential, roles, authorisations, purposes, retention
+  and the caller's access details) once in `access_log_shared`, keyed by its
+  SHA-256, and the rest on its row, compressed in place; the search columns
+  its insert trigger derives from both; and its `ACCESS_LOG_LINK`: the
+  content digest over the whole canonical form, which the writer computes
+  (`access_log::stored_form`), and the digest over the previous digest, the
+  sequence and the content digest. The server recomputes each content digest
+  from the joined parts (`AuditStore::access_log_contents`) and the database
+  checks the links, so an incremental run advances no further than the
+  server checked. An access detail the core states as the record holds it
+  (the principal and issuer the credential names, the count the outcome
+  delivered, the action and outcome the core codes) is not written
+  (`access_log::recorded::Core`). A tombstone keeps no shared part, and a
+  shared part leaves with the last row that named it.
   The two tables are two hash chains (#5573, our own design): the access log
   holds only the accesses to EHR data, one chain per system from 1 with no
   gaps, under its own head (`access_log_chain_state`), verified by
