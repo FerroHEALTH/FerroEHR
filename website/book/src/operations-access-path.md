@@ -208,9 +208,10 @@ recording while you investigate.
   writes, so no access goes unrecorded.
 - **What to do:**
   1. Check `access_log_append_duration_seconds` and
-     `access_log_sign_duration_seconds`. Signing runs while the head of the
-     chain is locked, so a slow key slows every audit write. An RSA key is far
-     slower than Ed25519 ([PGP signing](signing/pgp.md)).
+     `access_log_sign_duration_seconds`. Signing runs on the blocking pool
+     while the head of the chain is locked, so a slow key slows every audit
+     write but holds back no request. An RSA key is far slower than Ed25519
+     ([PGP signing](signing/pgp.md)).
   2. Check `access_log_entries_total{outcome="failed"}` and the log for the
      error of the failed append: a full disk, a lost audit database or a
      statement timeout.
