@@ -1185,8 +1185,9 @@ merged patient's EHR through the survivor's `PERSON`.
 the Patient Identity Registry with ITI-94 (PMIR 1.6.0 §2:3.94), criteria
 `Patient`: a Registry matches criteria against the `Patient` after a change,
 so a narrower criterion would miss the unlink that removes what it matches.
-One replica at a time checks the subscription under an advisory lock and
-adopts the one the Registry lists for the feed route. The Registry posts each
+One replica at a time checks the subscription under an advisory lock: it
+reads the status at the `Location` the store records (§2:3.94.4.3) and
+creates one when none is recorded or the Registry no longer holds it. The Registry posts each
 ITI-93 message (§2:3.93) to `POST {public root}/pmir/feed`, which admits only
 the client `pix.feed_issuer` and `pix.feed_client_id` name, by its IUA token
 (§2:3.93.5). The route reads the message with `ihe_iti::pmir::feed`, which
@@ -1211,7 +1212,7 @@ no `replaced-by` link, moves the recorded ones back; an update makes the
 `PERSON`'s patient identifiers the announced ones, moving an identifier from
 the `PERSON` whose identity gave it up or writing one no `PERSON` carries
 under its domain's `DV_IDENTIFIER` type. A message about a merged identity
-that states no state, an ambiguous binding, a contested identifier or a
+that states neither the merge nor its revert, an ambiguous binding, a contested identifier or a
 refused commit refuses the message: it keeps its splits and is logged, and
 the next message applies. An identity is bound to the one `PERSON` that
 carries one of its announced identifiers. A redelivery is stored once. **Our

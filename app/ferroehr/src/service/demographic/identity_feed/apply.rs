@@ -236,7 +236,7 @@ impl FerroEhrService {
         .await
         .map_err(StorageError::from)?;
         tracing::error!(
-            message = message_id,
+            message_id,
             reason = refusal.code(),
             "an ITI-93 message is refused: what it splits stays unresolved until it is settled"
         );

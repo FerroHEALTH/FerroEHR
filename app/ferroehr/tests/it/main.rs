@@ -115,6 +115,7 @@ mod party_reverse_paths;
 mod patient_index;
 mod persistence;
 mod pmir_consumer;
+mod pmir_subscription;
 mod policy_elements;
 mod policy_fixtures;
 mod policy_grants;

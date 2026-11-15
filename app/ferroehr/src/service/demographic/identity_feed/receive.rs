@@ -17,7 +17,7 @@
 //! off the request path. That reading is our own design.
 
 use ihe_iti::pmir::error::FeedError;
-use ihe_iti::pmir::feed::{Event, Feed, PatientIdentity, ResponseId, Unwritable};
+use ihe_iti::pmir::feed::{Event, Feed, LinkType, PatientIdentity, ResponseId, Unwritable};
 use secrecy::ExposeSecret as _;
 use sqlx::Connection as _;
 use sqlx::PgConnection;
@@ -88,7 +88,8 @@ fn referenced_id(reference: &str) -> String {
         .to_owned()
 }
 
-/// The stored form of `identity` reported as `kind`.
+/// The stored form of `identity` reported as `kind`: its id, its
+/// identifiers, its `active` and the survivor its `replaced-by` link names.
 fn event(kind: ChangeKind, identity: &PatientIdentity) -> FeedEvent {
     FeedEvent {
         kind,
@@ -108,17 +109,18 @@ fn event(kind: ChangeKind, identity: &PatientIdentity) -> FeedEvent {
                 })
             })
             .collect(),
-        active: None,
-        replaced_by: None,
+        active: identity.active(),
+        replaced_by: identity
+            .links()
+            .iter()
+            .find(|link| link.kind() == LinkType::ReplacedBy)
+            .map(|link| referenced_id(link.other().expose_secret())),
     }
 }
 
-/// The stored form of the changes of `feed`, in history order.
-///
-/// A merge states its content (`active` false and the `replaced-by` link,
-/// §2:3.93.4.1.2.4); the reader keeps no `active` or link of another change,
-/// so those are stored as unstated, and a message about a merged identity
-/// that needs them is refused when applied.
+/// The stored form of the changes of `feed`, in history order. The reader
+/// holds every created, updated and merged `Patient` to stating `active`,
+/// so the state of each is read from the message alone (§2:3.93.4.1.2.4).
 fn events(feed: &Feed) -> Vec<FeedEvent> {
     feed.events()
         .iter()
@@ -130,7 +132,6 @@ fn events(feed: &Feed) -> Vec<FeedEvent> {
                 subsumed,
                 surviving,
             } => Some(FeedEvent {
-                active: Some(false),
                 replaced_by: Some(referenced_id(surviving.expose_secret())),
                 ..event(ChangeKind::Merge, subsumed)
             }),
@@ -184,10 +185,7 @@ impl FerroEhrService {
     /// Stores the message `message_id` that `sender` sent, read into
     /// `events`, and stops what it splits resolving, in one transaction;
     /// `false` when the message was stored before, which changes nothing.
-    ///
-    /// # Errors
-    /// [`ReceiveError::Service`] when the store does not take it.
-    pub async fn pmir_store(
+    async fn pmir_store(
         &self,
         sender: &FeedSender,
         message_id: &str,

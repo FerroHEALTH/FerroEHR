@@ -6,12 +6,11 @@
 //! (PMIR 1.6.0 §2:3.93), applied to the patient `PERSON`s as demographic
 //! content, with what a split stops resolving held from receipt.
 //!
-//! The merge arrives as the bytes a Supplier sends, written by the
-//! Registry's own notification writer and read by the consumer's reader. The
-//! revert arrives as the stored changes the reader yields once it states
-//! `active` and the links of every `Patient` (`FerroPIX` #656), through the
-//! store the reader feeds. PMIR leaves the Consumer's handling to its
-//! capabilities (§2:3.93.4.1.3); what is asserted is our own design.
+//! Every message arrives as the bytes a Supplier sends, written by the
+//! Registry's own notification writer and read by the consumer's reader, each
+//! `Patient` stating `active` and its links. PMIR leaves the Consumer's
+//! handling to its capabilities (§2:3.93.4.1.3); what is asserted is our own
+//! design.
 
 use fhir_types::r4::identifier::Identifier as FhirIdentifier;
 use fhir_types::r4::patient::{Patient, PatientLink};
@@ -27,9 +26,7 @@ use crate::policy_fixtures::{ISSUER, capability, create, granted};
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::identity_feed::apply::Applied;
-use ferroehr::service::demographic::identity_feed::{
-    ChangeKind, FeedEvent, FeedSender, Identifier, Refusal,
-};
+use ferroehr::service::demographic::identity_feed::{FeedSender, Refusal};
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
@@ -96,13 +93,6 @@ fn message(id: &str, notices: &[Notice]) -> Vec<u8> {
         },
     );
     serde_json::to_vec(&bundle).expect("the message writes")
-}
-
-fn national(values: &[&str]) -> Vec<Identifier> {
-    values
-        .iter()
-        .map(|v| Identifier::new(NATIONAL, v))
-        .collect()
 }
 
 /// Two patients A and B, each carrying its national identifier and
@@ -188,25 +178,16 @@ impl Patients {
         )
     }
 
-    /// The steward's revert of that merge, as the reader stores it once it
-    /// states `active` and the links (`FerroPIX` #656).
-    fn revert(&self) -> Vec<FeedEvent> {
-        vec![
-            FeedEvent::new(
-                ChangeKind::Update,
-                &self.pix[1],
-                national(&["NAT-B"]),
-                Some(true),
-                None,
-            ),
-            FeedEvent::new(
-                ChangeKind::Update,
-                &self.pix[0],
-                national(&["NAT-A"]),
-                Some(true),
-                None,
-            ),
-        ]
+    /// The steward's revert of that merge: both patients as they now stand,
+    /// each `active` with no `replaced-by` link.
+    fn revert(&self) -> Vec<u8> {
+        message(
+            &Uuid::now_v7().to_string(),
+            &[
+                Notice::Updated(Box::new(fhir_patient(&self.pix[1], &["NAT-B"]))),
+                Notice::Updated(Box::new(fhir_patient(&self.pix[0], &["NAT-A"]))),
+            ],
+        )
     }
 }
 
@@ -283,9 +264,15 @@ async fn a_merge_and_its_revert_apply_on_both_replicas_and_the_split_holds_from_
     assert_eq!(index(&one, &patients.subject(1)).await, both);
 
     assert!(
-        two.pmir_store(&sender(), "revert-1", &patients.revert())
-            .await
-            .expect("the revert is stored")
+        two.pmir_receive(
+            &sender(),
+            Some("application/fhir+json"),
+            &patients.revert(),
+            FEED
+        )
+        .await
+        .expect("the revert is stored")
+        .stored
     );
     assert_eq!(
         trc(&one, "NAT-A").await,
@@ -344,9 +331,14 @@ async fn a_redelivered_or_late_message_changes_nothing_a_second_time() {
         None,
         "a redelivery was stored once and applies once"
     );
-    two.pmir_store(&sender(), "revert-2", &patients.revert())
-        .await
-        .expect("the revert is stored");
+    two.pmir_receive(
+        &sender(),
+        Some("application/fhir+json"),
+        &patients.revert(),
+        FEED,
+    )
+    .await
+    .expect("the revert is stored");
     assert!(
         matches!(
             two.pmir_apply_next(Uuid::now_v7())
@@ -426,7 +418,8 @@ async fn an_unlink_stops_resolving_at_receipt_and_a_link_adds_the_identifier() {
 }
 
 #[tokio::test]
-async fn a_message_about_a_merged_identity_that_states_no_state_is_refused_and_stays_split() {
+async fn a_message_about_a_merged_identity_that_states_neither_merge_nor_revert_is_refused_and_stays_split()
+ {
     let db = testkit::db().await.expect("testkit database");
     let (one, two) = replicas(&db).await;
     let patients = Patients::on(&one).await;
@@ -442,13 +435,17 @@ async fn a_message_about_a_merged_identity_that_states_no_state_is_refused_and_s
     one.pmir_apply_next(Uuid::now_v7())
         .await
         .expect("the apply runs");
-    // NOTE: the reader of ihe-iti 0.9.0 keeps no `active` or link of an update, so this is read
-    // as stating neither, the case the consumer refuses rather than guesses.
+    // NOTE: the merged identity is announced inactive with no replaced-by link: neither its
+    // merge nor its revert, which the consumer refuses rather than guesses.
+    let deactivated = Patient {
+        active: Some(false.into()),
+        ..fhir_patient(&patients.pix[0], &["NAT-A"])
+    };
     let unstated = message(
         "unstated-1",
         &[
             Notice::Updated(Box::new(fhir_patient(&patients.pix[1], &["NAT-B"]))),
-            Notice::Updated(Box::new(fhir_patient(&patients.pix[0], &["NAT-A"]))),
+            Notice::Updated(Box::new(deactivated)),
         ],
     );
     two.pmir_receive(&sender(), Some("application/fhir+json"), &unstated, FEED)

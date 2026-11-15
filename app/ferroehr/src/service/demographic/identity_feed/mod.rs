@@ -60,7 +60,7 @@ pub struct FeedSender {
 /// The kind of change one history entry reports (§2:3.93.4.1.1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ChangeKind {
+pub(crate) enum ChangeKind {
     /// A Patient Master Identity was created.
     Create,
     /// It was updated.
@@ -75,23 +75,12 @@ pub enum ChangeKind {
 ///
 /// `Debug` shows the system and never the value.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Identifier {
+pub(crate) struct Identifier {
     /// `Identifier.system`, the identifier's domain and the `DV_IDENTIFIER`
     /// issuer a patient `PERSON` carries it under.
     pub(crate) system: String,
     /// `Identifier.value`.
     pub(crate) value: String,
-}
-
-impl Identifier {
-    /// The identifier `value` of the domain `system`.
-    #[must_use]
-    pub fn new(system: &str, value: &str) -> Self {
-        Self {
-            system: system.to_owned(),
-            value: value.to_owned(),
-        }
-    }
 }
 
 impl fmt::Debug for Identifier {
@@ -106,7 +95,7 @@ impl fmt::Debug for Identifier {
 ///
 /// `Debug` shows the kind and the shape, never an id or an identifier.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FeedEvent {
+pub(crate) struct FeedEvent {
     /// What happened.
     pub(crate) kind: ChangeKind,
     /// The Registry's `Patient.id`.
@@ -119,27 +108,6 @@ pub struct FeedEvent {
     pub(crate) active: Option<bool>,
     /// The surviving `Patient.id` a `replaced-by` link names.
     pub(crate) replaced_by: Option<String>,
-}
-
-impl FeedEvent {
-    /// The change `kind` of the identity `id`, carrying `identifiers`, with
-    /// `active` and the `replaced-by` survivor as the message states them.
-    #[must_use]
-    pub fn new(
-        kind: ChangeKind,
-        id: &str,
-        identifiers: Vec<Identifier>,
-        active: Option<bool>,
-        replaced_by: Option<&str>,
-    ) -> Self {
-        Self {
-            kind,
-            id: id.to_owned(),
-            identifiers,
-            active,
-            replaced_by: replaced_by.map(str::to_owned),
-        }
-    }
 }
 
 impl fmt::Debug for FeedEvent {
@@ -157,9 +125,10 @@ impl fmt::Debug for FeedEvent {
 /// no value, which the message row and the log carry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum Refusal {
-    /// A message about a merged identity states neither a merge nor an
-    /// unmerge.
-    #[error("a message about a merged identity states no active state and no replaced-by link")]
+    /// A message about a merged identity states neither its merge (`active`
+    /// false, `replaced-by` the survivor) nor its revert (`active` true, no
+    /// `replaced-by` link).
+    #[error("a message about a merged identity states neither its merge nor its revert")]
     MergedStateMissing,
     /// More than one `PERSON` carries the identifiers of one identity.
     #[error("more than one PERSON carries the identifiers of one identity")]

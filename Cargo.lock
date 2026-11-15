@@ -3519,9 +3519,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.9.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31b4ff63936b3bd59f7e1354ab02edea00a4a41fc814bb36aac1cfc6d9849102"
+checksum = "45b0cdefea9b1d31fc7ee91feb471bb912cdefb050fe0c0bfc1616a305c5d55f"
 dependencies = [
  "ferrohealth-smart",
  "fhir-search",

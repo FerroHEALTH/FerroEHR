@@ -5,9 +5,9 @@
 //! (PMIR 1.6.0 §2:3.94).
 //!
 //! One replica at a time, under a transaction-level advisory lock, makes sure
-//! one subscription exists: it adopts a subscription the Registry lists for
-//! FerroEHR's feed route, and creates one only when none is listed and the
-//! store records none. The criteria are every `Patient` (§2:3.94.4.1.2.1.1):
+//! one subscription exists: it reads the status of the subscription whose
+//! `Location` the store records (§2:3.94.4.3), and creates one when the store
+//! records none or the Registry no longer holds it (§2:3.94.4.1). The criteria are every `Patient` (§2:3.94.4.1.2.1.1):
 //! a Registry matches criteria against the `Patient` after the change, so a
 //! criterion on an identifier system would not report the unlink that
 //! removes the identifier it matches. A subscription the Registry set to
@@ -20,7 +20,7 @@ use std::time::Duration;
 use ferrohealth_smart::client::outbound::OutboundClient;
 use ferrohealth_smart::config::ServerTls;
 use ihe_iti::pmir::PmirSubscriber;
-use ihe_iti::pmir::subscription::{Criteria, Search, SubscriptionRequest, SubscriptionStatus};
+use ihe_iti::pmir::subscription::{Criteria, Subscribed, SubscriptionRequest, SubscriptionStatus};
 use sqlx::Connection as _;
 use url::Url;
 
@@ -101,9 +101,34 @@ impl Subscription {
     }
 }
 
+impl Subscription {
+    /// The status of the subscription at the stored `location`, and the
+    /// location; `None` when the Registry no longer holds it (`404`, `410`,
+    /// FHIR R4 http.html, read) or the location lies outside its base, so
+    /// a new one is created.
+    async fn held(
+        &self,
+        location: &str,
+    ) -> Result<Option<(String, SubscriptionStatus)>, SubscribeError> {
+        // NOTE: a stored location outside the Registry's base names no subscription of it.
+        let Ok(subscribed) = Subscribed::at(self.subscriber.endpoint(), location) else {
+            return Ok(None);
+        };
+        match self.subscriber.status(&subscribed, self.timeout).await {
+            Ok(status) => Ok(Some((subscribed.location().to_string(), status))),
+            Err(ihe_iti::pmir::error::SubscribeError::Rejected { status, .. })
+                if status == http::StatusCode::NOT_FOUND || status == http::StatusCode::GONE =>
+            {
+                Ok(None)
+            }
+            Err(error) => Err(error.into()),
+        }
+    }
+}
+
 impl FerroEhrService {
-    /// Makes sure `subscription` is held at the Registry, adopting the one it
-    /// lists for the feed route or creating one.
+    /// Makes sure `subscription` is held at the Registry: the one whose
+    /// `Location` the store records, or a new one.
     ///
     /// # Errors
     /// A [`SubscribeError`] when the Registry or the store does not answer.
@@ -128,32 +153,12 @@ impl FerroEhrService {
                 .bind(endpoint)
                 .fetch_optional(&mut *tx)
                 .await?;
-        let found = subscription
-            .subscriber
-            .find(&subscription.request, subscription.timeout)
-            .await?;
-        let listed = match found {
-            Search::Found(listed) => listed,
-            Search::Unsupported if recorded.is_some() => {
-                return Ok(SubscribeOutcome::Held(SubscriptionStatus::Requested));
-            }
-            _ => Vec::new(),
+        let held = match recorded {
+            Some(location) => subscription.held(&location).await?,
+            None => None,
         };
-        let held = listed
-            .iter()
-            .find(|listed| {
-                matches!(
-                    listed.status,
-                    SubscriptionStatus::Active | SubscriptionStatus::Requested
-                )
-            })
-            .or_else(|| listed.first());
-        let (location, status, outcome) = if let Some(listed) = held {
-            (
-                listed.subscribed.location().to_string(),
-                listed.status,
-                SubscribeOutcome::Held(listed.status),
-            )
+        let (location, status, outcome) = if let Some((location, status)) = held {
+            (location, status, SubscribeOutcome::Held(status))
         } else {
             let created = subscription
                 .subscriber
