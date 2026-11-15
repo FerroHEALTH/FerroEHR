@@ -39,7 +39,7 @@ The terms are:
 |not authenticated, credential not bound, not authorised, consent absent, rate limited, system failure
 
 |credential binding
-|bound, provisional, subject of care, external, organisation, system, unbound, ambiguous, party inactive, party abandoned, party deleted, party kind mismatch, representation unrecorded, key claim missing, groups unavailable, guest, external credential incomplete, system personal scope, no agreement, scope beyond agreement, correlation missing, treatment relationship confirmation missing, treatment relationship confirmation mismatch, agreement condition unmet
+|bound, provisional, subject of care, external, organisation, system, unbound, ambiguous, party inactive, party abandoned, party deleted, party kind mismatch, representation unrecorded, key claim missing, groups unavailable, guest, external credential incomplete, system personal scope, no agreement, scope beyond agreement, correlation missing, treatment relationship confirmation missing, treatment relationship confirmation mismatch
 |===
 
 `credential binding` codes `ACCESSOR._binding_`: how the system bound the presented credential to `_accessor.party_`, or why it could not. Whether the access then ran is recorded by `ACCESS_OUTCOME`, so no code carries a refusal of its own; the refusals of a login sit beneath `access refusal reason` `not authenticated` or `credential not bound`, and `subject of care`, `external`, `organisation` and `system` sit beneath the `accessor kind` of the same name. The two treatment relationship confirmation codes follow the MyHealth@EU treatment relationship confirmation, which applies in every member state.

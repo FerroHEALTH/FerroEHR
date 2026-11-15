@@ -27,7 +27,8 @@ use serde_json::{Value, json};
 use ferroehr::access_log::search::{LOG_QUERY, LogQuery};
 use ferroehr::access_log::view::{LogReader, LogStanding, Restrictions, view_of};
 use ferroehr::system_log::event::{EntryScope, QueryNaming};
-use openehr_rm::draft::access_control::terminology::CallerKind;
+use fhir_search::token::Token;
+use openehr_rm::draft::access_control::terminology::{CallerKind, Term};
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
 use crate::extensions::access::authn::current_principal;
@@ -148,9 +149,9 @@ fn set(filter: &mut LogQuery, name: &str, value: String) -> Result<(), RestError
             crate::overview::version_id::parse_ehr_id(&value)?;
             filter.ehr_id = Some(value);
         }
-        "action" => filter.action = Some(value),
-        "outcome" => filter.outcome = Some(value),
-        "accessor_kind" => filter.accessor_kind = Some(value),
+        "action" => filter.action = Some(term(name, &value)?),
+        "outcome" => filter.outcome = Some(term(name, &value)?),
+        "accessor_kind" => filter.accessor_kind = Some(term(name, &value)?),
         "party_namespace" => filter.party.namespace = Some(value),
         "party_type" => filter.party.class = Some(value),
         "party_id" => filter.party.id = Some(value),
@@ -173,6 +174,24 @@ fn instant(name: &str, value: &str) -> Result<jiff::Timestamp, RestError> {
             "`{name}` is an ISO 8601 date-time with an offset, such as 2026-11-13T09:00:00Z"
         ))
     })
+}
+
+/// `value`, a token `terminology_id|code` (FHIR R4 search.html §3.1.1.4.10),
+/// as the term of `T`'s group it names.
+///
+/// The term is recognised by its coded content, never its rubric, and a bare
+/// code assumes no terminology: our own design, after the token of the FHIR
+/// `AuditEvent` `action` and `outcome` search parameters.
+fn term<T: Term>(name: &str, value: &str) -> Result<T, RestError> {
+    match Token::parse(value) {
+        Ok(Token::SystemCode { system, code }) => {
+            T::read(&system, &code).map_err(|outside| malformed(format!("`{name}`: {outside}")))
+        }
+        Ok(_) | Err(_) => Err(malformed(format!(
+            "`{name}` is a token terminology_id|code naming a term of the {} group",
+            T::GROUP.rubric()
+        ))),
+    }
 }
 
 /// `value`, `true` or `false`.

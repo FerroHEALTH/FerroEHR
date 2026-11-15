@@ -10,7 +10,11 @@
 //! `federation` issuer; EHDS Art. 10), a system client, and every other
 //! caller a professional. Its party, the roles of the `ROLE`s it performs and
 //! its care teams are the demographic facts the request already holds
-//! (`ferroehr::party_binding::grants`); a token's role claims drive no rule.
+//! (`ferroehr::party_binding::grants`); a token's role claims drive no rule,
+//! except that a caller admitted under a federation agreement adds the
+//! professional roles and the facility types its verified credential
+//! attests (`professional.hp_professional_role` and `provider.facility_type`,
+//! eHDSI SAML Profile 10.0.0 §2.3), each a code of the system it names (#5691).
 //! It acts for its care teams, the
 //! provider its client acts for and the `GROUP`s that provider is a member
 //! of (RM demographic `PARTY_RELATIONSHIP`, coded HL7 v3 `RoleClass#MBR`; #5575). The
@@ -28,12 +32,15 @@ use ferroehr::ids::EhrId;
 use ferroehr::party_binding::grants::agreement::Accessor;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::grants::operation::Operation;
+use ferrohealth_smart::federation::{Attribute, Field};
 use ferrohealth_smart::kind::CallerKind as SmartKind;
 use ferrohealth_smart::openehr;
 use ferrohealth_smart::openehr::smart_scopes::{
     Compartment, Permission, ResourceFamily, SmartScope,
 };
-use openehr_rm::draft::access_control::terminology::{AccessDefault, CallerKind, OperationClass};
+use openehr_rm::draft::access_control::terminology::{
+    AccessDefault, CallerKind, ForeignCode, OperationClass,
+};
 use uuid::Uuid;
 
 use super::authn::trc::TrcPatientEhr;
@@ -137,10 +144,50 @@ fn caller_of(
         patient_grants_only,
         acts_for,
         administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
-        facts: capabilities.facts().clone(),
+        facts: principal.map_or_else(
+            || capabilities.facts().clone(),
+            |principal| {
+                let (roles, types) = attested(principal);
+                capabilities.facts().clone().with_attested(roles, types)
+            },
+        ),
         settings,
         lacks_consent_reference: principal.is_some_and(lacks_consent_reference),
     }
+}
+
+/// The professional roles and the organisation types the verified credential
+/// of `principal` attests, when it was admitted under a federation agreement:
+/// each coded value of `professional.hp_professional_role` and
+/// `provider.facility_type` read as a code of the system it names. A value
+/// that names no system is no code a rule can match, so it is left out.
+fn attested(principal: &Principal) -> (Vec<ForeignCode>, Vec<ForeignCode>) {
+    let external = super::authn::declared::admitted(&principal.access)
+        .and(principal.access.caller())
+        .and_then(|caller| caller.kind().external());
+    let Some(external) = external else {
+        return (Vec::new(), Vec::new());
+    };
+    let coded = |field: Field| -> Vec<ForeignCode> {
+        match external.field(field) {
+            Some(Attribute::Codes(codes)) => codes
+                .iter()
+                .filter_map(|code| {
+                    // NOTE: our own design (#5691), a value with no system is legitimately no code
+                    // of any terminology, so no rule matches it and a deny over it holds.
+                    code.system.as_ref().map(|system| ForeignCode {
+                        terminology: system.clone(),
+                        code: code.code.clone(),
+                    })
+                })
+                .collect(),
+            Some(Attribute::Text(_)) | None => Vec::new(),
+        }
+    };
+    (
+        coded(Field::ProfessionalHpProfessionalRole),
+        coded(Field::ProviderFacilityType),
+    )
 }
 
 /// Whether `principal` was admitted under a federation agreement whose

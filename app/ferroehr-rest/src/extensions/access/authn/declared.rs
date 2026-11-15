@@ -86,17 +86,13 @@ impl Declared {
     ///
     /// A `chained` organisation request carries its correlation id in the
     /// field its issuer's `[[auth.federation]]` table maps, which the token
-    /// attests; no request header stands in for it. Under an agreement whose
-    /// jurisdiction is `NL`, Wabvpz Art. 15f admits only a care provider and
-    /// no occupational or insurance physician.
+    /// attests; no request header stands in for it.
     ///
     /// # Errors
     /// [`AuthError::KindRefused`] (`403`) for an external caller whose
     /// partner holds no agreement for its accessor kind, or one that does not
     /// read or breaks a rule, or holding a scope the agreement does not read,
-    /// or making a `chained` request without an attested correlation id, or
-    /// under an NL agreement asserting a refused UZI role or no care provider
-    /// type.
+    /// or making a `chained` request without an attested correlation id.
     pub(super) fn admit(
         &self,
         access: Access,
@@ -170,15 +166,6 @@ impl Declared {
                 code: "refused-correlation-missing",
                 message: "a chained organisation request carries no attested correlation id"
                     .to_owned(),
-                principal: None,
-            });
-        }
-        if agreement.jurisdiction == "NL"
-            && let Some((code, message)) = super::wabvpz::refusal(caller.kind().external())
-        {
-            return Err(AuthError::KindRefused {
-                code,
-                message: message.to_owned(),
                 principal: None,
             });
         }

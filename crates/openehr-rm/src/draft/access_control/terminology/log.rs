@@ -164,7 +164,5 @@ group! {
         TreatmentRelationshipConfirmationMissing => "treatment relationship confirmation missing",
         /// The treatment relationship confirmation names another patient.
         TreatmentRelationshipConfirmationMismatch => "treatment relationship confirmation mismatch",
-        /// A condition of the credential's agreement is not met.
-        AgreementConditionUnmet => "agreement condition unmet",
     }
 }

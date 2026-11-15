@@ -191,15 +191,45 @@ async fn every_page_and_total_matches_the_read_of_the_union_view() {
     for case in cases() {
         for count in [1, 3, 7, 20, 120] {
             for offset in [0, 1, 4, 13, 59, 60, 61, 119, 500] {
-                let filter = AuditSearchFilter {
-                    count,
-                    offset,
-                    ..case.filter.clone()
-                };
-                let (total, documents) = store.search(&filter).await.expect("the search");
                 let (want_total, want_page) = reference(&pool, case.sql, count, offset).await;
                 let what = format!("{}, _count={count}, _offset={offset}", case.name);
-                assert_eq!(total, want_total, "{what}: the total");
+                // A page read without its total (the default since #5702) says
+                // whether another follows; one read with `_total` counts too.
+                let uncounted = store
+                    .search(&AuditSearchFilter {
+                        count,
+                        offset,
+                        ..case.filter.clone()
+                    })
+                    .await
+                    .expect("the search");
+                let counted = store
+                    .search(&AuditSearchFilter {
+                        count,
+                        offset,
+                        total: true,
+                        ..case.filter.clone()
+                    })
+                    .await
+                    .expect("the counted search");
+                assert_eq!(uncounted.total, None, "{what}: no total unless asked");
+                assert_eq!(counted.total, Some(want_total), "{what}: the total");
+                let follows =
+                    offset + i64::try_from(want_page.len()).expect("a page length") < want_total;
+                assert_eq!(uncounted.more, follows, "{what}: whether a page follows");
+                assert_eq!(
+                    counted.more, follows,
+                    "{what}: whether a page follows, counted"
+                );
+                assert_eq!(
+                    uncounted.documents, counted.documents,
+                    "{what}: one page either way"
+                );
+                let documents: Vec<serde_json::Value> = uncounted
+                    .documents
+                    .iter()
+                    .map(|document| serde_json::to_value(document).expect("a served document"))
+                    .collect();
                 let mut want = Vec::with_capacity(want_page.len());
                 for (chain, seq) in &want_page {
                     let chain = AuditChain::named(chain).expect("a chain");

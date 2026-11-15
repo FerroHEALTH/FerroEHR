@@ -113,11 +113,19 @@ impl FerroEhrService {
         // The is_modifiable sync (the content-write guard, RM ehr master04
         // §EHR Active Status) rides this same UPDATE — zero extra statements.
         let (subject_id, namespace, is_queryable, is_modifiable) = ehr_promoted_columns(canonical);
+        let digest = self.care_subject_digest(
+            crate::storage::access_projection::EhrSubject::stored(
+                namespace.map(str::to_owned),
+                subject_id.map(str::to_owned),
+            )
+            .as_ref(),
+        );
         let columns = PromotedColumns {
             subject_id,
             subject_namespace: namespace,
             is_queryable,
             is_modifiable,
+            subject_digest: digest.as_deref(),
         };
         ehr_repo::update_promoted_columns(tx, ehr_id, columns)
             .await

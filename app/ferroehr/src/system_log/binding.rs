@@ -75,18 +75,12 @@ pub enum BindingCode {
     /// Refused: a `chained` organisation request carries no attested
     /// correlation id.
     RefusedCorrelationMissing,
-    /// Refused: an NL agreement's caller asserts the UZI role of an
-    /// occupational or insurance physician (Wabvpz Art. 15f(2)).
-    RefusedWabvpzRole,
-    /// Refused: an NL agreement's caller asserts no care provider type
-    /// (Wabvpz Art. 15f(1)).
-    RefusedWabvpzOrganisationType,
 }
 
 impl BindingCode {
     /// Every code, in the order the `ck_audit_event_binding` constraint lists
     /// them.
-    pub const ALL: [Self; 25] = [
+    pub const ALL: [Self; 23] = [
         Self::Bound,
         Self::Provisional,
         Self::External,
@@ -110,8 +104,6 @@ impl BindingCode {
         Self::RefusedNoAgreement,
         Self::RefusedScopeBeyondAgreement,
         Self::RefusedCorrelationMissing,
-        Self::RefusedWabvpzRole,
-        Self::RefusedWabvpzOrganisationType,
     ];
 
     /// Whether a refusal under this code is a security event, recorded once
@@ -152,8 +144,6 @@ impl BindingCode {
             Self::RefusedNoAgreement => "refused-no-agreement",
             Self::RefusedScopeBeyondAgreement => "refused-scope-beyond-agreement",
             Self::RefusedCorrelationMissing => "refused-correlation-missing",
-            Self::RefusedWabvpzRole => "refused-wabvpz-role",
-            Self::RefusedWabvpzOrganisationType => "refused-wabvpz-organisation-type",
         }
     }
 
@@ -190,9 +180,6 @@ impl BindingCode {
             Self::RefusedNoAgreement => CredentialBinding::NoAgreement,
             Self::RefusedScopeBeyondAgreement => CredentialBinding::ScopeBeyondAgreement,
             Self::RefusedCorrelationMissing => CredentialBinding::CorrelationMissing,
-            Self::RefusedWabvpzRole | Self::RefusedWabvpzOrganisationType => {
-                CredentialBinding::AgreementConditionUnmet
-            }
         }
     }
 
@@ -437,19 +424,15 @@ mod tests {
     use super::*;
 
     /// Every outcome is recorded under a term of the draft `credential
-    /// binding` group, every term but `agreement condition unmet` names one
-    /// outcome alone, and only the two Wabvpz refusals share that one.
+    /// binding` group, each term names one outcome alone, and every term of
+    /// the group is the term of an outcome.
     #[test]
     fn every_outcome_has_its_own_credential_binding_term() {
         use openehr_rm::draft::access_control::terminology::Term;
         let mut terms: Vec<CredentialBinding> = BindingCode::ALL.iter().map(|c| c.term()).collect();
-        let shared = terms
-            .iter()
-            .filter(|term| **term == CredentialBinding::AgreementConditionUnmet)
-            .count();
-        assert_eq!(shared, 2);
         terms.sort_by_key(|term| term.code());
         terms.dedup();
+        assert_eq!(terms.len(), BindingCode::ALL.len());
         assert_eq!(terms.len(), CredentialBinding::ALL.len());
     }
 

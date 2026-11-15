@@ -115,10 +115,11 @@ impl AuditStore {
         let access_log = self
             .access_log()
             .unwrap_or_else(|| AccessLogStore::new(self.pool.clone()));
-        let linked = access_log.append_in(conn, entries).await?;
+        let appended = access_log.append_in(conn, entries).await?;
+        let linked = appended.entries();
         let mut rows = IndexRows::default();
         let mut tokens = Vec::with_capacity(linked.len());
-        for (record, entry) in records.iter().zip(&linked) {
+        for (record, entry) in records.iter().zip(linked) {
             let writing = self.writing.of(&record.event);
             let digest = self.writing_digest(&writing).await?;
             let policy = writing.compiled().await?;
@@ -160,6 +161,7 @@ impl AuditStore {
             .execute(&mut *conn)
             .await?;
         }
+        appended.seal(conn).await?;
         Ok(learned)
     }
 
@@ -222,7 +224,7 @@ impl AuditStore {
         if tombstone.is_none() {
             return Ok(None);
         }
-        let learned = self.append_entries(&mut tx, &recorded).await?;
+        let learned = Box::pin(self.append_entries(&mut tx, &recorded)).await?;
         tx.commit().await?;
         self.remember(learned);
         Ok(tombstone)

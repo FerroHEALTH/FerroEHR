@@ -194,7 +194,7 @@ async fn searchset_bundle_with_filters_and_paging() {
     let resp = app
         .clone()
         .oneshot(get(
-            &format!("/fhir/r4/AuditEvent?{WINDOW}"),
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&_total=accurate"),
             &basic("root"),
         ))
         .await
@@ -214,7 +214,7 @@ async fn searchset_bundle_with_filters_and_paging() {
     let resp = app
         .clone()
         .oneshot(get(
-            &format!("/fhir/r4/AuditEvent?{WINDOW}&patient=patient-1&agent=alice"),
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&patient=patient-1&agent=alice&_total=accurate"),
             &basic("root"),
         ))
         .await
@@ -226,7 +226,7 @@ async fn searchset_bundle_with_filters_and_paging() {
     let resp = app
         .clone()
         .oneshot(get(
-            "/fhir/r4/AuditEvent?date=ge2026-07-11T00:00:00Z&date=le2026-07-13T00:00:00Z",
+            "/fhir/r4/AuditEvent?date=ge2026-07-11T00:00:00Z&date=le2026-07-13T00:00:00Z&_total=accurate",
             &basic("root"),
         ))
         .await
@@ -239,7 +239,7 @@ async fn searchset_bundle_with_filters_and_paging() {
     let resp = app
         .clone()
         .oneshot(get(
-            &format!("/fhir/r4/AuditEvent?{WINDOW}&action=R&_count=1&_offset=1"),
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&action=R&_count=1&_offset=1&_total=accurate"),
             &basic("root"),
         ))
         .await
@@ -301,7 +301,10 @@ async fn the_date_grammar_and_the_required_date() {
     // A day with no prefix is `eq` (FHIR R4 Search §3.1.1.4.5): the whole day.
     let resp = app
         .clone()
-        .oneshot(get("/fhir/r4/AuditEvent?date=2026-07-12", &basic("root")))
+        .oneshot(get(
+            "/fhir/r4/AuditEvent?date=2026-07-12&_total=accurate",
+            &basic("root"),
+        ))
         .await
         .expect("resp");
     assert_eq!(resp.status(), StatusCode::OK);
@@ -320,7 +323,7 @@ async fn the_date_grammar_and_the_required_date() {
     let resp = app
         .clone()
         .oneshot(get(
-            "/fhir/r4/AuditEvent?date=le2026-07-15T10:00:00.5713589Z&patient=patient-3",
+            "/fhir/r4/AuditEvent?date=le2026-07-15T10:00:00.5713589Z&patient=patient-3&_total=accurate",
             &basic("root"),
         ))
         .await
@@ -386,7 +389,7 @@ async fn rbac_gates_the_audit_surface_to_admins() {
     // An ADMIN retrieves.
     let resp = app
         .oneshot(get(
-            &format!("/fhir/r4/AuditEvent?{WINDOW}"),
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&_total=accurate"),
             &basic("root"),
         ))
         .await
@@ -425,7 +428,7 @@ async fn a_subject_audit_grant_reads_one_subjects_log_and_nothing_else() {
     let resp = app
         .clone()
         .oneshot(get(
-            &format!("/fhir/r4/AuditEvent?{WINDOW}&patient=patient-1"),
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&patient=patient-1&_total=accurate"),
             &basic("portal"),
         ))
         .await
@@ -473,7 +476,7 @@ async fn a_subject_audit_grant_reads_one_subjects_log_and_nothing_else() {
     // The admin keeps the unscoped retrieval.
     let resp = app
         .oneshot(get(
-            &format!("/fhir/r4/AuditEvent?{WINDOW}"),
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&_total=accurate"),
             &basic("root"),
         ))
         .await
@@ -629,7 +632,7 @@ async fn a_subject_audit_grant_cannot_name_two_subjects() {
     }
     let resp = app
         .oneshot(get(
-            &format!("/fhir/r4/AuditEvent?{WINDOW}&patient.identifier=patient-2"),
+            &format!("/fhir/r4/AuditEvent?{WINDOW}&patient.identifier=patient-2&_total=accurate"),
             &basic("portal"),
         ))
         .await
@@ -638,4 +641,66 @@ async fn a_subject_audit_grant_cannot_name_two_subjects() {
     let bundle = body_json(resp).await;
     assert_eq!(bundle["total"], 1, "{bundle}");
     assert_eq!(bundle["entry"][0]["resource"]["action"], "C", "{bundle}");
+}
+
+/// The page is served without its total unless `_total` asks for one (FHIR R4
+/// Search §3.1.1.5.2), the `next` link still says whether another page
+/// follows, and a `_total` outside the three values is refused (#5702).
+#[tokio::test]
+async fn the_total_is_counted_only_when_asked() {
+    let (_pg, app, store) = app(true, false).await;
+    for at in [
+        "2026-07-12T09:00:00Z",
+        "2026-07-12T10:00:00Z",
+        "2026-07-12T11:00:00Z",
+    ] {
+        seed(&store, at, EventActionCode::Read, "bob", Some("patient-2")).await;
+    }
+    let read = |query: String| {
+        let app = app.clone();
+        async move {
+            let resp = app
+                .oneshot(get(&format!("/fhir/r4/AuditEvent?{query}"), &basic("root")))
+                .await
+                .expect("resp");
+            let status = resp.status();
+            (status, body_json(resp).await)
+        }
+    };
+    for (query, total) in [
+        (format!("{WINDOW}&_count=2"), None),
+        (format!("{WINDOW}&_count=2&_total=none"), None),
+        (format!("{WINDOW}&_count=2&_total=accurate"), Some(3)),
+        (format!("{WINDOW}&_count=2&_total=estimate"), Some(3)),
+    ] {
+        let (status, bundle) = read(query.clone()).await;
+        assert_eq!(status, StatusCode::OK, "{query}: {bundle}");
+        match total {
+            Some(total) => assert_eq!(bundle["total"], total, "{query}: {bundle}"),
+            None => assert!(bundle.get("total").is_none(), "{query}: {bundle}"),
+        }
+        assert_eq!(bundle["entry"].as_array().map(Vec::len), Some(2), "{query}");
+        assert_eq!(bundle["link"][1]["relation"], "next", "{query}: {bundle}");
+    }
+    // The last page names no next page, counted or not.
+    for query in [
+        format!("{WINDOW}&_count=2&_offset=2"),
+        format!("{WINDOW}&_count=2&_offset=2&_total=accurate"),
+    ] {
+        let (_, bundle) = read(query.clone()).await;
+        assert_eq!(bundle["entry"].as_array().map(Vec::len), Some(1), "{query}");
+        assert_eq!(
+            bundle["link"].as_array().map(Vec::len),
+            Some(1),
+            "{query}: {bundle}"
+        );
+    }
+    // A full last page has no record behind it, so it names no next page.
+    let (_, bundle) = read(format!("{WINDOW}&_count=3")).await;
+    assert_eq!(bundle["link"].as_array().map(Vec::len), Some(1), "{bundle}");
+    // `_count=0` asks for the total alone.
+    let (_, bundle) = read(format!("{WINDOW}&_count=0")).await;
+    assert_eq!(bundle["total"], 3, "{bundle}");
+    let (status, bundle) = read(format!("{WINDOW}&_total=all")).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{bundle}");
 }

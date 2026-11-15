@@ -31,7 +31,8 @@ use ferroehr::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
 };
 use ferroehr::access_eval::scope::{CategoryIndex, Item, Object, Scopes};
-use ferroehr::party_binding::grants::caller::{CallerFacts, CareTeam};
+use ferroehr::party_binding::grants::caller::CareTeam;
+use ferroehr::party_binding::grants::caller::facts::CallerFacts;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::policy_register::CategoriesInForce;
 use ferroehr::service::ehr::access_rule::SettingsCaller;

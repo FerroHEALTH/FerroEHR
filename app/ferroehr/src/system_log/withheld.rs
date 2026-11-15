@@ -23,12 +23,12 @@ use sea_query_sqlx::SqlxBinder as _;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 use crate::system_log::event::AuditEvent;
-use crate::system_log::fhir::{access_record, to_fhir};
+use crate::system_log::fhir::{access_record, to_resource};
 use crate::system_log::message::AuditContext;
 use crate::system_log::render::classified;
 use crate::system_log::search::condition::search_condition;
 use crate::system_log::search::resolve_criteria;
-use crate::system_log::store::{AuditSearchFilter, AuditStore, newest_first};
+use crate::system_log::store::{AuditPage, AuditSearchFilter, AuditStore, newest_first};
 
 impl AuditStore {
     /// The EHR ids the records `filter` selects name, each once.
@@ -54,7 +54,7 @@ impl AuditStore {
 
     /// The ITI-81 retrieval of the person's own trail: the records `filter`
     /// selects that [`Holds::trail`] shows the person at `now`, newest first,
-    /// and how many there are.
+    /// and how many there are when the filter asks.
     ///
     /// Every matching record is read to count what the person sees, so the
     /// total and the pages agree; the service takes this path only while a
@@ -68,9 +68,9 @@ impl AuditStore {
         filter: &AuditSearchFilter,
         holds: &Holds,
         now: Timestamp,
-    ) -> Result<(i64, Vec<serde_json::Value>), AuditError> {
+    ) -> Result<AuditPage, AuditError> {
         let Some(resolved) = resolve_criteria(&self.pool, filter).await? else {
-            return Ok((0, Vec::new()));
+            return Ok(AuditPage::empty(filter));
         };
         let (sql, values) =
             newest_first(search_condition(filter, &resolved)).build_sqlx(PostgresQueryBuilder);
@@ -89,11 +89,20 @@ impl AuditStore {
                 continue;
             }
             if shown >= skip && documents.len() < take {
-                documents.push(to_fhir(&event, &policy.context, subject.as_deref())?);
+                documents.push(
+                    to_resource(&event, &policy.context, subject.as_deref())?.into_resource(),
+                );
             }
             shown = shown.saturating_add(1);
         }
-        Ok((i64::try_from(shown).unwrap_or(i64::MAX), documents))
+        let more = shown > skip.saturating_add(documents.len());
+        Ok(AuditPage {
+            total: filter
+                .total
+                .then(|| i64::try_from(shown).unwrap_or(i64::MAX)),
+            documents,
+            more,
+        })
     }
 }
 

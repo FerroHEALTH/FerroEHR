@@ -35,7 +35,6 @@ docs/specs/fhir-consent/** -text
 docs/specs/ihe-consents/** -text
 docs/specs/xacml/** -text
 docs/specs/nen-7513-sources/** -text
-docs/specs/nl-role-codes/** -text
 
 # Binary assets
 *.png  binary

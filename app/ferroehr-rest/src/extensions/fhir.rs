@@ -54,8 +54,8 @@ guarded_handler! {
     /// when off) and admin-only under RBAC (the node's security log is an operator
     /// surface). `ihe-atna` reads the query: at least one `date` is required
     /// (`RESTful` ATNA §3.81.4.1.2.1), and `patient`, `agent`, `entity` (or their
-    /// `.identifier` forms), `outcome`, `action`, `_count` and `_offset` are
-    /// applied; a parameter the store cannot apply is a `400` `not-supported`,
+    /// `.identifier` forms), `outcome`, `action`, `_count`, `_offset` and
+    /// `_total` are applied; a parameter the store cannot apply is a `400` `not-supported`,
     /// and one `ihe-atna` does not know is ignored (§3.81.4.1.3).
     ///
     /// OUR OWN EXTENSION as far as openEHR is concerned — no openEHR spec governs
@@ -73,7 +73,8 @@ guarded_handler! {
             ("outcome" = Option<String>, Query, description = "The outcome indicator: 0, 4, 8 or 12."),
             ("action" = Option<String>, Query, description = "The action code: C, R, U, D or E."),
             ("_count" = Option<i64>, Query, description = "Page size (default 50, max 1000)."),
-            ("_offset" = Option<i64>, Query, description = "Page offset.")
+            ("_offset" = Option<i64>, Query, description = "Page offset."),
+            ("_total" = Option<String>, Query, description = "`accurate` or `estimate` counts every match into `Bundle.total`; `none` or no `_total` serves the page without it (FHIR R4 Search §3.1.1.5.2). The `next` link says whether another page follows either way.")
         ),
         responses(
             (status = 200, description = "A FHIR searchset Bundle of AuditEvent resources.", content_type = "application/fhir+json"),
@@ -143,43 +144,9 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
         );
     }
     match searched(state, subject_scoped, &filter.store).await {
-        Ok((total, documents)) => {
-            let total_count = u32::try_from(total).unwrap_or(u32::MAX);
-            let served = u64::try_from(documents.len()).unwrap_or(u64::MAX);
-            let matches = if filter.total_only {
-                Vec::new()
-            } else {
-                match documents
-                    .into_iter()
-                    .map(|resource| {
-                        serde_json::from_value(resource).map(|resource| Match {
-                            full_url: None,
-                            resource,
-                        })
-                    })
-                    .collect::<Result<Vec<_>, _>>()
-                {
-                    Ok(matches) => matches,
-                    Err(e) => {
-                        tracing::error!(error = %e, "a stored AuditEvent is no FHIR R4 AuditEvent");
-                        return operation_outcome(
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            IssueType::Exception,
-                            "a stored audit record could not be read",
-                        );
-                    }
-                }
-            };
+        Ok(page) => {
             let query = parts.query.as_deref().unwrap_or_default();
-            let self_url = format!("AuditEvent?{query}");
-            let offset = u64::try_from(filter.store.offset).unwrap_or(0);
-            let next_offset = offset.saturating_add(served);
-            let next_url = (!filter.total_only
-                && served > 0
-                && next_offset < u64::try_from(total).unwrap_or(0))
-            .then(|| format!("AuditEvent?{}", with_offset(query, next_offset)));
-            let bundle = searchset(total_count, &self_url, next_url.as_deref(), matches);
-            let mut resp = fhir_json(StatusCode::OK, &bundle);
+            let (mut resp, result_count) = page_response(&filter, query, page);
             // Reading a person's access log is itself an access about that
             // person: the record of this call names whose log was read and how
             // many records it served, and it writes an access-log entry naming
@@ -189,7 +156,7 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
                 .insert(crate::system_log::middleware::AuditObject {
                     ehr_id: None,
                     uid: filter.patient.as_ref().map(|p| format!("audit-log:{p}")),
-                    result_count: u64::try_from(total).ok(),
+                    result_count: Some(result_count),
                     domain: Some(ferroehr::system_log::event::AccessDomain::System),
                     query: Some(ferroehr::system_log::event::QueryNaming::of(
                         ferroehr::access_log::entry::LOG_SEARCH,
@@ -205,18 +172,60 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
     }
 }
 
+/// The `searchset` response of `page` for the ITI-81 `query`, and the number
+/// of records its access record names: the total when counted, else the
+/// records served.
+fn page_response(
+    filter: &Filter,
+    query: &str,
+    page: ferroehr::system_log::store::AuditPage,
+) -> (Response, u64) {
+    let ferroehr::system_log::store::AuditPage {
+        total,
+        documents,
+        more,
+    } = page;
+    let served = u64::try_from(documents.len()).unwrap_or(u64::MAX);
+    let matches = if filter.total_only {
+        Vec::new()
+    } else {
+        documents
+            .into_iter()
+            .map(|resource| Match {
+                full_url: None,
+                resource,
+            })
+            .collect()
+    };
+    let self_url = format!("AuditEvent?{query}");
+    let offset = u64::try_from(filter.store.offset).unwrap_or(0);
+    let next_url = (!filter.total_only && more).then(|| {
+        format!(
+            "AuditEvent?{}",
+            with_offset(query, offset.saturating_add(served))
+        )
+    });
+    let mut bundle = searchset(
+        total.map_or(0, |total| u32::try_from(total).unwrap_or(u32::MAX)),
+        &self_url,
+        next_url.as_deref(),
+        matches,
+    );
+    // NOTE: FHIR R4 Search §3.1.1.5.2, `Bundle.total` is optional and `_total` asks for it.
+    if total.is_none() {
+        bundle.total = None;
+    }
+    let counted = total.map_or(served, |total| u64::try_from(total).unwrap_or(0));
+    (fhir_json(StatusCode::OK, &bundle), counted)
+}
+
 /// The store search of `filter`: the person's own trail for a subject-scoped
 /// read, every record for the controller's.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the store hands back the stored FHIR R4 AuditEvent documents as JSON, the \
-              searchset entries this handler deserializes"
-)]
 async fn searched(
     state: &AppState,
     subject_scoped: bool,
     filter: &ferroehr::system_log::store::AuditSearchFilter,
-) -> Result<(i64, Vec<serde_json::Value>), ServiceError> {
+) -> Result<ferroehr::system_log::store::AuditPage, ServiceError> {
     // NOTE: EHDS Art. 9 and Art. 3(3), the subject-scoped read is the person's own trail, which
     // leaves out the records about data held from them until it is released or expires.
     if subject_scoped {
@@ -260,7 +269,8 @@ const ACTION_SYSTEM: &str = "http://hl7.org/fhir/audit-event-action";
 /// with no time is read in UTC, the zone the store records in (FHIR R4 Search
 /// §3.1.1.4.7 has a server assume its own zone).
 fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
-    let query = Query::parse(query.unwrap_or_default())
+    let raw = query.unwrap_or_default();
+    let query = Query::parse(raw)
         .map_err(|e| Refused::Invalid(ferroehr::error::ErrorChain::new(&e).to_string()))?;
     let mut store = ferroehr::system_log::store::AuditSearchFilter {
         // NOTE: the page size when the query names none, our own design.
@@ -305,6 +315,7 @@ fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
         store.until = Some(rounded);
     }
     let total_only = query.count() == Some(0);
+    store.total = total_only || counted(raw)?;
     if let Some(count) = query.count().filter(|count| *count > 0) {
         store.count = i64::from(count).min(MAX_COUNT);
     }
@@ -317,6 +328,30 @@ fn audit_filter(query: Option<&str>) -> Result<Filter, Refused> {
         patient,
         total_only,
     })
+}
+
+/// Whether the query asks for every match to be counted: `_total=accurate`
+/// or `estimate` (FHIR R4 Search §3.1.1.5.2). `none`, or no `_total`, counts
+/// nothing; the page then says only whether another follows. A value outside
+/// the three is refused. `ihe-atna` lists `_total` among the parameters it
+/// ignores, so its value is read here.
+fn counted(query: &str) -> Result<bool, Refused> {
+    let mut counted = false;
+    for pair in query.split('&') {
+        let Some(value) = pair.strip_prefix("_total=") else {
+            continue;
+        };
+        counted = match value {
+            "accurate" | "estimate" => true,
+            "none" => false,
+            other => {
+                return Err(Refused::Invalid(format!(
+                    "invalid `_total` `{other}` (expected none, estimate or accurate)"
+                )));
+            }
+        };
+    }
+    Ok(counted)
 }
 
 /// The store criterion of one parameter of `RESTful` ATNA §3.81.4.1.2.2:

@@ -32,7 +32,6 @@ use ferroehr::versioning::object_version_id::VersionIdError;
 use openehr_its::rest::runtime::ApiError;
 use openehr_query::lexer::LexError;
 use openehr_query::parser::ParseError;
-use openehr_rm::draft::access_control::terminology::Term as _;
 
 use crate::overview::problem::{Detail, Kind, Position, Refused, Violation};
 
@@ -235,7 +234,7 @@ impl From<ServiceError> for RestError {
             _ => None,
         };
         let evaluator = match &e {
-            ServiceError::Forbidden(err) => err.kind,
+            ServiceError::Forbidden(err) => err.kind.clone(),
             _ => None,
         };
         let refused = Self::from(crate::overview::service_error::api_error(e));
@@ -250,7 +249,9 @@ impl From<ServiceError> for RestError {
             None => refused,
         };
         let refused = match evaluator {
-            Some(code) => refused.with_detail(Detail::Refusal(code.code())),
+            Some(evaluator) => Detail::of_refusal(evaluator.code, &evaluator.legal_grounds)
+                .into_iter()
+                .fold(refused, Self::with_detail),
             None => refused,
         };
         match kind {

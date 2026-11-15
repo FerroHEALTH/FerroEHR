@@ -316,13 +316,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   tombstones past their end into one `access_log_chain_gap` row through
   `audit.fold_access_log_tombstones()`, the one path a record leaves the log
   by (`audit/0033_access_log_chain_gap.sql`, `access_log::gap`): the
-  positions the run held, the link and link signature of its last record and
-  the grounds of its tombstones. The gap row is the record of the fold and
+  positions the run held, the link of its last record and the grounds of its
+  tombstones. The gap row is the record of the fold and
   is append-only; replicas serialise the fold on a transaction-scoped
-  advisory lock, and the request path takes no part in it. A run is cut after
-  each checkpoint's position, so a checkpoint always names a link the log
-  holds (`audit.access_log_link_at`). The verifier, its incremental form,
-  the checkpoint and signature checks, the export (`LogExport.gaps`), the
+  advisory lock, and the request path takes no part in it. A run folds whole,
+  and the checkpoints inside it, before its last position, leave with it;
+  one at its last position names the gap's link (`audit.access_log_link_at`,
+  #5704). The verifier, its incremental form,
+  the checkpoint check, the export (`LogExport.gaps`), the
   chain read and an import (`access_log_imported_gap`) walk a gap as one
   link whose digest is its link; a missing position no gap accounts for is
   still a deletion (our own design, #5619). An erasure a law orders takes
@@ -348,20 +349,28 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   collection reads too), so an EHR-only statement writes its per-EHR
   entries; a management route that touches EHRs records one access per EHR
   from the service (`emit_mark_access`, `emit_extract_audit`).
-  `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s of the
-  head, signed with the version-signing keyring's OpenPGP key. Whenever the
-  keyring holds one, every local link is signed and `access_log::schedule`
-  seals the head every five minutes when it grew; without one nothing is
-  signed or sealed, and no key of `[audit.access_log]` switches either
-  (#5562, our own design). `AccessLogStore::append_in` locks the head
-  (`audit.access_log_chain_reserve()`), computes the links its rows will get by
-  the chain rule the insert trigger applies, signs each digest and writes the
-  signature in the same `INSERT`, refusing the transaction when the trigger
-  gave another link (`audit/0029_access_log_link_signed_at_insert.sql`).
-  `access_log::checkpoint` seals and verifies (the chain through
-  `audit.verify_access_log_chain()`, the checkpoint and the link signatures
-  beside it). The system chain is sealed on the same schedule with the same
-  key (`system_log::seal`, `audit_chain_seal`, `ferroehr audit-chain seal`
+  `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s, by the
+  columns their canonical form is rebuilt from, signed with the
+  version-signing keyring's OpenPGP key. Whenever the keyring holds one,
+  every append ends, in its own transaction, with one checkpoint of the last
+  link it wrote: `AccessLogStore::append_in` inserts the rows, whose first
+  insert locks the head until the transaction ends, begins the checkpoint's
+  signature on the blocking pool and hands back an `Appended` the caller
+  seals before it commits, so the signature runs beside the rest of the
+  transaction (the drain's index rows, tokens and feed debt) and the head is
+  held for one signature at most. No link carries a signature; a checkpoint
+  insert must name the link the log holds at its position
+  (`audit/0037_access_log_batch_checkpoint.sql`, our own design, #5704).
+  Without a key nothing is sealed, and no key of `[audit.access_log]`
+  switches it (#5562). `access_log::publish` writes the newest checkpoint
+  every 30 seconds as its own write-once file under `[audit.access_log]
+  publish_directory`, the copy outside the database that shows a removal of
+  the newest entries with their checkpoints; the `access_log_checkpoints`
+  indicator reads `DEGRADED` without a key, without the directory, or while
+  publication fails. `access_log::checkpoint` seals and verifies (the chain
+  through `audit.verify_access_log_chain()` and the checkpoint beside it).
+  The system chain is sealed every five minutes with the same key
+  (`access_log::schedule`, `system_log::seal`, `audit_chain_seal`, `ferroehr audit-chain seal`
   and `verify`). `access_log::chain` verifies a span of links apart from the database
   (an export), and `access_log::transfer` exports one EHR's records with the
   span and checkpoint and imports another system's into
@@ -406,6 +415,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   represented EHR, and the full view to the caller the admin class admits;
   `GET {ext}/admin/access-log`, `/chain` and `/checkpoint` serve the review.
   `access_log::search` pages the records over the trigger's search columns,
+  the coded filters (`action`, `outcome`, `accessor_kind`) taken as a FHIR
+  token `terminology_id|code` and compared by `defining_code`, never by
+  rubric (#5687, our own design),
   `service::admin::access_log_read` holds the EHR check and the EHDS Art.
   3(3) holds the person's view leaves out, the subject view withholds what
   the access policy's Art. 9(3) `log_restrictions` name (#5570), and every
@@ -714,7 +726,14 @@ which is what makes an optional stage safe to disable:
    actor scope's `role` matches the coded `name` of a `ROLE` in force the
    caller performs (RM Demographic IM `PARTY.type()`), held as a caller fact
    (`FactKind::Role`, migration `party/0042`); a token's role claims stay
-   the coarse RBAC class gate and drive no rule. The `ROLE` is the
+   the coarse RBAC class gate and drive no rule, except that a caller
+   admitted under a federation agreement adds the roles and facility types
+   its verified credential attests (`professional.hp_professional_role`,
+   `provider.facility_type`), each a code of the system it names, matched by
+   an actor scope's `role` and `organisation_type` (#5691, our own design).
+   An actor scope's `organisation_type` also matches the coded name of the
+   `ORGANISATION` a system client acts for (`FactKind::OrganisationType`,
+   `party/0046`). The `ROLE` is the
    assignment and the rule the permission, the split of the XACML
    Hierarchical RBAC Profile. A SCIM User's `roles` (RFC 7643 §4.1.2) are
    such `ROLE`s (#5625, `service::demographic::user_roles`): each value one
@@ -752,12 +771,33 @@ which is what makes an optional stage safe to disable:
    the class (`scope::Held`, `scope::EhrFact`), which the SQL reads from the
    EHR's `access_settings.facts`, so one evaluator decides a direct read and a
    query alike, and an EHR of a class the condition does not hold contributes
-   no row. The subjects the caller cares for are bound once per statement, as
-   a `jsonb` object keyed by subject id in a `WITH` clause that each care
-   probe reads with `?`, so the planner's estimate and each probe cost the
-   same whatever the census, and only the one parse of the bound object grows
-   with it (#5645). The care relationships stay in the party domain, which the
-   clinical statement does not read. Before it renders a verdict, the emitter
+   no row. Care is read in one of three forms, chosen per query once the
+   service knows which EHRs it reads (`Care`, #5699). A query pinned to the
+   EHRs it names (an `ehr_id` scope, or `ehr_id/value` held equal in the
+   `EHR` source's predicate or the `WHERE` clause) has each EHR's care
+   decided from the evaluator's copies and binds only the cared EHR ids. Any
+   other query reads the clinical care projection (`clinical/0047_access_care.sql`):
+   the care relationships of the party domain, one row per subject reference
+   and relationship, written by each replica's care projector
+   (`service::ehr::care_projection`), which reads the party domain on the
+   party pool in one repeatable-read snapshot and writes the clinical domain
+   on the clinical pool, so no role reaches both. A row holds the `PERSON`
+   and team container UUIDs, the care dates and the keyed digest
+   (HMAC-SHA-256 under the clinical lookup subkey of the
+   `[privacy.identifier_protection]` root key, the scheme the national
+   identifier's lookup digest uses) of each subject reference that names the
+   `PERSON`; the EHR row carries the keyed digest of its own reference,
+   written with it, and both digest columns are held to 32 octets, so the
+   clinical domain holds no identifier the key does not open. The probe binds
+   the caller's team ids, the day and the grace, one index probe per EHR row.
+   A replica reads the projection only while the facts revision it reflects
+   is at least the one of the facts the replica holds, so a discharge, a
+   removed membership or an erasure is never granted from a stale row: until
+   the projector applies it the query binds the census, the subjects of every
+   patient under the caller's teams as a `jsonb` object in a `WITH` clause
+   (#5645). Erasing a `PERSON` deletes its rows in the erasing flow. Without
+   identifier protection the projection is not written and every query that
+   names no EHR binds the census. Our own design. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the
    disjunction (a fact of the EHR, which may be unknown, is never folded). A
@@ -927,8 +967,8 @@ care-team membership) and `audit-event-action` `C`, `R`, `U`, `D`. A value of
 a terminology the group holds no term of, or a code outside the group, is
 refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the care relationship codes are qualifiers, never
-operations. Role, sensitivity, category, purpose and legal ground stay in the
-terminology the jurisdiction names and are compared by
+operations. Role, organisation type, sensitivity, category, purpose and
+legal ground stay in the terminology the jurisdiction names and are compared by
 terminology id and code (`ForeignCode`). The draft invariants of
 `access_control_invariants` read their groups through it, and the evaluator
 and the `EHR_ACCESS` and `ACCESS_POLICY` write checks read no other code. RM
@@ -1049,7 +1089,9 @@ access evaluator reads about a caller (migrations `party/0039`, `party/0042`;
 `party/0044` keys a membership by its code, `MBR`):
 `binding_caller_fact`, one row per `ROLE` whose `name` is a `DV_CODED_TEXT`
 of the jurisdiction's terminology (the role its performer holds while the
-`ROLE` is in force, read with `ForeignCode::read`, #5621), and per care
+`ROLE` is in force, read with `ForeignCode::read`, #5621), per `ORGANISATION`
+whose `name` is one (its own type, `organisation_type`, `party/0046`, #5691),
+and per care
 relationship a `PERSON` holds (an inline
 `PARTY_RELATIONSHIP` whose `name` or `details` carry a membership, HL7 v3
 `RoleClass#MBR`, or `openehr_access::under_care_of`, RM demographic `party_relationship.adoc`: `source`,
@@ -1322,8 +1364,13 @@ against `ferroehr::config::federation::trust`, what `[auth]` trusts of each
 the EHDS Art. 13(4) and Annex II 3.2(b) rules of an organisation and of a
 `chained` access. The admission judges the agreement again for the caller's
 own issuer, so one that no longer keeps them, after its partner changed,
-admits nobody. No rule is a country's: the jurisdiction is the agreement's
-element and the consent source is `registry` or `local`. `/management/info`
+admits nobody. No rule is a country's: the agreement names no jurisdiction,
+the consent source is `registry` or `local`, and a national exclusion such
+as Wabvpz Art. 15f is a deny rule of the controller's `ACCESS_POLICY` over
+the roles and facility types the caller's credential attests, refused at
+step 4 as `refused-policy-denied` with the rule's `legal_grounds` (#5691;
+`scripts/checks/access-decides-no-country.sh` refuses a country in the
+access decision). `/management/info`
 reads the agreements in force from the copy on each request. **Our own
 design:** no specification gives a capability an authorization meaning or
 governs a data-sharing agreement's form.
@@ -1769,7 +1816,7 @@ EHR system to include both harmonised software components:
 
 | Component | Shipped by | Where |
 |---|---|---|
-| European logging software component (Annex II 3) | FerroEHR, and FerroBRIDGE for the accesses of its FHIR facade (below) | the shared crates `ehds-logging` 0.18.0 (the Annex II 3.2 access record, the Art 14(1) categories and their classification, the Art 9(2) retention floor, the Art 11(5) emergency mark) and `ihe-atna` 0.18.0 (the BALP `AuditEvent`, the DICOM audit message, RFC 5424 syslog over RFC 5425 TLS, the ATX: FHIR Feed), from FerroAUDIT and pinned exactly in the root `Cargo.toml`; `ferroehr::system_log` (the access-event model, the audit store, what each rendering says, the sinks, and `system_log::chain_check`, the scheduled verification of the store's hash chain), the audit schema migrations in `app/ferroehr/migrations/audit/`, `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /ferroehr/rest/fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
+| European logging software component (Annex II 3) | FerroEHR, and FerroBRIDGE for the accesses of its FHIR facade (below) | the shared crates `ehds-logging` 0.18.1 (the Annex II 3.2 access record, the Art 14(1) categories and their classification, the Art 9(2) retention floor, the Art 11(5) emergency mark) and `ihe-atna` 0.18.1 (the BALP `AuditEvent`, the DICOM audit message, RFC 5424 syslog over RFC 5425 TLS, the ATX: FHIR Feed), from FerroAUDIT and pinned exactly in the root `Cargo.toml`; `ferroehr::system_log` (the access-event model, the audit store, what each rendering says, the sinks, and `system_log::chain_check`, the scheduled verification of the store's hash chain), the audit schema migrations in `app/ferroehr/migrations/audit/`, `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /ferroehr/rest/fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
 | European interoperability software component (Annex II 2.1 to 2.3) | FerroBRIDGE | the openEHR-to-exchange-format mappings (#3206), and FHIR R4 resource mapping (<https://github.com/FerroHEALTH/FerroBRIDGE>, BUSL-1.1), reaching FerroEHR over ITS-REST; FerroEHR carries no FHIR mapping of its own, and keeps the AuditEvent route above and the FHIR terminology client |
 
 **FerroBRIDGE records the accesses of its FHIR facade** (owner decision on

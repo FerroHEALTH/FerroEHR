@@ -419,7 +419,7 @@ impl FerroEhrService {
 
     /// The RESTful-ATNA **ITI-81** retrieval: the FHIR `AuditEvent` documents
     /// of the matching records, rendered from the store, newest first, plus
-    /// the total match count. The read side of the system log (the retrieval
+    /// the total match count when the filter asks. The read side of the system log (the retrieval
     /// semantics are IHE's — the `RESTful` ATNA supplement's ITI-81 FHIR search
     /// on `AuditEvent`).
     ///
@@ -430,7 +430,7 @@ impl FerroEhrService {
     pub async fn audit_event_search(
         &self,
         filter: &store::AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), ServiceError> {
+    ) -> Result<store::AuditPage, ServiceError> {
         let Some(audit_store) = &self.audit_store else {
             return Err(ServiceError::precondition(
                 "the local audit record repository is not enabled ([audit.store])",

@@ -83,7 +83,9 @@ guarded_handler! {
              description = "The first `time_recorded` selected, an ISO 8601 date-time."),
             ("to" = Option<String>, Query,
              description = "The last `time_recorded` selected, an ISO 8601 date-time."),
-            ("outcome" = Option<String>, Query, description = "An `access outcome` rubric."),
+            ("outcome" = Option<String>, Query,
+             description = "A term of the `access outcome` group by its coded content, the token \
+                            `terminology_id|code`, such as `openehr_access|refused`."),
             ("emergency" = Option<bool>, Query,
              description = "Only the entries whose `is_emergency` is this."),
             ("offset" = Option<i64>, Query, description = "Records skipped; default 0."),
@@ -122,8 +124,8 @@ guarded_handler! {
                                           `from_sequence` to `to_sequence`, in chain order. \
                                           `gaps`: each run of folded tombstones that holds a \
                                           position of the span, with the positions it held, \
-                                          the `link` of its last record, that link's \
-                                          `signature` and the `grounds` of its tombstones.",
+                                          the `link` of its last record and the `grounds` of \
+                                          its tombstones.",
              body = serde_json::Value),
             (status = 400, description = "A bound is missing or outside its form, or the \
                                           span is longer than 10000.",
@@ -162,14 +164,16 @@ guarded_handler! {
 }
 
 guarded_handler! {
-    /// Seal the head of the access log in a signed checkpoint
-    /// (`POST /admin/access-log/checkpoint`). **Our own extension.**
+    /// The checkpoint of the head of the access log, sealed when no append
+    /// sealed it (`POST /admin/access-log/checkpoint`). **Our own
+    /// extension.**
     #[utoipa::path(
         post, path = "/admin/access-log/checkpoint", tag = "admin-access-log",
         responses(
             (status = 200, description = "The checkpoint of the head of the chain, as its \
-                                          ITS-JSON `ACCESS_LOG_CHECKPOINT`. A head already \
-                                          sealed answers its stored checkpoint.",
+                                          ITS-JSON `ACCESS_LOG_CHECKPOINT`. Every append made \
+                                          while the keyring holds a key seals itself, so a \
+                                          head already sealed answers its stored checkpoint.",
              body = serde_json::Value),
             (status = 404, description = "The chain is empty.", body = serde_json::Value),
             (status = 409, description = "The keyring holds no OpenPGP key to sign with.",
@@ -186,16 +190,16 @@ guarded_handler! {
     /// (`POST /admin/access-log/verify`). **Our own extension.**
     ///
     /// The whole chain is recomputed, tombstones taken as recorded; the
-    /// checkpoint's proof, the link it seals and every signed link are
-    /// checked, and every log imported from another system is verified
-    /// against each of its checkpoints. A finding is not a request failure.
+    /// checkpoint's proof and the link it seals are checked, and every log
+    /// imported from another system is verified against each of its
+    /// checkpoints. A finding is not a request failure.
     #[utoipa::path(
         post, path = "/admin/access-log/verify", tag = "admin-access-log",
         responses(
             (status = 200, description = "The verification ran. `intact` is true when a \
                                           checkpoint was there to verify against and nothing \
                                           failed; `findings` names each failure of the \
-                                          checkpoint and the signed links, `chain` each \
+                                          checkpoint, `chain` each \
                                           damaged record or boundary of the chain, \
                                           `imported` each failure of a log imported from \
                                           another system against one of its checkpoints.",

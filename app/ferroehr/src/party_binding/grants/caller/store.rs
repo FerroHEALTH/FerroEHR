@@ -82,6 +82,14 @@ const CARE_OF_SUBJECT: &str = concat!(
      ORDER BY f.holder_id, f.ordinal"
 );
 
+/// The care relationships of each of a set of subjects.
+const CARE_OF_SUBJECTS: &str = concat!(
+    "SELECT f.party_id AS stamped, ",
+    fact_columns!(),
+    " FROM binding_caller_fact f WHERE f.party_id = ANY($1) AND f.kind = 'under_care_of' \
+     ORDER BY f.party_id, f.holder_id, f.ordinal"
+);
+
 /// The care relationships to the team `$1`, one per subject under its care.
 /// Answered from `ix_binding_caller_fact_care_team`, and public so a test can
 /// `EXPLAIN` it.
@@ -407,6 +415,51 @@ pub(crate) async fn care_of_subject(
         .collect())
 }
 
+/// The care relationships of each of `subjects`, by subject, read on
+/// `conn`; a subject with none is absent.
+///
+/// # Errors
+/// As [`load`].
+pub(crate) async fn care_of_subjects(
+    conn: &mut PgConnection,
+    subjects: &[Uuid],
+) -> Result<Vec<(Uuid, Vec<FactRow>)>, StorageError> {
+    let rows = sqlx::query(CARE_OF_SUBJECTS)
+        .bind(subjects)
+        .fetch_all(&mut *conn)
+        .await?;
+    by_party(rows)
+}
+
+/// Every `PERSON` holding a care relationship, read on `conn`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn cared_persons(conn: &mut PgConnection) -> Result<Vec<Uuid>, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT DISTINCT party_id FROM binding_caller_fact WHERE kind = 'under_care_of' \
+         ORDER BY party_id",
+    )
+    .fetch_all(&mut *conn)
+    .await?)
+}
+
+/// Every party stamped after the facts revision `since`, read on `conn`.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub(crate) async fn stamped_since(
+    conn: &mut PgConnection,
+    since: i64,
+) -> Result<Vec<Uuid>, StorageError> {
+    Ok(sqlx::query_scalar(
+        "SELECT party_id FROM binding_caller_fact_party WHERE revision > $1 ORDER BY party_id",
+    )
+    .bind(since)
+    .fetch_all(&mut *conn)
+    .await?)
+}
+
 /// The care relationships to `team`, by subject, read on `conn`.
 ///
 /// # Errors
@@ -481,7 +534,13 @@ mod tests {
             .split(',')
             .map(|column| column.split_whitespace().last().unwrap_or_default())
         {
-            for read in [FACTS, HELD_FACTS, CARE_OF_SUBJECT, CARE_OF_TEAM] {
+            for read in [
+                FACTS,
+                HELD_FACTS,
+                CARE_OF_SUBJECT,
+                CARE_OF_SUBJECTS,
+                CARE_OF_TEAM,
+            ] {
                 assert!(read.contains(column), "{column} is not read");
             }
         }

@@ -66,8 +66,32 @@ const COLUMNS: &[(&[&str], &str, Typed)] = &[
     (&["system_id"], "system_id", Typed::Text),
     (&["time_recorded", "value"], "time_recorded", Typed::Instant),
     (&["ehr_id", "value"], "ehr_id", Typed::Text),
-    (&["action", "value"], "action", Typed::Text),
-    (&["outcome", "result", "value"], "result", Typed::Text),
+    (
+        &["action", "defining_code", "terminology_id", "value"],
+        "action_terminology",
+        Typed::Text,
+    ),
+    (
+        &["action", "defining_code", "code_string"],
+        "action_code",
+        Typed::Text,
+    ),
+    (
+        &[
+            "outcome",
+            "result",
+            "defining_code",
+            "terminology_id",
+            "value",
+        ],
+        "result_terminology",
+        Typed::Text,
+    ),
+    (
+        &["outcome", "result", "defining_code", "code_string"],
+        "result_code",
+        Typed::Text,
+    ),
     (
         &["accessor", "party", "external_ref", "id", "value"],
         "party_id",
@@ -79,7 +103,6 @@ const COLUMNS: &[(&[&str], &str, Typed)] = &[
     (&["link", "previous_digest"], "previous_digest", Typed::Text),
     (&["link", "content_digest"], "content_digest", Typed::Text),
     (&["link", "digest"], "digest", Typed::Text),
-    (&["link", "signature"], "signature", Typed::Text),
 ];
 
 /// Where a path's values are read.
@@ -119,7 +142,6 @@ pub fn statement(
                 "previous_digest",
                 "content_digest",
                 "digest",
-                "signature",
             ]
             .map(|name| (Alias::new(RECORD), Alias::new(name))),
         )
