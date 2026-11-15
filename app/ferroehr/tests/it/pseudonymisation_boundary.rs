@@ -836,7 +836,7 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
 }
 
 /// The protection engine over `party_pool`, sealing `nl-bsn` under the test key.
-fn protection_engine(
+pub(crate) fn protection_engine(
     party_pool: PgPool,
 ) -> ferroehr::identifier_protection::engine::IdentifierProtection {
     use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
