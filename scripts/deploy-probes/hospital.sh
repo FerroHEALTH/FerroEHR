@@ -419,6 +419,35 @@ h_boot_log() {
   done
 }
 
+# The SCIM client's later grants, an administrator's writes through the
+# Demographic API (`ferroehr party-binding grant` is the first grant only):
+# its `scim_provision` capability gains the role ceiling, the clinical roles of
+# the hospital's role code system its Users may perform (#5625), and its AGENT
+# a ROLE granting `write_care_relationship` for care-team Groups (#5617). The
+# AGENT and the ROLE are the ones the compose one-shot's report names.
+h_scim_client_grants() {
+  local report agent role version body
+  report="$(hdc logs --no-color ferroehr-grant-keycloak 2>&1)"
+  agent="$(grep -oE '"agent": "[0-9a-f-]{36}"' <<<"$report" | sed -n 1p | grep -oE '[0-9a-f-]{36}')"
+  role="$(grep -oE '"role": "[0-9a-f-]{36}"' <<<"$report" | sed -n 1p | grep -oE '[0-9a-f-]{36}')"
+  if [[ -z "$agent" || -z "$role" ]]; then
+    H_CODE=none H_BODY="the grant report names no AGENT and ROLE: ${report:0:300}" H_RID=""
+    return 1
+  fi
+  h_call 1 admin GET "/demographic/role/$role"
+  version="$(jq -r '.uid.value // empty' <<<"$H_BODY")"
+  [[ -n "$version" ]] || return 1
+  body="$(jq -c \
+    --argjson t "$(j_qualifier role_terminology "$(jq -nc --arg v "$H_ROLES" '{_type:"DV_TEXT",value:$v}')")" \
+    --argjson c "$(j_qualifier role "$(jq -nc '{_type:"DV_TEXT",value:"CLINICIAN"}')")" \
+    --argjson n "$(j_qualifier role "$(jq -nc '{_type:"DV_TEXT",value:"NURSE"}')")" \
+    'del(.uid) | .capabilities[0].credentials.items += [$t, $c, $n]' <<<"$H_BODY")"
+  H_IF_MATCH="\"$version\"" h_call 1 admin PUT "/demographic/role/$version" "$body"
+  [[ "$H_CODE" = 200 || "$H_CODE" = 204 ]] || return 1
+  h_party scim_care_role role "$(j_role "SCIM client care teams" AGENT "$agent" \
+    "$(j_capability "$(j_operation write_care_relationship)")")"
+}
+
 # A realm admin token of the master realm.
 kc_admin() {
   curl -s -d client_id=admin-cli -d username="${KEYCLOAK_ADMIN_USER:-admin}" \
@@ -456,13 +485,15 @@ kc_user() {
   hv_set "sub_$user" "$id"
 }
 
-# A SCIM User for the realm user `user`, through instance `n`; records the
-# PERSON as HV_person_<user>.
+# A SCIM User for the realm user `user`, through instance `n`, with the
+# hospital roles that follow; records the PERSON as HV_person_<user>.
 scim_user() {
-  local n="$1" user="$2" formatted="$3"
+  local n="$1" user="$2" formatted="$3" roles
+  shift 3
+  roles="$(printf '%s\n' "$@" | jq -Rnc '[inputs | select(length > 0) | {value: .}]')"
   h_call "$n" scim POST /scim/v2/Users "$(jq -nc --arg u "$user" --arg f "$formatted" \
-    --arg k "$(hv "sub_$user")" '{schemas:["urn:ietf:params:scim:schemas:core:2.0:User",
-      "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"],userName:$u,name:{formatted:$f},
+    --arg k "$(hv "sub_$user")" --argjson r "$roles" '{schemas:["urn:ietf:params:scim:schemas:core:2.0:User",
+      "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"],userName:$u,name:{formatted:$f},roles:$r,
       "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User":{loginIdentifier:$k}}')" "" \
     application/scim+json
   hv_set "person_$user" "$(jq -r '.id // empty' <<<"$H_BODY")"
@@ -595,12 +626,15 @@ hospital_setup() {
   for user in anna bram carla dirk gina hans; do
     [[ -n "$(hv "sub_$user")" ]] || probe_fail "a realm user $user" "no subject"
   done
+  h_scim_client_grants || h_fail_call "the SCIM client's role ceiling and care-team grant"
   # SCIM through both instances: the client's view must be one deployment.
-  scim_user 1 anna "Dr. Anna Jansen" || h_fail_call "SCIM creates anna"
-  scim_user 2 bram "Bram de Vries" || h_fail_call "SCIM creates bram"
-  scim_user 1 carla "Dr. Carla Smit" || h_fail_call "SCIM creates carla"
-  scim_user 2 dirk "Dr. Dirk Bakker" || h_fail_call "SCIM creates dirk"
-  scim_user 1 gina "Gina Mulder" || h_fail_call "SCIM creates gina"
+  # The SCIM client is the role authority: the clinical role a professional
+  # reaches the record under (j_rules) is a role of their User.
+  scim_user 1 anna "Dr. Anna Jansen" CLINICIAN || h_fail_call "SCIM creates anna"
+  scim_user 2 bram "Bram de Vries" NURSE || h_fail_call "SCIM creates bram"
+  scim_user 1 carla "Dr. Carla Smit" CLINICIAN || h_fail_call "SCIM creates carla"
+  scim_user 2 dirk "Dr. Dirk Bakker" CLINICIAN || h_fail_call "SCIM creates dirk"
+  scim_user 1 gina "Gina Mulder" NURSE || h_fail_call "SCIM creates gina"
   scim_user 2 hans "Hans Hoekstra" || h_fail_call "SCIM creates hans"
 
   h_party cardiology group "$(j_named_party GROUP Cardiology)" || h_fail_call "the Cardiology team"
@@ -738,11 +772,12 @@ j_rule() {
     archetype_node_id:"at0004",kind:$k,effect:$e,emergency_override:false} + $m'
 }
 
-# The controller's rules: physicians and psychiatrists are cleared for the
-# restricted (R) HIV results and psychiatrists alone for the very restricted
-# (V) mental-health notes; an emergency purpose is declared under break-glass
-# alone; a nurse does not record a diagnosis; and, with the lab system's
-# AGENT `lab` given, the lab writes its own template alone.
+# The controller's rules: a professional reaches the record under a clinical
+# role of their SCIM User alone; physicians and psychiatrists are cleared for
+# the restricted (R) HIV results and psychiatrists alone for the very
+# restricted (V) mental-health notes; an emergency purpose is declared under
+# break-glass alone; a nurse does not record a diagnosis; and, with the lab
+# system's AGENT `lab` given, the lab writes its own template alone.
 j_rules() {
   local lab="${1:-}" physician psychiatrist rules
   physician="$(jq -nc --argjson c "$(j_role_code PHYSICIAN)" '{_type:"ACCESS_ACTOR_SCOPE",role:$c}')"
@@ -763,7 +798,12 @@ j_rules() {
       --argjson c "$(j_role_code NURSE)" --argjson w "$(j_term write)" --arg t "$H_T_DIAGNOSIS" \
       '{applies_to:[{_type:"ACCESS_ACTOR_SCOPE",role:$c}],operations:[$w],
         data:[{_type:"ACCESS_DATA_SCOPE",templates:[$t]}]}')")" \
-    '[$cleared_r,$cleared_v,$emergency,$nurse]')"
+    --argjson clinical "$(j_rule "Professionals under a clinical role alone" deny "$(jq -nc \
+      --argjson pro "$(j_term professional)" --argjson only "$(j_rule "The clinical roles" permit "$(jq -nc \
+        --argjson c "$(j_role_code CLINICIAN)" --argjson n "$(j_role_code NURSE)" \
+        '{applies_to:[{_type:"ACCESS_ACTOR_SCOPE",role:$c},{_type:"ACCESS_ACTOR_SCOPE",role:$n}]}')")" \
+      '{applies_to:[{_type:"ACCESS_ACTOR_SCOPE",caller_kind:$pro}],exceptions:[$only]}')")" \
+    '[$clinical,$cleared_r,$cleared_v,$emergency,$nurse]')"
   if [[ -n "$lab" ]]; then
     rules="$(jq -c --argjson lab "$(j_rule "The lab system writes lab results alone" deny "$(jq -nc \
       --argjson p "$(j_party AGENT "$lab")" --argjson w "$(j_term write)" \
@@ -1049,7 +1089,7 @@ hospital_rbac() {
 hospital_abac() {
   local eva
   eva="$(hv ehr_eva)"
-  probe "P-HOSP-ABAC-CARE" "$PROBE_WORKING" "server" "#5610" \
+  probe "P-HOSP-ABAC-CARE" "$PROBE_WORKING" "server" "#5610 #5737" \
     "Dr. Jansen reads the cardiology data she treats Eva for, with a purpose, on both instances"
   h_read 1 kc:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen reads the encounter"
   h_read 2 kc:anna "$eva" c_vitals TREAT 200 "" "Dr. Jansen reads the vital signs"
@@ -1124,12 +1164,18 @@ hospital_queries() {
   local eva lab=""
   eva="$(hv ehr_eva)"
   [[ -n "$(hv c_lab)" ]] && lab=c_lab
-  probe "P-HOSP-AQL" "$PROBE_WORKING" "server" "#5633 #5636" \
+  probe "P-HOSP-AQL" "$PROBE_WORKING" "server" "#5633 #5636 #5735" \
     "AQL rows, COUNT and paging agree with the reads for every caller, on both instances"
   h_query_agrees 1 kc:anna "$eva" TREAT "c_encounter c_vitals c_hiv c_diagnosis c_nurse_dx $lab" "Dr. Jansen"
   h_query_agrees 2 kc:bram "$eva" TREAT "c_encounter c_vitals c_diagnosis c_nurse_dx $lab" "Nurse de Vries"
   h_query_agrees 1 kc:carla "$eva" TREAT "c_encounter c_vitals c_mental c_hiv c_diagnosis c_nurse_dx $lab" "Dr. Smit"
-  h_query_agrees 2 kc:gina "$eva" TREAT "" "Gina"
+  # Eva's EHR is restricted to Gina whole, so a query scoped to it answers as
+  # an unknown EHR does, as her read of it does (security.md, "What a
+  # professional sees").
+  h_rows 2 kc:gina "$eva" TREAT >/dev/null
+  h_assert_code 404 "Gina's query scoped to Eva's EHR: ${H_BODY:0:200}"
+  h_count 1 kc:gina "$eva" TREAT >/dev/null
+  h_assert_code 404 "Gina's COUNT scoped to Eva's EHR: ${H_BODY:0:200}"
   h_query_agrees 1 kc:dirk "$eva" ETREAT "c_encounter c_vitals c_mental c_hiv c_diagnosis c_nurse_dx $lab" \
     "Dr. Bakker in an emergency"
   h_query_agrees 2 kc:dirk "$eva" TREAT "" "Dr. Bakker without one"
@@ -1221,13 +1267,16 @@ hospital_scim_lifecycle() {
   h_assert_code 403 "a deleted nurse reads the vital signs: ${H_BODY:0:200}"
   probe_done
 
-  # Tracked by #5617: a SCIM Group is no care team, so its membership
-  # decides nothing.
-  probe "P-HOSP-SCIM-GROUPS" "$PROBE_WORKING" "server" "#5617" \
+  # A care team is a Group its client creates with FerroEHR's `careTeam`, under
+  # its `write_care_relationship` grant (#5617).
+  probe "P-HOSP-SCIM-GROUPS" "$PROBE_WORKING" "server" "#5617 #5735" \
     "a SCIM Group membership change decides access on the other instance"
   h_call 1 scim POST /scim/v2/Groups "$(jq -nc --arg m "$(hv person_dirk)" \
-    '{schemas:["urn:ietf:params:scim:schemas:core:2.0:Group"],displayName:"Emergency department",
-      externalId:"emergency-department",members:[{value:$m}]}')" "" application/scim+json
+    '{schemas:["urn:ietf:params:scim:schemas:core:2.0:Group",
+        "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group"],
+      displayName:"Emergency department",externalId:"emergency-department",members:[{value:$m}],
+      "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group":{careTeam:true}}')" "" \
+    application/scim+json
   h_assert_code 201 "SCIM creates the emergency department with Dr. Bakker: ${H_BODY:0:300}"
   local group
   group="$(jq -r '.id // empty' <<<"$H_BODY")"
@@ -1248,13 +1297,17 @@ ${H_BODY:0:300}"
     "Dr. Bakker after SCIM removed him from the team"
   probe_done
 
-  # Tracked by #5625: a SCIM User carries no roles.
-  probe "P-HOSP-SCIM-ROLE" "$PROBE_WORKING" "server" "#5625" \
+  # A SCIM User's roles are ROLE parties the controller's rules name (#5625):
+  # without a clinical role a professional reaches no record.
+  probe "P-HOSP-SCIM-ROLE" "$PROBE_WORKING" "server" "#5625 #5735" \
     "a role removed through SCIM stops working on the next request on the other instance"
   scim_patch 1 "$(hv person_anna)" '[{"op":"remove","path":"roles[value eq \"CLINICIAN\"]"}]'
   h_assert_code 200 "SCIM removes Dr. Jansen's clinician role: ${H_BODY:0:300}"
   h_call 2 kc:anna GET "/ehr/$eva/composition/$(hv c_encounter)" "" TREAT
   h_assert_code 403 "Dr. Jansen reads the encounter after her clinician role went"
+  scim_patch 2 "$(hv person_anna)" '[{"op":"add","path":"roles","value":[{"value":"CLINICIAN"}]}]'
+  h_assert_code 200 "SCIM gives Dr. Jansen her clinician role again: ${H_BODY:0:300}"
+  h_read 1 kc:anna "$eva" c_encounter TREAT 200 "" "Dr. Jansen with her clinician role again"
   probe_done
 }
 
@@ -1459,7 +1512,8 @@ hospital_pixm() {
     "Dr. Jansen, Cardiology, Eva under its care, Frank her representative and Eva's EHR through FerroPIX"
   kc_role CLINICIAN
   kc_user anna Anna Jansen CLINICIAN
-  scim_user 1 anna "Dr. Anna Jansen" || h_fail_call "SCIM creates anna"
+  h_scim_client_grants || h_fail_call "the SCIM client's role ceiling and care-team grant"
+  scim_user 1 anna "Dr. Anna Jansen" CLINICIAN || h_fail_call "SCIM creates anna"
   h_party cardiology group "$(j_named_party GROUP Cardiology)" || h_fail_call "the Cardiology team"
   h_party hospital organisation "$(j_named_party ORGANISATION "Sint Example Ziekenhuis")" || h_fail_call "the controller"
   h_facts_role anna PHYSICIAN || h_fail_call "Dr. Jansen's role"
