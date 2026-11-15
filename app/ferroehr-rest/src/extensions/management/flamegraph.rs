@@ -158,9 +158,10 @@ fn folded_lines(report: &pprof::Report) -> Vec<String> {
 fn run_sample(plan: SamplePlan) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     let guard = pprof::ProfilerGuardBuilder::default()
         .frequency(plan.frequency)
-        // Frames inside these libraries are unwind hazards pprof's own
-        // documentation blocklists (signal handlers interrupting non-reentrant
-        // code); the application frames we profile are unaffected.
+        // pprof walks the frame-pointer chain (its `frame-pointer` feature,
+        // #5723), so a sample anywhere in our own code is safe to unwind; a
+        // sample inside these libraries, which may be compiled without frame
+        // pointers or interrupted holding their locks, is dropped.
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])
         .build()?;
     std::thread::sleep(Duration::from_secs(u64::from(plan.seconds)));

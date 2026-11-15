@@ -472,8 +472,12 @@ opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio"] }
 # crate directly instead of enabling it. Its `flamegraph` feature is OFF on
 # purpose (#2406): that feature pins `inferno ^0.11`, whose quick-xml 0.26
 # carries RUSTSEC-2026-0194/0195; the SVG render goes through the direct
-# `inferno` dependency below instead, reproducing pprof's own fold.
-pprof = { version = "0.15.0" }
+# `inferno` dependency below instead, reproducing pprof's own fold. Its
+# `frame-pointer` feature walks the frame-pointer chain from the `SIGPROF`
+# handler with every read checked, instead of the platform unwinder, which is
+# not async-signal-safe and trapped on a sample inside SHA-512 (#5723); the
+# builds keep frame pointers through `.cargo/config.toml`.
+pprof = { version = "0.15.0", features = ["frame-pointer"] }
 # Flamegraph SVG renderer, at the quick-xml >= 0.41 line. `nameattr` mirrors
 # the feature pprof's flamegraph feature enabled, so the render is identical.
 inferno = { version = "0.12", features = ["nameattr"] }
