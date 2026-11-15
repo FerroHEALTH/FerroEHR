@@ -231,7 +231,7 @@ in the element's `name`:
 |---|---|
 | `not_before` | A `DV_DATE_TIME`: the instant before which the grant does not hold |
 | `not_after` | A `DV_DATE_TIME`: the instant after which the grant does not hold |
-| `template` | A template the grant writes |
+| `template` | On a federation agreement: a template an external person may commit ([Federation agreements](#federation-agreements)) |
 | `facility` | A facility the grant covers: an element whose value is a `DV_IDENTIFIER` (its `issuer` and `id`), or a `CLUSTER` of `issuer` with `identifier` or `identifier_prefix` |
 | `issuer` | In a `facility` `CLUSTER`: the issuer of the facility identifier |
 | `identifier` | In a `facility` `CLUSTER`: the facility identifier |
@@ -247,9 +247,10 @@ in the element's `name`:
 | `reader` | On `read_change_feed`: the reader's name, exactly one, matching `^[a-z][a-z0-9-]{0,62}$` |
 | `binding_issuer` | On `scim_provision`: the `identifier_issuer` of the binding keys the client owns, exactly one |
 | `token_scope` | On `scim_provision`: a scope the client's access token must hold, at least one |
+| `role_terminology` | On `scim_provision`: the terminology the client's User `roles` are coded in, exactly one when it names a `role` |
 | `acts_for` | On a `PARTY_RELATIONSHIP`: the source acts for the target |
 | `represents` | On a `PARTY_RELATIONSHIP`: the source represents the target, the subject, on the subject's own record ([Representatives in the patient portal](#representatives-in-the-patient-portal)); it makes no policy party |
-| `role` | A `DV_TEXT`: a role a `hold_roles` grant gives |
+| `role` | A `DV_TEXT`: a role a `hold_roles` grant gives, or a role code a `scim_provision` grant lets its client assign its Users ([SCIM roles](installation/config-auth.md#roles)) |
 | `scope` | A `DV_TEXT`: a SMART scope a `hold_scopes` grant gives |
 | `login_issuer` | A text or `DV_URI`: a token issuer whose first logins a `create_at_login` grant admits |
 | `admit_idp` | A text: an identity provider an admitted login comes from |
@@ -257,8 +258,6 @@ in the element's `name`:
 | `admit_role` | A text: a role an admitted login holds |
 | `admit_assurance` | A text, `low`, `substantial` or `high`: the lowest assurance level an admitted login carries |
 | `admit_guests` | A `DV_BOOLEAN`: whether a guest is admitted too |
-| `sensitivity_clearance` | A `DV_CODED_TEXT` of the jurisdiction's sensitivity terminology: a sensitivity the capability clears |
-| `permitted_purpose` | A `DV_CODED_TEXT` of the jurisdiction's purpose-of-use terminology: a purpose the capability lets its holder declare |
 | `member_of` | On a `PARTY_RELATIONSHIP`: the source, a professional's `PERSON`, is a member of the target, a care-team `GROUP`; or the source, a provider `ORGANISATION`, is a member of the target `GROUP` |
 | `under_care_of` | On a `PARTY_RELATIONSHIP`: the source, a patient's `PERSON`, is under the care of the target, a team `GROUP` or an organisational unit |
 
@@ -325,23 +324,21 @@ group is FerroEHR's own design.
 | Group | Codes | Read from |
 |---|---|---|
 | `access default` | `open`, `restricted`, `consent_required` | `ACCESS_DIRECTIVE_SETTINGS.default_access`: the disposition of an EHR where no directive applies |
-| `access directive kind` | `consent`, `restriction`, `opt_out`, `delegation` | `ACCESS_DIRECTIVE.kind`. A `restriction` (EHDS Art. 8) is always a deny; an `opt_out` (EHDS Art. 10) is a deny of the whole record |
+| `access directive kind` | `consent`, `restriction`, `opt_out`, `delegation`, `controller_rule` | `ACCESS_DIRECTIVE.kind`. A `restriction` (EHDS Art. 8) is always a deny; an `opt_out` (EHDS Art. 10) is a deny of the whole record; a `controller_rule` is a rule of the access policy and never a directive of an EHR |
 | `access effect` | `permit`, `deny` | `ACCESS_DIRECTIVE.effect`; a deny overrides a permit |
 | `access relationship` | `care`, `representative`, `proxy` | `ACCESS_ACTOR_SCOPE.relationship`: the caller's relationship to the subject |
 | `access caller kind` | `professional`, `access_service`, `subject`, `representative`, `system` | `ACCESS_ACTOR_SCOPE.caller_kind`. An `access_service` caller is one holding the `access_service` grant |
 | `access operation` | `read`, `write`, `export`, `query` | `ACCESS_DIRECTIVE.operations`: the operation classes a directive applies to. No capability grants one |
-| `access sensitivity clearance` | `sensitivity_clearance` | The `name` of a credentials element whose value is a sensitivity code |
-| `access permitted purpose` | `permitted_purpose` | The `name` of a credentials element whose value is a purpose-of-use code |
 | `care relationship` | `member_of`, `under_care_of` | The `name` of a `PARTY_RELATIONSHIP` |
 | `group kind` | `care_team` | The `name` of a `GROUP`: the `GROUP` is a care team ([Care teams provisioned over SCIM](#care-teams-provisioned-over-scim)) |
-| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-purpose-not-permitted`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing` | The access record of a refusal |
+| `access refusal` | `refused-opt-out`, `refused-restricted`, `refused-consent-denied`, `refused-policy-denied`, `refused-sensitivity`, `refused-no-care-relationship`, `refused-purpose-missing`, `refused-consent-required`, `refused-not-subject`, `refused-not-represented`, `refused-consent-reference-missing` | The access record of a refusal |
 | `access log withheld` | `accessor_party`, `accessor_provider`, `accessor_roles`, `accessor_groups` | `ACCESS_LOG_RESTRICTION.withheld`: the accessor members the access log's subject view withholds under EHDS Art. 9(3) |
 
 Two grants of the operation table belong to access control:
 `write_care_relationship` and `write_access_policy`.
 
-**Codes FerroEHR does not own.** Sensitivity, data category, purpose of use
-and legal ground are coded in the terminology your jurisdiction names, such
+**Codes FerroEHR does not own.** Role, sensitivity, data category, purpose
+of use and legal ground are coded in the terminology your jurisdiction names, such
 as HL7 v3 `Confidentiality` and `ActCode`, the EHDS categories and HL7
 `PurposeOfUse`. FerroEHR compares them by terminology id and code, and refuses
 one coded in `ferroehr-operations`, which holds none.
@@ -683,7 +680,6 @@ party's grants say. No key of `ferroehr.toml` declares a system client.
 `403`. Its `ACTOR` acts for the provider its acts-for relationship targets,
 or, with none, for the deployment's `[authz.party_binding] provider`. A `COMPOSITION` is admitted when one `commit_composition` grant:
 
-- lists its template in a `template` element, or the commit is `403`;
 - has the origin that fits the act. A composer that is a `PARTY_IDENTIFIED`
   whose identifier, of an issuer the grant lists as a
   `device_identifier_issuer`, is the `feeder_audit.originating_system_audit.system_id`
@@ -697,8 +693,10 @@ or, with none, for the deployment's `[authz.party_binding] provider`. A `COMPOSI
   `feeder_audit.originating_system_audit.location`; otherwise `422`. The
   server never writes the facility.
 
-A deletion is held to the templates the same way. A composer that names an
-`ORGANISATION` is `422`: the composer is a person.
+A composer that names an `ORGANISATION` is `422`: the composer is a person.
+Which templates a client commits is a [controller rule](#controller-rules),
+as it is for every other caller: a deny rule whose `applies_to` names the
+client's `AGENT`, with a permit exception listing the templates it may write.
 
 **Import.** `message_import_ehr` needs an `import_ehr` grant and
 `message_import_ehr_extract` an `import_ehr_extract` grant, either of which
@@ -1584,26 +1582,29 @@ design:
 - **A federation agreement is a grant on the partner**, keyed by its client
   identifiers, and its rules are judged when it is written.
 
-## Caller facts: clearances, purposes and care relationships
+## Caller facts: roles and care relationships
 
 Beside its grants, a caller carries the facts the access evaluator reads:
-the sensitivities it is cleared for, the purposes of use it may declare, and
-the care teams it belongs to. A patient carries the teams and units it is
-under the care of. FerroEHR reads each by its code of `ferroehr-operations`
-in any archetype, never by an archetype id, and holds them on every replica
-beside the grants, so a request reads them with no transaction of its own.
+the roles it performs and the care teams it belongs to. A patient carries the
+teams and units it is under the care of. FerroEHR reads them in any
+archetype, never by an archetype id, and holds them on every replica beside
+the grants, so a request reads them with no transaction of its own.
 
-**Clearance and permitted purpose.** A `CAPABILITY` of a `ROLE` clears a
-sensitivity when its `credentials` hold, at any depth, an element whose
-`name` is the `DV_CODED_TEXT` `sensitivity_clearance` and whose value is a
-`DV_CODED_TEXT` of the terminology your jurisdiction names, such as the HL7
-v3 `ActCode` code `PSY`. An element named `permitted_purpose` whose value is
-a purpose-of-use code, such as the HL7 `PurposeOfUse` code `TREAT`, lets the
-holder declare that purpose. Both hold while the capability does: the
-`ROLE`'s and the `CAPABILITY`'s `time_validity` and the `not_before` and
-`not_after` elements. A value coded in `ferroehr-operations`, or no
-`DV_CODED_TEXT`, is refused `422` at the commit of the `ROLE`. A `ROLE`
-carrying either is a policy party, which only an administrator writes.
+**Roles.** A `ROLE` whose `name` is a `DV_CODED_TEXT` of the terminology
+your jurisdiction names, such as a national professional role code, is a
+role its `performer` holds while the `ROLE` is in force: its `time_validity`
+holds the date of the request and it is not deleted. The role's type is its
+name (RM Demographic IM, `PARTY.type()`), so a nurse is one `ROLE` per nurse,
+each named by the nurse code. A [controller rule](#controller-rules) names a
+role in an `applies_to` entry, compared by terminology and code. A `ROLE`
+named in text, or by a code of `ferroehr-operations`, names no role. A
+token's role claims never count for a rule: they decide only the coarse RBAC
+class gate ([Security](security.md)). Which sensitivities a caller may read
+and which purposes it may declare are rules of the access policy too, never
+elements of a capability. A SCIM client writes these `ROLE`s from a User's
+`roles`, within the roles its grant admits
+([SCIM roles](installation/config-auth.md#roles)), so your identity
+provider assigns roles and the access policy says what each may do.
 
 **Care relationships.** A `PARTY_RELATIONSHIP` in a `PERSON`'s
 `relationships` whose `name` or `details` carry `member_of` makes the
@@ -1666,10 +1667,11 @@ the next request on every replica. The commit stamps the patient whose facts
 changed, and each replica reads only the facts of the parties stamped since
 its copy, in one indexed read.
 
-No openEHR specification gives a capability or a relationship an access
-meaning: reading them as clearances, purposes, care relationships and group
-memberships, the `write_care_relationship` rule, and holding them in memory
-are FerroEHR's own design.
+No openEHR specification gives a role or a relationship an access meaning:
+reading a `ROLE`'s coded name as the role a rule names, reading
+relationships as care relationships and group memberships, the
+`write_care_relationship` rule, and holding them in memory are FerroEHR's
+own design.
 
 ### Care teams provisioned over SCIM
 
@@ -1931,12 +1933,79 @@ one, nothing is tightened.
   kind, and a rule naming a role, purpose, sensitivity, category or legal
   ground in `ferroehr-operations`.
 - **Effective without a restart**, as the registers above.
-- **Read by the access evaluator** on every request: a classification gives
-  the data it covers its sensitivities (step 4), and the two requirements
-  are steps 5 and 6 of the [decision procedure](security.md#access-directives).
+- **Read by the access evaluator** on every request: the rules are step 4,
+  a classification gives the data it covers its sensitivities (step 5), and
+  the two requirements are steps 6 and 7 of the
+  [decision procedure](security.md#access-directives).
   A `relationship_grace` that is no ISO 8601 duration admits nothing after a
   care relationship ends.
 
 The routes are on
 [Admin & messaging APIs](operations-admin-apis.md#the-access-policy). A write
 needs `admin_role` and a policy grant of `write_access_policy`.
+
+### Controller rules
+
+Regulation (EU) 2025/327 Art. 11(3) asks each Member State to lay down
+which categories of health data different categories of health
+professionals may reach. The access policy's `rules` hold those rules for
+every EHR you keep. Each rule is an `ACCESS_DIRECTIVE` of kind
+`controller_rule`, with the `applies_to`, `operations`, `purposes`, `data`,
+`time_validity`, `emergency_override`, `exceptions` and `legal_grounds` a
+directive has. The `ROLE` parties say who holds a role; the rules say what
+the role may do.
+
+- **A deny rule refuses** what it covers with `403 refused-policy-denied`,
+  whatever the patient's directives permit (step 4). It binds every caller
+  but the patient on their own record, representatives included.
+- **A permit rule clears** the callers it names for the sensitivities its
+  `data` names (step 5) and decides nothing else.
+- **A deny rule with a permit exception says "only"**: the exception carves
+  what it covers out of the deny.
+- **For a write**, the data are the version being committed: its template,
+  root archetype, origins and the sensitivities your classifications give it.
+
+Four rules, as you write them in the policy body (a role code of
+`urn:example:roles` stands for your jurisdiction's role terminology):
+
+```json
+"rules": [
+  { "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "Nurses do not record diagnoses" },
+    "archetype_node_id": "id15",
+    "kind": { "_type": "DV_CODED_TEXT", "value": "controller_rule", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "controller_rule" } },
+    "effect": { "_type": "DV_CODED_TEXT", "value": "deny", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "deny" } },
+    "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "role": { "_type": "DV_CODED_TEXT", "value": "Nurse", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "urn:example:roles" }, "code_string": "NURSE" } } }],
+    "operations": [{ "_type": "DV_CODED_TEXT", "value": "write", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" }, "code_string": "write" } }],
+    "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["Diagnosis"] }],
+    "emergency_override": false }
+]
+```
+
+- **A nurse may not record a diagnosis:** the rule above.
+- **Only psychiatry reads mental-health notes:** classify the mental-health
+  templates `PSY` (HL7 v3 `ActCode`), and write a `permit` rule whose
+  `applies_to` names the psychiatrist role and whose `data` names the
+  sensitivity `PSY`. A patient's consent permit naming their GP clears the
+  GP in the same step; everyone else is refused `refused-sensitivity`.
+- **Professionals may declare only treatment or emergency treatment:** a
+  `deny` rule whose `applies_to` names the caller kind `professional`, with
+  one `permit` exception whose `purposes` are `TREAT` and `ETREAT`. A request
+  declaring another purpose, or none, is refused `refused-policy-denied`.
+- **A system client writes only its laboratory templates:** a `deny` rule on
+  `write` whose `applies_to` names the client's `AGENT` by `party`, with one
+  `permit` exception whose `data` lists the templates.
+
+A rule whose `emergency_override` is true is lifted for the holder of
+`authz.rbac.emergency_access_role` declaring an emergency purpose, and the
+access record names the rule. The access record of a refusal names the
+rule by its uid, its first identifier or its position in `rules`.
+
+**A federation agreement and the rules.** A federation agreement is the
+contract with a partner: its `template` elements say what the partner's
+persons may send. The rules are your own limits, and they hold for a
+partner's persons too: a deny rule refuses a template the agreement allows,
+because a deny overrides.
+
+No openEHR specification has a controller rule: the rules, their place as
+step 4, and reading a role from the coded name of a `ROLE` are FerroEHR's
+own design, proposed in the draft access control specification.

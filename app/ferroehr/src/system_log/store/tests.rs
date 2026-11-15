@@ -3,9 +3,9 @@
 
 //! The search-statement tests of the audit store.
 
+use super::search_page::build_search_statements;
 use super::{
     AuditCriterion, AuditElement, AuditSearchFilter, AuditToken, AuditTokenSystem, RECORD_COLUMNS,
-    build_search_statements,
 };
 
 /// Twenty payloads that break SQL when they reach the statement text rather
@@ -142,7 +142,15 @@ fn every_identifier_comes_from_the_closed_set() {
     seen.dedup();
 
     let mut expected: Vec<&str> = RECORD_COLUMNS.to_vec();
-    expected.extend(["audit", "audit_record"]);
+    expected.extend([
+        "audit",
+        "audit_record",
+        "access_log_search",
+        "system_page",
+        "access_log_candidate",
+        "access_log_page",
+        "chains",
+    ]);
     expected.sort_unstable();
     expected.dedup();
     assert_eq!(

@@ -31,9 +31,11 @@ use uuid::Uuid;
 
 use crate::access_eval::class::{Class, Classes};
 use crate::access_eval::procedure::{
-    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
+    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide, rules_of,
 };
+use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
+use crate::access_eval::stale::StaleCopies;
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
 use crate::party_binding::grants::live::{GrantsUnavailable, LiveGrants};
@@ -54,7 +56,7 @@ pub struct RequestAccess {
     operation: OperationClass,
     purpose: Option<String>,
     emergency: Emergency,
-    policy: Option<Arc<AccessPolicy>>,
+    pub(super) policy: Option<Arc<AccessPolicy>>,
     categories: CategoryIndex,
     server_default: AccessDefault,
     now: jiff::Timestamp,
@@ -62,33 +64,7 @@ pub struct RequestAccess {
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
     recorded: Recorded,
     stale: Option<Arc<StaleCopies>>,
-}
-
-/// The EHRs whose copy on this replica a read found older than the row in
-/// force: the copy drops each before its next read of the EHR.
-///
-/// A replica learns of a change committed on another one by its
-/// notification, which arrives after the commit. A read in between compares
-/// the revision its verdict was judged on with the row it reads, refuses on
-/// a mismatch, and marks the copy here, so the next request reads the row.
-/// No openEHR spec governs this: our own design (#5589).
-#[derive(Debug, Default)]
-pub struct StaleCopies(Mutex<BTreeSet<EhrId>>);
-
-impl StaleCopies {
-    /// Marks the copy of `ehr_id` stale.
-    pub fn mark(&self, ehr_id: EhrId) {
-        self.0
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .insert(ehr_id);
-    }
-
-    /// The EHRs marked since the last call, which are no longer marked.
-    #[must_use]
-    pub fn take(&self) -> BTreeSet<EhrId> {
-        std::mem::take(&mut *self.0.lock().unwrap_or_else(PoisonError::into_inner))
-    }
+    pub(super) written: Mutex<BTreeSet<Uuid>>,
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -130,6 +106,7 @@ pub struct Judgement {
 struct Recorded {
     facts: RecordFacts,
     refusals: Mutex<BTreeMap<Option<EhrId>, Noted>>,
+    lifted: LiftedCovers,
 }
 
 /// The facts of a request the access record names that the decision does
@@ -198,6 +175,7 @@ impl RequestAccess {
             verdicts: Mutex::new(BTreeMap::new()),
             recorded: Recorded::default(),
             stale: None,
+            written: Mutex::new(BTreeSet::new()),
         }
     }
 
@@ -226,6 +204,11 @@ impl RequestAccess {
     #[must_use]
     pub fn emergency(&self) -> Emergency {
         self.emergency
+    }
+
+    /// The lifted denies that covered an object this request admitted.
+    pub(crate) fn lifted_covers(&self) -> &LiftedCovers {
+        &self.recorded.lifted
     }
 
     /// The facts the access record names that the decision does not read.
@@ -273,7 +256,10 @@ impl RequestAccess {
         let rule = verdict.rule_for(item);
         let outcome = rule.map_or(verdict.otherwise, |rule| rule.then);
         let refusal = match outcome {
-            Outcome::Admit => return outcome,
+            Outcome::Admit => {
+                self.recorded.lifted.note(ehr_id, verdict, item);
+                return outcome;
+            }
             Outcome::Absent(refusal) | Outcome::Refused(refusal) => refusal,
         };
         self.recorded
@@ -417,6 +403,7 @@ impl RequestAccess {
                 emergency: self.emergency,
             },
             policy: self.policy(),
+            rules: rules_of(self.policy.as_deref()),
             ehr: Ehr {
                 settings,
                 server_default: self.server_default,
@@ -495,7 +482,11 @@ impl RequestAccess {
     #[must_use]
     pub fn outcome(&self, ehr_id: EhrId, item: &Item<'_>) -> Outcome {
         if let Some(verdict) = self.verdict(ehr_id) {
-            verdict.outcome(item)
+            let outcome = verdict.outcome(item);
+            if outcome == Outcome::Admit {
+                self.recorded.lifted.note(Some(ehr_id), &verdict, item);
+            }
+            outcome
         } else {
             tracing::error!(%ehr_id, "an EHR this request did not judge is withheld");
             Outcome::Absent(Refusal::Restricted)
@@ -552,6 +543,7 @@ impl RequestAccess {
                     Lifted::OptOut => "opt_out",
                     Lifted::Restriction => "restriction",
                     Lifted::Consent => "consent",
+                    Lifted::Rule => "rule",
                     Lifted::Policy => "policy",
                 };
                 metrics
@@ -753,13 +745,19 @@ where
 
 /// Whether `item` of `ehr_id` may leave the store for the running request.
 ///
-/// `seen` is the revision of the EHR's settings row the read found beside
+/// The object a write of this request committed leaves for its response
+/// ([`RequestAccess::wrote`]). `seen` is the revision of the EHR's settings row the read found beside
 /// the item. Always outside a request, and for an object of no EHR; a
 /// verdict judged on another revision admits nothing
 /// ([`RequestAccess::stale`]).
 #[must_use]
 pub fn admits(ehr_id: Option<EhrId>, seen: &Revision, item: &Item<'_>) -> bool {
     match (current(), ehr_id) {
+        // NOTE: our own design (owner ruling on #5621), a write's response is built from the
+        // version that request committed, so the writer's own object is no read of stored data.
+        (Some(access), Some(_)) if matches!(item, Item::Object(object) if access.written(object.vo_id)) => {
+            true
+        }
         (Some(access), Some(ehr_id)) => {
             !access.stale(ehr_id, seen) && access.outcome(ehr_id, item) == Outcome::Admit
         }

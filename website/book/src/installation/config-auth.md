@@ -796,6 +796,33 @@ An inactive or abandoned User is still read and found by a filter, so its
 client can reactivate it. When the second version of an `abandoned` User
 fails, the User stays `incomplete` and the same request completes it.
 
+#### Roles
+
+A User's `roles` (RFC 7643 §4.1.2) are the roles the access policy's
+[controller rules](../operational-policy.md#controller-rules) name. Each
+value is one `ROLE` the User's `PERSON` performs, of the professional role
+template, whose `name` is the value coded in the terminology the client's
+`scim_provision` grant names, and whose `time_validity` starts on the day it
+is added. The grant states which roles the client may hand out:
+
+| Element | Value |
+|---|---|
+| `role_terminology` | The terminology id the client's role values are coded in, exactly one |
+| `role` | A role code the client may assign, one element per code |
+
+A request whose `roles` names a code the grant does not list, or any role
+when the grant names no `role_terminology`, is **403** and changes nothing.
+A `POST`, `PUT` or `PATCH` makes the User hold exactly the roles its result
+lists: a new value commits a new `ROLE`, and a removed one ends its `ROLE`
+the day before (its `time_validity` gains the date of the removal as its
+exclusive end) and drops it from the `PERSON`'s `roles`. The change decides
+the next request on the replica that took it, and on every other replica
+once the commit's notification arrives, with no added transaction. A token's
+role claims never drive a controller rule. These `ROLE`s carry no
+capability, so a SCIM client writes them, and an administrator alone grants
+a capability. RFC 7643 sets no vocabulary for `roles` and RFC 7644 §2 leaves
+the authorization model out: the mapping is FerroEHR's own design.
+
 The versions of a deleted User are kept for the record-keeping duties that
 need the professional's identification (GDPR Art. 6(1)(c), laid down in law
 as Art. 6(3) requires: in the Netherlands BW 7:454(3), twenty years, and the

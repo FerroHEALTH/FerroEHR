@@ -225,6 +225,38 @@ impl FerroEhrService {
     }
 }
 
+impl FerroEhrService {
+    /// Adds to `served` every EHR among `named`, the EHRs the caller named as
+    /// a query's scope, that its rows did not name, with no row: a count, an
+    /// empty or a past-the-end page still accesses the EHR it names (EHDS
+    /// Art. 9). Each is judged as a served EHR is, and a verdict that admits
+    /// none of its data notes its refusal for the EHR's access record. Our
+    /// own design (#5639).
+    ///
+    /// # Errors
+    /// As [`Self::ehr_verdict`].
+    pub async fn add_named_ehrs(
+        &self,
+        named: &[EhrId],
+        served: &mut Vec<(String, u64)>,
+    ) -> Result<(), ServiceError> {
+        for ehr_id in named {
+            let id = ehr_id.to_string();
+            if served.iter().any(|(served, _)| *served == id) {
+                continue;
+            }
+            if let Some(access) = current() {
+                let verdict = self.ehr_verdict(&access, *ehr_id).await?;
+                if !verdict.admits_any() {
+                    access.note(*ehr_id, &verdict, &Item::Ehr);
+                }
+            }
+            served.push((id, 0));
+        }
+        Ok(())
+    }
+}
+
 /// The name the access record gives an override of the opt-out.
 const OPT_OUT_OVERRIDE: &str = "access-opt-out-override";
 

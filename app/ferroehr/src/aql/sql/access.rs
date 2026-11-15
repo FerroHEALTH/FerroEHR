@@ -19,7 +19,9 @@
 //! this: our own design (#5513, #5588).
 
 use sea_query::extension::postgres::PgFunc;
-use sea_query::{Alias, Expr, ExprTrait, Func, Query, SelectStatement};
+use sea_query::{
+    Alias, CommonTableExpression, Expr, ExprTrait, Func, Query, SelectStatement, WithClause,
+};
 use uuid::Uuid;
 
 use super::expr::{archetype_node_id, col};
@@ -28,7 +30,8 @@ use crate::access_eval::condition::{AccessCondition, CallerKeys, ConditionGroups
 use crate::access_eval::scope::{
     CategoryMatch, DataMatch, Edge, EhrFact, Held, Polarity, Pred, Recorded,
 };
-use crate::db::iden::{AccessSettings, Node, VersionRow, VoHead};
+use crate::db::iden::{AccessSettings, Ehr, Node, VersionRow, VoHead};
+use crate::storage::access_projection::EhrSubject;
 
 /// The alias of the root node an archetype probe reads.
 const ROOT: &str = "access_root";
@@ -38,6 +41,10 @@ const TRUNK: &str = "access_trunk";
 const CARE: &str = "access_ehr";
 /// The alias of the projected settings row of the EHR.
 const SETTINGS: &str = "access_settings_row";
+/// The common table that holds the subjects the caller cares for.
+const CARED: &str = "access_cared";
+/// The one column of [`CARED`]: a `jsonb` object keyed by subject id.
+const SUBJECTS: &str = "subjects";
 
 /// What a predicate is read against: the caller's facts, which a class's
 /// facts are compared with; `None` outside a class.
@@ -198,7 +205,8 @@ fn in_classes(ids: &[i64]) -> Expr {
     col(SETTINGS, AccessSettings::ClassId).eq(Expr::from(PgFunc::any(Expr::val(ids.to_vec()))))
 }
 
-/// The rows of an EHR of `pair` admitted, on head row `h` of EHR `target`.
+/// The rows of an EHR of `pair` of `condition` admitted, on head row `h` of
+/// EHR `target`.
 fn admitted(
     condition: &ConditionGroups,
     pair: &VerdictPair,
@@ -220,31 +228,78 @@ fn admitted(
     )
 }
 
-/// Whether the subject of the EHR `target` is under the care of the caller:
-/// a `CASE` condition, since an EHR names one subject. Its reference matches
-/// a cared one by namespace and id, the id of a reference in this CDR's own
-/// namespace by its container's UUID in any case, as
-/// [`crate::party_binding::grants::live::LiveGrants::person_of`] reads it.
-fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
-    let (namespaces, ids): (Vec<String>, Vec<String>) = condition
+/// The `WITH` clause that binds the subjects the caller cares for once per
+/// statement, which every [`cared`] probe reads; `None` when no verdict of
+/// the condition reads care.
+///
+/// The subjects are one `jsonb` object keyed by subject id: the planner
+/// estimates `jsonb ? text` at a fixed selectivity whatever the census, where
+/// it walks a bound array element by element, and a probe is one search of
+/// the object's sorted keys (PostgreSQL 18 §9.16, `jsonb ? text`). No openEHR
+/// spec governs this: our own design (#5645).
+#[expect(
+    clippy::disallowed_types,
+    reason = "the census object is SQL/JSON wire material (the bound operand of jsonb ?), \
+              not an RM value; no generated type models it"
+)]
+pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
+    let condition = condition.groups()?;
+    let pairs = std::iter::once(&condition.closed)
+        .chain(condition.groups.iter().map(|(_, pair)| pair))
+        .chain(condition.default.iter());
+    if pairs.into_iter().all(|pair| pair.cared == pair.uncared) {
+        return None;
+    }
+    let subjects: serde_json::Map<String, serde_json::Value> = condition
         .cared
         .iter()
-        .map(|subject| (subject.namespace.clone(), subject.id.clone()))
-        .unzip();
-    Expr::cust_with_exprs(
-        "EXISTS (SELECT 1 FROM ehr access_subject, \
-             unnest($2::text[], $3::text[]) AS access_care(namespace, id) \
-             WHERE access_subject.id = $1 AND access_subject.subject_namespace = access_care.namespace \
-             AND CASE WHEN access_care.namespace = $4 \
-                      THEN lower(access_subject.subject_id) = access_care.id \
-                      ELSE access_subject.subject_id = access_care.id END)",
-        [
-            target,
-            Expr::val(namespaces),
-            Expr::val(ids),
-            Expr::val(condition.subject_namespace.to_string()),
-        ],
-    )
+        .map(|subject| (census_key(subject), serde_json::Value::Bool(true)))
+        .collect();
+    let mut row = Query::select();
+    row.expr_as(
+        Expr::val(serde_json::Value::Object(subjects).to_string()).cast_as(Alias::new("jsonb")),
+        Alias::new(SUBJECTS),
+    );
+    let table = CommonTableExpression::new()
+        .query(row)
+        .table_name(Alias::new(CARED))
+        .to_owned();
+    Some(WithClause::new().cte(table).to_owned())
+}
+
+/// The key of `subject` in the [`census`]: its namespace and its id joined by
+/// U+001F, which no `OBJECT_REF.namespace` holds (BASE `OBJECT_REF`), as a
+/// [`cared`] probe builds it from the `ehr` row.
+fn census_key(subject: &EhrSubject) -> String {
+    format!("{}\u{1f}{}", subject.namespace, subject.id)
+}
+
+/// Whether the subject of the EHR `target` is under the care of the caller:
+/// a `CASE` condition, since an EHR names one subject. The subjects are the
+/// [`census`] the statement binds once, each keyed by [`census_key`]: its
+/// reference matches a cared one by namespace and id, the id of a reference
+/// in this CDR's own namespace by its container's UUID in any case, as
+/// [`crate::party_binding::grants::live::LiveGrants::person_of`] reads it.
+fn cared(condition: &ConditionGroups, target: Expr) -> Expr {
+    let mut subjects = Query::select();
+    subjects
+        .column(Alias::new(SUBJECTS))
+        .from(Alias::new(CARED));
+    let mut probe = Query::select();
+    probe
+        .expr(Expr::val(1))
+        .from_as(Ehr::Table, Alias::new(CARE))
+        .and_where(col(CARE, Ehr::Id).eq(target))
+        .and_where(Expr::cust_with_exprs(
+            "$1 ? ($2 || chr(31) || CASE WHEN $2 = $4 THEN lower($3) ELSE $3 END)",
+            [
+                Expr::SubQuery(None, Box::new(subjects.into())),
+                col(CARE, Ehr::SubjectNamespace),
+                col(CARE, Ehr::SubjectId),
+                Expr::val(condition.subject_namespace.to_string()),
+            ],
+        ));
+    Expr::exists(probe)
 }
 
 /// `pred` on the head row `h`, its facts read with `facts`.

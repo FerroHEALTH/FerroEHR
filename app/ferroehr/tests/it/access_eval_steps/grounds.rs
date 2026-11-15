@@ -129,12 +129,12 @@ fn of_kind<'a>(decision: &'a Decision, kind: &str) -> Vec<&'a AccessAuthorisatio
         .collect()
 }
 
-/// The capabilities and roles the caller held are `role` grounds: each
-/// grant by its operation code and `ROLE`, each functional role by its code.
+/// The capabilities the caller held and the roles it performs are `role`
+/// grounds: each grant by its operation code and `ROLE`, each role by its
+/// terminology and code.
 #[test]
 fn a_role_ground_names_each_capability_and_role() {
-    let mut nurse = professional(NURSE);
-    nurse.roles = vec!["NURSE".to_owned()];
+    let nurse = performing(CallerKind::Professional, NURSE, "NURSE");
     let access = request(nurse, read(None), None);
     let (outcome, decision) = decide_on(&access, None, &Item::Ehr);
     assert_eq!(outcome, Outcome::Admit);
@@ -146,7 +146,7 @@ fn a_role_ground_names_each_capability_and_role() {
         (role.id.as_str(), role.r#type.as_deref()),
         (ROLE, Some("ROLE"))
     );
-    assert_eq!(roles[1].name.as_deref(), Some("NURSE"));
+    assert_eq!(roles[1].name.as_deref(), Some("urn:example:roles::NURSE"));
     assert!(decision.refused.is_none());
 }
 
@@ -293,6 +293,39 @@ fn an_emergency_override_is_marked_with_what_it_lifted() {
     );
 }
 
+/// An emergency lifts a consent deny over the mental-health template; a read
+/// of another template names no `emergency` ground of that directive, only
+/// the `ACCESS_POLICY` of the lifted steps 4 to 7, and a read of the
+/// mental-health note names it (EHDS Art. 11(5) and Art. 9(1), #5630).
+#[test]
+fn the_emergency_grounds_name_only_the_directives_covering_the_data_read() {
+    let deny = directive(
+        "consent",
+        "deny",
+        &json!({ "emergency_override": true,
+                 "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["Mental health note"] }] }),
+    );
+    let lifted = |template: &str| {
+        let access = request(professional(DR_B), break_glass(read(Some("ETREAT"))), None);
+        let item = object(OBJECT, Some(template));
+        let (outcome, decision) = decide_on(
+            &access,
+            Some(settings("open", std::slice::from_ref(&deny), &[], &[])),
+            &item,
+        );
+        assert_eq!(outcome, Outcome::Admit, "{template}");
+        of_kind(&decision, "emergency")
+            .iter()
+            .map(|ground| ground.name.clone().unwrap_or_default())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(lifted("HIV result"), ["ACCESS_POLICY"]);
+    assert_eq!(
+        lifted("Mental health note"),
+        ["EHR_ACCESS", "ACCESS_POLICY"]
+    );
+}
+
 /// `entry` with the link the store gives it, so its invariants hold.
 fn linked(mut entry: AccessLogEntry) -> AccessLogEntry {
     entry.link = AccessLogLink {
@@ -394,19 +427,21 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             Refusal::PurposeMissing,
             professional(DR_B),
             None,
-            Some(purpose.clone()),
+            Some(purpose),
             settings("open", &[], &[], &[]),
             Item::Ehr,
             "ACCESS_POLICY",
         ),
         (
-            Refusal::PurposeNotPermitted,
-            professional(DR_B),
-            Some("HRESCH"),
-            Some(purpose),
+            Refusal::PolicyDenied,
+            performing(CallerKind::Professional, DR_B, "NURSE"),
+            None,
+            Some(policy(&json!({ "rules": [
+                rule("permit", &json!({})),
+                rule("deny", &json!({ "applies_to": [role_scope("NURSE")] }))] }))),
             settings("open", &[], &[], &[]),
             Item::Ehr,
-            "ACCESS_POLICY",
+            "rule 2 of ACCESS_POLICY",
         ),
         (
             Refusal::ConsentRequired,
