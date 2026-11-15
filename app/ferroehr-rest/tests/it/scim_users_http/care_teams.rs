@@ -32,7 +32,7 @@ use crate::policy_fixture::{capability, grant, scope};
 /// The URN of FerroEHR's Group extension.
 const GROUP_EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group";
 /// The client id of the hospital's ADT system.
-const ADT: &str = "adt";
+pub(super) const ADT: &str = "adt";
 
 /// The router over a fresh database holding the default definitions, where
 /// [`CLIENT`] provisions under [`LOGIN`] and holds `write_care_relationship`,
@@ -78,7 +78,11 @@ fn system_token(client: &str) -> String {
 }
 
 /// The status, `ETag` and body of `GET /demographic/person/{id}` as `client`.
-async fn read_person(app: &Router, client: &str, id: &str) -> (StatusCode, String, Value) {
+pub(super) async fn read_person(
+    app: &Router,
+    client: &str,
+    id: &str,
+) -> (StatusCode, String, Value) {
     let request = common::req("GET", format!("{BASE}/demographic/person/{id}"))
         .auth(&system_token(client))
         .accept("application/json")
@@ -102,7 +106,7 @@ async fn read_person(app: &Router, client: &str, id: &str) -> (StatusCode, Strin
 
 /// The status and body of the `PUT` of `body` as the version after
 /// `version` of the `PERSON` `id`, as `client`.
-async fn write_person(
+pub(super) async fn write_person(
     app: &Router,
     client: &str,
     (id, version): (&str, &str),
@@ -128,7 +132,7 @@ fn term(code: &str) -> Value {
 
 /// A `member_of` care relationship of the default archetype from the
 /// `PERSON` `member` to the `GROUP` `team`, valid from 2026-01-01.
-fn member_of(member: &str, team: &str) -> Value {
+pub(super) fn member_of(member: &str, team: &str) -> Value {
     let reference = |class: &str, id: &str| {
         json!({ "_type": "PARTY_REF", "namespace": "demographic", "type": class,
                 "id": { "_type": "HIER_OBJECT_ID", "value": id } })
@@ -156,7 +160,7 @@ fn member_of(member: &str, team: &str) -> Value {
 
 /// The SCIM Group `name` of `client` with `members`, a care team when
 /// `care_team`; the status and body.
-async fn group(
+pub(super) async fn group(
     app: &Router,
     client: &str,
     name: &str,
@@ -174,12 +178,12 @@ async fn group(
 }
 
 /// The id of a created SCIM Group.
-fn id_of(created: &Value) -> String {
+pub(super) fn id_of(created: &Value) -> String {
     created["id"].as_str().expect("an id").to_owned()
 }
 
 /// The `relationships` of the `PERSON` `id` the ADT system reads.
-async fn relationships(app: &Router, id: &str) -> Vec<Value> {
+pub(super) async fn relationships(app: &Router, id: &str) -> Vec<Value> {
     let (status, _, body) = read_person(app, ADT, id).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     body["relationships"]
@@ -189,7 +193,7 @@ async fn relationships(app: &Router, id: &str) -> Vec<Value> {
 }
 
 /// Whether `relationship` carries `ferroehr-operations::member_of`.
-fn carries_member_of(relationship: &Value) -> bool {
+pub(super) fn carries_member_of(relationship: &Value) -> bool {
     relationship
         .to_string()
         .contains("\"code_string\":\"member_of\"")

@@ -947,12 +947,14 @@ SCIM write to such a Group is **400** `invalidValue`.
 update of an `inactive` or `abandoned` `PERSON` (RM common master06 §Version
 Lifecycle), so such a `PERSON` cannot take a membership change, and an
 inactive `PERSON` binds to nothing. Setting a User's `active` to `false`
-therefore drops all its memberships in the same version, and each Group's
-`ETag` changes. Microsoft Entra ID often disables a user and then removes it
+therefore drops its memberships in the same version, and each Group's
+`ETag` changes. A membership of a care-team Group stays, as does every other
+care relationship, since SCIM never changes one ([Deprovisioning a team
+member](../operational-policy.md#deprovisioning-a-team-member)). Microsoft Entra ID often disables a user and then removes it
 from its groups; the later `remove` finds nothing to remove and answers
 **204**. An `add` naming an inactive or abandoned User is **400**
 `invalidValue` ("reactivate the User first"). A reactivated User belongs to
-no Group until its client adds it again.
+no plain Group until its client adds it again.
 
 ### Provision from Microsoft Entra ID
 

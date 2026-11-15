@@ -159,11 +159,10 @@ pub(crate) async fn reindex_committed(
         .as_ref()
         .map_or(&[][..], |f| f.targets.as_slice());
     party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
-    let care = grants::caller::CareBefore::read(tx, committed).await?;
+    grants::caller::check_care(tx, ctx.binding, committed, facts).await?;
     reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
-        .map_err(selector_in_use)?;
-    care.check(tx, ctx.binding).await
+        .map_err(selector_in_use)
 }
 
 /// Rebuilds the reverse-relationship index of the party `vo_id` of `kind` from
