@@ -142,13 +142,15 @@ profile, and the server acts on the kind:
     holds it to the launch-context patient. A read without it is refused with
     `403`, and the access record carries the reference with the other
     external fields;
-  - under an NL agreement, Wabvpz Art. 15f holds an insurer and an
-    occupational or insurance physician out. A caller whose `nl.role` is the
-    UZI role 01.008 (bedrijfsarts) or 01.048 (verzekeringsarts) is refused
-    with `403` as `refused-wabvpz-role`, and a caller whose
-    `nl.organisation_type` is missing or is not a care provider type of
-    Nictiz's `OrganisatieTypeCodelijst` is refused with `403` as
-    `refused-wabvpz-organisation-type`, which is how an insurer is refused;
+  - the professional roles and the facility types its token attests, in the
+    claims its `[[auth.federation]]` table maps to
+    `professional.hp_professional_role` and `provider.facility_type`, are
+    read as the caller's roles and its organisation's types, each a code of
+    the system the value names. The controller's rules name callers by them
+    ([Controller rules](operational-policy.md#controller-rules)), so a
+    national rule such as one that keeps insurers or occupational physicians
+    out of an exchange is a rule you commit, refused with `403` as
+    `refused-policy-denied`. A value that names no system matches no rule;
   - a `chained` organisation request carries the requester's correlation id
     in the claim or attested `authorization_details` member its
     `[[auth.federation]]` table maps to `correlation_id`, as one string; a

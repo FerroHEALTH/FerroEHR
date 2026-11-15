@@ -676,6 +676,9 @@ pub enum ForeignKind {
     /// A role a `ROLE` is named by, such as a professional role code
     /// (RM Demographic IM, `PARTY.type()`).
     Role,
+    /// A type an `ORGANISATION` is named by, such as a healthcare facility
+    /// type code (RM Demographic IM, `PARTY.type()`).
+    OrganisationType,
 }
 
 impl fmt::Display for ForeignKind {
@@ -686,6 +689,7 @@ impl fmt::Display for ForeignKind {
             Self::Purpose => "purpose",
             Self::LegalGround => "legal ground",
             Self::Role => "role",
+            Self::OrganisationType => "organisation type",
         })
     }
 }

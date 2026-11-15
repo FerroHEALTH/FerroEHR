@@ -40,7 +40,6 @@ commit the result.
 | IHE IUA supplement, Revision 2.5, at the `IHE/ITI.IUA` tag | `scripts/vendor/ihe-iua.sh` | `docs/specs/ihe-iua/` |
 | Nuts RFC021, VP Token Grant Type, at a pinned `nuts-foundation/nuts-specification` commit | `scripts/vendor/nuts-rfc.sh` | `docs/specs/nuts-rfc/` |
 | Mitz Implementatiehandleiding Open en Gesloten Vraag 3.8.2, cache only (no licence stated) | `scripts/vendor/mitz.sh` | record `docs/specs/mitz/`, cache `.vendor-cache/mitz/` |
-| Nictiz zib 2020 package excerpt (the `organization-type` CodeSystem and the `OrganisatieTypeCodelijst` ValueSet; CC0 1.0); the package tarball as published, the package's `uzi-rolcode` CodeSystem and the UZI-register CPS v11.7 its codes and titles reproduce, cache only (CIBG copyright, no reproduction; `--test-inputs` fetches the CodeSystem for the Wabvpz tests) | `scripts/vendor/nl-role-codes.sh` | `docs/specs/nl-role-codes/`, cache `.vendor-cache/nl-role-codes/` |
 | IHE Basic Audit Log Patterns 1.1.4 (Volume 1, the content profiles, the `AuditEvent` profile sources), at the `IHE/ITI.BasicAudit` tag | `scripts/vendor/ihe-balp.sh` | `docs/specs/ihe-balp/` |
 | FHIR R4 and R5 `AuditEvent` pages (resource, definitions, mappings, licence) | `scripts/vendor/fhir-auditevent.sh` | `docs/specs/fhir-auditevent/` |
 | FHIR R4 and R5 `Consent` (resource, definitions, StructureDefinition, the bound value sets, the examples in JSON, licence) | `scripts/vendor/fhir-consent.sh` | `docs/specs/fhir-consent/` |

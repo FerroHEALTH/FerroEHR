@@ -308,10 +308,10 @@ pub enum ServiceError {
     Restricted(Refusal),
     /// A person may not make the change, the wire's `403` (EHDS Art. 5;
     /// [`ServiceError::not_permitted`]); its kind is the access evaluator's
-    /// refusal code when the evaluator refused ([`ServiceError::refused`]).
+    /// refusal when the evaluator refused ([`ServiceError::refused`]).
     /// No openEHR spec governs it: our own design/extension.
     #[error(transparent)]
-    Forbidden(Refusal<Option<openehr_rm::draft::access_control::terminology::Refusal>>),
+    Forbidden(Refusal<Option<Refused>>),
     /// The query outran its execution budget, the wire's `408` (`responses/408_Query.yaml`).
     #[error(transparent)]
     Timeout(Refusal),
@@ -379,6 +379,17 @@ fn unprocessable(kind: Invalid, message: String) -> ServiceError {
     }
 }
 
+/// A refusal of the access evaluator: its `refused-*` code and the legal
+/// grounds of the controller rules that decided it, empty for any other
+/// step.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Refused {
+    /// The `refused-*` code.
+    pub code: openehr_rm::draft::access_control::terminology::Refusal,
+    /// The legal grounds the deciding rules name.
+    pub legal_grounds: Vec<openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText>,
+}
+
 impl ServiceError {
     /// A malformed-request refusal (`400`), the generic precondition.
     ///
@@ -419,14 +430,21 @@ impl ServiceError {
         ServiceError::Forbidden(Refusal::new(None, message))
     }
 
-    /// A refusal (`403`) of the access evaluator under `code`, which the wire
-    /// names beside `message`.
+    /// A refusal (`403`) of the access evaluator under `code`, resting on
+    /// `legal_grounds`, which the wire names beside `message`.
     #[must_use]
     pub fn refused(
         code: openehr_rm::draft::access_control::terminology::Refusal,
+        legal_grounds: Vec<openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText>,
         message: impl Into<String>,
     ) -> Self {
-        ServiceError::Forbidden(Refusal::new(Some(code), message))
+        ServiceError::Forbidden(Refusal::new(
+            Some(Refused {
+                code,
+                legal_grounds,
+            }),
+            message,
+        ))
     }
 
     /// A refusal (`403`) of a research-side disclosure the subject objected to.

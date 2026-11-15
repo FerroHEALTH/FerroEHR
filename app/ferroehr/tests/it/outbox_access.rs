@@ -18,7 +18,7 @@ use ferroehr::access_eval::procedure::{Caller, Emergency};
 use ferroehr::access_eval::scope::CategoryIndex;
 use ferroehr::extensions::outbox::OutboxDomain;
 use ferroehr::ids::EhrId;
-use ferroehr::party_binding::grants::caller::CallerFacts;
+use ferroehr::party_binding::grants::caller::facts::CallerFacts;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
