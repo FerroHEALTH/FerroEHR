@@ -2315,8 +2315,6 @@ dependencies = [
  "mimalloc",
  "openehr-its",
  "openehr-sdt",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
  "serde_json",
  "sqlx",
  "tokio",
