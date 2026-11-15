@@ -78,7 +78,6 @@ YAML
   FERROEHR__AUTH__SMART__PATIENT_ISSUERS: http://localhost:8180/patients
   FERROEHR__AUTH__DESCRIBED_ISSUER: https://keycloak.localhost:8443/auth/realms/ferroehr
 YAML
-      hospital_pix_env
     fi
     cat <<'YAML'
 services:
@@ -112,7 +111,6 @@ services:
     volumes:
       - keycloak-tls:/run/ferroehr-dev-tls:ro
 YAML
-    [[ -n "$patients" ]] && hospital_pix_config
   } > "$out"
   printf '%s' "$out"
 }
@@ -1392,9 +1390,10 @@ hospital_pixm() {
   hospital_files patients
   probe "P-HOSP-PIXM-BOOT" "$PROBE_WORKING" "deployment" "#5610" \
     "the stack boots again with the default pixm subject index and the portal issuer"
-  if ! hospital_up; then
+  if ! hospital_up || ! hospital_pix_up; then
     probe_fail "two serving instances on pixm" "$(replica_state "${HOSPITAL_FILES[@]}")"
     h_boot_log
+    hospital_pix_down
     probe_done
     return 0
   fi
@@ -1472,4 +1471,5 @@ hospital_pixm() {
   probe_done
 
   hospital_pix_merge
+  hospital_pix_down
 }

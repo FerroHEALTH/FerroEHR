@@ -20,13 +20,45 @@ HP_SOURCE="urn:oid:2.999.1.1"
 # The clinical pseudonymisation domain.
 HP_CLINICAL="urn:oid:2.999.7.1"
 
-# The environment and the FerroPIX configuration the PMIR leg adds to the
-# hospital overlay: FerroEHR subscribes with the quickstart client `ferroehr`
-# and trusts the feed of the client `ferropix`; FerroPIX runs PMIR, its
-# operator API and, for the plain-http channel of the compose network, the
-# development profile (FerroPIX admits an http channel endpoint there alone).
-hospital_pix_env() {
-  cat <<'YAML'
+# The FerroPIX release of the PMIR leg, pinned by digest: the first to
+# authenticate its ITI-93 sender (FerroPIX #655) and to state every Patient's
+# `active` and links (FerroPIX #656).
+HP_FERROPIX_IMAGE="ghcr.io/ferrohealth/ferropix:0.0.31@sha256:6681a8e3f923ecc07ceaa3cc7ede679e2c9fd471c25560dad12c82edaafbd6df"
+
+# Writes once per run, under `dir`, a test CA and the certificate both
+# instances serve their listener with (`localhost`, `127.0.0.1`): ITI-93 needs
+# secure transport (PMIR 1.6.0 §2:3.93.5), so the feed reaches FerroEHR over
+# TLS the CA anchors.
+hospital_pix_tls() {
+  local dir="$1"
+  [[ -s "$dir/ferroehr.crt" ]] && return 0
+  mkdir -p "$dir"
+  openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 2 \
+    -subj "/CN=FerroEHR hospital probe CA" -addext basicConstraints=critical,CA:true \
+    -keyout "$dir/ca.key" -out "$dir/ca.crt" 2>/dev/null
+  openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -subj "/CN=localhost" \
+    -keyout "$dir/ferroehr.key" -out "$dir/ferroehr.csr" 2>/dev/null
+  openssl x509 -req -in "$dir/ferroehr.csr" -CA "$dir/ca.crt" -CAkey "$dir/ca.key" \
+    -CAcreateserial -days 2 -out "$dir/ferroehr.crt" \
+    -extfile <(printf 'subjectAltName=DNS:localhost,IP:127.0.0.1\nextendedKeyUsage=serverAuth\n') 2>/dev/null
+  # NOTE: the containers run as a non-root user; the key is a throwaway of this run.
+  chmod 0755 "$dir"
+  chmod 0644 "$dir/ca.crt" "$dir/ferroehr.crt" "$dir/ferroehr.key"
+}
+
+# The overlay of the PMIR leg, written to `out` with the TLS material under
+# `dir`: both instances serve TLS under an https public base URL, subscribe
+# with the quickstart client `ferroehr` and trust the feed of the client
+# `ferropix`; FerroPIX runs on its production profile with PMIR, its operator
+# API and the consumer entry that presents its IUA token to FerroEHR over TLS
+# the test CA anchors.
+hospital_pix_overlay() {
+  local out="$1" dir="$2"
+  cat > "$out" <<YAML
+x-pix-env: &pix-env
+  FERROEHR__SERVER__PUBLIC_BASE_URL: https://localhost:8080
+  FERROEHR__SERVER__TLS__CERTIFICATE_FILE: /run/pmir-tls/ferroehr.crt
+  FERROEHR__SERVER__TLS__KEY_FILE: /run/pmir-tls/ferroehr.key
   FERROEHR__PIX__FEED_ISSUER: http://localhost:8180/quickstart
   FERROEHR__PIX__FEED_CLIENT_ID: ferropix
   FERROEHR__PIX__ENDPOINT__URL: http://localhost:8090/fhir
@@ -34,27 +66,24 @@ hospital_pix_env() {
   FERROEHR__PIX__ENDPOINT__CREDENTIALS__OAUTH__CLIENT_ID: ferroehr
   FERROEHR__PIX__ENDPOINT__CREDENTIALS__OAUTH__CLIENT_SECRET: quickstart
   FERROEHR__PIX__ENDPOINT__CREDENTIALS__OAUTH__SCOPE: system/Subscription.cruds
-YAML
-}
-
-# The FerroPIX release of the PMIR leg, pinned by digest: the first to
-# authenticate its ITI-93 sender (FerroPIX #655) and to state every Patient's
-# `active` and links (FerroPIX #656).
-HP_FERROPIX_IMAGE="ghcr.io/ferrohealth/ferropix:0.0.31@sha256:6681a8e3f923ecc07ceaa3cc7ede679e2c9fd471c25560dad12c82edaafbd6df"
-
-# FerroPIX's image and configuration of the PMIR leg, appended to the
-# overlay's services.
-hospital_pix_config() {
-  printf '  ferropix:\n    image: %s\n' "$HP_FERROPIX_IMAGE"
-  cat <<'YAML'
+services:
+  ferroehr:
+    environment: *pix-env
+    volumes:
+      - $dir:/run/pmir-tls:ro
+  ferroehr-2:
+    environment: *pix-env
+    volumes:
+      - $dir:/run/pmir-tls:ro
+  ferropix:
+    image: $HP_FERROPIX_IMAGE
+    volumes:
+      - $dir:/run/pmir-tls:ro
 configs:
   ferropix-config:
     content: |
-      profile = "development"
+      profile = "production"
       public_base_url = "http://localhost:8090"
-
-      [dev]
-      loopback = false
 
       [db]
       url_file = "/etc/ferropix/db-url"
@@ -90,7 +119,10 @@ configs:
       enabled = true
 
       [[pmir.feed.consumers]]
-      url = "http://localhost:8080"
+      url = "https://localhost:8080"
+
+      [pmir.feed.consumers.tls]
+      trust_roots_file = "/run/pmir-tls/ca.crt"
 
       [pmir.feed.consumers.credentials.oauth]
       token_endpoint = "http://localhost:8180/quickstart/token"
@@ -102,6 +134,30 @@ configs:
       deployment = "compose"
       state_dir = "/var/lib/ferropix"
 YAML
+  printf '%s' "$out"
+}
+
+# Restarts both instances and FerroPIX on the PMIR leg's overlay, over the
+# stack hospital_up brought up: the provisioning one-shots ran over plain http
+# before, and from here every call reaches the instances over TLS.
+# shellcheck disable=SC2034 # H1 and H2 are read by h_base in hospital.sh
+hospital_pix_up() {
+  local dir="$PROBE_TMP/pmir-tls"
+  hospital_pix_tls "$dir" || return 1
+  HOSPITAL_FILES+=(-f "$(hospital_pix_overlay "$PROBE_TMP/hospital-pix.yml" "$dir")")
+  export CURL_CA_BUNDLE="$dir/ca.crt"
+  H1="https://localhost:${FERROEHR_PORT}"
+  H2="https://localhost:${HOSPITAL_REPLICA_PORT}"
+  hdc up -d --wait --force-recreate --no-deps ferropix >/dev/null 2>&1 || return 1
+  hospital_restart
+}
+
+# Puts the plain-http addresses back once the PMIR leg is done.
+# shellcheck disable=SC2034 # H1 and H2 are read by h_base in hospital.sh
+hospital_pix_down() {
+  unset CURL_CA_BUNDLE
+  H1="$CDR"
+  H2="http://localhost:${HOSPITAL_REPLICA_PORT}"
 }
 
 # A client credentials token of the quickstart issuer for `client` with
