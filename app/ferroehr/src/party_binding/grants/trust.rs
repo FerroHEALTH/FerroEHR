@@ -71,6 +71,12 @@ impl FederationTrust {
     pub fn holder(&self) -> Retention {
         self.holder
     }
+
+    /// This trust with the access records kept for `holder`.
+    #[must_use]
+    pub fn with_holder(self, holder: Retention) -> Self {
+        Self { holder, ..self }
+    }
 }
 
 /// One federation agreement in force, as the boot line and

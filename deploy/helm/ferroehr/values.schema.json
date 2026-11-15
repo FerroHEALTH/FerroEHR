@@ -589,22 +589,6 @@
                 "boolean",
                 "null"
               ]
-            },
-            "store": {
-              "type": [
-                "object",
-                "null"
-              ],
-              "properties": {
-                "retention": {
-                  "description": "How long access-log records are kept, an ISO 8601 calendar period of years or days (P3Y, P1830D); unset keeps them forever. The server judges it against the jurisdictional floors and ceilings at boot.",
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "default": null
-                }
-              }
             }
           }
         },

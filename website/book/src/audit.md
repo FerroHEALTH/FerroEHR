@@ -727,25 +727,61 @@ An emergency the caller does not declare is not marked.
 
 ### Retention, and who chooses it
 
-`[audit.store] retention` decides how long the repository keeps a record:
-`0`, the default, keeps them forever, and any other value sets the horizon.
+The controller decides how long the log keeps a record, in its access policy
+(`ACCESS_POLICY.log_retention`, written through
+[`/admin/access_policy`](operational-policy.md)). FerroEHR provides the
+mechanism and names no national law of its own. `log_retention` holds:
+
+- `in_union`: whether Regulation (EU) 2025/327 binds the controller. When it
+  does, Art. 9(2) keeps the access information "available for at least three
+  years from each date of access to the data", and FerroEHR refuses a shorter
+  period.
+- `period`: how long each record is kept from the date of access, in whole
+  years (`P5Y`) or whole days (`P1826D`). Absent keeps every record without
+  end.
+- `floors` and `ceilings`: the minimum and maximum periods the controller's
+  law sets, each with the provision that sets it, coded in the terminology the
+  jurisdiction names (an `ACCESS_RETENTION_BOUND`).
+
+A policy whose period breaks a floor or ceiling it declares is refused when it
+is written, with `400`, and the version in force stays. So is a ceiling below
+a floor, a ceiling with no period (a record kept without end outlasts every
+ceiling), a controller outside the Union with no floor, and a period in any
+unit other than years or days. Years are counted on the calendar: three years
+admit `P1096D` as a floor but not as a ceiling, since 1 096 days can outlast
+three calendar years. A new version applies to every record written after it,
+on every replica, with no restart.
+
+**With no `log_retention`, every record is kept without end.** That meets
+every floor, so the log never forgets evidence a data subject's right of access
+is served from. It is also undecided: GDPR Art. 5(1)(e) makes the period the
+controller's to set. The `log_retention` readiness indicator reads `degraded`
+until the access policy states it, and the instance stays in rotation. `ferroehr
+config check` reads only the configuration file, so it cannot see the policy;
+check the indicator on `GET /management/health` after the first policy write.
+
+A stored policy version whose `log_retention` does not read (a damaged store;
+the write check refuses one) is named and held loud. Each replica keeps the
+last retention that read and records every access under it, so the access log
+never stops, while the reaper purges nothing and the `log_retention`
+indicator reads `down`, naming the version, until a version that reads is
+committed.
+
 Every record stores the first date it may be deleted on, and the reaper
-deletes each record hourly on or after that date and never before it. An
-access record takes its end from the retention its categories and origins
-call for (Regulation (EU) 2025/327 Annex II 3.4), so two records written the
-same day can end on different dates; every other record ends the day after
-its date of access plus the horizon. A record written before FerroEHR stored
-per-record ends is reaped by the horizon.
+deletes each record hourly on or after that date and never before it. A
+record outside the access log ends the day after its date of access plus the
+period in force when it was written.
 
 **An openEHR access-log entry states its own retention.** Each
 `ACCESS_LOG_ENTRY` carries an `ACCESS_RETENTION` when it is written:
-`retain_until`, the last day it is kept, and `grounds`, the provisions that
-set the period. The period is the one the retention policy above computes from
-the entry's categories and origins, so an entry whose categories call for
-different periods keeps the longest, and an entry kept without end states no
-`retain_until`. The grounds are coded in the `ehds-logging` terminology: the
-legal ground of the floor (`eu-2025-327-art-9-2` for Art. 9(2)) and what called
-for the period (`default`, `category:<system>|<code>` or `origin:<key>`). The
+`retain_until`, the last day it is kept; `grounds`, the provisions that set
+the period; and `policy`, the version of the access policy it was taken from.
+An entry kept without end states no `retain_until`. The grounds are Art. 9(2)
+for a controller in the Union, coded by the regulation's European Legislation
+Identifier with the subdivision as the code
+(`http://data.europa.eu/eli/reg/2025/327/oj`, `art_9.par_2`), then each
+declared floor and ceiling as the controller coded it. The ELI coding is our
+own design (Council conclusions 2012/C 325/02 define the identifier). The
 same hourly worker replaces every entry whose `retain_until` has passed by an
 `ACCESS_LOG_TOMBSTONE` in place, in any order of expiry. The tombstone keeps the
 entry's uid, `system_id`, `time_recorded` and chain link, names the grounds of
@@ -756,9 +792,7 @@ to it. An erasure a law orders before the period ends takes the same path
 through `POST {ext}/admin/access-log/erase`, with the law's provisions as the
 tombstone's grounds; the erasure is an access record of its own
 (`access-log-erasure:<uid>`) naming the administrator
-([Admin APIs](operations-admin-apis.md)). No configuration key decides an
-entry's period beyond `[audit.store] retention`, which stays the floor every
-period is held to.
+([Admin APIs](operations-admin-apis.md)).
 
 **A tombstone is kept as long again, then folds into a gap.** A tombstone
 holds no EHR, no accessor and no purpose, but its content digest is a hash
@@ -811,45 +845,19 @@ back a tombstone or an expired entry at a position a gap holds. The
 metrics count both logs, with `chain` = `local` or `imported`. No openEHR
 specification governs this: our own design (#5664).
 
-**The default is deliberate.** An access log is the evidence a data subject's right of access is served from, and a repository that silently
-forgets is worse than one that grows — so the software keeps everything until
-an operator says otherwise, rather than choosing a horizon on their behalf.
-
-Choosing that horizon is the deployment's, and it is a legal question:
-EHDS Art. 9(2) makes the access information "available for at least three
-years from each date of access to the data", and national law can ask for
-longer. NEN 7513 is the Dutch reference for this log and the Wabvpz for how
-long it must survive. The setting is per node, and one node serves one
-organisation, so two organisations needing different horizons run two
-instances.
-
-**A floor is enforced where a jurisdiction sets one.** The jurisdictions a
-deployment answers to are the ones its `[privacy.identifier_scan]` rules name,
-and where one publishes a minimum retention for the access log the server
-refuses to boot with a shorter horizon, naming the configured value and the
-floor. `0` always passes. The floors are written in calendar years, as the law
-writes them: a horizon set as `[audit.store] retention` is compared
-against the years exactly, and one set as `retention` against the most
-days those years can span (the day count in brackets below). The floors
-registered:
-
-| Jurisdiction | Floor | Source |
-|---|---|---|
-| Every EU Member State (AT, BE, BG, CY, CZ, DE, DK, EE, ES, FI, FR, GR, HR, HU, IE, IT, LT, LU, LV, MT, NL, PL, PT, RO, SE, SI, SK) | three years from each date of access (`1096` days, the most three calendar years can span) | [Regulation (EU) 2025/327](https://eur-lex.europa.eu/eli/reg/2025/327/oj) (EHDS) Art. 9(2); a longer national floor wins. Iceland, Liechtenstein and Norway are not listed: EHDS reaches the EEA only through an EEA Joint Committee decision |
-| NL | five years from the moment the entry is written (`1830` days, the most five calendar years can span) | [Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391) (Stcrt. 2019, 38007), under Art. 5 of the [Besluit elektronische gegevensverwerking door zorgaanbieders](https://wetten.overheid.nl/BWBR0040238), which binds the period to NEN 7513 |
-| CH | one year, and kept apart from the processing system (`366` days, the most one calendar year can span) | [Datenschutzverordnung (DSV) Art. 4 Abs. 5](https://www.fedlex.admin.ch/eli/cc/2022/568/de), as amended on 1 December 2025, for the logs of a large-scale automated processing of sensitive personal data; the separate storage is the deployment's, through the [forwarding sinks](#getting-the-log-out) |
-
-For the Netherlands the five national years win over the three EHDS years;
-Switzerland is outside the Union and keeps its one year. Of the other shipped
-jurisdictions, DE, FI and SE carry the EHDS floor, while GB and NO have no
-floor registered: an unknown requirement is never guessed at, and a deployment
-there sets its own. Art. 9 applies from 26 March 2029 for patient summaries,
-prescriptions and dispensations and from 26 March 2031 for the other priority
-categories (Art. 105). The floor is enforced from this release on, so a log
-kept today already meets it when Art. 9 applies.
-The effective retention is on the boot line beside the audit-enabled facts and
-on `GET /management/info` under `audit`.
-A record takes about 1.2 KB on disk, so the horizon decides how far the log
+Choosing the period is a legal question for the controller. NEN 7513 is the
+Dutch reference for this log and the Besluit vaststelling bewaartermijn
+logging sets its five years; SGB V § 309 Abs. 1 caps the German
+telematics-infrastructure log at three years; DSV Art. 4 Abs. 5 keeps a Swiss
+log at least one year. A controller bound by one of them declares it as a
+floor or ceiling with its provision. Art. 9 applies from 26 March 2029 for
+patient summaries, prescriptions and dispensations and from 26 March 2031 for
+the other priority categories (Art. 105). FerroEHR holds the Art. 9(2) floor
+from this release on, so a log kept today already meets it when Art. 9
+applies. One instance serves one access policy, so two controllers needing
+different periods run two instances.
+The retention in force is the access policy's (`GET {ext}/admin/access_policy`).
+A record takes about 1.2 KB on disk, so the period decides how far the log
 grows ([Storage sizing](operations.md#audit-retention)).
 
 ### The access log at steady state
@@ -1082,7 +1090,7 @@ release joins the digest in the same release.
 The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
 from them when the record is read (ITI-81) or delivered (the FHIR feed). What
 the rendering takes from the configuration (`source_id`, `enterprise_site_id`,
-`server_host`, `value_if_missing`, the store horizon, the audit category register and
+`server_host`, `value_if_missing`, the access policy's log retention, the audit category register and
 `emergency_purpose_codes`) is kept once per distinct configuration in
 `audit.audit_render_policy`, keyed by the SHA-256 of its text, and every record
 names the policy it was written under. A record therefore renders the same

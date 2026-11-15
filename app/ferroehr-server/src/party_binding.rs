@@ -180,13 +180,14 @@ pub fn install(
         .iter()
         .map(|settings| settings.issuer.clone())
         .chain(key_issuers.iter().cloned());
+    let holder = service.access_policy().log_retention().period;
     let service = service
         .with_import_policy(ImportPolicy::new(logins))
         .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
         .with_party_namespace(&config.authz.party_binding.namespace)
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,
-            config.audit.store.horizon(),
+            holder,
         ));
     let sections = config.authz.party_binding.sections();
     let mapping = ferroehr::config::binding::installed_mapping(

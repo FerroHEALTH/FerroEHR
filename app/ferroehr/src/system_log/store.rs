@@ -301,10 +301,10 @@ impl AuditStore {
         self
     }
 
-    /// This store writing every record from now on with `categories` as its
-    /// category map; a record of an earlier map keeps that map's policy.
-    pub fn set_categories(&self, categories: &crate::system_log::categories::CategoryMapConfig) {
-        self.writing.set_categories(categories);
+    /// This store writing every record from now on under the policy in force
+    /// as `change` alters it; a record of an earlier map keeps that map's.
+    pub fn change_render_policy(&self, change: impl FnOnce(&mut RenderPolicy)) {
+        self.writing.change(change);
     }
 
     /// The digest of `writing`, storing the policy the first time.

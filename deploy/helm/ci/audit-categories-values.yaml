@@ -1,13 +1,8 @@
-# A German deployment that is one of the SGB V § 307 controllers, which is the
-# shape that needs the access-log horizon in calendar years: the EHDS floor
-# (three years in every Member State) and the SGB V § 309 Abs. 1 ceiling (three
-# years) leave no day count that satisfies both, so the horizon is
-# `retention_years: 3`. The EHDS priority-category map it once carried is the
-# audit category admin register now, written through the admin API once the
-# server runs, so no chart value carries it.
-#
-# The identifier rules are narrowed to the German one on purpose: the shipped
-# set names NL as well, whose five-year floor would refuse a three-year horizon.
+# A German deployment whose audit policy lives outside the chart: the EHDS
+# priority-category map is the audit category admin register, and the access
+# log retention (the period and the SGB V § 309 Abs. 1 ceiling it answers to) is
+# the controller's ACCESS_POLICY, both written through the admin API once the
+# server runs, so no chart value carries either.
 #
 # Otherwise the production-minimal overlay: an external-Secret DSN and an OIDC
 # issuer, no key material.
@@ -56,10 +51,6 @@ config:
   privacy:
     identifier_scan:
       rules: [de-kvnr]
-  audit:
-    store:
-      retention: P3Y
-      sgb_v_309_controller: true
   record:
     subject_index: local
 

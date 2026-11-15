@@ -24,6 +24,8 @@
         "ACCESS_POLICY",
         "ACCESS_CLASSIFICATION",
         "ACCESS_LOG_RESTRICTION",
+        "ACCESS_LOG_RETENTION",
+        "ACCESS_RETENTION_BOUND",
         "VERSIONED_ACCESS_POLICY"
       ]
     }
@@ -494,7 +496,7 @@
     },
     "ACCESS_POLICY": {
       "name": "ACCESS_POLICY",
-      "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, holds the controller's own rules on which callers may perform which operations on which kinds of data, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.",
+      "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, holds the controller's own rules on which callers may perform which operations on which kinds of data, lists the named directives a subject can accept by reference, states what the subject's view of the access log withholds, and states how long the access log keeps an entry. Kept in its own versioned container, outside any EHR and outside the demographic service.",
       "ancestors": [
         "LOCATABLE"
       ],
@@ -577,6 +579,12 @@
             "lower": 0,
             "upper_unbounded": true
           }
+        },
+        "log_retention": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "log_retention",
+          "documentation": "How long the access log keeps each entry, and the legal bounds the controller declares on that period. Void keeps every entry without end.",
+          "type": "ACCESS_LOG_RETENTION"
         },
         "details": {
           "_type": "P_BMM_SINGLE_PROPERTY",
@@ -683,6 +691,87 @@
       "invariants": {
         "Accessor_kinds_valid": "accessor_kinds.for_all (k | terminology (Terminology_id_access).has_code_for_group_id (Group_id_accessor_kind, k.defining_code))",
         "Withheld_valid": "withheld.for_all (w | terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_log_withheld, w.defining_code))"
+      }
+    },
+    "ACCESS_LOG_RETENTION": {
+      "name": "ACCESS_LOG_RETENTION",
+      "documentation": "How long the access log keeps each entry, from the date of access, and the floors and ceilings the law binding the controller sets on that period. The controller declares the bounds; the system records them as the grounds of every entry (`ACCESS_RETENTION._grounds_`) and refuses a policy whose period breaks one.",
+      "ancestors": [
+        "LOCATABLE"
+      ],
+      "properties": {
+        "in_union": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "in_union",
+          "documentation": "Whether the controller declares itself bound by Regulation (EU) 2025/327, so that its Art. 9(2) keeps each entry at least three years from each date of access.",
+          "is_mandatory": true,
+          "type": "Boolean"
+        },
+        "period": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "period",
+          "documentation": "How long each entry is kept from the date of access; Void keeps it without end.",
+          "type": "DV_DURATION"
+        },
+        "floors": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "floors",
+          "documentation": "The minimum periods the law binding the controller sets, each with the provision that sets it.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_RETENTION_BOUND"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "ceilings": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "ceilings",
+          "documentation": "The maximum periods the law binding the controller sets, each with the provision that sets it.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_RETENTION_BOUND"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        }
+      },
+      "invariants": {
+        "Floors_valid": "floors /= Void implies not floors.is_empty",
+        "Ceilings_valid": "ceilings /= Void implies not ceilings.is_empty",
+        "Floor_outside_union": "not in_union implies floors /= Void",
+        "Period_union": "in_union and period /= Void implies period.magnitude >= P3Y",
+        "Period_floors": "floors /= Void and period /= Void implies floors.for_all (f | period.magnitude >= f.period.magnitude)",
+        "Ceilings_need_period": "ceilings /= Void implies period /= Void",
+        "Period_ceilings": "ceilings /= Void and period /= Void implies ceilings.for_all (c | period.magnitude <= c.period.magnitude)",
+        "Ceilings_floors": "ceilings /= Void and floors /= Void implies ceilings.for_all (c | floors.for_all (f | c.period.magnitude >= f.period.magnitude))"
+      }
+    },
+    "ACCESS_RETENTION_BOUND": {
+      "name": "ACCESS_RETENTION_BOUND",
+      "documentation": "One floor or ceiling on how long the access log keeps an entry, with the provision that sets it.",
+      "properties": {
+        "period": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "period",
+          "documentation": "The bound, counted from the date of access.",
+          "is_mandatory": true,
+          "type": "DV_DURATION"
+        },
+        "ground": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "ground",
+          "documentation": "The provision that sets the bound, coded in a terminology the jurisdiction names, such as the European Legislation Identifier of the act with the subdivision as the code.",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        }
+      },
+      "invariants": {
+        "Period_valid": "period.magnitude > 0"
       }
     },
     "VERSIONED_ACCESS_POLICY": {

@@ -318,9 +318,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   its own tombstone, which keeps its uid, time and link, so the chain verifies
   after its content is gone (`audit/0027_access_log_record.sql`,
   `access_log::store`). Each entry states its retention when it is written
-  (`access_log::retention`: `retain_until` and the grounds `ehds-logging`'s
-  policy computes from its categories and origins, the longest when they
-  differ), and the audit store's hourly worker replaces every entry past its
+  (`access_log::retention`: `retain_until` from the period of the access
+  policy's `log_retention`, the grounds it declares beside EHDS Art. 9(2)
+  coded by the regulation's ELI, and the policy version, #5660), and the audit store's hourly worker replaces every entry past its
   `retain_until` by its tombstone, in any order of expiry
   (`access_log::expiry`). A tombstone is kept one more retention horizon,
   its entry's own: its `fold_after` is `time_removed` plus the time its entry
@@ -1389,7 +1389,8 @@ values are never operations, and its validity is the grant's. The rules the
 configuration loader once applied at boot run at the `ROLE`'s commit
 (`party_binding::grants::check_agreements`, `422` naming each rule), judged
 against `ferroehr::config::federation::trust`, what `[auth]` trusts of each
-`federation` issuer and `[audit.store]`'s horizon: the partner's issuers are
+`federation` issuer, held against the period of the access policy's
+`log_retention` (`LivePolicy::attach_grants`, #5660): the partner's issuers are
 `federation` ones, one agreement per partner and accessor, a caller rate and
 `patient/` reads on every agreement, a contact point's `ehdsi_service`, and
 the EHDS Art. 13(4) and Annex II 3.2(b) rules of an organisation and of a

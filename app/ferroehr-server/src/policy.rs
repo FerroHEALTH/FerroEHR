@@ -37,5 +37,6 @@ pub async fn read_and_listen(
         .await
         .context("reading the access policy")?;
     service.access_policy().listened().spawn_listener(clinical);
+    service.access_policy().spawn_refresher();
     Ok(())
 }

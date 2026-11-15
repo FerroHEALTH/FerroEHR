@@ -346,7 +346,7 @@ record:**
 | Destination | stdout/stderr → node → your collector | its own store in the database, plus optional forwarding to an external repository |
 | Format | JSON lines, ours | DICOM PS3.15 plus FHIR `AuditEvent` (IHE BALP), standardised |
 | Retrieval | your log tool | the ITI-81 FHIR `AuditEvent` search endpoint |
-| Retention | your collector's policy | `config.audit.store.retention` (`0` keeps forever) |
+| Retention | your collector's policy | the access policy's `log_retention` (absent keeps forever) |
 | May it be sampled or dropped? | **yes**, it is diagnostics | **no** |
 
 > [!IMPORTANT]

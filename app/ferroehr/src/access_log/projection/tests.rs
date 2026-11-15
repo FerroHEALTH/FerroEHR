@@ -9,7 +9,8 @@ use secrecy::ExposeSecret as _;
 mod mapping;
 
 use super::Projection;
-use crate::access_log::entry::{entry_of, horizon_retention};
+use crate::access_log::entry::entry_of;
+use crate::access_log::retention::stated;
 use crate::access_log::store::canonical_form;
 use crate::system_log::access_binding::tests::{organisation, representative, system};
 use crate::system_log::binding::{BindingCode, BindingRecord, Identified, PartyTriple, Summary};
@@ -22,6 +23,7 @@ use crate::system_log::event::{
     EventOutcome, EventType, ObjectClass, QueryNaming, TokenAttributes,
 };
 use crate::system_log::render::{CompiledPolicy, RenderPolicy};
+use crate::system_log::retention::LogRetention;
 use ferrohealth_smart::assurance::AssuranceLevel;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 
@@ -202,7 +204,10 @@ pub(super) fn stored_entry(event: &AuditEvent, subject: Option<&str>) -> AccessL
         event,
         subject,
         "cdr.example.org",
-        horizon_retention(Some(jiff::civil::date(2031, 11, 13))),
+        stated(
+            Some(jiff::civil::date(2031, 11, 13)),
+            &LogRetention::default(),
+        ),
     )
     .expect("an entry");
     let stored = canonical_form(&entry).expect("a canonical form");

@@ -1,0 +1,26 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_RETENTION_BOUND",
+  "documentation": "One floor or ceiling on how long the access log keeps an entry, with the provision that sets it.",
+  "properties": {
+    "period": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "period",
+      "documentation": "The bound, counted from the date of access.",
+      "is_mandatory": true,
+      "type": "DV_DURATION"
+    },
+    "ground": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "ground",
+      "documentation": "The provision that sets the bound, coded in a terminology the jurisdiction names, such as the European Legislation Identifier of the act with the subdivision as the code.",
+      "is_mandatory": true,
+      "type": "DV_CODED_TEXT"
+    }
+  },
+  "invariants": {
+    "Period_valid": "period.magnitude > 0"
+  }
+}
+--------

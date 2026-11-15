@@ -1,0 +1,24 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_RETENTION_BOUND*
+
+h|*Description*
+2+a|One floor or ceiling on how long the access log keeps an entry, with the provision that sets it.
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*period*: `xref:data_types:date_time_package.adoc#_dv_duration_class[DV_DURATION]`
+a|The bound, counted from the date of access.
+
+h|*1..1*
+|*ground*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
+a|The provision that sets the bound, coded in a terminology the jurisdiction names, such as the European Legislation Identifier of the act with the subdivision as the code.
+
+h|*Invariants*
+2+a|__Period_valid__: `period.magnitude > 0`
+
+|===

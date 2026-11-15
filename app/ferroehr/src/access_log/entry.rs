@@ -20,7 +20,6 @@
 //! change proposal and no openEHR release, so no openEHR spec governs this
 //! module: our own design.
 
-use jiff::civil::Date;
 use openehr_base::containers::NonEmptyVec;
 use openehr_base::v1_3::base_types::identification::generic_id::GenericId;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
@@ -36,7 +35,6 @@ use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, Party
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::common::generic::party_self::PartySelf;
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
-use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_rm::v1_2::data_types::text::dv_text::{DvText, DvTextData};
 
@@ -63,8 +61,6 @@ use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention
 use openehr_rm::draft::access_log::access_log::accessed_item::AccessedItem;
 use openehr_rm::draft::access_log::access_log::accessor::Accessor;
 
-/// FerroEHR's terminology of the retention grounds an entry states.
-pub const RETENTION_TERMINOLOGY: &str = "ferroehr-access-log-retention";
 /// The terminology of a code a caller declared with no system.
 const LOCAL: &str = "local";
 /// The class an entry that changes the access log names the entry it changed
@@ -175,14 +171,18 @@ pub fn for_store(
     let retention = match &event.category {
         Some(category) => crate::access_log::retention::retention(
             &ctx.recording.retention,
+            &ctx.recording.log,
             event.timestamp,
             &category.classification,
             event.origins.iter().map(String::as_str),
         ),
-        None => horizon_retention(match crate::system_log::fhir::record_end(event, ctx) {
-            RecordEnd::On(date) => Some(date),
-            RecordEnd::Never => None,
-        }),
+        None => crate::access_log::retention::stated(
+            match crate::system_log::fhir::record_end(event, ctx) {
+                RecordEnd::On(date) => Some(date),
+                RecordEnd::Never => None,
+            },
+            &ctx.recording.log,
+        ),
     };
     entry_of(event, subject, &ctx.source_id, retention).map(Box::new)
 }
@@ -616,28 +616,6 @@ fn channel(event: &AuditEvent) -> Option<AccessChannel> {
             .and_then(|agreement| agreement.correlation_id.clone()),
         client_address: event.client_ip.clone(),
     })
-}
-
-/// The `ACCESS_RETENTION` of an entry the audit store's horizon keeps: kept
-/// through the day before `end`, the first date it may be removed on, or
-/// without end when `end` is `None`.
-#[must_use]
-pub fn horizon_retention(end: Option<Date>) -> AccessRetention {
-    AccessRetention {
-        retain_until: end.and_then(|end| end.yesterday().ok()).map(|last| DvDate {
-            normal_status: None,
-            normal_range: None,
-            other_reference_ranges: None,
-            magnitude_status: None,
-            accuracy: None,
-            value: last.to_string(),
-        }),
-        grounds: NonEmptyVec::of(coded_text(
-            RETENTION_TERMINOLOGY,
-            "store-horizon",
-            "the retention horizon of the audit store",
-        )),
-    }
 }
 
 /// FerroEHR's access details of the access `event` records, which its

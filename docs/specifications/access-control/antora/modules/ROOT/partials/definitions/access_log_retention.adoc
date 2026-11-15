@@ -1,0 +1,56 @@
+[cols="^1,3,5"]
+|===
+h|*Class*
+2+^h|*ACCESS_LOG_RETENTION*
+
+h|*Description*
+2+a|How long the access log keeps each entry, from the date of access, and the floors and ceilings the law binding the controller sets on that period. The controller declares the bounds; the system records them as the grounds of every entry (`ACCESS_RETENTION._grounds_`) and refuses a policy whose period breaks one.
+
+h|*Inherit*
+2+|`xref:common:archetyped_package.adoc#_locatable_class[LOCATABLE]`
+
+h|*Attributes*
+^h|*Signature*
+^h|*Meaning*
+
+h|*1..1*
+|*in_union*: `xref:{class_boolean}[Boolean]`
+a|Whether the controller declares itself bound by Regulation (EU) 2025/327, so that its Art. 9(2) keeps each entry at least three years from each date of access.
+
+h|*0..1*
+|*period*: `xref:data_types:date_time_package.adoc#_dv_duration_class[DV_DURATION]`
+a|How long each entry is kept from the date of access; Void keeps it without end.
+
+h|*0..1*
+|*floors*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_retention_bound_class[ACCESS_RETENTION_BOUND]>`
+a|The minimum periods the law binding the controller sets, each with the provision that sets it.
+
+h|*0..1*
+|*ceilings*: `xref:{class_list}[List]<xref:access_control:access_control_package.adoc#_access_retention_bound_class[ACCESS_RETENTION_BOUND]>`
+a|The maximum periods the law binding the controller sets, each with the provision that sets it.
+
+h|*Invariants*
+2+a|__Floors_valid__: `floors /= Void implies not floors.is_empty`
+
+h|
+2+a|__Ceilings_valid__: `ceilings /= Void implies not ceilings.is_empty`
+
+h|
+2+a|__Floor_outside_union__: `not in_union implies floors /= Void`
+
+h|
+2+a|__Period_union__: `in_union and period /= Void implies period.magnitude >= P3Y`
+
+h|
+2+a|__Period_floors__: `floors /= Void and period /= Void implies floors.for_all (f | period.magnitude >= f.period.magnitude)`
+
+h|
+2+a|__Ceilings_need_period__: `ceilings /= Void implies period /= Void`
+
+h|
+2+a|__Period_ceilings__: `ceilings /= Void and period /= Void implies ceilings.for_all (c | period.magnitude <= c.period.magnitude)`
+
+h|
+2+a|__Ceilings_floors__: `ceilings /= Void and floors /= Void implies ceilings.for_all (c | floors.for_all (f | c.period.magnitude >= f.period.magnitude))`
+
+|===

@@ -450,8 +450,8 @@ impl Agreement {
         };
         if !covers(period, holder) {
             errors.push(format!(
-                "it keeps the requester's log for \"{period}\", shorter than this node's \
-                 audit.store {}",
+                "it keeps the requester's log for \"{period}\", shorter than the access \
+                 policy's log retention of {}",
                 holder.describe()
             ));
         }

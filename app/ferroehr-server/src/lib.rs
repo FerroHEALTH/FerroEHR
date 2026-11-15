@@ -500,7 +500,6 @@ fn log_resolved_posture(
             queue_capacity = audit.queue_capacity,
             fail_mode = ?audit.fail_mode,
             resolve_subject = audit.resolve_subject,
-            retention = %audit.store.horizon().describe(),
             "IHE ATNA audit enabled"
         );
     }
@@ -1017,6 +1016,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     indicators.push(Arc::new(indicators::PolicyListenersHealth::new(
         service.policy_listeners(),
     )));
+    indicators.push(Arc::new(indicators::LogRetentionHealth::new(Arc::clone(
+        service.access_policy(),
+    ))));
     // The listeners, the access copies and the audit drain, read at each
     // collection (#5591).
     let meter = telemetry.telemetry().meter(telemetry::metrics::SCOPE);

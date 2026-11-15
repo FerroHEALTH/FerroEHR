@@ -9,9 +9,11 @@
 //! ([`check_policy`]), the root rules of a
 //! `LOCATABLE` and of the `controller`, and that each sensitivity and
 //! category a classification names, each role, purpose, sensitivity,
-//! category and legal ground a controller rule names, and each legal ground
-//! of a restriction of the access log's subject view, comes from the
-//! jurisdiction's terminology ([`ForeignCode`]).
+//! category and legal ground a controller rule names, each legal ground
+//! of a restriction of the access log's subject view, and each provision of
+//! the access log retention, comes from the jurisdiction's terminology
+//! ([`ForeignCode`]); and that the access log retention is one the audit
+//! trail keeps records under ([`crate::access_policy::retention`]).
 //!
 //! The draft package is FerroEHR's change proposal and no openEHR release:
 //! our own design over our own model (#5512).
@@ -66,6 +68,14 @@ pub enum PolicyDefect {
     /// which holds none.
     #[error(transparent)]
     NotForeign(#[from] NotForeign),
+    /// A period of the access log retention is no whole number of years or
+    /// days.
+    #[error(transparent)]
+    RetentionPeriod(#[from] crate::access_policy::retention::PeriodForm),
+    /// The access log retention breaks a bound it declares, as
+    /// `ehds-logging` counts calendar years and days.
+    #[error(transparent)]
+    Retention(#[from] crate::system_log::retention::RetentionDefect),
     /// The controller is not an `ORGANISATION`.
     #[error("the controller is a {0:?} reference; the controller is an ORGANISATION")]
     Controller(String),
@@ -115,6 +125,18 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
             ForeignCode::read(ForeignKind::LegalGround, ground)?;
         }
     }
+    if let Some(retention) = &policy.log_retention {
+        for bound in retention
+            .floors
+            .iter()
+            .flatten()
+            .chain(retention.ceilings.iter().flatten())
+        {
+            ForeignCode::read(ForeignKind::LegalGround, &bound.ground)?;
+        }
+    }
+    crate::access_policy::retention::log_retention(policy.log_retention.as_ref(), None)?
+        .policy()?;
     if policy.controller.r#type != CONTROLLER_TYPE {
         return Err(PolicyDefect::Controller(policy.controller.r#type.clone()));
     }

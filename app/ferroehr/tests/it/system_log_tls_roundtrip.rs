@@ -122,8 +122,6 @@ async fn the_drain_closes_its_connection_with_close_notify_when_it_exits() {
         enabled: true,
         store: StoreConfig {
             enabled: false,
-            retention: None,
-            sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
         },

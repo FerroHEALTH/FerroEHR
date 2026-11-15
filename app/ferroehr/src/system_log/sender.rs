@@ -58,7 +58,7 @@ use super::event::{AuditEvent, EmitOutcome};
 use crate::system_log::AuditError;
 use crate::system_log::categories::CategoryMapConfig;
 use crate::system_log::chain_check::ChainCheck;
-use crate::system_log::config::{AuditConfig, FailMode, Retention, StoreConfig};
+use crate::system_log::config::{AuditConfig, FailMode, StoreConfig};
 use crate::system_log::message::AuditContext;
 use crate::system_log::render::{CompiledPolicy, RenderPolicy};
 use crate::system_log::store::{AuditRecord, AuditStore, RecordEnd};
@@ -66,9 +66,11 @@ use crate::system_log::syslog::SyslogRoute;
 
 mod admission;
 mod categories;
+mod live;
 mod records;
 
 use categories::Classifiers;
+use live::LiveContext;
 #[cfg(feature = "fhir")]
 use records::submit_to_feed_spool;
 use records::{render_batch, submit_to_syslog};
@@ -122,9 +124,6 @@ pub const METRIC_SEND_FAILED: &str = "atna_audit_send_failed_total";
 /// Rows reaped by the retention job.
 pub const METRIC_REAPED: &str = "atna_audit_reaped_total";
 
-/// How often the retention reaper runs.
-const REAP_INTERVAL: Duration = Duration::from_hours(1);
-
 /// The drain's batch bound: how many queued events one `recv_many` takes at
 /// once (the store sink writes the whole batch in one multi-row INSERT).
 const DRAIN_BATCH: usize = 256;
@@ -160,6 +159,8 @@ struct SenderInner {
     legal_basis: Option<String>,
     /// The compiled category register every record is classified through.
     categories: Arc<Classifiers>,
+    /// The render policy and context the drain writes under.
+    context: Arc<LiveContext>,
     store: Option<AuditStore>,
     /// Whether the local store is currently accepting writes (`true` when the
     /// store is disabled — health then rides on the queue alone). Written by
@@ -541,21 +542,21 @@ pub async fn start(
     let (feed_notify, feed_spool) = start_feed(&config, store.as_ref(), &mut deliveries)?;
     #[cfg(not(feature = "fhir"))]
     let feed_notify = None;
+    let CompiledPolicy {
+        context: ctx,
+        categories,
+        emergency,
+    } = policy.compile()?;
+    let live = Arc::new(LiveContext::new(policy, ctx));
     let chain_check = store
         .as_ref()
-        .and_then(|store| spawn_store_upkeep(store, &config.store, &mut workers));
+        .and_then(|store| spawn_store_upkeep(store, &config.store, &live, &mut workers));
 
     if store.is_none() && syslog.is_none() && config.fhir_feed.is_none() {
         tracing::warn!(
             "ATNA auditing is enabled with no active sink — records will be rendered and discarded"
         );
     }
-
-    let CompiledPolicy {
-        context: ctx,
-        categories,
-        emergency,
-    } = policy.compile()?;
 
     let store_healthy = Arc::new(AtomicBool::new(true));
     let classifiers = Arc::new(Classifiers::new(categories));
@@ -570,7 +571,7 @@ pub async fn start(
     let join = tokio::spawn(drain(
         rx,
         sinks,
-        ctx,
+        Arc::clone(&live),
         Arc::clone(&classifiers),
         resolver,
         config.resolve_subject,
@@ -588,6 +589,7 @@ pub async fn start(
             emergency,
             legal_basis: config.legal_basis.clone(),
             categories: classifiers,
+            context: live,
             store,
             fail_mode: config.fail_mode,
             store_healthy,
@@ -658,9 +660,10 @@ fn start_feed(
 fn spawn_store_upkeep(
     store: &AuditStore,
     config: &StoreConfig,
+    live: &Arc<LiveContext>,
     workers: &mut Vec<JoinHandle<()>>,
 ) -> Option<ChainCheck> {
-    workers.push(tokio::spawn(reaper(store.clone(), config.horizon())));
+    workers.push(tokio::spawn(live::reaper(store.clone(), Arc::clone(live))));
     if config.verify_interval.is_zero() {
         return None;
     }
@@ -677,7 +680,7 @@ fn spawn_store_upkeep(
 async fn drain(
     mut rx: mpsc::Receiver<AuditEvent>,
     sinks: Sinks,
-    ctx: AuditContext,
+    live: Arc<LiveContext>,
     classifiers: Arc<Classifiers>,
     resolver: Option<SubjectResolver>,
     resolve_subject: bool,
@@ -700,6 +703,7 @@ async fn drain(
             break; // channel closed and drained
         }
 
+        let ctx = live.current();
         let unavailable = match (&resolver, resolve_subject) {
             (Some(resolve), true) => memoize_subjects(&batch, resolve, &subject_cache).await,
             _ => BTreeSet::new(),
@@ -830,34 +834,6 @@ async fn store_whole_batch(
     }
 }
 
-/// The hourly retention reaper, which also runs the access log's retention.
-#[expect(
-    clippy::infinite_loop,
-    reason = "the retention reaper is a detached background task with no \
-              shutdown channel — it ends when the runtime drops the task; \
-              declaring `-> !` is not an option because `tokio::spawn` would \
-              then need the never type as a type argument, which is unstable"
-)]
-async fn reaper(store: AuditStore, retention: Retention) {
-    let access_log = crate::access_log::store::AccessLogStore::new(store.pool.clone());
-    loop {
-        tokio::time::sleep(REAP_INTERVAL).await;
-        let now = jiff::Timestamp::now();
-        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
-        crate::access_log::expiry::scheduled(&access_log, now).await;
-        match store.reap_due(today, retention).await {
-            Ok(0) => {}
-            Ok(n) => {
-                crate::telemetry::metrics::metrics()
-                    .atna_audit_reaped
-                    .add(n, &[]);
-                tracing::debug!("ATNA audit retention reaped {n} records");
-            }
-            Err(e) => tracing::warn!("ATNA audit retention reap failed: {e}"),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::{LazyLock, Mutex};
@@ -872,8 +848,6 @@ mod tests {
             // No DB pool in these tests — exercise the transport path alone.
             store: StoreConfig {
                 enabled: false,
-                retention: None,
-                sgb_v_309_controller: false,
                 verify_interval: ferrohealth_config::units::Duration::from_secs(0),
                 full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             },
@@ -965,6 +939,11 @@ mod tests {
                 categories: Arc::new(Classifiers::new(
                     crate::system_log::categories::Classifier::default(),
                 )),
+                context: {
+                    let render = RenderPolicy::default();
+                    let compiled = render.compile().expect("the default policy compiles");
+                    Arc::new(LiveContext::new(render, compiled.context))
+                },
                 store: None,
                 fail_mode,
                 store_healthy: Arc::new(AtomicBool::new(store_healthy)),

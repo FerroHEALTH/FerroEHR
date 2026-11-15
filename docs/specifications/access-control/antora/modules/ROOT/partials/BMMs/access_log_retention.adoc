@@ -1,0 +1,61 @@
+[source,json]
+--------
+{
+  "name": "ACCESS_LOG_RETENTION",
+  "documentation": "How long the access log keeps each entry, from the date of access, and the floors and ceilings the law binding the controller sets on that period. The controller declares the bounds; the system records them as the grounds of every entry (`ACCESS_RETENTION._grounds_`) and refuses a policy whose period breaks one.",
+  "ancestors": [
+    "LOCATABLE"
+  ],
+  "properties": {
+    "in_union": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "in_union",
+      "documentation": "Whether the controller declares itself bound by Regulation (EU) 2025/327, so that its Art. 9(2) keeps each entry at least three years from each date of access.",
+      "is_mandatory": true,
+      "type": "Boolean"
+    },
+    "period": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "period",
+      "documentation": "How long each entry is kept from the date of access; Void keeps it without end.",
+      "type": "DV_DURATION"
+    },
+    "floors": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "floors",
+      "documentation": "The minimum periods the law binding the controller sets, each with the provision that sets it.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_RETENTION_BOUND"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    },
+    "ceilings": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "ceilings",
+      "documentation": "The maximum periods the law binding the controller sets, each with the provision that sets it.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_RETENTION_BOUND"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
+    }
+  },
+  "invariants": {
+    "Floors_valid": "floors /= Void implies not floors.is_empty",
+    "Ceilings_valid": "ceilings /= Void implies not ceilings.is_empty",
+    "Floor_outside_union": "not in_union implies floors /= Void",
+    "Period_union": "in_union and period /= Void implies period.magnitude >= P3Y",
+    "Period_floors": "floors /= Void and period /= Void implies floors.for_all (f | period.magnitude >= f.period.magnitude)",
+    "Ceilings_need_period": "ceilings /= Void implies period /= Void",
+    "Period_ceilings": "ceilings /= Void and period /= Void implies ceilings.for_all (c | period.magnitude <= c.period.magnitude)",
+    "Ceilings_floors": "ceilings /= Void and floors /= Void implies ceilings.for_all (c | floors.for_all (f | c.period.magnitude >= f.period.magnitude))"
+  }
+}
+--------
