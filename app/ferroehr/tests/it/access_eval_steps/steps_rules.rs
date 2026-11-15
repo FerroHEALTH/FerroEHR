@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Step 4 of the decision procedure: the controller's rules
+//! Step 5 of the decision procedure: the controller's rules
 //! (`ACCESS_POLICY.rules`, EHDS Art. 11(3)), which bind every caller but the
 //! subject, by the roles it performs in the demographic service, and which
 //! no permit of the subject lifts.
@@ -36,7 +36,7 @@ fn ruled(rules: &[Value], settings: Option<EhrAccessSettings>) -> Case {
 /// subject's directives permit, and every other role and operation is
 /// untouched.
 #[test]
-fn step_4_a_deny_rule_refuses_by_the_role_the_caller_performs() {
+fn step_5_a_deny_rule_refuses_by_the_role_the_caller_performs() {
     let patient_permit = directive(
         "consent",
         "permit",
@@ -122,7 +122,7 @@ fn step_4_a_deny_rule_refuses_by_the_role_the_caller_performs() {
 /// `AGENT` writes no template but the ones its exception lists, the
 /// equivalent of a template list on its grant (#5624).
 #[test]
-fn step_4_a_permit_exception_states_only() {
+fn step_5_a_permit_exception_states_only() {
     let only_lab = rule(
         "deny",
         &json!({ "applies_to": [{ "party": party("AGENT", DR_B) }],
@@ -157,7 +157,7 @@ fn step_4_a_permit_exception_states_only() {
 /// "Professionals may declare only treatment or emergency treatment": a deny
 /// rule over every professional with a permit exception naming the purposes.
 #[test]
-fn step_4_a_purpose_limit_is_a_rule() {
+fn step_5_a_purpose_limit_is_a_rule() {
     let treatment_only = rule(
         "deny",
         &json!({ "applies_to": [{ "caller_kind": term("professional") }],
@@ -190,7 +190,7 @@ fn step_4_a_purpose_limit_is_a_rule() {
 /// A declared emergency by the break-glass role lifts a deny rule only where
 /// its `emergency_override` holds, and the verdict marks it.
 #[test]
-fn step_4_an_emergency_lifts_only_an_overridable_rule() {
+fn step_5_an_emergency_lifts_only_an_overridable_rule() {
     let diagnosis = object(OBJECT, Some("diagnosis.v1"));
     let nurse = performing(CallerKind::Professional, NURSE, "NURSE");
     let emergency = break_glass(asked(OperationClass::Write, Some("ETREAT")));
@@ -212,7 +212,7 @@ fn step_4_an_emergency_lifts_only_an_overridable_rule() {
 
 /// A rule's step and its position name the refusal in the verdict.
 #[test]
-fn step_4_the_refusal_names_the_rule() {
+fn step_5_the_refusal_names_the_rule() {
     let verdict = ruled(&[rule("permit", &json!({})), nurse_rule()], None).verdict(
         &performing(CallerKind::Professional, NURSE, "NURSE"),
         asked(OperationClass::Write, None),
@@ -251,7 +251,7 @@ fn exchange(roles: &[ForeignCode], types: &[ForeignCode]) -> Caller {
 /// admitted type, or of none, and admits one of an admitted type; a type of
 /// another terminology is no admitted type.
 #[test]
-fn step_4_a_rule_names_callers_by_the_type_of_their_organisation() {
+fn step_5_a_rule_names_callers_by_the_type_of_their_organisation() {
     let case = ruled(&[care_providers_only()], None);
     for (name, types, expected) in [
         (
@@ -304,7 +304,7 @@ fn step_4_a_rule_names_callers_by_the_type_of_their_organisation() {
 /// A local caller's organisation type is the coded name of the provider it
 /// acts for, read as an attested one is.
 #[test]
-fn step_4_an_organisation_type_of_the_cdr_is_read_as_an_attested_one() {
+fn step_5_an_organisation_type_of_the_cdr_is_read_as_an_attested_one() {
     let case = ruled(&[care_providers_only()], None);
     let mut local = caller(CallerKind::AccessService, DR_B);
     local.facts =
@@ -318,11 +318,11 @@ fn step_4_an_organisation_type_of_the_cdr_is_read_as_an_attested_one() {
 }
 
 /// A deny rule by the role a credential attests, and one by a purpose,
-/// refuse what they name and nothing else; a request declaring no purpose
-/// cannot show it is not the excluded one, so the purpose rule covers it
-/// (#5691).
+/// refuse what they name and nothing else; a purpose scope matches only a
+/// declared purpose, so a request declaring none is outside the purpose rule,
+/// and the policy's `purpose_required` is what refuses it (#5691, #5737).
 #[test]
-fn step_4_a_rule_refuses_an_attested_role_and_a_declared_purpose() {
+fn step_5_a_rule_refuses_an_attested_role_and_a_declared_purpose() {
     let excluded_role = rule(
         "deny",
         &json!({ "applies_to": [{ "caller_kind": term("access_service"),
@@ -354,7 +354,7 @@ fn step_4_a_rule_refuses_an_attested_role_and_a_declared_purpose() {
             Some("EXAMINATION"),
             POLICY_DENIED,
         ),
-        ("no purpose", "PHYSICIAN", None, POLICY_DENIED),
+        ("no purpose", "PHYSICIAN", None, Outcome::Admit),
     ] {
         assert_outcome(
             &case.verdict(&exchange(&[code(ROLES, role)], &hospital), read(purpose)),

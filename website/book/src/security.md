@@ -451,18 +451,18 @@ write a directive or a rule refuses changes nothing:
 | 1. Opt-out (EHDS Art. 10) | an `opt_out` directive, for an access service | `404`, as for an unknown EHR |
 | 2. Restriction (EHDS Art. 8) | a `restriction` directive, for a professional, a system or an access service, over the data it covers | `404`, as for unknown data |
 | 3. Consent deny | any other deny directive that applies; a representative a `delegation` directive names reads only what it permits | `403 refused-consent-denied` |
-| 4. Controller rule (EHDS Art. 11(3)) | a deny rule of the access policy that applies; no permit of the person lifts it | `403 refused-policy-denied` |
-| 5. Sensitivity | data with a label or classification that no applying permit directive or permit rule names | `403 refused-sensitivity` |
-| 6. Care relationship | no live care relationship to the subject, where the access policy requires one | `403 refused-no-care-relationship` |
-| 7. Purpose | no declared purpose, where the access policy requires one; which purposes a caller may declare is a rule of step 4 | `403 refused-purpose-missing` |
+| 4. Purpose | no declared purpose, where the access policy requires one, whatever rules the policy holds; checked before any rule is read | `403 refused-purpose-missing` |
+| 5. Controller rule (EHDS Art. 11(3)) | a deny rule of the access policy that applies; no permit of the person lifts it; which purposes a caller may declare is such a rule | `403 refused-policy-denied` |
+| 6. Sensitivity | data with a label or classification that no applying permit directive or permit rule names | `403 refused-sensitivity` |
+| 7. Care relationship | no live care relationship to the subject, where the access policy requires one | `403 refused-no-care-relationship` |
 | 8. Default access | the settings' `default_access`, or `authz.rbac.ehr_access_default` for an EHR with none | `403 refused-consent-required` |
 
 - **Who is bound.** The record's person skips every step on their own EHR
   (EHDS Art. 3), so no controller rule limits a patient's own access, and is
   refused at step 0 on any other. A
   representative reaches only the EHR of the subject it represents, refused
-  at step 0 on any other, and is held there to steps 1 to 4 and skips the
-  others (Art. 4(2)): a controller rule can keep, say, a minor's confidential
+  at step 0 on any other, and is held there to steps 1 to 3 and 5 and skips
+  the others (Art. 4(2)): a controller rule can keep, say, a minor's confidential
   data from a parent.
   An access service is a caller holding an `access_service` grant or a
   verified caller of a `federation` issuer.
@@ -479,14 +479,21 @@ write a directive or a rule refuses changes nothing:
   [category map](audit.md)), sensitivities, origins and commit time. One
   level of `exceptions` of the opposite effect narrows it.
 - **A fact that cannot be read never opens data.** A `time_validity` bound
-  with no offset, a purpose the request does not declare, or a commit with no
-  recorded origin is read as covered by a deny and not by a permit.
+  with no offset, or a commit with no recorded origin, is read as covered by
+  a deny and not by a permit, and so is a purpose the request does not
+  declare, against a directive of the person.
+- **A purpose is declared.** The caller states the purpose, and the access
+  policy's `purpose_required` refuses a request without one at step 4. A
+  controller rule's `purposes` therefore match only a purpose the request
+  declares: "no medical examination" refuses that purpose and nothing else,
+  and a request with no purpose under a policy that does not require one is
+  not refused by a purpose rule.
 - **Emergencies.** An access service that may override an opt-out and
   declares one of `[audit] emergency_purpose_codes` reads an opted-out EHR
   where the directive's `emergency_override` holds, unless it acts for the
   person (Art. 10(2)). The holder of `authz.rbac.emergency_access_role`
   declaring such a purpose reads data a restriction, a consent deny or a deny
-  rule covers where its `emergency_override` holds, and passes steps 5 to 8
+  rule covers where its `emergency_override` holds, and passes steps 6 to 8
   (Art. 11(5)).
   A directive whose `emergency_override` is false binds in every emergency,
   as an absolute opt-out of the Member State's law does (recital 55). Each
@@ -507,7 +514,7 @@ write a directive or a rule refuses changes nothing:
   only when a directive, label or classification of the EHR depends on them.
 - **Refusals.** A `403` names its code in `detail`, and with
   `Prefer: return=representation` in the `refusal` member, with the
-  `legal_grounds` of the controller rules that refused at step 4
+  `legal_grounds` of the controller rules that refused at step 5
   ([problem types](using-the-api/problems.md#forbidden)). Steps 1 and 2 say
   nothing.
 
