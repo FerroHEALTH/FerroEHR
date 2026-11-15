@@ -54,7 +54,7 @@ impl RequestAccess {
     }
 
     /// Of the EHRs `entries` name, those whose subject the caller has a live
-    /// care relationship to, as [`Self::cares_for`] judges each.
+    /// care relationship to, judged as the care step judges one EHR.
     ///
     /// # Errors
     /// [`GrantsUnavailable`] when the care copy misses and cannot read.
