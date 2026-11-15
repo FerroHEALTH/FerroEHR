@@ -244,19 +244,13 @@ pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
         return None;
     }
     // NOTE: our own design (#5667), a subject is a UUID, whose hyphenated lower-case
-    // form needs no JSON escape, so the object is written directly.
-    let mut subjects = String::with_capacity(2 + condition.cared.len() * 44);
-    let mut id = Uuid::encode_buffer();
-    subjects.push('{');
-    for (n, subject) in condition.cared.iter().enumerate() {
-        if n > 0 {
-            subjects.push(',');
-        }
-        subjects.push('"');
-        subjects.push_str(subject.as_hyphenated().encode_lower(&mut id));
-        subjects.push_str("\":true");
-    }
-    subjects.push('}');
+    // form needs no JSON escape, so the object is written from it directly.
+    let keys: Vec<String> = condition
+        .cared
+        .iter()
+        .map(|subject| format!("\"{}\":true", subject.as_hyphenated()))
+        .collect();
+    let subjects = format!("{{{}}}", keys.join(","));
     let mut row = Query::select();
     row.expr_as(
         Expr::val(subjects).cast_as(Alias::new("jsonb")),
