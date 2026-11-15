@@ -118,6 +118,8 @@ pub async fn search_audit(
     push("action", &action);
     params.push(format!("_count={PAGE_SIZE}"));
     params.push(format!("_offset={offset}"));
+    // NOTE: FHIR R4 Search §3.1.1.5.2, the CDR counts only on `_total`, and this page draws the count.
+    params.push("_total=accurate".to_owned());
 
     let url = format!("{}?{}", cdr.fhir_r4("AuditEvent"), params.join("&"));
     let response = cdr.get(&url).accept("application/fhir+json").send().await?;
