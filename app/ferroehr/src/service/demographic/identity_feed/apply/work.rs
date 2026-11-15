@@ -364,9 +364,13 @@ impl Work<'_> {
             return Ok(());
         }
         let identifier_type = match rows.as_slice() {
-            [] => match self.released_types.get(&identifier.system) {
-                Some(known) => Some(known.clone()),
-                None => plan::domain_type(tx, &identifier.system).await?,
+            [] => match (
+                self.service.pmir_domains.get(&identifier.system),
+                self.released_types.get(&identifier.system),
+            ) {
+                (Some(named), _) => Some(named.clone()),
+                (None, Some(released)) => Some(released.clone()),
+                (None, None) => plan::domain_type(tx, &identifier.system).await?,
             },
             [row] => {
                 if !self.gives_up(tx, row.holder, identifier).await? {
@@ -384,12 +388,12 @@ impl Work<'_> {
             _ => return Err(ApplyError::Refused(Refusal::Contested)),
         };
         let Some(identifier_type) = identifier_type else {
-            tracing::warn!(
+            tracing::error!(
                 issuer = %identifier.system,
-                "an announced identifier of a domain no patient PERSON carries is not written: \
-                 its DV_IDENTIFIER type is unknown"
+                "an ITI-93 message links an identifier of a domain with no DV_IDENTIFIER type: \
+                 name the domain in [[pix.identifier_domain]] and retry the message"
             );
-            return Ok(());
+            return Err(ApplyError::Refused(Refusal::UnknownDomainType));
         };
         let value = openehr_its::json::to_canonical_value(&DvIdentifier {
             issuer: Some(identifier.system.clone()),

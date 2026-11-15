@@ -47,6 +47,27 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+impl crate::service::FerroEhrService {
+    /// This service writing a patient identifier the PMIR feed links with
+    /// the `DV_IDENTIFIER.type` its domain's `[[pix.identifier_domain]]`
+    /// entry names.
+    #[must_use]
+    pub fn with_pmir_identifier_domains(mut self, domains: &[config::IdentifierDomain]) -> Self {
+        self.pmir_domains = std::sync::Arc::new(
+            domains
+                .iter()
+                .map(|domain| {
+                    (
+                        domain.system.trim().to_owned(),
+                        domain.identifier_type.trim().to_owned(),
+                    )
+                })
+                .collect(),
+        );
+        self
+    }
+}
+
 /// The client an ITI-93 message was authenticated as: the issuer and
 /// `client_id` of its access token.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -145,6 +166,11 @@ pub enum Refusal {
     /// carries its value nowhere.
     #[error("a protected identifier cannot be moved: the message does not carry its value")]
     Unmovable,
+    /// A linked identifier's domain has no `DV_IDENTIFIER` type: no
+    /// `[[pix.identifier_domain]]` entry names it and the patient `PERSON`s
+    /// carry it with none or more than one.
+    #[error("a linked identifier's domain has no DV_IDENTIFIER type")]
+    UnknownDomainType,
     /// The contribution the message makes does not commit.
     #[error("the contribution the message makes is refused by the commit checks")]
     Commit,
@@ -160,6 +186,7 @@ impl Refusal {
             Self::Contested => "contested",
             Self::Survivor => "survivor",
             Self::Unmovable => "unmovable",
+            Self::UnknownDomainType => "unknown-domain-type",
             Self::Commit => "commit",
         }
     }

@@ -231,7 +231,7 @@ What a message does to the patient `PERSON`s:
 |---|---|
 | a merge of A into B | A's `record_subject` references move onto B's `PERSON`, and B's identifiers follow B's announcement |
 | the revert of that merge (A `active` again, no `replaced-by` link) | the moved references go back to A's `PERSON`, and each `PERSON` carries its own identifiers again |
-| a link (an identifier added) | the `PERSON` carries it, moved from the `PERSON` that gave it up, or written in its domain's `DV_IDENTIFIER` type |
+| a link (an identifier added) | the `PERSON` carries it, moved from the `PERSON` that gave it up, or written in its domain's `DV_IDENTIFIER` type: the one `[[pix.identifier_domain]]` names, else the one the patient `PERSON`s carry that domain with |
 | an unlink (an identifier dropped) | the `PERSON` no longer carries it |
 | a delete | the `PERSON` carries none of its patient identifiers |
 
@@ -247,8 +247,9 @@ redelivered message changes nothing. The Registry's client needs the
 
 **A message is refused, never guessed.** A message about a merged identity
 that states neither the merge nor its revert, an identity two `PERSON`s
-carry, an identifier another identity still holds, or a contribution the
-commit checks refuse, is kept unapplied with its split in force and logged as
+carry, an identifier another identity still holds, a linked identifier of a
+domain with no `DV_IDENTIFIER` type (the log names the domain), or a
+contribution the commit checks refuse, is kept unapplied with its split in force and logged as
 an error. An identity is bound to its `PERSON` when the feed first announces
 it while one `PERSON` carries one of its identifiers; a merge of two
 identities the feed never bound is refused.
@@ -258,6 +259,7 @@ identities the feed never bound is refused.
 | `pix.endpoint` | [endpoint table](#the-endpoint-table) | required | The Registry: `url`, its FHIR base (`[base]` of `[base]/Subscription`), `timeout` for one ITI-94 exchange, `retry`, the TLS and the credential the Registry authorizes a subscriber by. |
 | `pix.feed_issuer` | URL | required | The issuer of the access token the Registry presents with each ITI-93 message, one of the `[auth]` issuers. |
 | `pix.feed_client_id` | string | required | The `client_id` of that token. |
+| `pix.identifier_domain` | array of tables | none | Per identifier domain, its `system` and the `identifier_type` a linked identifier of it is written with, such as `MR`; a protected scheme's code keeps the identifier sealed. |
 
 ```toml
 [server]
@@ -266,6 +268,10 @@ public_base_url = "https://cdr.example.org"
 [pix]
 feed_issuer = "https://idp.example.org/realms/hospital"
 feed_client_id = "ferropix"
+
+[[pix.identifier_domain]]
+system = "urn:oid:2.999.1.1"
+identifier_type = "MR"
 
 [pix.endpoint]
 url = "https://pix.example.org/fhir"

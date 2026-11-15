@@ -436,7 +436,13 @@ fn assemble_service(
         .with_identifier_protection_opt(identifiers.map(Arc::new))
         .with_query_config(&config.record.query)
         .with_required_category_map(DeploymentPosture::requires_category_map(config))
-        .with_ehr_index(ehr_index);
+        .with_ehr_index(ehr_index)
+        .with_pmir_identifier_domains(
+            config
+                .pix
+                .as_ref()
+                .map_or(&[][..], |pix| pix.identifier_domain.as_slice()),
+        );
     if let Some(sender) = audit_sender {
         service = service.with_audit(sender);
     }

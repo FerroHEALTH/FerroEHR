@@ -1220,8 +1220,10 @@ record subjects onto the survivor's; an unmerge, read from `active` true with
 no `replaced-by` link, moves the recorded ones back; an update makes the
 `PERSON`'s patient identifiers the announced ones, moving an identifier from
 the `PERSON` whose identity gave it up or writing one no `PERSON` carries
-under its domain's `DV_IDENTIFIER` type. A message about a merged identity
-that states neither the merge nor its revert, an ambiguous binding, a contested identifier or a
+under its domain's `DV_IDENTIFIER` type, which `[[pix.identifier_domain]]`
+names or the patient `PERSON`s already carry that domain with. A message about a merged identity
+that states neither the merge nor its revert, a linked identifier of a domain
+with no `DV_IDENTIFIER` type, an ambiguous binding, a contested identifier or a
 refused commit refuses the message: it keeps its splits and is logged, and
 the next message applies. An identity is bound to the one `PERSON` that
 carries one of its announced identifiers. A redelivery is stored once. **Our

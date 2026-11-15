@@ -34,6 +34,27 @@ pub struct PixConfig {
     /// messages are applied.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
     pub feed_client_id: String,
+    /// `[[pix.identifier_domain]]`: the `DV_IDENTIFIER.type` a patient
+    /// identifier of each domain is written with when the feed links it to a
+    /// `PERSON` no other `PERSON` hands it from. A domain named nowhere takes
+    /// the one type the patient `PERSON`s already carry it with; with none, a
+    /// message linking one is refused and names the domain.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
+    pub identifier_domain: Vec<IdentifierDomain>,
+}
+
+/// One `[[pix.identifier_domain]]` entry.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
+pub struct IdentifierDomain {
+    /// The domain's `Identifier.system`, the `DV_IDENTIFIER.issuer` its
+    /// identifiers are carried under, such as `urn:oid:2.999.1.1`.
+    pub system: String,
+    /// The `DV_IDENTIFIER.type` they are written with, such as `MR`; a
+    /// protected scheme's code keeps the identifier sealed.
+    pub identifier_type: String,
 }
 
 /// The path of the ITI-93 feed route under the server's public root.
@@ -61,6 +82,24 @@ impl PixConfig {
                     .to_owned(),
             );
         }
+        let mut seen = std::collections::BTreeSet::new();
+        for (index, domain) in self.identifier_domain.iter().enumerate() {
+            if url::Url::parse(domain.system.trim()).is_err() {
+                problems.push(format!(
+                    "pix.identifier_domain[{index}].system must be an absolute URI, the domain's \
+                     Identifier.system"
+                ));
+            } else if !seen.insert(domain.system.trim()) {
+                problems.push(format!(
+                    "pix.identifier_domain[{index}].system names a domain an earlier entry names"
+                ));
+            }
+            if domain.identifier_type.trim().is_empty() {
+                problems.push(format!(
+                    "pix.identifier_domain[{index}].identifier_type must name the DV_IDENTIFIER type"
+                ));
+            }
+        }
         if !public_root {
             problems.push(
                 "[pix] needs [server] public_base_url: the subscription names the feed route \
@@ -84,6 +123,10 @@ mod tests {
             },
             feed_issuer: "https://idp.example/realms/hospital".to_owned(),
             feed_client_id: "ferropix".to_owned(),
+            identifier_domain: vec![IdentifierDomain {
+                system: "urn:oid:2.999.1.1".to_owned(),
+                identifier_type: "MR".to_owned(),
+            }],
         }
     }
 
@@ -104,5 +147,57 @@ mod tests {
         assert!(problems[0].contains("pix.feed_issuer"), "{problems:?}");
         assert!(problems[1].contains("pix.feed_client_id"), "{problems:?}");
         assert!(problems[2].contains("public_base_url"), "{problems:?}");
+    }
+
+    #[test]
+    fn an_identifier_domain_needs_a_uri_a_type_and_no_twin() {
+        let mut config = pix();
+        config.identifier_domain.push(IdentifierDomain {
+            system: "urn:oid:2.999.1.1".to_owned(),
+            identifier_type: "MR".to_owned(),
+        });
+        config.identifier_domain.push(IdentifierDomain {
+            system: "no uri".to_owned(),
+            identifier_type: " ".to_owned(),
+        });
+        let problems = config.problems(true);
+        assert_eq!(problems.len(), 3, "{problems:?}");
+        assert!(problems[0].contains("identifier_domain[1]"), "{problems:?}");
+        assert!(
+            problems[1].contains("identifier_domain[2].system"),
+            "{problems:?}"
+        );
+        assert!(
+            problems[2].contains("identifier_domain[2].identifier_type"),
+            "{problems:?}"
+        );
+    }
+
+    #[test]
+    fn the_domains_map_from_the_environment() {
+        let env = std::collections::HashMap::<String, String>::from([
+            (
+                "FERROEHR__PIX__FEED_ISSUER".to_owned(),
+                "https://idp.example".to_owned(),
+            ),
+            (
+                "FERROEHR__PIX__IDENTIFIER_DOMAIN__0__SYSTEM".to_owned(),
+                "urn:oid:2.999.1.1".to_owned(),
+            ),
+            (
+                "FERROEHR__PIX__IDENTIFIER_DOMAIN__0__IDENTIFIER_TYPE".to_owned(),
+                "MR".to_owned(),
+            ),
+        ]);
+        let (_, config) =
+            crate::config::loader::assemble_from(None, &env, &[]).expect("the tree assembles");
+        let pix = config.pix.expect("the [pix] table");
+        assert_eq!(
+            pix.identifier_domain,
+            vec![IdentifierDomain {
+                system: "urn:oid:2.999.1.1".to_owned(),
+                identifier_type: "MR".to_owned(),
+            }]
+        );
     }
 }

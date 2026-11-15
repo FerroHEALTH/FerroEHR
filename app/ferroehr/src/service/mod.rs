@@ -208,6 +208,10 @@ pub struct FerroEhrService {
     /// `[privacy.identifier_protection]` section.
     pub(in crate::service) identifiers:
         Option<Arc<crate::identifier_protection::engine::IdentifierProtection>>,
+    /// The `DV_IDENTIFIER.type` of each patient identifier domain
+    /// `[[pix.identifier_domain]]` names, by `Identifier.system`, which an
+    /// applied PMIR message writes a linked identifier with.
+    pub(in crate::service) pmir_domains: Arc<std::collections::BTreeMap<String, String>>,
     /// The clinical-side data-minimisation policy
     /// ([`crate::privacy`]) every clinical commit body is checked against.
     ///
@@ -309,6 +313,7 @@ impl FerroEhrService {
                 .time_to_live(Duration::from_secs(30))
                 .build(),
             identifiers: None,
+            pmir_domains: Arc::default(),
             privacy: Arc::new(crate::privacy::PrivacyPolicy::default()),
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),
             ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
