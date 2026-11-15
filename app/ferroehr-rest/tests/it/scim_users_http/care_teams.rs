@@ -68,7 +68,7 @@ async fn hospital() -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
 }
 
 /// A client-credentials token of `client` for the Demographic API.
-pub(super) fn system_token(client: &str) -> String {
+fn system_token(client: &str) -> String {
     let exp = jiff::Timestamp::now().as_second() + 3600;
     common::bearer(
         &json!({ "iss": MACHINES, "aud": super::AUDIENCE, "exp": exp,
