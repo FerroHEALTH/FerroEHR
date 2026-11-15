@@ -385,13 +385,20 @@ h_fail_call() {
 # Prints each instance's log lines that carry the request id `rid`; the
 # request log's span names it on every line written while serving it.
 h_request_log() {
-  local rid="$1" service lines
+  local rid="$1" service lines found=0
   [[ -n "$rid" ]] || return 0
   for service in ferroehr ferroehr-2; do
     lines="$(hdc logs --no-color "$service" 2>&1 | grep -F -- "$rid" | tail -n 20 | sed 's/^/        /')"
     [[ -n "$lines" ]] || continue
+    found=1
     echo "      log of $service:"
     echo "$lines"
+  done
+  [[ "$found" -eq 0 ]] || return 0
+  # A silent log is evidence too: say so, and show where each log stands.
+  echo "      no log line of either instance names request id $rid; each log ends:"
+  for service in ferroehr ferroehr-2; do
+    hdc logs --no-color --tail 5 "$service" 2>&1 | sed 's/^/        /'
   done
 }
 
