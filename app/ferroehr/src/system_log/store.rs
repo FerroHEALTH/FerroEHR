@@ -118,7 +118,7 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
 #[cfg(feature = "fhir")]
-const RECORD_COLUMNS: [&str; 42] = [
+const RECORD_COLUMNS: [&str; 41] = [
     "chain",
     "chain_seq",
     "recorded_at",
@@ -160,7 +160,6 @@ const RECORD_COLUMNS: [&str; 42] = [
     "previous_digest",
     "content_digest",
     "digest",
-    "signature",
 ];
 
 /// The oldest record the FHIR Feed owes past the outbox ids in `$1`, its
@@ -175,7 +174,7 @@ const OLDEST_OWED: &str = "SELECT o.id AS owed, \
      e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id, \
      e.subject_namespace, e.subject_lookup_failed, e.category_content, e.render_policy, \
      e.token_attributes, e.content, e.algorithm, e.previous_digest, e.content_digest, \
-     e.digest, e.signature \
+     e.digest \
      FROM audit.fhir_feed_outbox o \
      JOIN audit.audit_record e ON e.chain = o.chain AND e.chain_seq = o.chain_seq \
      WHERE NOT (o.id = ANY($1)) \

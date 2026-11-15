@@ -127,8 +127,8 @@ async fn the_shared_chain_splits_into_two_that_verify() {
         [1, 4],
         "the records outside the log keep their positions"
     );
-    let links: Vec<(i64, String, String, String, Option<String>)> = sqlx::query_as(
-        "SELECT chain_seq, previous_digest, content_digest, digest, signature \
+    let links: Vec<(i64, String, String, String)> = sqlx::query_as(
+        "SELECT chain_seq, previous_digest, content_digest, digest \
          FROM audit.access_log_record ORDER BY chain_seq",
     )
     .fetch_all(&pool)
@@ -138,16 +138,23 @@ async fn the_shared_chain_splits_into_two_that_verify() {
         .fetch_one(&pool)
         .await
         .expect("the genesis");
-    for ((sequence, before, content, digest, signature), expected) in links.iter().zip(1_i64..) {
+    for ((sequence, before, content, digest), expected) in links.iter().zip(1_i64..) {
         assert_eq!(*sequence, expected, "the access log is renumbered from 1");
         assert_eq!(*before, previous);
         assert_eq!(*digest, link_digest(before, *sequence, content));
-        assert_eq!(
-            *signature, None,
-            "a signature of the shared chain is cleared"
-        );
         previous.clone_from(digest);
     }
+    let signed: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM information_schema.columns WHERE table_schema = 'audit' \
+         AND table_name = 'access_log_record' AND column_name = 'signature'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the columns are read");
+    assert_eq!(
+        signed, 0,
+        "the links of the split log carry no signature (#5704)"
+    );
     assert_eq!(links.len(), 3);
     let span = log.chain(1, 3).await.expect("the span of every entry");
     assert_eq!(span.len(), 3, "the span holds the entries alone");
