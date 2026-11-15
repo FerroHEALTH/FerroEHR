@@ -33,6 +33,7 @@ use ferroehr::ids::{EhrId, VoId};
 use ferroehr::system_log::event::ObjectClass;
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::draft::access_control::terminology::{Refusal, Term as _};
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
 use crate::api::RequestParts;
@@ -156,9 +157,11 @@ async fn enforce_unnamed(
     let Some(raw) = scope else {
         return match access.judge_unnamed() {
             Outcome::Admit => Ok(()),
-            Outcome::Absent(code) | Outcome::Refused(code) => {
-                Err(Box::new(forbidden(principal, code)))
-            }
+            Outcome::Absent(code) | Outcome::Refused(code) => Err(Box::new(forbidden(
+                principal,
+                code,
+                &access.refusal_grounds(None),
+            ))),
         };
     };
     let Ok(ehr_id) = Uuid::parse_str(&raw).map(EhrId) else {
@@ -212,7 +215,10 @@ async fn enforce_objects(
             Outcome::Absent(_) => {
                 return Err(Box::new(recorded(object_not_found(op, raw), principal)));
             }
-            Outcome::Refused(code) => return Err(Box::new(forbidden(principal, code))),
+            Outcome::Refused(code) => {
+                let grounds = access.refusal_grounds(Some(ehr_id));
+                return Err(Box::new(forbidden(principal, code, &grounds)));
+            }
         }
     }
     Ok(held_any)
@@ -280,7 +286,11 @@ async fn refusal_of(
     Ok(match access.note(ehr_id, verdict, &Item::Ehr) {
         Outcome::Admit => None,
         Outcome::Absent(_) => Some(recorded(ehr_not_found(op, ehr_id), principal)),
-        Outcome::Refused(code) => Some(forbidden(principal, code)),
+        Outcome::Refused(code) => Some(forbidden(
+            principal,
+            code,
+            &access.refusal_grounds(Some(ehr_id)),
+        )),
     })
 }
 
@@ -398,16 +408,19 @@ fn unavailable(principal: Option<&Principal>, error: ServiceError) -> Response {
 }
 
 /// The `403` of a refusal under `code`, naming the code in `detail` and in the
-/// `refusal` member, carrying the principal so the ATNA layer records the
-/// deny (ITS-REST `401`/`403` discipline).
-fn forbidden(principal: Option<&Principal>, code: Refusal) -> Response {
-    let mut resp = RestError::from(ApiError::Forbidden(format!(
+/// `refusal` member, and the `legal_grounds` the refusing controller rules
+/// name, carrying the principal so the ATNA layer records the deny (ITS-REST
+/// `401`/`403` discipline).
+fn forbidden(principal: Option<&Principal>, code: Refusal, grounds: &[DvCodedText]) -> Response {
+    let refused = RestError::from(ApiError::Forbidden(format!(
         "access denied: {}: {}",
         code.code(),
         reason(code)
-    )))
-    .with_detail(Detail::Refusal(code.code()))
-    .into_response();
+    )));
+    let mut resp = Detail::of_refusal(code, grounds)
+        .into_iter()
+        .fold(refused, RestError::with_detail)
+        .into_response();
     if let Some(principal) = principal {
         resp.extensions_mut().insert(principal.clone());
     }
@@ -487,7 +500,10 @@ mod tests {
             Refusal::ConsentReferenceMissing,
         ] {
             assert!(!code.is_invisible());
-            assert_eq!(forbidden(None, code).status(), http::StatusCode::FORBIDDEN);
+            assert_eq!(
+                forbidden(None, code, &[]).status(),
+                http::StatusCode::FORBIDDEN
+            );
         }
     }
 }

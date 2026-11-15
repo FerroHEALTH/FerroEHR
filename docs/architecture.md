@@ -406,6 +406,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   represented EHR, and the full view to the caller the admin class admits;
   `GET {ext}/admin/access-log`, `/chain` and `/checkpoint` serve the review.
   `access_log::search` pages the records over the trigger's search columns,
+  the coded filters (`action`, `outcome`, `accessor_kind`) taken as a FHIR
+  token `terminology_id|code` and compared by `defining_code`, never by
+  rubric (#5687, our own design),
   `service::admin::access_log_read` holds the EHR check and the EHDS Art.
   3(3) holds the person's view leaves out, the subject view withholds what
   the access policy's Art. 9(3) `log_restrictions` name (#5570), and every
@@ -714,7 +717,14 @@ which is what makes an optional stage safe to disable:
    actor scope's `role` matches the coded `name` of a `ROLE` in force the
    caller performs (RM Demographic IM `PARTY.type()`), held as a caller fact
    (`FactKind::Role`, migration `party/0042`); a token's role claims stay
-   the coarse RBAC class gate and drive no rule. The `ROLE` is the
+   the coarse RBAC class gate and drive no rule, except that a caller
+   admitted under a federation agreement adds the roles and facility types
+   its verified credential attests (`professional.hp_professional_role`,
+   `provider.facility_type`), each a code of the system it names, matched by
+   an actor scope's `role` and `organisation_type` (#5691, our own design).
+   An actor scope's `organisation_type` also matches the coded name of the
+   `ORGANISATION` a system client acts for (`FactKind::OrganisationType`,
+   `party/0046`). The `ROLE` is the
    assignment and the rule the permission, the split of the XACML
    Hierarchical RBAC Profile. A SCIM User's `roles` (RFC 7643 §4.1.2) are
    such `ROLE`s (#5625, `service::demographic::user_roles`): each value one
@@ -927,8 +937,8 @@ care-team membership) and `audit-event-action` `C`, `R`, `U`, `D`. A value of
 a terminology the group holds no term of, or a code outside the group, is
 refused. The operations gain the grants `write_care_relationship` and
 `write_access_policy`, and the care relationship codes are qualifiers, never
-operations. Role, sensitivity, category, purpose and legal ground stay in the
-terminology the jurisdiction names and are compared by
+operations. Role, organisation type, sensitivity, category, purpose and
+legal ground stay in the terminology the jurisdiction names and are compared by
 terminology id and code (`ForeignCode`). The draft invariants of
 `access_control_invariants` read their groups through it, and the evaluator
 and the `EHR_ACCESS` and `ACCESS_POLICY` write checks read no other code. RM
@@ -1004,7 +1014,7 @@ Identification). **Our own design.**
 **Key spaces** (#5688). A key row under an issuer depends only on whether
 the mapping lists the issuer and whether it is a `patients` issuer, so each
 key issuer is a key space of its own (`party_binding::key_space`, migration
-`party/0046`). `binding_state` holds the digest of the rest of the mapping,
+`party/0047`). `binding_state` holds the digest of the rest of the mapping,
 which a boot compares and `party-binding refill` alone changes; each
 `binding_lease` lists the key issuers its replica derives keys for; and
 `binding_key_space` records each issuer with its portal flag and state. A
@@ -1068,7 +1078,9 @@ access evaluator reads about a caller (migrations `party/0039`, `party/0042`;
 `party/0044` keys a membership by its code, `MBR`):
 `binding_caller_fact`, one row per `ROLE` whose `name` is a `DV_CODED_TEXT`
 of the jurisdiction's terminology (the role its performer holds while the
-`ROLE` is in force, read with `ForeignCode::read`, #5621), and per care
+`ROLE` is in force, read with `ForeignCode::read`, #5621), per `ORGANISATION`
+whose `name` is one (its own type, `organisation_type`, `party/0046`, #5691),
+and per care
 relationship a `PERSON` holds (an inline
 `PARTY_RELATIONSHIP` whose `name` or `details` carry a membership, HL7 v3
 `RoleClass#MBR`, or `openehr_access::under_care_of`, RM demographic `party_relationship.adoc`: `source`,
@@ -1341,8 +1353,13 @@ against `ferroehr::config::federation::trust`, what `[auth]` trusts of each
 the EHDS Art. 13(4) and Annex II 3.2(b) rules of an organisation and of a
 `chained` access. The admission judges the agreement again for the caller's
 own issuer, so one that no longer keeps them, after its partner changed,
-admits nobody. No rule is a country's: the jurisdiction is the agreement's
-element and the consent source is `registry` or `local`. `/management/info`
+admits nobody. No rule is a country's: the agreement names no jurisdiction,
+the consent source is `registry` or `local`, and a national exclusion such
+as Wabvpz Art. 15f is a deny rule of the controller's `ACCESS_POLICY` over
+the roles and facility types the caller's credential attests, refused at
+step 4 as `refused-policy-denied` with the rule's `legal_grounds` (#5691;
+`scripts/checks/access-decides-no-country.sh` refuses a country in the
+access decision). `/management/info`
 reads the agreements in force from the copy on each request. **Our own
 design:** no specification gives a capability an authorization meaning or
 governs a data-sharing agreement's form.
@@ -1788,7 +1805,7 @@ EHR system to include both harmonised software components:
 
 | Component | Shipped by | Where |
 |---|---|---|
-| European logging software component (Annex II 3) | FerroEHR, and FerroBRIDGE for the accesses of its FHIR facade (below) | the shared crates `ehds-logging` 0.18.0 (the Annex II 3.2 access record, the Art 14(1) categories and their classification, the Art 9(2) retention floor, the Art 11(5) emergency mark) and `ihe-atna` 0.18.0 (the BALP `AuditEvent`, the DICOM audit message, RFC 5424 syslog over RFC 5425 TLS, the ATX: FHIR Feed), from FerroAUDIT and pinned exactly in the root `Cargo.toml`; `ferroehr::system_log` (the access-event model, the audit store, what each rendering says, the sinks, and `system_log::chain_check`, the scheduled verification of the store's hash chain), the audit schema migrations in `app/ferroehr/migrations/audit/`, `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /ferroehr/rest/fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
+| European logging software component (Annex II 3) | FerroEHR, and FerroBRIDGE for the accesses of its FHIR facade (below) | the shared crates `ehds-logging` 0.18.1 (the Annex II 3.2 access record, the Art 14(1) categories and their classification, the Art 9(2) retention floor, the Art 11(5) emergency mark) and `ihe-atna` 0.18.1 (the BALP `AuditEvent`, the DICOM audit message, RFC 5424 syslog over RFC 5425 TLS, the ATX: FHIR Feed), from FerroAUDIT and pinned exactly in the root `Cargo.toml`; `ferroehr::system_log` (the access-event model, the audit store, what each rendering says, the sinks, and `system_log::chain_check`, the scheduled verification of the store's hash chain), the audit schema migrations in `app/ferroehr/migrations/audit/`, `ferroehr-rest::system_log` (the middleware that records every API access and classifies it), the ITI-81 `GET /ferroehr/rest/fhir/r4/AuditEvent` retrieval in `ferroehr-rest::extensions::fhir`, and the retention register in `ferroehr::storage::marks` |
 | European interoperability software component (Annex II 2.1 to 2.3) | FerroBRIDGE | the openEHR-to-exchange-format mappings (#3206), and FHIR R4 resource mapping (<https://github.com/FerroHEALTH/FerroBRIDGE>, BUSL-1.1), reaching FerroEHR over ITS-REST; FerroEHR carries no FHIR mapping of its own, and keeps the AuditEvent route above and the FHIR terminology client |
 
 **FerroBRIDGE records the accesses of its FHIR facade** (owner decision on

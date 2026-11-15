@@ -619,7 +619,6 @@ named by its `openehr_access` code:
 | Code | Element |
 |---|---|
 | `agreement_name`, `agreement_version` | `DV_TEXT`: the agreement's name and version |
-| `jurisdiction` | `DV_TEXT` or `DV_CODED_TEXT`: the ISO 3166-1 alpha-2 code of the jurisdiction |
 | `exchange` | `DV_TEXT`: the kind of exchange |
 | `purpose` | `DV_CODED_TEXT` or `DV_TEXT`: what the exchange is for |
 | `gdpr_art_6_1`, `gdpr_art_9_2` | `DV_TEXT` or `DV_CODED_TEXT`: the point of GDPR Art. 6(1), `a` to `f`, and of Art. 9(2), `a` to `j` |
@@ -816,7 +815,7 @@ credentials at `/capabilities[id6]/credentials[id8]`, and its `time_validity` th
 | `ROLE.system_client` | Origin, named `origin`: `relay` or `device` | `/capabilities[id6]/credentials[id8]/items[id18]` | `DV_CODED_TEXT` |
 | `ROLE.system_client` | Subject namespace, named `subject_namespace` | `/capabilities[id6]/credentials[id8]/items[id19]` | `DV_TEXT` |
 | `ROLE.federation_partner` | Kind (accessor) | `at10` person, `at11` organisation | |
-| `ROLE.federation_partner` | Agreement name, version, jurisdiction, exchange | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id11]`, `[id12]` | `DV_TEXT` |
+| `ROLE.federation_partner` | Agreement name, version, exchange | `/capabilities[id6]/credentials[id8]/items[id9]`, `[id10]`, `[id12]` | `DV_TEXT` |
 | `ROLE.federation_partner` | Purpose | `/capabilities[id6]/credentials[id8]/items[id13]` | `DV_CODED_TEXT` |
 | `ROLE.federation_partner` | Legal ground: GDPR Art. 6(1), Art. 9(2), the provision of the law that applies | `/capabilities[id6]/credentials[id8]/items[id14]/items[id15]`, `[id16]`, `[id17]` | `DV_TEXT` |
 | `ROLE.federation_partner` | Consent source: `registry` or `local` | `/capabilities[id6]/credentials[id8]/items[id18]` | `DV_CODED_TEXT` |
@@ -1292,11 +1291,6 @@ accessor, here `person`. Each term is an element whose `name` is its
           "value": { "_type": "DV_TEXT", "value": "2.1" }
         },
         {
-          "_type": "ELEMENT", "archetype_node_id": "id11",
-          "name": { "_type": "DV_CODED_TEXT", "value": "Jurisdiction", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "jurisdiction" } },
-          "value": { "_type": "DV_TEXT", "value": "DE" }
-        },
-        {
           "_type": "ELEMENT", "archetype_node_id": "id12",
           "name": { "_type": "DV_CODED_TEXT", "value": "Exchange", "defining_code": { "_type": "CODE_PHRASE", "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" }, "code_string": "exchange" } },
           "value": { "_type": "DV_TEXT", "value": "patient summary" }
@@ -1610,12 +1604,25 @@ each named by the nurse code. A [controller rule](#controller-rules) names a
 role in an `applies_to` entry, compared by terminology and code. A `ROLE`
 named in text, or by a code of `openehr_access`, names no role. A
 token's role claims never count for a rule: they decide only the coarse RBAC
-class gate ([Security](security.md)). Which sensitivities a caller may read
+class gate ([Security](security.md)). The one exception is a caller admitted
+under a [federation agreement](#federation-agreements): the professional
+roles its token attests in `professional.hp_professional_role` are its roles,
+each a code of the system the value names, because no `ROLE` of this store
+describes a partner's professional. Which sensitivities a caller may read
 and which purposes it may declare are rules of the access policy too, never
 elements of a capability. A SCIM client writes these `ROLE`s from a User's
 `roles`, within the roles its grant admits
 ([SCIM roles](installation/config-auth.md#roles)), so your identity
 provider assigns roles and the access policy says what each may do.
+
+**Organisation types.** An `ORGANISATION` whose `name` is a `DV_CODED_TEXT`
+of the terminology your jurisdiction names, such as a national care
+provider type, is of that type, read as a `ROLE`'s name is. A system client
+acting for that provider acts for an organisation of that type, and a
+caller admitted under a federation agreement acts for one of each type its
+token attests in `provider.facility_type`. A [controller
+rule](#controller-rules) names them in an `applies_to` entry's
+`organisation_type`, compared by terminology and code.
 
 **Care relationships.** A `PARTY_RELATIONSHIP` in a `PERSON`'s
 `relationships` whose `name` or `details` carry `MBR` of `v3-RoleClass`
@@ -2059,11 +2066,26 @@ Four rules, as you write them in the policy body (a role code of
 - **A system client writes only its laboratory templates:** a `deny` rule on
   `write` whose `applies_to` names the client's `AGENT` by `party`, with one
   `permit` exception whose `data` lists the templates.
+- **Only care providers reach records through the exchange:** a `deny` rule
+  whose `applies_to` names the caller kind `access_service`, with one
+  `permit` exception whose `applies_to` lists one `organisation_type` per
+  care provider type, and the provision in its `legal_grounds`. A partner's
+  professional whose token attests an insurer's facility type, or none, is
+  refused `refused-policy-denied`. A second `deny` rule naming a `role`, such
+  as an occupational physician, or `purposes`, such as a medical
+  examination, keeps those out too. A rule naming `purposes` also refuses a
+  request that declares no purpose, since it cannot show the purpose is
+  another one. Wabvpz Art. 15f is a rule of this kind: you commit it,
+  FerroEHR holds no copy of it.
 
 A rule whose `emergency_override` is true is lifted for the holder of
 `authz.rbac.emergency_access_role` declaring an emergency purpose, and the
 access record names the rule. The access record of a refusal names the
-rule by its uid, its first identifier or its position in `rules`.
+rule by its uid, its first identifier or its position in `rules`, and a
+`legal obligation` ground carrying the rule's `legal_grounds`. The `403`
+problem body carries them in its `legal_grounds` member beside `refusal`,
+each with its `terminology`, `code` and `value`, under
+`Prefer: return=representation`.
 
 **A federation agreement and the rules.** A federation agreement is the
 contract with a partner: its `template` elements say what the partner's
@@ -2072,5 +2094,8 @@ partner's persons too: a deny rule refuses a template the agreement allows,
 because a deny overrides.
 
 No openEHR specification has a controller rule: the rules, their place as
-step 4, and reading a role from the coded name of a `ROLE` are FerroEHR's
-own design, proposed in the draft access control specification.
+step 4, reading a role from the coded name of a `ROLE` and an organisation
+type from the coded name of an `ORGANISATION`, reading a partner's attested
+roles and facility types as the same facts, and naming a refusing rule's
+legal grounds as a `legal obligation` ground are FerroEHR's own design,
+proposed in the draft access control specification.

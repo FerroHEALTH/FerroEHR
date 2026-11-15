@@ -50,7 +50,6 @@ pub(crate) mod record;
 pub(crate) mod refusal;
 mod scope;
 pub(crate) mod trc;
-mod wabvpz;
 
 use std::sync::Arc;
 

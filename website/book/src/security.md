@@ -506,7 +506,8 @@ write a directive or a rule refuses changes nothing:
   named object is read for its template, archetype, origins and commit time
   only when a directive, label or classification of the EHR depends on them.
 - **Refusals.** A `403` names its code in `detail`, and with
-  `Prefer: return=representation` in the `refusal` member
+  `Prefer: return=representation` in the `refusal` member, with the
+  `legal_grounds` of the controller rules that refused at step 4
   ([problem types](using-the-api/problems.md#forbidden)). Steps 1 and 2 say
   nothing.
 

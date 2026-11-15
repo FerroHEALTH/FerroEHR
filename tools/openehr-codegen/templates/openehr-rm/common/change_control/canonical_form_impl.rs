@@ -11,7 +11,10 @@
 //! members sorted by the UTF-16 code units of their raw names (§3.2.3). The
 //! writer runs once over the value into one `String`, sorting each object's
 //! members by reference with no per-name allocation, so a large version costs
-//! one pass (#5220). The `serde_json_canonicalizer` crate is its test oracle.
+//! one pass (#5220). Every object of a run shares one member vector, a
+//! string is scanned by byte and each run with nothing to escape is copied
+//! whole, an integer within 2^53 is written as its digits, and two names whose
+//! first difference is ASCII are ordered by their bytes (#5682). The `serde_json_canonicalizer` crate is its test oracle.
 
 #![expect(
     clippy::disallowed_types,
@@ -19,9 +22,9 @@
               service signs (#1694 boundary class)"
 )]
 
-use std::fmt::Write as _;
+use std::cmp::Ordering;
 
-use serde_json::{Map, Number, Value};
+use serde_json::{Number, Value};
 
 /// Returns the RFC 8785 canonical form of `value`.
 ///
@@ -29,9 +32,9 @@ use serde_json::{Map, Number, Value};
 /// A [`serde_json::Error`] when a number has no finite IEEE 754 double form,
 /// which RFC 8785 §3.2.2.3 requires every JSON number to have.
 pub fn canonical_json(value: &Value) -> Result<String, serde_json::Error> {
-    let mut out = String::new();
-    write_value(value, &mut out)?;
-    Ok(out)
+    let mut writer = Writer::default();
+    writer.value(value)?;
+    Ok(writer.out)
 }
 
 /// Returns the RFC 8785 canonical form of the object whose members are
@@ -45,65 +48,111 @@ pub fn canonical_json(value: &Value) -> Result<String, serde_json::Error> {
 pub fn canonical_object<'a>(
     members: impl IntoIterator<Item = (&'a str, &'a Value)>,
 ) -> Result<String, serde_json::Error> {
-    let mut out = String::new();
-    write_members(members.into_iter().collect(), &mut out)?;
-    Ok(out)
+    let mut writer = Writer::default();
+    writer.members.extend(members);
+    writer.object(0)?;
+    Ok(writer.out)
 }
 
-/// Writes the canonical form of `value` to `out`.
-fn write_value(value: &Value, out: &mut String) -> Result<(), serde_json::Error> {
-    match value {
-        Value::Null => out.push_str("null"),
-        Value::Bool(true) => out.push_str("true"),
-        Value::Bool(false) => out.push_str("false"),
-        Value::Number(number) => write_number(number, out)?,
-        Value::String(text) => write_string(text, out)?,
-        Value::Array(items) => {
-            out.push('[');
-            for (index, item) in items.iter().enumerate() {
-                if index > 0 {
-                    out.push(',');
+/// One run of the writer over a value whose strings and values outlive `'a`.
+#[derive(Debug, Default)]
+struct Writer<'a> {
+    /// The canonical form written so far.
+    out: String,
+    /// The members of every object being written, outermost first: each
+    /// object sorts and walks its own tail and leaves the vector as it found
+    /// it, so a whole document shares one allocation.
+    members: Vec<(&'a str, &'a Value)>,
+}
+
+impl<'a> Writer<'a> {
+    /// Writes the canonical form of `value`.
+    fn value(&mut self, value: &'a Value) -> Result<(), serde_json::Error> {
+        match value {
+            Value::Null => self.out.push_str("null"),
+            Value::Bool(true) => self.out.push_str("true"),
+            Value::Bool(false) => self.out.push_str("false"),
+            Value::Number(number) => write_number(number, &mut self.out)?,
+            Value::String(text) => write_string(text, &mut self.out),
+            Value::Array(items) => {
+                self.out.push('[');
+                for (index, item) in items.iter().enumerate() {
+                    if index > 0 {
+                        self.out.push(',');
+                    }
+                    self.value(item)?;
                 }
-                write_value(item, out)?;
+                self.out.push(']');
             }
-            out.push(']');
+            Value::Object(map) => {
+                let start = self.members.len();
+                self.members
+                    .extend(map.iter().map(|(name, value)| (name.as_str(), value)));
+                self.object(start)?;
+            }
         }
-        Value::Object(map) => write_map(map, out)?,
+        Ok(())
     }
-    Ok(())
+
+    /// Writes the object whose members are those from `start` on, sorted by
+    /// the UTF-16 code units of each name (RFC 8785 §3.2.3), and removes them.
+    fn object(&mut self, start: usize) -> Result<(), serde_json::Error> {
+        if let Some(members) = self.members.get_mut(start..) {
+            members.sort_by(|(a, _), (b, _)| utf16_order(a, b));
+        }
+        let end = self.members.len();
+        self.out.push('{');
+        for index in start..end {
+            if let Some(&(name, value)) = self.members.get(index) {
+                if index > start {
+                    self.out.push(',');
+                }
+                write_string(name, &mut self.out);
+                self.out.push(':');
+                self.value(value)?;
+            }
+        }
+        self.out.push('}');
+        self.members.truncate(start);
+        Ok(())
+    }
 }
 
-/// Writes the canonical form of the object `map` to `out`.
-fn write_map(map: &Map<String, Value>, out: &mut String) -> Result<(), serde_json::Error> {
-    write_members(
-        map.iter().map(|(name, value)| (name.as_str(), value)).collect(),
-        out,
-    )
+/// Orders `a` and `b` by their UTF-16 code units (RFC 8785 §3.2.3).
+///
+/// UTF-8 byte order is code point order, which UTF-16 order departs from only
+/// between a supplementary character and one in U+E000 to U+FFFF. When one
+/// name is a prefix of the other, or their first differing bytes are both
+/// ASCII, the byte order is the UTF-16 order; any other pair is compared by
+/// its code units.
+fn utf16_order(a: &str, b: &str) -> Ordering {
+    match a.bytes().zip(b.bytes()).find(|(x, y)| x != y) {
+        None => a.len().cmp(&b.len()),
+        Some((x, y)) if x.is_ascii() && y.is_ascii() => x.cmp(&y),
+        Some(_) => a.encode_utf16().cmp(b.encode_utf16()),
+    }
 }
 
-/// Writes the object of `members` to `out`, sorted by the UTF-16 code units
-/// of each name (RFC 8785 §3.2.3).
-fn write_members(
-    mut members: Vec<(&str, &Value)>,
-    out: &mut String,
-) -> Result<(), serde_json::Error> {
-    members.sort_by(|(a, _), (b, _)| a.encode_utf16().cmp(b.encode_utf16()));
-    out.push('{');
-    for (index, (name, value)) in members.into_iter().enumerate() {
-        if index > 0 {
-            out.push(',');
-        }
-        write_string(name, out)?;
-        out.push(':');
-        write_value(value, out)?;
-    }
-    out.push('}');
-    Ok(())
-}
+/// 2^53, the magnitude up to which every integer is an exact IEEE 754 double.
+const EXACT_INTEGER: u64 = 1 << 53;
 
 /// Writes `number` to `out` as the ECMAScript Number-to-String form of its
 /// IEEE 754 double (RFC 8785 §3.2.2.3), every integer included.
 fn write_number(number: &Number, out: &mut String) -> Result<(), serde_json::Error> {
+    // NOTE: ECMA-262 Number::toString writes an integral double below 10^21 as
+    // its decimal digits, so an integer within 2^53 is written as its own.
+    if let Some(magnitude) = number.as_u64().filter(|n| *n <= EXACT_INTEGER) {
+        write_digits(magnitude, out);
+        return Ok(());
+    }
+    if let Some(negative) = number
+        .as_i64()
+        .filter(|n| n.unsigned_abs() <= EXACT_INTEGER)
+    {
+        out.push('-');
+        write_digits(negative.unsigned_abs(), out);
+        return Ok(());
+    }
     match number.as_f64().filter(|double| double.is_finite()) {
         Some(double) => {
             out.push_str(ryu_js::Buffer::new().format_finite(double));
@@ -115,43 +164,92 @@ fn write_number(number: &Number, out: &mut String) -> Result<(), serde_json::Err
     }
 }
 
-/// Whether RFC 8785 §3.2.2.2 writes `c` as an escape.
-fn escaped(c: char) -> bool {
-    c == '"' || c == '\\' || c < ' '
+/// Writes the decimal digits of `value` to `out`, with no leading zero.
+#[expect(
+    clippy::expect_used,
+    reason = "a remainder of a division by ten is below ten, so it fits a byte"
+)]
+fn write_digits(mut value: u64, out: &mut String) {
+    let mut digits = [b'0'; 20];
+    let mut count = 0;
+    for slot in digits.iter_mut().rev() {
+        let digit = u8::try_from(value % 10).expect("a decimal digit should fit a byte");
+        *slot = b'0' + digit;
+        count += 1;
+        value /= 10;
+        if value == 0 {
+            break;
+        }
+    }
+    let skip = digits.len() - count;
+    out.extend(digits.iter().skip(skip).map(|digit| char::from(*digit)));
 }
 
-/// Writes `text` to `out` as a JSON string (RFC 8785 §3.2.2.2).
-fn write_string(text: &str, out: &mut String) -> Result<(), serde_json::Error> {
+/// Whether RFC 8785 §3.2.2.2 writes the byte `byte` as an escape.
+///
+/// Every escaped character is ASCII, and no byte of a multi-byte UTF-8
+/// sequence is, so a byte scan finds each escape at a character boundary.
+const fn escaped(byte: u8) -> bool {
+    byte == b'"' || byte == b'\\' || byte < b' '
+}
+
+/// Writes `text` to `out` as a JSON string (RFC 8785 §3.2.2.2), copying each
+/// run with nothing to escape whole.
+fn write_string(text: &str, out: &mut String) {
     out.reserve(text.len() + 2);
     out.push('"');
-    for run in text.split_inclusive(escaped) {
-        let mut chars = run.chars();
-        match chars.next_back() {
-            Some(last) if escaped(last) => {
-                out.push_str(chars.as_str());
-                write_escape(last, out)?;
-            }
-            _ => out.push_str(run),
-        }
+    let mut rest = text;
+    while let Some(at) = rest.bytes().position(escaped) {
+        let (run, byte, tail) = split_escape(rest, at);
+        out.push_str(run);
+        write_escape(byte, out);
+        rest = tail;
     }
+    out.push_str(rest);
     out.push('"');
-    Ok(())
 }
 
-/// Writes the escape of the character `c`, which [`escaped`] holds.
-fn write_escape(c: char, out: &mut String) -> Result<(), serde_json::Error> {
-    match c {
-        '"' => out.push_str("\\\""),
-        '\\' => out.push_str("\\\\"),
-        '\u{8}' => out.push_str("\\b"),
-        '\t' => out.push_str("\\t"),
-        '\n' => out.push_str("\\n"),
-        '\u{c}' => out.push_str("\\f"),
-        '\r' => out.push_str("\\r"),
+/// Splits `text` around the escaped byte at `at`: the run before it, the
+/// byte, and the text after it.
+#[expect(
+    clippy::expect_used,
+    reason = "`at` indexes an ASCII byte of `text` (`escaped` holds only ASCII), so `at` and \
+              `at + 1` are character boundaries within `text`"
+)]
+fn split_escape(text: &str, at: usize) -> (&str, u8, &str) {
+    let (run, from) = text
+        .split_at_checked(at)
+        .expect("an escaped byte should start a character");
+    let byte = *from
+        .as_bytes()
+        .first()
+        .expect("an escaped byte should be in the text");
+    let tail = from
+        .get(1..)
+        .expect("an escaped byte should be one whole character");
+    (run, byte, tail)
+}
+
+/// The lower-case hexadecimal digits of a `\u` escape, by value.
+const HEX: &[u8; 16] = b"0123456789abcdef";
+
+/// Writes the escape of `byte`, which [`escaped`] holds.
+fn write_escape(byte: u8, out: &mut String) {
+    match byte {
+        b'"' => out.push_str("\\\""),
+        b'\\' => out.push_str("\\\\"),
+        0x08 => out.push_str("\\b"),
+        b'\t' => out.push_str("\\t"),
+        b'\n' => out.push_str("\\n"),
+        0x0c => out.push_str("\\f"),
+        b'\r' => out.push_str("\\r"),
         control => {
-            return write!(out, "\\u{:04x}", u32::from(control))
-                .map_err(serde::ser::Error::custom);
+            out.push_str("\\u00");
+            for nibble in [control >> 4, control & 0x0f] {
+                if let Some(digit) = HEX.get(usize::from(nibble)) {
+                    out.push(char::from(*digit));
+                }
+            }
         }
     }
-    Ok(())
 }

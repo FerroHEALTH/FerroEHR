@@ -145,7 +145,6 @@ used as test corpora. Each family keeps its upstream license:
 | The FHIR R4 and R5 `Consent` resource pages, StructureDefinitions, value sets and examples, under `docs/specs/fhir-consent/` | HL7 International | [CC0 1.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC0-1.0.txt) |
 | IHE Basic Patient Privacy Consents (ITI Technical Framework) and the Advanced Patient Privacy Consents supplement, Rev. 1.4, under `docs/specs/ihe-consents/` | IHE International | [`LicenseRef-IHE-Technical-Framework-Copyright`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-IHE-Technical-Framework-Copyright.txt): the General Introduction's grant to reproduce and distribute IHE Technical Framework documents |
 | The OASIS XACML 2.0 core specification, under `docs/specs/xacml/` | OASIS Open | [`LicenseRef-OASIS-Copyright`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-OASIS-Copyright.txt): the document's own notice, a grant to copy and distribute it unmodified |
-| The care provider types of Nictiz's zib 2020 package, under `docs/specs/nl-role-codes/` | Nictiz | [CC0 1.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC0-1.0.txt) |
 | Logius's Logboek Dataverwerkingen NEN7513 Extensie, under `docs/specs/nen-7513-sources/logius/` | `Logius-standaarden/logboek-extensie-nen7513` | [CC-BY 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt) or [W3C-20150513](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/W3C-20150513.txt): the publication states the first, the repository's `LICENSE` the second |
 
 The NEN 7510, 7512 and 7513 standards the compliance pages cite are sold under
@@ -166,12 +165,6 @@ they are recorded by URL and sha256 in `docs/specs/dicom-ps3-15/` and
 `docs/specs/rfc-independent/` and read from the git-ignored cache. ISO
 27789 and ISO 22600 are sold under copyright, and `docs/specs/iso-health-informatics/` holds
 a record of the editions cited.
-
-The UZI-register Certificate Practice Statement v11.7, the source of the UZI
-role codes, is "Copyright CIBG" with no reproduction allowed. It and the
-`uzi-rolcode` CodeSystem of Nictiz's package, whose codes and titles
-reproduce it, are recorded by URL and sha256 in `docs/specs/nl-role-codes/`
-and read from the git-ignored cache.
 
 Every vendored tree in the repository carries a provenance note naming its exact
 upstream source and pinned revision, with the upstream `LICENSE` file vendored
