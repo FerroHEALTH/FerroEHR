@@ -164,7 +164,8 @@ async fn entries_are_stored_as_their_canonical_form_and_chained_by_their_links()
     }
 
     let row = sqlx::query(
-        "SELECT ehr_id, action, result, party_id, request_id, retain_until::text, \
+        "SELECT ehr_id, action_terminology, action_code, result_terminology, result_code, \
+                party_id, request_id, retain_until::text, \
                 time_recorded = '2026-11-07T09:14:03.120Z'::timestamptz AS at \
            FROM audit.access_log_record WHERE chain_seq = 2",
     )
@@ -175,8 +176,13 @@ async fn entries_are_stored_as_their_canonical_form_and_chained_by_their_links()
         row.get::<String, _>("ehr_id"),
         "7d44b88c-4199-4bad-97dc-000000000002"
     );
-    assert_eq!(row.get::<String, _>("action"), "read");
-    assert_eq!(row.get::<String, _>("result"), "granted");
+    assert_eq!(
+        row.get::<String, _>("action_terminology"),
+        "audit-event-action"
+    );
+    assert_eq!(row.get::<String, _>("action_code"), "R");
+    assert_eq!(row.get::<String, _>("result_terminology"), "openehr_access");
+    assert_eq!(row.get::<String, _>("result_code"), "granted");
     assert_eq!(
         row.get::<String, _>("party_id"),
         "6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5"
@@ -265,12 +271,16 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
     assert_eq!(grounds.len(), 5, "every ground is kept");
     assert!(written[0].is_emergency);
 
-    let row = sqlx::query("SELECT ehr_id, result FROM audit.access_log_record WHERE chain_seq = 2")
-        .fetch_one(&pool)
-        .await
-        .expect("the refusal's search columns");
+    let row = sqlx::query(
+        "SELECT ehr_id, result_terminology, result_code FROM audit.access_log_record \
+         WHERE chain_seq = 2",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the refusal's search columns");
     assert_eq!(row.get::<Option<String>, _>("ehr_id"), None);
-    assert_eq!(row.get::<String, _>("result"), "refused");
+    assert_eq!(row.get::<String, _>("result_terminology"), "openehr_access");
+    assert_eq!(row.get::<String, _>("result_code"), "refused");
     assert_eq!(findings(&pool).await, Vec::new(), "both verify");
 }
 

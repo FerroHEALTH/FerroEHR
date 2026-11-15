@@ -21,13 +21,14 @@ pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
     .fetch_all(pool)
     .await
     .expect("read the stored audit rows");
-    let (_, documents) = AuditStore::new(pool.clone())
+    let documents = AuditStore::new(pool.clone())
         .search(&AuditSearchFilter {
             count: 1000,
             ..AuditSearchFilter::default()
         })
         .await
-        .expect("render the stored audit records");
+        .expect("render the stored audit records")
+        .documents;
     texts.extend(documents.iter().map(ToString::to_string));
     texts
 }

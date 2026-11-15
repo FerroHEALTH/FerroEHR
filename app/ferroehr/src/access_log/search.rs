@@ -16,8 +16,8 @@ use jiff::Timestamp;
 use sqlx::Row;
 
 use crate::db::acquire::acquire;
-use openehr_rm::draft::access_control::terminology::Term as _;
-use openehr_rm::draft::access_control::terminology::log::AccessorKind;
+use openehr_rm::draft::access_control::terminology::Term;
+use openehr_rm::draft::access_control::terminology::log::{AccessorKind, Action, Outcome};
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
@@ -51,12 +51,12 @@ pub struct LogQuery {
     pub from: Option<Timestamp>,
     /// The last instant of `time_recorded` selected.
     pub to: Option<Timestamp>,
-    /// The `access action` rubric.
-    pub action: Option<String>,
-    /// The `access outcome` rubric.
-    pub outcome: Option<String>,
-    /// The `accessor kind` rubric.
-    pub accessor_kind: Option<String>,
+    /// The term of `ACCESS_LOG_ENTRY.action`.
+    pub action: Option<Action>,
+    /// The term of `ACCESS_OUTCOME.result`.
+    pub outcome: Option<Outcome>,
+    /// The term of `ACCESSOR.kind`.
+    pub accessor_kind: Option<AccessorKind>,
     /// `is_emergency`.
     pub emergency: Option<bool>,
     /// The accessing party.
@@ -115,28 +115,35 @@ impl AccessLogStore {
              WHERE ($1::text IS NULL OR r.ehr_id = $1) \
              AND ($2::text IS NULL OR r.time_recorded >= $2::text::timestamptz) \
              AND ($3::text IS NULL OR r.time_recorded <= $3::text::timestamptz) \
-             AND ($4::text IS NULL OR r.action = $4) \
-             AND ($5::text IS NULL OR r.result = $5) \
-             AND ($6::text IS NULL OR d.doc #>> '{accessor,kind,value}' = $6) \
-             AND ($7::boolean IS NULL OR (d.doc ->> 'is_emergency')::boolean = $7) \
-             AND ($8::text IS NULL OR d.doc #>> '{accessor,party,external_ref,namespace}' = $8) \
-             AND ($9::text IS NULL OR d.doc #>> '{accessor,party,external_ref,type}' = $9) \
-             AND ($10::text IS NULL OR r.party_id = $10) \
-             AND ($11::text IS NULL OR d.doc #>> '{accessor,credential,issuer}' = $11) \
-             AND ($12::text IS NULL OR d.doc #>> '{accessor,credential,subject}' = $12) \
-             AND ($13::text IS NULL OR r.request_id = $13) \
-             AND NOT ($14::boolean \
-                  AND d.doc #>> '{accessor,kind,value}' IS NOT DISTINCT FROM $15 \
+             AND ($4::text IS NULL OR (r.action_terminology = $4 AND r.action_code = $5)) \
+             AND ($6::text IS NULL OR (r.result_terminology = $6 AND r.result_code = $7)) \
+             AND ($8::text IS NULL \
+                  OR (d.doc #>> '{accessor,kind,defining_code,terminology_id,value}' = $8 \
+                      AND d.doc #>> '{accessor,kind,defining_code,code_string}' = $9)) \
+             AND ($10::boolean IS NULL OR (d.doc ->> 'is_emergency')::boolean = $10) \
+             AND ($11::text IS NULL OR d.doc #>> '{accessor,party,external_ref,namespace}' = $11) \
+             AND ($12::text IS NULL OR d.doc #>> '{accessor,party,external_ref,type}' = $12) \
+             AND ($13::text IS NULL OR r.party_id = $13) \
+             AND ($14::text IS NULL OR d.doc #>> '{accessor,credential,issuer}' = $14) \
+             AND ($15::text IS NULL OR d.doc #>> '{accessor,credential,subject}' = $15) \
+             AND ($16::text IS NULL OR r.request_id = $16) \
+             AND NOT ($17::boolean \
+                  AND d.doc #>> '{accessor,kind,defining_code,terminology_id,value}' \
+                      IS NOT DISTINCT FROM $18 \
+                  AND d.doc #>> '{accessor,kind,defining_code,code_string}' IS NOT DISTINCT FROM $19 \
                   AND d.doc @> jsonb_build_object('items', jsonb_build_array( \
-                      jsonb_build_object('rm_type', $16::text)))) \
-             ORDER BY r.time_recorded DESC, r.chain_seq DESC OFFSET $17 LIMIT $18",
+                      jsonb_build_object('rm_type', $20::text)))) \
+             ORDER BY r.time_recorded DESC, r.chain_seq DESC OFFSET $21 LIMIT $22",
         )
         .bind(query.ehr_id.as_deref())
         .bind(query.from.map(|from| from.to_string()))
         .bind(query.to.map(|to| to.to_string()))
-        .bind(query.action.as_deref())
-        .bind(query.outcome.as_deref())
-        .bind(query.accessor_kind.as_deref())
+        .bind(query.action.map(Term::terminology))
+        .bind(query.action.map(Term::code))
+        .bind(query.outcome.map(Term::terminology))
+        .bind(query.outcome.map(Term::code))
+        .bind(query.accessor_kind.map(Term::terminology))
+        .bind(query.accessor_kind.map(Term::code))
         .bind(query.emergency)
         .bind(query.party.namespace.as_deref())
         .bind(query.party.class.as_deref())
@@ -145,7 +152,8 @@ impl AccessLogStore {
         .bind(query.subject.as_deref())
         .bind(query.request_id.as_deref())
         .bind(query.without_own_log_reads)
-        .bind(AccessorKind::SubjectOfCare.rubric())
+        .bind(AccessorKind::SubjectOfCare.terminology())
+        .bind(AccessorKind::SubjectOfCare.code())
         .bind(LOG_RECORD)
         .bind(query.offset)
         .bind(query.fetch)

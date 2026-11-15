@@ -83,7 +83,9 @@ guarded_handler! {
              description = "The first `time_recorded` selected, an ISO 8601 date-time."),
             ("to" = Option<String>, Query,
              description = "The last `time_recorded` selected, an ISO 8601 date-time."),
-            ("outcome" = Option<String>, Query, description = "An `access outcome` rubric."),
+            ("outcome" = Option<String>, Query,
+             description = "A term of the `access outcome` group by its coded content, the token \
+                            `terminology_id|code`, such as `openehr_access|refused`."),
             ("emergency" = Option<bool>, Query,
              description = "Only the entries whose `is_emergency` is this."),
             ("offset" = Option<i64>, Query, description = "Records skipped; default 0."),

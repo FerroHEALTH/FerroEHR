@@ -182,9 +182,11 @@ fn paging_is_clamped_and_never_textual() {
         "paging must bind, not interpolate: {sql}"
     );
     let bound = format!("{values:?}");
+    // The page reads one record past the clamped count, which says whether a
+    // next page exists without counting the matches (#5702).
     assert!(
-        bound.contains("1000"),
-        "the count clamps to the cap: {bound}"
+        bound.contains("1001"),
+        "the count clamps to the cap, plus the one look-ahead record: {bound}"
     );
     assert!(
         !bound.contains(&i64::MIN.to_string()),
