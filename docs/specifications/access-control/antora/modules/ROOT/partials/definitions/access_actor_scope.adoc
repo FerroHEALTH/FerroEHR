@@ -30,9 +30,9 @@ h|*Invariants*
 2+a|__Not_empty__: `party /= Void or role /= Void or relationship /= Void or caller_kind /= Void`
 
 h|
-2+a|__Relationship_valid__: `relationship /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)`
+2+a|__Relationship_valid__: `relationship /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)`
 
 h|
-2+a|__Caller_kind_valid__: `caller_kind /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)`
+2+a|__Caller_kind_valid__: `caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)`
 
 |===

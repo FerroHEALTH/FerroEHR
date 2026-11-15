@@ -52,6 +52,8 @@
 #   SCIM_GRANT      the command that runs the server's binary against its
 #                   database, such as `docker compose exec -T ferroehr ferroehr`;
 #                   unset, the client is taken as granted already
+#   SCIM_IDS        a file each created User is appended to as `<user> <id>`,
+#                   its id the container of the PERSON it is bound to
 set -euo pipefail
 
 usage() {
@@ -143,7 +145,12 @@ while [[ $# -gt 0 ]]; do
     -H "Authorization: Bearer $token" -H 'Content-Type: application/scim+json' \
     --data "$body" "$base_url/scim/v2/Users")"
   case "$status" in
-    201) echo "scim-provision: created $user" ;;
+    201)
+      echo "scim-provision: created $user"
+      if [[ -n "${SCIM_IDS:-}" ]]; then
+        jq -er --arg user "$user" '"\($user) \(.id)"' "$body_file" >>"$SCIM_IDS"
+      fi
+      ;;
     409)
       # NOTE: RFC 7644 §3.3: a 409 `uniqueness` may name a userName of another
       # client, so the User counts as provisioned only when this client sees it.

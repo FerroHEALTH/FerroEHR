@@ -83,8 +83,8 @@ backend client: a client the CDR grants `query_system_wide`.
 
 Both client grants are policy the CDR holds, read on every request with no
 restart: a capability of a `ROLE` the client's `AGENT` performs, coded
-`ferroehr-operations::query_system_wide` or
-`ferroehr-operations::access_demographic`, under an `[authz.grants] allowed`
+`openehr_access::query_system_wide` or
+`openehr_access::access_demographic`, under an `[authz.grants] allowed`
 that admits the code. See
 [Operational policy](operational-policy.md#a-backend-client-and-a-demographic-client)
 for a worked example. A grant counts for a client's own app-only token; a

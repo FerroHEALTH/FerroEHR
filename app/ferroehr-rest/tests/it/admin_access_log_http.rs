@@ -26,11 +26,16 @@ use crate::common::EXT;
 /// The EHR the logged access reached.
 const EHR: &str = "7d44b88c-4199-4bad-97dc-d78268e01398";
 
-/// A coded term of the draft's `openehr` groups.
+/// A coded term of the draft `openehr_access` groups.
 fn coded(value: &str) -> Value {
+    in_terminology("openehr_access", value)
+}
+
+/// A term of `terminology` whose code is its rubric.
+fn in_terminology(terminology: &str, value: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": value,
             "defining_code": { "_type": "CODE_PHRASE",
-                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
                 "code_string": value } })
 }
 
@@ -41,7 +46,7 @@ fn entry(system_id: &str) -> AccessLogEntry {
         "uid": { "_type": "HIER_OBJECT_ID", "value": "0193f1a2-7c1e-7b4a-9f00-2c6d1e8b5a01" },
         "system_id": system_id,
         "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-07T09:14:03.120Z" },
-        "action": coded("read"),
+        "action": in_terminology("audit-event-action", "R"),
         "outcome": { "_type": "ACCESS_OUTCOME", "result": coded("granted") },
         "accessor": { "_type": "ACCESSOR", "kind": coded("person"),
             "party": { "_type": "PARTY_IDENTIFIED", "name": "a professional" } },

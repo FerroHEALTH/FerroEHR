@@ -5,7 +5,7 @@
 //! partner `ORGANISATION` carrying the client identifiers of its issuer, and
 //! a `ROLE` it performs whose capabilities grant
 //! `federated_person_access` or `federated_organisation_access`, their terms
-//! the coded elements of the `ferroehr-operations` terminology. No openEHR
+//! the coded elements of the `openehr_access` terminology. No openEHR
 //! spec gives a capability an authorization meaning: our own design.
 
 use ferroehr::error::ServiceError;
@@ -44,7 +44,7 @@ pub(crate) struct Terms {
     items: Vec<Value>,
 }
 
-/// A `DV_CODED_TEXT` of the operation terminology.
+/// A `DV_CODED_TEXT` of the draft access terminology.
 fn coded(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",

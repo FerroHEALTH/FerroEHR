@@ -71,6 +71,9 @@ answers `503`, so no decision is made without it.
 | `access_copy_refills_total` | counter | `copy`, `outcome` | Reads of the settings projection that fill the copy: `ok`, or `failed` (the request answered `503`). |
 | `access_copy_drops_total` | counter | `scope` | Drops: `ehr` (one EHR's settings changed), `classes` (a new class), `every` (a listener connected or was lost, or a refill notification). |
 
+What the copies and the care caches hold at scale is on the
+[Performance](performance.md#the-access-path-at-scale) page.
+
 The hit ratio is `rate(access_copy_lookups_total{result="hit"}[5m]) /
 rate(access_copy_lookups_total[5m])`. Alert on any rate of
 `access_copy_refills_total{outcome="failed"}`. While the listener is down

@@ -58,14 +58,14 @@ one licence.
   `DV_IDENTIFIER` elements; the personal relationship's type is a `DV_TEXT`,
   since the source's value set is unbound.
 - A record subject element (`id36`) is added, which the CKM source does not
-  have: a `DV_IDENTIFIER` named by the coded `record_subject` of FerroEHR's
-  operation terminology, holding an `EHR_STATUS` subject reference the
+  have: a `DV_IDENTIFIER` named by the coded `record_subject` of the draft
+  openEHR access terminology `openehr_access`, holding an `EHR_STATUS` subject reference the
   `PERSON` stands for, such as a pseudonym. An identifier another
   organisation issued belongs in `PARTY.details` (RM Demographic IM §2.1.3).
 - A care relationship (`id32`) is added, which the CKM source does not
   have: the patient's relationship to a care team or unit, whose one
-  mandatory element is the coded `under_care_of` of FerroEHR's terminology
-  `ferroehr-operations`, with an optional discharge time.
+  mandatory element is the coded `under_care_of` of the draft openEHR access
+  terminology `openehr_access`, with an optional discharge time.
 - Every element is optional and every relationship `0..*`, so a patient
   known by one identifier commits `532|complete|`. The CKM source makes the
   details, the name and a contact mandatory.

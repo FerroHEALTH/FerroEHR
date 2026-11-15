@@ -278,7 +278,7 @@ ferroehr party-binding grant --issuer <ISSUER> --client-id <CLIENT_ID>
                              --operation <CODE> [--element <CODE>=<TEXT>]...
 ```
 
-Grants an operation of the `ferroehr-operations` terminology to a client, on
+Grants an operation of the `openehr_access` terminology to a client, on
 the operator's authority: an `AGENT` carrying the client identifier under the
 token issuer, unless an `ACTOR` names the client already, and a `ROLE` it
 performs whose capability grants the operation, with one scope element per

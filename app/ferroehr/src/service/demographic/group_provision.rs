@@ -106,7 +106,7 @@ pub struct GroupState {
     /// The members' `PERSON` containers.
     pub members: Vec<VoId>,
     /// Whether the Group is a care team: its `GROUP` carries
-    /// the coded `care_team` as its `name` and each membership `member_of`
+    /// the coded `care_team` as its `name` and each membership `MBR`
     /// (#5617). Set at its creation and never changed.
     pub care_team: bool,
 }
@@ -234,7 +234,7 @@ impl FerroEhrService {
     }
 
     /// The new version of the `PERSON` `member` that adds (`join`) or drops
-    /// its membership of the `GROUP` `group`, carrying `member_of` when the
+    /// its membership of the `GROUP` `group`, carrying `MBR` when the
     /// group is a care team (`care_team`); `None` when it already holds
     /// what is asked, and for a drop from a `PERSON` that is not `complete` or
     /// `incomplete`, whose memberships its deactivation already dropped.
@@ -401,7 +401,7 @@ impl FerroEhrService {
             clear_mapped_value(&mut body, external, Some((issued.1, issued.0)));
         }
         if head.is_none() && state.care_team {
-            name_coded(&mut body, GroupKind::CareTeam.code(), "care team");
+            name_coded(&mut body, GroupKind::CareTeam, "care team");
         }
         Ok(body)
     }

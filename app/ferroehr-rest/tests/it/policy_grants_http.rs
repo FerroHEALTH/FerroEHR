@@ -187,7 +187,7 @@ fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
-/// A `DV_CODED_TEXT` of the operation terminology.
+/// A `DV_CODED_TEXT` of the draft access terminology.
 fn operation_code(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",

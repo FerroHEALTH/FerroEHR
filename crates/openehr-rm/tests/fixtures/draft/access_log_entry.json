@@ -14,9 +14,9 @@
     "value": "read",
     "defining_code": {
       "terminology_id": {
-        "value": "openehr"
+        "value": "audit-event-action"
       },
-      "code_string": "<access action: read>"
+      "code_string": "R"
     }
   },
   "operation": {
@@ -36,9 +36,9 @@
       "value": "granted",
       "defining_code": {
         "terminology_id": {
-          "value": "openehr"
+          "value": "openehr_access"
         },
-        "code_string": "<access outcome: granted>"
+        "code_string": "granted"
       }
     },
     "delivered": 1
@@ -50,9 +50,9 @@
       "value": "person",
       "defining_code": {
         "terminology_id": {
-          "value": "openehr"
+          "value": "openehr_access"
         },
-        "code_string": "<accessor kind: person>"
+        "code_string": "person"
       }
     },
     "party": {
@@ -117,7 +117,7 @@
       "value": "treatment",
       "defining_code": {
         "terminology_id": {
-          "value": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+          "value": "v3-ActReason"
         },
         "code_string": "TREAT"
       }

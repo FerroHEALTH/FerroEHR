@@ -185,7 +185,7 @@ fn role(template: &str, performer: VoId, validity: Option<Value>) -> Value {
 
 /// A representation `PARTY_RELATIONSHIP` of `archetype` from `source` to
 /// `target`: its name the openEHR `subject_relationship` code `code`, and its
-/// details the representation code of FerroEHR's operation terminology.
+/// details the representation code of the draft access terminology.
 fn representation(
     archetype: &str,
     source: (&str, VoId),
@@ -201,7 +201,7 @@ fn representation(
             "name": text("Representation code"),
             "value": { "_type": "DV_CODED_TEXT", "value": "represents",
                 "defining_code": { "_type": "CODE_PHRASE",
-                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                     "code_string": "represents" } } }] });
     body
 }

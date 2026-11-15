@@ -293,6 +293,15 @@ mod tests {
                     "code_string": code } })
     }
 
+    /// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+    fn provision(code: &str) -> Value {
+        let mut value = term(code);
+        value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+        );
+        value
+    }
+
     /// A code of the jurisdiction's terminology `terminology`.
     fn foreign_term(terminology: &str, code: &str) -> Value {
         json!({ "_type": "DV_CODED_TEXT", "value": code,
@@ -308,7 +317,7 @@ mod tests {
             "name": { "_type": "DV_TEXT", "value": "Directive" },
             "archetype_node_id": "at0001",
             "kind": term(kind),
-            "effect": term(effect),
+            "effect": provision(effect),
             "emergency_override": false
         });
         if let (Some(d), Some(extra)) = (d.as_object_mut(), extra.as_object()) {

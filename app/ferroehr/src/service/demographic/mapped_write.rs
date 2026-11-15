@@ -275,7 +275,7 @@ impl FerroEhrService {
     /// Returns a membership of the `GROUP` `group` held by the `PERSON`
     /// `member`: an inline `PARTY_RELATIONSHIP` of `archetype_id` whose
     /// `source` is the member and whose `target` is the group, each named
-    /// under `namespace`, named by the coded `member_of` when the group is a
+    /// under `namespace`, named by the coded membership, HL7 v3 `RoleClass#MBR`, when the group is a
     /// care team, as RM `PARTY_RELATIONSHIP.type()` is its `name` (#5617).
     ///
     /// RM demographic master02 §Party Relationships: a relationship is stored
@@ -298,19 +298,19 @@ impl FerroEhrService {
             object.insert("target".to_owned(), party_ref(namespace, "GROUP", group));
         }
         if care_team {
-            name_coded(&mut body, CareRelationship::MemberOf.code(), "member of");
+            name_coded(&mut body, CareRelationship::MemberOf, "member of");
         }
         Ok(body)
     }
 }
 
-/// Names the party or relationship `body` by `code` of the access control
-/// terminology, reading `rubric`: RM demographic `party.adoc` and
+/// Names the party or relationship `body` by the access term `term`, reading
+/// `rubric`: RM demographic `party.adoc` and
 /// `party_relationship.adoc` make `type()` the `name` (`Type_valid`), so the
 /// coded name says what kind it is.
-pub(super) fn name_coded(body: &mut Value, code: &str, rubric: &str) {
+pub(super) fn name_coded<T: Term>(body: &mut Value, term: T, rubric: &str) {
     if let Some(object) = body.as_object_mut() {
-        object.insert("name".to_owned(), coded_term(code, rubric));
+        object.insert("name".to_owned(), coded_term(term, rubric));
     }
 }
 

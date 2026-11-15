@@ -3,13 +3,14 @@
 
 //! The caller facts (#5511, #5621): the roles a caller performs, read from
 //! the coded `name` of each `ROLE` in force it performs, and care
-//! relationships read from a `PERSON`'s relationships by their code of
-//! `ferroehr-operations`, in an archetype of the deployment's own, held on
+//! relationships read from a `PERSON`'s relationships by their code (HL7 v3
+//! `RoleClass#MBR` for a membership, `openehr_access::under_care_of` for
+//! care), in an archetype of the deployment's own, held on
 //! every replica beside the grants. An admission and a discharge decide the next request on another
 //! replica, a replica reads only the facts of the parties that changed, with
 //! one indexed read, and only a caller holding `write_care_relationship` (or
 //! an administrator) changes a care relationship. A provider
-//! `ORGANISATION`'s `member_of` relationship is its membership of a `GROUP`
+//! `ORGANISATION`'s `MBR` relationship is its membership of a `GROUP`
 //! (#5575), held and guarded the same way. No openEHR spec gives a
 //! capability or a relationship an access meaning: our own design.
 
@@ -30,7 +31,7 @@ use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 /// The HL7 v3 `ActCode` sensitivity terminology id.
-const ACT_CODE: &str = "2.16.840.1.113883.5.25";
+const ACT_CODE: &str = "v3-ActCode";
 /// The jurisdiction's role code system.
 const ROLES: &str = "urn:example:roles";
 
@@ -76,16 +77,21 @@ fn party_ref(kind: &str, id: VoId) -> Value {
             "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() } })
 }
 
+/// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
+const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+/// A patient under the care of a team or unit.
+const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
+
 /// A care relationship to `team` carrying `code` in its details, in an
 /// archetype of the deployment's own, over `validity`.
-fn care(code: &str, source: VoId, team: VoId, validity: &Value) -> Value {
+fn care((terminology, code): (&str, &str), source: VoId, team: VoId, validity: &Value) -> Value {
     json!({
         "_type": "PARTY_RELATIONSHIP",
         "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.ward_stay.v3",
         "name": text("Ward stay"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
             "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("kind"),
-                        "value": coded(TERMINOLOGY, code) }] },
+                        "value": coded(terminology, code) }] },
         "time_validity": validity,
         "source": party_ref("PERSON", source),
         "target": party_ref("GROUP", team)
@@ -307,7 +313,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         .expect("the patient commits");
     let roster = person(
         "Dr D",
-        &[care("member_of", doctor, ward, &interval(&day(-30), None))],
+        &[care(MEMBER, doctor, ward, &interval(&day(-30), None))],
     );
     update_as(
         &one,
@@ -336,12 +342,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         (PartyKind::Person, patient, &uid),
         &person(
             "Mr E",
-            &[care(
-                "under_care_of",
-                patient,
-                ward,
-                &interval(&day(0), None),
-            )],
+            &[care(UNDER_CARE, patient, ward, &interval(&day(0), None))],
         ),
     )
     .await
@@ -385,7 +386,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         &person(
             "Mr E",
             &[care(
-                "under_care_of",
+                UNDER_CARE,
                 patient,
                 ward,
                 &interval(&day(-3), Some(&day(-1))),
@@ -425,12 +426,7 @@ async fn only_a_write_care_relationship_grant_changes_a_care_relationship() {
         .expect("the patient commits");
     let admitted = person(
         "Mr E",
-        &[care(
-            "under_care_of",
-            patient,
-            ward,
-            &interval(&day(0), None),
-        )],
+        &[care(UNDER_CARE, patient, ward, &interval(&day(0), None))],
     );
     let refused = update_as(
         &svc,
@@ -472,7 +468,7 @@ async fn a_providers_group_membership_is_guarded_and_held_on_another_replica() {
         .await
         .expect("the ORGANISATION commits");
     let membership = |validity: &Value| {
-        let mut relationship = care("member_of", hospital, region, validity);
+        let mut relationship = care(MEMBER, hospital, region, validity);
         relationship["source"] = party_ref("ORGANISATION", hospital);
         organisation(&[relationship])
     };
@@ -542,7 +538,7 @@ async fn a_care_relationship_of_its_own_is_refused() {
         .await
         .expect("the patient commits");
     let mut write = WriteRequest::new(crate::typed_body::typed(&care(
-        "under_care_of",
+        UNDER_CARE,
         patient,
         ward,
         &interval(&day(0), None),
@@ -570,7 +566,7 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
          INSERT INTO party.binding_caller_fact \
              (holder_id, ordinal, kind, party_id, target_id, lifecycle_state, role_validity, \
               validity) \
-         SELECT id, 0, 'member_of', id, uuidv7(), '532', '(,)', '(,)' FROM p",
+         SELECT id, 0, 'MBR', id, uuidv7(), '532', '(,)', '(,)' FROM p",
     )
     .execute(&pool)
     .await

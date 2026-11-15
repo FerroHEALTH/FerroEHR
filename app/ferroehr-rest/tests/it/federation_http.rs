@@ -940,7 +940,9 @@ async fn an_external_persons_write_records_its_committer_and_names_its_provider(
 /// deny overrides (#5621).
 #[tokio::test]
 async fn a_controller_rule_refuses_a_template_the_agreement_allows() {
-    use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+    use openehr_rm::draft::access_control::terminology::{
+        TERMINOLOGY_ID_ACCESS, TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
+    };
     let write = "patient/composition-*.c";
     let writer = agreement(Accessor::Person)
         .also("read_scope", write)
@@ -949,13 +951,14 @@ async fn a_controller_rule_refuses_a_template_the_agreement_allows() {
     svc.template_adl14_upload(&common::ips_opt_xml())
         .await
         .expect("upload the IPS template");
-    let term = |code: &str| {
+    let in_terminology = |terminology: &str, code: &str| {
         json!({ "_type": "DV_CODED_TEXT", "value": code,
                 "defining_code": { "_type": "CODE_PHRASE",
-                    "terminology_id": { "_type": "TERMINOLOGY_ID",
-                                        "value": TERMINOLOGY_ID_ACCESS_CONTROL },
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
                     "code_string": code } })
     };
+    let term = |code: &str| in_terminology(TERMINOLOGY_ID_ACCESS, code);
+    let provision = |code: &str| in_terminology(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, code);
     let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
     let policy = json!({
         "_type": "ACCESS_POLICY",
@@ -970,7 +973,7 @@ async fn a_controller_rule_refuses_a_template_the_agreement_allows() {
         "purpose_required": false,
         "rules": [{ "_type": "ACCESS_DIRECTIVE",
             "name": { "_type": "DV_TEXT", "value": "No summaries from partners" },
-            "archetype_node_id": "id15", "kind": term("controller_rule"), "effect": term("deny"),
+            "archetype_node_id": "id15", "kind": term("controller_rule"), "effect": provision("deny"),
             "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("access_service") }],
             "operations": [term("write")],
             "data": [{ "_type": "ACCESS_DATA_SCOPE",

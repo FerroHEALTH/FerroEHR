@@ -37,7 +37,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 
 /// The HL7 v3 `ActCode` sensitivity terminology id.
-const ACT_CODE: &str = "2.16.840.1.113883.5.25";
+const ACT_CODE: &str = "v3-ActCode";
 
 fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
@@ -55,9 +55,20 @@ fn party_ref(kind: &str, id: VoId) -> Value {
             "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() } })
 }
 
+/// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
+const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+/// A patient under the care of a team or unit.
+const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
+
 /// A care relationship of `code` from `source` to `team`, over the dates
 /// `from` to `until`, each included.
-fn care(code: &str, source: VoId, team: VoId, from: &str, until: Option<&str>) -> Value {
+fn care(
+    (terminology, code): (&str, &str),
+    source: VoId,
+    team: VoId,
+    from: &str,
+    until: Option<&str>,
+) -> Value {
     let mut validity = json!({ "_type": "DV_INTERVAL",
         "lower": { "_type": "DV_DATE", "value": from },
         "lower_unbounded": false, "upper_unbounded": until.is_none(),
@@ -71,7 +82,7 @@ fn care(code: &str, source: VoId, team: VoId, from: &str, until: Option<&str>) -
         "name": text("Ward stay"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
             "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("kind"),
-                        "value": coded(TERMINOLOGY, code) }] },
+                        "value": coded(terminology, code) }] },
         "time_validity": validity,
         "source": party_ref("PERSON", source),
         "target": party_ref("GROUP", team)
@@ -268,7 +279,7 @@ async fn the_ward_with_its_grace_period() {
         let (doctor, uid) = create(&svc, PartyKind::Person, &person(name, &[]))
             .await
             .expect("the professional commits");
-        let roster = person(name, &[care("member_of", doctor, team, "2026-10-01", None)]);
+        let roster = person(name, &[care(MEMBER, doctor, team, "2026-10-01", None)]);
         update_as_adt(&svc, (doctor, &uid), &roster).await;
         doctors.push(doctor);
     }
@@ -276,7 +287,7 @@ async fn the_ward_with_its_grace_period() {
         .await
         .expect("the patient commits");
     let stay = care(
-        "under_care_of",
+        UNDER_CARE,
         patient,
         cardiology,
         "2026-11-03",
@@ -362,7 +373,7 @@ async fn hiv_results() {
         "sensitivities": [coded(ACT_CODE, "HIV")] }],
         "rules": [{ "_type": "ACCESS_DIRECTIVE", "name": text("Infectious disease reads HIV"),
             "archetype_node_id": "at0003",
-            "kind": coded(TERMINOLOGY, "controller_rule"), "effect": coded(TERMINOLOGY, "permit"),
+            "kind": coded(TERMINOLOGY, "controller_rule"), "effect": coded(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, "permit"),
             "applies_to": [{ "role": coded("urn:example:roles", "INFECTIOUS_DISEASE") }],
             "data": [{ "sensitivities": [coded(ACT_CODE, "HIV")] }],
             "emergency_override": false }] }));
@@ -420,10 +431,7 @@ async fn two_wards(svc: &FerroEhrService) -> ([VoId; 2], [VoId; 2]) {
         let (person_id, uid) = create(svc, PartyKind::Person, &person(doctor, &[]))
             .await
             .expect("the professional commits");
-        let roster = person(
-            doctor,
-            &[care("member_of", person_id, team, "2026-10-01", None)],
-        );
+        let roster = person(doctor, &[care(MEMBER, person_id, team, "2026-10-01", None)]);
         update_as_adt(svc, (person_id, &uid), &roster).await;
         teams.push(team);
         doctors.push(person_id);
@@ -461,7 +469,7 @@ async fn care_and_representation_resolve_under_both_subject_indexes() {
     let (patient, uid) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
         .await
         .expect("the patient commits");
-    let stay = care("under_care_of", patient, cardiology, "2026-11-03", None);
+    let stay = care(UNDER_CARE, patient, cardiology, "2026-11-03", None);
     let admitted = declaring(person("Mr E", &[stay]), &[(PIXM, &pseudonym)]);
     update_as_adt(&svc, (patient, &uid), &admitted).await;
     let local = create_ehr_for_party(&svc, patient).await;
@@ -540,7 +548,7 @@ async fn an_identity_merge_moves_the_record_subject_in_one_contribution() {
         let (vo, uid) = create(&svc, PartyKind::Person, &person(name, &[]))
             .await
             .expect("the patient commits");
-        let stay = care("under_care_of", vo, team, "2026-11-01", None);
+        let stay = care(UNDER_CARE, vo, team, "2026-11-01", None);
         let body = declaring(
             person(name, std::slice::from_ref(&stay)),
             &[(PIXM, pseudonym.as_str())],

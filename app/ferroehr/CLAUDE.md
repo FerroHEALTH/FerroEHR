@@ -6,9 +6,10 @@ our change proposals) are generated into `openehr-rm` under
 `openehr_rm::draft`, behind its `draft` feature, which this crate enables;
 their class invariants sit beside them (`openehr_rm::draft::invariants`,
 `openehr_rm::draft::access_log::invariants`,
-`openehr_rm::draft::access_control::invariants`), and so do the access
-control groups of `ferroehr-operations` those invariants, the access
-evaluator and the write checks read
+`openehr_rm::draft::access_control::invariants`), and so do the groups of
+the draft `openehr_access` terminology (with the HL7 codes some terms are)
+those invariants, the access evaluator, the write checks and the access log
+read
 (`openehr_rm::draft::access_control::terminology`). Generated openEHR types
 never live in an application crate (owner decision 2026-11-13, #5540): the
 service logic over them stays here and names them by full path.
@@ -33,7 +34,7 @@ parties by archetype and carries their default definitions from
 definitions of `deploy/definitions/` and the ids the default mapping names;
 `service::demographic::default_definitions` seeds both sets at boot when
 absent; `grants` derives the client identifiers of any `ACTOR` and the
-operations of the `ferroehr-operations` terminology coded in any `ROLE`'s
+operations of the `openehr_access` terminology coded in any `ROLE`'s
 capability credentials into the side table in each commit, never by
 archetype, refuses an operation above `[authz.grants] allowed` or a grant
 without its terms, holds each client's acts-for provider, and keeps them in

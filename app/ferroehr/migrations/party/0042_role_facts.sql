@@ -24,7 +24,7 @@ ALTER TABLE binding_caller_fact DROP CONSTRAINT ck_binding_caller_fact_kind;
 ALTER TABLE binding_caller_fact ADD CONSTRAINT ck_binding_caller_fact_kind
     CHECK (kind IN ('role', 'member_of', 'under_care_of'));
 
-COMMENT ON COLUMN binding_caller_fact.kind IS 'What the fact is: role, the coded name of a ROLE the party performs, or member_of and under_care_of, the ferroehr-operations codes of a care relationship.';
+COMMENT ON COLUMN binding_caller_fact.kind IS 'What the fact is: role, the coded name of a ROLE the party performs, or member_of and under_care_of, the codes of a care relationship.';
 
 COMMENT ON TABLE binding_caller_fact IS 'The roles each ROLE head that is not deleted names for its performer, and the care relationships of each PERSON and ORGANISATION head. Derived from the party versions in each commit''s transaction; no openEHR spec governs reading them as access facts, our own design.';
 

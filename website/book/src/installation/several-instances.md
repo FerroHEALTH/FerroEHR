@@ -90,6 +90,11 @@ withdraw readiness, so the instance stays in rotation. The metric
 `policy_listener_up` reads `0` for the lost listener; see [a lost policy
 listener](../operations-access-path.md#a-lost-policy-listener).
 
+The cost of a change on the database grows with the instances: each one
+reads the change once, on its own notification. The reload load measured for
+one, two and three instances is on the
+[Performance](../performance.md#the-access-path-at-scale) page.
+
 ## Connection budget
 
 Each instance opens three pools, one per domain (clinical, party and audit).
