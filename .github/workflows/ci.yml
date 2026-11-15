@@ -910,6 +910,17 @@ jobs:
       - name: spec-citations / Every cited migration file exists
         if: ${{ !cancelled() }}
         run: bash scripts/checks/migration-citations.sh --all
+
+      # ---- migration-numbering -----------------------------------------
+      # Each domain's migrations are numbered 0001 to N, each number once:
+      # two pull requests that each add the next number pass alone, and only
+      # their merge group holds both (#5741).
+      - name: migration-numbering / The numbering detector catches what it claims to
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/migration-numbering.sh --self-test
+      - name: migration-numbering / No domain shares a migration number or skips one
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/migration-numbering.sh
       - name: spec-citations / The application-path detector catches what it claims to
         if: ${{ !cancelled() }}
         run: bash scripts/checks/crate-tests-read-no-app.sh --self-test
