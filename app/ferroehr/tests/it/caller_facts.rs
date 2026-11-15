@@ -607,3 +607,63 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
         .expect("the facts read");
     assert_eq!(read.len(), 10, "only the parties stamped since are read");
 }
+
+/// Party migration 0042 (#5621) made a `ROLE`'s coded name a caller fact. A
+/// store migrated from 0041 holds its `ROLE`s and no role rows, and the next
+/// boot refills them before it serves, with no command run (#5675).
+#[tokio::test]
+async fn the_boot_after_migration_0042_reads_the_roles_already_stored() {
+    const MIGRATION: &str = include_str!("../../migrations/party/0042_role_facts.sql");
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = replica(&pool).await;
+    let (agent, _) = granted(
+        &svc,
+        "stored-client",
+        &[capability("access_demographic", &[])],
+    )
+    .await;
+    create(
+        &svc,
+        PartyKind::Role,
+        &named_role(agent, &coded(ROLES, "NURSE"), None),
+    )
+    .await
+    .expect("the ROLE commits");
+    sqlx::query("DELETE FROM party.binding_caller_fact WHERE kind = 'role'")
+        .execute(&pool)
+        .await
+        .expect("the store as migration 0041 left it");
+    let mut conn = pool.acquire().await.expect("a connection").detach();
+    sqlx::raw_sql("SET search_path = party, ext, public")
+        .execute(&mut conn)
+        .await
+        .expect("the party search path");
+    sqlx::raw_sql(MIGRATION)
+        .execute(&mut conn)
+        .await
+        .expect("migration 0042 runs");
+    sqlx::Connection::close(conn)
+        .await
+        .expect("the connection closes");
+
+    let upgraded = replica(&pool).await;
+    assert!(
+        !of_client(&upgraded, "stored-client")
+            .await
+            .facts()
+            .roles()
+            .contains(&foreign(ROLES, "NURSE")),
+        "the store holds no role row until a boot"
+    );
+    upgraded
+        .read_grants()
+        .await
+        .expect("the boot reads the grants");
+    let facts = of_client(&upgraded, "stored-client").await.facts().clone();
+    assert!(
+        facts.roles().contains(&foreign(ROLES, "NURSE")),
+        "the boot refilled the role: {:?}",
+        facts.roles()
+    );
+}

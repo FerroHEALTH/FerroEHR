@@ -1,0 +1,1 @@
+- The access record of an emergency read names a lifted controller deny rule only when its data scope covers an object the read delivered, by the rule's uid, else its position, as it already did for a patient's directives. Before, it named every lifted rule, including one that covered nothing the caller read (#5676).
