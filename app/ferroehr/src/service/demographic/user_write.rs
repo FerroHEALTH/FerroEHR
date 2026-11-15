@@ -23,6 +23,7 @@ use sqlx::Connection as _;
 use crate::db::acquire::acquire;
 use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
+use crate::party_binding::grants::caller::is_care;
 use crate::party_binding::provisioned;
 use crate::service::FerroEhrService;
 use crate::service::demographic::group_provision::{is_membership, retain_relationships};
@@ -95,8 +96,10 @@ impl FerroEhrService {
     /// returning the User as it stands after, or `None` when the id names no
     /// User of that client.
     ///
-    /// A deactivation drops the User's memberships in the same version, so a
-    /// reactivated User belongs to no Group until its client adds it again.
+    /// A deactivation drops the User's Group memberships in the same version,
+    /// so a reactivated User belongs to no plain Group until its client adds
+    /// it again; it keeps every care relationship, which SCIM never changes,
+    /// so a reactivated User holds them as before (#5628).
     ///
     /// # Errors
     /// [`ServiceError::VersionConflict`] when the current version is not the
@@ -150,10 +153,10 @@ impl FerroEhrService {
         if matches!(outcome, Transition::One(state::INACTIVE | state::ABANDONED))
             && let Ok(mapping) = self.scim_group_mapping()
         {
-            // NOTE: RM common master06 §Version Lifecycle draws no update of an
-            // inactive or abandoned version, so the deactivation drops the memberships.
+            // NOTE: RM common master06 §Version Lifecycle draws no update of an inactive or
+            // abandoned version, so a deactivation drops memberships, never a care one (#5628).
             retain_relationships(&mut body, |relationship| {
-                !is_membership(relationship, mapping.membership)
+                !is_membership(relationship, mapping.membership) || is_care(relationship)
             });
         }
         for lifecycle in commits {

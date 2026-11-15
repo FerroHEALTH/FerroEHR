@@ -262,48 +262,90 @@ pub(crate) fn check_content(facts: Option<&Facts>) -> Result<(), ServiceError> {
     }
 }
 
-/// The care relationships of a committed `PERSON`, or the memberships of a
-/// committed `ORGANISATION`, before its commit writes them, which
-/// [`CareBefore::check`] compares with what it wrote.
-#[derive(Debug)]
-pub(crate) struct CareBefore(Option<(Uuid, Vec<String>)>);
-
-impl CareBefore {
-    /// The stored care relationships of the party `committed` writes, when
-    /// it is a `PERSON` or an `ORGANISATION`, read on its commit transaction
-    /// `tx`.
-    ///
-    /// # Errors
-    /// A storage failure.
-    pub(crate) async fn read(
-        tx: &mut sqlx::PgConnection,
-        committed: &crate::versioning::change::Committed,
-    ) -> Result<Self, ServiceError> {
-        if !matches!(committed.kind, Kind::Person | Kind::Organisation) {
-            return Ok(Self(None));
-        }
-        let party = committed.vo_id.0;
-        Ok(Self(Some((party, store::care(tx, party).await?))))
+/// Refuses the commit `committed` of a `PERSON` or an `ORGANISATION` when
+/// its version changes what the care relationships or memberships say, or
+/// the record subjects it declares, and its caller may not
+/// ([`check_care_writer`]).
+///
+/// The care relationships and record subjects of `facts`, what the committed
+/// body holds, are compared with those of the last earlier version that
+/// holds a body: a relationship by kind, target and `time_validity`, a
+/// subject by namespace and id, never by position (#5640). A logical
+/// deletion holds no body and changes none: its earlier versions keep them
+/// (RM common `master06-change_control_package.adoc` §Logical Deletion). A
+/// lifecycle state is no relationship content, so a deactivation that keeps
+/// them needs no grant (#5628). Our own design.
+///
+/// # Errors
+/// The `403` of [`check_care_writer`], and a storage failure.
+pub(crate) async fn check_care(
+    tx: &mut sqlx::PgConnection,
+    mapping: &BindingMapping,
+    committed: &crate::versioning::change::Committed,
+    facts: Option<&Facts>,
+) -> Result<(), ServiceError> {
+    if !matches!(committed.kind, Kind::Person | Kind::Organisation) {
+        return Ok(());
     }
-
-    /// Refuses the commit when it changed the care relationships and its
-    /// caller may not ([`check_care_writer`]).
-    ///
-    /// # Errors
-    /// The `403` of [`check_care_writer`] and a storage failure.
-    pub(crate) async fn check(
-        self,
-        tx: &mut sqlx::PgConnection,
-        mapping: &BindingMapping,
-    ) -> Result<(), ServiceError> {
-        let Some((party, before)) = self.0 else {
-            return Ok(());
-        };
-        if store::care(tx, party).await? == before {
-            return Ok(());
+    let Some(after) = facts else {
+        return Ok(());
+    };
+    let before: Option<String> = sqlx::query_scalar(
+        "SELECT v.body FROM version v WHERE v.vo_id = $1 AND v.sys_version < $2 \
+         AND v.body IS NOT NULL ORDER BY v.sys_version DESC LIMIT 1",
+    )
+    .bind(committed.vo_id)
+    .bind(committed.sys_version)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(StorageError::from)?;
+    let before = match before {
+        Some(body) => {
+            let body: Value = serde_json::from_str(&body).map_err(StorageError::BodyDecode)?;
+            GrantFacts::of(committed.kind, &body)
         }
-        check_care_writer(mapping, party)
+        None => GrantFacts::default(),
+    };
+    if same_care(&before.facts, &after.grants.facts)
+        && same_subjects(&before.subjects, &after.grants.subjects)
+    {
+        return Ok(());
     }
+    check_care_writer(mapping, committed.vo_id.0)
+}
+
+/// Whether the care relationships among `before` and `after` say the same:
+/// each of one matches one of the other by kind, target and
+/// `time_validity`, whatever their order.
+fn same_care(before: &[CallerFact], after: &[CallerFact]) -> bool {
+    let care = |fact: &&CallerFact| matches!(fact.value, FactValue::Team(_));
+    let mut unmatched: Vec<&CallerFact> = after.iter().filter(care).collect();
+    before.iter().filter(care).all(|fact| {
+        let found = unmatched.iter().position(|other| {
+            other.kind == fact.kind && other.value == fact.value && other.validity == fact.validity
+        });
+        found.map(|at| unmatched.swap_remove(at)).is_some()
+    }) && unmatched.is_empty()
+}
+
+/// Whether `before` and `after` declare the same record subjects, by
+/// namespace and id, whatever their order.
+fn same_subjects(before: &[subject::DeclaredSubject], after: &[subject::DeclaredSubject]) -> bool {
+    let sorted = |held: &[subject::DeclaredSubject]| {
+        let mut subjects: Vec<_> = held
+            .iter()
+            .map(|declared| declared.subject.clone())
+            .collect();
+        subjects.sort();
+        subjects
+    };
+    sorted(before) == sorted(after)
+}
+
+/// Whether `relationship` carries a code of [`CareRelationship`] in its
+/// `name` or its `details`: a care relationship, which SCIM never changes.
+pub(crate) fn is_care(relationship: &Value) -> bool {
+    care_kind(relationship).is_some()
 }
 
 /// Refuses a commit that changed the care relationships, memberships or
@@ -622,6 +664,56 @@ mod tests {
             facts.unread
         );
         assert!(facts.unread[1].starts_with("relationships[2]"));
+    }
+
+    #[test]
+    fn care_compares_what_relationships_say_never_their_order_or_other_facts() {
+        let facts = |relationships: Vec<Value>| {
+            GrantFacts::of(
+                Kind::Person,
+                &json!({"_type": "PERSON", "relationships": relationships}),
+            )
+            .facts
+        };
+        let other = "0190a1bc-3a1e-72e4-b7c5-f78a24c01309";
+        let both = facts(vec![
+            relationship("member_of", TEAM),
+            relationship("under_care_of", other),
+        ]);
+        let swapped = facts(vec![
+            relationship("represents", TEAM),
+            relationship("under_care_of", other),
+            relationship("member_of", TEAM),
+        ]);
+        assert!(same_care(&both, &swapped), "order and other relationships");
+        assert!(!same_care(&both, &both[..1]), "a relationship removed");
+        assert!(!same_care(&both[..1], &both), "a relationship added");
+        let mut ended = relationship("member_of", TEAM);
+        ended["time_validity"]["upper"] = json!({"_type": "DV_DATE", "value": "2026-11-14"});
+        ended["time_validity"]["upper_unbounded"] = json!(false);
+        let ended = facts(vec![ended, relationship("under_care_of", other)]);
+        assert!(!same_care(&both, &ended), "a relationship ended");
+        let twice = facts(vec![
+            relationship("member_of", TEAM),
+            relationship("member_of", TEAM),
+        ]);
+        assert!(!same_care(&twice, &both[..1]), "a repeat removed");
+    }
+
+    #[test]
+    fn record_subjects_compare_by_reference_never_by_position() {
+        let declared = |ordinal: i32, id: &str| subject::DeclaredSubject {
+            ordinal,
+            subject: crate::storage::access_projection::EhrSubject::new("pixm", id),
+        };
+        let both = [declared(0, "p-1"), declared(1, "p-2")];
+        let swapped = [declared(0, "p-2"), declared(1, "p-1")];
+        assert!(same_subjects(&both, &swapped));
+        assert!(!same_subjects(&both, &both[..1]));
+        assert!(!same_subjects(
+            &both,
+            &[declared(0, "p-1"), declared(1, "p-3")]
+        ));
     }
 
     #[test]

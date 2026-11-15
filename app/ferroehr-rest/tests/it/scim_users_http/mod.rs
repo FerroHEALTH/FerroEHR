@@ -32,6 +32,7 @@ use crate::common;
 
 mod care_teams;
 mod default_definitions;
+mod deprovision;
 mod entra;
 mod groups;
 mod groups_entra;

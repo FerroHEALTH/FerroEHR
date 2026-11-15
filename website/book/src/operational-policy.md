@@ -1697,6 +1697,49 @@ none: it holds until the client removes the member or the Group. Plain
 Groups, with `careTeam` left out or `false`, carry no care relationship and
 need no grant.
 
+### Deprovisioning a team member
+
+A SCIM client deactivates or deletes a professional who holds care
+relationships without the `write_care_relationship` grant. Revoking access
+is never blocked: removing a leaver's access rights is a control that has to
+work at once (ISO/IEC 27001:2022 Annex A 5.18), and neither request changes
+what the care relationships say.
+
+- **Deactivation** (`active = false`, RFC 7643 §4.1.1) writes an `inactive`
+  version of the `PERSON` that keeps every care relationship, whoever wrote
+  it: the ADT system's rosters and the memberships of care-team Groups. Plain
+  Group memberships are dropped ([Groups](installation/config-auth.md#groups)).
+  **Reactivation** (`active = true`) restores the login, and the care
+  relationships are as they were.
+- **Deletion** writes a logical `deleted` version of the `PERSON` and its
+  professional `ROLE`s (RM common §Logical Deletion). The earlier versions
+  stay, with the teams the professional belonged to, so the record still
+  answers "was this nurse on Ward 3 on that date". The User answers `404`
+  from then on (RFC 7644 §3.6). SCIM never erases the identity; only the
+  erasure process does, under the exemptions of GDPR Art. 17(3).
+
+The care check compares what each care relationship says (its kind, target
+and `time_validity`), and each record subject the `PERSON` declares, in the
+new version with the last version that holds a body. A lifecycle state is no relationship content, and a deletion holds no
+body, so neither needs the grant.
+
+The login is refused on its next request on every replica, because each
+request reads the binding with no cache: an inactive `PERSON` with
+`refused-inactive`, and a login whose key only a deleted `PERSON` carried
+with `refused-deprovisioned`. The access evaluator never sees the caller, so
+the care relationships it would read do not matter.
+
+The ADT system writes no version of a deactivated `PERSON`: an `inactive`
+version takes no update (RM common master06 §Version Lifecycle: editing
+resumes only through `reactivate` or `retrieve`), and a roster cannot change
+the lifecycle state, so such a write is refused `403` and the `PERSON` stays
+`inactive`. That costs nothing: a deactivated person's memberships decide no
+access, since the login is refused at binding. A leaver's roster is cleaned
+up by the SCIM deletion, a logical `deleted` version that ends every
+relationship while the earlier versions keep the history (master06
+§Logical Deletion), or by the ADT system after the User is reactivated.
+Apart from the cited lifecycle rules, this section is FerroEHR's own design.
+
 ## Representatives in the patient portal
 
 A parent, a guardian or a proxy the patient chose reads the patient's record

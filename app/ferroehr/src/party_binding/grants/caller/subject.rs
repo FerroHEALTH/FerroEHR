@@ -254,25 +254,6 @@ pub(crate) async fn settle(
     ))
 }
 
-/// The record subjects the `PERSON` `person` declares, as their texts,
-/// sorted: what a commit compares before and after, beside the care
-/// relationships.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub(crate) async fn texts(
-    tx: &mut PgConnection,
-    person: Uuid,
-) -> Result<Vec<String>, StorageError> {
-    Ok(sqlx::query_scalar(
-        "SELECT ROW(namespace, subject_id, lifecycle_state)::text AS subject \
-         FROM binding_record_subject WHERE holder_id = $1 ORDER BY subject",
-    )
-    .bind(person)
-    .fetch_all(&mut *tx)
-    .await?)
-}
-
 /// The `complete` or `incomplete` `PERSON` that declares `subject`, read on
 /// `conn` from the unique constraint of `binding_record_subject`.
 ///
