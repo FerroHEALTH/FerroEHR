@@ -454,7 +454,7 @@ A replica reads the projection only while it is as recent as the care facts
 the replica holds. A discharge, a removed membership or an erasure is never
 granted from a stale row: until the projector catches up, the query sends the
 list of every patient in your teams' care, as it did before. With protection
-off, the projection is not written and every query sends that list. At 20 000
-patients that list is about 1.2 MB per query, so turn protection on for a
-deployment of that size. Rotating the key rebuilds the projection and the
+off, the projection is not written and every query sends that list, which
+grows with the patients in your teams' care, so turn protection on for a
+deployment that holds many. Rotating the key rebuilds the projection and the
 digests on the next projector run.
