@@ -91,6 +91,10 @@ pub struct ScimClient {
     /// The issuer its Groups' `externalId`s are written under
     /// ([`ferroehr::config::scim::group_issuer`]).
     pub group_issuer: String,
+    /// Whether the client provisions a patient portal's representatives: its
+    /// `binding_issuer` is a `patients` issuer, so its Users are `PERSON`s of
+    /// the patient template with no professional `ROLE` (#5622).
+    pub portal: bool,
     /// The roles its Users may hold: the terminology its `scim_provision`
     /// grants code them in, and the codes they admit.
     pub roles: RoleCeiling,
@@ -119,6 +123,21 @@ struct Gate {
     authenticator: Arc<Authenticator>,
     service: Arc<FerroEhrService>,
     parties: Arc<[PartySection]>,
+    /// The issuers a binding key is held under
+    /// ([`ferroehr::config::binding::key_issuers`]).
+    key_issuers: Arc<[String]>,
+    /// The `patients` issuers among them.
+    portal_issuers: Arc<[String]>,
+}
+
+impl Gate {
+    /// Whether `binding_issuer` is a `patients` issuer, so its client
+    /// provisions a patient portal's representatives (#5622).
+    fn portal(&self, binding_issuer: &str) -> bool {
+        self.portal_issuers
+            .iter()
+            .any(|issuer| issuer == binding_issuer)
+    }
 }
 
 /// Why a SCIM endpoint cannot be served.
@@ -185,10 +204,19 @@ pub(crate) fn router(
             return None;
         }
     };
+    let resolved = match ferroehr::config::auth::resolve(&config.auth.shared) {
+        Ok(resolved) => resolved,
+        Err(error) => {
+            tracing::error!(%error, "the SCIM endpoint is not mounted: [auth] does not resolve");
+            return None;
+        }
+    };
     let gate = Gate {
         authenticator: Arc::clone(authenticator),
         service,
         parties: config.auth.shared.party.iter().cloned().collect(),
+        key_issuers: ferroehr::config::binding::key_issuers(&resolved).into(),
+        portal_issuers: ferroehr::config::binding::portal_issuers(&resolved).into(),
     };
     let gated: Router<AppState> = Router::new()
         .route("/ResourceTypes", get(resource_types))
@@ -361,13 +389,13 @@ fn provisioning_client(
         )));
     };
     if !gate
-        .parties
+        .key_issuers
         .iter()
-        .any(|table| table.identifier_issuer == binding_issuer)
+        .any(|issuer| issuer == binding_issuer)
     {
         return Err(forbidden(format!(
             "the scim_provision grant names the binding_issuer {binding_issuer:?}, which is the \
-             identifier_issuer of no [[auth.party]] table"
+             identifier_issuer of no [[auth.party]] table and no patients issuer"
         )));
     }
     let own = capabilities.client().map(|client| client.party);
@@ -424,6 +452,7 @@ fn provisioning_client(
         client_id,
         binding_issuer: binding_issuer.to_owned(),
         group_issuer: ferroehr::config::scim::group_issuer(binding_issuer, &gate.parties),
+        portal: gate.portal(binding_issuer),
         roles: RoleCeiling {
             terminology,
             allowed,

@@ -157,9 +157,11 @@ pub async fn representations(
     Ok(out)
 }
 
-/// The live key rows of the representatives whose binding key is `value`
-/// under the identifier issuer `issuer`, of any type, compared in the
-/// canonical form its type declares, as `(party, lifecycle_state)`.
+/// The live key rows of the `PERSON`s whose portal login is `value`.
+///
+/// The key is under the identifier issuer `issuer`, a `patients` issuer, of
+/// any type, compared in the canonical form its type declares; each row is
+/// `(party, lifecycle_state)`.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -170,7 +172,7 @@ pub async fn representative_keys(
 ) -> Result<Vec<(Uuid, String)>, StorageError> {
     Ok(sqlx::query_as(
         "SELECT party_id, lifecycle_state FROM binding_identifier \
-         WHERE selector = 'key' AND issuer = $1 AND retired_at IS NULL AND representative \
+         WHERE selector = 'key' AND issuer = $1 AND retired_at IS NULL \
            AND value = CASE WHEN lower(identifier_type) IN ('guid', 'uuid') \
                             THEN lower($2) ELSE $2 END \
          ORDER BY party_id",

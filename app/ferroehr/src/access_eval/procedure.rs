@@ -257,8 +257,9 @@ pub struct Grounds {
     /// it covers, so the access record names it only for an item it lifted.
     pub lifted: Vec<(usize, Pred)>,
     /// The positions in the policy's `rules` of the deny rules an emergency
-    /// lifted.
-    pub lifted_rules: Vec<usize>,
+    /// lifted, each with the items it covers, so the access record names it
+    /// only for an item it lifted.
+    pub lifted_rules: Vec<(usize, Pred)>,
     /// The verdict reads a live care relationship to the subject.
     pub cared: bool,
     /// The verdict reads the caller as a gate-keeper or the controller.
@@ -676,7 +677,10 @@ fn controller_denials(read: &Reader<'_, '_>, verdict: &mut Verdict) {
         if rule.emergency_override && break_glass {
             if binds == Pred::True {
                 verdict.lifted.push(Lifted::Rule);
-                verdict.grounds.lifted_rules.push(at);
+                verdict
+                    .grounds
+                    .lifted_rules
+                    .push((at, read.cover(rule, Effect::Deny, None)));
             }
             continue;
         }
