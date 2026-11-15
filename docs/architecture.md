@@ -1328,8 +1328,23 @@ so the binding is FerroEHR's. Who may represent whom and until when, the age
 and legal-capacity rules of national law (EHDS Art. 4(2): "in accordance
 with national law"), reach FerroEHR as the representations and the
 `time_validity` the deployment records; FerroEHR holds no rule of its own.
-**Our own design**, as no openEHR spec governs resolving a login to a party
-or who may write a relationship.
+A login a live `PERSON` carries under a `patients` issuer is held to that
+`PERSON` (#5622): the patient only when it is the EHR's subject, a
+representative only through a live representation, refused
+(`refused-representation-unrecorded`) otherwise, so the CDR's facts decide
+over the issuer's claim of the EHR; a login no `PERSON` carries is the
+patient. The key issuers the server compiles the person mapping from and the
+SCIM gate admits a `binding_issuer` from are one set,
+`config::binding::key_issuers`: the `[[auth.party]]` identifier issuers and
+every `patients` issuer (#5652, `installed_mapping`). A key under a
+`patients` issuer is held in `binding_identifier` with no professional
+`ROLE`. A SCIM client whose `binding_issuer` is a `patients` issuer
+provisions the portal's representatives as `PERSON`s of the patient
+template, a non-default person template of the default mapping, with no
+`ROLE`, and the party protection refuses any version from a SCIM client that
+adds, changes or drops a representation (EHDS Art. 4(2)). **Our own
+design**, as no openEHR spec governs resolving a login to a party, SCIM
+provisioning or who may write a relationship.
 
 **Break-glass stays in the configuration.** Emergency access (EHDS Art.
 11(5)) must work when the party store does not answer, so

@@ -313,18 +313,24 @@ key = { path = "/details[id2]/items[id3]", type = "login" }
 user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
 external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
 
+[[authz.party_binding.person.template]]
+template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0"
+key = { path = "/details[id2]/items[id3]", type = "login" }
+user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
+
 [[authz.party_binding.person.attribute]]
 scim = "name.formatted"
 name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]", "openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0" = "/identities[id6]/details[id7]/items[id8]" }
 
 [[authz.party_binding.person.attribute]]
 scim = "name.givenName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]", "openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0" = "/identities[id6]/details[id7]/items[id9]" }
 
 [[authz.party_binding.person.attribute]]
 scim = "name.familyName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]", "openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0" = "/identities[id6]/details[id7]/items[id10]" }
 
 [[authz.party_binding.person.attribute]]
 scim = 'emails[type eq "work"].value'
@@ -349,7 +355,9 @@ name = "/identities[id6]/details[id7]/items[id8]"
 
 The template ids are the ADL 2 ids of the stored archetypes, and the
 membership archetype is named in the interface form each membership's
-`archetype_node_id` carries. A representation needs no section: FerroEHR
+`archetype_node_id` carries. The patient template is a person template too,
+never the default: a patient portal's SCIM client provisions its
+representatives in it ([Users](#users)). A representation needs no section: FerroEHR
 recognises it by the code it carries, in any archetype (see
 [Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal)). The default
 key is of the type `login`, so an `[[auth.party]]` table whose
@@ -669,8 +677,10 @@ Who provisions is CDR data, read on every request: a provisioning client is
 an OAuth client-credentials client of your own authorization server (an
 `[[auth.issuer]]` of kind `machines`) whose `ACTOR` holds a `scim_provision`
 grant in force. The grant's `binding_issuer` is the identifier issuer of the
-binding keys the client provisions, the `identifier_issuer` of an
-`[[auth.party]]` table, and its `token_scope` the scope a token of the client
+binding keys the client provisions: the `identifier_issuer` of an
+`[[auth.party]]` table for a client of your professionals, or a `patients`
+issuer for a patient portal's client, which provisions the portal's
+representatives. Its `token_scope` is the scope a token of the client
 must hold; SMART on openEHR defines none for SCIM, so the value is yours to
 choose. Each User belongs to the one client whose `binding_issuer` issues its
 key, so no two clients' grants name one. `[authz.grants] allowed` must admit
@@ -709,8 +719,8 @@ grant in force:
 - no token, or one that does not verify, is **401** with
   `WWW-Authenticate: Bearer`;
 - a person's token, a client with no grant in force, a grant whose
-  `binding_issuer` no `[[auth.party]]` table issues or another client's grant
-  names too, and a token without the grant's `token_scope` are **403**, the
+  `binding_issuer` is neither the `identifier_issuer` of an `[[auth.party]]`
+  table nor a `patients` issuer, or another client's grant names too, and a token without the grant's `token_scope` are **403**, the
   last with `WWW-Authenticate: Bearer error="insufficient_scope"` (RFC 6750
   §3.1).
 
@@ -733,7 +743,17 @@ the form Microsoft Entra ID requires of a custom attribute, in the
 ### Users
 
 A User is a `PERSON` of the default person template performing the
-professional `ROLE`. The client serves these operations (RFC 7644 §3):
+professional `ROLE`. A patient portal's client, whose `binding_issuer` is a
+`patients` issuer, provisions the portal's representatives instead: each
+User is a `PERSON` of the `[authz.party_binding.patient]` template, which a
+`[[authz.party_binding.person.template]]` must name too, with no `ROLE`,
+and its binding key is the representative's portal login. SCIM provisions
+the identity only. The representation that lets the person act for a
+patient is written by the patient or an administrator (Regulation (EU)
+2025/327 Art. 4(2)), and a version from the client that adds, changes or
+drops one is refused `403`. Until a live representation exists, the login
+reaches nothing ([Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal)).
+This is FerroEHR's own design. The client serves these operations (RFC 7644 §3):
 
 - `POST /scim/v2/Users` creates the `PERSON` and its `ROLE` in one demographic
   CONTRIBUTION, under the client as committer, and answers **201** with the
@@ -755,7 +775,7 @@ The User's `userName`, `externalId` and binding key are `DV_IDENTIFIER`s at
 their selectors, issued by the client's `binding_issuer`. A client sees only
 its own Users, the ones whose key its `binding_issuer` issues: every other id
 is **404** and absent from every list, as is a `PERSON` without a live
-professional `ROLE`. The `userName` index spans every client, so a **409**
+professional `ROLE`, apart from a portal client's Users, which perform none. The `userName` index spans every client, so a **409**
 `uniqueness` tells one client that a `userName` exists under another;
 `externalId` is unique within one client. Every SCIM request is an access
 record of the client, with the `PERSON` as its object.
