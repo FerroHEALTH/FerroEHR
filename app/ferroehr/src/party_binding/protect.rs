@@ -319,8 +319,9 @@ async fn refuse_scim_representation(
 /// beside it decides it by that grant: the care delivery environment's ADT
 /// system rosters a provisioned professional (#5617). A version in another
 /// lifecycle state than the one before is no roster: the ADT system neither
-/// reactivates a deactivated login nor revives a deleted one (#5628). Our
-/// own design.
+/// reactivates a deactivated login nor revives a deleted one, and a roster of
+/// an inactive `PERSON` keeps its state ([`roster_keeps_inactive`], #5628).
+/// Our own design.
 async fn care_writer_roster(
     tx: &mut PgConnection,
     (kind, vo_id): (Kind, VoId),
@@ -350,6 +351,31 @@ async fn care_writer_roster(
         return Ok(false);
     };
     Ok(only_care_differs(&before, &after)?)
+}
+
+/// Whether a version of a `PERSON` of `kind` written over a head in the
+/// lifecycle state `preceding` keeps that state, `inactive`: its caller holds
+/// [`Operation::WriteCareRelationship`], is neither an administrator of
+/// `mapping` nor a SCIM client, and asks for no other state (`asked_other`).
+///
+/// The care delivery environment's ADT system ends or changes the care
+/// relationships of a deactivated professional, such as a leaver's roster,
+/// and never reactivates the login (#5628); the version still meets
+/// [`check`] and the care check. RM common
+/// `master06-change_control_package.adoc` §Version Lifecycle draws no update
+/// of an `inactive` version, so this one self-transition is our own design.
+pub(crate) fn roster_keeps_inactive(
+    kind: Kind,
+    preceding: &str,
+    asked_other: bool,
+    mapping: &BindingMapping,
+) -> bool {
+    kind == Kind::Person
+        && preceding == crate::versioning::lifecycle::state::INACTIVE
+        && !asked_other
+        && PROVISIONER.try_with(|_| ()).is_err()
+        && Capabilities::current().holds(Operation::WriteCareRelationship)
+        && !administrator(mapping)
 }
 
 /// Judges the write of the standalone `PARTY_RELATIONSHIP` `vo_id`, whose

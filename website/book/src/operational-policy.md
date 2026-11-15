@@ -1727,9 +1727,12 @@ The login is refused on its next request on every replica, because each
 request reads the binding with no cache: an inactive `PERSON` with
 `refused-inactive`, and a login whose key only a deleted `PERSON` carried
 with `refused-deprovisioned`. The access evaluator never sees the caller, so
-the care relationships it would read do not matter. The ADT system does not
-undo a revocation: a roster it writes over a deactivated `PERSON` would
-reactivate it, so it is refused `403`. All of this is FerroEHR's own design.
+the care relationships it would read do not matter. The ADT system still
+ends or changes a deactivated professional's care relationships, such as a
+leaver's roster, and never undoes the revocation: its version keeps the
+`inactive` state, and one that asks for another state is refused `403`. The
+openEHR version lifecycle draws no update of an `inactive` version, so this
+one self-transition and the rest of this section are FerroEHR's own design.
 
 ## Representatives in the patient portal
 

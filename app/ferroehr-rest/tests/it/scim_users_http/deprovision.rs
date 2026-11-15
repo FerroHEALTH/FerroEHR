@@ -26,7 +26,8 @@ use http::StatusCode;
 use serde_json::{Value, json};
 
 use super::care_teams::{
-    ADT, carries_member_of, group, id_of, member_of, read_person, relationships, write_person,
+    ADT, carries_member_of, group, id_of, member_of, read_person, relationships, system_token,
+    write_person,
 };
 use super::default_definitions::{seeded, zero_config};
 use super::{
@@ -217,23 +218,47 @@ async fn a_deactivation_keeps_a_care_team_membership_and_drops_a_plain_one() {
     assert_eq!(relationships(&app, &user).await, care);
 }
 
-/// The ADT system cannot undo a revocation: a roster written over a
-/// deactivated User would reactivate its `PERSON`, so it is refused and the
-/// login stays refused.
+/// The ADT system cleans up a leaver's roster and never undoes the
+/// revocation: it ends the ward membership of a deactivated nurse, the
+/// version keeps the `inactive` state and the login stays refused, and a
+/// version that asks for `complete` is refused.
 #[tokio::test]
-async fn the_adt_system_does_not_reactivate_a_deactivated_professional() {
+async fn the_adt_system_ends_a_deactivated_professionals_roster_and_keeps_it_inactive() {
     let (_db, _service, app) = hospital().await;
     let key = (OTHER, "dirk-login");
     let user = nurse(&app, OTHER, "dirk", key.1).await;
     let (_, ward) = group(&app, OTHER, "Ward 4", &[], false).await;
+    roster(&app, &user, &id_of(&ward)).await;
     let (status, body) = set_active(&app, OTHER, &user, false).await;
     assert_eq!(status, StatusCode::OK, "{body}");
 
     let (status, version, mut person) = read_person(&app, ADT, &user).await;
     assert_eq!(status, StatusCode::OK, "the ADT system reads the PERSON");
-    person["relationships"] = json!([member_of(&user, &id_of(&ward))]);
-    let (status, refused) = write_person(&app, ADT, (&user, &version), &person).await;
+    let mut ended = member_of(&user, &id_of(&ward));
+    ended["time_validity"]["upper"] = json!({ "_type": "DV_DATE", "value": "2026-11-14" });
+    ended["time_validity"]["upper_unbounded"] = json!(false);
+    person["relationships"] = json!([ended]);
+    let (status, answer) = write_person(&app, ADT, (&user, &version), &person).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{answer}");
+    assert_eq!(relationships(&app, &user).await, vec![ended]);
+    let (status, _, read) = call(&app, "GET", &format!("/Users/{user}"), OTHER, None, &[]).await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    assert_eq!(
+        read["active"],
+        json!(false),
+        "the roster keeps the User inactive"
+    );
+    admitted(&app, key, Some("refused-inactive")).await;
+
+    let (_, version, person) = read_person(&app, ADT, &user).await;
+    let request = common::req("PUT", format!("{}/demographic/person/{user}", common::BASE))
+        .auth(&system_token(ADT))
+        .accept("application/json")
+        .if_match(format!("\"{version}\""))
+        .header("openehr-version", "lifecycle_state.code_string=\"532\"")
+        .json(person.to_string())
+        .build();
+    let (status, _, refused) = common::send(&app, request).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
-    assert_eq!(relationships(&app, &user).await, Vec::<Value>::new());
     admitted(&app, key, Some("refused-inactive")).await;
 }

@@ -290,8 +290,9 @@ pub(super) async fn resolve_modify(
     mut content: Content,
 ) -> Result<ResolvedWrite, ServiceError> {
     let kind = content.kind;
-    let lifecycle =
-        content_lifecycle(ctx, &mut content.canonical, content.lifecycle_state.take()).await?;
+    let asked = content.lifecycle_state.take();
+    let absent = asked.is_none();
+    let lifecycle = content_lifecycle(ctx, &mut content.canonical, asked).await?;
     let next = next_version(
         tx,
         at.ehr_id,
@@ -306,9 +307,21 @@ pub(super) async fn resolve_modify(
     system::admit_content(kind, &content.canonical)?;
     external::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
-    // the transition from the preceding version's state must be legal
-    // (master06 §Version Lifecycle state machine).
-    validate_transition(Some(&next.preceding_lifecycle), &lifecycle)?;
+    let asked_other = !absent && lifecycle != lifecycle::state::INACTIVE;
+    let keeps = crate::party_binding::protect::roster_keeps_inactive(
+        kind,
+        &next.preceding_lifecycle,
+        asked_other,
+        ctx.binding,
+    );
+    let lifecycle = if keeps {
+        lifecycle::state::INACTIVE.to_owned()
+    } else {
+        // the transition from the preceding version's state must be legal
+        // (master06 §Version Lifecycle state machine).
+        validate_transition(Some(&next.preceding_lifecycle), &lifecycle)?;
+        lifecycle
+    };
     let body = prepare_body(tx, ctx, kind, vo_id, next.tree, content.canonical).await?;
     // Content equal to the preceding tip's is stored once: the new version
     // reads the tip's rows (its own, or the ones it shares), and nothing of
