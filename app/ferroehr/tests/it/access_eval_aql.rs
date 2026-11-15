@@ -12,6 +12,7 @@
 
 use std::sync::Arc;
 
+use ferroehr::access_eval::condition::care::Care;
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
 use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
 use ferroehr::access_eval::scope::CategoryIndex;
@@ -44,7 +45,7 @@ const COUNT: &str = "SELECT COUNT(c/uid/value) FROM EHR e CONTAINS COMPOSITION c
 /// and the nurse, the `PERSON` the professional the tests ask as is bound to,
 /// which a directive names only as a party of the store.
 struct World {
-    _db: testkit::TestDb,
+    db: testkit::TestDb,
     svc: FerroEhrService,
     ehrs: Vec<(EhrId, uuid::Uuid, Vec<String>)>,
     nurse: String,
@@ -152,7 +153,7 @@ impl World {
         .0
         .to_string();
         Self {
-            _db: db,
+            db,
             svc,
             ehrs,
             nurse,
@@ -289,6 +290,129 @@ fn request_of(ask: &Ask) -> Arc<RequestAccess> {
     ))
 }
 
+/// How a statement reads the caller's care in [`run_query`].
+#[derive(Clone, Copy, Debug)]
+enum CareForm {
+    /// The subjects of every patient in care, bound into the statement.
+    Census,
+    /// The EHRs whose subjects are in care, as a pinned query binds them
+    /// (#5699); for a query over every EHR the same answer when every cared
+    /// EHR is named.
+    Ehrs,
+    /// The clinical care projection, its rows written for the subjects in
+    /// care under one team, probed by the EHR rows' keyed digests (#5699).
+    Projected,
+}
+
+/// Every care form, each of which must read the same rows.
+const CARE_FORMS: [CareForm; 3] = [CareForm::Census, CareForm::Ehrs, CareForm::Projected];
+
+/// The root key of the test deployment's identifier protection, synthetic.
+const TEST_ROOT_KEY: &str = "5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ff";
+
+/// The care team the projected care is written under.
+const TEAM: uuid::Uuid = uuid::Uuid::from_u128(0x0199_0000_0000_7000_8000_0000_0000_0001);
+
+/// The namespace this CDR names its parties under, which the EHR rows'
+/// subjects are digested in.
+fn own() -> String {
+    ferroehr::config::binding::PartyBindingConfig::default().namespace
+}
+
+/// The identifier-protection engine of the test deployment.
+fn engine(pool: &sqlx::PgPool) -> ferroehr::identifier_protection::engine::IdentifierProtection {
+    use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
+    ferroehr::identifier_protection::engine::IdentifierProtection::from_config(
+        Some(&IdentifierProtectionConfig {
+            schemes: vec!["nl-bsn".to_owned()],
+            key: None,
+            key_file: None,
+        }),
+        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
+        pool.clone(),
+    )
+    .expect("the engine builds")
+    .expect("protection is enabled")
+}
+
+/// Write the care projection of `cared`, each relationship from `from` until
+/// `until`, under [`TEAM`], and every EHR row's keyed digest: what the care
+/// projector writes from the party domain.
+async fn project(
+    world: &World,
+    cared: &[(
+        EhrSubject,
+        Option<jiff::civil::Date>,
+        Option<jiff::civil::Date>,
+    )],
+) {
+    use ferroehr::storage::access_care::{self, CareRow, cared_key, subject_key};
+    let pool = world.db.pool();
+    let engine = engine(&pool);
+    let mut conn = pool.acquire().await.expect("a connection");
+    let mut tx = sqlx::Connection::begin(&mut *conn)
+        .await
+        .expect("a transaction");
+    let persons: Vec<uuid::Uuid> = world.ehrs.iter().map(|(_, person, _)| *person).collect();
+    let rows: Vec<CareRow> = cared
+        .iter()
+        .map(|(subject, from, until)| CareRow {
+            digest: engine.care_subject_digest(&cared_key(subject)),
+            person: subject.id.parse().unwrap_or(uuid::Uuid::nil()),
+            team: TEAM,
+            from: *from,
+            until: *until,
+        })
+        .collect();
+    access_care::clear(&mut tx)
+        .await
+        .expect("the projection is cleared");
+    access_care::replace(&mut tx, &persons, &rows)
+        .await
+        .expect("the rows are written");
+    let undigested = access_care::undigested(&mut tx, 100)
+        .await
+        .expect("the EHRs");
+    let digests: Vec<_> = undigested
+        .into_iter()
+        .map(|(ehr, subject)| {
+            let digest = engine.care_subject_digest(&subject_key(&own(), &subject));
+            (ehr, subject, digest)
+        })
+        .collect();
+    access_care::set_digests(&mut tx, &digests)
+        .await
+        .expect("the digests are written");
+    tx.commit().await.expect("the projection commits");
+}
+
+/// The projected care probe of the caller on `day` with `grace`.
+fn projected(day: jiff::civil::Date, grace: &str) -> Care {
+    Care::Projected(ferroehr::access_eval::condition::care::ProjectedCare {
+        teams: vec![TEAM].into(),
+        day,
+        grace: grace.to_owned(),
+    })
+}
+
+/// The care `ask` holds, in `form`.
+fn care_of(world: &World, ask: &Ask, form: CareForm) -> Care {
+    match form {
+        CareForm::Projected => projected(jiff::Zoned::now().date(), "P0D"),
+        CareForm::Census => Care::Census(ask.cared.clone().into()),
+        CareForm::Ehrs => Care::Ehrs(
+            world
+                .ehrs
+                .iter()
+                .enumerate()
+                .filter(|(index, _)| ask.cared.contains(&world.subject(*index)))
+                .map(|(_, (ehr_id, _, _))| ehr_id.0)
+                .collect::<Vec<_>>()
+                .into(),
+        ),
+    }
+}
+
 /// The outcome of `aql` run by `access` as `ask`, from `offset`, at most
 /// `fetch`.
 async fn run_query(
@@ -298,11 +422,23 @@ async fn run_query(
     aql: &str,
     page: Option<(i64, i64)>,
 ) -> QueryOutcome {
+    run_query_as(world, ask, access, aql, page, CareForm::Census).await
+}
+
+/// [`run_query`] with the caller's care read in `form`.
+async fn run_query_as(
+    world: &World,
+    ask: &Ask,
+    access: &Arc<RequestAccess>,
+    aql: &str,
+    page: Option<(i64, i64)>,
+    form: CareForm,
+) -> QueryOutcome {
     let svc = &world.svc;
     let run = async {
         let classes = svc.ehr_access_classes().await.expect("the classes read");
         let request = AqlQueryRequest {
-            ehr_access: access.condition(&classes, ask.cared.clone()),
+            ehr_access: access.condition(&classes, care_of(world, ask, form)),
             offset: page.map(|(offset, _)| offset),
             fetch: page.map(|(_, fetch)| fetch),
             ..AqlQueryRequest::default()
@@ -314,13 +450,26 @@ async fn run_query(
     Box::pin(with_request_access(Arc::clone(access), run)).await
 }
 
-/// The rows of `aql` `ask` reads, from `offset`, at most `fetch`.
+/// The rows of `aql` `ask` reads, from `offset`, at most `fetch`, with the
+/// same rows under every care form.
 async fn rows(world: &World, ask: &Ask, aql: &str, page: Option<(i64, i64)>) -> Vec<Value> {
-    let outcome = run_query(world, ask, &request_of(ask), aql, page).await;
-    outcome.result_set["rows"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default()
+    let mut read: Option<Vec<Value>> = None;
+    for form in CARE_FORMS {
+        if matches!(form, CareForm::Projected) {
+            let cared: Vec<_> = ask.cared.iter().map(|s| (s.clone(), None, None)).collect();
+            project(world, &cared).await;
+        }
+        let outcome = run_query_as(world, ask, &request_of(ask), aql, page, form).await;
+        let rows = outcome.result_set["rows"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        match &read {
+            Some(first) => assert_eq!(&rows, first, "{form:?} reads what the census reads"),
+            None => read = Some(rows),
+        }
+    }
+    read.unwrap_or_default()
 }
 
 /// The composition ids `ask` reads, each page of one row in turn, and checks
@@ -554,6 +703,67 @@ async fn step_6_only_the_ehrs_in_care_are_queried() {
         "two subjects in care",
     )
     .await;
+}
+
+/// The care projection reads a relationship's dates as the evaluator reads
+/// them (`CareTeam::live_on`): begun, and open or ended less than the grace
+/// before the day of the request (#5699).
+#[tokio::test]
+async fn the_projection_reads_the_dates_of_care_as_the_evaluator() {
+    use ferroehr::party_binding::grants::caller::CareTeam;
+    let world = Box::pin(World::new()).await;
+    world.settings(1, &settings("open", &[], &[])).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    let access = request_of(&ask);
+    let today = access.today();
+    let day = |days: i64| {
+        today
+            .checked_add(jiff::Span::new().days(days))
+            .expect("a date")
+    };
+    let cases: [(Option<jiff::civil::Date>, Option<jiff::civil::Date>, &str); 7] = [
+        (None, None, "P14D"),
+        (Some(day(1)), None, "P14D"),
+        (Some(today), Some(day(1)), "P0D"),
+        (None, Some(today), "P0D"),
+        (None, Some(day(-13)), "P14D"),
+        (None, Some(day(-14)), "P14D"),
+        (None, Some(day(-1)), "P1M"),
+    ];
+    for (from, until, grace) in cases {
+        let span: jiff::Span = grace.parse().expect("a grace");
+        let live = CareTeam::spanning(TEAM, from, until).live_on(today, span);
+        project(&world, &[(world.subject(0), from, until)]).await;
+        let run = async {
+            let classes = world
+                .svc
+                .ehr_access_classes()
+                .await
+                .expect("the classes read");
+            let request = AqlQueryRequest {
+                ehr_access: access.condition(&classes, projected(today, grace)),
+                ..AqlQueryRequest::default()
+            };
+            Box::pin(world.svc.execute_aql(COMPOSITIONS, None, &request))
+                .await
+                .expect("the query runs")
+        };
+        let outcome = Box::pin(with_request_access(Arc::clone(&access), run)).await;
+        let read: Vec<String> = outcome.result_set["rows"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|row| row[0].as_str())
+            .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+            .collect();
+        let expected = if live { world.objects(0) } else { Vec::new() };
+        assert_eq!(
+            read, expected,
+            "from {from:?} until {until:?} with grace {grace}"
+        );
+    }
 }
 
 /// A care census far larger than the store reads exactly the EHRs whose
@@ -865,7 +1075,7 @@ async fn an_ehr_of_a_class_the_condition_does_not_hold_is_withheld() {
                 .ehr_access_classes()
                 .await
                 .expect("the classes read"),
-            Vec::new(),
+            Care::Census(Vec::new().into()),
         )
     }))
     .await;

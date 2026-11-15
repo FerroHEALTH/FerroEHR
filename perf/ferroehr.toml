@@ -100,3 +100,9 @@ subject_index = "local"
 mode = "pgp"
 key_file = "/etc/ferroehr/signing.asc"
 key_passphrase_file = "/etc/ferroehr/signing-passphrase"
+
+# Identifier protection under the root key scripts/perf/gate.sh generates for
+# the run: its clinical lookup subkey digests the subject references of the
+# care projection the access condition reads (#5699).
+[privacy.identifier_protection]
+key_file = "/etc/ferroehr/identifier-key"

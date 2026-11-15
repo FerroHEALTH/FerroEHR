@@ -547,7 +547,7 @@ mod tests {
                 groups: vec![(vec![1], std::sync::Arc::clone(&pair))],
                 closed: pair,
                 default: None,
-                cared: Vec::new().into(),
+                cared: ferroehr::access_eval::condition::care::Care::Census(Vec::new().into()),
                 subject_namespace: "demographic".into(),
                 facts: CallerKeys {
                     now: jiff::Timestamp::UNIX_EPOCH,

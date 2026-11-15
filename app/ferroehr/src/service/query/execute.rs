@@ -166,11 +166,17 @@ impl FerroEhrService {
         let access_settings = Box::pin(self.ehr_access_readers())
             .await
             .map_err(Failure::analysis)?;
+        let ehr_access = Box::pin(self.resolve_care(
+            &request.ehr_access,
+            pinned_ehrs(ir, params, request).as_deref(),
+        ))
+        .await
+        .map_err(Failure::analysis)?;
         let ctx = SqlCtx {
             system_id: self.effective_system_id(),
             ehr_ids: request.ehr_ids.clone(),
             ehr_scope_kind: request.ehr_scope_kind,
-            ehr_access: request.ehr_access.clone(),
+            ehr_access,
             limit,
             offset,
             // The stored specialisation graph an archetype predicate widens a
@@ -306,6 +312,18 @@ impl FerroEhrService {
         }
         Ok(())
     }
+}
+
+/// The EHRs every row of `ir` belongs to: those the request names as its
+/// scope, or the one the query's own text pins its `EHR` source to; `None`
+/// when the query may read any EHR (#5699).
+fn pinned_ehrs(ir: &QueryIr, params: &Params, request: &AqlQueryRequest) -> Option<Vec<EhrId>> {
+    if request.ehr_scope_kind == aql::sql::EhrScopeKind::Named && !request.ehr_ids.is_empty() {
+        return Some(request.ehr_ids.clone());
+    }
+    // NOTE: our own design, a pin that names no UUID matches no EHR, so the query reads none.
+    aql::sql::pinned_ehr(ir, params)
+        .map(|id| id.parse::<uuid::Uuid>().map(EhrId).into_iter().collect())
 }
 
 /// A planned query: one statement, or the two halves of a query that joins a
