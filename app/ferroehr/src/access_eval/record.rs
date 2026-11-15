@@ -27,9 +27,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
-use openehr_rm::draft::access_control::terminology::{
-    Authorisation, DirectiveKind, Refusal, Term as _,
-};
+use openehr_rm::draft::access_control::terminology::log::Authorisation;
+use openehr_rm::draft::access_control::terminology::{DirectiveKind, Refusal, Term as _};
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;

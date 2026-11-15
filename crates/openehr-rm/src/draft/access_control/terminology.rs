@@ -30,6 +30,8 @@ use crate::v1_2::data_types::text::code_phrase::CodePhrase;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_base::prelude::TerminologyId;
 
+use log::{AccessorKind, Action, Authorisation, CredentialBinding, Outcome, RefusalReason};
+
 /// The BMMs' `Terminology_id_access`: the draft `openehr_access` terminology,
 /// which holds the access groups' own codes until openEHR adopts them.
 pub const TERMINOLOGY_ID_ACCESS: &str = "openehr_access";
@@ -112,11 +114,14 @@ pub enum Group {
     /// `access refusal reason`: why an access was refused, beside the
     /// `access refusal` codes of the decision procedure.
     AccessRefusalReason,
+    /// `credential binding`: how the system bound a credential to a party,
+    /// or why it could not.
+    CredentialBinding,
 }
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 18] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -134,6 +139,7 @@ impl Group {
         Self::AccessorKind,
         Self::AccessAuthorisation,
         Self::AccessRefusalReason,
+        Self::CredentialBinding,
     ];
 
     /// The group's rubric, such as `access default`.
@@ -157,6 +163,7 @@ impl Group {
             Self::AccessorKind => "accessor kind",
             Self::AccessAuthorisation => "access authorisation",
             Self::AccessRefusalReason => "access refusal reason",
+            Self::CredentialBinding => "credential binding",
         }
     }
 
@@ -182,6 +189,7 @@ impl Group {
             Self::AccessorKind => phrases::<AccessorKind>(),
             Self::AccessAuthorisation => phrases::<Authorisation>(),
             Self::AccessRefusalReason => phrases::<RefusalReason>(),
+            Self::CredentialBinding => phrases::<CredentialBinding>(),
         }
     }
 
@@ -354,6 +362,8 @@ macro_rules! group {
         }
     };
 }
+
+pub mod log;
 
 group! {
     /// The disposition of an EHR where no directive applies
@@ -538,104 +548,6 @@ group! {
         /// `ACCESSOR.groups`: the groups whose membership the access relied
         /// on.
         AccessorGroups => "accessor_groups",
-    }
-}
-
-group! {
-    /// What an access recorded in the access log did (`ACCESS_LOG_ENTRY.action`).
-    Action in AccessAction {
-        /// The access read data: HL7 FHIR `audit-event-action#R`.
-        Read => "R" of TERMINOLOGY_ID_AUDIT_EVENT_ACTION, "read",
-        /// The access queried data.
-        Query => "query",
-        /// The access created data: HL7 FHIR `audit-event-action#C`.
-        Create => "C" of TERMINOLOGY_ID_AUDIT_EVENT_ACTION, "create",
-        /// The access changed data: HL7 FHIR `audit-event-action#U`.
-        Update => "U" of TERMINOLOGY_ID_AUDIT_EVENT_ACTION, "update",
-        /// The access deleted data: HL7 FHIR `audit-event-action#D`.
-        Delete => "D" of TERMINOLOGY_ID_AUDIT_EVENT_ACTION, "delete",
-        /// The access exported data out of the system.
-        Export => "export",
-        /// The access imported data into the system.
-        Import => "import",
-    }
-}
-
-group! {
-    /// The result of an access (`ACCESS_OUTCOME.result`).
-    Outcome in AccessOutcome {
-        /// The access was granted in full.
-        Granted => "granted",
-        /// The access was granted for part of what it asked.
-        PartiallyGranted => "partially granted",
-        /// The access was refused.
-        Refused => "refused",
-        /// The access failed for another reason.
-        Failed => "failed",
-    }
-}
-
-group! {
-    /// The kind of accessor (`ACCESSOR.kind`), which
-    /// `ACCESS_LOG_RESTRICTION.accessor_kinds` is coded in too.
-    AccessorKind in AccessorKind {
-        /// A person acting on their own account.
-        Person => "person",
-        /// A person acting through a client they delegated to.
-        DelegatedPerson => "delegated person",
-        /// The subject of care: HL7 `extra-security-role-type#datasubject`.
-        SubjectOfCare => "datasubject" of TERMINOLOGY_ID_SECURITY_ROLE_TYPE, "subject of care",
-        /// A representative of the subject of care.
-        Representative => "representative",
-        /// A person of another organisation.
-        ExternalPerson => "external person",
-        /// An organisation.
-        Organisation => "organisation",
-        /// A system acting on its own account.
-        System => "system",
-    }
-}
-
-group! {
-    /// The kind of ground an access ran under (`ACCESS_AUTHORISATION.kind`).
-    Authorisation in AccessAuthorisation {
-        /// A role the accessor holds.
-        Role => "role",
-        /// A treatment relationship to the subject of care.
-        TreatmentRelationship => "treatment relationship",
-        /// An agreement between organisations.
-        Agreement => "agreement",
-        /// A consent decision.
-        Consent => "consent",
-        /// A data permit.
-        Permit => "permit",
-        /// An emergency override.
-        Emergency => "emergency",
-        /// The accessor is the subject of care.
-        SubjectOfCare => "subject of care",
-        /// A representation of the subject of care.
-        Representation => "representation",
-        /// A legal obligation.
-        LegalObligation => "legal obligation",
-    }
-}
-
-group! {
-    /// Why an access was refused, partly granted or failed
-    /// (`ACCESS_OUTCOME.reason`), where no [`Refusal`] code names it.
-    RefusalReason in AccessRefusalReason {
-        /// The caller was not authenticated.
-        NotAuthenticated => "not authenticated",
-        /// The caller's credential is bound to no party.
-        CredentialNotBound => "credential not bound",
-        /// The caller is not authorised.
-        NotAuthorised => "not authorised",
-        /// No consent was given.
-        ConsentAbsent => "consent absent",
-        /// The caller exceeded a rate limit.
-        RateLimited => "rate limited",
-        /// The system failed.
-        SystemFailure => "system failure",
     }
 }
 

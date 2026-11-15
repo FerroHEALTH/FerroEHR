@@ -32,8 +32,9 @@ use crate::draft::access_control::access_control::access_directive::AccessDirect
 use crate::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
+use crate::draft::access_control::terminology::log::AccessorKind;
 use crate::draft::access_control::terminology::{
-    AccessDefault, AccessorKind, CallerKind, DirectiveKind, Effect, Relationship, Term, Withheld,
+    AccessDefault, CallerKind, DirectiveKind, Effect, Relationship, Term, Withheld,
 };
 use crate::draft::invariants::{Check, Violations};
 use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;

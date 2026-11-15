@@ -8493,7 +8493,7 @@
         "tags": [
           "audit"
         ],
-        "summary": "The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction\n(`GET /fhir/r4/AuditEvent`): a FHIR search over the local Audit Record\nRepository, returning a `searchset` Bundle of stored FHIR R4 `AuditEvent`\ndocuments (IHE BALP shape). Gated by the local store (`[audit.store]`; 404\nwhen off) and admin-only under RBAC (the node's security log is an operator\nsurface). `ihe-atna` reads the query: at least one `date` is required\n(`RESTful` ATNA §3.81.4.1.2.1), and `patient`, `agent`, `entity` (or their\n`.identifier` forms), `outcome`, `action`, `_count` and `_offset` are\napplied; a parameter the store cannot apply is a `400` `not-supported`,\nand one `ihe-atna` does not know is ignored (§3.81.4.1.3).",
+        "summary": "The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction\n(`GET /fhir/r4/AuditEvent`): a FHIR search over the local Audit Record\nRepository, returning a `searchset` Bundle of stored FHIR R4 `AuditEvent`\ndocuments (IHE BALP shape). Gated by the local store (`[audit.store]`; 404\nwhen off) and admin-only under RBAC (the node's security log is an operator\nsurface). `ihe-atna` reads the query: at least one `date` is required\n(`RESTful` ATNA §3.81.4.1.2.1), and `patient`, `agent`, `entity` (or their\n`.identifier` forms), `outcome`, `action`, `_count`, `_offset` and\n`_total` are applied; a parameter the store cannot apply is a `400` `not-supported`,\nand one `ihe-atna` does not know is ignored (§3.81.4.1.3).",
         "description": "OUR OWN EXTENSION as far as openEHR is concerned — no openEHR spec governs\nthis: the ITS-REST resource set defines no audit-retrieval endpoint. Its\nbasis is IHE ITI TF-2, transaction **ITI-81 (Retrieve ATNA Audit Event)**,\nwhose RESTful-ATNA option this realizes over the local Audit Record\nRepository.",
         "operationId": "audit_event_search",
         "parameters": [
@@ -8572,6 +8572,15 @@
             "schema": {
               "type": "integer",
               "format": "int64"
+            }
+          },
+          {
+            "name": "_total",
+            "in": "query",
+            "description": "`accurate` or `estimate` counts every match into `Bundle.total`; `none` or no `_total` serves the page without it (FHIR R4 Search §3.1.1.5.2). The `next` link says whether another page follows either way.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
