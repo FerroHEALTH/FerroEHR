@@ -752,6 +752,13 @@ until the access policy states it, and the instance stays in rotation. `ferroehr
 config check` reads only the configuration file, so it cannot see the policy;
 check the indicator on `GET /management/health` after the first policy write.
 
+A stored policy version whose `log_retention` does not read (a damaged store;
+the write check refuses one) is named and held loud. Each replica keeps the
+last retention that read and records every access under it, so the access log
+never stops, while the reaper purges nothing and the `log_retention`
+indicator reads `down`, naming the version, until a version that reads is
+committed.
+
 Every record stores the first date it may be deleted on, and the reaper
 deletes each record hourly on or after that date and never before it. A
 record outside the access log ends the day after its date of access plus the

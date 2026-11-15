@@ -437,3 +437,78 @@ async fn a_log_retention_that_breaks_a_bound_is_refused_and_one_that_holds_appli
         "the period names the policy version it came from"
     );
 }
+
+/// A stored version whose log retention does not read is named and held
+/// loud: the replica keeps the last retention that read for the records it
+/// writes, the audit trail purges nothing and the `log_retention` indicator
+/// reads down, until a version that reads is committed (#5660).
+#[tokio::test]
+async fn an_unreadable_stored_retention_keeps_the_last_good_one_and_holds_the_purge() {
+    use ferrohealth_health::registry::HealthIndicator;
+
+    let (_db, pool) = common::migrated_pool().await;
+    let (svc, app) = replica(&pool, false, true).await;
+    let indicator =
+        ferroehr::telemetry::indicators::LogRetentionHealth::new(Arc::clone(svc.access_policy()));
+    let (sender, _handle) = ferroehr::system_log::sender::start(
+        ferroehr::system_log::config::AuditConfig {
+            store: ferroehr::system_log::config::StoreConfig {
+                enabled: false,
+                ..ferroehr::system_log::config::StoreConfig::default()
+            },
+            ..ferroehr::system_log::config::AuditConfig::default()
+        },
+        None,
+        None,
+    )
+    .await
+    .expect("an audit trail without a store");
+    svc.access_policy().attach_audit(sender.clone());
+    create(&app, &with_retention(Some("P3Y"), "P10Y")).await;
+    svc.read_access_policy().await.expect("read the policy");
+    let good = svc.access_policy().log_retention();
+    assert_eq!(
+        good.period,
+        ferroehr::system_log::config::Retention::Years(3)
+    );
+    assert_eq!(
+        indicator.check().await.state(),
+        ferrohealth_health::document::State::Up
+    );
+    assert_eq!(sender.retention(), good);
+    assert!(!sender.purge_held());
+
+    // NOTE: the commit check refuses a period in months, so the stored version
+    // that does not read is written past it, as a damaged store would hold it.
+    sqlx::query(
+        "INSERT INTO clinical.access_policy_version (version, vo_id, system_id, \
+         contribution_id, commit_audit, time_committed, lifecycle_state, data) \
+         SELECT 2, vo_id, system_id, gen_random_uuid(), commit_audit, now(), lifecycle_state, \
+         jsonb_set(data, '{log_retention,period,value}', '\"P18M\"') \
+         FROM clinical.access_policy_version WHERE version = 1",
+    )
+    .execute(&pool)
+    .await
+    .expect("store a version whose retention does not read");
+    svc.read_access_policy().await.expect("read the policy");
+
+    let held = svc.access_policy().retention_in_force();
+    assert_eq!(
+        held.unreadable,
+        Some(2),
+        "the version that did not read is named"
+    );
+    assert_eq!(
+        held.last_good, good,
+        "records keep the last retention that read"
+    );
+    assert_eq!(sender.retention(), good, "the trail records under it");
+    assert!(sender.purge_held(), "the trail purges nothing");
+    let check = indicator.check().await;
+    assert_eq!(check.state(), ferrohealth_health::document::State::Down);
+    assert!(
+        check.detail().unwrap_or_default().contains("version 2"),
+        "{:?}",
+        check.detail()
+    );
+}

@@ -8,9 +8,10 @@
 //! The binary constructs them over the live handles and registers them into
 //! a [`ferrohealth_health::registry::Registry`] at boot; the HTTP probes live
 //! in the protocol adapter (`ferroehr-rest`). `db` and `migrations` read
-//! `down` when they fail, which withdraws readiness; every other indicator
-//! reads at worst `degraded`, so it reports without taking the instance out
-//! of rotation.
+//! `down` when they fail, which withdraws readiness, and so does
+//! `log_retention` while the access policy's retention does not read; every
+//! other indicator reads at worst `degraded`, so it reports without taking the
+//! instance out of rotation.
 //!
 //! No openEHR spec governs health probes — our own operational design.
 
@@ -349,8 +350,9 @@ impl HealthIndicator for PolicyListenersHealth {
 /// With none stated every entry is kept without end, which meets every floor
 /// a law sets but leaves the period undecided, and GDPR Art. 5(1)(e) makes
 /// that period the controller's to set. So the indicator reads `DEGRADED`,
-/// a warning that never takes the instance out of rotation. No openEHR spec
-/// governs this: our own design (#5660).
+/// a warning that never takes the instance out of rotation. When the newest
+/// version's retention does not read it reads `DOWN`, naming the version.
+/// No openEHR spec governs this: our own design (#5660).
 #[derive(Debug)]
 pub struct LogRetentionHealth {
     policy: Arc<crate::access_policy::LivePolicy>,
@@ -371,8 +373,14 @@ impl HealthIndicator for LogRetentionHealth {
 
     fn check(&self) -> Check<'_> {
         Box::pin(async move {
-            let retention = self.policy.log_retention();
-            if retention.is_declared() {
+            let retention = self.policy.retention_in_force();
+            if let Some(version) = retention.unreadable {
+                Outcome::down(format!(
+                    "the access log retention of access policy version {version} does not read; \
+                     records keep the last retention that read and nothing is purged until a \
+                     version that reads is committed"
+                ))
+            } else if retention.last_good.is_declared() {
                 Outcome::up()
             } else {
                 Outcome::degraded(

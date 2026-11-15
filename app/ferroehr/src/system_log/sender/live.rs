@@ -8,6 +8,7 @@
 //! No openEHR spec governs how a running system takes up a new policy: our
 //! own design.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError, RwLock};
 use std::time::Duration;
 
@@ -26,6 +27,9 @@ const REAP_INTERVAL: Duration = Duration::from_hours(1);
 pub(super) struct LiveContext {
     render: Mutex<RenderPolicy>,
     current: RwLock<Arc<AuditContext>>,
+    /// Whether the newest access policy version's retention did not read, so
+    /// the reaper purges nothing.
+    purge_held: AtomicBool,
 }
 
 impl LiveContext {
@@ -34,6 +38,7 @@ impl LiveContext {
         Self {
             render: Mutex::new(render),
             current: RwLock::new(Arc::new(context)),
+            purge_held: AtomicBool::new(false),
         }
     }
 
@@ -41,6 +46,12 @@ impl LiveContext {
     pub(super) fn current(&self) -> Arc<AuditContext> {
         // NOTE: a writer swaps one `Arc` whole, so a poisoned lock holds no torn value.
         Arc::clone(&self.current.read().unwrap_or_else(PoisonError::into_inner))
+    }
+
+    /// Whether the reaper purges nothing, because the newest access policy
+    /// version's retention did not read.
+    pub(super) fn purge_held(&self) -> bool {
+        self.purge_held.load(Ordering::Acquire)
     }
 
     /// The access log retention in force.
@@ -86,6 +97,20 @@ impl AuditSender {
             .replace(|render| render.retention = retention.clone());
     }
 
+    /// Have the reaper purge nothing while `held`: the newest access policy
+    /// version's retention did not read, so no period is known to be the
+    /// controller's. Records keep being written under the last retention
+    /// that read.
+    pub fn hold_purge(&self, held: bool) {
+        self.inner.context.purge_held.store(held, Ordering::Release);
+    }
+
+    /// Whether the reaper purges nothing ([`Self::hold_purge`]).
+    #[must_use]
+    pub fn purge_held(&self) -> bool {
+        self.inner.context.purge_held()
+    }
+
     /// The access log retention every record is written under.
     #[must_use]
     pub fn retention(&self) -> LogRetention {
@@ -113,6 +138,12 @@ pub(super) async fn reaper(store: AuditStore, live: Arc<LiveContext>) {
     let access_log = crate::access_log::store::AccessLogStore::new(store.pool.clone());
     loop {
         tokio::time::sleep(REAP_INTERVAL).await;
+        if live.purge_held() {
+            tracing::error!(
+                "the access log retention in force does not read; the reaper purges nothing"
+            );
+            continue;
+        }
         let now = jiff::Timestamp::now();
         let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
         crate::access_log::expiry::scheduled(&access_log, now).await;

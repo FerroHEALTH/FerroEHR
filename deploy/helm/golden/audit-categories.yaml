@@ -240,7 +240,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 65fda2690a05d69185370de4513e5966a37ea3ff17de649bf4dac8ee62b38ce6
+        checksum/config: 76d41400b8d5efb12ec8237099ffeb2a891bae28f914217d0196613b7113e194
       labels:
         app.kubernetes.io/name: ferroehr
         app.kubernetes.io/instance: ferroehr
