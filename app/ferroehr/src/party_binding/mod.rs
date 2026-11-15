@@ -411,6 +411,19 @@ pub struct BindingMapping {
     /// held with no professional `ROLE` and bound only as a representative
     /// through a live representation (#5622).
     portal_issuers: BTreeSet<String>,
+    /// The patient's `PERSON` template with the path of its identifiers.
+    patient: Option<PatientSelector>,
+}
+
+/// The patient's `PERSON` template and the path of the `ELEMENT` holding its
+/// identifiers, each a `DV_IDENTIFIER` of any type and issuer
+/// (`[authz.party_binding.patient]`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PatientSelector {
+    /// The canonical template id.
+    template: String,
+    /// The parsed identifier path.
+    parsed: Vec<Step>,
 }
 
 impl BindingMapping {
@@ -501,6 +514,26 @@ impl BindingMapping {
     {
         self.portal_issuers = issuers.into_iter().map(Into::into).collect();
         self
+    }
+
+    /// Returns this mapping reading the identifiers of a patient's `PERSON`
+    /// of `template_id` at `path`, each a `DV_IDENTIFIER` in `details` of any
+    /// type and issuer (RM Demographic IM §2.1.3).
+    ///
+    /// # Errors
+    /// [`SelectorError::Path`] naming the path when a step is not an
+    /// attribute name with an optional node id predicate.
+    pub fn with_patient(mut self, template_id: &str, path: &str) -> Result<Self, SelectorError> {
+        let Some(parsed) = parse(path) else {
+            return Err(SelectorError::Path {
+                path: path.to_owned(),
+            });
+        };
+        self.patient = Some(PatientSelector {
+            template: canonical_key(template_id),
+            parsed,
+        });
+        Ok(self)
     }
 
     /// The `patients` issuers, sorted ([`Self::with_portal_issuers`]).

@@ -43,6 +43,7 @@
               the caller facts are derived from"
 )]
 
+pub mod patient;
 pub mod store;
 pub mod subject;
 
