@@ -357,7 +357,7 @@ cpu_table() {
     ;;
   container:*)
     id="${spec#container:}"
-    stat=$(find /sys/fs/cgroup -maxdepth 3 -type d \( -name "docker-$id.scope" -o -name "$id" \) 2>/dev/null | head -1)
+    stat=$(find /sys/fs/cgroup -maxdepth 3 -type d \( -name "docker-$id.scope" -o -name "$id" \) 2>/dev/null | sed -n 1p)
     if [[ -n "$stat" ]]; then
       awk '$1 == "usage_usec" { printf "c %.3f\n", $2 / 1e6 }' "$stat/cpu.stat"
     else
@@ -671,7 +671,7 @@ step() {
     WHERE query NOT ILIKE '%pg_stat%' ORDER BY total_exec_time DESC LIMIT 15) t" \
     >"$dir/statements.json"
   local report
-  report=$(find "$dir" -maxdepth 1 -name '*.json' ! -name statements.json ! -name step.json | head -1)
+  report=$(find "$dir" -maxdepth 1 -name '*.json' ! -name statements.json ! -name step.json | sed -n 1p)
   [[ -n "$report" ]] || { cat "$dir/perf.log" >&2; cap_die "ferrohealth-perf wrote no report (exit $status)"; }
   activity_json "$dir/activity.txt" >"$dir/activity.json"
   jq -n --arg what "$what" --argjson rate "$rate" --slurpfile r "$report" \
@@ -723,6 +723,12 @@ activity_json() {
       print "}}" }' "$1"
 }
 
+# busy_host <group|mix> <rate>: whether the host's load average exceeded
+# its cores at the end of that step.
+busy_host() {
+  jq -e '.host_load_1m > .host_cores' "$CAP_OUT_ABS/steps/$1/$2/step.json" >/dev/null
+}
+
 sweep() { # <group|mix> [<rate>...]
   local what="$1" rate passed=0 ran=0
   shift
@@ -731,6 +737,10 @@ sweep() { # <group|mix> [<rate>...]
   for rate in "${rates[@]}"; do
     ran=$((ran + 1))
     if step "$what" "$rate"; then
+      passed="$rate"
+    elif busy_host "$what" "$rate" && step "$what" "$rate"; then
+      # A step that failed while the host ran more than its cores is run once
+      # more, so another tenant's burst is not read as the knee.
       passed="$rate"
     else
       break

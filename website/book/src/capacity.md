@@ -149,6 +149,8 @@ acquire time rises and the active backends sit at the pool size, the pool
 saturated. When one statement's total time grows faster than the rate, or
 backends wait on one lock, that statement or lock is the limit.
 
-## The measurements
+## Where the measurements are
 
-{{#include ../generated/capacity-record.md}}
+The tracker issue of each run holds its result, with the hardware it ran on:
+the first is #5722. A knee is a property of one deployment on one host, so
+the book publishes the method and never a figure without its host.
