@@ -36,7 +36,6 @@ use opentelemetry::metrics::Meter;
 use sqlx::PgPool;
 use tokio::task::JoinHandle;
 use tracing_subscriber::layer::SubscriberExt as _;
-use tracing_subscriber::util::SubscriberInitExt as _;
 use tracing_subscriber::{Layer as _, Registry};
 
 /// The `service.name` of every span and metric, and the crate prefix whose
@@ -52,15 +51,12 @@ pub enum TelemetryError {
     /// The shared provider or its collector's TLS could not be built.
     #[error(transparent)]
     Build(#[from] ferrohealth_server::telemetry::TelemetryBuildError),
-    /// The console or the subscriber could not be built.
+    /// The console or the subscriber could not be built or installed.
     #[error(transparent)]
     Init(#[from] ferrohealth_telemetry::telemetry::InitError),
     /// The span-timing capture file could not be created.
     #[error("the span-timing capture file could not be created")]
     Flame(#[from] tracing_flame::Error),
-    /// A subscriber is already installed in this process.
-    #[error("a log subscriber is already installed")]
-    Subscriber(#[from] tracing_subscriber::util::TryInitError),
 }
 
 /// Returns the service the telemetry describes: `ferroehr` at
@@ -70,16 +66,19 @@ pub fn service(build: &BuildInfo) -> Service {
     Service::new(SERVICE, format!("{}+{}", build.version, build.git_sha))
 }
 
-/// Builds the provider `section` asks for, installs the process subscriber on
-/// stdout (with the span-timing capture when `flame_file` is set) and
-/// registers FerroEHR's instruments on the shared meter.
+/// Installs the process subscriber with its `log` bridge and FerroEHR's instruments.
+///
+/// It builds the provider `section` asks for, installs the subscriber on
+/// stdout (with the span-timing capture when `flame_file` is set) through
+/// `ferrohealth-telemetry`'s `log` bridge (#5696), and registers FerroEHR's
+/// instruments on the shared meter.
 ///
 /// # Errors
 ///
 /// Returns [`TelemetryError::Build`] when the provider or the collector's TLS
-/// cannot be built, [`TelemetryError::Init`] when the console cannot be built,
-/// [`TelemetryError::Flame`] when the capture file cannot be created, and
-/// [`TelemetryError::Subscriber`] when a subscriber is already installed.
+/// cannot be built, [`TelemetryError::Init`] when the console cannot be built
+/// or a subscriber or a `log` logger is already installed, and
+/// [`TelemetryError::Flame`] when the capture file cannot be created.
 pub fn init(
     section: &TelemetrySection,
     flame_file: Option<&Path>,
@@ -97,7 +96,7 @@ pub fn init(
         layers.push(layer.boxed());
         flame = Some(flush);
     }
-    tracing_subscriber::registry().with(layers).try_init()?;
+    ferrohealth_telemetry::log_bridge::install(tracing_subscriber::registry().with(layers))?;
     ferrohealth_telemetry::panic::install_hook();
 
     let meter = telemetry.meter(metrics::SCOPE);
