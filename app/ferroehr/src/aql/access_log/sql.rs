@@ -79,7 +79,6 @@ const COLUMNS: &[(&[&str], &str, Typed)] = &[
     (&["link", "previous_digest"], "previous_digest", Typed::Text),
     (&["link", "content_digest"], "content_digest", Typed::Text),
     (&["link", "digest"], "digest", Typed::Text),
-    (&["link", "signature"], "signature", Typed::Text),
 ];
 
 /// Where a path's values are read.
@@ -119,7 +118,6 @@ pub fn statement(
                 "previous_digest",
                 "content_digest",
                 "digest",
-                "signature",
             ]
             .map(|name| (Alias::new(RECORD), Alias::new(name))),
         )

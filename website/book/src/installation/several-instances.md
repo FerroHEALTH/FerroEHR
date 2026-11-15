@@ -123,10 +123,13 @@ connections and only the listeners against PostgreSQL's.
 ## Every instance shares the same signing key and configuration
 
 The access log and the system chain are one hash chain each. Every instance
-appends to them under a row lock on the chain head, and signs each link when
-an OpenPGP key is configured ([version signing](../signing/index.md)). Give
-every instance the same `[record.signing]` key and the same configuration
-file. An instance with another key writes links the others cannot vouch for.
+appends to them under a row lock on the chain head, and each instance seals
+every append it makes to the access log in a signed checkpoint, in the
+append's own transaction, when an OpenPGP key is configured ([version
+signing](../signing/index.md)). Give every instance the same
+`[record.signing]` key and the same configuration file, the same
+`[audit.access_log] publish_directory` included. An instance with another
+key writes checkpoints the others cannot vouch for.
 
 Each instance compares itself with the others when it starts and every 30
 seconds after. It writes the fingerprint of its signing key's certificate

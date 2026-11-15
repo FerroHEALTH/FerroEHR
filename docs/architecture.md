@@ -316,13 +316,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   tombstones past their end into one `access_log_chain_gap` row through
   `audit.fold_access_log_tombstones()`, the one path a record leaves the log
   by (`audit/0033_access_log_chain_gap.sql`, `access_log::gap`): the
-  positions the run held, the link and link signature of its last record and
-  the grounds of its tombstones. The gap row is the record of the fold and
+  positions the run held, the link of its last record and the grounds of its
+  tombstones. The gap row is the record of the fold and
   is append-only; replicas serialise the fold on a transaction-scoped
-  advisory lock, and the request path takes no part in it. A run is cut after
-  each checkpoint's position, so a checkpoint always names a link the log
-  holds (`audit.access_log_link_at`). The verifier, its incremental form,
-  the checkpoint and signature checks, the export (`LogExport.gaps`), the
+  advisory lock, and the request path takes no part in it. A run folds whole,
+  and the checkpoints inside it, before its last position, leave with it;
+  one at its last position names the gap's link (`audit.access_log_link_at`,
+  #5704). The verifier, its incremental form,
+  the checkpoint check, the export (`LogExport.gaps`), the
   chain read and an import (`access_log_imported_gap`) walk a gap as one
   link whose digest is its link; a missing position no gap accounts for is
   still a deletion (our own design, #5619). An erasure a law orders takes
@@ -348,20 +349,28 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   collection reads too), so an EHR-only statement writes its per-EHR
   entries; a management route that touches EHRs records one access per EHR
   from the service (`emit_mark_access`, `emit_extract_audit`).
-  `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s of the
-  head, signed with the version-signing keyring's OpenPGP key. Whenever the
-  keyring holds one, every local link is signed and `access_log::schedule`
-  seals the head every five minutes when it grew; without one nothing is
-  signed or sealed, and no key of `[audit.access_log]` switches either
-  (#5562, our own design). `AccessLogStore::append_in` locks the head
-  (`audit.access_log_chain_reserve()`), computes the links its rows will get by
-  the chain rule the insert trigger applies, signs each digest and writes the
-  signature in the same `INSERT`, refusing the transaction when the trigger
-  gave another link (`audit/0029_access_log_link_signed_at_insert.sql`).
-  `access_log::checkpoint` seals and verifies (the chain through
-  `audit.verify_access_log_chain()`, the checkpoint and the link signatures
-  beside it). The system chain is sealed on the same schedule with the same
-  key (`system_log::seal`, `audit_chain_seal`, `ferroehr audit-chain seal`
+  `access_log_checkpoint` keeps the signed `ACCESS_LOG_CHECKPOINT`s, by the
+  columns their canonical form is rebuilt from, signed with the
+  version-signing keyring's OpenPGP key. Whenever the keyring holds one,
+  every append ends, in its own transaction, with one checkpoint of the last
+  link it wrote: `AccessLogStore::append_in` inserts the rows, whose first
+  insert locks the head until the transaction ends, begins the checkpoint's
+  signature on the blocking pool and hands back an `Appended` the caller
+  seals before it commits, so the signature runs beside the rest of the
+  transaction (the drain's index rows, tokens and feed debt) and the head is
+  held for one signature at most. No link carries a signature; a checkpoint
+  insert must name the link the log holds at its position
+  (`audit/0035_access_log_batch_checkpoint.sql`, our own design, #5704).
+  Without a key nothing is sealed, and no key of `[audit.access_log]`
+  switches it (#5562). `access_log::publish` writes the newest checkpoint
+  every 30 seconds as its own write-once file under `[audit.access_log]
+  publish_directory`, the copy outside the database that shows a removal of
+  the newest entries with their checkpoints; the `access_log_checkpoints`
+  indicator reads `DEGRADED` without a key, without the directory, or while
+  publication fails. `access_log::checkpoint` seals and verifies (the chain
+  through `audit.verify_access_log_chain()` and the checkpoint beside it).
+  The system chain is sealed every five minutes with the same key
+  (`access_log::schedule`, `system_log::seal`, `audit_chain_seal`, `ferroehr audit-chain seal`
   and `verify`). `access_log::chain` verifies a span of links apart from the database
   (an export), and `access_log::transfer` exports one EHR's records with the
   span and checkpoint and imports another system's into

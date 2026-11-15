@@ -20,7 +20,7 @@ use openehr_rm::draft::access_control::terminology::{AccessorKind, Term as _};
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
-use super::store::{AccessLogError, AccessLogStore, link, stored};
+use super::store::{AccessLogError, AccessLogStore, own_link, stored};
 
 /// The `ACCESSED_ITEM.rm_type` of an entry that records a read of the access
 /// log itself (rule 4 of the draft's recording rules).
@@ -109,8 +109,8 @@ impl AccessLogStore {
     /// [`AccessLogError::Unreadable`] when a stored record does not read.
     pub async fn search(&self, query: &LogQuery) -> Result<Vec<AccessLogRecord>, AccessLogError> {
         let rows = sqlx::query(
-            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest, \
-             signature FROM audit.access_log_record r, LATERAL (SELECT r.content::jsonb AS doc) d \
+            "SELECT chain_seq, content, algorithm, previous_digest, content_digest, digest \
+             FROM audit.access_log_record r, LATERAL (SELECT r.content::jsonb AS doc) d \
              WHERE ($1::text IS NULL OR r.ehr_id = $1) \
              AND ($2::text IS NULL OR r.time_recorded >= $2::text::timestamptz) \
              AND ($3::text IS NULL OR r.time_recorded <= $3::text::timestamptz) \
@@ -187,7 +187,7 @@ impl AccessLogStore {
         to: i64,
     ) -> Result<Vec<(String, AccessLogLink)>, AccessLogError> {
         let rows = sqlx::query(
-            "SELECT uid, chain_seq, algorithm, previous_digest, content_digest, digest, signature \
+            "SELECT uid, chain_seq, algorithm, previous_digest, content_digest, digest \
              FROM audit.access_log_record WHERE chain_seq BETWEEN $1 AND $2 ORDER BY chain_seq",
         )
         .bind(from)
@@ -196,7 +196,7 @@ impl AccessLogStore {
         .await?;
         let links = rows
             .iter()
-            .map(|row| Ok((row.try_get::<String, _>("uid")?, link(row)?)))
+            .map(|row| Ok((row.try_get::<String, _>("uid")?, own_link(row)?)))
             .collect::<Result<Vec<_>, sqlx::Error>>()?;
         Ok(links)
     }

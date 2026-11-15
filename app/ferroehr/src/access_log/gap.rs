@@ -8,12 +8,14 @@
 //! It is kept one more retention horizon, its entry's own: as long after its
 //! removal as the entry was kept before it. After that, a run of consecutive
 //! tombstones that are all past it folds into one gap, which keeps the
-//! positions the run held, the link digest of its last record, that link's
-//! signature and the grounds its tombstones named. The record after the run
+//! positions the run held, the link digest of its last record and the
+//! grounds its tombstones named. The record after the run
 //! links to the gap's link, so the chain verifies across it, and a missing
-//! position no gap accounts for is still a deletion. A run never spans a
-//! checkpoint's position except as its last, so every checkpoint still names
-//! a link the log holds.
+//! position no gap accounts for is still a deletion. A run folds whole, and
+//! the checkpoints inside it, before its last position, leave with it: the
+//! checkpoints after the run still seal every link below them through the
+//! chain, and one at the run's last position verifies against the gap's link
+//! (#5704).
 //!
 //! The draft access log defines no gap: the gap is FerroEHR's own record, and
 //! no openEHR spec governs audit retention: our own design.
@@ -43,7 +45,8 @@ pub struct ChainGap {
     /// after the run links to.
     pub link: String,
     /// `ACCESS_LOG_LINK.signature` of the run's last record, the signature of
-    /// `link`, when that link was signed.
+    /// `link`, when its exporter signed that link; this system signs no link,
+    /// so a gap of its own log carries none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signature: Option<String>,
     /// Every distinct ground the run's tombstones named.
@@ -117,8 +120,8 @@ impl AccessLogStore {
     /// [`AccessLogError::Unreadable`] when a stored gap does not read.
     pub async fn gaps(&self, from: i64, to: i64) -> Result<Vec<ChainGap>, AccessLogError> {
         let rows = sqlx::query(
-            "SELECT first_seq, last_seq, link, signature, grounds::text AS grounds, time_folded \
-             FROM audit.access_log_chain_gap WHERE last_seq >= $1 AND first_seq <= $2 \
+            "SELECT first_seq, last_seq, link, NULL::text AS signature, grounds::text AS grounds, \
+             time_folded FROM audit.access_log_chain_gap WHERE last_seq >= $1 AND first_seq <= $2 \
              ORDER BY first_seq",
         )
         .bind(from)

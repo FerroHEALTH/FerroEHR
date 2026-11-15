@@ -9,9 +9,9 @@
 # policy, the care relationships and the EHRs' directives through the ADMIN
 # and demographic routes, and the clinician reads and writes under them, so
 # every clinical group runs the access evaluator with care relationships and
-# controller rules in force (#5590). The access log signs each link with the OpenPGP
-# key scripts/perf/gate.sh generates for the run and mounts where
-# [record.signing] names it.
+# controller rules in force (#5590). The access log seals each append in a
+# checkpoint signed with the OpenPGP key scripts/perf/gate.sh generates for the
+# run and mounts where [record.signing] names it.
 
 [deployment]
 profile = "sandbox"
