@@ -171,6 +171,15 @@ directives; an older base sends them as its administrator. Every arm signs
 its access-log links with an OpenPGP key the gate generates for the run with
 `gpg`: Ed25519 by default, RSA-3072 with `PERF_SIGNING_KEY=rsa3072`.
 
+A gate measures a change in the code, so it compares like with like: when
+the base binary accepts this tree's gate configuration (`ferroehr config
+check`), the base arm runs under it too, with the same signing key, access
+seed and credentials. Only a base that refuses it, such as an earlier release
+without the access path, runs under its own tree's configuration; that
+comparison shows the whole cost of the access path and the signed access log,
+which `docs/benchmarks/access-path/record.json` records as the accepted cost
+of the EHDS access log.
+
 `gate.sh replicas <image> <pg-image> [<instances>...]` measures the reload
 load of one, two and three instances on one PostgreSQL: after each change the
 copies listen for (a grant, a care relationship, the access policy, an EHR's

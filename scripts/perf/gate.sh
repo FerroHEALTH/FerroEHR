@@ -39,6 +39,8 @@
 # directives on the EHR, and the clinical groups sent as the clinician. Its
 # access log signs every link with an OpenPGP key the gate generates for the
 # run (PERF_SIGNING_KEY), mounted where the tree's configuration names it.
+# A base that accepts this tree's configuration runs under it as well, so the
+# two arms differ in the code alone (base_config_tree).
 #
 # Usage:
 #   scripts/perf/gate.sh install                     the pinned ferrohealth-perf into target/tools/perf
@@ -490,6 +492,27 @@ base_tree() {
   echo "perf gate: the base is $rev"
 }
 
+# base_config_tree <base-image>: the tree the base arm runs under. When the
+# base binary accepts this tree's gate configuration (`ferroehr config check`),
+# both arms run one configuration, signing key, access seed and request
+# credentials, so the gate measures the code alone (#5590); an older base
+# that refuses it runs under its own tree's, as BASE_TREE holds it.
+base_config_tree() {
+  if docker run --rm -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
+    -e FERROEHR__DATABASE__URL=postgres://check:check@localhost/check \
+    -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro" \
+    -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro" \
+    -v "$OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro" \
+    -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro" \
+    "$1" config check >/dev/null 2>&1; then
+    echo "perf gate: the base runs under this tree's configuration" >&2
+    echo "$ROOT"
+  else
+    echo "perf gate: the base refuses this tree's configuration and runs under its own" >&2
+    echo "$BASE_TREE"
+  fi
+}
+
 # ab <image> <pg-image> <base-image> <base-pg-image>: the head and the base
 # side by side, each seeded and provisioned from its own tree, judged by
 # `ferrohealth-perf ab` over this checkout's plan with each arm's ids.
@@ -505,7 +528,7 @@ ab() {
   local head_url="$SERVER_URL" head_db="$DATABASE_URL" head_container="${TARGET[1]}"
   local -a vars=()
   for entry in "${SEED[@]}"; do vars+=(--head-var "$entry"); done
-  up "$3" "$4" "$BASE_TREE" -base "$BASE_HTTP_PORT" "$BASE_PG_PORT"
+  up "$3" "$4" "$(base_config_tree "$3")" -base "$BASE_HTTP_PORT" "$BASE_PG_PORT"
   for entry in "${SEED[@]}"; do vars+=(--base-var "$entry"); done
   render "$ROOT/perf/plan.toml" "$OUT/plan.toml" per-arm
   "$bin" ab --plan "$OUT/plan.toml" \
