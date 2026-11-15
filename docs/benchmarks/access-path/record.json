@@ -153,7 +153,7 @@
       "revision": "70bb072a9f1bbb39301d9921b261c84d25d2bfd4"
     },
     "head": {
-      "what": "this branch, release build, with #5615 and #5616"
+      "what": "main at bcab7e0f2, with #5615, #5616, #5645, #5646, #5656 and #5667 fixed; the RSA-3072 column predates the last four"
     },
     "population": 20000,
     "runs": [
@@ -165,100 +165,100 @@
         "checks": [
           {
             "name": "access_log_read.p50_ms",
-            "head": 113.983,
-            "base": 6.811,
-            "threshold": 8.51375,
+            "head": 17.103,
+            "base": 7.2509999999999994,
+            "threshold": 9.503,
             "passed": false
           },
           {
             "name": "aql_order_by.p50_ms",
-            "head": 33.855000000000004,
-            "base": 5.357,
-            "threshold": 6.69625,
+            "head": 17.399,
+            "base": 6.301,
+            "threshold": 7.876250000000001,
             "passed": false
           },
           {
             "name": "aql_population.p50_ms",
-            "head": 15.271,
-            "base": 3.056,
-            "threshold": 3.915706371553926,
+            "head": 14.555,
+            "base": 3.364,
+            "threshold": 4.205,
             "passed": false
           },
           {
             "name": "aql_unordered.p50_ms",
-            "head": 30.110999999999997,
-            "base": 4.875,
-            "threshold": 6.4603342632260645,
+            "head": 13.559000000000001,
+            "base": 4.993,
+            "threshold": 6.241250000000001,
             "passed": false
           },
           {
             "name": "composition_commit.p50_ms",
-            "head": 5.2509999999999994,
-            "base": 5.115,
-            "threshold": 6.393750000000001,
+            "head": 6.477,
+            "base": 6.519,
+            "threshold": 8.14875,
             "passed": true
           },
           {
             "name": "composition_read.p50_ms",
-            "head": 4.015000000000001,
-            "base": 3.574,
-            "threshold": 4.467499999999999,
+            "head": 4.855,
+            "base": 4.225,
+            "threshold": 5.28125,
             "passed": true
           },
           {
             "name": "cpu_per_request_ms",
-            "head": 3.88966,
-            "base": 1.5095899999999998,
-            "threshold": 1.9638943793652053,
+            "head": 3.16246125,
+            "base": 1.4529566666666667,
+            "threshold": 1.8161958333333335,
             "passed": false
           },
           {
             "name": "ehr_create.p50_ms",
-            "head": 5.463,
-            "base": 5.375,
-            "threshold": 6.909870950027456,
+            "head": 6.323,
+            "base": 5.197,
+            "threshold": 6.49625,
             "passed": true
           },
           {
             "name": "ehr_read.p50_ms",
-            "head": 3.0759999999999996,
-            "base": 2.964,
-            "threshold": 3.705,
+            "head": 3.661,
+            "base": 3.767,
+            "threshold": 4.731,
             "passed": true
           },
           {
             "name": "export.p50_ms",
-            "head": 6.463,
-            "base": 5.785,
-            "threshold": 7.23125,
+            "head": 8.530999999999999,
+            "base": 7.117,
+            "threshold": 8.89625,
             "passed": true
           },
           {
             "name": "party_read.p50_ms",
-            "head": 3.784,
-            "base": 3.652,
-            "threshold": 4.565,
+            "head": 4.372999999999999,
+            "base": 4.485,
+            "threshold": 5.60625,
             "passed": true
           },
           {
             "name": "party_version_read.p50_ms",
-            "head": 3.612,
-            "base": 3.559,
-            "threshold": 4.44875,
+            "head": 4.335,
+            "base": 4.589,
+            "threshold": 5.736514648212226,
             "passed": true
           },
           {
             "name": "peak_memory_bytes",
-            "head": 362991616.0,
-            "base": 187715584.0,
-            "threshold": 225258700.79999998,
-            "passed": false
+            "head": 222226432.0,
+            "base": 191803392.0,
+            "threshold": 230164070.4,
+            "passed": true
           },
           {
             "name": "template_upload.p50_ms",
-            "head": 4.006,
-            "base": 3.943,
-            "threshold": 4.92875,
+            "head": 4.383,
+            "base": 4.551,
+            "threshold": 5.688750000000001,
             "passed": true
           },
           {
@@ -270,9 +270,9 @@
           },
           {
             "name": "transactions_per_request",
-            "head": 7.180357142857143,
-            "base": 7.477857142857143,
-            "threshold": 8.225642857142859,
+            "head": 6.603928571428572,
+            "base": 7.4350000000000005,
+            "threshold": 8.178500000000001,
             "passed": true
           }
         ]
@@ -410,14 +410,13 @@
       }
     },
     "regressions": [
-      5645,
-      5646
+      5685
     ]
   },
   "access_log": {
     "entry_row_bytes": 2518,
     "tombstone_row_bytes": 1079,
-    "stored_bytes_per_entry": 3887,
+    "stored_bytes_per_entry": 2911,
     "entries_per_request": 2.076923076923077,
     "entries_per_request_basis": "the plan's thirteen groups at one rate: seven write one entry, the population query twenty, the rest none",
     "rate_rps": 20,
