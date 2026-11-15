@@ -152,9 +152,9 @@ pub(crate) async fn write(
     finish(tx, parties).await
 }
 
-/// Replaces the facts and the record subjects of the `PERSON` `head` on its
-/// commit transaction `tx`, as [`write()`] does, stamping the `PERSON` too
-/// when its record subjects changed.
+/// Replaces the facts, the record subjects and the patient identifiers of
+/// the `PERSON` `head` on its commit transaction `tx`, as [`write()`] does,
+/// stamping the `PERSON` too when its record subjects changed.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -166,6 +166,7 @@ pub(crate) async fn write_person(
     if super::subject::replace(tx, head).await? {
         parties.push(head.vo_id);
     }
+    super::patient::replace(tx, head).await?;
     finish(tx, parties).await
 }
 
@@ -336,6 +337,7 @@ pub(crate) async fn erase(tx: &mut PgConnection, vo_ids: &[Uuid]) -> Result<bool
         .execute(&mut *tx)
         .await?
         .rows_affected();
+    super::patient::erase(tx, vo_ids).await?;
     sqlx::query("DELETE FROM binding_caller_fact_party WHERE party_id = ANY($1)")
         .bind(vo_ids)
         .execute(&mut *tx)

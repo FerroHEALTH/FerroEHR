@@ -1153,6 +1153,29 @@ access revision (`clinical/0046`) carries the namespace with the id. **Our own
 design:** the element, the projection, its uniqueness, the resolution order
 and the grant.
 
+**The patient's EHRs** (#5648, #5649). `FerroEhrService::subject_ehrs`, the
+index lookup a subject cohort makes, answers the EHR the clinical subject
+names and the EHR of every other record subject of the `PERSON` that declares
+it (`ehr_ids_for_person`). After a PIX merge, ITI-83 answers the survivor's
+pseudonym for the merged identifier (PIXm 3.1.0 §2:3.83.4.2.2.5, FerroPIX
+§2:3.104.4.2.3), and the merge contribution has moved the merged patient's
+pseudonym onto the survivor's `PERSON`, so both EHRs answer. That is the
+consumer's handling of a merge (PMIR 1.6.0 §2:3.93.4.1.3). A contact point's
+TRC patient resolves in the party domain alone (`patient_ehrs`): migration
+`party/0045` projects the `DV_IDENTIFIER`s at the `[authz.party_binding.patient]
+identifier` path of a `PERSON` of the patient template into
+`binding_patient_identifier` at its commit, and one indexed statement finds
+the `PERSON` that carries the TRC identifier by issuer and value. A
+protected-scheme identifier is held as its stored reference and joined
+through `national_identifier`'s lookup digest. Then the `PERSON`'s references
+name its EHRs. Under `local` the identifier also names the EHR whose
+`EHR_STATUS` carries it. An identifier no `PERSON`, or more than one,
+carries finds nothing, and the request is refused with `trc-patient-mismatch`.
+So the TRC confinement makes no ITI-83 call, and an unavailable PIX Manager
+refuses no contact point. **Our own design:** the projection, the match on
+issuer and value, the refusal of an ambiguous identifier, and reaching a
+merged patient's EHR through the survivor's `PERSON`.
+
 **The client lists are grants** (#5437). A backend client, whose
 `system/aql-*` scope "would grant access to all registered and ad-hoc AQL
 queries system-wide" (SMART on openEHR `master08-scopes.adoc` §Resource

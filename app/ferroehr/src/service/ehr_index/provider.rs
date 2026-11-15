@@ -6,8 +6,10 @@
 //! [`EhrIndexProvider`] selects who translates a subject into the clinical
 //! domain: an IHE patient identity source asked over PIXm ([`super::ihe`]), or
 //! nobody, for a FerroEHR run on its own (`local`), where a subject names
-//! itself. Either way the EHR is the one whose `EHR_STATUS.subject` names the
-//! clinical subject, read from the `ehr` table's promoted subject columns. A
+//! itself. Either way the EHRs are the ones whose `EHR_STATUS.subject` names
+//! the clinical subject or another record subject of its `PERSON`, read from
+//! the `ehr` table's promoted subject columns. A contact point's TRC patient is
+//! found in the party domain alone ([`FerroEhrService::patient_ehrs`]). A
 //! service that was given neither refuses every subject-scoped operation, and
 //! a configured identity source that fails is reported as the failure it is.
 //!
@@ -150,26 +152,91 @@ impl FerroEhrService {
         }
     }
 
-    /// The EHR whose `EHR_STATUS` names `subject` once the installed provider
-    /// has resolved it into the clinical domain, matched on the EHR's promoted
-    /// subject columns; `None` when no EHR names it or the identity source
-    /// knows no clinical identifier for it.
+    /// The EHRs of the patient `subject` names once the installed provider
+    /// has resolved it into the clinical domain: the EHR whose
+    /// `EHR_STATUS.subject` names the clinical subject, and the EHR of every
+    /// other record subject the `PERSON` declaring it carries
+    /// ([`Self::ehr_ids_for_person`]), which after an identity merge
+    /// includes the merged patient's EHR; empty when no EHR names it or the
+    /// identity source knows no clinical identifier for it.
     ///
     /// Under [`EhrIndexProvider::Local`] the subject names itself; under
     /// [`EhrIndexProvider::Ihe`] a subject outside the clinical domain is
-    /// cross-referenced by the PIX Manager.
+    /// cross-referenced by the PIX Manager, which answers the survivor's
+    /// pseudonym for a merged identifier (PIXm 3.1.0 §2:3.83.4.2.2.5 leaves
+    /// that to policy). Reaching the merged patient's EHR through the
+    /// survivor's `PERSON` is the consumer's handling of the merge (PMIR 1.6.0
+    /// §2:3.93.4.1.3): our own design (#5649).
     ///
     /// # Errors
     /// [`IndexError::Unconfigured`] with no provider installed,
     /// [`IndexError::IdentitySource`] when the source fails,
     /// [`IndexError::NotPseudonymous`] for an answered identifier the subject
     /// rule refuses, and [`IndexError::Service`] on a storage fault.
-    pub async fn subject_ehr(&self, subject: &SubjectRef) -> Result<Option<EhrId>, IndexError> {
+    pub async fn subject_ehrs(&self, subject: &SubjectRef) -> Result<Vec<EhrId>, IndexError> {
         let Some(clinical) = self.clinical_subject(subject).await? else {
-            return Ok(None);
+            return Ok(Vec::new());
         };
         Ok(self
-            .ehr_id_for_subject(&clinical.id, &clinical.namespace)
+            .ehr_ids_for_person(&clinical.id, &clinical.namespace)
             .await?)
+    }
+
+    /// The EHRs of the patient a contact point's treatment relationship
+    /// confirmation names by `patient`, an identifier of the patient's
+    /// domain, found in the party domain with no call to an identity source.
+    ///
+    /// The patient is the `PERSON` that carries `patient` at the
+    /// `[authz.party_binding.patient]` identifier path, matched on the issuer
+    /// and the value (a protected scheme's value through its lookup digest),
+    /// and its EHRs are the ones its own reference and its record subjects
+    /// name ([`Self::ehr_ids_for_person`]). Under
+    /// [`EhrIndexProvider::Local`] the identifier also names the EHR whose
+    /// `EHR_STATUS` carries it, as a local subject names itself. An
+    /// identifier no `PERSON`, or more than one, carries finds no EHR in the
+    /// party domain, so the caller refuses: it fails closed. eHDSI XCA Profile 8.0.1 §4.2.1 names the TRC patient
+    /// and leaves finding its record to the data holder; resolving it in the
+    /// party domain keeps admitting a request off the identity source: our own
+    /// design (#5648).
+    ///
+    /// # Errors
+    /// [`IndexError::Unconfigured`] with no provider installed, and
+    /// [`IndexError::Service`] when the party or the clinical store cannot
+    /// answer.
+    pub async fn patient_ehrs(&self, patient: &SubjectRef) -> Result<Vec<EhrId>, IndexError> {
+        let mut found = match &self.ehr_index {
+            EhrIndexProvider::Unconfigured => return Err(IndexError::Unconfigured),
+            EhrIndexProvider::Local => {
+                self.ehr_ids_for_person(&patient.id, &patient.namespace)
+                    .await?
+            }
+            EhrIndexProvider::Ihe(_) => Vec::new(),
+        };
+        let protected = self
+            .identifiers
+            .as_ref()
+            .map(|engine| engine.lookup_digests(&patient.id))
+            .unwrap_or_default();
+        let persons = self
+            .grants
+            .patients_carrying(&patient.namespace, &patient.id, &protected)
+            .await
+            .map_err(crate::error::ServiceError::from)?;
+        let [person] = persons.as_slice() else {
+            if persons.len() > 1 {
+                tracing::warn!(
+                    persons = persons.len(),
+                    "a patient identifier is carried by more than one PERSON, so it finds no EHR"
+                );
+            }
+            return Ok(found);
+        };
+        let own = self.grants.namespace();
+        for ehr_id in self.ehr_ids_for_person(&person.to_string(), &own).await? {
+            if !found.contains(&ehr_id) {
+                found.push(ehr_id);
+            }
+        }
+        Ok(found)
     }
 }
