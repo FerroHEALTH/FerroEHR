@@ -244,7 +244,7 @@ impl FerroEhrService {
         }
         Err(ServiceError::not_permitted(
             "a system caller exports an EHR only under a grant of \
-             ferroehr-operations::export_ehr_extract whose subject_namespace elements name the \
+             openehr_access::export_ehr_extract whose subject_namespace elements name the \
              subject namespace of the EHR, or hold no_subject_namespace for a subject with none",
         ))
     }
@@ -334,7 +334,7 @@ fn imported_subjects(containers: &[ImportContainer]) -> BTreeSet<Option<String>>
 /// covering the EHR.
 fn refused_import(operation: Operation) -> ServiceError {
     ServiceError::not_permitted(format!(
-        "importing needs a grant of ferroehr-operations::{operation} whose subject_namespace \
+        "importing needs a grant of openehr_access::{operation} whose subject_namespace \
          elements name the subject namespace of the EHR, or hold no_subject_namespace for a \
          subject with none"
     ))

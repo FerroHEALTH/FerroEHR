@@ -114,6 +114,7 @@ pub(crate) async fn reindex_committed(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     grants::caller::check_content(facts)?;
+    grants::caller::subject::check(facts, &ctx.grants.namespace(), ctx.privacy)?;
     if committed.kind == Kind::PartyRelationship {
         return standalone::committed(tx, ctx.binding, committed, facts).await;
     }
@@ -159,11 +160,10 @@ pub(crate) async fn reindex_committed(
         .as_ref()
         .map_or(&[][..], |f| f.targets.as_slice());
     party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
-    let care = grants::caller::CareBefore::read(tx, committed).await?;
+    grants::caller::check_care(tx, ctx.binding, committed, facts).await?;
     reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
-        .map_err(selector_in_use)?;
-    care.check(tx, ctx.binding).await
+        .map_err(selector_in_use)
 }
 
 /// Rebuilds the reverse-relationship index of the party `vo_id` of `kind` from
@@ -497,6 +497,7 @@ async fn write_persons(
                 lifecycle_state: head.lifecycle_state.clone(),
                 representative: !facts.representations.is_empty()
                     || standalone.contains(&head.vo_id),
+                portal: *selector == "key" && mapping.is_portal_issuer(&identifier.issuer),
             });
         }
         listed.extend(facts.roles.iter().map(|role| (*role, head.vo_id)));
@@ -542,6 +543,7 @@ fn tombstones_of(mapping: &BindingMapping, heads: &[Head]) -> Vec<IdentifierRow>
                 value: identifier.canonical(),
                 lifecycle_state: lifecycle_state.clone(),
                 representative: false,
+                portal: false,
             });
         }
     }
@@ -610,6 +612,7 @@ async fn write_groups(
             value: value.to_owned(),
             lifecycle_state: head.lifecycle_state.clone(),
             representative: false,
+            portal: false,
         };
         for id in &facts.group_external_ids {
             identifiers.push(row("group_external_id", &id.issuer, &id.id_type, &id.id));

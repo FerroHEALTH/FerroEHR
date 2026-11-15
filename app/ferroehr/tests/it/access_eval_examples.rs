@@ -3,9 +3,9 @@
 
 //! Two worked examples of the ABAC design end to end through the service and
 //! the store, against a real `PostgreSQL` 18 (shared testkit harness): the
-//! care relationships the ADT system writes and the clearance a capability
-//! carries are read from the replica's copy of the caller facts, and the
-//! decision holds for a named composition and for a query alike.
+//! care relationships the ADT system writes and the role a `ROLE` names are
+//! read from the replica's copy of the caller facts, and the decision holds
+//! for a named composition and for a query alike.
 //!
 //! BASE Architecture Overview `master07-security.adoc` §Security Policy,
 //! "Time-limitation of access", bounds access by the episode of care "plus
@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use crate::fixtures::{composition, create_ehr_for_party, if_match, object, uv};
+use crate::fixtures::{change_type, composition, create_ehr_for_party, if_match, object, uv};
 use crate::policy_fixtures::{capability, create, granted, granting, of_client};
 use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
 use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
@@ -37,7 +37,7 @@ use openehr_rm::draft::access_control::terminology::{
 };
 
 /// The HL7 v3 `ActCode` sensitivity terminology id.
-const ACT_CODE: &str = "2.16.840.1.113883.5.25";
+const ACT_CODE: &str = "v3-ActCode";
 
 fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
@@ -55,9 +55,20 @@ fn party_ref(kind: &str, id: VoId) -> Value {
             "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() } })
 }
 
+/// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
+const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+/// A patient under the care of a team or unit.
+const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
+
 /// A care relationship of `code` from `source` to `team`, over the dates
 /// `from` to `until`, each included.
-fn care(code: &str, source: VoId, team: VoId, from: &str, until: Option<&str>) -> Value {
+fn care(
+    (terminology, code): (&str, &str),
+    source: VoId,
+    team: VoId,
+    from: &str,
+    until: Option<&str>,
+) -> Value {
     let mut validity = json!({ "_type": "DV_INTERVAL",
         "lower": { "_type": "DV_DATE", "value": from },
         "lower_unbounded": false, "upper_unbounded": until.is_none(),
@@ -71,7 +82,7 @@ fn care(code: &str, source: VoId, team: VoId, from: &str, until: Option<&str>) -
         "name": text("Ward stay"),
         "details": { "_type": "ITEM_TREE", "archetype_node_id": "at0002", "name": text("details"),
             "items": [{ "_type": "ELEMENT", "archetype_node_id": "at0003", "name": text("kind"),
-                        "value": coded(TERMINOLOGY, code) }] },
+                        "value": coded(terminology, code) }] },
         "time_validity": validity,
         "source": party_ref("PERSON", source),
         "target": party_ref("GROUP", team)
@@ -199,10 +210,9 @@ fn access(
         Caller {
             kind: CallerKind::Professional,
             party: Some(party.to_string()),
-            own_ehr: None,
+            own_ehrs: Vec::new(),
             patient_grants_only: false,
             acts_for,
-            roles: Vec::new(),
             facts,
             administrator: false,
             settings: SettingsCaller::new(false, false, Some(party.to_string())),
@@ -269,7 +279,7 @@ async fn the_ward_with_its_grace_period() {
         let (doctor, uid) = create(&svc, PartyKind::Person, &person(name, &[]))
             .await
             .expect("the professional commits");
-        let roster = person(name, &[care("member_of", doctor, team, "2026-10-01", None)]);
+        let roster = person(name, &[care(MEMBER, doctor, team, "2026-10-01", None)]);
         update_as_adt(&svc, (doctor, &uid), &roster).await;
         doctors.push(doctor);
     }
@@ -277,7 +287,7 @@ async fn the_ward_with_its_grace_period() {
         .await
         .expect("the patient commits");
     let stay = care(
-        "under_care_of",
+        UNDER_CARE,
         patient,
         cardiology,
         "2026-11-03",
@@ -320,9 +330,10 @@ async fn the_ward_with_its_grace_period() {
     }
 }
 
-/// HIV results: the policy classifies the results; the specialist whose
-/// capability clears `HIV` reads them, and a professional without the
-/// clearance reads the rest of the record without them.
+/// HIV results: the policy classifies the results and a rule clears the
+/// infectious-disease role for them; the specialist performing that role
+/// reads them, and a professional who does not reads the rest of the record
+/// without them.
 #[tokio::test]
 async fn hiv_results() {
     let db = testkit::db().await.expect("testkit database");
@@ -330,20 +341,12 @@ async fn hiv_results() {
         &ferroehr::db::domain::DomainPools::from_shared(&db.pool()),
     ))
     .await;
-    let qualifier = |name: &str, value: &Value| {
-        json!({ "_type": "ELEMENT", "archetype_node_id": "at0040",
-                "name": coded(TERMINOLOGY, name), "value": value })
-    };
     let (specialist, _) = create(&svc, PartyKind::Person, &person("Dr ID", &[]))
         .await
         .expect("the specialist commits");
-    let role = crate::policy_fixtures::role(
-        specialist,
-        &[capability(
-            "access_demographic",
-            &[qualifier("sensitivity_clearance", &coded(ACT_CODE, "HIV"))],
-        )],
-    );
+    let mut role =
+        crate::policy_fixtures::role(specialist, &[capability("access_demographic", &[])]);
+    role["name"] = coded("urn:example:roles", "INFECTIOUS_DISEASE");
     create(&svc, PartyKind::Role, &role)
         .await
         .expect("the ROLE commits");
@@ -367,7 +370,13 @@ async fn hiv_results() {
         "data": { "_type": "ACCESS_DATA_SCOPE",
                   "archetypes": [{ "_type": "ARCHETYPE_ID",
                                    "value": "openEHR-EHR-COMPOSITION.encounter.v1" }] },
-        "sensitivities": [coded(ACT_CODE, "HIV")] }] }));
+        "sensitivities": [coded(ACT_CODE, "HIV")] }],
+        "rules": [{ "_type": "ACCESS_DIRECTIVE", "name": text("Infectious disease reads HIV"),
+            "archetype_node_id": "at0003",
+            "kind": coded(TERMINOLOGY, "controller_rule"), "effect": coded(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, "permit"),
+            "applies_to": [{ "role": coded("urn:example:roles", "INFECTIOUS_DISEASE") }],
+            "data": [{ "sensitivities": [coded(ACT_CODE, "HIV")] }],
+            "emergency_override": false }] }));
     let now = jiff::Timestamp::now();
     let (_, read, rows) = decided(
         &svc,
@@ -386,4 +395,258 @@ async fn hiv_results() {
     .await;
     assert_eq!(outcome, Outcome::Admit, "the dermatologist reaches the EHR");
     assert!(!read && rows == 0, "and not the results");
+}
+
+/// The pseudonymisation domain an identity source issues the clinical
+/// domain's subject pseudonyms in, as `[pixm] assigning_authority` names it.
+const PIXM: &str = "urn:oid:2.999.7.1";
+
+/// `body` declaring `subjects`, each `(namespace, id)`, as record subject
+/// elements of its details (#5634).
+fn declaring(mut body: Value, subjects: &[(&str, &str)]) -> Value {
+    let items: Vec<Value> = subjects
+        .iter()
+        .map(|(namespace, id)| {
+            json!({ "_type": "ELEMENT", "archetype_node_id": "at0010",
+                "name": coded(TERMINOLOGY, "record_subject"),
+                "value": { "_type": "DV_IDENTIFIER", "issuer": namespace, "id": id, "type": "PI" } })
+        })
+        .collect();
+    body["details"] = json!({ "_type": "ITEM_TREE", "archetype_node_id": "at0009",
+        "name": text("details"), "items": items });
+    body
+}
+
+/// Cardiology and nephrology with Dr D a member of the first and Dr F of the
+/// second, written by the ADT system: the two teams and the two doctors.
+async fn two_wards(svc: &FerroEhrService) -> ([VoId; 2], [VoId; 2]) {
+    granted(svc, "adt", &[capability("write_care_relationship", &[])]).await;
+    let group = |name: &str| party("GROUP", "openEHR-DEMOGRAPHIC-GROUP.ward.v1", name, &[]);
+    let mut teams = Vec::new();
+    let mut doctors = Vec::new();
+    for (team, doctor) in [("Cardiology", "Dr D"), ("Nephrology", "Dr F")] {
+        let (team, _) = create(svc, PartyKind::Group, &group(team))
+            .await
+            .expect("the GROUP commits");
+        let (person_id, uid) = create(svc, PartyKind::Person, &person(doctor, &[]))
+            .await
+            .expect("the professional commits");
+        let roster = person(doctor, &[care(MEMBER, person_id, team, "2026-10-01", None)]);
+        update_as_adt(svc, (person_id, &uid), &roster).await;
+        teams.push(team);
+        doctors.push(person_id);
+    }
+    ([teams[0], teams[1]], [doctors[0], doctors[1]])
+}
+
+/// An EHR whose subject is `id` under `namespace`, with one composition.
+async fn ehr_of(svc: &FerroEhrService, id: &str, namespace: &str) -> (EhrId, VoId) {
+    let subject = ferroehr::service::ehr_index::types::SubjectRef::person(id, namespace);
+    let ehr_id = crate::fixtures::create_ehr_subject(svc, &subject).await;
+    let vo = svc
+        .create_composition(ehr_id, uv(&composition("ward note"), "249", None))
+        .await
+        .expect("the composition commits")
+        .vo_id;
+    (ehr_id, vo)
+}
+
+/// The ward under both subject indexes (#5634): Mr E's `PERSON` declares his
+/// pseudonym, so the EHR whose `EHR_STATUS` names the `PERSON` (`local`) and
+/// the EHR whose `EHR_STATUS` names the pseudonym (`pixm`) both inherit his
+/// care relationship, and the representation reaches both. A pseudonym no
+/// `PERSON` declares, and the `PERSON`'s container id under another
+/// namespace, name no `PERSON`, so care fails closed on them.
+#[tokio::test]
+async fn care_and_representation_resolve_under_both_subject_indexes() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&db.pool()),
+    ))
+    .await;
+    let ([cardiology, _], [dr_d, dr_f]) = two_wards(&svc).await;
+    let pseudonym = uuid::Uuid::now_v7().to_string();
+    let (patient, uid) = create(&svc, PartyKind::Person, &person("Mr E", &[]))
+        .await
+        .expect("the patient commits");
+    let stay = care(UNDER_CARE, patient, cardiology, "2026-11-03", None);
+    let admitted = declaring(person("Mr E", &[stay]), &[(PIXM, &pseudonym)]);
+    update_as_adt(&svc, (patient, &uid), &admitted).await;
+    let local = create_ehr_for_party(&svc, patient).await;
+    let local_vo = svc
+        .create_composition(local, uv(&composition("ward note"), "249", None))
+        .await
+        .expect("the composition commits")
+        .vo_id;
+    let (pixm, pixm_vo) = ehr_of(&svc, &pseudonym, PIXM).await;
+    let (orphan, orphan_vo) = ehr_of(&svc, &uuid::Uuid::now_v7().to_string(), PIXM).await;
+    let (foreign, foreign_vo) = ehr_of(&svc, &patient.to_string(), "local").await;
+    svc.grants().refresh().await.expect("the copy reads");
+
+    assert_eq!(
+        svc.ehr_subject_person(local).await.expect("read"),
+        Some(patient.0)
+    );
+    assert_eq!(
+        svc.ehr_subject_person(pixm).await.expect("read"),
+        Some(patient.0)
+    );
+    assert_eq!(svc.ehr_subject_person(orphan).await.expect("read"), None);
+    assert_eq!(
+        svc.ehr_subject_person(foreign).await.expect("read"),
+        None,
+        "a container id under another namespace names no PERSON of this store"
+    );
+    let mut represented = svc
+        .ehr_ids_for_person(&patient.to_string(), "demographic")
+        .await
+        .expect("the EHRs of the represented PERSON");
+    represented.sort_unstable();
+    let mut both = vec![local, pixm];
+    both.sort_unstable();
+    assert_eq!(represented, both, "a representative reaches both EHRs");
+
+    let ward = policy(&json!({ "care_relationship_required": true }));
+    let refused = Outcome::Refused(Refusal::NoCareRelationship);
+    for (ehr_id, vo, expected) in [
+        (local, local_vo, Outcome::Admit),
+        (pixm, pixm_vo, Outcome::Admit),
+        (orphan, orphan_vo, refused),
+        (foreign, foreign_vo, refused),
+    ] {
+        let judged = access(&svc, dr_d, ward.clone(), noon("2026-11-05"));
+        let (outcome, read, rows) = decided(&svc, judged, ehr_id, vo).await;
+        assert_eq!(outcome, expected, "Dr D on {ehr_id}");
+        assert_eq!(read, expected == Outcome::Admit, "Dr D reads {ehr_id}");
+        assert_eq!(rows, 2, "Dr D's query reads the local and the pixm EHR");
+    }
+    let judged = access(&svc, dr_f, ward, noon("2026-11-05"));
+    let (outcome, _, rows) = decided(&svc, judged, pixm, pixm_vo).await;
+    assert_eq!(outcome, refused, "Dr F is in no care relationship");
+    assert_eq!(rows, 0);
+}
+
+/// An identity merge is one demographic contribution (#5634): it moves the
+/// pseudonym of Mr A's EHR onto Mr B's `PERSON`, in either order of its
+/// versions, so the EHR inherits Mr B's care from the next request and a
+/// representative of Mr B reaches both EHRs. A contribution that leaves the
+/// pseudonym on both `PERSON`s is refused.
+#[tokio::test]
+async fn an_identity_merge_moves_the_record_subject_in_one_contribution() {
+    let db = testkit::db().await.expect("testkit database");
+    let svc = granting(FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&db.pool()),
+    ))
+    .await;
+    let ([cardiology, nephrology], [dr_d, dr_f]) = two_wards(&svc).await;
+    let (p_a, p_b) = (
+        uuid::Uuid::now_v7().to_string(),
+        uuid::Uuid::now_v7().to_string(),
+    );
+    let mut persons = Vec::new();
+    for (name, team, pseudonym) in [("Mr A", cardiology, &p_a), ("Mr B", nephrology, &p_b)] {
+        let (vo, uid) = create(&svc, PartyKind::Person, &person(name, &[]))
+            .await
+            .expect("the patient commits");
+        let stay = care(UNDER_CARE, vo, team, "2026-11-01", None);
+        let body = declaring(
+            person(name, std::slice::from_ref(&stay)),
+            &[(PIXM, pseudonym.as_str())],
+        );
+        update_as_adt(&svc, (vo, &uid), &body).await;
+        persons.push((vo, stay));
+    }
+    let (ehr_a, vo_a) = ehr_of(&svc, &p_a, PIXM).await;
+    let (ehr_b, _) = ehr_of(&svc, &p_b, PIXM).await;
+    svc.grants().refresh().await.expect("the copy reads");
+    let ward = policy(&json!({ "care_relationship_required": true }));
+    let on_a = |doctor| {
+        let svc = &svc;
+        let ward = ward.clone();
+        async move {
+            let judged = access(svc, doctor, ward, noon("2026-11-05"));
+            decided(svc, judged, ehr_a, vo_a).await.0
+        }
+    };
+    assert_eq!(on_a(dr_d).await, Outcome::Admit, "Mr A is in cardiology");
+    assert_eq!(
+        on_a(dr_f).await,
+        Outcome::Refused(Refusal::NoCareRelationship)
+    );
+
+    let (a, a_stay) = persons[0].clone();
+    let (b, b_stay) = persons[1].clone();
+    let version = |vo: VoId, body: Value| {
+        json!({ "_type": "ORIGINAL_VERSION",
+            "commit_audit": { "change_type": change_type("251", "modification"),
+                "committer": adt_committer() },
+            "lifecycle_state": change_type("532", "complete"),
+            "preceding_version_uid": { "value": format!("{vo}::{}::2", ferroehr::service::DEFAULT_SYSTEM_ID) },
+            "data": body })
+    };
+    let contribution = |versions: Vec<Value>| {
+        json!({ "_type": "CONTRIBUTION", "versions": versions,
+            "audit": { "change_type": change_type("251", "modification"),
+                "committer": adt_committer() } })
+    };
+    let survivor = declaring(
+        person("Mr B", std::slice::from_ref(&b_stay)),
+        &[(PIXM, p_b.as_str()), (PIXM, p_a.as_str())],
+    );
+    let doubled = contribution(vec![version(b, survivor.clone())]);
+    let refused = Box::pin(as_client(
+        &svc,
+        "adt",
+        svc.demographic_contribution_create(doubled),
+    ))
+    .await
+    .expect_err("one pseudonym on two PERSONs is refused");
+    assert!(matches!(refused, ServiceError::Conflict(_)), "{refused:?}");
+
+    let merged = contribution(vec![
+        version(b, survivor),
+        version(a, person("Mr A", &[a_stay])),
+    ]);
+    Box::pin(as_client(
+        &svc,
+        "adt",
+        svc.demographic_contribution_create(merged),
+    ))
+    .await
+    .expect("the merge commits as one contribution");
+    svc.grants()
+        .refresh_if_stale()
+        .await
+        .expect("the copy reads");
+    assert_eq!(
+        svc.ehr_subject_person(ehr_a).await.expect("read"),
+        Some(b.0)
+    );
+    assert_eq!(
+        on_a(dr_f).await,
+        Outcome::Admit,
+        "EHR A now has Mr B's care"
+    );
+    assert_eq!(
+        on_a(dr_d).await,
+        Outcome::Refused(Refusal::NoCareRelationship)
+    );
+    let mut represented = svc
+        .ehr_ids_for_person(&b.to_string(), "demographic")
+        .await
+        .expect("the EHRs of the survivor");
+    represented.sort_unstable();
+    let mut both = vec![ehr_a, ehr_b];
+    both.sort_unstable();
+    assert_eq!(
+        represented, both,
+        "a representative of Mr B reaches both EHRs"
+    );
+}
+
+/// The committer placeholder naming the ADT client, the authenticated caller.
+fn adt_committer() -> Value {
+    json!({ "_type": "PARTY_IDENTIFIED",
+        "identifiers": [{ "_type": "DV_IDENTIFIER",
+            "issuer": crate::policy_fixtures::ISSUER, "id": "adt" }] })
 }

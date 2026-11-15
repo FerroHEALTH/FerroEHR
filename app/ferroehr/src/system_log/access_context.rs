@@ -29,6 +29,7 @@ task_local! {
     static REQUEST_ROLES: Vec<String>;
     static ACCESS_DELAY_ENFORCED: bool;
     static COMMITTED_FACILITIES: FacilitySink;
+    static REQUEST_BINDING: Option<crate::system_log::binding::BindingRecord>;
 }
 
 /// Where the facilities the compositions of one request name are gathered,
@@ -83,6 +84,27 @@ where
     F: Future,
 {
     REQUEST_ORIGIN.scope(origin, fut).await
+}
+
+/// How the authenticated caller of the current request was bound.
+///
+/// A record the service layer writes itself names it as the adapter's own
+/// records do (EHDS Annex II 3.2(a), (b); #5638); `None` outside a request
+/// scope or for a caller no binding names.
+#[must_use]
+pub fn current_binding() -> Option<crate::system_log::binding::BindingRecord> {
+    REQUEST_BINDING.try_with(Clone::clone).ok().flatten()
+}
+
+/// Run `fut` with `binding` published as the request's caller binding.
+pub async fn with_binding<F>(
+    binding: Option<crate::system_log::binding::BindingRecord>,
+    fut: F,
+) -> F::Output
+where
+    F: Future,
+{
+    REQUEST_BINDING.scope(binding, fut).await
 }
 
 /// The roles the authenticated caller holds for the current request (#3239).

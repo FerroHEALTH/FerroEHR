@@ -10,12 +10,17 @@
 //! draft is FerroEHR's change proposal and no openEHR release, so these checks
 //! are our own design over our own model (#5124).
 //!
-//! The four terminology invariants (`Action_valid`, `Kind_valid` of `ACCESSOR`
-//! and of `ACCESS_AUTHORISATION`, `Result_valid`) ask for a code of a new
-//! openEHR Terminology group. The draft defines each group by its rubrics and
-//! leaves the codes to the terminology editors, so a coded value holds when its
-//! terminology is `openehr` and its value is one of the group's rubrics.
+//! The five terminology invariants (`Action_valid`, `Kind_valid` of `ACCESSOR`
+//! and of `ACCESS_AUTHORISATION`, `Binding_valid`, `Result_valid`) ask for a
+//! term of a group of
+//! the draft `openehr_access` terminology (`Terminology_id_access`): a coded
+//! value holds when [`crate::draft::access_control::terminology`] reads its
+//! `defining_code` as a term of the invariant's group.
 
+use crate::draft::access_control::terminology::Term;
+use crate::draft::access_control::terminology::log::{
+    AccessorKind, Action, Authorisation, CredentialBinding, Outcome,
+};
 use crate::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use crate::draft::access_log::access_log::access_credential::AccessCredential;
 use crate::draft::access_log::access_log::access_log_checkpoint::AccessLogCheckpoint;
@@ -29,44 +34,6 @@ use crate::draft::access_log::access_log::access_query::AccessQuery;
 use crate::draft::access_log::access_log::accessed_item::AccessedItem;
 use crate::draft::access_log::access_log::accessor::Accessor;
 use crate::draft::invariants::{Check, Violations};
-use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
-
-/// The rubrics of the draft `access action` group.
-const ACCESS_ACTION: &[&str] = &[
-    "read", "query", "create", "update", "delete", "export", "import",
-];
-/// The rubrics of the draft `access outcome` group.
-const ACCESS_OUTCOME: &[&str] = &["granted", "partially granted", "refused", "failed"];
-/// The rubrics of the draft `accessor kind` group, which
-/// `ACCESS_LOG_RESTRICTION.accessor_kinds` of the draft access control is
-/// coded in too.
-pub(crate) const ACCESSOR_KIND: &[&str] = &[
-    "person",
-    "delegated person",
-    "subject of care",
-    "representative",
-    "external person",
-    "organisation",
-    "system",
-];
-/// The rubrics of the draft `access authorisation` group.
-const ACCESS_AUTHORISATION: &[&str] = &[
-    "role",
-    "treatment relationship",
-    "agreement",
-    "consent",
-    "permit",
-    "emergency",
-    "subject of care",
-    "representation",
-    "legal obligation",
-];
-
-/// Whether `coded` is a term of the draft openEHR group whose rubrics are
-/// `group`.
-pub(crate) fn in_group(coded: &DvCodedText, group: &[&str]) -> bool {
-    coded.defining_code.terminology_id.value == "openehr" && group.contains(&coded.value.as_str())
-}
 
 /// Checks every invariant of an `ACCESS_LOG_ENTRY` or an
 /// `ACCESS_LOG_TOMBSTONE` and of the objects it holds.
@@ -133,7 +100,7 @@ fn entry_rules(check: &mut Check, entry: &AccessLogEntry) {
     );
     link_rules(check, &entry.link);
     check.hold(
-        in_group(&entry.action, ACCESS_ACTION),
+        Action::read_coded(&entry.action).is_ok(),
         "ACCESS_LOG_ENTRY",
         "Action_valid",
     );
@@ -174,7 +141,7 @@ fn link_rules(check: &mut Check, link: &AccessLogLink) {
 
 fn outcome_rules(check: &mut Check, outcome: &AccessOutcome) {
     check.hold(
-        in_group(&outcome.result, ACCESS_OUTCOME),
+        Outcome::read_coded(&outcome.result).is_ok(),
         "ACCESS_OUTCOME",
         "Result_valid",
     );
@@ -187,9 +154,17 @@ fn outcome_rules(check: &mut Check, outcome: &AccessOutcome) {
 
 fn accessor_rules(check: &mut Check, accessor: &Accessor) {
     check.hold(
-        in_group(&accessor.kind, ACCESSOR_KIND),
+        AccessorKind::read_coded(&accessor.kind).is_ok(),
         "ACCESSOR",
         "Kind_valid",
+    );
+    check.hold(
+        accessor
+            .binding
+            .as_ref()
+            .is_none_or(|binding| CredentialBinding::read_coded(binding).is_ok()),
+        "ACCESSOR",
+        "Binding_valid",
     );
     let credentials = accessor
         .credential
@@ -249,7 +224,7 @@ fn query_rules(check: &mut Check, query: &AccessQuery) {
 
 fn authorisation_rules(check: &mut Check, authorisation: &AccessAuthorisation) {
     check.hold(
-        in_group(&authorisation.kind, ACCESS_AUTHORISATION),
+        Authorisation::read_coded(&authorisation.kind).is_ok(),
         "ACCESS_AUTHORISATION",
         "Kind_valid",
     );

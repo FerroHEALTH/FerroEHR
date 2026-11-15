@@ -8,7 +8,8 @@
 //! their invariants [`openehr_rm::draft::access_log::invariants`]; [`store`]
 //! keeps the records in the `audit` schema, chained over their content
 //! digests, and [`retention`] is the period each entry states, after which the
-//! store replaces it by its tombstone ([`expiry`]). The draft is FerroEHR's
+//! store replaces it by its tombstone, which later folds into a [`gap`] of
+//! the chain ([`expiry`]). The draft is FerroEHR's
 //! change proposal and no openEHR release, so no openEHR spec governs this
 //! module: our own design.
 
@@ -19,6 +20,8 @@ pub mod config;
 pub mod details;
 pub mod entry;
 pub mod expiry;
+pub mod gap;
+pub mod imported;
 #[cfg(feature = "fhir")]
 pub mod projection;
 #[cfg(feature = "fhir")]

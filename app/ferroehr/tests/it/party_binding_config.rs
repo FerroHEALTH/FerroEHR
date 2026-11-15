@@ -722,3 +722,38 @@ fn an_unknown_scim_key_is_named() {
     let unknown = refusal(&format!("{}\n[auth.scim]\nmax_deactivation = 3\n", full()));
     assert!(unknown.contains("max_deactivation"), "{unknown}");
 }
+
+/// The person mapping the server installs holds a portal representative's
+/// binding key, the login under the `patients` issuer, beside the keys of the
+/// `persons` issuer's `[[auth.party]]` table (#5622): the boot compiles the
+/// mapping from the one key-issuer set the SCIM gate reads too.
+#[test]
+fn the_installed_mapping_holds_a_patients_issuer_key_beside_a_party_table() {
+    let config = assemble(&bound(&full())).expect("assembles");
+    config.validate().expect("validates");
+    let resolved = ferroehr::config::auth::resolve(&config.auth.shared).expect("resolves");
+    let issuers = ferroehr::config::binding::key_issuers(&resolved);
+    assert_eq!(
+        issuers,
+        [
+            "https://idp.example/realms/patients".to_owned(),
+            "urn:example:staff-login".to_owned()
+        ]
+    );
+    let mapping = config
+        .authz
+        .party_binding
+        .sections()
+        .binding_mapping(&issuers, "ADMIN")
+        .expect("the mapping compiles");
+    let key = mapping
+        .key_selector("FerroEHR professional")
+        .expect("the default template keys logins");
+    assert!(
+        key.issuers()
+            .iter()
+            .any(|issuer| issuer == "https://idp.example/realms/patients"),
+        "{:?}",
+        key.issuers()
+    );
+}

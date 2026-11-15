@@ -106,7 +106,7 @@ pub struct GroupState {
     /// The members' `PERSON` containers.
     pub members: Vec<VoId>,
     /// Whether the Group is a care team: its `GROUP` carries
-    /// the coded `care_team` as its `name` and each membership `member_of`
+    /// the coded `care_team` as its `name` and each membership `MBR`
     /// (#5617). Set at its creation and never changed.
     pub care_team: bool,
 }
@@ -234,7 +234,7 @@ impl FerroEhrService {
     }
 
     /// The new version of the `PERSON` `member` that adds (`join`) or drops
-    /// its membership of the `GROUP` `group`, carrying `member_of` when the
+    /// its membership of the `GROUP` `group`, carrying `MBR` when the
     /// group is a care team (`care_team`); `None` when it already holds
     /// what is asked, and for a drop from a `PERSON` that is not `complete` or
     /// `incomplete`, whose memberships its deactivation already dropped.
@@ -350,7 +350,8 @@ impl FerroEhrService {
         let today = crate::party_binding::source::today();
         let found: BTreeSet<uuid::Uuid> = {
             let mut conn = acquire(&self.demographic_pool).await?;
-            provisioned::users_among(&mut conn, binding_issuer, &ids, &today)
+            let today = (!self.binding.is_portal_issuer(binding_issuer)).then_some(today.as_str());
+            provisioned::users_among(&mut conn, binding_issuer, &ids, today)
                 .await?
                 .into_iter()
                 .collect()
@@ -400,7 +401,7 @@ impl FerroEhrService {
             clear_mapped_value(&mut body, external, Some((issued.1, issued.0)));
         }
         if head.is_none() && state.care_team {
-            name_coded(&mut body, GroupKind::CareTeam.code(), "care team");
+            name_coded(&mut body, GroupKind::CareTeam, "care team");
         }
         Ok(body)
     }

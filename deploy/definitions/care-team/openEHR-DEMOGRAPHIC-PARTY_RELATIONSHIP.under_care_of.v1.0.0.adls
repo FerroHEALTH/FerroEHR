@@ -14,7 +14,7 @@ description
         ["en"] = <
             language = <[ISO_639-1::en]>
             purpose = <"The care of a patient by a care team or an organisational unit, such as a ward during an admission: a PARTY_RELATIONSHIP from the patient's PERSON, its source, to the team's GROUP or the unit, its target.">
-            use = <"Held in the patient's PERSON.relationships, written by the care delivery environment, such as a hospital's ADT system, under a write_care_relationship grant, with time_validity from the admission to the discharge. Its details hold the code that makes it a care relationship, under_care_of of FerroEHR's terminology ferroehr-operations, and the optional time of the discharge when a bound finer than a day is needed. Adapted from the person-to-provider PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline.">
+            use = <"Held in the patient's PERSON.relationships, written by the care delivery environment, such as a hospital's ADT system, under a write_care_relationship grant, with time_validity from the admission to the discharge. Its details hold the code that makes it a care relationship, under_care_of of the draft openEHR access terminology openehr_access, and the optional time of the discharge when a bound finer than a day is needed. Adapted from the person-to-provider PARTY_RELATIONSHIP the openEHR CKM archetype the derived_from entry names constrains inline.">
             copyright = <"© openEHR Foundation">
         >
     >
@@ -44,7 +44,7 @@ terminology
         ["en"] = <
             ["id1"] = <text = <"Under care of"> description = <"The care of a patient by a care team or an organisational unit.">>
             ["id2"] = <text = <"Details"> description = <"The details of the care relationship.">>
-            ["id3"] = <text = <"Care relationship code"> description = <"The code that makes the relationship a care relationship: under_care_of of FerroEHR's terminology ferroehr-operations.">>
+            ["id3"] = <text = <"Care relationship code"> description = <"The code that makes the relationship a care relationship: under_care_of of the draft openEHR access terminology openehr_access.">>
             ["id6"] = <text = <"Discharge time"> description = <"The time the patient left the care of the team or unit, when a bound finer than the date of time_validity is needed.">>
         >
     >

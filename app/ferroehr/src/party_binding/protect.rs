@@ -192,6 +192,9 @@ pub(crate) async fn check(
         return Ok(());
     }
     refuse_policy(mapping, (kind, vo_id), &before, &after)?;
+    if kind == Kind::Person && PROVISIONER.try_with(|_| ()).is_ok() {
+        refuse_scim_representation(tx, mapping, vo_id, previous, facts).await?;
+    }
     let owner = match PROVISIONER.try_with(Clone::clone) {
         Ok(issuer) => {
             let held = [current, previous];
@@ -272,13 +275,52 @@ fn unowned(kind: Kind, vo_id: VoId) -> ServiceError {
     ))
 }
 
+/// Refuses a SCIM client's version of the `PERSON` `vo_id` that adds,
+/// changes or drops a representation: its stored version `previous` and the
+/// committed `facts` (`None` for a deletion) must hold the same ones.
+///
+/// SCIM provisions an identity, never the authority to act for someone: a
+/// representation is written by the patient it represents or by an
+/// administrator (Regulation (EU) 2025/327 Art. 4(2)), so a portal client's
+/// representative reaches a record only once one of them records it
+/// (#5622). Our own design.
+async fn refuse_scim_representation(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    vo_id: VoId,
+    previous: Option<i32>,
+    facts: Option<&Facts>,
+) -> Result<(), ServiceError> {
+    let before = match previous {
+        Some(sys_version) => match body(tx, vo_id, sys_version).await? {
+            Some(body) => parsed(Kind::Person, &body, mapping)?.representations,
+            None => Vec::new(),
+        },
+        None => Vec::new(),
+    };
+    let after = facts.map(|facts| facts.representations.as_slice());
+    match after {
+        Some(after) if after != before.as_slice() => Err(ServiceError::not_permitted(format!(
+            "this version of PERSON {vo_id} changes its representations ({}::{}): a SCIM client \
+             provisions the identity only, and a representation is written by the patient it \
+             represents or an administrator",
+            policy_mark::TERMINOLOGY,
+            policy_mark::REPRESENTS
+        ))),
+        _ => Ok(()),
+    }
+}
+
 /// Whether the commit of the `PERSON` `vo_id`, whose versions `held` are the
 /// new head and the one before it, is a holder of
 /// [`Operation::WriteCareRelationship`] changing only its care relationships.
 ///
 /// Such a version touches nothing the protection guards, so the care check
 /// beside it decides it by that grant: the care delivery environment's ADT
-/// system rosters a provisioned professional (#5617). Our own design.
+/// system rosters a provisioned professional (#5617). A version in another
+/// lifecycle state than the one before is no roster: the ADT system neither
+/// reactivates a deactivated login nor revives a deleted one (#5628). Our
+/// own design.
 async fn care_writer_roster(
     tx: &mut PgConnection,
     (kind, vo_id): (Kind, VoId),
@@ -288,6 +330,17 @@ async fn care_writer_roster(
         return Ok(false);
     };
     if kind != Kind::Person || !Capabilities::current().holds(Operation::WriteCareRelationship) {
+        return Ok(false);
+    }
+    let states: i64 = sqlx::query_scalar(
+        "SELECT count(DISTINCT v.lifecycle_state) FROM version v \
+         WHERE v.vo_id = $1 AND v.sys_version = ANY($2)",
+    )
+    .bind(vo_id)
+    .bind([current, previous])
+    .fetch_one(&mut *tx)
+    .await?;
+    if states != 1 {
         return Ok(false);
     }
     let (Some(after), Some(before)) = (

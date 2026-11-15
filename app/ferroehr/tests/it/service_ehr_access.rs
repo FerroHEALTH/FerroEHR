@@ -125,6 +125,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 /// Restricted settings whose gate-keepers are the subject and the guardian,
 /// the `PERSON` `guardian`.
 fn kept(guardian: uuid::Uuid) -> Value {
@@ -589,7 +598,7 @@ fn with_a_directive(guardian: uuid::Uuid) -> Value {
         "name": { "_type": "DV_TEXT", "value": "No professional reads" },
         "archetype_node_id": "at0001",
         "kind": term("consent"),
-        "effect": term("deny"),
+        "effect": provision("deny"),
         "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("professional") }],
         "operations": [term("read")],
         "emergency_override": true

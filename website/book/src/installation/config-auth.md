@@ -313,18 +313,24 @@ key = { path = "/details[id2]/items[id3]", type = "login" }
 user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
 external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
 
+[[authz.party_binding.person.template]]
+template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
+key = { path = "/details[id2]/items[id3]", type = "login" }
+user_name = { path = "/details[id2]/items[id3]", type = "scim_user_name" }
+external_id = { path = "/details[id2]/items[id3]", type = "scim_external_id" }
+
 [[authz.party_binding.person.attribute]]
 scim = "name.formatted"
 name = true
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id6]", "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0" = "/identities[id6]/details[id7]/items[id8]" }
 
 [[authz.party_binding.person.attribute]]
 scim = "name.givenName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id7]", "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0" = "/identities[id6]/details[id7]/items[id9]" }
 
 [[authz.party_binding.person.attribute]]
 scim = "name.familyName"
-path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]" }
+path = { "openEHR-DEMOGRAPHIC-PERSON.healthcare_professional.v1.0.0" = "/identities[id4]/details[id5]/items[id8]", "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0" = "/identities[id6]/details[id7]/items[id10]" }
 
 [[authz.party_binding.person.attribute]]
 scim = 'emails[type eq "work"].value'
@@ -342,14 +348,16 @@ display_name = "/identities[id4]/details[id5]/items[id6]"
 archetype_id = "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.membership.v1"
 
 [authz.party_binding.patient]
-template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.1.0"
+template_id = "openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0"
 identifier = "/details[id2]/items[id3]"
 name = "/identities[id6]/details[id7]/items[id8]"
 ```
 
 The template ids are the ADL 2 ids of the stored archetypes, and the
 membership archetype is named in the interface form each membership's
-`archetype_node_id` carries. A representation needs no section: FerroEHR
+`archetype_node_id` carries. The patient template is a person template too,
+never the default: a patient portal's SCIM client provisions its
+representatives in it ([Users](#users)). A representation needs no section: FerroEHR
 recognises it by the code it carries, in any archetype (see
 [Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal)). The default
 key is of the type `login`, so an `[[auth.party]]` table whose
@@ -398,13 +406,13 @@ the mapping names is refused with `409`.
 
 The parties the binding relies on are protected: a `PERSON` of a mapped
 template carrying a selector identifier, its professional `ROLE`, a
-representation relationship (one carrying `ferroehr-operations::represents`),
+representation relationship (one carrying `openehr_access::represents`),
 and a `GROUP` of the group template. Only an
 administrator (`authz.rbac.admin_role`) writes one through the demographic
 API, including the creation of a party that carries a selector identifier;
 the patient a representation of its own targets writes that one too.
 The policy parties (a party holding a capability coded in
-`ferroehr-operations`, an acts-for relationship or a `client_id` identifier)
+`openehr_access`, an acts-for relationship or a `client_id` identifier)
 are recognised by what they hold and take no key of this mapping; they are an administrator's to write and to read,
 never a SCIM client's: see [Operational policy](../operational-policy.md#who-writes-and-reads-a-policy-party).
 An administrator's version that leaves a protected identifier out is refused
@@ -503,7 +511,7 @@ specification governs it.
 
 Which logins are created is operational policy, so it is CDR data and no
 configuration key: an administrator writes a `ROLE` whose capability grants
-`ferroehr-operations::create_at_login`, naming the issuer and the admission
+`openehr_access::create_at_login`, naming the issuer and the admission
 conditions, through the Demographic API. The grant is read on each first
 login, so a change applies to the next one without a restart. The
 [Operational policy](../operational-policy.md#just-in-time-admission) page
@@ -614,7 +622,7 @@ still holds it is refused at boot as an unknown key.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `allowed` | list of operation codes | `["commit_composition"]` | The operations of the `ferroehr-operations` terminology the policy grants may grant. A `ROLE` committed with a capability that codes an operation this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. An empty list lets the party store grant nothing; an unknown code refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The codes and how a request reads its grants are on [Operational policy](../operational-policy.md#how-a-request-reads-its-grants). |
+| `allowed` | list of operation codes | `["commit_composition"]` | The operations of the `openehr_access` terminology the policy grants may grant. A `ROLE` committed with a capability that codes an operation this list does not name is refused with `403`, and one already stored is never honoured, so a compromised administrator account grants no more than you allow. An empty list lets the party store grant nothing; an unknown code refuses the start. Environment: `FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated. The codes and how a request reads its grants are on [Operational policy](../operational-policy.md#how-a-request-reads-its-grants). |
 
 ### `[authz.rbac]`
 
@@ -669,8 +677,10 @@ Who provisions is CDR data, read on every request: a provisioning client is
 an OAuth client-credentials client of your own authorization server (an
 `[[auth.issuer]]` of kind `machines`) whose `ACTOR` holds a `scim_provision`
 grant in force. The grant's `binding_issuer` is the identifier issuer of the
-binding keys the client provisions, the `identifier_issuer` of an
-`[[auth.party]]` table, and its `token_scope` the scope a token of the client
+binding keys the client provisions: the `identifier_issuer` of an
+`[[auth.party]]` table for a client of your professionals, or a `patients`
+issuer for a patient portal's client, which provisions the portal's
+representatives. Its `token_scope` is the scope a token of the client
 must hold; SMART on openEHR defines none for SCIM, so the value is yours to
 choose. Each User belongs to the one client whose `binding_issuer` issues its
 key, so no two clients' grants name one. `[authz.grants] allowed` must admit
@@ -709,8 +719,8 @@ grant in force:
 - no token, or one that does not verify, is **401** with
   `WWW-Authenticate: Bearer`;
 - a person's token, a client with no grant in force, a grant whose
-  `binding_issuer` no `[[auth.party]]` table issues or another client's grant
-  names too, and a token without the grant's `token_scope` are **403**, the
+  `binding_issuer` is neither the `identifier_issuer` of an `[[auth.party]]`
+  table nor a `patients` issuer, or another client's grant names too, and a token without the grant's `token_scope` are **403**, the
   last with `WWW-Authenticate: Bearer error="insufficient_scope"` (RFC 6750
   §3.1).
 
@@ -733,7 +743,17 @@ the form Microsoft Entra ID requires of a custom attribute, in the
 ### Users
 
 A User is a `PERSON` of the default person template performing the
-professional `ROLE`. The client serves these operations (RFC 7644 §3):
+professional `ROLE`. A patient portal's client, whose `binding_issuer` is a
+`patients` issuer, provisions the portal's representatives instead: each
+User is a `PERSON` of the `[authz.party_binding.patient]` template, which a
+`[[authz.party_binding.person.template]]` must name too, with no `ROLE`,
+and its binding key is the representative's portal login. SCIM provisions
+the identity only. The representation that lets the person act for a
+patient is written by the patient or an administrator (Regulation (EU)
+2025/327 Art. 4(2)), and a version from the client that adds, changes or
+drops one is refused `403`. Until a live representation exists, the login
+reaches nothing ([Representatives in the patient portal](../operational-policy.md#representatives-in-the-patient-portal)).
+This is FerroEHR's own design. The client serves these operations (RFC 7644 §3):
 
 - `POST /scim/v2/Users` creates the `PERSON` and its `ROLE` in one demographic
   CONTRIBUTION, under the client as committer, and answers **201** with the
@@ -755,7 +775,7 @@ The User's `userName`, `externalId` and binding key are `DV_IDENTIFIER`s at
 their selectors, issued by the client's `binding_issuer`. A client sees only
 its own Users, the ones whose key its `binding_issuer` issues: every other id
 is **404** and absent from every list, as is a `PERSON` without a live
-professional `ROLE`. The `userName` index spans every client, so a **409**
+professional `ROLE`, apart from a portal client's Users, which perform none. The `userName` index spans every client, so a **409**
 `uniqueness` tells one client that a `userName` exists under another;
 `externalId` is unique within one client. Every SCIM request is an access
 record of the client, with the `PERSON` as its object.
@@ -795,6 +815,33 @@ MAY). `active` drives the lifecycle state of the `PERSON` (RM common
 An inactive or abandoned User is still read and found by a filter, so its
 client can reactivate it. When the second version of an `abandoned` User
 fails, the User stays `incomplete` and the same request completes it.
+
+#### Roles
+
+A User's `roles` (RFC 7643 §4.1.2) are the roles the access policy's
+[controller rules](../operational-policy.md#controller-rules) name. Each
+value is one `ROLE` the User's `PERSON` performs, of the professional role
+template, whose `name` is the value coded in the terminology the client's
+`scim_provision` grant names, and whose `time_validity` starts on the day it
+is added. The grant states which roles the client may hand out:
+
+| Element | Value |
+|---|---|
+| `role_terminology` | The terminology id the client's role values are coded in, exactly one |
+| `role` | A role code the client may assign, one element per code |
+
+A request whose `roles` names a code the grant does not list, or any role
+when the grant names no `role_terminology`, is **403** and changes nothing.
+A `POST`, `PUT` or `PATCH` makes the User hold exactly the roles its result
+lists: a new value commits a new `ROLE`, and a removed one ends its `ROLE`
+the day before (its `time_validity` gains the date of the removal as its
+exclusive end) and drops it from the `PERSON`'s `roles`. The change decides
+the next request on the replica that took it, and on every other replica
+once the commit's notification arrives, with no added transaction. A token's
+role claims never drive a controller rule. These `ROLE`s carry no
+capability, so a SCIM client writes them, and an administrator alone grants
+a capability. RFC 7643 sets no vocabulary for `roles` and RFC 7644 §2 leaves
+the authorization model out: the mapping is FerroEHR's own design.
 
 The versions of a deleted User are kept for the record-keeping duties that
 need the professional's identification (GDPR Art. 6(1)(c), laid down in law
@@ -847,7 +894,7 @@ demographic `GROUP` of the group template:
   `mutability`). A care team is served with `careTeam = true` and the
   extension in its `schemas`; any other Group is served without either. A
   care team's `GROUP` is named by the coded `care_team` and each membership
-  by the coded `member_of` (RM demographic `PARTY.type()` is the `name`), so
+  by the coded `MBR` of HL7 `v3-RoleClass` (RM demographic `PARTY.type()` is the `name`), so
   its members are in the care of the patients under the team's care.
   Creating one and changing its members needs the client's
   `write_care_relationship` grant beside `scim_provision`, and is **403**
@@ -900,12 +947,14 @@ SCIM write to such a Group is **400** `invalidValue`.
 update of an `inactive` or `abandoned` `PERSON` (RM common master06 §Version
 Lifecycle), so such a `PERSON` cannot take a membership change, and an
 inactive `PERSON` binds to nothing. Setting a User's `active` to `false`
-therefore drops all its memberships in the same version, and each Group's
-`ETag` changes. Microsoft Entra ID often disables a user and then removes it
+therefore drops its memberships in the same version, and each Group's
+`ETag` changes. A membership of a care-team Group stays, as does every other
+care relationship, since SCIM never changes one ([Deprovisioning a team
+member](../operational-policy.md#deprovisioning-a-team-member)). Microsoft Entra ID often disables a user and then removes it
 from its groups; the later `remove` finds nothing to remove and answers
 **204**. An `add` naming an inactive or abandoned User is **400**
 `invalidValue` ("reactivate the User first"). A reactivated User belongs to
-no Group until its client adds it again.
+no plain Group until its client adds it again.
 
 ### Provision from Microsoft Entra ID
 

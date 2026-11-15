@@ -108,8 +108,8 @@ guarded_handler! {
 
 guarded_handler! {
     /// The uid and link of each record of a span of the access log's chain,
-    /// without their content (`GET /admin/access-log/chain`). **Our own
-    /// extension.**
+    /// without their content, and the gaps of folded tombstones between
+    /// (`GET /admin/access-log/chain`). **Our own extension.**
     #[utoipa::path(
         get, path = "/admin/access-log/chain", tag = "admin-access-log",
         params(
@@ -119,7 +119,11 @@ guarded_handler! {
         ),
         responses(
             (status = 200, description = "`links`: the `uid` and `link` of each record from \
-                                          `from_sequence` to `to_sequence`, in chain order.",
+                                          `from_sequence` to `to_sequence`, in chain order. \
+                                          `gaps`: each run of folded tombstones that holds a \
+                                          position of the span, with the positions it held, \
+                                          the `link` of its last record, that link's \
+                                          `signature` and the `grounds` of its tombstones.",
              body = serde_json::Value),
             (status = 400, description = "A bound is missing or outside its form, or the \
                                           span is longer than 10000.",
@@ -183,7 +187,8 @@ guarded_handler! {
     ///
     /// The whole chain is recomputed, tombstones taken as recorded; the
     /// checkpoint's proof, the link it seals and every signed link are
-    /// checked. A finding is not a request failure.
+    /// checked, and every log imported from another system is verified
+    /// against each of its checkpoints. A finding is not a request failure.
     #[utoipa::path(
         post, path = "/admin/access-log/verify", tag = "admin-access-log",
         responses(
@@ -191,13 +196,17 @@ guarded_handler! {
                                           checkpoint was there to verify against and nothing \
                                           failed; `findings` names each failure of the \
                                           checkpoint and the signed links, `chain` each \
-                                          damaged record or boundary of the chain.",
+                                          damaged record or boundary of the chain, \
+                                          `imported` each failure of a log imported from \
+                                          another system against one of its checkpoints.",
              body = serde_json::Value, example = json!({
                  "intact": false,
                  "checkpoint": { "sequence": 48213, "digest": "<64 hex>" },
                  "findings": ["the checkpoint at 48213 is not signed by a trusted key"],
                  "chain": [{ "chain_seq": 48190,
-                             "finding": "record content was modified after it was written" }]
+                             "finding": "record content was modified after it was written" }],
+                 "imported": [{ "system_id": "cdr-a.example.org", "checkpoint": 912,
+                                "finding": "the link at 905 does not link to the link before it" }]
              })),
             AdminRefusal
         )
@@ -216,9 +225,9 @@ guarded_handler! {
         ),
         responses(
             (status = 200, description = "The EHR's records with their links, every link \
-                                          from the first of them to the checkpoint they \
-                                          verify against, and that checkpoint, verified \
-                                          before it is answered. `ferroehr access-log import` \
+                                          and gap of folded tombstones from the first of \
+                                          them to the checkpoint they verify against, and \
+                                          that checkpoint, verified before it is answered. `ferroehr access-log import` \
                                           reads this document.",
              body = serde_json::Value),
             (status = 400, description = "`ehr_id` is missing.", body = serde_json::Value),
@@ -276,13 +285,13 @@ async fn chain(state: AppState, parts: RequestParts) -> Result<Response, RestErr
                 "`to_sequence` is at least `from_sequence` and less than {MAX_SPAN} after it"
             ))));
         }
-        let links = state.backend().access_log_chain(from, to).await?;
-        let served = links.len();
+        let (links, gaps) = state.backend().access_log_chain(from, to).await?;
+        let served = links.len().saturating_add(gaps.len());
         let links = links
             .into_iter()
             .map(|(uid, link)| json!({ "uid": uid, "link": link }))
             .collect::<Vec<_>>();
-        Ok((json!({ "links": links }), Some(served)))
+        Ok((json!({ "links": links, "gaps": gaps }), Some(served)))
     }
     .await;
     let query = parts.query.as_deref();
@@ -406,6 +415,15 @@ fn verification_report(verification: &Verification) -> Value {
             .map(|finding| json!({
                 "chain_seq": finding.chain_seq,
                 "finding": finding.finding,
+            }))
+            .collect::<Vec<_>>(),
+        "imported": verification
+            .imported
+            .iter()
+            .map(|finding| json!({
+                "system_id": finding.system_id,
+                "checkpoint": finding.checkpoint,
+                "finding": finding.finding.to_string(),
             }))
             .collect::<Vec<_>>(),
     })

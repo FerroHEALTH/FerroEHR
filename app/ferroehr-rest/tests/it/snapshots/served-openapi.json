@@ -534,7 +534,7 @@
         "tags": [
           "admin-access-log"
         ],
-        "summary": "The uid and link of each record of a span of the access log's chain,\nwithout their content (`GET /admin/access-log/chain`). **Our own\nextension.**",
+        "summary": "The uid and link of each record of a span of the access log's chain,\nwithout their content, and the gaps of folded tombstones between\n(`GET /admin/access-log/chain`). **Our own extension.**",
         "operationId": "admin_access_log_chain",
         "parameters": [
           {
@@ -560,7 +560,7 @@
         ],
         "responses": {
           "200": {
-            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order.",
+            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order. `gaps`: each run of folded tombstones that holds a position of the span, with the positions it held, the `link` of its last record, that link's `signature` and the `grounds` of its tombstones.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -887,7 +887,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The EHR's records with their links, every link from the first of them to the checkpoint they verify against, and that checkpoint, verified before it is answered. `ferroehr access-log import` reads this document.",
+            "description": "The EHR's records with their links, every link and gap of folded tombstones from the first of them to the checkpoint they verify against, and that checkpoint, verified before it is answered. `ferroehr access-log import` reads this document.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -963,11 +963,11 @@
           "admin-access-log"
         ],
         "summary": "Verify the access log against its newest checkpoint\n(`POST /admin/access-log/verify`). **Our own extension.**",
-        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked. A finding is not a request failure.",
+        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked, and every log imported from another system is verified\nagainst each of its checkpoints. A finding is not a request failure.",
         "operationId": "admin_verify_access_log",
         "responses": {
           "200": {
-            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain.",
+            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain, `imported` each failure of a log imported from another system against one of its checkpoints.",
             "content": {
               "application/json": {
                 "schema": {},
@@ -984,6 +984,13 @@
                     {
                       "chain_seq": 48190,
                       "finding": "record content was modified after it was written"
+                    }
+                  ],
+                  "imported": [
+                    {
+                      "system_id": "cdr-a.example.org",
+                      "checkpoint": 912,
+                      "finding": "the link at 905 does not link to the link before it"
                     }
                   ]
                 }

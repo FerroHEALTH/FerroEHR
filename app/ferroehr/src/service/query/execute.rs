@@ -202,11 +202,16 @@ impl FerroEhrService {
         // the original query as submitted.
         let executed = substitute_params(aql, params);
         let served_rows = u64::try_from(result.rows.len()).unwrap_or(u64::MAX);
-        let served_ehrs = result
+        let mut served_ehrs = result
             .served_ehrs
             .iter()
             .map(|(ehr, count)| (ehr.to_string(), *count))
             .collect();
+        if request.ehr_scope_kind == aql::sql::EhrScopeKind::Named {
+            Box::pin(self.add_named_ehrs(&request.ehr_ids, &mut served_ehrs))
+                .await
+                .map_err(Failure::analysis)?;
+        }
         let served_origins = result.served_origins.clone();
         let origin_count = result.origin_count;
         let (accessed, served_ehr_content) = accessed_content(&result);

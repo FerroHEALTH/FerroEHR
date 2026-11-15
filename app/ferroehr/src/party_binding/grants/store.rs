@@ -85,7 +85,7 @@ pub(crate) async fn write(
             write_clients(tx, head).await? | write_provider(tx, head).await?
         }
         Kind::Person => {
-            super::caller::store::write(tx, head, Some(head.vo_id), None).await?;
+            super::caller::store::write_person(tx, head).await?;
             write_clients(tx, head).await?
         }
         Kind::Agent | Kind::Group => write_clients(tx, head).await?,
@@ -278,6 +278,8 @@ pub(crate) async fn clear(tx: &mut PgConnection) -> Result<(), StorageError> {
         "DELETE FROM binding_capability",
         "DELETE FROM binding_provider",
         "DELETE FROM binding_caller_fact",
+        "DELETE FROM binding_record_subject",
+        "DELETE FROM binding_patient_identifier",
     ] {
         sqlx::query(statement).execute(&mut *tx).await?;
     }

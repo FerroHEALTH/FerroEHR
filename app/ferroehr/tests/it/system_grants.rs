@@ -8,7 +8,7 @@
 //! A system client is an `AGENT` carrying its `client_id`, acting for a
 //! provider `ORGANISATION` by an acts-for `PARTY_RELATIONSHIP`, and
 //! performing a `ROLE` whose capabilities grant operations of the
-//! `ferroehr-operations` terminology. Every party is of a deployment's own
+//! `openehr_access` terminology. Every party is of a deployment's own
 //! archetype with no template. No openEHR spec gives a capability an
 //! authorization meaning: our own design.
 
@@ -39,7 +39,7 @@ pub(crate) fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
-/// A `DV_CODED_TEXT` of the operation terminology.
+/// A `DV_CODED_TEXT` of the draft access terminology.
 pub(crate) fn coded(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",

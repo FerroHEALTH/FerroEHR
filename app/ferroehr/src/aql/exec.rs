@@ -182,11 +182,12 @@ pub async fn execute(
     Ok(QueryResult {
         columns,
         rows: out_rows,
-        served_ehrs: served_ehrs(&rows, &prepared.access_ehr_cols)?,
+        served_ehrs: served_ehrs(&rows, &prepared.access_ehr_cols, prepared.access_aggregated)?,
         settled_ehrs: settled_ehrs(
             &rows,
             &prepared.access_ehr_cols,
             &prepared.access_settled_cols,
+            prepared.access_aggregated,
         )?,
         served_origins: served.origins,
         origin_count: served.origin_count,
@@ -227,7 +228,11 @@ fn served_versions(
 ///
 /// # Errors
 /// [`ExecError`] when a column the builder declared cannot be read back.
-fn served_ehrs(rows: &[PgRow], access_cols: &[String]) -> Result<Vec<(Uuid, u64)>, AqlError> {
+fn served_ehrs(
+    rows: &[PgRow],
+    access_cols: &[String],
+    aggregated: bool,
+) -> Result<Vec<(Uuid, u64)>, AqlError> {
     if access_cols.is_empty() {
         return Ok(Vec::new());
     }
@@ -241,11 +246,10 @@ fn served_ehrs(rows: &[PgRow], access_cols: &[String]) -> Result<Vec<(Uuid, u64)
         // is one served row of that EHR.
         in_row.clear();
         for name in access_cols {
-            let ehr: Option<Uuid> = row.try_get(name.as_str()).map_err(ExecError::from)?;
-            if let Some(ehr) = ehr
-                && !in_row.contains(&ehr)
-            {
-                in_row.push(ehr);
+            for ehr in ehrs_of(row, name, aggregated)? {
+                if !in_row.contains(&ehr) {
+                    in_row.push(ehr);
+                }
             }
         }
         for ehr in &in_row {
@@ -266,10 +270,15 @@ fn settled_ehrs(
     rows: &[PgRow],
     access_cols: &[String],
     settled_cols: &[String],
+    aggregated: bool,
 ) -> Result<Vec<Uuid>, AqlError> {
     let mut settled: indexmap::IndexSet<Uuid> = indexmap::IndexSet::new();
     for row in rows {
         for (name, flag) in access_cols.iter().zip(settled_cols) {
+            if aggregated {
+                settled.extend(ehrs_of(row, flag, true)?);
+                continue;
+            }
             let ehr: Option<Uuid> = row.try_get(name.as_str()).map_err(ExecError::from)?;
             let held: Option<bool> = row.try_get(flag.as_str()).map_err(ExecError::from)?;
             if let (Some(ehr), Some(true)) = (ehr, held) {
@@ -278,6 +287,21 @@ fn settled_ehrs(
         }
     }
     Ok(settled.into_iter().collect())
+}
+
+/// The EHRs the access column `name` of `row` names: one id, or the array an
+/// aggregate projection read when `aggregated`; none for a NULL.
+///
+/// # Errors
+/// [`ExecError`] when the column cannot be read back.
+fn ehrs_of(row: &PgRow, name: &str, aggregated: bool) -> Result<Vec<Uuid>, AqlError> {
+    if aggregated {
+        let ehrs: Option<Vec<Uuid>> = row.try_get(name).map_err(ExecError::from)?;
+        Ok(ehrs.unwrap_or_default())
+    } else {
+        let ehr: Option<Uuid> = row.try_get(name).map_err(ExecError::from)?;
+        Ok(ehr.into_iter().collect())
+    }
 }
 
 /// The result of scanning the SQL rows: the assembled cells, the subtree

@@ -328,6 +328,15 @@ impl FerroEhrService {
         self
     }
 
+    /// Name this CDR's parties under `namespace`, `[authz.party_binding]
+    /// namespace`, which the access evaluator compares an EHR's subject
+    /// reference with to find its `PERSON`.
+    #[must_use]
+    pub fn with_party_namespace(self, namespace: &str) -> Self {
+        self.grants.set_namespace(namespace);
+        self
+    }
+
     /// Judge the federation agreements against `trust`: a commit of one that
     /// breaks a rule is refused, and a request is admitted only under one that
     /// keeps them.

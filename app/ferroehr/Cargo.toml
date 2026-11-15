@@ -209,6 +209,10 @@ harness = false
 name = "access_classes"
 harness = false
 
+[[bench]]
+name = "access_decision"
+harness = false
+
 [lints]
 workspace = true
 

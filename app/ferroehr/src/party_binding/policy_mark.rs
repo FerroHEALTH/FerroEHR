@@ -7,7 +7,7 @@
 //! A version is a policy party when it holds, in any archetype or template:
 //!
 //! - a `CAPABILITY` whose `credentials` hold, anywhere in their tree, a
-//!   `DV_CODED_TEXT` of FerroEHR's operation terminology ([`TERMINOLOGY`]);
+//!   `DV_CODED_TEXT` of the draft access terminology ([`TERMINOLOGY`]);
 //! - a `PARTY_RELATIONSHIP`, at its root or inline, whose `name` or whose
 //!   `details` hold the acts-for code ([`ACTS_FOR`]) of that terminology;
 //! - a `DV_IDENTIFIER` of the client identifier type ([`CLIENT_ID`]), which
@@ -35,9 +35,11 @@ use sqlx::PgConnection;
 
 use crate::ids::VoId;
 use crate::storage::error::StorageError;
+use openehr_rm::draft::access_control::terminology::{TERMINOLOGY_ID_ACCESS, Term};
 
-/// The `TERMINOLOGY_ID` of FerroEHR's operation terminology.
-pub const TERMINOLOGY: &str = "ferroehr-operations";
+/// The `TERMINOLOGY_ID` the operation grants, their qualifiers and the
+/// relationship codes are coded in: the draft `openehr_access` terminology.
+pub const TERMINOLOGY: &str = TERMINOLOGY_ID_ACCESS;
 
 /// The code of [`TERMINOLOGY`] that makes a `PARTY_RELATIONSHIP` an acts-for
 /// relationship.
@@ -53,17 +55,17 @@ pub const CLIENT_ID: &str = "client_id";
 
 /// The SQL/JSON path that holds exactly when [`policy_content`] finds content.
 ///
-/// The party migration `0034_policy_party_mark.sql` and `mark_stored` test
+/// The party migration `0044_access_terminology.sql` and `mark_stored` test
 /// each version's body with it, and a test runs both over one set of bodies.
 pub const POLICY_PATH: &str = "$ ? (\
 exists($.**?(@._type == \"CAPABILITY\").credentials.**?(@._type == \"DV_CODED_TEXT\" \
-&& @.defining_code.terminology_id.value == \"ferroehr-operations\")) \
+&& @.defining_code.terminology_id.value == \"openehr_access\")) \
 || exists($.**?(@._type == \"PARTY_RELATIONSHIP\")?(\
 exists(@.name?(@._type == \"DV_CODED_TEXT\" \
-&& @.defining_code.terminology_id.value == \"ferroehr-operations\" \
+&& @.defining_code.terminology_id.value == \"openehr_access\" \
 && @.defining_code.code_string == \"acts_for\")) \
 || exists(@.details.**?(@._type == \"DV_CODED_TEXT\" \
-&& @.defining_code.terminology_id.value == \"ferroehr-operations\" \
+&& @.defining_code.terminology_id.value == \"openehr_access\" \
 && @.defining_code.code_string == \"acts_for\")))) \
 || exists($.**?(@._type == \"DV_IDENTIFIER\" && @.type == \"client_id\")))";
 
@@ -93,18 +95,27 @@ fn text<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
     value.get(key).and_then(Value::as_str)
 }
 
-/// The code of `value` when it is a `DV_CODED_TEXT` of [`TERMINOLOGY`].
-pub(crate) fn coded(value: &Value) -> Option<&str> {
+/// The terminology id and code of `value` when it is a `DV_CODED_TEXT`.
+fn phrase(value: &Value) -> Option<(&str, &str)> {
     let code = value.get("defining_code")?;
-    let terminology = code.get("terminology_id").and_then(|id| text(id, "value"));
-    (text(value, "_type") == Some("DV_CODED_TEXT") && terminology == Some(TERMINOLOGY))
-        .then(|| text(code, "code_string"))
+    let terminology = code
+        .get("terminology_id")
+        .and_then(|id| text(id, "value"))?;
+    (text(value, "_type") == Some("DV_CODED_TEXT"))
+        .then(|| Some((terminology, text(code, "code_string")?)))
         .flatten()
 }
 
-/// The `DV_CODED_TEXT` of `code` in [`TERMINOLOGY`], reading `rubric`: the
-/// one place a written code names the access control terminology.
-pub(crate) fn coded_term(code: &str, rubric: &str) -> Value {
+/// The code of `value` when it is a `DV_CODED_TEXT` of [`TERMINOLOGY`].
+pub(crate) fn coded(value: &Value) -> Option<&str> {
+    phrase(value)
+        .filter(|(terminology, _)| *terminology == TERMINOLOGY)
+        .map(|(_, code)| code)
+}
+
+/// The `DV_CODED_TEXT` of the access term `term`, reading `rubric`: the one
+/// place a written code names its terminology.
+pub(crate) fn coded_term<T: Term>(term: T, rubric: &str) -> Value {
     openehr_its::json::to_canonical_value(&openehr_rm::prelude::DvCodedText {
         value: rubric.to_owned(),
         hyperlink: None,
@@ -114,9 +125,9 @@ pub(crate) fn coded_term(code: &str, rubric: &str) -> Value {
         encoding: None,
         defining_code: openehr_rm::prelude::CodePhrase {
             terminology_id: openehr_base::prelude::TerminologyId {
-                value: TERMINOLOGY.to_owned(),
+                value: term.terminology().to_owned(),
             },
-            code_string: code.to_owned(),
+            code_string: term.code().to_owned(),
             preferred_term: None,
         },
     })
@@ -135,11 +146,11 @@ fn first<T>(value: &Value, found: &mut impl FnMut(&Value) -> Option<T>) -> Optio
     }
 }
 
-/// Whether the `PARTY_RELATIONSHIP` `relationship` carries `wanted`, a code of
-/// [`TERMINOLOGY`] such as [`ACTS_FOR`] or [`REPRESENTS`], in its `name` or
-/// anywhere in its `details`.
-pub(crate) fn carries(relationship: &Value, wanted: &str) -> bool {
-    let code = |item: &Value| (coded(item) == Some(wanted)).then_some(());
+/// Whether the `PARTY_RELATIONSHIP` `relationship` carries the code `wanted`
+/// of `terminology`, such as [`ACTS_FOR`] or [`REPRESENTS`] of [`TERMINOLOGY`],
+/// in its `name` or anywhere in its `details`.
+pub(crate) fn carries(relationship: &Value, terminology: &str, wanted: &str) -> bool {
+    let code = |item: &Value| (phrase(item) == Some((terminology, wanted))).then_some(());
     relationship.get("name").and_then(code).is_some()
         || relationship
             .get("details")
@@ -180,7 +191,9 @@ pub fn policy_content(body: &Value) -> Option<PolicyContent> {
             coded(item).map(str::to_owned)
         })
         .map(PolicyContent::Grant),
-        "PARTY_RELATIONSHIP" => carries(value, ACTS_FOR).then_some(PolicyContent::ActsFor),
+        "PARTY_RELATIONSHIP" => {
+            carries(value, TERMINOLOGY, ACTS_FOR).then_some(PolicyContent::ActsFor)
+        }
         "DV_IDENTIFIER" => {
             (text(value, "type") == Some(CLIENT_ID)).then_some(PolicyContent::Client)
         }
@@ -251,13 +264,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_draft_access_control_terminology_is_the_operation_terminology() {
-        // The draft access control's groups live in this terminology until
-        // openEHR adopts them, so its invariants and the policy marks agree.
-        assert_eq!(
-            TERMINOLOGY,
-            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL
-        );
+    fn the_operation_terminology_is_the_draft_access_terminology() {
+        // The grants and the draft's access groups share one terminology, so
+        // the draft invariants and the policy marks agree.
+        assert_eq!(TERMINOLOGY, "openehr_access");
     }
 
     /// A `DV_CODED_TEXT` of `code` in `terminology`.
@@ -392,8 +402,8 @@ mod tests {
         }
         let representation = json!({ "_type": "PARTY_RELATIONSHIP",
             "archetype_node_id": "at5", "name": coded_text(REPRESENTS, TERMINOLOGY) });
-        assert!(carries(&representation, REPRESENTS));
-        assert!(!carries(&representation, ACTS_FOR));
+        assert!(carries(&representation, TERMINOLOGY, REPRESENTS));
+        assert!(!carries(&representation, TERMINOLOGY, ACTS_FOR));
         assert_eq!(
             policy_content(&holding(&json!({ "_type": "PARTY_RELATIONSHIP",
                 "archetype_node_id": "at5", "name": coded_text(REPRESENTS, TERMINOLOGY) }))),
@@ -431,7 +441,7 @@ mod tests {
     /// [`POLICY_PATH`] as [`mark_stored`] does.
     #[test]
     fn the_migration_marks_by_the_same_path() {
-        let migration = include_str!("../../migrations/party/0034_policy_party_mark.sql");
+        let migration = include_str!("../../migrations/party/0044_access_terminology.sql");
         assert!(
             migration.contains(&format!(
                 "jsonb_path_exists(v.body::jsonb, '{POLICY_PATH}')"

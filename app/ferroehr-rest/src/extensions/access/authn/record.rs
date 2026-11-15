@@ -20,15 +20,17 @@ use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::party::{Outcome, PartyRef};
 use ferrohealth_smart::resource::Caller;
 
-/// Runs the request `fut`, gathering the facilities its commits name, and
+/// Runs the request `fut`, gathering the facilities its commits name, with
+/// `binding` published for the records the service layer writes itself, and
 /// puts `binding`, with those facilities, on its response.
 pub(super) async fn recorded<F>(binding: Option<BindingRecord>, fut: F) -> axum::response::Response
 where
     F: Future<Output = axum::response::Response>,
 {
+    use ferroehr::system_log::access_context::{with_binding, with_facilities};
     let sink: Arc<Mutex<Vec<Identified>>> = Arc::default();
-    let mut resp =
-        ferroehr::system_log::access_context::with_facilities(Arc::clone(&sink), fut).await;
+    let published = Box::pin(with_binding(binding.clone(), fut));
+    let mut resp = with_facilities(Arc::clone(&sink), published).await;
     if let Some(mut binding) = binding {
         binding.facilities =
             std::mem::take(&mut *sink.lock().unwrap_or_else(PoisonError::into_inner));

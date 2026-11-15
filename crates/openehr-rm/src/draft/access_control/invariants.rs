@@ -19,10 +19,11 @@
 //! `Value_valid`, through the BASE validator the RM types use (RM Data Types,
 //! `DV_DATE_TIME` and `DV_DURATION` §Invariants, #5629).
 //!
-//! The terminology invariants name `Terminology_id_access_control`, which the
-//! draft leaves to FerroEHR's operation terminology until openEHR adopts the
-//! groups: a coded value holds when [`crate::draft::access_control::terminology`] reads it as
-//! a term of the invariant's group.
+//! The terminology invariants name `Terminology_id_access`, the draft
+//! `openehr_access` terminology, whose groups take an HL7 code where one
+//! means the same: a coded value holds when
+//! [`crate::draft::access_control::terminology`] reads it as a term of the
+//! invariant's group.
 
 use crate::draft::access_control::access_control::access_actor_scope::AccessActorScope;
 use crate::draft::access_control::access_control::access_classification::AccessClassification;
@@ -31,10 +32,10 @@ use crate::draft::access_control::access_control::access_directive::AccessDirect
 use crate::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
 use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
 use crate::draft::access_control::access_control::access_policy::AccessPolicy;
+use crate::draft::access_control::terminology::log::AccessorKind;
 use crate::draft::access_control::terminology::{
     AccessDefault, CallerKind, DirectiveKind, Effect, Relationship, Term, Withheld,
 };
-use crate::draft::access_log::invariants::{ACCESSOR_KIND, in_group};
 use crate::draft::invariants::{Check, Violations};
 use crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
@@ -168,7 +169,7 @@ fn log_restriction_rules(check: &mut Check, restriction: &AccessLogRestriction) 
         restriction
             .accessor_kinds
             .iter()
-            .all(|kind| in_group(kind, ACCESSOR_KIND)),
+            .all(|kind| AccessorKind::read_coded(kind).is_ok()),
         "ACCESS_LOG_RESTRICTION",
         "Accessor_kinds_valid",
     );

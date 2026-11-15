@@ -78,9 +78,9 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 12);
-    assert_eq!(applied("clinical").await, 45);
-    assert_eq!(applied("party").await, 41);
-    assert_eq!(applied("audit").await, 32);
+    assert_eq!(applied("clinical").await, 46);
+    assert_eq!(applied("party").await, 45);
+    assert_eq!(applied("audit").await, 34);
 
     let tables = |schema: &'static str| {
         let pool = pool.clone();
@@ -147,7 +147,9 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "binding_identifier",
             "binding_lease",
             "binding_membership",
+            "binding_patient_identifier",
             "binding_provider",
+            "binding_record_subject",
             "binding_representation",
             "binding_state",
             "blob_ref",

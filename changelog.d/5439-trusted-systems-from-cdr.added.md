@@ -1,4 +1,4 @@
-- The `ferroehr-operations` terminology gains the operations `data_origin`,
+- The `openehr_access` terminology gains the operations `data_origin`,
   `read_change_feed` and `scim_provision` and the scope elements `creating_system`,
   `origin`, `reader`, `binding_issuer` and `token_scope`. A change an administrator commits
   through the Demographic API decides the next request with no restart: the outbox is

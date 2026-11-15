@@ -38,6 +38,7 @@ use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::ehr::access_settings::EhrAccessSettings;
 use openehr_rm::draft::access_control::access_control::access_directive_settings::AccessDirectiveSettings;
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE;
 use openehr_rm::draft::access_control::terminology::{AccessDefault, CallerKind, OperationClass};
 use serde_json::{Value, json};
 
@@ -48,6 +49,13 @@ const NURSE: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7f83";
 fn term(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code, "defining_code": { "_type": "CODE_PHRASE",
         "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY }, "code_string": code } })
+}
+
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": code, "defining_code": { "_type": "CODE_PHRASE",
+        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY_ID_CONSENT_PROVISION_TYPE },
+        "code_string": code } })
 }
 
 /// The settings of the `i`th EHR of the population.
@@ -64,7 +72,7 @@ fn settings(i: u64) -> String {
     };
     let mut directive = json!({ "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": "Directive" }, "archetype_node_id": "at0001",
-        "kind": term(kind), "effect": term("deny"), "emergency_override": true,
+        "kind": term(kind), "effect": provision("deny"), "emergency_override": true,
         "time_validity": { "_type": "DV_INTERVAL", "lower_unbounded": false,
             "upper_unbounded": true, "lower_included": true, "upper_included": false,
             "lower": { "_type": "DV_DATE_TIME", "value": lower } } });
@@ -91,10 +99,9 @@ fn request() -> RequestAccess {
     let caller = Caller {
         kind: CallerKind::Professional,
         party: Some(NURSE.to_owned()),
-        own_ehr: None,
+        own_ehrs: Vec::new(),
         patient_grants_only: false,
         acts_for: Vec::new(),
-        roles: Vec::new(),
         facts: ferroehr::party_binding::grants::caller::CallerFacts::default(),
         administrator: false,
         settings: SettingsCaller::new(false, false, Some(NURSE.to_owned())),

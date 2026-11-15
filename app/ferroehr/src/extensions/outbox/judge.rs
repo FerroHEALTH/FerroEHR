@@ -117,7 +117,7 @@ fn entry_of(ehr_id: EhrId, stored: Stored) -> EhrEntry {
     EhrEntry {
         version: settings.as_ref().and(stored.version),
         settings: Arc::new(settings),
-        subject: stored.revision.subject,
+        subject: stored.revision.subject.clone(),
         revision: stored.revision,
     }
 }

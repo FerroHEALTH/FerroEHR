@@ -5,7 +5,7 @@
 //! #5436), committed as the server: an `AGENT` carrying the client's
 //! `client_id` under each token issuer, acting for a provider `ORGANISATION`,
 //! and performing a `ROLE` whose capabilities grant operations of the
-//! `ferroehr-operations` terminology. Every party is of a deployment's own
+//! `openehr_access` terminology. Every party is of a deployment's own
 //! archetype with no template. No openEHR spec gives a capability an
 //! authorization meaning: our own design.
 
@@ -22,7 +22,7 @@ pub(crate) fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
-/// A `DV_CODED_TEXT` of the operation terminology.
+/// A `DV_CODED_TEXT` of the draft access terminology.
 pub(crate) fn coded(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",
@@ -133,7 +133,7 @@ pub(crate) async fn group(svc: &FerroEhrService, name: &str) -> VoId {
 
 /// Commits, as the server, a provider `ORGANISATION` identified by
 /// `(issuer, id)`, a member of each `GROUP` of `groups` by a relationship
-/// coded `member_of`; its container.
+/// coded HL7 v3 `RoleClass#MBR`; its container.
 pub(crate) async fn provider_organisation(
     svc: &FerroEhrService,
     (issuer, id): (&str, &str),
@@ -155,7 +155,11 @@ pub(crate) async fn provider_organisation(
             .iter()
             .map(|group| {
                 json!({ "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at0050",
-                        "name": coded("member_of"),
+                        "name": { "_type": "DV_CODED_TEXT", "value": "member of",
+                            "defining_code": { "_type": "CODE_PHRASE",
+                                "terminology_id": { "_type": "TERMINOLOGY_ID",
+                                    "value": "v3-RoleClass" },
+                                "code_string": "MBR" } },
                         "source": reference("ORGANISATION", hospital),
                         "target": reference("GROUP", *group) })
             })
@@ -235,6 +239,27 @@ pub(crate) async fn performs(
         "identities": identities("integration"),
         "performer": reference(performer.0, performer.1),
         "capabilities": capabilities
+    });
+    create(svc, PartyKind::Role, &role).await;
+}
+
+/// Commits, as the server, a `ROLE` of a deployment's own archetype the
+/// party `performer` (its RM type and container) performs, named `name`,
+/// whose one capability grants nothing: the role `name` codes, which a
+/// controller rule names.
+pub(crate) async fn performs_role(svc: &FerroEhrService, performer: (&str, VoId), name: &Value) {
+    let archetype = "openEHR-DEMOGRAPHIC-ROLE.professional.v1";
+    let role = json!({
+        "_type": "ROLE", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": name,
+        "identities": identities("professional"),
+        "performer": reference(performer.0, performer.1),
+        "capabilities": [{ "_type": "CAPABILITY", "archetype_node_id": "at0020",
+            "name": text("registration"),
+            "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "at0022",
+                "name": text("terms"), "items": [{ "_type": "ELEMENT",
+                    "archetype_node_id": "at0023", "name": text("registration"),
+                    "value": text("BIG 12345") }] } }]
     });
     create(svc, PartyKind::Role, &role).await;
 }

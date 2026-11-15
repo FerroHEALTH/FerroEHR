@@ -79,7 +79,19 @@ fn a_granted_read_names_the_version_the_party_and_the_request() {
         entry_of(&composition_read(), None, "cdr.example.org", retention()).expect("an entry"),
     );
     assert_eq!(entry.action.value, "read");
+    assert_eq!(
+        (
+            entry.action.defining_code.terminology_id.value.as_str(),
+            entry.action.defining_code.code_string.as_str()
+        ),
+        ("audit-event-action", "R"),
+        "a read is HL7 FHIR audit-event-action#R"
+    );
     assert_eq!(entry.outcome.result.value, "granted");
+    assert_eq!(
+        entry.outcome.result.defining_code.terminology_id.value,
+        "openehr_access"
+    );
     assert_eq!(entry.outcome.delivered, Some(1));
     assert_eq!(entry.ehr_id.as_ref().map(HierObjectId::value), Some(EHR));
     let items = entry.items.as_deref().expect("an item");
@@ -93,8 +105,11 @@ fn a_granted_read_names_the_version_the_party_and_the_request() {
         Some("01JC2Q7N3X")
     );
     assert_eq!(
-        entry.accessor.binding.as_ref().map(|b| b.value.as_str()),
-        Some("bound")
+        entry.accessor.binding.as_ref().map(|b| (
+            b.defining_code.terminology_id.value.as_str(),
+            b.value.as_str()
+        )),
+        Some(("openehr_access", "bound"))
     );
     assert_eq!(
         entry

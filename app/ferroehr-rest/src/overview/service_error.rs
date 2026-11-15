@@ -90,9 +90,8 @@ pub(crate) fn api_error(e: ServiceError) -> ApiError {
         ServiceError::Unrecorded(err) => ApiError::ServiceUnavailable(err.message),
         // Our own refusal (no openEHR spec governs restriction of processing);
         // RFC 9110 §15.5.4 is the HTTP authority for the 403.
-        ServiceError::Restricted(err) | ServiceError::Forbidden(err) => {
-            ApiError::Forbidden(err.message)
-        }
+        ServiceError::Restricted(err) => ApiError::Forbidden(err.message),
+        ServiceError::Forbidden(err) => ApiError::Forbidden(err.message),
         ServiceError::Timeout(err) => ApiError::Internal(err.message),
     }
 }
@@ -203,7 +202,7 @@ mod tests {
         ));
         rows.push((
             "Forbidden".to_owned(),
-            ServiceError::Forbidden(refusal((), with_cause)),
+            ServiceError::Forbidden(refusal(None, with_cause)),
             C::FORBIDDEN,
         ));
         rows.push((

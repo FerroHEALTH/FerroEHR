@@ -864,12 +864,19 @@ pub(crate) fn access_directive(kind: &str, objects: &[&str]) -> Value {
                     "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                 "code_string": code } })
     };
+    let provision = |code: &str| {
+        let mut value = term(code);
+        value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+        );
+        value
+    };
     let mut directive = serde_json::json!({
         "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": kind },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term("deny"),
+        "effect": provision("deny"),
         "emergency_override": true
     });
     if !objects.is_empty() {
@@ -910,7 +917,7 @@ pub(crate) async fn commit_access_settings(svc: &FerroEhrService, ehr_id: EhrId,
 }
 
 /// The live `PERSON` in `pool` carrying the key `key` under `issuer`.
-async fn bound_person(pool: &PgPool, issuer: &str, key: &str) -> Option<uuid::Uuid> {
+pub(crate) async fn bound_person(pool: &PgPool, issuer: &str, key: &str) -> Option<uuid::Uuid> {
     let party = ferroehr::db::domain_pool_from(pool, ferroehr::db::domain::Domain::Party);
     let today = jiff::Zoned::now()
         .with_time_zone(jiff::tz::TimeZone::UTC)

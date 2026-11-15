@@ -37,7 +37,7 @@ pub struct AccessLogEntry {
     pub link: AccessLogLink,
     /// Time interval over which the access took place, when it is known and differs from `_time_recorded_`.
     pub occurred: Option<DvInterval<DvDateTime>>,
-    /// What the access did to the data, coded in the openEHR Terminology `access action` group.
+    /// What the access did to the data, coded in the draft `openehr_access` terminology's `access action` group.
     pub action: DvCodedText,
     /// The interface operation that carried the access, such as an ITS-REST operation id, coded in a terminology that names the interface.
     pub operation: Option<DvCodedText>,

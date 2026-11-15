@@ -56,7 +56,7 @@ pub struct ClientGrant {
     pub client_id: String,
     /// The operation granted.
     pub operation: Operation,
-    /// The scope elements, each a code of the operation terminology and the
+    /// The scope elements, each a code of the draft access terminology and the
     /// text it names.
     pub elements: Vec<(String, String)>,
 }
@@ -68,7 +68,7 @@ pub struct PersonGrant {
     pub person: Uuid,
     /// The operation granted.
     pub operation: Operation,
-    /// The scope elements, each a code of the operation terminology and the
+    /// The scope elements, each a code of the draft access terminology and the
     /// text it names.
     pub elements: Vec<(String, String)>,
 }

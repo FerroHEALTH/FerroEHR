@@ -65,7 +65,9 @@ pub(crate) fn discovery(
     let mut enterprise = Vec::new();
     let mut extension = Vec::new();
     let ours = EXTENSION_URN;
-    let intrinsic = ["userName", "active"].into_iter().map(str::to_owned);
+    let intrinsic = ["userName", "active", "roles"]
+        .into_iter()
+        .map(str::to_owned);
     let mapped = binding
         .person()
         .attribute
@@ -137,7 +139,7 @@ fn resource_types(
         endpoint: "/Users".to_owned(),
         description: Some(
             "A health professional, held as a demographic PERSON performing the professional \
-             ROLE"
+             ROLE, or a patient portal's representative, a PERSON of the patient template"
                 .to_owned(),
         ),
         schema: SchemaSelection::only(core_user, core),
@@ -266,7 +268,7 @@ fn ferrohealth_group() -> Schema {
             sub_attributes: None,
             multi_valued: false,
             description: "Whether the Group is a care team: its GROUP carries \
-                          ferroehr-operations::care_team and each membership member_of, \
+                          openehr_access::care_team and each membership v3-RoleClass::MBR, \
                           written under the client's write_care_relationship grant; set at \
                           creation and never changed."
                 .to_owned(),
@@ -328,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn the_user_schema_carries_exactly_the_mapped_attributes() {
+    fn the_user_schema_carries_exactly_the_mapped_attributes_and_roles() {
         let binding = mapped(&[
             "name.givenName",
             "name.familyName",
@@ -339,7 +341,7 @@ mod tests {
         let discovery = discovery(&enabled(), base(), &binding).expect("the documents build");
         let user = discovery.schema(urn::CORE_USER).expect("the User schema");
         let names: Vec<&str> = user.attributes.iter().map(|a| a.name.as_str()).collect();
-        assert_eq!(names, ["userName", "name", "active", "emails"]);
+        assert_eq!(names, ["userName", "name", "active", "emails", "roles"]);
         let ours = discovery.schema(EXTENSION_URN).expect("the extension");
         let names: Vec<&str> = ours.attributes.iter().map(|a| a.name.as_str()).collect();
         assert_eq!(

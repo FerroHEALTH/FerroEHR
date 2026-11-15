@@ -307,10 +307,11 @@ pub enum ServiceError {
     #[error(transparent)]
     Restricted(Refusal),
     /// A person may not make the change, the wire's `403` (EHDS Art. 5;
-    /// [`ServiceError::not_permitted`]). No openEHR spec governs it: our own
-    /// design/extension.
+    /// [`ServiceError::not_permitted`]); its kind is the access evaluator's
+    /// refusal code when the evaluator refused ([`ServiceError::refused`]).
+    /// No openEHR spec governs it: our own design/extension.
     #[error(transparent)]
-    Forbidden(Refusal),
+    Forbidden(Refusal<Option<openehr_rm::draft::access_control::terminology::Refusal>>),
     /// The query outran its execution budget, the wire's `408` (`responses/408_Query.yaml`).
     #[error(transparent)]
     Timeout(Refusal),
@@ -415,7 +416,17 @@ impl ServiceError {
     /// A refusal (`403`) of a change a person may not make (EHDS Art. 5).
     #[must_use]
     pub fn not_permitted(message: impl Into<String>) -> Self {
-        ServiceError::Forbidden(Refusal::new((), message))
+        ServiceError::Forbidden(Refusal::new(None, message))
+    }
+
+    /// A refusal (`403`) of the access evaluator under `code`, which the wire
+    /// names beside `message`.
+    #[must_use]
+    pub fn refused(
+        code: openehr_rm::draft::access_control::terminology::Refusal,
+        message: impl Into<String>,
+    ) -> Self {
+        ServiceError::Forbidden(Refusal::new(Some(code), message))
     }
 
     /// A refusal (`403`) of a research-side disclosure the subject objected to.

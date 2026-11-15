@@ -16,7 +16,7 @@ use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
 #[doc(alias = "ACCESSOR")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Accessor {
-    /// The kind of accessor, coded in the openEHR Terminology `accessor kind` group: a person, a person through a delegated client, the subject of care, a representative, a person of another organisation, an organisation, or a system acting for nobody.
+    /// The kind of accessor, coded in the draft `openehr_access` terminology's `accessor kind` group: a person, a person through a delegated client, the subject of care, a representative, a person of another organisation, an organisation, or a system acting for nobody.
     pub kind: DvCodedText,
     /// The party that accessed: `PARTY_IDENTIFIED` with an `_external_ref_` to the demographic party the system bound the caller to, `PARTY_SELF` for the subject of care, `PARTY_RELATED` for a representative, or `PARTY_IDENTIFIED` with identifiers alone where no party is known here.
     pub party: PartyProxy,
@@ -26,7 +26,7 @@ pub struct Accessor {
     pub roles: Option<Vec<DvCodedText>>,
     /// The demographic `GROUP` parties, such as care teams, whose membership the access relied on.
     pub groups: Option<Vec<PartyRef>>,
-    /// How the system bound the credential to `_party_`, or why it could not, coded in a terminology the system names.
+    /// How the system bound the credential to `_party_`, or why it could not, coded in the draft `openehr_access` terminology's `credential binding` group.
     pub binding: Option<DvCodedText>,
     /// The credential the accessor authenticated with.
     pub credential: Option<AccessCredential>,

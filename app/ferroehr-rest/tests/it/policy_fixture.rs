@@ -3,7 +3,7 @@
 
 //! Policy parties for the wire tests that read a grant (#5439): a
 //! deployment's own `AGENT` carrying a client identifier and a `ROLE` whose
-//! capability codes an operation of `ferroehr-operations` with its scope
+//! capability codes an operation of `openehr_access` with its scope
 //! elements, committed through the service by an administrator. No openEHR
 //! spec gives a capability an authorization meaning: our own design.
 

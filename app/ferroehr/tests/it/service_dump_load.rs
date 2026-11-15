@@ -1686,11 +1686,18 @@ async fn an_archive_whose_head_directive_names_an_unknown_party_is_refused() {
                     "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                 "code_string": code } })
     };
+    let provision = |code: &str| {
+        let mut value = term(code);
+        value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+        );
+        value
+    };
     let naming = |id: &str| {
         json!({ "_type": "ACCESS_DIRECTIVE_SETTINGS", "default_access": term("open"),
             "directives": [{ "_type": "ACCESS_DIRECTIVE",
                 "name": { "_type": "DV_TEXT", "value": "consent" }, "archetype_node_id": "at0001",
-                "kind": term("consent"), "effect": term("permit"), "emergency_override": false,
+                "kind": term("consent"), "effect": provision("permit"), "emergency_override": false,
                 "applies_to": [{ "party": { "_type": "PARTY_REF", "namespace": "demographic",
                     "type": "PERSON", "id": { "_type": "HIER_OBJECT_ID", "value": id } } }] }] })
     };

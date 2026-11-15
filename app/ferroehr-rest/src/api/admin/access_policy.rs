@@ -228,7 +228,7 @@ async fn write(state: AppState, parts: RequestParts) -> Result<Response, RestErr
     if !Capabilities::current().holds(Operation::WriteAccessPolicy) {
         return Err(RestError::from(ApiError::Forbidden(
             "writing the access policy needs a policy grant of \
-             ferroehr-operations::write_access_policy"
+             openehr_access::write_access_policy"
                 .to_owned(),
         )));
     }

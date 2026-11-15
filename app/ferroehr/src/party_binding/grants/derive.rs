@@ -24,8 +24,8 @@ use serde_json::Value;
 
 use crate::party_binding::derive::container;
 use crate::party_binding::grants::caller::{self, CallerFact};
-use crate::party_binding::grants::operation::{NOT_AFTER, NOT_BEFORE, is_qualifier};
-use crate::party_binding::policy_mark::{ACTS_FOR, CLIENT_ID, carries, coded};
+use crate::party_binding::grants::operation::{NOT_AFTER, NOT_BEFORE, Operation, is_qualifier};
+use crate::party_binding::policy_mark::{ACTS_FOR, CLIENT_ID, TERMINOLOGY, carries, coded};
 use crate::versioning::Kind;
 
 /// A `Not before` or `Not after` bound of a capability's credentials.
@@ -72,9 +72,13 @@ pub(crate) struct GrantFacts {
     /// An `ORGANISATION`'s identifier as a provider, `(issuer, id)`: the
     /// first `DV_IDENTIFIER` in its `details` that names no client.
     pub(crate) identifier: Option<(String, String)>,
-    /// The caller facts: a `ROLE`'s clearances and permitted purposes, a
-    /// `PERSON`'s care relationships, in document order.
+    /// The caller facts: the role a `ROLE` names, the care relationships of
+    /// a `PERSON` and the memberships of an `ORGANISATION`, in document
+    /// order.
     pub(crate) facts: Vec<CallerFact>,
+    /// The EHR subject references a `PERSON` declares in its `details`,
+    /// distinct, in document order.
+    pub(crate) subjects: Vec<caller::subject::DeclaredSubject>,
     /// Why a fact the body carries cannot be read, which its commit refuses.
     pub(crate) unread: Vec<String>,
 }
@@ -104,7 +108,7 @@ impl GrantFacts {
                     .and_then(Value::as_array)
                     .into_iter()
                     .flatten()
-                    .filter(|relationship| carries(relationship, ACTS_FOR))
+                    .filter(|relationship| carries(relationship, TERMINOLOGY, ACTS_FOR))
                     .find_map(|relationship| {
                         container(relationship.pointer("/target/id/value")?.as_str()?)
                     });
@@ -114,6 +118,7 @@ impl GrantFacts {
                 caller::relationships(kind, body, &mut facts);
             }
             Kind::Role => {
+                caller::role(body, &mut facts);
                 for (ordinal, capability) in body
                     .get("capabilities")
                     .and_then(Value::as_array)
@@ -125,13 +130,35 @@ impl GrantFacts {
                     facts
                         .capabilities
                         .extend(CapabilityFacts::of(ordinal, capability));
-                    caller::qualifiers(ordinal, capability, &mut facts);
+                    unknown_names(ordinal, capability, &mut facts.unread);
                 }
             }
             _ => caller::relationships(kind, body, &mut facts),
         }
+        caller::subject::declared(kind, body, &mut facts);
         facts
     }
+}
+
+/// Pushes onto `unread` each element name of `capability`, at `ordinal`,
+/// that is a code of [`crate::party_binding::policy_mark::TERMINOLOGY`] no
+/// table defines, such as a removed one: neither a qualifier nor an
+/// operation, which its commit refuses.
+fn unknown_names(ordinal: i32, capability: &Value, unread: &mut Vec<String>) {
+    let Some(credentials) = capability.get("credentials") else {
+        return;
+    };
+    walk(credentials, &mut |node| {
+        if let Some(code) = node.get("name").and_then(coded)
+            && !is_qualifier(code)
+            && Operation::of(code.trim()).is_none()
+        {
+            unread.push(format!(
+                "ROLE.capabilities[{ordinal}].credentials: an element is named {code}, which no \
+                 table of the operation terminology defines"
+            ));
+        }
+    });
 }
 
 impl CapabilityFacts {

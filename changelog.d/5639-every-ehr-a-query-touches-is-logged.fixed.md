@@ -1,0 +1,1 @@
+- Every EHR a query touches gets an access-log entry: an EHR the query names by its scope, whatever its rows hold (a `COUNT`, an empty or a past-the-end page), each EHR whose data an aggregate projection read (one entry per contributing EHR of a population `COUNT`), and, for a refused query, the EHR it asked for.

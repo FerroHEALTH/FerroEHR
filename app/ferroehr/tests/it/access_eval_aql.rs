@@ -22,6 +22,7 @@ use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::query::request::{AqlQueryRequest, QueryOutcome};
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
+use ferroehr::storage::access_projection::EhrSubject;
 use ferroehr::versioning::committer::CommitterIdentity;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
@@ -57,6 +58,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 /// A coded value of `terminology`.
 fn coded(terminology: &str, code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
@@ -72,7 +82,7 @@ fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
         "name": { "_type": "DV_TEXT", "value": "Directive" },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term(effect),
+        "effect": provision(effect),
         "emergency_override": false
     });
     if let (Some(d), Some(extra)) = (d.as_object_mut(), extra.as_object()) {
@@ -203,9 +213,13 @@ impl World {
         all
     }
 
-    /// The subject of EHR `index`.
-    fn subject(&self, index: usize) -> String {
-        self.ehrs[index].1.to_string()
+    /// The subject reference of EHR `index`: its `PERSON` under the CDR's own
+    /// namespace.
+    fn subject(&self, index: usize) -> EhrSubject {
+        EhrSubject::new(
+            ferroehr::config::binding::PartyBindingConfig::default().namespace,
+            self.ehrs[index].1.to_string(),
+        )
     }
 }
 
@@ -214,7 +228,7 @@ struct Ask {
     caller: Caller,
     purpose: Option<&'static str>,
     policy: Option<AccessPolicy>,
-    cared: Vec<String>,
+    cared: Vec<EhrSubject>,
     default: AccessDefault,
 }
 
@@ -229,7 +243,7 @@ impl Ask {
     fn subject(world: &World, own: Option<EhrId>) -> Self {
         let mut ask = Self::of(world, CallerKind::Subject);
         ask.caller.party = None;
-        ask.caller.own_ehr = own;
+        ask.caller.own_ehrs = own.into_iter().collect();
         ask.caller.settings = SettingsCaller::new(false, true, None);
         ask
     }
@@ -240,10 +254,9 @@ impl Ask {
             caller: Caller {
                 kind,
                 party: Some(world.nurse.clone()),
-                own_ehr: None,
+                own_ehrs: Vec::new(),
                 patient_grants_only: false,
                 acts_for: Vec::new(),
-                roles: Vec::new(),
                 facts: CallerFacts::default(),
                 administrator: false,
                 settings: SettingsCaller::new(false, false, Some(world.nurse.clone())),
@@ -458,14 +471,14 @@ async fn step_3_a_consent_deny_leaves_the_query() {
     .await;
 }
 
-/// Step 4: a labelled object the caller is not cleared for contributes no
-/// row.
+/// Step 5: a labelled object no permit names contributes no row; a permit
+/// rule naming the caller's role clears it.
 #[tokio::test]
-async fn step_4_a_sensitive_object_leaves_the_query() {
+async fn step_5_a_sensitive_object_leaves_the_query() {
     let world = Box::pin(World::new()).await;
     let labelled = world.objects(0)[1].clone();
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(&labelled),
-                        "sensitivities": [coded("2.16.840.1.113883.5.25", "HIV")] });
+                        "sensitivities": [coded("v3-ActCode", "HIV")] });
     world.settings(0, &settings("open", &[], &[label])).await;
     assert_reads(
         &world,
@@ -475,21 +488,36 @@ async fn step_4_a_sensitive_object_leaves_the_query() {
     )
     .await;
     let mut cleared = Ask::professional(&world);
-    cleared.caller.facts = cleared_for_hiv();
-    assert_reads(&world, &cleared, &world.every(), "cleared").await;
+    cleared.policy = Some(policy(&json!({ "rules": [{
+        "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "HIV specialists" },
+        "archetype_node_id": "at0001", "kind": term("controller_rule"), "effect": provision("permit"),
+        "applies_to": [{ "role": coded(ROLES, "HIV_SPECIALIST") }],
+        "data": [{ "sensitivities": [coded("v3-ActCode", "HIV")] }],
+        "emergency_override": false }] })));
+    assert_reads(
+        &world,
+        &cleared,
+        &except(&world, &[], &[&labelled]),
+        "another role",
+    )
+    .await;
+    cleared.caller.facts = performing("HIV_SPECIALIST");
+    assert_reads(&world, &cleared, &world.every(), "cleared by a rule").await;
 }
 
-/// A caller's facts clearing `HIV`.
-fn cleared_for_hiv() -> CallerFacts {
+/// The roles of the role code system [`ROLES`]: a caller performing `role`.
+fn performing(role: &str) -> CallerFacts {
     CallerFacts::new(
         vec![ForeignCode {
-            terminology: "2.16.840.1.113883.5.25".to_owned(),
-            code: "HIV".to_owned(),
+            terminology: ROLES.to_owned(),
+            code: role.to_owned(),
         }],
-        Vec::new(),
         Vec::new(),
     )
 }
+
+/// The jurisdiction's role code system.
+const ROLES: &str = "urn:example:roles";
 
 /// An `ACCESS_POLICY` with `members`.
 fn policy(members: &Value) -> AccessPolicy {
@@ -508,11 +536,11 @@ fn policy(members: &Value) -> AccessPolicy {
     openehr_its::json::from_canonical_value(&p).expect("the test policy reads")
 }
 
-/// Step 5: where the policy requires a care relationship, a professional
+/// Step 6: where the policy requires a care relationship, a professional
 /// reads only the EHRs of the subjects in their care, with or without
 /// settings.
 #[tokio::test]
-async fn step_5_only_the_ehrs_in_care_are_queried() {
+async fn step_6_only_the_ehrs_in_care_are_queried() {
     let world = Box::pin(World::new()).await;
     world.settings(1, &settings("open", &[], &[])).await;
     let mut ask = Ask::professional(&world);
@@ -528,32 +556,75 @@ async fn step_5_only_the_ehrs_in_care_are_queried() {
     .await;
 }
 
-/// Step 6: where the policy requires a purpose, a query without one reads
-/// nothing, and one the caller may declare reads everything.
+/// A care census far larger than the store reads exactly the EHRs whose
+/// subjects it names, with or without settings, whatever else it holds: the
+/// subjects bound once as a `jsonb` object match as the bound array matched
+/// (#5645).
 #[tokio::test]
-async fn step_6_a_missing_purpose_reads_nothing() {
+async fn a_large_care_census_reads_exactly_the_ehrs_in_care() {
+    let world = Box::pin(World::new()).await;
+    world.settings(1, &settings("open", &[], &[])).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    let others: Vec<EhrSubject> = (0..5000)
+        .map(|_| {
+            EhrSubject::new(
+                ferroehr::config::binding::PartyBindingConfig::default().namespace,
+                uuid::Uuid::now_v7().to_string(),
+            )
+        })
+        .collect();
+    ask.cared.clone_from(&others);
+    assert_reads(&world, &ask, &[], "a census naming no subject of the store").await;
+    let upper = world.subject(1);
+    ask.cared
+        .push(EhrSubject::new(upper.namespace, upper.id.to_uppercase()));
+    assert_reads(&world, &ask, &[], "a subject named in another case").await;
+    ask.cared
+        .extend([world.subject(2), world.subject(0), world.subject(2)]);
+    assert_reads(
+        &world,
+        &ask,
+        &except(&world, &[1], &[]),
+        "two subjects among five thousand, one named twice",
+    )
+    .await;
+    ask.cared.push(world.subject(1));
+    assert_reads(&world, &ask, &world.every(), "every subject in care").await;
+}
+
+/// Step 7: where the policy requires a purpose, a query without one reads
+/// nothing; step 4: a rule limiting the purposes a professional declares
+/// reads nothing for another purpose.
+#[tokio::test]
+async fn step_7_a_missing_purpose_reads_nothing() {
     let world = Box::pin(World::new()).await;
     let mut ask = Ask::professional(&world);
     ask.policy = Some(policy(&json!({ "purpose_required": true })));
     assert_reads(&world, &ask, &[], "no purpose").await;
     ask.purpose = Some("TREAT");
-    assert_reads(&world, &ask, &[], "a purpose not permitted").await;
-    ask.caller.facts = CallerFacts::new(
-        Vec::new(),
-        vec![ForeignCode {
-            terminology: "2.16.840.1.113883.5.8".to_owned(),
-            code: "TREAT".to_owned(),
-        }],
-        Vec::new(),
-    );
+    assert_reads(&world, &ask, &world.every(), "a purpose").await;
+    ask.policy = Some(policy(&json!({ "purpose_required": true, "rules": [{
+        "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "Treatment only" },
+        "archetype_node_id": "at0001", "kind": term("controller_rule"), "effect": provision("deny"),
+        "applies_to": [{ "caller_kind": term("professional") }],
+        "exceptions": [{
+            "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "Treatment" },
+            "archetype_node_id": "at0002", "kind": term("controller_rule"),
+            "effect": provision("permit"),
+            "purposes": [coded("v3-ActReason", "TREAT")],
+            "emergency_override": false }],
+        "emergency_override": false }] })));
     assert_reads(&world, &ask, &world.every(), "a permitted purpose").await;
+    ask.purpose = Some("HRESCH");
+    assert_reads(&world, &ask, &[], "a purpose the rule denies").await;
 }
 
-/// Step 7: an EHR that requires consent contributes only the rows a permit
+/// Step 8: an EHR that requires consent contributes only the rows a permit
 /// covers, and the server's restricted default withholds every EHR with no
 /// settings.
 #[tokio::test]
-async fn step_7_the_default_disposition_bounds_the_query() {
+async fn step_8_the_default_disposition_bounds_the_query() {
     let world = Box::pin(World::new()).await;
     let permitted = world.objects(0)[0].clone();
     let permit = directive(
@@ -760,7 +831,7 @@ async fn a_shared_class_reads_each_ehrs_labels() {
     let world = Box::pin(World::new()).await;
     let label = |object: &str| {
         json!({ "_type": "ACCESS_LABEL", "target": object_ref(object),
-                "sensitivities": [coded("2.16.840.1.113883.5.25", "HIV")] })
+                "sensitivities": [coded("v3-ActCode", "HIV")] })
     };
     let (first, second) = (world.objects(0)[0].clone(), world.objects(2)[1].clone());
     world

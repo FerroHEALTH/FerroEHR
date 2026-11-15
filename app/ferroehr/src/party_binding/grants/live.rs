@@ -43,6 +43,8 @@ use crate::party_binding::grants::trust::{AgreementPosture, FederationTrust};
 use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
 
+mod subjects;
+
 tokio::task_local! {
     /// Set when a commit of the running request changed a grant row.
     static CHANGED: AtomicBool;
@@ -134,6 +136,9 @@ impl HeldFacts {
 /// ceiling it honours the grants under.
 pub struct LiveGrants {
     pool: PgPool,
+    /// The `PARTY_REF.namespace` this CDR names its parties under
+    /// (`[authz.party_binding] namespace`).
+    namespace: RwLock<Arc<str>>,
     ceiling: RwLock<Arc<GrantCeiling>>,
     federation: RwLock<Arc<FederationTrust>>,
     held: RwLock<Arc<Held>>,
@@ -165,6 +170,11 @@ impl LiveGrants {
             listened: Arc::new(Listened::with_subscriber(CHANNEL, dropping)),
             care,
             pool,
+            namespace: RwLock::new(Arc::from(
+                crate::config::binding::PartyBindingConfig::default()
+                    .namespace
+                    .as_str(),
+            )),
             ceiling: RwLock::new(Arc::new(GrantCeiling::default())),
             federation: RwLock::new(Arc::default()),
             held: RwLock::new(Arc::default()),
@@ -182,6 +192,25 @@ impl LiveGrants {
     #[must_use]
     pub fn ceiling(&self) -> Arc<GrantCeiling> {
         self.ceiling
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    /// Name this CDR's parties under `namespace`, `[authz.party_binding]
+    /// namespace`: a subject reference under it names a `PERSON` by its
+    /// container ([`Self::person_of`]).
+    pub fn set_namespace(&self, namespace: &str) {
+        *self
+            .namespace
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = Arc::from(namespace);
+    }
+
+    /// The namespace this CDR names its parties under.
+    #[must_use]
+    pub fn namespace(&self) -> Arc<str> {
+        self.namespace
             .read()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
@@ -287,12 +316,13 @@ impl LiveGrants {
                     changed.parties.iter().map(|(party, _)| *party).collect();
                 stamped.sort_unstable();
                 let teams = changed.cared_teams.clone();
+                let declared = changed.declared.clone();
                 let held = self.held_facts();
                 if held.revision.is_none_or(|held| held < changed.revision) {
                     *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
                         Arc::new(held.with(changed));
                 }
-                self.care.drop_changed(&stamped, &teams).await;
+                self.care.drop_changed(&stamped, &teams, &declared).await;
             }
             Ok::<(), StorageError>(())
         };
@@ -410,7 +440,7 @@ impl LiveGrants {
     }
 
     /// The `GROUP`s the `ORGANISATION` `organisation` is a member of at
-    /// `now`, from the copy held: each `member_of` relationship of its live
+    /// `now`, from the copy held: each membership (`MBR`) relationship of its live
     /// head that holds on the date of `now` in UTC.
     #[must_use]
     pub fn memberships(&self, organisation: Uuid, now: jiff::Timestamp) -> Vec<Uuid> {
@@ -429,14 +459,13 @@ impl LiveGrants {
     }
 
     /// The caller facts of the party `party` at `now`, from the copy held:
-    /// the clearances and purposes of the capabilities of the `ROLE`s it
-    /// performs that hold on the date of `now` in UTC and at `now`, and the
-    /// care teams it is a member of on that date.
+    /// the roles of the `ROLE`s it performs that hold on the date of `now` in
+    /// UTC, and the care teams it is a member of on that date.
     #[must_use]
     pub fn facts_of(&self, party: Uuid, now: jiff::Timestamp) -> CallerFacts {
         let held = self.held_facts();
         let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
-        let (mut clearances, mut purposes, mut care_teams) = (Vec::new(), Vec::new(), Vec::new());
+        let (mut roles, mut care_teams) = (Vec::new(), Vec::new());
         for row in held
             .by_party
             .get(&party)
@@ -447,55 +476,14 @@ impl LiveGrants {
                 continue;
             }
             match (row.kind, &row.value) {
-                (FactKind::Clearance, FactValue::Code(code)) => clearances.push(code.clone()),
-                (FactKind::Purpose, FactValue::Code(code)) => purposes.push(code.clone()),
+                (FactKind::Role, FactValue::Code(code)) => roles.push(code.clone()),
                 (FactKind::MemberOf, FactValue::Team(team)) => {
                     care_teams.extend(row.term.dates.map(|dates| CareTeam::new(*team, dates)));
                 }
                 _ => {}
             }
         }
-        CallerFacts::new(clearances, purposes, care_teams)
-    }
-
-    /// The care teams and units the subject `subject` is under the care of:
-    /// each `under_care_of` relationship of its live `PERSON` head with the
-    /// dates it holds, whether or not it holds today, so the evaluator judges
-    /// a discharge and the grace after it; from the care copy, or read on a
-    /// miss.
-    ///
-    /// # Errors
-    /// [`GrantsUnavailable`] when a miss cannot be read.
-    pub async fn under_care_of(&self, subject: Uuid) -> Result<Vec<CareTeam>, GrantsUnavailable> {
-        Ok(self.care.of_subject(&self.pool, subject).await?.to_vec())
-    }
-
-    /// The subjects under the care of any of `teams` on `day`, with `grace`
-    /// after each relationship ends: the patients a member of those teams
-    /// has a live care relationship to ([`CareTeam::live_on`]), sorted and
-    /// distinct; from the care copy, or read on a miss.
-    ///
-    /// # Errors
-    /// [`GrantsUnavailable`] when a miss cannot be read.
-    pub async fn cared_for_by(
-        &self,
-        teams: &[Uuid],
-        day: jiff::civil::Date,
-        grace: jiff::Span,
-    ) -> Result<Vec<Uuid>, GrantsUnavailable> {
-        let mut subjects = Vec::new();
-        for team in teams {
-            let census = self.care.of_team(&self.pool, *team).await?;
-            subjects.extend(
-                census
-                    .iter()
-                    .filter(|(_, care)| care.live_on(day, grace))
-                    .map(|(subject, _)| *subject),
-            );
-        }
-        subjects.sort_unstable();
-        subjects.dedup();
-        Ok(subjects)
+        CallerFacts::new(roles, care_teams)
     }
 
     /// How many subjects and care teams the care copy holds, and the patients

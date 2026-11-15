@@ -410,3 +410,68 @@ async fn a_representative_login_on_a_professional_row_is_refused_as_the_wrong_ma
     )
     .await;
 }
+
+/// An EHR export's access-log entry names the request it answered and the
+/// bound accessor, its `PERSON` and the declared provider, as every other
+/// access entry does (EHDS Annex II 3.2, #5638).
+#[tokio::test]
+async fn an_export_entry_names_the_request_and_the_bound_accessor() {
+    let (db, _audit, svc) = audited_service().await;
+    let key = "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
+    let (uid, _) = professional(&svc, key, "532").await;
+    let mut config = crate::party_binding_http::config(None);
+    config.party_binding.provider = Some(Providers::One(ProviderId {
+        issuer: PROVIDER_ISSUER.to_owned(),
+        id: "90000010".to_owned(),
+    }));
+    let app = router(Arc::clone(&svc), config).await;
+    let credential = token(key, &json!({}));
+    let (status, body) = common::send_body(
+        &app,
+        common::req("POST", format!("{}/ehr", common::BASE))
+            .auth(&credential)
+            .prefer_representation()
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let ehr = serde_json::from_str::<Value>(&body).expect("an EHR")["ehr_id"]["value"]
+        .as_str()
+        .expect("an EHR id")
+        .to_owned();
+    let (status, headers, body) = common::send(
+        &app,
+        common::req("GET", format!("{}/message/export/{ehr}", common::EXT))
+            .auth(&credential)
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let request_id = headers
+        .get("x-request-id")
+        .and_then(|value| value.to_str().ok())
+        .expect("the response names its request")
+        .to_owned();
+    let exported = crate::access_log_http::entries(&db.pool(), 1, |stored| {
+        stored.ehr_id.as_deref() == Some(ehr.as_str()) && stored.action.as_deref() == Some("export")
+    })
+    .await;
+    assert_eq!(exported.len(), 1, "the export's one entry");
+    assert_eq!(exported[0].request_id.as_deref(), Some(request_id.as_str()));
+    let entry: Value = serde_json::from_str(&exported[0].content).expect("an entry");
+    let person = vo(&uid).0.to_string();
+    let accessor = &entry["accessor"];
+    assert_eq!(
+        accessor["party"]["external_ref"]["id"]["value"], person,
+        "the bound PERSON: {entry}"
+    );
+    assert_eq!(
+        accessor["provider"]["identifiers"][0]["id"], "90000010",
+        "the provider: {entry}"
+    );
+    assert_eq!(
+        entry["channel"]["request_id"],
+        request_id.as_str(),
+        "{entry}"
+    );
+}

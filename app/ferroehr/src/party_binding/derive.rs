@@ -99,6 +99,9 @@ pub(crate) struct Facts {
     /// The selector identifiers of a `PERSON` of a mapped template, distinct
     /// by selector, issuer and compared value, in document order.
     pub(crate) identifiers: Selected,
+    /// The identifiers of a `PERSON` of the patient template, distinct by
+    /// issuer, type and id, in document order.
+    pub(crate) patient_identifiers: Vec<Identifier>,
     /// The `externalId`s of a `GROUP` of the group template, distinct by
     /// issuer and id.
     pub(crate) group_external_ids: Vec<Identifier>,
@@ -155,6 +158,7 @@ impl Facts {
                 facts.targets.extend(target);
                 if crate::party_binding::policy_mark::carries(
                     body,
+                    crate::party_binding::policy_mark::TERMINOLOGY,
                     crate::party_binding::policy_mark::REPRESENTS,
                 ) {
                     facts.representative = body
@@ -196,6 +200,7 @@ impl Facts {
             let is = |of: Option<&String>| of.is_some() && of == archetype.as_ref();
             if crate::party_binding::policy_mark::carries(
                 relationship,
+                crate::party_binding::policy_mark::TERMINOLOGY,
                 crate::party_binding::policy_mark::REPRESENTS,
             ) {
                 self.represents = true;
@@ -228,6 +233,17 @@ impl Facts {
                 .filter_map(|role| role.get("id")?.get("value")?.as_str())
                 .filter_map(container)
                 .collect();
+        }
+        if let Some(patient) = mapping
+            .patient
+            .as_ref()
+            .filter(|patient| self.template.as_ref() == Some(&patient.template))
+        {
+            for identifier in patient.identifiers(body) {
+                if !self.patient_identifiers.contains(&identifier) {
+                    self.patient_identifiers.push(identifier);
+                }
+            }
         }
         let Some(selectors) = self
             .template
@@ -306,14 +322,19 @@ pub(crate) fn container(reference: &str) -> Option<Uuid> {
     hyphenated.then(|| Uuid::parse_str(&root).ok()).flatten()
 }
 
+/// The `DV_IDENTIFIER`s `steps` address in `body`, in document order.
+fn dv_identifiers<'a>(body: &'a Value, steps: &[Step]) -> impl Iterator<Item = &'a Value> {
+    select(body, steps)
+        .into_iter()
+        .filter(|value| type_of(value) == Some("DV_IDENTIFIER"))
+}
+
 impl IdentifierSelector {
     /// The identifiers the selector holds in `body`, in document order: each
     /// `DV_IDENTIFIER` of its type at its path with an issuer and an id, of
     /// one of its issuers when it names any.
     pub(crate) fn identifiers(&self, body: &Value) -> Vec<Identifier> {
-        select(body, &self.parsed)
-            .into_iter()
-            .filter(|value| type_of(value) == Some("DV_IDENTIFIER"))
+        dv_identifiers(body, &self.parsed)
             .filter_map(|value| {
                 let text = |key: &str| value.get(key).and_then(Value::as_str);
                 if text("type") != Some(self.identifier_type.as_str()) {
@@ -323,6 +344,30 @@ impl IdentifierSelector {
                 let id = text("id")?;
                 (self.issuers.is_empty() || self.issuers.iter().any(|held| held == issuer))
                     .then(|| Identifier::new(issuer, &self.identifier_type, id))
+            })
+            .collect()
+    }
+}
+
+impl super::PatientSelector {
+    /// The identifiers the patient selector holds in `body`, in document
+    /// order: each `DV_IDENTIFIER` at its path with an `issuer` and an `id`,
+    /// of any type. One without an issuer names no identifier domain, so the
+    /// patient cannot be found by it.
+    pub(crate) fn identifiers(&self, body: &Value) -> Vec<Identifier> {
+        dv_identifiers(body, &self.parsed)
+            .filter_map(|value| {
+                let text = |key: &str| {
+                    value
+                        .get(key)
+                        .and_then(Value::as_str)
+                        .filter(|text| !text.trim().is_empty())
+                };
+                Some(Identifier::new(
+                    text("issuer")?,
+                    text("type").unwrap_or_default(),
+                    text("id")?,
+                ))
             })
             .collect()
     }
@@ -503,6 +548,46 @@ mod tests {
     }
 
     #[test]
+    fn a_patient_holds_each_identifier_with_an_issuer_once() {
+        let mapping = mapping()
+            .with_patient("Patient.v1", "/details[id2]/items[id3]")
+            .expect("parses");
+        let untyped = json!({"_type": "DV_IDENTIFIER", "issuer": "urn:oid:2.999.1", "id": "P-2"});
+        let unissued = json!({"_type": "DV_IDENTIFIER", "type": "NI", "id": "P-3"});
+        let body = json!({
+            "_type": "PERSON",
+            "archetype_details": {"template_id": {"value": "patient.v1"}},
+            "details": {"archetype_node_id": "id2", "items": [
+                {"archetype_node_id": "id3", "value": identifier("urn:oid:2.999.1", "P-1")},
+                {"archetype_node_id": "id3", "value": identifier("urn:oid:2.999.1", "P-1")},
+                {"archetype_node_id": "id3", "value": untyped},
+                {"archetype_node_id": "id3", "value": unissued},
+                {"archetype_node_id": "id4", "value": identifier("urn:oid:2.999.1", "P-4")}
+            ]}
+        });
+        let facts = Facts::of(Kind::Person, &body, &mapping);
+        assert_eq!(
+            facts.patient_identifiers,
+            vec![
+                Identifier::new("urn:oid:2.999.1", "guid", "P-1"),
+                Identifier::new("urn:oid:2.999.1", "", "P-2"),
+            ]
+        );
+        let professional = json!({
+            "_type": "PERSON",
+            "archetype_details": {"template_id": {"value": "professional.v1"}},
+            "details": {"archetype_node_id": "id2", "items": [
+                {"archetype_node_id": "id3", "value": identifier("urn:oid:2.999.1", "P-1")}
+            ]}
+        });
+        assert_eq!(
+            Facts::of(Kind::Person, &professional, &mapping).patient_identifiers,
+            Vec::new(),
+            "a PERSON of another template holds no patient identifier"
+        );
+    }
+
+    #[test]
     fn a_person_holds_the_groups_its_memberships_target() {
         let group = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
         let other = "0190a1bc-3a1e-72e4-b7c5-f78a24c01309";
@@ -539,7 +624,7 @@ mod tests {
                     "value": {"_type": "DV_CODED_TEXT", "value": "represents",
                         "defining_code": {"_type": "CODE_PHRASE",
                             "terminology_id": {"_type": "TERMINOLOGY_ID",
-                                "value": "ferroehr-operations"},
+                                "value": "openehr_access"},
                             "code_string": "represents"}}}]});
         }
         relationship

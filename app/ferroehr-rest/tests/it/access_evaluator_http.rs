@@ -204,6 +204,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 /// A directive of `kind` and `effect` with `extra` members.
 pub(crate) fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
     let mut d = json!({
@@ -211,7 +220,7 @@ pub(crate) fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
         "name": { "_type": "DV_TEXT", "value": kind },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term(effect),
+        "effect": provision(effect),
         "emergency_override": false
     });
     if let (Some(d), Some(extra)) = (d.as_object_mut(), extra.as_object()) {
@@ -236,7 +245,7 @@ pub(crate) fn refusal(body: &str) -> (Value, String) {
 }
 
 /// The composition ids an AQL population query returns to `user`.
-async fn queried(app: &Router, user: &str, purpose: Option<&str>) -> Vec<String> {
+pub(crate) async fn queried(app: &Router, user: &str, purpose: Option<&str>) -> Vec<String> {
     let (status, body) = send(
         app,
         "POST",
@@ -371,7 +380,7 @@ async fn a_classification_refuses_the_uncleared() {
             "data": { "_type": "ACCESS_DATA_SCOPE", "templates": ["International Patient Summary"] },
             "sensitivities": [{ "_type": "DV_CODED_TEXT", "value": "HIV",
                 "defining_code": { "_type": "CODE_PHRASE",
-                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "2.16.840.1.113883.5.25" },
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "v3-ActCode" },
                     "code_string": "HIV" } }]
         }],
         "care_relationship_required": false,
@@ -432,7 +441,7 @@ async fn an_absolute_restriction_holds_in_an_emergency() {
 /// settings. A system client acting for a member `ORGANISATION` reads the
 /// record and queries it; a client of a provider outside the region is
 /// refused with the default's code and queries nothing (IHE BPPC; RM
-/// Demographic IM `PARTY_RELATIONSHIP`, coded `member_of`; our own design,
+/// Demographic IM `PARTY_RELATIONSHIP`, coded HL7 v3 `RoleClass#MBR`; our own design,
 /// #5575).
 #[tokio::test]
 async fn regional_sharing_admits_a_client_of_a_member_organisation() {

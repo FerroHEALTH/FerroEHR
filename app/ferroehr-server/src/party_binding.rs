@@ -58,7 +58,7 @@ pub enum PartyBindingCmd {
     /// refuses, naming them, the `PERSON`s whose key fails the provenance
     /// rule of `check`.
     Adopt(AdoptArgs),
-    /// Grant an operation of the `ferroehr-operations` terminology to a
+    /// Grant an operation of the `openehr_access` terminology to a
     /// client, on the operator's authority: an `AGENT` carrying the client
     /// identifier, unless an `ACTOR` names the client already, and a `ROLE`
     /// it performs whose capability grants the operation with the scope
@@ -99,7 +99,7 @@ pub struct GrantArgs {
     /// The operation's code, such as `scim_provision`.
     #[arg(long, value_name = "CODE")]
     pub operation: String,
-    /// A scope element of the grant, its code of the operation terminology
+    /// A scope element of the grant, its code of the draft access terminology
     /// and the text it names, such as `binding_issuer=urn:example:login`.
     #[arg(long = "element", value_name = "CODE=TEXT")]
     pub elements: Vec<String>,
@@ -177,14 +177,18 @@ pub fn install(
     let service = service
         .with_import_policy(ImportPolicy::new(logins))
         .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
+        .with_party_namespace(&config.authz.party_binding.namespace)
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,
             config.audit.store.horizon(),
         ));
     let sections = config.authz.party_binding.sections();
-    let mapping = sections
-        .binding_mapping(&key_issuers, &config.authz.rbac.admin_role)
-        .context("compiling [authz.party_binding]")?;
+    let mapping = ferroehr::config::binding::installed_mapping(
+        &sections,
+        &resolved,
+        &config.authz.rbac.admin_role,
+    )
+    .context("compiling [authz.party_binding]")?;
     Ok(service
         .with_mapped_party_templates(sections.mapped_templates())
         .with_binding_mapping(mapping))
@@ -440,7 +444,7 @@ pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<
 pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<Granted> {
     let operation = Operation::of(&args.operation).with_context(|| {
         format!(
-            "{:?} is no operation of the ferroehr-operations terminology",
+            "{:?} is no operation of the openehr_access terminology",
             args.operation
         )
     })?;

@@ -13,9 +13,9 @@ use crate::v1_2::data_types::text::dv_text::DvText;
 #[doc(alias = "ACCESS_OUTCOME")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessOutcome {
-    /// The result, coded in the openEHR Terminology `access outcome` group: granted, partially granted, refused or failed.
+    /// The result, coded in the draft `openehr_access` terminology's `access outcome` group: granted, partially granted, refused or failed.
     pub result: DvCodedText,
-    /// Why the access was refused, partly granted or failed, coded in the openEHR Terminology `access refusal reason` group or a terminology the system names.
+    /// Why the access was refused, partly granted or failed, coded in the draft `openehr_access` terminology's `access refusal reason` group or a terminology the system names.
     pub reason: Option<DvCodedText>,
     /// Free text on the outcome, never clinical content.
     pub description: Option<DvText>,

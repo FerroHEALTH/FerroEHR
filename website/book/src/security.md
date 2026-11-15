@@ -274,7 +274,7 @@ Committing settings of the `access_directives` scheme switches that EHR to
 explicit policy, and those settings **always win over the server default**,
 in both directions. The settings are an `ACCESS_DIRECTIVE_SETTINGS`, a class
 of FerroEHR's draft access control package, and every coded value is a code
-of the access control groups of FerroEHR's terminology `ferroehr-operations`:
+of the access control groups of the draft openEHR access terminology `openehr_access`:
 
 ```json
 {
@@ -292,7 +292,7 @@ of the access control groups of FerroEHR's terminology `ferroehr-operations`:
     "default_access": {
       "_type": "DV_CODED_TEXT", "value": "restricted",
       "defining_code": { "_type": "CODE_PHRASE",
-        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+        "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
         "code_string": "restricted" }
     },
     "gate_keepers": [
@@ -432,15 +432,16 @@ The access evaluator decides every request that reaches an EHR, after
 authentication, the operation grants and the SMART scopes, by a fixed
 procedure over three sets of facts: the person's directives and labels in the
 EHR's `EHR_ACCESS` settings, the caller's facts in the demographic service
-(the operations, sensitivity clearances and permitted purposes its
-capabilities grant, and the care teams it is a member of), and the
-controller's [access policy](operational-policy.md#the-access-policy). The first step that
-refuses decides, and a deny overrides a permit. An EHR id that names no EHR
+(the operations its capabilities grant, the roles of the `ROLE`s it performs
+and the care teams it is a member of), and the controller's
+[access policy](operational-policy.md#the-access-policy) with its
+[rules](operational-policy.md#controller-rules). The first step that refuses
+decides, and a deny overrides a permit. An EHR id that names no EHR
 answers `404` before any step refuses, for every caller under every
 disposition, so a restricted EHR is never told apart from an unknown one
 (EHDS Art. 8). A write is judged on the content it carries, its template,
 root archetype, origins and commit instant, before anything is stored, so a
-write a directive refuses changes nothing:
+write a directive or a rule refuses changes nothing:
 
 | Step | What refuses | Answer |
 |---|---|---|
@@ -450,23 +451,27 @@ write a directive refuses changes nothing:
 | 1. Opt-out (EHDS Art. 10) | an `opt_out` directive, for an access service | `404`, as for an unknown EHR |
 | 2. Restriction (EHDS Art. 8) | a `restriction` directive, for a professional, a system or an access service, over the data it covers | `404`, as for unknown data |
 | 3. Consent deny | any other deny directive that applies; a representative a `delegation` directive names reads only what it permits | `403 refused-consent-denied` |
-| 4. Sensitivity | data whose label or classification the caller is not cleared for, and no applying permit names | `403 refused-sensitivity` |
-| 5. Care relationship | no live care relationship to the subject, where the access policy requires one | `403 refused-no-care-relationship` |
-| 6. Purpose | no declared purpose, or one the caller may not declare, where the access policy requires one | `403 refused-purpose-missing`, `403 refused-purpose-not-permitted` |
-| 7. Default access | the settings' `default_access`, or `authz.rbac.ehr_access_default` for an EHR with none | `403 refused-consent-required` |
+| 4. Controller rule (EHDS Art. 11(3)) | a deny rule of the access policy that applies; no permit of the person lifts it | `403 refused-policy-denied` |
+| 5. Sensitivity | data with a label or classification that no applying permit directive or permit rule names | `403 refused-sensitivity` |
+| 6. Care relationship | no live care relationship to the subject, where the access policy requires one | `403 refused-no-care-relationship` |
+| 7. Purpose | no declared purpose, where the access policy requires one; which purposes a caller may declare is a rule of step 4 | `403 refused-purpose-missing` |
+| 8. Default access | the settings' `default_access`, or `authz.rbac.ehr_access_default` for an EHR with none | `403 refused-consent-required` |
 
 - **Who is bound.** The record's person skips every step on their own EHR
-  (EHDS Art. 3) and is refused at step 0 on any other. A
+  (EHDS Art. 3), so no controller rule limits a patient's own access, and is
+  refused at step 0 on any other. A
   representative reaches only the EHR of the subject it represents, refused
-  at step 0 on any other, and is held there to steps 1 to 3 and skips the
-  others (Art. 4(2)).
+  at step 0 on any other, and is held there to steps 1 to 4 and skips the
+  others (Art. 4(2)): a controller rule can keep, say, a minor's confidential
+  data from a parent.
   An access service is a caller holding an `access_service` grant or a
   verified caller of a `federation` issuer.
 - **When a directive applies.** Every attribute an `applies_to` entry sets
   must hold for the caller: the party (its own `PERSON` or `AGENT`, a care
   team it is a member of, the provider its client acts for, or a `GROUP`
-  that provider is a member of), a role it
-  holds, the `care` relationship (a live care relationship), the
+  that provider is a member of), a role it performs (the coded `name` of a
+  `ROLE` in force it performs, compared by terminology and code; a token's
+  role claims never count), the `care` relationship (a live care relationship), the
   `representative` and `proxy` relationships, or its caller kind. Its
   `operations` (`read`, `write`, `export`, `query`), `purposes` and
   `time_validity` must hold too, and its `data` scopes say which data it
@@ -480,11 +485,21 @@ write a directive refuses changes nothing:
   declares one of `[audit] emergency_purpose_codes` reads an opted-out EHR
   where the directive's `emergency_override` holds, unless it acts for the
   person (Art. 10(2)). The holder of `authz.rbac.emergency_access_role`
-  declaring such a purpose reads data a restriction or a consent deny covers
-  where its `emergency_override` holds, and passes steps 4 to 7 (Art. 11(5)).
+  declaring such a purpose reads data a restriction, a consent deny or a deny
+  rule covers where its `emergency_override` holds, and passes steps 5 to 8
+  (Art. 11(5)).
   A directive whose `emergency_override` is false binds in every emergency,
   as an absolute opt-out of the Member State's law does (recital 55). Each
   such access carries the emergency mark.
+- **Writes.** A write is judged by steps 1 and 2 for the EHR as a whole and
+  by steps 3 to 8 for the version it commits: its template, root archetype,
+  origins and the sensitivities the policy's classifications give it. A
+  restriction and an opt-out restrict who sees data, not its recording
+  (EHDS Art. 8): no write is refused for its content by either, so care is
+  always documented and a write never reveals one, and the data written stay
+  restricted for reading. Where the answer depends on the
+  datum, the first step that refuses that datum answers, for a named object
+  as for a written version, before any step about the EHR alone.
 - **Every decision is a copy.** The settings, the caller facts and the access
   policy are held on each replica and dropped on the notification of the
   commit that changes them, so a decision adds no database transaction. A
@@ -1170,6 +1185,36 @@ URL, so configure it not to log query strings on this route, or not at all.
 FerroPIX as the EHR index provider (IHE PIXm, planned in
 [#3380](https://github.com/FerroHEALTH/FerroEHR/issues/3380)) resolves a
 patient identifier to an EHR without putting it in a FerroEHR URL.
+
+### The subject link in the party domain
+
+The access evaluator needs the `PERSON` of an EHR's subject to read its care
+relationships and its representatives. Under `record.subject_index = "pixm"`
+the EHR names its subject by a pseudonym, so the patient's `PERSON` declares
+it: an element of `PARTY.details` named by the `record_subject` code of
+the draft openEHR access terminology `openehr_access`,
+whose `DV_IDENTIFIER` holds the pseudonym and its namespace. An identifier
+another organisation issued belongs in `details` (RM Demographic IM §2.1.3),
+and the cross-reference stays out of the EHR (RM EHR IM §EHR Status). FerroEHR
+projects it into the party table `binding_record_subject` at the commit of the
+`PERSON`, and each replica holds the resolutions it uses in a bounded cache,
+so a decision on a held subject adds no database transaction, a miss costs one
+indexed read, and no decision calls the identity source.
+
+**This is an accepted trade-off** (owner decision, 2026-11-14,
+[#5634](https://github.com/FerroHEALTH/FerroEHR/issues/5634)). Without the
+element, mapping a pseudonym back to a person needs a steward action in the
+identity source. With it, the party domain maps the pseudonym to the `PERSON`
+for every patient whose `PERSON` carries the element. The clinical side is
+unchanged: it holds the pseudonym alone, and `ferroehr_clinical` still reads
+nothing in `party`. Re-identifying a clinical record still needs both domains,
+so the condition of GDPR Art. 4(5), additional information kept separately,
+holds inside the CDR, and the link sits in the party domain under its own role
+and dump, the "identity cross-reference" BASE Architecture Overview §Anonymity
+describes. Only the `PERSON`s that need care relationships or representation
+need the element, so the exposure is per patient (Art. 25(2)). The evaluator's
+resolution tells the caller nothing, so it writes no `linkage` access event; a
+representative's EHR lookup records one per subject reference it resolves.
 
 ### Declaring the posture
 
