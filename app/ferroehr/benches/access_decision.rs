@@ -41,6 +41,7 @@ use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::ehr::access_settings::EhrAccessSettings;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE;
 use openehr_rm::draft::access_control::terminology::{
     AccessDefault, CallerKind, ForeignCode, OperationClass,
 };
@@ -91,7 +92,7 @@ fn party_ref(id: &str) -> Value {
 /// A directive of `kind` and `effect` holding `members`.
 fn directive(kind: &str, effect: &str, members: &Value) -> Value {
     let mut d = json!({ "_type": "ACCESS_DIRECTIVE", "name": text(kind),
-        "archetype_node_id": "at0001", "kind": term(kind), "effect": term(effect),
+        "archetype_node_id": "at0001", "kind": term(kind), "effect": coded(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, effect),
         "emergency_override": true });
     if let (Some(d), Some(members)) = (d.as_object_mut(), members.as_object()) {
         d.extend(members.clone());
