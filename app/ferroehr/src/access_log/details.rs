@@ -202,8 +202,9 @@ impl Detail {
     }
 }
 
-/// The details tree being written: one element per value, in the order they
-/// are added.
+/// The details tree being written: one element per value, ordered by the
+/// codes of their details and, within one detail, in the order they are
+/// added, so the tree's order follows from its content (#5703).
 #[derive(Debug, Default)]
 pub struct DetailsWriter {
     items: Vec<Item>,
@@ -288,10 +289,12 @@ impl DetailsWriter {
 
     /// The tree of the details added; `None` when none was.
     #[must_use]
-    pub fn finish(self) -> Option<ItemStructure> {
+    pub fn finish(mut self) -> Option<ItemStructure> {
         if self.items.is_empty() {
             return None;
         }
+        self.items
+            .sort_by(|left, right| node(left).cmp(node(right)));
         Some(ItemStructure::ItemTree(Box::new(ItemTree {
             name: text("access details"),
             archetype_node_id: ARCHETYPE.to_owned(),
@@ -307,6 +310,14 @@ impl DetailsWriter {
             feeder_audit: None,
             items: Some(self.items),
         })))
+    }
+}
+
+/// The node id of the element or cluster `item`.
+fn node(item: &Item) -> &str {
+    match item {
+        Item::Element(element) => &element.archetype_node_id,
+        Item::Cluster(cluster) => &cluster.archetype_node_id,
     }
 }
 

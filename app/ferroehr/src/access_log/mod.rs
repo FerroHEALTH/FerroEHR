@@ -24,11 +24,13 @@ pub mod gap;
 pub mod imported;
 #[cfg(feature = "fhir")]
 pub mod projection;
+pub mod publish;
 #[cfg(feature = "fhir")]
 pub mod recorded;
 pub mod retention;
 pub mod schedule;
 pub mod search;
 pub mod store;
+pub mod stored_form;
 pub mod transfer;
 pub mod view;

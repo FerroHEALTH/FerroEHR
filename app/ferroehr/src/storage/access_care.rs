@@ -1,0 +1,231 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The care projection of the clinical domain (#5699).
+//!
+//! `clinical/0047_access_care.sql` holds the care relationships of the party
+//! domain, one row per subject reference and relationship, each reference
+//! held only as its keyed digest, and the keyed digest of each EHR's own
+//! subject reference beside it.
+//!
+//! The care projector writes the rows; a query's access condition probes
+//! them by the EHR row's digest and the caller's team ids. No openEHR spec
+//! governs the projection: our own design.
+
+use sqlx::{PgConnection, PgPool, Row};
+use uuid::Uuid;
+
+use crate::db::acquire::acquire;
+use crate::ids::EhrId;
+use crate::storage::access_projection::EhrSubject;
+use crate::storage::error::StorageError;
+
+/// The text a subject reference is digested from.
+///
+/// It is the namespace and the id joined by U+001F, which no
+/// `OBJECT_REF.namespace` holds (BASE `OBJECT_REF`), the id of a reference in
+/// this CDR's own namespace `own` in lower case, as the container UUID a
+/// `PERSON` is named by is written.
+#[must_use]
+pub fn subject_key(own: &str, subject: &EhrSubject) -> String {
+    if subject.namespace == own {
+        format!("{}\u{1f}{}", subject.namespace, subject.id.to_lowercase())
+    } else {
+        format!("{}\u{1f}{}", subject.namespace, subject.id)
+    }
+}
+
+/// The text a subject reference a `PERSON` is named by is digested from.
+///
+/// It is the reference as the party domain holds it, the namespace and the
+/// id joined by U+001F with the id as written, so it matches an EHR's
+/// [`subject_key`] exactly when the census matched it.
+#[must_use]
+pub fn cared_key(subject: &EhrSubject) -> String {
+    format!("{}\u{1f}{}", subject.namespace, subject.id)
+}
+
+/// One projected care relationship of one subject reference.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CareRow {
+    /// The keyed digest of the subject reference.
+    pub digest: Vec<u8>,
+    /// The `PERSON` under care.
+    pub person: Uuid,
+    /// The care team or unit.
+    pub team: Uuid,
+    /// The first date it holds; `None` when unbounded.
+    pub from: Option<jiff::civil::Date>,
+    /// The first date it no longer holds; `None` when unbounded.
+    pub until: Option<jiff::civil::Date>,
+}
+
+/// The facts revision the projection reflects and the check digest of the
+/// key its digests were taken under, the state row locked until the
+/// transaction on `tx` ends, so one projector writes at a time.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn lock_state(
+    tx: &mut PgConnection,
+) -> Result<(Option<i64>, Option<Vec<u8>>), StorageError> {
+    let row =
+        sqlx::query("SELECT revision, key_check FROM access_care_state WHERE singleton FOR UPDATE")
+            .fetch_one(&mut *tx)
+            .await?;
+    Ok((row.try_get("revision")?, row.try_get("key_check")?))
+}
+
+/// Record that the projection reflects the facts revision `revision`, its
+/// digests taken under the key `key_check` names.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn set_state(
+    tx: &mut PgConnection,
+    revision: i64,
+    key_check: &[u8],
+) -> Result<(), StorageError> {
+    sqlx::query(
+        "UPDATE access_care_state SET revision = $1, key_check = $2, updated_at = now() \
+         WHERE singleton",
+    )
+    .bind(revision)
+    .bind(key_check)
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+/// Empty the projection and every EHR row's digest, before a projection under
+/// another key or from no revision is written whole.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn clear(tx: &mut PgConnection) -> Result<(), StorageError> {
+    sqlx::query("DELETE FROM access_care")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("UPDATE ehr SET subject_digest = NULL WHERE subject_digest IS NOT NULL")
+        .execute(&mut *tx)
+        .await?;
+    Ok(())
+}
+
+/// Replace the rows of each of `persons` by `rows`, in one transaction.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn replace(
+    tx: &mut PgConnection,
+    persons: &[Uuid],
+    rows: &[CareRow],
+) -> Result<(), StorageError> {
+    sqlx::query("DELETE FROM access_care WHERE person_id = ANY($1)")
+        .bind(persons)
+        .execute(&mut *tx)
+        .await?;
+    if rows.is_empty() {
+        return Ok(());
+    }
+    let digests: Vec<&[u8]> = rows.iter().map(|row| row.digest.as_slice()).collect();
+    let people: Vec<Uuid> = rows.iter().map(|row| row.person).collect();
+    let teams: Vec<Uuid> = rows.iter().map(|row| row.team).collect();
+    let froms: Vec<Option<jiff_sqlx::Date>> = rows
+        .iter()
+        .map(|row| row.from.map(jiff_sqlx::Date::from))
+        .collect();
+    let untils: Vec<Option<jiff_sqlx::Date>> = rows
+        .iter()
+        .map(|row| row.until.map(jiff_sqlx::Date::from))
+        .collect();
+    sqlx::query(
+        "INSERT INTO access_care (subject_digest, person_id, team_id, care_from, care_until) \
+         SELECT * FROM unnest($1::bytea[], $2::uuid[], $3::uuid[], $4::date[], $5::date[])",
+    )
+    .bind(&digests)
+    .bind(&people)
+    .bind(&teams)
+    .bind(&froms)
+    .bind(&untils)
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+/// Delete the rows of each of `persons`, the erasure of a `PERSON` removing
+/// its care in the flow that erases it.
+///
+/// # Errors
+/// [`StorageError::Acquire`] when no connection is free, and
+/// [`StorageError::Database`] on a driver failure.
+pub async fn forget(pool: &PgPool, persons: &[Uuid]) -> Result<(), StorageError> {
+    if persons.is_empty() {
+        return Ok(());
+    }
+    sqlx::query("DELETE FROM access_care WHERE person_id = ANY($1)")
+        .bind(persons)
+        .execute(&mut *acquire(pool).await?)
+        .await?;
+    Ok(())
+}
+
+/// Up to `limit` EHRs with a subject reference and no digest, each with that
+/// reference.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn undigested(
+    conn: &mut PgConnection,
+    limit: i64,
+) -> Result<Vec<(EhrId, EhrSubject)>, StorageError> {
+    let rows: Vec<(Uuid, String, String)> = sqlx::query_as(
+        "SELECT id, subject_namespace, subject_id FROM ehr \
+         WHERE subject_digest IS NULL AND subject_namespace IS NOT NULL \
+         AND subject_id IS NOT NULL ORDER BY id LIMIT $1",
+    )
+    .bind(limit)
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|(id, namespace, subject)| (EhrId(id), EhrSubject::new(namespace, subject)))
+        .collect())
+}
+
+/// Write each EHR's digest, and answer the number of rows written.
+///
+/// A row whose reference is no longer the one read keeps the digest the
+/// write of the new reference gave it.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn set_digests(
+    conn: &mut PgConnection,
+    digests: &[(EhrId, EhrSubject, Vec<u8>)],
+) -> Result<u64, StorageError> {
+    let ids: Vec<Uuid> = digests.iter().map(|(ehr, _, _)| ehr.0).collect();
+    let namespaces: Vec<&str> = digests
+        .iter()
+        .map(|(_, subject, _)| subject.namespace.as_str())
+        .collect();
+    let subjects: Vec<&str> = digests
+        .iter()
+        .map(|(_, subject, _)| subject.id.as_str())
+        .collect();
+    let values: Vec<&[u8]> = digests.iter().map(|(_, _, d)| d.as_slice()).collect();
+    let written = sqlx::query(
+        "UPDATE ehr e SET subject_digest = t.digest \
+         FROM unnest($1::uuid[], $2::text[], $3::text[], $4::bytea[]) \
+              AS t(id, namespace, subject, digest) \
+         WHERE e.id = t.id AND e.subject_namespace = t.namespace \
+         AND e.subject_id = t.subject AND e.subject_digest IS NULL",
+    )
+    .bind(&ids)
+    .bind(&namespaces)
+    .bind(&subjects)
+    .bind(&values)
+    .execute(&mut *conn)
+    .await?;
+    Ok(written.rows_affected())
+}

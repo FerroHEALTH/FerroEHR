@@ -52,9 +52,9 @@ pub const ACCESS_EMERGENCY_OVERRIDES: &str = "access_emergency_overrides";
 pub const ACCESS_LOG_ENTRIES: &str = "access_log_entries";
 /// Access-log append latency, one transaction's entries (`outcome`).
 pub const ACCESS_LOG_APPEND_DURATION: &str = "access_log_append_duration";
-/// Access-log link signing latency, one append's links (`outcome`).
+/// Access-log checkpoint signing latency, one append's checkpoint (`outcome`).
 pub const ACCESS_LOG_SIGN_DURATION: &str = "access_log_sign_duration";
-/// Checkpoint and seal runs over a chain (`chain`, `outcome`).
+/// Scheduled seal runs over the system chain (`chain`, `outcome`).
 pub const AUDIT_SEAL_DURATION: &str = "audit_seal_duration";
 /// The Unix time of a chain's newest successful seal run (`chain`).
 pub const AUDIT_SEAL_LAST_SUCCESS: &str = "audit_seal_last_success";
@@ -154,9 +154,9 @@ pub struct AccessPathMetrics {
     pub log_entries: Counter<u64>,
     /// Access-log append latency, seconds.
     pub log_append_duration: Histogram<f64>,
-    /// Access-log link signing latency, seconds.
+    /// Access-log checkpoint signing latency, seconds.
     pub log_sign_duration: Histogram<f64>,
-    /// Checkpoint and seal runs, seconds.
+    /// Scheduled seal runs, seconds.
     pub seal_duration: Histogram<f64>,
     /// The Unix time of each chain's newest successful seal run.
     pub seal_last_success: Gauge<f64>,
@@ -224,13 +224,12 @@ impl AccessPathMetrics {
             ),
             log_sign_duration: make.histogram(
                 ACCESS_LOG_SIGN_DURATION,
-                "Access-log link signing latency per append (outcome = ok | failed)",
+                "Access-log checkpoint signing latency per append (outcome = ok | failed)",
                 PATH_BUCKETS,
             ),
             seal_duration: make.histogram(
                 AUDIT_SEAL_DURATION,
-                "Checkpoint and seal runs (chain = access_log | system, \
-                 outcome = sealed | empty | failed)",
+                "Scheduled seal runs (chain = system, outcome = sealed | empty | failed)",
                 SCHEDULED_BUCKETS,
             ),
             seal_last_success: make.timestamp(

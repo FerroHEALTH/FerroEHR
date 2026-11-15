@@ -57,23 +57,26 @@ pub async fn insert_ehr(
     tx: &mut PgConnection,
     ehr_id: EhrId,
     system_id: &str,
-    subject_id: Option<&str>,
-    subject_namespace: Option<&str>,
-    is_queryable: bool,
-    is_modifiable: bool,
+    columns: PromotedColumns<'_>,
 ) -> Result<Option<jiff::Timestamp>, StorageError> {
+    let PromotedColumns {
+        subject_id,
+        subject_namespace,
+        ..
+    } = columns;
     let row = sqlx::query(
         "INSERT INTO ehr (id, system_id, subject_id, subject_namespace, is_queryable, \
-         is_modifiable) \
-         VALUES ($1, $2, $3, $4, $5, $6) \
+         is_modifiable, subject_digest) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7) \
          ON CONFLICT (id) DO NOTHING RETURNING time_created",
     )
     .bind(ehr_id)
     .bind(system_id)
     .bind(subject_id)
     .bind(subject_namespace)
-    .bind(is_queryable)
-    .bind(is_modifiable)
+    .bind(columns.is_queryable)
+    .bind(columns.is_modifiable)
+    .bind(columns.subject_digest)
     .fetch_optional(&mut *tx)
     .await
     .map_err(|e| {
@@ -680,6 +683,10 @@ pub struct PromotedColumns<'a> {
     pub is_queryable: bool,
     /// `EHR_STATUS.is_modifiable`.
     pub is_modifiable: bool,
+    /// The keyed digest of the subject reference the care projection is
+    /// matched by (`clinical/0047_access_care.sql`); `None` without a subject
+    /// or while identifier protection is off.
+    pub subject_digest: Option<&'a [u8]>,
 }
 
 /// Write the promoted `ehr` columns of `ehr_id` on the status commit's
@@ -697,7 +704,7 @@ pub async fn update_promoted_columns(
     // the EHR's access facts, whose care relationships are its subject's.
     sqlx::query(
         "WITH changed AS (UPDATE ehr SET subject_id = $2, subject_namespace = $3, \
-         is_queryable = $4, is_modifiable = $5 WHERE id = $1 \
+         is_queryable = $4, is_modifiable = $5, subject_digest = $7 WHERE id = $1 \
          RETURNING OLD.subject_id IS DISTINCT FROM NEW.subject_id AS moved) \
          SELECT pg_notify($6, $1::text) FROM changed WHERE moved",
     )
@@ -707,6 +714,7 @@ pub async fn update_promoted_columns(
     .bind(columns.is_queryable)
     .bind(columns.is_modifiable)
     .bind(crate::storage::access_projection::CHANNEL)
+    .bind(columns.subject_digest)
     .execute(tx)
     .await
     .map_err(|e| match &e {

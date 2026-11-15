@@ -19,8 +19,10 @@ use sqlx::postgres::PgRow;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::digest::sha256_hex;
 use crate::system_log::AuditError;
 use crate::system_log::store::AuditStore;
+use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
 
 /// One of the two hash chains of the audit store.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -60,7 +62,7 @@ impl AuditChain {
             }
             Self::AccessLog => {
                 "SELECT chain_seq, record_id, recorded_at, finding \
-                 FROM audit.verify_access_log_chain_incremental($1)"
+                 FROM audit.verify_access_log_chain_incremental($1, $2, $3)"
             }
         }
     }
@@ -119,10 +121,24 @@ impl AuditStore {
         chain: AuditChain,
         scope: VerifyScope,
     ) -> Result<Vec<AuditChainFinding>, AuditError> {
-        let rows = sqlx::query(chain.incremental())
-            .bind(scope == VerifyScope::Full)
-            .fetch_all(&mut *acquire(&self.pool).await?)
-            .await?;
+        let full = scope == VerifyScope::Full;
+        let rows = match chain {
+            AuditChain::System => {
+                sqlx::query(chain.incremental())
+                    .bind(full)
+                    .fetch_all(&mut *acquire(&self.pool).await?)
+                    .await?
+            }
+            AuditChain::AccessLog => {
+                let (through, modified) = self.access_log_contents(full).await?;
+                sqlx::query(chain.incremental())
+                    .bind(full)
+                    .bind(through)
+                    .bind(&modified)
+                    .fetch_all(&mut *acquire(&self.pool).await?)
+                    .await?
+            }
+        };
         rows.iter().map(|row| finding(chain, row)).collect()
     }
 
@@ -144,6 +160,87 @@ impl AuditStore {
 }
 
 /// The finding about `chain` a verification row holds.
+/// How many entries one page of the content check reads.
+const CONTENT_PAGE: i64 = 1000;
+
+impl AuditStore {
+    /// The content check of the access log the database cannot run, since
+    /// only the server writes an entry's canonical form (#5703): each entry
+    /// after the verification cursor, or every entry when `full`, joined from
+    /// its row and shared parts and digested again. Returns the newest
+    /// position the check covered, `None` for an empty log, and the positions
+    /// whose digest differs from their link's `content_digest`. It writes
+    /// nothing, so it also serves a check that moves no cursor.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when a statement fails.
+    pub async fn access_log_contents(
+        &self,
+        full: bool,
+    ) -> Result<(Option<i64>, Vec<i64>), AuditError> {
+        let mut conn = acquire(&self.pool).await?;
+        let through: Option<i64> =
+            sqlx::query_scalar("SELECT max(chain_seq) FROM audit.access_log_record")
+                .fetch_one(&mut *conn)
+                .await?;
+        let Some(through) = through else {
+            return Ok((None, Vec::new()));
+        };
+        let mut after: i64 = if full {
+            0
+        } else {
+            sqlx::query_scalar(
+                "SELECT coalesce((SELECT through_seq FROM audit.access_log_chain_verified \
+                 WHERE singleton), 0)",
+            )
+            .fetch_one(&mut *conn)
+            .await?
+        };
+        let mut modified = Vec::new();
+        loop {
+            let rows = sqlx::query(
+                "SELECT r.chain_seq, r.content, sh.content AS shared, r.content_digest \
+                 FROM audit.access_log_record r \
+                 LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
+                 WHERE r.chain_seq > $1 AND r.chain_seq <= $2 \
+                 AND r.record_type = 'ACCESS_LOG_ENTRY' ORDER BY r.chain_seq LIMIT $3",
+            )
+            .bind(after)
+            .bind(through)
+            .bind(CONTENT_PAGE)
+            .fetch_all(&mut *conn)
+            .await?;
+            let Some(last) = rows.last() else {
+                return Ok((Some(through), modified));
+            };
+            after = last.try_get("chain_seq")?;
+            for row in &rows {
+                if !content_intact(row)? {
+                    modified.push(row.try_get("chain_seq")?);
+                }
+            }
+        }
+    }
+}
+
+/// Whether the entry `row` stores still digests to its `content_digest`; an
+/// entry whose parts no longer read as JSON does not.
+fn content_intact(row: &PgRow) -> Result<bool, AuditError> {
+    let parse = |text: &str| serde_json::from_str::<serde_json::Value>(text);
+    let content: String = row.try_get("content")?;
+    let shared: Option<String> = row.try_get("shared")?;
+    let recorded: String = row.try_get("content_digest")?;
+    // NOTE: our own design; a part that no longer parses was changed after it was written.
+    let (Ok(own), Ok(shared)) = (parse(&content), shared.as_deref().map(parse).transpose()) else {
+        return Ok(false);
+    };
+    let joined = crate::access_log::stored_form::join(own, shared);
+    let Ok(form) = canonical_json(&joined) else {
+        return Ok(false);
+    };
+    Ok(sha256_hex(&form) == recorded)
+}
+
 fn finding(chain: AuditChain, row: &PgRow) -> Result<AuditChainFinding, AuditError> {
     Ok(AuditChainFinding {
         chain,

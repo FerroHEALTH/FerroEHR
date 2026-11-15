@@ -437,3 +437,24 @@ Only the demographic writer role reaches the sealed value. The read-only twin
 sees that a party holds a protected identifier and which party it is, and is
 refused the ciphertext and the digest by column-level grant; the clinical roles
 are refused the table outright.
+
+### The care projection
+
+The same root key also drives the care projection the access evaluator reads.
+A clinical query that names no EHR asks, for each EHR it reads, whether one of
+your care teams cares for the EHR's subject. With protection on, each replica
+keeps a copy of the care relationships in the clinical database
+(`clinical.access_care`). It holds only the patient's and the team's container
+UUIDs, the care dates, and an HMAC-SHA-256 digest of each subject reference
+under the clinical lookup subkey. The `ehr` row holds the same digest of its
+own subject. The key never reaches the database, so the digests name nobody to
+a reader of the database, a backup or a replica.
+
+A replica reads the projection only while it is as recent as the care facts
+the replica holds. A discharge, a removed membership or an erasure is never
+granted from a stale row: until the projector catches up, the query sends the
+list of every patient in your teams' care, as it did before. With protection
+off, the projection is not written and every query sends that list, which
+grows with the patients in your teams' care, so turn protection on for a
+deployment that holds many. Rotating the key rebuilds the projection and the
+digests on the next projector run.

@@ -560,7 +560,7 @@
         ],
         "responses": {
           "200": {
-            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order. `gaps`: each run of folded tombstones that holds a position of the span, with the positions it held, the `link` of its last record, that link's `signature` and the `grounds` of its tombstones.",
+            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order. `gaps`: each run of folded tombstones that holds a position of the span, with the positions it held, the `link` of its last record and the `grounds` of its tombstones.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -704,11 +704,11 @@
         "tags": [
           "admin-access-log"
         ],
-        "summary": "Seal the head of the access log in a signed checkpoint\n(`POST /admin/access-log/checkpoint`). **Our own extension.**",
+        "summary": "The checkpoint of the head of the access log, sealed when no append\nsealed it (`POST /admin/access-log/checkpoint`). **Our own\nextension.**",
         "operationId": "admin_seal_access_log_checkpoint",
         "responses": {
           "200": {
-            "description": "The checkpoint of the head of the chain, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`. A head already sealed answers its stored checkpoint.",
+            "description": "The checkpoint of the head of the chain, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`. Every append made while the keyring holds a key seals itself, so a head already sealed answers its stored checkpoint.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -963,11 +963,11 @@
           "admin-access-log"
         ],
         "summary": "Verify the access log against its newest checkpoint\n(`POST /admin/access-log/verify`). **Our own extension.**",
-        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked, and every log imported from another system is verified\nagainst each of its checkpoints. A finding is not a request failure.",
+        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof and the link it seals are checked, and every log\nimported from another system is verified against each of its\ncheckpoints. A finding is not a request failure.",
         "operationId": "admin_verify_access_log",
         "responses": {
           "200": {
-            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain, `imported` each failure of a log imported from another system against one of its checkpoints.",
+            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint, `chain` each damaged record or boundary of the chain, `imported` each failure of a log imported from another system against one of its checkpoints.",
             "content": {
               "application/json": {
                 "schema": {},
@@ -27781,7 +27781,7 @@
     },
     {
       "name": "admin-access-log",
-      "description": "The review and the integrity of the access log: list its records across EHRs, read the links of a span of its chain and a stored checkpoint, seal its head in a checkpoint signed with the keyring's OpenPGP key, verify the chain and the signatures against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."
+      "description": "The review and the integrity of the access log: list its records across EHRs, read the links of a span of its chain and a stored checkpoint, seal its head in a checkpoint signed with the keyring's OpenPGP key when no append sealed it, verify the chain against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."
     },
     {
       "name": "admin-identifiers",

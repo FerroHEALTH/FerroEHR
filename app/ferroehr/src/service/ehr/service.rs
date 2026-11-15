@@ -97,14 +97,18 @@ impl FerroEhrService {
             subject_namespace.map(str::to_owned),
             subject_id.map(str::to_owned),
         );
+        let digest = self.care_subject_digest(subject.as_ref());
         let time_created = match crate::storage::ehr_repo::insert_ehr(
             &mut tx,
             ehr_id,
             &self.effective_system_id(),
-            subject_id,
-            subject_namespace,
-            is_queryable,
-            is_modifiable,
+            crate::storage::ehr_repo::PromotedColumns {
+                subject_id,
+                subject_namespace,
+                is_queryable,
+                is_modifiable,
+                subject_digest: digest.as_deref(),
+            },
         )
         .await
         {
