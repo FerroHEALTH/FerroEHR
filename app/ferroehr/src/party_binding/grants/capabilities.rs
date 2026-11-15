@@ -293,7 +293,7 @@ impl Capabilities {
         self
     }
 
-    /// The caller's clearances, permitted purposes and care teams in force
+    /// The caller's roles and care teams in force
     /// on the request.
     #[must_use]
     pub fn facts(&self) -> &CallerFacts {

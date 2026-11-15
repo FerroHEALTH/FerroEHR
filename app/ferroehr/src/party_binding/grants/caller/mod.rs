@@ -4,12 +4,14 @@
 //! The caller facts: what the access evaluator reads about a caller beside
 //! its grants, and the care relationships of a subject.
 //!
-//! A `CAPABILITY` clears a sensitivity, and lets its holder declare a
-//! purpose of use, by an element anywhere in its `credentials` named by the
-//! code [`SensitivityClearance`] or [`PermittedPurpose`] whose value is a
-//! `DV_CODED_TEXT` of the terminology the jurisdiction names (RM demographic
-//! `org.openehr.rm.demographic.capability.adoc`: `credentials` are "the
-//! qualifications of the performer of the role for this capability"). A
+//! A `ROLE` whose `name` is a `DV_CODED_TEXT` of a terminology the
+//! jurisdiction names is a role its `performer` holds while the `ROLE` is in
+//! force: the role's type is its name (RM demographic
+//! `org.openehr.rm.demographic.party.adoc`, `PARTY.type()` with the invariant
+//! `type = name`, and `org.openehr.rm.demographic.role.adoc`). The rules of
+//! the controller's `ACCESS_POLICY` name callers by such a role
+//! (`ACCESS_ACTOR_SCOPE.role`), so the demographic service is the one source
+//! of who holds which role. A
 //! `PARTY_RELATIONSHIP` of a `PERSON` whose `name` or `details` carry a code
 //! of [`CareRelationship`] is a care relationship
 //! (`org.openehr.rm.demographic.party_relationship.adoc`: `source`, `target`,
@@ -31,9 +33,9 @@
 //! [`store`] writes the facts in each commit's transaction and stamps the
 //! parties whose facts changed, and [`crate::party_binding::grants::live`]
 //! holds them on each replica beside the grants, so a request reads them with
-//! no transaction of its own. Nothing is read by archetype: every fact is
-//! read by its code. No openEHR spec gives a capability or a relationship an
-//! access meaning: our own design.
+//! no transaction of its own. Nothing is read by archetype: a role is read by
+//! its coded name, every other fact by its code. No openEHR spec gives a role
+//! or a relationship an access meaning: our own design (#5621).
 
 #![expect(
     clippy::disallowed_types,
@@ -50,23 +52,22 @@ use crate::error::{ServiceError, Violation};
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::capabilities::Capabilities;
-use crate::party_binding::grants::derive::{Bound, GrantFacts, bounds, walk};
+use crate::party_binding::grants::derive::{Bound, GrantFacts};
 use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::grants::store::Dates;
-use crate::party_binding::policy_mark::{TERMINOLOGY, carries, coded};
+use crate::party_binding::policy_mark::carries;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, ForeignCode, ForeignKind, PermittedPurpose, SensitivityClearance, Term,
+    CareRelationship, ForeignCode, ForeignKind, Term,
 };
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
-/// What a caller fact is, by the code it is read by.
+/// What a caller fact is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum FactKind {
-    /// A sensitivity the capability clears.
-    Clearance,
-    /// A purpose of use the capability lets its holder declare.
-    Purpose,
+    /// The performer holds the role the `ROLE`'s coded name names.
+    Role,
     /// The professional is a member of the care team.
     MemberOf,
     /// The patient is in the care of the team or unit.
@@ -75,31 +76,22 @@ pub(crate) enum FactKind {
 
 impl FactKind {
     /// Every kind, in contract order.
-    const ALL: [Self; 4] = [
-        Self::Clearance,
-        Self::Purpose,
-        Self::MemberOf,
-        Self::UnderCareOf,
-    ];
+    const ALL: [Self; 3] = [Self::Role, Self::MemberOf, Self::UnderCareOf];
 
-    /// The `(terminology id, code)` the kind is read by.
-    fn term(self) -> (&'static str, &'static str) {
+    /// The care relationship term the kind is read by; `None` for a role,
+    /// which the `ROLE`'s coded name names in the jurisdiction's terminology.
+    pub(crate) fn care(self) -> Option<CareRelationship> {
         match self {
-            Self::Clearance => SensitivityClearance::SensitivityClearance.phrase(),
-            Self::Purpose => PermittedPurpose::PermittedPurpose.phrase(),
-            Self::MemberOf => CareRelationship::MemberOf.phrase(),
-            Self::UnderCareOf => CareRelationship::UnderCareOf.phrase(),
+            Self::Role => None,
+            Self::MemberOf => Some(CareRelationship::MemberOf),
+            Self::UnderCareOf => Some(CareRelationship::UnderCareOf),
         }
     }
 
-    /// The terminology id of the code the kind is read by.
-    pub(crate) fn terminology(self) -> &'static str {
-        self.term().0
-    }
-
-    /// The code the kind is read by, as the side table stores it.
+    /// The kind as the side table stores it: `role` for a role, and the code
+    /// a care relationship is read by.
     pub(crate) fn code(self) -> &'static str {
-        self.term().1
+        self.care().map_or("role", |care| care.code())
     }
 
     /// The kind stored as `code`, `None` for another code.
@@ -108,12 +100,20 @@ impl FactKind {
     }
 }
 
-/// What one fact names: the `CODE_PHRASE` of a clearance or a purpose, or the
-/// container a care relationship targets.
+impl From<CareRelationship> for FactKind {
+    fn from(term: CareRelationship) -> Self {
+        match term {
+            CareRelationship::MemberOf => Self::MemberOf,
+            CareRelationship::UnderCareOf => Self::UnderCareOf,
+        }
+    }
+}
+
+/// What one fact names: the `CODE_PHRASE` of a role, or the container a care
+/// relationship targets.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum FactValue {
-    /// A sensitivity or purpose code of the terminology the jurisdiction
-    /// names.
+    /// A role code of the terminology the jurisdiction names.
     Code(ForeignCode),
     /// The care team `GROUP` or the organisational unit.
     Team(Uuid),
@@ -122,64 +122,53 @@ pub(crate) enum FactValue {
 /// One caller fact a body holds.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct CallerFact {
-    /// The capability's or the relationship's position.
+    /// The relationship's position; `0` for a role.
     pub(crate) ordinal: i32,
     /// What the fact is.
     pub(crate) kind: FactKind,
     /// What it names.
     pub(crate) value: FactValue,
-    /// The capability's or the relationship's `time_validity`.
+    /// The relationship's `time_validity`; `None` for a role, which holds
+    /// while its `ROLE` does.
     pub(crate) validity: Option<Value>,
-    /// The `Not before` bound of a capability's credentials.
+    /// Always [`Bound::Open`]: no fact has a credentials bound.
     pub(crate) not_before: Bound,
-    /// The `Not after` bound of a capability's credentials.
+    /// Always [`Bound::Open`].
     pub(crate) not_after: Bound,
 }
 
-/// Pushes onto `facts` the clearances and permitted purposes `capability`, at
-/// `ordinal` of a `ROLE`, holds, and why one cannot be read.
-pub(crate) fn qualifiers(ordinal: i32, capability: &Value, facts: &mut GrantFacts) {
-    let Some(credentials) = capability.get("credentials") else {
+/// Pushes onto `facts` the role `body`, a `ROLE`, names: its `name` when that
+/// is a `DV_CODED_TEXT` of a terminology the jurisdiction names. A `ROLE`
+/// named in text, or by a code of [`crate::party_binding::policy_mark::TERMINOLOGY`], which holds no role,
+/// names none.
+pub(crate) fn role(body: &Value, facts: &mut GrantFacts) {
+    let Some(name) = body
+        .get("name")
+        .filter(|name| name.get("_type").and_then(Value::as_str) == Some("DV_CODED_TEXT"))
+    else {
         return;
     };
-    let (not_before, not_after) = bounds(credentials);
-    walk(credentials, &mut |node| {
-        let (kind, foreign) = match node.get("name").and_then(coded) {
-            Some(code) if SensitivityClearance::read(TERMINOLOGY, code).is_ok() => {
-                (FactKind::Clearance, ForeignKind::Sensitivity)
-            }
-            Some(code) if PermittedPurpose::read(TERMINOLOGY, code).is_ok() => {
-                (FactKind::Purpose, ForeignKind::Purpose)
-            }
-            _ => return,
-        };
-        match foreign_code(foreign, node.get("value")) {
-            Ok(code) => facts.facts.push(CallerFact {
-                ordinal,
-                kind,
-                value: FactValue::Code(code),
-                validity: capability.get("time_validity").cloned(),
-                not_before,
-                not_after,
-            }),
-            Err(why) => facts.unread.push(format!(
-                "ROLE.capabilities[{ordinal}].credentials: the {}::{} element {why}",
-                kind.terminology(),
-                kind.code()
-            )),
+    let coded: DvCodedText = match openehr_its::json::from_canonical_value(name) {
+        Ok(coded) => coded,
+        Err(error) => {
+            facts.unread.push(format!(
+                "ROLE.name: the DV_CODED_TEXT does not read: {error}"
+            ));
+            return;
         }
-    });
-}
-
-/// The foreign code of `value`, the value of a clearance or purpose element:
-/// a `DV_CODED_TEXT` of the terminology the jurisdiction names, which no
-/// code of [`TERMINOLOGY`] is.
-fn foreign_code(kind: ForeignKind, value: Option<&Value>) -> Result<ForeignCode, String> {
-    let coded = value
-        .filter(|value| value.get("_type").and_then(Value::as_str) == Some("DV_CODED_TEXT"))
-        .and_then(|value| openehr_its::json::from_canonical_value(value).ok())
-        .ok_or_else(|| format!("holds no DV_CODED_TEXT of the {kind} terminology"))?;
-    ForeignCode::read(kind, &coded).map_err(|refused| format!("holds no {kind}: {refused}"))
+    };
+    // NOTE: our own design (#5621), a rule names a role only in a jurisdiction's terminology,
+    // so a ROLE named by an operation code is legitimately no role a rule can match.
+    if let Ok(code) = ForeignCode::read(ForeignKind::Role, &coded) {
+        facts.facts.push(CallerFact {
+            ordinal: 0,
+            kind: FactKind::Role,
+            value: FactValue::Code(code),
+            validity: None,
+            not_before: Bound::Open,
+            not_after: Bound::Open,
+        });
+    }
 }
 
 /// Pushes onto `facts` the care relationships `body`, a party of `kind`,
@@ -189,21 +178,22 @@ fn foreign_code(kind: ForeignKind, value: Option<&Value>) -> Result<ForeignCode,
 /// the providers of a region.
 pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
     if kind == Kind::PartyRelationship {
-        if let Some(care) = care_kind(body) {
+        if let Some(term) = care_kind(body) {
             facts.unread.push(format!(
                 "a {}::{} relationship is held in its source PERSON's \
                  relationships, never as a PARTY_RELATIONSHIP of its own",
-                care.terminology(),
-                care.code()
+                term.terminology(),
+                term.code()
             ));
         }
         return;
     }
     let held = body.get("relationships").and_then(Value::as_array);
     for (ordinal, relationship) in held.into_iter().flatten().enumerate() {
-        let Some(care) = care_kind(relationship) else {
+        let Some(code) = care_kind(relationship) else {
             continue;
         };
+        let care = FactKind::from(code);
         let target = relationship
             .pointer("/target/id/value")
             .and_then(Value::as_str)
@@ -231,18 +221,19 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
         };
         facts.unread.push(format!(
             "relationships[{ordinal}]: a {}::{} relationship {refusal}",
-            care.terminology(),
-            care.code()
+            code.terminology(),
+            code.code()
         ));
     }
 }
 
 /// The care relationship code `relationship` carries in its `name` or its
 /// `details`, the first of [`CareRelationship`] in contract order.
-fn care_kind(relationship: &Value) -> Option<FactKind> {
-    [FactKind::MemberOf, FactKind::UnderCareOf]
-        .into_iter()
-        .find(|kind| carries(relationship, kind.terminology(), kind.code()))
+fn care_kind(relationship: &Value) -> Option<CareRelationship> {
+    CareRelationship::ALL
+        .iter()
+        .copied()
+        .find(|term| carries(relationship, term.terminology(), term.code()))
 }
 
 /// Whether the stored `PERSON` bodies `before` and `after`, two versions of
@@ -274,9 +265,9 @@ pub(crate) fn only_care_differs(before: &str, after: &str) -> Result<bool, Stora
 }
 
 /// Refuses the committed body `facts` when a caller fact it carries cannot be
-/// read: a clearance or purpose element whose value is no code of the
-/// jurisdiction's terminology, and a care relationship that is not a
-/// `PERSON`'s or names no target of this store.
+/// read: a `ROLE` name that is a `DV_CODED_TEXT` that does not read, and a
+/// care relationship that is not a `PERSON`'s or names no target of this
+/// store.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] (`422`) naming the first such fact.
@@ -350,10 +341,10 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
         "this version changes the care relationships of party {party} ({}::{} or {}::{}): only \
          a caller holding the {} grant, such as the care delivery environment's ADT system, or \
          an administrator writes them",
-        FactKind::MemberOf.terminology(),
-        FactKind::MemberOf.code(),
-        FactKind::UnderCareOf.terminology(),
-        FactKind::UnderCareOf.code(),
+        CareRelationship::MemberOf.terminology(),
+        CareRelationship::MemberOf.code(),
+        CareRelationship::UnderCareOf.terminology(),
+        CareRelationship::UnderCareOf.code(),
         Operation::WriteCareRelationship
     )))
 }
@@ -436,36 +427,26 @@ impl CareTeam {
 
 /// What the access evaluator reads about one caller beside its grants.
 ///
-/// They are the sensitivities and purposes the capabilities in force clear
-/// and permit, the care teams the caller is a member of on the request's
-/// date, and the `GROUP`s the provider a client acts for is a member of on
-/// that date.
+/// They are the roles of the `ROLE`s in force the caller performs, the care
+/// teams it is a member of on the request's date, and the `GROUP`s the
+/// provider a client acts for is a member of on that date.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CallerFacts {
-    clearances: Vec<ForeignCode>,
-    purposes: Vec<ForeignCode>,
+    roles: Vec<ForeignCode>,
     care_teams: Vec<CareTeam>,
     provider_groups: Vec<Uuid>,
 }
 
 impl CallerFacts {
-    /// The facts holding `clearances`, `purposes` and `care_teams`, each
-    /// sorted and distinct.
+    /// The facts holding `roles` and `care_teams`, each sorted and distinct.
     #[must_use]
-    pub fn new(
-        mut clearances: Vec<ForeignCode>,
-        mut purposes: Vec<ForeignCode>,
-        mut care_teams: Vec<CareTeam>,
-    ) -> Self {
-        for codes in [&mut clearances, &mut purposes] {
-            codes.sort();
-            codes.dedup();
-        }
+    pub fn new(mut roles: Vec<ForeignCode>, mut care_teams: Vec<CareTeam>) -> Self {
+        roles.sort();
+        roles.dedup();
         care_teams.sort();
         care_teams.dedup();
         Self {
-            clearances,
-            purposes,
+            roles,
             care_teams,
             provider_groups: Vec::new(),
         }
@@ -481,31 +462,18 @@ impl CallerFacts {
         self
     }
 
-    /// The sensitivity codes the caller's capabilities in force clear.
+    /// The roles of the `ROLE`s in force the caller performs.
     #[must_use]
-    pub fn clearances(&self) -> &[ForeignCode] {
-        &self.clearances
+    pub fn roles(&self) -> &[ForeignCode] {
+        &self.roles
     }
 
-    /// Whether a capability in force clears `sensitivity`, compared by
-    /// terminology id and code.
+    /// Whether the caller performs a `ROLE` in force named `role`, compared
+    /// by terminology id and code (`ACCESS_ACTOR_SCOPE.role`).
     #[must_use]
-    pub fn clears(&self, sensitivity: &ForeignCode) -> bool {
-        self.clearances.binary_search(sensitivity).is_ok()
-    }
-
-    /// The purposes of use the caller's capabilities in force let it
-    /// declare.
-    #[must_use]
-    pub fn purposes(&self) -> &[ForeignCode] {
-        &self.purposes
-    }
-
-    /// Whether a capability in force lets the caller declare `purpose`,
-    /// compared by terminology id and code.
-    #[must_use]
-    pub fn permits(&self, purpose: &ForeignCode) -> bool {
-        self.purposes.binary_search(purpose).is_ok()
+    pub fn performs(&self, role: &DvCodedText) -> bool {
+        ForeignCode::read(ForeignKind::Role, role)
+            .is_ok_and(|code| self.roles.binary_search(&code).is_ok())
     }
 
     /// The care teams the caller is a member of on the request's date.
@@ -528,6 +496,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+    use crate::party_binding::policy_mark::TERMINOLOGY;
 
     fn coded(terminology: &str, code: &str) -> Value {
         json!({"_type": "DV_CODED_TEXT", "value": code,
@@ -570,27 +539,16 @@ mod tests {
     }
 
     #[test]
-    fn a_capability_clears_and_permits_by_coded_element_anywhere_in_its_credentials() {
-        let body = json!({
-            "_type": "ROLE", "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-ROLE.psychiatrist.v2",
-            "capabilities": [
-                {"_type": "CAPABILITY", "credentials": {"items": [
-                    {"items": [element(&coded(TERMINOLOGY, "sensitivity_clearance"),
-                                       &coded("v3-Confidentiality", "PSY"))]},
-                    element(&coded(TERMINOLOGY, "permitted_purpose"),
-                            &coded("v3-ActReason", "TREAT")),
-                    element(&json!({"_type": "DV_TEXT", "value": "sensitivity_clearance"}),
-                            &coded("v3-Confidentiality", "HIV"))
-                ]}},
-                {"_type": "CAPABILITY", "credentials": {"items": [
-                    element(&coded(TERMINOLOGY, "sensitivity_clearance"),
-                            &coded(TERMINOLOGY, "open")),
-                    element(&coded(TERMINOLOGY, "permitted_purpose"),
-                            &json!({"_type": "DV_TEXT", "value": "TREAT"}))
-                ]}}
-            ]
-        });
-        let facts = GrantFacts::of(Kind::Role, &body);
+    fn a_role_is_read_from_the_coded_name_of_a_role() {
+        let role = |name: Value| {
+            json!({"_type": "ROLE",
+                   "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-ROLE.nurse.v2",
+                   "name": name,
+                   "capabilities": [{"_type": "CAPABILITY", "credentials": {"items": [
+                       element(&json!({"_type": "DV_TEXT", "value": "operation"}),
+                               &coded(TERMINOLOGY, "access_demographic"))]}}]})
+        };
+        let facts = GrantFacts::of(Kind::Role, &role(coded("urn:example:roles", "NURSE")));
         let read: Vec<(i32, FactKind, FactValue)> = facts
             .facts
             .iter()
@@ -598,27 +556,29 @@ mod tests {
             .collect();
         assert_eq!(
             read,
-            vec![
-                (
-                    0,
-                    FactKind::Clearance,
-                    FactValue::Code(code("v3-Confidentiality", "PSY"))
-                ),
-                (
-                    0,
-                    FactKind::Purpose,
-                    FactValue::Code(code("v3-ActReason", "TREAT"))
-                ),
-            ],
-            "an element whose name is no code of the terminology clears nothing"
+            vec![(
+                0,
+                FactKind::Role,
+                FactValue::Code(code("urn:example:roles", "NURSE"))
+            )]
         );
-        assert_eq!(facts.unread.len(), 2, "{:?}", facts.unread);
-        assert!(facts.unread[0].contains("sensitivity_clearance"));
-        assert!(facts.unread[1].contains("permitted_purpose"));
         assert!(
-            facts.capabilities.is_empty(),
-            "a clearance grants no operation"
+            facts.facts[0].validity.is_none(),
+            "a role holds while its ROLE does"
         );
+        assert_eq!(facts.unread, Vec::<String>::new());
+        let text = GrantFacts::of(
+            Kind::Role,
+            &role(json!({"_type": "DV_TEXT", "value": "Nurse"})),
+        );
+        assert_eq!(text.facts, Vec::new(), "a ROLE named in text names no role");
+        let operation = GrantFacts::of(Kind::Role, &role(coded(TERMINOLOGY, "NURSE")));
+        assert_eq!(
+            operation.facts,
+            Vec::new(),
+            "an operation code names no role"
+        );
+        assert_eq!(operation.unread, Vec::<String>::new());
     }
 
     #[test]
@@ -715,16 +675,15 @@ mod tests {
 
     #[test]
     fn caller_facts_answer_by_terminology_and_code() {
-        let facts = CallerFacts::new(
-            vec![code("v3-ActCode", "PSY"), code("v3-ActCode", "PSY")],
-            vec![code("v3-ActReason", "TREAT")],
-            Vec::new(),
-        );
-        assert_eq!(facts.clearances().len(), 1);
-        assert!(facts.clears(&code("v3-ActCode", "PSY")));
-        assert!(!facts.clears(&code("local", "PSY")));
-        assert!(facts.permits(&code("v3-ActReason", "TREAT")));
-        assert!(!facts.permits(&code("v3-ActReason", "HOPERAT")));
+        let nurse = code("urn:example:roles", "NURSE");
+        let facts = CallerFacts::new(vec![nurse.clone(), nurse], Vec::new());
+        assert_eq!(facts.roles().len(), 1);
+        let named = |terminology: &str, value: &str| -> DvCodedText {
+            openehr_its::json::from_canonical_value(&coded(terminology, value)).expect("a code")
+        };
+        assert!(facts.performs(&named("urn:example:roles", "NURSE")));
+        assert!(!facts.performs(&named("local", "NURSE")));
+        assert!(!facts.performs(&named("urn:example:roles", "nurse")));
     }
 
     #[test]

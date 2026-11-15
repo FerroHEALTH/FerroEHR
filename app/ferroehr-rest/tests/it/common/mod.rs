@@ -917,7 +917,7 @@ pub(crate) async fn commit_access_settings(svc: &FerroEhrService, ehr_id: EhrId,
 }
 
 /// The live `PERSON` in `pool` carrying the key `key` under `issuer`.
-async fn bound_person(pool: &PgPool, issuer: &str, key: &str) -> Option<uuid::Uuid> {
+pub(crate) async fn bound_person(pool: &PgPool, issuer: &str, key: &str) -> Option<uuid::Uuid> {
     let party = ferroehr::db::domain_pool_from(pool, ferroehr::db::domain::Domain::Party);
     let today = jiff::Zoned::now()
         .with_time_zone(jiff::tz::TimeZone::UTC)

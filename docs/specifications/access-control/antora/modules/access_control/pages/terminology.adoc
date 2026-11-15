@@ -87,14 +87,6 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |read, write, export, query
 |`ACCESS_DIRECTIVE._operations_`: the classes of operation a directive applies to
 
-|access sensitivity clearance
-|sensitivity_clearance
-|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a sensitivity code the capability clears
-
-|access permitted purpose
-|permitted_purpose
-|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a purpose of use the capability permits
-
 |care relationship
 |`v3-RoleClass::MBR` (a member of a care-team `GROUP`), under_care_of
 |The `_name_` or `_details_` of a `PARTY_RELATIONSHIP`: a professional's membership of a care-team `GROUP`, and the subject being under the care of a team or unit
@@ -108,7 +100,7 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `v3-RoleClass::MBR`
 
 |access refusal
-|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-policy-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
 
 |access log withheld
@@ -116,7 +108,7 @@ The groups of this package follow. The codes in `openehr_access` are proposed; a
 |`ACCESS_LOG_RESTRICTION._withheld_` (`Group_id_access_log_withheld`): the `_party_`, `_provider_`, `_roles_` and `_groups_` of an `ACCESSOR` the subject view withholds (EHDS Art 9(3))
 |===
 
-The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other seven are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a clearance, a permitted purpose, a care relationship, a care team or a representation by the code in an element's or a relationship's `_name_` or `_details_`. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other four are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a care relationship or a representation by the code in a relationship's `_name_` or `_details_`, and a care team by the `group kind` code in a `GROUP`'s `_name_`, never by its archetype or a path. The Demographic IM makes a party's type its name (`PARTY.type()`, invariant `Type_valid: type = name`; `PARTY_RELATIONSHIP.type()` likewise) and names "the specialist care team, e.g. cardiology team" as the typical `GROUP` (`GROUP` class), so a coded name says what kind of group or relationship it is; the codes are this proposal's design. A role is no code of these groups: it is the coded `_name_` of a `ROLE`, in the terminology the jurisdiction names, and a sensitivity a caller may read and a purpose it may declare are rules of the controller's policy. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
 
 A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code, which is that model's reason for an opt-out or a restriction. `ACCESS_LOG_RESTRICTION._accessor_kinds_` is coded in that model's `accessor kind` group, so a restriction names exactly the kinds its entries record. The Access Log Information Model lists its own groups on its Terminology page, in the same terminology.
 
@@ -188,4 +180,4 @@ A draft code whose closest standard code is broader or narrower stays in `openeh
 
 == Codes from Other Terminologies
 
-Sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the HL7 `v3-Confidentiality` codes and the `v3-ActCode` sensitivity codes, the EHDS categories, and the HL7 `v3-ActReason` PurposeOfUse codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).
+Role, sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the HL7 `v3-Confidentiality` codes and the `v3-ActCode` sensitivity codes, the EHDS categories, and the HL7 `v3-ActReason` PurposeOfUse codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).

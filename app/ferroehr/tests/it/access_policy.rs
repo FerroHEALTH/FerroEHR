@@ -14,6 +14,7 @@ use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::access_policy::PolicyPrecondition;
 use ferroehr::service::demographic::default_definitions::Seeded;
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
 use serde_json::{Value, json};
 
 const HOSPITAL: &str = "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7";
@@ -58,13 +59,10 @@ fn nurse_rule() -> Value {
     json!({ "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": "Nurses do not record diagnoses" },
         "archetype_node_id": "id15",
-        "kind": coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "controller_rule"),
-        "effect": coded(
-            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
-            "deny",
-        ),
+        "kind": coded(TERMINOLOGY_ID_ACCESS, "controller_rule"),
+        "effect": coded(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, "deny"),
         "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "role": coded("urn:example:roles", "NURSE") }],
-        "operations": [coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "write")],
+        "operations": [coded(TERMINOLOGY_ID_ACCESS, "write")],
         "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["diagnosis.v1"] }],
         "emergency_override": false })
 }
@@ -238,13 +236,12 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
     let cases: [Defect; 11] = [
         ("Rules_kind", |p| {
             let mut rule = nurse_rule();
-            rule["kind"] = coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "consent");
+            rule["kind"] = coded(TERMINOLOGY_ID_ACCESS, "consent");
             p["rules"] = json!([rule]);
         }),
         ("a rule's role in the draft access terminology", |p| {
             let mut rule = nurse_rule();
-            rule["applies_to"][0]["role"] =
-                coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "NURSE");
+            rule["applies_to"][0]["role"] = coded(TERMINOLOGY_ID_ACCESS, "NURSE");
             p["rules"] = json!([rule]);
         }),
         ("an empty list of rules", |p| p["rules"] = json!([])),
@@ -267,7 +264,7 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
         }),
         ("a sensitivity in the draft access terminology", |p| {
             p["classifications"][0]["sensitivities"][0]["defining_code"]["terminology_id"]["value"] =
-                json!(ferroehr::party_binding::policy_mark::TERMINOLOGY);
+                json!(TERMINOLOGY_ID_ACCESS);
         }),
         ("a controller that is no ORGANISATION", |p| {
             p["controller"]["type"] = json!("PERSON");

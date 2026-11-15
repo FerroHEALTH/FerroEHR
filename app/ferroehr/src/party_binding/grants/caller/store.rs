@@ -168,7 +168,7 @@ fn sorted(rows: &[(Uuid, String)]) -> Vec<&str> {
     texts
 }
 
-/// The code a clearance or a purpose names; `None` for a care relationship.
+/// The code a role names; `None` for a care relationship.
 fn code_of(fact: &CallerFact) -> Option<&ForeignCode> {
     match &fact.value {
         FactValue::Code(code) => Some(code),

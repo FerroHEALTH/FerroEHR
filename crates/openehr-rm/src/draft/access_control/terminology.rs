@@ -63,12 +63,6 @@ pub enum Group {
     AccessCallerKind,
     /// `access operation`: the operation classes a directive names.
     AccessOperation,
-    /// `access sensitivity clearance`: the credentials element whose value is
-    /// a sensitivity code the capability clears.
-    AccessSensitivityClearance,
-    /// `access permitted purpose`: the credentials element whose value is a
-    /// purpose of use the capability lets its holder declare.
-    AccessPermittedPurpose,
     /// `care relationship`: the demographic relationships that put a caller
     /// in care of a subject.
     CareRelationship,
@@ -97,15 +91,13 @@ pub enum Group {
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 18] = [
+    pub const ALL: [Self; 16] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
         Self::AccessRelationship,
         Self::AccessCallerKind,
         Self::AccessOperation,
-        Self::AccessSensitivityClearance,
-        Self::AccessPermittedPurpose,
         Self::CareRelationship,
         Self::GroupKind,
         Self::Representation,
@@ -128,8 +120,6 @@ impl Group {
             Self::AccessRelationship => "access relationship",
             Self::AccessCallerKind => "access caller kind",
             Self::AccessOperation => "access operation",
-            Self::AccessSensitivityClearance => "access sensitivity clearance",
-            Self::AccessPermittedPurpose => "access permitted purpose",
             Self::CareRelationship => "care relationship",
             Self::GroupKind => "group kind",
             Self::Representation => "representation",
@@ -154,8 +144,6 @@ impl Group {
             Self::AccessRelationship => phrases::<Relationship>(),
             Self::AccessCallerKind => phrases::<CallerKind>(),
             Self::AccessOperation => phrases::<OperationClass>(),
-            Self::AccessSensitivityClearance => phrases::<SensitivityClearance>(),
-            Self::AccessPermittedPurpose => phrases::<PermittedPurpose>(),
             Self::CareRelationship => phrases::<CareRelationship>(),
             Self::GroupKind => phrases::<GroupKind>(),
             Self::Representation => phrases::<Representation>(),
@@ -425,26 +413,6 @@ group! {
 }
 
 group! {
-    /// The credentials element naming a sensitivity clearance: its value is
-    /// a sensitivity code of the jurisdiction's terminology.
-    SensitivityClearance in AccessSensitivityClearance {
-        /// The element whose value is a sensitivity code the capability
-        /// clears.
-        SensitivityClearance => "sensitivity_clearance",
-    }
-}
-
-group! {
-    /// The credentials element naming a permitted purpose: its value is a
-    /// purpose-of-use code of the jurisdiction's terminology.
-    PermittedPurpose in AccessPermittedPurpose {
-        /// The element whose value is a purpose of use the capability lets
-        /// its holder declare.
-        PermittedPurpose => "permitted_purpose",
-    }
-}
-
-group! {
     /// The demographic relationships of care, coded in the `name` of a
     /// `PARTY_RELATIONSHIP`.
     CareRelationship in CareRelationship {
@@ -488,14 +456,15 @@ group! {
         Restricted => "refused-restricted",
         /// A deny directive applies, with no exception that applies.
         ConsentDenied => "refused-consent-denied",
+        /// A deny rule of the controller's policy applies, with no exception
+        /// that applies; no permit of the subject lifts it.
+        PolicyDenied => "refused-policy-denied",
         /// The data carry a sensitivity the caller is not cleared for.
         Sensitivity => "refused-sensitivity",
         /// The policy needs a care relationship and the caller has none.
         NoCareRelationship => "refused-no-care-relationship",
         /// The policy needs a declared purpose and the request has none.
         PurposeMissing => "refused-purpose-missing",
-        /// The caller's capabilities do not permit the declared purpose.
-        PurposeNotPermitted => "refused-purpose-not-permitted",
         /// The EHR needs consent and no permit directive applies.
         ConsentRequired => "refused-consent-required",
         /// A subject caller asks for an EHR other than the one its patient

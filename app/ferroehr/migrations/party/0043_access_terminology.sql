@@ -4,8 +4,8 @@
 -- party: the access codes move to the draft openehr_access terminology
 -- (#5655).
 --
--- The operation grants, their qualifiers, the caller-fact element names and
--- the acts-for and representation codes are codes of the draft
+-- The operation grants, their qualifiers, the care and the acts-for and
+-- representation codes are codes of the draft
 -- openehr_access terminology the access-control change request proposes to
 -- openEHR, and a professional's membership of a care team is HL7 v3
 -- RoleClass MBR ("a member of a group", terminology id v3-RoleClass). This
@@ -28,7 +28,7 @@ UPDATE binding_caller_fact SET kind = 'MBR' WHERE kind = 'member_of';
 
 ALTER TABLE binding_caller_fact
     ADD CONSTRAINT ck_binding_caller_fact_kind
-        CHECK (kind IN ('sensitivity_clearance', 'permitted_purpose', 'MBR', 'under_care_of')),
+        CHECK (kind IN ('role', 'MBR', 'under_care_of')),
     ADD CONSTRAINT ck_binding_caller_fact_value
         CHECK (CASE WHEN kind IN ('MBR', 'under_care_of')
                     THEN target_id IS NOT NULL AND terminology_id IS NULL
@@ -36,8 +36,7 @@ ALTER TABLE binding_caller_fact
                     ELSE target_id IS NULL AND terminology_id IS NOT NULL
                          AND code_string IS NOT NULL END);
 
-COMMENT ON TABLE binding_caller_fact IS 'The sensitivity clearances, permitted purposes and care relationships each ROLE or PERSON head that is not deleted holds, read by their codes: sensitivity_clearance, permitted_purpose and under_care_of of the draft openehr_access terminology, and MBR of HL7 v3 RoleClass. Derived from the party versions in each commit''s transaction; no openEHR spec governs reading them as access facts, our own design.';
-COMMENT ON COLUMN binding_caller_fact.kind IS 'The code the fact is read by: sensitivity_clearance, permitted_purpose or under_care_of of openehr_access, or MBR of v3-RoleClass.';
+COMMENT ON COLUMN binding_caller_fact.kind IS 'What the fact is: role, the coded name of a ROLE the party performs, or the code of a care relationship, MBR of v3-RoleClass or under_care_of of openehr_access.';
 
 -- ── binding_representation ──────────────────────────────────────────────────
 COMMENT ON TABLE binding_representation IS 'The representation relationships each PERSON is the source of: its inline PARTY_RELATIONSHIPs and the standalone PARTY_RELATIONSHIP containers that carry the openehr_access::represents code. No openEHR spec governs it, our own design.';
