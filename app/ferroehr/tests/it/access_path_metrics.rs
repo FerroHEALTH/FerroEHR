@@ -14,7 +14,7 @@ use ferroehr::access_eval::condition::{
 use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
 use ferroehr::access_eval::scope::{CategoryIndex, Item};
 use ferroehr::ids::EhrId;
-use ferroehr::party_binding::grants::caller::CallerFacts;
+use ferroehr::party_binding::grants::caller::facts::CallerFacts;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr::telemetry::{access_path, metrics};

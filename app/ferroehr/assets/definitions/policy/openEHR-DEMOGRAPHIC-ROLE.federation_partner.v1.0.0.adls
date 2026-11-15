@@ -57,9 +57,6 @@ definition
                             ELEMENT[id10] occurrences matches {1} matches {
                                 value matches { DV_TEXT[id41] }
                             }
-                            ELEMENT[id11] occurrences matches {1} matches {
-                                value matches { DV_TEXT[id42] }
-                            }
                             ELEMENT[id12] occurrences matches {1} matches {
                                 value matches { DV_TEXT[id43] }
                             }
@@ -142,7 +139,6 @@ terminology
             ["id90"] = <text = <"Operation"> description = <"An operation the capability grants, a code of the draft openEHR access terminology openehr_access.">>
             ["id9"] = <text = <"Agreement name"> description = <"The name of the agreement.">>
             ["id10"] = <text = <"Agreement version"> description = <"The version of the agreement.">>
-            ["id11"] = <text = <"Jurisdiction"> description = <"The ISO 3166-1 alpha-2 code of the jurisdiction the agreement is made under.">>
             ["id12"] = <text = <"Exchange"> description = <"The kind of exchange the agreement covers.">>
             ["id13"] = <text = <"Purpose"> description = <"What the exchange is for, a code the agreement names.">>
             ["id14"] = <text = <"Legal ground"> description = <"The legal ground of the processing.">>

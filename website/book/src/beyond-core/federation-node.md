@@ -107,10 +107,13 @@ their rights come from an agreement, never from a role
   person and organisation is an access-service caller by its kind (EHDS
   Art. 10(1)), so an opted-out EHR answers as an unknown one. Only a person
   agreement with `opt_out_override`, under an emergency purpose, reaches one.
-- **Wabvpz Art. 15f** bars insurers and occupational and insurance
-  physicians from an exchange system: under an NL agreement a bedrijfsarts
-  or verzekeringsarts, and an organisation that is not a care provider, are
-  refused with `403`.
+- **National exclusions are your rules.** Wabvpz Art. 15f bars insurers
+  and occupational and insurance physicians from an exchange system. You
+  state that as deny rules of your `ACCESS_POLICY`, over the roles and the
+  facility types the caller's token attests and the purpose it declares,
+  each with the provision it rests on in its `legal_grounds`. The node
+  refuses such a caller with `403` as `refused-policy-denied` and records the
+  provision ([Controller rules](../operational-policy.md#controller-rules)).
 - **Wabvpz Art. 15a consent.** Every NL federation read needs the consent
   decision reference, from Mitz or from the data holder's own registration
   (`consent = "mitz"` or `"local"`), carried in the token.

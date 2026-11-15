@@ -27,6 +27,8 @@ use ferroehr::versioning::object_version_id::entity_tag_value;
 use ferrohealth_server::problem::{Problem, ProblemError, ProblemType, ProblemTypes};
 use ferrohealth_telemetry::request_log::RequestId;
 use http::{HeaderValue, StatusCode, header};
+use openehr_rm::draft::access_control::terminology::{Refusal, Term as _};
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 use crate::overview::negotiate::prefer::{
     AppliedPreference, PREFERENCE_APPLIED, Preference, prefers,
@@ -255,9 +257,26 @@ pub enum Detail {
     /// `refusal`: the `refused-*` code of the access control terminology the
     /// access evaluator refused under.
     Refusal(&'static str),
+    /// `legal_grounds`: the legal grounds the controller rules that refused
+    /// name.
+    LegalGrounds(Vec<LegalGround>),
 }
 
 impl Detail {
+    /// The members of a refusal of the access evaluator under `code`: the
+    /// `refusal` member, and the `legal_grounds` member when the refusing
+    /// rules name any.
+    #[must_use]
+    pub fn of_refusal(code: Refusal, legal_grounds: &[DvCodedText]) -> Vec<Self> {
+        let mut details = vec![Self::Refusal(code.code())];
+        if !legal_grounds.is_empty() {
+            details.push(Self::LegalGrounds(
+                legal_grounds.iter().map(LegalGround::from).collect(),
+            ));
+        }
+        details
+    }
+
     /// The extension member's name.
     #[must_use]
     pub const fn name(&self) -> &'static str {
@@ -267,6 +286,7 @@ impl Detail {
             Self::CurrentVersion(_) => "current_version",
             Self::Archive(_) => "archive",
             Self::Refusal(_) => "refusal",
+            Self::LegalGrounds(_) => "legal_grounds",
         }
     }
 
@@ -278,6 +298,29 @@ impl Detail {
             Self::CurrentVersion(version) => problem.with_extension(self.name(), version),
             Self::Archive(fault) => problem.with_extension(self.name(), fault),
             Self::Refusal(code) => problem.with_extension(self.name(), code),
+            Self::LegalGrounds(grounds) => problem.with_extension(self.name(), grounds),
+        }
+    }
+}
+
+/// One legal ground a refusing rule names: the `DV_CODED_TEXT`'s
+/// terminology, code and text.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct LegalGround {
+    /// The `TERMINOLOGY_ID` value.
+    pub terminology: String,
+    /// The `code_string`.
+    pub code: String,
+    /// The text.
+    pub value: String,
+}
+
+impl From<&DvCodedText> for LegalGround {
+    fn from(coded: &DvCodedText) -> Self {
+        Self {
+            terminology: coded.defining_code.terminology_id.value.clone(),
+            code: coded.defining_code.code_string.clone(),
+            value: coded.value.clone(),
         }
     }
 }
