@@ -860,11 +860,14 @@ levels off once the first tombstones fold, after `2P`:
 - the entries of the last `P` days: `r × P × 3.9 kB` (2.5 kB of row and 1.4
   kB of indexes each, with signed links);
 - their tombstones, kept another `P` days: `r × P × 1.1 kB`;
-- the gaps: about 0.6 kB each, at least one per checkpoint interval (288 a
-  day), plus one for each run an entry kept longer cut apart. Gaps and
+- the gaps: about 0.6 kB each, one for each run an entry kept longer cut
+  apart. A checkpoint inside a run leaves with it; gaps and the remaining
   checkpoints are kept without end.
 
-The access-path record of #5590 measures 2 518 bytes of row and 3 887 bytes
+These figures predate the storage of #5703, which keeps the part an
+entry's caller shares once and compresses each row in place; the
+performance gate's summary states the bytes per entry of the tree it
+measures. The access-path record of #5590 measures 2 518 bytes of row and 3 887 bytes
 stored per entry, 1 079 bytes per tombstone, and 2.08 entries per request at
 20 requests a second, which is 3.59 million entries a day. With the EHDS
 floor of three years (`P` = 1 096 days) that is about 14 GB of entries a day,

@@ -15,7 +15,7 @@ use serde_json::json;
 use sqlx::migrate::Migrator;
 
 use ferroehr::access_log::chain::link_digest;
-use ferroehr::access_log::store::AccessLogStore;
+use ferroehr::access_log::store::{AccessLogStore, canonical_form};
 use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 use ferroehr::system_log::store::AuditStore;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
@@ -32,6 +32,23 @@ fn entry(n: u32) -> AccessLogEntry {
     value["uid"]["value"] = json!(format!("0193f1a2-7c1e-7b4a-9f00-{n:012x}"));
     value["ehr_id"]["value"] = json!(format!("7d44b88c-4199-4bad-97dc-{n:012x}"));
     serde_json::from_value(value).expect("the example entry reads")
+}
+
+/// Append `entries` as the shared chain stored them, each record its whole
+/// canonical form, which the insert trigger of that schema digested.
+async fn shared_append(pool: &sqlx::PgPool, entries: &[AccessLogEntry]) {
+    let contents: Vec<String> = entries
+        .iter()
+        .map(|entry| canonical_form(entry).expect("the canonical form"))
+        .collect();
+    sqlx::query(
+        "INSERT INTO audit.access_log_record (content) \
+         SELECT t.content FROM unnest($1::text[]) WITH ORDINALITY AS t(content, n) ORDER BY t.n",
+    )
+    .bind(&contents)
+    .execute(pool)
+    .await
+    .expect("the entries of the shared chain");
 }
 
 /// A record outside the access log: a read of a party.
@@ -85,11 +102,9 @@ async fn the_shared_chain_splits_into_two_that_verify() {
     let audit = AuditStore::new(pool.clone());
     let log = AccessLogStore::new(pool.clone());
     audit.insert(&outside(), None).await.expect("record 1");
-    log.append(vec![entry(1), entry(2)])
-        .await
-        .expect("records 2 and 3");
+    shared_append(&pool, &[entry(1), entry(2)]).await;
     audit.insert(&outside(), None).await.expect("record 4");
-    log.append(vec![entry(3)]).await.expect("record 5");
+    shared_append(&pool, &[entry(3)]).await;
     sqlx::raw_sql(
         "INSERT INTO audit.fhir_feed_outbox (chain_seq) VALUES (3), (4); \
          INSERT INTO audit.access_log_checkpoint (sequence, system_id, digest, time_sealed, content) \

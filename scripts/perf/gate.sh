@@ -374,8 +374,8 @@ population_summary() {
 }
 
 # access_log_storage <pg-container>: the access log's entries, its
-# checkpoints and the bytes its record and checkpoint tables hold with their
-# indexes and TOAST, as "<entries> <checkpoints> <bytes>", or "none" for a
+# checkpoints and the bytes its record, shared-part and checkpoint tables hold
+# with their indexes and TOAST, as "<entries> <checkpoints> <bytes>", or "none" for a
 # store with no access log.
 access_log_storage() {
   local -a psql=(docker exec "$1" psql -U postgres -d ferroehr -Atq -c)
@@ -386,7 +386,8 @@ access_log_storage() {
   "${psql[@]}" "SELECT (SELECT count(*) FROM audit.access_log_record) || ' ' || \
     (SELECT count(*) FROM audit.access_log_checkpoint) || ' ' || \
     (pg_total_relation_size('audit.access_log_record') \
-     + pg_total_relation_size('audit.access_log_checkpoint'))"
+     + pg_total_relation_size('audit.access_log_checkpoint') \
+     + coalesce(pg_total_relation_size(to_regclass('audit.access_log_shared')), 0))"
 }
 
 # storage_summary <summary>: each arm's access-log storage appended to the

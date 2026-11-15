@@ -571,6 +571,11 @@ NCP. How the log is protected is therefore our own design.
   `content_digest`. A removed, inserted or reordered record breaks every
   later link. The digest algorithm is named per link, so a system can move
   to a new algorithm at a known sequence.
+- **How an entry is stored.** The canonical form is what the chain
+  digests, and how it is stored is FerroEHR's choice (#5703): the part the
+  caller's entries share is stored once and each row keeps the rest; the
+  writer computes `content_digest` over the whole form, and the verifier
+  joins the parts back into it. A tombstone still replaces one person's row.
 - **Why digest the content separately.** Retention removes entries in the
   middle of the log, since periods differ per category and origin (Annex II
   3.4). A tombstone keeps the uid, the time, and the link with its

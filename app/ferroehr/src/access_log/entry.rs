@@ -114,7 +114,7 @@ pub fn entry_of(
         .as_ref()
         .and_then(|_| item(event))
         .map(|item| vec![item]);
-    Some(AccessLogEntry {
+    let mut entry = AccessLogEntry {
         uid: HierObjectId::from(uuid::Uuid::now_v7()),
         system_id: system_id.to_owned(),
         time_recorded: dv_date_time(&event.timestamp),
@@ -149,8 +149,10 @@ pub fn entry_of(
         channel: channel(event),
         security_labels: None,
         retention,
-        other_details: details(event, subject),
-    })
+        other_details: None,
+    };
+    entry.other_details = details(event, subject, &entry);
+    Some(entry)
 }
 
 /// The access-log entry `event` writes as its record, its EHR belonging to
@@ -644,8 +646,9 @@ pub fn horizon_retention(end: Option<Date>) -> AccessRetention {
 fn details(
     event: &AuditEvent,
     subject: Option<&str>,
+    core: &AccessLogEntry,
 ) -> Option<openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure> {
-    crate::access_log::recorded::details(event, subject)
+    crate::access_log::recorded::details(event, subject, core)
 }
 
 /// A slim build projects no entry, so its entries keep no access details.
@@ -653,6 +656,7 @@ fn details(
 fn details(
     _event: &AuditEvent,
     _subject: Option<&str>,
+    _core: &AccessLogEntry,
 ) -> Option<openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure> {
     None
 }
