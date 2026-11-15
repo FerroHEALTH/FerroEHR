@@ -142,7 +142,7 @@ whose `name` and `version` name the document the ground is defined in:
 | `consent` | a consent permit admitted the access, or the caller is a gate-keeper of the settings | `EHR_ACCESS` and the uid of its version; the directive by its uid, its first identifier or its position from 1, and its legal grounds |
 | `representation` | a `delegation` permit admitted a representative | as `consent` |
 | `treatment relationship` | the decision read a live care relationship | `ACCESS_POLICY` and the uid of its version |
-| `emergency` | an emergency lifted a directive or steps 4 to 7 | the directive it lifted, or the `ACCESS_POLICY` version; an entry naming the objects it delivered names only the directives whose data scope covers one of them |
+| `emergency` | an emergency lifted a directive, a controller rule or steps 5 to 8 | the directive it lifted, or the `ACCESS_POLICY` version with the rule it lifted by its uid, its first identifier or its position from 1; an entry naming the objects it delivered names only the directives and rules whose data scope covers one of them |
 
 The entry of each EHR an AQL query served names the same grounds a read of
 that EHR alone names. The query's condition is built from this replica's copy

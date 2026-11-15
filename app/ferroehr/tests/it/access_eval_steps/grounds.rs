@@ -39,6 +39,8 @@ const EHR_ACCESS_VERSION: &str = "5a1c0b8e-55a6-4d0b-9a63-3f0f6c3c2a11::cdr.exam
 const POLICY_VERSION: &str = "1f2e3d4c-5b6a-4978-8a9b-0c1d2e3f4a5b::cdr.example.org::3";
 /// The `ROLE` whose `CAPABILITY` grants the caller an operation.
 const ROLE: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7fa0";
+/// The uid of a controller rule.
+const RULE_UID: &str = "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f";
 
 /// The request of `caller` asking `asked` under `policy`, naming the grant
 /// of `access_service` by [`ROLE`] and the policy version in its record.
@@ -323,6 +325,52 @@ fn the_emergency_grounds_name_only_the_directives_covering_the_data_read() {
     assert_eq!(
         lifted("Mental health note"),
         ["EHR_ACCESS", "ACCESS_POLICY"]
+    );
+}
+
+/// An emergency lifts a controller deny rule over the mental-health
+/// template; a read of another template names no `emergency` ground of that
+/// rule, and a read of the mental-health note names it by its uid, else its
+/// position (EHDS Art. 11(5) and Art. 9(1), #5676).
+#[test]
+fn the_emergency_grounds_name_only_the_rules_covering_the_data_read() {
+    let deny = |uid: Option<&str>| {
+        let mut rule = rule(
+            "deny",
+            &json!({ "applies_to": [role_scope("NURSE")], "emergency_override": true,
+                     "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["Mental health note"] }] }),
+        );
+        if let Some(uid) = uid {
+            rule["uid"] = json!({ "_type": "HIER_OBJECT_ID", "value": uid });
+        }
+        rule
+    };
+    let lifted = |rule: &Value, template: &str| {
+        let access = request(
+            performing(CallerKind::Professional, NURSE, "NURSE"),
+            break_glass(read(Some("ETREAT"))),
+            Some(policy(&json!({ "rules": [rule] }))),
+        );
+        let item = object(OBJECT, Some(template));
+        let (outcome, decision) = decide_on(&access, None, &item);
+        assert_eq!(outcome, Outcome::Admit, "{template}");
+        of_kind(&decision, "emergency")
+            .iter()
+            .filter_map(|ground| ground.reference.as_ref())
+            .map(|reference| (reference.r#type.clone(), reference.id.clone()))
+            .collect::<Vec<_>>()
+    };
+    let by_position = deny(None);
+    assert_eq!(lifted(&by_position, "HIV result"), []);
+    assert_eq!(
+        lifted(&by_position, "Mental health note"),
+        [(Some("position".to_owned()), "1".to_owned())]
+    );
+    let by_uid = deny(Some(RULE_UID));
+    assert_eq!(lifted(&by_uid, "HIV result"), []);
+    assert_eq!(
+        lifted(&by_uid, "Mental health note"),
+        [(Some("uid".to_owned()), RULE_UID.to_owned())]
     );
 }
 

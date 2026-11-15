@@ -30,11 +30,12 @@ use crate::storage::error::StorageError;
 
 /// The condition that the key row `k` is a live User of the client of `$1`
 /// on `$5` matching the ids `$2`, the `userName`s `$3` and the `externalId`s
-/// `$4`.
+/// `$4`: a professional valid on `$5`, or any key of a portal client, whose
+/// `$5` is `NULL` (#5622).
 macro_rules! user_of_client {
     () => {
         "k.selector = 'key' AND k.issuer = $1 AND k.retired_at IS NULL \
-         AND k.professional @> $5::date \
+         AND ($5::date IS NULL OR k.professional @> $5::date) \
          AND k.party_id = ALL($2::uuid[]) \
          AND NOT EXISTS (SELECT 1 FROM unnest($3::text[]) AS n(v) WHERE NOT EXISTS ( \
              SELECT 1 FROM binding_identifier u WHERE u.party_id = k.party_id \
@@ -74,9 +75,13 @@ pub struct UserFilter {
     pub external_ids: Vec<String>,
 }
 
-/// The Users of the client of `binding_issuer` matching `filter` on `today`
-/// (`YYYY-MM-DD`): ordered by container, from the 0-based `offset`, at most
-/// `limit`; with the total match count.
+/// The Users of the client of `binding_issuer` matching `filter` on `today`.
+///
+/// They are ordered by container, from the 0-based `offset`, at most
+/// `limit`, with the total match count; `today` is `YYYY-MM-DD`. A portal
+/// client, whose `binding_issuer` is a `patients` issuer, passes no `today`:
+/// its Users are the `PERSON`s its keys name, with no professional `ROLE`
+/// (#5622).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -84,7 +89,7 @@ pub async fn users(
     conn: &mut PgConnection,
     binding_issuer: &str,
     filter: &UserFilter,
-    today: &str,
+    today: Option<&str>,
     page: (i64, i64),
 ) -> Result<(i64, Vec<UserRow>), StorageError> {
     let total: i64 = sqlx::query_scalar(concat!(
@@ -133,9 +138,11 @@ pub async fn users(
     Ok((total, out))
 }
 
-/// The ids among `ids` that are Users of the client of `binding_issuer` on
-/// `today` (`YYYY-MM-DD`): each a `PERSON` with a live key row of that issuer
-/// and a professional `ROLE` valid on that date.
+/// The ids among `ids` that are Users of the client of `binding_issuer`.
+///
+/// Each is a `PERSON` with a live key row of that issuer and a professional
+/// `ROLE` valid on `today` (`YYYY-MM-DD`), or for a portal client, which
+/// passes no `today`, with the key row alone (#5622).
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -143,12 +150,13 @@ pub async fn users_among(
     conn: &mut PgConnection,
     binding_issuer: &str,
     ids: &[Uuid],
-    today: &str,
+    today: Option<&str>,
 ) -> Result<Vec<Uuid>, StorageError> {
     Ok(sqlx::query_scalar(
         "SELECT DISTINCT k.party_id FROM binding_identifier k \
          WHERE k.selector = 'key' AND k.issuer = $1 AND k.retired_at IS NULL \
-           AND k.professional @> $3::date AND k.party_id = ANY($2::uuid[]) \
+           AND ($3::date IS NULL OR k.professional @> $3::date) \
+           AND k.party_id = ANY($2::uuid[]) \
          ORDER BY k.party_id",
     )
     .bind(binding_issuer)

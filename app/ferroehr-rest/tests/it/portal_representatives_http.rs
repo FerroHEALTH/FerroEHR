@@ -309,9 +309,15 @@ async fn a_representation_not_recorded_or_ended_is_refused() {
 
 /// A former representative is never the patient (#5532): once an inline
 /// representation is deleted from their `PERSON`, or a standalone one is
-/// deleted, both paths refuse them, while the patient's own login and a
-/// representative of another subject only, who never represented this one,
-/// are still the patient.
+/// deleted, both paths refuse them, while the patient's own login is still
+/// the patient.
+///
+/// A representative of another subject only, who never represented this one,
+/// is refused too. The owner's decision on #5622 (2026-11-14) holds a login a
+/// `PERSON` carries to that `PERSON`: when the CDR knows who signs in, its
+/// facts decide, not the issuer's claim of the EHR. This test once expected
+/// that login to be admitted as the patient, a defect the earlier rule
+/// pinned.
 #[tokio::test]
 async fn a_deleted_representation_never_leaves_the_patient_behind() {
     let (_db, svc) = service().await;
@@ -348,6 +354,7 @@ async fn a_deleted_representation_never_leaves_the_patient_behind() {
         ("deleted, act", acting(&ehr, Some(PARENT))),
         ("deleted, own login", token(PARENT, &ehr, &json!({}))),
         ("never recorded, act", acting(&ehr, Some(PROXY))),
+        ("never recorded, own login", token(PROXY, &ehr, &json!({}))),
     ] {
         let (status, body) = read(&app, &ehr, &credential).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{case}: {body}");
@@ -356,13 +363,8 @@ async fn a_deleted_representation_never_leaves_the_patient_behind() {
             "{case}: {body}"
         );
     }
-    for (case, credential) in [
-        ("the patient", acting(&ehr, None)),
-        ("never recorded, own login", token(PROXY, &ehr, &json!({}))),
-    ] {
-        let (status, body) = read(&app, &ehr, &credential).await;
-        assert_eq!(status, StatusCode::OK, "{case}: {body}");
-    }
+    let (status, body) = read(&app, &ehr, &acting(&ehr, None)).await;
+    assert_eq!(status, StatusCode::OK, "the patient: {body}");
 }
 
 /// The patient authorises a proxy through the API: the proxy then reads the
