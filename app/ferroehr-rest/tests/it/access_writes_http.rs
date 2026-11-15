@@ -7,7 +7,8 @@
 //! A write the subject's directives refuse is refused before any version is
 //! stored, judged on the content it carries as a read of that content would
 //! be (RM EHR IM §EHR Access; BASE Architecture Overview §Access Control,
-//! #5626). An EHR id that names no EHR answers `404` before any step refuses,
+//! #5626), apart from a restriction or an opt-out, which restrict who sees
+//! data and never its recording (EHDS Art. 8; owner ruling on #5621). An EHR id that names no EHR answers `404` before any step refuses,
 //! exactly as a restricted EHR does, so a restriction stays invisible (EHDS
 //! Art. 8, #5623). Both are our own design.
 
@@ -69,8 +70,7 @@ async fn commit(app: &Router, ehr: &str, user: &str) -> (StatusCode, String) {
 /// The nurse's write of a composition a consent deny covers by its template
 /// is refused `403 refused-consent-denied` before anything is stored: the EHR
 /// still holds the one composition, and the access log records the refusal
-/// with its code. A restriction covering the template answers `404`, naming
-/// no uid, and stores nothing either.
+/// with its code.
 #[tokio::test]
 async fn a_write_a_directive_refuses_is_never_stored() {
     let (_db, pool, svc, app) = Box::pin(app()).await;
@@ -91,10 +91,13 @@ async fn a_write_a_directive_refuses_is_never_stored() {
     .await;
     let (status, body) = commit(&app, &ehr, "nurse").await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    assert!(
-        refusal(&body).1.contains("refused-consent-denied"),
-        "{body}"
+    let (member, detail) = refusal(&body);
+    assert_eq!(
+        member,
+        json!("refused-consent-denied"),
+        "a write refusal carries the refusal member a read refusal carries: {body}"
     );
+    assert!(detail.starts_with("refused-consent-denied"), "{body}");
     assert_eq!(compositions(&app, &ehr).await, 1, "nothing was stored");
     let refused = crate::access_log_http::entries(&pool, 1, |stored| {
         stored.result.as_deref() == Some("refused")
@@ -105,9 +108,22 @@ async fn a_write_a_directive_refuses_is_never_stored() {
         entry["outcome"]["reason"]["defining_code"]["code_string"], "refused-consent-denied",
         "{entry}"
     );
+}
 
+/// A restriction covering a template restricts who reads it, never its
+/// recording: the nurse's write in the restricted category is stored and
+/// answered `201` with its representation, built from the version her request
+/// committed; her next read of it is refused with the `404` of absent data,
+/// and the access log holds exactly the create and the refused read (EHDS
+/// Art. 8; owner ruling on #5621).
+#[tokio::test]
+async fn a_write_in_a_restricted_category_is_stored_and_not_read_back() {
+    let (_db, pool, svc, app) = Box::pin(app()).await;
+    let (ehr, _) = ehr_with_composition(&app).await;
+    let nurse = common::basic_person(&pool, "nurse").await;
     let mut restriction = common::access_directive("restriction", &[]);
-    restriction["data"] = template;
+    restriction["data"] = json!([{ "_type": "ACCESS_DATA_SCOPE",
+                                   "templates": ["International Patient Summary"] }]);
     restriction["applies_to"] = naming(nurse);
     restriction["emergency_override"] = json!(false);
     common::commit_access_settings(
@@ -117,13 +133,45 @@ async fn a_write_a_directive_refuses_is_never_stored() {
     )
     .await;
     let (status, body) = commit(&app, &ehr, "nurse").await;
+    assert_eq!(status, StatusCode::CREATED, "the write is stored: {body}");
+    assert_eq!(
+        serde_json::from_str::<Value>(&body).expect("the representation")["_type"],
+        "COMPOSITION",
+        "{body}"
+    );
+    assert_eq!(compositions(&app, &ehr).await, 2, "the version was stored");
+    let vo = serde_json::from_str::<Value>(&body).expect("the composition")["uid"]["value"]
+        .as_str()
+        .and_then(|uid| uid.split("::").next())
+        .expect("the composition uid")
+        .to_owned();
+    let read = format!("{BASE}/ehr/{ehr}/composition/{vo}");
+    let (status, body) = send(&app, "GET", &read, "nurse", None, None).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     assert!(!body.contains("refused-"), "{body}");
-    assert!(
-        uid_in(&refusal(&body).1).is_none(),
-        "the 404 names no new uid: {body}"
+    let refused = crate::access_log_http::entries(&pool, 1, |stored| {
+        stored.result.as_deref() == Some("refused")
+    })
+    .await;
+    assert_eq!(refused.len(), 1, "one refused read");
+    let naming_it =
+        crate::access_log_http::entries(&pool, 1, |stored| stored.content.contains(&vo)).await;
+    let actions: Vec<(Option<&str>, Option<&str>)> = naming_it
+        .iter()
+        .map(|stored| (stored.action.as_deref(), stored.result.as_deref()))
+        .filter(|(_, result)| *result != Some("refused"))
+        .collect();
+    assert_eq!(
+        actions,
+        vec![(Some("create"), Some("granted"))],
+        "the response is recorded as the create, and no read of it but the refused one"
     );
-    assert_eq!(compositions(&app, &ehr).await, 1, "nothing was stored");
+    let refused = &refused[0];
+    let entry: Value = serde_json::from_str(&refused.content).expect("a canonical entry");
+    assert_eq!(
+        entry["outcome"]["reason"]["defining_code"]["code_string"], "refused-restricted",
+        "{entry}"
+    );
 }
 
 /// `body` less what differs between any two answers, the problem's
@@ -134,12 +182,6 @@ fn unique(body: &str, ehr: &str) -> String {
         .as_object_mut()
         .map(|problem| problem.remove("instance"));
     problem.to_string().replace(ehr, "{ehr_id}")
-}
-
-/// A UUID in `body`, if any.
-fn uid_in(body: &str) -> Option<&str> {
-    body.split(|c: char| !(c.is_ascii_hexdigit() || c == '-'))
-        .find(|word| word.len() == 36 && word.matches('-').count() == 4)
 }
 
 /// Under a policy that requires a care relationship, an EHR id that names no

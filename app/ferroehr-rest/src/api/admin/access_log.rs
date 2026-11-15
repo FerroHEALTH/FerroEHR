@@ -108,8 +108,8 @@ guarded_handler! {
 
 guarded_handler! {
     /// The uid and link of each record of a span of the access log's chain,
-    /// without their content (`GET /admin/access-log/chain`). **Our own
-    /// extension.**
+    /// without their content, and the gaps of folded tombstones between
+    /// (`GET /admin/access-log/chain`). **Our own extension.**
     #[utoipa::path(
         get, path = "/admin/access-log/chain", tag = "admin-access-log",
         params(
@@ -119,7 +119,11 @@ guarded_handler! {
         ),
         responses(
             (status = 200, description = "`links`: the `uid` and `link` of each record from \
-                                          `from_sequence` to `to_sequence`, in chain order.",
+                                          `from_sequence` to `to_sequence`, in chain order. \
+                                          `gaps`: each run of folded tombstones that holds a \
+                                          position of the span, with the positions it held, \
+                                          the `link` of its last record, that link's \
+                                          `signature` and the `grounds` of its tombstones.",
              body = serde_json::Value),
             (status = 400, description = "A bound is missing or outside its form, or the \
                                           span is longer than 10000.",
@@ -216,9 +220,9 @@ guarded_handler! {
         ),
         responses(
             (status = 200, description = "The EHR's records with their links, every link \
-                                          from the first of them to the checkpoint they \
-                                          verify against, and that checkpoint, verified \
-                                          before it is answered. `ferroehr access-log import` \
+                                          and gap of folded tombstones from the first of \
+                                          them to the checkpoint they verify against, and \
+                                          that checkpoint, verified before it is answered. `ferroehr access-log import` \
                                           reads this document.",
              body = serde_json::Value),
             (status = 400, description = "`ehr_id` is missing.", body = serde_json::Value),
@@ -276,13 +280,13 @@ async fn chain(state: AppState, parts: RequestParts) -> Result<Response, RestErr
                 "`to_sequence` is at least `from_sequence` and less than {MAX_SPAN} after it"
             ))));
         }
-        let links = state.backend().access_log_chain(from, to).await?;
-        let served = links.len();
+        let (links, gaps) = state.backend().access_log_chain(from, to).await?;
+        let served = links.len().saturating_add(gaps.len());
         let links = links
             .into_iter()
             .map(|(uid, link)| json!({ "uid": uid, "link": link }))
             .collect::<Vec<_>>();
-        Ok((json!({ "links": links }), Some(served)))
+        Ok((json!({ "links": links, "gaps": gaps }), Some(served)))
     }
     .await;
     let query = parts.query.as_deref();

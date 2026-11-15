@@ -51,6 +51,9 @@ pub struct ProvisionedUser {
     pub body: Value,
     /// The template paths an incomplete head lacks; empty otherwise.
     pub missing: Vec<String>,
+    /// The roles the User holds: the coded names of the `ROLE`s in force it
+    /// performs ([`FerroEhrService::user_roles`]).
+    pub roles: Vec<crate::service::demographic::user_roles::UserRole>,
 }
 
 /// One page of a client's Users.
@@ -270,6 +273,7 @@ impl FerroEhrService {
         } else {
             Vec::new()
         };
+        let roles = self.user_roles(&read.body).await?;
         Ok(ProvisionedUser {
             row,
             version_uid: meta.uid,
@@ -277,6 +281,7 @@ impl FerroEhrService {
             last_modified,
             body: read.body,
             missing,
+            roles,
         })
     }
 

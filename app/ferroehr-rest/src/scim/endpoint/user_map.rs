@@ -385,6 +385,14 @@ impl UserMap {
             "active".to_owned(),
             Value::Bool(matches!(state, "532" | "553")),
         );
+        let roles: Vec<Value> = user
+            .roles
+            .iter()
+            .map(|role| serde_json::json!({ "value": role.code }))
+            .collect();
+        if !roles.is_empty() {
+            attributes.insert("roles".to_owned(), Value::Array(roles));
+        }
         let template = template_of(&user.body);
         for mapped in &self.attributes {
             let Some(text) = mapped

@@ -22,18 +22,18 @@ A deployment combines every attribute the model has (scope, exception, effect, t
  (Demographic IM)                   (EHR_ACCESS, per EHR)              (ACCESS_POLICY, per controller)
 
  PERSON/AGENT --performs--> ROLE    EHR_ACCESS                         ACCESS_POLICY
-     |                  +-CAPABILITY  settings: ACCESS_DIRECTIVE_         controller -> ORGANISATION
-     |                     credentials  SETTINGS                          classifications
+     |                  name (role)   settings: ACCESS_DIRECTIVE_         controller -> ORGANISATION
+     |                  +-CAPABILITY    SETTINGS                          classifications
      +--member of--> GROUP            default_access                    care_relationship_required
                        ^              gate_keepers                      relationship_grace
  subject PERSON --under care of--+    directives (+ exceptions)         purpose_required
-     ^                                labels                            catalogue
-     +--represents-- PERSON           evidence -> ADMIN_ENTRY
+     ^                                labels                            rules (+ exceptions)
+     +--represents-- PERSON           evidence -> ADMIN_ENTRY           catalogue
 ----
 
 * *Per EHR*, `ACCESS_DIRECTIVE_SETTINGS` in `EHR_ACCESS._settings_`: the default disposition, the gate-keepers, the subject's directives and sensitivity labels on single objects. It is versioned with the EHR and travels in an EHR Extract.
-* *Per caller*, the Demographic IM as it stands: the `ROLE` a caller performs, the codes its `CAPABILITY._credentials_` carry (the operations it may perform, the sensitivities it is cleared for, the purposes it may declare), and `PARTY_RELATIONSHIP` instances for care-team membership and for the subject being under the care of a team or a unit. This follows The Problem of Roles: the care delivery environment evaluates "care deliverer", and the EHR system reads the outcome. The package adds no demographic class.
-* *Per controller*, `ACCESS_POLICY`: the classification of kinds of data into sensitivities, whether clinical access needs a care relationship and a declared purpose, and a catalogue of named directives a subject accepts by reference. It is not about one EHR and it is not a party, so it is a versioned root of its own, `VERSIONED_ACCESS_POLICY`.
+* *Per caller*, the Demographic IM as it stands: the `ROLE`s a caller performs, each named by its role (`PARTY.type()`), the operation codes their `CAPABILITY._credentials_` carry, and `PARTY_RELATIONSHIP` instances for care-team membership and for the subject being under the care of a team or a unit. This follows The Problem of Roles: the care delivery environment evaluates "care deliverer", and the EHR system reads the outcome. The package adds no demographic class.
+* *Per controller*, `ACCESS_POLICY`: the classification of kinds of data into sensitivities, whether clinical access needs a care relationship and a declared purpose, the controller's rules on which roles and callers may perform which operations on which kinds of data (EHDS Art 11(3)), and a catalogue of named directives a subject accepts by reference. The role is the assignment and the rule is the permission, the split the XACML Hierarchical RBAC Profile draws between a Role Enablement Authority and a permission policy. It is not about one EHR and it is not a party, so it is a versioned root of its own, `VERSIONED_ACCESS_POLICY`.
 
 == Placement of the Controller Policy
 

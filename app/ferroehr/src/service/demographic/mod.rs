@@ -78,6 +78,7 @@ pub mod reverse;
 pub mod template;
 pub mod types;
 pub mod user_lifecycle;
+pub mod user_roles;
 pub mod user_write;
 
 mod api;

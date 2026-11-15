@@ -45,6 +45,7 @@ mod access_event_fail_closed;
 mod access_log_aql;
 mod access_log_chain_split;
 mod access_log_checkpoint;
+mod access_log_gaps;
 mod access_log_retention;
 mod access_log_store;
 mod access_origins;

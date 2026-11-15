@@ -238,3 +238,24 @@ pub(crate) async fn performs(
     });
     create(svc, PartyKind::Role, &role).await;
 }
+
+/// Commits, as the server, a `ROLE` of a deployment's own archetype the
+/// party `performer` (its RM type and container) performs, named `name`,
+/// whose one capability grants nothing: the role `name` codes, which a
+/// controller rule names.
+pub(crate) async fn performs_role(svc: &FerroEhrService, performer: (&str, VoId), name: &Value) {
+    let archetype = "openEHR-DEMOGRAPHIC-ROLE.professional.v1";
+    let role = json!({
+        "_type": "ROLE", "archetype_node_id": archetype,
+        "archetype_details": archetyped(archetype), "name": name,
+        "identities": identities("professional"),
+        "performer": reference(performer.0, performer.1),
+        "capabilities": [{ "_type": "CAPABILITY", "archetype_node_id": "at0020",
+            "name": text("registration"),
+            "credentials": { "_type": "ITEM_TREE", "archetype_node_id": "at0022",
+                "name": text("terms"), "items": [{ "_type": "ELEMENT",
+                    "archetype_node_id": "at0023", "name": text("registration"),
+                    "value": text("BIG 12345") }] } }]
+    });
+    create(svc, PartyKind::Role, &role).await;
+}
