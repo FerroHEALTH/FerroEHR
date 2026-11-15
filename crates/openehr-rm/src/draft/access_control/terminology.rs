@@ -112,11 +112,14 @@ pub enum Group {
     /// `access refusal reason`: why an access was refused, beside the
     /// `access refusal` codes of the decision procedure.
     AccessRefusalReason,
+    /// `credential binding`: how the system bound a credential to a party,
+    /// or why it could not.
+    CredentialBinding,
 }
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 18] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
@@ -134,6 +137,7 @@ impl Group {
         Self::AccessorKind,
         Self::AccessAuthorisation,
         Self::AccessRefusalReason,
+        Self::CredentialBinding,
     ];
 
     /// The group's rubric, such as `access default`.
@@ -157,6 +161,7 @@ impl Group {
             Self::AccessorKind => "accessor kind",
             Self::AccessAuthorisation => "access authorisation",
             Self::AccessRefusalReason => "access refusal reason",
+            Self::CredentialBinding => "credential binding",
         }
     }
 
@@ -182,6 +187,7 @@ impl Group {
             Self::AccessorKind => phrases::<AccessorKind>(),
             Self::AccessAuthorisation => phrases::<Authorisation>(),
             Self::AccessRefusalReason => phrases::<RefusalReason>(),
+            Self::CredentialBinding => phrases::<CredentialBinding>(),
         }
     }
 
@@ -636,6 +642,64 @@ group! {
         RateLimited => "rate limited",
         /// The system failed.
         SystemFailure => "system failure",
+    }
+}
+
+group! {
+    /// How the system bound the credential to the accessor's party, or why
+    /// it could not (`ACCESSOR.binding`). Whether the access ran is
+    /// `ACCESS_OUTCOME`'s, so no code carries a refused prefix.
+    CredentialBinding in CredentialBinding {
+        /// The credential is bound to one active party.
+        Bound => "bound",
+        /// The credential is bound provisionally, pending its party.
+        Provisional => "provisional",
+        /// The credential is the subject of care's own.
+        SubjectOfCare => "subject of care",
+        /// The credential is of a person of another organisation.
+        External => "external",
+        /// The credential is of an organisation under an agreement.
+        Organisation => "organisation",
+        /// The credential is of a system acting for nobody.
+        System => "system",
+        /// The credential is bound to no party.
+        Unbound => "unbound",
+        /// The credential matches more than one party.
+        Ambiguous => "ambiguous",
+        /// The bound party is inactive.
+        PartyInactive => "party inactive",
+        /// The bound party was abandoned.
+        PartyAbandoned => "party abandoned",
+        /// The bound party was deleted.
+        PartyDeleted => "party deleted",
+        /// The bound party is not of the kind the credential claims.
+        PartyKindMismatch => "party kind mismatch",
+        /// The credential claims a representation the system holds no
+        /// record of.
+        RepresentationUnrecorded => "representation unrecorded",
+        /// The credential lacks the claim its party is keyed by.
+        KeyClaimMissing => "key claim missing",
+        /// The credential's groups could not be read.
+        GroupsUnavailable => "groups unavailable",
+        /// The credential is a guest's.
+        Guest => "guest",
+        /// The credential of a person of another organisation lacks what
+        /// binding it needs.
+        ExternalCredentialIncomplete => "external credential incomplete",
+        /// A system credential asks for a personal scope.
+        SystemPersonalScope => "system personal scope",
+        /// No agreement covers the credential's organisation.
+        NoAgreement => "no agreement",
+        /// The credential asks for more than its agreement grants.
+        ScopeBeyondAgreement => "scope beyond agreement",
+        /// The agreement asks for a correlation id the request lacks.
+        CorrelationMissing => "correlation missing",
+        /// The request carries no treatment relationship confirmation.
+        TreatmentRelationshipConfirmationMissing => "treatment relationship confirmation missing",
+        /// The treatment relationship confirmation names another patient.
+        TreatmentRelationshipConfirmationMismatch => "treatment relationship confirmation mismatch",
+        /// A condition of the credential's agreement is not met.
+        AgreementConditionUnmet => "agreement condition unmet",
     }
 }
 

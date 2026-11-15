@@ -21,6 +21,7 @@
 
 use std::collections::BTreeMap;
 
+use openehr_rm::draft::access_control::terminology::CredentialBinding;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -153,6 +154,45 @@ impl BindingCode {
             Self::RefusedCorrelationMissing => "refused-correlation-missing",
             Self::RefusedWabvpzRole => "refused-wabvpz-role",
             Self::RefusedWabvpzOrganisationType => "refused-wabvpz-organisation-type",
+        }
+    }
+
+    /// The term of the draft `credential binding` group the access log
+    /// records this outcome under (`ACCESSOR.binding`).
+    ///
+    /// Whether the access ran is `ACCESS_OUTCOME`'s, so each refusal maps to
+    /// its cause alone.
+    #[must_use]
+    pub const fn term(self) -> CredentialBinding {
+        match self {
+            Self::Bound => CredentialBinding::Bound,
+            Self::Provisional => CredentialBinding::Provisional,
+            Self::External => CredentialBinding::External,
+            Self::Organisation => CredentialBinding::Organisation,
+            Self::System => CredentialBinding::System,
+            Self::SelfPatient => CredentialBinding::SubjectOfCare,
+            Self::RefusedUnbound => CredentialBinding::Unbound,
+            Self::RefusedAmbiguous => CredentialBinding::Ambiguous,
+            Self::RefusedInactive => CredentialBinding::PartyInactive,
+            Self::RefusedAbandoned => CredentialBinding::PartyAbandoned,
+            Self::RefusedDeprovisioned => CredentialBinding::PartyDeleted,
+            Self::RefusedWrongMarker => CredentialBinding::PartyKindMismatch,
+            Self::RefusedRepresentationUnrecorded => CredentialBinding::RepresentationUnrecorded,
+            Self::RefusedKeyClaimMissing => CredentialBinding::KeyClaimMissing,
+            Self::RefusedGroupsUnavailable => CredentialBinding::GroupsUnavailable,
+            Self::RefusedGuest => CredentialBinding::Guest,
+            Self::RefusedExternalIncomplete => CredentialBinding::ExternalCredentialIncomplete,
+            Self::RefusedTrcPatientMismatch => {
+                CredentialBinding::TreatmentRelationshipConfirmationMismatch
+            }
+            Self::RefusedTrcMissing => CredentialBinding::TreatmentRelationshipConfirmationMissing,
+            Self::RefusedSystemPersonalScope => CredentialBinding::SystemPersonalScope,
+            Self::RefusedNoAgreement => CredentialBinding::NoAgreement,
+            Self::RefusedScopeBeyondAgreement => CredentialBinding::ScopeBeyondAgreement,
+            Self::RefusedCorrelationMissing => CredentialBinding::CorrelationMissing,
+            Self::RefusedWabvpzRole | Self::RefusedWabvpzOrganisationType => {
+                CredentialBinding::AgreementConditionUnmet
+            }
         }
     }
 
@@ -395,6 +435,23 @@ impl BindingRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every outcome is recorded under a term of the draft `credential
+    /// binding` group, every term but `agreement condition unmet` names one
+    /// outcome alone, and only the two Wabvpz refusals share that one.
+    #[test]
+    fn every_outcome_has_its_own_credential_binding_term() {
+        use openehr_rm::draft::access_control::terminology::Term;
+        let mut terms: Vec<CredentialBinding> = BindingCode::ALL.iter().map(|c| c.term()).collect();
+        let shared = terms
+            .iter()
+            .filter(|term| **term == CredentialBinding::AgreementConditionUnmet)
+            .count();
+        assert_eq!(shared, 2);
+        terms.sort_by_key(|term| term.code());
+        terms.dedup();
+        assert_eq!(terms.len(), CredentialBinding::ALL.len());
+    }
 
     fn party() -> PartyTriple {
         PartyTriple {

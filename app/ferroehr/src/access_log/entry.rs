@@ -62,8 +62,6 @@ use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention
 use openehr_rm::draft::access_log::access_log::accessed_item::AccessedItem;
 use openehr_rm::draft::access_log::access_log::accessor::Accessor;
 
-/// FerroEHR's terminology of the party binding outcomes (#5007).
-pub const BINDING_TERMINOLOGY: &str = "ferroehr-party-binding";
 /// FerroEHR's terminology of the retention grounds an entry states.
 pub const RETENTION_TERMINOLOGY: &str = "ferroehr-access-log-retention";
 /// The terminology of a code a caller declared with no system.
@@ -288,13 +286,7 @@ fn accessor(event: &AuditEvent, system_id: &str) -> Accessor {
                 .collect(),
         ),
         groups: binding.and_then(|binding| nonempty(groups(binding))),
-        binding: binding.map(|binding| {
-            coded_text(
-                BINDING_TERMINOLOGY,
-                binding.code.as_str(),
-                binding.code.as_str(),
-            )
-        }),
+        binding: binding.map(|binding| binding.code.term().coded()),
         credential: credential(event),
         delegation: binding.and_then(|binding| {
             nonempty(

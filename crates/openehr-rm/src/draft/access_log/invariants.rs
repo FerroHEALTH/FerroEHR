@@ -10,14 +10,15 @@
 //! draft is FerroEHR's change proposal and no openEHR release, so these checks
 //! are our own design over our own model (#5124).
 //!
-//! The four terminology invariants (`Action_valid`, `Kind_valid` of `ACCESSOR`
-//! and of `ACCESS_AUTHORISATION`, `Result_valid`) ask for a term of a group of
+//! The five terminology invariants (`Action_valid`, `Kind_valid` of `ACCESSOR`
+//! and of `ACCESS_AUTHORISATION`, `Binding_valid`, `Result_valid`) ask for a
+//! term of a group of
 //! the draft `openehr_access` terminology (`Terminology_id_access`): a coded
 //! value holds when [`crate::draft::access_control::terminology`] reads its
 //! `defining_code` as a term of the invariant's group.
 
 use crate::draft::access_control::terminology::{
-    AccessorKind, Action, Authorisation, Outcome, Term,
+    AccessorKind, Action, Authorisation, CredentialBinding, Outcome, Term,
 };
 use crate::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use crate::draft::access_log::access_log::access_credential::AccessCredential;
@@ -155,6 +156,14 @@ fn accessor_rules(check: &mut Check, accessor: &Accessor) {
         AccessorKind::read_coded(&accessor.kind).is_ok(),
         "ACCESSOR",
         "Kind_valid",
+    );
+    check.hold(
+        accessor
+            .binding
+            .as_ref()
+            .is_none_or(|binding| CredentialBinding::read_coded(binding).is_ok()),
+        "ACCESSOR",
+        "Binding_valid",
     );
     let credentials = accessor
         .credential
