@@ -91,15 +91,18 @@ fn referenced_id(reference: &str) -> String {
 /// The stored form of `identity` reported as `kind`: its id, its
 /// identifiers, its `active` and the survivor its `replaced-by` link names.
 fn event(kind: ChangeKind, identity: &PatientIdentity) -> FeedEvent {
+    let id = identity
+        .id()
+        .map(|id| id.expose_secret().to_owned())
+        .unwrap_or_default();
     FeedEvent {
         kind,
-        id: identity
-            .id()
-            .map(|id| id.expose_secret().to_owned())
-            .unwrap_or_default(),
         identifiers: identity
             .identifiers()
             .iter()
+            // NOTE: PMIR 1.6.0 §2:3.93.4.1.1, `Patient.id` is the Master Patient Identification
+            // Domain's identifier; its echo in `Patient.identifier` names the identity, no PERSON.
+            .filter(|identifier| identifier.value().expose_secret() != id)
             .filter_map(|identifier| {
                 // NOTE: an identifier without a system names no domain, so no patient
                 // PERSON carries it under an issuer and nothing resolves by it.
@@ -109,6 +112,7 @@ fn event(kind: ChangeKind, identity: &PatientIdentity) -> FeedEvent {
                 })
             })
             .collect(),
+        id,
         active: identity.active(),
         replaced_by: identity
             .links()

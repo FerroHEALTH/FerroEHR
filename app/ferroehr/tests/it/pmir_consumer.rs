@@ -17,6 +17,30 @@ use fhir_types::r4::patient::{Patient, PatientLink};
 use fhir_types::r4::reference::Reference;
 use ihe_iti::pmir::server::notification::{self, Addressing, Notice};
 use url::Url;
+
+/// The Registry's master domain, which `FerroPIX` names by its base URL and
+/// repeats in every announced `Patient` (PMIR 1.6.0 §2:3.93.4.1.3).
+const MASTER: &str = "https://pix.example";
+
+/// A `Patient` carrying its own master identifier first, as the Registry
+/// announces it.
+pub(crate) trait MasterIdentifier {
+    fn with_master_identifier(self, id: &str) -> Self;
+}
+
+impl MasterIdentifier for Patient {
+    fn with_master_identifier(mut self, id: &str) -> Self {
+        self.identifier.insert(
+            0,
+            FhirIdentifier {
+                system: Some(MASTER.into()),
+                value: Some(id.into()),
+                ..FhirIdentifier::default()
+            },
+        );
+        self
+    }
+}
 use uuid::Uuid;
 
 use crate::ehr_index_ihe::CLINICAL;
@@ -60,6 +84,7 @@ fn fhir_patient(id: &str, national: &[&str]) -> Patient {
         active: Some(true.into()),
         ..Patient::default()
     }
+    .with_master_identifier(id)
 }
 
 /// `merged` deprecated into `survivor`, as the merged Patient profile has it.

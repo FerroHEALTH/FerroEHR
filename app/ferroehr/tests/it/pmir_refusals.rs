@@ -16,6 +16,7 @@ use uuid::Uuid;
 use crate::ehr_index_ihe::CLINICAL;
 use crate::fixtures::create_ehr_subject;
 use crate::patient_index::{NATIONAL, identifier, patient, replica, sorted};
+use crate::pmir_consumer::MasterIdentifier;
 use crate::policy_fixtures::{ISSUER, capability, create, granted};
 use ferroehr::ids::EhrId;
 use ferroehr::service::FerroEhrService;
@@ -52,6 +53,7 @@ fn fhir_patient(id: &str, identifiers: &[(&str, &str)]) -> Patient {
         active: Some(true.into()),
         ..Patient::default()
     }
+    .with_master_identifier(id)
 }
 
 fn national(id: &str, values: &[&str]) -> Patient {
