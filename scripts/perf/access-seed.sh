@@ -30,7 +30,12 @@
 readonly EXT=/ferroehr/rest/extensions/v1
 # shellcheck disable=SC2034 # read by gate.sh, which sources this file
 readonly CLINICIAN_AUTH="Basic Y2xpbmljaWFuOmNsaW5pY2lhbg=="
-readonly ACCESS_TERMINOLOGY=ferroehr-operations
+# The access-control codes and the grant operations (openehr_access), the
+# effect of a directive (HL7 FHIR consent-provision-type) and a membership
+# of a care team (HL7 v3 RoleClass MBR), as openehr-rm's terminology names them.
+readonly ACCESS_TERMINOLOGY=openehr_access
+readonly PROVISION_TERMINOLOGY=consent-provision-type
+readonly ROLE_CLASS_TERMINOLOGY=v3-RoleClass
 readonly ACT_CODE=2.16.840.1.113883.5.25
 readonly ACT_REASON=2.16.840.1.113883.5.8
 # The code system and code of the clinician's functional role.
@@ -75,13 +80,18 @@ party_json() {
     + (if ($rel | length) > 0 then {relationships: $rel} else {} end)'
 }
 
-# care_json <code> <source-person> <team>: a care relationship of <code> from
-# the first of January this year, unbounded.
+# care_json <under_care_of|member_of> <source-person> <team>: a care
+# relationship from the first of January this year, unbounded, coded
+# under_care_of of openehr_access or MBR of the HL7 v3 RoleClass.
 care_json() {
-  local from
+  local from t="$ACCESS_TERMINOLOGY" coded="$1"
   from="$(date -u +%Y)-01-01"
-  jq -cn --arg code "$1" --arg source "$2" --arg team "$3" --arg from "$from" \
-    --arg t "$ACCESS_TERMINOLOGY" '
+  if [[ "$1" == member_of ]]; then
+    t="$ROLE_CLASS_TERMINOLOGY"
+    coded=MBR
+  fi
+  jq -cn --arg code "$1" --arg coded "$coded" --arg source "$2" --arg team "$3" \
+    --arg from "$from" --arg t "$t" '
     def text($v): {_type: "DV_TEXT", value: $v};
     def ref($type; $id): {_type: "PARTY_REF", namespace: "demographic", type: $type,
       id: {_type: "HIER_OBJECT_ID", value: $id}};
@@ -91,7 +101,7 @@ care_json() {
      details: {_type: "ITEM_TREE", archetype_node_id: "at0002", name: text("details"),
        items: [{_type: "ELEMENT", archetype_node_id: "at0003", name: text("kind"),
          value: {_type: "DV_CODED_TEXT", value: $code, defining_code: {_type: "CODE_PHRASE",
-           terminology_id: {_type: "TERMINOLOGY_ID", value: $t}, code_string: $code}}}]},
+           terminology_id: {_type: "TERMINOLOGY_ID", value: $t}, code_string: $coded}}}]},
      time_validity: {_type: "DV_INTERVAL", lower: {_type: "DV_DATE", value: $from},
        lower_unbounded: false, upper_unbounded: true, lower_included: true,
        upper_included: false},
@@ -126,7 +136,7 @@ policy_json() {
   jq -cn --arg controller "$1" --argjson hiv "$(coded_json "$ACT_CODE" HIV)" \
     --argjson role "$(coded_json "$ROLE_SYSTEM" "$ROLE_CODE")" \
     --argjson rule "$(coded_json "$ACCESS_TERMINOLOGY" controller_rule)" \
-    --argjson permit "$(coded_json "$ACCESS_TERMINOLOGY" permit)" '
+    --argjson permit "$(coded_json "$PROVISION_TERMINOLOGY" permit)" '
     def text($v): {_type: "DV_TEXT", value: $v};
     {_type: "ACCESS_POLICY", name: text("Perf gate access policy"),
      archetype_node_id: "openEHR-EHR-ACCESS_POLICY.controller.v1",
@@ -151,7 +161,8 @@ policy_json() {
 
 # The settings every seeded EHR carries: five directives, one gate-keeper.
 settings_json() {
-  jq -cn --arg t "$ACCESS_TERMINOLOGY" --arg act "$ACT_CODE" --arg reason "$ACT_REASON" \
+  jq -cn --arg t "$ACCESS_TERMINOLOGY" --arg provision "$PROVISION_TERMINOLOGY" \
+    --arg act "$ACT_CODE" --arg reason "$ACT_REASON" \
     --arg named "$NAMED_PROFESSIONAL" --arg rep "$REPRESENTATIVE" '
     def text($v): {_type: "DV_TEXT", value: $v};
     def code($term; $c): {_type: "DV_CODED_TEXT", value: $c, defining_code: {_type: "CODE_PHRASE",
@@ -160,7 +171,7 @@ settings_json() {
     def person($id): {_type: "PARTY_REF", namespace: "demographic", type: "PERSON",
       id: {_type: "HIER_OBJECT_ID", value: $id}};
     def directive($kind; $effect): {_type: "ACCESS_DIRECTIVE", name: text($kind),
-      archetype_node_id: "at0001", kind: term($kind), effect: term($effect),
+      archetype_node_id: "at0001", kind: term($kind), effect: code($provision; $effect),
       emergency_override: true};
     {_type: "ACCESS_DIRECTIVE_SETTINGS", default_access: term("open"),
      gate_keepers: [{_type: "PARTY_IDENTIFIED", external_ref: person($named)}],
