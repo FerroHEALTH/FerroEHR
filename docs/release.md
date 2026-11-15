@@ -134,8 +134,9 @@ over this tree's `perf/plan.toml`, with each arm's seeded ids:
   at once, four pairs, the base leading in the first and the head in the
   next. It covers EHR create and read, composition commit and read, the
   lab-results AQL query with and without `ORDER BY`, a population query
-  (`SELECT e/ehr_id/value FROM EHR e LIMIT 20`), a template upload, and two
-  demographic reads. Each group's p50, p95 and p99 latency, the throughput,
+  (`SELECT e/ehr_id/value FROM EHR e LIMIT 20`), a template upload, two
+  demographic reads, an export of the read EHR and an access-log read
+  through the ITI-81 retrieval. Each group's p50, p95 and p99 latency, the throughput,
   the peak memory, the CPU time per request and the transactions per request
   of the head are judged against the base's.
 
@@ -154,7 +155,38 @@ entry per EHR it served. After the load the gate counts those entries in each
 arm's store and adds a table to the summary: the statements, the per-EHR
 entries and the entries per statement of the head and the base, beside the
 group's latency, CPU and transactions per request (#5564). A base whose store
-has no access log reads `none`.
+has no access log reads `none`. A second table gives each arm's access-log
+entries and the bytes they take on disk.
+
+An arm whose tree configures the `clinician` Basic user runs with the access
+path in force (#5590, `scripts/perf/access-seed.sh`): the administrator
+commits an access policy that requires a care relationship, makes the
+clinician a member of a care team in a coded role that a controller rule of
+the policy lets read HIV data, and places the subject of
+the read EHR, the write EHR and every population EHR under that team's care,
+each EHR with five directives. The clinical groups (EHR read, composition
+commit and read, the AQL queries, the export) are sent as the clinician, so
+the evaluator judges every one by its care relationship, role and
+directives; an older base sends them as its administrator. Every arm signs
+its access-log links with an OpenPGP key the gate generates for the run with
+`gpg`: Ed25519 by default, RSA-3072 with `PERF_SIGNING_KEY=rsa3072`.
+
+A gate measures a change in the code, so it compares like with like: when
+the base binary accepts this tree's gate configuration (`ferroehr config
+check`), the base arm runs under it too, with the same signing key, access
+seed and credentials. Only a base that refuses it, such as an earlier release
+without the access path, runs under its own tree's configuration; that
+comparison shows the whole cost of the access path and the signed access log,
+which `docs/benchmarks/access-path/record.json` records as the accepted cost
+of the EHDS access log.
+
+`gate.sh replicas <image> <pg-image> [<instances>...]` measures the reload
+load of one, two and three instances on one PostgreSQL: after each change the
+copies listen for (a grant, a care relationship, the access policy, an EHR's
+directives) it counts the transactions and statements of the window and reads
+each instance's grants refreshes. The recorded runs of both are in
+`docs/benchmarks/access-path/record.json`, rendered into the book's
+performance page.
 
 The job first runs `gate.sh self-test`. It polls a table with no wait during
 the idle phase, and the self-test passes only when the gate fails that run on
