@@ -610,7 +610,10 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
 
 /// Party migration 0042 (#5621) made a `ROLE`'s coded name a caller fact. A
 /// store migrated from 0041 holds its `ROLE`s and no role rows, and the next
-/// boot refills them before it serves, with no command run (#5675).
+/// boot refills them before it serves, with no command run (#5675). The
+/// store is built at head and its role rows deleted, then 0042 runs again:
+/// a real 0041 store cannot be built, because its check constraint refuses
+/// the `role` facts the current code writes at each `ROLE` commit.
 #[tokio::test]
 async fn the_boot_after_migration_0042_reads_the_roles_already_stored() {
     const MIGRATION: &str = include_str!("../../migrations/party/0042_role_facts.sql");

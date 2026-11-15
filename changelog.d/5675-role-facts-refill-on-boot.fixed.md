@@ -1,1 +1,0 @@
-- The first boot after party migration `0042` reads the roles of the `ROLE`s already stored as caller facts before it serves. Before, an operator had to run `ferroehr party-binding refill`, and a store that skipped it refused every caller a controller rule names by role (#5675).
