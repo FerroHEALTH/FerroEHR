@@ -406,6 +406,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   represented EHR, and the full view to the caller the admin class admits;
   `GET {ext}/admin/access-log`, `/chain` and `/checkpoint` serve the review.
   `access_log::search` pages the records over the trigger's search columns,
+  the coded filters (`action`, `outcome`, `accessor_kind`) taken as a FHIR
+  token `terminology_id|code` and compared by `defining_code`, never by
+  rubric (#5687, our own design),
   `service::admin::access_log_read` holds the EHR check and the EHDS Art.
   3(3) holds the person's view leaves out, the subject view withholds what
   the access policy's Art. 9(3) `log_restrictions` name (#5570), and every

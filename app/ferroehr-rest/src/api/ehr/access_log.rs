@@ -67,10 +67,17 @@ guarded_handler! {
              description = "The first `time_recorded` selected, an ISO 8601 date-time."),
             ("to" = Option<String>, Query,
              description = "The last `time_recorded` selected, an ISO 8601 date-time."),
-            ("action" = Option<String>, Query, description = "An `access action` rubric."),
-            ("outcome" = Option<String>, Query, description = "An `access outcome` rubric."),
+            ("action" = Option<String>, Query,
+             description = "A term of the `access action` group by its coded content, the token \
+                            `terminology_id|code`, such as `audit-event-action|R` or \
+                            `openehr_access|query`."),
+            ("outcome" = Option<String>, Query,
+             description = "A term of the `access outcome` group by its coded content, the token \
+                            `terminology_id|code`, such as `openehr_access|refused`."),
             ("accessor_kind" = Option<String>, Query,
-             description = "An `accessor kind` rubric."),
+             description = "A term of the `accessor kind` group by its coded content, the token \
+                            `terminology_id|code`, such as \
+                            `extra-security-role-type|datasubject`."),
             ("emergency" = Option<bool>, Query,
              description = "Only the entries whose `is_emergency` is this."),
             ("include_self" = Option<bool>, Query,

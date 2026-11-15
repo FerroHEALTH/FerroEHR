@@ -28,7 +28,8 @@ pub(crate) const SUBJECT: &str = "patient-access-log-1";
 /// A value written into a composition, which no entry may carry.
 pub(crate) const SENTINEL: &str = "access-log-sentinel-6b1f";
 
-/// One stored entry: its EHR, action, result, request id and canonical form.
+/// One stored entry: its EHR, the codes of its action and result, its request
+/// id and its canonical form.
 #[derive(Debug, Clone)]
 pub(crate) struct Stored {
     pub(crate) ehr_id: Option<String>,
@@ -57,7 +58,7 @@ pub(crate) async fn entries(
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<Columns> = sqlx::query_as(
-            "SELECT ehr_id, action, result, request_id, content \
+            "SELECT ehr_id, action_code, result_code, request_id, content \
              FROM audit.access_log_record ORDER BY chain_seq",
         )
         .fetch_all(pool)
@@ -181,12 +182,12 @@ async fn an_its_rest_write_and_read_each_write_an_entry_without_content() {
 
     let mine = |s: &Stored| s.ehr_id.as_deref() == Some(ehr.as_str());
     let stored = entries(&pool, 3, |s| {
-        mine(s) && matches!(s.action.as_deref(), Some("create" | "read"))
+        mine(s) && matches!(s.action.as_deref(), Some("C" | "R"))
     })
     .await;
     let created = stored
         .iter()
-        .filter(|s| s.action.as_deref() == Some("create"))
+        .filter(|s| s.action.as_deref() == Some("C"))
         .count();
     assert!(
         created >= 2,
@@ -194,7 +195,7 @@ async fn an_its_rest_write_and_read_each_write_an_entry_without_content() {
     );
     let read: Vec<&Stored> = stored
         .iter()
-        .filter(|s| s.action.as_deref() == Some("read"))
+        .filter(|s| s.action.as_deref() == Some("R"))
         .collect();
     assert_eq!(read.len(), 1, "{stored:?}");
     assert_eq!(read[0].result.as_deref(), Some("granted"));
@@ -334,7 +335,7 @@ async fn a_read_of_the_log_writes_an_entry_naming_the_log() {
     assert_eq!(status, StatusCode::OK, "ITI-81: {body}");
     let read = entries(&pool, 1, |s| s.content.contains("audit_event_search")).await;
     assert_eq!(read.len(), 1, "{read:?}");
-    assert_eq!(read[0].action.as_deref(), Some("read"));
+    assert_eq!(read[0].action.as_deref(), Some("R"));
     assert!(
         read[0].content.contains("FHIR search"),
         "{}",
