@@ -70,8 +70,9 @@ pub mod policy;
 pub mod process;
 mod usage_report_cmd;
 
-/// How long to wait for the audit queue to flush on shutdown.
-const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
+/// How long the audit chainer and forwarders get to stop on shutdown; what
+/// they leave waits in the store for the next run.
+const AUDIT_STOP_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// What `ferroehr --version` prints after the binary's name: the version, then
 /// the manufacturer with its postal address, single point of contact and
@@ -408,7 +409,6 @@ fn assemble_service(
     deployment: DeploymentPosture,
     ehr_index: EhrIndexProvider,
 ) -> anyhow::Result<FerroEhrService> {
-    let audit_enabled = audit_sender.is_some();
     // The MRN patterns compiled here; `FerroEhrConfig::validate` already
     // refused an uncompilable one at boot, so this cannot be the first place a
     // bad pattern is noticed.
@@ -453,12 +453,9 @@ fn assemble_service(
                 .map_or(&[][..], |pix| pix.identifier_domain.as_slice()),
         );
     if let Some(sender) = audit_sender {
-        service = service.with_audit(sender);
-    }
-    if audit_enabled && config.audit.store.enabled {
-        service = service.with_audit_store(ferroehr::system_log::store::AuditStore::new(
-            pools.audit.clone(),
-        ));
+        service = service
+            .with_audit_store(sender.store().clone())
+            .with_audit(sender);
     }
 
     service = attach_terminology(service, config)?;
@@ -510,11 +507,8 @@ fn log_resolved_posture(
     );
     if audit_enabled {
         tracing::info!(
-            local_repository = audit.store.enabled,
             syslog = audit.syslog.is_some(),
             fhir_feed = audit.fhir_feed.is_some(),
-            queue_capacity = audit.queue_capacity,
-            fail_mode = ?audit.fail_mode,
             resolve_subject = audit.resolve_subject,
             "IHE ATNA audit enabled"
         );
@@ -907,7 +901,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     #[cfg(not(feature = "fhir"))]
     ferroehr::system_log::require_fhir_disabled(&config.audit).map_err(|e| anyhow::anyhow!(e))?;
     let audit_config: AuditConfig = config.audit.clone();
-    let (audit_sender, audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await;
+    let (audit_sender, audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await?;
 
     // Health indicators.
     let mut indicators: Vec<Arc<dyn HealthIndicator>> = vec![
@@ -957,7 +951,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // NOTE: our own design, the drain appends every access's entry through the checkpoints'
     // store, which seals each append under an OpenPGP key; no request has run before this.
     if let Some(sender) = &audit_sender {
-        let installed = sender.use_access_log(access_log.store().clone());
+        let installed = sender.store().use_access_log(access_log.store().clone());
         tracing::debug!(
             installed,
             "access-log entries appended through the configured store"
@@ -986,7 +980,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
             .with_access_log(access_log.clone()),
     );
     let publication = access_log::spawn_schedule(&config, &access_log);
-    if audit_enabled && config.audit.store.enabled {
+    if audit_enabled {
         indicators.push(Arc::new(indicators::AccessLogCheckpointsHealth::new(
             access_log.seals(),
             publication,
@@ -1102,7 +1096,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         held.release().await;
     }
     if let Some(handle) = audit_handle {
-        handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
+        handle.shutdown(AUDIT_STOP_TIMEOUT).await;
     }
     support_watch.abort();
     outbox_prune.abort();
@@ -1114,8 +1108,10 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     Ok(())
 }
 
-/// Start the audit subsystem from config. `(None, None)` when disabled or on a
-/// boot failure (fail-open).
+/// Start the audit subsystem from config; `(None, None)` when it is disabled.
+///
+/// # Errors
+/// When auditing is on and does not start: the boot is refused.
 ///
 /// Two pools, deliberately: the record is written to the `audit` domain, while
 /// the optional subject resolution reads the `clinical` one. A single pool
@@ -1124,20 +1120,20 @@ async fn start_audit(
     config: &AuditConfig,
     clinical: &PgPool,
     audit: &PgPool,
-) -> (Option<AuditSender>, Option<AuditHandle>) {
+) -> anyhow::Result<(Option<AuditSender>, Option<AuditHandle>)> {
     if !config.enabled {
-        return (None, None);
+        return Ok((None, None));
     }
     let resolver = config
         .resolve_subject
         .then(|| subject_resolver(clinical.clone()));
-    match ferroehr::system_log::sender::start(config.clone(), resolver, Some(audit.clone())).await {
-        Ok((sender, handle)) => (Some(sender), Some(handle)),
-        Err(e) => {
-            tracing::error!("ATNA audit failed to start ({e}); continuing without auditing");
-            (None, None)
-        }
-    }
+    // NOTE: our own design (#5747), auditing that does not start refuses the boot, since a
+    // request served without its record is an access the log does not hold.
+    let (sender, handle) =
+        ferroehr::system_log::sender::start(config.clone(), resolver, audit.clone())
+            .await
+            .context("starting the audit store, its chainer and its sinks")?;
+    Ok((Some(sender), Some(handle)))
 }
 
 /// Builds the full authorization handle the binary serves with: the RBAC gate

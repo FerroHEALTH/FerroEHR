@@ -121,7 +121,7 @@ pub(crate) fn start(
 pub async fn run(cmd: &PmirCmd, config: &ferroehr::config::FerroEhrConfig) -> anyhow::Result<()> {
     config.validate()?;
     let pools = crate::connect_pool(config).await?;
-    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
+    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await?;
     let mut service = FerroEhrService::new(&pools);
     if let Some(sender) = sender {
         service = service.with_audit(sender);
@@ -129,7 +129,7 @@ pub async fn run(cmd: &PmirCmd, config: &ferroehr::config::FerroEhrConfig) -> an
     let answer = Box::pin(act(&service, cmd)).await;
     drop(service);
     if let Some(handle) = handle {
-        handle.shutdown(crate::AUDIT_DRAIN_TIMEOUT).await;
+        handle.shutdown(crate::AUDIT_STOP_TIMEOUT).await;
     }
     println!("{}", answer?);
     Ok(())

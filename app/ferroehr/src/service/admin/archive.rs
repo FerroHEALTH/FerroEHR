@@ -41,8 +41,7 @@ impl FerroEhrService {
     /// - `versioned_object_does_not_exist` (`404`) — any EHR is unknown
     ///   (`ehr_id_does_not_exist`); nothing is archived.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    /// - `service_overloaded` — an access record was refused under
-    ///   `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — an access record could not be written.
     pub async fn archive_ehrs(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
@@ -52,7 +51,7 @@ impl FerroEhrService {
             tier::freeze(&mut tx, &vo_ids, Some("archive_ehrs")).await?;
         }
         tx.commit().await?;
-        self.emit_archive_access(ehr_ids, "archive")
+        self.emit_archive_access(ehr_ids, "archive").await
     }
 
     /// Move each party's versioned object to the cold archival tier
@@ -99,8 +98,7 @@ impl FerroEhrService {
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — any EHR is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    /// - `service_overloaded` — an access record was refused under
-    ///   `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — an access record could not be written.
     pub async fn restore_archived_ehrs(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
@@ -110,18 +108,22 @@ impl FerroEhrService {
             tier::thaw(&mut tx, &vo_ids).await?;
         }
         tx.commit().await?;
-        self.emit_archive_access(ehr_ids, "archive-restore")
+        self.emit_archive_access(ehr_ids, "archive-restore").await
     }
 
     /// Record the move of each EHR between the tiers as an access to it, one
     /// record per EHR, so its access log shows who archived or restored it.
     ///
     /// # Errors
-    /// `service_overloaded` when a record was refused under `[audit] fail_mode
-    /// = "closed"`; the move itself is already committed.
-    fn emit_archive_access(&self, ehr_ids: &[EhrId], register: &str) -> Result<(), ServiceError> {
+    /// `service_overloaded` when a record could not be written; the move itself is already committed.
+    async fn emit_archive_access(
+        &self,
+        ehr_ids: &[EhrId],
+        register: &str,
+    ) -> Result<(), ServiceError> {
         for &ehr_id in ehr_ids {
-            self.emit_mark_access(EventActionCode::Update, ehr_id, None, register)?;
+            self.emit_mark_access(EventActionCode::Update, ehr_id, None, register)
+                .await?;
         }
         Ok(())
     }

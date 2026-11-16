@@ -43,11 +43,11 @@
               (#1694)"
 )]
 
-mod leaf;
+pub(crate) mod leaf;
 pub(crate) mod node_ids;
 pub(crate) mod plan;
 mod presence;
-mod subtype;
+pub(crate) mod subtype;
 mod unique;
 
 use indexmap::IndexMap;
@@ -59,7 +59,6 @@ use crate::rm_instance::{ValidationKind, ValidationMessage};
 use crate::flat::path;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode, is_present};
-use crate::flat::webtemplate::constraint::WebTemplateArchetypeSlot;
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 use plan::{ChildGroup, NodeWalk};
 
@@ -731,7 +730,7 @@ impl Validator {
             {
                 continue;
             }
-            match ca.slots.iter().position(|s| slot_admits(s, ct, nid)) {
+            match ca.slots.iter().position(|s| s.admits(ct, nid)) {
                 Some(i) => counts[i] += 1,
                 None => self.push(
                     &ca.path,
@@ -1316,36 +1315,6 @@ fn children_under_attr<'a>(node: &'a Value, attr: &str) -> Vec<&'a Value> {
     }
 }
 
-/// Whether an open `ARCHETYPE_SLOT` admits a filler of RM type `child_type` and
-/// archetype id `archetype_id` (AOM 1.4 `ARCHETYPE_SLOT`): the type must conform
-/// to the slot's `rm_type`, the id must match at least one `includes` regex (an
-/// empty `includes` = open to the type), and match no `excludes` regex. A blanket
-/// match-all (`.*`) exclude is ignored when `includes` is non-empty — the ADL 1.4
-/// closed-slot idiom (AOM 1.4 has no `is_closed`; NOTE: includes then win,
-/// matching de-facto CDR behaviour).
-fn slot_admits(slot: &WebTemplateArchetypeSlot, child_type: &str, archetype_id: &str) -> bool {
-    if !slot.rm_type.is_empty() && !subtype::conforms(child_type, &slot.rm_type) {
-        return false;
-    }
-    let include_ok = slot.includes.is_empty()
-        || slot
-            .includes
-            .iter()
-            .any(|p| leaf::matches_pattern(p, archetype_id));
-    if !include_ok {
-        return false;
-    }
-    for ex in &slot.excludes {
-        if !slot.includes.is_empty() && matches!(ex.trim(), ".*" | ".+") {
-            continue; // closed-slot idiom: a specific includes list wins.
-        }
-        if leaf::matches_pattern(ex, archetype_id) {
-            return false;
-        }
-    }
-    true
-}
-
 #[cfg(test)]
 mod tests {
     //! Per-rule unit tests for the composition validator, built on hand-shaped
@@ -1357,7 +1326,8 @@ mod tests {
 
     use super::*;
     use crate::flat::webtemplate::constraint::{
-        WebTemplateClosedAttribute, WebTemplateCodeList, WebTemplateExistence, WebTemplateSlot,
+        WebTemplateArchetypeSlot, WebTemplateClosedAttribute, WebTemplateCodeList,
+        WebTemplateExistence, WebTemplateSlot,
     };
     use crate::flat::webtemplate::model::{
         WebTemplateCardinality, WebTemplateCodedValue, WebTemplateInput, WebTemplateInputType,

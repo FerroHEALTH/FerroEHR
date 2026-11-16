@@ -123,12 +123,11 @@ async fn adoption_gives_each_prepared_person_its_role_in_one_contribution() {
     let audit = ferroehr::system_log::config::AuditConfig {
         enabled: true,
         store: ferroehr::system_log::config::StoreConfig {
-            enabled: true,
             ..Default::default()
         },
         ..Default::default()
     };
-    let (sender, handle) = ferroehr::system_log::sender::start(audit, None, Some(db.pool()))
+    let (sender, handle) = ferroehr::system_log::sender::start(audit, None, db.pool())
         .await
         .expect("the audit sender");
     let svc = svc.with_audit(sender);

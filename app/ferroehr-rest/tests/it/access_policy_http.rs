@@ -451,18 +451,12 @@ async fn an_unreadable_stored_retention_keeps_the_last_good_one_and_holds_the_pu
     let indicator =
         ferroehr::telemetry::indicators::LogRetentionHealth::new(Arc::clone(svc.access_policy()));
     let (sender, _handle) = ferroehr::system_log::sender::start(
-        ferroehr::system_log::config::AuditConfig {
-            store: ferroehr::system_log::config::StoreConfig {
-                enabled: false,
-                ..ferroehr::system_log::config::StoreConfig::default()
-            },
-            ..ferroehr::system_log::config::AuditConfig::default()
-        },
+        ferroehr::system_log::config::AuditConfig::default(),
         None,
-        None,
+        pool.clone(),
     )
     .await
-    .expect("an audit trail without a store");
+    .expect("an audit trail");
     svc.access_policy().attach_audit(sender.clone());
     create(&app, &with_retention(Some("P3Y"), "P10Y")).await;
     svc.read_access_policy().await.expect("read the policy");

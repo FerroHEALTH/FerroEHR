@@ -85,10 +85,9 @@ async fn merge(svc: &FerroEhrService, id: &str, from: &str, into: &str) -> Optio
 /// one refused message, [`REFUSED`].
 async fn app(admin: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let (sender, _handle): (_, AuditHandle) =
-        start(common::local_audit(), None, Some(pool.clone()))
-            .await
-            .expect("the audit sender");
+    let (sender, _handle): (_, AuditHandle) = start(common::local_audit(), None, pool.clone())
+        .await
+        .expect("the audit sender");
     let svc = common::binding_service(&pool).with_audit(sender);
     assert!(matches!(
         merge(&svc, "m-merge", PIX_A, PIX_B).await,

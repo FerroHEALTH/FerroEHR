@@ -73,7 +73,6 @@ jiff-sqlx.workspace = true
 # `IndexMap` FLAT map the reverse transform reads leaf-by-leaf.
 indexmap.workspace = true
 # The audit forwarder's retry/backoff (`system_log::sender`).
-backon.workspace = true
 sea-query.workspace = true
 sea-query-sqlx.workspace = true
 # `EHR_ACCESS` scheme-settings cache (per-ehr, invalidated on EHR_ACCESS commit).

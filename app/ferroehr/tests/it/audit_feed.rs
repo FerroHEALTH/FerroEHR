@@ -23,7 +23,6 @@ fn config(arr_url: &str) -> AuditConfig {
     AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
@@ -101,12 +100,13 @@ async fn stored_records_are_fed_to_the_fhir_arr_and_stamped() {
         .await;
 
     let cfg = config(&format!("{}/fhir", arr.uri()));
-    let (sender, handle) = sender::start(cfg, None, Some(pool.clone()))
-        .await
-        .expect("start");
+    let (sender, handle) = sender::start(cfg, None, pool.clone()).await.expect("start");
 
     for _ in 0..2 {
-        let _ = sender.emit(event());
+        sender
+            .record(vec![event()])
+            .await
+            .expect("the record is written");
     }
 
     // Both rows are stored and, via the outbox worker, delivered + stamped.
@@ -146,10 +146,11 @@ async fn an_entry_is_fed_as_its_projection() {
         .await;
 
     let cfg = config(&format!("{}/fhir", arr.uri()));
-    let (sender, handle) = sender::start(cfg, None, Some(pool.clone()))
+    let (sender, handle) = sender::start(cfg, None, pool.clone()).await.expect("start");
+    sender
+        .record(vec![access()])
         .await
-        .expect("start");
-    let _ = sender.emit(access());
+        .expect("the record is written");
 
     let delivered = eventually(
         || async {
@@ -205,10 +206,11 @@ async fn arr_outage_leaves_rows_pending_then_delivers_on_recovery() {
         .await;
 
     let cfg = config(&format!("{}/fhir", arr.uri()));
-    let (sender, handle) = sender::start(cfg, None, Some(pool.clone()))
+    let (sender, handle) = sender::start(cfg, None, pool.clone()).await.expect("start");
+    sender
+        .record(vec![event()])
         .await
-        .expect("start");
-    let _ = sender.emit(event());
+        .expect("the record is written");
 
     // Stored immediately (durability anchor) even while the ARR is down…
     let stored = eventually(
@@ -296,10 +298,11 @@ async fn the_feed_authenticates_with_a_client_credentials_token() {
         client_secret: Some(secrecy::SecretString::from("s3cret")),
         ..Default::default()
     });
-    let (sender, handle) = sender::start(cfg, None, Some(pool.clone()))
+    let (sender, handle) = sender::start(cfg, None, pool.clone()).await.expect("start");
+    sender
+        .record(vec![event()])
         .await
-        .expect("start");
-    let _ = sender.emit(event());
+        .expect("the record is written");
 
     let delivered = eventually(
         || async {
@@ -347,11 +350,14 @@ async fn count(pool: &sqlx::PgPool, sql: &'static str) -> i64 {
 async fn with_no_feed_configured_no_record_is_owed() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let (sender, handle) = sender::start(store_only(), None, Some(pool.clone()))
+    let (sender, handle) = sender::start(store_only(), None, pool.clone())
         .await
         .expect("start");
     for _ in 0..3 {
-        let _ = sender.emit(event());
+        sender
+            .record(vec![event()])
+            .await
+            .expect("the record is written");
     }
     drop(sender);
     handle.shutdown(Duration::from_secs(2)).await;
@@ -383,11 +389,14 @@ async fn with_no_feed_configured_no_record_is_owed() {
 async fn records_stored_before_the_outbox_are_fed_once_a_feed_runs() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
-    let (sender, handle) = sender::start(store_only(), None, Some(pool.clone()))
+    let (sender, handle) = sender::start(store_only(), None, pool.clone())
         .await
         .expect("start");
     for _ in 0..2 {
-        let _ = sender.emit(event());
+        sender
+            .record(vec![event()])
+            .await
+            .expect("the record is written");
     }
     drop(sender);
     handle.shutdown(Duration::from_secs(2)).await;
@@ -404,13 +413,10 @@ async fn records_stored_before_the_outbox_are_fed_once_a_feed_runs() {
         .expect(2)
         .mount(&arr)
         .await;
-    let (sender, handle) = sender::start(
-        config(&format!("{}/fhir", arr.uri())),
-        None,
-        Some(pool.clone()),
-    )
-    .await
-    .expect("start");
+    let (sender, handle) =
+        sender::start(config(&format!("{}/fhir", arr.uri())), None, pool.clone())
+            .await
+            .expect("start");
     let delivered = eventually(
         || async {
             count(

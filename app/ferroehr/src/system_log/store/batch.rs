@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The parallel column arrays of the batched audit insert, one entry per
-//! record, which the `unnest` of the statement reads.
+//! The parallel column arrays of the batched intake of the system chain, one
+//! entry per record, which the `unnest` of the statement reads.
 
 #![expect(
     clippy::disallowed_types,
@@ -43,6 +43,7 @@ macro_rules! batch_columns {
 }
 
 batch_columns! {
+    ids: uuid::Uuid,
     recorded_at: Timestamp,
     actions: String,
     outcomes: i16,
@@ -108,6 +109,7 @@ impl<'a> BatchColumns<'a> {
         end: Option<&RecordEnd>,
     ) -> Result<(), AuditError> {
         let AuditRecord { event, subject, .. } = record;
+        self.ids.push(uuid::Uuid::now_v7());
         self.recorded_at.push(Timestamp::from(event.timestamp));
         self.actions.push(action_str(event));
         self.outcomes.push(outcome_smallint(event));

@@ -40,6 +40,7 @@ mod party_build;
 mod prohibited_context;
 mod raw_attributes;
 mod shape_tolerance;
+mod slot_admission;
 mod spec_vectors;
 mod structured;
 mod template_navigation;

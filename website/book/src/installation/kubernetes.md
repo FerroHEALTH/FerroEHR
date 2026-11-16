@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DATABASE__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 36.0.0 -n ferroehr \
+  --version 37.0.0 -n ferroehr \
   --set config.deployment.profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.7.1-rc1 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 36.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 37.0.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 36.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 37.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.7.1-rc1` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 36.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 37.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -271,8 +271,7 @@ says what it runs:
   `production`, which refuses to start while a separation is missing and not
   named in `config.deployment.accepts`. The chart defaults leave several open:
   one DSN for every domain, an empty `config.privacy.subject_namespaces`, the
-  server's `open` defaults for `config.audit.fail_mode` and
-  `config.authz.rbac.ehr_access_default`, `config.database.migrations: apply` on the
+  server's `open` default for `config.authz.rbac.ehr_access_default`, `config.database.migrations: apply` on the
   runtime credential, and a plaintext listener behind the ingress; see [`deployment.profile`](configuration.md#deploymentprofile).
   The chart's [production overlay](#the-production-overlay) closes them and
   accepts the plaintext listener by name.
@@ -302,7 +301,7 @@ separation that profile checks made, except one it accepts by name:
 | `shared_cluster` | yours to make: the server compares the cluster each domain pool reaches, so the separation is three DSNs on three PostgreSQL clusters. Each cluster is prepared on its own migrator: the migration Job applies the schema in every cluster, and the server verifies it there, on `database.<domain>.migrateExistingSecret` (`database.migrateExistingSecret` for the clinical cluster) |
 | `migrate_on_runtime_credential` | `config.database.migrations: verify`, with `migrations.job.enabled` preparing the schema on `database.migrateExistingSecret` |
 | `open_subject_namespace` | `config.privacy.subject_namespaces` declared |
-| `audit_off`, `audit_fails_open` | the audit trail on with its local store, `config.audit.fail_mode: closed` |
+| `audit_off` | the audit trail on (`config.audit.enabled: true`), which refuses an access it cannot record |
 | `no_category_map` | the shipped category map (the default), or templates and archetypes of your own in the audit category register, which refuses a write that opens the gap |
 | `open_ehr_access_default` | `config.authz.rbac.ehr_access_default: restricted` |
 | `auth_off` | OIDC authentication on |
@@ -324,7 +323,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 36.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 37.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -833,7 +832,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 36.0.0 -n ferroehr --reuse-values \
+  --version 37.0.0 -n ferroehr --reuse-values \
   --set config.record.query.plan_cache_capacity=512
 ```
 
@@ -1012,7 +1011,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 36.0.0 -n ferroehr --reuse-values \
+  --version 37.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1383,7 +1382,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 36.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 37.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

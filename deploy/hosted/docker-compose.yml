@@ -183,15 +183,15 @@ services:
   # Grants the PERSON of the demo user `ferroehr` the SMART on openEHR scopes
   # of every resource family in the CDR (hold_scopes), on the operator's
   # authority (`ferroehr party-binding grant --basic-user`): a Basic user is a
-  # credential alone. It fails until ferroehr-provision has created that
-  # PERSON and runs again until it has; a PERSON that holds the grant already
-  # gets nothing, and the deploy after the nightly wipe starts it again.
+  # credential alone. It starts once ferroehr-provision has created that
+  # PERSON; a PERSON that holds the grant already gets nothing, and the deploy
+  # after the nightly wipe starts it again.
   ferroehr-hold:
     image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:latest}
     container_name: ferroehr-sandbox-hold
     restart: on-failure
     depends_on:
-      ferroehr-grant:
+      ferroehr-provision:
         condition: service_completed_successfully
     deploy:
       resources:
@@ -225,18 +225,21 @@ services:
   # provisions people, so the Basic login is bound to the PERSON FerroEHR
   # issues for its binding key: the `sandbox-scim` client takes a client
   # credentials token (RFC 6749 §4.4) for the scope ferroehr/scim from the
-  # development issuer, asks for the User by `userName` (RFC 7644 §3.4.2.2)
-  # and creates it when it is missing. The nightly reset wipes every PERSON
-  # and restarts the CDR alone, so this service keeps asking every 30 seconds
-  # instead of exiting: the reseed (scripts/sandbox/reseed.sh) waits for the
-  # login to bind before it commits anything.
+  # development issuer and creates the User. A one-shot, run once by every
+  # `up -d` of the box's deploy, which the nightly reset goes through too
+  # (#5412): a `409 uniqueness` (RFC 7644 §3.12) is a User provisioned
+  # already once this client finds it by `userName` (RFC 7644 §3.4.2.2), and
+  # any other answer fails the run, so ferroehr-hold never starts and the
+  # reseed stops at `refused-unbound`.
   ferroehr-provision:
     image: ${FERROEHR_CURL_IMAGE:-curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777}
     container_name: ferroehr-sandbox-provision
-    restart: unless-stopped
+    restart: "no"
     network_mode: service:identity-issuer
     depends_on:
       identity-issuer-ready:
+        condition: service_completed_successfully
+      ferroehr-grant:
         condition: service_completed_successfully
     deploy:
       resources:
@@ -246,23 +249,21 @@ services:
       - sh
       - -c
       - >-
-        while true; do
+        set -eu;
         token=$$(curl -fsS -d grant_type=client_credentials -d client_id=sandbox-scim
         -d client_secret=sandbox -d scope=ferroehr/scim
         http://localhost:8180/sandbox/token | sed -n 's/.*"access_token" *: *"\([^"]*\)".*/\1/p');
-        if [ -n "$$token" ]; then
-        found=$$(curl -sS -H "Authorization: Bearer $$token"
-        'http://localhost:8080/scim/v2/Users?filter=userName%20eq%20%22ferroehr%22' |
-        sed -n 's/.*"totalResults" *: *\([0-9]*\).*/\1/p');
-        if [ "$$found" = 0 ]; then
+        if [ -z "$$token" ]; then echo 'the issuer answered no access token' >&2; exit 1; fi;
         status=$$(curl -sS -o /tmp/answer -w '%{http_code}' -X POST
         -H "Authorization: Bearer $$token" -H 'Content-Type: application/scim+json'
         --data '{"schemas":["urn:ietf:params:scim:schemas:core:2.0:User","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User"],"userName":"ferroehr","urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User":{"loginIdentifier":"ferroehr"}}'
         http://localhost:8080/scim/v2/Users);
-        echo "provisioning ferroehr answered $$status";
-        fi;
-        fi;
-        sleep 30; done
+        if [ "$$status" = 201 ]; then echo 'provisioned ferroehr'; exit 0; fi;
+        if [ "$$status" = 409 ] && grep -q '"uniqueness"' /tmp/answer &&
+        curl -fsS -H "Authorization: Bearer $$token"
+        'http://localhost:8080/scim/v2/Users?filter=userName%20eq%20%22ferroehr%22' |
+        grep -q '"totalResults" *: *1[,}]'; then echo 'ferroehr is provisioned already'; exit 0; fi;
+        echo "provisioning ferroehr answered $$status" >&2; cat /tmp/answer >&2; exit 1
     read_only: true
     tmpfs:
       - /tmp

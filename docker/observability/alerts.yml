@@ -53,16 +53,25 @@ groups:
 
   - name: ferroehr-audit
     rules:
-      - alert: AuditRecordsDropped
-        # Any increase in dropped audit records — fail-open auditing losing
-        # records is a page.
-        expr: increase(atna_audit_dropped_total[5m]) > 0
+      - alert: AuditRecordsUnwritten
+        # Requests refused because their audit records could not be written:
+        # the audit store is failing, and clinical traffic with it.
+        expr: increase(atna_audit_rejected_total[5m]) > 0
         for: 0m
         labels:
           severity: critical
         annotations:
-          summary: "ATNA audit records dropped"
-          description: "The audit pipeline dropped records in the last 5 minutes."
+          summary: "Accesses refused: their audit records could not be written"
+          description: "Requests were answered 503 in the last 5 minutes because the audit store did not take their records."
+      - alert: AuditChainerBehind
+        # The chainer links fewer records than the requests write.
+        expr: rate(access_log_entries_total{outcome="ok"}[5m]) > 1.5 * rate(audit_chained_total[5m])
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The audit chainer is behind the intake"
+          description: "Records are stored; the chains, checkpoints and feeds lag. See the audit_sender readiness indicator."
 
   - name: ferroehr-security
     rules:

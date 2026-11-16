@@ -145,11 +145,9 @@ impl FerroEhrService {
         self.admit_export(an_ehr_id).await?;
         let mut served = Vec::new();
         let extract = self.export_whole_ehr(an_ehr_id, 1, &mut served).await?;
-        self.emit_extract_audit(
-            an_ehr_id,
-            EventActionCode::Read,
-            Some(served_content(served, false)),
-        )?;
+        let content = Some(served_content(served, false));
+        let recorded = self.emit_extract_audit(an_ehr_id, EventActionCode::Read, content);
+        recorded.await?;
         Ok(vec![extract])
     }
 
@@ -213,11 +211,9 @@ impl FerroEhrService {
             out.push(self.assemble_extract(items, &demographics, spec_value.clone(), seq));
         }
         for (ehr_id, served) in exported_ehrs {
-            self.emit_extract_audit(
-                ehr_id,
-                EventActionCode::Read,
-                Some(served_content(served, sel.include_revision_history)),
-            )?;
+            let content = Some(served_content(served, sel.include_revision_history));
+            let recorded = self.emit_extract_audit(ehr_id, EventActionCode::Read, content);
+            recorded.await?;
         }
         Ok(out)
     }
