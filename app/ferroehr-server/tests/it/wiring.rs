@@ -184,12 +184,21 @@ fn pmir_subcommands_parse_and_name_their_operator() -> Result<(), clap::Error> {
 #[test]
 fn a_pmir_act_names_the_operator_and_the_effective_user() {
     let account = ferroehr_server::pmir::os_account().expect("the effective user reads");
-    assert!(account.starts_with("os:"), "{account}");
+    assert!(
+        account.starts_with("os:"),
+        "the account is the operating system's"
+    );
     let uid = nix::unistd::geteuid().to_string();
-    assert!(account.ends_with(&uid), "{account} names uid {uid}");
+    assert!(
+        account.ends_with(&uid),
+        "the account names the effective uid"
+    );
     let committer = ferroehr_server::pmir::committer(" steward ", &account);
     assert_eq!(committer.subject, "steward");
-    assert_eq!(committer.client.as_deref(), Some(account.as_str()));
+    assert!(
+        committer.client.as_deref() == Some(account.as_str()),
+        "the committer's client is the account"
+    );
 }
 
 /// `config` without a utility is rejected (the inner subcommand is required).
