@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
+use ferroehr::policy_register::listen::Listeners;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use http::StatusCode;
 use serde_json::json;
@@ -30,9 +31,15 @@ async fn second(world: &World) -> (Router, AuditHandle) {
         .expect("the audit sender");
     let svc = Arc::new(replica(&world.config, &world.pool, Some(sender)).await);
     let connect = (*world.pool.connect_options()).clone();
-    svc.ehr_access_listened().spawn_listener(connect.clone());
-    svc.grants().listened().spawn_listener(connect.clone());
-    svc.access_policy().listened().spawn_listener(connect);
+    Listeners::on(
+        connect,
+        &[
+            Arc::clone(svc.ehr_access_listened()),
+            Arc::clone(svc.grants().listened()),
+            Arc::clone(svc.access_policy().listened()),
+        ],
+    )
+    .spawn();
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     while !(svc.ehr_access_listened().is_listening()
         && svc.grants().listened().is_listening()
