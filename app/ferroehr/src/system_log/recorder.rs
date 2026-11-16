@@ -9,7 +9,7 @@
 //! builder: everything the request's operation record names except what the
 //! write itself decides (the EHR, the object, the content and the origins of
 //! what it wrote). The one commit choke point,
-//! [`crate::service::FerroEhrService::commit_recorded`], completes the
+//! `FerroEhrService::commit_recorded`, completes the
 //! record with those facts, writes it into the audit intake held under a
 //! reservation id, inserts the id in the write's own transaction and commits;
 //! the adapter then releases what the request reserved. No openEHR spec

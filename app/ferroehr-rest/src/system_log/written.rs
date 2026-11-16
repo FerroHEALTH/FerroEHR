@@ -8,7 +8,7 @@
 //! before the operation runs. The layers inside publish what only they know:
 //! the dispatch names the operation and the authentication layer how the
 //! caller authenticated. The service's commit choke point
-//! ([`ferroehr::service::FerroEhrService::commit_recorded`]) calls the
+//! (`FerroEhrService::commit_recorded` in `ferroehr`) calls the
 //! builder with what the write decided, so the operation record is the one
 //! the middleware would have written for a successful response, written and
 //! held before the write commits. No openEHR spec governs the audit trail:
