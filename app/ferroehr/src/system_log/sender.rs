@@ -667,7 +667,8 @@ fn spawn_store_upkeep(
     if config.verify_interval.is_zero() {
         return None;
     }
-    let check = ChainCheck::default();
+    let check =
+        ChainCheck::new((!config.max_verify_lag.is_zero()).then(|| config.max_verify_lag.get()));
     workers.push(tokio::spawn(crate::system_log::chain_check::scheduled(
         store.clone(),
         check.clone(),
@@ -850,6 +851,7 @@ mod tests {
                 enabled: false,
                 verify_interval: ferrohealth_config::units::Duration::from_secs(0),
                 full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+                max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
             },
             syslog: Some(SyslogConfig {
                 // A port nothing listens on is fine: the sink connects on the

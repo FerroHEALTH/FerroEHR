@@ -749,6 +749,7 @@ async fn setting_and_lifting_a_mark_is_recorded_in_the_access_trail() {
             enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..AuditConfig::default()
     };

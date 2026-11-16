@@ -501,6 +501,7 @@ async fn every_execution_is_recorded_as_a_linkage_access() {
             enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..AuditConfig::default()
     };
