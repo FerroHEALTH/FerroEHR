@@ -818,7 +818,15 @@ which is what makes an optional stage safe to disable:
    patient under the caller's teams as a `jsonb` object in a `WITH` clause
    (#5645). Erasing a `PERSON` deletes its rows in the erasing flow. Without
    identifier protection the projection is not written and every query that
-   names no EHR binds the census. Our own design. Before it renders a verdict, the emitter
+   names no EHR binds the census. Our own design. A query pinned to one EHR is
+   decided before its statement (`access_eval::condition::pinned`, #5746): the
+   evaluator judges that EHR from its copy as a direct read of it is judged,
+   and the statement carries only the part of the verdict that reads each
+   object, the EHR id compared with a constant, and one uncorrelated check,
+   which PostgreSQL runs once, that the revision of the EHR's settings row
+   and subject in force is the one the verdict was judged on, so a copy older
+   than the store admits no row. Every other query keeps the class condition
+   and its probe of the settings row per object. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the
    disjunction (a fact of the EHR, which may be unknown, is never folded). A

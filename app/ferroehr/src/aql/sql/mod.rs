@@ -59,6 +59,7 @@ mod from;
 mod gates;
 mod head;
 mod jsonpath;
+mod pinned;
 mod predicate;
 mod scope;
 mod select;
