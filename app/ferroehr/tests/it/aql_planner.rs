@@ -2554,9 +2554,24 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
         Vec::new(),
         Some(20),
     );
+    // NOTE: our own design (#5782), a root linked to the EHR source names the source's EHR,
+    // so the statement names it once and the source's column serves both.
+    assert_eq!(rooted.access_ehr_cols, vec!["access_ehr_0".to_owned()]);
+    assert!(
+        rooted.sql.contains(r#""e0"."id" AS "access_ehr_0""#),
+        "the linked root's rows name the EHR source's id: {}",
+        rooted.sql
+    );
+    assert_eq!(rooted.access_version_cols.len(), 1, "the root's version");
+    let unlinked = prepare(
+        "SELECT c/uid/value FROM COMPOSITION c",
+        Vec::new(),
+        Some(20),
+    );
     assert_eq!(
-        rooted.access_ehr_cols,
-        vec!["access_ehr_0".to_owned(), "access_ehr_1".to_owned()]
+        unlinked.access_ehr_cols,
+        vec!["access_ehr_0".to_owned()],
+        "a root no EHR source covers names its own EHR"
     );
     assert!(
         prepare(

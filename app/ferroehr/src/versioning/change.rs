@@ -842,6 +842,7 @@ async fn commit_resolved(
         blob_uris,
         content_digest: r.content_digest.as_ref().map(<[u8; 32]>::as_slice),
         content_sys_version: r.shared_from,
+        root_archetype: archetype.as_deref(),
         // Nothing is superseded in place: the head row advancing past the
         // previous version inside the SAME statement is what makes this one
         // current (master06 §The 'Virtual Version Tree').

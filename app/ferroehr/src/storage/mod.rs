@@ -91,10 +91,7 @@ macro_rules! head_facts {
             "h.committed_at AS access_recorded, ",
             "(SELECT t.origins FROM version t WHERE t.tier = h.tier AND t.vo_id = h.vo_id ",
             "AND t.sys_version = h.trunk_head_sys_version) AS access_origins, ",
-            "(SELECT COALESCE(n.data->>'archetype_node_id', ",
-            "ext.node_archetype_node_id(n.archetype, n.rm_version)) FROM node n ",
-            "WHERE n.tier = h.tier AND n.vo_id = h.vo_id ",
-            "AND n.sys_version = h.trunk_head_content_key AND n.num = 0) AS access_archetype, ",
+            "h.root_archetype AS access_archetype, ",
             access_revision!("h.ehr_id")
         )
     };

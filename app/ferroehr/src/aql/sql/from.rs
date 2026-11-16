@@ -853,7 +853,7 @@ impl Builder<'_> {
                 // drives idx_version_hot_ehr with no per-node-row index.
                 self.q
                     .and_where(col(&voa, VersionRow::EhrId).eq(col(e, Ehr::Id)));
-                self.roots_linked_to_ehr.insert(node.clone());
+                self.roots_linked_to_ehr.insert(node.clone(), e.to_owned());
             }
             // FolderItems: the child's own version group is open; the
             // reference edge itself is the correlated `items` lookup over the
