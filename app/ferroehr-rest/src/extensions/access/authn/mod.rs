@@ -1696,6 +1696,7 @@ mod tests {
     }
 
     mod basic;
+    mod basic_cache;
     mod described;
     mod outcome_status;
     mod remote_issuer;
