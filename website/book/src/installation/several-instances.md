@@ -100,10 +100,10 @@ one, two and three instances is on the
 Each instance opens three pools, one per domain (clinical, party and audit).
 Each pool holds at most `[database] max_connections` connections, and the four
 listeners hold one each beside them. Unset, the pool size is four per core the
-instance may run on, at least 10 and at most 30, and the server opens the
-whole pool before it answers ready ([Sizing the
+instance may run on, at least 10 and at most 30, and the server opens one
+connection per core in each pool before it answers ready ([Sizing the
 pool](config-server.md#sizing-the-pool)). An instance on eight cores or more
-therefore holds 3 × 30 + 4 = 94 connections:
+therefore holds up to 3 × 30 + 4 = 94 connections under load:
 
 | Instances | Connections at the default ceiling | Fits PostgreSQL's default `max_connections = 100` |
 |---|---|---|

@@ -1571,7 +1571,7 @@ spec:
         # secret values. Hashing the ConfigMap template alone missed the last two,
         # so a rotated passphrase or an edited mounted file propagated into the
         # volume while every pod kept running on the value it read at startup.
-        checksum/config: 963aa9f56715978aef497f1766c02ffff7d0c013da38ffea29cbe0f56d1ab382
+        checksum/config: c519137b252c1fd2f38dcfb29a79c3a845d18c14aba60138f1bf2b618aa1099c
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
         prometheus.io/path: "/management/prometheus"

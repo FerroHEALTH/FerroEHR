@@ -359,7 +359,7 @@ statement_timeout = "1min"
 | `migrate_url_file` | path | unset | Read `migrate_url` from a file instead, for a mounted secret. At most one of the pair. |
 | `migrate` | enum{apply,verify} | `apply` | Whether the server applies its embedded migrations at boot. `apply` is what makes an empty configuration boot against an empty database. `verify` issues **no DDL at all**: it checks that the database already carries exactly this build's migrations and refuses to start otherwise, so the serving DSN can authenticate as a role with no DDL rights. That check still READS every `_sqlx_migrations` table of each database, which no least-privilege role can do, so pair it with `migrate_url` above and with `ferroehr db migrate` run out of band; see [Operations](../operations.md#which-credential-prepares-the-schema). |
 | `max_connections` | int | unset | The size of each domain's pool (clinical, party and audit each have one). Unset, it is four per core the server may run on, at least 10 and at most 30, and never more than `server.max_concurrent_requests`. See [Sizing the pool](#sizing-the-pool). |
-| `min_connections` | int | unset | Connections each pool keeps open while idle, which the server opens before it answers ready. Unset, the server opens and keeps the whole pool. A one-shot command (`ferroehr db migrate`, `party-binding refill`) opens only what it uses. |
+| `min_connections` | int | unset | Connections each pool keeps open while idle, which the server opens before it answers ready. Unset, the server keeps one per core it may run on, at least 2 and at most the pool size. A one-shot command (`ferroehr db migrate`, `party-binding refill`) opens only what it uses. |
 | `acquire_timeout` | duration | `"30s"` | How long to wait for a free connection before failing. |
 | `statement_timeout` | duration | `"1min"` | `statement_timeout` applied to every pooled connection; `"0s"` leaves the server default. |
 
@@ -370,11 +370,11 @@ it back when its handler has answered, so the audit record and the response's
 way out hold none. How long that is shows in `db_pool_hold_duration_seconds`,
 and how long requests wait for a connection in
 `db_pool_acquire_duration_seconds`. A pool needs about the arrival rate times
-the hold time, and room for a burst above that: a pause of 15 ms at 3000
-requests per second gathers 45 requests that each want a connection when it
-ends. Four connections per core is about what the server keeps in use with
-every core busy, at the 1 to 3 ms a request holds one, and the burst above it
-waits in the pool rather than failing.
+the hold time, and room for a burst above that: every request that arrives
+during a pause of the server or the database wants a connection when the
+pause ends. A request holds a connection about as long as it runs on a core,
+so four connections per core is about what the server keeps in use with every
+core busy, and the burst above it waits in the pool rather than failing.
 
 The budget is PostgreSQL's `max_connections`, less its
 `superuser_reserved_connections` (3 by default) and what your tools use, over
@@ -384,10 +384,12 @@ default ceiling of 30 keeps one instance, 3 × 30 + 4 = 94 connections, inside
 PostgreSQL's default of 100. With more than one instance, set
 `max_connections` on each, or raise PostgreSQL's.
 
-The server opens every connection a pool keeps before it answers ready, so an
+Before it answers ready, the server opens the connections each pool keeps
+while idle, one per core unless `min_connections` says otherwise, so an
 instance restarted under load does not refuse its first requests while it
-opens them. Set `min_connections` below the pool size to keep fewer open
-while idle; the rest open when a burst asks for them.
+opens them. The rest open when a burst asks for them. Keep the kept
+connections of every instance inside PostgreSQL's budget too: an instance
+that cannot open them does not start.
 
 `statement_timeout` is the backstop for every statement. An AQL query
 (ad hoc or stored) and the composition-count statistics stop sooner when their

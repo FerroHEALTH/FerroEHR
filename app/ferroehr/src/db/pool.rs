@@ -29,6 +29,17 @@ pub const POOL_FLOOR: u32 = 10;
 /// default `max_connections` of 100, less its three reserved slots.
 pub const POOL_CEILING: u32 = 30;
 
+/// The fewest connections an unset [`DbConfig::min_connections`] keeps open
+/// in a server's pool.
+pub const POOL_KEPT_FLOOR: u32 = 2;
+
+/// The cores this process may run on.
+fn cores() -> u32 {
+    // NOTE: our own design (#5774); a host that cannot tell its cores is sized as one core.
+    let cores = std::thread::available_parallelism().map_or(1, std::num::NonZero::get);
+    u32::try_from(cores).unwrap_or(u32::MAX)
+}
+
 impl DbConfig {
     /// The size of each domain's pool: [`Self::max_connections`], or else
     /// [`POOL_PER_CORE`] per core the process may run on, within
@@ -36,10 +47,7 @@ impl DbConfig {
     #[must_use]
     pub fn pool_size(&self) -> u32 {
         self.max_connections.unwrap_or_else(|| {
-            // NOTE: our own design (#5774); a host that cannot tell its cores is sized as one core.
-            let cores = std::thread::available_parallelism().map_or(1, std::num::NonZero::get);
-            u32::try_from(cores)
-                .unwrap_or(u32::MAX)
+            cores()
                 .saturating_mul(POOL_PER_CORE)
                 .clamp(POOL_FLOOR, POOL_CEILING)
         })
@@ -56,7 +64,8 @@ impl DbConfig {
     /// These settings as the server runs them, for one that admits at most
     /// `max_concurrent_requests` at once: an unset pool size is bounded by
     /// that, since a request holds at most one connection of a pool, and an
-    /// unset [`Self::min_connections`] keeps the whole pool open.
+    /// unset [`Self::min_connections`] keeps one connection per core, at
+    /// least [`POOL_KEPT_FLOOR`] and at most the pool size.
     #[must_use]
     pub fn for_serving(&self, max_concurrent_requests: u32) -> Self {
         let mut serving = self.clone();
@@ -64,7 +73,10 @@ impl DbConfig {
             .max_connections
             .unwrap_or_else(|| self.pool_size().min(max_concurrent_requests.max(1)));
         serving.max_connections = Some(size);
-        serving.min_connections = Some(self.min_connections.unwrap_or(size));
+        serving.min_connections = Some(
+            self.min_connections
+                .unwrap_or_else(|| cores().max(POOL_KEPT_FLOOR).min(size)),
+        );
         serving
     }
 }

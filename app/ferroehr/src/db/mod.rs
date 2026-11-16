@@ -150,9 +150,9 @@ pub struct DbConfig {
     pub max_connections: Option<u32>,
     /// Connections each pool keeps open while idle. The server opens them
     /// before it answers ready, so an instance started under load serves its
-    /// first requests without opening connections; unset, the server opens
-    /// and keeps the pool's whole size, and a one-shot command opens what it
-    /// uses.
+    /// first requests without opening connections; unset, the server keeps one
+    /// per core, at least 2 and at most the pool size, and a one-shot command
+    /// opens what it uses.
     pub min_connections: Option<u32>,
     /// How long to wait for a free connection before failing.
     pub acquire_timeout: units::Duration,
@@ -200,8 +200,8 @@ impl Default for DbConfig {
             migrate_url_file: None,
             listen_url: None,
             listen_url_file: None,
-            // Unset: sized from the instance's cores, and opened in full
-            // before the server answers ready (#5774).
+            // Unset: sized from the instance's cores, and one connection per
+            // core opened before the server answers ready (#5774).
             max_connections: None,
             min_connections: None,
             acquire_timeout: units::Duration::from_secs(30),

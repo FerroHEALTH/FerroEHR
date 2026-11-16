@@ -82,13 +82,14 @@ async fn a_request_gives_its_connection_back_once_its_handler_answered() {
     pool.close().await;
 }
 
-/// The server's settings keep every pool open in full, and `open_kept` has
-/// opened them all when it returns, before the server would answer ready.
+/// `open_kept` has opened every connection each pool keeps when it returns,
+/// before the server would answer ready.
 #[tokio::test]
 async fn the_server_opens_every_kept_connection_before_it_serves() {
     let db = testkit::db().await.expect("testkit database");
     let mut config = DbConfig::new(db.url());
     config.max_connections = Some(3);
+    config.min_connections = Some(3);
     let serving = config.for_serving(256);
     assert_eq!(serving.pool_kept(), 3);
     let pools = ferroehr::db::connect_domains(&serving)

@@ -4,7 +4,7 @@
 //! The database error chain, the domain layout and the pool defaults.
 
 use super::*;
-use crate::db::pool::{POOL_CEILING, POOL_FLOOR};
+use crate::db::pool::{POOL_CEILING, POOL_FLOOR, POOL_KEPT_FLOOR};
 
 /// Every `DbError` variant wrapping a cause keeps it as the source and out
 /// of its own message, so a chain printer shows it once (#3684).
@@ -68,20 +68,25 @@ fn default_url_is_the_dev_dsn() {
 }
 
 /// The server bounds an unset pool size by what it admits at once and keeps
-/// an unset pool open in full; a set size and a set floor are kept, and a
-/// pool never keeps more than its size.
+/// one connection per core of an unset floor open; a set size and a set
+/// floor are kept, and a pool never keeps more than its size.
 #[test]
-fn the_server_sizes_an_unset_pool_for_its_concurrency_and_keeps_it_open() {
+fn the_server_sizes_an_unset_pool_for_its_concurrency_and_keeps_a_core_each_open() {
     let unset = DbConfig::new("postgres://localhost/ferroehr");
-    let small = unset.for_serving(4);
+    let small = unset.for_serving(1);
     assert_eq!(
         (small.max_connections, small.min_connections),
-        (Some(4), Some(4))
+        (Some(1), Some(1))
     );
     assert_eq!(unset.for_serving(0).max_connections, Some(1));
     let derived = unset.for_serving(256);
     assert_eq!(derived.max_connections, Some(unset.pool_size()));
-    assert_eq!(derived.pool_kept(), unset.pool_size());
+    let cores = u32::try_from(std::thread::available_parallelism().map_or(1, usize::from))
+        .expect("the cores fit u32");
+    assert_eq!(
+        derived.pool_kept(),
+        cores.max(POOL_KEPT_FLOOR).min(unset.pool_size())
+    );
     let mut set = unset.clone();
     set.max_connections = Some(50);
     set.min_connections = Some(80);
