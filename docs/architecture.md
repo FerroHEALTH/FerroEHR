@@ -202,6 +202,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   grants name move over the outbox feed (`extensions::outbox`); and
   `blob_ref`, which records that a version references an externalized
   multimedia blob so collection is an index probe rather than a scan of `node`.
+  Each replica holds the addresses `template_ref` registers in memory
+  (`service::definition::registered`), refreshed through `LISTEN` on
+  `ferroehr_template_ref`, which a registration or a release notifies, so a
+  COMPOSITION commit asks the store only of an address the copy does not hold
+  (#5775, our own design); the `version.template_id` foreign key and the
+  template delete guard still refuse a template released at the same moment.
+  A COMPOSITION commit reads its EHR's existence, `is_modifiable`, restriction
+  mark and settings revision in one statement (`ehr_repo::ehr_writability`).
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers

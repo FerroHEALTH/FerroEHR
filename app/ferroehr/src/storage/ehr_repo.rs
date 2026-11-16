@@ -478,15 +478,17 @@ pub async fn ehr_is_modifiable_locked(
         .await?)
 }
 
-/// The two content-write pre-checks plus the server clock in ONE round trip:
-/// whether the EHR exists, whether it is modifiable, and the database `now()`.
+/// The content-write pre-checks plus the server clock in ONE round trip.
+///
+/// Whether the EHR exists, whether it is modifiable, whether it is restricted
+/// with the revision of its access settings row, and the database `now()`.
 ///
 /// Reads the `ehr` row directly — a present row is the existence signal and
 /// carries the promoted `is_modifiable` column (synced with the current
 /// `EHR_STATUS` by `sync_ehr_subject` and its import/archive-load
-/// re-promotion over [`current_status_root`]). Returns `(exists,
-/// is_modifiable, now)` where `is_modifiable` is `None` exactly when the EHR
-/// does not exist and `now` is the database transaction timestamp of this
+/// re-promotion over [`current_status_root`]). In the [`Writability`] it
+/// returns `is_modifiable` is `None` exactly when the EHR does not exist and
+/// `now` is the database transaction timestamp of this
 /// probe, carried forward as the commit instant of a create that follows it
 /// (the database stays the only clock; the fresh versioned object has no
 /// stored interval the slightly earlier instant could disorder). The concepts
@@ -499,17 +501,46 @@ pub async fn ehr_is_modifiable_locked(
 pub async fn ehr_writability<'e>(
     executor: impl PgExecutor<'e>,
     ehr_id: EhrId,
-) -> Result<(bool, Option<bool>, jiff::Timestamp), StorageError> {
-    let row = sqlx::query(
-        "SELECT (SELECT is_modifiable FROM ehr WHERE id = $1) AS is_modifiable, now() AS ts",
-    )
+) -> Result<Writability, StorageError> {
+    let row = sqlx::query(concat!(
+        "SELECT e.is_modifiable, e.restricted_at IS NOT NULL AS restricted, ",
+        access_revision!("e.id"),
+        ", now() AS ts FROM (VALUES (1)) AS one (x) LEFT JOIN ehr e ON e.id = $1"
+    ))
     .bind(ehr_id)
     .fetch_one(executor)
     .await?;
     let is_modifiable: Option<bool> = row.try_get("is_modifiable")?;
-    let now = row.try_get::<jiff_sqlx::Timestamp, _>("ts")?.to_jiff();
-    Ok((is_modifiable.is_some(), is_modifiable, now))
+    let restriction = match row.try_get::<Option<bool>, _>("restricted")? {
+        Some(restricted) if is_modifiable.is_some() => Some((
+            restricted,
+            crate::storage::access_projection::Revision::read(&row)?,
+        )),
+        _ => None,
+    };
+    Ok(Writability {
+        is_modifiable,
+        now: row.try_get::<jiff_sqlx::Timestamp, _>("ts")?.to_jiff(),
+        restriction,
+    })
 }
+
+/// What [`ehr_writability`] read of an EHR in one statement (#5775).
+#[derive(Debug, Clone)]
+pub struct Writability {
+    /// The promoted `is_modifiable`; `None` exactly when the EHR does not
+    /// exist.
+    pub is_modifiable: Option<bool>,
+    /// The database transaction timestamp of the read.
+    pub now: jiff::Timestamp,
+    /// Whether the EHR is restricted and its access settings revision, as
+    /// [`restriction_and_revision`] reads them; `None` when it does not exist.
+    pub restriction: Restriction,
+}
+
+/// Whether an EHR is restricted and the revision of its access settings row;
+/// `None` when the EHR does not exist.
+pub type Restriction = Option<(bool, crate::storage::access_projection::Revision)>;
 
 /// Whether ANY live (non-deleted) folder hierarchy is indexed for the EHR —
 /// the `POST /directory` conflict probe.
@@ -601,7 +632,7 @@ pub async fn live_folder_root_exists(
 pub async fn restriction_and_revision(
     tx: &mut PgConnection,
     ehr_id: EhrId,
-) -> Result<Option<(bool, crate::storage::access_projection::Revision)>, StorageError> {
+) -> Result<Restriction, StorageError> {
     let row = sqlx::query(concat!(
         "SELECT e.restricted_at IS NOT NULL AS restricted, ",
         access_revision!("e.id"),

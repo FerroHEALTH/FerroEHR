@@ -91,10 +91,11 @@ impl FerroEhrService {
         // ONE pooled connection carries both gates AND the commit: measured at
         // +0.4 ms per extra checkout on #3097.
         self.commit_one(&self.pool, mode, async move |conn| {
-            // The EHR-existence (404) and content-writability (409) gates in
-            // one round trip: a COMPOSITION is EHR content (RM ehr master04
+            // The EHR-existence (404), content-writability (409) and restriction
+            // gates in one round trip: a COMPOSITION is EHR content (RM ehr master04
             // §EHR Creation / §EHR Active Status).
-            let commit_now = self.ensure_ehr_content_writable(&mut *conn, ehr_id).await?;
+            let (commit_now, restriction) =
+                self.ensure_ehr_content_writable(&mut *conn, ehr_id).await?;
             validated?;
             self.reject_duplicate_persistent(&mut *conn, ehr_id, &composition)
                 .await?;
@@ -103,7 +104,8 @@ impl FerroEhrService {
                 Change::create(Kind::Composition, composition, template_id, envelope),
                 audit,
             )
-            .at(commit_now))
+            .at(commit_now)
+            .gated(restriction))
         })
         .await
     }
@@ -635,7 +637,8 @@ impl FerroEhrService {
     /// before the non-modifiable 409, over a single
     /// [`crate::storage::ehr_repo::ehr_writability`] read. Returns the database
     /// `now()` that statement read, which the create path passes on as the commit
-    /// instant. The guarded concepts are RM ehr master04 §EHR Creation and §EHR
+    /// instant, and the EHR's restriction mark and settings revision, which the
+    /// commit's restriction gate takes instead of reading them again (#5775). The guarded concepts are RM ehr master04 §EHR Creation and §EHR
     /// Active Status; no openEHR spec governs the query shape (our own design).
     ///
     /// Runs on the CALLER'S executor so a write path can spend one pooled
@@ -651,10 +654,9 @@ impl FerroEhrService {
         &self,
         executor: impl sqlx::PgExecutor<'e>,
         ehr_id: EhrId,
-    ) -> Result<jiff::Timestamp, ServiceError> {
-        let (exists, is_modifiable, now) =
-            crate::storage::ehr_repo::ehr_writability(executor, ehr_id).await?;
-        if !exists {
+    ) -> Result<(jiff::Timestamp, crate::storage::ehr_repo::Restriction), ServiceError> {
+        let read = crate::storage::ehr_repo::ehr_writability(executor, ehr_id).await?;
+        if read.is_modifiable.is_none() {
             return Err(ServiceError::not_found(
                 Missing::Ehr,
                 format!("EHR {ehr_id}"),
@@ -662,10 +664,10 @@ impl FerroEhrService {
         }
         // `None` (no current EHR_STATUS) is treated as modifiable, so the guard
         // never spuriously blocks — identical to `ensure_content_writable`.
-        if is_modifiable == Some(false) {
+        if read.is_modifiable == Some(false) {
             return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
         }
-        Ok(now)
+        Ok((read.now, read.restriction))
     }
 }
 
