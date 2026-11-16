@@ -52,6 +52,7 @@
 mod access;
 mod archetype;
 mod attestation;
+mod coerce;
 mod compact;
 mod condition;
 pub(crate) mod expr;
@@ -336,9 +337,15 @@ enum ValueMode {
     Projection,
     /// A coerced scalar for comparison / ordering / aggregation.
     Value(Coercion),
-    /// A NULL-guarded numeric extraction for a mixed-type (`Raw`) leaf compared
-    /// or matched against a numeric literal.
+    /// A mixed-type (`Raw`) leaf's number: a JSON number, or the magnitude of
+    /// a whole numeric `DV_ORDERED` ([`coerce::raw_numeric`]); NULL otherwise.
     RawNumeric,
+    /// A mixed-type leaf's text when it is a JSON string, number or Boolean;
+    /// NULL for a whole object ([`coerce::raw_text`]).
+    RawText,
+    /// The instant of a mixed-type leaf that is a whole date/time value of the
+    /// kinds given; NULL otherwise ([`coerce::raw_temporal`]).
+    RawTemporal(coerce::TemporalKinds),
 }
 
 /// The shared SQL-builder state; its `impl` blocks are fanned across the

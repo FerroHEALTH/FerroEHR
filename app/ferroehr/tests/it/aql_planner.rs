@@ -187,6 +187,24 @@ fn temporal_leaf_coercion() {
     assert_eq!(leaf.coercion, Coercion::Temporal);
 }
 
+/// A `DV_DURATION`'s `value` is a String (QUERY master03 §ORDER BY orders it
+/// as text; §Dates and Times types only dates, times and date-times), and the
+/// whole `DV_DURATION` is a `DV_AMOUNT` ordered by its magnitude (#5752).
+#[test]
+fn duration_value_is_text_and_the_whole_duration_a_magnitude() {
+    let from = "FROM EHR e CONTAINS INTERVAL_EVENT i";
+    for (select, coercion) in [
+        ("i/width/value", Coercion::Text),
+        ("i/width", Coercion::Magnitude),
+        ("i/time/value", Coercion::Temporal),
+        ("i/time", Coercion::Temporal),
+    ] {
+        let ir = plan_ok(&format!("SELECT {select} {from}"));
+        let leaf = data_leaf(&ir.select[0].value);
+        assert_eq!(leaf.coercion, coercion, "coercion for {select}");
+    }
+}
+
 // ── FROM / CONTAINS trees ─────────────────────────────────────────────────────
 
 #[test]
@@ -1283,7 +1301,8 @@ fn raw_leaf_numeric_comparison_dispatches_to_numeric() {
 }
 
 /// the same mixed-type leaf compared to a *string* literal stays on the
-/// text path (no numeric guard).
+/// text path (no numeric guard), and reads the text of a JSON scalar only,
+/// never a whole data value's serialized JSON (#5751).
 #[test]
 fn raw_leaf_text_comparison_stays_text() {
     let sql = build_sql(
@@ -1292,8 +1311,12 @@ fn raw_leaf_text_comparison_stays_text() {
          WHERE o/data[at0001]/events[at0006]/data/items[at0004]/value = 'x'",
     );
     assert!(
-        !sql.contains("jsonb_typeof"),
+        !sql.contains("= 'number'") && !sql.contains("openehr_magnitude"),
         "a text comparison must not use the numeric guard"
+    );
+    assert!(
+        sql.contains("IN ('string', 'number', 'boolean')"),
+        "a text comparison reads the text of a JSON scalar only"
     );
 }
 

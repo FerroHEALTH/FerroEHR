@@ -86,13 +86,20 @@ macro_rules! access_revision {
 /// aliased `h`: what the access evaluator judges an object by.
 macro_rules! head_facts {
     () => {
+        concat!(head_object_facts!(), access_revision!("h.ehr_id"))
+    };
+}
+
+/// [`head_facts`] but the settings revision, for a statement that selects the
+/// revision beside them once (#5773).
+macro_rules! head_object_facts {
+    () => {
         concat!(
             "h.ehr_id AS access_ehr_id, h.template_id AS access_template, ",
             "h.committed_at AS access_recorded, ",
             "(SELECT t.origins FROM version t WHERE t.tier = h.tier AND t.vo_id = h.vo_id ",
             "AND t.sys_version = h.trunk_head_sys_version) AS access_origins, ",
-            "h.root_archetype AS access_archetype, ",
-            access_revision!("h.ehr_id")
+            "h.root_archetype AS access_archetype, "
         )
     };
 }

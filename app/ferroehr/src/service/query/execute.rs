@@ -242,7 +242,10 @@ impl FerroEhrService {
         let served_origins = result.served_origins.clone();
         let origin_count = result.origin_count;
         let (accessed, served_ehr_content) = accessed_content(&result);
-        let mut outcome = QueryOutcome::plain(result_set_json(aql, &executed, name, result));
+        let mut outcome = QueryOutcome::plain(
+            result_set_json(aql, &executed, name, result)
+                .map_err(|error| Failure::analysis(error.into()))?,
+        );
         outcome.served_ehrs = served_ehrs;
         outcome.served_rows = served_rows;
         outcome.served_origins = served_origins;
