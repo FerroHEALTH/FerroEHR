@@ -12,15 +12,15 @@
 //! verdict, are values: the EHR a single-EHR query names, the request's
 //! moment and day, the caller's parties and care teams, the EHRs it is cared
 //! for or confined to, the pinned EHR's revision, the `ehr_ids` scope and the
-//! paging bounds. A [`Live`] source names each of them.
+//! paging bounds. A `Live` source names each of them.
 //!
 //! [`Shapes`] holds, per plan, the shapes the plan has been executed in. A
-//! request whose [`Key`] matches a shape binds the shape's slots from its own
+//! request whose `Key` matches a shape binds the shape's slots from its own
 //! values and renders nothing; a request that matches none is built as before.
 //! The second request of a key derives its shape from two builds over
-//! [`Sentinels`]: every [`Live`] source carries a fresh random value in each,
+//! `Sentinels`: every `Live` source carries a fresh random value in each,
 //! the two texts must be equal, and every value either agrees in both (a fixed
-//! value of the shape) or is the image of one [`Live`] source in each (a slot).
+//! value of the shape) or is the image of one `Live` source in each (a slot).
 //! A value that depends on a source any other way, or a text that does, leaves
 //! the key unshaped, and the shape must reproduce the request's own build
 //! exactly before it is kept. The dataflow is thus observed rather than
