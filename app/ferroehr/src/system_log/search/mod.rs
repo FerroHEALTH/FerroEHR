@@ -99,7 +99,7 @@ impl AuditElement {
     }
 
     /// Whether a token of the parameter `parameter` is kept in the shared set.
-    fn shares(parameter: &str) -> bool {
+    pub(crate) fn shares(parameter: &str) -> bool {
         ELEMENTS
             .iter()
             .any(|element| element.parameter() == parameter && element.shared())

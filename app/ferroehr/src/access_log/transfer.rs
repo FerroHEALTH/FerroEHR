@@ -284,6 +284,7 @@ impl Checkpoints {
             vec![crate::access_log::intake::IntakeEntry::of(
                 &mut entry, None,
             )?],
+            &[],
         )
         .await?;
         tx.commit().await.map_err(AccessLogError::from)?;

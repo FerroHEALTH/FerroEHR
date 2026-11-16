@@ -1,7 +1,7 @@
 # Provenance: the draft access control model, in the openEHR Antora layout
 
 This tree is the computable part of the draft openEHR change of the ABAC
-design (`docs/plans/abac-openehr.md`, tracker issue #5487), laid out as the
+design (tracker issue #5487, recorded in `docs/architecture.md`), laid out as the
 access log draft is (`docs/specifications/access-log/antora/PROVENANCE.md`), so it
 drops into the openEHR RM specification repository beside
 `openehr_rm_1.2.0.bmm.json`. It is FerroEHR's own text under BUSL-1.1,

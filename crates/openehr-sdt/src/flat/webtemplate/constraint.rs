@@ -8,7 +8,7 @@
 //! metadata document (`ITS-REST simplified_formats master04 §"Web Template
 //! Metadata"`), so none is serialized.
 
-use crate::flat::validation::{leaf, subtype};
+use crate::flat::validation::subtype;
 
 /// An AOM 1.4 `C_ATTRIBUTE.existence` constraint on a single RM attribute.
 ///
@@ -176,33 +176,118 @@ impl WebTemplateArchetypeSlot {
     /// and `excludes`).
     ///
     /// `rm_type` conforms to the slot's `rm_type` by the RM inheritance
-    /// graph, generic parameters ignored; a slot type the RM does not define
-    /// admits any filler type, and an empty one admits every type. The id
-    /// matches at least one `includes` pattern (an empty list admits every
-    /// id) and no `excludes` pattern. Each pattern constrains the whole id:
-    /// it is anchored at both ends, and the slashes ADL writes around it are
-    /// dropped. A match-all exclude (`.*` or `.+`) beside a non-empty
-    /// `includes` is the ADL 1.4 closed-slot idiom and excludes nothing the
-    /// includes admit.
+    /// graph, generic parameters ignored. The id matches at least one
+    /// `includes` pattern (an empty list admits every id) and no `excludes`
+    /// pattern. Each pattern constrains the whole id: it is anchored at both
+    /// ends, and the slashes ADL writes around it are dropped. A match-all
+    /// exclude (`.*` or `.+`) beside a non-empty `includes` is the ADL 1.4
+    /// closed-slot idiom and excludes nothing the includes admit.
     ///
-    /// A pattern is compiled by the `regex` crate, or by `fancy-regex` when
-    /// `regex` refuses it. A pattern neither engine compiles counts as a
-    /// match: an include admits the id and an exclude refuses it.
+    /// The decision fails closed on a slot [`Self::defect`] reports: a slot
+    /// type the RM does not define admits nothing, an include no engine can
+    /// evaluate matches nothing, and such an exclude refuses every id.
     #[must_use]
     pub fn admits(&self, rm_type: &str, archetype_id: &str) -> bool {
-        if !self.rm_type.is_empty() && !subtype::conforms(rm_type, &self.rm_type) {
+        if !rm_type_is_known(&self.rm_type) || !subtype::conforms(rm_type, &self.rm_type) {
             return false;
         }
         let included = self.includes.is_empty()
             || self
                 .includes
                 .iter()
-                .any(|pattern| leaf::matches_pattern(pattern, archetype_id));
+                .any(|pattern| pattern_matches(pattern, archetype_id) == Some(true));
         included
             && !self.excludes.iter().any(|pattern| {
                 let closed_idiom =
                     !self.includes.is_empty() && matches!(pattern.trim(), ".*" | ".+");
-                !closed_idiom && leaf::matches_pattern(pattern, archetype_id)
+                !closed_idiom && pattern_matches(pattern, archetype_id) != Some(false)
             })
+    }
+
+    /// Returns the first defect that keeps the slot from being evaluated: a
+    /// `rm_type` the RM does not define, or an include or exclude pattern
+    /// neither `regex` nor `fancy-regex` compiles.
+    #[must_use]
+    pub fn defect(&self) -> Option<SlotDefect> {
+        if !rm_type_is_known(&self.rm_type) {
+            return Some(SlotDefect::UnknownRmType(self.rm_type.clone()));
+        }
+        self.includes
+            .iter()
+            .chain(&self.excludes)
+            .find(|pattern| compile(pattern).is_none())
+            .map(|pattern| SlotDefect::UnreadablePattern(pattern.clone()))
+    }
+}
+
+/// Why an `ARCHETYPE_SLOT` cannot be evaluated.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum SlotDefect {
+    /// The slot's `rm_type` is no class of the RM (an empty one included).
+    #[error("the slot type {0:?} is no class of the reference model")]
+    UnknownRmType(String),
+    /// An include or exclude pattern neither regex engine compiles.
+    #[error("the archetype-id pattern {0:?} compiles in no regex engine")]
+    UnreadablePattern(String),
+}
+
+/// Refuses a Web Template that holds a slot [`WebTemplateArchetypeSlot::defect`]
+/// reports, naming the attribute the slot stands under.
+pub(crate) fn check_slots(
+    tree: &super::model::WebTemplateNode,
+) -> Result<(), crate::flat::error::FlatError> {
+    let mut stack = vec![tree];
+    while let Some(node) = stack.pop() {
+        for attribute in &node.closed_attributes {
+            if let Some(defect) = attribute
+                .slots
+                .iter()
+                .find_map(WebTemplateArchetypeSlot::defect)
+            {
+                return Err(crate::flat::error::FlatError::UnevaluableSlot {
+                    path: attribute.path.clone(),
+                    defect,
+                });
+            }
+        }
+        stack.extend(node.children.iter().chain(&node.alternatives));
+    }
+    Ok(())
+}
+
+/// Whether `rm_type` names a class of the RM, generic parameters ignored.
+fn rm_type_is_known(rm_type: &str) -> bool {
+    openehr_rm::v1_2::model::class(subtype::base(rm_type)).is_some()
+}
+
+/// A slot pattern compiled, anchored at both ends, by `regex` or else by
+/// `fancy-regex` (the ADL regex dialect is a subset of Perl, ADL 1.4
+/// `master05-cadl.adoc` §Regular Expression); `None` when neither compiles it.
+enum Compiled {
+    Plain(regex::Regex),
+    Fancy(fancy_regex::Regex),
+}
+
+fn compile(pattern: &str) -> Option<Compiled> {
+    let body = pattern
+        .strip_prefix('/')
+        .and_then(|inner| inner.strip_suffix('/'))
+        .unwrap_or(pattern);
+    let anchored = format!("^(?:{body})$");
+    regex::Regex::new(&anchored)
+        .map(Compiled::Plain)
+        .ok()
+        .or_else(|| {
+            // NOTE: ADL 1.4 `master05-cadl.adoc` §Regular Expression: a Perl pattern `regex` refuses goes to PCRE.
+            fancy_regex::Regex::new(&anchored).map(Compiled::Fancy).ok()
+        })
+}
+
+/// Whether `pattern` matches the whole of `archetype_id`; `None` when the
+/// pattern cannot be evaluated.
+fn pattern_matches(pattern: &str, archetype_id: &str) -> Option<bool> {
+    match compile(pattern)? {
+        Compiled::Plain(re) => Some(re.is_match(archetype_id)),
+        Compiled::Fancy(re) => re.is_match(archetype_id).ok(),
     }
 }
