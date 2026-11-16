@@ -25,7 +25,7 @@ openehr-rm = "0.0.98"
 openehr-its = "0.0.98"
 ```
 
-All nine are **edition 2024** with an MSRV of **Rust 1.98**, and all nine
+All nine are **edition 2024** with an MSRV of **Rust 1.99**, and all nine
 inherit the workspace lint table, including `unsafe_code = "forbid"`, which no
 attribute anywhere in the crate can relax. There is no `unsafe` block in the
 published specification layer.

@@ -14,7 +14,7 @@ members = ["crates/*", "app/*", "tools/*"]
 [workspace.package]
 version = "5.7.1-rc1"
 edition = "2024"
-rust-version = "1.98"
+rust-version = "1.99"
 license = "BUSL-1.1"
 repository = "https://github.com/FerroHEALTH/FerroEHR"
 # No `authors`, deliberately. The cargo manifest reference opens that section
@@ -61,7 +61,7 @@ missing_assert_message = "deny"     # production asserts carry a message (lint i
 dbg_macro = "deny"
 print_stdout = "deny"               # libraries speak tracing; binaries/tools relax per-crate
 print_stderr = "deny"
-incompatible_msrv = "deny"          # MSRV 1.98 is a hard pin
+incompatible_msrv = "deny"          # MSRV 1.99 is a hard pin
 unchecked_time_subtraction = "deny" # std::time::Duration::sub panics on negative durations; jiff is the safe alternative
 as_conversions = "deny"             # `as` silently truncates; use TryFrom/TryInto or explicit casts
 
@@ -527,7 +527,7 @@ criterion = { version = "0.8.2", features = ["html_reports"] }
 #   cargo-nextest, cargo-audit, cargo-deny, cargo-machete, cargo-hakari,
 #   cargo-llvm-cov, sccache ; linker: mold (Linux).
 #
-# Toolchain: Rust stable 1.99.1, edition 2024; the MSRV is 1.98.
+# Toolchain: Rust stable 1.100.0, edition 2024; the MSRV is 1.99.
 # The MSRV is the toolchain minus one minor and is only ever raised, the rule every
 # FerroHEALTH repository follows; the toolchain watcher moves both, and the next
 # crates publish takes a new lockstep version for an MSRV move (docs/VERSIONS.md §MSRV policy).

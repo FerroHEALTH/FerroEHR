@@ -1,0 +1,1 @@
+- **The Rust toolchain moves to 1.100.0 and the MSRV to 1.99.** The pinned channel, both container base images (digest re-resolved) and the CI job containers move together; the nine `openehr-*` crates take a new version at their next publish and need Rust 1.99 or newer.

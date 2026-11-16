@@ -28,16 +28,16 @@
 # The RUST_VERSION toolchain is single-sourced from rust-toolchain.toml; CI
 # cross-checks the ARG against its `channel` so they never drift.
 
-ARG RUST_VERSION=1.99.1
+ARG RUST_VERSION=1.100.0
 
 # ── builder: compile in-image against the persistent target cache ──────────────
-# Digest-pinned rust:1.99.1-slim-trixie (Debian 13, glibc 2.41), resolved
+# Digest-pinned rust:1.100.0-slim-trixie (Debian 13, glibc 2.41), resolved
 # 2026-10-21. The builder and the cc-debian13 runtime below share the Debian 13
 # generation so the binary links the exact glibc it runs against. Pinning by
 # digest (not the mutable tag) guarantees a reproducible base
 # (docs.docker.com/build/building/best-practices — "pinning to a digest
 # guarantees the same image version").
-FROM rust:${RUST_VERSION}-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d AS builder
+FROM rust:${RUST_VERSION}-slim-trixie@sha256:e9d95b74296f7126a83ae3d041aeaba1ff4c478f13abc5cc034fcf7c131c3d4a AS builder
 WORKDIR /app
 COPY . .
 # Build provenance: the OCI-standard REVISION build-arg (the git SHA CI's

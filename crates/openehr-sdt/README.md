@@ -76,7 +76,7 @@ available at runtime as the crate-level constant `openehr_sdt::SPEC_VERSION`
 
 ## Minimum supported Rust version
 
-Rust 1.98 (edition 2024).
+Rust 1.99 (edition 2024).
 
 ## License
 

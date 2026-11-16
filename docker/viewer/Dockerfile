@@ -26,13 +26,13 @@
 #
 # RUST_VERSION is single-sourced from rust-toolchain.toml.
 
-ARG RUST_VERSION=1.99.1
+ARG RUST_VERSION=1.100.0
 
 # ── builder: toolchain, then cargo under the cache ──────────────────────────────
-# Digest-pinned rust:1.99.1-slim-trixie (Debian 13, glibc 2.41), resolved
+# Digest-pinned rust:1.100.0-slim-trixie (Debian 13, glibc 2.41), resolved
 # 2026-10-21, same base and rationale as docker/Dockerfile
 # (docs.docker.com/build/building/best-practices, pin by digest).
-FROM rust:${RUST_VERSION}-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d AS builder
+FROM rust:${RUST_VERSION}-slim-trixie@sha256:e9d95b74296f7126a83ae3d041aeaba1ff4c478f13abc5cc034fcf7c131c3d4a AS builder
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
       pkg-config ca-certificates \

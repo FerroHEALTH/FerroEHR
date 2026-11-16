@@ -44,8 +44,8 @@ the product version.
 
 | Item | Pin |
 |---|---|
-| Rust toolchain | stable 1.99 (1.99.1) |
-| MSRV | 1.98 |  <!-- the toolchain minus one: see the MSRV bump policy below -->
+| Rust toolchain | stable 1.100 (1.100.0) |
+| MSRV | 1.99 |  <!-- the toolchain minus one: see the MSRV bump policy below -->
 | Edition | 2024 |
 | Cargo resolver | v3 |
 | Fuzz toolchain | `nightly-2026-11-02` (rustc 1.101.0-nightly 3e92e1a2d 2026-11-01) |  <!-- the `FUZZ_NIGHTLY` pin of .github/workflows/fuzz.yml, moved by toolchain-watcher.yml -->
