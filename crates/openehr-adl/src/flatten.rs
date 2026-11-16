@@ -551,7 +551,7 @@ fn max_effective_occurrences(node: &CObject, attr: &CAttribute) -> Option<i32> {
 /// / attributes are overlaid; a prohibited (`occurrences {0}`) child keeps the
 /// node visible but strips its sub-structure (plain flat — see the module NOTE).
 /// For any other combination the child fully specifies the node and replaces it.
-fn overlay_node(base: &CObject, child: &CObject) -> Result<CObject, FlattenError> {
+pub(crate) fn overlay_node(base: &CObject, child: &CObject) -> Result<CObject, FlattenError> {
     if let (
         CObject::CComplexObject(CComplexObject::CComplexObject(bp)),
         CObject::CComplexObject(CComplexObject::CComplexObject(cp)),

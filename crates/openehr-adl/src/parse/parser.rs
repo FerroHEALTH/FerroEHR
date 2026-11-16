@@ -4,12 +4,12 @@
 //! The cADL structure productions (`cadl2.g4`).
 //!
 //! The definition root, the type-headed object forms, attributes with their
-//! existence/cardinality clauses, the `_default` value
-//! (`ADL2/master06-default_values.adoc`), and the second-order
+//! existence/cardinality clauses, and the second-order
 //! attribute/primitive tuples of `ADL2/master04.4-cadl_second_order.adoc` —
 //! one `impl` block over the `Parser` state of [`crate::parse`].
 //!
-//! The object productions dispatch into [`crate::parse::refs`] (archetype
+//! The object productions dispatch into [`crate::parse::default_value`] (the
+//! `_default` value), [`crate::parse::refs`] (archetype
 //! slots, archetype roots, internal-reference proxies),
 //! [`crate::parse::primitives`] (the inline `C_PRIMITIVE` family) and — in the
 //! `Dialect::Adl14` dialect only — [`crate::adl14::lower`] (the 1.4
@@ -36,7 +36,6 @@ use crate::aom::build::{
     cobject_to_primitive, complex_object, into_archetype_root, mult, tuple_member,
 };
 use crate::error::SyntaxErrorCode;
-use crate::odin::{is_interval, odin_to_json};
 use crate::parse::{Dialect, PResult, Parser};
 use openehr_lang::v1_1::lexer::Token;
 
@@ -131,6 +130,23 @@ impl Parser<'_> {
     }
 
     /// `multiplicity : INTEGER | '*' | INTEGER '..' ( INTEGER | '*' )`.
+    /// An optional `c_occurrences`, then the refusal of a negated `matches`
+    /// after it, reported under `code`.
+    pub(crate) fn parse_occurrences_clause(
+        &mut self,
+        code: SyntaxErrorCode,
+    ) -> PResult<Option<MultiplicityInterval>> {
+        let occurrences = if matches!(self.peek(), Some(Token::SymOccurrences)) {
+            Some(self.parse_occurrences()?)
+        } else {
+            None
+        };
+        if self.at_negated_matches() {
+            return self.negated_matches_reject(code);
+        }
+        Ok(occurrences)
+    }
+
     fn parse_multiplicity(&mut self, code: SyntaxErrorCode) -> PResult<MultiplicityInterval> {
         if self.eat(|t| matches!(t, Token::SymStar)) {
             // `*` == 0..* .
@@ -279,15 +295,7 @@ impl Parser<'_> {
         let type_span = self.cur_span();
         let rm_type = self.parse_rm_type_id()?;
         let (node_id, archetype_ref) = self.parse_node_bracket()?;
-        let occurrences = if matches!(self.peek(), Some(Token::SymOccurrences)) {
-            Some(self.parse_occurrences()?)
-        } else {
-            None
-        };
-
-        if self.at_negated_matches() {
-            return self.negated_matches_reject(SyntaxErrorCode::Sccog);
-        }
+        let occurrences = self.parse_occurrences_clause(SyntaxErrorCode::Sccog)?;
         let mut obj = if matches!(self.peek(), Some(Token::SymMatches)) {
             self.parse_matches_body(&rm_type, &node_id)?
         } else if let Some(prim) = Self::primitive_any(&rm_type, &node_id) {
@@ -328,9 +336,10 @@ impl Parser<'_> {
         Ok(obj)
     }
 
-    /// The body of a complex object: `c_attribute_def+ default_value?`.
-    /// Returns `(attributes, attribute_tuples, default_value)`.
-    fn parse_object_body(
+    /// The body of a complex object: `c_attribute_def+ default_value? |
+    /// default_value` (`cadl2.g4` `c_complex_object`, adl-antlr `d85ef269b`,
+    /// SPECPR-146). Returns `(attributes, attribute_tuples, default_value)`.
+    pub(super) fn parse_object_body(
         &mut self,
     ) -> PResult<(
         Vec<CAttribute>,
@@ -570,100 +579,6 @@ impl Parser<'_> {
             is_ordered,
             is_unique,
         })
-    }
-
-    /// `default_value : SYM_DEFAULT SYM_EQ '<' odin_text '>'` — the ODIN body
-    /// is parsed by `openehr_lang::v1_1::odin` and converted to canonical JSON.
-    fn parse_default_value(&mut self) -> PResult<serde_json::Value> {
-        self.pos += 1; // SYM_DEFAULT (`_default`)
-        self.expect(
-            |t| matches!(t, Token::SymEq),
-            SyntaxErrorCode::Sadf,
-            "expecting '=' after '_default'",
-        )?;
-        // The optional RM-type cast of the typed form
-        // `_default = (DV_CODED_TEXT) < … >` (`master06-default_values.adoc`
-        // §Syntax); it lands as the value's `_type` in the canonical JSON.
-        let mut cast: Option<String> = None;
-        if self.eat(|t| matches!(t, Token::LParen)) {
-            let Some(Token::AlphaUcId(name)) = self.peek() else {
-                return self.err(
-                    SyntaxErrorCode::Sadf,
-                    "expecting an RM type name in the '_default = (TYPE)' cast",
-                );
-            };
-            cast = Some(name.clone());
-            self.pos += 1;
-            self.expect(
-                |t| matches!(t, Token::RParen),
-                SyntaxErrorCode::Sadf,
-                "expecting ')' closing the '_default' type cast",
-            )?;
-        }
-        // The whole `<…>` block, delimiters included, is what the ODIN reader
-        // is handed: `odin_text` is `attr_vals | object_value_block`
-        // (`LANG/docs/odin/master05-content.adoc` §General Structure), so a
-        // block whose content is a bare leaf or interval (`<|0..5|>`, `<5>`)
-        // only parses with its delimiters in place.
-        let start_byte = self.cur_span().start;
-        self.expect(
-            |t| matches!(t, Token::SymLt),
-            SyntaxErrorCode::Sadf,
-            "expecting '<' opening the default value",
-        )?;
-        // Capture the balanced `<…>` span by `<`/`>` depth. A `<` or `>` inside
-        // an interval is a bound operator, not a block delimiter
-        // (`LANG/docs/odin/master07-leaf_data.adoc` §Intervals of Ordered
-        // Primitive Types: `|>N..<M|`), so the `|…|` pairs are tracked and
-        // their contents skipped.
-        let mut depth = 1usize;
-        let mut end_byte = start_byte;
-        let mut in_interval = false;
-        while depth > 0 {
-            match self.bump() {
-                Some(Token::SymIvlDelim) => in_interval = !in_interval,
-                Some(Token::SymLt) if !in_interval => depth += 1,
-                Some(Token::SymGt) if !in_interval => {
-                    depth -= 1;
-                    if depth == 0 {
-                        end_byte = self.span_at(self.pos - 1).end;
-                    }
-                }
-                Some(_) => {}
-                None => return self.err(SyntaxErrorCode::Sadf, "unterminated default value block"),
-            }
-        }
-        let text = self.src.get(start_byte..end_byte).unwrap_or_default();
-        match openehr_lang::v1_1::odin::parse(text) {
-            Ok(v) => {
-                let mut json = match odin_to_json(&v) {
-                    Ok(json) => json,
-                    Err(e) => {
-                        self.push(SyntaxErrorCode::Sdinv, e.to_string(), start_byte..end_byte);
-                        return Err(());
-                    }
-                };
-                // An interval already carries its own canonical `_type`
-                // (`Point_interval`/`Proper_interval`); the cast on one names
-                // the generic slot type (`Interval<Quantity>`), which is not a
-                // canonical-JSON class tag.
-                if let Some(t) = cast
-                    && !is_interval(&v)
-                    && let serde_json::Value::Object(m) = &mut json
-                {
-                    m.insert("_type".to_owned(), serde_json::Value::String(t));
-                }
-                Ok(json)
-            }
-            Err(e) => {
-                self.push(
-                    SyntaxErrorCode::Sadf,
-                    format!("invalid ODIN default value: {e}"),
-                    start_byte..end_byte,
-                );
-                Err(())
-            }
-        }
     }
 
     /// `c_attribute_tuple : '[' rm_attribute_id (',' rm_attribute_id)* ']'
