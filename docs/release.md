@@ -35,6 +35,7 @@ The checks, in the order the plan job runs them:
 | The technical documentation and the CRA risk assessment follow their paths since the previous release | `scripts/checks/technical-documentation.sh`, `scripts/checks/cra-risk-assessment.sh` |
 | The changelog section becomes the notes, with the support period and the CRA user-information link | `plan.sh notes`, `scripts/checks/release-notes.sh` |
 | The chart's `appVersion`, its unpublished version, the party statement, `CITATION.cff`, `.zenodo.json`, the compose image tags, the default demographic definitions' release assets and the documented keys | the scripts `plan.sh` names |
+| The information sheet and the instructions for use at the commit `docs/ehds/system-documents.env` pins name only configuration keys this release reads (EHDS Art. 28(b)): every `[table]`, `[table] key`, `FERROEHR__` form, dotted key and `toml` block in a section whose heading names FerroEHR resolves in the shipped default configuration, and a paragraph that names a key as unknown names one this release refuses. A refused key fails the plan, and the fix is a corrected page in the FerroHEALTH book and the pin moved to it. `accompanying-documents.sh` refuses the same pages when it attaches them | `scripts/checks/ifu-config-keys.sh` |
 
 The previous release is resolved the way the plan job resolves it: from
 `git ls-remote --tags origin 'v*'`, by version order. A tag that was pushed but
@@ -208,6 +209,18 @@ too. Below the verdict, each arm's ten statements by PostgreSQL time over
 the run name their calls and their mean planning and execution time:
 PostgreSQL counts planning beside execution (`pg_stat_statements.track_planning`),
 and an AQL statement is planned for its values on every call (#5746).
+Each arm's PostgreSQL keeps its cluster in memory (tmpfs): every request
+commits before it answers, and a hosted runner's WAL fsync time varies
+16-fold between runs, which would tail every route on both arms (#5866). A
+commit still flushes the WAL, so the gate judges the durable work by count:
+the last table of the summary gives each arm's WAL bytes and WAL flushes per
+request over the run, and the run fails when the head flushes more than 0.10
+times per request more than the base (a commit added to every request is a
+whole one) or writes more than 10 % more WAL bytes per request. Two arms of
+one build differ by up to 4 % in bytes and 0.04 in flushes. The gate does
+not measure what a flush costs on a disk: the capacity test
+(`scripts/perf/capacity.sh`, the Capacity test workflow) runs its PostgreSQL
+on the runner's disk and measures the absolute fsync cost.
 `target/perf/base-rev` names the base commit. Locally, `PERF_SERVER`,
 `PERF_DATABASE` and `PERF_TARGET` point `gate.sh self-test` at a server you
 started yourself (see the script's header).

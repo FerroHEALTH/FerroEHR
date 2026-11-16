@@ -5,7 +5,7 @@
 #
 # THE build of `ferroehr-server` under the `e2e` profile (the release profile
 # without LTO, #3490) that ci.yml's ui-e2e-binary and perf-base-binary and the
-# hospital deploy-probe lane run, in one place (#5673). It leaves the stripped
+# scheduled deploy probe run, in one place (#5673). It leaves the stripped
 # binary at bin/amd64/ferroehr of the workspace and uploads it as the artifact
 # the caller names.
 #

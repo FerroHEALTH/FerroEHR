@@ -34,6 +34,7 @@ use sqlx::PgConnection;
 use crate::access_log::chain::ALGORITHM;
 use crate::access_log::store::{AccessLogError, canonical_form};
 use crate::access_log::stored_form;
+use crate::db::acquire::acquire;
 use crate::digest::sha256_hex;
 
 /// The member of an entry's ITS-JSON form its canonical form leaves out.
@@ -270,35 +271,42 @@ impl Columns {
     }
 }
 
-/// The shared parts of a batch, then its intake rows in their order, in one
-/// statement.
-const INTAKE: &str = "WITH shared AS (INSERT INTO audit.access_log_shared (digest, content) \
-     SELECT decode(t.digest, 'hex'), t.content FROM unnest($25::text[], $26::text[]) \
-     AS t(digest, content) ON CONFLICT (digest) DO NOTHING) \
-     INSERT INTO audit.access_log_intake (record_type, uid, time_recorded, \
-     content, shared, content_digest, ehr_id, party_id, retain_until, action_terminology, \
-     action_code, result_terminology, result_code, recorded_at, action, outcome, principal, \
-     patient_id, resource_id, request_id, client_ip, index_ehr_id, search_tokens, render_policy) \
-     SELECT u.c1, u.c2::uuid, u.c3::timestamptz, u.c4, decode(u.c5, 'hex'), decode(u.c6, 'hex'), \
-     u.c7, u.c8, u.c9::date, u.c10, u.c11, u.c12, u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, \
-     u.c19, u.c20, u.c21, u.c22, u.c23::integer[], u.c24 \
-     FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], \
-     $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], $12::text[], $13::text[], \
-     $14::timestamptz[], $15::text[], $16::smallint[], $17::text[], $18::text[], $19::text[], \
-     $20::text[], $21::text[], $22::text[], $23::text[], $24::bytea[]) WITH ORDINALITY \
-     AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, \
-     c20, c21, c22, c23, c24, n) \
-     ORDER BY u.n";
+/// One search token of an entry's index row, which the intake statement
+/// stores or finds: its ITI-81 parameter, system and code, and whether it is
+/// kept in the entry's shared set.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IntakeToken {
+    /// The ITI-81 parameter.
+    pub parameter: &'static str,
+    /// The system of the coding or identifier.
+    pub system: Option<String>,
+    /// The code, the identifier value or the address.
+    pub code: Option<String>,
+    /// Whether the token belongs to the entry's shared set.
+    pub shares: bool,
+}
 
-/// Write `entries` into the intake on `conn`, in their order, with the
-/// shared parts they name, in one statement; the caller's transaction
-/// commits them.
+/// The intake statement: the search tokens and shared sets, the shared parts
+/// and the rows of a batch (`audit.access_log_intake_take`).
+const INTAKE: &str = "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6, $7, $8, $9, \
+     $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, \
+     $28, $29, $30, $31)";
+
+/// Write `entries` into the intake on `conn`, in their order, in one
+/// statement.
+///
+/// The shared parts they name go in with them. `tokens` holds, by the
+/// position of its entry, the search tokens of each entry whose index row
+/// leaves them to the statement (an empty `search_tokens`); the statement
+/// stores or finds them and their shared set. On a connection outside a
+/// transaction the statement commits on its own.
 ///
 /// # Errors
-/// The store errors when a statement fails.
+/// The store errors when the statement fails.
 pub async fn take_in(
     conn: &mut PgConnection,
     entries: Vec<IntakeEntry>,
+    tokens: &[Vec<IntakeToken>],
 ) -> Result<(), AccessLogError> {
     if entries.is_empty() {
         return Ok(());
@@ -312,6 +320,20 @@ pub async fn take_in(
         columns.push(entry);
     }
     let (keys, texts): (Vec<String>, Vec<String>) = shared.into_iter().unzip();
+    let mut token_entries = Vec::new();
+    let mut parameters = Vec::new();
+    let mut systems = Vec::new();
+    let mut codes = Vec::new();
+    let mut in_sets = Vec::new();
+    for (position, entry_tokens) in (1_i32..).zip(tokens) {
+        for token in entry_tokens {
+            token_entries.push(position);
+            parameters.push(token.parameter);
+            systems.push(token.system.as_deref());
+            codes.push(token.code.as_deref());
+            in_sets.push(token.shares);
+        }
+    }
     let c = columns;
     sqlx::query(INTAKE)
         .bind(c.record_types)
@@ -340,7 +362,136 @@ pub async fn take_in(
         .bind(c.policies)
         .bind(keys)
         .bind(texts)
+        .bind(token_entries)
+        .bind(parameters)
+        .bind(systems)
+        .bind(codes)
+        .bind(in_sets)
         .execute(&mut *conn)
         .await?;
     Ok(())
+}
+
+/// One request's entries waiting for the gathered intake write.
+struct Job {
+    entries: Vec<IntakeEntry>,
+    tokens: Vec<Vec<IntakeToken>>,
+    done: tokio::sync::oneshot::Sender<Result<(), std::sync::Arc<AccessLogError>>>,
+}
+
+/// The most entries one gathered write takes.
+const GATHER_MAX: usize = 512;
+
+/// How many jobs may wait for the writers before a request waits to queue.
+const QUEUE: usize = 4096;
+
+/// How many gathered writes may be in flight at once, each on its own
+/// connection.
+const WRITERS: usize = 4;
+
+/// The gathered intake write (#5770).
+///
+/// Requests hand their entries to one writer, which writes every entry
+/// waiting when its previous write returned in one statement that commits on
+/// its own, and answers each request once that commit is durable. Under load one commit, and one flush of the
+/// write-ahead log, serves many requests; alone, a request waits for its own
+/// statement only. No specification governs it: our own design.
+#[derive(Debug, Clone)]
+pub struct GroupWriter {
+    jobs: tokio::sync::mpsc::Sender<Job>,
+}
+
+impl std::fmt::Debug for Job {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Job")
+            .field("entries", &self.entries.len())
+            .finish_non_exhaustive()
+    }
+}
+
+impl GroupWriter {
+    /// Spawn the writer over `pool` on the running runtime.
+    #[must_use]
+    pub fn spawn(pool: &sqlx::PgPool) -> Self {
+        let (jobs, queue) = tokio::sync::mpsc::channel(QUEUE);
+        let queue = std::sync::Arc::new(tokio::sync::Mutex::new(queue));
+        for _ in 0..WRITERS {
+            tokio::spawn(gather(pool.clone(), std::sync::Arc::clone(&queue)));
+        }
+        Self { jobs }
+    }
+
+    /// Write `entries`, with their search `tokens` by position, durably in
+    /// the next gathered statement.
+    ///
+    /// # Errors
+    /// [`AccessLogError::Gathered`] when the gathered write fails or the
+    /// writer stopped.
+    pub async fn write(
+        &self,
+        entries: Vec<IntakeEntry>,
+        tokens: Vec<Vec<IntakeToken>>,
+    ) -> Result<(), AccessLogError> {
+        if entries.is_empty() {
+            return Ok(());
+        }
+        let (done, answer) = tokio::sync::oneshot::channel();
+        self.jobs
+            .send(Job {
+                entries,
+                tokens,
+                done,
+            })
+            .await
+            .map_err(|_stopped| AccessLogError::Gathered(None))?;
+        match answer.await {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(failed)) => Err(AccessLogError::Gathered(Some(failed))),
+            Err(_) => Err(AccessLogError::Gathered(None)),
+        }
+    }
+}
+
+/// One writer's loop, until every sender is gone: it takes what waits, lets
+/// the next writer take what arrives meanwhile, and writes.
+async fn gather(
+    pool: sqlx::PgPool,
+    queue: std::sync::Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<Job>>>,
+) {
+    loop {
+        let mut waiting = queue.lock().await;
+        let Some(first) = waiting.recv().await else {
+            return;
+        };
+        let mut jobs = vec![first];
+        let mut count = jobs.iter().map(|job| job.entries.len()).sum::<usize>();
+        while count < GATHER_MAX {
+            let Ok(job) = waiting.try_recv() else {
+                break;
+            };
+            count = count.saturating_add(job.entries.len());
+            jobs.push(job);
+        }
+        drop(waiting);
+        let mut entries = Vec::with_capacity(count);
+        let mut tokens = Vec::with_capacity(count);
+        let mut answers = Vec::with_capacity(jobs.len());
+        for job in jobs {
+            let mut job_tokens = job.tokens;
+            job_tokens.resize(job.entries.len(), Vec::new());
+            entries.extend(job.entries);
+            tokens.extend(job_tokens);
+            answers.push(job.done);
+        }
+        let written = async {
+            let mut conn = acquire(&pool).await?;
+            take_in(&mut conn, entries, &tokens).await
+        }
+        .await
+        .map_err(std::sync::Arc::new);
+        for answer in answers {
+            // NOTE: our own design (#5770), a request that stopped waiting needs no answer.
+            let _gone = answer.send(written.clone());
+        }
+    }
 }

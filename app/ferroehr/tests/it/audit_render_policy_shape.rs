@@ -12,6 +12,10 @@ use sqlx::PgPool;
 const MIGRATION: &str = include_str!("../../migrations/audit/0040_render_policy_log_retention.sql");
 
 /// Runs the migration once more over `pool`, as the migrator runs it.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn migrate(pool: &PgPool) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
     sqlx::query("SET LOCAL search_path = audit, ext, public")

@@ -1414,6 +1414,10 @@ async fn request_ids_and_version_uids_add_no_token_and_stay_searchable() {
 /// after; outside reaping no token can be deleted, and within it no token a
 /// record names.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn retention_removes_the_tokens_only_its_records_named() {
     use ferroehr::system_log::config::Retention;
 

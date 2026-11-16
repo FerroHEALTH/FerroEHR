@@ -595,6 +595,10 @@ async fn live_holder(party_pool: &PgPool, scheme: &str, value: &str) -> Option<U
 /// answers "which party holds this identifier" to a caller that already knows
 /// the value. Neither answers the other's question.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_sealed_identifier_round_trips_and_resolves_to_its_party() {
     use ferroehr::identifier_protection::store::IdentifierStore;
 
@@ -650,6 +654,10 @@ async fn a_sealed_identifier_round_trips_and_resolves_to_its_party() {
 
 /// An unregistered scheme is refused rather than stored unprotected.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn an_unregistered_scheme_is_refused() {
     use ferroehr::identifier_protection::store::{IdentifierStore, StoreError};
     use ferroehr::storage::identifier_repo::IdentifierRepoError;
@@ -1726,6 +1734,10 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
 /// The digest half is the one that would fail silently: a digest that matches
 /// no row reads exactly like an identifier nobody holds.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() {
     use ferroehr::db::DbConfig;
     use ferroehr::identifier_protection::store::IdentifierStore;

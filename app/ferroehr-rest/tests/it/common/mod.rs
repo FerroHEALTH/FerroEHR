@@ -984,6 +984,10 @@ pub(crate) async fn open_configured_key_spaces(config: &AppConfig) {
 }
 
 /// The live `PERSON` in `pool` carrying the key `key` under `issuer`.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 pub(crate) async fn bound_person(pool: &PgPool, issuer: &str, key: &str) -> Option<uuid::Uuid> {
     let party = ferroehr::db::domain_pool_from(pool, ferroehr::db::domain::Domain::Party);
     let today = jiff::Zoned::now()

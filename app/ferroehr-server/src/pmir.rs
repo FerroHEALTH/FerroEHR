@@ -120,7 +120,7 @@ pub(crate) fn start(
 )]
 pub async fn run(cmd: &PmirCmd, config: &ferroehr::config::FerroEhrConfig) -> anyhow::Result<()> {
     config.validate()?;
-    let pools = crate::connect_pool(config).await?;
+    let pools = crate::pools::connect(config, crate::pools::Opening::OneShot).await?;
     let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await?;
     let mut service = FerroEhrService::new(&pools);
     if let Some(sender) = sender {

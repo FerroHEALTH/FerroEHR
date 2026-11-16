@@ -1,0 +1,1 @@
+- A template whose text value is constrained by a `C_STRING` pattern that no regex engine compiles is refused when its Web Template is built, with an error naming the node's path and the pattern. Composition validation refuses a value checked against such a pattern; before, the pattern was skipped and every value passed.

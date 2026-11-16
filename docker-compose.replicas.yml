@@ -39,10 +39,9 @@ services:
       FERROEHR_CONFIG: /etc/ferroehr/ferroehr.toml
       FERROEHR__SERVER__LISTEN: 0.0.0.0:8081
       FERROEHR__DATABASE__URL: postgres://${PG_INIT_USER:-ferroehr}:${PG_INIT_PASSWORD:-ferroehr}@ferroehr-postgres:5432/${PG_INIT_DB:-ferroehr}
-      # Two instances hold two sets of pools and listeners, so each takes
-      # fewer connections than the quickstart's one (the connection budget on
-      # the page above).
-      FERROEHR__DATABASE__MAX_CONNECTIONS: ${FERROEHR__DATABASE__MAX_CONNECTIONS:-10}
+      # Each instance opens at most [database] connection_budget, 40 by
+      # default, so two fit the quickstart PostgreSQL's default of 100 (the
+      # connection budget on the page above).
       FERROEHR__RECORD__SIGNING__ENABLED: ${FERROEHR__RECORD__SIGNING__ENABLED:-true}
       FERROEHR__TELEMETRY__FORMAT: ${FERROEHR__TELEMETRY__FORMAT:-pretty}
       FERROEHR__TELEMETRY__FILTER: ${FERROEHR__TELEMETRY__FILTER:-info}

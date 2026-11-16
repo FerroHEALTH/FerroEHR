@@ -23,12 +23,16 @@ const SYSTEM: &str = "cdr-intake.example.org";
 const EHR: &str = "7d44b88c-4199-4bad-97dc-0000000000e1";
 
 /// Writes the entries `numbers` into the intake, one transaction each.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn write(pool: &PgPool, numbers: impl Iterator<Item = u32>) {
     for n in numbers {
         let mut conn = pool.acquire().await.expect("a connection");
         let mut tx = conn.begin().await.expect("begin");
         let intake = IntakeEntry::of(&mut entry(n, SYSTEM, EHR), None).expect("a stored form");
-        take_in(&mut tx, vec![intake])
+        take_in(&mut tx, vec![intake], &[])
             .await
             .expect("the intake write");
         tx.commit().await.expect("commit");

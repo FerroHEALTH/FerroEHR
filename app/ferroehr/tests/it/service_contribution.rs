@@ -2632,6 +2632,10 @@ async fn reactivating_contribution_unlocks_its_own_content() {
 /// gate's locked read, and the promoted `ehr.is_modifiable` column is exactly
 /// what the gate reads.)
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn concurrent_deactivation_is_seen_by_the_content_commit() {
     let (db, svc) = crate::fixtures::service().await;
     let ehr_id = crate::fixtures::create_ehr(&svc).await;

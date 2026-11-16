@@ -556,6 +556,10 @@ async fn a_care_relationship_of_its_own_is_refused() {
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
@@ -614,6 +618,10 @@ async fn one_indexed_read_returns_the_facts_of_the_parties_that_changed() {
 /// a real 0041 store cannot be built, because its check constraint refuses
 /// the `role` facts the current code writes at each `ROLE` commit.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn the_boot_after_migration_0042_reads_the_roles_already_stored() {
     const MIGRATION: &str = include_str!("../../migrations/party/0042_role_facts.sql");
     let db = testkit::db().await.expect("testkit database");

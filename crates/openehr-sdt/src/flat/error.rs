@@ -16,6 +16,28 @@ pub enum FlatError {
     #[error("invalid operational template: {0}")]
     InvalidTemplate(String),
 
+    /// A `C_STRING` pattern of the template compiles in no regex engine (ADL 1.4
+    /// `master05-cadl.adoc` §Regular Expression), so no value could be judged
+    /// against it.
+    #[error("the string pattern {pattern:?} at {path} compiles in no regex engine")]
+    UnevaluablePattern {
+        /// The archetype path of the constrained node.
+        path: String,
+        /// The pattern as the template states it.
+        pattern: String,
+    },
+
+    /// An `ARCHETYPE_SLOT` of the template cannot be evaluated (AOM 1.4
+    /// `ARCHETYPE_SLOT`), so no filler could be judged against it.
+    #[error("the archetype slot under {path} cannot be evaluated")]
+    UnevaluableSlot {
+        /// The archetype path of the attribute the slot stands under.
+        path: String,
+        /// What keeps the slot from being evaluated.
+        #[source]
+        defect: crate::flat::webtemplate::constraint::SlotDefect,
+    },
+
     /// An OPT 1.4 XML document failed to parse.
     #[error("failed to parse OPT 1.4 XML")]
     OptParse(#[from] openehr_its::xml::runtime::XmlError),

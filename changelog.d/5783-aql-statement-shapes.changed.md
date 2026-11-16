@@ -1,0 +1,1 @@
+- A repeated AQL query no longer builds and renders its SQL on every request. Each cached plan keeps the SQL text of the statement shapes it has run in, and a request of a known shape binds its own values (the EHR a single-EHR query names, the `ehr_ids` scope, the paging and the caller's access facts) into the cached text. Answers are unchanged.

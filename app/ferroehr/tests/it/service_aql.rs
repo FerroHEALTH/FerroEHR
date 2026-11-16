@@ -880,6 +880,10 @@ async fn archetype_predicate_child_releases_follow_their_own_parent_release() {
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn all_versions_includes_a_branch_row() {
     use ferroehr::ids::{EhrId, VoId};
     use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_versions_verbatim};
@@ -1965,6 +1969,59 @@ async fn plan_cache_reuses_plan_and_binds_per_request() {
         2,
         "fetch=2 returns two rows from the same plan"
     );
+}
+
+/// A repeated single-EHR query binds each EHR's id into the one statement
+/// shape of its plan (#5783): from the third request on, no request builds its
+/// SQL, and every answer is still its own EHR's, as the `ehr_id` parameter and
+/// the `ehr_ids` scope name it. No openEHR spec governs the SQL build: our own
+/// design, so this asserts behaviour equivalence.
+#[tokio::test]
+async fn statement_shapes_answer_each_ehr_its_own_rows() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let mut ehrs = Vec::new();
+    for at in 0..3 {
+        let ehr_id = crate::fixtures::create_ehr(&svc).await.to_string();
+        let names: Vec<String> = (0..=at).map(|n| format!("ehr {at} row {n}")).collect();
+        for name in &names {
+            create_comp(&svc, &ehr_id, name, 90.0).await;
+        }
+        ehrs.push((ehr_id, names));
+    }
+    let names = |r: &Value| {
+        rows(r)
+            .iter()
+            .map(|row| row[0].as_str().expect("a name").to_owned())
+            .collect::<Vec<_>>()
+    };
+    let by_parameter = "SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c \
+                        WHERE e/ehr_id/value = $ehr ORDER BY c/name/value";
+    let by_scope = "SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/name/value";
+    for _ in 0..3 {
+        for (ehr_id, expected) in &ehrs {
+            let request = AqlQueryRequest {
+                parameters: BTreeMap::from([("ehr".to_owned(), json!(ehr_id))]),
+                ..AqlQueryRequest::default()
+            };
+            let answer = run_aql(&svc, by_parameter, request).await;
+            assert_eq!(&names(&answer), expected, "the parameter's own EHR");
+            let answer = run_aql(&svc, by_scope, ehr_scope(ehr_id)).await;
+            assert_eq!(&names(&answer), expected, "the scope's own EHR");
+        }
+    }
+    for query in [by_parameter, by_scope] {
+        let plan = svc
+            .plan_cache()
+            .get(query)
+            .await
+            .expect("the plan is cached");
+        let shapes = plan.shapes.as_ref().expect("a cached plan has shapes");
+        assert_eq!(
+            shapes.bound(),
+            7,
+            "nine requests, the first two built: {query}"
+        );
+    }
 }
 
 /// The `ehr_id` execution scope binds the EHR SOURCE itself, not only

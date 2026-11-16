@@ -10,6 +10,7 @@
 //! spec governs the copy: our own design.
 
 use super::{GrantsUnavailable, LiveGrants, store};
+use crate::db::acquire::acquire;
 
 /// The grant revision and the facts revision of the store.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,7 +40,7 @@ impl LiveGrants {
     /// [`GrantsUnavailable`] when the party store does not answer.
     pub async fn behind(&self) -> Result<Option<Revisions>, GrantsUnavailable> {
         let read = async {
-            let mut conn = self.pool.acquire().await?;
+            let mut conn = acquire(&self.pool).await?;
             store::revisions(&mut conn).await
         };
         let (grants, facts) = read.await?;

@@ -4,7 +4,7 @@
 //! The database error chain, the domain layout and the pool defaults.
 
 use super::*;
-use crate::db::pool::{POOL_CEILING, POOL_FLOOR, POOL_KEPT_FLOOR};
+use crate::db::pool::{POOL_KEPT_FLOOR, POOL_MIN};
 
 /// Every `DbError` variant wrapping a cause keeps it as the source and out
 /// of its own message, so a chain printer shows it once (#3684).
@@ -56,7 +56,7 @@ fn defaults_applied() {
     assert_eq!(s.url.expose(), "postgres://localhost/ferroehr");
     assert_eq!(s.max_connections, None);
     assert_eq!(s.min_connections, None);
-    assert!((POOL_FLOOR..=POOL_CEILING).contains(&s.pool_size()));
+    assert!((POOL_MIN..=s.pool_share()).contains(&s.pool_size()));
     assert_eq!(s.pool_kept(), 0);
     assert_eq!(s.acquire_timeout, units::Duration::from_secs(30));
     assert!(!s.is_dev_default());
@@ -94,4 +94,72 @@ fn the_server_sizes_an_unset_pool_for_its_concurrency_and_keeps_a_core_each_open
     assert_eq!(set.pool_kept(), 50);
     set.min_connections = Some(5);
     assert_eq!(set.for_serving(4).pool_kept(), 5);
+}
+
+/// One instance with every default opens at most its budget of 40: one
+/// listener session for every channel, the audit runtime's four and three
+/// pools of at most 11, so two instances fit `PostgreSQL`'s default
+/// `max_connections` of 100 less its three `superuser_reserved_connections`
+/// (#5845).
+#[test]
+fn two_default_instances_fit_a_default_postgresql() {
+    let settings = DbConfig::default();
+    let serving = settings.for_serving(256);
+    assert_eq!(settings.connection_budget, 40);
+    assert_eq!(
+        serving.listen_sessions(),
+        1,
+        "one session carries every channel"
+    );
+    assert_eq!(serving.pool_share(), 11);
+    assert!(serving.pool_size() <= 11);
+    assert_eq!(serving.connections(), serving.pool_size() * 3 + 4 + 1);
+    assert!(serving.connections() <= 40, "{}", serving.connections());
+    assert!(serving.connections() * 2 <= 100 - 3);
+    assert_eq!(serving.budget_errors(), Vec::<String>::new());
+}
+
+/// A domain listening on a DSN of its own takes a second session, which the
+/// pools' share gives up; one listen DSN for both domains keeps one.
+#[test]
+fn each_listen_dsn_takes_one_session_out_of_the_budget() {
+    let mut settings = DbConfig::new("postgres://localhost/ferroehr");
+    settings.listen_url = Some(SecretUrl::new("postgres://primary/ferroehr"));
+    assert_eq!(settings.listen_sessions(), 1);
+    settings.party.listen_url = Some(SecretUrl::new("postgres://party/ferroehr"));
+    assert_eq!(settings.listen_sessions(), 2);
+    assert_eq!(settings.pool_share(), 11);
+    settings.connection_budget = 100;
+    assert_eq!(settings.pool_share(), 31);
+    assert!(settings.connections() <= 100);
+}
+
+/// A budget that leaves a pool fewer than two connections, and a set pool
+/// size whose pools and listener exceed the budget, are refused naming the
+/// budget; a set size inside it is kept.
+#[test]
+fn a_pool_outside_the_budget_is_refused_naming_it() {
+    let mut settings = DbConfig::new("postgres://localhost/ferroehr");
+    settings.connection_budget = 6;
+    let errors = settings.budget_errors();
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(
+        errors
+            .iter()
+            .all(|e| e.contains("database.connection_budget = 6") && e.contains("at least 11")),
+        "{errors:?}"
+    );
+    settings.connection_budget = 40;
+    settings.max_connections = Some(30);
+    let errors = settings.budget_errors();
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(
+        errors
+            .iter()
+            .all(|e| e.contains("95 in all") && e.contains("database.connection_budget = 40")),
+        "{errors:?}"
+    );
+    settings.max_connections = Some(11);
+    assert_eq!(settings.budget_errors(), Vec::<String>::new());
+    assert_eq!(settings.connections(), 38);
 }

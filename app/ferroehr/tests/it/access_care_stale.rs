@@ -28,6 +28,7 @@ use crate::policy_fixtures::{capability, create, granted, granting};
 use ferroehr::access_eval::condition::{RequestAccess, current, with_request_access};
 use ferroehr::error::ServiceError;
 use ferroehr::ids::{EhrId, VoId};
+use ferroehr::policy_register::listen::Listeners;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr::composition_read::JudgedRead;
@@ -98,9 +99,11 @@ impl Ward {
             .expect("the composition commits")
             .vo_id;
         let listened = two.grants().listened();
-        listened.spawn_listener(
+        Listeners::on(
             PgConnectOptions::from_str(elsewhere.url()).expect("the test DSN parses"),
-        );
+            &[Arc::clone(listened)],
+        )
+        .spawn();
         for _ in 0..250 {
             if listened.is_listening() {
                 break;

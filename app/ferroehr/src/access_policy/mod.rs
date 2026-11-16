@@ -23,6 +23,7 @@
 pub mod check;
 pub mod retention;
 
+use crate::db::domain::Domain;
 use std::fmt;
 use std::sync::{Arc, PoisonError, RwLock};
 
@@ -157,7 +158,7 @@ impl LivePolicy {
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         Self {
-            listened: Arc::new(Listened::new(CHANNEL)),
+            listened: Arc::new(Listened::new(CHANNEL, Domain::Clinical)),
             pool,
             in_force: RwLock::new(Arc::default()),
             installing: tokio::sync::Mutex::new(()),
@@ -241,7 +242,7 @@ impl LivePolicy {
     }
 
     /// The listener that says when the policy in force must be read again;
-    /// [`Listened::spawn_listener`] starts it.
+    /// [`crate::policy_register::listen::Listeners::spawn`] starts it.
     #[must_use]
     pub fn listened(&self) -> &Arc<Listened> {
         &self.listened

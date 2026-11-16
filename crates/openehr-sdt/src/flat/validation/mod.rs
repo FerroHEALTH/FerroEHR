@@ -47,7 +47,8 @@ mod leaf;
 pub(crate) mod node_ids;
 pub(crate) mod plan;
 mod presence;
-mod subtype;
+pub(crate) mod subtype;
+mod unique;
 
 use indexmap::IndexMap;
 use openehr_rm::v1_2::paths::{PathSegment, is_archetype_root_node_id};
@@ -58,7 +59,6 @@ use crate::rm_instance::{ValidationKind, ValidationMessage};
 use crate::flat::path;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode, is_present};
-use crate::flat::webtemplate::constraint::WebTemplateArchetypeSlot;
 use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 use plan::{ChildGroup, NodeWalk};
 
@@ -730,7 +730,7 @@ impl Validator {
             {
                 continue;
             }
-            match ca.slots.iter().position(|s| slot_admits(s, ct, nid)) {
+            match ca.slots.iter().position(|s| s.admits(ct, nid)) {
                 Some(i) => counts[i] += 1,
                 None => self.push(
                     &ca.path,
@@ -1128,7 +1128,7 @@ impl Validator {
 
     /// Container-cardinality check: for each constraining cardinality on this
     /// node, count the children under the constrained attribute path and compare
-    /// to `min`/`max`. Iterates [`WebTemplateNode::card_all`] — the full AOM 1.4
+    /// to `min`/`max`, and refuse two value-equal members under `unique`. Iterates [`WebTemplateNode::card_all`] — the full AOM 1.4
     /// §cardinality set (`0..1`/`1..1`/`1..*` included), a superset of the
     /// serialized `cardinalities` (which the metadata document filters).
     fn check_cardinalities(&mut self, instance: &Value, wt: &WebTemplateNode, plan: &NodeWalk) {
@@ -1153,9 +1153,20 @@ impl Validator {
                 if matches!(container.get(&last.attribute), None | Some(Value::Null)) {
                     continue;
                 }
-                let count =
-                    i32::try_from(openehr_rm::v1_2::paths::select_children(container, last).len())
-                        .unwrap_or(i32::MAX);
+                let members = openehr_rm::v1_2::paths::select_children(container, last);
+                if card.unique
+                    && let Some((first, second)) = unique::first_duplicate(&members)
+                {
+                    self.push(
+                        card.path.clone(),
+                        format!(
+                            "cardinality unique violated: members {first} and {second} are equal \
+                             by value"
+                        ),
+                        ValidationKind::Cardinality,
+                    );
+                }
+                let count = i32::try_from(members.len()).unwrap_or(i32::MAX);
                 let min = card.min.unwrap_or(0).max(0);
                 // The cardinality lower bound is relaxed away for a
                 // `553|incomplete|` commit (master06 §"Incomplete Content": "all
@@ -1304,36 +1315,6 @@ fn children_under_attr<'a>(node: &'a Value, attr: &str) -> Vec<&'a Value> {
     }
 }
 
-/// Whether an open `ARCHETYPE_SLOT` admits a filler of RM type `child_type` and
-/// archetype id `archetype_id` (AOM 1.4 `ARCHETYPE_SLOT`): the type must conform
-/// to the slot's `rm_type`, the id must match at least one `includes` regex (an
-/// empty `includes` = open to the type), and match no `excludes` regex. A blanket
-/// match-all (`.*`) exclude is ignored when `includes` is non-empty — the ADL 1.4
-/// closed-slot idiom (AOM 1.4 has no `is_closed`; NOTE: includes then win,
-/// matching de-facto CDR behaviour).
-fn slot_admits(slot: &WebTemplateArchetypeSlot, child_type: &str, archetype_id: &str) -> bool {
-    if !slot.rm_type.is_empty() && !subtype::conforms(child_type, &slot.rm_type) {
-        return false;
-    }
-    let include_ok = slot.includes.is_empty()
-        || slot
-            .includes
-            .iter()
-            .any(|p| leaf::matches_pattern(p, archetype_id));
-    if !include_ok {
-        return false;
-    }
-    for ex in &slot.excludes {
-        if !slot.includes.is_empty() && matches!(ex.trim(), ".*" | ".+") {
-            continue; // closed-slot idiom: a specific includes list wins.
-        }
-        if leaf::matches_pattern(ex, archetype_id) {
-            return false;
-        }
-    }
-    true
-}
-
 #[cfg(test)]
 mod tests {
     //! Per-rule unit tests for the composition validator, built on hand-shaped
@@ -1345,7 +1326,8 @@ mod tests {
 
     use super::*;
     use crate::flat::webtemplate::constraint::{
-        WebTemplateClosedAttribute, WebTemplateCodeList, WebTemplateExistence, WebTemplateSlot,
+        WebTemplateArchetypeSlot, WebTemplateClosedAttribute, WebTemplateCodeList,
+        WebTemplateExistence, WebTemplateSlot,
     };
     use crate::flat::webtemplate::model::{
         WebTemplateCardinality, WebTemplateCodedValue, WebTemplateInput, WebTemplateInputType,
@@ -1437,6 +1419,7 @@ mod tests {
             max: 2,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
         let inst = json!({
@@ -1523,6 +1506,7 @@ mod tests {
             max: -1,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
         let one_child = json!({
@@ -1540,6 +1524,7 @@ mod tests {
             max: 2,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let three = json!({
             "_type": "COMPOSITION", "archetype_node_id": "x",
@@ -1758,6 +1743,22 @@ mod tests {
         assert_eq!(walk_only(&good, &n), Vec::<ValidationMessage>::new());
     }
 
+    #[test]
+    fn a_pattern_no_engine_compiles_refuses_every_value() {
+        let mut n = node("DV_TEXT", "/text");
+        let mut input = WebTemplateInput::new(WebTemplateInputType::Text, None);
+        input.validation = Some(WebTemplateValidation {
+            pattern: Some("(".to_owned()),
+            ..Default::default()
+        });
+        n.inputs = vec![input];
+        let any = json!({"_type": "DV_TEXT", "value": "("});
+        assert_eq!(
+            kinds(&walk_only(&any, &n)),
+            vec![ValidationKind::PatternError]
+        );
+    }
+
     // ── coded value membership ─────────────────────────────────────────────────
 
     fn coded_node(codes: &[&str]) -> WebTemplateNode {
@@ -1924,6 +1925,7 @@ mod tests {
             max: -1,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let inst = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": []});
         let msgs = walk_only(&inst, &root);

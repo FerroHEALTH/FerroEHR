@@ -26,6 +26,7 @@ use ferrohealth_smart::party::{Markers, Membership, PartyRef, PartyState, Repres
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::live::GrantsUnavailable;
@@ -155,7 +156,7 @@ impl LocalPartySource {
 
     /// [`Self::name`] read from the party pool.
     async fn read_name(&self, party: Uuid) -> Result<Option<String>, StorageError> {
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = acquire(&self.pool).await?;
         for (template, selectors) in &self.mapping.persons {
             let Some(name) = &selectors.name else {
                 continue;
@@ -231,7 +232,7 @@ impl LocalPartySource {
         group_issuer: Option<&str>,
         today: &str,
     ) -> Result<Lookup, LookupError> {
-        let mut conn = self.pool.acquire().await.map_err(StorageError::from)?;
+        let mut conn = acquire(&self.pool).await.map_err(StorageError::from)?;
         let rows = lookup::key_rows(&mut conn, issuer, identifier_type, value, today).await?;
         let (live, tombstones): (Vec<KeyRow>, Vec<KeyRow>) =
             rows.into_iter().partition(|row| row.live);
@@ -390,5 +391,38 @@ impl BindingSource for LocalPartySource {
             }
             Ok(created)
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use sqlx::postgres::PgPoolOptions;
+    use uuid::Uuid;
+
+    use super::LocalPartySource;
+    use crate::error::ServiceError;
+    use crate::storage::error::classify_storage;
+
+    /// A bound committer's name read on a party pool that cannot open a
+    /// connection answers `503`: no statement ran, so the caller may repeat
+    /// the request. A resolver failure is no refused connect, and read on a
+    /// raw pool checkout it answered `500` (#5109).
+    #[tokio::test]
+    async fn a_name_read_on_a_pool_that_cannot_connect_is_unavailable() {
+        let pool = PgPoolOptions::new()
+            .acquire_timeout(Duration::from_secs(5))
+            .connect_lazy("postgres://ferroehr@ferroehr-database.invalid/ferroehr")
+            .expect("a lazy pool");
+        let error = LocalPartySource::new(pool, "local")
+            .name(Uuid::nil())
+            .await
+            .expect_err("no connection can be opened");
+        let shown = format!("{error:?}");
+        assert!(
+            matches!(classify_storage(error), ServiceError::Overloaded(_)),
+            "a connect failure is a 503: {shown}"
+        );
     }
 }

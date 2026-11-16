@@ -139,6 +139,7 @@ impl FerroEhrService {
         let party = aql::exec::execute(
             &self.demographic_pool,
             &halves.party,
+            None,
             job.params,
             &party_ctx,
             self.spec_profile,
@@ -203,6 +204,7 @@ impl FerroEhrService {
             let run = aql::exec::execute(
                 &self.pool,
                 &halves.clinical,
+                None,
                 job.params,
                 &ctx,
                 self.spec_profile,
