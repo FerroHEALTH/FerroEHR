@@ -42,6 +42,11 @@ const COMPOSITIONS: &str =
     "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/uid/value";
 /// The count of the same rows.
 const COUNT: &str = "SELECT COUNT(c/uid/value) FROM EHR e CONTAINS COMPOSITION c";
+/// The same rows with no `EHR` source, whose root decides its own EHR
+/// (#5782).
+const UNLINKED: &str = "SELECT c/uid/value FROM COMPOSITION c ORDER BY c/uid/value";
+/// The count of the same rows with no `EHR` source.
+const UNLINKED_COUNT: &str = "SELECT COUNT(c/uid/value) FROM COMPOSITION c";
 
 /// Three EHRs, each with two compositions, the subject of each a `PERSON`,
 /// and the nurse, the `PERSON` the professional the tests ask as is bound to,
@@ -498,6 +503,17 @@ async fn assert_reads(world: &World, ask: &Ask, expected: &[String], case: &str)
         counted[0][0],
         json!(expected.len()),
         "{case}: the count counts only readable rows"
+    );
+    let unlinked = ids(rows(world, ask, UNLINKED, None).await);
+    assert_eq!(unlinked, expected, "{case}: the rows with no EHR source");
+    let paged = ids(rows(world, ask, UNLINKED, Some((1, 2))).await);
+    let window: Vec<String> = expected.iter().skip(1).take(2).cloned().collect();
+    assert_eq!(paged, window, "{case}: a page with no EHR source");
+    let counted = rows(world, ask, UNLINKED_COUNT, None).await;
+    assert_eq!(
+        counted[0][0],
+        json!(expected.len()),
+        "{case}: the count with no EHR source"
     );
     for (index, (ehr_id, _, objects)) in world.ehrs.iter().enumerate() {
         let of_ehr: Vec<String> = expected
@@ -1464,6 +1480,204 @@ async fn break_glass_reads_what_the_emergency_lifts() {
         opt_out_override: false,
     };
     assert_reads(&world, &ask, &except(&world, &[2], &[]), "break-glass").await;
+}
+
+/// The newest compositions, as the benchmark's population page asks for
+/// them (#5782).
+const NEWEST: &str = "SELECT c/uid/value, c/context/start_time/value FROM EHR e \
+     CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC, c/uid/value ASC";
+
+/// The composition ids of the rows of `aql` `ask` reads, sorted.
+async fn sorted_ids(world: &World, ask: &Ask, aql: &str) -> Vec<String> {
+    let mut ids: Vec<String> = rows(world, ask, aql, None)
+        .await
+        .iter()
+        .filter_map(|row| row[0].as_str())
+        .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// The composition ids `access` serves for `aql` under `condition`, in row
+/// order.
+async fn served_under(
+    world: &World,
+    access: &Arc<RequestAccess>,
+    condition: AccessCondition,
+    aql: &str,
+) -> Vec<String> {
+    let request = AqlQueryRequest {
+        ehr_access: condition,
+        ..AqlQueryRequest::default()
+    };
+    let outcome = Box::pin(with_request_access(
+        Arc::clone(access),
+        world.svc.execute_aql(aql, None, &request),
+    ))
+    .await
+    .expect("the query runs");
+    outcome.result_set["rows"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|row| row[0].as_str())
+        .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+        .collect()
+}
+
+/// Whether the condition of `ask` admits every item of every class it
+/// knows, of an EHR held closed and of an EHR with no settings, so the
+/// statement reads it as "the EHR's class is known" (#5782).
+async fn admits_every_known(world: &World, ask: &Ask) -> bool {
+    let access = request_of(ask);
+    let classes = world.svc.ehr_access_classes().await.expect("the classes");
+    let condition = Box::pin(with_request_access(Arc::clone(&access), async {
+        access.condition(&classes, Care::Census(Vec::new().into()))
+    }))
+    .await;
+    let groups = condition.groups().expect("a condition over the classes");
+    groups.default.is_none()
+        && groups.closed.admits_all()
+        && groups.groups.iter().all(|(_, pair)| pair.admits_all())
+}
+
+/// A restriction scoped by root archetype withholds the objects whose trunk
+/// head has that root, case-folded, read from the head row the commit
+/// writes, and no object of another root (#5782).
+#[tokio::test]
+async fn an_archetype_scope_reads_the_root_of_the_trunk_head() {
+    let world = Box::pin(World::new()).await;
+    let restriction = |archetype: &str| {
+        directive(
+            "restriction",
+            "deny",
+            &json!({ "data": [{ "archetypes": [
+                { "_type": "ARCHETYPE_ID", "value": archetype }] }] }),
+        )
+    };
+    let mut report = composition("report");
+    report["archetype_node_id"] = json!("openEHR-EHR-COMPOSITION.report.v1");
+    report["archetype_details"]["archetype_id"]["value"] =
+        json!("openEHR-EHR-COMPOSITION.report.v1");
+    let reported = world
+        .svc
+        .create_composition(world.ehrs[1].0, uv(&report, "249", None))
+        .await
+        .expect("the report commits")
+        .vo_id
+        .0
+        .to_string();
+    let ask = Ask::professional(&world);
+    let mut unrestricted = world.every();
+    unrestricted.push(reported.clone());
+    unrestricted.sort();
+    assert_eq!(
+        sorted_ids(&world, &ask, UNLINKED).await,
+        unrestricted,
+        "no scope withholds nothing"
+    );
+    world
+        .settings(
+            0,
+            &settings(
+                "open",
+                &[restriction("openEHR-EHR-COMPOSITION.ENCOUNTER.v1")],
+                &[],
+            ),
+        )
+        .await;
+    world
+        .settings(
+            1,
+            &settings(
+                "open",
+                &[restriction("openEHR-EHR-COMPOSITION.report.v1")],
+                &[],
+            ),
+        )
+        .await;
+    let expected = except(&world, &[0], &[]);
+    assert!(!expected.contains(&reported), "the report is EHR 1's own");
+    assert_reads(&world, &ask, &expected, "the encounters and the report").await;
+}
+
+/// A caller every known class, an EHR held closed and an EHR with no
+/// settings admit in full reads every EHR of a known class, by every query
+/// shape, and still none of a class its condition does not hold; a caller
+/// a class refuses keeps the full condition and reads without that class's
+/// EHR (#5782).
+#[tokio::test]
+async fn a_condition_admitting_every_known_class_reads_as_the_full_one() {
+    let world = Box::pin(World::new()).await;
+    world
+        .settings(
+            0,
+            &settings("open", &[directive("opt_out", "deny", &json!({}))], &[]),
+        )
+        .await;
+    world.settings(1, &settings("restricted", &[], &[])).await;
+    let mut administrator = Ask::professional(&world);
+    administrator.caller.administrator = true;
+    assert!(
+        admits_every_known(&world, &administrator).await,
+        "the administrator's condition admits every known class"
+    );
+    assert_reads(&world, &administrator, &world.every(), "the administrator").await;
+    assert_eq!(
+        sorted_ids(&world, &administrator, NEWEST).await,
+        world.every(),
+        "the administrator's newest compositions"
+    );
+    let professional = Ask::professional(&world);
+    assert!(
+        !admits_every_known(&world, &professional).await,
+        "a class refuses the professional something"
+    );
+    let expected = except(&world, &[1], &[]);
+    assert_reads(&world, &professional, &expected, "the professional").await;
+    assert_eq!(
+        sorted_ids(&world, &professional, NEWEST).await,
+        expected,
+        "the professional's newest compositions"
+    );
+    let access = request_of(&administrator);
+    let stale = Box::pin(with_request_access(Arc::clone(&access), async {
+        access.condition(
+            &world
+                .svc
+                .ehr_access_classes()
+                .await
+                .expect("the classes read"),
+            Care::Census(Vec::new().into()),
+        )
+    }))
+    .await;
+    world
+        .settings(
+            2,
+            &settings("open", &[opt_out_from("2020-01-01T00:00:00Z")], &[]),
+        )
+        .await;
+    for aql in [COMPOSITIONS, UNLINKED] {
+        assert_eq!(
+            served_under(&world, &access, stale.clone(), aql).await,
+            except(&world, &[2], &[]),
+            "the administrator's stale condition withholds the new class: {aql}"
+        );
+    }
+    assert!(
+        admits_every_known(&world, &administrator).await,
+        "the classes read again"
+    );
+    assert_reads(
+        &world,
+        &administrator,
+        &world.every(),
+        "the classes read again",
+    )
+    .await;
 }
 
 /// The `EHR_ACCESS` of an EHR a pinned query reads is answered as the query

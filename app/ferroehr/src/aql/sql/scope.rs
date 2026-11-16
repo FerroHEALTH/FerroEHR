@@ -49,9 +49,11 @@ impl Builder<'_> {
             .map(|root| col(root, Node::EhrId))
             .chain(self.ehr_alias.values().map(|alias| col(alias, Ehr::Id)));
         for target in targets {
-            if let Some(scoped) = scope_cond(ctx, target.clone()) {
+            if let Some(scoped) = scope_cond(ctx, target) {
                 self.q.and_where(scoped);
             }
+        }
+        for target in self.accessed_ehr_ids() {
             if let Some(gate) = gates.on_ehr_id(&target) {
                 self.q.and_where(gate);
             }
@@ -61,6 +63,44 @@ impl Builder<'_> {
         if let Some(pinned) = self.ctx.ehr_access.pinned() {
             self.q.and_where(super::pinned::in_force(pinned));
         }
+    }
+
+    /// The group roots no bound `EHR` source covers: a root linked to one
+    /// (`version.ehr_id = e.id`) has the source's id as its EHR id.
+    fn unlinked_roots(&self) -> Vec<String> {
+        self.group_roots
+            .iter()
+            .filter(|root| !self.roots_linked_to_ehr.contains_key(*root))
+            .cloned()
+            .collect()
+    }
+
+    /// The EHR ids the access evaluator's per-EHR decision binds: every
+    /// root's and every EHR source's, and under a condition that probes the
+    /// settings row only those no head predicate already decides.
+    ///
+    /// Under such a condition, a root linked to an EHR source has the
+    /// source's id as its EHR id, so the source decides it; and a source with
+    /// a linked root contributes only rows whose head the condition admits
+    /// ([`super::access::on_head`]), and an admitted item is one the EHR
+    /// reaches ([`super::access::on_ehr_id`] holds wherever `on_head` does).
+    /// Each repeat was one more probe of the settings row per candidate row.
+    /// A pinned condition keeps every one: it is an equality on a constant,
+    /// which the planner reads as an index condition. No openEHR spec governs
+    /// this: our own design (#5782).
+    fn accessed_ehr_ids(&self) -> Vec<Expr> {
+        let probes = self.ctx.ehr_access.pinned().is_none();
+        let roots = self
+            .group_roots
+            .iter()
+            .filter(|root| !probes || !self.roots_linked_to_ehr.contains_key(*root))
+            .map(|root| col(root, Node::EhrId));
+        let ehrs = self
+            .ehr_alias
+            .values()
+            .filter(|alias| !probes || !self.roots_linked_to_ehr.values().any(|e| e == *alias))
+            .map(|alias| col(alias, Ehr::Id));
+        roots.chain(ehrs).collect()
     }
 
     /// The explicit `ehr_ids` scope on the EHR id `target`, when the query is
@@ -117,10 +157,7 @@ impl Builder<'_> {
         // One gate per join-connected component: a VO root linked to
         // an EHR alias (`node.ehr_id = e.id`) is covered by that alias's gate —
         // gating both would filter the same EHR twice.
-        for root in self.group_roots.clone() {
-            if self.roots_linked_to_ehr.contains(&root) {
-                continue;
-            }
+        for root in self.unlinked_roots() {
             self.gate_vo_root(&root);
         }
         // An EHR source already has its `ehr` row in the FROM — filter its
