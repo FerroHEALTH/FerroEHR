@@ -2318,6 +2318,7 @@ dependencies = [
  "ferrohealth-usage-report",
  "jiff",
  "mimalloc",
+ "nix 0.31.3",
  "openehr-its",
  "openehr-sdt",
  "serde_json",

@@ -397,7 +397,11 @@ impl FerroEhrService {
         event.object_id = Some(object_id);
         event.event_type = operation.map(crate::system_log::event::EventType::rest);
         // NOTE: a write outside a request (a sweep, an unwired re-key) names no reader.
-        event.user_id = crate::versioning::committer::current_committer()
+        let committer = crate::versioning::committer::current_committer();
+        event.client_id = committer
+            .as_ref()
+            .and_then(|committer| committer.client.clone());
+        event.user_id = committer
             .map(|committer| committer.subject)
             .unwrap_or_default();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
