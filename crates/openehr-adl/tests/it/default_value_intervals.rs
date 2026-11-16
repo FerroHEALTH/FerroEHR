@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! ODIN interval `_default` values, end to end: source → AOM2 → printed ADL →
+//! ODIN interval and term-code `_default` values, end to end: source → AOM2 → printed ADL →
 //! source again.
 //!
 //! `ADL2/master06-default_values.adoc` §Syntax states that a default value is
@@ -202,5 +202,43 @@ fn a_non_numeric_plus_minus_default_is_refused() {
             .iter()
             .any(|e| e.to_string().contains("no lower/upper reduction")),
         "expected the reduction limitation to be named, got {errors:?}"
+    );
+}
+
+/// An ODIN term code in a `_default` is the RM `CODE_PHRASE` it denotes, with a
+/// stated version folded into the `TERMINOLOGY_ID` value, and it prints back
+/// as the term code (#5817).
+#[test]
+fn a_term_code_in_a_default_is_a_code_phrase() {
+    let (json, printed) = parse_and_print(
+        "(DV_CODED_TEXT) <\n\
+         \x20   value = <\"lying BP\">\n\
+         \x20   defining_code = <[snomed_ct(2024-01)::163033001]>\n\
+         >",
+    );
+    assert_eq!(
+        json["defining_code"],
+        serde_json::json!({"_type": "CODE_PHRASE",
+            "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "snomed_ct(2024-01)"},
+            "code_string": "163033001"})
+    );
+    assert!(
+        printed.contains("defining_code = <[snomed_ct(2024-01)::163033001]>"),
+        "the code prints as a term code:\n{printed}"
+    );
+}
+
+/// A list of term codes keeps its list form through the printer.
+#[test]
+fn a_list_of_term_codes_round_trips() {
+    let (json, printed) = parse_and_print(
+        "<\n\
+         \x20   codes = <[snomed_ct::1], [loinc::2-3]>\n\
+         >",
+    );
+    assert_eq!(json["codes"][1]["code_string"], "2-3");
+    assert!(
+        printed.contains("codes = <[snomed_ct::1], [loinc::2-3]>"),
+        "{printed}"
     );
 }

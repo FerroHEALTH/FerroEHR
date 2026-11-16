@@ -73,8 +73,9 @@ use crate::adl14::term_constraint::rewrite_as_authored;
 use crate::aom::access::{
     child_occurrences, common_mut, complex_attributes, object_node_id, strip_sibling_order,
 };
+use crate::aom::build::complex_object;
 use crate::artefact::{ArchetypeRepository, view};
-use crate::flatten::{FlattenError, flat_form};
+use crate::flatten::{FlattenError, flat_form, overlay_node};
 use crate::odin::nil_uuid;
 use crate::paths::{child_path, parse_path};
 use openehr_lang::nesting::Nesting;
@@ -527,6 +528,24 @@ impl Transform<'_> {
         let mut definition = flat_view.definition.clone();
         let mut terminology = flat_view.terminology.clone();
         rewrite_as_authored(&mut definition, &mut terminology);
+        // NOTE: a `use_archetype` body redefines the referenced archetype at this node
+        // (`ADL2/master10-templates.adoc` OPT2 example), so it overlays the flat form.
+        if let CComplexObject::CComplexObject(base) = &definition
+            && !(r.attributes.as_ref().is_none_or(Vec::is_empty)
+                && r.attribute_tuples.as_ref().is_none_or(Vec::is_empty))
+        {
+            let body = complex_object(
+                String::new(),
+                base.node_id.clone(),
+                r.attributes.take().unwrap_or_default(),
+                r.attribute_tuples.take().unwrap_or_default(),
+                None,
+            );
+            let base = CObject::CComplexObject(definition.clone());
+            if let CObject::CComplexObject(overlaid) = overlay_node(&base, &body)? {
+                definition = overlaid;
+            }
+        }
 
         // Gather the constituent's flat terminology (master03 §Terminology: the flat
         // terminology of every constituent except the root template). The

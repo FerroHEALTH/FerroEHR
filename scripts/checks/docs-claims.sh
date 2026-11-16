@@ -59,6 +59,8 @@ set -euo pipefail
 
 # shellcheck source=scripts/lib/guard-args.sh
 . "$(dirname "$0")/../lib/guard-args.sh"
+# shellcheck source=scripts/lib/config-keys.sh
+. "$(dirname "$0")/../lib/config-keys.sh"
 guard_known_flags "[--all | --diff [base] | <file>...]" "--all --diff" "$@"
 cd "$(dirname "$0")/../.."
 
@@ -97,35 +99,6 @@ trap 'rm -rf "$work"' EXIT
 
 # ── the authorities ──────────────────────────────────────────────────────────
 
-# Every TOML path, plus every ancestor table (a page may document `[audit]` as
-# `config.audit`). A `#?` line documents a real optional/secret/derived key and
-# counts; a plain `#` comment does not, except under a `# [table.<name>]`
-# header, a table under an operator-chosen name, whose keys are written as
-# `# key = …` and count with `*` in the name's place.
-toml_paths() {
-  local file="$1"
-  awk '
-    { line = $0
-      sub(/^[[:space:]]*/, "", line)
-      if (line ~ /^# \[[A-Za-z0-9_.]+\.<name>\]$/) {
-        sec = line; gsub(/^# \[|\]$/, "", sec); gsub(/<name>/, "*", sec); named = 1; next
-      }
-      if (named && line ~ /^# [A-Za-z0-9_]+ = /) sub(/^# /, "", line)
-      else if (line ~ /^#\?[[:space:]]*/) { sub(/^#\?[[:space:]]*/, "", line); named = 0 }
-      else if (line ~ /^#/) next
-      else named = 0
-      if (line ~ /^\[\[?[A-Za-z0-9_.]+\]\]?/) { sec = line; gsub(/^\[\[?|\]\]?.*$/, "", sec); next }
-      if (line ~ /^[A-Za-z0-9_]+[[:space:]]*=/) {
-        k = line; sub(/[[:space:]]*=.*$/, "", k)
-        path = (sec == "" ? k : sec "." k)
-        print path
-        n = split(path, seg, ".")
-        acc = seg[1]
-        for (i = 2; i < n; i++) { print acc; acc = acc "." seg[i] }
-        if (n > 1) print acc
-      }
-    }' "$file" | sort -u
-}
 
 # values.yaml flattened to dotted paths by indentation. Our own file, two-space
 # indented; list items and comments are skipped.
@@ -149,7 +122,7 @@ values_paths() {
     }' "$file" | sort -u
 }
 
-toml_paths "$TOML" > "$work/toml"
+config_keys "$TOML" > "$work/toml"
 values_paths "$VALUES" > "$work/values"
 # Env forms: the TOML path upper-cased with `__` between segments.
 sed 's/\./__/g' "$work/toml" | tr '[:lower:]' '[:upper:]' | sed 's/^/FERROEHR__/' | sort -u > "$work/env"

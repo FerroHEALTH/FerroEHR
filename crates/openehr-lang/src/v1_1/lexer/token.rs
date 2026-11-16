@@ -383,9 +383,10 @@ pub enum Token {
     /// the delimiters (`LANG/docs/odin/master09-plug_in_syntaxes`: "the `<>`
     /// delimiters are modified to `<# #>`, to allow for easier parser design";
     /// the delimiters are reserved by `master03-basics` §Reserved
-    /// Characters). ODIN-only — the vendored ADL/BEL grammars have no `#`
-    /// production at all, so the other readings refuse the token. The body is
-    /// raw foreign text ("expressed in some other syntax"), never lexed.
+    /// Characters). ODIN and ADL read it: ADL as the block of an
+    /// `INCLUDED_LANGUAGE_FRAGMENT` (`base_lexer.g4`), the BEL and EL readings
+    /// refuse it. The body is raw foreign text ("expressed in some other
+    /// syntax"), never lexed.
     ///
     /// The DFA matches only the `<`, and the `<` callback scans the rest in a
     /// loop, so its length costs no stack.
