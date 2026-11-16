@@ -6,7 +6,7 @@ the binary carries and stores at boot when absent:
 `[authz.party_binding.patient]`.
 
 It is a patient's `PERSON`, the subject of an EHR and the target of a
-representation relationship. In `details`: its patient identifiers at
+representation relationship, or the representative who is its source. In `details`: its patient identifiers at
 `/details[id2]/items[id3]`, its date of birth at `/details[id2]/items[id4]`,
 its sex at `/details[id2]/items[id5]` and the EHR subject references it
 stands for at `/details[id2]/items[id36]`. In `identities`: its names, each
@@ -17,7 +17,10 @@ a postal address (`ADDRESS[id12]`) and an electronic address
 third-party payer (`id26`) and a healthcare provider (`id29`), the payer and
 the provider each with the patient identifiers it issues, and the care
 relationships (`id32`) to the teams and units the patient is under the care
-of.
+of, and a slot (`id37`) for a representation the person holds of another,
+such as one of `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1`,
+since a patient portal provisions a representative as a `PERSON` of this
+archetype (#5611).
 
 ## Source
 

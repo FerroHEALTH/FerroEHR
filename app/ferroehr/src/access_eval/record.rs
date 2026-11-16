@@ -40,7 +40,7 @@ use crate::access_eval::scope::{Item, Pred};
 use crate::access_log::entry::authorisation;
 use crate::ids::EhrId;
 use crate::service::ehr::access_settings::EhrAccessSettings;
-use crate::system_log::event::{AccessDecision, AuditEvent};
+use crate::system_log::event::{AccessDecision, AuditEvent, EventOutcome};
 
 /// The name a ground defined in an EHR's settings names them by.
 const EHR_ACCESS: &str = "EHR_ACCESS";
@@ -506,9 +506,11 @@ pub fn stamp(event: &mut AuditEvent, access: &RequestAccess) {
     let decision = access.decision(ehr_id);
     if decision.refused.is_some() {
         event.decision = AccessDecision::Refused;
-        // NOTE: EHDS Art. 9(1), a refused request that named its EHR outside its path, such
-        // as a query's scope, is recorded against that EHR (#5639).
+        // NOTE: EHDS Art. 9(1), a request answered refused that named its EHR outside its path,
+        // such as a query's scope, is recorded against that EHR; an answered query's served
+        // record names it already (#5639, #5611).
         if event.ehr_id.is_none()
+            && event.outcome != EventOutcome::Success
             && let Some((Some(refused_on), _)) = access.noted(None)
         {
             event.ehr_id = Some(refused_on.to_string());
