@@ -64,6 +64,8 @@ pub mod config;
 pub mod detect;
 mod identifier_kind;
 
+use std::fmt::Write as _;
+
 use openehr_base::validate::InvariantViolation;
 use serde_json::Value;
 
@@ -277,7 +279,7 @@ impl PrivacyPolicy {
         if root == "EHR_STATUS" && self.subject_rule_in_force() {
             self.check_subject(root, body, &mut findings);
         }
-        self.walk(root, body, Position::CONTENT, &mut findings);
+        self.walk(&mut root.to_owned(), body, Position::CONTENT, &mut findings);
         findings
     }
 
@@ -394,8 +396,9 @@ impl PrivacyPolicy {
     }
 
     /// The identified-party rule and the identifier scanner, over every node of
-    /// the body.
-    fn walk(&self, at: &str, node: &Value, position: Position, findings: &mut Vec<Finding>) {
+    /// the body. `at` is the path of `node`, one buffer the walk extends and
+    /// restores around each child, so a path is copied only into a finding.
+    fn walk(&self, at: &mut String, node: &Value, position: Position, findings: &mut Vec<Finding>) {
         match node {
             Value::Object(map) => {
                 if !self.allow_identified_parties {
@@ -417,12 +420,19 @@ impl PrivacyPolicy {
                         _ => DeclaredKind::Undeclared,
                     };
                     let child_position = Position { slot, element_name };
-                    self.walk(&format!("{at}/{key}"), child, child_position, findings);
+                    let len = at.len();
+                    at.push('/');
+                    at.push_str(key);
+                    self.walk(at, child, child_position, findings);
+                    at.truncate(len);
                 }
             }
             Value::Array(items) => {
                 for (index, child) in items.iter().enumerate() {
-                    self.walk(&format!("{at}[{index}]"), child, position, findings);
+                    let len = at.len();
+                    let _ = write!(at, "[{index}]");
+                    self.walk(at, child, position, findings);
+                    at.truncate(len);
                 }
             }
             Value::String(text) => self.scan_text(at, text, findings),

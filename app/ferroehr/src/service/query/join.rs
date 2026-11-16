@@ -188,13 +188,14 @@ impl FerroEhrService {
             Box::pin(self.query_access_condition(&job.request.ehr_access, Some(&ehrs)))
                 .await
                 .map_err(Failure::analysis)?;
+        let access_settings = Box::pin(self.query_access_readers(&ehr_access))
+            .await
+            .map_err(Failure::analysis)?;
         let ctx = SqlCtx {
             ehr_ids: ehrs,
             ehr_scope_kind: EhrScopeKind::PopulationSubset,
             ehr_access,
-            access_settings: Box::pin(self.ehr_access_readers())
-                .await
-                .map_err(Failure::analysis)?,
+            access_settings,
             ..party_ctx
         };
         let result = aql::exec::execute(

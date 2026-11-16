@@ -574,14 +574,14 @@ async fn import_one_version(
         reassemble(&rows)?
     };
     let item = crate::versioning::wire::build_original_version(
-        &crate::versioning::wire::OriginalVersionParts {
+        crate::versioning::wire::OriginalVersionParts {
             creating_system_id: &version.creating_system_id,
             vo_id: cursor.vo_id,
             tree: version.tree,
             preceding_version_uid: version.preceding_version_uid.as_deref(),
             other_input_version_uids: &version.other_input_version_uids,
-            contribution: &version.contribution,
-            commit_audit: &version.commit_audit,
+            contribution: version.contribution.clone(),
+            commit_audit: version.commit_audit.clone(),
             lifecycle_state: &version.lifecycle_state,
             data: &served,
             // The received original's own attestations are attributes of

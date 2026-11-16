@@ -48,7 +48,7 @@ pub(crate) async fn access_middleware(
             // names the person behind a management request from the response
             // extensions the way the API's authentication layer does (#3244).
             if let Some(principal) = principal {
-                resp.extensions_mut().insert(principal);
+                resp.extensions_mut().insert(Arc::new(principal));
             }
             resp
         }
