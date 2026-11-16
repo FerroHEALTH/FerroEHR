@@ -18,6 +18,7 @@ use sqlx::PgPool;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot;
 
+use crate::db::pool::AUDIT_RUNTIME_POOL;
 use crate::system_log::AuditError;
 
 /// The running audit runtime.
@@ -84,10 +85,19 @@ impl Background {
     }
 
     /// A pool over the audit store of `pool`, opened in the audit runtime's
-    /// context.
+    /// context, of the [`AUDIT_RUNTIME_POOL`] connections the instance's
+    /// connection budget counts (#5845).
     pub(super) fn pool_over(&self, pool: &PgPool) -> PgPool {
         let _entered = self.handle.enter();
-        crate::db::domain_pool_from(pool, crate::db::domain::Domain::Audit)
+        crate::db::pool::options(
+            &crate::db::DbConfig::default(),
+            crate::db::domain::Domain::Audit,
+        )
+        .max_connections(AUDIT_RUNTIME_POOL)
+        .min_connections(0)
+        .connect_lazy_with(sqlx::postgres::PgConnectOptions::clone(
+            &pool.connect_options(),
+        ))
     }
 
     /// End the runtime once the tasks on it have been stopped.
@@ -98,5 +108,26 @@ impl Background {
         // The thread ends with its runtime; it is not joined, so a shutdown
         // never blocks a worker of the request runtime.
         drop(self.thread.take());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Background;
+
+    /// The chainer, the forwarders and the upkeep run on the audit runtime's
+    /// own thread, never on a worker of the runtime that serves requests,
+    /// whatever a round costs (#5770).
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn spawned_work_runs_on_the_audit_thread() {
+        let background = Background::start().expect("the audit runtime starts");
+        let request_worker = std::thread::current().id();
+        let ran_on = background
+            .spawn(async { std::thread::current() })
+            .await
+            .expect("the task completes");
+        assert_eq!(ran_on.name(), Some("ferroehr-audit"));
+        assert_ne!(ran_on.id(), request_worker);
+        background.stop();
     }
 }

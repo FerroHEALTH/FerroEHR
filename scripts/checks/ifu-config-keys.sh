@@ -16,7 +16,8 @@
 # What it reads, in the sections whose heading names FerroEHR (a `##` or
 # `###` heading containing "FerroEHR" opens one, the next such heading closes
 # it, so FerroBRIDGE's settings are never read against FerroEHR's keys):
-#   - a ```toml block: each `[table]` and `key = value` line;
+#   - a ```toml block, a list item's indented one included: each `[table]`
+#     and `key = value` line;
 #   - a code span `[table]`, `[table] key` or `[table] key = value`;
 #   - a code span `FERROEHR__A__B`, the environment form of `a.b`;
 #   - a code span `a.b.c` whose first segment is a top-level table of the
@@ -72,10 +73,10 @@ references() {
       }
       block = ""
     }
-    /^```/ {
+    /^[[:space:]]*```/ {
       flush()
       if (fence) { fence = 0; toml = 0; next }
-      fence = 1; toml = ($0 ~ /^```toml/); sec = ""; next
+      fence = 1; toml = ($0 ~ /^[[:space:]]*```toml/); sec = ""; next
     }
     fence {
       if (!scope || !toml) next
@@ -145,6 +146,12 @@ verify_interval = "1h"
 - Set `[authz.rbac] first_admin = "x"` and read `support.status`, which is
   no key. `[audit]` alone is a table, and `FERROEHR__AUDIT__ENABLED` its key.
 - A configuration that carries `[fhir]` is refused at boot as unknown keys.
+- A block inside a list item is read too:
+
+  ```toml
+  [authz.grants]
+  allowed = ["commit_composition"]
+  ```
 
 ### FerroBRIDGE settings
 
@@ -173,6 +180,12 @@ EOF
       echo "ifu-config-keys: self-test: a refused key in a toml block passed: $bad" >&2
       exit 1
     fi
+    # shellcheck disable=SC2016 # the backticks are Markdown, not an expansion
+    printf '### FerroEHR settings\n\n- In a list item:\n\n  ```toml\n  %b\n  ```\n' "${bad//\\n/\\n  }" >"$tmp/bad.md"
+    if check "$tmp/bad.md" 2>/dev/null; then
+      echo "ifu-config-keys: self-test: a refused key in an indented toml block passed: $bad" >&2
+      exit 1
+    fi
   done
   # shellcheck disable=SC2016 # the backticks are Markdown, not an expansion
   for bad in '`[audit.categories]`' '`[audit.store] verify_interval_seconds = 86400`' \
@@ -184,7 +197,7 @@ EOF
       exit 1
     fi
   done
-  echo "ifu-config-keys: self-test OK (toml blocks, table and key spans, environment forms, dotted keys, FerroBRIDGE sections skipped, unknown keys held refused)."
+  echo "ifu-config-keys: self-test OK (toml blocks at any indent, table and key spans, environment forms, dotted keys, FerroBRIDGE sections skipped, unknown keys held refused)."
 }
 
 case "${1:-}" in

@@ -24,6 +24,7 @@ use ferroehr::config::rest::ApiConfig;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::EhrId;
 use ferroehr::party_binding::grants::operation::Operation;
+use ferroehr::policy_register::listen::Listeners;
 use ferroehr::service::version_update::WriteRequest;
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
 use ferroehr_rest::config::AppConfig;
@@ -50,8 +51,11 @@ async fn replica(pool: &PgPool, listening: bool) -> (Arc<FerroEhrService>, Route
     );
     common::grant_basic_users(&svc, pool, USERS).await;
     if listening {
-        svc.ehr_access_listened()
-            .spawn_listener((*pool.connect_options()).clone());
+        Listeners::on(
+            (*pool.connect_options()).clone(),
+            &[Arc::clone(svc.ehr_access_listened())],
+        )
+        .spawn();
         wait_until(
             || svc.ehr_access_listened().is_listening(),
             "the listener connects",

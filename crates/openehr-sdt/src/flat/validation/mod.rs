@@ -1743,6 +1743,22 @@ mod tests {
         assert_eq!(walk_only(&good, &n), Vec::<ValidationMessage>::new());
     }
 
+    #[test]
+    fn a_pattern_no_engine_compiles_refuses_every_value() {
+        let mut n = node("DV_TEXT", "/text");
+        let mut input = WebTemplateInput::new(WebTemplateInputType::Text, None);
+        input.validation = Some(WebTemplateValidation {
+            pattern: Some("(".to_owned()),
+            ..Default::default()
+        });
+        n.inputs = vec![input];
+        let any = json!({"_type": "DV_TEXT", "value": "("});
+        assert_eq!(
+            kinds(&walk_only(&any, &n)),
+            vec![ValidationKind::PatternError]
+        );
+    }
+
     // ── coded value membership ─────────────────────────────────────────────────
 
     fn coded_node(codes: &[&str]) -> WebTemplateNode {

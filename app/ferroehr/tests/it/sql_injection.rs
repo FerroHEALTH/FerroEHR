@@ -390,7 +390,7 @@ fn the_select_as_label_never_becomes_a_sql_identifier() {
         prepared.sql
     );
     assert_eq!(
-        prepared.columns.first().map(|c| c.name.as_str()),
+        prepared.layout.columns.first().map(|c| c.name.as_str()),
         Some(MARKER),
         "the label belongs on the RESULT_SET column, not the SQL"
     );
@@ -405,7 +405,7 @@ fn the_select_as_label_never_becomes_a_sql_identifier() {
         whole.sql
     );
     assert_eq!(
-        whole.columns.first().map(|c| c.sql_cols.as_slice()),
+        whole.layout.columns.first().map(|c| c.sql_cols.as_slice()),
         Some(
             ["col0_vo", "col0_sv", "col0_num", "col0_cap"]
                 .map(String::from)
@@ -666,12 +666,12 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
     let mut statements: Vec<(String, String)> = Vec::new();
     for query in CORPUS {
         let prepared = build(query, &Params::default());
-        statements.push(((*query).to_owned(), prepared.sql));
+        statements.push(((*query).to_owned(), prepared.sql.to_string()));
     }
     for payload in HOSTILE {
         for (position, query) in PARAM_POSITIONS {
             let prepared = build(query, &one_param("p", payload));
-            statements.push((format!("{position}: {query}"), prepared.sql));
+            statements.push((format!("{position}: {query}"), prepared.sql.to_string()));
         }
     }
     // The STREAMING FROM shape is selected by the execution context's effective
@@ -691,7 +691,7 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
         "SELECT o/data FROM COMPOSITION c CONTAINS OBSERVATION o",
     ] {
         let prepared = build_with(query, &Params::default(), &streaming);
-        statements.push((format!("{query} [streaming]"), prepared.sql));
+        statements.push((format!("{query} [streaming]"), prepared.sql.to_string()));
     }
 
     for (source, sql) in &statements {
@@ -723,7 +723,7 @@ fn the_sort_direction_is_a_closed_two_valued_choice() {
     );
     assert_eq!(
         asc.sql.replace(" ASC", " DESC"),
-        desc.sql,
+        *desc.sql,
         "ASC and DESC must differ only in the direction keyword"
     );
     assert!(asc.sql.ends_with(" ASC"), "unexpected tail: {}", asc.sql);

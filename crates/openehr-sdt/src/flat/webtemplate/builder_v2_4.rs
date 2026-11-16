@@ -52,10 +52,11 @@ use openehr_am::v2_4::aom2::rules::expr_constraint::ExprConstraint;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
 use openehr_am::v2_4::beom::core::assertion::Assertion;
 use openehr_am::v2_4::beom::core::expression::Expression;
-use openehr_base::prelude::{Cardinality, MultiplicityInterval};
+use openehr_base::prelude::MultiplicityInterval;
 use openehr_lang::v1_1::beom::core::operator_kind::OperatorKind;
 
 use super::binding_v2_4::{bound_codes, split_operational, term_bindings_of};
+use super::cardinality_v2_4::{all_cardinalities, cardinalities};
 use super::constraint::{
     WebTemplateArchetypeSlot, WebTemplateClosedAttribute, WebTemplateExistence,
     WebTemplateStructuralStub,
@@ -68,8 +69,8 @@ use super::interval_v2_4::{
     range_union, real_default, real_range, sole_interval,
 };
 use super::model::{
-    WebTemplate, WebTemplateCardinality, WebTemplateCodedValue, WebTemplateInput,
-    WebTemplateInputType, WebTemplateNode, WebTemplateValidation,
+    WebTemplate, WebTemplateCodedValue, WebTemplateInput, WebTemplateInputType, WebTemplateNode,
+    WebTemplateValidation,
 };
 use super::path_v2_4::{build_path, name_constraint, object_path, prohibited_under};
 use super::shape;
@@ -132,7 +133,7 @@ pub fn build_web_template_v2_4(
     tree.max = 1;
 
     let tree = shape::finish(tree);
-    super::constraint::check_slots(&tree)?;
+    super::constraint::check_evaluable(&tree)?;
 
     Ok(WebTemplate {
         template_id,
@@ -1173,49 +1174,6 @@ fn proportion_inputs(co: &CObject, proportion_types: &mut Vec<String>) -> Vec<We
         .collect()
 }
 
-// ── cardinalities ────────────────────────────────────────────────────────────
-
-fn cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
-    let mut out = Vec::new();
-    for attr in co_attributes(co) {
-        if !attr.is_multiple {
-            continue;
-        }
-        let Some(card) = &attr.cardinality else {
-            continue;
-        };
-        if requires_cardinality(card, attr.children.as_ref().map_or(0, Vec::len)) {
-            let (min, max) = occ(&card.interval);
-            out.push(WebTemplateCardinality {
-                min,
-                max,
-                ids: None,
-                path: format!("{node_path}/{}", attr.rm_attribute_name),
-                unique: card.is_unique,
-            });
-        }
-    }
-    out
-}
-
-/// Whether a container cardinality genuinely constrains the container beyond
-/// what the child count already implies (mirrors the OPT-1.4 front end).
-fn requires_cardinality(card: &Cardinality, children_count: usize) -> bool {
-    let (min, max) = occ(&card.interval);
-    let Some(min) = min else {
-        return max != -1;
-    };
-    if min == 0 {
-        return max != -1 && i32::try_from(children_count).unwrap_or(i32::MAX) > max;
-    }
-    let count = i32::try_from(children_count).unwrap_or(i32::MAX);
-    if min == 1 && max == 1 && children_count == 1 {
-        false
-    } else {
-        min > 1 || (max != -1 && max < count)
-    }
-}
-
 // ── archetype-conformance constraint capture (validation-only fields) ─────────
 //
 // The v2_4 front end fills the same validation-only constraint fields the
@@ -1224,32 +1182,6 @@ fn requires_cardinality(card: &Cardinality, children_count: usize) -> bool {
 // node-identified `C_OBJECT` alternatives, and `ARCHETYPE_SLOT` (AOM2
 // `AM/docs/AOM2/master03-archetype_package.adoc` §C_ATTRIBUTE,
 // §ARCHETYPE_SLOT), captured before compaction hoists wrappers.
-
-/// Capture EVERY constraining `C_ATTRIBUTE.cardinality` (AOM2 §C_ATTRIBUTE:
-/// "Cardinality constraint of attribute, if a container attribute") for the
-/// validation walk: any interval with a lower bound `>= 1` or a bounded upper
-/// bound constrains the container, and so does `unique`. A superset of the serialized [`cardinalities`]
-/// selection, so `0..1`/`1..1`/`1..*` container bounds are enforced from
-/// [`WebTemplateNode::card_all`] too (mirrors the OPT-1.4 front end).
-fn all_cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
-    let mut out = Vec::new();
-    for attr in co_attributes(co) {
-        let Some(card) = &attr.cardinality else {
-            continue;
-        };
-        let (min, max) = occ(&card.interval);
-        if min.unwrap_or(0) >= 1 || max != -1 || card.is_unique {
-            out.push(WebTemplateCardinality {
-                min,
-                max,
-                ids: None,
-                path: format!("{node_path}/{}", attr.rm_attribute_name),
-                unique: card.is_unique,
-            });
-        }
-    }
-    out
-}
 
 /// Capture the AOM2 `C_ATTRIBUTE.existence` constraints (AOM2 §C_ATTRIBUTE:
 /// existence "indicates whether its target object exists or not, i.e. is
@@ -1503,7 +1435,7 @@ fn structural_stubs(
 
 // ── v2_4 C_OBJECT navigation ─────────────────────────────────────────────────
 
-fn co_attributes(co: &CObject) -> &[CAttribute] {
+pub(super) fn co_attributes(co: &CObject) -> &[CAttribute] {
     match co {
         CObject::CComplexObject(CComplexObject::CComplexObject(d)) => {
             d.attributes.as_deref().unwrap_or_default()
