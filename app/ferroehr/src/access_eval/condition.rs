@@ -22,17 +22,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
-use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, OperationClass, Refusal, Term as _,
-};
-use opentelemetry::KeyValue;
+use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationClass, Refusal};
 use tokio::task_local;
 use uuid::Uuid;
 
 use crate::access_eval::class::{Class, Classes};
 use crate::access_eval::condition::care::Care;
 use crate::access_eval::procedure::{
-    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide, rules_of,
+    Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide, rules_of,
 };
 use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
@@ -48,6 +45,8 @@ task_local! {
 }
 
 pub mod care;
+mod decisions;
+pub mod pinned;
 /// The evaluator of one request: the caller, what it asks, the policy and
 /// the category map in force when it began, and each EHR's verdict once
 /// judged.
@@ -515,54 +514,6 @@ impl RequestAccess {
         true
     }
 
-    /// Count the request's decisions once it ended: one per EHR it judged or
-    /// refused, refused under the first code noted for it, and each
-    /// directive or step an emergency lifted. The labels are the closed sets
-    /// of the outcome, the `refused-*` code and [`Lifted`], never the EHR.
-    /// No openEHR spec governs the metrics: our own design (#5591).
-    fn count_decisions(&self) {
-        let metrics = crate::telemetry::access_path::metrics();
-        let mut refused: BTreeMap<Option<EhrId>, Refusal> = self
-            .recorded
-            .refusals
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .iter()
-            .map(|(ehr_id, noted)| (*ehr_id, noted.refusal))
-            .collect();
-        let verdicts = self.verdicts.lock().unwrap_or_else(PoisonError::into_inner);
-        for (ehr_id, judged) in verdicts.iter() {
-            let decision = match refused.remove(&Some(*ehr_id)) {
-                Some(refusal) => [("outcome", "refused"), ("code", refusal.code())],
-                None => [("outcome", "admitted"), ("code", "none")],
-            };
-            metrics
-                .decisions
-                .add(1, &decision.map(|(key, value)| KeyValue::new(key, value)));
-            for lifted in &judged.verdict.lifted {
-                let lifted = match lifted {
-                    Lifted::OptOut => "opt_out",
-                    Lifted::Restriction => "restriction",
-                    Lifted::Consent => "consent",
-                    Lifted::Rule => "rule",
-                    Lifted::Policy => "policy",
-                };
-                metrics
-                    .emergency_overrides
-                    .add(1, &[KeyValue::new("lifted", lifted)]);
-            }
-        }
-        for refusal in refused.into_values() {
-            metrics.decisions.add(
-                1,
-                &[
-                    KeyValue::new("outcome", "refused"),
-                    KeyValue::new("code", refusal.code()),
-                ],
-            );
-        }
-    }
-
     /// The condition a query applies, over every EHR of a class among
     /// `classes`, an EHR held closed, and the default for an EHR with no
     /// settings, the caller's care read as `care` says. An EHR of a class
@@ -677,12 +628,15 @@ pub struct CallerKeys {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AccessCondition {
     groups: Option<Arc<ConditionGroups>>,
+    /// The verdict of the one EHR a pinned query reads ([`pinned::PinnedEhr`]).
+    pinned: Option<Arc<pinned::PinnedEhr>>,
 }
 
 impl From<ConditionGroups> for AccessCondition {
     fn from(groups: ConditionGroups) -> Self {
         Self {
             groups: Some(Arc::new(groups)),
+            pinned: None,
         }
     }
 }
@@ -738,6 +692,7 @@ impl AccessCondition {
                     ..condition.clone()
                 })
             }),
+            pinned: self.pinned.clone(),
         }
     }
 
