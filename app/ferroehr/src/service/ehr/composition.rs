@@ -179,9 +179,7 @@ impl FerroEhrService {
             &read.creating_system_id,
             read.tree,
         );
-        let prefix =
-            format!("{{\"uid\": {{\"_type\": \"OBJECT_VERSION_ID\", \"value\": \"{uid}\"}}");
-        if text.starts_with(&prefix) {
+        if carries_version_uid(&text, &uid) {
             return Ok(RawServiceResponse {
                 body: ReadBody::RawJson(text),
                 meta: Some(meta),
@@ -780,4 +778,14 @@ impl FerroEhrService {
     pub async fn expand_multimedia(&self, body: Value) -> Result<Value, ServiceError> {
         Ok(body)
     }
+}
+
+/// Whether `text`, a stored body in the compact form the commit writes
+/// (`canonical_body_text`), carries `uid` as its stamped `OBJECT_VERSION_ID`
+/// member, so the JSON read can serve it verbatim (#5755).
+fn carries_version_uid(text: &str, uid: &str) -> bool {
+    const OPEN: &str = r#""uid":{"_type":"OBJECT_VERSION_ID","value":""#;
+    text.split(OPEN)
+        .skip(1)
+        .any(|rest| rest.strip_prefix(uid).is_some_and(|r| r.starts_with("\"}")))
 }

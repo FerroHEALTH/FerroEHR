@@ -26,7 +26,7 @@ idle_timeout = "2min"
 body_limit = "64MiB"
 drain_delay = "0s"
 shutdown_timeout = "10s"
-# max_concurrent_requests = 256
+max_concurrent_requests = 256
 retry_after = "1s"
 trusted_proxies = []
 forwarded_header = "forwarded"
@@ -45,13 +45,25 @@ compression_min_size = "1KiB"
 | `body_limit` | size | `"64MiB"` | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`) take up to this; [`api.body_limit`](#api) narrows the rest of the clinical surface below it. The largest operational template in the vendored CKM corpus is several megabytes, well below this ceiling. |
 | `drain_delay` | duration | `"0s"` | On `SIGTERM` or `SIGINT`, readiness answers `503` this long while the listener still accepts, so an orchestrator stops routing first. |
 | `shutdown_timeout` | duration | `"10s"` | Then the listener closes and the requests in flight get this long to finish; a connection still open after it is dropped. |
-| `max_concurrent_requests` | int | unset | The requests served at once. Past it a request is answered `503` with `Retry-After` and the openEHR error body, never queued, so offered load beyond capacity cannot exhaust memory. The health routes are never refused. Unset, there is no bound. |
+| `max_concurrent_requests` | int | `256` | The requests served at once. Past it a request is answered `503` with `Retry-After` and the openEHR error body, never queued, so offered load beyond capacity cannot exhaust memory. The health routes are never refused, so readiness holds while the server sheds. The bound is always on; `0` is refused. See [sizing the bound](#sizing-max_concurrent_requests). |
 | `retry_after` | duration | `"1s"` | The `Retry-After` of a `503` or `429` the listener writes, in whole seconds (RFC 9110 §10.2.3). |
 | `trusted_proxies` | list | `[]` | The reverse proxies, as addresses or CIDR blocks, whose forwarded client address is believed. Empty, every request is named by its peer address. |
 | `forwarded_header` | enum{forwarded,x-forwarded-for} | `forwarded` | The header a trusted proxy names the client in (`Forwarded` is RFC 7239). |
 | `compression` | bool | `true` | Compress a response with gzip or Brotli when the client accepts one. |
 | `compression_min_size` | size | `"1KiB"` | The smallest response body that is compressed. |
 | `public_base_url` | string | unset | The URL clients reach the server at, through any proxy in front of it: `https://cdr.example.com`, or with the path a proxy serves it under (`https://gw.example.com/cdr`). FerroEHR's own key beside the shared section, and the one place a deployment names its public URL; see [below](#public_base_url-the-one-public-url). An absolute `http(s)` URL with no userinfo, query or fragment. Required with `auth.smart.discovery`, `[auth.scim]` or `[auth.dpop]` under `auth.enabled`. |
+
+### Sizing `max_concurrent_requests`
+
+The bound counts requests in flight, not requests per second. The memory a server holds grows with what each request in flight keeps (its body, its parsed query, its wait for a database connection), so the bound is what keeps a replica inside its memory when the offered load passes its capacity. Unbounded, one instance under the capacity test grew to 9.9 GB resident at about 4096 requests in flight and was killed by the kernel; with 256 it refused the excess `503` and kept serving.
+
+To size it for your deployment:
+
+- **In flight at your target rate.** By Little's law, requests in flight are the rate times the latency. The capacity test's mix at 2000 requests per second held about 24 in flight on average and under 80 at the p99, so 256 refuses nothing there.
+- **A multiple of the pool.** Past a few times `database.max_connections` a request only waits for a connection. 256 is about 13 times the default pool of 20; raise the bound with the pool, not past it by much.
+- **Memory per request.** Allow a few megabytes per request in flight for clinical commits and AQL with large results, and keep the bound times that inside the replica's memory limit.
+
+A `503` with `Retry-After` under the bound tells a client to back off; add replicas when it shows at your normal load.
 
 A refusal the listener writes itself (`408`, `413`, `429`, `503`) and a handler
 that panics (`500`) answer the standard openEHR `{ error, message }` body. `413`

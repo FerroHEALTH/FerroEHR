@@ -351,7 +351,7 @@ async fn a_login_matching_two_parties_is_refused_naming_the_caller() {
     .expect("the router answers");
     let principal = response
         .extensions()
-        .get::<ferroehr_rest::extensions::access::authn::Principal>()
+        .get::<Arc<ferroehr_rest::extensions::access::authn::Principal>>()
         .expect("the refusal names its caller");
     assert_eq!(principal.subject, twice);
 }

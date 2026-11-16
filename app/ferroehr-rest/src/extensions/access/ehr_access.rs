@@ -23,6 +23,8 @@
 //! condition of its one SQL statement (`query_condition`). The procedure and
 //! its codes are our own design (#5487, #5513).
 
+use std::sync::Arc;
+
 use axum::response::{IntoResponse, Response};
 use ferroehr::access_eval::condition::{AccessCondition, RequestAccess, current};
 use ferroehr::access_eval::procedure::{Outcome, Verdict};
@@ -144,7 +146,7 @@ async fn enforce_unnamed(
     access: &RequestAccess,
     op: &str,
     parts: &RequestParts,
-    principal: Option<&Principal>,
+    principal: Option<&Arc<Principal>>,
 ) -> Result<(), Box<Response>> {
     if !access.caller().confined() {
         return Ok(());
@@ -186,7 +188,7 @@ async fn enforce_unnamed(
 async fn enforce_objects(
     state: &AppState,
     op: &str,
-    principal: Option<&Principal>,
+    principal: Option<&Arc<Principal>>,
     objects: &[(&str, VoId)],
 ) -> Result<bool, Box<Response>> {
     let Some(access) = current() else {
@@ -265,7 +267,7 @@ async fn refusal_of(
     state: &AppState,
     access: &RequestAccess,
     op: &str,
-    principal: Option<&Principal>,
+    principal: Option<&Arc<Principal>>,
     ehr_id: EhrId,
     verdict: &Verdict,
 ) -> Result<Option<Response>, Box<Response>> {
@@ -349,9 +351,9 @@ fn reads_ehr_access(op: &str) -> bool {
 /// `resp`, the `404` of data that read as absent, carrying the principal so
 /// the access record names the refused access, whose response says nothing
 /// (EHDS Art. 8, `ferroehr::access_eval::record::stamp`).
-fn recorded(mut resp: Response, principal: Option<&Principal>) -> Response {
+fn recorded(mut resp: Response, principal: Option<&Arc<Principal>>) -> Response {
     if let Some(principal) = principal {
-        resp.extensions_mut().insert(principal.clone());
+        resp.extensions_mut().insert(Arc::clone(principal));
     }
     resp
 }
@@ -391,7 +393,7 @@ fn not_found(missing: Missing, message: String) -> Response {
 
 /// The `503` of a settings store that cannot answer, and the fail-closed
 /// `500` of settings that cannot be read.
-fn unavailable(principal: Option<&Principal>, error: ServiceError) -> Response {
+fn unavailable(principal: Option<&Arc<Principal>>, error: ServiceError) -> Response {
     let mut resp = match error {
         overloaded @ ServiceError::Overloaded(_) => RestError::from(overloaded).into_response(),
         other => {
@@ -402,7 +404,7 @@ fn unavailable(principal: Option<&Principal>, error: ServiceError) -> Response {
         }
     };
     if let Some(principal) = principal {
-        resp.extensions_mut().insert(principal.clone());
+        resp.extensions_mut().insert(Arc::clone(principal));
     }
     resp
 }
@@ -411,7 +413,11 @@ fn unavailable(principal: Option<&Principal>, error: ServiceError) -> Response {
 /// `refusal` member, and the `legal_grounds` the refusing controller rules
 /// name, carrying the principal so the ATNA layer records the deny (ITS-REST
 /// `401`/`403` discipline).
-fn forbidden(principal: Option<&Principal>, code: Refusal, grounds: &[DvCodedText]) -> Response {
+fn forbidden(
+    principal: Option<&Arc<Principal>>,
+    code: Refusal,
+    grounds: &[DvCodedText],
+) -> Response {
     let refused = RestError::from(ApiError::Forbidden(format!(
         "access denied: {}: {}",
         code.code(),
@@ -422,7 +428,7 @@ fn forbidden(principal: Option<&Principal>, code: Refusal, grounds: &[DvCodedTex
         .fold(refused, RestError::with_detail)
         .into_response();
     if let Some(principal) = principal {
-        resp.extensions_mut().insert(principal.clone());
+        resp.extensions_mut().insert(Arc::clone(principal));
     }
     resp
 }
@@ -450,14 +456,14 @@ const fn reason(code: Refusal) -> &'static str {
 
 /// A `500` (fail-closed) when the settings cannot be read: an access decision
 /// must never proceed on unknown policy.
-fn server_error(principal: Option<&Principal>, detail: &str) -> Response {
+fn server_error(principal: Option<&Arc<Principal>>, detail: &str) -> Response {
     let mut resp = RestError::from(crate::overview::error::internal_fault(
         "read the EHR access-control settings",
         &detail,
     ))
     .into_response();
     if let Some(principal) = principal {
-        resp.extensions_mut().insert(principal.clone());
+        resp.extensions_mut().insert(Arc::clone(principal));
     }
     resp
 }

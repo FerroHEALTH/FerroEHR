@@ -321,14 +321,14 @@ pub(crate) fn original_version(read: &VersionRead, signer: &Signer) -> Result<Va
         append_after_committal_attestations(&mut ov, &read.attestations_after_committal);
         return Ok(ov);
     }
-    let mut ov = build_original_version(&OriginalVersionParts {
+    let mut ov = build_original_version(OriginalVersionParts {
         creating_system_id: &read.creating_system_id,
         vo_id: read.vo_id,
         tree: read.tree,
         preceding_version_uid: read.preceding_version_uid.as_deref(),
         other_input_version_uids: &read.other_input_version_uids,
-        contribution: &contribution_ref(read.contribution_id),
-        commit_audit: &read.audit.canonical(&read.time_committed),
+        contribution: contribution_ref(read.contribution_id),
+        commit_audit: read.audit.canonical(&read.time_committed),
         lifecycle_state: &read.lifecycle_state,
         data: &read.canonical,
         attestations: &read.attestations_at_committal,
@@ -398,14 +398,14 @@ fn build_wrapped_original(
             .with_path("ORIGINAL_VERSION.commit_audit"),
         ));
     }
-    build_original_version(&OriginalVersionParts {
+    build_original_version(OriginalVersionParts {
         creating_system_id: &read.creating_system_id,
         vo_id: read.vo_id,
         tree: read.tree,
         preceding_version_uid: read.preceding_version_uid.as_deref(),
         other_input_version_uids: &read.other_input_version_uids,
-        contribution: &wrapped.contribution,
-        commit_audit: &wrapped.commit_audit,
+        contribution: wrapped.contribution.clone(),
+        commit_audit: wrapped.commit_audit.clone(),
         lifecycle_state: &read.lifecycle_state,
         data: &read.canonical,
         attestations: &read.attestations_at_committal,
@@ -499,9 +499,9 @@ pub(crate) struct OriginalVersionParts<'a> {
     pub(crate) other_input_version_uids: &'a [String],
     /// The `VERSION.contribution` `OBJECT_REF` — local for a locally created
     /// version, the source system's for a wrapped imported original.
-    pub(crate) contribution: &'a Value,
+    pub(crate) contribution: Value,
     /// The canonical `AUDIT_DETAILS` (or `ATTESTATION`) of `commit_audit`.
-    pub(crate) commit_audit: &'a Value,
+    pub(crate) commit_audit: Value,
     /// The numeric `version_lifecycle_state` code.
     pub(crate) lifecycle_state: &'a str,
     /// The canonical content, or [`Value::Null`] for a deleted version.
@@ -528,85 +528,82 @@ pub(crate) struct OriginalVersionParts<'a> {
 /// rather than a struct literal, so a malformed identifier is refused before it
 /// is signed and served.
 pub(crate) fn build_original_version(
-    parts: &OriginalVersionParts<'_>,
+    parts: OriginalVersionParts<'_>,
 ) -> Result<Value, VersionIdError> {
-    // NOTE: the ENVELOPE stays a JSON literal — its fragments arrive as
-    // already-canonical stored bytes and `ORIGINAL_VERSION` is exactly the
-    // serialization master06 §Digital Signature signs; re-encoding could drift.
-    let mut ov = json!({
-        "_type": "ORIGINAL_VERSION",
-        "uid": openehr_its::json::to_canonical_value(&version_id(
-            parts.vo_id,
-            parts.creating_system_id,
-            parts.tree,
-        )?),
-        "contribution": parts.contribution.clone(),
-        "commit_audit": parts.commit_audit.clone(),
-        "lifecycle_state": openehr_its::json::to_canonical_value(&DvText::DvCodedText(
-            DvCodedText {
-                value: lifecycle_rubric(parts.lifecycle_state).clone(),
-                hyperlink: None,
-                formatting: None,
-                mappings: None,
-                language: None,
-                encoding: None,
-                defining_code: CodePhrase {
-                    terminology_id: TerminologyId {
-                        value: OPENEHR.to_owned(),
-                    },
-                    code_string: parts.lifecycle_state.to_owned(),
-                    preferred_term: None,
+    // NOTE: master06 §Digital Signature signs this serialization, so the envelope
+    // is built as JSON, its already-canonical fragments moved in unchanged, in order.
+    let mut map = serde_json::Map::new();
+    map.insert("_type".to_owned(), Value::from("ORIGINAL_VERSION"));
+    let uid = version_id(parts.vo_id, parts.creating_system_id, parts.tree)?;
+    map.insert(
+        "uid".to_owned(),
+        openehr_its::json::to_canonical_value(&uid),
+    );
+    map.insert("contribution".to_owned(), parts.contribution);
+    map.insert("commit_audit".to_owned(), parts.commit_audit);
+    map.insert(
+        "lifecycle_state".to_owned(),
+        openehr_its::json::to_canonical_value(&DvText::DvCodedText(DvCodedText {
+            value: lifecycle_rubric(parts.lifecycle_state),
+            hyperlink: None,
+            formatting: None,
+            mappings: None,
+            language: None,
+            encoding: None,
+            defining_code: CodePhrase {
+                terminology_id: TerminologyId {
+                    value: OPENEHR.to_owned(),
                 },
+                code_string: parts.lifecycle_state.to_owned(),
+                preferred_term: None,
             },
-        )),
-    });
-    if let Value::Object(map) = &mut ov {
-        // preceding_version_uid: the STORED prior OBJECT_VERSION_ID, never
-        // synthesized, because under branching and import it may carry a
-        // different creating_system_id (RM common master06 §Distributed
-        // Versioning).
-        //
-        // NOTE: `VERSION.Preceding_version_uid_validity` is enforced in its
-        // TRUNK-ONLY sense — BASE's `is_first` is "trunk_version is 1" alone,
-        // making the literal invariant unsatisfiable for branches off trunk 1.
-        if let Some(preceding) = parts.preceding_version_uid {
-            map.insert(
-                "preceding_version_uid".to_owned(),
-                object_version_ref(preceding)?,
-            );
-        }
-        // other_input_version_uids: merge provenance (master06 §Version
-        // Merging); `is_merged` is its derived boolean
-        // (`VERSION.Is_merged_validity`: is_merged = not …is_empty).
-        if !parts.other_input_version_uids.is_empty() {
-            map.insert(
-                "other_input_version_uids".to_owned(),
-                Value::Array(
-                    parts
-                        .other_input_version_uids
-                        .iter()
-                        .map(|uid| object_version_ref(uid))
-                        .collect::<Result<Vec<_>, _>>()?,
-                ),
-            );
-        }
-        // A deleted version carries no data (canonical is Null).
-        if !parts.data.is_null() {
-            map.insert("data".to_owned(), parts.data.clone());
-        }
-        // attestations: the ones present AT committal, which master06 §Digital
-        // Signature includes in the signed serialisation of "the entire Version
-        // object". Omitted when empty — `Attestations_valid` forbids a
-        // present-but-empty list.
-        if !parts.attestations.is_empty() {
-            map.insert(
-                "attestations".to_owned(),
-                Value::Array(parts.attestations.to_vec()),
-            );
-        }
-        if let Some(sig) = parts.signature {
-            map.insert("signature".to_owned(), Value::String(sig.to_owned()));
-        }
+        })),
+    );
+    // preceding_version_uid: the STORED prior OBJECT_VERSION_ID, never
+    // synthesized, because under branching and import it may carry a
+    // different creating_system_id (RM common master06 §Distributed
+    // Versioning).
+    //
+    // NOTE: `VERSION.Preceding_version_uid_validity` is enforced in its
+    // TRUNK-ONLY sense — BASE's `is_first` is "trunk_version is 1" alone,
+    // making the literal invariant unsatisfiable for branches off trunk 1.
+    if let Some(preceding) = parts.preceding_version_uid {
+        map.insert(
+            "preceding_version_uid".to_owned(),
+            object_version_ref(preceding)?,
+        );
     }
-    Ok(ov)
+    // other_input_version_uids: merge provenance (master06 §Version
+    // Merging); `is_merged` is its derived boolean
+    // (`VERSION.Is_merged_validity`: is_merged = not …is_empty).
+    if !parts.other_input_version_uids.is_empty() {
+        map.insert(
+            "other_input_version_uids".to_owned(),
+            Value::Array(
+                parts
+                    .other_input_version_uids
+                    .iter()
+                    .map(|uid| object_version_ref(uid))
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+        );
+    }
+    // A deleted version carries no data (canonical is Null).
+    if !parts.data.is_null() {
+        map.insert("data".to_owned(), parts.data.clone());
+    }
+    // attestations: the ones present AT committal, which master06 §Digital
+    // Signature includes in the signed serialisation of "the entire Version
+    // object". Omitted when empty — `Attestations_valid` forbids a
+    // present-but-empty list.
+    if !parts.attestations.is_empty() {
+        map.insert(
+            "attestations".to_owned(),
+            Value::Array(parts.attestations.to_vec()),
+        );
+    }
+    if let Some(sig) = parts.signature {
+        map.insert("signature".to_owned(), Value::String(sig.to_owned()));
+    }
+    Ok(Value::Object(map))
 }

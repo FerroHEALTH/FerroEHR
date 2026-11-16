@@ -283,15 +283,60 @@ impl PathParam {
 
 /// One segment of a path template.
 #[derive(Clone, Copy)]
-enum Segment<'a> {
+enum Segment {
     /// A segment that must equal the request's segment.
-    Literal(&'a str),
+    Literal(&'static str),
     /// A `{name}` segment that captures the request's segment.
-    Param(&'a str),
+    Param(&'static str),
 }
 
+/// One route of a route table, with its template split once into segments.
+struct Route {
+    group: &'static str,
+    method: &'static str,
+    template: &'static str,
+    operation_id: &'static str,
+    params: &'static [Param],
+    request_media: &'static [&'static str],
+    segments: Box<[Segment]>,
+    /// `true` per literal segment, so a lexicographic maximum prefers a
+    /// literal at the first differing position.
+    specificity: Box<[bool]>,
+}
+
+/// Every route of every group, split once on first use (#5757).
+static ROUTES: std::sync::LazyLock<Box<[Route]>> = std::sync::LazyLock::new(|| {
+    GROUPS
+        .iter()
+        .flat_map(|&(group, routes, params, media)| {
+            // The generated module asserts `ROUTE_PARAMS.len() == ROUTES.len()`
+            // and the same of `ROUTE_REQUEST_MEDIA` at compile time, so the
+            // zip pairs every route with its rows.
+            routes.iter().zip(params).zip(media).map(
+                move |((&(method, template, operation_id), &params), &request_media)| {
+                    let segments = template_segments(template);
+                    let specificity = segments
+                        .iter()
+                        .map(|segment| matches!(segment, Segment::Literal(_)))
+                        .collect();
+                    Route {
+                        group,
+                        method,
+                        template,
+                        operation_id,
+                        params,
+                        request_media,
+                        segments,
+                        specificity,
+                    }
+                },
+            )
+        })
+        .collect()
+});
+
 /// The segments of `template`, its RFC 6570 query expansion dropped.
-fn template_segments(template: &str) -> Vec<Segment<'_>> {
+fn template_segments(template: &'static str) -> Box<[Segment]> {
     let path = template.split("{?").next().unwrap_or(template);
     path.strip_prefix('/')
         .unwrap_or(path)
@@ -305,25 +350,19 @@ fn template_segments(template: &str) -> Vec<Segment<'_>> {
         .collect()
 }
 
-/// The specificity of a matched template: `true` per literal segment, so a
-/// lexicographic maximum prefers a literal at the first differing position.
-fn specificity(segments: &[Segment<'_>]) -> Vec<bool> {
-    segments
-        .iter()
-        .map(|segment| matches!(segment, Segment::Literal(_)))
-        .collect()
-}
-
-/// Whether `segments` match the request's `parts`.
-fn matches_path(segments: &[Segment<'_>], parts: &[&str]) -> bool {
-    segments.len() == parts.len()
-        && segments
-            .iter()
-            .zip(parts)
-            .all(|(segment, part)| match segment {
-                Segment::Literal(literal) => literal == part,
-                Segment::Param(_) => !part.is_empty(),
-            })
+impl Route {
+    /// Whether this route's template matches the request's `parts`.
+    fn matches(&self, parts: &[&str]) -> bool {
+        self.segments.len() == parts.len()
+            && self
+                .segments
+                .iter()
+                .zip(parts)
+                .all(|(segment, part)| match segment {
+                    Segment::Literal(literal) => literal == part,
+                    Segment::Param(_) => !part.is_empty(),
+                })
+    }
 }
 
 /// Names the operation `method` and `path` address.
@@ -334,46 +373,17 @@ fn matches_path(segments: &[Segment<'_>], parts: &[&str]) -> bool {
 pub fn lookup(method: &Method, path: &str) -> Lookup {
     let path = path.split('?').next().unwrap_or(path);
     let parts: Vec<&str> = path.strip_prefix('/').unwrap_or(path).split('/').collect();
-    let candidates: Vec<Candidate> = GROUPS
-        .iter()
-        .flat_map(|&(group, routes, params, media)| {
-            // The generated module asserts `ROUTE_PARAMS.len() == ROUTES.len()`
-            // and the same of `ROUTE_REQUEST_MEDIA` at compile time, so the
-            // zip pairs every route with its rows.
-            routes.iter().zip(params).zip(media).map(
-                move |((&(method, template, operation_id), &params), &request_media)| Candidate {
-                    group,
-                    method,
-                    template,
-                    operation_id,
-                    params,
-                    request_media,
-                    segments: template_segments(template),
-                },
-            )
-        })
-        .filter(|candidate| matches_path(&candidate.segments, &parts))
-        .collect();
-    let Some(best) = candidates
-        .iter()
-        .map(|candidate| specificity(&candidate.segments))
-        .max()
-    else {
+    let matched = || ROUTES.iter().filter(|route| route.matches(&parts));
+    let Some(best) = matched().map(|route| &route.specificity).max() else {
         return Lookup::NotFound;
     };
     // The routes of the one resource the path resolves to, every method.
-    let resource: Vec<Candidate> = candidates
-        .into_iter()
-        .filter(|candidate| specificity(&candidate.segments) == best)
-        .collect();
-    let Some(chosen) = resource
-        .iter()
-        .find(|candidate| candidate.method == method.as_str())
-    else {
+    let resource = || matched().filter(|route| route.specificity == *best);
+    let Some(chosen) = resource().find(|route| route.method == method.as_str()) else {
         let mut allowed: Vec<&'static str> = Vec::new();
-        for candidate in &resource {
-            if !allowed.contains(&candidate.method) {
-                allowed.push(candidate.method);
+        for route in resource() {
+            if !allowed.contains(&route.method) {
+                allowed.push(route.method);
             }
         }
         return Lookup::MethodNotAllowed { allowed };
@@ -399,15 +409,4 @@ pub fn lookup(method: &Method, path: &str) -> Lookup {
         params: chosen.params,
         request_media: chosen.request_media,
     })
-}
-
-/// One route of a route table, with its parsed template.
-struct Candidate {
-    group: &'static str,
-    method: &'static str,
-    template: &'static str,
-    operation_id: &'static str,
-    params: &'static [Param],
-    request_media: &'static [&'static str],
-    segments: Vec<Segment<'static>>,
 }

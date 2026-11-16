@@ -102,7 +102,7 @@ async fn audit_search(state: &AppState, parts: &RequestParts) -> Response {
         && let Some(rbac) = authz.rbac()
     {
         let roles = crate::extensions::access::authn::current_principal()
-            .map(|p| p.roles)
+            .map(|p| p.roles.clone())
             .unwrap_or_default();
         if let RbacDecision::Deny(reason) = rbac.decide(
             crate::extensions::access::authz::classify::OperationClass::Admin,

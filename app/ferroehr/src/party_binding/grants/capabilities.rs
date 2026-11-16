@@ -270,7 +270,7 @@ impl<'a> Credentials<'a> {
 /// evaluator reads.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Capabilities {
-    client: Option<Client>,
+    client: Option<Arc<Client>>,
     grants: Vec<Grant>,
     facts: CallerFacts,
 }
@@ -278,7 +278,7 @@ pub struct Capabilities {
 impl Capabilities {
     /// The capabilities of the client `client` or of a party, holding
     /// `grants` and no caller facts.
-    pub(crate) fn new(client: Option<Client>, grants: Vec<Grant>) -> Self {
+    pub(crate) fn new(client: Option<Arc<Client>>, grants: Vec<Grant>) -> Self {
         Self {
             client,
             grants,
@@ -312,7 +312,7 @@ impl Capabilities {
     /// or a client no `ACTOR` carries.
     #[must_use]
     pub fn client(&self) -> Option<&Client> {
-        self.client.as_ref()
+        self.client.as_deref()
     }
 
     /// Every grant in force.

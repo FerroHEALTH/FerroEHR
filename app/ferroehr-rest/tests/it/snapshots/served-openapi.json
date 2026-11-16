@@ -2974,6 +2974,272 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/pmir/messages": {
+      "get": {
+        "tags": [
+          "admin-identifiers"
+        ],
+        "summary": "List the refused ITI-93 messages still to retry or settle\n(`GET /admin/pmir/messages`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_pmir_messages_list",
+        "responses": {
+          "200": {
+            "description": "`{ \"messages\": [...] }`, oldest first: each refused message with its refusal code, receipt and refusal time, apply attempts, the Registry's `Patient.id`s it names and the `PERSON`s whose identifiers or record subjects it keeps split, as counts. No identifier value is answered. Each message listed is one access record.",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "example": {
+                  "messages": [
+                    {
+                      "message_id": "0196f1f4-8c3a-7d2e-9b1a-3c5d7e9f1a2b",
+                      "reason": "unknown-domain-type",
+                      "received_at": "2026-11-16T09:15:00Z",
+                      "refused_at": "2026-11-16T09:15:01Z",
+                      "attempts": 1,
+                      "identities": [
+                        "0196f1f4-8c3b-7a10-8f2e-4d6c8b0a2e4f"
+                      ],
+                      "splits": [
+                        {
+                          "person": "0d6c7f1e-3b7a-4c2e-9f61-2a8e5d4c3b21",
+                          "identifiers": 1,
+                          "subjects": 0
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/pmir/messages/{message_id}/retry": {
+      "post": {
+        "tags": [
+          "admin-identifiers"
+        ],
+        "summary": "Retry a refused ITI-93 message once its cause is fixed\n(`POST /admin/pmir/messages/{message_id}/retry`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_pmir_message_retry",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "description": "The refused message's `MessageHeader.id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "`{ \"message_id\": …, \"state\": \"received\" }`: the message is back at its arrival position, and the applier applies it next under the configuration and grants in force.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such message.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The message is not refused, or a message received after it that names one of its identities has applied: settle it instead.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/pmir/messages/{message_id}/settle": {
+      "post": {
+        "tags": [
+          "admin-identifiers"
+        ],
+        "summary": "Settle a refused ITI-93 message without applying it\n(`POST /admin/pmir/messages/{message_id}/settle`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_pmir_message_settle",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "description": "The refused message's `MessageHeader.id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "`{ \"decision\": …, \"reason\": … }`: `discard` keeps the message's splits, `lift-splits` removes them so the identifiers and record subjects resolve as before the message; the reason is 1 to 1000 characters and names no identifier.",
+          "content": {
+            "application/json": {
+              "schema": {},
+              "example": {
+                "decision": "discard",
+                "reason": "the Registry corrected the identity in a later message"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "`{ \"message_id\": …, \"decision\": …, \"lifted\": … }`: the message is settled, `lifted` counting the splits removed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "The decision is neither `discard` nor `lift-splits`, or the reason is missing, empty or longer than 1000 characters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such message.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The message is not refused, and is not a discarded one whose splits are being lifted.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/query/{qualified_query_name}/{version}": {
       "delete": {
         "tags": [

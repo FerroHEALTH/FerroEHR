@@ -45,6 +45,8 @@ use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
+#[cfg(test)]
+mod sharing;
 mod subjects;
 
 tokio::task_local! {
@@ -100,8 +102,9 @@ impl GrantsUnavailable {
 struct Held {
     /// The revision read; `None` before the first read.
     revision: Option<i64>,
-    /// Each client `ACTOR` by `(issuer, client_id)`.
-    clients: BTreeMap<(String, String), Client>,
+    /// Each client `ACTOR` by issuer, then `client_id`, so a request looks one
+    /// up by its borrowed identifiers.
+    clients: BTreeMap<String, BTreeMap<String, Arc<Client>>>,
     /// The capabilities of each performer.
     capabilities: BTreeMap<Uuid, Vec<CapabilityRow>>,
 }
@@ -364,21 +367,21 @@ impl LiveGrants {
                 "stored grants are above [authz.grants] allowed and are not honoured"
             );
         }
-        let clients = loaded
-            .clients
-            .into_iter()
-            .map(|row| {
-                let client = Client {
-                    party: row.party_id,
-                    state: ClientState::of(&row.lifecycle_state),
-                    provider: row.provider_id.map(|party| Provider {
-                        party,
-                        identifier: row.provider,
-                    }),
-                };
-                ((row.issuer, row.client_id), client)
-            })
-            .collect();
+        let mut clients: BTreeMap<String, BTreeMap<String, Arc<Client>>> = BTreeMap::new();
+        for row in loaded.clients {
+            let client = Client {
+                party: row.party_id,
+                state: ClientState::of(&row.lifecycle_state),
+                provider: row.provider_id.map(|party| Provider {
+                    party,
+                    identifier: row.provider,
+                }),
+            };
+            clients
+                .entry(row.issuer)
+                .or_default()
+                .insert(row.client_id, Arc::new(client));
+        }
         let mut capabilities: BTreeMap<Uuid, Vec<CapabilityRow>> = BTreeMap::new();
         for row in loaded.capabilities {
             capabilities.entry(row.performer_id).or_default().push(row);
@@ -404,8 +407,9 @@ impl LiveGrants {
             Actor::Client { issuer, client_id } => {
                 let Some(client) = held
                     .clients
-                    .get(&(issuer.to_owned(), client_id.to_owned()))
-                    .cloned()
+                    .get(issuer)
+                    .and_then(|clients| clients.get(client_id))
+                    .map(Arc::clone)
                 else {
                     return Capabilities::default();
                 };
@@ -426,11 +430,7 @@ impl LiveGrants {
             .flatten()
             .filter_map(|row| {
                 let operation = in_force(row, &ceiling, today, now)?;
-                Some(Grant::new(
-                    operation,
-                    row.role_id,
-                    row.credentials.clone().map(Arc::new),
-                ))
+                Some(Grant::new(operation, row.role_id, row.credentials.clone()))
             })
             .collect();
         let provider = client
@@ -534,7 +534,10 @@ impl LiveGrants {
         let ceiling = self.ceiling();
         let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
         let mut out = Vec::new();
-        for ((issuer, client_id), client) in &held.clients {
+        let clients = held.clients.iter().flat_map(|(issuer, clients)| {
+            clients.iter().map(move |(id, client)| (issuer, id, client))
+        });
+        for (issuer, client_id, client) in clients {
             if !client.state.grants() {
                 continue;
             }
@@ -543,11 +546,7 @@ impl LiveGrants {
                 else {
                     continue;
                 };
-                let grant = Grant::new(
-                    accessor.operation(),
-                    row.role_id,
-                    row.credentials.clone().map(Arc::new),
-                );
+                let grant = Grant::new(accessor.operation(), row.role_id, row.credentials.clone());
                 // NOTE: an agreement that does not read is listed without its terms,
                 // and the admission refuses every caller under it.
                 let agreement = Agreement::read(accessor, grant.credentials()).ok();
@@ -612,7 +611,7 @@ impl LiveGrants {
             .filter(|row| in_force(row, &ceiling, today, now) == Some(Operation::CreateAtLogin))
             // NOTE: admission::check refuses the commit of credentials that do not
             // read, so a stored one that does not is never honoured; our own design.
-            .filter_map(|row| Admission::read(Credentials::of(row.credentials.as_ref())).ok())
+            .filter_map(|row| Admission::read(Credentials::of(row.credentials.as_deref())).ok())
             .filter(|admission| admission.names(issuer))
             .collect()
     }
@@ -632,6 +631,7 @@ impl LiveGrants {
         let silenced: std::collections::BTreeSet<Uuid> = held
             .clients
             .values()
+            .flat_map(BTreeMap::values)
             .filter(|client| !client.state.grants())
             .map(|client| client.party)
             .collect();
@@ -643,11 +643,7 @@ impl LiveGrants {
             .map(|(performer, row)| {
                 (
                     performer,
-                    Grant::new(
-                        operation,
-                        row.role_id,
-                        row.credentials.clone().map(Arc::new),
-                    ),
+                    Grant::new(operation, row.role_id, row.credentials.clone()),
                 )
             })
             .collect()
@@ -664,13 +660,7 @@ impl LiveGrants {
             .values()
             .flatten()
             .filter(|row| Operation::of(&row.operation) == Some(operation))
-            .map(|row| {
-                Grant::new(
-                    operation,
-                    row.role_id,
-                    row.credentials.clone().map(Arc::new),
-                )
-            })
+            .map(|row| Grant::new(operation, row.role_id, row.credentials.clone()))
             .collect()
     }
 }

@@ -63,7 +63,7 @@ impl Builder<'_> {
             // so only its statement asks which served EHRs carry settings.
             if self.ctx.ehr_access.groups().is_some() {
                 let flag = format!("{}{i}", super::ACCESS_SETTLED_PREFIX);
-                let held = super::access::settled(ehr.clone());
+                let held = super::access::settled(&self.ctx.ehr_access, ehr.clone());
                 let held = if aggregates {
                     contributing(ehr.clone(), Some(held))
                 } else {

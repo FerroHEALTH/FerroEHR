@@ -109,6 +109,7 @@ impl FerroEhrService {
                 "party:{}#binding-key:{}|{}>{}|{}",
                 party.0, from.issuer, from.value, to.issuer, to.value
             ),
+            None,
         )
     }
 }

@@ -2151,7 +2151,7 @@ dependencies = [
  "ferrohealth-config",
  "ferrohealth-health",
  "ferrohealth-secret",
- "ferrohealth-server 0.9.0",
+ "ferrohealth-server 0.10.0",
  "ferrohealth-smart",
  "ferrohealth-telemetry 0.5.0",
  "ferrohealth-usage-report",
@@ -2247,7 +2247,7 @@ dependencies = [
  "ferrohealth-config",
  "ferrohealth-health",
  "ferrohealth-secret",
- "ferrohealth-server 0.9.0",
+ "ferrohealth-server 0.10.0",
  "ferrohealth-smart",
  "ferrohealth-telemetry 0.5.0",
  "fhir-search",
@@ -2313,7 +2313,7 @@ dependencies = [
  "ferroehr-rest",
  "ferrohealth-config",
  "ferrohealth-health",
- "ferrohealth-server 0.9.0",
+ "ferrohealth-server 0.10.0",
  "ferrohealth-telemetry 0.5.0",
  "ferrohealth-usage-report",
  "jiff",
@@ -2338,7 +2338,7 @@ dependencies = [
  "ferrohealth-config",
  "ferrohealth-health",
  "ferrohealth-secret",
- "ferrohealth-server 0.9.0",
+ "ferrohealth-server 0.10.0",
  "ferrohealth-session",
  "ferrohealth-smart",
  "ferrohealth-telemetry 0.5.0",
@@ -2440,9 +2440,9 @@ dependencies = [
 
 [[package]]
 name = "ferrohealth-server"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec7c1160e768b0929119199cc1549c993a91b84b5a8e5fe7b639439409eefaab"
+checksum = "f745cfd2746a4fcfbc7528a36004d934d4dad107a38908cc72f068bf75dd97c8"
 dependencies = [
  "axum",
  "clap",
@@ -5343,7 +5343,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -6506,7 +6506,7 @@ version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "287f59010008f0d7cf5e3b03196d666c1acc46c8d3e9cf34c28a1a7157601e72"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "proc-macro2",
  "quote",
  "syn 2.0.119",

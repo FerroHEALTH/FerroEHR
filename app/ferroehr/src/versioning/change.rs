@@ -29,7 +29,6 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
-use crate::storage::row::NodeRow;
 use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
@@ -48,7 +47,7 @@ mod written;
 
 use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
 use sign::body_and_signature;
-use written::{admit_written, root_archetype};
+use written::{admit_written, nodes, root_archetype};
 
 /// The outcome of a versioned-object write: the object id, the new version's
 /// tree id, and the provenance carried into the event-outbox envelope.
@@ -509,8 +508,9 @@ struct ResolvedWrite {
     /// A client-supplied `UPDATE_VERSION.signature`, stored verbatim (master06
     /// §Digital Signature); `None` on the direct endpoints.
     client_signature: Option<String>,
-    /// The decomposed node rows (empty for a logical delete — data Void).
-    rows: Vec<NodeRow>,
+    /// The accepted, uid-stamped body, decomposed into node rows only by the
+    /// write (#5759); `Value::Null` for a logical delete (data Void).
+    body: Value,
     /// The canonical body BYTES, serialized from the accepted, uid-stamped
     /// value BEFORE decomposition — the stored `version.body` text a point
     /// read serves verbatim. `None` for a logical delete.
@@ -532,8 +532,8 @@ struct ResolvedWrite {
     /// every kind but a party.
     party_facts: Option<Box<crate::party_binding::derive::Facts>>,
     /// The version whose node rows this one reads when its content equals the
-    /// preceding tip's (`version.content_sys_version`, #4415); the rows are
-    /// then decomposed for the signature and not written.
+    /// preceding tip's (`version.content_sys_version`, #4415); the body is
+    /// then signed and not decomposed.
     shared_from: Option<i32>,
     /// The preceding tip of a modify, which the opt-in re-send answer names
     /// instead of committing.
@@ -814,6 +814,9 @@ async fn commit_resolved(
 
     let (signature, signature_client_supplied) =
         body_and_signature(ctx, audit, contribution_id, &r, &at_committal_attestations)?;
+    let archetype = root_archetype(&r.body);
+    // A version that shares its predecessor's rows writes none of its own.
+    let (rows, fragments, blob_uris) = nodes(r.body, r.shared_from.is_some())?;
 
     let folded = crate::storage::version_repo::commit::FoldedVersion {
         vo_id: r.vo_id,
@@ -834,13 +837,9 @@ async fn commit_resolved(
         origins: &r.origins,
         body: r.canonical_text.as_deref(),
         time_committed: r.time_committed,
-        // A version that shares its predecessor's rows writes none of its
-        // own; the rows still served the signature above.
-        rows: if r.shared_from.is_some() {
-            &[]
-        } else {
-            &r.rows
-        },
+        rows: &rows,
+        fragments,
+        blob_uris,
         content_digest: r.content_digest.as_ref().map(<[u8; 32]>::as_slice),
         content_sys_version: r.shared_from,
         // Nothing is superseded in place: the head row advancing past the
@@ -853,11 +852,11 @@ async fn commit_resolved(
     let statement = match contribution {
         ContributionCtx::New => Folded::Standalone {
             id: contribution_id,
-            version: &folded,
+            version: folded,
         },
         ContributionCtx::Existing(id) => Folded::Into {
             id,
-            version: &folded,
+            version: folded,
         },
     };
     let time_committed = commit_folded(tx, &audit_row, statement)
@@ -889,7 +888,7 @@ async fn commit_resolved(
             kind: r.kind,
             change_type: audit.change_type.clone(),
             template_id: r.template_id,
-            root_archetype: root_archetype(&r.rows),
+            root_archetype: archetype,
             time_committed,
             skipped: false,
             content_digest: r.content_digest,
@@ -916,7 +915,7 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
         kind: r.kind,
         change_type: audit.change_type.clone(),
         template_id: r.template_id.clone(),
-        root_archetype: root_archetype(&r.rows),
+        root_archetype: root_archetype(&r.body),
         time_committed: preceding.committed_at,
         skipped: true,
         content_digest: r.content_digest,

@@ -27,19 +27,19 @@ use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::ehr_index::provider::EhrIndexProvider;
 use ferroehr::service::ehr_index::types::SubjectRef;
 
-const FEED: &str = "https://cdr.example/pmir/feed";
-const CLIENT: &str = "ferropix";
+pub(crate) const FEED: &str = "https://cdr.example/pmir/feed";
+pub(crate) const CLIENT: &str = "ferropix";
 /// A domain no patient `PERSON` carries an identifier of.
-const OTHER: &str = "urn:oid:2.999.9.9";
+pub(crate) const OTHER: &str = "urn:oid:2.999.9.9";
 
-fn sender() -> FeedSender {
+pub(crate) fn sender() -> FeedSender {
     FeedSender {
         issuer: ISSUER.to_owned(),
         client_id: CLIENT.to_owned(),
     }
 }
 
-fn fhir_patient(id: &str, identifiers: &[(&str, &str)]) -> Patient {
+pub(crate) fn fhir_patient(id: &str, identifiers: &[(&str, &str)]) -> Patient {
     Patient {
         id: Some(id.to_owned()),
         identifier: identifiers
@@ -56,7 +56,7 @@ fn fhir_patient(id: &str, identifiers: &[(&str, &str)]) -> Patient {
     .with_master_identifier(id)
 }
 
-fn national(id: &str, values: &[&str]) -> Patient {
+pub(crate) fn national(id: &str, values: &[&str]) -> Patient {
     let identifiers: Vec<(&str, &str)> = values.iter().map(|v| (NATIONAL, *v)).collect();
     fhir_patient(id, &identifiers)
 }
@@ -76,7 +76,7 @@ fn merged(id: &str, survivor: &str) -> Patient {
     }
 }
 
-fn message(id: &str, notices: &[Notice]) -> Vec<u8> {
+pub(crate) fn message(id: &str, notices: &[Notice]) -> Vec<u8> {
     let registry = Url::parse("https://pix.example/fhir").expect("a URL");
     let destination = Url::parse(FEED).expect("a URL");
     let history = Uuid::now_v7().to_string();
@@ -92,7 +92,7 @@ fn message(id: &str, notices: &[Notice]) -> Vec<u8> {
     .expect("the message writes")
 }
 
-async fn receive(svc: &FerroEhrService, id: &str, notices: &[Notice]) {
+pub(crate) async fn receive(svc: &FerroEhrService, id: &str, notices: &[Notice]) {
     svc.pmir_receive(
         &sender(),
         Some("application/fhir+json"),
@@ -103,7 +103,7 @@ async fn receive(svc: &FerroEhrService, id: &str, notices: &[Notice]) {
     .expect("the message is stored");
 }
 
-async fn apply(svc: &FerroEhrService) -> Option<Applied> {
+pub(crate) async fn apply(svc: &FerroEhrService) -> Option<Applied> {
     Box::pin(svc.pmir_apply_next(Uuid::now_v7()))
         .await
         .expect("the apply runs")
@@ -111,7 +111,7 @@ async fn apply(svc: &FerroEhrService) -> Option<Applied> {
 
 /// A patient `PERSON` carrying the national identifiers `values` and
 /// declaring a pseudonym of its own, with an EHR on it.
-async fn patient_with_ehr(svc: &FerroEhrService, name: &str, values: &[&str]) -> EhrId {
+pub(crate) async fn patient_with_ehr(svc: &FerroEhrService, name: &str, values: &[&str]) -> EhrId {
     let pseudonym = Uuid::now_v7().to_string();
     let identifiers: Vec<_> = values
         .iter()
@@ -131,7 +131,7 @@ async fn patient_with_ehr(svc: &FerroEhrService, name: &str, values: &[&str]) ->
     create_ehr_subject(svc, &SubjectRef::person(&pseudonym, CLINICAL)).await
 }
 
-async fn trc(svc: &FerroEhrService, system: &str, id: &str) -> Vec<EhrId> {
+pub(crate) async fn trc(svc: &FerroEhrService, system: &str, id: &str) -> Vec<EhrId> {
     svc.grants()
         .refresh_if_stale()
         .await
@@ -145,7 +145,7 @@ async fn trc(svc: &FerroEhrService, system: &str, id: &str) -> Vec<EhrId> {
 
 /// One replica over `db`, the Registry's client granted the care
 /// relationship writes when `grant`.
-async fn consumer(db: &testkit::TestDb, grant: bool) -> FerroEhrService {
+pub(crate) async fn consumer(db: &testkit::TestDb, grant: bool) -> FerroEhrService {
     let svc = replica(db, EhrIndexProvider::Local).await;
     if grant {
         granted(&svc, CLIENT, &[capability("write_care_relationship", &[])]).await;
@@ -153,7 +153,7 @@ async fn consumer(db: &testkit::TestDb, grant: bool) -> FerroEhrService {
     svc
 }
 
-fn refused(id: &str, refusal: Refusal) -> Applied {
+pub(crate) fn refused(id: &str, refusal: Refusal) -> Applied {
     Applied::Refused(id.to_owned(), refusal)
 }
 

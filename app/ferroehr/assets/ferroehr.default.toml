@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 859 keys. A deployment that holds real data sets the 10
+# This file lists 860 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -84,8 +84,10 @@ profile = "sandbox"
 # (infrastructure).
 #? shutdown_timeout = "10s"
 # How many requests the server serves at once; past it a request is answered
-# `503`. Unset, there is no bound. Optional, unset by default (infrastructure).
-#? max_concurrent_requests = 0
+# `503` with `Retry-After` at once, never queued, so offered load beyond
+# capacity cannot grow the server's memory. Always bounded, 256 by default
+# (`DEFAULT_MAX_CONCURRENT_REQUESTS`); never zero. Optional (infrastructure).
+#? max_concurrent_requests = 256
 # How long a refused request is told to wait (`Retry-After`), a whole number of
 # seconds, since the header carries delay-seconds (RFC 9110 §10.2.3). Optional
 # (infrastructure).
@@ -2699,6 +2701,11 @@ subject_namespaces = []
 # The `client_id` that access token names: the only client whose ITI-93
 # messages are applied. Optional (trust).
 #? feed_client_id = ""
+# How many refused ITI-93 messages still to retry or settle turn the
+# `pmir_refused_messages` health indicator `DEGRADED`; at least 1. A refused
+# message keeps the identifiers it split unresolved until an operator acts on
+# it. Optional.
+#? refused_degraded_at = 1
 
 # `[pix.endpoint]`, the family's outbound endpoint: the FHIR base URL of the
 # Patient Identity Registry (`url`, the `[base]` of `[base]/Subscription`, PMIR
