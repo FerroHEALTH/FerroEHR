@@ -316,7 +316,7 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/perf/base-rev.sh --self-test
-          printf "rev=a9cca09b0f29a72e245ecdd9ec90f9d18673cd07\nreason=stall probe: the base before the gathered intake\n" | tee -a "$GITHUB_OUTPUT"
+          printf "rev=65d0a92239c910e50e9856aab8212b9c72415abe\nreason=stall probe: the base before the durable intake\n" | tee -a "$GITHUB_OUTPUT"
       - id: push
         shell: bash
         env:
