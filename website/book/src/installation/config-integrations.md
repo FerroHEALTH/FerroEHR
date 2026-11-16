@@ -22,7 +22,7 @@ max_result_rows = 10000
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `plan_cache_capacity` | int | `256` | Maximum distinct cached query plans; `0` disables the cache and every lookup runs the full parse-and-lower path. Cache activity is reported by the `aql_plan_cache_events` counter. |
+| `plan_cache_capacity` | int | `256` | Maximum distinct cached query plans; `0` disables the cache and every lookup runs the full parse-and-lower path. A cached plan also keeps the SQL text of up to 32 statement shapes, so a repeated query binds its values without rendering its SQL again. Cache activity is reported by the `aql_plan_cache_events` counter. |
 | `timeout` | duration | `"30s"` | Per-query database execution budget; `"0s"` disables it. Overrun is refused `408`. |
 | `max_result_rows` | int | `10000` | The largest page one query execution serves: the page of a query nothing else bounds, and the maximum an explicit `LIMIT` or `fetch` may ask for (a larger page is refused `400`); `0` means unbounded. |
 

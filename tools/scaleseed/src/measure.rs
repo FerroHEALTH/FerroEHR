@@ -205,7 +205,7 @@ async fn query(dsn: &str, case: &Case, ehr: Uuid, plan: &Path) -> anyhow::Result
     for _ in 0..=WARM {
         let started = Instant::now();
         rows = sqlx::query_with(
-            sqlx::AssertSqlSafe(prepared.sql.clone()),
+            sqlx::AssertSqlSafe(Arc::clone(&prepared.sql)),
             prepared.values.clone(),
         )
         .fetch_all(&mut conn)
