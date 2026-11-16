@@ -209,6 +209,12 @@ too. Below the verdict, each arm's ten statements by PostgreSQL time over
 the run name their calls and their mean planning and execution time:
 PostgreSQL counts planning beside execution (`pg_stat_statements.track_planning`),
 and an AQL statement is planned for its values on every call (#5746).
+Each arm's PostgreSQL keeps its cluster in memory (tmpfs): every request
+commits before it answers, and a hosted runner's WAL fsync time varies
+16-fold between runs, which would tail every route on both arms (#5866). A
+commit still flushes the WAL, so the last table of the summary gives each
+arm's WAL bytes and WAL flushes per request, where a change in what a
+request writes durably shows.
 `target/perf/base-rev` names the base commit. Locally, `PERF_SERVER`,
 `PERF_DATABASE` and `PERF_TARGET` point `gate.sh self-test` at a server you
 started yourself (see the script's header).
