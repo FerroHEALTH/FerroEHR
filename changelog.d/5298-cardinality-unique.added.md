@@ -1,0 +1,1 @@
+- Composition validation evaluates the `unique` cardinality modifier (SPECAM-111): a container a template constrains `unique` refuses two members that are equal by value, with a `422` naming the container's path. A member's `name` and every `uid` are left out of the comparison, and numbers compare by value. A container without `unique` keeps accepting value-equal members.

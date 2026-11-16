@@ -617,7 +617,9 @@ Every composition is validated against its template at commit time. This is
 where the template earns its keep. The server checks:
 
 - **structure:** required sections and fields are present, and cardinality and
-  occurrence constraints are respected;
+  occurrence constraints are respected. A container whose cardinality is
+  `unique` refuses two members that are equal by value; their names and
+  `uid`s do not count;
 - **leaf values:** data types, units, value ranges, string patterns, decimal
   precision, and date/time constraints match the template;
 - **terminology:** coded values are members of the value sets the template
