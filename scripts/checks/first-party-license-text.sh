@@ -40,6 +40,9 @@ readonly -a EXCLUDED=(
   ':(exclude)crates/openehr-lang/tests/vendor/**'
   ':(exclude)crates/openehr-term/tests/**'
   ':(exclude)corpus/**'
+  # The ZITADEL excerpt (#5829): zitadel/zitadel's own AGPL-3.0-only LICENSE
+  # and LICENSING.md, vendored beside the files they govern.
+  ':(exclude)docs/specs/zitadel/**'
 )
 
 # Files that legitimately NAME these licences without granting them: the licence
