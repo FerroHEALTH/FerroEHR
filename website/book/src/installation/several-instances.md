@@ -63,9 +63,11 @@ a transaction for this.
 
 ## The listeners hold connections of their own
 
-Each instance runs four listeners, one per copy, and each holds one
-connection for its `LISTEN`, apart from the request pools: three on the
-clinical database and one on the party database. Each listener session
+Each instance runs five listeners, one per copy, and each holds one
+connection for its `LISTEN`, apart from the request pools: four on the
+clinical database and one on the party database. The fifth holds the
+registered template addresses, so a COMPOSITION commit learns whether its
+template is registered without a statement. Each listener session
 names itself `ferroehr policy listener` in `pg_stat_activity`.
 
 PgBouncer in transaction mode hands a connection back after each transaction

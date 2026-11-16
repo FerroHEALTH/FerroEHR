@@ -6,7 +6,7 @@
 //! (`audit.syslog_outbox`).
 //!
 //! The chainer writes a record's outbox rows in the transaction that chains
-//! it (`migrations/audit/0041_audit_intake.sql`), so a sink delivers only
+//! it (`migrations/audit/0042_audit_intake.sql`), so a sink delivers only
 //! stored records, rendered from the store when they are read, and a record
 //! is owed until the repository accepts it. No specification governs where a
 //! record waits for its delivery: our own design.

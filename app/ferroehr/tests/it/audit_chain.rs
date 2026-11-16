@@ -47,7 +47,7 @@ fn read_event(at: Timestamp, subject: &str) -> AuditEvent {
 }
 
 /// Write `count` records through the real store path, oldest first.
-async fn seed(store: &AuditStore, count: u32) {
+pub(crate) async fn seed(store: &AuditStore, count: u32) {
     for n in 0..count {
         let at = Timestamp::now() - jiff::SignedDuration::from_hours(i64::from(count - n));
         let event = read_event(at, &format!("8fa1::ferroehr::{n}"));
@@ -60,7 +60,7 @@ async fn seed(store: &AuditStore, count: u32) {
 
 /// Run `sql` with the append-only triggers off, which only the table's OWNER
 /// can do — the attacker this mechanism is designed to catch rather than stop.
-async fn with_triggers_disabled(pool: &PgPool, sql: &str) {
+pub(crate) async fn with_triggers_disabled(pool: &PgPool, sql: &str) {
     sqlx::query("ALTER TABLE audit.audit_event DISABLE TRIGGER USER")
         .execute(pool)
         .await

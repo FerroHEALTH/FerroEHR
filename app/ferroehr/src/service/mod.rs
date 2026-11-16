@@ -108,6 +108,9 @@ pub struct FerroEhrService {
     /// internal optimisation's state is a metric, not a REST surface; no
     /// openEHR spec governs the cache — our own design).
     pub(crate) web_templates: WebTemplateCache,
+    /// The template addresses `template_ref` registers, held in memory so a
+    /// commit asks no statement of a registered template (#5775).
+    registered_templates: Arc<definition::registered::RegisteredTemplates>,
     /// Version signer (`VERSION.signature`, RM common master06 §Digital
     /// Signature). Defaults to server-side `digest` signing; the binary wires
     /// the configured [`Signer`].
@@ -296,6 +299,9 @@ impl FerroEhrService {
             system_id: DEFAULT_SYSTEM_ID.to_owned(),
             spec_profile: crate::config::profile::SpecProfile::default(),
             web_templates: WebTemplateCache::default(),
+            registered_templates: Arc::new(definition::registered::RegisteredTemplates::new(
+                pools.clinical.clone(),
+            )),
             signer: Arc::new(Signer::digest_default()),
             licence: crate::licence::state::LicenceState::NoLicence(
                 crate::licence::state::Reason::NoneEmbedded,

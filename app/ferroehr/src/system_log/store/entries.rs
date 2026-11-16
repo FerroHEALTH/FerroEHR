@@ -12,7 +12,7 @@
 //! written under (`migrations/audit/0030_access_log_projections.sql`). A read
 //! renders the document from the entry's content. Both are written into the
 //! intake before the response and chained after
-//! (`migrations/audit/0041_audit_intake.sql`). A record an act wrote as its
+//! (`migrations/audit/0042_audit_intake.sql`). A record an act wrote as its
 //! entry in its own transaction ([`EntryScope::Written`]) is written by that
 //! act alone, so it is stored once. No openEHR spec governs
 //! audit storage: our own design.

@@ -56,6 +56,10 @@ use openehr_base::prelude::{Cardinality, MultiplicityInterval};
 use openehr_lang::v1_1::beom::core::operator_kind::OperatorKind;
 
 use super::binding_v2_4::{bound_codes, split_operational, term_bindings_of};
+use super::constraint::{
+    WebTemplateArchetypeSlot, WebTemplateClosedAttribute, WebTemplateExistence,
+    WebTemplateStructuralStub,
+};
 use super::facts::WebTemplateNodeFacts;
 use super::implicit;
 use super::inputs::{assumed_code, default_string};
@@ -64,9 +68,8 @@ use super::interval_v2_4::{
     range_union, real_default, real_range, sole_interval,
 };
 use super::model::{
-    WebTemplate, WebTemplateArchetypeSlot, WebTemplateCardinality, WebTemplateClosedAttribute,
-    WebTemplateCodedValue, WebTemplateExistence, WebTemplateInput, WebTemplateInputType,
-    WebTemplateNode, WebTemplateStructuralStub, WebTemplateValidation,
+    WebTemplate, WebTemplateCardinality, WebTemplateCodedValue, WebTemplateInput,
+    WebTemplateInputType, WebTemplateNode, WebTemplateValidation,
 };
 use super::path_v2_4::{build_path, name_constraint, object_path, prohibited_under};
 use super::shape;
@@ -128,12 +131,7 @@ pub fn build_web_template_v2_4(
     tree.min = Some(1);
     tree.max = 1;
 
-    let mut tree = shape::compact(tree, 1).unwrap_or_else(shape::tree_placeholder);
-    super::in_context::synthesize_in_context(&mut tree);
-    super::id::build_ids(&mut tree);
-    // Parse the archetype-conformance walk plan once, as the OPT-1.4 front end
-    // does, so a commit against this template is walked without re-parsing.
-    crate::flat::validation::prepare_walk(&mut tree);
+    let tree = shape::finish(tree);
 
     Ok(WebTemplate {
         template_id,

@@ -11,7 +11,7 @@
 //! chainer moves the intake into the chains: the access log through
 //! [`AccessLogStore::chain_round`], the system chain through
 //! `audit.audit_event_chain_move`, each owing the record to the sinks that
-//! deliver from the store (`migrations/audit/0041_audit_intake.sql`). No
+//! deliver from the store (`migrations/audit/0042_audit_intake.sql`). No
 //! openEHR spec governs audit storage: our own design.
 
 use sqlx::PgConnection;

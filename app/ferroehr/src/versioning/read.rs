@@ -323,7 +323,7 @@ pub(crate) struct RawVersionRead {
 /// The [`version_read`] rejections; [`ServiceError::Internal`] when the
 /// stored body text does not parse (our own jsonb rendering — corrupt data,
 /// never a client condition).
-fn raw_version_read(
+pub(crate) fn raw_version_read(
     profile: crate::config::profile::SpecProfile,
     mut stored: crate::storage::version_repo::read::StoredVersion,
 ) -> Result<RawVersionRead, ServiceError> {

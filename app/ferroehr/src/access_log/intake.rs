@@ -8,7 +8,7 @@
 //! form, the content digest over the whole form, the columns the log derives
 //! from the content and, when the entry is indexed, its ITI-81 index row, so
 //! the chainer only computes the links
-//! (`migrations/audit/0041_audit_intake.sql`). Each derived column is read
+//! (`migrations/audit/0042_audit_intake.sql`). Each derived column is read
 //! from the entry's ITS-JSON value at the path the database's own derive
 //! reads (`audit.access_log_record_derive`), and the text is cast by the
 //! database as that function casts it, so a chained record compares equal to

@@ -77,12 +77,18 @@ pub const AUDIT_CHAIN_INTACT: &str = "audit_chain_intact";
 pub const ACCESS_LOG_CHAIN_HOLD: &str = "access_log_chain_hold_duration";
 /// Records the audit chainer linked into a chain (`chain`).
 pub const AUDIT_CHAINED: &str = "audit_chained";
+/// Chain positions past a chain's verification cursor, the head minus the
+/// cursor (`chain`, #5779).
+pub const AUDIT_CHAIN_VERIFICATION_LAG: &str = "audit_chain_verification_lag";
+/// How long ago the oldest record past a chain's verification cursor was
+/// recorded, in seconds; `0` when the cursor is at the head (`chain`, #5779).
+pub const AUDIT_CHAIN_UNVERIFIED_AGE: &str = "audit_chain_unverified_age";
 /// Live instances of the deployment that differ from this one, by what
 /// differs (`differs`), at its last comparison (#5589).
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 27] = [
+pub const NAMES: [&str; 29] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
@@ -109,6 +115,8 @@ pub const NAMES: [&str; 27] = [
     AUDIT_CHAIN_INTACT,
     ACCESS_LOG_CHAIN_HOLD,
     AUDIT_CHAINED,
+    AUDIT_CHAIN_VERIFICATION_LAG,
+    AUDIT_CHAIN_UNVERIFIED_AGE,
     INSTANCE_MISMATCHES,
 ];
 
@@ -183,6 +191,10 @@ pub struct AccessPathMetrics {
     pub chain_last_verification: Gauge<f64>,
     /// Whether the newest chain verification found the chains intact.
     pub chain_intact: Gauge<u64>,
+    /// Chain positions past the verification cursor, by chain.
+    pub chain_verification_lag: Gauge<u64>,
+    /// The age of the oldest record past the cursor by chain, seconds.
+    pub chain_unverified_age: Gauge<f64>,
 }
 
 impl AccessPathMetrics {
@@ -250,7 +262,7 @@ impl AccessPathMetrics {
                 "Scheduled seal runs (chain = system, outcome = sealed | empty | failed)",
                 SCHEDULED_BUCKETS,
             ),
-            seal_last_success: make.timestamp(
+            seal_last_success: make.seconds(
                 AUDIT_SEAL_LAST_SUCCESS,
                 "Unix time of the newest successful seal run, by chain",
             ),
@@ -277,17 +289,25 @@ impl AccessPathMetrics {
                  result = intact | damaged | unverifiable)",
                 SCHEDULED_BUCKETS,
             ),
-            chain_last_verification: make.timestamp(
+            chain_last_verification: make.seconds(
                 AUDIT_CHAIN_LAST_VERIFICATION,
                 "Unix time of the newest finished audit chain verification",
             ),
-            chain_intact: meter
-                .u64_gauge(AUDIT_CHAIN_INTACT)
-                .with_description(
-                    "Whether the newest audit chain verification found the chains intact (1) \
-                     or damaged or unverifiable (0)",
-                )
-                .build(),
+            chain_intact: make.gauge(
+                AUDIT_CHAIN_INTACT,
+                "Whether the newest audit chain verification found the chains intact (1) \
+                 or damaged or unverifiable (0)",
+            ),
+            chain_verification_lag: make.gauge(
+                AUDIT_CHAIN_VERIFICATION_LAG,
+                "Chain positions past the verification cursor: the chain head \
+                 minus the cursor (chain = system | access_log)",
+            ),
+            chain_unverified_age: make.seconds(
+                AUDIT_CHAIN_UNVERIFIED_AGE,
+                "Seconds since the oldest record past the verification cursor was \
+                 recorded, 0 at the head (chain = system | access_log)",
+            ),
         }
     }
 }
@@ -319,8 +339,13 @@ impl Make<'_> {
             .build()
     }
 
-    /// A gauge of a Unix time in seconds.
-    fn timestamp(&self, name: &'static str, description: &'static str) -> Gauge<f64> {
+    /// A gauge of whole numbers.
+    fn gauge(&self, name: &'static str, description: &'static str) -> Gauge<u64> {
+        self.0.u64_gauge(name).with_description(description).build()
+    }
+
+    /// A gauge in seconds: a Unix time or an age.
+    fn seconds(&self, name: &'static str, description: &'static str) -> Gauge<f64> {
         self.0
             .f64_gauge(name)
             .with_description(description)

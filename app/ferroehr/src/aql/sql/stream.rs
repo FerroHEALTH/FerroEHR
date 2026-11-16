@@ -506,10 +506,10 @@ impl Builder<'_> {
             Alias::new(root_alias.as_str()),
             Expr::val(true),
         );
+        self.node_alias.insert(plan.root, root_alias.clone());
         for cond in self.rm_conds(&root_alias, root)? {
             self.q.and_where(cond);
         }
-        self.node_alias.insert(plan.root, root_alias.clone());
         Ok(root_alias)
     }
 }

@@ -529,6 +529,7 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
         store: StoreConfig {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..AuditConfig::default()
     };

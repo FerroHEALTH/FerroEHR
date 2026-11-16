@@ -544,7 +544,8 @@ fn spawn_store_upkeep(
     if config.verify_interval.is_zero() {
         return None;
     }
-    let check = ChainCheck::default();
+    let check =
+        ChainCheck::new((!config.max_verify_lag.is_zero()).then(|| config.max_verify_lag.get()));
     workers.push(background.spawn(crate::system_log::chain_check::scheduled(
         store.clone(),
         check.clone(),

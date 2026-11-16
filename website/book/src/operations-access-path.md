@@ -127,10 +127,17 @@ row failed.
 | `audit_chain_last_verification_seconds` | gauge | (none) | Unix time of the newest finished verification. |
 | `audit_chain_intact` | gauge | (none) | `1` when the newest verification found both chains intact, `0` when it found damage or could not run. |
 | `atna_audit_chain_findings_total` | counter | `kind` | Findings of the verifications, `damage` or `unverifiable`. |
+| `audit_chain_verification_lag` | gauge | `chain` | Positions of the chain (`system` or `access_log`) past its verification cursor: the head minus the cursor, measured after each step of a run. |
+| `audit_chain_unverified_age_seconds` | gauge | `chain` | Seconds since the oldest record past the chain's cursor was recorded, `0` at the head. |
 
-Alert on `audit_chain_intact == 0`, and on `time() -
+Alert on `audit_chain_intact == 0`, on `time() -
 audit_chain_last_verification_seconds` above twice `[audit.store]
-verify_interval`.
+verify_interval`, and on `audit_chain_unverified_age_seconds` above
+`[audit.store] max_verify_lag`.
+
+A run walks each chain in steps of at most 20 000 records, one statement
+each, and every intact step moves the cursor. A long backlog therefore shows
+as a lag that falls during the run, never as `unverifiable`.
 
 ## The instances of a deployment
 

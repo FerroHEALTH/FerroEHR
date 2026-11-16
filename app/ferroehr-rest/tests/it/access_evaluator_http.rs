@@ -363,6 +363,20 @@ async fn a_category_restriction_with_an_exception() {
 async fn a_classification_refuses_the_uncleared() {
     let (_db, _pool, _svc, app) = Box::pin(app()).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
+    let (status, body) = send(
+        &app,
+        "GET",
+        &format!("{BASE}/ehr/{ehr}/composition/{vo}"),
+        "nurse",
+        None,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "readable before the policy: {body}");
+    let v1 = serde_json::from_str::<Value>(&body).expect("COMPOSITION json")["uid"]["value"]
+        .as_str()
+        .expect("the version uid")
+        .to_owned();
     let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
     let policy = json!({
         "_type": "ACCESS_POLICY",
@@ -401,6 +415,23 @@ async fn a_classification_refuses_the_uncleared() {
     let (status, body) = send(&app, "GET", &read, "nurse", None, None).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     assert_eq!(refusal(&body).0, json!("refused-sensitivity"), "{body}");
+    // The read by version uid judges the object on the row it reads (#5773):
+    // the same refusal, for the version it holds and for one it does not.
+    let missing_version = v1.replace("::1", "::9");
+    for uid in [v1.as_str(), missing_version.as_str()] {
+        let read = format!("{BASE}/ehr/{ehr}/composition/{uid}");
+        let (status, body) = send(&app, "GET", &read, "nurse", None, None).await;
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "the version read is refused: {body}"
+        );
+        assert_eq!(refusal(&body).0, json!("refused-sensitivity"), "{body}");
+        assert!(!body.contains("International Patient Summary"), "{body}");
+    }
+    let unknown = format!("{BASE}/ehr/{ehr}/composition/{}", uuid::Uuid::nil());
+    let (status, body) = send(&app, "GET", &unknown, "nurse", None, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "an unknown object: {body}");
     let (status, _) = send(
         &app,
         "GET",

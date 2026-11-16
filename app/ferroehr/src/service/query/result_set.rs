@@ -21,6 +21,7 @@ use serde_json::Value;
 
 use crate::aql::exec::QueryResult;
 use crate::aql::ir::{ParamValue, Params};
+use crate::error::ServiceError;
 use crate::service::query::request::AqlQueryRequest;
 
 /// The `RESULT_SET` `_schema_version` this server emits — "the version of the
@@ -127,12 +128,16 @@ fn render_param(value: &ParamValue) -> String {
 /// `meta`/`name`/`q`/`columns`/`rows` with `required: [rows]` and **no**
 /// `additionalProperties`, so on this wire an `id` key would be an undeclared
 /// property on a closed object schema.
+///
+/// # Errors
+/// [`ResultSetError`] when the envelope does not serialise as a JSON object;
+/// the document is then refused, never served as `null`.
 pub(super) fn result_set_json(
     aql: &str,
     executed: &str,
     name: Option<&QualifiedQueryName>,
     result: QueryResult,
-) -> Value {
+) -> Result<Value, ResultSetError> {
     let columns: Vec<ResultSetColumn> = result
         .columns
         .iter()
@@ -182,14 +187,44 @@ pub(super) fn result_set_json(
     // an OpenAPI 3.0 `type: string` property does not admit `null`
     // (<https://spec.openapis.org/oas/v3.0.3#schema-object>). `rows` cells are
     // untouched — an unset AQL leaf is a genuine `null` there.
-    let mut envelope = serde_json::to_value(&set).unwrap_or(Value::Null);
-    if let Value::Object(map) = &mut envelope {
-        map.insert(
-            "rows".to_owned(),
-            Value::Array(result.rows.into_iter().map(Value::Array).collect()),
-        );
+    with_rows(&set, result.rows)
+}
+
+/// `envelope` serialised, its `rows` the `rows` moved in.
+///
+/// # Errors
+/// [`ResultSetError`] when `envelope` does not serialise, or serialises as
+/// anything but a JSON object.
+fn with_rows<T: serde::Serialize>(
+    envelope: &T,
+    rows: Vec<Vec<Value>>,
+) -> Result<Value, ResultSetError> {
+    let mut envelope = serde_json::to_value(envelope).map_err(ResultSetError::Serialise)?;
+    let Value::Object(map) = &mut envelope else {
+        return Err(ResultSetError::NotAnObject);
+    };
+    map.insert(
+        "rows".to_owned(),
+        Value::Array(rows.into_iter().map(Value::Array).collect()),
+    );
+    Ok(envelope)
+}
+
+/// A `RESULT_SET` document that could not be assembled.
+#[derive(Debug, thiserror::Error)]
+pub enum ResultSetError {
+    /// The envelope did not serialise.
+    #[error("the RESULT_SET envelope did not serialise")]
+    Serialise(#[source] serde_json::Error),
+    /// The envelope serialised as something other than a JSON object.
+    #[error("the RESULT_SET envelope did not serialise as a JSON object")]
+    NotAnObject,
+}
+
+impl From<ResultSetError> for ServiceError {
+    fn from(error: ResultSetError) -> Self {
+        ServiceError::internal("assemble the RESULT_SET", error)
     }
-    envelope
 }
 
 /// An empty `RESULT_SET` for `aql`: the envelope, no columns, no rows.
@@ -198,6 +233,50 @@ pub(super) fn result_set_json(
 /// query is never planned in that case — an unscoped execution would be a
 /// population query, the opposite of what was asked — so no column metadata
 /// exists to report, and the honest document is the empty one.
-pub(crate) fn empty_result_set(aql: &str) -> Value {
+///
+/// # Errors
+/// As [`result_set_json`].
+pub(crate) fn empty_result_set(aql: &str) -> Result<Value, ResultSetError> {
     result_set_json(aql, aql, None, QueryResult::of_rows(Vec::new(), Vec::new()))
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::{Value, json};
+
+    use super::{ResultSetError, with_rows};
+
+    /// A value whose serialisation fails.
+    struct Unserialisable;
+
+    impl serde::Serialize for Unserialisable {
+        fn serialize<S: serde::Serializer>(&self, _: S) -> Result<S::Ok, S::Error> {
+            Err(serde::ser::Error::custom("refused"))
+        }
+    }
+
+    #[test]
+    fn an_envelope_that_does_not_serialise_is_refused() {
+        let refused = with_rows(&Unserialisable, vec![vec![json!(1)]]);
+        assert!(
+            matches!(refused, Err(ResultSetError::Serialise(_))),
+            "{refused:?}"
+        );
+    }
+
+    #[test]
+    fn an_envelope_that_is_no_object_is_refused() {
+        let refused = with_rows(&Value::Null, vec![vec![json!(1)]]);
+        assert!(
+            matches!(refused, Err(ResultSetError::NotAnObject)),
+            "{refused:?}"
+        );
+    }
+
+    #[test]
+    fn the_rows_are_moved_into_the_envelope() {
+        let served = with_rows(&json!({ "q": "SELECT" }), vec![vec![json!(1), Value::Null]])
+            .expect("an object serialises");
+        assert_eq!(served, json!({ "q": "SELECT", "rows": [[1, null]] }));
+    }
 }

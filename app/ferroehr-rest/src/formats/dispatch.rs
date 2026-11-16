@@ -443,6 +443,25 @@ mod tests {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     }
 
+    /// A value on an ELEMENT with value alternatives is client data → `422`,
+    /// and the problem names the key and the alternatives (#5768).
+    #[test]
+    fn value_without_input_maps_to_422_naming_the_alternatives() {
+        let e = openehr_sdt::flat::error::FlatError::ValueWithoutInput {
+            path: "encounter/demonstration:0/any_event/heading1:0/choice:0".to_owned(),
+            rm_type: "ELEMENT".to_owned(),
+            alternatives: vec!["quantity_value".to_owned(), "coded_text_value".to_owned()],
+        };
+        let message = e.to_string();
+        assert!(message.contains("heading1:0/choice"), "{message}");
+        assert!(
+            message.contains("quantity_value, coded_text_value"),
+            "{message}"
+        );
+        let status = flat_input_err(&e).into_response().status();
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    }
+
     /// An output conversion failure (rendering stored server data) stays `500`.
     #[test]
     fn output_conversion_failure_stays_500() {

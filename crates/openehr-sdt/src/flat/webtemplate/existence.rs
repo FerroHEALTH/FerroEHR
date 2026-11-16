@@ -9,9 +9,9 @@
 use openehr_its::opt14::types::{CAttribute, CObject};
 
 use super::builder::{object_occurrences, occurrences};
+use super::constraint::WebTemplateExistence;
 use super::implicit::attribute_existence;
 use super::inputs;
-use super::model::WebTemplateExistence;
 
 /// Capture the AOM 1.4 `C_ATTRIBUTE.existence` constraints for the mandatory
 /// single-valued RM attributes of `co`, keyed by their absolute archetype path.

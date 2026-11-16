@@ -163,15 +163,15 @@ impl FerroEhrService {
         // Multi-EHR scoping (`ehr_ids: List<UUID>`): an absent id raises
         // `ehr_id_does_not_exist`.
         self.check_ehr_ids(&request.ehr_ids).await?;
-        let access_settings = Box::pin(self.ehr_access_readers())
-            .await
-            .map_err(Failure::analysis)?;
         let ehr_access = Box::pin(self.query_access_condition(
             &request.ehr_access,
             pinned_ehrs(ir, params, request).as_deref(),
         ))
         .await
         .map_err(Failure::analysis)?;
+        let access_settings = Box::pin(self.query_access_readers(&ehr_access))
+            .await
+            .map_err(Failure::analysis)?;
         let ctx = SqlCtx {
             system_id: self.effective_system_id(),
             ehr_ids: request.ehr_ids.clone(),
@@ -221,7 +221,10 @@ impl FerroEhrService {
         let served_origins = result.served_origins.clone();
         let origin_count = result.origin_count;
         let (accessed, served_ehr_content) = accessed_content(&result);
-        let mut outcome = QueryOutcome::plain(result_set_json(aql, &executed, name, result));
+        let mut outcome = QueryOutcome::plain(
+            result_set_json(aql, &executed, name, result)
+                .map_err(|error| Failure::analysis(error.into()))?,
+        );
         outcome.served_ehrs = served_ehrs;
         outcome.served_rows = served_rows;
         outcome.served_origins = served_origins;

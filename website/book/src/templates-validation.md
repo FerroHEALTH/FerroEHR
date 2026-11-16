@@ -493,6 +493,18 @@ two mutually exclusive), and both directions preserve it:
 }
 ```
 
+The `_null_flavour` key holds even when the template constrains the null flavour,
+for example to the four openEHR codes 253, 271, 272 and 273. That constraint
+never adds a value alternative to the element: an element with one value type
+keeps its own key (`…/systolic`, not `…/systolic/quantity_value`), and a
+null flavour outside the template's list is refused on commit.
+
+An element whose template allows several value types has one key per type
+(`…/choice/quantity_value|magnitude`, `…/choice/coded_text_value|code`). A value
+given on the element key itself (`…/choice: 5`) is refused with `422`, and the
+problem names the alternatives. The same holds for any other node that takes no
+value of its own, such as a cluster or an observation.
+
 ### Who the entry is about: `subject`
 
 Every entry (observation, evaluation, instruction, action, admin entry) records a

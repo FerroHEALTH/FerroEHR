@@ -91,10 +91,11 @@ impl FerroEhrService {
         // ONE pooled connection carries both gates AND the commit: measured at
         // +0.4 ms per extra checkout on #3097.
         self.commit_one(&self.pool, mode, async move |conn| {
-            // The EHR-existence (404) and content-writability (409) gates in
-            // one round trip: a COMPOSITION is EHR content (RM ehr master04
+            // The EHR-existence (404), content-writability (409) and restriction
+            // gates in one round trip: a COMPOSITION is EHR content (RM ehr master04
             // §EHR Creation / §EHR Active Status).
-            let commit_now = self.ensure_ehr_content_writable(&mut *conn, ehr_id).await?;
+            let (commit_now, restriction) =
+                self.ensure_ehr_content_writable(&mut *conn, ehr_id).await?;
             validated?;
             self.reject_duplicate_persistent(&mut *conn, ehr_id, &composition)
                 .await?;
@@ -103,7 +104,8 @@ impl FerroEhrService {
                 Change::create(Kind::Composition, composition, template_id, envelope),
                 audit,
             )
-            .at(commit_now))
+            .at(commit_now)
+            .gated(restriction))
         })
         .await
     }
@@ -140,61 +142,8 @@ impl FerroEhrService {
                 )
                 .await?
             }
-        }
-        .filter(|r| r.read.ehr_id == Some(ehr_id) && r.read.kind == Kind::Composition)
-        .ok_or_else(|| {
-            ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"))
-        })?;
-        if raw.read.deleted() {
-            return Ok(RawServiceResponse {
-                body: ReadBody::Value(Value::Null),
-                meta: None,
-            });
-        }
-        let read = raw.read;
-        let meta = self
-            .version_meta(
-                ehr_id,
-                vo_id,
-                &read.creating_system_id,
-                read.tree,
-                read.time_committed,
-            )
-            .with_origins(crate::versioning::origins::of_stored(
-                read.origins.as_ref(),
-                &read.canonical,
-                &read.creating_system_id,
-            ))
-            .with_content(vec![read.content.clone()]);
-        let Some(text) = raw.raw_json else {
-            let stamped =
-                self.with_uid(read.canonical, vo_id, &read.creating_system_id, read.tree)?;
-            return Ok(RawServiceResponse {
-                body: ReadBody::Value(stamped),
-                meta: Some(meta),
-            });
         };
-        let uid = crate::versioning::object_version_id::object_version_id(
-            vo_id,
-            &read.creating_system_id,
-            read.tree,
-        );
-        if carries_version_uid(&text, &uid) {
-            return Ok(RawServiceResponse {
-                body: ReadBody::RawJson(text),
-                meta: Some(meta),
-            });
-        }
-        let value: Value = serde_json::from_str(&text).map_err(|e| {
-            ServiceError::exception(format!(
-                "the stored body of COMPOSITION {vo_id} is not decodable JSON: {e}"
-            ))
-        })?;
-        let stamped = self.with_uid(value, vo_id, &read.creating_system_id, read.tree)?;
-        Ok(RawServiceResponse {
-            body: ReadBody::Value(stamped),
-            meta: Some(meta),
-        })
+        self.composition_served(ehr_id, vo_id, raw)
     }
 
     /// The COMPOSITION current at `a_time` (time-travel), or the latest when
@@ -688,7 +637,8 @@ impl FerroEhrService {
     /// before the non-modifiable 409, over a single
     /// [`crate::storage::ehr_repo::ehr_writability`] read. Returns the database
     /// `now()` that statement read, which the create path passes on as the commit
-    /// instant. The guarded concepts are RM ehr master04 §EHR Creation and §EHR
+    /// instant, and the EHR's restriction mark and settings revision, which the
+    /// commit's restriction gate takes instead of reading them again (#5775). The guarded concepts are RM ehr master04 §EHR Creation and §EHR
     /// Active Status; no openEHR spec governs the query shape (our own design).
     ///
     /// Runs on the CALLER'S executor so a write path can spend one pooled
@@ -704,10 +654,9 @@ impl FerroEhrService {
         &self,
         executor: impl sqlx::PgExecutor<'e>,
         ehr_id: EhrId,
-    ) -> Result<jiff::Timestamp, ServiceError> {
-        let (exists, is_modifiable, now) =
-            crate::storage::ehr_repo::ehr_writability(executor, ehr_id).await?;
-        if !exists {
+    ) -> Result<(jiff::Timestamp, crate::storage::ehr_repo::Restriction), ServiceError> {
+        let read = crate::storage::ehr_repo::ehr_writability(executor, ehr_id).await?;
+        if read.is_modifiable.is_none() {
             return Err(ServiceError::not_found(
                 Missing::Ehr,
                 format!("EHR {ehr_id}"),
@@ -715,10 +664,10 @@ impl FerroEhrService {
         }
         // `None` (no current EHR_STATUS) is treated as modifiable, so the guard
         // never spuriously blocks — identical to `ensure_content_writable`.
-        if is_modifiable == Some(false) {
+        if read.is_modifiable == Some(false) {
             return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
         }
-        Ok(now)
+        Ok((read.now, read.restriction))
     }
 }
 
@@ -778,14 +727,4 @@ impl FerroEhrService {
     pub async fn expand_multimedia(&self, body: Value) -> Result<Value, ServiceError> {
         Ok(body)
     }
-}
-
-/// Whether `text`, a stored body in the compact form the commit writes
-/// (`canonical_body_text`), carries `uid` as its stamped `OBJECT_VERSION_ID`
-/// member, so the JSON read can serve it verbatim (#5755).
-fn carries_version_uid(text: &str, uid: &str) -> bool {
-    const OPEN: &str = r#""uid":{"_type":"OBJECT_VERSION_ID","value":""#;
-    text.split(OPEN)
-        .skip(1)
-        .any(|rest| rest.strip_prefix(uid).is_some_and(|r| r.starts_with("\"}")))
 }

@@ -33,8 +33,9 @@ pub struct StoreConfig {
     /// off. Default one hour.
     ///
     /// A run verifies the records written since the newest link an earlier run
-    /// found intact (`audit.verify_audit_chain_incremental()`), so its cost
-    /// follows the records written since; a finding is logged at `ERROR`,
+    /// found intact, in steps that each move that link
+    /// (`audit.verify_audit_chain_step()`, `audit.verify_access_log_chain_step()`),
+    /// so its cost follows the records written since; a finding is logged at `ERROR`,
     /// counted and reported by the `audit_chain` health indicator
     /// (`docs/law/eu/cra/text.html Annex I Part I(2)(f)`: "report on
     /// corruptions").
@@ -47,6 +48,15 @@ pub struct StoreConfig {
     /// A run that found damage is always followed by a full pass.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub full_verify_interval: Duration,
+    /// How long a record may wait past its chain's verification cursor
+    /// before the `audit_chain` health indicator reads `DEGRADED`
+    /// (`FERROEHR__AUDIT__STORE__MAX_VERIFY_LAG`); `"0s"` reports the lag
+    /// only as the `audit_chain_verification_lag` and
+    /// `audit_chain_unverified_age` metrics. Default four hours. Set it above
+    /// `verify_interval`, since the cursor stays where a run left it until
+    /// the next run.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
+    pub max_verify_lag: Duration,
 }
 
 impl Default for StoreConfig {
@@ -57,6 +67,9 @@ impl Default for StoreConfig {
             // unreported; a week bounds it for older records.
             verify_interval: Duration::from_hours(1),
             full_verify_interval: Duration::from_days(7),
+            // Four hours: a record waits up to one interval for the next run,
+            // so this allows three runs that did not reach the head.
+            max_verify_lag: Duration::from_hours(4),
         }
     }
 }

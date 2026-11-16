@@ -93,12 +93,16 @@ async fn findings(pool: &PgPool) -> Vec<(Option<i64>, String)> {
 /// The findings of an incremental verification of the access log from its
 /// cursor, which a clean run moves to the newest position.
 async fn incremental(pool: &PgPool) -> Vec<(Option<i64>, String)> {
-    sqlx::query_as(
-        "SELECT chain_seq, finding FROM audit.verify_access_log_chain_incremental(false)",
-    )
-    .fetch_all(pool)
-    .await
-    .expect("the incremental verification runs")
+    ferroehr::system_log::store::AuditStore::new(pool.clone())
+        .verify_chain_advancing(
+            ferroehr::system_log::store::chains::AuditChain::AccessLog,
+            ferroehr::system_log::store::chains::VerifyScope::SinceCheckpoint,
+        )
+        .await
+        .expect("the incremental verification runs")
+        .into_iter()
+        .map(|finding| (finding.chain_seq, finding.finding))
+        .collect()
 }
 
 /// The stored gaps, as (first, last).
