@@ -93,7 +93,7 @@ impl FerroEhrService {
     }
 
     /// The listener that drops this replica's copy of an EHR's settings when
-    /// a commit changes them; [`Listened::spawn_listener`] starts it.
+    /// a commit changes them; [`crate::policy_register::listen::Listeners::spawn`] starts it.
     #[must_use]
     pub fn ehr_access_listened(&self) -> &Arc<Listened> {
         &self.ehr_access_listened

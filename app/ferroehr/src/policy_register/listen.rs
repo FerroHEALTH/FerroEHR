@@ -13,11 +13,13 @@
 //! never serves an outdated policy. The admin registers listen on
 //! [`CHANNEL`], the policy grants and the `EHR_ACCESS` projection on their
 //! own channels; a [`Subscriber`] drops what each notification names before
-//! the notification counts as received. Each listener holds a connection of
-//! its own, never one of the request pools, so the pools may run through a
-//! transaction-mode pooler that would end a `LISTEN`
-//! ([`crate::db::domain::listen_options`]). No openEHR spec governs operational
-//! policy: our own design.
+//! the notification counts as received. [`Listeners`] holds every channel of
+//! one database on one `LISTEN` session, apart from the request pools, so the
+//! pools may run through a transaction-mode pooler that would end a `LISTEN`
+//! ([`crate::db::domain::listen_options`]) and an instance opens one listener
+//! connection per database, which [`crate::db::DbConfig::listen_sessions`]
+//! counts into its connection budget (#5845). No openEHR spec governs
+//! operational policy: our own design.
 
 use std::fmt;
 use std::future::Future;
@@ -27,6 +29,9 @@ use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, Ordering};
 use std::time::Duration;
 
 use sqlx::postgres::{PgConnectOptions, PgListener, PgPoolOptions};
+
+use crate::db::domain::Domain;
+use crate::db::{DbConfig, DbError};
 
 /// The channel a register write notifies and every replica listens on.
 pub const CHANNEL: &str = "ferroehr_policy_register";
@@ -58,6 +63,8 @@ pub trait Subscriber: fmt::Debug + Send + Sync {
 pub struct Listened {
     /// The channel it listens on.
     channel: &'static str,
+    /// The domain whose database the writes that notify the channel run in.
+    domain: Domain,
     /// Whether the listener is connected, so a request may trust the copy
     /// until a notification marks it stale.
     listening: AtomicBool,
@@ -89,12 +96,14 @@ struct ListenerCounts {
 }
 
 impl Listened {
-    /// The listener state of `channel`, not yet listening, so every request
-    /// reads until [`Self::spawn_listener`] connects.
+    /// The listener state of `channel`, notified in `domain`'s database, not
+    /// yet listening, so every request reads until [`Listeners::spawn`]
+    /// connects it.
     #[must_use]
-    pub fn new(channel: &'static str) -> Self {
+    pub fn new(channel: &'static str, domain: Domain) -> Self {
         Self {
             channel,
+            domain,
             listening: AtomicBool::new(false),
             stale: AtomicBool::new(false),
             notified: AtomicU64::new(0),
@@ -108,11 +117,27 @@ impl Listened {
     /// notification `subscriber` drops from its copy before it counts as
     /// received.
     #[must_use]
-    pub fn with_subscriber(channel: &'static str, subscriber: Arc<dyn Subscriber>) -> Self {
+    pub fn with_subscriber(
+        channel: &'static str,
+        domain: Domain,
+        subscriber: Arc<dyn Subscriber>,
+    ) -> Self {
         Self {
             subscriber: Some(subscriber),
-            ..Self::new(channel)
+            ..Self::new(channel, domain)
         }
+    }
+
+    /// The channel this copy listens on.
+    #[must_use]
+    pub const fn channel(&self) -> &'static str {
+        self.channel
+    }
+
+    /// The domain whose database notifies the channel.
+    #[must_use]
+    pub const fn domain(&self) -> Domain {
+        self.domain
     }
 
     /// Lets the subscriber drop what `payload` names.
@@ -129,11 +154,31 @@ impl Listened {
         }
     }
 
-    /// Listen on the channel on this replica's behalf, on a connection of
-    /// its own made with `connect`, in a detached task that ends with the
-    /// runtime, connecting again whenever the connection is lost.
-    pub fn spawn_listener(self: &Arc<Self>, connect: PgConnectOptions) {
-        tokio::spawn(listen(Arc::clone(self), connect));
+    /// The session listens again: drop everything and mark the copy stale,
+    /// so the notifications missed while it was down are made up, then
+    /// trust the copy until the next notification.
+    async fn connected(&self) {
+        self.drop_all().await;
+        self.mark_stale();
+        self.listening.store(true, Ordering::Release);
+    }
+
+    /// A notification of `payload` arrived on the channel.
+    async fn heard(&self, payload: &str) {
+        self.drop_notified(payload).await;
+        self.mark_stale();
+        self.counts
+            .last_notified_ms
+            .store(jiff::Timestamp::now().as_millisecond(), Ordering::Relaxed);
+        self.notified.fetch_add(1, Ordering::AcqRel);
+        self.wake.notify_waiters();
+    }
+
+    /// The session was lost: every request reads until it listens again.
+    async fn lost(&self) {
+        self.listening.store(false, Ordering::Release);
+        self.counts.losses.fetch_add(1, Ordering::Relaxed);
+        self.drop_all().await;
     }
 
     /// Whether a notification is pending or the listener is down, so the next
@@ -221,57 +266,153 @@ impl Listened {
     }
 }
 
-/// The listener loop: connect, listen, mark the copy stale so the reads
-/// missed while disconnected are made up, then mark it stale on every
-/// notification; on any failure, fall back to reading on every request and
-/// connect again.
+/// Every listened channel of this replica, grouped by the database whose
+/// `LISTEN` session carries it: one session per distinct
+/// [`DbConfig::listen_dsn`], however many channels it carries.
+///
+/// A notification is delivered by the database it was raised in
+/// (<https://www.postgresql.org/docs/18/sql-notify.html>), so one session per
+/// database hears every channel of that database. No openEHR spec governs the
+/// process model: our own design (#5845).
+pub struct Listeners {
+    /// One entry per session, in the order its first channel was given.
+    sessions: Vec<Session>,
+}
+
+/// One `LISTEN` session and the copies whose channels it carries.
+struct Session {
+    /// The connect options of the session; they carry the credential, so
+    /// they are never rendered.
+    options: PgConnectOptions,
+    /// The copies it carries, each on its own channel.
+    listened: Vec<Arc<Listened>>,
+}
+
+impl fmt::Debug for Listeners {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let channels: Vec<Vec<&str>> = self
+            .sessions
+            .iter()
+            .map(|session| session.listened.iter().map(|l| l.channel).collect())
+            .collect();
+        f.debug_struct("Listeners")
+            .field("sessions", &channels)
+            .finish()
+    }
+}
+
+impl Listeners {
+    /// The sessions that carry `listened` under `settings`: the copies whose
+    /// domains listen on one DSN share one session.
+    ///
+    /// # Errors
+    /// [`DbError::Sqlx`] when a listen DSN does not parse as a `PostgreSQL`
+    /// URL.
+    pub fn new(settings: &DbConfig, listened: &[Arc<Listened>]) -> Result<Self, DbError> {
+        let mut keyed: Vec<(&str, Session)> = Vec::new();
+        for copy in listened {
+            let dsn = settings.listen_dsn(copy.domain);
+            if let Some((_, session)) = keyed.iter_mut().find(|(key, _)| *key == dsn) {
+                session.listened.push(Arc::clone(copy));
+            } else {
+                let options = crate::db::domain::listen_options(settings, copy.domain)?;
+                keyed.push((
+                    dsn,
+                    Session {
+                        options,
+                        listened: vec![Arc::clone(copy)],
+                    },
+                ));
+            }
+        }
+        Ok(Self {
+            sessions: keyed.into_iter().map(|(_, session)| session).collect(),
+        })
+    }
+
+    /// One session on `options` carrying every channel of `listened`, for a
+    /// caller that holds connect options and no configuration.
+    #[must_use]
+    pub fn on(options: PgConnectOptions, listened: &[Arc<Listened>]) -> Self {
+        Self {
+            sessions: vec![Session {
+                options,
+                listened: listened.to_vec(),
+            }],
+        }
+    }
+
+    /// The `LISTEN` sessions these copies take, one connection each.
+    #[must_use]
+    pub fn sessions(&self) -> usize {
+        self.sessions.len()
+    }
+
+    /// Listen on every channel on this replica's behalf, one detached task
+    /// per session that ends with the runtime and connects again whenever its
+    /// connection is lost.
+    pub fn spawn(self) {
+        for session in self.sessions {
+            tokio::spawn(listen(session));
+        }
+    }
+}
+
+/// The loop of one session: connect, listen on every channel it carries,
+/// mark each copy stale so the reads missed while disconnected are made up,
+/// then mark the copy a notification names stale; on any failure, fall back
+/// to reading on every request and connect again.
 #[expect(
     clippy::infinite_loop,
     reason = "a detached task that lives as long as the runtime"
 )]
-async fn listen(state: Arc<Listened>, options: PgConnectOptions) {
-    let channel = state.channel;
+async fn listen(session: Session) {
+    let mut channels: Vec<&'static str> = session.listened.iter().map(|l| l.channel).collect();
+    channels.sort_unstable();
+    channels.dedup();
     loop {
-        match connect(channel, &options).await {
+        match connect(&channels, &session.options).await {
             Ok(mut listener) => {
-                state.drop_all().await;
-                state.mark_stale();
-                state.listening.store(true, Ordering::Release);
+                for copy in &session.listened {
+                    copy.connected().await;
+                }
                 loop {
                     match listener.try_recv().await {
                         Ok(Some(notification)) => {
-                            state.drop_notified(notification.payload()).await;
-                            state.mark_stale();
-                            state
-                                .counts
-                                .last_notified_ms
-                                .store(jiff::Timestamp::now().as_millisecond(), Ordering::Relaxed);
-                            state.notified.fetch_add(1, Ordering::AcqRel);
-                            state.wake.notify_waiters();
+                            let named = session
+                                .listened
+                                .iter()
+                                .filter(|copy| copy.channel == notification.channel());
+                            for copy in named {
+                                copy.heard(notification.payload()).await;
+                            }
                         }
                         Ok(None) => break,
                         Err(error) => {
-                            tracing::warn!(channel, %error, "the policy listener failed");
+                            tracing::warn!(?channels, %error, "the policy listener failed");
                             break;
                         }
                     }
                 }
-                state.listening.store(false, Ordering::Release);
-                state.counts.losses.fetch_add(1, Ordering::Relaxed);
-                state.drop_all().await;
+                for copy in &session.listened {
+                    copy.lost().await;
+                }
             }
             Err(error) => {
-                tracing::warn!(channel, %error, "the policy listener could not connect");
+                tracing::warn!(?channels, %error, "the policy listener could not connect");
             }
         }
         tokio::time::sleep(RECONNECT).await;
     }
 }
 
-/// A listener on `channel`, on one connection made with `options` and named
-/// [`SESSION_NAME`] that no pool shares, the way `PgListener::connect` makes
-/// it from a URL.
-async fn connect(channel: &str, options: &PgConnectOptions) -> Result<PgListener, sqlx::Error> {
+/// A listener on every one of `channels`, on one connection made with
+/// `options` and named [`SESSION_NAME`] that no pool shares, the way
+/// `PgListener::connect` makes it from a URL.
+async fn connect(
+    channels: &[&'static str],
+    options: &PgConnectOptions,
+) -> Result<PgListener, sqlx::Error> {
     let session = PgPoolOptions::new()
         .max_connections(1)
         .min_connections(0)
@@ -281,6 +422,6 @@ async fn connect(channel: &str, options: &PgConnectOptions) -> Result<PgListener
         .await?;
     let mut listener = PgListener::connect_with(&session).await?;
     listener.ignore_pool_close_event(true);
-    listener.listen(channel).await?;
+    listener.listen_all(channels.iter().copied()).await?;
     Ok(listener)
 }

@@ -35,6 +35,11 @@ It runs the care-relationship and representation assertions again under the
 default `pixm` subject index. It runs in the required `deploy-probe` job as
 one family of the default run, with its own stack of two instances and
 Keycloak on fresh volumes, which it takes down before the next family (#5642).
+The same default run, every family the required job runs, also runs from
+`deploy-probe-scheduled.yml`: daily and on a dispatch against the images built
+from the tree it checks out, and after each completed Containers run on main
+against the server and postgres images that run published, each pinned by its
+digest, never the mutable `:main` tag (#5673). It uploads `compose.json`.
 A failed call prints the lines both instances logged for its request id, and
 the instances log `ferrohealth_smart` at `debug`, so a `401` shows the reason
 its body leaves out.

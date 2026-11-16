@@ -19,6 +19,7 @@ use axum::Router;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::grants::operation::{GrantCeiling, Operation};
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
+use ferroehr::policy_register::listen::Listeners;
 use ferroehr::service::FerroEhrService;
 use ferrohealth_smart::profile::Preset;
 use http::{StatusCode, header};
@@ -63,7 +64,7 @@ async fn replica(
     let svc = Arc::new(svc);
     if listen {
         let listened = svc.grants().listened();
-        listened.spawn_listener(listen_on);
+        Listeners::on(listen_on, &[Arc::clone(listened)]).spawn();
         let deadline = std::time::Instant::now() + Duration::from_secs(10);
         while !listened.is_listening() {
             assert!(

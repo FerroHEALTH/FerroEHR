@@ -53,7 +53,7 @@ pub async fn run(
     config.validate()?;
     let signer =
         Arc::new(Signer::from_config(&config.record.signing).context("initialising the keyring")?);
-    let pools = crate::connect_pool(&config).await?;
+    let pools = crate::pools::connect(&config, crate::pools::Opening::OneShot).await?;
     let seals = crate::access_log::build(&config, pools.audit.clone(), signer)?.system_seals();
     let outcome = match cmd {
         AuditChainCmd::Seal => match seals.seal().await? {

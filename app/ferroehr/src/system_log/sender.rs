@@ -332,10 +332,11 @@ impl AuditHandle {
     /// reservations of writes whose process stopped between their commit and
     /// their release.
     pub fn reconcile_reservations(&mut self, pools: &crate::db::domain::DomainPools) {
-        use crate::db::domain::Domain;
+        // NOTE: our own design (#5845), the domain pools inside the connection budget serve the
+        // reconciler's few statements, so it opens no pool of its own.
         let domains = reconciler::Domains {
-            clinical: self.background.pool_over(&pools.clinical, Domain::Clinical),
-            party: self.background.pool_over(&pools.party, Domain::Party),
+            clinical: pools.clinical.clone(),
+            party: pools.party.clone(),
         };
         self.workers.push(
             self.background
@@ -484,7 +485,7 @@ pub async fn start(
 ) -> Result<(AuditSender, AuditHandle), AuditError> {
     let policy = RenderPolicy::of(&config, &CategoryMapConfig::default());
     let background = Background::start()?;
-    let behind = background.pool_over(&pool, crate::db::domain::Domain::Audit);
+    let behind = background.pool_over(&pool);
     let store = AuditStore::new(pool)
         .with_fhir_feed(config.fhir_feed.is_some())
         .with_syslog(config.syslog.is_some())

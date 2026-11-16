@@ -45,7 +45,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use sqlx::migrate::Migrator;
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use sqlx::postgres::PgConnectOptions;
 use sqlx::{Connection, PgConnection, PgPool};
 
 use crate::config::deployment::DeploymentProfile;
@@ -125,8 +125,8 @@ pub struct DbConfig {
     /// DSN the policy listeners hold their `LISTEN` sessions on, for every
     /// domain on [`Self::url`]; unset reuses [`Self::url`].
     ///
-    /// Each listener holds one connection of its own, apart from the pools, for
-    /// as long as it listens. `PgBouncer` in transaction mode ends a `LISTEN`
+    /// The listeners of one database share one connection of their own, apart
+    /// from the pools, for as long as they listen. `PgBouncer` in transaction mode ends a `LISTEN`
     /// when the transaction ends, so a deployment whose pools reach
     /// `PostgreSQL` through such a pooler points this key at the primary
     /// directly or at a session-mode pooler. No openEHR spec governs the
@@ -135,18 +135,27 @@ pub struct DbConfig {
     /// Path to a file holding [`Self::listen_url`], read at boot in place of
     /// it. Setting both is a boot error.
     pub listen_url_file: Option<PathBuf>,
+    /// The most connections this instance opens to `PostgreSQL` while it
+    /// serves: its three pools, the audit runtime's
+    /// [`pool::AUDIT_RUNTIME_POOL`] and its listener sessions together.
+    ///
+    /// The pools are sized inside it ([`Self::pool_size`]), and a
+    /// [`Self::max_connections`] that does not fit is refused at load. The
+    /// default of 40 lets two instances and their tools share `PostgreSQL`'s
+    /// default `max_connections` of 100, less its three reserved slots. No
+    /// openEHR spec governs connection handling: our own design (#5845).
+    pub connection_budget: u32,
     /// Upper bound of each domain's connection pool (clinical, party and
     /// audit each have one). Unset, it follows the instance: four per core
-    /// the process may run on, at least 10 and at most 30
-    /// ([`pool::POOL_PER_CORE`], [`pool::POOL_FLOOR`], [`pool::POOL_CEILING`]), and the server
-    /// bounds it by `server.max_concurrent_requests`, since a request holds at
-    /// most one connection of a pool.
+    /// the process may run on, at least 10 ([`pool::POOL_PER_CORE`],
+    /// [`pool::POOL_FLOOR`]), within the share of
+    /// [`Self::connection_budget`] each pool gets, and the server bounds it by
+    /// `server.max_concurrent_requests`, since a request holds at most one
+    /// connection of a pool.
     ///
     /// The need is the arrival rate times how long a request holds a
-    /// connection (`db_pool_hold_duration`) times a burst factor; the budget
-    /// is `PostgreSQL`'s `max_connections`, less its reserved slots and your
-    /// tools, over the instances, each holding three pools and its listeners.
-    /// No openEHR spec governs connection handling: our own design (#5774).
+    /// connection (`db_pool_hold_duration`) times a burst factor. No openEHR
+    /// spec governs connection handling: our own design (#5774).
     pub max_connections: Option<u32>,
     /// Connections each pool keeps open while idle. The server opens them
     /// before it answers ready, so an instance started under load serves its
@@ -200,8 +209,11 @@ impl Default for DbConfig {
             migrate_url_file: None,
             listen_url: None,
             listen_url_file: None,
-            // Unset: sized from the instance's cores, and one connection per
-            // core opened before the server answers ready (#5774).
+            // Two instances, 76 connections, inside PostgreSQL's default of
+            // 100 less its three reserved slots, with 21 left for tools (#5845).
+            connection_budget: 40,
+            // Unset: sized from the instance's cores within the budget, and one
+            // connection per core opened before the server answers ready (#5774).
             max_connections: None,
             min_connections: None,
             acquire_timeout: units::Duration::from_secs(30),
@@ -459,43 +471,6 @@ pub enum SchemaMismatch {
 
 // ── Pool ─────────────────────────────────────────────────────────────────────
 
-/// The pool options for one domain: sizing + acquire timeout from settings,
-/// the domain's session setup on every physical connection, and no per-checkout
-/// liveness ping. Connection retirement stays on the `sqlx` defaults (an idle
-/// reap plus a bounded lifetime — infinite-lived connections are discouraged by
-/// the driver, so we do not disable them).
-fn pool_options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
-    // Rendered once here rather than per connection. The value is an integer
-    // from our own configuration, never client input, and it is bound as a
-    // literal because PostgreSQL's `SET` takes no parameter placeholder.
-    let statement_timeout = (!settings.statement_timeout.is_zero()).then(|| {
-        format!(
-            "SET statement_timeout = {}",
-            settings.statement_timeout.as_millis()
-        )
-    });
-    let search_path = domain.search_path();
-    PgPoolOptions::new()
-        .max_connections(settings.pool_size())
-        .min_connections(settings.pool_kept())
-        .acquire_timeout(settings.acquire_timeout.get())
-        // No liveness ping per checkout: `test_before_acquire` (default true)
-        // pings each connection before handing it out, one round trip per
-        // acquisition (https://docs.rs/sqlx/0.9.0/sqlx/pool/struct.PoolOptions.html#method.test_before_acquire).
-        // A connection that broke while idle therefore fails its first real
-        // statement, and that statement's error reaches the caller: sqlx does
-        // not retry it.
-        .test_before_acquire(false)
-        .after_connect(move |conn, _meta| {
-            // Cloned per call: `after_connect` takes an `Fn`, so the captured
-            // value cannot be moved out of it.
-            let statement_timeout = statement_timeout.clone();
-            Box::pin(async move {
-                session::open_session(conn, search_path, statement_timeout.as_deref()).await
-            })
-        })
-}
-
 /// Create one domain's connection pool.
 ///
 /// Every physical connection is initialized with that domain's search path
@@ -514,7 +489,7 @@ fn pool_options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
 /// authentication, unknown database), or the session-setup statements fail on
 /// that first connection.
 pub async fn connect_domain(settings: &DbConfig, domain: Domain) -> Result<PgPool, DbError> {
-    let pool = pool_options(settings, domain)
+    let pool = pool::options(settings, domain)
         .connect(settings.dsn(domain))
         .await?;
     Ok(pool)
@@ -556,7 +531,7 @@ pub async fn connect_domains(settings: &DbConfig) -> Result<DomainPools, DbError
 pub fn domain_pool_from(pool: &PgPool, domain: Domain) -> PgPool {
     let defaults = DbConfig::default();
     let options = pool.connect_options();
-    pool_options(&defaults, domain)
+    pool::options(&defaults, domain)
         .min_connections(0)
         .connect_lazy_with(PgConnectOptions::clone(&options))
 }

@@ -25,6 +25,10 @@ impl FerroEhrService {
                 Arc::clone(self.policy_registers().listened()),
             ),
             ("access_policy", Arc::clone(self.access_policy().listened())),
+            (
+                "registered_templates",
+                Arc::clone(self.registered_templates().listened()),
+            ),
         ]
     }
 

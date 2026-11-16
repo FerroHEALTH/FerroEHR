@@ -32,7 +32,7 @@ use crate::storage::error::StorageError;
 
 /// The notification channel a stored message is announced on, which wakes
 /// the appliers.
-pub(super) const CHANNEL: &str = "ferroehr_pmir_feed";
+pub(crate) const CHANNEL: &str = "ferroehr_pmir_feed";
 
 /// A message received and stored.
 #[derive(Debug)]

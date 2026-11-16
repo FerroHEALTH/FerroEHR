@@ -20,6 +20,7 @@
 //! admit is never honoured. No openEHR spec governs operational policy: our
 //! own design.
 
+use crate::db::domain::Domain;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::future::Future;
@@ -173,7 +174,7 @@ impl LiveGrants {
         let care = Arc::new(CareCopy::new());
         let dropping: Arc<dyn Subscriber> = Arc::<CareCopy>::clone(&care);
         Self {
-            listened: Arc::new(Listened::with_subscriber(CHANNEL, dropping)),
+            listened: Arc::new(Listened::with_subscriber(CHANNEL, Domain::Party, dropping)),
             care,
             pool,
             namespace: RwLock::new(Arc::from(
@@ -241,7 +242,7 @@ impl LiveGrants {
     }
 
     /// The listener that says when the copy must be read again;
-    /// [`Listened::spawn_listener`] starts it.
+    /// [`crate::policy_register::listen::Listeners::spawn`] starts it.
     #[must_use]
     pub fn listened(&self) -> &Arc<Listened> {
         &self.listened
