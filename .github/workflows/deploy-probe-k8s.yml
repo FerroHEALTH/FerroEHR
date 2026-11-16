@@ -113,7 +113,11 @@ jobs:
           kind load docker-image ferroehr:deploy-probe --name "$KIND_CLUSTER"
           kubectl cluster-info
       # A pod reaches the host database through the gateway of the kind
-      # network, where compose publishes it on 0.0.0.0.
+      # network, where compose publishes it on 0.0.0.0. A kind node on the
+      # runner cannot start the user-namespaced pods `hostUsers: false` asks
+      # for (runc cannot mount sysfs in the pod's user namespace), so the run
+      # layers `hostUsers: true` through the harness's PROBE_K8S_VALUES, which
+      # the record names; the posture probes are not in this family.
       - name: Probe the EHR index on two replicas
         env:
           PROBE_K8S_IMAGE: ferroehr:deploy-probe
@@ -125,7 +129,9 @@ jobs:
           gateway="$(docker network inspect kind \
             | jq -r '[.[0].IPAM.Config[].Gateway | select(test("^[0-9.]+$"))][0] // empty')"
           [[ -n "$gateway" ]] || { echo "::error::the kind network has no IPv4 gateway"; exit 1; }
-          PROBE_K8S_DB_HOST="$gateway" bash scripts/deploy-probe-k8s.sh --ehr-index-only --keep-up
+          printf 'hostUsers: true\nferropix:\n  hostUsers: true\n' > "$RUNNER_TEMP/kind-values.yaml"
+          PROBE_K8S_DB_HOST="$gateway" PROBE_K8S_VALUES="$RUNNER_TEMP/kind-values.yaml" \
+            bash scripts/deploy-probe-k8s.sh --ehr-index-only --keep-up
       - name: Read every server pod's log
         if: always()
         run: |
