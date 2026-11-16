@@ -18,7 +18,7 @@ pub enum FlatError {
 
     /// An `ARCHETYPE_SLOT` of the template cannot be evaluated (AOM 1.4
     /// `ARCHETYPE_SLOT`), so no filler could be judged against it.
-    #[error("the archetype slot under {path} cannot be evaluated: {defect}")]
+    #[error("the archetype slot under {path} cannot be evaluated")]
     UnevaluableSlot {
         /// The archetype path of the attribute the slot stands under.
         path: String,
