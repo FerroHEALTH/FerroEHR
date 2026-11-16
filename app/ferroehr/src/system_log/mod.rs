@@ -238,11 +238,13 @@ impl FerroEhrService {
             return Ok(());
         };
         // NOTE: boxed, so every service future that records carries a pointer, not the write.
-        Box::pin(sender.record(events)).await.map_err(|unwritten| {
-            ServiceError::Unrecorded(
-                Refusal::new((), "audit trail unavailable").with_source(unwritten),
-            )
-        })
+        Box::pin(sender.record(events, None))
+            .await
+            .map_err(|unwritten| {
+                ServiceError::Unrecorded(
+                    Refusal::new((), "audit trail unavailable").with_source(unwritten),
+                )
+            })
     }
 
     /// Record `event` as one act on one object of the current request: one

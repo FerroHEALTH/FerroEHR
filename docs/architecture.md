@@ -414,8 +414,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   no fail mode. The intake is append-only: the runtime role may insert and
   read, the tables refuse every update, delete and truncate, and only the
   two `SECURITY DEFINER` moves remove a row, each by chaining it. The
-  chainer (`system_log::sender::chainer`), woken by each request and polling
-  every 50 ms, runs on every replica: a round takes the access log's head
+  chainer (`system_log::sender::chainer`) runs on every replica on the audit
+  runtime: a request's write wakes it and it runs one round 200 ms later for
+  what that window wrote, touching only the chains written since the last
+  round, and it polls both chains every 2 seconds for the rows a stopped
+  replica left. A round takes the access log's head
   with `audit.access_log_chain_take()` (`FOR UPDATE SKIP LOCKED`, so one
   replica chains at a time and the others skip), reads up to 512 intake
   digests, computes the links in Rust, and `audit.access_log_chain_move()`
@@ -424,8 +427,16 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   checkpoint and the commit end the round. The insert trigger derives
   nothing: it checks each link against the head, and the verifier derives
   every column again and compares (0039). `audit.audit_event_chain_move()`
-  moves the system intake into the system chain the same way. Our own
-  design; one chain carries about 15 000 entries per second on the
+  moves the system intake into the system chain the same way. A
+  request-scoped write commits through one choke point,
+  `FerroEhrService::commit_recorded` (`system_log::reservation`, #5762): its
+  records go into the intake held under a reservation id (`reserved_by`,
+  which the moves skip), the id into the write's own domain
+  (`clinical/0048`, `party/0050` `audit_reservation`) in the write's
+  transaction, and the REST layer releases them once the response is built;
+  `system_log::sender::reconciler` releases or discards what a stopped
+  replica left, and `scripts/checks/request-commits.sh` guards the choke
+  point. Our own design; one chain carries about 15 000 entries per second on the
   reference host (#5745), and partitioned chains (one per EHR hash, a
   draft-model change) are the recorded next step past that. The entry keeps in its `other_details` the facts its
   projections carry that the draft's core does not hold, FerroEHR's access

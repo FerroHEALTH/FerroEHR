@@ -110,6 +110,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "access_settings",
             "adl2_artefact",
             "archetype_store",
+            "audit_reservation",
             "blob_ref",
             "category_map",
             "commit_audit",
@@ -140,6 +141,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(
         tables("party").await,
         [
+            "audit_reservation",
             "binding_caller_fact",
             "binding_caller_fact_party",
             "binding_capability",

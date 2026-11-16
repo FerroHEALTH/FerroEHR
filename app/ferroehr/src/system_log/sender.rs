@@ -201,35 +201,6 @@ impl AuditSender {
         &self.inner.store
     }
 
-    /// Write `events`, the records of one act, into the local store in one
-    /// transaction; they are durable when this returns, and the chainer links
-    /// them after.
-    ///
-    /// Every record is stamped with the digest of the category map in force,
-    /// with the emergency mark when a purpose of use it names is one of
-    /// `[audit] emergency_purpose_codes`, and with the subject of its EHR.
-    ///
-    /// # Errors
-    /// The errors of [`AuditStore::write`]: the caller refuses the access it
-    /// was to report (`503`), since no access is reported without its
-    /// record.
-    pub async fn record(&self, events: Vec<AuditEvent>) -> Result<(), AuditError> {
-        self.write(events, None).await
-    }
-
-    /// [`Self::record`], every record held under `reservation` until the
-    /// write it records is confirmed (#5762).
-    ///
-    /// # Errors
-    /// As [`Self::record`].
-    pub async fn record_held(
-        &self,
-        events: Vec<AuditEvent>,
-        reservation: uuid::Uuid,
-    ) -> Result<(), AuditError> {
-        self.write(events, Some(reservation)).await
-    }
-
     /// Release the records held under `reservations`, whose writes
     /// committed, to the chainer, and wake it (#5762).
     ///
@@ -242,8 +213,20 @@ impl AuditSender {
         Ok(released)
     }
 
-    /// The work of [`Self::record`] and [`Self::record_held`].
-    async fn write(
+    /// Write `events`, the records of one act, into the local store in one
+    /// transaction; they are durable when this returns, and the chainer links
+    /// them after, unless `reservation` holds them until the write they
+    /// record is released ([`Self::release`], #5762).
+    ///
+    /// Every record is stamped with the digest of the category map in force,
+    /// with the emergency mark when a purpose of use it names is one of
+    /// `[audit] emergency_purpose_codes`, and with the subject of its EHR.
+    ///
+    /// # Errors
+    /// The errors of [`AuditStore::write`]: the caller refuses the access it
+    /// was to report (`503`), since no access is reported without its
+    /// record.
+    pub async fn record(
         &self,
         events: Vec<AuditEvent>,
         reservation: Option<uuid::Uuid>,

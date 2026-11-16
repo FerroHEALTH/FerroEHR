@@ -234,7 +234,7 @@ async fn records_of_a_write_that_never_committed_are_discarded() {
     event.ehr_id = Some(Uuid::now_v7().to_string());
     "clinician-7".clone_into(&mut event.user_id);
     sender
-        .record_held(vec![event, system_record()], reservation)
+        .record(vec![event, system_record()], Some(reservation))
         .await
         .expect("the held write");
     let (entries, records) = held(&pool, reservation).await;

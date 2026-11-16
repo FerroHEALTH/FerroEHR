@@ -85,7 +85,7 @@ impl FerroEhrService {
             }
         };
         let reservation = Uuid::now_v7();
-        if let Err(unwritten) = Box::pin(sender.record_held(events, reservation)).await {
+        if let Err(unwritten) = Box::pin(sender.record(events, Some(reservation))).await {
             unbuild();
             return Err(ServiceError::Unrecorded(
                 Refusal::new((), "audit trail unavailable").with_source(unwritten),

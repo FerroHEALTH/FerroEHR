@@ -82,7 +82,7 @@ async fn tls_octet_counted_frame_round_trips() {
     let mut listener = SyslogTlsListener::bind(0).await.expect("listener");
     let (sender, handle) = audited(&db.pool(), &listener, 1000).await;
     sender
-        .record(vec![event(), event()])
+        .record(vec![event(), event()], None)
         .await
         .expect("the records are written");
     for _ in 0..2 {
@@ -104,7 +104,7 @@ async fn a_record_whose_send_fails_is_delivered_later() {
     let mut listener = SyslogTlsListener::bind(1).await.expect("listener");
     let (sender, handle) = audited(&db.pool(), &listener, 500).await;
     sender
-        .record(vec![event()])
+        .record(vec![event()], None)
         .await
         .expect("the record is written");
     let received = listener
@@ -141,7 +141,7 @@ async fn the_route_closes_its_connection_with_close_notify_when_it_stops() {
     let mut listener = SyslogTlsListener::bind(0).await.expect("listener");
     let (sender, handle) = audited(&db.pool(), &listener, 1000).await;
     sender
-        .record(vec![event()])
+        .record(vec![event()], None)
         .await
         .expect("the record is written");
     assert!(

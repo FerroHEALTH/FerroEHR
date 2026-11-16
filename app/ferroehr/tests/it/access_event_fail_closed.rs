@@ -54,7 +54,7 @@ async fn rejecting_sender() -> (ferroehr::system_log::sender::AuditSender, Audit
         EventOutcome::Success,
     );
     sender
-        .record(vec![probe])
+        .record(vec![probe], None)
         .await
         .expect_err("a record the store cannot take is an error, never a drop");
     (sender, handle)
