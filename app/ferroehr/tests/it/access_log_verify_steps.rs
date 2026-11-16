@@ -293,3 +293,26 @@ async fn the_system_chain_walks_in_bounded_steps() {
     let lag = audit.chain_lag(AuditChain::System).await.expect("the lag");
     assert_eq!(lag.entries, 4);
 }
+
+/// The scheduled check walks a backlog of many steps to the head, pausing
+/// between them and adapting their size to their duration (#5804).
+#[tokio::test]
+async fn the_scheduled_check_paces_its_steps_to_the_head() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let audit = AuditStore::new(pool.clone());
+    let log = AccessLogStore::new(pool.clone());
+    append(&log, 1..=40).await;
+
+    let check = ChainCheck::new(None)
+        .with_first_step(ferroehr::system_log::store::chain_walk::StepPace::starting_at(3));
+    assert!(matches!(
+        check.run_scope(&audit, VerifyScope::SinceCheckpoint).await,
+        ChainCheckState::Intact { .. }
+    ));
+    assert_eq!(cursor(&pool).await, 40);
+    assert_eq!(
+        check.lag(AuditChain::AccessLog).map(|lag| lag.entries),
+        Some(0)
+    );
+}

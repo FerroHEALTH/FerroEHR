@@ -1138,11 +1138,13 @@ Four controls sit on top of it, and they are separate on purpose:
   it off). Each run verifies the records written since the newest link an
   earlier run found intact, and the chain head, so its cost follows the
   records written since rather than the size of the trail. It walks each
-  chain from its own cursor to the head it started with, at most 20 000
-  records per statement (`audit.verify_audit_chain_step()` and
-  `audit.verify_access_log_chain_step()`), and each intact step moves the
-  cursor, so a backlog of any size is verified in one run and no statement
-  reaches the `[database] statement_timeout`. How far a cursor is behind is
+  chain from its own cursor to the head it started with, one statement per
+  step (`audit.verify_audit_chain_step()` and
+  `audit.verify_access_log_chain_step()`), each sized to take about half a
+  second and followed by a pause as long, and each intact step moves the
+  cursor, so a backlog of any size is verified in one run, no statement nears
+  the `[database] statement_timeout`, and a catch-up leaves the database to
+  the requests. How far a cursor is behind is
   the `audit_chain_verification_lag` and `audit_chain_unverified_age_seconds`
   metrics; once the oldest unverified record has waited longer than
   `[audit.store] max_verify_lag` (default four hours), the `audit_chain`

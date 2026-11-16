@@ -15,8 +15,9 @@
 //! and after any run that found damage, so damage to an older record stays
 //! reported until a full pass finds the trail intact again.
 //!
-//! Each chain is walked in bounded steps, each of which moves its cursor
-//! ([`AuditStore::chain_step`]), so a run verifies a backlog of any length
+//! Each chain is walked in steps sized to a time budget, each of which moves
+//! its cursor ([`AuditStore::chain_step_paced`]), with a pause as long as the
+//! step between two steps (#5804), so a run verifies a backlog of any length
 //! to the head it started with, and a backlog reads as a lag: the
 //! `audit_chain_verification_lag` and `audit_chain_unverified_age` metrics
 //! by chain, and an `audit_chain` indicator that reads `DEGRADED` once the
@@ -37,7 +38,7 @@ use jiff::Timestamp;
 
 use crate::system_log::AuditError;
 use crate::system_log::store::AuditStore;
-use crate::system_log::store::chain_walk::{VERIFY_STEP_RECORDS, VerificationLag};
+use crate::system_log::store::chain_walk::{StepPace, VerificationLag};
 use crate::system_log::store::chains::{AuditChain, AuditChainFinding, VerifyScope};
 use crate::telemetry::access_path;
 
@@ -85,6 +86,7 @@ pub struct ChainCheck {
     state: Arc<RwLock<ChainCheckState>>,
     lags: Arc<RwLock<BTreeMap<AuditChain, VerificationLag>>>,
     max_lag: Option<Duration>,
+    first_step: StepPace,
 }
 
 impl ChainCheck {
@@ -96,6 +98,13 @@ impl ChainCheck {
             max_lag,
             ..Self::default()
         }
+    }
+
+    /// This check with each walk's first step verifying `pace`'s records.
+    #[must_use]
+    pub fn with_first_step(mut self, pace: StepPace) -> Self {
+        self.first_step = pace;
+        self
     }
 
     /// `chain`'s lag as the most recent step measured it, `None` before the
@@ -202,9 +211,16 @@ impl ChainCheck {
         let mut findings = Vec::new();
         for chain in AuditChain::ALL {
             let mut walk = store.chain_walk(chain, scope).await?;
+            let mut pace = self.first_step;
             while !walk.done() {
-                findings.extend(store.chain_step(&mut walk, VERIFY_STEP_RECORDS).await?);
+                let (found, took) = store.chain_step_paced(&mut walk, &mut pace).await?;
+                findings.extend(found);
                 self.refresh_lag(store, chain).await?;
+                // NOTE: our own design (#5804), a walk behind its head leaves the database
+                // as long between steps as a step took, so it takes at most half a core.
+                if !walk.done() {
+                    tokio::time::sleep(took).await;
+                }
             }
         }
         Ok(findings)

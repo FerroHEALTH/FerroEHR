@@ -20,7 +20,7 @@ use uuid::Uuid;
 
 use crate::system_log::AuditError;
 use crate::system_log::store::AuditStore;
-use crate::system_log::store::chain_walk::VERIFY_STEP_RECORDS;
+use crate::system_log::store::chain_walk::StepPace;
 
 /// One of the two hash chains of the audit store.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -87,8 +87,8 @@ impl AuditStore {
     /// [`VerifyScope::SinceCheckpoint`] recomputes only the records written
     /// after the newest link an earlier run found intact, so its cost follows
     /// the records written since rather than the size of the chain. The
-    /// chain is walked in steps of at most [`VERIFY_STEP_RECORDS`] records,
-    /// each its own statement that moves the cursor ([`Self::chain_step`]),
+    /// chain is walked in steps sized to a time budget ([`StepPace`]), each its
+    /// own statement that moves the cursor ([`Self::chain_step`]),
     /// so a backlog of any length is verified to the head the run started
     /// with; a change
     /// to a record before that link needs [`VerifyScope::Full`], the pass
@@ -110,9 +110,10 @@ impl AuditStore {
         scope: VerifyScope,
     ) -> Result<Vec<AuditChainFinding>, AuditError> {
         let mut walk = self.chain_walk(chain, scope).await?;
+        let mut pace = StepPace::default();
         let mut findings = Vec::new();
         while !walk.done() {
-            findings.extend(self.chain_step(&mut walk, VERIFY_STEP_RECORDS).await?);
+            findings.extend(self.chain_step_paced(&mut walk, &mut pace).await?.0);
         }
         Ok(findings)
     }
