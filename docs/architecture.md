@@ -838,8 +838,8 @@ which is what makes an optional stage safe to disable:
    readable rows. A class verdict holds an atom wherever it reads a fact of
    the class (`scope::Held`, `scope::EhrFact`), which the SQL reads from the
    EHR's `access_settings.facts`, so one evaluator decides a direct read and a
-   query alike, and an EHR of a class the condition does not hold contributes
-   no row. Care is read in one of three forms, chosen per query once the
+   query alike, and an EHR of a class the condition does not hold fails the
+   statement, which the service judges again (#5794). Care is read in one of three forms, chosen per query once the
    service knows which EHRs it reads (`Care`, #5699). A query pinned to the
    EHRs it names (an `ehr_id` scope, or `ehr_id/value` held equal in the
    `EHR` source's predicate or the `WHERE` clause) has each EHR's care
@@ -872,7 +872,14 @@ which is what makes an optional stage safe to disable:
    object, the EHR id compared with a constant, and one uncorrelated check,
    which PostgreSQL runs once, that the revision of the EHR's settings row
    and subject in force is the one the verdict was judged on, so a copy older
-   than the store admits no row. Whether the caller reads that EHR's
+   than the store answers no row: the check fails the statement (SQLSTATE
+   `ZA001`, `clinical/0049_access_stale_copy.sql`), and so does a row of an
+   EHR whose settings class the condition does not hold (`ZA002`). The
+   service then drops the stale copy, judges the query again from a fresh
+   read and runs it once more; when the copy has not caught up within 100 ms
+   it refuses with `503` and the problem type `access-refreshing`, so a
+   stale copy never answers fewer rows, a smaller count or a shorter page
+   (`service::query::stale`, #5794). Whether the caller reads that EHR's
    `EHR_ACCESS` objects is decided from the same copy, so no settings row is
    probed for it either. Every other query keeps the class condition
    and its probe of the settings row per object, once per row (#5782): a root
@@ -885,7 +892,8 @@ which is what makes an optional stage safe to disable:
    node row. A condition whose every known class, closed verdict and default
    admit every item, an administrator's, reduces exactly to "the EHR carries
    no settings row of a class the condition does not know", one uncorrelated
-   subquery PostgreSQL hashes once. Before it renders a verdict, the emitter
+   subquery PostgreSQL hashes once, which fails the statement for a row of
+   such an EHR as the full condition does. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the
    disjunction (a fact of the EHR, which may be unknown, is never folded). A
@@ -1190,6 +1198,20 @@ elements' names. A per-request read without a cache,
 which the program first named, would add a transaction to every request,
 which the performance gate's transactions-per-request measure refuses
 (#5459).
+
+**The login's binding** (#5771) is held the same way. `LiveBindings` keeps
+each login key's lookup of the side table (its parties, their states,
+markers, groups and represented subjects, under the date its states were
+judged on) and each bound `PERSON`'s name, read on a miss, listening on
+`ferroehr_party_binding`. Triggers of `party/0051` notify it with an empty
+payload on any change of a key row, a membership, a representation or a key
+space's state, which drops every lookup, and with a `PERSON`'s container on
+a write of its version, which drops its name. A request whose own commit
+changed the side table drops the copy before it answers, so a deprovisioned
+key is refused on that replica's next request and on another's once the
+notification arrives; while the listener is down every request reads the
+store. A request whose caller is held makes no party-store statement to
+resolve it. **Our own design.**
 
 **Caller facts** (#5511). Beside the grants, the side table holds what the
 access evaluator reads about a caller (migrations `party/0039`, `party/0042`;

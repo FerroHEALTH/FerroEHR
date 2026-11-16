@@ -290,6 +290,12 @@ pub enum ServiceError {
     /// or it rolled back; [`ServiceError::overloaded`].
     #[error(transparent)]
     Overloaded(Curated),
+    /// A `503` for a query judged on an access copy older than the store
+    /// that did not catch up within the wait the server allows: the answer
+    /// is withheld, never served short or empty (#5794);
+    /// [`ServiceError::access_refreshing`].
+    #[error(transparent)]
+    AccessRefreshing(Curated),
     /// The access record for a completed read or write could not be written
     /// durably, so the result is withheld: the wire's `503`, `Retry-After`
     /// set, the same answer the REST layer gives when its own request record

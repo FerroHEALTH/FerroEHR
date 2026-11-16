@@ -289,6 +289,7 @@ async fn reindex_heads(
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     crate::party_binding::policy_mark::mark_stored(tx, None).await?;
     for statement in [
         "DELETE FROM binding_identifier",
@@ -719,6 +720,7 @@ pub(crate) fn parsed(
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn erase(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     sqlx::query("DELETE FROM binding_identifier WHERE party_id = ANY($1)")
         .bind(vo_ids)
         .execute(&mut *tx)

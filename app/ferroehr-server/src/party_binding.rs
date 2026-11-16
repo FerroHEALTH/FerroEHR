@@ -243,6 +243,10 @@ pub async fn prepare(
         .grants()
         .listened()
         .spawn_listener(listen_options(config, Domain::Party)?);
+    service
+        .bindings()
+        .listened()
+        .spawn_listener(listen_options(config, Domain::Party)?);
     service.grants().log_agreements();
     service
         .grants()

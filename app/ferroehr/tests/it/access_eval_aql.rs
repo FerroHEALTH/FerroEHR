@@ -1116,11 +1116,12 @@ async fn a_shared_class_reads_each_ehrs_labels() {
     .await;
 }
 
-/// A query judged on classes read before a commit made a new one withholds
-/// every EHR of the new class, never admits it under what it held before;
-/// once the classes are read again the EHR is back (#5588).
+/// A query judged on classes read before a commit made a new one never
+/// answers an EHR of the new class under what it held before, nor leaves it
+/// out: the statement fails, the service reads the classes again and
+/// answers every EHR as the classes in force decide it (#5588, #5794).
 #[tokio::test]
-async fn an_ehr_of_a_class_the_condition_does_not_hold_is_withheld() {
+async fn an_ehr_of_a_class_the_condition_does_not_hold_is_judged_again() {
     let world = Box::pin(World::new()).await;
     let ask = Ask::professional(&world);
     let access = request_of(&ask);
@@ -1154,11 +1155,7 @@ async fn an_ehr_of_a_class_the_condition_does_not_hold_is_withheld() {
         .filter_map(|row| row[0].as_str())
         .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
         .collect();
-    assert_eq!(
-        served,
-        except(&world, &[1], &[]),
-        "the new class is withheld"
-    );
+    assert_eq!(served, world.every(), "the new class is read again");
     assert_reads(&world, &ask, &world.every(), "the classes read again").await;
 }
 
@@ -1402,11 +1399,12 @@ async fn a_query_pinned_to_one_ehr_is_decided_before_the_statement() {
 }
 
 /// A verdict judged on a copy of the EHR's settings older than the row in
-/// force admits no row: the statement checks the revision once, so a
-/// replica that has not yet heard of a change never serves what the change
-/// withholds (#5746).
+/// force never answers from that copy: the statement fails, the service
+/// reads the copy again and answers what the row in force admits; a store
+/// whose revision keeps moving past every copy is refused with `503` once
+/// the wait has passed, never answered with no rows (#5746, #5794).
 #[tokio::test]
-async fn a_pinned_verdict_judged_on_an_older_copy_admits_nothing() {
+async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
     let world = Box::pin(World::new()).await;
     world.settings(0, &settings("open", &[], &[])).await;
     let ask = Ask::professional(&world);
@@ -1414,25 +1412,31 @@ async fn a_pinned_verdict_judged_on_an_older_copy_admits_nothing() {
     let ehr_id = world.ehrs[0].0;
     let svc = &world.svc;
     let aql = pinned_to(COMPOSITIONS, ehr_id);
-    for (older, expected) in [(false, world.objects(0)), (true, Vec::new())] {
-        let outcome = Box::pin(with_request_access(Arc::clone(&access), async {
-            let condition = unresolved(&world, &access)
-                .await
-                .with_care(Care::Ehrs(Vec::new().into()));
-            let mut entry = svc.ehr_access_entry(ehr_id).await.expect("the copy reads");
-            if older {
-                entry.revision.settings = entry.revision.settings.map(|ordinal| ordinal - 1);
-            }
-            let request = AqlQueryRequest {
-                ehr_access: access.pin(&condition, ehr_id, &entry),
-                ..AqlQueryRequest::default()
-            };
-            assert!(request.ehr_access.pinned().is_some(), "the EHR is decided");
-            Box::pin(svc.execute_aql(&aql, None, &request))
-                .await
-                .expect("the query runs")
-        }))
-        .await;
+    let run = |older: bool| {
+        let access = Arc::clone(&access);
+        let aql = aql.clone();
+        let world = &world;
+        async move {
+            Box::pin(with_request_access(Arc::clone(&access), async {
+                let condition = unresolved(world, &access)
+                    .await
+                    .with_care(Care::Ehrs(Vec::new().into()));
+                let mut entry = svc.ehr_access_entry(ehr_id).await.expect("the copy reads");
+                if older {
+                    entry.revision.settings = entry.revision.settings.map(|ordinal| ordinal - 1);
+                }
+                let request = AqlQueryRequest {
+                    ehr_access: access.pin(&condition, ehr_id, &entry),
+                    ..AqlQueryRequest::default()
+                };
+                assert!(request.ehr_access.pinned().is_some(), "the EHR is decided");
+                Box::pin(svc.execute_aql(&aql, None, &request)).await
+            }))
+            .await
+        }
+    };
+    for older in [false, true] {
+        let outcome = run(older).await.expect("the query runs");
         let served: Vec<String> = outcome.result_set["rows"]
             .as_array()
             .cloned()
@@ -1441,8 +1445,34 @@ async fn a_pinned_verdict_judged_on_an_older_copy_admits_nothing() {
             .filter_map(|row| row[0].as_str())
             .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
             .collect();
-        assert_eq!(served, expected, "a copy older than the row: {older}");
+        assert_eq!(
+            served,
+            world.objects(0),
+            "a copy older than the row: {older}"
+        );
     }
+    // NOTE: our own design (#5794), a store that moves past every read of the copy is
+    // simulated by a revision check that always finds the copy older.
+    sqlx::query(
+        "CREATE OR REPLACE FUNCTION access_in_force(ehr uuid, judged text) RETURNS boolean \
+         LANGUAGE plpgsql STABLE AS $$ BEGIN \
+         RAISE EXCEPTION 'moved' USING ERRCODE = 'ZA001'; END $$",
+    )
+    .execute(&world.db.pool())
+    .await
+    .expect("the revision check is replaced");
+    let started = std::time::Instant::now();
+    let refused = run(true)
+        .await
+        .expect_err("a copy that never catches up is refused");
+    assert!(
+        matches!(refused, ferroehr::error::ServiceError::AccessRefreshing(_)),
+        "the refusal is the 503 of a refreshing access state: {refused:?}"
+    );
+    assert!(
+        started.elapsed() >= std::time::Duration::from_millis(100),
+        "the service asked again for the bounded wait first"
+    );
 }
 
 /// Break-glass: where the policy requires a care relationship, the
@@ -1605,7 +1635,8 @@ async fn an_archetype_scope_reads_the_root_of_the_trunk_head() {
 
 /// A caller every known class, an EHR held closed and an EHR with no
 /// settings admit in full reads every EHR of a known class, by every query
-/// shape, and still none of a class its condition does not hold; a caller
+/// shape, and an EHR of a class its condition does not hold once the
+/// classes are read again (#5794); a caller
 /// a class refuses keeps the full condition and reads without that class's
 /// EHR (#5782).
 #[tokio::test]
@@ -1663,8 +1694,8 @@ async fn a_condition_admitting_every_known_class_reads_as_the_full_one() {
     for aql in [COMPOSITIONS, UNLINKED] {
         assert_eq!(
             served_under(&world, &access, stale.clone(), aql).await,
-            except(&world, &[2], &[]),
-            "the administrator's stale condition withholds the new class: {aql}"
+            world.every(),
+            "the administrator's stale condition is judged again: {aql}"
         );
     }
     assert!(

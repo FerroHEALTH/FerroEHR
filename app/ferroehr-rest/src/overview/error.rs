@@ -226,6 +226,7 @@ impl From<ServiceError> for RestError {
         let kind = match &e {
             ServiceError::Restricted(_) => Some(Kind::ProcessingRestricted),
             ServiceError::Timeout(_) => Some(Kind::QueryTimeout),
+            ServiceError::AccessRefreshing(_) => Some(Kind::AccessRefreshing),
             _ => None,
         };
         let archive = crate::overview::service_error::archive_fault(&e);
@@ -660,6 +661,33 @@ mod tests {
                 .get(http::header::RETRY_AFTER)
                 .and_then(|v| v.to_str().ok()),
             Some("1")
+        );
+    }
+
+    #[tokio::test]
+    async fn a_refreshing_access_state_maps_to_503_with_its_type() {
+        // A query judged on an access copy that did not catch up is withheld
+        // as a 503 a client retries, typed so it is told apart from an
+        // overload (#5794).
+        let resp =
+            RestError::from(ferroehr::error::ServiceError::access_refreshing()).into_response();
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(
+            resp.headers()
+                .get(http::header::RETRY_AFTER)
+                .and_then(|v| v.to_str().ok()),
+            Some("1")
+        );
+        let body = resp
+            .into_body()
+            .collect()
+            .await
+            .expect("the body")
+            .to_bytes();
+        let problem: Value = serde_json::from_slice(&body).expect("a problem document");
+        assert_eq!(
+            problem["type"],
+            Value::String(format!("{BASE}access-refreshing"))
         );
     }
 

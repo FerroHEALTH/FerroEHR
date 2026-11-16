@@ -205,6 +205,17 @@ impl super::ServiceError {
         })
     }
 
+    /// A `503` for a query whose access copy is still older than the store
+    /// ([`AccessRefreshing`](super::ServiceError::AccessRefreshing)).
+    #[must_use]
+    pub fn access_refreshing() -> Self {
+        Self::AccessRefreshing(Curated {
+            message: "the access state this replica judges queries by is being refreshed; \
+                      ask again shortly",
+            source: None,
+        })
+    }
+
     /// The client-visible text of this error: a refusal's message, the
     /// rendered violation of a `422`, the joined validation violations, the
     /// curated internal message of a server fault, and the `Display` text of a
@@ -218,7 +229,7 @@ impl super::ServiceError {
             E::Conflict(r) => r.message.clone(),
             E::VersionConflict(r) | E::Unrecorded(r) | E::Restricted(r) => r.message.clone(),
             E::Forbidden(r) => r.message.clone(),
-            E::Fault(f) | E::Overloaded(f) => f.message.to_owned(),
+            E::Fault(f) | E::Overloaded(f) | E::AccessRefreshing(f) => f.message.to_owned(),
             // A server fault's detail is a log record, never client text.
             E::Internal(_)
             | E::JsonWrite(_)

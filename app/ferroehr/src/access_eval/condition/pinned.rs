@@ -10,7 +10,8 @@
 //! and id) instead of the class condition with its probe of the EHR's
 //! settings row for every object (#5746). The statement checks once that the
 //! revision the verdict was judged on is the one in force, so a verdict
-//! judged on a copy older than the store admits nothing. No openEHR spec
+//! judged on a copy older than the store fails the statement and is judged
+//! again (`crate::service::query`, #5794). No openEHR spec
 //! governs this: our own design.
 
 use std::sync::Arc;

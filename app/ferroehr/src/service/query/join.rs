@@ -184,29 +184,51 @@ impl FerroEhrService {
         // the caller named no EHR, so the linked EHRs are a population subset.
         // NOTE: our own design (#5699), the clinical half reads only the linked EHRs, so care is
         // read for those and never for the caller's whole census.
-        let ehr_access =
+        let mut ehr_access =
             Box::pin(self.query_access_condition(&job.request.ehr_access, Some(&ehrs)))
                 .await
                 .map_err(Failure::analysis)?;
-        let access_settings = Box::pin(self.query_access_readers(&ehr_access))
-            .await
-            .map_err(Failure::analysis)?;
-        let ctx = SqlCtx {
-            ehr_ids: ehrs,
-            ehr_scope_kind: EhrScopeKind::PopulationSubset,
-            ehr_access,
-            access_settings,
-            ..party_ctx
+        let mut stale_since = None;
+        let result = loop {
+            let access_settings = Box::pin(self.query_access_readers(&ehr_access))
+                .await
+                .map_err(Failure::analysis)?;
+            let ctx = SqlCtx {
+                ehr_ids: ehrs.clone(),
+                ehr_scope_kind: EhrScopeKind::PopulationSubset,
+                ehr_access: ehr_access.clone(),
+                access_settings,
+                ..party_ctx.clone()
+            };
+            let run = aql::exec::execute(
+                &self.pool,
+                &halves.clinical,
+                job.params,
+                &ctx,
+                self.spec_profile,
+            )
+            .await;
+            match run {
+                Ok(result) => break result,
+                // NOTE: our own design (#5794), a verdict judged on a stale copy is judged again,
+                // or the query is refused; it never answers fewer rows.
+                Err(e) => match e.stale_copy() {
+                    Some(copy) => {
+                        let since = *stale_since.get_or_insert_with(std::time::Instant::now);
+                        ehr_access = Box::pin(self.judged_again(
+                            copy,
+                            &job.request.ehr_access,
+                            Some(&ehrs),
+                            &ehr_access,
+                            since,
+                        ))
+                        .await
+                        .map_err(Failure::exec_refused)?;
+                    }
+                    None => return Err(Failure::exec(e)),
+                },
+            }
         };
-        let result = aql::exec::execute(
-            &self.pool,
-            &halves.clinical,
-            job.params,
-            &ctx,
-            self.spec_profile,
-        )
-        .await
-        .map_err(Failure::exec)?;
         Box::pin(self.judge_served_ehrs(&result))
             .await
             .map_err(Failure::analysis)?;

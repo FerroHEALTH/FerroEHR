@@ -19,6 +19,7 @@ impl FerroEhrService {
         vec![
             ("ehr_access", Arc::clone(self.ehr_access_listened())),
             ("grants", Arc::clone(self.grants().listened())),
+            ("party_binding", Arc::clone(self.bindings().listened())),
             (
                 "policy_registers",
                 Arc::clone(self.policy_registers().listened()),
