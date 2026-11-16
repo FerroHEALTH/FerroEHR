@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 860 keys. A deployment that holds real data sets the 10
+# This file lists 861 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1352,6 +1352,13 @@ system_id = "ferroehr.local"
 # audit.verify_audit_chain()` on demand. Default one week. A run that found
 # damage is always followed by a full pass. Optional.
 #? full_verify_interval = "7d"
+# How long a record may wait past its chain's verification cursor before the
+# `audit_chain` health indicator reads `DEGRADED`
+# (`FERROEHR__AUDIT__STORE__MAX_VERIFY_LAG`); `"0s"` reports the lag only as
+# the `audit_chain_verification_lag` and `audit_chain_unverified_age` metrics.
+# Default four hours. Set it above `verify_interval`, since the cursor stays
+# where a run left it until the next run. Optional.
+#? max_verify_lag = "4h"
 
 # The classic DICOM-over-syslog feed; absent, off.
 #? [audit.syslog]

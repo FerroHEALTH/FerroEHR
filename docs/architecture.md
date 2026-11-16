@@ -202,6 +202,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   grants name move over the outbox feed (`extensions::outbox`); and
   `blob_ref`, which records that a version references an externalized
   multimedia blob so collection is an index probe rather than a scan of `node`.
+  Each replica holds the addresses `template_ref` registers in memory
+  (`service::definition::registered`), refreshed through `LISTEN` on
+  `ferroehr_template_ref`, which a registration or a release notifies, so a
+  COMPOSITION commit asks the store only of an address the copy does not hold
+  (#5775, our own design); the `version.template_id` foreign key and the
+  template delete guard still refuse a template released at the same moment.
+  A COMPOSITION commit reads its EHR's existence, `is_modifiable`, restriction
+  mark and settings revision in one statement (`ehr_repo::ehr_writability`).
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers
@@ -298,9 +306,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   content digest over the whole canonical form, which the writer computes
   (`access_log::stored_form`), and the digest over the previous digest, the
   sequence and the content digest. The server recomputes each content digest
-  from the joined parts (`AuditStore::access_log_contents`) and the database
-  checks the links, so an incremental run advances no further than the
-  server checked. An access detail the core states as the record holds it
+  from the joined parts and the database checks the links, so an
+  incremental run advances no further than the server checked. A run walks
+  each chain from its cursor to the head it started with in windows of at
+  most `VERIFY_STEP_RECORDS` records, one statement each, and every intact
+  window moves the cursor, so no statement grows with the backlog and a
+  backlog reads as a lag, never as unverifiable (#5779, our own design,
+  `audit/0041_chain_verification_steps.sql`). An access detail the core states as the record holds it
   (the principal and issuer the credential names, the count the outcome
   delivered, the action and outcome the core codes) is not written
   (`access_log::recorded::Core`). A tombstone keeps no shared part, and a
@@ -308,7 +320,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   The two tables are two hash chains (#5573, our own design): the access log
   holds only the accesses to EHR data, one chain per system from 1 with no
   gaps, under its own head (`access_log_chain_state`), verified by
-  `audit.verify_access_log_chain()` and its incremental form; `audit_event`,
+  `audit.verify_access_log_chain()` and its stepped form; `audit_event`,
   the system chain, keeps its head (`audit_chain_state`), its retention gaps
   and `audit.verify_audit_chain()`. Writers of a chain serialise on its head
   row, which holds across replicas, and the scheduled chain check verifies

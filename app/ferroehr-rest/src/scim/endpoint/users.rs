@@ -232,7 +232,7 @@ pub(crate) async fn modify(
 ) -> Response {
     let issuer = client.binding_issuer.as_str();
     let patching = method == Method::PATCH;
-    let outcome = async {
+    let outcome = Box::pin(async {
         let body = json_body(&body)?;
         let request = patching.then(|| PatchRequest::parse(&body)).transpose()?;
         let (user, current) = current(&users, issuer, &id, &headers).await?;
@@ -269,7 +269,7 @@ pub(crate) async fn modify(
         )
         .await?;
         sync_roles(&users, &client, user, wanted).await
-    }
+    })
     .await;
     let op = if patching {
         "scim_user_patch"
