@@ -407,7 +407,10 @@ $$;
 -- shared sets they name are stored or found, the shared parts inserted and the
 -- intake rows written, so a request's intake write is one round trip that
 -- commits on its own. A token or set another writer stores at the same moment
--- is read again, as the server's own statements did. Our own design.
+-- is read again, as the server's own statements did. The tokens, the sets and
+-- the shared parts, the rows concurrent statements share, are each inserted in
+-- the order of their key, so two statements wait for each other's rows in one
+-- order and never deadlock (#5881). Our own design.
 CREATE FUNCTION audit.access_log_intake_take(
     p_record_types text[], p_uids text[], p_times text[], p_contents text[],
     p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[],
@@ -452,6 +455,7 @@ BEGIN
               FROM unnest(p_token_parameters, p_token_systems, p_token_codes, v_digests, v_ids)
                    AS t(p, s, c, digest, id)
              WHERE t.id IS NULL
+             ORDER BY t.digest
             ON CONFLICT (digest) DO NOTHING;
         END LOOP;
         v_set_keys := ARRAY(
@@ -479,15 +483,18 @@ BEGIN
                 RAISE EXCEPTION 'a shared search set of the intake could not be stored or read';
             END IF;
             INSERT INTO audit.audit_search_set (tokens, digest)
-            SELECT DISTINCT k.tokens::integer[], audit.search_set_digest(k.tokens::integer[])
-              FROM unnest(v_set_keys, v_set_ids) AS k(tokens, id)
-             WHERE k.tokens IS NOT NULL AND k.id IS NULL
+            SELECT s.tokens, audit.search_set_digest(s.tokens)
+              FROM (SELECT DISTINCT k.tokens::integer[] AS tokens
+                      FROM unnest(v_set_keys, v_set_ids) AS k(tokens, id)
+                     WHERE k.tokens IS NOT NULL AND k.id IS NULL) AS s
+             ORDER BY s.tokens
             ON CONFLICT (tokens) DO NOTHING;
         END LOOP;
     END IF;
     INSERT INTO audit.access_log_shared (digest, content)
     SELECT decode(t.digest, 'hex'), t.content
       FROM unnest(p_shared_digests, p_shared_contents) AS t(digest, content)
+     ORDER BY decode(t.digest, 'hex')
     ON CONFLICT (digest) DO NOTHING;
     INSERT INTO audit.access_log_intake (record_type, uid, time_recorded, content, shared,
         content_digest, ehr_id, party_id, retain_until, action_terminology, action_code,

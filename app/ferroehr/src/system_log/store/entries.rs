@@ -90,7 +90,7 @@ impl AuditStore {
         records: Vec<AuditRecord>,
     ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
         let (uids, intake, tokens) = self.entry_rows(records).await?;
-        crate::access_log::intake::take_in(conn, intake, &tokens).await?;
+        crate::access_log::intake::take_in(conn, &intake, &tokens).await?;
         Ok((uids, LearnedSets::default()))
     }
 
