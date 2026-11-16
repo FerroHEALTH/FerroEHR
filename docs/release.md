@@ -209,6 +209,18 @@ too. Below the verdict, each arm's ten statements by PostgreSQL time over
 the run name their calls and their mean planning and execution time:
 PostgreSQL counts planning beside execution (`pg_stat_statements.track_planning`),
 and an AQL statement is planned for its values on every call (#5746).
+Each arm's PostgreSQL keeps its cluster in memory (tmpfs): every request
+commits before it answers, and a hosted runner's WAL fsync time varies
+16-fold between runs, which would tail every route on both arms (#5866). A
+commit still flushes the WAL, so the gate judges the durable work by count:
+the last table of the summary gives each arm's WAL bytes and WAL flushes per
+request over the run, and the run fails when the head flushes more than 0.10
+times per request more than the base (a commit added to every request is a
+whole one) or writes more than 10 % more WAL bytes per request. Two arms of
+one build differ by up to 4 % in bytes and 0.04 in flushes. The gate does
+not measure what a flush costs on a disk: the capacity test
+(`scripts/perf/capacity.sh`, the Capacity test workflow) runs its PostgreSQL
+on the runner's disk and measures the absolute fsync cost.
 `target/perf/base-rev` names the base commit. Locally, `PERF_SERVER`,
 `PERF_DATABASE` and `PERF_TARGET` point `gate.sh self-test` at a server you
 started yourself (see the script's header).
