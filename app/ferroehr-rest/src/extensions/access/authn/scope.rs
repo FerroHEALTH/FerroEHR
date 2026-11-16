@@ -7,6 +7,8 @@
 //! the caller and its access record carries the same fields. No openEHR spec
 //! governs access logging or the committer of a request: our own design.
 
+use std::sync::Arc;
+
 use axum::response::Response;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 
@@ -16,7 +18,7 @@ impl Authenticator {
     /// Runs `fut` as the request of `principal`: under its committer and
     /// roles, recording the binding outcome and the principal on the
     /// response for the access record.
-    pub(crate) async fn run_admitted<F>(&self, principal: Principal, fut: F) -> Response
+    pub(crate) async fn run_admitted<F>(&self, principal: Arc<Principal>, fut: F) -> Response
     where
         F: Future<Output = Response>,
     {

@@ -16,16 +16,18 @@ use sea_query::{Expr, ExprTrait};
 use crate::aql::error::{AqlError, SqlError};
 use crate::aql::ir::{
     ArchetypeConstraint, Bind, Coercion, EhrField, LikePattern, NameConstraint, NodeConstraint,
-    Operand, PathTarget, StdPredicate, TypedLit,
+    Operand, PathTarget, RmSource, StdPredicate, TypedLit,
 };
 use crate::db::iden::{Ehr, Node};
 use openehr_query::ast::{BuiltinFunction, DateTimeFunction, NumericFunction, StringFunction};
 use openehr_query::lexer::CompOp;
 
 use super::archetype::archetype_predicate;
+use super::coerce::{RawPartner, coerce_rhs, numeric_value, target_types};
+use super::compact::version_uid_text;
 use super::expr::{aql_like_to_sql, as_text, binoper, cast, col, fragment_source, jsonb_path};
+use super::from::is_vo_root_type;
 use super::jsonpath::jsonpath;
-use super::value::coerce_rhs;
 use super::{Builder, ValueMode};
 
 impl Builder<'_> {
@@ -102,22 +104,43 @@ impl Builder<'_> {
         if let Some(expr) = self.ehr_id_typed_compare(lhs, op, rhs)? {
             return Ok(expr);
         }
-        // A mixed-type (`Raw`) leaf compared to a numeric literal is compared
-        // numerically (with a NULL-guard); otherwise the Raw set falls through
-        // to text, exactly as every other Text leaf (QUERY master03
-        // §Comparison operators).
-        let (l, r) = if coercion == Coercion::Raw && raw_numeric_wanted(&[lhs, rhs]) {
-            (
-                self.operand_value_raw_numeric(lhs)?,
-                self.operand_value_raw_numeric(rhs)?,
-            )
-        } else {
-            (
-                self.operand_value(lhs, coercion)?,
-                self.operand_value(rhs, coercion)?,
-            )
-        };
+        if coercion == Coercion::Raw
+            && let Some((target, value, leaf_left)) = self.raw_sides(lhs, rhs)?
+        {
+            let partner = RawPartner::of(value, target_types(target));
+            let (first, second) = partner.modes();
+            let first = self.value_expr(target, first)?;
+            let second = second.map(|m| self.value_expr(target, m)).transpose()?;
+            return Ok(partner.compare(binoper(op), leaf_left, first, second));
+        }
+        let l = self.operand_value(lhs, coercion)?;
+        let r = self.operand_value(rhs, coercion)?;
         Ok(l.binary(binoper(op), r))
+    }
+
+    /// The path, the bound value opposite it and whether the path is on the
+    /// left, for a comparison of one path with a literal or a parameter, which
+    /// a mixed-type (`Raw`) leaf compares by [`RawPartner`]; `None` for any
+    /// other pair of operands.
+    ///
+    /// # Errors
+    /// [`SqlError::UnboundParameter`] for an unbound parameter.
+    pub(super) fn raw_sides<'o>(
+        &self,
+        lhs: &'o Operand,
+        rhs: &'o Operand,
+    ) -> Result<Option<(&'o PathTarget, sea_query::Value, bool)>, AqlError> {
+        let (target, other, leaf_left) = match (lhs, rhs) {
+            (Operand::Path(t), other) => (t, other, true),
+            (other, Operand::Path(t)) => (t, other, false),
+            _ => return Ok(None),
+        };
+        let value = match other {
+            Operand::Literal(lit) => super::expr::literal_value(lit),
+            Operand::Param(p) => self.param_value(p)?,
+            Operand::Path(_) | Operand::Function { .. } => return Ok(None),
+        };
+        Ok(Some((target, value, leaf_left)))
     }
 
     /// The SQL `LIKE` pattern of an AQL pattern (QUERY master03
@@ -134,7 +157,8 @@ impl Builder<'_> {
 
     /// The extraction mode and the coerced members of a `matches` value list
     /// (QUERY master03 §matches): a mixed-type leaf matched against numeric
-    /// literals compares numerically.
+    /// literals compares by its number ([`ValueMode::RawNumeric`]), and against
+    /// any other list by its text ([`ValueMode::RawText`]).
     ///
     /// # Errors
     /// [`AqlError`] from binding or coercing a member.
@@ -147,18 +171,18 @@ impl Builder<'_> {
             && values
                 .iter()
                 .any(|b| matches!(b, Bind::Literal(TypedLit::Integer(_) | TypedLit::Real(_))));
-        let mode = if numeric {
-            ValueMode::RawNumeric
-        } else {
-            ValueMode::Value(coercion)
+        let mode = match (numeric, coercion) {
+            (true, _) => ValueMode::RawNumeric,
+            (false, Coercion::Raw) => ValueMode::RawText,
+            (false, coercion) => ValueMode::Value(coercion),
         };
         let mut members = Vec::with_capacity(values.len());
         for b in values {
             let v = self.bind_value(b)?;
-            members.push(if numeric {
-                cast(Expr::val(v), "numeric")
-            } else {
-                coerce_rhs(v, coercion)?
+            members.push(match (numeric, coercion) {
+                (true, _) => numeric_value(v)?,
+                (false, Coercion::Raw) => coerce_rhs(v, Coercion::Text)?,
+                (false, coercion) => coerce_rhs(v, coercion)?,
             });
         }
         Ok((mode, members))
@@ -336,6 +360,9 @@ impl Builder<'_> {
         coercion: Coercion,
     ) -> Result<Expr, AqlError> {
         match op {
+            // A mixed-type leaf beside another path or a function compares by
+            // its text, which a whole data value has none of (`coerce`).
+            Operand::Path(t) if coercion == Coercion::Raw => self.value_expr(t, ValueMode::RawText),
             Operand::Path(t) => self.value_expr(t, ValueMode::Value(coercion)),
             Operand::Literal(lit) => coerce_rhs(super::expr::literal_value(lit), coercion),
             Operand::Param(p) => coerce_rhs(self.param_value(p)?, coercion),
@@ -350,20 +377,6 @@ impl Builder<'_> {
                     _ => expr,
                 })
             }
-        }
-    }
-
-    /// Lower a comparison operand for the numeric branch of a mixed-type (`Raw`)
-    /// comparison: the path side extracts through the NULL-guarded numeric
-    /// mode, literals/params cast to `numeric` (QUERY master03 §Comparison operators).
-    pub(super) fn operand_value_raw_numeric(&mut self, op: &Operand) -> Result<Expr, AqlError> {
-        match op {
-            Operand::Path(t) => self.value_expr(t, ValueMode::RawNumeric),
-            Operand::Literal(lit) => {
-                Ok(cast(Expr::val(super::expr::literal_value(lit)), "numeric"))
-            }
-            Operand::Param(p) => Ok(cast(Expr::val(self.param_value(p)?), "numeric")),
-            Operand::Function { func, args } => self.scalar_fn_expr(*func, args),
         }
     }
 
@@ -402,16 +415,61 @@ impl Builder<'_> {
         }
     }
 
+    /// A standard predicate on the node `node` (QUERY master03 §Standard
+    /// predicate), reading its path as the same path reads in WHERE: the
+    /// `uid/value` of a versioned object's root is its bound version's
+    /// identifier (RM common master06 §Version Identification), which the
+    /// stored fragment does not carry, and every other path reads the
+    /// fragment.
+    ///
+    /// # Errors
+    /// [`SqlError::UnboundParameter`] for an unbound parameter.
     pub(super) fn std_cond(&self, node: &str, sp: &StdPredicate) -> Result<Expr, AqlError> {
-        let jp = jsonpath(&sp.path);
         let root = self.root_version_alias(node);
-        let lhs = as_text(jsonb_path(
-            fragment_source(node, Some(&jp), root.as_deref()),
-            &jp,
-            None,
-        ));
+        let lhs = match root.as_deref() {
+            Some(voa) if is_version_uid(&sp.path) => version_uid_text(voa),
+            _ => {
+                let jp = jsonpath(&sp.path);
+                as_text(jsonb_path(
+                    fragment_source(node, Some(&jp), root.as_deref()),
+                    &jp,
+                    None,
+                ))
+            }
+        };
         let rhs = cast(Expr::val(self.bind_value(&sp.value)?), "text");
         Ok(lhs.binary(binoper(sp.op), rhs))
+    }
+
+    /// The standard predicates of an RM source's class expression on its node
+    /// `alias` ([`Self::std_cond`]).
+    ///
+    /// # Errors
+    /// [`SqlError::Unsupported`] for a `uid` predicate on a versioned object
+    /// no version is bound beside (an `OR` or `NOT CONTAINS` operand), and
+    /// [`SqlError::UnboundParameter`] for an unbound parameter.
+    pub(super) fn source_std_conds(
+        &self,
+        alias: &str,
+        r: &RmSource,
+    ) -> Result<Vec<Expr>, AqlError> {
+        let mut out = Vec::with_capacity(r.standard.len());
+        for sp in &r.standard {
+            // NOTE: RM common master06 §Version Identification gives a versioned object's root its
+            // `uid` from the version, so only a bound version answers the predicate on it.
+            if is_version_uid(&sp.path)
+                && r.rm_type.names().iter().all(|t| is_vo_root_type(t))
+                && self.root_version_alias(alias).is_none()
+            {
+                return Err(SqlError::Unsupported(
+                    "a uid predicate on a versioned object reached through OR or NOT CONTAINS"
+                        .to_owned(),
+                )
+                .into());
+            }
+            out.push(self.std_cond(alias, sp)?);
+        }
+        Ok(out)
     }
 
     pub(super) fn node_constraint_conds(
@@ -433,17 +491,9 @@ impl Builder<'_> {
     }
 }
 
-/// Whether a `Raw` (mixed-type) comparison should be evaluated numerically: true
-/// when a comparison partner is a numeric literal — "numeric for numbers, text
-/// otherwise" (QUERY master03 §Comparison operators). Parameters are untyped at
-/// plan time and keep the text path.
-pub(super) fn raw_numeric_wanted(operands: &[&Operand]) -> bool {
-    operands.iter().any(|o| {
-        matches!(
-            o,
-            Operand::Literal(TypedLit::Integer(_) | TypedLit::Real(_))
-        )
-    })
+/// Whether a standard predicate's path is a versioned object's `uid/value`.
+pub(super) fn is_version_uid(path: &[String]) -> bool {
+    matches!(path, [uid, value] if uid == "uid" && value == "value")
 }
 
 /// Lowers `ehr.id <op> raw`, the one EHR-id comparison of the `EHR` class

@@ -58,7 +58,7 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
         return None;
     }
     let principal = current_principal();
-    let principal = principal.as_ref();
+    let principal = principal.as_deref();
     let backend = state.backend();
     let capabilities = Capabilities::current();
     let caller = caller_of(state, principal, &capabilities, Some(op));
@@ -98,7 +98,7 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
 /// confined caller reaches (#5614).
 pub(crate) fn current_caller(state: &AppState) -> Caller {
     let principal = current_principal();
-    caller_of(state, principal.as_ref(), &Capabilities::current(), None)
+    caller_of(state, principal.as_deref(), &Capabilities::current(), None)
 }
 
 /// The evaluator's caller `principal` is, holding `capabilities`, asking

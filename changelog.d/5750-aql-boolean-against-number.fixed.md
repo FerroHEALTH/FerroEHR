@@ -1,0 +1,1 @@
+- An AQL comparison of a Boolean with a number, such as `…/value/magnitude = false`, or of a number with a Boolean path, is refused with a 400 naming the two kinds; it answered a 500 from the database before.

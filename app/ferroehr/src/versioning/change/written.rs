@@ -24,7 +24,7 @@ pub(super) fn admit_written(
     let Some(gate) = gate.filter(|_| resolved.canonical_text.is_some()) else {
         return Ok(());
     };
-    let archetype = root_archetype(&resolved.rows);
+    let archetype = root_archetype(&resolved.body);
     gate.admit_written(&Item::Object(Object {
         vo_id: resolved.vo_id.0,
         template: resolved.template_id.as_deref(),
@@ -34,12 +34,34 @@ pub(super) fn admit_written(
     }))
 }
 
-/// The root's `archetype_node_id` off the decomposed rows, for the outbox
-/// envelope, the audit record and the access evaluator.
-pub(super) fn root_archetype(rows: &[NodeRow]) -> Option<String> {
-    rows.first()
-        .filter(|root| root.num == 0)
-        .and_then(|root| root.data.get("archetype_node_id"))
+/// The root's `archetype_node_id` off the body, for the outbox envelope, the
+/// audit record and the access evaluator; `None` for a logical delete.
+pub(super) fn root_archetype(body: &Value) -> Option<String> {
+    body.get("archetype_node_id")
         .and_then(Value::as_str)
         .map(str::to_owned)
+}
+
+/// The node rows a body decomposes into, their fragments index-aligned, and
+/// the external blob URIs it references ([`nodes`]).
+pub(super) type Nodes = (Vec<NodeRow>, Vec<Value>, Vec<String>);
+
+/// The node rows `body` decomposes into, each with its fragment taken out
+/// for the write to store uncopied, and the external blob URIs the body
+/// references (#5759); none for a logical delete or a version that `shares`
+/// its predecessor's rows.
+///
+/// # Errors
+/// The decomposition's refusal of a body that is no single tree.
+pub(super) fn nodes(body: Value, shares: bool) -> Result<Nodes, ServiceError> {
+    if shares || body.is_null() {
+        return Ok((Vec::new(), Vec::new(), Vec::new()));
+    }
+    let uris = crate::storage::blob_ref::uris_of(&body);
+    let mut rows = crate::storage::codec::decompose(body)?;
+    let fragments = rows
+        .iter_mut()
+        .map(|row| std::mem::take(&mut row.data))
+        .collect();
+    Ok((rows, fragments, uris))
 }

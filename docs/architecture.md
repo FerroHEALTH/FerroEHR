@@ -492,7 +492,15 @@ abstract→concrete descendants — generated, not reflected, not hand-written)
 CONTAINS chains; `jsonb_path_query_first` for leaf extraction and
 `jsonb_path_query` as a lateral set-returning function for array unnesting;
 `ext.openehr_magnitude` and `ext.openehr_timestamp` for typed comparison and
-ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0). The emitter uses no
+ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0). A path whose candidate
+types are mixed (an `ELEMENT`'s whole `DATA_VALUE`) compares and orders by
+keys read off each value's own `_type` (`aql::sql::coerce`): a number against
+a JSON number or the magnitude of a whole numeric `DV_ORDERED`, an ISO 8601
+date/time against the instant of a whole `DV_DATE`, `DV_TIME` or
+`DV_DATE_TIME` of its kind, text against a JSON scalar, and never the
+serialized JSON; AQL 1.1.0 leaves this open, so the reading is our own
+(#5751). A Real binds as its shortest round-trip decimal cast to `numeric`,
+never through `float8` (#5753). The emitter uses no
 jsonpath item methods (their date/time conversions depend on the session
 TimeZone and are not index-legal), no `JSON_TABLE`, and no GIN index (it
 emits no GIN-servable operator; the baseline removed the index). The one
@@ -825,7 +833,9 @@ which is what makes an optional stage safe to disable:
    object, the EHR id compared with a constant, and one uncorrelated check,
    which PostgreSQL runs once, that the revision of the EHR's settings row
    and subject in force is the one the verdict was judged on, so a copy older
-   than the store admits no row. Every other query keeps the class condition
+   than the store admits no row. Whether the caller reads that EHR's
+   `EHR_ACCESS` objects is decided from the same copy, so no settings row is
+   probed for it either. Every other query keeps the class condition
    and its probe of the settings row per object. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the

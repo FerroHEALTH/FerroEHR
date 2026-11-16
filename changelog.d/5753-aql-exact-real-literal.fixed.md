@@ -1,0 +1,1 @@
+- An AQL Real literal or parameter compares as the decimal written: a magnitude of 17 significant digits now equals the same literal, which PostgreSQL's 15-digit `float8` conversion missed before.

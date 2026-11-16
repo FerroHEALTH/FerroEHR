@@ -373,7 +373,9 @@ pub(crate) struct CapabilityRow {
     pub(crate) operation: String,
     /// When it holds.
     pub(crate) term: Term,
-    pub(crate) credentials: Option<Value>,
+    /// Shared with every [`super::capabilities::Grant`] built from it, so a
+    /// request takes a reference count, never a copy (#5754).
+    pub(crate) credentials: Option<std::sync::Arc<Value>>,
 }
 
 /// When a stored grant or caller fact holds: the lifecycle state of the head
@@ -537,7 +539,9 @@ pub(crate) async fn load(conn: &mut PgConnection) -> Result<Loaded, StorageError
             performer_id: row.try_get("performer_id")?,
             operation: row.try_get("operation")?,
             term: Term::of(&row)?,
-            credentials: row.try_get("credentials")?,
+            credentials: row
+                .try_get::<Option<Value>, _>("credentials")?
+                .map(std::sync::Arc::new),
         });
     }
     let facts = super::caller::store::load(&mut tx, None).await?;

@@ -16,22 +16,19 @@ use uuid::Uuid;
 
 use super::ResolvedWrite;
 use crate::error::ServiceError;
-use crate::storage::codec::reassemble;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::{SigningCtx, integrity};
 
-/// Reassemble the version body from the node rows and derive the signature
-/// over it.
+/// Derive the signature over the version body.
 ///
-/// The signature input is the reassembled value; the stored `version.body`
-/// is the pre-decomposition text ([`super::canonical_body_text`]). The two are the
-/// same VALUE by decompose/reassemble fidelity, and the signature
-/// canonicalization is RFC 8785 (key-order-insensitive), so signing the
-/// reassembled form still proves the stored and served bytes. Empty rows =
-/// logical delete (Void body is signed — master06 §Logical Deletion).
+/// The signature input is the accepted body before decomposition, the value
+/// the stored `version.body` text ([`super::canonical_body_text`]) serializes
+/// and the node rows reassemble to, and the signature canonicalization is RFC
+/// 8785 (key-order-insensitive), so it proves the stored and served bytes. A Null body is a logical delete
+/// (Void body is signed, master06 §Logical Deletion).
 ///
 /// # Errors
-/// The reassembly [`ServiceError`] or the signer's failure.
+/// The signer's [`ServiceError`].
 pub(super) fn body_and_signature(
     ctx: &SigningCtx<'_>,
     audit: &AuditInput,
@@ -39,20 +36,14 @@ pub(super) fn body_and_signature(
     r: &ResolvedWrite,
     at_committal_attestations: &[Value],
 ) -> Result<(Option<String>, bool), ServiceError> {
-    // Only a server signature reads the body: reassembling it for nothing
-    // costs as much as the version is large (#5220).
     let signs = r.client_signature.is_none() && ctx.signer.enabled();
-    let body = if r.rows.is_empty() || !signs {
-        None
-    } else {
-        Some(reassemble(&r.rows)?)
-    };
+    let body = (signs && !r.body.is_null()).then_some(&r.body);
     version_signature(
         ctx,
         audit,
         contribution_id,
         r,
-        body.as_ref(),
+        body,
         at_committal_attestations,
     )
 }
@@ -60,7 +51,7 @@ pub(super) fn body_and_signature(
 /// The signature stored with the version, and whether it is **client-supplied**
 /// (foreign — stored verbatim, never re-verified at read; master06 §Digital
 /// Signature) vs server-generated. A client-supplied signature is kept verbatim;
-/// otherwise, with server signing enabled, the pre-reassembled `body` is signed
+/// otherwise, with server signing enabled, the `body` is signed
 /// — a logically deleted version signs Void (master06 §Logical Deletion), and a
 /// content version signs the same served bytes reads return, so the digest
 /// recomputes at read time. `at_committal_attestations` are the completed

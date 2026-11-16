@@ -133,8 +133,10 @@ impl FerroEhrService {
             },
         };
         let executed = substitute_params(aql, params);
-        let mut outcome =
-            QueryOutcome::plain(result_set_json(aql, &executed, name, result(plan, rows)));
+        let mut outcome = QueryOutcome::plain(
+            result_set_json(aql, &executed, name, result(plan, rows))
+                .map_err(|error| Failure::analysis(error.into()))?,
+        );
         outcome.served_rows = served_rows;
         outcome.log_read = Some(log_read);
         Ok(outcome)
