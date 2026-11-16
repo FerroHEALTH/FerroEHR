@@ -212,8 +212,11 @@ up() {
   docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
   docker run -d --name "$pg" --network "$NETWORK" -p "127.0.0.1:${pg_port}:5432" \
     -e "POSTGRES_PASSWORD=$PG_SUPER_SECRET" -e PG_INIT_USER=ferroehr -e "PG_INIT_PASSWORD=$PG_SECRET" \
-    -e PG_INIT_DB=ferroehr "$pg_image" >/dev/null
+    -e PG_INIT_DB=ferroehr "$pg_image" -c shared_preload_libraries=pg_stat_statements \
+    -c pg_stat_statements.track=all -c pg_stat_statements.track_planning=on >/dev/null
   wait_for "PostgreSQL$suffix" 60 docker exec "$pg" pg_isready -h 127.0.0.1 -U ferroehr -d ferroehr
+  docker exec "$pg" psql -U postgres -d ferroehr -Atq \
+    -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements" >/dev/null
   STARTED=1
   local -a process=(--network "$NETWORK" --read-only --tmpfs /tmp --cap-drop ALL
     --security-opt no-new-privileges:true
@@ -371,6 +374,46 @@ population_summary() {
       fi
     done
   } >>"$1"
+}
+
+# statements_summary <summary>: each arm's statements by PostgreSQL time over
+# the measured run, its planning counted beside its execution
+# (pg_stat_statements.track_planning): the AQL is custom-planned per call, so
+# its execution alone leaves out about half of its cost at a small answer
+# (#5746).
+statements_summary() {
+  local arm container
+  {
+    echo
+    echo "### Statements by PostgreSQL time, planning included"
+    for arm in head base; do
+      container="$PG"
+      [[ "$arm" == base ]] && container="$PG-base"
+      echo
+      echo "#### $arm"
+      echo
+      echo "| calls | plan ms (mean) | execution ms (mean) | rows per call | buffer hits per call | statement |"
+      echo "|---:|---:|---:|---:|---:|---|"
+      docker exec "$container" psql -U postgres -d ferroehr -Atq -F '|' -c "SELECT calls, \
+        round(mean_plan_time::numeric, 3), round(mean_exec_time::numeric, 3), \
+        round(rows::numeric / calls, 1), round(shared_blks_hit::numeric / calls, 1), \
+        replace(left(regexp_replace(query, '\s+', ' ', 'g'), 120), '|', '/') \
+        FROM pg_stat_statements WHERE calls > 0 AND query NOT ILIKE '%pg_stat%' \
+        ORDER BY total_plan_time + total_exec_time DESC LIMIT 10" 2>/dev/null \
+        | awk -F'|' '{ printf "| %s | %s | %s | %s | %s | `%s` |\n", $1, $2, $3, $4, $5, $6 }' \
+        || echo "| unreadable | | | | | |"
+    done
+  } >>"$1"
+}
+
+# statements_reset: both arms' statement counters zeroed, so the summary
+# covers the measured run and not the seed.
+statements_reset() {
+  local container
+  for container in "$PG" "$PG-base"; do
+    docker exec "$container" psql -U postgres -d ferroehr -Atq \
+      -c "SELECT pg_stat_statements_reset()" >/dev/null
+  done
 }
 
 # access_log_storage <pg-container>: the access log's entries, its
@@ -541,12 +584,14 @@ ab() {
   up "$3" "$4" "$(base_config_tree "$3")" -base "$BASE_HTTP_PORT" "$BASE_PG_PORT"
   for entry in "${SEED[@]}"; do vars+=(--base-var "$entry"); done
   render "$ROOT/perf/plan.toml" "$OUT/plan.toml" per-arm
+  statements_reset
   "$bin" ab --plan "$OUT/plan.toml" \
     --head-url "$head_url" --head-container "$head_container" --head-database-url "$head_db" \
     --base-url "$SERVER_URL" --base-container "${TARGET[1]}" --base-database-url "$DATABASE_URL" \
     "${vars[@]}" --out-dir "$OUT" --summary "$OUT/summary.md" || status=$?
   population_summary "$OUT/summary.md"
   storage_summary "$OUT/summary.md"
+  statements_summary "$OUT/summary.md"
   return "$status"
 }
 

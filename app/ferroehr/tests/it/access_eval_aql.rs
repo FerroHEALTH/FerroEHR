@@ -13,9 +13,11 @@
 use std::sync::Arc;
 
 use ferroehr::access_eval::condition::care::Care;
-use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
+use ferroehr::access_eval::condition::{
+    AccessCondition, Asking, InForce, RequestAccess, with_request_access,
+};
 use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
-use ferroehr::access_eval::scope::CategoryIndex;
+use ferroehr::access_eval::scope::{CategoryIndex, Pred};
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::party_binding::BindingMapping;
 use ferroehr::party_binding::grants::caller::facts::CallerFacts;
@@ -231,6 +233,7 @@ struct Ask {
     policy: Option<AccessPolicy>,
     cared: Vec<EhrSubject>,
     default: AccessDefault,
+    emergency: Emergency,
 }
 
 impl Ask {
@@ -267,6 +270,7 @@ impl Ask {
             policy: None,
             cared: Vec::new(),
             default: AccessDefault::Open,
+            emergency: Emergency::default(),
         }
     }
 }
@@ -278,7 +282,7 @@ fn request_of(ask: &Ask) -> Arc<RequestAccess> {
         Asking {
             operation: OperationClass::Query,
             purpose: ask.purpose.map(str::to_owned),
-            emergency: Emergency::default(),
+            emergency: ask.emergency,
         },
         InForce {
             policy: ask.policy.clone().map(Arc::new),
@@ -495,6 +499,40 @@ async fn assert_reads(world: &World, ask: &Ask, expected: &[String], case: &str)
         json!(expected.len()),
         "{case}: the count counts only readable rows"
     );
+    for (index, (ehr_id, _, objects)) in world.ehrs.iter().enumerate() {
+        let of_ehr: Vec<String> = expected
+            .iter()
+            .filter(|id| objects.contains(id))
+            .cloned()
+            .collect();
+        let pinned = pinned_to(COMPOSITIONS, *ehr_id);
+        let whole = ids(rows(world, ask, &pinned, None).await);
+        assert_eq!(whole, of_ehr, "{case}: the rows of EHR {index} pinned");
+        let mut paged = Vec::new();
+        for offset in 0..=i64::try_from(of_ehr.len()).expect("a count") {
+            paged.extend(ids(rows(world, ask, &pinned, Some((offset, 1))).await));
+        }
+        assert_eq!(
+            paged, of_ehr,
+            "{case}: one row per page of EHR {index} pinned"
+        );
+        let counted = rows(world, ask, &pinned_to(COUNT, *ehr_id), None).await;
+        assert_eq!(
+            counted[0][0],
+            json!(of_ehr.len()),
+            "{case}: the count of EHR {index} pinned"
+        );
+    }
+}
+
+/// `aql`, a query over `EHR e`, pinned to `ehr_id` by its own `WHERE`
+/// clause, which the service decides before the statement (#5746).
+fn pinned_to(aql: &str, ehr_id: EhrId) -> String {
+    let filter = format!(" WHERE e/ehr_id/value = '{ehr_id}'");
+    match aql.find(" ORDER BY") {
+        Some(at) => format!("{}{filter}{}", &aql[..at], &aql[at..]),
+        None => format!("{aql}{filter}"),
+    }
 }
 
 /// Settings of `default` holding `directives` and `labels`.
@@ -1250,4 +1288,180 @@ async fn a_patient_is_refused_every_ehr_but_their_own() {
             "a patient context naming no EHR reaches none"
         );
     }
+}
+
+/// The condition `access` applies to a query of the running request, with
+/// its care unread, as the protocol adapter hands it to the service.
+async fn unresolved(world: &World, access: &Arc<RequestAccess>) -> AccessCondition {
+    let classes = world
+        .svc
+        .ehr_access_classes()
+        .await
+        .expect("the classes read");
+    access.condition(&classes, Care::Unresolved)
+}
+
+/// A query pinned to one EHR is decided before its statement, from the
+/// copy of that EHR's settings, so the statement carries only what the
+/// verdict leaves to each object; a query over several EHRs keeps the class
+/// condition (#5746).
+#[tokio::test]
+async fn a_query_pinned_to_one_ehr_is_decided_before_the_statement() {
+    let world = Box::pin(World::new()).await;
+    let hidden = world.objects(1)[0].clone();
+    let restriction = directive(
+        "restriction",
+        "deny",
+        &json!({ "data": [{ "objects": [object_ref(&hidden)] }] }),
+    );
+    world
+        .settings(1, &settings("open", &[restriction], &[]))
+        .await;
+    let ask = Ask::professional(&world);
+    let access = request_of(&ask);
+    let (one, two) = (world.ehrs[1].0, world.ehrs[0].0);
+    let svc = &world.svc;
+    let (pinned, unpinned, several) = Box::pin(with_request_access(Arc::clone(&access), async {
+        let condition = unresolved(&world, &access).await;
+        let pin = |ehrs: Option<Vec<EhrId>>| {
+            let condition = condition.clone();
+            async move {
+                Box::pin(svc.query_access_condition(&condition, ehrs.as_deref()))
+                    .await
+                    .expect("the condition reads")
+            }
+        };
+        (
+            pin(Some(vec![one])).await,
+            pin(None).await,
+            pin(Some(vec![one, two])).await,
+        )
+    }))
+    .await;
+    let decided = pinned.pinned().expect("the one EHR is decided");
+    assert_eq!(decided.ehr, one.0);
+    assert!(decided.settled, "EHR 1 has a settings row");
+    assert_ne!(
+        decided.admitted,
+        Pred::True,
+        "the restriction is left to each object"
+    );
+    assert_ne!(
+        decided.admitted,
+        Pred::False,
+        "the rest of the EHR is admitted"
+    );
+    assert!(
+        unpinned.pinned().is_none(),
+        "a query over any EHR is not pinned"
+    );
+    assert!(
+        several.pinned().is_none(),
+        "a query over two EHRs is not pinned"
+    );
+    let request = AqlQueryRequest {
+        ehr_access: pinned,
+        ..AqlQueryRequest::default()
+    };
+    let outcome = Box::pin(with_request_access(
+        Arc::clone(&access),
+        svc.execute_aql(&pinned_to(COMPOSITIONS, one), None, &request),
+    ))
+    .await
+    .expect("the query runs");
+    let served: Vec<String> = outcome.result_set["rows"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|row| row[0].as_str())
+        .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+        .collect();
+    let expected: Vec<String> = world
+        .objects(1)
+        .into_iter()
+        .filter(|id| *id != hidden)
+        .collect();
+    assert_eq!(served, expected, "the restricted object is withheld");
+}
+
+/// A verdict judged on a copy of the EHR's settings older than the row in
+/// force admits no row: the statement checks the revision once, so a
+/// replica that has not yet heard of a change never serves what the change
+/// withholds (#5746).
+#[tokio::test]
+async fn a_pinned_verdict_judged_on_an_older_copy_admits_nothing() {
+    let world = Box::pin(World::new()).await;
+    world.settings(0, &settings("open", &[], &[])).await;
+    let ask = Ask::professional(&world);
+    let access = request_of(&ask);
+    let ehr_id = world.ehrs[0].0;
+    let svc = &world.svc;
+    let aql = pinned_to(COMPOSITIONS, ehr_id);
+    for (older, expected) in [(false, world.objects(0)), (true, Vec::new())] {
+        let outcome = Box::pin(with_request_access(Arc::clone(&access), async {
+            let condition = unresolved(&world, &access)
+                .await
+                .with_care(Care::Ehrs(Vec::new().into()));
+            let mut entry = svc.ehr_access_entry(ehr_id).await.expect("the copy reads");
+            if older {
+                entry.revision.settings = entry.revision.settings.map(|ordinal| ordinal - 1);
+            }
+            let request = AqlQueryRequest {
+                ehr_access: access.pin(&condition, ehr_id, &entry),
+                ..AqlQueryRequest::default()
+            };
+            assert!(request.ehr_access.pinned().is_some(), "the EHR is decided");
+            Box::pin(svc.execute_aql(&aql, None, &request))
+                .await
+                .expect("the query runs")
+        }))
+        .await;
+        let served: Vec<String> = outcome.result_set["rows"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|row| row[0].as_str())
+            .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+            .collect();
+        assert_eq!(served, expected, "a copy older than the row: {older}");
+    }
+}
+
+/// Break-glass: where the policy requires a care relationship, the
+/// break-glass role declaring an emergency purpose reads every EHR without
+/// one, a restriction whose `emergency_override` holds lifted and a consent
+/// deny without it still in force (EHDS Art. 11(5)); without the emergency
+/// it reads nothing.
+#[tokio::test]
+async fn break_glass_reads_what_the_emergency_lifts() {
+    let world = Box::pin(World::new()).await;
+    let restricted = world.objects(1)[0].clone();
+    let mut restriction = directive(
+        "restriction",
+        "deny",
+        &json!({ "data": [{ "objects": [object_ref(&restricted)] }] }),
+    );
+    restriction["emergency_override"] = json!(true);
+    world
+        .settings(1, &settings("open", &[restriction], &[]))
+        .await;
+    let deny = directive(
+        "consent",
+        "deny",
+        &json!({ "applies_to": [{ "party": {
+        "_type": "PARTY_REF", "namespace": "local", "type": "PERSON",
+        "id": { "_type": "HIER_OBJECT_ID", "value": world.nurse } } }] }),
+    );
+    world.settings(2, &settings("open", &[deny], &[])).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    assert_reads(&world, &ask, &[], "no relationship and no emergency").await;
+    ask.emergency = Emergency {
+        declared: true,
+        break_glass: true,
+        opt_out_override: false,
+    };
+    assert_reads(&world, &ask, &except(&world, &[2], &[]), "break-glass").await;
 }
