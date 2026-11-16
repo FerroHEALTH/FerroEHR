@@ -323,10 +323,7 @@ impl Make<'_> {
 
     /// A gauge of whole numbers.
     fn gauge(&self, name: &'static str, description: &'static str) -> Gauge<u64> {
-        self.0
-            .u64_gauge(name)
-            .with_description(description)
-            .build()
+        self.0.u64_gauge(name).with_description(description).build()
     }
 
     /// A gauge in seconds: a Unix time or an age.

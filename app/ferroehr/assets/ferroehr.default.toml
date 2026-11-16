@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 860 keys. A deployment that holds real data sets the 10
+# This file lists 861 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
