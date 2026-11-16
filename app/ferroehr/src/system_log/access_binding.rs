@@ -231,8 +231,6 @@ fn binding(record: &BindingRecord) -> Result<Binding, BindingError> {
         BindingCode::RefusedNoAgreement => Binding::RefusedNoAgreement,
         BindingCode::RefusedScopeBeyondAgreement => Binding::RefusedScopeBeyondAgreement,
         BindingCode::RefusedCorrelationMissing => Binding::RefusedCorrelationMissing,
-        BindingCode::RefusedWabvpzRole => Binding::RefusedWabvpzRole,
-        BindingCode::RefusedWabvpzOrganisationType => Binding::RefusedWabvpzOrganisationType,
     })
 }
 

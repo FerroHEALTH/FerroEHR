@@ -136,6 +136,7 @@ fn selectors() -> PersonSelectors {
 /// mapping installed.
 pub(crate) async fn service() -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
+    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false), (OTHER, false)]).await;
     for (hrid, root) in [(PERSON, "PERSON"), (ROLE, "ROLE")] {
         svc.template_adl2_upload(&archetype(hrid, root))
             .await
@@ -794,12 +795,11 @@ async fn a_deletion_erases_the_contacts_and_keeps_the_attribution_minimum() {
     let audit = ferroehr::system_log::config::AuditConfig {
         enabled: true,
         store: ferroehr::system_log::config::StoreConfig {
-            enabled: true,
             ..Default::default()
         },
         ..Default::default()
     };
-    let (sender, handle) = ferroehr::system_log::sender::start(audit, None, Some(db.pool()))
+    let (sender, handle) = ferroehr::system_log::sender::start(audit, None, db.pool())
         .await
         .expect("the audit sender");
     let svc = svc.with_audit(sender);

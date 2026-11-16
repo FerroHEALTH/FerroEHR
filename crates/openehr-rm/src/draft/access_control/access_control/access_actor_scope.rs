@@ -15,10 +15,12 @@ use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
 pub struct AccessActorScope {
     /// A party in the demographic service: a `PERSON` or `AGENT` matches itself; an `ORGANISATION` or `GROUP` matches every caller that acts for it or is a member of it.
     pub party: Option<PartyRef>,
-    /// A functional role the caller holds, coded as the role's capability or the caller's token states it, such as a professional role code.
+    /// A role the caller performs: the caller matches when it is the `performer` of a `ROLE` in force (its `time_validity` holds the date of the access and its versioned object is not deleted) whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code, or when the verified credential of a caller from outside the system, admitted under an agreement, attests a professional role with the same terminology and code.
     pub role: Option<DvCodedText>,
     /// A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.
     pub relationship: Option<DvCodedText>,
+    /// A type of organisation the caller acts for: the caller matches when it acts for an `ORGANISATION` whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code, or when the verified credential of a caller from outside the system, admitted under an agreement, attests a type of its healthcare facility with the same terminology and code.
+    pub organisation_type: Option<DvCodedText>,
     /// The kind of caller, coded in the `access caller kind` group: `professional`, `access_service`, `subject`, `representative` or `system`.
     pub caller_kind: Option<DvCodedText>,
 }

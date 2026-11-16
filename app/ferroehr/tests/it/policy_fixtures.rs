@@ -3,7 +3,7 @@
 
 //! Policy parties for the tests that read a grant (#5439): a deployment's own
 //! `AGENT` carrying a client identifier and a `ROLE` whose capability codes an
-//! operation of `ferroehr-operations` with its scope elements, committed by an
+//! operation of `openehr_access` with its scope elements, committed by an
 //! administrator, and the request scope that carries the client's grants. No
 //! openEHR spec gives a capability an authorization meaning: our own design.
 
@@ -69,7 +69,7 @@ fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
-/// A `DV_CODED_TEXT` of the operation terminology.
+/// A `DV_CODED_TEXT` of the draft access terminology.
 pub(crate) fn operation_code(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",

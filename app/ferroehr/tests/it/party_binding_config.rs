@@ -252,6 +252,35 @@ fn an_explicit_section_overrides_its_default_and_leaves_the_others() {
     assert_ne!(binding.group, default.group);
 }
 
+/// `[authz.rbac] first_admin` beside a `persons` `[[auth.party]]` table is a
+/// person's credential: unmapped it is refused with the remedy, the operator
+/// grant that lets SCIM provision its `PERSON`, and mapped to a key it boots
+/// before that `PERSON` exists (#5620).
+#[test]
+fn a_first_admin_beside_a_persons_table_is_mapped_or_refused_naming_the_operator_grant() {
+    let first_admin = "[authz.rbac]\nfirst_admin = \"alice\"\n";
+    let mapped = with("[authz.rbac]\n", first_admin);
+    assemble(&bound(&mapped))
+        .expect("assembles")
+        .validate()
+        .expect("a mapped first_admin boots before its PERSON exists");
+    let unmapped = mapped.replacen(
+        "[[authz.party_binding.basic_user]]\nuser = \"alice\"",
+        "[[authz.party_binding.basic_user]]\nuser = \"bob\"",
+        1,
+    );
+    let text = refusal(&unmapped);
+    assert!(
+        text.contains("the Basic user \"alice\" maps to no party key"),
+        "{text}"
+    );
+    assert!(
+        text.contains("[[authz.party_binding.basic_user]]")
+            && text.contains("ferroehr party-binding grant --operation scim_provision"),
+        "the refusal names the mapping and the operator grant: {text}"
+    );
+}
+
 #[test]
 fn a_basic_user_with_no_mapping_is_refused_naming_the_user() {
     let text = refusal(&with(
@@ -692,4 +721,39 @@ fn a_scim_table_with_no_client_loads() {
 fn an_unknown_scim_key_is_named() {
     let unknown = refusal(&format!("{}\n[auth.scim]\nmax_deactivation = 3\n", full()));
     assert!(unknown.contains("max_deactivation"), "{unknown}");
+}
+
+/// The person mapping the server installs holds a portal representative's
+/// binding key, the login under the `patients` issuer, beside the keys of the
+/// `persons` issuer's `[[auth.party]]` table (#5622): the boot compiles the
+/// mapping from the one key-issuer set the SCIM gate reads too.
+#[test]
+fn the_installed_mapping_holds_a_patients_issuer_key_beside_a_party_table() {
+    let config = assemble(&bound(&full())).expect("assembles");
+    config.validate().expect("validates");
+    let resolved = ferroehr::config::auth::resolve(&config.auth.shared).expect("resolves");
+    let issuers = ferroehr::config::binding::key_issuers(&resolved);
+    assert_eq!(
+        issuers,
+        [
+            "https://idp.example/realms/patients".to_owned(),
+            "urn:example:staff-login".to_owned()
+        ]
+    );
+    let mapping = config
+        .authz
+        .party_binding
+        .sections()
+        .binding_mapping(&issuers, "ADMIN")
+        .expect("the mapping compiles");
+    let key = mapping
+        .key_selector("FerroEHR professional")
+        .expect("the default template keys logins");
+    assert!(
+        key.issuers()
+            .iter()
+            .any(|issuer| issuer == "https://idp.example/realms/patients"),
+        "{:?}",
+        key.issuers()
+    );
 }

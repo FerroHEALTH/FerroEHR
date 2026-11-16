@@ -4,8 +4,9 @@
 //! How the decision procedure ([`crate::access_eval::procedure`]) reads a
 //! directive: whether it binds the caller, applies to the request now, names
 //! the caller in an actor scope, and which items it covers less its
-//! exceptions, for one EHR or, through its layout, a settings class. No
-//! openEHR spec governs the reading: our own design (#5513, #5588).
+//! exceptions, for one EHR or, through its layout, a settings class. A role
+//! scope names a role the caller performs in the demographic service. No
+//! openEHR spec governs the reading: our own design (#5513, #5588, #5621).
 
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::terminology::{
@@ -90,7 +91,9 @@ impl Reader<'_, '_> {
                 caller,
                 CallerKind::Professional | CallerKind::System | CallerKind::AccessService
             ),
-            DirectiveKind::Consent => caller != CallerKind::Subject,
+            // NOTE: our own design (#5621), a rule of the policy binds every caller but the
+            // subject, whose own right of access (EHDS Art. 3) is not the controller's to deny.
+            DirectiveKind::Consent | DirectiveKind::ControllerRule => caller != CallerKind::Subject,
             DirectiveKind::Delegation => caller == CallerKind::Representative,
         };
         if !bindable {
@@ -134,8 +137,12 @@ impl Reader<'_, '_> {
                     .map_or(polarity.unreadable(), |op| op == asked.operation)
             })
         });
+        // NOTE: our own design (#5737), `purpose_required` controls a missing purpose, so a rule's
+        // purpose scope matches only a declared one; a subject's deny still covers its absence.
+        let undeclared =
+            polarity.unreadable() && kind_and_effect(directive).0 != DirectiveKind::ControllerRule;
         let purpose = directive.purposes.as_deref().is_none_or(|purposes| {
-            asked.purpose.map_or(polarity.unreadable(), |declared| {
+            asked.purpose.map_or(undeclared, |declared| {
                 purposes
                     .iter()
                     .any(|coded| coded.defining_code.code_string == declared)
@@ -178,12 +185,14 @@ impl Reader<'_, '_> {
                             }
                         }
                     };
-                    let role = scope.role.as_ref().is_none_or(|role| {
-                        caller
-                            .roles
-                            .iter()
-                            .any(|held| held.eq_ignore_ascii_case(&role.defining_code.code_string))
-                    });
+                    let role = scope
+                        .role
+                        .as_ref()
+                        .is_none_or(|role| caller.facts.performs(role));
+                    let organisation = scope
+                        .organisation_type
+                        .as_ref()
+                        .is_none_or(|kind| caller.facts.acts_for_type(kind));
                     let relationship = scope.relationship.as_ref().is_none_or(|coded| {
                         match Relationship::read_coded(coded) {
                             Ok(Relationship::Care) => self.judged.ehr.cared,
@@ -197,7 +206,10 @@ impl Reader<'_, '_> {
                         .caller_kind
                         .as_ref()
                         .is_none_or(|coded| CallerKind::read_coded(coded) == Ok(caller.kind));
-                    Pred::all(vec![party, Pred::of(role && relationship && kind)])
+                    Pred::all(vec![
+                        party,
+                        Pred::of(role && organisation && relationship && kind),
+                    ])
                 })
                 .collect();
         Pred::any(scopes)

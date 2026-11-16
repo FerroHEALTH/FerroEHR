@@ -58,16 +58,16 @@ fn entry() -> Value {
         "uid": { "_type": "HIER_OBJECT_ID", "value": UID },
         "system_id": "cdr.example.org",
         "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-07T09:14:03.120Z" },
-        "action": coded("openehr", "read"),
-        "outcome": { "_type": "ACCESS_OUTCOME", "result": coded("openehr", "granted"),
+        "action": coded("audit-event-action", "R"),
+        "outcome": { "_type": "ACCESS_OUTCOME", "result": coded("openehr_access", "granted"),
             "delivered": 1 },
-        "accessor": { "_type": "ACCESSOR", "kind": coded("openehr", "person"),
+        "accessor": { "_type": "ACCESSOR", "kind": coded("openehr_access", "person"),
             "party": { "_type": "PARTY_IDENTIFIED", "name": "A. Clinician" } },
         "ehr_id": { "_type": "HIER_OBJECT_ID", "value": "7d44b88c-4199-4bad-97dc-d78268e01398" },
         "is_emergency": false,
         "retention": { "_type": "ACCESS_RETENTION",
             "retain_until": { "_type": "DV_DATE", "value": "2031-11-07" },
-            "grounds": [coded("ehds-logging", "eu-2025-327-art-9-2")] },
+            "grounds": [coded("http://data.europa.eu/eli/reg/2025/327/oj", "art_9.par_2")] },
         "link": { "_type": "ACCESS_LOG_LINK", "sequence": 1, "algorithm": "SHA-256",
             "previous_digest": "0".repeat(64), "content_digest": "0".repeat(64),
             "digest": "0".repeat(64) }
@@ -83,7 +83,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
 /// [`app`] over the audit sinks `audit` configures.
 async fn app_auditing(audit: AuditConfig) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = common::binding_service(&pool)

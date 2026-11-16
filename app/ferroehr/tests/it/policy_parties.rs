@@ -682,7 +682,7 @@ async fn only_an_administrator_reads_a_policy_party() {
 
 /// The professional `ROLE`'s `CAPABILITY` holds a clinician's
 /// qualifications (CKM `individual_credentials`), never a grant: it holds no
-/// code of FerroEHR's operation terminology, so a `ROLE` of it is no policy
+/// code of the draft access terminology, so a `ROLE` of it is no policy
 /// party, and a clinician reads it.
 #[tokio::test]
 async fn a_professional_credentials_capability_is_never_read_as_a_grant() {

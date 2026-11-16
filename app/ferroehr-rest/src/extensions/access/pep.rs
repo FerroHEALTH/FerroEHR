@@ -30,6 +30,7 @@ use crate::api::operation::{CompositionGate, Operation, Verb, operation};
 use openehr_its::rest::runtime::ApiError;
 
 use ferroehr::error::ServiceError;
+use ferroehr::system_log::categories::{AccessedContent, ContentIds};
 use openehr_rm::prelude::Composition;
 
 use crate::api::RequestParts;
@@ -80,7 +81,8 @@ fn composition_template(parts: &RequestParts) -> Option<String> {
 fn forbidden(principal: &Principal, detail: &str) -> Response {
     let mut resp =
         RestError::from(ApiError::Forbidden(format!("access denied: {detail}"))).into_response();
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut()
+        .insert(std::sync::Arc::new(principal.clone()));
     resp
 }
 
@@ -108,7 +110,8 @@ fn lookup_error(
         None => RestError::from(crate::overview::error::internal_fault_caused(step, error))
             .into_response(),
     };
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut()
+        .insert(std::sync::Arc::new(principal.clone()));
     resp
 }
 
@@ -143,7 +146,8 @@ pub(crate) async fn pre_check(
 }
 
 /// The SMART gate of a COMPOSITION read, on the template of the version the
-/// dispatch returned (`object`, the ids it recorded).
+/// dispatch returned (`object`, the ids it recorded): the template its content
+/// ids name, read again only when the response names none (#5773).
 async fn smart_post(
     state: &AppState,
     op: &'static str,
@@ -155,9 +159,22 @@ async fn smart_post(
     let Some(principal) = current_principal() else {
         return Ok(());
     };
-    let uid = object.as_ref().and_then(|o| o.uid.clone());
-    let template = composition_template_of(state, &principal, uid.as_deref()).await?;
+    let template = if let Some(ids) = served_ids(object.as_ref()) {
+        ids.template_id.clone()
+    } else {
+        let uid = object.as_ref().and_then(|o| o.uid.as_deref());
+        composition_template_of(state, &principal, uid).await?
+    };
     smart_composition(&principal, op, template.as_deref())
+}
+
+/// The content ids of the one version `object` names, `None` when the
+/// response names no single one.
+fn served_ids(object: Option<&crate::system_log::middleware::AuditObject>) -> Option<&ContentIds> {
+    let Some(AccessedContent::Objects(ids)) = object?.content.as_ref() else {
+        return None;
+    };
+    ids.first().filter(|_| ids.len() == 1)
 }
 
 /// Checks the `composition-` requirement of `op` on `template` for

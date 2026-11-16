@@ -13,7 +13,9 @@
 //! `lookup` seeds the login binding's side table with bound persons and groups and
 //! times the lookup every request of a person makes against its budget (#5087).
 //! `groups` builds a SCIM Group to its cap one member per change and weighs
-//! each change against its budgets (#5015).
+//! each change against its budgets (#5015). `replica` seeds patients under
+//! care and the professionals of their teams into the caller facts and
+//! measures what one replica's copy of them holds and costs (#5590).
 //! No openEHR specification governs load generation: our own design.
 //!
 //! ```text
@@ -23,6 +25,7 @@
 //! scaleseed --database-url postgres://… measure --out target/scale/1m --host "…"
 //! scaleseed --database-url postgres://… lookup --out target/perf/lookup
 //! scaleseed --database-url postgres://… groups --out target/perf/groups
+//! scaleseed --database-url postgres://… replica --patients 1000000
 //! ```
 
 #![expect(
@@ -36,6 +39,7 @@ mod groups;
 mod lookup;
 mod measure;
 mod proto;
+mod replica;
 mod seed;
 
 use std::path::PathBuf;
@@ -116,6 +120,16 @@ enum Command {
         #[arg(long, default_value = "target/perf/groups")]
         out: PathBuf,
     },
+    /// Seeds patients under care and their teams' professionals into the
+    /// caller facts, and measures one replica's copy of them.
+    Replica {
+        /// The population to seed.
+        #[command(flatten)]
+        target: replica::Target,
+        /// Seed only, and measure nothing.
+        #[arg(long)]
+        seed_only: bool,
+    },
     /// Seeds the login binding's side table and times the lookup.
     Lookup {
         /// The bound persons to seed.
@@ -143,7 +157,7 @@ enum Command {
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let mut config = ferroehr::db::DbConfig::new(cli.database_url.clone());
-    config.max_connections = 16;
+    config.max_connections = Some(16);
     config.statement_timeout = ferrohealth_config::units::Duration::ZERO;
     let pool = ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Clinical)
         .await
@@ -226,6 +240,9 @@ async fn main() -> anyhow::Result<()> {
                 build_bytes,
             };
             Box::pin(groups::main(&pool, target, &out)).await?;
+        }
+        Command::Replica { target, seed_only } => {
+            replica::run(&config, &pool, target, seed_only).await?;
         }
         Command::Measure { out, host } => {
             measure::run(&svc, &pool, &cli.database_url, &host, &out).await?;

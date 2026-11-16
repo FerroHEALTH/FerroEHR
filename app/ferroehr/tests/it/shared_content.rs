@@ -139,6 +139,10 @@ struct Served {
     aql: Vec<Vec<String>>,
 }
 
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn served(pool: &PgPool, svc: &FerroEhrService, chain: &Chain) -> Served {
     let mut bodies = Vec::new();
     let mut nodes = Vec::new();
@@ -313,6 +317,10 @@ async fn a_shared_tree_answers_the_same_as_its_own_copy() {
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_delete_an_archive_and_a_restore_keep_the_shared_tree() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
@@ -527,15 +535,13 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
     let config = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: true,
-            retention: None,
-            sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..AuditConfig::default()
     };
-    let (audit, _handle) = sender::start(config, None, Some(pool.clone()))
+    let (audit, _handle) = sender::start(config, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))

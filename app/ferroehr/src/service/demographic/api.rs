@@ -22,6 +22,7 @@ use openehr_rm::prelude::ItemTag;
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::VoId;
@@ -58,16 +59,14 @@ impl FerroEhrService {
         // set rides `openehr-item-tag`, the served VERSION's own set rides
         // `openehr-version-item-tag`. The version tail comes from the response
         // metadata's own OBJECT_VERSION_ID.
-        let container = self.party_tags(vo_id, None).await?;
         // NOTE: a meta uid that is no OBJECT_VERSION_ID names no version, so no version set rides.
         let served = resp
             .meta
             .as_ref()
             .and_then(|m| ObjectVersionId::from_str(&m.uid).ok());
-        let version = match tag_target_tail(served.as_ref()) {
-            Some(tail) => Some(self.party_tags(vo_id, Some(tail)).await?),
-            None => None,
-        };
+        let (container, version) = self
+            .party_tag_sets(vo_id, tag_target_tail(served.as_ref()))
+            .await?;
         if let Some(meta) = resp.meta.as_mut() {
             meta.item_tags = Some(container);
             meta.version_item_tags = version;
@@ -595,7 +594,7 @@ impl FerroEhrService {
         if !self.binding.names_policy() {
             return Ok(());
         }
-        let mut conn = self.demographic_pool.acquire().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
         crate::party_binding::protect::check_read(&mut conn, &self.binding, vo_id).await
     }
 }

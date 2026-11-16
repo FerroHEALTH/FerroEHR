@@ -112,6 +112,10 @@ pub struct FerroEhrConfig {
     /// `[pixm]` — the IHE PIXm patient identity source the subject index asks
     /// (ITI-83) under `record.subject_index = "pixm"`.
     pub pixm: Option<crate::service::ehr_index::config::PixmConfig>,
+    /// `[pix]` — the PMIR Patient Identity Registry FerroEHR subscribes to
+    /// (ITI-94) and whose merges, unmerges and links it applies (ITI-93);
+    /// absent, no subscription is held.
+    pub pix: Option<crate::service::demographic::identity_feed::config::PixConfig>,
 }
 
 impl Default for FerroEhrConfig {
@@ -144,6 +148,7 @@ impl Default for FerroEhrConfig {
             record: record::RecordConfig::default(),
             terminology: None,
             pixm: None,
+            pix: None,
         }
     }
 }
@@ -353,21 +358,21 @@ mod tests {
     #[test]
     fn layering_file_env_set() {
         let file = toml_file("[database]\nmax_connections = 5\n");
-        // file overrides default (20).
+        // file overrides the default (unset).
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(c.database.max_connections, 5);
+        assert_eq!(c.database.max_connections, Some(5));
         let c = assemble_ok(
             Some(file.path()),
             &env(&[("FERROEHR__DATABASE__MAX_CONNECTIONS", "9")]),
             &[],
         );
-        assert_eq!(c.database.max_connections, 9);
+        assert_eq!(c.database.max_connections, Some(9));
         let c = assemble_ok(
             Some(file.path()),
             &env(&[("FERROEHR__DATABASE__MAX_CONNECTIONS", "9")]),
             &[("database.max_connections".to_owned(), "11".to_owned())],
         );
-        assert_eq!(c.database.max_connections, 11);
+        assert_eq!(c.database.max_connections, Some(11));
     }
 
     #[test]
@@ -497,10 +502,7 @@ mod tests {
             ]),
             &[],
         );
-        assert_eq!(
-            c.server.shared.max_concurrent_requests,
-            std::num::NonZeroUsize::new(64)
-        );
+        assert_eq!(c.server.shared.max_concurrent_requests.get(), 64);
         let [issuer] = c.auth.shared.issuers() else {
             panic!("one issuer table from the env");
         };
@@ -826,7 +828,7 @@ mod tests {
             &env(&[("FERROEHR__DATABASE__MAX_CONNECTIONS", "7")]),
             &[],
         );
-        assert_eq!(c.database.max_connections, 7);
+        assert_eq!(c.database.max_connections, Some(7));
     }
 
     /// The `[privacy]` section is reachable from the environment, both scalars

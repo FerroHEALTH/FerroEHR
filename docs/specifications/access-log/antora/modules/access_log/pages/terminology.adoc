@@ -4,26 +4,95 @@ include::partial$module_vars.adoc[]
 
 NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminology] (SPECTERM).
 
-Five groups are added to the openEHR Terminology, with constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS` (`Group_id_access_action`, `Group_id_access_outcome`, `Group_id_accessor_kind`, `Group_id_access_authorisation`, `Group_id_access_refusal_reason`). The codes are for the terminology editors to assign; the rubrics are:
+Six groups are added to the draft `openehr_access` terminology, which the Access Control Information Model proposes for both packages (`Terminology_id_access`), with constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS` (`Group_id_access_action`, `Group_id_access_outcome`, `Group_id_accessor_kind`, `Group_id_access_authorisation`, `Group_id_access_refusal_reason`, `Group_id_credential_binding`). The identifier is proposed and not assigned; if openEHR adopts the groups, they move into the openEHR Terminology with numeric codes. Until then each code of `openehr_access` is its own rubric. Where an HL7 code system publishes a code with the same meaning, the group's term is that code, carried under the code system's identifier:
 
 [cols="2,5", options="header"]
 |===
-|Group |Rubrics
+|Terminology identifier |Canonical URI
+
+|`audit-event-action`
+|`http://hl7.org/fhir/audit-event-action`
+
+|`extra-security-role-type`
+|`http://terminology.hl7.org/CodeSystem/extra-security-role-type`
+|===
+
+The terms are:
+
+[cols="2,5", options="header"]
+|===
+|Group |Terms
 
 |access action
-|read, query, create, update, delete, export, import
+|`audit-event-action::R` (read), query, `audit-event-action::C` (create), `audit-event-action::U` (update), `audit-event-action::D` (delete), export, import
 
 |access outcome
 |granted, partially granted, refused, failed
 
 |accessor kind
-|person, delegated person, subject of care, representative, external person, organisation, system
+|person, delegated person, `extra-security-role-type::datasubject` (subject of care), representative, external person, organisation, system
 
 |access authorisation
 |role, treatment relationship, agreement, consent, permit, emergency, subject of care, representation, legal obligation
 
 |access refusal reason
-|not authenticated, credential not bound, not authorised, consent absent, opted out, restricted by the subject, rate limited, system failure
+|not authenticated, credential not bound, not authorised, consent absent, rate limited, system failure
+
+|credential binding
+|bound, provisional, subject of care, external, organisation, system, unbound, ambiguous, party inactive, party abandoned, party deleted, party kind mismatch, representation unrecorded, key claim missing, groups unavailable, guest, external credential incomplete, system personal scope, no agreement, scope beyond agreement, correlation missing, treatment relationship confirmation missing, treatment relationship confirmation mismatch
 |===
 
-`access refusal reason` is recommended; a system MAY code `ACCESS_OUTCOME._reason_` in its own terminology.
+`credential binding` codes `ACCESSOR._binding_`: how the system bound the presented credential to `_accessor.party_`, or why it could not. Whether the access then ran is recorded by `ACCESS_OUTCOME`, so no code carries a refusal of its own; the refusals of a login sit beneath `access refusal reason` `not authenticated` or `credential not bound`, and `subject of care`, `external`, `organisation` and `system` sit beneath the `accessor kind` of the same name. The two treatment relationship confirmation codes follow the MyHealth@EU treatment relationship confirmation, which applies in every member state.
+
+`access refusal reason` is recommended; a system MAY code `ACCESS_OUTCOME._reason_` in its own terminology. A refusal of the access control decision procedure is recorded with its `access refusal` code of the same terminology, such as `refused-opt-out` for an opt-out and `refused-restricted` for a restriction by the subject, so this group holds no code of its own for either.
+
+A draft code whose closest standard code is broader or narrower stays in `openehr_access`, and the terminology records that code as a `TERM_MAPPING` with its match (RM Data Types, `TERM_MAPPING._match_`):
+
+[cols="2,2,3,1", options="header"]
+|===
+|Group |Code |Mapped to |Match
+
+|access action
+|query
+|`audit-event-action::E`
+|`<`
+
+|access outcome
+|failed
+|`audit-event-outcome::8` (serious failure)
+|`>`
+
+|accessor kind
+|person
+|`extra-security-role-type::humanuser`
+|`>`
+
+|accessor kind
+|delegated person
+|`v3-RoleCode::DELEGATEE`
+|`>`
+
+|accessor kind
+|representative
+|`v3-RoleCode::RESPRSN`
+|`>`
+|===
+
+`audit-event-outcome` is `http://terminology.hl7.org/CodeSystem/audit-event-outcome` and `v3-RoleCode` is `http://terminology.hl7.org/CodeSystem/v3-RoleCode`.
+
+== Retention Grounds
+
+`ACCESS_RETENTION._grounds_` names the legal provisions that set an entry's period, coded in the terminology the jurisdiction names; the proposal adds no group for them. A system SHOULD code a provision of an act that has a European Legislation Identifier (ELI, Council conclusions 2012/C 325/02) with the act's ELI as the terminology identifier and the subdivision as the code, and an act without one by the official identifier its publisher gives it. This coding is the proposal's own design.
+
+Regulation (EU) 2025/327 Art. 9(2) sets the floor of every entry a controller in the Union records: the information on each access "shall be available for at least three years from each date of access to the data". It is coded:
+
+[cols="2,1,3", options="header"]
+|===
+|Terminology identifier |Code |Rubric
+
+|`\http://data.europa.eu/eli/reg/2025/327/oj`
+|`art_9.par_2`
+|Regulation (EU) 2025/327 Art. 9(2): at least three years from each date of access
+|===
+
+The other provisions are the controller's: the floors and ceilings its access policy declares (Access Control Information Model, `ACCESS_LOG_RETENTION`), and `ACCESS_RETENTION._policy_` names the version of that policy the period was taken from.

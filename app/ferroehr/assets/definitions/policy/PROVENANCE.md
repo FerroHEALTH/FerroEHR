@@ -8,8 +8,8 @@ codes it holds in any archetype, never by these archetype ids, and no
 configuration key names them; a deployment versions or replaces the
 templates through the definition API. Each carries the codes: every `ROLE`
 holds an `Operation` element (`id90`) whose `DV_CODED_TEXT` is a code of
-FerroEHR's operation terminology `ferroehr-operations`, the acts-for
-relationship holds `ferroehr-operations::acts_for` in its details (`id6`),
+the draft openEHR access terminology `openehr_access`, the acts-for
+relationship holds `openehr_access::acts_for` in its details (`id6`),
 and the `AGENT` holds a `client_id` identifier, so a party of one of them is
 a policy party, which only an administrator writes and reads (#5485); the
 book's "Operational policy" page describes the model.
@@ -26,7 +26,7 @@ book's "Operational policy" page describes the model.
    do, one `CAPABILITY` per grant: what it commits (its templates,
    facilities, origin and device identifier issuers) and what it imports or
    exports (its subject namespaces), each credentials element named by its
-   `ferroehr-operations` code. A migration is a system client whose grants
+   `openehr_access` code. A migration is a system client whose grants
    are the import and export operations.
 4. `openEHR-DEMOGRAPHIC-ROLE.federation_partner.v1.0.0.adls`: the terms of a
    partner's data-sharing agreement, one `CAPABILITY` per accessor (person or
@@ -72,7 +72,7 @@ its modification time.
 - **The value sets** (operations, accessors, privileges) are
   FerroEHR's own, and so is the name of the acts-for relationship, its type
   (RM `PARTY_RELATIONSHIP` `Type_validity`).
-- **The federation partner's coded terms carry `ferroehr-operations` codes**
+- **The federation partner's coded terms carry `openehr_access` codes**
   (#5440). Its purpose, consent source, MyHealth@EU service and access class
   are `DV_CODED_TEXT` with no local value set, since FerroEHR reads an
   agreement's terms by the codes of that terminology in any archetype, and

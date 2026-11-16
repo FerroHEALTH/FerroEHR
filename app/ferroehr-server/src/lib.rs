@@ -65,12 +65,14 @@ pub mod db_cmd;
 pub mod definitions;
 pub mod instances;
 pub mod party_binding;
+pub mod pmir;
 pub mod policy;
 pub mod process;
 mod usage_report_cmd;
 
-/// How long to wait for the audit queue to flush on shutdown.
-const AUDIT_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
+/// How long the audit chainer and forwarders get to stop on shutdown; what
+/// they leave waits in the store for the next run.
+const AUDIT_STOP_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// What `ferroehr --version` prints after the binary's name: the version, then
 /// the manufacturer with its postal address, single point of contact and
@@ -152,6 +154,12 @@ pub enum Command {
         #[command(subcommand)]
         cmd: party_binding::PartyBindingCmd,
     },
+    /// The PMIR feed messages the consumer refused: list, retry or settle them.
+    Pmir {
+        /// Which step to run.
+        #[command(subcommand)]
+        cmd: pmir::PmirCmd,
+    },
     /// Write a redacted report of what this deployment runs (build, features,
     /// specification pins, migration level, posture, licence, manufacturer and
     /// configuration), the file a complaint or an incident report attaches.
@@ -201,6 +209,9 @@ pub(crate) async fn dispatch(cli: Cli) -> anyhow::Result<()> {
         Some(Command::AuditChain { cmd }) => Box::pin(audit_chain::run(&cmd, config, set)).await,
         Some(Command::PartyBinding { cmd }) => {
             Box::pin(party_binding::run(&cmd, config, set)).await
+        }
+        Some(Command::Pmir { cmd }) => {
+            Box::pin(pmir::run(&cmd, &ferroehr::config::load(config, set)?)).await
         }
         Some(Command::UsageReport { print: _, event }) => {
             usage_report_cmd::run(event, config, set).await
@@ -398,7 +409,6 @@ fn assemble_service(
     deployment: DeploymentPosture,
     ehr_index: EhrIndexProvider,
 ) -> anyhow::Result<FerroEhrService> {
-    let audit_enabled = audit_sender.is_some();
     // The MRN patterns compiled here; `FerroEhrConfig::validate` already
     // refused an uncompilable one at boot, so this cannot be the first place a
     // bad pattern is noticed.
@@ -435,14 +445,17 @@ fn assemble_service(
         .with_identifier_protection_opt(identifiers.map(Arc::new))
         .with_query_config(&config.record.query)
         .with_required_category_map(DeploymentPosture::requires_category_map(config))
-        .with_ehr_index(ehr_index);
+        .with_ehr_index(ehr_index)
+        .with_pmir_identifier_domains(
+            config
+                .pix
+                .as_ref()
+                .map_or(&[][..], |pix| pix.identifier_domain.as_slice()),
+        );
     if let Some(sender) = audit_sender {
-        service = service.with_audit(sender);
-    }
-    if audit_enabled && config.audit.store.enabled {
-        service = service.with_audit_store(ferroehr::system_log::store::AuditStore::new(
-            pools.audit.clone(),
-        ));
+        service = service
+            .with_audit_store(sender.store().clone())
+            .with_audit(sender);
     }
 
     service = attach_terminology(service, config)?;
@@ -494,13 +507,9 @@ fn log_resolved_posture(
     );
     if audit_enabled {
         tracing::info!(
-            local_repository = audit.store.enabled,
             syslog = audit.syslog.is_some(),
             fhir_feed = audit.fhir_feed.is_some(),
-            queue_capacity = audit.queue_capacity,
-            fail_mode = ?audit.fail_mode,
             resolve_subject = audit.resolve_subject,
-            retention = %audit.store.horizon().describe(),
             "IHE ATNA audit enabled"
         );
     }
@@ -718,12 +727,23 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
 /// A connection, migration or domain-isolation failure, contextualized for the
 /// operator.
 async fn connect_pool(config: &ferroehr::config::FerroEhrConfig) -> anyhow::Result<DomainPools> {
-    let pools = db::connect_domains(&config.database)
+    let concurrency =
+        u32::try_from(config.server.shared.max_concurrent_requests.get()).unwrap_or(u32::MAX);
+    let database = config.database.for_serving(concurrency);
+    let pools = db::connect_domains(&database)
         .await
         .context("connecting to PostgreSQL")?;
     db::prepare(&config.database, &pools, config.deployment.profile)
         .await
         .context("preparing the database schema")?;
+    db::pool::open_kept(&database, &pools)
+        .await
+        .context("opening the pooled connections")?;
+    tracing::info!(
+        pool_size = database.pool_size(),
+        kept_open = database.pool_kept(),
+        "each domain pool is open"
+    );
     for domain in Domain::ALL {
         if config.database.is_separated(domain) {
             tracing::info!(
@@ -881,7 +901,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     #[cfg(not(feature = "fhir"))]
     ferroehr::system_log::require_fhir_disabled(&config.audit).map_err(|e| anyhow::anyhow!(e))?;
     let audit_config: AuditConfig = config.audit.clone();
-    let (audit_sender, audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await;
+    let (audit_sender, audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await?;
 
     // Health indicators.
     let mut indicators: Vec<Arc<dyn HealthIndicator>> = vec![
@@ -929,9 +949,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let instances = instances::join(pool.clone(), &config, &signer, &mut indicators).await?;
     let access_log = access_log::build(&config, pools.audit.clone(), Arc::clone(&signer))?;
     // NOTE: our own design, the drain appends every access's entry through the checkpoints'
-    // store, which signs links under an OpenPGP key; no request has run before this.
+    // store, which seals each append under an OpenPGP key; no request has run before this.
     if let Some(sender) = &audit_sender {
-        let installed = sender.use_access_log(access_log.store().clone());
+        let installed = sender.store().use_access_log(access_log.store().clone());
         tracing::debug!(
             installed,
             "access-log entries appended through the configured store"
@@ -959,7 +979,13 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         assemble_service(&config, &pools, audit_sender, signer, deployment, ehr_index)?
             .with_access_log(access_log.clone()),
     );
-    access_log::spawn_schedule(&access_log);
+    let publication = access_log::spawn_schedule(&config, &access_log);
+    if audit_enabled {
+        indicators.push(Arc::new(indicators::AccessLogCheckpointsHealth::new(
+            access_log.seals(),
+            publication,
+        )));
+    }
 
     // The schemas are prepared by now, so a configured identifier scheme the
     // registry does not hold is refused here, not at its first party commit.
@@ -980,6 +1006,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         .context("mirroring the audit category register into the retention register")?;
     // NOTE: EHDS Art. 3(3), a hold stops withholding at its limit; this only writes the record.
     service.spawn_access_delay_expiries(Duration::from_secs(60));
+    pmir::start(&service, &config, &mut indicators).context("starting the PMIR consumer")?;
     // The commit-event outbox: a commit writes its row only while a change-feed
     // grant names a reader, and every reader no grant names any more is marked
     // inactive, so it holds the prune back no longer.
@@ -1011,6 +1038,9 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     indicators.push(Arc::new(indicators::PolicyListenersHealth::new(
         service.policy_listeners(),
     )));
+    indicators.push(Arc::new(indicators::LogRetentionHealth::new(Arc::clone(
+        service.access_policy(),
+    ))));
     // The listeners, the access copies and the audit drain, read at each
     // collection (#5591).
     let meter = telemetry.telemetry().meter(telemetry::metrics::SCOPE);
@@ -1066,7 +1096,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         held.release().await;
     }
     if let Some(handle) = audit_handle {
-        handle.shutdown(AUDIT_DRAIN_TIMEOUT).await;
+        handle.shutdown(AUDIT_STOP_TIMEOUT).await;
     }
     support_watch.abort();
     outbox_prune.abort();
@@ -1078,8 +1108,10 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     Ok(())
 }
 
-/// Start the audit subsystem from config. `(None, None)` when disabled or on a
-/// boot failure (fail-open).
+/// Start the audit subsystem from config; `(None, None)` when it is disabled.
+///
+/// # Errors
+/// When auditing is on and does not start: the boot is refused.
 ///
 /// Two pools, deliberately: the record is written to the `audit` domain, while
 /// the optional subject resolution reads the `clinical` one. A single pool
@@ -1088,20 +1120,20 @@ async fn start_audit(
     config: &AuditConfig,
     clinical: &PgPool,
     audit: &PgPool,
-) -> (Option<AuditSender>, Option<AuditHandle>) {
+) -> anyhow::Result<(Option<AuditSender>, Option<AuditHandle>)> {
     if !config.enabled {
-        return (None, None);
+        return Ok((None, None));
     }
     let resolver = config
         .resolve_subject
         .then(|| subject_resolver(clinical.clone()));
-    match ferroehr::system_log::sender::start(config.clone(), resolver, Some(audit.clone())).await {
-        Ok((sender, handle)) => (Some(sender), Some(handle)),
-        Err(e) => {
-            tracing::error!("ATNA audit failed to start ({e}); continuing without auditing");
-            (None, None)
-        }
-    }
+    // NOTE: our own design (#5747), auditing that does not start refuses the boot, since a
+    // request served without its record is an access the log does not hold.
+    let (sender, handle) =
+        ferroehr::system_log::sender::start(config.clone(), resolver, audit.clone())
+            .await
+            .context("starting the audit store, its chainer and its sinks")?;
+    Ok((Some(sender), Some(handle)))
 }
 
 /// Builds the full authorization handle the binary serves with: the RBAC gate

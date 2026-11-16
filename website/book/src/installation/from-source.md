@@ -112,14 +112,13 @@ cargo build --release --locked -p ferroehr-server --no-default-features
 ```
 
 A slim binary refuses loudly at boot if the configuration enables an
-integration it was built without: `multimedia.enabled`,
-`audit.store.enabled`, `audit.fhir_feed.enabled`, or a configured external
-FHIR terminology provider. The syslog ATNA feed and the in-process terminology
-bundle remain available in slim builds.
+integration it was built without: `multimedia.enabled`, `[audit] enabled`
+(the audit store writes each access-log entry with its FHIR projection), or a
+configured external FHIR terminology provider. The in-process terminology
+bundle remains available in slim builds.
 
 > [!WARNING]
-> The local audit store is **on in the shipped defaults**, so a slim build
-> refuses to start on an untouched configuration. To run one, disable it
-> explicitly (`FERROEHR__AUDIT__STORE__ENABLED=false`) or configure the
-> syslog feed as the audit sink; silently dropping the audit trail is not
-> a boot mode.
+> Auditing is **on in the shipped defaults**, so a slim build refuses to
+> start on an untouched configuration. To run one, disable it explicitly
+> (`FERROEHR__AUDIT__ENABLED=false`); serving accesses the audit trail does
+> not record is not a boot mode.

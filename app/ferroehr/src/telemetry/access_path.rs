@@ -48,18 +48,22 @@ pub const GRANTS_REFRESH_DURATION: &str = "grants_refresh_duration";
 pub const ACCESS_DECISIONS: &str = "access_decisions";
 /// Directives and steps an emergency lifted (`lifted`).
 pub const ACCESS_EMERGENCY_OVERRIDES: &str = "access_emergency_overrides";
-/// Access-log entries appended (`outcome`).
+/// Audit records written to the intake (`outcome`).
 pub const ACCESS_LOG_ENTRIES: &str = "access_log_entries";
-/// Access-log append latency, one transaction's entries (`outcome`).
+/// Intake write latency, one request's records (`outcome`).
 pub const ACCESS_LOG_APPEND_DURATION: &str = "access_log_append_duration";
-/// Access-log link signing latency, one append's links (`outcome`).
+/// Access-log checkpoint signing latency, one append's checkpoint (`outcome`).
 pub const ACCESS_LOG_SIGN_DURATION: &str = "access_log_sign_duration";
-/// Checkpoint and seal runs over a chain (`chain`, `outcome`).
+/// Scheduled seal runs over the system chain (`chain`, `outcome`).
 pub const AUDIT_SEAL_DURATION: &str = "audit_seal_duration";
 /// The Unix time of a chain's newest successful seal run (`chain`).
 pub const AUDIT_SEAL_LAST_SUCCESS: &str = "audit_seal_last_success";
 /// Access-log entries replaced by their tombstones.
 pub const ACCESS_LOG_TOMBSTONES: &str = "access_log_tombstones";
+/// Access-log tombstones folded into gaps of the chain.
+pub const ACCESS_LOG_FOLDED: &str = "access_log_folded";
+/// Gaps written into the access log's chain, one per folded run.
+pub const ACCESS_LOG_GAPS: &str = "access_log_gaps";
 /// Access-log retention runs (`outcome`).
 pub const ACCESS_LOG_RETENTION_DURATION: &str = "access_log_retention_duration";
 /// Scheduled verifications of the audit chains (`scope`, `result`).
@@ -68,14 +72,23 @@ pub const AUDIT_CHAIN_VERIFICATION_DURATION: &str = "audit_chain_verification_du
 pub const AUDIT_CHAIN_LAST_VERIFICATION: &str = "audit_chain_last_verification";
 /// Whether the newest chain verification found the chains intact, `1` or `0`.
 pub const AUDIT_CHAIN_INTACT: &str = "audit_chain_intact";
-/// Records waiting in the audit drain's queue.
-pub const AUDIT_DRAIN_QUEUE_DEPTH: &str = "audit_drain_queue_depth";
+/// How long one round of the audit chainer held the head of the access log
+/// (`outcome`).
+pub const ACCESS_LOG_CHAIN_HOLD: &str = "access_log_chain_hold_duration";
+/// Records the audit chainer linked into a chain (`chain`).
+pub const AUDIT_CHAINED: &str = "audit_chained";
+/// Chain positions past a chain's verification cursor, the head minus the
+/// cursor (`chain`, #5779).
+pub const AUDIT_CHAIN_VERIFICATION_LAG: &str = "audit_chain_verification_lag";
+/// How long ago the oldest record past a chain's verification cursor was
+/// recorded, in seconds; `0` when the cursor is at the head (`chain`, #5779).
+pub const AUDIT_CHAIN_UNVERIFIED_AGE: &str = "audit_chain_unverified_age";
 /// Live instances of the deployment that differ from this one, by what
 /// differs (`differs`), at its last comparison (#5589).
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 24] = [
+pub const NAMES: [&str; 29] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
@@ -94,11 +107,16 @@ pub const NAMES: [&str; 24] = [
     AUDIT_SEAL_DURATION,
     AUDIT_SEAL_LAST_SUCCESS,
     ACCESS_LOG_TOMBSTONES,
+    ACCESS_LOG_FOLDED,
+    ACCESS_LOG_GAPS,
     ACCESS_LOG_RETENTION_DURATION,
     AUDIT_CHAIN_VERIFICATION_DURATION,
     AUDIT_CHAIN_LAST_VERIFICATION,
     AUDIT_CHAIN_INTACT,
-    AUDIT_DRAIN_QUEUE_DEPTH,
+    ACCESS_LOG_CHAIN_HOLD,
+    AUDIT_CHAINED,
+    AUDIT_CHAIN_VERIFICATION_LAG,
+    AUDIT_CHAIN_UNVERIFIED_AGE,
     INSTANCE_MISMATCHES,
 ];
 
@@ -122,6 +140,7 @@ pub fn histogram_views() -> Vec<(&'static str, &'static [f64])> {
         (GRANTS_REFRESH_DURATION, PATH_BUCKETS),
         (ACCESS_LOG_APPEND_DURATION, PATH_BUCKETS),
         (ACCESS_LOG_SIGN_DURATION, PATH_BUCKETS),
+        (ACCESS_LOG_CHAIN_HOLD, PATH_BUCKETS),
         (AUDIT_SEAL_DURATION, SCHEDULED_BUCKETS),
         (ACCESS_LOG_RETENTION_DURATION, SCHEDULED_BUCKETS),
         (AUDIT_CHAIN_VERIFICATION_DURATION, SCHEDULED_BUCKETS),
@@ -148,14 +167,22 @@ pub struct AccessPathMetrics {
     pub log_entries: Counter<u64>,
     /// Access-log append latency, seconds.
     pub log_append_duration: Histogram<f64>,
-    /// Access-log link signing latency, seconds.
+    /// Access-log checkpoint signing latency, seconds.
     pub log_sign_duration: Histogram<f64>,
-    /// Checkpoint and seal runs, seconds.
+    /// How long each chainer round held the head of the access log, seconds.
+    pub log_chain_hold: Histogram<f64>,
+    /// Records the chainer linked into a chain.
+    pub log_chained: Counter<u64>,
+    /// Scheduled seal runs, seconds.
     pub seal_duration: Histogram<f64>,
     /// The Unix time of each chain's newest successful seal run.
     pub seal_last_success: Gauge<f64>,
     /// Access-log entries replaced by their tombstones.
     pub log_tombstones: Counter<u64>,
+    /// Access-log tombstones folded into gaps.
+    pub log_folded: Counter<u64>,
+    /// Gaps written into the access log's chain.
+    pub log_gaps: Counter<u64>,
     /// Access-log retention runs, seconds.
     pub log_retention_duration: Histogram<f64>,
     /// Chain verifications, seconds.
@@ -164,28 +191,36 @@ pub struct AccessPathMetrics {
     pub chain_last_verification: Gauge<f64>,
     /// Whether the newest chain verification found the chains intact.
     pub chain_intact: Gauge<u64>,
+    /// Chain positions past the verification cursor, by chain.
+    pub chain_verification_lag: Gauge<u64>,
+    /// The age of the oldest record past the cursor by chain, seconds.
+    pub chain_unverified_age: Gauge<f64>,
 }
 
 impl AccessPathMetrics {
     /// Create every event instrument on `meter`.
     #[must_use]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one instrument per field, each named with its description"
+    )]
     pub fn new(meter: &Meter) -> Self {
         let make = Make(meter);
         Self {
             copy_lookups: make.counter(
                 ACCESS_COPY_LOOKUPS,
-                "Lookups in the per-EHR access copy and the class copy \
-                 (copy = ehr | classes, result = hit | miss)",
+                "Lookups in the per-EHR access copy, the class copy and the binding copies \
+                 (copy = ehr | classes | binding | party_name, result = hit | miss)",
             ),
             copy_refills: make.counter(
                 ACCESS_COPY_REFILLS,
-                "Reads that refill the per-EHR access copy or the class copy \
-                 (copy = ehr | classes, outcome = ok | failed)",
+                "Reads that refill the per-EHR access copy, the class copy or a binding copy \
+                 (copy = ehr | classes | binding | party_name, outcome = ok | failed)",
             ),
             copy_drops: make.counter(
                 ACCESS_COPY_DROPS,
-                "Drops from the per-EHR access copy and the class copy \
-                 (scope = ehr | classes | every)",
+                "Drops from the per-EHR access copy, the class copy and the binding copies \
+                 (scope = ehr | classes | binding | party_name | every)",
             ),
             grants_refresh_duration: make.histogram(
                 GRANTS_REFRESH_DURATION,
@@ -205,31 +240,47 @@ impl AccessPathMetrics {
             ),
             log_entries: make.counter(
                 ACCESS_LOG_ENTRIES,
-                "Access-log entries appended (outcome = ok | failed)",
+                "Audit records a request wrote to the intake (outcome = ok | failed)",
             ),
             log_append_duration: make.histogram(
                 ACCESS_LOG_APPEND_DURATION,
-                "Access-log append latency per transaction (outcome = ok | failed)",
+                "A request's intake write (outcome = ok | failed)",
                 PATH_BUCKETS,
+            ),
+            log_chain_hold: make.histogram(
+                ACCESS_LOG_CHAIN_HOLD,
+                "A chainer round's hold of the head (outcome = ok | failed)",
+                PATH_BUCKETS,
+            ),
+            log_chained: make.counter(
+                AUDIT_CHAINED,
+                "Audit records the chainer linked (chain = access_log | system)",
             ),
             log_sign_duration: make.histogram(
                 ACCESS_LOG_SIGN_DURATION,
-                "Access-log link signing latency per append (outcome = ok | failed)",
+                "Access-log checkpoint signing latency per append (outcome = ok | failed)",
                 PATH_BUCKETS,
             ),
             seal_duration: make.histogram(
                 AUDIT_SEAL_DURATION,
-                "Checkpoint and seal runs (chain = access_log | system, \
-                 outcome = sealed | empty | failed)",
+                "Scheduled seal runs (chain = system, outcome = sealed | empty | failed)",
                 SCHEDULED_BUCKETS,
             ),
-            seal_last_success: make.timestamp(
+            seal_last_success: make.seconds(
                 AUDIT_SEAL_LAST_SUCCESS,
                 "Unix time of the newest successful seal run, by chain",
             ),
             log_tombstones: make.counter(
                 ACCESS_LOG_TOMBSTONES,
                 "Access-log entries replaced by their tombstones",
+            ),
+            log_folded: make.counter(
+                ACCESS_LOG_FOLDED,
+                "Access-log tombstones folded into gaps of the chain",
+            ),
+            log_gaps: make.counter(
+                ACCESS_LOG_GAPS,
+                "Gaps written into the access log's chain, one per folded run",
             ),
             log_retention_duration: make.histogram(
                 ACCESS_LOG_RETENTION_DURATION,
@@ -242,17 +293,25 @@ impl AccessPathMetrics {
                  result = intact | damaged | unverifiable)",
                 SCHEDULED_BUCKETS,
             ),
-            chain_last_verification: make.timestamp(
+            chain_last_verification: make.seconds(
                 AUDIT_CHAIN_LAST_VERIFICATION,
                 "Unix time of the newest finished audit chain verification",
             ),
-            chain_intact: meter
-                .u64_gauge(AUDIT_CHAIN_INTACT)
-                .with_description(
-                    "Whether the newest audit chain verification found the chains intact (1) \
-                     or damaged or unverifiable (0)",
-                )
-                .build(),
+            chain_intact: make.gauge(
+                AUDIT_CHAIN_INTACT,
+                "Whether the newest audit chain verification found the chains intact (1) \
+                 or damaged or unverifiable (0)",
+            ),
+            chain_verification_lag: make.gauge(
+                AUDIT_CHAIN_VERIFICATION_LAG,
+                "Chain positions past the verification cursor: the chain head \
+                 minus the cursor (chain = system | access_log)",
+            ),
+            chain_unverified_age: make.seconds(
+                AUDIT_CHAIN_UNVERIFIED_AGE,
+                "Seconds since the oldest record past the verification cursor was \
+                 recorded, 0 at the head (chain = system | access_log)",
+            ),
         }
     }
 }
@@ -284,8 +343,13 @@ impl Make<'_> {
             .build()
     }
 
-    /// A gauge of a Unix time in seconds.
-    fn timestamp(&self, name: &'static str, description: &'static str) -> Gauge<f64> {
+    /// A gauge of whole numbers.
+    fn gauge(&self, name: &'static str, description: &'static str) -> Gauge<u64> {
+        self.0.u64_gauge(name).with_description(description).build()
+    }
+
+    /// A gauge in seconds: a Unix time or an age.
+    fn seconds(&self, name: &'static str, description: &'static str) -> Gauge<f64> {
         self.0
             .f64_gauge(name)
             .with_description(description)
@@ -331,8 +395,8 @@ pub fn unix_now() -> f64 {
 }
 
 /// Register the instruments read at collection time over `service`: each
-/// policy listener's state, the size of the per-EHR access copy and the
-/// class copy, and the depth of the audit drain's queue.
+/// policy listener's state, and the size of the per-EHR access copy and the
+/// class copy.
 pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
     let listeners = service.policy_listeners();
     observe_listeners(meter, &listeners);
@@ -345,17 +409,6 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
             let (ehrs, classes) = held.ehr_access_held();
             observer.observe(ehrs, &[KeyValue::new("copy", "ehr")]);
             observer.observe(classes, &[KeyValue::new("copy", "classes")]);
-        })
-        .build();
-
-    let drained = Arc::clone(service);
-    let _queue = meter
-        .u64_observable_gauge(AUDIT_DRAIN_QUEUE_DEPTH)
-        .with_description("Records waiting in the audit drain's queue")
-        .with_callback(move |observer| {
-            if let Some(queued) = drained.audit_queued() {
-                observer.observe(queued, &[]);
-            }
         })
         .build();
 }

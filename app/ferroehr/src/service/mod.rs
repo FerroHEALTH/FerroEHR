@@ -108,6 +108,9 @@ pub struct FerroEhrService {
     /// internal optimisation's state is a metric, not a REST surface; no
     /// openEHR spec governs the cache — our own design).
     pub(crate) web_templates: WebTemplateCache,
+    /// The template addresses `template_ref` registers, held in memory so a
+    /// commit asks no statement of a registered template (#5775).
+    registered_templates: Arc<definition::registered::RegisteredTemplates>,
     /// Version signer (`VERSION.signature`, RM common master06 §Digital
     /// Signature). Defaults to server-side `digest` signing; the binary wires
     /// the configured [`Signer`].
@@ -208,6 +211,15 @@ pub struct FerroEhrService {
     /// `[privacy.identifier_protection]` section.
     pub(in crate::service) identifiers:
         Option<Arc<crate::identifier_protection::engine::IdentifierProtection>>,
+    /// The `DV_IDENTIFIER.type` of each patient identifier domain
+    /// `[[pix.identifier_domain]]` names, by `Identifier.system`, which an
+    /// applied PMIR message writes a linked identifier with.
+    pub(in crate::service) pmir_domains: Arc<std::collections::BTreeMap<String, String>>,
+    /// The party facts revision the clinical care projection is known to
+    /// reflect on this replica ([`ehr::care_projection`]); a query reads the
+    /// projection only while it is at least the revision of the facts this
+    /// replica holds.
+    pub(in crate::service) care_projected: Arc<ehr::care_projection::Projected>,
     /// The clinical-side data-minimisation policy
     /// ([`crate::privacy`]) every clinical commit body is checked against.
     ///
@@ -252,6 +264,9 @@ pub struct FerroEhrService {
     /// The policy grants in force on the party pool, under the default
     /// `[authz.grants] allowed` until the binary sets the configured one.
     pub(in crate::service) grants: Arc<crate::party_binding::grants::live::LiveGrants>,
+    /// This replica's copy of the binding lookups and the bound `PERSON`s'
+    /// names, which every party source of this service reads (#5771).
+    pub(in crate::service) bindings: Arc<crate::party_binding::live::LiveBindings>,
     /// Who may import and which wrapped committers an import may carry;
     /// [`Self::new`] lets every caller import with no wrapped-committer rule
     /// beyond its own issuer.
@@ -274,12 +289,22 @@ impl FerroEhrService {
     #[must_use]
     pub fn new(pools: &DomainPools) -> Self {
         let ehr_access = Arc::new(EhrAccessCache::default());
+        let access_policy = Arc::new(crate::access_policy::LivePolicy::new(
+            pools.clinical.clone(),
+        ));
+        let grants = Arc::new(crate::party_binding::grants::live::LiveGrants::new(
+            pools.party.clone(),
+        ));
+        access_policy.attach_grants(Arc::clone(&grants));
         Self {
             demographic_pool: pools.party.clone(),
             pool: pools.clinical.clone(),
             system_id: DEFAULT_SYSTEM_ID.to_owned(),
             spec_profile: crate::config::profile::SpecProfile::default(),
             web_templates: WebTemplateCache::default(),
+            registered_templates: Arc::new(definition::registered::RegisteredTemplates::new(
+                pools.clinical.clone(),
+            )),
             signer: Arc::new(Signer::digest_default()),
             licence: crate::licence::state::LicenceState::NoLicence(
                 crate::licence::state::Reason::NoneEmbedded,
@@ -309,21 +334,20 @@ impl FerroEhrService {
                 .time_to_live(Duration::from_secs(30))
                 .build(),
             identifiers: None,
+            pmir_domains: Arc::default(),
+            care_projected: Arc::default(),
             privacy: Arc::new(crate::privacy::PrivacyPolicy::default()),
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),
             ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
             registers: Arc::new(crate::policy_register::LiveRegisters::new(
                 pools.clinical.clone(),
             )),
-            access_policy: Arc::new(crate::access_policy::LivePolicy::new(
-                pools.clinical.clone(),
-            )),
+            access_policy,
             require_category_map: false,
             party_templates: Arc::default(),
             binding: Arc::default(),
-            grants: Arc::new(crate::party_binding::grants::live::LiveGrants::new(
-                pools.party.clone(),
-            )),
+            grants,
+            bindings: Arc::default(),
             import_policy: Arc::default(),
         }
     }
@@ -402,7 +426,9 @@ impl FerroEhrService {
         let grants = crate::party_binding::grants::live::LiveGrants::new(pool.clone());
         grants.set_ceiling((*self.grants.ceiling()).clone());
         grants.set_federation((*self.grants.federation()).clone());
+        grants.set_namespace(&self.grants.namespace());
         self.grants = Arc::new(grants);
+        self.bindings = Arc::default();
         self.demographic_pool = pool;
         self
     }
@@ -475,6 +501,7 @@ impl FerroEhrService {
     #[must_use]
     pub fn with_audit(mut self, sender: AuditSender) -> Self {
         self.registers.attach_audit(sender.clone());
+        self.access_policy.attach_audit(sender.clone());
         self.audit = Some(sender);
         self
     }
@@ -626,6 +653,7 @@ impl FerroEhrService {
             skip_identical_resend: self.skip_identical_resend,
             binding: &self.binding,
             grants: &self.grants,
+            privacy: &self.privacy,
             access_delay: self.registers.access_delay().policy.clone(),
             direct_origin: crate::origins::DirectOrigin::current(&self.system_id),
         }

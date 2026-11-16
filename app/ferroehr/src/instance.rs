@@ -264,7 +264,7 @@ mod tests {
         let base = FerroEhrConfig::default();
         let mut own = base.clone();
         own.server.shared.listen = "127.0.0.1:18081".parse().expect("an address");
-        own.database.max_connections = 7;
+        own.database.max_connections = Some(7);
         assert_eq!(of(&base), of(&own));
         let mut shared = base.clone();
         shared.api.system_id = "another.example.org".to_owned();

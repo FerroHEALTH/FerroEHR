@@ -746,15 +746,13 @@ async fn setting_and_lifting_a_mark_is_recorded_in_the_access_trail() {
     let config = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: true,
-            retention: None,
-            sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..AuditConfig::default()
     };
-    let (sender, _handle) = sender::start(config, None, Some(pool.clone()))
+    let (sender, _handle) = sender::start(config, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))

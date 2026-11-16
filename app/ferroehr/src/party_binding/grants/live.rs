@@ -5,6 +5,10 @@
 //! facts, from which every request resolves its caller's capabilities and
 //! facts with no read of its own.
 //!
+//! The care relationships of subjects are no caller facts: the care copy
+//! ([`crate::party_binding::grants::care`]) holds them in caches of a fixed
+//! bound, read on a miss (#5615).
+//!
 //! The copy is read again when a notification on [`CHANNEL`] marks it stale,
 //! when the listener is down, and after a request whose own commit changed a
 //! grant or a fact, so the next request on every replica decides under the
@@ -25,18 +29,26 @@ use std::sync::{Arc, PoisonError, RwLock};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
+use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::party_binding::grants::caller::store::{Changed, FactRow};
-use crate::party_binding::grants::caller::{self, CallerFacts, CareTeam, FactKind, FactValue};
+use crate::party_binding::grants::caller::{self, CareTeam, FactKind, FactValue};
 use crate::party_binding::grants::capabilities::{
     Actor, Capabilities, Client, ClientState, Credentials, Grant, Provider,
 };
+use crate::party_binding::grants::care::CareCopy;
 use crate::party_binding::grants::operation::{GrantCeiling, Operation};
 use crate::party_binding::grants::store::{self, CHANNEL, CapabilityRow, Loaded};
 use crate::party_binding::grants::trust::{AgreementPosture, FederationTrust};
-use crate::policy_register::listen::Listened;
+use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
+use openehr_rm::draft::access_control::terminology::ForeignCode;
+
+#[cfg(test)]
+mod sharing;
+mod subjects;
 
 tokio::task_local! {
     /// Set when a commit of the running request changed a grant row.
@@ -70,6 +82,14 @@ pub async fn tracking<F: Future>(fut: F) -> (F::Output, bool) {
 #[error("the policy grants could not be read")]
 pub struct GrantsUnavailable(#[from] StorageError);
 
+impl From<GrantsUnavailable> for crate::error::ServiceError {
+    /// A copy that cannot be read answers `503`: the request is refused, never
+    /// decided without the facts it needs.
+    fn from(error: GrantsUnavailable) -> Self {
+        Self::overloaded("the access facts could not be read", error)
+    }
+}
+
 impl GrantsUnavailable {
     /// The store failure.
     #[must_use]
@@ -83,8 +103,9 @@ impl GrantsUnavailable {
 struct Held {
     /// The revision read; `None` before the first read.
     revision: Option<i64>,
-    /// Each client `ACTOR` by `(issuer, client_id)`.
-    clients: BTreeMap<(String, String), Client>,
+    /// Each client `ACTOR` by issuer, then `client_id`, so a request looks one
+    /// up by its borrowed identifiers.
+    clients: BTreeMap<String, BTreeMap<String, Arc<Client>>>,
     /// The capabilities of each performer.
     capabilities: BTreeMap<Uuid, Vec<CapabilityRow>>,
 }
@@ -121,6 +142,9 @@ impl HeldFacts {
 /// ceiling it honours the grants under.
 pub struct LiveGrants {
     pool: PgPool,
+    /// The `PARTY_REF.namespace` this CDR names its parties under
+    /// (`[authz.party_binding] namespace`).
+    namespace: RwLock<Arc<str>>,
     ceiling: RwLock<Arc<GrantCeiling>>,
     federation: RwLock<Arc<FederationTrust>>,
     held: RwLock<Arc<Held>>,
@@ -129,6 +153,8 @@ pub struct LiveGrants {
     installing: tokio::sync::Mutex<()>,
     /// The listener on [`CHANNEL`].
     listened: Arc<Listened>,
+    /// The subjects' care relationships and the teams' patients held.
+    care: Arc<CareCopy>,
 }
 
 impl fmt::Debug for LiveGrants {
@@ -144,9 +170,17 @@ impl LiveGrants {
     /// on the first request.
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
+        let care = Arc::new(CareCopy::new());
+        let dropping: Arc<dyn Subscriber> = Arc::<CareCopy>::clone(&care);
         Self {
-            listened: Arc::new(Listened::new(CHANNEL)),
+            listened: Arc::new(Listened::with_subscriber(CHANNEL, dropping)),
+            care,
             pool,
+            namespace: RwLock::new(Arc::from(
+                crate::config::binding::PartyBindingConfig::default()
+                    .namespace
+                    .as_str(),
+            )),
             ceiling: RwLock::new(Arc::new(GrantCeiling::default())),
             federation: RwLock::new(Arc::default()),
             held: RwLock::new(Arc::default()),
@@ -164,6 +198,25 @@ impl LiveGrants {
     #[must_use]
     pub fn ceiling(&self) -> Arc<GrantCeiling> {
         self.ceiling
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    /// Name this CDR's parties under `namespace`, `[authz.party_binding]
+    /// namespace`: a subject reference under it names a `PERSON` by its
+    /// container ([`Self::person_of`]).
+    pub fn set_namespace(&self, namespace: &str) {
+        *self
+            .namespace
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = Arc::from(namespace);
+    }
+
+    /// The namespace this CDR names its parties under.
+    #[must_use]
+    pub fn namespace(&self) -> Arc<str> {
+        self.namespace
             .read()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
@@ -253,7 +306,7 @@ impl LiveGrants {
         let started = std::time::Instant::now();
         let mut kind = "unchanged";
         let read = async {
-            let mut conn = self.pool.acquire().await?;
+            let mut conn = acquire(&self.pool).await?;
             let (revision, facts_revision) = store::revisions(&mut conn).await?;
             if Some(revision) != self.revision() {
                 kind = "grants";
@@ -265,11 +318,17 @@ impl LiveGrants {
                 let _installing = self.installing.lock().await;
                 let since = self.facts_revision();
                 let changed = read_facts(&mut conn, since).await?;
+                let mut stamped: Vec<Uuid> =
+                    changed.parties.iter().map(|(party, _)| *party).collect();
+                stamped.sort_unstable();
+                let teams = changed.cared_teams.clone();
+                let declared = changed.declared.clone();
                 let held = self.held_facts();
                 if held.revision.is_none_or(|held| held < changed.revision) {
                     *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
                         Arc::new(held.with(changed));
                 }
+                self.care.drop_changed(&stamped, &teams, &declared).await;
             }
             Ok::<(), StorageError>(())
         };
@@ -309,27 +368,28 @@ impl LiveGrants {
                 "stored grants are above [authz.grants] allowed and are not honoured"
             );
         }
-        let clients = loaded
-            .clients
-            .into_iter()
-            .map(|row| {
-                let client = Client {
-                    party: row.party_id,
-                    state: ClientState::of(&row.lifecycle_state),
-                    provider: row.provider_id.map(|party| Provider {
-                        party,
-                        identifier: row.provider,
-                    }),
-                };
-                ((row.issuer, row.client_id), client)
-            })
-            .collect();
+        let mut clients: BTreeMap<String, BTreeMap<String, Arc<Client>>> = BTreeMap::new();
+        for row in loaded.clients {
+            let client = Client {
+                party: row.party_id,
+                state: ClientState::of(&row.lifecycle_state),
+                provider: row.provider_id.map(|party| Provider {
+                    party,
+                    identifier: row.provider,
+                }),
+            };
+            clients
+                .entry(row.issuer)
+                .or_default()
+                .insert(row.client_id, Arc::new(client));
+        }
         let mut capabilities: BTreeMap<Uuid, Vec<CapabilityRow>> = BTreeMap::new();
         for row in loaded.capabilities {
             capabilities.entry(row.performer_id).or_default().push(row);
         }
         *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
             Arc::new(HeldFacts::default().with(loaded.facts));
+        self.care.drop_all();
         *self.held.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(Held {
             revision: Some(loaded.revision),
             clients,
@@ -348,8 +408,9 @@ impl LiveGrants {
             Actor::Client { issuer, client_id } => {
                 let Some(client) = held
                     .clients
-                    .get(&(issuer.to_owned(), client_id.to_owned()))
-                    .cloned()
+                    .get(issuer)
+                    .and_then(|clients| clients.get(client_id))
+                    .map(Arc::clone)
                 else {
                     return Capabilities::default();
                 };
@@ -370,23 +431,24 @@ impl LiveGrants {
             .flatten()
             .filter_map(|row| {
                 let operation = in_force(row, &ceiling, today, now)?;
-                Some(Grant::new(
-                    operation,
-                    row.role_id,
-                    row.credentials.clone().map(Arc::new),
-                ))
+                Some(Grant::new(operation, row.role_id, row.credentials.clone()))
             })
             .collect();
-        let groups = client
+        let provider = client
             .as_ref()
             .and_then(|client| client.provider.as_ref())
-            .map_or_else(Vec::new, |provider| self.memberships(provider.party, now));
-        let facts = self.facts_of(performer, now).with_provider_groups(groups);
+            .map(|provider| provider.party);
+        let groups = provider.map_or_else(Vec::new, |party| self.memberships(party, now));
+        let types = provider.map_or_else(Vec::new, |party| self.organisation_types(party));
+        let facts = self
+            .facts_of(performer, now)
+            .with_provider_groups(groups)
+            .with_organisation_types(types);
         Capabilities::new(client, grants).with_facts(facts)
     }
 
     /// The `GROUP`s the `ORGANISATION` `organisation` is a member of at
-    /// `now`, from the copy held: each `member_of` relationship of its live
+    /// `now`, from the copy held: each membership (`MBR`) relationship of its live
     /// head that holds on the date of `now` in UTC.
     #[must_use]
     pub fn memberships(&self, organisation: Uuid, now: jiff::Timestamp) -> Vec<Uuid> {
@@ -404,15 +466,31 @@ impl LiveGrants {
             .collect()
     }
 
+    /// The types the coded name of the `ORGANISATION` `organisation` names,
+    /// from the copy held.
+    #[must_use]
+    pub fn organisation_types(&self, organisation: Uuid) -> Vec<ForeignCode> {
+        let held = self.held_facts();
+        held.by_party
+            .get(&organisation)
+            .into_iter()
+            .flat_map(|rows| rows.iter())
+            .filter(|row| row.kind == FactKind::OrganisationType)
+            .filter_map(|row| match &row.value {
+                FactValue::Code(code) => Some(code.clone()),
+                FactValue::Team(_) => None,
+            })
+            .collect()
+    }
+
     /// The caller facts of the party `party` at `now`, from the copy held:
-    /// the clearances and purposes of the capabilities of the `ROLE`s it
-    /// performs that hold on the date of `now` in UTC and at `now`, and the
-    /// care teams it is a member of on that date.
+    /// the roles of the `ROLE`s it performs that hold on the date of `now` in
+    /// UTC, and the care teams it is a member of on that date.
     #[must_use]
     pub fn facts_of(&self, party: Uuid, now: jiff::Timestamp) -> CallerFacts {
         let held = self.held_facts();
         let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
-        let (mut clearances, mut purposes, mut care_teams) = (Vec::new(), Vec::new(), Vec::new());
+        let (mut roles, mut care_teams) = (Vec::new(), Vec::new());
         for row in held
             .by_party
             .get(&party)
@@ -423,73 +501,29 @@ impl LiveGrants {
                 continue;
             }
             match (row.kind, &row.value) {
-                (FactKind::Clearance, FactValue::Code(code)) => clearances.push(code.clone()),
-                (FactKind::Purpose, FactValue::Code(code)) => purposes.push(code.clone()),
+                (FactKind::Role, FactValue::Code(code)) => roles.push(code.clone()),
                 (FactKind::MemberOf, FactValue::Team(team)) => {
                     care_teams.extend(row.term.dates.map(|dates| CareTeam::new(*team, dates)));
                 }
                 _ => {}
             }
         }
-        CallerFacts::new(clearances, purposes, care_teams)
+        CallerFacts::new(roles, care_teams)
     }
 
-    /// The care teams and units the subject `subject` is under the care of,
-    /// from the copy held: each `under_care_of` relationship of its live
-    /// `PERSON` head with the dates it holds, whether or not it holds today,
-    /// so the evaluator judges a discharge and the grace after it.
+    /// How many subjects and care teams the care copy holds, and the patients
+    /// those teams hold together; each bounded
+    /// ([`crate::party_binding::grants::care::SUBJECTS`],
+    /// [`crate::party_binding::grants::care::CENSUS`]).
     #[must_use]
-    pub fn under_care_of(&self, subject: Uuid) -> Vec<CareTeam> {
-        let held = self.held_facts();
-        let mut out: Vec<CareTeam> = held
-            .by_party
-            .get(&subject)
-            .into_iter()
-            .flat_map(|rows| rows.iter())
-            .filter(|row| row.kind == FactKind::UnderCareOf)
-            .filter(|row| matches!(row.term.lifecycle_state.as_str(), "532" | "553"))
-            .filter_map(|row| match (row.value.clone(), row.term.dates) {
-                (FactValue::Team(team), Some(dates)) => Some(CareTeam::new(team, dates)),
-                _ => None,
-            })
-            .collect();
-        out.sort();
-        out.dedup();
-        out
+    pub fn care_held(&self) -> (u64, u64, u64) {
+        self.care.held()
     }
 
-    /// The subjects under the care of any of `teams` on `day`, with `grace`
-    /// after each relationship ends, from the copy held: the patients a
-    /// member of those teams has a live care relationship to
-    /// ([`CareTeam::live_on`]), sorted.
+    /// How many parties the copy of the caller facts holds facts of.
     #[must_use]
-    pub fn cared_for_by(
-        &self,
-        teams: &[Uuid],
-        day: jiff::civil::Date,
-        grace: jiff::Span,
-    ) -> Vec<Uuid> {
-        if teams.is_empty() {
-            return Vec::new();
-        }
-        let held = self.held_facts();
-        held.by_party
-            .iter()
-            .filter(|(_, rows)| {
-                rows.iter().any(|row| {
-                    row.kind == FactKind::UnderCareOf
-                        && matches!(row.term.lifecycle_state.as_str(), "532" | "553")
-                        && match (&row.value, row.term.dates) {
-                            (FactValue::Team(team), Some(dates)) => {
-                                teams.contains(team)
-                                    && CareTeam::new(*team, dates).live_on(day, grace)
-                            }
-                            _ => false,
-                        }
-                })
-            })
-            .map(|(subject, _)| *subject)
-            .collect()
+    pub fn parties_held(&self) -> usize {
+        self.held_facts().by_party.len()
     }
 
     /// Every federation agreement in force at `now`, once per client
@@ -501,7 +535,10 @@ impl LiveGrants {
         let ceiling = self.ceiling();
         let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
         let mut out = Vec::new();
-        for ((issuer, client_id), client) in &held.clients {
+        let clients = held.clients.iter().flat_map(|(issuer, clients)| {
+            clients.iter().map(move |(id, client)| (issuer, id, client))
+        });
+        for (issuer, client_id, client) in clients {
             if !client.state.grants() {
                 continue;
             }
@@ -510,11 +547,7 @@ impl LiveGrants {
                 else {
                     continue;
                 };
-                let grant = Grant::new(
-                    accessor.operation(),
-                    row.role_id,
-                    row.credentials.clone().map(Arc::new),
-                );
+                let grant = Grant::new(accessor.operation(), row.role_id, row.credentials.clone());
                 // NOTE: an agreement that does not read is listed without its terms,
                 // and the admission refuses every caller under it.
                 let agreement = Agreement::read(accessor, grant.credentials()).ok();
@@ -579,7 +612,7 @@ impl LiveGrants {
             .filter(|row| in_force(row, &ceiling, today, now) == Some(Operation::CreateAtLogin))
             // NOTE: admission::check refuses the commit of credentials that do not
             // read, so a stored one that does not is never honoured; our own design.
-            .filter_map(|row| Admission::read(Credentials::of(row.credentials.as_ref())).ok())
+            .filter_map(|row| Admission::read(Credentials::of(row.credentials.as_deref())).ok())
             .filter(|admission| admission.names(issuer))
             .collect()
     }
@@ -599,6 +632,7 @@ impl LiveGrants {
         let silenced: std::collections::BTreeSet<Uuid> = held
             .clients
             .values()
+            .flat_map(BTreeMap::values)
             .filter(|client| !client.state.grants())
             .map(|client| client.party)
             .collect();
@@ -610,11 +644,7 @@ impl LiveGrants {
             .map(|(performer, row)| {
                 (
                     performer,
-                    Grant::new(
-                        operation,
-                        row.role_id,
-                        row.credentials.clone().map(Arc::new),
-                    ),
+                    Grant::new(operation, row.role_id, row.credentials.clone()),
                 )
             })
             .collect()
@@ -631,13 +661,7 @@ impl LiveGrants {
             .values()
             .flatten()
             .filter(|row| Operation::of(&row.operation) == Some(operation))
-            .map(|row| {
-                Grant::new(
-                    operation,
-                    row.role_id,
-                    row.credentials.clone().map(Arc::new),
-                )
-            })
+            .map(|row| Grant::new(operation, row.role_id, row.credentials.clone()))
             .collect()
     }
 }

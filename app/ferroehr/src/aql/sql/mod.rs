@@ -52,13 +52,16 @@
 mod access;
 mod archetype;
 mod attestation;
+mod coerce;
 mod compact;
 mod condition;
 pub(crate) mod expr;
+mod fold;
 mod from;
 mod gates;
 mod head;
 mod jsonpath;
+mod pinned;
 mod predicate;
 mod scope;
 mod select;
@@ -252,6 +255,9 @@ pub struct PreparedQuery {
     /// column, whether its EHR carries `EHR_ACCESS` settings
     /// ([`ACCESS_SETTLED_PREFIX`]).
     pub access_settled_cols: Vec<String>,
+    /// Whether each access column holds, per row, the array of the EHRs an
+    /// aggregate projection read in place of one EHR id (#5639).
+    pub access_aggregated: bool,
     /// The SQL aliases of the hidden version-locator columns, one
     /// `(vo_id, sys_version)` pair per bound VO root, appended beside the
     /// access-EHR columns so the origins of the served data can be aggregated
@@ -269,10 +275,12 @@ pub struct PreparedQuery {
 /// it too. It is never read off a second, unpaged scan, which would name EHRs
 /// the query matched and never disclosed.
 ///
-/// Two plan shapes cannot carry it and get none: `SELECT DISTINCT`, where an
-/// extra column changes which rows are distinct, and an aggregate projection,
-/// where an ungrouped column is not even valid SQL. Both are recorded as a
-/// statement-level access with a row count and no per-EHR breakdown.
+/// `SELECT DISTINCT` cannot carry it, since an extra column changes which
+/// rows are distinct, and is recorded as a statement-level access with a row
+/// count and no per-EHR breakdown. An aggregate projection, where an
+/// ungrouped column is not valid SQL, carries per row the array of the
+/// distinct EHRs its aggregate read, so every EHR whose data shaped the
+/// result is named (EHDS Art. 9, #5639).
 ///
 /// **No openEHR spec governs this — our own design/extension.**
 pub const ACCESS_EHR_PREFIX: &str = "access_ehr_";
@@ -304,6 +312,7 @@ impl std::fmt::Debug for PreparedQuery {
             .field("columns", &self.columns)
             .field("access_ehr_cols", &self.access_ehr_cols)
             .field("access_settled_cols", &self.access_settled_cols)
+            .field("access_aggregated", &self.access_aggregated)
             .field("access_version_cols", &self.access_version_cols)
             .finish()
     }
@@ -328,9 +337,15 @@ enum ValueMode {
     Projection,
     /// A coerced scalar for comparison / ordering / aggregation.
     Value(Coercion),
-    /// A NULL-guarded numeric extraction for a mixed-type (`Raw`) leaf compared
-    /// or matched against a numeric literal.
+    /// A mixed-type (`Raw`) leaf's number: a JSON number, or the magnitude of
+    /// a whole numeric `DV_ORDERED` ([`coerce::raw_numeric`]); NULL otherwise.
     RawNumeric,
+    /// A mixed-type leaf's text when it is a JSON string, number or Boolean;
+    /// NULL for a whole object ([`coerce::raw_text`]).
+    RawText,
+    /// The instant of a mixed-type leaf that is a whole date/time value of the
+    /// kinds given; NULL otherwise ([`coerce::raw_temporal`]).
+    RawTemporal(coerce::TemporalKinds),
 }
 
 /// The shared SQL-builder state; its `impl` blocks are fanned across the
@@ -365,10 +380,10 @@ struct Builder<'a> {
     /// Node aliases that root a VO group (targets of the REST `ehr_id` filter).
     group_roots: Vec<String>,
     /// The subset of `group_roots` whose rows are join-linked to a bound EHR
-    /// alias (`node.ehr_id = e.id`) — the population gate on the EHR alias
-    /// already covers them, so gating the root again would be a duplicate
-    /// full-population subquery per query.
-    roots_linked_to_ehr: BTreeSet<String>,
+    /// alias (`node.ehr_id = e.id`), each with that alias: the population gate
+    /// on the EHR alias already covers them, so gating the root again would be
+    /// a duplicate full-population subquery per query.
+    roots_linked_to_ehr: BTreeMap<String, String>,
     /// The `version` alias for each entry in `group_roots` (parallel vec).
     group_vos: Vec<String>,
     /// The `(node, version)` left-binding aliases of each `OR` branch operand
@@ -421,7 +436,7 @@ impl<'a> Builder<'a> {
             version_vo: BTreeMap::new(),
             joined_heads: BTreeSet::new(),
             group_roots: Vec::new(),
-            roots_linked_to_ehr: BTreeSet::new(),
+            roots_linked_to_ehr: BTreeMap::new(),
             group_vos: Vec::new(),
             branch_roots: Vec::new(),
             sub_ctr: 0,
@@ -449,13 +464,16 @@ impl<'a> Builder<'a> {
     }
 
     /// The EHR id of every EHR a row of this query is drawn from: each bound
-    /// `EHR` source's `id`, then each served root's `ehr_id`.
+    /// `EHR` source's `id`, then the `ehr_id` of each served root no source
+    /// covers.
     ///
     /// A query that reads only the `ehr` row (`FROM EHR e` with no
     /// containment, or an `ehr_status` path) binds no versioned-object root
     /// and still serves the EHR its row names, so the access log
-    /// ([`ACCESS_EHR_PREFIX`]) reads this one list. No openEHR spec governs
-    /// this: our own design.
+    /// ([`ACCESS_EHR_PREFIX`]) reads this one list. A root linked to an `EHR`
+    /// source names that source's EHR, so its column would repeat the
+    /// source's and its settings probe the source's (#5782). No openEHR spec
+    /// governs this: our own design.
     fn served_ehr_ids(&self) -> Vec<sea_query::Expr> {
         self.ehr_alias
             .values()
@@ -463,6 +481,7 @@ impl<'a> Builder<'a> {
             .chain(
                 self.served_roots()
                     .iter()
+                    .filter(|(root, _)| !self.roots_linked_to_ehr.contains_key(root))
                     .map(|(root, _)| col(root, Node::EhrId)),
             )
             .collect()
@@ -524,6 +543,68 @@ fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
             .any(|c| matches!(c.value, super::ir::SelectValue::Aggregate { .. }))
 }
 
+/// The EHR id every row of a query belongs to, or `None`.
+///
+/// Its containment tree is rooted at one `EHR` source, and that source's own
+/// predicate or a top-level conjunct of its `WHERE` clause holds
+/// `ehr_id/value` equal to a string literal or a bound string parameter.
+///
+/// The access evaluator decides care for that one EHR instead of binding the
+/// caller's whole care census into the statement (#5699). No openEHR spec
+/// governs this: our own design.
+#[must_use]
+pub fn pinned_ehr(ir: &QueryIr, params: &Params) -> Option<String> {
+    use crate::aql::ir::{
+        ContainsTree, EhrField, Expr as IrExpr, Operand, PathTarget, Source, TypedLit,
+    };
+    use openehr_query::lexer::CompOp;
+    fn conjunct(filter: &IrExpr, ehr: usize) -> Option<&Operand> {
+        match filter {
+            IrExpr::And(a, b) => conjunct(a, ehr).or_else(|| conjunct(b, ehr)),
+            IrExpr::Compare {
+                lhs:
+                    Operand::Path(PathTarget::Ehr {
+                        source,
+                        field: EhrField::EhrId | EhrField::Whole,
+                    }),
+                op: CompOp::Eq,
+                rhs,
+                ..
+            } if source.0 == ehr => Some(rhs),
+            _ => None,
+        }
+    }
+    let ContainsTree::Operand { source, .. } = &ir.contains else {
+        return None;
+    };
+    let Some(Source::Ehr(ehr)) = ir.sources.get(source.0) else {
+        return None;
+    };
+    let text = |lit: &TypedLit| match lit {
+        TypedLit::String(s) => Some(s.clone()),
+        _ => None,
+    };
+    let param = |name: &str| match params.get(name) {
+        Some(ParamValue::Str(s)) => Some(s.clone()),
+        _ => None,
+    };
+    let in_predicate = ehr
+        .predicates
+        .iter()
+        .filter(|p| p.field == EhrField::EhrId && p.op == CompOp::Eq)
+        .find_map(|p| match &p.value {
+            Bind::Literal(lit) => text(lit),
+            Bind::Param(name) => param(name),
+        });
+    in_predicate.or_else(
+        || match ir.filter.as_ref().and_then(|f| conjunct(f, source.0))? {
+            Operand::Literal(lit) => text(lit),
+            Operand::Param(name) => param(name),
+            _ => None,
+        },
+    )
+}
+
 /// Lowers a planned [`QueryIr`] to SQL.
 ///
 /// # Errors
@@ -533,6 +614,18 @@ fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
 /// the SQL generator does not render.
 pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuery, AqlError> {
     from::refuse_negated_reads(ir)?;
+    // NOTE: our own design (#5699), the service reads care before a statement is built, so an
+    // unread care is refused loudly rather than withholding every cared row.
+    if ctx.ehr_access.reads_care()
+        && ctx.ehr_access.groups().is_some_and(|groups| {
+            groups.cared == crate::access_eval::condition::care::Care::Unresolved
+        })
+    {
+        return Err(SqlError::Unsupported(
+            "an access condition whose care the service has not read".to_owned(),
+        )
+        .into());
+    }
     let mut b = Builder::new(ir, params, ctx);
     // A query aimed at named EHRs, or pinned to one by its own text, reads only
     // those EHRs' versions, which the spine enters through the `ehr_id` index,
@@ -566,11 +659,18 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     if ir.distinct {
         b.q.distinct();
     }
-    let (sql, values) = b.q.build_sqlx(PostgresQueryBuilder);
+    let (sql, values) = match access::census(&ctx.ehr_access) {
+        Some(census) => b.q.with(census).build_sqlx(PostgresQueryBuilder),
+        None => b.q.build_sqlx(PostgresQueryBuilder),
+    };
     Ok(PreparedQuery {
         sql,
         values,
         columns,
+        access_aggregated: !access_ehr_cols.is_empty()
+            && ir.select.iter().any(|column| {
+                matches!(column.value, crate::aql::ir::SelectValue::Aggregate { .. })
+            }),
         access_ehr_cols,
         access_settled_cols,
         access_version_cols,

@@ -71,8 +71,6 @@ use crate::party_binding::grants::operation::Operation;
 use crate::service::FerroEhrService;
 use crate::service::ehr::access_settings::check_written_settings;
 use crate::storage::ehr_repo;
-use crate::system_log::categories::AccessedContent;
-use crate::system_log::event::EventActionCode;
 use crate::versioning::Kind;
 use crate::versioning::audit::{change_type, change_type_code};
 use crate::versioning::import::{
@@ -180,8 +178,7 @@ impl FerroEhrService {
         }
         tx.commit().await.map_err(ServiceError::from)?;
         self.invalidate_ehr_access(ehr_id).await;
-        let content = self.landed_content(&landed).await;
-        self.emit_extract_audit(ehr_id, EventActionCode::Create, Some(content))?;
+        self.emit_import_audit(ehr_id, &landed).await?;
         Ok(ehr_id)
     }
 
@@ -261,8 +258,7 @@ impl FerroEhrService {
         if touches_ehr_access {
             self.invalidate_ehr_access(an_ehr_id).await;
         }
-        let content = self.landed_content(&landed).await;
-        self.emit_extract_audit(an_ehr_id, EventActionCode::Create, Some(content))?;
+        self.emit_import_audit(an_ehr_id, &landed).await?;
         Ok(())
     }
 
@@ -301,26 +297,6 @@ impl FerroEhrService {
             }
         }
         Ok(())
-    }
-
-    /// What an import landed, for its access record's EHDS priority category
-    /// (Annex II 3.2(c), `docs/law/eu/ehds/text.html`): the newest content of
-    /// each received versioned object.
-    ///
-    /// The import has committed by then, so a failed read is logged and the
-    /// record is written `unclassified` rather than failing a completed import.
-    async fn landed_content(&self, landed: &[VoId]) -> AccessedContent {
-        match self.audit_content_of_objects(landed).await {
-            Ok(content) => AccessedContent::Objects(content),
-            Err(e) => {
-                tracing::warn!(
-                    error = %crate::error::ErrorChain::new(&e),
-                    "reading the categories of an imported Extract failed; the access \
-                     record is written unclassified"
-                );
-                AccessedContent::Objects(Vec::new())
-            }
-        }
     }
 
     /// Replay the extract's demographics chapter into the demographic domain,

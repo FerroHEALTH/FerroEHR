@@ -48,13 +48,15 @@ use openehr_its::opt14::types::{
     TermBindingItem, Termbindingset, ValidityKind,
 };
 
+use super::constraint::{
+    WebTemplateArchetypeSlot, WebTemplateClosedAttribute, WebTemplateCodeList,
+    WebTemplateConstraintBinding, WebTemplateExistence, WebTemplateStructuralStub,
+};
 use super::existence::{existence_constraints, prohibited_attributes};
 use super::implicit::{self, attribute_existence};
 use super::inputs::{self, Labels};
 use super::model::{
-    CodedName, WebTemplate, WebTemplateArchetypeSlot, WebTemplateBindingCodedValue,
-    WebTemplateCardinality, WebTemplateClosedAttribute, WebTemplateCodeList,
-    WebTemplateConstraintBinding, WebTemplateExistence, WebTemplateNode, WebTemplateStructuralStub,
+    CodedName, WebTemplate, WebTemplateBindingCodedValue, WebTemplateCardinality, WebTemplateNode,
 };
 use super::shape;
 
@@ -316,17 +318,7 @@ pub fn build_web_template(
         None,
         shape::Identity::Archetyped,
     );
-    tree = shape::compact(tree, 1).unwrap_or_else(shape::tree_placeholder);
-    // Synthesize the in-context RM children the master04 example carries for the
-    // structural attributes an OPT commonly leaves unconstrained (COMPOSITION
-    // context/category/language/territory/composer, per-ENTRY language/encoding/
-    // subject, per-EVENT time) BEFORE id assignment, so their ids go through the
-    // normal sibling-uniqueness discipline (super::id).
-    super::in_context::synthesize_in_context(&mut tree);
-    super::id::build_ids(&mut tree);
-    // Parse the walk's template-static constraint paths ONCE, so the validation
-    // walk never re-parses them per instance-node visit.
-    crate::flat::validation::prepare_walk(&mut tree);
+    tree = shape::finish(tree);
 
     Ok(WebTemplate {
         template_id,
@@ -645,6 +637,7 @@ fn cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
                 max,
                 ids: None,
                 path: format!("{node_path}/{}", m.rm_attribute_name),
+                unique: m.cardinality.is_unique,
             });
         }
     }
@@ -654,7 +647,7 @@ fn cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
 /// Capture **every** constraining multiple-attribute cardinality for the
 /// validation walk (AOM 1.4 `master04-constraint_model_package.adoc`
 /// §cardinality): any interval with a lower bound `>= 1` or a bounded upper
-/// bound constrains the container. This is the superset of the serialized
+/// bound constrains the container, and so does `unique`. This is the superset of the serialized
 /// [`requires_cardinality`] selection, which drops `0..1`/`1..1`/`1..*` — those
 /// intervals are still real archetype constraints (master15/16 truth tables)
 /// and are enforced from [`WebTemplateNode::card_all`], never serialized.
@@ -663,12 +656,14 @@ fn all_cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinalit
     for attr in inputs::attributes(co) {
         if let openehr_its::opt14::types::CAttribute::CMultipleAttribute(m) = attr {
             let (min, max) = occurrences(&m.cardinality.interval);
-            if min.unwrap_or(0) >= 1 || max != -1 {
+            let unique = m.cardinality.is_unique;
+            if min.unwrap_or(0) >= 1 || max != -1 || unique {
                 out.push(WebTemplateCardinality {
                     min,
                     max,
                     ids: None,
                     path: format!("{node_path}/{}", m.rm_attribute_name),
+                    unique,
                 });
             }
         }

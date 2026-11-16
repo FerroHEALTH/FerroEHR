@@ -5,10 +5,12 @@
 # live-verified design dossier is recorded on that issue — the mechanism
 # notes live in scripts/watch/spec-update.sh itself).
 #
-# Twice weekly it polls the public openEHR Jira for newly COMPLETED SPEC*
+# Twice weekly it reads each pinned upstream repository's commits past the
+# vendored pin, polls the public openEHR Jira for newly COMPLETED SPEC*
 # changes and diffs the upstream amendment records against the vendored spec
-# mirror, opening ONE `spec-update` issue per change for conformance-impact
-# triage. Filing goes through the watcher family's one engine
+# mirror. A change in a master-pinned repository is listed on that
+# component's ONE rolling issue; any other actionable change opens ONE
+# `spec-update` issue for conformance-impact triage (#5364). Filing goes through the watcher family's one engine
 # (.github/actions/file-watcher-issue/file-issue.sh, #2778), called from the
 # script because this lane files N issues per run; dedup/watermark is the issue
 # board itself (--state all, by the Jira key in the title) — no state file.

@@ -589,11 +589,10 @@ parties to their EHRs.
 
 **Residual risk.** The records name subjects, actors, organisations, roles and
 what they read, which is sensitive in its own right and is a disclosure
-surface like any other. Retention makes it durable on purpose: where one of
-the deployment's active identifier rules names a jurisdiction with a
-registered retention floor, a shorter `audit.store.retention` is a boot
-error rather than a silent trim. The Netherlands is the one registered floor
-today, at 1830 days.
+surface like any other. Retention makes it durable on purpose: an access
+policy whose `log_retention` period is shorter than a floor the controller
+declares, or than the three years of EHDS Art. 9(2) in the Union, is refused
+when it is written rather than trimmed silently.
 
 ## What is explicitly NOT defended against
 

@@ -1,77 +1,63 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The non-blocking audit sender: a bounded `tokio::mpsc` drained by a
-//! background task that renders each record once and fans it out to the
-//! enabled sinks.
+//! The audit sender: each record written durably before the response that
+//! reports its access, and the background tasks that chain and deliver the
+//! stored records (#5747).
 //!
-//! The request path only [`AuditSender::emit`]s (a `try_send`, never blocking
-//! or awaiting). The drain task optionally enriches the patient subject
-//! (background only — never on the request path), renders the record — the
-//! FHIR R4 `AuditEvent` (IHE BALP, [`super::fhir`]) and/or the DICOM PS3.15
-//! §A.5 XML ([`super::message`]) — and delivers it:
+//! The request path [`AuditSender::record`]s every record of a request in
+//! one transaction of the local Audit Record Repository: the subject of the
+//! record's EHR is resolved (memoized), the record is classified, the
+//! access-log entry of an access to EHR data is built, and all of it goes
+//! into the intake (`crate::system_log::store`). A record that cannot be
+//! written is an error the caller answers with `503`, so no access is
+//! reported without its record and nothing waits in memory.
 //!
-//! - **store** (`[audit.store]`, the durability anchor): the record is
-//!   `INSERTed` into the local Audit Record Repository first, with bounded
-//!   retries; a persistent write failure marks the store unhealthy, which
-//!   under `fail_mode = closed` makes every subsequent auditable request
-//!   answer `503` until a write succeeds again (prospective "no un-audited
-//!   PHI access" — the emit path is non-blocking, so the failing record's
-//!   own request has already been answered).
-//! - **syslog** (`[audit.syslog]`): the classic ITI-20 feed. The drain stores
-//!   each frame in `ihe-atna`'s spool and the crate's forwarder delivers it
-//!   (ITI TF-2 §3.20.4.1.1); the local store keeps no syslog frame.
-//! - **`fhir_feed`** (`[audit.fhir_feed]`, ITI-20 ATX:FHIR Feed): the crate's
-//!   forwarder delivers from the local store (`audit.fhir_feed_outbox`),
-//!   so a down ARR loses nothing, or with the store off from an
-//!   in-memory spool.
+//! Behind the request path:
 //!
-//! Failures are fail-open (drop + `tracing` + a `metrics` counter) or
-//! fail-closed (the REST layer returns `503`); see [`EmitOutcome`].
-
-#![cfg_attr(
-    feature = "fhir",
-    expect(
-        clippy::disallowed_types,
-        reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): the drain carries an \
-              already-rendered FHIR document, never a typed resource"
-    )
-)]
+//! - **the chainer** (`sender::chainer`) links the intake into the chains, any
+//!   replica under the head's lock, and owes each chained record to the
+//!   sinks that deliver from the store;
+//! - **syslog** (`[audit.syslog]`, ITI-20) and the **FHIR Feed**
+//!   (`[audit.fhir_feed]`, ITI-20 ATX: FHIR Feed) are projections of the
+//!   stored records, delivered by `ihe-atna`'s forwarders from the store's
+//!   outboxes, so a down repository loses nothing.
+//!
+//! No openEHR spec governs the audit trail's delivery: our own design.
 
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use backon::{ExponentialBuilder, Retryable};
-use ihe_atna::atna::forwarder::{Forwarder, Outbox, Status};
+use ihe_atna::atna::forwarder::Status;
 #[cfg(feature = "fhir")]
-use ihe_atna::atna::spool::Spool;
+use ihe_atna::atna::forwarder::{Forwarder, Outbox};
 use sqlx::PgPool;
-use tokio::sync::{Notify, mpsc};
+use tokio::sync::Notify;
 use tokio::task::JoinHandle;
 
-use super::event::{AuditEvent, EmitOutcome};
+use super::event::AuditEvent;
 
 use crate::system_log::AuditError;
 use crate::system_log::categories::CategoryMapConfig;
 use crate::system_log::chain_check::ChainCheck;
-use crate::system_log::config::{AuditConfig, FailMode, Retention, StoreConfig};
-use crate::system_log::message::AuditContext;
+use crate::system_log::config::{AuditConfig, StoreConfig};
 use crate::system_log::render::{CompiledPolicy, RenderPolicy};
-use crate::system_log::store::{AuditRecord, AuditStore, RecordEnd};
-use crate::system_log::syslog::SyslogRoute;
+use crate::system_log::store::AuditStore;
 
-mod admission;
+mod background;
 mod categories;
+mod chainer;
+mod live;
 mod records;
 
+use background::Background;
 use categories::Classifiers;
-#[cfg(feature = "fhir")]
-use records::submit_to_feed_spool;
-use records::{render_batch, submit_to_syslog};
+use chainer::Chainer;
+use live::LiveContext;
+use records::render_records;
 
 /// The patient subject of an EHR: `EHR_STATUS.subject.external_ref`'s id and
 /// namespace.
@@ -94,59 +80,23 @@ pub enum SubjectLookup {
     Unavailable,
 }
 
-/// A background-only, indexed lookup of the EHR's patient subject.
+/// An indexed lookup of the EHR's patient subject.
 ///
-/// Reads `ehr.subject_id` and `ehr.subject_namespace`. Supplied by the binary
-/// (keeps the request path DB-free); given an `ehr_id`, says whether it found
-/// a subject, found none, or could not ask.
+/// Reads `ehr.subject_id` and `ehr.subject_namespace`. Supplied by the binary;
+/// given an `ehr_id`, says whether it found a subject, found none, or could
+/// not ask. Its answers are memoized, so a request seldom asks.
 pub type SubjectResolver =
     Arc<dyn Fn(String) -> Pin<Box<dyn Future<Output = SubjectLookup> + Send>> + Send + Sync>;
 
-/// `metrics` counter names.
-pub const METRIC_EMITTED: &str = "atna_audit_emitted_total";
-/// Records dropped because the queue was full or the drain stopped.
-pub const METRIC_DROPPED: &str = "atna_audit_dropped_total";
-/// Auditable operations rejected under `fail_mode = closed` (queue full, or
-/// the local store is unhealthy). Each rejection is a `503` at the REST layer.
-pub const METRIC_REJECTED: &str = "atna_audit_rejected_total";
-/// Records dropped in the drain because a rendering failed.
-///
-/// The system log follows IHE ATNA; silent audit loss would undermine that, so
-/// every serialize-drop is metered.
-pub const METRIC_SERIALIZE_FAILED: &str = "atna_audit_serialize_failed_total";
-/// Records successfully written to a sink (label `sink`:
-/// `store`/`syslog`/`fhir_feed`).
-pub const METRIC_SENT: &str = "atna_audit_sent_total";
-/// Sink delivery failures (label `sink`, post-enqueue).
-pub const METRIC_SEND_FAILED: &str = "atna_audit_send_failed_total";
-/// Rows reaped by the retention job.
-pub const METRIC_REAPED: &str = "atna_audit_reaped_total";
-
-/// How often the retention reaper runs.
-const REAP_INTERVAL: Duration = Duration::from_hours(1);
-
-/// The drain's batch bound: how many queued events one `recv_many` takes at
-/// once (the store sink writes the whole batch in one multi-row INSERT).
-const DRAIN_BATCH: usize = 256;
-
-/// Drop warnings are rate-limited to one per this interval, carrying the
-/// count of records dropped since the previous warning (per-record WARNs at
-/// a loaded write rate flood the log and perturb the very load being
-/// measured; `atna_audit_dropped_total` still counts every drop exactly).
-const DROP_WARN_INTERVAL: Duration = Duration::from_secs(5);
-
-/// The cheaply-cloneable handle the REST layer emits through.
+/// The cheaply-cloneable handle the REST layer records through.
 #[derive(Debug, Clone)]
 pub struct AuditSender {
     inner: Arc<SenderInner>,
 }
 
-#[derive(Debug)]
 struct SenderInner {
-    tx: mpsc::Sender<AuditEvent>,
     enabled: bool,
     suppress_login_events: bool,
-    fail_mode: FailMode,
     /// The access-logging declaration surface: the header a caller declares a
     /// purpose of use in, the codes this deployment accepts (empty accepts
     /// any), and the legal basis it processes under.
@@ -160,42 +110,25 @@ struct SenderInner {
     legal_basis: Option<String>,
     /// The compiled category register every record is classified through.
     categories: Arc<Classifiers>,
-    store: Option<AuditStore>,
-    /// Whether the local store is currently accepting writes (`true` when the
-    /// store is disabled — health then rides on the queue alone). Written by
-    /// the drain, read by [`AuditSender::emit`] under `fail_mode = closed`.
-    store_healthy: Arc<AtomicBool>,
-    /// Drops since the last rate-limited warning (drained by the warner).
-    dropped_since_warn: AtomicU64,
-    /// Milliseconds since `warn_epoch` of the last emitted drop warning.
-    last_drop_warn_ms: AtomicU64,
-    /// The process-local time anchor for `last_drop_warn_ms`.
-    warn_epoch: Instant,
+    /// The render policy and context records are written under.
+    context: Arc<LiveContext>,
+    /// The local Audit Record Repository every record is written to.
+    store: AuditStore,
+    /// The subject lookup, when subjects are resolved.
+    resolver: Option<SubjectResolver>,
+    /// The `ehr_id` to subject memo.
+    subjects: SubjectCache,
+    /// Wakes the chainer once a request wrote its records.
+    chain: Arc<Notify>,
 }
 
-impl SenderInner {
-    /// Count one drop and emit at most one warning per
-    /// [`DROP_WARN_INTERVAL`], carrying the accumulated count.
-    fn warn_dropped(&self) {
-        let pending = self.dropped_since_warn.fetch_add(1, Ordering::Relaxed) + 1;
-        let now_ms = u64::try_from(self.warn_epoch.elapsed().as_millis()).unwrap_or(u64::MAX);
-        let last = self.last_drop_warn_ms.load(Ordering::Relaxed);
-        let interval_ms = u64::try_from(DROP_WARN_INTERVAL.as_millis()).unwrap_or(u64::MAX);
-        let due = last == 0 || now_ms.saturating_sub(last) >= interval_ms;
-        if due
-            && self
-                .last_drop_warn_ms
-                .compare_exchange(last, now_ms.max(1), Ordering::Relaxed, Ordering::Relaxed)
-                .is_ok()
-        {
-            let count = self.dropped_since_warn.swap(0, Ordering::Relaxed);
-            tracing::warn!(
-                dropped = count.max(pending.min(1)),
-                "ATNA audit records dropped (queue full or drain stopped); fail_mode={:?} — \
-                 count since the previous warning; atna_audit_dropped_total is exact",
-                self.fail_mode
-            );
-        }
+impl std::fmt::Debug for SenderInner {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SenderInner")
+            .field("enabled", &self.enabled)
+            .field("store", &self.store)
+            .field("resolves_subjects", &self.resolver.is_some())
+            .finish_non_exhaustive()
     }
 }
 
@@ -261,82 +194,92 @@ impl AuditSender {
         self.inner.legal_basis.as_deref()
     }
 
-    /// Enqueue an event (non-blocking). Never awaits, never blocks the request.
-    ///
-    /// A full queue (or a stopped drain) is metered and mapped through the
-    /// configured [`FailMode`]: `open` → [`EmitOutcome::Dropped`] (the request
-    /// proceeds), `closed` → [`EmitOutcome::Rejected`] (the REST layer returns
-    /// `503`). Under `fail_mode = closed` an unhealthy local store also
-    /// rejects — the event is still enqueued (best-effort: it delivers when
-    /// the store recovers), but the operation must not be reported as having
-    /// been audited.
+    /// The local Audit Record Repository the records are written to.
+    #[must_use]
+    pub fn store(&self) -> &AuditStore {
+        &self.inner.store
+    }
+
+    /// Write `events`, the records of one act, into the local store in one
+    /// transaction; they are durable when this returns, and the chainer links
+    /// them after.
     ///
     /// Every record is stamped with the digest of the category map in force,
-    /// and with the emergency mark when a purpose of use it names is one of
-    /// `[audit] emergency_purpose_codes`.
-    pub fn emit(&self, mut event: AuditEvent) -> EmitOutcome {
-        event.category_map_digest = Some(self.categories().digest());
-        event.emergency_access = event.names_purpose(|c| self.is_emergency_purpose(Some(c)));
-        crate::telemetry::metrics::metrics()
-            .atna_audit_emitted
-            .add(1, &[]);
-        let enqueued = self.inner.tx.try_send(event).is_ok();
-        if !enqueued {
-            crate::telemetry::metrics::metrics()
-                .atna_audit_dropped
-                .add(1, &[]);
-            self.inner.warn_dropped();
+    /// with the emergency mark when a purpose of use it names is one of
+    /// `[audit] emergency_purpose_codes`, and with the subject of its EHR.
+    ///
+    /// # Errors
+    /// The errors of [`AuditStore::write`]: the caller refuses the access it
+    /// was to report (`503`), since no access is reported without its
+    /// record.
+    pub async fn record(&self, events: Vec<AuditEvent>) -> Result<(), AuditError> {
+        if events.is_empty() {
+            return Ok(());
         }
-        match self.inner.fail_mode {
-            FailMode::Open => {
-                if enqueued {
-                    EmitOutcome::Enqueued
-                } else {
-                    EmitOutcome::Dropped
-                }
+        let count = u64::try_from(events.len()).unwrap_or(u64::MAX);
+        let mut events = events;
+        let digest = self.categories().digest();
+        for event in &mut events {
+            event.category_map_digest = Some(digest);
+            event.emergency_access = event.names_purpose(|c| self.is_emergency_purpose(Some(c)));
+        }
+        let ctx = self.inner.context.current();
+        let unavailable = match &self.inner.resolver {
+            Some(resolve) => Some(memoize_subjects(&events, resolve, &self.inner.subjects).await),
+            None => None,
+        };
+        let records =
+            render_records(events, &ctx, &self.inner.subjects, unavailable.as_ref()).await;
+        let ends = crate::system_log::retention::record_ends(&records, &ctx);
+        let started = std::time::Instant::now();
+        let written = self.inner.store.write(records, &ends).await;
+        let path = crate::telemetry::access_path::metrics();
+        let outcome = crate::telemetry::access_path::outcome(&written);
+        path.log_append_duration.record(
+            crate::telemetry::access_path::seconds_since(started),
+            std::slice::from_ref(&outcome),
+        );
+        path.log_entries.add(count, &[outcome]);
+        let metrics = crate::telemetry::metrics::metrics();
+        match written {
+            Ok(()) => {
+                metrics.atna_audit_emitted.add(count, &[]);
+                self.inner.chain.notify_one();
+                Ok(())
             }
-            FailMode::Closed => {
-                if !enqueued {
-                    crate::telemetry::metrics::metrics()
-                        .atna_audit_rejected
-                        .add(1, &[]);
-                    return EmitOutcome::Rejected;
-                }
-                if !self.inner.store_healthy.load(Ordering::Relaxed) {
-                    // No un-audited PHI access: the store stopped accepting
-                    // writes, so auditable operations 503 until it recovers
-                    // (the enqueued record delivers on recovery).
-                    crate::telemetry::metrics::metrics()
-                        .atna_audit_rejected
-                        .add(1, &[]);
-                    tracing::warn!(
-                        "ATNA fail-closed: local audit store unhealthy — rejecting the operation"
-                    );
-                    return EmitOutcome::Rejected;
-                }
-                EmitOutcome::Enqueued
+            Err(error) => {
+                metrics.atna_audit_rejected.add(count, &[]);
+                tracing::error!(
+                    records = count,
+                    error = %crate::error::ErrorChain::new(&error),
+                    "the audit records could not be written; the access is refused"
+                );
+                Err(error)
             }
         }
     }
 }
 
-/// Owns the background tasks; the binary keeps it and drains it on shutdown.
+/// Owns the background tasks; the binary keeps it and stops it on shutdown.
 #[derive(Debug)]
 pub struct AuditHandle {
-    join: JoinHandle<()>,
-    /// The retention workers (reaper, chain verification). Aborted on
-    /// shutdown after the drain flushes.
+    /// The chainer, stopped first so its last round finishes.
+    chainer: Chainer,
+    /// The retention workers (reaper, chain verification), aborted on
+    /// shutdown.
     workers: Vec<JoinHandle<()>>,
-    /// The forwarders, stopped after the drain flushes so their connections
-    /// close cleanly; what they hold is delivered by the next run.
+    /// The forwarders, stopped after the chainer so their connections close
+    /// cleanly; what they owe is delivered by the next run.
     deliveries: Vec<Delivery>,
+    /// The runtime the chainer, the forwarders and the workers run on.
+    background: Background,
     /// The result of the scheduled hash-chain verification, when it runs.
     chain_check: Option<ChainCheck>,
 }
 
 impl AuditHandle {
     /// Returns the shared result of the scheduled hash-chain verification;
-    /// `None` when the local store is off or `verify_interval_seconds` is `0`.
+    /// `None` when `verify_interval` is `0`.
     #[must_use]
     pub fn chain_check(&self) -> Option<ChainCheck> {
         self.chain_check.clone()
@@ -355,15 +298,11 @@ impl AuditHandle {
         }
     }
 
-    /// Await the drain task, bounded by `timeout`, then stop the background
-    /// workers. All [`AuditSender`] clones must be dropped first so the
-    /// channel closes and the drain flushes then exits.
+    /// Stop the chainer, bounded by `timeout`, then the workers and the
+    /// forwarders. A record the chainer did not link waits in the intake for
+    /// the next chainer, of this replica or another.
     pub async fn shutdown(self, timeout: Duration) {
-        match tokio::time::timeout(timeout, self.join).await {
-            Ok(Ok(())) => tracing::debug!("ATNA audit drain flushed and exited"),
-            Ok(Err(e)) => tracing::warn!("ATNA audit drain task panicked: {e}"),
-            Err(_) => tracing::warn!("ATNA audit drain did not flush within {timeout:?}"),
-        }
+        self.chainer.stop(timeout).await;
         for worker in self.workers {
             worker.abort();
         }
@@ -376,6 +315,7 @@ impl AuditHandle {
                 );
             }
         }
+        self.background.stop();
     }
 }
 
@@ -424,14 +364,19 @@ impl DeliveryStatus {
     }
 }
 
-/// Spawns `forwarder` onto the runtime as the delivery of `sink`, with the
-/// sampler that moves its delivered and retried counts onto the metrics.
-fn deliver<O: Outbox + 'static>(sink: &'static str, forwarder: &Arc<Forwarder<O>>) -> Delivery {
-    let join = tokio::spawn(Arc::clone(forwarder).run());
+/// Spawns `forwarder` onto the audit runtime as the delivery of `sink`, with
+/// the sampler that moves its delivered and retried counts onto the metrics.
+#[cfg(feature = "fhir")]
+fn deliver<O: Outbox + 'static>(
+    background: &Background,
+    sink: &'static str,
+    forwarder: &Arc<Forwarder<O>>,
+) -> Delivery {
+    let join = background.spawn(Arc::clone(forwarder).run());
     let reader = Arc::clone(forwarder);
     let stopper = Arc::clone(forwarder);
     let sampled = Arc::clone(forwarder);
-    tokio::spawn(sample(sink, move || sampled.status()));
+    drop(background.spawn(sample(sink, move || sampled.status())));
     Delivery {
         sink,
         status: Arc::new(move || reader.status()),
@@ -441,11 +386,13 @@ fn deliver<O: Outbox + 'static>(sink: &'static str, forwarder: &Arc<Forwarder<O>
 }
 
 /// How often a forwarder's counts move onto the metrics.
+#[cfg(feature = "fhir")]
 const SAMPLE_INTERVAL: Duration = Duration::from_secs(15);
 
 /// Moves the delivered and retried counts of `status` onto
 /// `atna_audit_sent` and `atna_audit_send_failed` as they grow, until the
 /// runtime ends the task.
+#[cfg(feature = "fhir")]
 #[expect(
     clippy::infinite_loop,
     reason = "a detached sampler ended by the runtime, as the reaper is"
@@ -467,88 +414,76 @@ async fn sample(sink: &'static str, status: impl Fn() -> Status + Send + 'static
     }
 }
 
-/// The resolved sink set the drain fans out to.
-struct Sinks {
-    store: Option<AuditStore>,
-    syslog: Option<SyslogRoute>,
-    /// The FHIR feed's spool (store OFF only; with the store on the forwarder
-    /// delivers from the store).
-    #[cfg(feature = "fhir")]
-    feed_spool: Option<Arc<Forwarder<Spool>>>,
-    /// Wakes the store's feed forwarder after a store insert.
-    feed_notify: Option<Arc<Notify>>,
-}
-
-/// One drained batch, the unit every sink consumes: each record with its
-/// resolved subject, and beside each the FHIR `AuditEvent` document the
-/// store-off FHIR feed sends (none when that feed is off).
-struct Drained {
-    records: Vec<AuditRecord>,
-    #[cfg(feature = "fhir")]
-    rendered: Vec<Option<serde_json::Value>>,
-}
-
-/// The drain's `ehr_id` → subject-id memo (an EHR's subject is immutable for
-/// audit purposes, so one lookup serves every later record).
+/// The `ehr_id` → subject memo (an EHR's subject is immutable for audit
+/// purposes, so one lookup serves every later record).
 type SubjectCache = moka::future::Cache<String, Option<ResolvedSubject>>;
 
-/// Start the audit subsystem: resolve the sinks and spawn the drain plus any
-/// forwarding/retention workers. `pool` backs the local store (`None` in
-/// store-less setups, e.g. transport-only tests).
+/// Start the audit subsystem over the local store on `pool`: the sender, the
+/// chainer, the forwarders of the configured sinks and the store's upkeep.
 ///
 /// # Errors
-/// [`AuditError`] if the syslog transport cannot be established (UDP
-/// bind/connect, or a TLS config/CA problem).
+/// [`AuditError`] if a sink's transport cannot be established (a TLS
+/// config or CA problem, a refused feed endpoint), or the render policy does
+/// not compile.
+#[cfg_attr(
+    not(feature = "fhir"),
+    expect(
+        clippy::unused_async,
+        reason = "a slim build starts no forwarder, which is what the full build awaits"
+    )
+)]
 pub async fn start(
     config: AuditConfig,
     resolver: Option<SubjectResolver>,
-    pool: Option<PgPool>,
+    pool: PgPool,
 ) -> Result<(AuditSender, AuditHandle), AuditError> {
+    let policy = RenderPolicy::of(&config, &CategoryMapConfig::default());
+    let background = Background::start()?;
+    let behind = background.pool_over(&pool);
+    let store = AuditStore::new(pool)
+        .with_fhir_feed(config.fhir_feed.is_some())
+        .with_syslog(config.syslog.is_some())
+        .with_render_policy(policy.clone());
+    // NOTE: our own design (#5770), the background work runs on the audit runtime over its own pool.
+    let behind = store.with_pool(behind);
+    #[cfg_attr(
+        not(feature = "fhir"),
+        expect(unused_mut, reason = "a slim build has no sink")
+    )]
     let mut deliveries = Vec::new();
-    let syslog = if let Some(syslog) = &config.syslog {
-        let route = SyslogRoute::new(
+    #[cfg_attr(
+        not(feature = "fhir"),
+        expect(unused_mut, reason = "a slim build has no sink")
+    )]
+    let mut woken = Vec::new();
+    #[cfg(feature = "fhir")]
+    if let Some(syslog) = &config.syslog {
+        let notify = Arc::new(Notify::new());
+        let forwarder = crate::system_log::syslog::forwarder(
             syslog,
             config.server_host.as_deref().unwrap_or_default(),
             &config.source_id,
+            behind.clone(),
+            Arc::clone(&notify),
         )
         .await?;
-        deliveries.push(deliver("syslog", &route.forwarder()));
-        Some(route)
-    } else {
-        None
-    };
-
-    let policy = RenderPolicy::of(&config, &CategoryMapConfig::default());
-    let store = if config.store.enabled {
-        if let Some(pool) = pool {
-            Some(
-                AuditStore::new(pool)
-                    .with_fhir_feed(config.fhir_feed.is_some())
-                    .with_render_policy(policy.clone()),
-            )
-        } else {
-            tracing::warn!(
-                "ATNA audit store enabled but no database pool supplied — store sink off"
-            );
-            None
-        }
-    } else {
-        None
-    };
-
-    let mut workers = Vec::new();
+        deliveries.push(deliver(&background, "syslog", &forwarder));
+        woken.push(notify);
+    }
     #[cfg(feature = "fhir")]
-    let (feed_notify, feed_spool) = start_feed(&config, store.as_ref(), &mut deliveries)?;
-    #[cfg(not(feature = "fhir"))]
-    let feed_notify = None;
-    let chain_check = store
-        .as_ref()
-        .and_then(|store| spawn_store_upkeep(store, &config.store, &mut workers));
-
-    if store.is_none() && syslog.is_none() && config.fhir_feed.is_none() {
-        tracing::warn!(
-            "ATNA auditing is enabled with no active sink — records will be rendered and discarded"
-        );
+    if let Some(fhir_feed) = &config.fhir_feed {
+        use crate::system_log::feed::{StoreOutbox, repository};
+        use crate::system_log::store::outbox::Sink;
+        let arr = repository(fhir_feed)?;
+        let notify = Arc::new(Notify::new());
+        let idle = Duration::max(fhir_feed.poll_interval.get(), Duration::from_millis(100));
+        let outbox = StoreOutbox::new(behind.clone(), Sink::FhirFeed, Arc::clone(&notify), idle);
+        deliveries.push(deliver(
+            &background,
+            "fhir_feed",
+            &Forwarder::fhir_feed_from(outbox, arr),
+        ));
+        woken.push(notify);
     }
 
     let CompiledPolicy {
@@ -556,30 +491,14 @@ pub async fn start(
         categories,
         emergency,
     } = policy.compile()?;
-
-    let store_healthy = Arc::new(AtomicBool::new(true));
-    let classifiers = Arc::new(Classifiers::new(categories));
-    let (tx, rx) = mpsc::channel(config.queue_capacity.max(1));
-    let sinks = Sinks {
-        store: store.clone(),
-        syslog,
-        #[cfg(feature = "fhir")]
-        feed_spool,
-        feed_notify,
-    };
-    let join = tokio::spawn(drain(
-        rx,
-        sinks,
-        ctx,
-        Arc::clone(&classifiers),
-        resolver,
-        config.resolve_subject,
-        Arc::clone(&store_healthy),
-    ));
+    let live = Arc::new(LiveContext::new(policy, ctx));
+    let mut workers = Vec::new();
+    let chain_check = spawn_store_upkeep(&background, &behind, &config.store, &live, &mut workers);
+    let chain = Arc::new(Notify::new());
+    let chainer = Chainer::spawn(&background, behind, Arc::clone(&chain), woken);
 
     let sender = AuditSender {
         inner: Arc::new(SenderInner {
-            tx,
             enabled: config.enabled,
             suppress_login_events: config.suppress_login_events,
             purpose_header: config.purpose_header.to_ascii_lowercase(),
@@ -587,68 +506,27 @@ pub async fn start(
             purpose_codes: config.purpose_codes.clone(),
             emergency,
             legal_basis: config.legal_basis.clone(),
-            categories: classifiers,
+            categories: Arc::new(Classifiers::new(categories)),
+            context: live,
             store,
-            fail_mode: config.fail_mode,
-            store_healthy,
-            dropped_since_warn: AtomicU64::new(0),
-            last_drop_warn_ms: AtomicU64::new(0),
-            warn_epoch: Instant::now(),
+            resolver: resolver.filter(|_| config.resolve_subject),
+            subjects: moka::future::Cache::builder()
+                .max_capacity(100_000)
+                .time_to_live(Duration::from_hours(1))
+                .build(),
+            chain,
         }),
     };
     Ok((
         sender,
         AuditHandle {
-            join,
+            chainer,
             workers,
             deliveries,
+            background,
             chain_check,
         },
     ))
-}
-
-/// What starting the feed hands the drain: the notify that wakes the store's
-/// forwarder, or the store-off spool's forwarder.
-#[cfg(feature = "fhir")]
-type FeedStart = (Option<Arc<Notify>>, Option<Arc<Forwarder<Spool>>>);
-
-/// Starts the ITI-20 ATX:FHIR Feed when it is on: a forwarder delivering
-/// from the store when the store is on, returning the notify that wakes it,
-/// else a forwarder delivering from an in-memory spool the drain fills.
-///
-/// # Errors
-/// [`AuditError::Transport`] when the feed repository cannot be built.
-#[cfg(feature = "fhir")]
-fn start_feed(
-    config: &AuditConfig,
-    store: Option<&AuditStore>,
-    deliveries: &mut Vec<Delivery>,
-) -> Result<FeedStart, AuditError> {
-    use crate::system_log::feed::{StoreOutbox, repository};
-    let Some(fhir_feed) = &config.fhir_feed else {
-        return Ok((None, None));
-    };
-    let feed = repository(fhir_feed)?;
-    let Some(store) = store else {
-        // NOTE: no specification governs the bounds of the store-off feed's
-        // spool: our own design, about a day of records at a modest rate.
-        let spool = Spool::in_memory(ihe_atna::atna::spool::Bounds {
-            max_messages: 100_000,
-            max_bytes: 256 * 1024 * 1024,
-            write_timeout: Duration::from_secs(2),
-        });
-        let forwarder = Forwarder::fhir_feed(spool, feed);
-        deliveries.push(deliver("fhir_feed", &forwarder));
-        return Ok((None, Some(forwarder)));
-    };
-    let notify = Arc::new(Notify::new());
-    let poll = Duration::max(fhir_feed.poll_interval.get(), Duration::from_millis(100));
-    let outbox = StoreOutbox::new(store.clone(), Arc::clone(&notify), poll);
-    deliveries.push(deliver(
-        "fhir_feed",
-        &Forwarder::fhir_feed_from(outbox, feed),
-    ));
-    Ok((Some(notify), None))
 }
 
 /// Spawns the local store's upkeep workers onto `workers`: the retention
@@ -656,16 +534,19 @@ fn start_feed(
 /// verification unless `verify_interval` is `"0s"`, whose shared result is
 /// returned.
 fn spawn_store_upkeep(
+    background: &Background,
     store: &AuditStore,
     config: &StoreConfig,
+    live: &Arc<LiveContext>,
     workers: &mut Vec<JoinHandle<()>>,
 ) -> Option<ChainCheck> {
-    workers.push(tokio::spawn(reaper(store.clone(), config.horizon())));
+    workers.push(background.spawn(live::reaper(store.clone(), Arc::clone(live))));
     if config.verify_interval.is_zero() {
         return None;
     }
-    let check = ChainCheck::default();
-    workers.push(tokio::spawn(crate::system_log::chain_check::scheduled(
+    let check =
+        ChainCheck::new((!config.max_verify_lag.is_zero()).then(|| config.max_verify_lag.get()));
+    workers.push(background.spawn(crate::system_log::chain_check::scheduled(
         store.clone(),
         check.clone(),
         config.verify_interval.get(),
@@ -674,70 +555,17 @@ fn spawn_store_upkeep(
     Some(check)
 }
 
-async fn drain(
-    mut rx: mpsc::Receiver<AuditEvent>,
-    sinks: Sinks,
-    ctx: AuditContext,
-    classifiers: Arc<Classifiers>,
-    resolver: Option<SubjectResolver>,
-    resolve_subject: bool,
-    store_healthy: Arc<AtomicBool>,
-) {
-    // Batched receive: one loop turn takes up to DRAIN_BATCH queued events, so
-    // the store sink persists them in one multi-row INSERT rather than per-event
-    // round trips.
-    let mut batch: Vec<AuditEvent> = Vec::with_capacity(DRAIN_BATCH);
-    // The subject lookup memo: an EHR's subject id is immutable for audit
-    // purposes at write-path rates, and one awaited per-event lookup is the
-    // remaining drain bottleneck.
-    let subject_cache: SubjectCache = moka::future::Cache::builder()
-        .max_capacity(100_000)
-        .time_to_live(Duration::from_hours(1))
-        .build();
-    loop {
-        batch.clear();
-        if rx.recv_many(&mut batch, DRAIN_BATCH).await == 0 {
-            break; // channel closed and drained
-        }
-
-        let unavailable = match (&resolver, resolve_subject) {
-            (Some(resolve), true) => memoize_subjects(&batch, resolve, &subject_cache).await,
-            _ => BTreeSet::new(),
-        };
-        let drained = render_batch(
-            &mut batch,
-            &ctx,
-            &classifiers,
-            &subject_cache,
-            resolve_subject.then_some(&unavailable),
-            &sinks,
-        )
-        .await;
-
-        // The store is the durability anchor and is written first.
-        write_to_store(&sinks, &drained.records, &ctx, &store_healthy).await;
-        if let Some(route) = &sinks.syslog {
-            submit_to_syslog(route, &drained.records, &ctx, &classifiers).await;
-        }
-        #[cfg(feature = "fhir")]
-        if let Some(forwarder) = &sinks.feed_spool {
-            submit_to_feed_spool(forwarder, &drained.rendered).await;
-        }
-    }
-    tracing::debug!("ATNA audit drain: channel closed, task exiting");
-}
-
-/// Resolves the subject id of every EHR the batch references that the memo
+/// Resolves the subject id of every EHR the records reference that the memo
 /// does not already hold, concurrently, and memoizes each answer.
 ///
-/// A failed lookup is not memoized, so the next batch asks again; the EHRs
-/// whose lookup failed are returned for this batch's records.
+/// A failed lookup is not memoized, so the next request asks again; the EHRs
+/// whose lookup failed are returned for these records.
 async fn memoize_subjects(
-    batch: &[AuditEvent],
+    events: &[AuditEvent],
     resolve: &SubjectResolver,
     cache: &SubjectCache,
 ) -> BTreeSet<String> {
-    let mut pending: Vec<String> = batch
+    let mut pending: Vec<String> = events
         .iter()
         .filter_map(|event| event.ehr_id.clone())
         .filter(|ehr_id| !cache.contains_key(ehr_id))
@@ -766,127 +594,10 @@ async fn memoize_subjects(
     unavailable
 }
 
-/// Writes the batch to the local Audit Record Repository in one multi-row
-/// INSERT, each record with its own retention end.
-async fn write_to_store(
-    sinks: &Sinks,
-    records: &[AuditRecord],
-    ctx: &AuditContext,
-    store_healthy: &AtomicBool,
-) {
-    if let Some(store) = &sinks.store {
-        let ends = crate::system_log::retention::record_ends(records, ctx);
-        store_whole_batch(
-            store,
-            records,
-            &ends,
-            store_healthy,
-            sinks.feed_notify.as_ref(),
-        )
-        .await;
-    }
-}
-
-/// Persists the batch in one multi-row INSERT with bounded jittered retries,
-/// updating the store health flag the fail-closed mode reads.
-async fn store_whole_batch(
-    store: &AuditStore,
-    records: &[AuditRecord],
-    ends: &[RecordEnd],
-    store_healthy: &AtomicBool,
-    feed_notify: Option<&Arc<Notify>>,
-) {
-    let insert = || async { store.insert_batch(records, ends).await };
-    #[expect(
-        clippy::as_conversions,
-        reason = "the batch record count widens exactly: usize is at most 64 bits on \
-                  every supported target"
-    )]
-    let count = records.len() as u64;
-    match insert
-        .retry(
-            ExponentialBuilder::default()
-                .with_jitter()
-                .with_max_times(2),
-        )
-        .await
-    {
-        Ok(()) => {
-            store_healthy.store(true, Ordering::Relaxed);
-            crate::telemetry::metrics::metrics()
-                .atna_audit_sent
-                .add(count, &[opentelemetry::KeyValue::new("sink", "store")]);
-            if let Some(notify) = feed_notify {
-                notify.notify_one();
-            }
-        }
-        Err(e) => {
-            store_healthy.store(false, Ordering::Relaxed);
-            crate::telemetry::metrics::metrics()
-                .atna_audit_send_failed
-                .add(count, &[opentelemetry::KeyValue::new("sink", "store")]);
-            tracing::warn!("ATNA audit store batch write failed: {e}");
-        }
-    }
-}
-
-/// The hourly retention reaper, which also tombstones the expired access-log entries.
-#[expect(
-    clippy::infinite_loop,
-    reason = "the retention reaper is a detached background task with no \
-              shutdown channel — it ends when the runtime drops the task; \
-              declaring `-> !` is not an option because `tokio::spawn` would \
-              then need the never type as a type argument, which is unstable"
-)]
-async fn reaper(store: AuditStore, retention: Retention) {
-    let access_log = crate::access_log::store::AccessLogStore::new(store.pool.clone());
-    loop {
-        tokio::time::sleep(REAP_INTERVAL).await;
-        let now = jiff::Timestamp::now();
-        let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
-        crate::access_log::expiry::scheduled(&access_log, now).await;
-        match store.reap_due(today, retention).await {
-            Ok(0) => {}
-            Ok(n) => {
-                crate::telemetry::metrics::metrics()
-                    .atna_audit_reaped
-                    .add(n, &[]);
-                tracing::debug!("ATNA audit retention reaped {n} records");
-            }
-            Err(e) => tracing::warn!("ATNA audit retention reap failed: {e}"),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::sync::{LazyLock, Mutex};
-
     use super::*;
-    use crate::system_log::config::{StoreConfig, SyslogConfig};
     use crate::system_log::event::{EventActionCode, EventOutcome, ObjectClass};
-
-    fn syslog_config() -> AuditConfig {
-        AuditConfig {
-            enabled: true,
-            // No DB pool in these tests — exercise the transport path alone.
-            store: StoreConfig {
-                enabled: false,
-                retention: None,
-                sgb_v_309_controller: false,
-                verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-                full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
-            },
-            syslog: Some(SyslogConfig {
-                // A port nothing listens on is fine: the sink connects on the
-                // first send, which fails and is metered.
-                url: ferrohealth_secret::secret_url::SecretUrl::new("tls://127.0.0.1:1"),
-                ..SyslogConfig::default()
-            }),
-            queue_capacity: 8,
-            ..AuditConfig::default()
-        }
-    }
 
     fn event() -> AuditEvent {
         AuditEvent::new(
@@ -897,7 +608,7 @@ mod tests {
     }
 
     /// A failed lookup is reported for its EHR and never memoized, so the next
-    /// batch asks again; a subject or its absence is memoized.
+    /// request asks again; a subject or its absence is memoized.
     #[tokio::test]
     async fn a_failed_subject_lookup_is_reported_and_not_memoized() {
         let batch: Vec<AuditEvent> = ["failing", "empty", "named"]
@@ -932,94 +643,5 @@ mod tests {
             cache.get("named").await.flatten().map(|subject| subject.id),
             Some("patient-1".to_owned())
         );
-    }
-
-    /// Receivers of senders built by [`bare_sender`]: parked here (never read)
-    /// so the channel stays open and the queue can fill, without leaking them.
-    static PARKED_RECEIVERS: LazyLock<Mutex<Vec<mpsc::Receiver<AuditEvent>>>> =
-        LazyLock::new(|| Mutex::new(Vec::new()));
-
-    fn bare_sender(fail_mode: FailMode, capacity: usize, store_healthy: bool) -> AuditSender {
-        let (tx, rx) = mpsc::channel(capacity);
-        // Keep the receiver alive but unread so the queue can fill.
-        PARKED_RECEIVERS
-            .lock()
-            .expect("parked-receiver registry")
-            .push(rx);
-        AuditSender {
-            inner: Arc::new(SenderInner {
-                tx,
-                enabled: true,
-                suppress_login_events: true,
-                purpose_header: "x-purpose-of-use".to_owned(),
-                permit_header: "x-data-permit".to_owned(),
-                purpose_codes: Vec::new(),
-                emergency: ehds_logging::emergency::EmergencyPurposes::declare(&[
-                    ehds_logging::record::Purpose {
-                        system: None,
-                        code: "ETREAT".to_owned(),
-                    },
-                ])
-                .expect("one declared purpose"),
-                legal_basis: None,
-                categories: Arc::new(Classifiers::new(
-                    crate::system_log::categories::Classifier::default(),
-                )),
-                store: None,
-                fail_mode,
-                store_healthy: Arc::new(AtomicBool::new(store_healthy)),
-                dropped_since_warn: AtomicU64::new(0),
-                last_drop_warn_ms: AtomicU64::new(0),
-                warn_epoch: Instant::now(),
-            }),
-        }
-    }
-
-    #[tokio::test]
-    async fn emit_enqueues_and_drains_on_shutdown() {
-        let (sender, handle) = start(syslog_config(), None, None).await.expect("start");
-        assert!(sender.enabled());
-        assert_eq!(sender.emit(event()), EmitOutcome::Enqueued);
-        drop(sender);
-        handle.shutdown(Duration::from_secs(2)).await;
-    }
-
-    #[tokio::test]
-    async fn fail_open_drops_when_full() {
-        let sender = bare_sender(FailMode::Open, 1, true);
-        assert_eq!(sender.emit(event()), EmitOutcome::Enqueued);
-        assert_eq!(sender.emit(event()), EmitOutcome::Dropped);
-    }
-
-    #[tokio::test]
-    async fn fail_closed_rejects_when_full() {
-        let sender = bare_sender(FailMode::Closed, 1, true);
-        assert_eq!(sender.emit(event()), EmitOutcome::Enqueued);
-        assert_eq!(sender.emit(event()), EmitOutcome::Rejected);
-    }
-
-    #[tokio::test]
-    async fn fail_closed_rejects_while_store_unhealthy() {
-        // The event is still enqueued (delivers on recovery) but the
-        // operation is rejected: no un-audited PHI access.
-        let sender = bare_sender(FailMode::Closed, 8, false);
-        assert_eq!(sender.emit(event()), EmitOutcome::Rejected);
-    }
-
-    /// Only a declared code on `emergency_purpose_codes` marks an access; an
-    /// absent purpose and any other code never do (EHDS Art. 11(5)).
-    #[tokio::test]
-    async fn only_a_configured_emergency_code_marks_an_access() {
-        let sender = bare_sender(FailMode::Open, 8, true);
-        assert!(sender.is_emergency_purpose(Some("ETREAT")));
-        assert!(!sender.is_emergency_purpose(Some("TREAT")));
-        assert!(!sender.is_emergency_purpose(Some("etreat")));
-        assert!(!sender.is_emergency_purpose(None));
-    }
-
-    #[tokio::test]
-    async fn fail_open_ignores_store_health() {
-        let sender = bare_sender(FailMode::Open, 8, false);
-        assert_eq!(sender.emit(event()), EmitOutcome::Enqueued);
     }
 }

@@ -169,7 +169,7 @@ async fn a_reviewer_queries_across_ehrs() {
 #[tokio::test]
 async fn the_person_queries_their_own_redacted_entries() {
     let fx = logged().await;
-    let person = request(LogStanding::Person(fx.first));
+    let person = request(LogStanding::Person(vec![fx.first].into()));
     let own = rows(
         &fx.svc,
         "SELECT l, l/ehr_id/value, l/accessor/credential/subject, l/channel \
@@ -205,7 +205,7 @@ async fn the_person_queries_their_own_redacted_entries() {
             None,
             &AqlQueryRequest {
                 ehr_ids: vec![fx.second],
-                ..request(LogStanding::Person(fx.first))
+                ..request(LogStanding::Person(vec![fx.first].into()))
             },
         )
         .await
@@ -257,6 +257,10 @@ async fn a_refused_caller_and_a_containment_are_refused() {
 /// The person's lookup of their entries by time reads the `(ehr_id,
 /// time_recorded)` index, in the order the index keeps.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn the_persons_lookup_by_time_reads_the_ehr_index() {
     let fx = logged().await;
     let query = parse_str(

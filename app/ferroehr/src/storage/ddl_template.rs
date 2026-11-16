@@ -76,6 +76,11 @@ pub const VERSION_CONTENT: &str = include_str!("../../migrations/templates/versi
 pub const HEAD_CONTENT_KEY: &str =
     include_str!("../../migrations/templates/head_content_key.sql.in");
 
+/// The head root archetype template: the trunk head's root archetype a
+/// query's access condition compares (#5782).
+pub const HEAD_ROOT_ARCHETYPE: &str =
+    include_str!("../../migrations/templates/head_root_archetype.sql.in");
+
 /// The version-tree key template: `uq_version_tree` keyed with the object
 /// last, so the foreign-key lookup of a node row reads one version (#4340).
 pub const VERSION_TREE_KEY: &str =
@@ -240,6 +245,16 @@ mod tests {
             "migrations/party/0026_head_content_key.sql",
             PARTY,
             HEAD_CONTENT_KEY,
+        ),
+        (
+            "migrations/clinical/0048_head_root_archetype.sql",
+            CLINICAL,
+            HEAD_ROOT_ARCHETYPE,
+        ),
+        (
+            "migrations/party/0050_head_root_archetype.sql",
+            PARTY,
+            HEAD_ROOT_ARCHETYPE,
         ),
     ];
 

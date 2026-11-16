@@ -26,15 +26,15 @@ use serde_json::{Value, json};
 
 use ferroehr::access_log::search::{LOG_QUERY, LogQuery};
 use ferroehr::access_log::view::{LogReader, LogStanding, Restrictions, view_of};
-use ferroehr::ids::EhrId;
 use ferroehr::system_log::event::{EntryScope, QueryNaming};
+use fhir_search::token::Token;
+use openehr_rm::draft::access_control::terminology::{CallerKind, Term};
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
-use crate::extensions::access::authn::{Principal, current_principal};
+use crate::extensions::access::authn::current_principal;
 use crate::extensions::access::authz::AuthzHandle;
 use crate::extensions::access::authz::classify::OperationClass;
 use crate::extensions::access::authz::roles::RbacDecision;
-use crate::extensions::access::delay;
 use crate::overview::error::RestError;
 use crate::overview::params::query_pairs;
 use crate::state::AppState;
@@ -71,20 +71,26 @@ pub(crate) const REVIEW_PARAMETERS: &[&str] = &[
 ];
 
 /// What the current caller may read of the access log, whichever resource
-/// names it: the subject of care and a representative bound through the party
-/// binding read the subject view of the EHR they are confined to (the EHR of
-/// the patient token's launch context, or of the subject the representation
-/// names, #5446, #5532), any other caller the admin class admits reads the
+/// names it: the subject of care and a representative read the subject view
+/// of the EHR the evaluator's caller is confined to (the EHR of the patient
+/// token's launch context, or of the subject the representation names,
+/// #5446, #5532, #5614), any other caller the admin class admits reads the
 /// full view, and any other caller is refused.
 pub(crate) fn standing(state: &AppState) -> LogStanding {
     // NOTE: our own design, a server with authentication off is open, as the admin review is.
     let Some(principal) = current_principal() else {
         return LogStanding::Reviewer;
     };
-    if delay::acts_for_the_person(&principal) {
-        return confined(&principal)
-            .and_then(|ehr| ehr.parse::<uuid::Uuid>().ok())
-            .map_or(LogStanding::Refused, |ehr| LogStanding::Person(EhrId(ehr)));
+    let caller = crate::extensions::access::caller::current_caller(state);
+    if matches!(
+        caller.kind,
+        CallerKind::Subject | CallerKind::Representative
+    ) {
+        return if caller.own_ehrs.is_empty() {
+            LogStanding::Refused
+        } else {
+            LogStanding::Person(caller.own_ehrs.into())
+        };
     }
     let authz = state.authz();
     let admitted = authz
@@ -97,15 +103,6 @@ pub(crate) fn standing(state: &AppState) -> LogStanding {
         LogStanding::Reviewer
     } else {
         LogStanding::Refused
-    }
-}
-
-/// The EHR the person's caller is confined to: the represented subject's for
-/// a representative, else the launch context's of the patient's token.
-fn confined(principal: &Principal) -> Option<&str> {
-    match &principal.represented {
-        Some(represented) => represented.ehr_id.as_deref(),
-        None => principal.access.ehr_id(),
     }
 }
 
@@ -152,9 +149,9 @@ fn set(filter: &mut LogQuery, name: &str, value: String) -> Result<(), RestError
             crate::overview::version_id::parse_ehr_id(&value)?;
             filter.ehr_id = Some(value);
         }
-        "action" => filter.action = Some(value),
-        "outcome" => filter.outcome = Some(value),
-        "accessor_kind" => filter.accessor_kind = Some(value),
+        "action" => filter.action = Some(term(name, &value)?),
+        "outcome" => filter.outcome = Some(term(name, &value)?),
+        "accessor_kind" => filter.accessor_kind = Some(term(name, &value)?),
         "party_namespace" => filter.party.namespace = Some(value),
         "party_type" => filter.party.class = Some(value),
         "party_id" => filter.party.id = Some(value),
@@ -177,6 +174,24 @@ fn instant(name: &str, value: &str) -> Result<jiff::Timestamp, RestError> {
             "`{name}` is an ISO 8601 date-time with an offset, such as 2026-11-13T09:00:00Z"
         ))
     })
+}
+
+/// `value`, a token `terminology_id|code` (FHIR R4 search.html §3.1.1.4.10),
+/// as the term of `T`'s group it names.
+///
+/// The term is recognised by its coded content, never its rubric, and a bare
+/// code assumes no terminology: our own design, after the token of the FHIR
+/// `AuditEvent` `action` and `outcome` search parameters.
+fn term<T: Term>(name: &str, value: &str) -> Result<T, RestError> {
+    match Token::parse(value) {
+        Ok(Token::SystemCode { system, code }) => {
+            T::read(&system, &code).map_err(|outside| malformed(format!("`{name}`: {outside}")))
+        }
+        Ok(_) | Err(_) => Err(malformed(format!(
+            "`{name}` is a token terminology_id|code naming a term of the {} group",
+            T::GROUP.rubric()
+        ))),
+    }
 }
 
 /// `value`, `true` or `false`.

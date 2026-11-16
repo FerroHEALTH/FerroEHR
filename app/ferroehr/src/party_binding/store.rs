@@ -41,6 +41,7 @@ use crate::ids::VoId;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants;
+use crate::party_binding::key_space;
 use crate::party_binding::rows::{
     self, IdentifierRow, Professional, RepresentationRow, write_identifiers,
 };
@@ -50,6 +51,7 @@ use crate::versioning::change::Committed;
 use crate::versioning::{Kind, SigningCtx};
 
 mod conflict;
+pub mod held;
 mod standalone;
 
 use conflict::selector_in_use;
@@ -114,6 +116,10 @@ pub(crate) async fn reindex_committed(
     facts: Option<&Facts>,
 ) -> Result<(), ServiceError> {
     grants::caller::check_content(facts)?;
+    grants::caller::subject::check(facts, &ctx.grants.namespace(), ctx.privacy)?;
+    if !ctx.binding.is_empty() {
+        key_space::gate_shared(tx).await?;
+    }
     if committed.kind == Kind::PartyRelationship {
         return standalone::committed(tx, ctx.binding, committed, facts).await;
     }
@@ -159,11 +165,10 @@ pub(crate) async fn reindex_committed(
         .as_ref()
         .map_or(&[][..], |f| f.targets.as_slice());
     party_reverse::replace(tx, committed.vo_id, targets, committed.time_committed).await?;
-    let care = grants::caller::CareBefore::read(tx, committed).await?;
+    grants::caller::check_care(tx, ctx.binding, committed, facts).await?;
     reindex_heads(tx, ctx.binding, committed.kind, vec![head])
         .await
-        .map_err(selector_in_use)?;
-    care.check(tx, ctx.binding).await
+        .map_err(selector_in_use)
 }
 
 /// Rebuilds the reverse-relationship index of the party `vo_id` of `kind` from
@@ -178,6 +183,9 @@ pub(crate) async fn reindex_stored(
     kind: Kind,
     vo_id: VoId,
 ) -> Result<(), StorageError> {
+    if !mapping.is_empty() {
+        key_space::gate_shared(tx).await?;
+    }
     party_reverse::rebuild(tx, vo_id).await?;
     let mut heads = stored_heads(tx, mapping, kind, Some(&[vo_id.0]), None).await?;
     let Some(head) = heads.pop() else {
@@ -251,7 +259,7 @@ async fn reindex_heads(
         return Ok(());
     }
     match kind {
-        Kind::Person => write_persons(tx, mapping, &heads, true).await,
+        Kind::Person => write_persons(tx, mapping, &heads, Scope::Heads { tombstones: true }).await,
         Kind::Role => {
             let mut performers = Vec::new();
             for head in &heads {
@@ -263,7 +271,7 @@ async fn reindex_heads(
                 return Ok(());
             }
             let persons = stored_heads(tx, mapping, Kind::Person, Some(&performers), None).await?;
-            write_persons(tx, mapping, &persons, false).await
+            write_persons(tx, mapping, &persons, Scope::Heads { tombstones: false }).await
         }
         Kind::Group => write_groups(tx, mapping, &heads).await,
         _ => Ok(()),
@@ -281,6 +289,7 @@ async fn reindex_heads(
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     crate::party_binding::policy_mark::mark_stored(tx, None).await?;
     for statement in [
         "DELETE FROM binding_identifier",
@@ -304,7 +313,9 @@ pub async fn refill(tx: &mut PgConnection, mapping: &BindingMapping) -> Result<(
                 heads.push(with_last(tx, mapping, kind, head).await?);
             }
             match kind {
-                Kind::Person => write_persons(tx, mapping, &heads, true).await?,
+                Kind::Person => {
+                    write_persons(tx, mapping, &heads, Scope::Heads { tombstones: true }).await?;
+                }
                 _ => write_groups(tx, mapping, &heads).await?,
             }
         }
@@ -336,115 +347,33 @@ pub async fn refill_grants(tx: &mut PgConnection) -> Result<(), StorageError> {
     grants::store::refilled(tx).await
 }
 
-/// One selector identifier of a live `PERSON` head, as the unique indexes
-/// compare it.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct HeldSelector {
-    /// `key`, `user_name` or `external_id`.
-    pub selector: &'static str,
-    /// The `DV_IDENTIFIER.issuer`; empty for a `userName`, which is unique
-    /// across issuers.
-    pub issuer: String,
-    /// The compared value: the canonical key, the folded `userName`, or the
-    /// `externalId`.
-    pub value: String,
-    /// The `PERSON`'s container.
-    pub party_id: Uuid,
+/// Which rows [`write_persons`] writes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Scope<'a> {
+    /// Every row of the heads; with `tombstones`, the key of each deleted one
+    /// is left as a tombstone.
+    Heads {
+        /// Whether a deleted head leaves its keys as tombstones.
+        tombstones: bool,
+    },
+    /// The key rows and tombstones under one issuer alone: the online fill of
+    /// that issuer's key space ([`crate::party_binding::key_space`]).
+    KeySpace(&'a str),
 }
 
-/// Every selector identifier of every live `PERSON` head of a mapped
-/// template, whether or not it binds, on `tx`: what [`refill`] would hold
-/// each value to one party by.
-///
-/// # Errors
-/// [`StorageError::Database`] on a driver failure.
-pub async fn held_selectors(
-    tx: &mut PgConnection,
-    mapping: &BindingMapping,
-) -> Result<Vec<HeldSelector>, StorageError> {
-    let mut out = Vec::new();
-    let mut after = None;
-    loop {
-        let page = stored_heads(tx, mapping, Kind::Person, None, after).await?;
-        let Some(last) = page.last() else {
-            break;
-        };
-        after = Some(last.vo_id);
-        let start = out.len();
-        let mut names = Vec::new();
-        for head in &page {
-            let Some(facts) = head
-                .facts
-                .as_ref()
-                .filter(|_| head.lifecycle_state != DELETED)
-            else {
-                continue;
-            };
-            if !facts
-                .template
-                .as_ref()
-                .is_some_and(|t| mapping.persons.contains_key(t))
-            {
-                continue;
-            }
-            for (selector, identifier) in &facts.identifiers {
-                let (issuer, value) = match *selector {
-                    "key" => (identifier.issuer.clone(), identifier.canonical()),
-                    "user_name" => {
-                        names.push(identifier.id.clone());
-                        (String::new(), identifier.id.clone())
-                    }
-                    _ => (identifier.issuer.clone(), identifier.id.clone()),
-                };
-                out.push(HeldSelector {
-                    selector,
-                    issuer,
-                    value,
-                    party_id: head.vo_id,
-                });
-            }
-        }
-        let folded = fold(tx, &names).await?;
-        for held in out
-            .iter_mut()
-            .skip(start)
-            .filter(|h| h.selector == "user_name")
-        {
-            if let Some(value) = folded.get(&held.value) {
-                held.value.clone_from(value);
-            }
+impl Scope<'_> {
+    /// Whether the identifier of `selector` under `issuer` is in scope.
+    fn holds(self, selector: &str, issuer: &str) -> bool {
+        match self {
+            Self::Heads { .. } => true,
+            Self::KeySpace(only) => selector == "key" && issuer == only,
         }
     }
-    out.sort();
-    out.dedup();
-    Ok(out)
-}
-
-/// The fold of each of `values`, as `party.binding_fold` compares a
-/// `userName`.
-async fn fold(
-    tx: &mut PgConnection,
-    values: &[String],
-) -> Result<BTreeMap<String, String>, StorageError> {
-    if values.is_empty() {
-        return Ok(BTreeMap::new());
-    }
-    let rows = sqlx::query(
-        "SELECT DISTINCT v, party.binding_fold(v) AS folded FROM unnest($1::text[]) AS t(v)",
-    )
-    .bind(values)
-    .fetch_all(&mut *tx)
-    .await?;
-    let mut out = BTreeMap::new();
-    for row in rows {
-        out.insert(row.try_get("v")?, row.try_get("folded")?);
-    }
-    Ok(out)
 }
 
 /// Writes the key, `userName`, `externalId`, representation and membership
-/// rows of the `PERSON` heads `heads`, and, when `tombstones` is set, leaves
-/// the key of each deleted one as a tombstone.
+/// rows of the `PERSON` heads `heads` that `scope` holds, with the tombstones
+/// it asks for.
 ///
 /// A key row is written for a `PERSON` that performs a professional `ROLE`
 /// (RM demographic `role.adoc`: a `ROLE` listed in `roles`, whose
@@ -455,7 +384,7 @@ async fn write_persons(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
     heads: &[Head],
-    tombstones: bool,
+    scope: Scope<'_>,
 ) -> Result<(), StorageError> {
     let parties: Vec<Uuid> = heads.iter().map(|h| h.vo_id).collect();
     let mut identifiers = Vec::new();
@@ -484,6 +413,9 @@ async fn write_persons(
             validity: r.validity.clone(),
         }));
         for (selector, identifier) in &facts.identifiers {
+            if !scope.holds(selector, &identifier.issuer) {
+                continue;
+            }
             identifiers.push(IdentifierRow {
                 party: head.vo_id,
                 selector,
@@ -497,25 +429,62 @@ async fn write_persons(
                 lifecycle_state: head.lifecycle_state.clone(),
                 representative: !facts.representations.is_empty()
                     || standalone.contains(&head.vo_id),
+                portal: *selector == "key" && mapping.is_portal_issuer(&identifier.issuer),
             });
         }
         listed.extend(facts.roles.iter().map(|role| (*role, head.vo_id)));
     }
     let professional = professional(tx, mapping, &listed).await?;
-    rows::write_representations(tx, &parties, &representations).await?;
+    let (selectors, issuer, tombstones): (&[&str], _, _) = match scope {
+        Scope::Heads { tombstones } => (&["key", "user_name", "external_id"], None, tombstones),
+        Scope::KeySpace(issuer) => (&["key"], Some(issuer), true),
+    };
+    if issuer.is_none() {
+        rows::write_representations(tx, &parties, &representations).await?;
+    }
     write_identifiers(
         tx,
         &parties,
-        &["key", "user_name", "external_id"],
+        (selectors, issuer),
         &identifiers,
         &professional,
     )
     .await?;
-    rows::write_memberships(tx, &parties, &memberships).await?;
+    if issuer.is_none() {
+        rows::write_memberships(tx, &parties, &memberships).await?;
+    }
     if tombstones {
-        rows::insert_tombstones(tx, &tombstones_of(mapping, heads)).await?;
+        let mut rows = tombstones_of(mapping, heads);
+        rows.retain(|row| scope.holds(row.selector, &row.issuer));
+        rows::insert_tombstones(tx, &rows).await?;
     }
     rows::revive_keys(tx, &parties).await
+}
+
+/// Writes the key rows and tombstones under `issuer` of one page of the
+/// `PERSON` heads after `after` in container order, on `tx`, returning the
+/// last container of the page, `None` past the last page: one step of the
+/// online fill of `issuer`'s key space.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure, the unique violation of
+/// two `PERSON`s carrying one key under `issuer` included.
+pub(crate) async fn fill_key_space(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    issuer: &str,
+    after: Option<Uuid>,
+) -> Result<Option<Uuid>, StorageError> {
+    let page = stored_heads(tx, mapping, Kind::Person, None, after).await?;
+    let Some(last) = page.last().map(|head| head.vo_id) else {
+        return Ok(None);
+    };
+    let mut heads = Vec::with_capacity(page.len());
+    for head in page {
+        heads.push(with_last(tx, mapping, Kind::Person, head).await?);
+    }
+    write_persons(tx, mapping, &heads, Scope::KeySpace(issuer)).await?;
+    Ok(Some(last))
 }
 
 /// The tombstone rows of the deleted heads among `heads`: the binding keys
@@ -542,6 +511,7 @@ fn tombstones_of(mapping: &BindingMapping, heads: &[Head]) -> Vec<IdentifierRow>
                 value: identifier.canonical(),
                 lifecycle_state: lifecycle_state.clone(),
                 representative: false,
+                portal: false,
             });
         }
     }
@@ -610,6 +580,7 @@ async fn write_groups(
             value: value.to_owned(),
             lifecycle_state: head.lifecycle_state.clone(),
             representative: false,
+            portal: false,
         };
         for id in &facts.group_external_ids {
             identifiers.push(row("group_external_id", &id.issuer, &id.id_type, &id.id));
@@ -621,7 +592,7 @@ async fn write_groups(
     write_identifiers(
         tx,
         &groups,
-        &["group_external_id", "group_display_name"],
+        (&["group_external_id", "group_display_name"], None),
         &identifiers,
         &[],
     )
@@ -749,6 +720,7 @@ pub(crate) fn parsed(
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn erase(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     sqlx::query("DELETE FROM binding_identifier WHERE party_id = ANY($1)")
         .bind(vo_ids)
         .execute(&mut *tx)

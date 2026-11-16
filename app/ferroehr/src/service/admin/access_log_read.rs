@@ -13,6 +13,7 @@
 
 use jiff::Timestamp;
 
+use crate::access_log::gap::ChainGap;
 use crate::access_log::search::LogQuery;
 use crate::access_log::store::AccessLogStore;
 use crate::access_log::view::{LogReader, withheld};
@@ -21,7 +22,6 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::system_log::sender::AuditSender;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
@@ -131,22 +131,22 @@ impl FerroEhrService {
     }
 
     /// The uid and link of every access-log record from `from` to `to`, both
-    /// included, for a verifier.
+    /// included, and every gap that holds a position between (#5619), for a
+    /// verifier.
     ///
     /// # Errors
     /// - `conflict` (`409`): the local audit store is off.
-    /// - `precondition` (`400`): a position between holds a record of the
-    ///   `audit_event` form, which only this database verifies.
     /// - `exception`: the store failed.
     pub async fn access_log_chain(
         &self,
         from: i64,
         to: i64,
-    ) -> Result<Vec<(String, AccessLogLink)>, ServiceError> {
+    ) -> Result<(Vec<(String, AccessLogLink)>, Vec<ChainGap>), ServiceError> {
         let log = self.access_log_store()?;
-        log.chain(from, to)
-            .await
-            .map_err(|error| ServiceError::internal(LOG_STORE, error))
+        let failed = |error| ServiceError::internal(LOG_STORE, error);
+        let links = log.chain(from, to).await.map_err(failed)?;
+        let gaps = log.gaps(from, to).await.map_err(failed)?;
+        Ok((links, gaps))
     }
 
     /// `Ok` when an EHR has the id `ehr`.
@@ -180,7 +180,7 @@ impl FerroEhrService {
         Ok(self
             .audit
             .as_ref()
-            .and_then(AuditSender::access_log)
+            .and_then(|sender| sender.store().access_log())
             .unwrap_or_else(|| AccessLogStore::new(audit_store.pool.clone())))
     }
 }

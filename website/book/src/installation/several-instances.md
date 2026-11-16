@@ -63,9 +63,11 @@ a transaction for this.
 
 ## The listeners hold connections of their own
 
-Each instance runs four listeners, one per copy, and each holds one
-connection for its `LISTEN`, apart from the request pools: three on the
-clinical database and one on the party database. Each listener session
+Each instance runs six listeners, one per copy, and each holds one
+connection for its `LISTEN`, apart from the request pools: four on the
+clinical database and two on the party database. One of the clinical ones
+holds the registered template addresses, so a COMPOSITION commit learns
+whether its template is registered without a statement. Each listener session
 names itself `ferroehr policy listener` in `pg_stat_activity`.
 
 PgBouncer in transaction mode hands a connection back after each transaction
@@ -90,38 +92,48 @@ withdraw readiness, so the instance stays in rotation. The metric
 `policy_listener_up` reads `0` for the lost listener; see [a lost policy
 listener](../operations-access-path.md#a-lost-policy-listener).
 
+The cost of a change on the database grows with the instances: each one
+reads the change once, on its own notification. The reload load measured for
+one, two and three instances is on the
+[Performance](../performance.md#the-access-path-at-scale) page.
+
 ## Connection budget
 
 Each instance opens three pools, one per domain (clinical, party and audit).
-Each pool holds at most `[database] max_connections` connections, and the four
-listeners hold one each beside them. With the default of 20, one instance uses
-at most 3 × 20 + 4 = 64 connections:
+Each pool holds at most `[database] max_connections` connections, and the six
+listeners hold one each beside them. Unset, the pool size is four per core the
+instance may run on, at least 10 and at most 30, and the server opens one
+connection per core in each pool before it answers ready ([Sizing the
+pool](config-server.md#sizing-the-pool)). An instance on eight cores or more
+therefore holds up to 3 × 30 + 6 = 96 connections under load:
 
-| Instances | Connections at most | Fits PostgreSQL's default `max_connections = 100` |
+| Instances | Connections at the default ceiling | Fits PostgreSQL's default `max_connections = 100` |
 |---|---|---|
-| 1 | 64 | yes |
-| 2 | 128 | no |
-| 3 | 192 | no |
+| 1 | 96 | yes, leaving 1 for your tools |
+| 2 | 192 | no |
+| 3 | 288 | no |
 
-Keep `instances × (3 × max_connections + 4)` below PostgreSQL's
+Keep `instances × (3 × max_connections + 6)` below PostgreSQL's
 `max_connections` minus `superuser_reserved_connections` (3 by default) and
-the connections your operators and tools need. With the default pool size,
-PostgreSQL needs `max_connections` of at least 64 + 3 = 67 for one instance,
-128 + 3 = 131 for two and 192 + 3 = 195 for three, before your own
-connections; the default of 100 fits one instance only. To fit two instances
-in the default of 100, set `[database] max_connections = 12` on each:
-(3 × 12 + 4) × 2 = 80, which leaves 17 for the reserved slots and your tools.
-The Compose overlay above sets 10 on each instance, 68 in all. Through a
+the connections your operators and tools need. To fit two instances in the
+default of 100, set `[database] max_connections = 12` on each:
+(3 × 12 + 6) × 2 = 84, which leaves 13 for the reserved slots and your tools.
+The Compose overlay above sets 10 on each instance, 72 in all. A smaller pool
+keeps a smaller burst: when `db_pool_acquire_duration_seconds` rises at your
+load, raise PostgreSQL's `max_connections` and the pool with it. Through a
 transaction-mode pooler, the pools count against the pooler's server
 connections and only the listeners against PostgreSQL's.
 
 ## Every instance shares the same signing key and configuration
 
 The access log and the system chain are one hash chain each. Every instance
-appends to them under a row lock on the chain head, and signs each link when
-an OpenPGP key is configured ([version signing](../signing/index.md)). Give
-every instance the same `[record.signing]` key and the same configuration
-file. An instance with another key writes links the others cannot vouch for.
+appends to them under a row lock on the chain head, and each instance seals
+every append it makes to the access log in a signed checkpoint, in the
+append's own transaction, when an OpenPGP key is configured ([version
+signing](../signing/index.md)). Give every instance the same
+`[record.signing]` key and the same configuration file, the same
+`[audit.access_log] publish_directory` included. An instance with another
+key writes checkpoints the others cannot vouch for.
 
 Each instance compares itself with the others when it starts and every 30
 seconds after. It writes the fingerprint of its signing key's certificate

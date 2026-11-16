@@ -7,10 +7,11 @@
 //! openEHR fixes no audit-record shape, so everything below follows external
 //! standards, cited as external standards and never as openEHR spec text.
 //!
-//! One audit record per audited API operation is rendered in both official ATNA
-//! formats and fanned out to the configured sinks: the local Audit Record
-//! Repository (the `audit` schema, the durability anchor, on by default, served
-//! back via the RESTful-ATNA ITI-81 retrieval), the classic DICOM Audit Message
+//! One audit record per audited API operation is written to the local Audit
+//! Record Repository before its response (the `audit` schema, always on while
+//! auditing is, served back via the RESTful-ATNA ITI-81 retrieval) and
+//! delivered from it, in both official ATNA formats, to the configured
+//! sinks: the classic DICOM Audit Message
 //! feed (DICOM PS3.15 §A.5 XML over RFC 5424 syslog on RFC 5425 TLS; IHE ITI
 //! TF-2 ITI-20), and the FHIR R4 `AuditEvent` feed (IHE BALP shape; ITI-20 ATX:
 //! FHIR Feed). The shared FerroAUDIT crates write both formats and send them:
@@ -33,8 +34,8 @@
 //!
 //! The ITS-REST operation to classification mapping is the protocol adapter's
 //! concern (`ferroehr-rest::system_log::classify`); its audit middleware builds
-//! an [`event::AuditEvent`] per request and hands it to the platform through
-//! [`FerroEhrService::emit`]. The binary boots the subsystem via
+//! an [`event::AuditEvent`] per request and writes it through
+//! [`FerroEhrService::record_events`]. The binary boots the subsystem via
 //! [`sender::start`] and supplies the DB-backed [`sender::SubjectResolver`]; the
 //! sender is installed with
 //! [`FerroEhrService::with_audit`](crate::service::FerroEhrService::with_audit).
@@ -52,13 +53,14 @@
 //! - `fhir` — the FHIR R4 `AuditEvent` of a record (the `fhir` cargo feature):
 //!   the EHDS access record written by `ehds-logging`, every other record a
 //!   BALP exchange written by `ihe-atna`.
-//! - [`syslog`] — the ITI-20 syslog sink: `ihe-atna`'s RFC 5424 frame over its
-//!   RFC 5425 TLS connection.
+//! - `syslog` — the ITI-20 syslog sink: `ihe-atna`'s RFC 5424 frame over its
+//!   RFC 5425 TLS connection, delivered from the store (the `fhir` cargo
+//!   feature).
 //! - [`render`] — the render policy a stored record's FHIR `AuditEvent` is
 //!   rendered under, and the rendering of a stored record.
 //! - [`store`] — the local Audit Record Repository and the ITI-81 search filter.
-//! - [`sender`] — the bounded-mpsc sender, background drain, sink fan-out and
-//!   fail modes.
+//! - [`sender`] — the sender that writes each record before its response, the
+//!   chainer and the forwarders on the audit runtime.
 //! - [`config`] — the `[audit]` section struct ([`config::AuditConfig`]).
 
 #![cfg_attr(
@@ -94,11 +96,12 @@ pub mod sender;
 pub mod store;
 
 use crate::system_log::sender::AuditSender;
+#[cfg(feature = "fhir")]
 pub mod syslog;
 #[cfg(feature = "fhir")]
 mod withheld;
 
-use event::{AuditEvent, EmitOutcome};
+use event::AuditEvent;
 
 // The paths the binary and the config tree consume (`crate::system_log::sender::start`,
 // `ferroehr::system_log::{AuditConfig, AuditHandle, AuditSender, SubjectResolver}`).
@@ -174,6 +177,12 @@ pub enum AuditError {
     /// store after it was stored.
     #[error("an audit search token cannot be read back from the store")]
     SearchToken,
+    /// The audit subsystem's own runtime could not start.
+    #[error("the audit runtime could not start")]
+    Runtime(#[source] std::io::Error),
+    /// An access-log entry's uid is no UUID, so the log cannot key it.
+    #[error("an access-log entry's uid is no UUID")]
+    EntryUid(#[source] uuid::Error),
     /// A JSON column of a stored record, or the render policy it names, does
     /// not read as the shape this build writes.
     #[error("audit record {chain_seq} cannot be read back: {column} does not read")]
@@ -188,56 +197,50 @@ pub enum AuditError {
     },
 }
 
-/// The loud slim-build refusal for the FHIR-rendering audit sinks.
+/// The loud slim-build refusal of auditing.
 ///
-/// Both the local Audit Record Repository and the ITI-20 ATX:FHIR Feed carry
-/// a FHIR R4 `AuditEvent` document, which a binary built without the `fhir`
-/// cargo feature cannot render. A configuration that enables either is a
-/// boot error, never a silently document-less audit trail (the syslog sink
-/// needs no FHIR and stays available).
+/// The local Audit Record Repository every record is written to before its
+/// access is reported carries the access-log entry and its FHIR R4
+/// `AuditEvent` projection, which a binary built without the `fhir` cargo
+/// feature cannot write. A configuration that turns auditing on is a boot
+/// error, never an access reported without its record.
 ///
 /// # Errors
-/// The refusal message when `[audit.store]` or `[audit.fhir_feed]` is
-/// enabled.
+/// The refusal message when `[audit] enabled` is true.
 #[cfg(not(feature = "fhir"))]
 pub fn require_fhir_disabled(cfg: &config::AuditConfig) -> Result<(), String> {
-    if !cfg.enabled {
-        return Ok(());
-    }
-    if cfg.store.enabled {
+    if cfg.enabled {
         return Err(
-            "audit.store.enabled = true, but this binary was built without the \
-             `fhir` cargo feature (the audit record repository stores FHIR \
-             AuditEvent documents)"
-                .to_owned(),
-        );
-    }
-    if cfg.fhir_feed.is_some() {
-        return Err(
-            "[audit.fhir_feed] is configured, but this binary was built without \
-             the `fhir` cargo feature"
+            "[audit] enabled = true, but this binary was built without the `fhir` cargo \
+             feature (the audit record repository writes the access-log entry and its FHIR \
+             AuditEvent projection); set [audit] enabled = false or use the full build"
                 .to_owned(),
         );
     }
     Ok(())
 }
 
-/// The platform's system log: it emits resolved
-/// audit events through the optional ATNA [`AuditSender`] the binary wires in
+/// The platform's system log: it records resolved audit events through the
+/// optional ATNA [`AuditSender`] the binary wires in
 /// ([`FerroEhrService::with_audit`](crate::service::FerroEhrService::with_audit)).
-/// With no sender wired, auditing is off and every emit is
-/// [`EmitOutcome::Dropped`].
+/// With no sender wired, auditing is off and nothing is recorded.
 impl FerroEhrService {
-    /// Enqueue a resolved audit event on the system log (non-blocking).
-    /// Returns [`EmitOutcome::Dropped`] when no sender is wired, and the
-    /// sender's own outcome otherwise (see [`AuditSender::emit`]).
-    #[must_use]
-    pub fn emit(&self, event: AuditEvent) -> EmitOutcome {
-        // `map_or` (not `map(..).unwrap_or(..)`) keeps clippy happy; behaviour
-        // is identical to `Dropped` when no sender is wired.
-        self.audit
-            .as_ref()
-            .map_or(EmitOutcome::Dropped, |s| s.emit(event))
+    /// Write `events`, the records of one act, durably before the act is
+    /// reported; nothing when no sender is wired.
+    ///
+    /// # Errors
+    /// [`ServiceError::Unrecorded`] (the wire's `503`) when the records could
+    /// not be written: the act is not reported as done.
+    pub async fn record_events(&self, events: Vec<AuditEvent>) -> Result<(), ServiceError> {
+        let Some(sender) = &self.audit else {
+            return Ok(());
+        };
+        // NOTE: boxed, so every service future that records carries a pointer, not the write.
+        Box::pin(sender.record(events)).await.map_err(|unwritten| {
+            ServiceError::Unrecorded(
+                Refusal::new((), "audit trail unavailable").with_source(unwritten),
+            )
+        })
     }
 
     /// Record `event` as one act on one object of the current request: one
@@ -246,9 +249,27 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// As [`Self::record_access`].
-    pub fn record_one_access(&self, mut event: AuditEvent) -> Result<(), ServiceError> {
+    pub async fn record_one_access(&self, mut event: AuditEvent) -> Result<(), ServiceError> {
         self.stamp_one_access(&mut event);
-        self.record_access(event)
+        self.record_access(event).await
+    }
+
+    /// Record `event` as an act of the request's committer, under the
+    /// request's purpose and permit and the deployment's legal basis.
+    ///
+    /// # Errors
+    /// As [`Self::record_access`].
+    pub(crate) async fn record_committer_access(
+        &self,
+        mut event: AuditEvent,
+    ) -> Result<(), ServiceError> {
+        event.purpose = access_context::current_purpose();
+        event.permit = access_context::current_permit();
+        if let Some(committer) = crate::versioning::committer::current_committer() {
+            event.user_id = committer.subject;
+        }
+        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
+        self.record_access(event).await
     }
 
     /// Stamp `event` as one act on one object of the current request: one
@@ -265,26 +286,14 @@ impl FerroEhrService {
         stamp_caller(event);
     }
 
-    /// Record an access event and honour the configured fail mode.
-    ///
-    /// The service-layer twin of the REST middleware's rejection: under
-    /// `[audit] fail_mode = "closed"` a record the sender cannot take
-    /// ([`EmitOutcome::Rejected`]) becomes an error the caller returns in
-    /// place of its result, so no read or write completes unrecorded.
-    /// `Enqueued`, and `Dropped` under `fail_mode = "open"`, complete.
+    /// Record an access event, stamped with the caller, before the access is
+    /// reported: the service-layer twin of the REST middleware's record.
     ///
     /// # Errors
-    /// [`ServiceError::Unrecorded`] (the wire's `503`) when the sender
-    /// rejected the record.
-    pub fn record_access(&self, mut event: AuditEvent) -> Result<(), ServiceError> {
+    /// As [`Self::record_events`].
+    pub async fn record_access(&self, mut event: AuditEvent) -> Result<(), ServiceError> {
         stamp_caller(&mut event);
-        match self.emit(event) {
-            EmitOutcome::Enqueued | EmitOutcome::Dropped => Ok(()),
-            EmitOutcome::Rejected => Err(ServiceError::Unrecorded(Refusal::new(
-                (),
-                "audit trail unavailable (fail-closed)",
-            ))),
-        }
+        self.record_events(vec![event]).await
     }
 
     /// Whether `purpose` is one of `[audit] emergency_purpose_codes`, the codes
@@ -419,7 +428,7 @@ impl FerroEhrService {
 
     /// The RESTful-ATNA **ITI-81** retrieval: the FHIR `AuditEvent` documents
     /// of the matching records, rendered from the store, newest first, plus
-    /// the total match count. The read side of the system log (the retrieval
+    /// the total match count when the filter asks. The read side of the system log (the retrieval
     /// semantics are IHE's — the `RESTful` ATNA supplement's ITI-81 FHIR search
     /// on `AuditEvent`).
     ///
@@ -430,7 +439,7 @@ impl FerroEhrService {
     pub async fn audit_event_search(
         &self,
         filter: &store::AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), ServiceError> {
+    ) -> Result<store::AuditPage, ServiceError> {
         let Some(audit_store) = &self.audit_store else {
             return Err(ServiceError::precondition(
                 "the local audit record repository is not enabled ([audit.store])",

@@ -14,7 +14,7 @@ use ferroehr::access_eval::condition::{
 use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
 use ferroehr::access_eval::scope::{CategoryIndex, Item};
 use ferroehr::ids::EhrId;
-use ferroehr::party_binding::grants::caller::CallerFacts;
+use ferroehr::party_binding::grants::caller::facts::CallerFacts;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::telemetry::build_info::BuildInfo;
 use ferroehr::telemetry::{access_path, metrics};
@@ -48,13 +48,13 @@ fn request(emergency: Emergency) -> Arc<RequestAccess> {
         Caller {
             kind: CallerKind::Professional,
             party: Some(party.clone()),
-            own_ehr: None,
+            own_ehrs: Vec::new(),
             patient_grants_only: false,
             acts_for: Vec::new(),
-            roles: Vec::new(),
             facts: CallerFacts::default(),
             administrator: false,
             settings: SettingsCaller::new(false, false, Some(party)),
+            lacks_consent_reference: false,
         },
         Asking {
             operation: OperationClass::Read,
@@ -81,7 +81,10 @@ async fn ask(access: Arc<RequestAccess>, ehr_id: EhrId) -> Outcome {
     };
     let judged = Arc::clone(&access);
     with_request_access(access, async move {
-        let verdict = judged.judge_ehr(ehr_id, &entry);
+        let verdict = judged
+            .judge_ehr(ehr_id, &entry)
+            .await
+            .expect("an EHR with no subject reads no care relationship");
         judged.note(ehr_id, &verdict, &Item::Ehr)
     })
     .await

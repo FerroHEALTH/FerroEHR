@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! One table per step of the decision procedure and per refusal code:
-//! steps 4 to 7, which read the caller's facts and the access policy, and
+//! steps 6 to 8, which read the caller's facts and the access policy, and
 //! the order of the steps.
 
 use openehr_rm::draft::access_control::terminology::{AccessDefault, CallerKind, Refusal};
@@ -10,19 +10,28 @@ use serde_json::json;
 
 use super::*;
 
-/// Step 4: data whose label or classification the caller is not cleared for
-/// are refused `refused-sensitivity`, unless a permit names the sensitivity.
+/// Step 6: data whose label or classification no applying permit, a
+/// directive or a rule of the policy, names are refused `refused-sensitivity`.
 #[test]
-fn step_4_sensitivity() {
-    let hiv = code(CONFIDENTIALITY, "HIV");
+fn step_6_sensitivity() {
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(OBJECT),
                         "sensitivities": [coded(CONFIDENTIALITY, "HIV")] });
-    let classified = policy(&json!({ "classifications": [{
+    let classification = json!([{
         "_type": "ACCESS_CLASSIFICATION",
         "name": { "_type": "DV_TEXT", "value": "HIV results" },
         "archetype_node_id": "at0002",
         "data": { "_type": "ACCESS_DATA_SCOPE", "templates": ["lab_hiv.v1"] },
-        "sensitivities": [coded(CONFIDENTIALITY, "HIV")] }] }));
+        "sensitivities": [coded(CONFIDENTIALITY, "HIV")] }]);
+    let classified = policy(&json!({ "classifications": classification }));
+    let clearing = |purposes: Option<&str>| {
+        let mut cleared = json!({ "applies_to": [role_scope("HIV_SPECIALIST")],
+            "data": [{ "sensitivities": [coded(CONFIDENTIALITY, "HIV")] }] });
+        if let Some(purpose) = purposes {
+            cleared["purposes"] = json!([coded(PURPOSE, purpose)]);
+        }
+        policy(&json!({ "classifications": classification, "rules": [rule("permit", &cleared)] }))
+    };
+    let specialist = || performing(CallerKind::Professional, NURSE, "HIV_SPECIALIST");
     let naming = directive(
         "consent",
         "permit",
@@ -60,13 +69,31 @@ fn step_4_sensitivity() {
             [Outcome::Admit, sensitive, Outcome::Admit],
         ),
         (
-            "a clearance",
+            "a permit rule naming the caller's role",
             Case {
-                policy: Some(classified),
+                policy: Some(clearing(None)),
                 ..Case::of(settings("open", &[], std::slice::from_ref(&label), &[]))
             },
-            with_facts(professional(NURSE), &[hiv], &[], &[]),
+            specialist(),
             [Outcome::Admit; 3],
+        ),
+        (
+            "a permit rule naming another role",
+            Case {
+                policy: Some(clearing(None)),
+                ..Case::of(settings("open", &[], std::slice::from_ref(&label), &[]))
+            },
+            performing(CallerKind::Professional, NURSE, "NURSE"),
+            [sensitive, sensitive, Outcome::Admit],
+        ),
+        (
+            "a permit rule for another purpose",
+            Case {
+                policy: Some(clearing(Some("HRESCH"))),
+                ..Case::of(settings("open", &[], std::slice::from_ref(&label), &[]))
+            },
+            specialist(),
+            [sensitive, sensitive, Outcome::Admit],
         ),
         (
             "a permit naming it",
@@ -83,10 +110,10 @@ fn step_4_sensitivity() {
     }
 }
 
-/// Step 5: where the policy requires one, a professional needs a live care
+/// Step 7: where the policy requires one, a professional needs a live care
 /// relationship, a permit naming them or a gate-keeper entry.
 #[test]
-fn step_5_care_relationship() {
+fn step_7_care_relationship() {
     let required = policy(&json!({ "care_relationship_required": true }));
     let refused = Outcome::Refused(Refusal::NoCareRelationship);
     let naming = directive(
@@ -159,53 +186,14 @@ fn step_5_care_relationship() {
     }
 }
 
-/// Step 6: where the policy requires one, a declared purpose the caller's
-/// capabilities permit.
-#[test]
-fn step_6_purpose() {
-    let required = Case {
-        policy: Some(policy(&json!({ "purpose_required": true }))),
-        ..Case::default()
-    };
-    let permitted = with_facts(professional(NURSE), &[], &[code(PURPOSE, "TREAT")], &[]);
-    let rows = [
-        (
-            "no purpose",
-            read(None),
-            Outcome::Refused(Refusal::PurposeMissing),
-        ),
-        (
-            "a purpose not permitted",
-            read(Some("HOPERAT")),
-            Outcome::Refused(Refusal::PurposeNotPermitted),
-        ),
-        ("a permitted purpose", read(Some("TREAT")), Outcome::Admit),
-    ];
-    for (name, asked, expected) in rows {
-        assert_outcome(
-            &required.verdict(&permitted, asked),
-            &Item::Ehr,
-            expected,
-            name,
-        );
-    }
-    let guardian = caller(CallerKind::Representative, GUARDIAN);
-    assert_outcome(
-        &required.verdict(&guardian, read(None)),
-        &Item::Ehr,
-        Outcome::Admit,
-        "a representative",
-    );
-}
-
-/// Step 7: the default disposition, and the server's for an EHR with no
+/// Step 8: the default disposition, and the server's for an EHR with no
 /// settings.
 #[test]
 #[expect(
     clippy::too_many_lines,
     reason = "one row per case of the step's table"
 )]
-fn step_7_default_disposition() {
+fn step_8_default_disposition() {
     let required = Outcome::Refused(Refusal::ConsentRequired);
     let permit = directive(
         "consent",
@@ -372,7 +360,8 @@ fn step_7_default_disposition() {
 }
 
 /// Deny overrides permit in step order: a restriction answers absent before a
-/// consent deny refuses, and a consent deny before a sensitivity.
+/// consent deny refuses, a consent deny before a controller rule, and a
+/// controller rule before a sensitivity.
 #[test]
 fn the_first_step_that_refuses_decides() {
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(OBJECT),
@@ -388,7 +377,33 @@ fn the_first_step_that_refuses_decides() {
         &json!({ "data": [{ "objects": [object_ref(OBJECT)] }] }),
     );
     let permit = directive("consent", "permit", &json!({}));
+    let ruled = policy(&json!({ "rules": [rule("deny",
+        &json!({ "data": [{ "objects": [object_ref(OBJECT)] }] }))] }));
     let item = object(OBJECT, None);
+    for (name, directives, expected) in [
+        ("consent before a rule", vec![deny.clone()], DENIED),
+        (
+            "a rule before sensitivity",
+            vec![permit.clone()],
+            Outcome::Refused(Refusal::PolicyDenied),
+        ),
+    ] {
+        let case = Case {
+            policy: Some(ruled.clone()),
+            ..Case::of(settings(
+                "restricted",
+                &directives,
+                std::slice::from_ref(&label),
+                &[],
+            ))
+        };
+        assert_outcome(
+            &case.verdict(&professional(NURSE), read(None)),
+            &item,
+            expected,
+            name,
+        );
+    }
     let cases = [
         (
             "restriction before consent",

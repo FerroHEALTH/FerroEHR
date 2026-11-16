@@ -36,11 +36,12 @@ impl Builder<'_> {
     /// Append the hidden access-logging columns: the EHR id of each bound
     /// `EHR` source and each bound VO root, after the projection.
     ///
-    /// Returns their SQL aliases, or empty when this plan cannot carry them —
+    /// Returns their SQL aliases, or empty when this plan cannot carry them:
     /// `SELECT DISTINCT`, where an extra column changes which rows are
-    /// distinct, and an aggregate projection, where an ungrouped column is not
-    /// valid SQL. The contract those two exclusions leave is on
-    /// [`super::ACCESS_EHR_PREFIX`].
+    /// distinct. An aggregate projection, where an ungrouped column is not
+    /// valid SQL, carries per row the array of the distinct EHRs its
+    /// aggregate read instead, so each EHR that contributed is named (#5639).
+    /// The contract is on [`super::ACCESS_EHR_PREFIX`].
     ///
     /// Beside each, for a query a request judges, it appends whether that EHR
     /// carries `EHR_ACCESS` settings ([`super::ACCESS_SETTLED_PREFIX`]),
@@ -51,7 +52,7 @@ impl Builder<'_> {
             .iter()
             .any(|column| matches!(column.value, SelectValue::Aggregate { .. }));
         let served = self.served_ehr_ids();
-        if ir.distinct || aggregates || served.is_empty() {
+        if ir.distinct || served.is_empty() {
             return (Vec::new(), Vec::new());
         }
         let mut aliases = Vec::with_capacity(served.len());
@@ -62,12 +63,22 @@ impl Builder<'_> {
             // so only its statement asks which served EHRs carry settings.
             if self.ctx.ehr_access.groups().is_some() {
                 let flag = format!("{}{i}", super::ACCESS_SETTLED_PREFIX);
-                self.q.expr_as(
-                    super::access::settled(ehr.clone()),
-                    Alias::new(flag.as_str()),
-                );
+                let held = super::access::settled(&self.ctx.ehr_access, ehr.clone());
+                let held = if aggregates {
+                    contributing(ehr.clone(), Some(held))
+                } else {
+                    held
+                };
+                self.q.expr_as(held, Alias::new(flag.as_str()));
                 settled.push(flag);
             }
+            // NOTE: our own design (#5639), every EHR whose data an aggregate read is accessed
+            // (EHDS Art. 9), so the aggregate names them as an array beside its own columns.
+            let ehr = if aggregates {
+                contributing(ehr, None)
+            } else {
+                ehr
+            };
             self.q.expr_as(ehr, Alias::new(alias.as_str()));
             aliases.push(alias);
         }
@@ -548,5 +559,20 @@ impl Builder<'_> {
             PathTarget::Attestations { .. } => true,
             PathTarget::Version { .. } | PathTarget::Ehr { .. } => false,
         }
+    }
+}
+
+/// The distinct EHRs `ehr` names among the rows an aggregate reads, as an
+/// array, each only where `held` holds when one is given (#5639).
+fn contributing(ehr: Expr, held: Option<Expr>) -> Expr {
+    match held {
+        None => Expr::cust_with_exprs(
+            "array_agg(DISTINCT $1) FILTER (WHERE $2 IS NOT NULL)",
+            [ehr.clone(), ehr],
+        ),
+        Some(held) => Expr::cust_with_exprs(
+            "array_agg(DISTINCT $1) FILTER (WHERE $2 IS NOT NULL AND $3)",
+            [ehr.clone(), ehr, held],
+        ),
     }
 }

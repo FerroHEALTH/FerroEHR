@@ -268,6 +268,7 @@ async fn update(svc: &FerroEhrService, uid: &str, body: &Value, lifecycle: &str)
 
 pub(crate) async fn service() -> (testkit::TestDb, Arc<FerroEhrService>) {
     let (db, pool) = common::migrated_pool().await;
+    common::open_key_spaces(&pool, &[(LOGIN, false)]).await;
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
         .with_binding_mapping(mapping());
     (db, Arc::new(svc))
@@ -281,8 +282,9 @@ pub(crate) async fn audited_service() -> (
     Arc<FerroEhrService>,
 ) {
     let (db, pool) = common::migrated_pool().await;
+    common::open_key_spaces(&pool, &[(LOGIN, false)]).await;
     let (sender, handle) =
-        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+        ferroehr::system_log::sender::start(common::local_audit(), None, pool.clone())
             .await
             .expect("the audit sender");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
@@ -349,7 +351,7 @@ async fn a_login_matching_two_parties_is_refused_naming_the_caller() {
     .expect("the router answers");
     let principal = response
         .extensions()
-        .get::<ferroehr_rest::extensions::access::authn::Principal>()
+        .get::<Arc<ferroehr_rest::extensions::access::authn::Principal>>()
         .expect("the refusal names its caller");
     assert_eq!(principal.subject, twice);
 }
@@ -420,6 +422,7 @@ async fn a_token_without_the_key_claim_is_refused() {
 #[tokio::test]
 async fn a_deactivation_on_one_instance_refuses_the_next_request_on_another() {
     let (db, pool) = common::migrated_pool().await;
+    common::open_key_spaces(&pool, &[(LOGIN, false)]).await;
     let first = Arc::new(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_binding_mapping(mapping()),
@@ -556,7 +559,7 @@ pub(crate) async fn refusal_rows(
 async fn a_login_binding_refusal_is_recorded_with_its_code_and_party() {
     let (db, pool) = common::migrated_pool().await;
     let (sender, _handle): (_, ferroehr::system_log::sender::AuditHandle) =
-        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+        ferroehr::system_log::sender::start(common::local_audit(), None, pool.clone())
             .await
             .expect("the audit sender");
     let svc = Arc::new(

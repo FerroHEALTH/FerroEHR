@@ -5,15 +5,19 @@
 //!
 //! It is installed on the service and judged against its templates at boot;
 //! the binding side table is filled or checked under its digest, with this
-//! replica's lease renewed while it runs; and `ferroehr party-binding refill`
-//! is the one path by which the mapping of a deployment changes;
+//! replica's lease renewed and the key spaces tended while it runs;
+//! `ferroehr party-binding refill` is the one path by which the templates,
+//! selectors, role, group or membership of a deployment change;
 //! `ferroehr party-binding check` is the read-only pre-flight of a migration
 //! to binding, the provisional persons just-in-time creation left
 //! incomplete among what it reports.
 //!
-//! A mapping change is a stop-the-world step: every replica stops, the
-//! refill runs, and replicas with the new mapping start. No openEHR spec
-//! governs the binding: our own design.
+//! A change to those is a stop-the-world step: every replica stops, the
+//! refill runs, and replicas with the new mapping start. A key issuer added
+//! or removed is no such change: each is a key space the replicas add,
+//! fill and retire while they serve
+//! ([`ferroehr::party_binding::key_space`]). No openEHR spec governs the
+//! binding: our own design.
 
 use ferroehr::service::ehr::access_projection::Rebuild;
 use std::collections::BTreeMap;
@@ -39,7 +43,9 @@ pub enum PartyBindingCmd {
     /// Rebuild the binding side table, the policy grants included, from the
     /// party versions under the configured mapping and store its digest. Run
     /// it with every replica stopped: it refuses while a replica's lease is
-    /// live. With no mapping configured it rebuilds the policy grants alone.
+    /// live. A key issuer added or removed needs no refill: the running
+    /// replicas fill and retire its key space themselves. With no mapping
+    /// configured it rebuilds the policy grants alone.
     /// It then rebuilds the `EHR_ACCESS` projection from every EHR's current
     /// `EHR_ACCESS` version.
     Refill,
@@ -58,7 +64,7 @@ pub enum PartyBindingCmd {
     /// refuses, naming them, the `PERSON`s whose key fails the provenance
     /// rule of `check`.
     Adopt(AdoptArgs),
-    /// Grant an operation of the `ferroehr-operations` terminology to a
+    /// Grant an operation of the `openehr_access` terminology to a
     /// client, on the operator's authority: an `AGENT` carrying the client
     /// identifier, unless an `ACTOR` names the client already, and a `ROLE`
     /// it performs whose capability grants the operation with the scope
@@ -99,7 +105,7 @@ pub struct GrantArgs {
     /// The operation's code, such as `scim_provision`.
     #[arg(long, value_name = "CODE")]
     pub operation: String,
-    /// A scope element of the grant, its code of the operation terminology
+    /// A scope element of the grant, its code of the draft access terminology
     /// and the text it names, such as `binding_issuer=urn:example:login`.
     #[arg(long = "element", value_name = "CODE=TEXT")]
     pub elements: Vec<String>,
@@ -174,17 +180,22 @@ pub fn install(
         .iter()
         .map(|settings| settings.issuer.clone())
         .chain(key_issuers.iter().cloned());
+    let holder = service.access_policy().log_retention().period;
     let service = service
         .with_import_policy(ImportPolicy::new(logins))
         .with_grant_ceiling(config.authz.grants.ceiling(&config.authz.rbac))
+        .with_party_namespace(&config.authz.party_binding.namespace)
         .with_federation_trust(ferroehr::config::federation::trust(
             &config.auth.shared,
-            config.audit.store.horizon(),
+            holder,
         ));
     let sections = config.authz.party_binding.sections();
-    let mapping = sections
-        .binding_mapping(&key_issuers, &config.authz.rbac.admin_role)
-        .context("compiling [authz.party_binding]")?;
+    let mapping = ferroehr::config::binding::installed_mapping(
+        &sections,
+        &resolved,
+        &config.authz.rbac.admin_role,
+    )
+    .context("compiling [authz.party_binding]")?;
     Ok(service
         .with_mapped_party_templates(sections.mapped_templates())
         .with_binding_mapping(mapping))
@@ -198,7 +209,8 @@ pub fn install(
 /// grants, starts their listener and logs the federation agreements in
 /// force, judges the mapping against its
 /// templates, prepares the side table and takes this replica's lease,
-/// renewed in the background until it is released.
+/// renewed in the background with the key spaces tended
+/// ([`Lease::tend`]) until it is released.
 ///
 /// # Errors
 /// A default definition the definition store refuses, two `AGENT`s naming
@@ -231,10 +243,15 @@ pub async fn prepare(
         .grants()
         .listened()
         .spawn_listener(listen_options(config, Domain::Party)?);
+    service
+        .bindings()
+        .listened()
+        .spawn_listener(listen_options(config, Domain::Party)?);
     service.grants().log_agreements();
     service
         .grants()
         .spawn_refresher(std::time::Duration::from_secs(60));
+    service.spawn_care_projector();
     let errors = service
         .party_mapping_errors(&config.authz.party_binding.sections())
         .await?;
@@ -254,12 +271,13 @@ pub async fn prepare(
     let renewing = Arc::clone(&lease);
     let renewal = tokio::spawn(async move {
         let mut tick = tokio::time::interval(LEASE_RENEWAL);
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
             tick.tick().await;
-            if let Err(e) = renewing.renew().await {
+            if let Err(e) = renewing.tend().await {
                 tracing::warn!(
                     error = %ferroehr::error::ErrorChain::new(&e),
-                    "the party binding lease could not be renewed"
+                    "the party binding lease could not be renewed or its key spaces tended"
                 );
             }
         }
@@ -425,7 +443,7 @@ pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<
         .context("adopting the PERSONs");
     drop(service);
     if let Some(handle) = handle {
-        handle.shutdown(crate::AUDIT_DRAIN_TIMEOUT).await;
+        handle.shutdown(crate::AUDIT_STOP_TIMEOUT).await;
     }
     adopted
 }
@@ -440,7 +458,7 @@ pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<
 pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<Granted> {
     let operation = Operation::of(&args.operation).with_context(|| {
         format!(
-            "{:?} is no operation of the ferroehr-operations terminology",
+            "{:?} is no operation of the openehr_access terminology",
             args.operation
         )
     })?;
@@ -483,7 +501,7 @@ pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<
     };
     drop(service);
     if let Some(handle) = handle {
-        handle.shutdown(crate::AUDIT_DRAIN_TIMEOUT).await;
+        handle.shutdown(crate::AUDIT_STOP_TIMEOUT).await;
     }
     granted
 }
@@ -525,9 +543,7 @@ async fn basic_user_person(
         .with_time_zone(jiff::tz::TimeZone::UTC)
         .date()
         .to_string();
-    let mut conn = pools
-        .party
-        .acquire()
+    let mut conn = ferroehr::db::acquire::acquire(&pools.party)
         .await
         .context("connecting to the party store")?;
     let rows = ferroehr::party_binding::lookup::key_rows(
@@ -634,7 +650,7 @@ async fn audited(
     FerroEhrService,
     Option<ferroehr::system_log::sender::AuditHandle>,
 )> {
-    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
+    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await?;
     let mut service = judged(pools, config).await?;
     if let Some(sender) = sender {
         service = service.with_audit(sender);

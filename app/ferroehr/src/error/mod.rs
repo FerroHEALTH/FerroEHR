@@ -290,10 +290,16 @@ pub enum ServiceError {
     /// or it rolled back; [`ServiceError::overloaded`].
     #[error(transparent)]
     Overloaded(Curated),
-    /// The access record for a completed read or write could not be taken
-    /// and the deployment fails closed (`[audit] fail_mode = "closed"`), so
-    /// the result is withheld — the wire's `503`, `Retry-After` set, the same
-    /// answer the REST layer gives when its own request record is rejected.
+    /// A `503` for a query judged on an access copy older than the store
+    /// that did not catch up within the wait the server allows: the answer
+    /// is withheld, never served short or empty (#5794);
+    /// [`ServiceError::access_refreshing`].
+    #[error(transparent)]
+    AccessRefreshing(Curated),
+    /// The access record for a completed read or write could not be written
+    /// durably, so the result is withheld: the wire's `503`, `Retry-After`
+    /// set, the same answer the REST layer gives when its own request record
+    /// cannot be written.
     ///
     /// Carries the refusal
     /// [`FerroEhrService::record_access`](crate::service::FerroEhrService::record_access)
@@ -307,10 +313,11 @@ pub enum ServiceError {
     #[error(transparent)]
     Restricted(Refusal),
     /// A person may not make the change, the wire's `403` (EHDS Art. 5;
-    /// [`ServiceError::not_permitted`]). No openEHR spec governs it: our own
-    /// design/extension.
+    /// [`ServiceError::not_permitted`]); its kind is the access evaluator's
+    /// refusal when the evaluator refused ([`ServiceError::refused`]).
+    /// No openEHR spec governs it: our own design/extension.
     #[error(transparent)]
-    Forbidden(Refusal),
+    Forbidden(Refusal<Option<refusal::Refused>>),
     /// The query outran its execution budget, the wire's `408` (`responses/408_Query.yaml`).
     #[error(transparent)]
     Timeout(Refusal),
@@ -415,7 +422,14 @@ impl ServiceError {
     /// A refusal (`403`) of a change a person may not make (EHDS Art. 5).
     #[must_use]
     pub fn not_permitted(message: impl Into<String>) -> Self {
-        ServiceError::Forbidden(Refusal::new((), message))
+        ServiceError::Forbidden(Refusal::new(None, message))
+    }
+
+    /// A refusal (`403`) of the access evaluator, its code and legal grounds
+    /// `refused`, which the wire names beside `message`.
+    #[must_use]
+    pub fn refused(refused: refusal::Refused, message: impl Into<String>) -> Self {
+        ServiceError::Forbidden(Refusal::new(Some(refused), message))
     }
 
     /// A refusal (`403`) of a research-side disclosure the subject objected to.

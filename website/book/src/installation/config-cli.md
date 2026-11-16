@@ -186,9 +186,12 @@ ferroehr party-binding refill   # rebuild the party binding side table under the
 
 Rebuilds the binding side table from the party versions under the
 configured [party mapping](config-auth.md#the-party-mapping) and stores the
-mapping's digest. Run it with every replica stopped after a mapping change:
-it refuses while a replica holds a live lease, and refuses a store in which
-two parties carry one selector value, naming both.
+mapping's digest. Run it with every replica stopped after a change to the
+templates, selectors, role, group or membership: it refuses while a replica
+holds a live lease, and refuses a store in which two parties carry one
+selector value, naming both. A key issuer added or removed needs no refill:
+the running replicas fill and retire its keys themselves
+([Changing the mapping](config-auth.md#changing-the-mapping)).
 
 ### `ferroehr party-binding check`
 
@@ -278,7 +281,7 @@ ferroehr party-binding grant --issuer <ISSUER> --client-id <CLIENT_ID>
                              --operation <CODE> [--element <CODE>=<TEXT>]...
 ```
 
-Grants an operation of the `ferroehr-operations` terminology to a client, on
+Grants an operation of the `openehr_access` terminology to a client, on
 the operator's authority: an `AGENT` carrying the client identifier under the
 token issuer, unless an `ACTOR` names the client already, and a `ROLE` it
 performs whose capability grants the operation, with one scope element per

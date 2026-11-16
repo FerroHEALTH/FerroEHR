@@ -7,6 +7,16 @@
 # what the seed created, so the committed plan names no id. The request set
 # reads one seeded EHR whose content never changes and writes into another, so
 # the reads are as fast at the end of the window as at its start.
+#
+# The clinical groups (EHR read, composition commit and read, the AQL queries
+# and the export) carry the per-arm clinical credential: in an arm whose tree
+# runs the access path that is the clinician, whom the access evaluator judges
+# by a care relationship, its role's controller rule and each EHR's
+# directives, and every
+# access writes a signed access-log entry (#5590); in an older arm it is the
+# administrator.
+# The administrative groups (EHR create, the template upload, the demographic
+# reads and the access-log read) are sent as the administrator.
 
 [idle]
 duration_secs = 60
@@ -37,7 +47,7 @@ group = "ehr_read"
 method = "GET"
 path = "/ferroehr/rest/openehr/v1/ehr/@READ_EHR@"
 status = 200
-headers = { authorization = "@AUTH@", accept = "application/json" }
+headers = { authorization = "@CLINICAL_AUTH@", accept = "application/json" }
 
 [[requests]]
 group = "composition_commit"
@@ -45,14 +55,14 @@ method = "POST"
 path = "/ferroehr/rest/openehr/v1/ehr/@WRITE_EHR@/composition"
 status = 201
 body = '''@COMPOSITION@'''
-headers = { authorization = "@AUTH@", content-type = "application/json", prefer = "return=minimal" }
+headers = { authorization = "@CLINICAL_AUTH@", content-type = "application/json", prefer = "return=minimal" }
 
 [[requests]]
 group = "composition_read"
 method = "GET"
 path = "/ferroehr/rest/openehr/v1/ehr/@READ_EHR@/composition/@READ_COMPOSITION@"
 status = 200
-headers = { authorization = "@AUTH@", accept = "application/json" }
+headers = { authorization = "@CLINICAL_AUTH@", accept = "application/json" }
 
 [[requests]]
 group = "aql_order_by"
@@ -60,7 +70,7 @@ method = "POST"
 path = "/ferroehr/rest/openehr/v1/query/aql"
 status = 200
 body = '''@AQL_ORDER_BY@'''
-headers = { authorization = "@AUTH@", content-type = "application/json", accept = "application/json" }
+headers = { authorization = "@CLINICAL_AUTH@", content-type = "application/json", accept = "application/json" }
 
 [[requests]]
 group = "aql_unordered"
@@ -68,7 +78,7 @@ method = "POST"
 path = "/ferroehr/rest/openehr/v1/query/aql"
 status = 200
 body = '''@AQL_UNORDERED@'''
-headers = { authorization = "@AUTH@", content-type = "application/json", accept = "application/json" }
+headers = { authorization = "@CLINICAL_AUTH@", content-type = "application/json", accept = "application/json" }
 
 # A population query over the population the seed writes (PERF_POPULATION in
 # scripts/perf/gate.sh): it names no EHR, so the access log writes one entry
@@ -80,7 +90,7 @@ method = "POST"
 path = "/ferroehr/rest/openehr/v1/query/aql"
 status = 200
 body = '''@AQL_POPULATION@'''
-headers = { authorization = "@AUTH@", content-type = "application/json", accept = "application/json" }
+headers = { authorization = "@CLINICAL_AUTH@", content-type = "application/json", accept = "application/json" }
 
 [[requests]]
 group = "template_upload"
@@ -103,3 +113,22 @@ method = "GET"
 path = "/ferroehr/rest/openehr/v1/demographic/versioned_party/@READ_PARTY_VO@"
 status = 200
 headers = { authorization = "@AUTH@", accept = "application/json" }
+
+# The export of the read EHR as openEHR EXTRACTs (our own route): every
+# versioned object of the EHR, judged and recorded as one export.
+[[requests]]
+group = "export"
+method = "GET"
+path = "/ferroehr/rest/extensions/v1/message/export/@READ_EHR@"
+status = 200
+headers = { authorization = "@CLINICAL_AUTH@", accept = "application/json" }
+
+# A read of the access log through the RESTful ATNA ITI-81 retrieval, which
+# every arm serves: the newest page of the AuditEvents it renders from the
+# stored entries.
+[[requests]]
+group = "access_log_read"
+method = "GET"
+path = "/ferroehr/rest/fhir/r4/AuditEvent?date=ge2026-01-01&_count=20"
+status = 200
+headers = { authorization = "@AUTH@", accept = "application/fhir+json" }

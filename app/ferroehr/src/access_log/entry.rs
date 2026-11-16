@@ -20,7 +20,6 @@
 //! change proposal and no openEHR release, so no openEHR spec governs this
 //! module: our own design.
 
-use jiff::civil::Date;
 use openehr_base::containers::NonEmptyVec;
 use openehr_base::v1_3::base_types::identification::generic_id::GenericId;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
@@ -28,14 +27,14 @@ use openehr_base::v1_3::base_types::identification::object_id::ObjectId;
 use openehr_base::v1_3::base_types::identification::object_ref::{ObjectRef, ObjectRefData};
 use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
 use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
-use openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId;
-use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+use openehr_rm::draft::access_control::terminology::log::{
+    AccessorKind, Action, Authorisation, Outcome,
+};
+use openehr_rm::draft::access_control::terminology::{Term, coded_text};
 use openehr_rm::v1_2::common::generic::party_identified::{PartyIdentified, PartyIdentifiedData};
 use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
 use openehr_rm::v1_2::common::generic::party_self::PartySelf;
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
-use openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate;
-use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use openehr_rm::v1_2::data_types::text::dv_text::{DvText, DvTextData};
 
@@ -62,15 +61,6 @@ use openehr_rm::draft::access_log::access_log::access_retention::AccessRetention
 use openehr_rm::draft::access_log::access_log::accessed_item::AccessedItem;
 use openehr_rm::draft::access_log::access_log::accessor::Accessor;
 
-/// The terminology of the draft's own groups (`access action`, `access
-/// outcome`, `accessor kind`, `access authorisation`), whose terms carry
-/// their rubric as the code until the openEHR terminology editors assign one
-/// (`openehr_rm::draft::access_log::invariants`).
-const OPENEHR: &str = "openehr";
-/// FerroEHR's terminology of the party binding outcomes (#5007).
-pub const BINDING_TERMINOLOGY: &str = "ferroehr-party-binding";
-/// FerroEHR's terminology of the retention grounds an entry states.
-pub const RETENTION_TERMINOLOGY: &str = "ferroehr-access-log-retention";
 /// The terminology of a code a caller declared with no system.
 const LOCAL: &str = "local";
 /// The class an entry that changes the access log names the entry it changed
@@ -120,7 +110,7 @@ pub fn entry_of(
         .as_ref()
         .and_then(|_| item(event))
         .map(|item| vec![item]);
-    Some(AccessLogEntry {
+    let mut entry = AccessLogEntry {
         uid: HierObjectId::from(uuid::Uuid::now_v7()),
         system_id: system_id.to_owned(),
         time_recorded: dv_date_time(&event.timestamp),
@@ -133,7 +123,7 @@ pub fn entry_of(
             signature: None,
         },
         occurred: None,
-        action: coded(OPENEHR, action(event), action(event)),
+        action: Term::coded(action(event)),
         operation: operation(event),
         outcome: outcome(event),
         accessor: accessor(event, system_id),
@@ -146,7 +136,7 @@ pub fn entry_of(
                 .into_iter()
                 .map(|purpose| {
                     let system = purpose.system.as_deref().unwrap_or(LOCAL);
-                    coded(system, &purpose.code, &purpose.code)
+                    coded_text(system, &purpose.code, &purpose.code)
                 })
                 .collect(),
         ),
@@ -155,8 +145,10 @@ pub fn entry_of(
         channel: channel(event),
         security_labels: None,
         retention,
-        other_details: details(event, subject),
-    })
+        other_details: None,
+    };
+    entry.other_details = details(event, subject, &entry);
+    Some(entry)
 }
 
 /// The access-log entry `event` writes as its record, its EHR belonging to
@@ -179,35 +171,20 @@ pub fn for_store(
     let retention = match &event.category {
         Some(category) => crate::access_log::retention::retention(
             &ctx.recording.retention,
+            &ctx.recording.log,
             event.timestamp,
             &category.classification,
             event.origins.iter().map(String::as_str),
         ),
-        None => horizon_retention(match crate::system_log::fhir::record_end(event, ctx) {
-            RecordEnd::On(date) => Some(date),
-            RecordEnd::Never => None,
-        }),
+        None => crate::access_log::retention::stated(
+            match crate::system_log::fhir::record_end(event, ctx) {
+                RecordEnd::On(date) => Some(date),
+                RecordEnd::Never => None,
+            },
+            &ctx.recording.log,
+        ),
     };
     entry_of(event, subject, &ctx.source_id, retention).map(Box::new)
-}
-
-/// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
-fn coded(terminology: &str, code: &str, rubric: &str) -> DvCodedText {
-    DvCodedText {
-        value: rubric.to_owned(),
-        hyperlink: None,
-        formatting: None,
-        mappings: None,
-        language: None,
-        encoding: None,
-        defining_code: CodePhrase {
-            terminology_id: TerminologyId {
-                value: terminology.to_owned(),
-            },
-            code_string: code.to_owned(),
-            preferred_term: None,
-        },
-    }
 }
 
 /// `values`, or `None` when there are none, as the draft's optional lists are
@@ -227,20 +204,22 @@ fn ehr_id(event: &AuditEvent) -> Option<HierObjectId> {
         .and_then(|id| HierObjectId::new(id).ok())
 }
 
-/// The rubric of the `access action` the event performed.
-fn action(event: &AuditEvent) -> &'static str {
+/// The `access action` the event performed.
+fn action(event: &AuditEvent) -> Action {
     if event.entry == EntryScope::LogRead {
-        return "read";
+        return Action::Read;
     }
     match (event.object, event.action) {
-        (ObjectClass::Extract, EventActionCode::Create) => "import",
-        (ObjectClass::Extract, _) => "export",
-        (ObjectClass::Query, EventActionCode::Read | EventActionCode::Execute) => "query",
-        (_, EventActionCode::Read | EventActionCode::Execute) if event.query.is_some() => "query",
-        (_, EventActionCode::Create) => "create",
-        (_, EventActionCode::Update) => "update",
-        (_, EventActionCode::Delete) => "delete",
-        (_, EventActionCode::Read | EventActionCode::Execute) => "read",
+        (ObjectClass::Extract, EventActionCode::Create) => Action::Import,
+        (ObjectClass::Extract, _) => Action::Export,
+        (ObjectClass::Query, EventActionCode::Read | EventActionCode::Execute) => Action::Query,
+        (_, EventActionCode::Read | EventActionCode::Execute) if event.query.is_some() => {
+            Action::Query
+        }
+        (_, EventActionCode::Create) => Action::Create,
+        (_, EventActionCode::Update) => Action::Update,
+        (_, EventActionCode::Delete) => Action::Delete,
+        (_, EventActionCode::Read | EventActionCode::Execute) => Action::Read,
     }
 }
 
@@ -248,7 +227,7 @@ fn action(event: &AuditEvent) -> &'static str {
 /// FHIR rendering names it by.
 fn operation(event: &AuditEvent) -> Option<DvCodedText> {
     match &event.event_type {
-        Some(EventType::RestOperation(op)) => Some(coded(OPERATION_SYSTEM, op, op)),
+        Some(EventType::RestOperation(op)) => Some(coded_text(OPERATION_SYSTEM, op, op)),
         Some(EventType::Login | EventType::Logout) | None => None,
     }
 }
@@ -256,11 +235,11 @@ fn operation(event: &AuditEvent) -> Option<DvCodedText> {
 /// The access outcome: granted, refused, or failed for any other failure.
 fn outcome(event: &AuditEvent) -> AccessOutcome {
     let result = if event.decision == AccessDecision::Refused {
-        "refused"
+        Outcome::Refused
     } else if event.outcome == EventOutcome::Success {
-        "granted"
+        Outcome::Granted
     } else {
-        "failed"
+        Outcome::Failed
     };
     let delivered = (event.outcome == EventOutcome::Success
         && event.decision == AccessDecision::Admitted)
@@ -272,14 +251,8 @@ fn outcome(event: &AuditEvent) -> AccessOutcome {
         .as_ref()
         .and_then(|decided| decided.refused.as_ref());
     AccessOutcome {
-        result: coded(OPENEHR, result, result),
-        reason: refused.map(|refused| {
-            coded(
-                TERMINOLOGY_ID_ACCESS_CONTROL,
-                refused.code(),
-                refused.code(),
-            )
-        }),
+        result: Term::coded(result),
+        reason: refused.map(|refused| Term::coded(refused.code)),
         description: refused.map(|refused| {
             DvText::DvText(DvTextData {
                 value: refused.description(),
@@ -299,7 +272,7 @@ fn accessor(event: &AuditEvent, system_id: &str) -> Accessor {
     let binding = event.binding.as_ref();
     let issuer = event.issuer.as_deref().unwrap_or(system_id);
     Accessor {
-        kind: coded(OPENEHR, accessor_kind(event), accessor_kind(event)),
+        kind: Term::coded(accessor_kind(event)),
         party: party(event, issuer),
         provider: provider(event),
         roles: nonempty(
@@ -307,7 +280,7 @@ fn accessor(event: &AuditEvent, system_id: &str) -> Accessor {
                 .role_codings()
                 .into_iter()
                 .map(|role| {
-                    coded(
+                    coded_text(
                         role.system.as_deref().unwrap_or(LOCAL),
                         &role.code,
                         &role.code,
@@ -316,13 +289,7 @@ fn accessor(event: &AuditEvent, system_id: &str) -> Accessor {
                 .collect(),
         ),
         groups: binding.and_then(|binding| nonempty(groups(binding))),
-        binding: binding.map(|binding| {
-            coded(
-                BINDING_TERMINOLOGY,
-                binding.code.as_str(),
-                binding.code.as_str(),
-            )
-        }),
+        binding: binding.map(|binding| binding.code.term().coded()),
         credential: credential(event),
         delegation: binding.and_then(|binding| {
             nonempty(
@@ -343,24 +310,24 @@ fn accessor(event: &AuditEvent, system_id: &str) -> Accessor {
     }
 }
 
-/// The rubric of the `accessor kind`: from the binding when it says, else
-/// from how the caller acted.
-fn accessor_kind(event: &AuditEvent) -> &'static str {
+/// The `accessor kind`: from the binding when it says, else from how the
+/// caller acted.
+fn accessor_kind(event: &AuditEvent) -> AccessorKind {
     if let Some(binding) = &event.binding {
         match binding.code {
-            BindingCode::SelfPatient => return "subject of care",
-            BindingCode::External => return "external person",
-            BindingCode::Organisation => return "organisation",
-            BindingCode::System => return "system",
-            _ if binding.representation.is_some() => return "representative",
+            BindingCode::SelfPatient => return AccessorKind::SubjectOfCare,
+            BindingCode::External => return AccessorKind::ExternalPerson,
+            BindingCode::Organisation => return AccessorKind::Organisation,
+            BindingCode::System => return AccessorKind::System,
+            _ if binding.representation.is_some() => return AccessorKind::Representative,
             _ => {}
         }
     }
     match event.actor.mode {
-        Some(ActingMode::Delegated) => "delegated person",
-        Some(ActingMode::External) => "external person",
-        Some(ActingMode::System | ActingMode::Client) => "system",
-        Some(ActingMode::Person) | None => "person",
+        Some(ActingMode::Delegated) => AccessorKind::DelegatedPerson,
+        Some(ActingMode::External) => AccessorKind::ExternalPerson,
+        Some(ActingMode::System | ActingMode::Client) => AccessorKind::System,
+        Some(ActingMode::Person) | None => AccessorKind::Person,
     }
 }
 
@@ -466,7 +433,7 @@ fn credential(event: &AuditEvent) -> Option<AccessCredential> {
         assurance: event
             .actor
             .assurance_level
-            .map(|level| coded(LOCAL, level.as_str(), level.as_str())),
+            .map(|level| coded_text(LOCAL, level.as_str(), level.as_str())),
         authentication_method: None,
     })
 }
@@ -499,7 +466,7 @@ fn item(event: &AuditEvent) -> Option<AccessedItem> {
                 .classification
                 .categories()
                 .keys()
-                .map(|category| coded(category.system(), category.code(), category.code()))
+                .map(|category| coded_text(category.system(), category.code(), category.code()))
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
@@ -572,12 +539,11 @@ fn query(event: &AuditEvent) -> Option<AccessQuery> {
     })
 }
 
-/// A ground of the draft `access authorisation` group whose rubric is
-/// `rubric`, naming nothing else.
+/// A ground of the `access authorisation` term `kind`, naming nothing else.
 #[must_use]
-pub(crate) fn authorisation(rubric: &str) -> AccessAuthorisation {
+pub(crate) fn authorisation(kind: Authorisation) -> AccessAuthorisation {
     AccessAuthorisation {
-        kind: coded(OPENEHR, rubric, rubric),
+        kind: Term::coded(kind),
         policy: None,
         name: None,
         version: None,
@@ -604,29 +570,25 @@ fn authorisations(event: &AuditEvent) -> Vec<AccessAuthorisation> {
             legal_grounds: agreement
                 .legal_ground
                 .as_ref()
-                .map(|ground| vec![coded(LOCAL, ground, ground)]),
-            ..kind("agreement")
+                .map(|ground| vec![coded_text(LOCAL, ground, ground)]),
+            ..kind(Authorisation::Agreement)
         });
     }
     if let Some(representation) = binding.and_then(|binding| binding.representation.as_ref()) {
         authorisations.push(AccessAuthorisation {
             reference: Some(identifier(&representation.represented)),
-            ..kind("representation")
+            ..kind(Authorisation::Representation)
         });
     }
     if let Some(permit) = &event.permit {
         authorisations.push(AccessAuthorisation {
             reference: Some(identifier(permit)),
-            ..kind("permit")
+            ..kind(Authorisation::Permit)
         });
     }
-    let marked = |rubric: &str| {
-        authorisations
-            .iter()
-            .any(|ground| ground.kind.value == rubric)
-    };
-    if event.emergency_access && !marked("emergency") {
-        authorisations.push(kind("emergency"));
+    let marked = |kind: Authorisation| authorisations.iter().any(|ground| kind.is(&ground.kind));
+    if event.emergency_access && !marked(Authorisation::Emergency) {
+        authorisations.push(kind(Authorisation::Emergency));
     }
     authorisations
 }
@@ -656,36 +618,15 @@ fn channel(event: &AuditEvent) -> Option<AccessChannel> {
     })
 }
 
-/// The `ACCESS_RETENTION` of an entry the audit store's horizon keeps: kept
-/// through the day before `end`, the first date it may be removed on, or
-/// without end when `end` is `None`.
-#[must_use]
-pub fn horizon_retention(end: Option<Date>) -> AccessRetention {
-    AccessRetention {
-        retain_until: end.and_then(|end| end.yesterday().ok()).map(|last| DvDate {
-            normal_status: None,
-            normal_range: None,
-            other_reference_ranges: None,
-            magnitude_status: None,
-            accuracy: None,
-            value: last.to_string(),
-        }),
-        grounds: NonEmptyVec::of(coded(
-            RETENTION_TERMINOLOGY,
-            "store-horizon",
-            "the retention horizon of the audit store",
-        )),
-    }
-}
-
 /// FerroEHR's access details of the access `event` records, which its
 /// projections read ([`crate::access_log::recorded::details`]).
 #[cfg(feature = "fhir")]
 fn details(
     event: &AuditEvent,
     subject: Option<&str>,
+    core: &AccessLogEntry,
 ) -> Option<openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure> {
-    crate::access_log::recorded::details(event, subject)
+    crate::access_log::recorded::details(event, subject, core)
 }
 
 /// A slim build projects no entry, so its entries keep no access details.
@@ -693,6 +634,7 @@ fn details(
 fn details(
     _event: &AuditEvent,
     _subject: Option<&str>,
+    _core: &AccessLogEntry,
 ) -> Option<openehr_rm::v1_2::data_structures::item_structure::item_structure::ItemStructure> {
     None
 }

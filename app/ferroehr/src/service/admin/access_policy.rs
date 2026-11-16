@@ -38,7 +38,6 @@ use uuid::Uuid;
 use crate::access_policy::check::checked;
 use crate::access_policy::{CHANNEL, LivePolicy};
 use crate::db::acquire::acquire;
-use crate::error::refusal::Refusal;
 use crate::error::{ErrorChain, ServiceError};
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
@@ -90,14 +89,14 @@ impl PolicyVersion {
         let tree = TreeId::trunk(row.version);
         let data: Value = serde_json::from_str(&row.data)?;
         let commit_audit: Value = serde_json::from_str(&row.commit_audit)?;
-        let original_version = build_original_version(&OriginalVersionParts {
+        let original_version = build_original_version(OriginalVersionParts {
             creating_system_id: &row.system_id,
             vo_id,
             tree,
             preceding_version_uid: preceding,
             other_input_version_uids: &[],
-            contribution: &contribution_ref(row.contribution_id),
-            commit_audit: &commit_audit,
+            contribution: contribution_ref(row.contribution_id),
+            commit_audit,
             lifecycle_state: &row.lifecycle_state,
             data: &data,
             attestations: &[],
@@ -243,7 +242,7 @@ impl FerroEhrService {
     /// - `version_mismatch` (`412`) — `precondition` does not hold.
     /// - `service_overloaded` (`503`) — the policy store does not answer, or
     ///   the write changes the access log's restrictions and its access-log
-    ///   entry is refused under `[audit] fail_mode = "closed"`.
+    ///   entry cannot be written.
     /// - `exception` — a database fault (rolled back).
     pub async fn put_access_policy(
         &self,
@@ -299,12 +298,6 @@ impl FerroEhrService {
             .as_ref()
             .and_then(|previous| previous.log_restrictions.as_ref())
             != policy.log_restrictions.as_ref();
-        if log_meaning_changed && self.audit.as_ref().is_some_and(|sender| !sender.admits()) {
-            return Err(ServiceError::Unrecorded(Refusal::new(
-                (),
-                "audit trail unavailable (fail-closed)",
-            )));
-        }
         let system_id = self.effective_system_id();
         let time_committed = crate::storage::version_repo::placement::tx_now(&mut tx).await?;
         let commit_audit = openehr_its::json::to_canonical_json(
@@ -341,9 +334,8 @@ impl FerroEhrService {
         if log_meaning_changed {
             let mut event = log_meaning_event(&written.version_uid, previous.is_none());
             self.stamp_one_access(&mut event);
-            // NOTE: our own design, the sender admitted the record before the commit, so a record
-            // the queue refuses after it leaves the committed version as the record of the change.
-            let _outcome = self.emit(event);
+            // TODO(#5762): the record joins the policy commit through its durable reservation.
+            self.record_events(vec![event]).await?;
         }
         Ok(written)
     }

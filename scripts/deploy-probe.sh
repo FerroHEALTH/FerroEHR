@@ -61,6 +61,10 @@ PROBE_OUT="${PROBE_OUT:-docs/conformance/deployment/compose.json}"
 . scripts/deploy-probes/signing_pgp.sh
 # shellcheck source=scripts/deploy-probes/replicas.sh
 . scripts/deploy-probes/replicas.sh
+# shellcheck source=scripts/deploy-probes/hospital.sh
+. scripts/deploy-probes/hospital.sh
+# shellcheck source=scripts/deploy-probes/hospital_pix.sh
+. scripts/deploy-probes/hospital_pix.sh
 # shellcheck source=scripts/deploy-probes/reset.sh
 . scripts/deploy-probes/reset.sh
 
@@ -76,8 +80,31 @@ trap cleanup EXIT
 
 command -v docker >/dev/null || { red "docker not found on PATH"; exit 1; }
 
+# The image the CDR container runs, read from the container once the stack is
+# up: the reference it started from, the local image id, and the registry
+# digests, empty for an image built on this host. The requested reference
+# alone hid a probe of an image older than its tree (#5673), so the header and
+# the record (`PROBE_IMAGE`, which lib.sh's probe_report writes) name what ran.
+probe_image_identity() {
+  local container ref id digests
+  container="$(dc ps -q ferroehr 2>/dev/null)"
+  container="${container%%$'\n'*}"
+  if [[ -z "$container" ]]; then
+    red "  ran:    no ferroehr container is running to read its image from"
+    return 0
+  fi
+  ref="$(docker inspect --format '{{.Config.Image}}' "$container" 2>/dev/null)"
+  id="$(docker inspect --format '{{.Image}}' "$container" 2>/dev/null)"
+  digests="$(docker image inspect --format '{{join .RepoDigests " "}}' "$id" 2>/dev/null)"
+  PROBE_IMAGE="$(printf '{"ref":"%s","id":"%s","digests":"%s"}' \
+    "$(json_string "$ref")" "$(json_string "$id")" "$(json_string "$digests")")"
+  echo "  ran:    $ref"
+  echo "  id:     $id"
+  echo "  digest: ${digests:-<none, built on this host>}"
+}
+
 bold "── deployment probes: compose ──────────────────────────────"
-echo "  image:  ${FERROEHR_IMAGE:-<the compose default pin>}"
+echo "  image:  ${FERROEHR_IMAGE:-<the compose default pin>} (the running image is read once the stack is up)"
 echo "  cdr:    $CDR"
 echo
 
@@ -108,6 +135,7 @@ bold "bringing the stack up (postgres + CDR + seaweedfs + init + the Basic user'
 # A login no demographic party carries is refused, so the Basic user is bound
 # through SCIM before any probe calls with it.
 compose_up ferroehr seaweedfs seaweedfs-init ferroehr-provision
+probe_image_identity
 
 # One family, or all of them. The terminology family needs a licensed release
 # and ~8 GB, so its CI lane runs it alone rather than paying for every other
@@ -139,6 +167,9 @@ run_family observability && probes_observability
 run_family terminology_ferroterm && probes_terminology_ferroterm
 run_family terminology && probes_terminology
 run_family replicas && probes_replicas
+# The hospital scenario runs only when asked for by name: its own lane,
+# deploy-probe-hospital.yml, runs it until its tracked findings land (#5610).
+[[ "${PROBE_ONLY:-}" = hospital ]] && probes_hospital
 # Last: it deletes the stack's volumes, which is the procedure under test.
 run_family original_state && probes_original_state
 run_family decommission && probes_decommission

@@ -282,6 +282,23 @@ async fn the_query_family_needs_an_aql_grant() {
     assert_eq!(status, StatusCode::OK, "{body}");
 }
 
+/// Another patient's EHR, which the store holds, so refusing it is the
+/// evaluator's step 0: an EHR the store does not hold answers `404` (#5623).
+const OTHER_EHR: &str = "0b8f7c5e-0000-4000-8000-000000000001";
+
+/// Create the EHR `ehr_id` in `db`.
+async fn seed_ehr(db: &testkit::TestDb, ehr_id: &str) {
+    let svc = ferroehr::service::FerroEhrService::new(
+        &ferroehr::db::domain::DomainPools::from_shared(&db.pool()),
+    );
+    Box::pin(svc.create_ehr_with_id_meta(
+        ehr_id.parse().expect("an EHR id"),
+        ferroehr::service::version_update::WriteRequest::new(None),
+    ))
+    .await
+    .expect("the EHR is created");
+}
+
 /// master07 §Context Selection and master08 §Resource Scopes: a `patient/`
 /// query grant of a bound issuer runs only within the launch context's EHR,
 /// named by the single-EHR `ehr_id`; a query naming no EHR is refused.
@@ -289,8 +306,9 @@ async fn the_query_family_needs_an_aql_grant() {
 async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (_pg, app) = common::app(config(&uri, false, true)).await;
+    let (pg, app) = common::app(config(&uri, false, true)).await;
     let launched = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+    seed_ehr(&pg, OTHER_EHR).await;
     let credential = token(&uri, "patient/aql-*.s", &json!({ "ehrId": launched }));
     let query = |ehr: Option<&str>| {
         let q = "SELECT%20e/ehr_id/value%20FROM%20EHR%20e";
@@ -302,7 +320,7 @@ async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
     };
     let (status, body) = send_body(&app, query(None)).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    let (status, body) = send_body(&app, query(Some("0b8f7c5e-0000-4000-8000-000000000001"))).await;
+    let (status, body) = send_body(&app, query(Some(OTHER_EHR))).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "another EHR: {body}");
     let (status, _body) = send_body(&app, query(Some(launched))).await;
     assert_ne!(
@@ -321,9 +339,10 @@ async fn a_patient_query_grant_runs_within_the_launch_context_ehr_alone() {
 async fn a_patient_grant_reaches_the_launch_context_ehr_on_its_routes() {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (_pg, app) = common::app(config(&uri, false, true)).await;
+    let (pg, app) = common::app(config(&uri, false, true)).await;
     let launched = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
-    let other = "0b8f7c5e-0000-4000-8000-000000000001";
+    let other = OTHER_EHR;
+    seed_ehr(&pg, other).await;
     let credential = token(
         &uri,
         "patient/composition-*.r",

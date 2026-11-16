@@ -42,6 +42,14 @@ pub(crate) const MISSING_PATHS: &str = "missingPaths";
 pub(crate) const EXTENSION_URN: &str =
     "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User";
 
+/// The URN of FerroEHR's Group extension, in the form
+/// [`crate::scim::protocol::deviation::custom_extension_urn`] builds.
+pub(crate) const GROUP_EXTENSION_URN: &str =
+    "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group";
+
+/// The Group extension attribute saying whether the Group is a care team.
+pub(crate) const CARE_TEAM: &str = "careTeam";
+
 /// The discovery documents of `scim` over the person mapping of `binding`.
 ///
 /// # Errors
@@ -57,7 +65,9 @@ pub(crate) fn discovery(
     let mut enterprise = Vec::new();
     let mut extension = Vec::new();
     let ours = EXTENSION_URN;
-    let intrinsic = ["userName", "active"].into_iter().map(str::to_owned);
+    let intrinsic = ["userName", "active", "roles"]
+        .into_iter()
+        .map(str::to_owned);
     let mapped = binding
         .person()
         .attribute
@@ -129,7 +139,7 @@ fn resource_types(
         endpoint: "/Users".to_owned(),
         description: Some(
             "A health professional, held as a demographic PERSON performing the professional \
-             ROLE"
+             ROLE, or a patient portal's representative, a PERSON of the patient template"
                 .to_owned(),
         ),
         schema: SchemaSelection::only(core_user, core),
@@ -145,7 +155,10 @@ fn resource_types(
                     .to_owned(),
             ),
             schema: SchemaSelection::all(catalogue::core_group()),
-            extensions: Vec::new(),
+            extensions: vec![ExtensionConfig {
+                schema: SchemaSelection::all(ferrohealth_group()),
+                required: false,
+            }],
         });
     }
     types
@@ -237,6 +250,40 @@ fn ferrohealth_user(mapped: &[String]) -> Schema {
     }
 }
 
+/// FerroEHR's Group extension: whether the Group is a care team, set at its
+/// creation and never changed (RFC 7643 §2.2 `immutable`). RFC 7643 §4.2
+/// leaves the meaning of a Group to the provider, so a care team is our own
+/// design (#5617).
+fn ferrohealth_group() -> Schema {
+    Schema {
+        schemas: None,
+        id: GROUP_EXTENSION_URN.to_owned(),
+        name: Some("FerroHEALTHGroup".to_owned()),
+        description: Some(
+            "FerroEHR's Group extension: whether the Group is a care team.".to_owned(),
+        ),
+        attributes: vec![AttributeDefinition {
+            name: CARE_TEAM.to_owned(),
+            kind: AttributeType::Boolean,
+            sub_attributes: None,
+            multi_valued: false,
+            description: "Whether the Group is a care team: its GROUP carries \
+                          openehr_access::care_team and each membership v3-RoleClass::MBR, \
+                          written under the client's write_care_relationship grant; set at \
+                          creation and never changed."
+                .to_owned(),
+            required: false,
+            canonical_values: None,
+            case_exact: None,
+            mutability: Mutability::Immutable,
+            returned: Returned::Default,
+            uniqueness: None,
+            reference_types: None,
+        }],
+        meta: None,
+    }
+}
+
 /// A single-valued, optional, read-write string attribute, returned by
 /// default, compared without regard to case (RFC 7643 §2.2 defaults).
 fn string(name: &str, description: &str) -> AttributeDefinition {
@@ -283,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn the_user_schema_carries_exactly_the_mapped_attributes() {
+    fn the_user_schema_carries_exactly_the_mapped_attributes_and_roles() {
         let binding = mapped(&[
             "name.givenName",
             "name.familyName",
@@ -294,7 +341,7 @@ mod tests {
         let discovery = discovery(&enabled(), base(), &binding).expect("the documents build");
         let user = discovery.schema(urn::CORE_USER).expect("the User schema");
         let names: Vec<&str> = user.attributes.iter().map(|a| a.name.as_str()).collect();
-        assert_eq!(names, ["userName", "name", "active", "emails"]);
+        assert_eq!(names, ["userName", "name", "active", "emails", "roles"]);
         let ours = discovery.schema(EXTENSION_URN).expect("the extension");
         let names: Vec<&str> = ours.attributes.iter().map(|a| a.name.as_str()).collect();
         assert_eq!(
@@ -334,10 +381,43 @@ mod tests {
     }
 
     #[test]
-    fn the_extension_urn_has_the_custom_form() {
+    fn the_extension_urns_have_the_custom_form() {
         assert_eq!(
             EXTENSION_URN,
             crate::scim::protocol::deviation::custom_extension_urn("ferrohealth", "User")
+        );
+        assert_eq!(
+            GROUP_EXTENSION_URN,
+            crate::scim::protocol::deviation::custom_extension_urn("ferrohealth", "Group")
+        );
+    }
+
+    #[test]
+    fn the_group_extension_carries_an_immutable_care_team_boolean() {
+        let mut binding = mapped(&[]);
+        binding.group = PartyBindingConfig::default().group;
+        binding.membership = PartyBindingConfig::default().membership;
+        let discovery = discovery(&enabled(), base(), &binding).expect("the documents build");
+        let ours = discovery
+            .schema(GROUP_EXTENSION_URN)
+            .expect("the Group extension");
+        let care_team = ours.attribute(CARE_TEAM).expect("careTeam");
+        assert_eq!(care_team.kind, AttributeType::Boolean);
+        assert_eq!(care_team.mutability, Mutability::Immutable);
+        let group = discovery
+            .resource_schema("Group")
+            .expect("the Group resource type");
+        assert!(
+            group.extension(GROUP_EXTENSION_URN).is_some(),
+            "the Group resource type lists its extension"
+        );
+        let listed = discovery
+            .resource_type("Group")
+            .expect("the Group resource type document");
+        let listed = serde_json::to_value(listed).expect("renders");
+        assert_eq!(
+            listed["schemaExtensions"][0]["schema"], GROUP_EXTENSION_URN,
+            "{listed}"
         );
     }
 

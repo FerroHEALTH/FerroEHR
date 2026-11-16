@@ -1,0 +1,141 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# .github/workflows/perf-capacity.yml
+#
+# The capacity test (#5722): how many requests per second an image sustains
+# before it degrades, and what saturates first. scripts/perf/capacity.sh
+# brings the image up on one PostgreSQL 18 (one instance, or two behind
+# Caddy), seeds the perf gate's access seed and steps an open-loop arrival
+# rate up through each group and the mix until the knee. The generator runs
+# pinned to the runner's first core and the containers to the others, so the
+# load it adds is not read as the server's. A hosted runner shares its host,
+# so its knee is a floor of what dedicated hardware reaches, never a
+# published figure; the book page "Capacity" says how to read the result.
+#
+# DISPATCH ONLY. It never runs on a pull request or a schedule: a sweep takes
+# well over an hour and its result is read by a person. It writes nothing
+# back; the steps, the profiles and the summary leave as a run artifact.
+name: Capacity test
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: "FerroEHR image to measure (default: main's)"
+        required: false
+        default: ghcr.io/ferrohealth/ferroehr:main
+        type: string
+      instances:
+        description: "FerroEHR instances on the one PostgreSQL (1 or 2)"
+        required: false
+        default: "1"
+        type: choice
+        options: ["1", "2"]
+      groups:
+        description: "Groups to sweep, space-separated, `mix` for the mix (capacity.sh groups)"
+        required: false
+        default: "ehr_read composition_read aql_ehr aql_population access_log_read party_read composition_commit mix"
+        type: string
+      rates:
+        description: "Arrival rates of each sweep, rps, lowest first"
+        required: false
+        default: "50 100 200 500 1000 1500 2000 3000"
+        type: string
+      population:
+        description: "Patients the seed puts under care"
+        required: false
+        default: "20000"
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: perf-capacity
+  cancel-in-progress: false
+
+env:
+  # Every server this workflow starts sends no usage report to FerroPULSE.
+  FERROEHR__USAGE_REPORT__ENABLED: "false"
+
+jobs:
+  capacity:
+    name: capacity, ${{ inputs.instances }} instance(s)
+    runs-on: ubuntu-26.04
+    timeout-minutes: 360
+    permissions:
+      contents: read # the checkout
+      packages: read # pull the image under test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache: false
+      - name: Install the pinned ferrohealth-perf
+        run: bash scripts/perf/gate.sh install
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull the image under test
+        env:
+          IMAGE: ${{ inputs.image }}
+        run: docker pull "$IMAGE"
+      - name: Build the postgres image (COPY-only, seconds)
+        run: docker build -t ferroehr-postgres:capacity docker/postgres
+      - name: Bring the topology up and seed it
+        env:
+          CAPACITY_TOPOLOGY: docker
+          CAPACITY_IMAGE: ${{ inputs.image }}
+          CAPACITY_PG_IMAGE: ferroehr-postgres:capacity
+          CAPACITY_CADDY_IMAGE: caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+          CAPACITY_POPULATION: ${{ inputs.population }}
+          INSTANCES: ${{ inputs.instances }}
+        run: |
+          set -euo pipefail
+          last=$(( $(nproc) - 1 ))
+          export CAPACITY_SERVER_CPUS="1-$last" CAPACITY_PG_CPUS="1-$last"
+          bash scripts/perf/capacity.sh up "$INSTANCES"
+          bash scripts/perf/capacity.sh seed
+      - name: Sweep each group
+        env:
+          CAPACITY_TOPOLOGY: docker
+          CAPACITY_GENERATOR_CPUS: "0"
+          SWEEP_GROUPS: ${{ inputs.groups }}
+          RATES: ${{ inputs.rates }}
+        run: |
+          set -euo pipefail
+          read -r -a rates <<<"$RATES"
+          read -r -a groups <<<"$SWEEP_GROUPS"
+          for group in "${groups[@]}"; do
+            bash scripts/perf/capacity.sh sweep "$group" "${rates[@]}" || true
+          done
+      - name: Summary
+        if: always()
+        env:
+          CAPACITY_TOPOLOGY: docker
+          INSTANCES: ${{ inputs.instances }}
+        run: |
+          {
+            echo "### Capacity: $INSTANCES instance(s), $(nproc) cores ($(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs))"
+            echo
+            bash scripts/perf/capacity.sh summary || echo "No step ran."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Stop the topology
+        if: always()
+        env:
+          CAPACITY_TOPOLOGY: docker
+        run: bash scripts/perf/capacity.sh down
+      - name: Keep the steps
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: perf-capacity-${{ inputs.instances }}
+          path: |
+            target/capacity/steps/
+            target/capacity/steps.jsonl
+            target/capacity/profiles/
+          if-no-files-found: ignore

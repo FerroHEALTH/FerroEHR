@@ -595,6 +595,10 @@ async fn live_holder(party_pool: &PgPool, scheme: &str, value: &str) -> Option<U
 /// answers "which party holds this identifier" to a caller that already knows
 /// the value. Neither answers the other's question.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_sealed_identifier_round_trips_and_resolves_to_its_party() {
     use ferroehr::identifier_protection::store::IdentifierStore;
 
@@ -650,6 +654,10 @@ async fn a_sealed_identifier_round_trips_and_resolves_to_its_party() {
 
 /// An unregistered scheme is refused rather than stored unprotected.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn an_unregistered_scheme_is_refused() {
     use ferroehr::identifier_protection::store::{IdentifierStore, StoreError};
     use ferroehr::storage::identifier_repo::IdentifierRepoError;
@@ -836,7 +844,7 @@ async fn a_protected_identifier_never_reaches_the_versioned_body() {
 }
 
 /// The protection engine over `party_pool`, sealing `nl-bsn` under the test key.
-fn protection_engine(
+pub(crate) fn protection_engine(
     party_pool: PgPool,
 ) -> ferroehr::identifier_protection::engine::IdentifierProtection {
     use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
@@ -1726,6 +1734,10 @@ async fn erasing_a_party_removes_its_sealed_identifiers() {
 /// The digest half is the one that would fail silently: a digest that matches
 /// no row reads exactly like an identifier nobody holds.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() {
     use ferroehr::db::DbConfig;
     use ferroehr::identifier_protection::store::IdentifierStore;
@@ -1787,8 +1799,7 @@ async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() 
 /// The store writes through the clinical pool. Before the grant migration the
 /// Audit Record Repository was held by the single-domain pair only, so a
 /// deployment whose clinical credential is a member of `ferroehr_clinical` alone
-/// wrote no access record at all: dropped and metered under
-/// `fail_mode = "open"`, every auditable operation refused under `"closed"`.
+/// wrote no access record at all, and every auditable operation was refused.
 /// Runs as a fresh login role IN ROLE `ferroehr_clinical`, never as the superuser
 /// the testkit pool is.
 #[tokio::test]
@@ -1839,7 +1850,7 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         .await
         .expect("the record's chain position");
     store
-        .mark_fhir_feed_delivered(seq)
+        .mark_delivered(ferroehr::system_log::store::outbox::Sink::FhirFeed, seq)
         .await
         .expect("a delivery stamp is the one sanctioned mutation");
     crate::fixtures::verify_chain(&clinical)

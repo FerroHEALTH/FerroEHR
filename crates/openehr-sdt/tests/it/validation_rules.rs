@@ -9,10 +9,10 @@ use indexmap::IndexMap;
 use serde_json::{Value, json};
 
 use openehr_sdt::flat::validation::*;
+use openehr_sdt::flat::webtemplate::constraint::WebTemplateExistence;
 use openehr_sdt::flat::webtemplate::model::{
-    WebTemplate, WebTemplateCardinality, WebTemplateCodedValue, WebTemplateExistence,
-    WebTemplateInput, WebTemplateInputType, WebTemplateNode, WebTemplateRange,
-    WebTemplateValidation,
+    WebTemplate, WebTemplateCardinality, WebTemplateCodedValue, WebTemplateInput,
+    WebTemplateInputType, WebTemplateNode, WebTemplateRange, WebTemplateValidation,
 };
 use openehr_sdt::rm_instance::*;
 
@@ -123,6 +123,7 @@ fn cardinality_violation() {
         max: 2,
         ids: None,
         path: "/content".to_owned(),
+        unique: false,
     }];
     let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
     let inst = json!({
@@ -204,6 +205,7 @@ fn incomplete_suppresses_cardinality_lower_but_keeps_upper() {
         max: -1,
         ids: None,
         path: "/content".to_owned(),
+        unique: false,
     }];
     let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
     let one_child = json!({
@@ -221,6 +223,7 @@ fn incomplete_suppresses_cardinality_lower_but_keeps_upper() {
         max: 2,
         ids: None,
         path: "/content".to_owned(),
+        unique: false,
     }];
     let three = json!({
         "_type": "COMPOSITION", "archetype_node_id": "x",
@@ -878,7 +881,7 @@ fn segment_parsing_respects_brackets() {
 
 // ── CNF-hardening additions (master15/16/17 truth tables) ────────────────────
 
-use openehr_sdt::flat::webtemplate::model::{WebTemplateCodeList, WebTemplateSlot};
+use openehr_sdt::flat::webtemplate::constraint::{WebTemplateCodeList, WebTemplateSlot};
 
 /// `1..*` container cardinality with zero members → Cardinality (master15
 /// CONT-COMP-content_card_1plus; AOM 1.4 §cardinality).
@@ -890,6 +893,7 @@ fn cardinality_one_plus_empty_rejected() {
         max: -1,
         ids: None,
         path: "/content".to_owned(),
+        unique: false,
     }];
     let inst = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": []});
     let msgs = walk_only(&inst, &root);
@@ -1238,7 +1242,9 @@ fn media_type_code_list() {
 
 // ── closed-archetype walk ─────────────────────────────────────────
 
-use openehr_sdt::flat::webtemplate::model::{WebTemplateArchetypeSlot, WebTemplateClosedAttribute};
+use openehr_sdt::flat::webtemplate::constraint::{
+    WebTemplateArchetypeSlot, WebTemplateClosedAttribute,
+};
 
 /// A COMPOSITION whose `content` is closed to `openEHR-EHR-SECTION.x.v1`: the
 /// defined section is accepted, a foreign OBSERVATION is rejected as unexpected

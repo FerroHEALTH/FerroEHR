@@ -1,0 +1,567 @@
+{
+  "issue": 5590,
+  "environment": {
+    "hardware_class": "Apple M5 Pro laptop",
+    "memory_gb": 48,
+    "containers": "every server and database in a Podman machine (libkrun, 8 vCPU, 16 GB)",
+    "build": "release",
+    "memory_measure": "resident set size from ps"
+  },
+  "evaluator": {
+    "bench": "app/ferroehr/benches/access_decision.rs",
+    "decisions": 200000,
+    "rows": [
+      {
+        "set": "none",
+        "directives": 0,
+        "cared": true,
+        "decision_ns_p50": 906,
+        "decision_ns_p99": 1073
+      },
+      {
+        "set": "none",
+        "directives": 0,
+        "cared": false,
+        "decision_ns_p50": 896,
+        "decision_ns_p99": 1032
+      },
+      {
+        "set": "realistic",
+        "directives": 5,
+        "cared": true,
+        "decision_ns_p50": 2167,
+        "decision_ns_p99": 2468
+      },
+      {
+        "set": "realistic",
+        "directives": 5,
+        "cared": false,
+        "decision_ns_p50": 2234,
+        "decision_ns_p99": 2550
+      },
+      {
+        "set": "heavy",
+        "directives": 16,
+        "cared": true,
+        "decision_ns_p50": 4866,
+        "decision_ns_p99": 5619
+      },
+      {
+        "set": "heavy",
+        "directives": 16,
+        "cared": false,
+        "decision_ns_p50": 4786,
+        "decision_ns_p99": 5633
+      }
+    ],
+    "policy": "a care relationship with a 14-day grace, a declared purpose, HIV results classified, and a controller rule letting the caller's role read HIV data (#5621)"
+  },
+  "replica": {
+    "tool": "scaleseed replica --teams 500 --staff 5000",
+    "teams": 500,
+    "staff": 5000,
+    "subjects_cap": 4096,
+    "census_cap": 262144,
+    "before": {
+      "measured_at_commit": "0f6db50ec819bbddebe11506cca8313350f859fb",
+      "what": "every caller fact held, patients in care among them",
+      "rows": [
+        {
+          "patients": 10000,
+          "resident_bytes": 27197440,
+          "reload_ms": 43,
+          "under_care_of_ns": 42,
+          "cared_for_by_ns": 120375
+        },
+        {
+          "patients": 100000,
+          "resident_bytes": 149209088,
+          "reload_ms": 225,
+          "under_care_of_ns": 42,
+          "cared_for_by_ns": 484292
+        },
+        {
+          "patients": 1000000,
+          "resident_bytes": 1584021504,
+          "reload_ms": 4124,
+          "under_care_of_ns": 42,
+          "cared_for_by_ns": 4268333
+        }
+      ]
+    },
+    "after": {
+      "what": "the facts of callers held, and the bounded care caches of #5615",
+      "rows": [
+        {
+          "patients": 10000,
+          "teams": 500,
+          "staff": 5000,
+          "parties_held": 5000,
+          "copy_bytes": 12402688,
+          "reload_ms": 18,
+          "care_bytes": 2818048,
+          "subjects_held": 4096,
+          "teams_held": 500,
+          "census_held": 10000,
+          "care_miss_ns": 302083,
+          "care_hit_ns": 84,
+          "census_miss_ns": 437750,
+          "census_hit_ns": 333,
+          "cared_by_one_team": 20
+        },
+        {
+          "patients": 100000,
+          "teams": 500,
+          "staff": 5000,
+          "parties_held": 5000,
+          "copy_bytes": 12353536,
+          "reload_ms": 19,
+          "care_bytes": 7929856,
+          "subjects_held": 4096,
+          "teams_held": 500,
+          "census_held": 100000,
+          "care_miss_ns": 242000,
+          "care_hit_ns": 83,
+          "census_miss_ns": 521750,
+          "census_hit_ns": 917,
+          "cared_by_one_team": 200
+        },
+        {
+          "patients": 1000000,
+          "teams": 500,
+          "staff": 5000,
+          "parties_held": 5000,
+          "copy_bytes": 12402688,
+          "reload_ms": 38,
+          "care_bytes": 33652736,
+          "subjects_held": 4096,
+          "teams_held": 131,
+          "census_held": 262000,
+          "care_miss_ns": 179208,
+          "care_hit_ns": 83,
+          "census_miss_ns": 5149250,
+          "census_hit_ns": 4085333,
+          "cared_by_one_team": 2000
+        }
+      ]
+    }
+  },
+  "gate": {
+    "tool": "scripts/perf/gate.sh ab",
+    "base": {
+      "image": "ghcr.io/ferrohealth/ferroehr:5.7.1-rc1",
+      "revision": "70bb072a9f1bbb39301d9921b261c84d25d2bfd4"
+    },
+    "head": {
+      "what": "main at bcab7e0f2, with #5615, #5616, #5645, #5646, #5656 and #5667 fixed; the RSA-3072 column predates the last four"
+    },
+    "population": 20000,
+    "runs": [
+      {
+        "label": "Ed25519, 20 000 EHRs",
+        "key": "ed25519",
+        "population": 20000,
+        "outcome": "fail",
+        "checks": [
+          {
+            "name": "access_log_read.p50_ms",
+            "head": 17.103,
+            "base": 7.2509999999999994,
+            "threshold": 9.503,
+            "passed": false
+          },
+          {
+            "name": "aql_order_by.p50_ms",
+            "head": 17.399,
+            "base": 6.301,
+            "threshold": 7.876250000000001,
+            "passed": false
+          },
+          {
+            "name": "aql_population.p50_ms",
+            "head": 14.555,
+            "base": 3.364,
+            "threshold": 4.205,
+            "passed": false
+          },
+          {
+            "name": "aql_unordered.p50_ms",
+            "head": 13.559000000000001,
+            "base": 4.993,
+            "threshold": 6.241250000000001,
+            "passed": false
+          },
+          {
+            "name": "composition_commit.p50_ms",
+            "head": 6.477,
+            "base": 6.519,
+            "threshold": 8.14875,
+            "passed": true
+          },
+          {
+            "name": "composition_read.p50_ms",
+            "head": 4.855,
+            "base": 4.225,
+            "threshold": 5.28125,
+            "passed": true
+          },
+          {
+            "name": "cpu_per_request_ms",
+            "head": 3.16246125,
+            "base": 1.4529566666666667,
+            "threshold": 1.8161958333333335,
+            "passed": false
+          },
+          {
+            "name": "ehr_create.p50_ms",
+            "head": 6.323,
+            "base": 5.197,
+            "threshold": 6.49625,
+            "passed": true
+          },
+          {
+            "name": "ehr_read.p50_ms",
+            "head": 3.661,
+            "base": 3.767,
+            "threshold": 4.731,
+            "passed": true
+          },
+          {
+            "name": "export.p50_ms",
+            "head": 8.530999999999999,
+            "base": 7.117,
+            "threshold": 8.89625,
+            "passed": true
+          },
+          {
+            "name": "party_read.p50_ms",
+            "head": 4.372999999999999,
+            "base": 4.485,
+            "threshold": 5.60625,
+            "passed": true
+          },
+          {
+            "name": "party_version_read.p50_ms",
+            "head": 4.335,
+            "base": 4.589,
+            "threshold": 5.736514648212226,
+            "passed": true
+          },
+          {
+            "name": "peak_memory_bytes",
+            "head": 222226432.0,
+            "base": 191803392.0,
+            "threshold": 230164070.4,
+            "passed": true
+          },
+          {
+            "name": "template_upload.p50_ms",
+            "head": 4.383,
+            "base": 4.551,
+            "threshold": 5.688750000000001,
+            "passed": true
+          },
+          {
+            "name": "throughput_rps",
+            "head": 20.0,
+            "base": 20.0,
+            "threshold": 16.0,
+            "passed": true
+          },
+          {
+            "name": "transactions_per_request",
+            "head": 6.603928571428572,
+            "base": 7.4350000000000005,
+            "threshold": 8.178500000000001,
+            "passed": true
+          }
+        ]
+      },
+      {
+        "label": "RSA-3072, 2 000 EHRs",
+        "key": "rsa3072",
+        "population": 2000,
+        "outcome": "fail",
+        "checks": [
+          {
+            "name": "access_log_read.p50_ms",
+            "head": 40.879,
+            "base": 6.372999999999999,
+            "threshold": 7.966249999999999,
+            "passed": false
+          },
+          {
+            "name": "aql_order_by.p50_ms",
+            "head": 11.259,
+            "base": 6.401,
+            "threshold": 8.001249999999999,
+            "passed": false
+          },
+          {
+            "name": "aql_population.p50_ms",
+            "head": 6.257,
+            "base": 3.722,
+            "threshold": 4.6525,
+            "passed": false
+          },
+          {
+            "name": "aql_unordered.p50_ms",
+            "head": 11.631,
+            "base": 6.1129999999999995,
+            "threshold": 7.641249999999999,
+            "passed": false
+          },
+          {
+            "name": "composition_commit.p50_ms",
+            "head": 9.710999999999999,
+            "base": 6.555,
+            "threshold": 8.19375,
+            "passed": false
+          },
+          {
+            "name": "composition_read.p50_ms",
+            "head": 4.469,
+            "base": 4.2989999999999995,
+            "threshold": 5.373749999999999,
+            "passed": true
+          },
+          {
+            "name": "cpu_per_request_ms",
+            "head": 11.608490833333333,
+            "base": 1.8646241666666667,
+            "threshold": 2.3307802083333335,
+            "passed": false
+          },
+          {
+            "name": "ehr_create.p50_ms",
+            "head": 13.835,
+            "base": 6.497,
+            "threshold": 8.12125,
+            "passed": false
+          },
+          {
+            "name": "ehr_read.p50_ms",
+            "head": 3.625,
+            "base": 3.84,
+            "threshold": 4.8,
+            "passed": true
+          },
+          {
+            "name": "export.p50_ms",
+            "head": 9.051,
+            "base": 7.121,
+            "threshold": 8.901250000000001,
+            "passed": true
+          },
+          {
+            "name": "party_read.p50_ms",
+            "head": 4.078,
+            "base": 4.423,
+            "threshold": 5.5287500000000005,
+            "passed": true
+          },
+          {
+            "name": "party_version_read.p50_ms",
+            "head": 4.149,
+            "base": 4.2170000000000005,
+            "threshold": 5.27125,
+            "passed": true
+          },
+          {
+            "name": "peak_memory_bytes",
+            "head": 185452544.0,
+            "base": 122531840.0,
+            "threshold": 147038208.0,
+            "passed": false
+          },
+          {
+            "name": "template_upload.p50_ms",
+            "head": 28.999000000000002,
+            "base": 4.473,
+            "threshold": 6.436251974206005,
+            "passed": false
+          },
+          {
+            "name": "throughput_rps",
+            "head": 20.0,
+            "base": 20.0,
+            "threshold": 16.0,
+            "passed": true
+          },
+          {
+            "name": "transactions_per_request",
+            "head": 6.610357142857143,
+            "base": 7.4625,
+            "threshold": 8.20875,
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "before_fix": {
+      "issue": 5616,
+      "cpu_per_request_ms": {
+        "head": 90.457,
+        "base": 1.592
+      },
+      "ehr_read_p50_ms": {
+        "head": 81.407,
+        "base": 3.426
+      }
+    },
+    "regressions": [
+      5685
+    ]
+  },
+  "access_log": {
+    "entry_row_bytes": 2518,
+    "tombstone_row_bytes": 1079,
+    "stored_bytes_per_entry": 2911,
+    "entries_per_request": 2.076923076923077,
+    "entries_per_request_basis": "the plan's thirteen groups at one rate: seven write one entry, the population query twenty, the rest none",
+    "rate_rps": 20,
+    "horizon_days": 1096,
+    "tombstones": 5619
+  },
+  "replicas": {
+    "tool": "scripts/perf/gate.sh replicas",
+    "window_seconds": 3,
+    "rows": [
+      {
+        "instances": 1,
+        "change": "none",
+        "transactions": 3,
+        "statements": 23,
+        "refreshes": 0,
+        "refresh_ms": null,
+        "connections": 11
+      },
+      {
+        "instances": 1,
+        "change": "grant",
+        "transactions": 188,
+        "statements": 190,
+        "refreshes": 1,
+        "refresh_ms": 1.242,
+        "connections": 11
+      },
+      {
+        "instances": 1,
+        "change": "facts",
+        "transactions": 6,
+        "statements": 353,
+        "refreshes": 2,
+        "refresh_ms": 1.4075,
+        "connections": 11
+      },
+      {
+        "instances": 1,
+        "change": "policy",
+        "transactions": 22,
+        "statements": 94,
+        "refreshes": 0,
+        "refresh_ms": null,
+        "connections": 11
+      },
+      {
+        "instances": 1,
+        "change": "settings",
+        "transactions": 11,
+        "statements": 162,
+        "refreshes": 0,
+        "refresh_ms": null,
+        "connections": 11
+      },
+      {
+        "instances": 2,
+        "change": "none",
+        "transactions": 2,
+        "statements": 44,
+        "refreshes": 0,
+        "refresh_ms": null,
+        "connections": 21
+      },
+      {
+        "instances": 2,
+        "change": "grant",
+        "transactions": 187,
+        "statements": 220,
+        "refreshes": 2,
+        "refresh_ms": 1.0625,
+        "connections": 21
+      },
+      {
+        "instances": 2,
+        "change": "facts",
+        "transactions": 32,
+        "statements": 383,
+        "refreshes": 3,
+        "refresh_ms": 1.5576666666666668,
+        "connections": 21
+      },
+      {
+        "instances": 2,
+        "change": "policy",
+        "transactions": 46,
+        "statements": 115,
+        "refreshes": 0,
+        "refresh_ms": null,
+        "connections": 21
+      },
+      {
+        "instances": 2,
+        "change": "settings",
+        "transactions": 13,
+        "statements": 186,
+        "refreshes": 0,
+        "refresh_ms": null,
+        "connections": 21
+      },
+      {
+        "instances": 3,
+        "change": "none",
+        "transactions": 6,
+        "statements": 68,
+        "refreshes": 0,
+        "refresh_ms": null,
+        "connections": 32
+      },
+      {
+        "instances": 3,
+        "change": "grant",
+        "transactions": 189,
+        "statements": 250,
+        "refreshes": 3,
+        "refresh_ms": 1.8423333333333334,
+        "connections": 32
+      },
+      {
+        "instances": 3,
+        "change": "facts",
+        "transactions": 23,
+        "statements": 412,
+        "refreshes": 4,
+        "refresh_ms": 1.2815,
+        "connections": 32
+      },
+      {
+        "instances": 3,
+        "change": "policy",
+        "transactions": 24,
+        "statements": 137,
+        "refreshes": 0,
+        "refresh_ms": null,
+        "connections": 32
+      },
+      {
+        "instances": 3,
+        "change": "settings",
+        "transactions": 46,
+        "statements": 209,
+        "refreshes": 0,
+        "refresh_ms": null,
+        "connections": 32
+      }
+    ]
+  }
+}

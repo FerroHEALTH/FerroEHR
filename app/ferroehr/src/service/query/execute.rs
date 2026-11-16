@@ -163,36 +163,63 @@ impl FerroEhrService {
         // Multi-EHR scoping (`ehr_ids: List<UUID>`): an absent id raises
         // `ehr_id_does_not_exist`.
         self.check_ehr_ids(&request.ehr_ids).await?;
-        let access_settings = Box::pin(self.ehr_access_readers())
-            .await
-            .map_err(Failure::analysis)?;
-        let ctx = SqlCtx {
-            system_id: self.effective_system_id(),
-            ehr_ids: request.ehr_ids.clone(),
-            ehr_scope_kind: request.ehr_scope_kind,
-            ehr_access: request.ehr_access.clone(),
-            limit,
-            offset,
-            // The stored specialisation graph an archetype predicate widens a
-            // parent query through (BASE Artefact Identification
-            // §Supporting Archetype-based Querying): resolved here, once per execution,
-            // because SQL building is synchronous.
-            archetype_lineage: self.archetype_lineage().await,
-            policy_parties: PolicyParties::of_request(&self.binding),
-            access_settings,
-        };
-
+        let pinned = pinned_ehrs(ir, params, request);
+        let mut ehr_access =
+            Box::pin(self.query_access_condition(&request.ehr_access, pinned.as_deref()))
+                .await
+                .map_err(Failure::analysis)?;
+        // The stored specialisation graph an archetype predicate widens a
+        // parent query through (BASE Artefact Identification
+        // §Supporting Archetype-based Querying): resolved here, once per execution,
+        // because SQL building is synchronous.
+        let archetype_lineage = self.archetype_lineage().await;
         let exec_start = Instant::now();
-        // `[record.query] timeout` bounds the DB execution so an over-long query is
-        // `408` rather than hanging to the global request timeout.
-        // The demographic domain runs the same SQL on the party pool, whose
-        // `search_path` names the `party` schema.
-        let pool = match ir.domain {
-            QueryDomain::Clinical => &self.pool,
-            QueryDomain::Demographic => &self.demographic_pool,
+        let mut stale_since = None;
+        let result = loop {
+            let access_settings = Box::pin(self.query_access_readers(&ehr_access))
+                .await
+                .map_err(Failure::analysis)?;
+            let ctx = SqlCtx {
+                system_id: self.effective_system_id(),
+                ehr_ids: request.ehr_ids.clone(),
+                ehr_scope_kind: request.ehr_scope_kind,
+                ehr_access: ehr_access.clone(),
+                limit,
+                offset,
+                archetype_lineage: Arc::clone(&archetype_lineage),
+                policy_parties: PolicyParties::of_request(&self.binding),
+                access_settings,
+            };
+            // `[record.query] timeout` bounds the DB execution so an over-long query is
+            // `408` rather than hanging to the global request timeout.
+            // The demographic domain runs the same SQL on the party pool, whose
+            // `search_path` names the `party` schema.
+            let pool = match ir.domain {
+                QueryDomain::Clinical => &self.pool,
+                QueryDomain::Demographic => &self.demographic_pool,
+            };
+            let run = aql::exec::execute(pool, ir, params, &ctx, self.spec_profile);
+            match self.within_budget(run).await? {
+                Ok(result) => break result,
+                // NOTE: our own design (#5794), a verdict judged on a stale copy is judged again,
+                // or the query is refused; it never answers fewer rows.
+                Err(e) => match e.stale_copy() {
+                    Some(copy) => {
+                        let since = *stale_since.get_or_insert_with(Instant::now);
+                        ehr_access = Box::pin(self.judged_again(
+                            copy,
+                            &request.ehr_access,
+                            pinned.as_deref(),
+                            &ehr_access,
+                            since,
+                        ))
+                        .await
+                        .map_err(Failure::exec_refused)?;
+                    }
+                    None => return Err(Failure::exec(e)),
+                },
+            }
         };
-        let run = aql::exec::execute(pool, ir, params, &ctx, self.spec_profile);
-        let result = self.within_budget(run).await?.map_err(Failure::exec)?;
         record_phase("execute", exec_start);
         Box::pin(self.judge_served_ehrs(&result))
             .await
@@ -202,15 +229,23 @@ impl FerroEhrService {
         // the original query as submitted.
         let executed = substitute_params(aql, params);
         let served_rows = u64::try_from(result.rows.len()).unwrap_or(u64::MAX);
-        let served_ehrs = result
+        let mut served_ehrs = result
             .served_ehrs
             .iter()
             .map(|(ehr, count)| (ehr.to_string(), *count))
             .collect();
+        if request.ehr_scope_kind == aql::sql::EhrScopeKind::Named {
+            Box::pin(self.add_named_ehrs(&request.ehr_ids, &mut served_ehrs))
+                .await
+                .map_err(Failure::analysis)?;
+        }
         let served_origins = result.served_origins.clone();
         let origin_count = result.origin_count;
         let (accessed, served_ehr_content) = accessed_content(&result);
-        let mut outcome = QueryOutcome::plain(result_set_json(aql, &executed, name, result));
+        let mut outcome = QueryOutcome::plain(
+            result_set_json(aql, &executed, name, result)
+                .map_err(|error| Failure::analysis(error.into()))?,
+        );
         outcome.served_ehrs = served_ehrs;
         outcome.served_rows = served_rows;
         outcome.served_origins = served_origins;
@@ -303,6 +338,18 @@ impl FerroEhrService {
     }
 }
 
+/// The EHRs every row of `ir` belongs to: those the request names as its
+/// scope, or the one the query's own text pins its `EHR` source to; `None`
+/// when the query may read any EHR (#5699).
+fn pinned_ehrs(ir: &QueryIr, params: &Params, request: &AqlQueryRequest) -> Option<Vec<EhrId>> {
+    if request.ehr_scope_kind == aql::sql::EhrScopeKind::Named && !request.ehr_ids.is_empty() {
+        return Some(request.ehr_ids.clone());
+    }
+    // NOTE: our own design, a pin that names no UUID matches no EHR, so the query reads none.
+    aql::sql::pinned_ehr(ir, params)
+        .map(|id| id.parse::<uuid::Uuid>().map(EhrId).into_iter().collect())
+}
+
 /// A planned query: one statement, or the two halves of a query that joins a
 /// demographic root to its EHR.
 enum Planned {
@@ -387,6 +434,16 @@ impl Failure {
         Self {
             outcome: outcome_of(&e),
             error: Box::new(map_exec_error(e)),
+        }
+    }
+
+    /// A query the service withheld after its execution: the access copy
+    /// it was judged on stayed older than the store
+    /// ([`ServiceError::AccessRefreshing`]).
+    pub(super) fn exec_refused(error: ServiceError) -> Self {
+        Self {
+            outcome: "exec_error",
+            error: Box::new(error),
         }
     }
 

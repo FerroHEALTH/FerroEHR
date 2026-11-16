@@ -67,7 +67,7 @@ async fn app(declared: bool) -> (testkit::TestDb, PgPool, Router) {
         emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
     };
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let allowed = if declared {
@@ -619,7 +619,7 @@ async fn recording_and_reversing_an_opt_out_each_write_an_entry() {
         assert_eq!(status, StatusCode::OK, "opt-out {reverse}: {body}");
         let written = crate::access_log_http::entries(&pool, step, |s| {
             s.ehr_id.as_deref() == Some(ehr.as_str())
-                && s.action.as_deref() == Some("update")
+                && s.action.as_deref() == Some("U")
                 && s.content.contains("\"ehr-access:ehr-wide\"")
         })
         .await;
@@ -702,4 +702,26 @@ async fn the_absent_answer_and_the_override_are_recorded_with_their_grounds() {
         "the capability it acted under: {marked}"
     );
     assert!(version.contains("::"), "an OBJECT_VERSION_ID: {version}");
+}
+
+/// The controller's commit refuses settings whose `DV_DATE_TIME` is no ISO
+/// 8601 date-time with `400` naming `DV_DATE_TIME.Value_valid`, and stores
+/// nothing (RM Data Types, `DV_DATE_TIME` §Invariants; #5629).
+#[tokio::test]
+async fn settings_holding_a_date_time_that_is_no_iso_8601_are_refused() {
+    let (_db, _pool, app) = Box::pin(app(true)).await;
+    let (ehr, _) = ehr_with_composition(&app).await;
+    let current = versions(&app, &ehr).await.expect("the versions read");
+    let preceding = current[0]["version_uid"].as_str().expect("version uid");
+    let mut directive = common::access_directive("restriction", &[]);
+    directive["time_validity"] = json!({ "_type": "DV_INTERVAL",
+        "lower": { "_type": "DV_DATE_TIME", "value": "T00:00:00Z" },
+        "lower_unbounded": false, "upper_unbounded": true,
+        "lower_included": true, "upper_included": false });
+    let settings = common::directive_settings(&[directive]);
+    let (status, body) = commit_settings(&app, &ehr, preceding, &settings).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(body.contains("DV_DATE_TIME.Value_valid"), "{body}");
+    let after = versions(&app, &ehr).await.expect("the versions read");
+    assert_eq!(after.len(), current.len(), "nothing was stored");
 }

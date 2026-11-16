@@ -431,7 +431,7 @@
           {
             "name": "outcome",
             "in": "query",
-            "description": "An `access outcome` rubric.",
+            "description": "A term of the `access outcome` group by its coded content, the token `terminology_id|code`, such as `openehr_access|refused`.",
             "required": false,
             "schema": {
               "type": "string"
@@ -534,7 +534,7 @@
         "tags": [
           "admin-access-log"
         ],
-        "summary": "The uid and link of each record of a span of the access log's chain,\nwithout their content (`GET /admin/access-log/chain`). **Our own\nextension.**",
+        "summary": "The uid and link of each record of a span of the access log's chain,\nwithout their content, and the gaps of folded tombstones between\n(`GET /admin/access-log/chain`). **Our own extension.**",
         "operationId": "admin_access_log_chain",
         "parameters": [
           {
@@ -560,7 +560,7 @@
         ],
         "responses": {
           "200": {
-            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order.",
+            "description": "`links`: the `uid` and `link` of each record from `from_sequence` to `to_sequence`, in chain order. `gaps`: each run of folded tombstones that holds a position of the span, with the positions it held, the `link` of its last record and the `grounds` of its tombstones.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -704,11 +704,11 @@
         "tags": [
           "admin-access-log"
         ],
-        "summary": "Seal the head of the access log in a signed checkpoint\n(`POST /admin/access-log/checkpoint`). **Our own extension.**",
+        "summary": "The checkpoint of the head of the access log, sealed when no append\nsealed it (`POST /admin/access-log/checkpoint`). **Our own\nextension.**",
         "operationId": "admin_seal_access_log_checkpoint",
         "responses": {
           "200": {
-            "description": "The checkpoint of the head of the chain, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`. A head already sealed answers its stored checkpoint.",
+            "description": "The checkpoint of the head of the chain, as its ITS-JSON `ACCESS_LOG_CHECKPOINT`. Every append made while the keyring holds a key seals itself, so a head already sealed answers its stored checkpoint.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -887,7 +887,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The EHR's records with their links, every link from the first of them to the checkpoint they verify against, and that checkpoint, verified before it is answered. `ferroehr access-log import` reads this document.",
+            "description": "The EHR's records with their links, every link and gap of folded tombstones from the first of them to the checkpoint they verify against, and that checkpoint, verified before it is answered. `ferroehr access-log import` reads this document.",
             "content": {
               "application/json": {
                 "schema": {}
@@ -963,11 +963,11 @@
           "admin-access-log"
         ],
         "summary": "Verify the access log against its newest checkpoint\n(`POST /admin/access-log/verify`). **Our own extension.**",
-        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof, the link it seals and every signed link are\nchecked. A finding is not a request failure.",
+        "description": "The whole chain is recomputed, tombstones taken as recorded; the\ncheckpoint's proof and the link it seals are checked, and every log\nimported from another system is verified against each of its\ncheckpoints. A finding is not a request failure.",
         "operationId": "admin_verify_access_log",
         "responses": {
           "200": {
-            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint and the signed links, `chain` each damaged record or boundary of the chain.",
+            "description": "The verification ran. `intact` is true when a checkpoint was there to verify against and nothing failed; `findings` names each failure of the checkpoint, `chain` each damaged record or boundary of the chain, `imported` each failure of a log imported from another system against one of its checkpoints.",
             "content": {
               "application/json": {
                 "schema": {},
@@ -984,6 +984,13 @@
                     {
                       "chain_seq": 48190,
                       "finding": "record content was modified after it was written"
+                    }
+                  ],
+                  "imported": [
+                    {
+                      "system_id": "cdr-a.example.org",
+                      "checkpoint": 912,
+                      "finding": "the link at 905 does not link to the link before it"
                     }
                   ]
                 }
@@ -2870,7 +2877,7 @@
             }
           },
           "503": {
-            "description": "The access record could not be written under `audit.fail_mode = \"closed\"`; the values are withheld.",
+            "description": "The access record could not be written; the values are withheld.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2956,6 +2963,272 @@
                 "description": "EMPTY — mandatory on every `405` (RFC 9110 §15.5.6) and emitted here explicitly because the status comes from a matched handler; the empty field value is RFC 9110 §10.2.1's own case for a resource \"temporarily disabled by configuration\"."
               }
             },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/pmir/messages": {
+      "get": {
+        "tags": [
+          "admin-identifiers"
+        ],
+        "summary": "List the refused ITI-93 messages still to retry or settle\n(`GET /admin/pmir/messages`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_pmir_messages_list",
+        "responses": {
+          "200": {
+            "description": "`{ \"messages\": [...] }`, oldest first: each refused message with its refusal code, receipt and refusal time, apply attempts, the Registry's `Patient.id`s it names and the `PERSON`s whose identifiers or record subjects it keeps split, as counts. No identifier value is answered. Each message listed is one access record.",
+            "content": {
+              "application/json": {
+                "schema": {},
+                "example": {
+                  "messages": [
+                    {
+                      "message_id": "0196f1f4-8c3a-7d2e-9b1a-3c5d7e9f1a2b",
+                      "reason": "unknown-domain-type",
+                      "received_at": "2026-11-16T09:15:00Z",
+                      "refused_at": "2026-11-16T09:15:01Z",
+                      "attempts": 1,
+                      "identities": [
+                        "0196f1f4-8c3b-7a10-8f2e-4d6c8b0a2e4f"
+                      ],
+                      "splits": [
+                        {
+                          "person": "0d6c7f1e-3b7a-4c2e-9f61-2a8e5d4c3b21",
+                          "identifiers": 1,
+                          "subjects": 0
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/pmir/messages/{message_id}/retry": {
+      "post": {
+        "tags": [
+          "admin-identifiers"
+        ],
+        "summary": "Retry a refused ITI-93 message once its cause is fixed\n(`POST /admin/pmir/messages/{message_id}/retry`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_pmir_message_retry",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "description": "The refused message's `MessageHeader.id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "`{ \"message_id\": …, \"state\": \"received\" }`: the message is back at its arrival position, and the applier applies it next under the configuration and grants in force.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such message.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The message is not refused, or a message received after it that names one of its identities has applied: settle it instead.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ferroehr/rest/extensions/v1/admin/pmir/messages/{message_id}/settle": {
+      "post": {
+        "tags": [
+          "admin-identifiers"
+        ],
+        "summary": "Settle a refused ITI-93 message without applying it\n(`POST /admin/pmir/messages/{message_id}/settle`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_pmir_message_settle",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "description": "The refused message's `MessageHeader.id`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "`{ \"decision\": …, \"reason\": … }`: `discard` keeps the message's splits, `lift-splits` removes them so the identifiers and record subjects resolve as before the message; the reason is 1 to 1000 characters and names no identifier.",
+          "content": {
+            "application/json": {
+              "schema": {},
+              "example": {
+                "decision": "discard",
+                "reason": "the Registry corrected the identity in a later message"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "`{ \"message_id\": …, \"decision\": …, \"lifted\": … }`: the message is settled, `lifted` counting the splits removed.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "The decision is neither `discard` nor `lift-splits`, or the reason is missing, empty or longer than 1000 characters.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such message.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The message is not refused, and is not a discarded one whose splits are being lifted.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The body is not `application/json`.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -6693,7 +6966,7 @@
           {
             "name": "action",
             "in": "query",
-            "description": "An `access action` rubric.",
+            "description": "A term of the `access action` group by its coded content, the token `terminology_id|code`, such as `audit-event-action|R` or `openehr_access|query`.",
             "required": false,
             "schema": {
               "type": "string"
@@ -6702,7 +6975,7 @@
           {
             "name": "outcome",
             "in": "query",
-            "description": "An `access outcome` rubric.",
+            "description": "A term of the `access outcome` group by its coded content, the token `terminology_id|code`, such as `openehr_access|refused`.",
             "required": false,
             "schema": {
               "type": "string"
@@ -6711,7 +6984,7 @@
           {
             "name": "accessor_kind",
             "in": "query",
-            "description": "An `accessor kind` rubric.",
+            "description": "A term of the `accessor kind` group by its coded content, the token `terminology_id|code`, such as `extra-security-role-type|datasubject`.",
             "required": false,
             "schema": {
               "type": "string"
@@ -8486,7 +8759,7 @@
         "tags": [
           "audit"
         ],
-        "summary": "The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction\n(`GET /fhir/r4/AuditEvent`): a FHIR search over the local Audit Record\nRepository, returning a `searchset` Bundle of stored FHIR R4 `AuditEvent`\ndocuments (IHE BALP shape). Gated by the local store (`[audit.store]`; 404\nwhen off) and admin-only under RBAC (the node's security log is an operator\nsurface). `ihe-atna` reads the query: at least one `date` is required\n(`RESTful` ATNA §3.81.4.1.2.1), and `patient`, `agent`, `entity` (or their\n`.identifier` forms), `outcome`, `action`, `_count` and `_offset` are\napplied; a parameter the store cannot apply is a `400` `not-supported`,\nand one `ihe-atna` does not know is ignored (§3.81.4.1.3).",
+        "summary": "The RESTful-ATNA **ITI-81 Retrieve ATNA Audit Event** transaction\n(`GET /fhir/r4/AuditEvent`): a FHIR search over the local Audit Record\nRepository, returning a `searchset` Bundle of stored FHIR R4 `AuditEvent`\ndocuments (IHE BALP shape). Gated by the local store (`[audit.store]`; 404\nwhen off) and admin-only under RBAC (the node's security log is an operator\nsurface). `ihe-atna` reads the query: at least one `date` is required\n(`RESTful` ATNA §3.81.4.1.2.1), and `patient`, `agent`, `entity` (or their\n`.identifier` forms), `outcome`, `action`, `_count`, `_offset` and\n`_total` are applied; a parameter the store cannot apply is a `400` `not-supported`,\nand one `ihe-atna` does not know is ignored (§3.81.4.1.3).",
         "description": "OUR OWN EXTENSION as far as openEHR is concerned — no openEHR spec governs\nthis: the ITS-REST resource set defines no audit-retrieval endpoint. Its\nbasis is IHE ITI TF-2, transaction **ITI-81 (Retrieve ATNA Audit Event)**,\nwhose RESTful-ATNA option this realizes over the local Audit Record\nRepository.",
         "operationId": "audit_event_search",
         "parameters": [
@@ -8565,6 +8838,15 @@
             "schema": {
               "type": "integer",
               "format": "int64"
+            }
+          },
+          {
+            "name": "_total",
+            "in": "query",
+            "description": "`accurate` or `estimate` counts every match into `Bundle.total`; `none` or no `_total` serves the page without it (FHIR R4 Search §3.1.1.5.2). The `next` link says whether another page follows either way.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -27765,7 +28047,7 @@
     },
     {
       "name": "admin-access-log",
-      "description": "The review and the integrity of the access log: list its records across EHRs, read the links of a span of its chain and a stored checkpoint, seal its head in a checkpoint signed with the keyring's OpenPGP key, verify the chain and the signatures against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."
+      "description": "The review and the integrity of the access log: list its records across EHRs, read the links of a span of its chain and a stored checkpoint, seal its head in a checkpoint signed with the keyring's OpenPGP key when no append sealed it, verify the chain against a checkpoint, and export one EHR's log with the checkpoint it verifies against for a transfer to another system. OUR OWN EXTENSION: no ITS-REST operation governs these routes, and the access log is a draft openEHR package FerroEHR proposes (same admin gate + RBAC Admin class)."
     },
     {
       "name": "admin-identifiers",

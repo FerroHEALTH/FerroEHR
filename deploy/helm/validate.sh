@@ -787,7 +787,6 @@ schema_gate() {
     "backup.party.schedule=daily|/backup/party/schedule"
     "backup.audit.schedule=nightly|/backup/audit/schedule"
     "backup.backoffLimit=-1|/backup/backoffLimit"
-    "config.audit.store.retention=3|/config/audit/store/retention"
     "config.deployment.profile=true|/config/deployment/profile"
   )
   local refused=0 probe want out
@@ -882,7 +881,6 @@ schema_gate() {
     "config.telemetry.otlp.endpoint=http://otel-collector:4317"
     "global.imageRegistry=registry.example.com"
     "config.deployment.profile=production"
-    "config.audit.store.retention=P5Y"
   )
   local accepted=0
   for probe in "${acceptances[@]}"; do
@@ -973,23 +971,22 @@ rendered_toml() {
     --show-only templates/configmap.yaml | yq '.data."ferroehr.toml"'
 }
 config_keys_gate() {
-  bold "── declared posture + audit horizon ─────────────────────"
+  bold "── declared posture + audit policy outside the chart ────"
   local toml missing=0 want
   toml="$(rendered_toml "${CI_DIR}/default-values.yaml")"
   grep -qE '^ *profile = "sandbox"$' <<<"$toml" \
     || { red "  the default render does not declare [deployment] profile = \"sandbox\""; missing=1; }
   toml="$(rendered_toml "${CI_DIR}/audit-categories-values.yaml")"
-  for want in \
-    '^ *retention = "P3Y"$' \
-    '^ *sgb_v_309_controller = true$'; do
-    grep -qE "$want" <<<"$toml" || { red "  audit-categories render lacks a line matching: ${want}"; missing=1; }
-  done
   if grep -qE '^ *\[(audit\.categories|privacy\.access_delay)' <<<"$toml"; then
     red "  audit-categories render carries a table the admin registers replace"
     missing=1
   fi
+  if grep -qE '^ *(retention|sgb_v_309_controller) = ' <<<"$toml"; then
+    red "  audit-categories render carries a retention key the access policy replaces"
+    missing=1
+  fi
   if [[ "$missing" -eq 0 ]]; then
-    echo "  the default render declares sandbox; the audit overlay renders retention_years = 3 and no register table"
+    echo "  the default render declares sandbox; the audit overlay renders no register table and no retention key"
   else
     FAIL=1
   fi
@@ -1064,8 +1061,6 @@ deployment|profile|"production"
 deployment|accepts|["plaintext_listener"]
 database|migrations|"verify"
 audit|enabled|true
-audit|fail_mode|"closed"
-audit.store|enabled|true
 authz.rbac|ehr_access_default|"restricted"
 authz.rbac|enabled|true
 auth|enabled|true

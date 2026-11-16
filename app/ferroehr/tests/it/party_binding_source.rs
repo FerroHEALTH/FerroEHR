@@ -38,11 +38,11 @@ use ferroehr::service::demographic::types::PartyKind;
 use ferroehr::service::version_update::WriteRequest;
 
 /// The template of a professional's `PERSON`.
-const PERSON_TEMPLATE: &str = "FerroEHR professional";
+pub(crate) const PERSON_TEMPLATE: &str = "FerroEHR professional";
 /// A `PERSON` template the mapping does not name.
 const OTHER_TEMPLATE: &str = "FerroEHR patient";
 /// The template of the professional `ROLE`.
-const ROLE_TEMPLATE: &str = "FerroEHR professional role";
+pub(crate) const ROLE_TEMPLATE: &str = "FerroEHR professional role";
 /// The template of a provisioned `GROUP`.
 const GROUP_TEMPLATE: &str = "FerroEHR care team";
 /// The archetype of a membership `PARTY_RELATIONSHIP`.
@@ -53,18 +53,18 @@ const REPRESENTATION: &str = "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHI
 /// The identifier cluster the key selector reads.
 const CLUSTER: &str = "openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1";
 /// The `identifier_issuer` of the login's `[[auth.party]]` table.
-const LOGIN: &str = "https://login.example/tenant";
+pub(crate) const LOGIN: &str = "https://login.example/tenant";
 /// The `group_identifier_issuer` of that table.
 const GROUPS: &str = "https://login.example/groups";
 /// The `identifier_type` of that table.
-const GUID: &str = "guid";
+pub(crate) const GUID: &str = "guid";
 /// The date every lookup is judged on.
-const TODAY: &str = "2026-06-01";
+pub(crate) const TODAY: &str = "2026-06-01";
 /// The namespace a reported party is named under.
-const NAMESPACE: &str = "demographic";
+pub(crate) const NAMESPACE: &str = "demographic";
 
 /// The mapping the tests derive the side table under.
-fn mapping() -> BindingMapping {
+pub(crate) fn mapping() -> BindingMapping {
     let key = IdentifierSelector::new(
         format!("/details[at0001]/items[{CLUSTER}]/items[at0001]"),
         GUID,
@@ -82,16 +82,17 @@ fn mapping() -> BindingMapping {
 /// A service over a fresh database with the mapping installed.
 async fn service() -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
+    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
     (db, svc.with_binding_mapping(mapping()))
 }
 
-fn text(value: &str) -> Value {
+pub(crate) fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
 /// An `ELEMENT` `at` holding the `DV_IDENTIFIER` `id` of `kind` under
 /// `issuer`.
-fn identifier(at: &str, issuer: &str, kind: &str, id: &str) -> Value {
+pub(crate) fn identifier(at: &str, issuer: &str, kind: &str, id: &str) -> Value {
     json!({
         "_type": "ELEMENT", "archetype_node_id": at, "name": text("identifier"),
         "value": { "_type": "DV_IDENTIFIER", "issuer": issuer, "id": id, "type": kind }
@@ -99,11 +100,11 @@ fn identifier(at: &str, issuer: &str, kind: &str, id: &str) -> Value {
 }
 
 /// The login key `id` at the key selector.
-fn key(id: &str) -> Value {
+pub(crate) fn key(id: &str) -> Value {
     identifier("at0001", LOGIN, GUID, id)
 }
 
-fn identities(name: &str) -> Value {
+pub(crate) fn identities(name: &str) -> Value {
     json!([{
         "_type": "PARTY_IDENTITY", "archetype_node_id": "at0002", "name": text("name"),
         "details": {
@@ -114,7 +115,7 @@ fn identities(name: &str) -> Value {
     }])
 }
 
-fn archetyped(archetype: &str, template: &str) -> Value {
+pub(crate) fn archetyped(archetype: &str, template: &str) -> Value {
     json!({
         "_type": "ARCHETYPED",
         "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
@@ -123,7 +124,7 @@ fn archetyped(archetype: &str, template: &str) -> Value {
     })
 }
 
-fn party_ref(class: &str, id: VoId) -> Value {
+pub(crate) fn party_ref(class: &str, id: VoId) -> Value {
     json!({
         "_type": "PARTY_REF", "namespace": NAMESPACE, "type": class,
         "id": { "_type": "HIER_OBJECT_ID", "value": id.to_string() }
@@ -132,7 +133,7 @@ fn party_ref(class: &str, id: VoId) -> Value {
 
 /// A `DV_INTERVAL<DV_DATE>` from `lower` to `upper`, each unbounded when
 /// absent.
-fn interval(lower: Option<&str>, upper: Option<&str>) -> Value {
+pub(crate) fn interval(lower: Option<&str>, upper: Option<&str>) -> Value {
     let mut value = json!({
         "_type": "DV_INTERVAL",
         "lower_unbounded": lower.is_none(), "upper_unbounded": upper.is_none(),
@@ -149,7 +150,7 @@ fn interval(lower: Option<&str>, upper: Option<&str>) -> Value {
 
 /// A `PERSON` of `template` with `identifiers` in its identifier cluster,
 /// and no `details` when it carries none.
-fn person(template: &str, identifiers: &[Value]) -> Value {
+pub(crate) fn person(template: &str, identifiers: &[Value]) -> Value {
     let mut body = json!({
         "_type": "PERSON",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-PERSON.person.v1",
@@ -168,7 +169,7 @@ fn person(template: &str, identifiers: &[Value]) -> Value {
 }
 
 /// A `ROLE` of `template` performed by `performer`.
-fn role(template: &str, performer: VoId, validity: Option<Value>) -> Value {
+pub(crate) fn role(template: &str, performer: VoId, validity: Option<Value>) -> Value {
     let mut body = json!({
         "_type": "ROLE",
         "archetype_node_id": "openEHR-DEMOGRAPHIC-ROLE.professional.v1",
@@ -185,7 +186,7 @@ fn role(template: &str, performer: VoId, validity: Option<Value>) -> Value {
 
 /// A representation `PARTY_RELATIONSHIP` of `archetype` from `source` to
 /// `target`: its name the openEHR `subject_relationship` code `code`, and its
-/// details the representation code of FerroEHR's operation terminology.
+/// details the representation code of the draft access terminology.
 fn representation(
     archetype: &str,
     source: (&str, VoId),
@@ -201,7 +202,7 @@ fn representation(
             "name": text("Representation code"),
             "value": { "_type": "DV_CODED_TEXT", "value": "represents",
                 "defining_code": { "_type": "CODE_PHRASE",
-                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                     "code_string": "represents" } } }] });
     body
 }
@@ -249,7 +250,7 @@ fn group(template: &str, external_id: &str) -> Value {
 }
 
 /// The write of `data` in the lifecycle state `lifecycle`, after `preceding`.
-fn version<T: serde::de::DeserializeOwned>(
+pub(crate) fn version<T: serde::de::DeserializeOwned>(
     data: &Value,
     lifecycle: &str,
     preceding: Option<&str>,
@@ -262,13 +263,13 @@ fn version<T: serde::de::DeserializeOwned>(
 
 /// Creates the party `body` of `kind`, returning its container and version
 /// uid.
-async fn create(svc: &FerroEhrService, kind: PartyKind, body: &Value) -> (VoId, String) {
+pub(crate) async fn create(svc: &FerroEhrService, kind: PartyKind, body: &Value) -> (VoId, String) {
     create_in(svc, kind, body, "532").await
 }
 
 /// Creates the party `body` of `kind` in `lifecycle`, returning its container
 /// and version uid.
-async fn create_in(
+pub(crate) async fn create_in(
     svc: &FerroEhrService,
     kind: PartyKind,
     body: &Value,
@@ -283,7 +284,7 @@ async fn create_in(
 
 /// Commits `body` as the next version of `vo` after `uid` in `lifecycle`,
 /// returning the new version uid.
-async fn update(
+pub(crate) async fn update(
     svc: &FerroEhrService,
     kind: PartyKind,
     vo: VoId,
@@ -305,7 +306,7 @@ async fn update(
 }
 
 /// Deletes the party `vo` of `kind` at `uid`.
-async fn delete(svc: &FerroEhrService, kind: PartyKind, uid: &str) {
+pub(crate) async fn delete(svc: &FerroEhrService, kind: PartyKind, uid: &str) {
     Box::pin(svc.party_delete(
         kind,
         object(uid),
@@ -319,7 +320,7 @@ async fn delete(svc: &FerroEhrService, kind: PartyKind, uid: &str) {
 /// A `PERSON` of `template` carrying `identifiers` that performs a `ROLE` of
 /// `role_template` valid over `validity`, in `lifecycle`; returns the
 /// `PERSON`, its last version uid and the `ROLE`'s container and version uid.
-async fn performer(
+pub(crate) async fn performer(
     svc: &FerroEhrService,
     template: &str,
     identifiers: &[Value],
@@ -341,7 +342,7 @@ async fn performer(
 }
 
 /// A professional `PERSON` carrying the login key `id`.
-async fn professional(svc: &FerroEhrService, id: &str) -> (VoId, String) {
+pub(crate) async fn professional(svc: &FerroEhrService, id: &str) -> (VoId, String) {
     let (vo, uid, _, _) =
         performer(svc, PERSON_TEMPLATE, &[key(id)], ROLE_TEMPLATE, None, "532").await;
     (vo, uid)
@@ -413,7 +414,10 @@ async fn the_source_returns_the_one_professional_carrying_the_key() {
 
 #[tokio::test]
 async fn a_key_of_another_issuer_type_or_path_does_not_match() {
-    let (_db, svc) = service().await;
+    let (db, svc) = service().await;
+    // The other issuer is an active key space too, so the issuer the row
+    // carries is what keeps it from matching.
+    crate::fixtures::open_key_spaces(&db, &[("https://other.example", false)]).await;
     let value = "0b9e6c2a-5d4f-4e8a-9b1c-2d3e4f5a6b7c";
     professional(&svc, value).await;
 
@@ -1126,6 +1130,10 @@ async fn a_refill_rebuilds_every_row_from_the_versions() {
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn the_lookup_is_an_index_only_scan_at_fifty_thousand_persons() {
     let (db, svc) = service().await;
     let (vo, _) = professional(&svc, UPPER_KEY).await;
@@ -1211,6 +1219,7 @@ async fn the_lookup_runs_on_the_party_role_only() {
     let pools = ferroehr::db::connect_domains(&storage)
         .await
         .expect("each pool connects on its own credential");
+    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
     let svc = FerroEhrService::new(&pools).with_binding_mapping(mapping());
     let (vo, _) = professional(&svc, UPPER_KEY).await;
 
@@ -1246,6 +1255,10 @@ async fn intervals(pool: &sqlx::PgPool, target: VoId) -> Vec<(VoId, String, Opti
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_rebuild_from_the_versions_writes_the_intervals_the_commits_wrote() {
     let (db, svc) = service().await;
     let pool = db.pool();
@@ -1276,6 +1289,10 @@ async fn a_rebuild_from_the_versions_writes_the_intervals_the_commits_wrote() {
 /// its source a representative with a row of its own, its deletion retires
 /// both, and a refill rebuilds the rows the commits wrote.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_standalone_representation_holds_a_row_of_its_own() {
     let (db, svc) = service().await;
     let pool = db.pool();

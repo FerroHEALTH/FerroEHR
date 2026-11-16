@@ -34,8 +34,13 @@
 //! between its statements: a connection [`acquire`] handed out goes back to
 //! the scope when its guard drops, and the next [`acquire`] of the same pool
 //! takes it from there, so a request queues for the pool once and returns its
-//! connection to the pool once, when the scope ends. Outside a scope every
-//! guard returns its connection to the pool, as before.
+//! connection to the pool once: at [`release_held`], which the HTTP layer calls
+//! when the handler has answered, so the work after its last statement (the
+//! audit record, the response's way out) holds no connection, or else when
+//! the scope ends. How long the request held each connection is recorded on
+//! [`DB_POOL_HOLD_DURATION`](crate::telemetry::metrics::DB_POOL_HOLD_DURATION)
+//! (#5774). Outside a scope every guard returns its connection to the pool,
+//! as before.
 //!
 //! No openEHR spec governs this — our own design.
 //!
@@ -315,16 +320,56 @@ async fn probe_and_record(pool: &PgPool, claim: ProbeClaim<'_>) -> Result<Reach,
     outcome
 }
 
+/// A connection a [`request_scope`] keeps between checkouts.
+struct Held {
+    /// The pool's [`pool_key`].
+    pool: usize,
+    /// The connection.
+    conn: PoolConnection<Postgres>,
+    /// When the request took it from the pool.
+    since: Instant,
+}
+
 tokio::task_local! {
     /// The connections a [`request_scope`] keeps between checkouts, at most
-    /// one per pool, each under its pool's [`pool_key`].
-    static HELD: RefCell<Vec<(usize, PoolConnection<Postgres>)>>;
+    /// one per pool.
+    static HELD: RefCell<Vec<Held>>;
 }
 
 /// Runs `body` as one request: the connection each pool hands it is kept
-/// between its checkouts and returns to the pool when `body` ends.
+/// between its checkouts and returns to the pool at [`release_held`], or when
+/// `body` ends.
 pub async fn request_scope<F: Future>(body: F) -> F::Output {
-    HELD.scope(RefCell::new(Vec::new()), body).await
+    HELD.scope(RefCell::new(Vec::new()), async {
+        let output = body.await;
+        release_held();
+        output
+    })
+    .await
+}
+
+/// Returns every connection the current [`request_scope`] keeps to its pool,
+/// recording how long the request held each; a later [`acquire`] in the
+/// scope checks out again. Outside a scope it does nothing.
+pub fn release_held() {
+    let released = HELD
+        .try_with(|held| {
+            held.try_borrow_mut()
+                .map(|mut held| std::mem::take(&mut *held))
+        })
+        .ok()
+        .and_then(Result::ok);
+    for held in released.into_iter().flatten() {
+        held_for(held.since);
+        drop(held.conn);
+    }
+}
+
+/// Records that a request held a connection from `since` until now.
+fn held_for(since: Instant) {
+    crate::telemetry::metrics::metrics()
+        .db_pool_hold_duration
+        .record(since.elapsed().as_secs_f64(), &[]);
 }
 
 /// The identity of the shared pool `pool` is a handle to: the address of the
@@ -335,11 +380,11 @@ fn pool_key(pool: &PgPool) -> usize {
 
 /// The connection the current [`request_scope`] keeps for the pool `key`,
 /// taken out of the scope; `None` outside a scope or when it keeps none.
-fn take_held(key: usize) -> Option<PoolConnection<Postgres>> {
+fn take_held(key: usize) -> Option<Held> {
     HELD.try_with(|held| {
         let mut held = held.try_borrow_mut().ok()?;
-        let at = held.iter().position(|(pool, _)| *pool == key)?;
-        Some(held.swap_remove(at).1)
+        let at = held.iter().position(|kept| kept.pool == key)?;
+        Some(held.swap_remove(at))
     })
     .ok()
     .flatten()
@@ -352,15 +397,18 @@ fn take_held(key: usize) -> Option<PoolConnection<Postgres>> {
 pub struct Checkout {
     conn: Option<PoolConnection<Postgres>>,
     pool: usize,
+    since: Instant,
     close: bool,
 }
 
 impl Checkout {
-    /// A checkout of `conn`, a connection of the pool `pool`.
-    fn new(conn: PoolConnection<Postgres>, pool: usize) -> Self {
+    /// A checkout of `conn`, a connection of the pool `pool` taken from it
+    /// at `since`.
+    fn new(conn: PoolConnection<Postgres>, pool: usize, since: Instant) -> Self {
         Self {
             conn: Some(conn),
             pool,
+            since,
             close: false,
         }
     }
@@ -426,16 +474,19 @@ impl Drop for Checkout {
             conn.close_on_drop();
             return;
         }
-        let pool = self.pool;
-        // Outside a scope, or with the scope already keeping a connection of
-        // this pool, the closure is dropped unrun or hands `conn` back, and
-        // dropping it returns it to the pool.
+        let (pool, since) = (self.pool, self.since);
+        // Outside a scope the closure is dropped unrun, and dropping `conn`
+        // returns it to the pool; a scope already keeping a connection of
+        // this pool hands it back, and the request's hold of it ends here.
         let returned = HELD.try_with(move |held| match held.try_borrow_mut() {
-            Ok(mut held) if !held.iter().any(|(kept, _)| *kept == pool) => {
-                held.push((pool, conn));
+            Ok(mut held) if !held.iter().any(|kept| kept.pool == pool) => {
+                held.push(Held { pool, conn, since });
                 None
             }
-            _ => Some(conn),
+            _ => {
+                held_for(since);
+                Some(conn)
+            }
         });
         drop(returned);
     }
@@ -458,8 +509,8 @@ impl Drop for Checkout {
 /// new connection.
 pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
     let key = pool_key(pool);
-    if let Some(conn) = take_held(key) {
-        return Ok(Checkout::new(conn, key));
+    if let Some(held) = take_held(key) {
+        return Ok(Checkout::new(held.conn, key, held.since));
     }
     let started = Instant::now();
     // Boxed: the probe and the pool's connect future are large, and every
@@ -469,7 +520,7 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
         .db_pool_acquire_duration
         .record(started.elapsed().as_secs_f64(), &[]);
     let conn = result?;
-    Ok(Checkout::new(conn, key))
+    Ok(Checkout::new(conn, key, Instant::now()))
 }
 
 /// The error for a pool that failed: a connect the database refused or reset
@@ -508,6 +559,10 @@ async fn acquire_unmetered(pool: &PgPool) -> Result<PoolConnection<Postgres>, Ac
     }
     // Boxed as sqlx's own `&Pool` executor boxes it: the connect future is
     // large, and every caller's state machine would otherwise carry it inline.
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the one place the crate takes a pooled connection: the ban routes every other caller here"
+    )]
     let mut waiting = Box::pin(pool.acquire());
     if let Ok(result) = tokio::time::timeout(PROBE_AFTER, &mut waiting).await {
         return result.map_err(|error| pool_failed(&key, error));

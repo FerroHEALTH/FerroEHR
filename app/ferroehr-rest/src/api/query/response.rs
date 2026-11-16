@@ -53,7 +53,7 @@ impl QueryScope {
     /// normalized request.
     pub(super) fn apply(&self, mut request: AqlQueryRequest) -> AqlQueryRequest {
         request.ehr_access.clone_from(&self.ehr_access);
-        request.log_standing = self.log_standing;
+        request.log_standing = self.log_standing.clone();
         request
     }
 }
@@ -547,7 +547,8 @@ mod tests {
                 groups: vec![(vec![1], std::sync::Arc::clone(&pair))],
                 closed: pair,
                 default: None,
-                cared: Vec::new().into(),
+                cared: ferroehr::access_eval::condition::care::Care::Census(Vec::new().into()),
+                subject_namespace: "demographic".into(),
                 facts: CallerKeys {
                     now: jiff::Timestamp::UNIX_EPOCH,
                     parties: Vec::new().into(),

@@ -2,7 +2,7 @@
 --------
 {
   "name": "ACCESS_POLICY",
-  "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.",
+  "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, holds the controller's own rules on which callers may perform which operations on which kinds of data, lists the named directives a subject can accept by reference, states what the subject's view of the access log withholds, and states how long the access log keeps an entry. Kept in its own versioned container, outside any EHR and outside the demographic service.",
   "ancestors": [
     "LOCATABLE"
   ],
@@ -43,9 +43,22 @@
     "purpose_required": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "purpose_required",
-      "documentation": "Whether an access to clinical data must declare a purpose of use.",
+      "documentation": "Whether an access to clinical data must declare a purpose of use. An access without one is refused before the controller's rules are read, whatever rules the policy holds.",
       "is_mandatory": true,
       "type": "Boolean"
+    },
+    "rules": {
+      "_type": "P_BMM_CONTAINER_PROPERTY",
+      "name": "rules",
+      "documentation": "The controller's rules for every EHR it keeps: which callers may perform which operations on which kinds of data, such as the rules a Member State lays down under EHDS Art. 11(3). Each is an `ACCESS_DIRECTIVE` of kind `controller_rule`. A deny rule that applies refuses whatever the subject's directives permit; a permit rule acts only on sensitivity, and a permit exception only narrows the deny rule it sits in.",
+      "type_def": {
+        "container_type": "List",
+        "type": "ACCESS_DIRECTIVE"
+      },
+      "cardinality": {
+        "lower": 0,
+        "upper_unbounded": true
+      }
     },
     "catalogue": {
       "_type": "P_BMM_CONTAINER_PROPERTY",
@@ -73,6 +86,12 @@
         "upper_unbounded": true
       }
     },
+    "log_retention": {
+      "_type": "P_BMM_SINGLE_PROPERTY",
+      "name": "log_retention",
+      "documentation": "How long the access log keeps each entry, and the legal bounds the controller declares on that period. Void keeps every entry without end.",
+      "type": "ACCESS_LOG_RETENTION"
+    },
     "details": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "details",
@@ -86,7 +105,10 @@
     "Catalogue_identified": "catalogue /= Void implies catalogue.for_all (d | d.identifiers /= Void)",
     "Classifications_valid": "classifications /= Void implies not classifications.is_empty",
     "Catalogue_valid": "catalogue /= Void implies not catalogue.is_empty",
-    "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty"
+    "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty",
+    "Rules_valid": "rules /= Void implies not rules.is_empty",
+    "Rules_kind": "rules /= Void implies rules.for_all (r | r.is_controller_rule and (r.exceptions = Void or r.exceptions.for_all (e | e.is_controller_rule)))",
+    "Catalogue_not_controller_rules": "catalogue /= Void implies catalogue.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))"
   }
 }
 --------

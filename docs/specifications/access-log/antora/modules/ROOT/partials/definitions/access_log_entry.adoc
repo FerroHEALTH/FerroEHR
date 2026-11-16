@@ -19,7 +19,7 @@ a|Time interval over which the access took place, when it is known and differs f
 
 h|*1..1*
 |*action*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
-a|What the access did to the data, coded in the openEHR Terminology `access action` group.
+a|What the access did to the data, coded in the draft `openehr_access` terminology's `access action` group.
 
 h|*0..1*
 |*operation*: `xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]`
@@ -74,7 +74,7 @@ h|*0..1*
 a|Further details a jurisdiction or a deployment records, never clinical content. May be archetyped.
 
 h|*Invariants*
-2+a|__Action_valid__: `terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_access_action, action.defining_code)`
+2+a|__Action_valid__: `terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_action, action.defining_code)`
 
 h|
 2+a|__Items_need_ehr__: `not items.is_empty implies ehr_id /= Void`

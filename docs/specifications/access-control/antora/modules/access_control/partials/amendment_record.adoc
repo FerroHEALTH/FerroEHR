@@ -7,7 +7,22 @@
 4+^h|*Draft, not part of an RM release*
 
 |[[latest_issue]]0.1.0
+|The decision procedure checks `ACCESS_POLICY._purpose_required_` as step 4, before the controller's rules, so an access without a purpose under a policy that requires one is refused `refused-purpose-missing` whatever rules exist. The `_purposes_` of a `controller_rule` match only a purpose the access declares.
+|FerroEHR
+|[[latest_issue_date]]15 Nov 2026
+
+|0.1.0
+|`ACCESS_ACTOR_SCOPE._organisation_type_`: a caller acting for an `ORGANISATION` whose coded `_name_` is the type. `_role_` and `_organisation_type_` also match what the verified credential of a caller admitted under an agreement attests.
+|FerroEHR
+|15 Nov 2026
+
+|0.1.0
+|`ACCESS_POLICY._rules_`: the controller's own rules for every EHR, as `ACCESS_DIRECTIVE` instances of the new kind `controller_rule`, with the invariants that keep the kind out of an EHR's settings and the catalogue. `ACCESS_ACTOR_SCOPE._role_` is read from the coded `_name_` of the `ROLE`s the caller performs. Mappings to FHIR R5 `Permission` and IHE APPC foundational policies.
+|FerroEHR
+|14 Nov 2026
+
+|0.1.0
 |Initial draft: the `access_control` package with the `access_directives` scheme of `ACCESS_CONTROL_SETTINGS` and the versioned `ACCESS_POLICY`, the decision procedure, the terminology groups, ITS-REST resources and the mappings to FHIR `Consent`, IHE BPPC and IHE APPC.
 |FerroEHR
-|[[latest_issue_date]]13 Nov 2026
+|13 Nov 2026
 |===

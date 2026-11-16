@@ -19,9 +19,7 @@ use super::{
 };
 use crate::error::ServiceError;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
-use crate::storage::codec::decompose;
 use crate::storage::identifier_repo;
-use crate::storage::row::NodeRow;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::{
     Kind, SigningCtx, attestation, external, lifecycle, person, profile, system,
@@ -54,7 +52,7 @@ pub(super) async fn resolve_delete(
     )
     .await?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
-    system::admit_delete(tx, kind, vo_id).await?;
+    system::admit_delete(kind)?;
     external::admit_delete(tx, kind, vo_id).await?;
     lifecycle::refuse_already_deleted(kind, vo_id, &next.preceding_lifecycle)?;
     retire_protected_identifiers(tx, ctx, kind, vo_id).await?;
@@ -72,7 +70,7 @@ pub(super) async fn resolve_delete(
         other_input_version_uids,
         template_id: None,
         client_signature: signature,
-        rows: Vec::new(),
+        body: Value::Null,
         canonical_text: None,
         content_digest: None,
         party_facts: None,
@@ -109,10 +107,11 @@ pub(super) struct Content {
     pub(super) other_input_version_uids: Vec<String>,
 }
 
-/// A body ready to store: its node rows, its canonical text, its
+/// A body ready to store: the body itself, its canonical text, its
 /// `stable_compatible` stamp and its origins.
 struct Prepared {
-    rows: Vec<NodeRow>,
+    /// The sealed, uid-stamped body, decomposed only by the write (#5759).
+    body: Value,
     canonical_text: Option<String>,
     stable_compatible: bool,
     origins: Vec<String>,
@@ -189,8 +188,8 @@ async fn content_lifecycle(
     Ok(lifecycle)
 }
 
-/// Seal the protected identifiers, stamp the version uid and decompose the
-/// ACCEPTED body: the stored node rows reassemble to these bytes, and the
+/// Seal the protected identifiers and stamp the version uid of the ACCEPTED
+/// body: the node rows the write decomposes it into reassemble to these bytes, and the
 /// released-generation reader's answer is what a later `stable` deployment
 /// reads back.
 async fn prepare_body(
@@ -218,7 +217,7 @@ async fn prepare_body(
         ))
     });
     Ok(Prepared {
-        rows: decompose(canonical)?,
+        body: canonical,
         canonical_text,
         stable_compatible,
         origins,
@@ -239,11 +238,7 @@ pub(super) async fn resolve_create(
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
     person::refuse_composing_for_others(content.kind, &content.canonical)?;
-    system::admit_content(
-        content.kind,
-        &content.canonical,
-        content.template_id.as_deref(),
-    )?;
+    system::admit_content(content.kind, &content.canonical)?;
     external::admit_content(
         content.kind,
         &content.canonical,
@@ -270,7 +265,7 @@ pub(super) async fn resolve_create(
         other_input_version_uids: content.other_input_version_uids,
         template_id: content.template_id,
         client_signature: content.signature,
-        rows: body.rows,
+        body: body.body,
         canonical_text: body.canonical_text,
         content_digest: Some(body.content_digest),
         party_facts: body.party_facts,
@@ -307,7 +302,7 @@ pub(super) async fn resolve_modify(
     )
     .await?;
     person::refuse_composing_for_others(kind, &content.canonical)?;
-    system::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
+    system::admit_content(kind, &content.canonical)?;
     external::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
     // the transition from the preceding version's state must be legal
@@ -330,7 +325,7 @@ pub(super) async fn resolve_modify(
         other_input_version_uids: content.other_input_version_uids,
         template_id: content.template_id,
         client_signature: content.signature,
-        rows: body.rows,
+        body: body.body,
         canonical_text: body.canonical_text,
         content_digest: Some(body.content_digest),
         party_facts: body.party_facts,

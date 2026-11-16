@@ -26,8 +26,7 @@ use serde::de::value::{MapAccessDeserializer, SeqAccessDeserializer};
 use serde::de::{MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::party_binding::shipped;
-
+mod defaults;
 pub mod jit;
 pub mod person;
 
@@ -81,6 +80,17 @@ impl PartyBindingConfig {
         self.person.as_ref().unwrap_or(&person::NO_PERSON)
     }
 
+    /// The person template a patient portal's SCIM client provisions its
+    /// representatives in: the `[authz.party_binding.patient]` template, when
+    /// a `[[authz.party_binding.person.template]]` names it too (#5622).
+    #[must_use]
+    pub fn portal_person_template(&self) -> Option<&person::PersonTemplate> {
+        let wanted = crate::templates::identity::canonical_key(&self.patient.as_ref()?.template_id);
+        self.person().template.iter().find(|template| {
+            crate::templates::identity::canonical_key(&template.template_id) == wanted
+        })
+    }
+
     /// The mapping sections of the table.
     #[must_use]
     pub fn sections(&self) -> person::Sections<'_> {
@@ -91,92 +101,6 @@ impl PartyBindingConfig {
             membership: self.membership.as_ref(),
             patient: self.patient.as_ref(),
         }
-    }
-}
-
-impl Default for PartyBindingConfig {
-    fn default() -> Self {
-        Self {
-            provider: None,
-            // NOTE: ITS-REST overview, Requests_and_responses.md §openehr-version, names
-            // `committer.external_ref.namespace="demographic"` in its example.
-            namespace: "demographic".to_owned(),
-            basic_user: Vec::new(),
-            // The default mapping names the shipped definitions of
-            // `deploy/definitions/`, which every boot stores when absent.
-            person: Some(person::PersonSection {
-                template: vec![person::PersonTemplate {
-                    template_id: shipped::PROFESSIONAL_PERSON.to_owned(),
-                    key: selector(IDENTIFIER, "login"),
-                    user_name: Some(selector(IDENTIFIER, "scim_user_name")),
-                    external_id: Some(selector(IDENTIFIER, "scim_external_id")),
-                    default: true,
-                }],
-                attribute: vec![
-                    attribute(
-                        "name.formatted",
-                        true,
-                        "/identities[id4]/details[id5]/items[id6]",
-                    ),
-                    attribute(
-                        "name.givenName",
-                        false,
-                        "/identities[id4]/details[id5]/items[id7]",
-                    ),
-                    attribute(
-                        "name.familyName",
-                        false,
-                        "/identities[id4]/details[id5]/items[id8]",
-                    ),
-                    attribute(
-                        "emails[type eq \"work\"].value",
-                        false,
-                        "/contacts[id9]/addresses[id10]/details[id11]/items[id12]",
-                    ),
-                ],
-            }),
-            professional_role: Some(person::RoleSection {
-                template_id: shipped::PROFESSIONAL_ROLE.to_owned(),
-            }),
-            group: Some(person::GroupSection {
-                template_id: shipped::CARE_TEAM.to_owned(),
-                external_id: selector(IDENTIFIER, "scim_external_id"),
-                display_name: Some("/identities[id4]/details[id5]/items[id6]".to_owned()),
-            }),
-            membership: Some(person::MembershipSection {
-                archetype_id: shipped::MEMBERSHIP.to_owned(),
-            }),
-            patient: Some(person::PatientSection {
-                template_id: shipped::PATIENT.to_owned(),
-                identifier: IDENTIFIER.to_owned(),
-                name: Some("/identities[id6]/details[id7]/items[id8]".to_owned()),
-            }),
-            issuer: Vec::new(),
-            provisional_report_after: ferrohealth_config::units::Duration::from_days(30),
-        }
-    }
-}
-
-/// The identifier element of each default `PERSON` and `GROUP` definition.
-const IDENTIFIER: &str = "/details[id2]/items[id3]";
-
-/// The selector of the identifiers of `identifier_type` at `path`.
-fn selector(path: &str, identifier_type: &str) -> person::Selector {
-    person::Selector {
-        path: path.to_owned(),
-        identifier_type: identifier_type.to_owned(),
-    }
-}
-
-/// The attribute mapping the SCIM attribute `scim` to `path` of the default
-/// professional's `PERSON`.
-fn attribute(scim: &str, name: bool, path: &str) -> person::PersonAttribute {
-    person::PersonAttribute {
-        scim: Some(scim.to_owned()),
-        oidc: None,
-        jit: false,
-        name,
-        path: BTreeMap::from([(shipped::PROFESSIONAL_PERSON.to_owned(), path.to_owned())]),
     }
 }
 
@@ -274,6 +198,15 @@ pub enum BindingError {
     /// The shared crate refuses a party table or a Basic user's key.
     #[error(transparent)]
     Party(#[from] PartyError),
+    /// A Basic user maps to no key while an `[[auth.party]]` table binds
+    /// logins, so the user resolves to no `PERSON`.
+    #[error(
+        "beside an [[auth.party]] table a Basic user is a person's credential: map it with \
+         [[authz.party_binding.basic_user]] to the key of its PERSON, which SCIM provisions \
+         once the operator grant (`ferroehr party-binding grant --operation scim_provision`) \
+         admits the SCIM client"
+    )]
+    BasicUnmapped(#[source] PartyError),
 }
 
 /// Returns the party binding the configuration describes, looking logins up
@@ -284,7 +217,9 @@ pub enum BindingError {
 /// the section must map to a key.
 ///
 /// # Errors
-/// [`BindingError`] naming the table, the adapter or the Basic user refused.
+/// [`BindingError`] naming the table, the adapter or the Basic user refused;
+/// [`BindingError::BasicUnmapped`] names the operator grant that bootstraps
+/// the `PERSON` an unmapped Basic user needs.
 pub fn party_binding(
     binding: &PartyBindingConfig,
     resolved: &Resolved,
@@ -295,7 +230,9 @@ pub fn party_binding(
         built = built.with_basic_user(&user.user, &user.key_issuer, &user.key)?;
     }
     if let Some(store) = &resolved.basic {
-        built.check_basic(store)?;
+        built
+            .check_basic(store)
+            .map_err(BindingError::BasicUnmapped)?;
     }
     Ok(built)
 }
@@ -517,14 +454,52 @@ impl crate::config::FerroEhrConfig {
     }
 }
 
-/// The `identifier_issuer` of every `[[auth.party]]` table: the issuers a
-/// binding key is held under.
+/// Every `patients` issuer, sorted: a binding key under one is a portal
+/// representative's login, held with no `[[auth.party]]` table and bound
+/// only through a live representation (#5446, #5622).
+#[must_use]
+pub fn portal_issuers(resolved: &Resolved) -> Vec<String> {
+    resolved
+        .kinds
+        .iter()
+        .filter(|(_, kind)| **kind == IssuerKind::Patients)
+        .map(|(issuer, _)| issuer.clone())
+        .collect()
+}
+
+/// The person mapping the server derives the side table under (#5622).
+///
+/// It compiles `sections` for the administrator role `admin_role` with the
+/// key selectors held to the [`key_issuers`] of `resolved`, and a key under
+/// one of its [`portal_issuers`] held as a portal login.
+///
+/// # Errors
+/// [`crate::party_binding::SelectorError`] when a selector path does not compile, which
+/// the configuration check reports first.
+pub fn installed_mapping(
+    sections: &person::Sections<'_>,
+    resolved: &Resolved,
+    admin_role: &str,
+) -> Result<crate::party_binding::BindingMapping, crate::party_binding::SelectorError> {
+    Ok(sections
+        .binding_mapping(&key_issuers(resolved), admin_role)?
+        .with_portal_issuers(portal_issuers(resolved)))
+}
+
+/// The issuers a binding key is held under: the `identifier_issuer` of every
+/// `[[auth.party]]` table, and every `patients` issuer, under which a portal
+/// representative's login is their key with no table (#5622).
+///
+/// The server compiles the person mapping from this one set, and the SCIM
+/// gate admits a `scim_provision` grant whose `binding_issuer` is in it. No
+/// openEHR spec governs resolving a login to a party: our own design.
 #[must_use]
 pub fn key_issuers(resolved: &Resolved) -> Vec<String> {
     let mut issuers: Vec<String> = resolved
         .party
         .iter()
         .map(|table| table.identifier_issuer.clone())
+        .chain(portal_issuers(resolved))
         .collect();
     issuers.sort();
     issuers.dedup();

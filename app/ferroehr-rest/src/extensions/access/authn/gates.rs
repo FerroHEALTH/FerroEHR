@@ -7,6 +7,8 @@
 //! assurance is too low. Role semantics are our own design; the SMART grammar is
 //! the ITS-REST SMART on openEHR draft (`crate::smart::routes`).
 
+use std::sync::Arc;
+
 use axum::extract::{MatchedPath, OriginalUri, Request};
 use axum::response::{IntoResponse, Response};
 use ferroehr::party_binding::grants::capabilities::Capabilities;
@@ -31,8 +33,12 @@ use super::{AuthError, AuthLayer, AuthMethod, Principal};
 ///
 /// A bearer token whose SMART on openEHR resource scopes are all `system/`
 /// scopes passes the clinical class without a role: its scopes decide access,
-/// in [`smart_refusal`]. A `user/` or `patient/` token belongs to a person and
-/// keeps the role gate, as does a Basic user.
+/// in [`smart_refusal`]. So does the record's person and whoever represents
+/// them: their right comes from who they are (EHDS Art. 3 and 4(2)), SMART App
+/// Launch defines no role claim for a patient's token, and the access
+/// evaluator confines them to the one EHR ([`crate::extensions::access::delay::acts_for_the_person`]).
+/// Any other `user/` or `patient/` token keeps the role gate, as does a Basic
+/// user.
 ///
 /// A principal carrying the configured read-only role is refused on every write
 /// operation, overriding any grant. Both denials produce the same `403`,
@@ -54,7 +60,8 @@ pub(super) fn rbac_refusal(
             .access
             .caller()
             .is_some_and(|caller| crate::smart::holds_only_system_scopes(&caller.openehr_scopes()));
-    let gated = if backend && class == OperationClass::Clinical {
+    let person = crate::extensions::access::delay::acts_for_the_person(principal);
+    let gated = if (backend || person) && class == OperationClass::Clinical {
         RbacDecision::Allow
     } else {
         rbac.decide(class, &principal.roles)
@@ -71,7 +78,7 @@ pub(super) fn rbac_refusal(
     };
     count_auth_failure(mechanism_label(principal.method), "403");
     let mut resp = RestError::from(ApiError::Forbidden(reason)).into_response();
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut().insert(Arc::new(principal.clone()));
     Some(resp)
 }
 
@@ -123,7 +130,7 @@ pub(super) fn smart_refusal(
             .authenticator
             .challenge(Some(&AuthError::Forbidden(String::new()))),
     );
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut().insert(Arc::new(principal.clone()));
     Some(resp)
 }
 
@@ -223,7 +230,7 @@ pub(super) fn patient_data_refusal(
             resp
         }
     };
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut().insert(Arc::new(principal.clone()));
     resp.extensions_mut().insert(actor);
     resp
 }

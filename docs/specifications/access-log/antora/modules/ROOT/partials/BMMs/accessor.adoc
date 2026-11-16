@@ -7,7 +7,7 @@
     "kind": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "kind",
-      "documentation": "The kind of accessor, coded in the openEHR Terminology `accessor kind` group: a person, a person through a delegated client, the subject of care, a representative, a person of another organisation, an organisation, or a system acting for nobody.",
+      "documentation": "The kind of accessor, coded in the draft `openehr_access` terminology's `accessor kind` group: a person, a person through a delegated client, the subject of care, a representative, a person of another organisation, an organisation, or a system acting for nobody.",
       "is_mandatory": true,
       "type": "DV_CODED_TEXT"
     },
@@ -53,7 +53,7 @@
     "binding": {
       "_type": "P_BMM_SINGLE_PROPERTY",
       "name": "binding",
-      "documentation": "How the system bound the credential to `_party_`, or why it could not, coded in a terminology the system names.",
+      "documentation": "How the system bound the credential to `_party_`, or why it could not, coded in the draft `openehr_access` terminology's `credential binding` group.",
       "type": "DV_CODED_TEXT"
     },
     "credential": {
@@ -77,7 +77,8 @@
     }
   },
   "invariants": {
-    "Kind_valid": "terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, kind.defining_code)"
+    "Kind_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_accessor_kind, kind.defining_code)",
+    "Binding_valid": "binding /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_credential_binding, binding.defining_code)"
   }
 }
 --------

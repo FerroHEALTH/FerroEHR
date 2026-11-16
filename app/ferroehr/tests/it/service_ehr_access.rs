@@ -125,6 +125,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 /// Restricted settings whose gate-keepers are the subject and the guardian,
 /// the `PERSON` `guardian`.
 fn kept(guardian: uuid::Uuid) -> Value {
@@ -235,38 +244,37 @@ fn forbidden(outcome: &Result<String, ServiceError>, who: &str) {
     );
 }
 
-/// Every writer kind: the administrator and each gate-keeper the current
-/// settings name commit; the subject before they are named, an unnamed
-/// representative and a professional are refused `403`.
+/// Every writer kind: the subject while no gate-keeper is named, the
+/// administrator and each gate-keeper the current settings name commit; an
+/// unnamed representative and a professional are refused `403`.
 #[tokio::test]
 async fn each_writer_kind_is_decided_by_the_gate_keepers() {
     let (_db, svc, ehr_id, guardian) = setup().await;
     forbidden(
-        &write(&svc, ehr_id, &subject(), 1, &kept(guardian)).await,
-        "the subject no settings name",
-    );
-    forbidden(
         &write(&svc, ehr_id, &professional(), 1, &kept(guardian)).await,
         "a professional",
     );
-    write(&svc, ehr_id, &administrator(), 1, &kept(guardian))
+    write(&svc, ehr_id, &subject(), 1, &kept(guardian))
         .await
-        .expect("the administrator writes the first settings");
-    write(&svc, ehr_id, &subject(), 2, &kept(guardian))
+        .expect("the competent subject writes the first settings, naming their gate-keepers");
+    write(&svc, ehr_id, &administrator(), 2, &kept(guardian))
+        .await
+        .expect("the administrator writes");
+    write(&svc, ehr_id, &subject(), 3, &kept(guardian))
         .await
         .expect("the subject named PARTY_SELF writes");
-    write(&svc, ehr_id, &representative(guardian), 3, &kept(guardian))
+    write(&svc, ehr_id, &representative(guardian), 4, &kept(guardian))
         .await
         .expect("the named guardian writes");
     forbidden(
-        &write(&svc, ehr_id, &representative(STRANGER), 4, &kept(guardian)).await,
+        &write(&svc, ehr_id, &representative(STRANGER), 5, &kept(guardian)).await,
         "an unnamed representative",
     );
     forbidden(
-        &write(&svc, ehr_id, &professional(), 4, &kept(guardian)).await,
+        &write(&svc, ehr_id, &professional(), 5, &kept(guardian)).await,
         "a professional no gate-keeper names",
     );
-    write(&svc, ehr_id, &server(), 4, &kept(guardian))
+    write(&svc, ehr_id, &server(), 5, &kept(guardian))
         .await
         .expect("the server's own write");
     let settings = svc
@@ -278,6 +286,34 @@ async fn each_writer_kind_is_decided_by_the_gate_keepers() {
         Some(2),
         "the committed settings are current"
     );
+}
+
+/// Settings naming a guardian without `PARTY_SELF` take the subject's write
+/// away: the guardian then decides, and the subject, who wrote the settings
+/// while no gate-keeper was named, is refused `403` (BASE Architecture
+/// Overview §Access Control, a gate-keeper other than the patient for a
+/// subject who is not a competent adult).
+#[tokio::test]
+async fn a_guardian_named_without_the_subject_takes_the_subjects_write_away() {
+    let (_db, svc, ehr_id, guardian) = setup().await;
+    let mut guarded = kept(guardian);
+    guarded["gate_keepers"]
+        .as_array_mut()
+        .expect("the gate-keepers")
+        .remove(0);
+    write(&svc, ehr_id, &subject(), 1, &guarded)
+        .await
+        .expect("the subject writes while no gate-keeper is named");
+    forbidden(
+        &write(&svc, ehr_id, &subject(), 2, &kept(guardian)).await,
+        "the subject the guardian's settings do not name",
+    );
+    write(&svc, ehr_id, &representative(guardian), 2, &kept(guardian))
+        .await
+        .expect("the guardian writes, naming the subject again");
+    write(&svc, ehr_id, &subject(), 3, &kept(guardian))
+        .await
+        .expect("the subject named PARTY_SELF writes again");
 }
 
 /// A body of the removed scheme, and one breaking an invariant, are refused
@@ -438,6 +474,10 @@ async fn a_missing_ehr_access_is_restored_at_boot() {
 /// removed scheme, whole, and leaves every other EHR's alone; the boot then
 /// restores the default.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn the_migration_drops_an_ehr_access_of_the_removed_scheme() {
     let (db, svc, ehr_id, _guardian) = setup().await;
     let other = crate::fixtures::create_ehr(&svc).await;
@@ -562,7 +602,7 @@ fn with_a_directive(guardian: uuid::Uuid) -> Value {
         "name": { "_type": "DV_TEXT", "value": "No professional reads" },
         "archetype_node_id": "at0001",
         "kind": term("consent"),
-        "effect": term("deny"),
+        "effect": provision("deny"),
         "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("professional") }],
         "operations": [term("read")],
         "emergency_override": true

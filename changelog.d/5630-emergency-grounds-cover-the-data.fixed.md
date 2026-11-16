@@ -1,0 +1,1 @@
+- The `emergency` grounds of an access-log entry name only the directives whose data scope covers an object the entry delivered, beside the `ACCESS_POLICY` of the lifted steps; before, every lifted deny of the EHR was named, whichever data was read.

@@ -31,6 +31,12 @@ use crate::identifier_protection::store::{IdentifierStore, StoreError};
 use crate::ids::VoId;
 use crate::storage::identifier_repo::{self, IdentifierRepoError};
 
+/// The scheme a care subject reference is digested under (#5699).
+const CARE_SUBJECT_SCHEME: &str = "ferroehr:care-subject:v1";
+
+/// The scheme of the care projection's key check (#5699).
+const CARE_KEY_CHECK_SCHEME: &str = "ferroehr:care-subject:check:v1";
+
 /// The national-identifier protection engine.
 #[derive(Debug)]
 pub struct IdentifierProtection {
@@ -92,6 +98,48 @@ impl IdentifierProtection {
             root: RootKey::from_hex(&material)?,
             store: IdentifierStore::new(pool),
         }))
+    }
+
+    /// The lookup digest of `value` in each configured scheme, in the
+    /// configured order: what an equality search for an identifier of a
+    /// protected scheme compares, without the value leaving the caller.
+    #[must_use]
+    pub fn lookup_digests(&self, value: &str) -> Vec<(String, Vec<u8>)> {
+        let keys = DomainKeys::derive(&self.root, KeyDomain::Demographic);
+        self.schemes
+            .iter()
+            .map(|scheme| (scheme.clone(), keys.lookup_digest(scheme, value)))
+            .collect()
+    }
+
+    /// The keyed digest of the care subject reference `key` (#5699): the
+    /// lookup digest under the clinical domain's subkey, in a scheme of its
+    /// own, so the care projection and the EHR row match one subject without
+    /// either holding the reference. A registry or national number has few
+    /// enough values that an unkeyed digest of it is reversible. No openEHR
+    /// spec governs this: our own design.
+    #[must_use]
+    pub fn care_subject_digest(&self, key: &str) -> Vec<u8> {
+        DomainKeys::derive(&self.root, KeyDomain::Ehr).lookup_digest(CARE_SUBJECT_SCHEME, key)
+    }
+
+    /// The keyed digests of each of `keys`, under one derivation.
+    #[must_use]
+    pub fn care_subject_digests<'a>(
+        &self,
+        keys: impl IntoIterator<Item = &'a str>,
+    ) -> Vec<Vec<u8>> {
+        let derived = DomainKeys::derive(&self.root, KeyDomain::Ehr);
+        keys.into_iter()
+            .map(|key| derived.lookup_digest(CARE_SUBJECT_SCHEME, key))
+            .collect()
+    }
+
+    /// A digest that changes with the key, which tells the care projector
+    /// that the stored digests were taken under another key.
+    #[must_use]
+    pub fn care_key_check(&self) -> Vec<u8> {
+        DomainKeys::derive(&self.root, KeyDomain::Ehr).lookup_digest(CARE_KEY_CHECK_SCHEME, "")
     }
 
     /// The first configured scheme the database registry does not hold.

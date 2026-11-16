@@ -82,9 +82,8 @@ guarded_handler! {
              body = serde_json::Value),
             (status = 405, description = "The admin API is disabled on this server.",
              body = serde_json::Value),
-            (status = 503, description = "The access record could not be written under \
-                                          `audit.fail_mode = \"closed\"`; the values are \
-                                          withheld.",
+            (status = 503, description = "The access record could not be written; the \
+                                          values are withheld.",
              body = serde_json::Value)
         )
     )]
@@ -98,7 +97,7 @@ async fn party_identifiers(state: AppState, parts: RequestParts) -> Result<Respo
     if !Capabilities::current().holds(Operation::ReadIdentifiers) {
         return Err(RestError::from(ApiError::Forbidden(
             "reading a party's protected identifiers needs a policy grant of \
-             ferroehr-operations::read_identifiers"
+             openehr_access::read_identifiers"
                 .to_owned(),
         )));
     }

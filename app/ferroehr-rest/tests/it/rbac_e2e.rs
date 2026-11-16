@@ -22,7 +22,7 @@ use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::config::rest::ApiConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
+use ferroehr::system_log::config::{AuditConfig, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
@@ -103,17 +103,16 @@ async fn app(rbac_enabled: bool, audit: Option<AuditSender>) -> (testkit::TestDb
 /// Bind a TLS syslog listener and build an [`AuditSender`] shipping DICOM records to it
 /// (fail-open, login events suppressed). The returned listener receives the RFC
 /// 5425 frames; each carries the DICOM `AuditMessage` XML in its `MSG` field.
-async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
+async fn audit_capture() -> (testkit::TestDb, SyslogTlsListener, AuditSender) {
+    let db = testkit::db().await.expect("the audit store");
     let socket = SyslogTlsListener::bind(0).await.expect("syslog listener");
     let port = socket.port;
     let cfg = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: false,
-            retention: None,
-            sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         syslog: Some(SyslogConfig {
             url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
@@ -124,14 +123,10 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             ..SyslogConfig::default()
         }),
         suppress_login_events: true,
-        fail_mode: FailMode::Open,
-        queue_capacity: 64,
         ..AuditConfig::default()
     };
-    // The drain task is detached (we drop the handle); it runs while the sender
-    // — held by the service — is alive, which spans the whole test.
-    let (sender, _handle) = start(cfg, None, None).await.expect("audit start");
-    (socket, sender)
+    let (sender, _handle) = start(cfg, None, db.pool()).await.expect("audit start");
+    (db, socket, sender)
 }
 
 /// How long a test waits for the audit record it asserts on. A pass returns
@@ -497,7 +492,7 @@ async fn rbac_deny_is_audited() {
     // User-Authentication event (`csd-code="110114"`, DICOM PS3.15 §A.5.1 —
     // a rejected access attempt), a minor-failure outcome
     // (`EventOutcomeIndicator="4"`), attributed to `user`.
-    let (mut socket, sender) = audit_capture().await;
+    let (_audit, mut socket, sender) = audit_capture().await;
     let (_pg, app) = app(true, Some(sender)).await;
 
     let s = status(

@@ -9,6 +9,7 @@ use crate::system_log::event::{ActingMode, ActorAuthentication};
 use base64::Engine;
 use ferrohealth_smart::assurance::AssuranceLevel as Level;
 use jiff::Timestamp;
+use openehr_rm::draft::access_control::terminology::log::Authorisation;
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use secrecy::ExposeSecret as _;
 
@@ -615,7 +616,7 @@ fn the_decision_policies_follow_the_permit() {
     .map(|(name, version)| AccessAuthorisation {
         name: Some(name.to_owned()),
         version: Some(version.clone()),
-        ..crate::access_log::entry::authorisation("consent")
+        ..crate::access_log::entry::authorisation(Authorisation::Consent)
     })
     .collect();
     e.decided = crate::access_eval::record::Decision::of_recorded(&grounds);

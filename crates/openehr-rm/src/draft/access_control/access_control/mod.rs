@@ -12,5 +12,7 @@ pub mod access_directive;
 pub mod access_directive_settings;
 pub mod access_label;
 pub mod access_log_restriction;
+pub mod access_log_retention;
 pub mod access_policy;
+pub mod access_retention_bound;
 pub mod versioned_access_policy;

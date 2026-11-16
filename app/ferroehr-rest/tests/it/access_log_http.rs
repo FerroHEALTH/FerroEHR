@@ -26,9 +26,10 @@ use crate::common::{BASE, EXT, FHIR};
 /// The synthetic patient subject every EHR of the test resolves to.
 pub(crate) const SUBJECT: &str = "patient-access-log-1";
 /// A value written into a composition, which no entry may carry.
-const SENTINEL: &str = "access-log-sentinel-6b1f";
+pub(crate) const SENTINEL: &str = "access-log-sentinel-6b1f";
 
-/// One stored entry: its EHR, action, result, request id and canonical form.
+/// One stored entry: its EHR, the codes of its action and result, its request
+/// id and its canonical form.
 #[derive(Debug, Clone)]
 pub(crate) struct Stored {
     pub(crate) ehr_id: Option<String>,
@@ -38,13 +39,15 @@ pub(crate) struct Stored {
     pub(crate) content: String,
 }
 
-/// The columns of one stored entry, in [`Stored`]'s order.
+/// The columns of one stored entry, in [`Stored`]'s order, with its shared
+/// part.
 type Columns = (
     Option<String>,
     Option<String>,
     Option<String>,
     Option<String>,
     String,
+    Option<String>,
 );
 
 /// The entries stored so far that `keep` selects, polled until there are at
@@ -57,23 +60,31 @@ pub(crate) async fn entries(
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<Columns> = sqlx::query_as(
-            "SELECT ehr_id, action, result, request_id, content \
-             FROM audit.access_log_record ORDER BY chain_seq",
+            "SELECT r.ehr_id, r.action_code, r.result_code, \
+             audit.access_log_document(r.content, sh.content) #>> '{channel,request_id}', \
+             r.content, sh.content \
+             FROM audit.access_log_record r \
+             LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared ORDER BY r.chain_seq",
         )
         .fetch_all(pool)
         .await
         .expect("read the access log");
         let all = rows.len();
-        let debug_rows: Vec<String> = rows.iter().map(|row| row.4.clone()).collect();
+        let debug_rows: Vec<String> = rows
+            .iter()
+            .map(|row| common::joined_entry(&row.4, row.5.as_deref()))
+            .collect();
         let kept: Vec<Stored> = rows
             .into_iter()
-            .map(|(ehr_id, action, result, request_id, content)| Stored {
-                ehr_id,
-                action,
-                result,
-                request_id,
-                content,
-            })
+            .map(
+                |(ehr_id, action, result, request_id, content, shared)| Stored {
+                    ehr_id,
+                    action,
+                    result,
+                    request_id,
+                    content: common::joined_entry(&content, shared.as_deref()),
+                },
+            )
             .filter(|stored| keep(stored))
             .collect();
         if kept.len() >= expected {
@@ -181,12 +192,12 @@ async fn an_its_rest_write_and_read_each_write_an_entry_without_content() {
 
     let mine = |s: &Stored| s.ehr_id.as_deref() == Some(ehr.as_str());
     let stored = entries(&pool, 3, |s| {
-        mine(s) && matches!(s.action.as_deref(), Some("create" | "read"))
+        mine(s) && matches!(s.action.as_deref(), Some("C" | "R"))
     })
     .await;
     let created = stored
         .iter()
-        .filter(|s| s.action.as_deref() == Some("create"))
+        .filter(|s| s.action.as_deref() == Some("C"))
         .count();
     assert!(
         created >= 2,
@@ -194,7 +205,7 @@ async fn an_its_rest_write_and_read_each_write_an_entry_without_content() {
     );
     let read: Vec<&Stored> = stored
         .iter()
-        .filter(|s| s.action.as_deref() == Some("read"))
+        .filter(|s| s.action.as_deref() == Some("R"))
         .collect();
     assert_eq!(read.len(), 1, "{stored:?}");
     assert_eq!(read[0].result.as_deref(), Some("granted"));
@@ -334,7 +345,7 @@ async fn a_read_of_the_log_writes_an_entry_naming_the_log() {
     assert_eq!(status, StatusCode::OK, "ITI-81: {body}");
     let read = entries(&pool, 1, |s| s.content.contains("audit_event_search")).await;
     assert_eq!(read.len(), 1, "{read:?}");
-    assert_eq!(read[0].action.as_deref(), Some("read"));
+    assert_eq!(read[0].action.as_deref(), Some("R"));
     assert!(
         read[0].content.contains("FHIR search"),
         "{}",

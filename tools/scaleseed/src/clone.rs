@@ -104,6 +104,10 @@ impl Prototype {
     ///
     /// # Errors
     /// A failed read, or a version the service does not serve.
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "a seeding tool beside the server: it serves no request, so no request checkout applies"
+    )]
     pub(crate) async fn read(
         svc: &FerroEhrService,
         pool: &PgPool,

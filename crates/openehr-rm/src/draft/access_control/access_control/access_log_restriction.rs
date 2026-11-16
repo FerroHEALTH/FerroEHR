@@ -38,7 +38,7 @@ pub struct AccessLogRestriction {
     pub archetype_details: Option<Archetyped>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
     pub feeder_audit: Option<FeederAudit>,
-    /// The kinds of accessor the restriction applies to, coded in the openEHR Terminology `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.
+    /// The kinds of accessor the restriction applies to, coded in the draft `openehr_access` terminology's `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.
     pub accessor_kinds: openehr_base::containers::NonEmptyVec<DvCodedText>,
     /// The attributes of `ACCESSOR` the subject view withholds, coded in the `access log withheld` group: `accessor_party`, `accessor_provider`, `accessor_roles` or `accessor_groups`.
     pub withheld: openehr_base::containers::NonEmptyVec<DvCodedText>,

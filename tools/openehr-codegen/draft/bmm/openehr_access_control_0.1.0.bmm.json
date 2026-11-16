@@ -24,6 +24,8 @@
         "ACCESS_POLICY",
         "ACCESS_CLASSIFICATION",
         "ACCESS_LOG_RESTRICTION",
+        "ACCESS_LOG_RETENTION",
+        "ACCESS_RETENTION_BOUND",
         "VERSIONED_ACCESS_POLICY"
       ]
     }
@@ -94,16 +96,17 @@
         }
       },
       "invariants": {
-        "Default_access_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_default, default_access.defining_code)",
+        "Default_access_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_default, default_access.defining_code)",
         "Gate_keepers_valid": "gate_keepers /= Void implies not gate_keepers.is_empty",
         "Directives_valid": "directives /= Void implies not directives.is_empty",
         "Labels_valid": "labels /= Void implies not labels.is_empty",
-        "Opt_out_unique": "directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1"
+        "Opt_out_unique": "directives /= Void implies directives.filter (d | d.is_opt_out).count <= 1",
+        "Directives_not_controller_rules": "directives /= Void implies directives.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))"
       }
     },
     "ACCESS_DIRECTIVE": {
       "name": "ACCESS_DIRECTIVE",
-      "documentation": "One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.",
+      "documentation": "One instruction about access to the data of one EHR, given by the subject, their representative or the controller on their instruction: a consent permit or deny, an EHDS Art. 8 restriction, an EHDS Art. 10 opt-out, or the scope of a delegation; or one rule of a controller's `ACCESS_POLICY` for every EHR it keeps. A directive applies to an access when every attribute it sets matches the access (the actor, the operation, the purpose, the data, the time), and none of its exceptions applies. Where a permit and a deny both apply, the deny wins.",
       "ancestors": [
         "LOCATABLE"
       ],
@@ -111,7 +114,7 @@
         "kind": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "kind",
-          "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
+          "documentation": "What kind of instruction this is, coded in the `access directive kind` group: `consent`, `restriction`, `opt_out` or `delegation` for a directive of an EHR, `controller_rule` for a rule of an `ACCESS_POLICY`. The kind decides which callers the directive can bind and how a refusal is shown (a restriction and an opt-out read as absent).",
           "is_mandatory": true,
           "type": "DV_CODED_TEXT"
         },
@@ -138,7 +141,7 @@
         "operations": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "operations",
-          "documentation": "The operations the directive applies to, coded in the operation terminology the system documents (such as `read`, `write`, `export`). Empty applies to every operation.",
+          "documentation": "The operations the directive applies to, coded in the draft `openehr_access` terminology's `access operation` group (`read`, `write`, `export`, `query`). Empty applies to every operation.",
           "type_def": {
             "container_type": "List",
             "type": "DV_CODED_TEXT"
@@ -151,7 +154,7 @@
         "purposes": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "purposes",
-          "documentation": "The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose.",
+          "documentation": "The purposes of use the directive applies to, coded in the purpose-of-use terminology the system accepts. Empty applies to every purpose. On a `controller_rule` it applies only to an access that declares one of them, since `ACCESS_POLICY.purpose_required` is the control for an access without one. On a directive of an EHR, a deny also covers an access that declares no purpose, which cannot show it is outside the deny.",
           "type_def": {
             "container_type": "List",
             "type": "DV_CODED_TEXT"
@@ -287,11 +290,19 @@
             "_type": "P_BMM_SIMPLE_TYPE",
             "type": "Boolean"
           }
+        },
+        "is_controller_rule": {
+          "name": "is_controller_rule",
+          "documentation": "True when `_kind_` is the `controller_rule` code of the `access directive kind` group.",
+          "result": {
+            "_type": "P_BMM_SIMPLE_TYPE",
+            "type": "Boolean"
+          }
         }
       },
       "invariants": {
-        "Kind_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_directive_kind, kind.defining_code)",
-        "Effect_valid": "terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_effect, effect.defining_code)",
+        "Kind_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_directive_kind, kind.defining_code)",
+        "Effect_valid": "terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_effect, effect.defining_code)",
         "Restriction_denies": "is_restriction implies is_deny",
         "Opt_out_denies_whole_record": "is_opt_out implies (is_deny and data = Void)",
         "Exceptions_opposite": "exceptions /= Void implies exceptions.for_all (e | e.is_deny /= is_deny and e.exceptions = Void)",
@@ -318,13 +329,19 @@
         "role": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "role",
-          "documentation": "A functional role the caller holds, coded as the role's capability or the caller's token states it, such as a professional role code.",
+          "documentation": "A role the caller performs: the caller matches when it is the `performer` of a `ROLE` in force (its `time_validity` holds the date of the access and its versioned object is not deleted) whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code, or when the verified credential of a caller from outside the system, admitted under an agreement, attests a professional role with the same terminology and code.",
           "type": "DV_CODED_TEXT"
         },
         "relationship": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "relationship",
           "documentation": "A relationship the caller must hold to the subject of the EHR, coded in the `access relationship` group: `care` (a live care relationship), `representative` or `proxy`.",
+          "type": "DV_CODED_TEXT"
+        },
+        "organisation_type": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "organisation_type",
+          "documentation": "A type of organisation the caller acts for: the caller matches when it acts for an `ORGANISATION` whose `name` (`PARTY.type()`) is a `DV_CODED_TEXT` with the same terminology and code, or when the verified credential of a caller from outside the system, admitted under an agreement, attests a type of its healthcare facility with the same terminology and code.",
           "type": "DV_CODED_TEXT"
         },
         "caller_kind": {
@@ -335,9 +352,9 @@
         }
       },
       "invariants": {
-        "Not_empty": "party /= Void or role /= Void or relationship /= Void or caller_kind /= Void",
-        "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
-        "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
+        "Not_empty": "party /= Void or role /= Void or organisation_type /= Void or relationship /= Void or caller_kind /= Void",
+        "Relationship_valid": "relationship /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_relationship, relationship.defining_code)",
+        "Caller_kind_valid": "caller_kind /= Void implies terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_caller_kind, caller_kind.defining_code)"
       }
     },
     "ACCESS_DATA_SCOPE": {
@@ -479,7 +496,7 @@
     },
     "ACCESS_POLICY": {
       "name": "ACCESS_POLICY",
-      "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.",
+      "documentation": "The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps. It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, holds the controller's own rules on which callers may perform which operations on which kinds of data, lists the named directives a subject can accept by reference, states what the subject's view of the access log withholds, and states how long the access log keeps an entry. Kept in its own versioned container, outside any EHR and outside the demographic service.",
       "ancestors": [
         "LOCATABLE"
       ],
@@ -520,9 +537,22 @@
         "purpose_required": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "purpose_required",
-          "documentation": "Whether an access to clinical data must declare a purpose of use.",
+          "documentation": "Whether an access to clinical data must declare a purpose of use. An access without one is refused before the controller's rules are read, whatever rules the policy holds.",
           "is_mandatory": true,
           "type": "Boolean"
+        },
+        "rules": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "rules",
+          "documentation": "The controller's rules for every EHR it keeps: which callers may perform which operations on which kinds of data, such as the rules a Member State lays down under EHDS Art. 11(3). Each is an `ACCESS_DIRECTIVE` of kind `controller_rule`. A deny rule that applies refuses whatever the subject's directives permit; a permit rule acts only on sensitivity, and a permit exception only narrows the deny rule it sits in.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_DIRECTIVE"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
         },
         "catalogue": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
@@ -550,6 +580,12 @@
             "upper_unbounded": true
           }
         },
+        "log_retention": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "log_retention",
+          "documentation": "How long the access log keeps each entry, and the legal bounds the controller declares on that period. Void keeps every entry without end.",
+          "type": "ACCESS_LOG_RETENTION"
+        },
         "details": {
           "_type": "P_BMM_SINGLE_PROPERTY",
           "name": "details",
@@ -563,7 +599,10 @@
         "Catalogue_identified": "catalogue /= Void implies catalogue.for_all (d | d.identifiers /= Void)",
         "Classifications_valid": "classifications /= Void implies not classifications.is_empty",
         "Catalogue_valid": "catalogue /= Void implies not catalogue.is_empty",
-        "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty"
+        "Log_restrictions_valid": "log_restrictions /= Void implies not log_restrictions.is_empty",
+        "Rules_valid": "rules /= Void implies not rules.is_empty",
+        "Rules_kind": "rules /= Void implies rules.for_all (r | r.is_controller_rule and (r.exceptions = Void or r.exceptions.for_all (e | e.is_controller_rule)))",
+        "Catalogue_not_controller_rules": "catalogue /= Void implies catalogue.for_all (d | not d.is_controller_rule and (d.exceptions = Void or d.exceptions.for_all (e | not e.is_controller_rule)))"
       }
     },
     "ACCESS_CLASSIFICATION": {
@@ -609,7 +648,7 @@
         "accessor_kinds": {
           "_type": "P_BMM_CONTAINER_PROPERTY",
           "name": "accessor_kinds",
-          "documentation": "The kinds of accessor the restriction applies to, coded in the openEHR Terminology `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.",
+          "documentation": "The kinds of accessor the restriction applies to, coded in the draft `openehr_access` terminology's `accessor kind` group of the access log, which `ACCESSOR._kind_` is coded in.",
           "is_mandatory": true,
           "type_def": {
             "container_type": "List",
@@ -650,8 +689,89 @@
         }
       },
       "invariants": {
-        "Accessor_kinds_valid": "accessor_kinds.for_all (k | terminology (Terminology_id_openehr).has_code_for_group_id (Group_id_accessor_kind, k.defining_code))",
-        "Withheld_valid": "withheld.for_all (w | terminology (Terminology_id_access_control).has_code_for_group_id (Group_id_access_log_withheld, w.defining_code))"
+        "Accessor_kinds_valid": "accessor_kinds.for_all (k | terminology (Terminology_id_access).has_code_for_group_id (Group_id_accessor_kind, k.defining_code))",
+        "Withheld_valid": "withheld.for_all (w | terminology (Terminology_id_access).has_code_for_group_id (Group_id_access_log_withheld, w.defining_code))"
+      }
+    },
+    "ACCESS_LOG_RETENTION": {
+      "name": "ACCESS_LOG_RETENTION",
+      "documentation": "How long the access log keeps each entry, from the date of access, and the floors and ceilings the law binding the controller sets on that period. The controller declares the bounds; the system records them as the grounds of every entry (`ACCESS_RETENTION._grounds_`) and refuses a policy whose period breaks one.",
+      "ancestors": [
+        "LOCATABLE"
+      ],
+      "properties": {
+        "in_union": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "in_union",
+          "documentation": "Whether the controller declares itself bound by Regulation (EU) 2025/327, so that its Art. 9(2) keeps each entry at least three years from each date of access.",
+          "is_mandatory": true,
+          "type": "Boolean"
+        },
+        "period": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "period",
+          "documentation": "How long each entry is kept from the date of access; Void keeps it without end.",
+          "type": "DV_DURATION"
+        },
+        "floors": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "floors",
+          "documentation": "The minimum periods the law binding the controller sets, each with the provision that sets it.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_RETENTION_BOUND"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        },
+        "ceilings": {
+          "_type": "P_BMM_CONTAINER_PROPERTY",
+          "name": "ceilings",
+          "documentation": "The maximum periods the law binding the controller sets, each with the provision that sets it.",
+          "type_def": {
+            "container_type": "List",
+            "type": "ACCESS_RETENTION_BOUND"
+          },
+          "cardinality": {
+            "lower": 0,
+            "upper_unbounded": true
+          }
+        }
+      },
+      "invariants": {
+        "Floors_valid": "floors /= Void implies not floors.is_empty",
+        "Ceilings_valid": "ceilings /= Void implies not ceilings.is_empty",
+        "Floor_outside_union": "not in_union implies floors /= Void",
+        "Period_union": "in_union and period /= Void implies period.magnitude >= P3Y",
+        "Period_floors": "floors /= Void and period /= Void implies floors.for_all (f | period.magnitude >= f.period.magnitude)",
+        "Ceilings_need_period": "ceilings /= Void implies period /= Void",
+        "Period_ceilings": "ceilings /= Void and period /= Void implies ceilings.for_all (c | period.magnitude <= c.period.magnitude)",
+        "Ceilings_floors": "ceilings /= Void and floors /= Void implies ceilings.for_all (c | floors.for_all (f | c.period.magnitude >= f.period.magnitude))"
+      }
+    },
+    "ACCESS_RETENTION_BOUND": {
+      "name": "ACCESS_RETENTION_BOUND",
+      "documentation": "One floor or ceiling on how long the access log keeps an entry, with the provision that sets it.",
+      "properties": {
+        "period": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "period",
+          "documentation": "The bound, counted from the date of access.",
+          "is_mandatory": true,
+          "type": "DV_DURATION"
+        },
+        "ground": {
+          "_type": "P_BMM_SINGLE_PROPERTY",
+          "name": "ground",
+          "documentation": "The provision that sets the bound, coded in a terminology the jurisdiction names, such as the European Legislation Identifier of the act with the subdivision as the code.",
+          "is_mandatory": true,
+          "type": "DV_CODED_TEXT"
+        }
+      },
+      "invariants": {
+        "Period_valid": "period.magnitude > 0"
       }
     },
     "VERSIONED_ACCESS_POLICY": {

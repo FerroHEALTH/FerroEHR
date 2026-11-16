@@ -142,13 +142,15 @@ profile, and the server acts on the kind:
     holds it to the launch-context patient. A read without it is refused with
     `403`, and the access record carries the reference with the other
     external fields;
-  - under an NL agreement, Wabvpz Art. 15f holds an insurer and an
-    occupational or insurance physician out. A caller whose `nl.role` is the
-    UZI role 01.008 (bedrijfsarts) or 01.048 (verzekeringsarts) is refused
-    with `403` as `refused-wabvpz-role`, and a caller whose
-    `nl.organisation_type` is missing or is not a care provider type of
-    Nictiz's `OrganisatieTypeCodelijst` is refused with `403` as
-    `refused-wabvpz-organisation-type`, which is how an insurer is refused;
+  - the professional roles and the facility types its token attests, in the
+    claims its `[[auth.federation]]` table maps to
+    `professional.hp_professional_role` and `provider.facility_type`, are
+    read as the caller's roles and its organisation's types, each a code of
+    the system the value names. The controller's rules name callers by them
+    ([Controller rules](operational-policy.md#controller-rules)), so a
+    national rule such as one that keeps insurers or occupational physicians
+    out of an exchange is a rule you commit, refused with `403` as
+    `refused-policy-denied`. A value that names no system matches no rule;
   - a `chained` organisation request carries the requester's correlation id
     in the claim or attested `authorization_details` member its
     `[[auth.federation]]` table maps to `correlation_id`, as one string; a
@@ -202,11 +204,17 @@ server). Its person agreement names the service it serves in `ehdsi_service`
   `ERROR_SEC_DATA_INTEGRITY_NOT_ENSURED` (MyHealth@EU Requirements Catalogue
   10.0.0 requirement 11.01.02), recorded as `refused-trc-missing`, before
   the EHR index is asked.
-- The patient is resolved to its EHR through the deployment's
-  [EHR index](installation/config-integrations.md#pixm), compared on the value and the
-  assigning authority, and the request must name that EHR: the route's
-  `{ehr_id}`, or a query's `ehr_id`. The EHR stands in for the launch
-  context the token does not carry (eHDSI XCA Profile 8.0.1 §4.2.1).
+- The patient is resolved to its EHRs in the party domain, with no call to
+  the identity source: the patient's `PERSON` carries the identifier at the
+  `[authz.party_binding.patient] identifier` path, compared on the value and
+  the assigning authority (the `DV_IDENTIFIER` issuer), and its EHRs are the
+  ones its own reference and its `record_subject` references name
+  ([The patient's EHRs](installation/config-integrations.md#the-patients-ehrs)).
+  Under `record.subject_index = "local"` an EHR whose `EHR_STATUS` names the
+  identifier itself is found too. The request must name one of those EHRs:
+  the route's `{ehr_id}`, or a query's `ehr_id`. The EHR stands in for the
+  launch context the token does not carry (eHDSI XCA Profile 8.0.1 §4.2.1).
+  An identifier no `PERSON`, or more than one, carries finds no EHR.
 - Another patient's EHR, an EHR the server does not hold, an EHR an
   opted-out patient's record keeps out of reach, a TRC patient no EHR
   belongs to, and a request that names no EHR all get one answer, `404` of
@@ -345,7 +353,7 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
    |---|---|
    | `200`-family | roles arrived and the operation was permitted |
    | `401` | no credential, or one the server rejected (the body deliberately never says which) |
-   | `403` | the token is valid but carries no role or SMART on openEHR scope the operation needs: a clinical call needs a matching scope and, unless every SMART on openEHR scope it holds is a `system/` scope, at least one role, an admin call needs the admin role and the product scope |
+   | `403` | the token is valid but carries no role or SMART on openEHR scope the operation needs: a clinical call needs a matching scope and, unless every SMART on openEHR scope it holds is a `system/` scope or the caller is the record's person or their representative, at least one role, an admin call needs the admin role and the product scope |
    | `400` | the `Authorization` header itself is malformed; no credential was ever read |
    | `503` | the CDR could not read your issuer's key set again, so the token was never judged: check network egress, not the token |
 

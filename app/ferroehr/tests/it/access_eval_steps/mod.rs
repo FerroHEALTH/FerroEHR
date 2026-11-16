@@ -14,6 +14,8 @@ mod examples;
 mod grounds;
 mod steps;
 mod steps_policy;
+mod steps_purpose;
+mod steps_rules;
 
 use std::sync::Arc;
 
@@ -27,10 +29,11 @@ use uuid::Uuid;
 use ferroehr::access_eval::class::{Class, classify, resolve_verdict};
 use ferroehr::access_eval::condition::CallerKeys;
 use ferroehr::access_eval::procedure::{
-    Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide,
+    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
 };
 use ferroehr::access_eval::scope::{CategoryIndex, Item, Object, Scopes};
-use ferroehr::party_binding::grants::caller::{CallerFacts, CareTeam};
+use ferroehr::party_binding::grants::caller::CareTeam;
+use ferroehr::party_binding::grants::caller::facts::CallerFacts;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::policy_register::CategoriesInForce;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
@@ -57,9 +60,11 @@ pub(super) const OBJECT: &str = "8849182c-82ad-4088-a07f-48ead4180515";
 pub(super) const OTHER: &str = "8849182c-82ad-4088-a07f-48ead4180516";
 
 /// The jurisdiction's sensitivity code system.
-pub(super) const CONFIDENTIALITY: &str = "2.16.840.1.113883.5.25";
+pub(super) const CONFIDENTIALITY: &str = "v3-ActCode";
 /// The jurisdiction's purpose of use code system.
-pub(super) const PURPOSE: &str = "2.16.840.1.113883.5.8";
+pub(super) const PURPOSE: &str = "v3-ActReason";
+/// The jurisdiction's role code system.
+pub(super) const ROLES: &str = "urn:example:roles";
 /// The national category system of the test map.
 pub(super) const CATEGORIES: &str = "urn:example:categories";
 
@@ -85,6 +90,14 @@ pub(super) fn break_glass(asked: Asked<'_>) -> Asked<'_> {
 /// A term of the access control groups.
 pub(super) fn term(code: &str) -> Value {
     coded(TERMINOLOGY, code)
+}
+
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+pub(super) fn provision(code: &str) -> Value {
+    coded(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
+        code,
+    )
 }
 
 /// A coded value of `terminology`.
@@ -114,7 +127,7 @@ pub(super) fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
         "name": { "_type": "DV_TEXT", "value": "Directive" },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term(effect),
+        "effect": provision(effect),
         "emergency_override": false
     });
     if let (Some(d), Some(extra)) = (d.as_object_mut(), extra.as_object()) {
@@ -160,6 +173,21 @@ pub(super) fn settings(
     EhrAccessSettings::from_ehr_access(&json!({ "_type": "EHR_ACCESS", "settings": s }))
         .expect("the settings read")
         .expect("settings")
+}
+
+/// A rule of the controller's policy of `effect` with `extra` members.
+pub(super) fn rule(effect: &str, extra: &Value) -> Value {
+    directive("controller_rule", effect, extra)
+}
+
+/// A role code of [`ROLES`] as an actor scope.
+pub(super) fn role_scope(role: &str) -> Value {
+    json!({ "role": coded(ROLES, role) })
+}
+
+/// A caller of `kind` bound to `party`, performing the role `role`.
+pub(super) fn performing(kind: CallerKind, party: &str, role: &str) -> Caller {
+    with_facts(caller(kind, party), &[code(ROLES, role)], &[])
 }
 
 /// An `ACCESS_POLICY` with `members`.
@@ -214,29 +242,24 @@ pub(super) fn caller(kind: CallerKind, party: &str) -> Caller {
     Caller {
         kind,
         party: Some(party.to_owned()),
-        own_ehr: None,
+        own_ehrs: Vec::new(),
         patient_grants_only: false,
         acts_for: Vec::new(),
-        roles: Vec::new(),
         facts: CallerFacts::default(),
         administrator: false,
         settings: SettingsCaller::new(false, kind == CallerKind::Subject, Some(party.to_owned())),
+        lacks_consent_reference: false,
     }
 }
 
-/// `caller` holding `clearances`, `purposes` and member of `teams`, each
+/// `caller` performing `ROLE`s named `roles` and member of `teams`, each
 /// relationship from 1 November 2026 with no end.
-pub(super) fn with_facts(
-    mut caller: Caller,
-    clearances: &[ForeignCode],
-    purposes: &[ForeignCode],
-    teams: &[&str],
-) -> Caller {
+pub(super) fn with_facts(mut caller: Caller, roles: &[ForeignCode], teams: &[&str]) -> Caller {
     let teams = teams
         .iter()
         .map(|team| care_team(team, "2026-11-01", None))
         .collect();
-    caller.facts = CallerFacts::new(clearances.to_vec(), purposes.to_vec(), teams);
+    caller.facts = CallerFacts::new(roles.to_vec(), teams);
     caller.acts_for = caller
         .facts
         .care_teams()
@@ -318,6 +341,7 @@ impl Case {
                 caller,
                 asked,
                 policy: Policy::of(self.policy.as_ref()),
+                rules: self.rules(),
                 ehr: Ehr {
                     settings: (*class.settings).as_ref(),
                     server_default: self.server_default.unwrap_or(AccessDefault::Open),
@@ -351,6 +375,17 @@ impl Case {
         verdict
     }
 
+    /// The rules of the case's policy.
+    fn rules(
+        &self,
+    ) -> &[openehr_rm::draft::access_control::access_control::access_directive::AccessDirective]
+    {
+        self.policy
+            .as_ref()
+            .and_then(|p| p.rules.as_deref())
+            .unwrap_or_default()
+    }
+
     /// The verdict for `caller` asking `asked`, read from the settings.
     fn direct(&self, caller: &Caller, asked: Asked<'_>) -> Verdict {
         let labels = match &self.settings {
@@ -367,6 +402,7 @@ impl Case {
             caller,
             asked,
             policy: Policy::of(self.policy.as_ref()),
+            rules: self.rules(),
             ehr: Ehr {
                 settings: self.settings.as_ref(),
                 server_default: self.server_default.unwrap_or(AccessDefault::Open),

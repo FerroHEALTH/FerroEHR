@@ -14,7 +14,6 @@ use ferroehr::service::FerroEhrService;
 
 use crate::party_binding::listen_options;
 
-/// Read the policy registers and the access policy in force, and start the
 /// listener of each, so a write on any replica reaches this one.
 ///
 /// # Errors
@@ -36,6 +35,11 @@ pub async fn read_and_listen(
         .read_access_policy()
         .await
         .context("reading the access policy")?;
+    service
+        .registered_templates()
+        .listened()
+        .spawn_listener(clinical.clone());
     service.access_policy().listened().spawn_listener(clinical);
+    service.access_policy().spawn_refresher();
     Ok(())
 }

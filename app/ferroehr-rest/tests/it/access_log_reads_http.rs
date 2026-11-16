@@ -43,12 +43,14 @@ pub(crate) struct Fixture {
     _db: testkit::TestDb,
     _drain: ferroehr::system_log::sender::AuditHandle,
     pub(crate) pool: PgPool,
-    svc: Arc<FerroEhrService>,
+    pub(crate) svc: Arc<FerroEhrService>,
     pub(crate) app: Router,
     /// The child's EHR, which the parent represents.
     pub(crate) ehr: String,
     /// Another person's EHR.
     pub(crate) elsewhere: String,
+    /// The parent's `PERSON`, who represents the child.
+    pub(crate) parent: ferroehr::ids::VoId,
 }
 
 /// The server over a fresh database: the patient portal trusted with its
@@ -58,7 +60,7 @@ pub(crate) struct Fixture {
 pub(crate) async fn fixture() -> Fixture {
     let (db, pool) = common::migrated_pool().await;
     let (sender, drain) =
-        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+        ferroehr::system_log::sender::start(common::local_audit(), None, pool.clone())
             .await
             .expect("the audit sender");
     let svc = Arc::new(
@@ -69,7 +71,7 @@ pub(crate) async fn fixture() -> Fixture {
     );
     let (subject, ehr) = child(&svc).await;
     let (_, elsewhere) = child(&svc).await;
-    representative(
+    let parent = representative(
         &svc,
         PARENT,
         json!([representation(subject, subject, "254", None)]),
@@ -97,6 +99,7 @@ pub(crate) async fn fixture() -> Fixture {
         app,
         ehr,
         elsewhere,
+        parent,
     };
     let (status, body) = get(
         &fixture.app,
@@ -164,13 +167,17 @@ pub(crate) async fn stored(
 ) -> Vec<Value> {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
-        let rows: Vec<String> = sqlx::query_scalar(
-            "SELECT content FROM audit.access_log_record \
-             WHERE record_type = 'ACCESS_LOG_ENTRY' ORDER BY chain_seq",
+        let rows: Vec<String> = sqlx::query_as::<_, (String, Option<String>)>(
+            "SELECT r.content, sh.content FROM audit.access_log_record r \
+             LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
+             WHERE r.record_type = 'ACCESS_LOG_ENTRY' ORDER BY r.chain_seq",
         )
         .fetch_all(pool)
         .await
-        .expect("read the access log");
+        .expect("read the access log")
+        .into_iter()
+        .map(|(content, shared)| common::joined_entry(&content, shared.as_deref()))
+        .collect();
         let kept: Vec<Value> = rows
             .iter()
             .map(|row| serde_json::from_str(row).expect("an entry"))
@@ -424,12 +431,12 @@ fn policy(restricted: bool) -> Value {
         "purpose_required": false
     });
     if restricted {
-        let control = openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+        let access = openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
         policy["log_restrictions"] = json!([{ "_type": "ACCESS_LOG_RESTRICTION",
             "name": { "_type": "DV_TEXT", "value": "Professional withheld" },
             "archetype_node_id": "id11",
-            "accessor_kinds": [coded("openehr", "person")],
-            "withheld": [coded(control, "accessor_party"), coded(control, "accessor_provider")],
+            "accessor_kinds": [coded(access, "person")],
+            "withheld": [coded(access, "accessor_party"), coded(access, "accessor_provider")],
             "legal_grounds": [coded("urn:example:national-law", "art-9-3")] }]);
     }
     policy

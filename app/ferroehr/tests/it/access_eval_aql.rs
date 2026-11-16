@@ -12,16 +12,20 @@
 
 use std::sync::Arc;
 
-use ferroehr::access_eval::condition::{Asking, InForce, RequestAccess, with_request_access};
+use ferroehr::access_eval::condition::care::Care;
+use ferroehr::access_eval::condition::{
+    AccessCondition, Asking, InForce, RequestAccess, with_request_access,
+};
 use ferroehr::access_eval::procedure::{Caller, Emergency, Outcome};
-use ferroehr::access_eval::scope::CategoryIndex;
+use ferroehr::access_eval::scope::{CategoryIndex, Pred};
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::party_binding::BindingMapping;
-use ferroehr::party_binding::grants::caller::CallerFacts;
+use ferroehr::party_binding::grants::caller::facts::CallerFacts;
 use ferroehr::party_binding::policy_mark::TERMINOLOGY;
 use ferroehr::service::ehr::access_rule::SettingsCaller;
 use ferroehr::service::query::request::{AqlQueryRequest, QueryOutcome};
 use ferroehr::service::{DEFAULT_SYSTEM_ID, FerroEhrService};
+use ferroehr::storage::access_projection::EhrSubject;
 use ferroehr::versioning::committer::CommitterIdentity;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::terminology::{
@@ -38,12 +42,17 @@ const COMPOSITIONS: &str =
     "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c ORDER BY c/uid/value";
 /// The count of the same rows.
 const COUNT: &str = "SELECT COUNT(c/uid/value) FROM EHR e CONTAINS COMPOSITION c";
+/// The same rows with no `EHR` source, whose root decides its own EHR
+/// (#5782).
+const UNLINKED: &str = "SELECT c/uid/value FROM COMPOSITION c ORDER BY c/uid/value";
+/// The count of the same rows with no `EHR` source.
+const UNLINKED_COUNT: &str = "SELECT COUNT(c/uid/value) FROM COMPOSITION c";
 
 /// Three EHRs, each with two compositions, the subject of each a `PERSON`,
 /// and the nurse, the `PERSON` the professional the tests ask as is bound to,
 /// which a directive names only as a party of the store.
 struct World {
-    _db: testkit::TestDb,
+    db: testkit::TestDb,
     svc: FerroEhrService,
     ehrs: Vec<(EhrId, uuid::Uuid, Vec<String>)>,
     nurse: String,
@@ -55,6 +64,15 @@ fn term(code: &str) -> Value {
             "defining_code": { "_type": "CODE_PHRASE",
                 "terminology_id": { "_type": "TERMINOLOGY_ID", "value": TERMINOLOGY },
                 "code_string": code } })
+}
+
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
 }
 
 /// A coded value of `terminology`.
@@ -72,7 +90,7 @@ fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
         "name": { "_type": "DV_TEXT", "value": "Directive" },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term(effect),
+        "effect": provision(effect),
         "emergency_override": false
     });
     if let (Some(d), Some(extra)) = (d.as_object_mut(), extra.as_object()) {
@@ -142,7 +160,7 @@ impl World {
         .0
         .to_string();
         Self {
-            _db: db,
+            db,
             svc,
             ehrs,
             nurse,
@@ -203,9 +221,13 @@ impl World {
         all
     }
 
-    /// The subject of EHR `index`.
-    fn subject(&self, index: usize) -> String {
-        self.ehrs[index].1.to_string()
+    /// The subject reference of EHR `index`: its `PERSON` under the CDR's own
+    /// namespace.
+    fn subject(&self, index: usize) -> EhrSubject {
+        EhrSubject::new(
+            ferroehr::config::binding::PartyBindingConfig::default().namespace,
+            self.ehrs[index].1.to_string(),
+        )
     }
 }
 
@@ -214,8 +236,9 @@ struct Ask {
     caller: Caller,
     purpose: Option<&'static str>,
     policy: Option<AccessPolicy>,
-    cared: Vec<String>,
+    cared: Vec<EhrSubject>,
     default: AccessDefault,
+    emergency: Emergency,
 }
 
 impl Ask {
@@ -229,7 +252,7 @@ impl Ask {
     fn subject(world: &World, own: Option<EhrId>) -> Self {
         let mut ask = Self::of(world, CallerKind::Subject);
         ask.caller.party = None;
-        ask.caller.own_ehr = own;
+        ask.caller.own_ehrs = own.into_iter().collect();
         ask.caller.settings = SettingsCaller::new(false, true, None);
         ask
     }
@@ -240,18 +263,19 @@ impl Ask {
             caller: Caller {
                 kind,
                 party: Some(world.nurse.clone()),
-                own_ehr: None,
+                own_ehrs: Vec::new(),
                 patient_grants_only: false,
                 acts_for: Vec::new(),
-                roles: Vec::new(),
                 facts: CallerFacts::default(),
                 administrator: false,
                 settings: SettingsCaller::new(false, false, Some(world.nurse.clone())),
+                lacks_consent_reference: false,
             },
             purpose: None,
             policy: None,
             cared: Vec::new(),
             default: AccessDefault::Open,
+            emergency: Emergency::default(),
         }
     }
 }
@@ -263,7 +287,7 @@ fn request_of(ask: &Ask) -> Arc<RequestAccess> {
         Asking {
             operation: OperationClass::Query,
             purpose: ask.purpose.map(str::to_owned),
-            emergency: Emergency::default(),
+            emergency: ask.emergency,
         },
         InForce {
             policy: ask.policy.clone().map(Arc::new),
@@ -275,6 +299,133 @@ fn request_of(ask: &Ask) -> Arc<RequestAccess> {
     ))
 }
 
+/// How a statement reads the caller's care in [`run_query`].
+#[derive(Clone, Copy, Debug)]
+enum CareForm {
+    /// The subjects of every patient in care, bound into the statement.
+    Census,
+    /// The EHRs whose subjects are in care, as a pinned query binds them
+    /// (#5699); for a query over every EHR the same answer when every cared
+    /// EHR is named.
+    Ehrs,
+    /// The clinical care projection, its rows written for the subjects in
+    /// care under one team, probed by the EHR rows' keyed digests (#5699).
+    Projected,
+}
+
+/// Every care form, each of which must read the same rows.
+const CARE_FORMS: [CareForm; 3] = [CareForm::Census, CareForm::Ehrs, CareForm::Projected];
+
+/// The root key of the test deployment's identifier protection, synthetic.
+const TEST_ROOT_KEY: &str = "5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ffee5a1d0c0ff";
+
+/// The care team the projected care is written under.
+const TEAM: uuid::Uuid = uuid::Uuid::from_u128(0x0199_0000_0000_7000_8000_0000_0000_0001);
+
+/// The namespace this CDR names its parties under, which the EHR rows'
+/// subjects are digested in.
+fn own() -> String {
+    ferroehr::config::binding::PartyBindingConfig::default().namespace
+}
+
+/// The identifier-protection engine of the test deployment.
+fn engine(pool: &sqlx::PgPool) -> ferroehr::identifier_protection::engine::IdentifierProtection {
+    use ferroehr::identifier_protection::config::IdentifierProtectionConfig;
+    ferroehr::identifier_protection::engine::IdentifierProtection::from_config(
+        Some(&IdentifierProtectionConfig {
+            schemes: vec!["nl-bsn".to_owned()],
+            key: None,
+            key_file: None,
+        }),
+        Some(&ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY)),
+        pool.clone(),
+    )
+    .expect("the engine builds")
+    .expect("protection is enabled")
+}
+
+/// Write the care projection of `cared`, each relationship from `from` until
+/// `until`, under [`TEAM`], and every EHR row's keyed digest: what the care
+/// projector writes from the party domain.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn project(
+    world: &World,
+    cared: &[(
+        EhrSubject,
+        Option<jiff::civil::Date>,
+        Option<jiff::civil::Date>,
+    )],
+) {
+    use ferroehr::storage::access_care::{self, CareRow, cared_key, subject_key};
+    let pool = world.db.pool();
+    let engine = engine(&pool);
+    let mut conn = pool.acquire().await.expect("a connection");
+    let mut tx = sqlx::Connection::begin(&mut *conn)
+        .await
+        .expect("a transaction");
+    let persons: Vec<uuid::Uuid> = world.ehrs.iter().map(|(_, person, _)| *person).collect();
+    let rows: Vec<CareRow> = cared
+        .iter()
+        .map(|(subject, from, until)| CareRow {
+            digest: engine.care_subject_digest(&cared_key(subject)),
+            person: subject.id.parse().unwrap_or(uuid::Uuid::nil()),
+            team: TEAM,
+            from: *from,
+            until: *until,
+        })
+        .collect();
+    access_care::clear(&mut tx)
+        .await
+        .expect("the projection is cleared");
+    access_care::replace(&mut tx, &persons, &rows)
+        .await
+        .expect("the rows are written");
+    let undigested = access_care::undigested(&mut tx, 100)
+        .await
+        .expect("the EHRs");
+    let digests: Vec<_> = undigested
+        .into_iter()
+        .map(|(ehr, subject)| {
+            let digest = engine.care_subject_digest(&subject_key(&own(), &subject));
+            (ehr, subject, digest)
+        })
+        .collect();
+    access_care::set_digests(&mut tx, &digests)
+        .await
+        .expect("the digests are written");
+    tx.commit().await.expect("the projection commits");
+}
+
+/// The projected care probe of the caller on `day` with `grace`.
+fn projected(day: jiff::civil::Date, grace: &str) -> Care {
+    Care::Projected(ferroehr::access_eval::condition::care::ProjectedCare {
+        teams: vec![TEAM].into(),
+        day,
+        grace: grace.to_owned(),
+    })
+}
+
+/// The care `ask` holds, in `form`.
+fn care_of(world: &World, ask: &Ask, form: CareForm) -> Care {
+    match form {
+        CareForm::Projected => projected(jiff::Zoned::now().date(), "P0D"),
+        CareForm::Census => Care::Census(ask.cared.clone().into()),
+        CareForm::Ehrs => Care::Ehrs(
+            world
+                .ehrs
+                .iter()
+                .enumerate()
+                .filter(|(index, _)| ask.cared.contains(&world.subject(*index)))
+                .map(|(_, (ehr_id, _, _))| ehr_id.0)
+                .collect::<Vec<_>>()
+                .into(),
+        ),
+    }
+}
+
 /// The outcome of `aql` run by `access` as `ask`, from `offset`, at most
 /// `fetch`.
 async fn run_query(
@@ -284,11 +435,23 @@ async fn run_query(
     aql: &str,
     page: Option<(i64, i64)>,
 ) -> QueryOutcome {
+    run_query_as(world, ask, access, aql, page, CareForm::Census).await
+}
+
+/// [`run_query`] with the caller's care read in `form`.
+async fn run_query_as(
+    world: &World,
+    ask: &Ask,
+    access: &Arc<RequestAccess>,
+    aql: &str,
+    page: Option<(i64, i64)>,
+    form: CareForm,
+) -> QueryOutcome {
     let svc = &world.svc;
     let run = async {
         let classes = svc.ehr_access_classes().await.expect("the classes read");
         let request = AqlQueryRequest {
-            ehr_access: access.condition(&classes, ask.cared.clone()),
+            ehr_access: access.condition(&classes, care_of(world, ask, form)),
             offset: page.map(|(offset, _)| offset),
             fetch: page.map(|(_, fetch)| fetch),
             ..AqlQueryRequest::default()
@@ -300,13 +463,26 @@ async fn run_query(
     Box::pin(with_request_access(Arc::clone(access), run)).await
 }
 
-/// The rows of `aql` `ask` reads, from `offset`, at most `fetch`.
+/// The rows of `aql` `ask` reads, from `offset`, at most `fetch`, with the
+/// same rows under every care form.
 async fn rows(world: &World, ask: &Ask, aql: &str, page: Option<(i64, i64)>) -> Vec<Value> {
-    let outcome = run_query(world, ask, &request_of(ask), aql, page).await;
-    outcome.result_set["rows"]
-        .as_array()
-        .cloned()
-        .unwrap_or_default()
+    let mut read: Option<Vec<Value>> = None;
+    for form in CARE_FORMS {
+        if matches!(form, CareForm::Projected) {
+            let cared: Vec<_> = ask.cared.iter().map(|s| (s.clone(), None, None)).collect();
+            project(world, &cared).await;
+        }
+        let outcome = run_query_as(world, ask, &request_of(ask), aql, page, form).await;
+        let rows = outcome.result_set["rows"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        match &read {
+            Some(first) => assert_eq!(&rows, first, "{form:?} reads what the census reads"),
+            None => read = Some(rows),
+        }
+    }
+    read.unwrap_or_default()
 }
 
 /// The composition ids `ask` reads, each page of one row in turn, and checks
@@ -332,6 +508,51 @@ async fn assert_reads(world: &World, ask: &Ask, expected: &[String], case: &str)
         json!(expected.len()),
         "{case}: the count counts only readable rows"
     );
+    let unlinked = ids(rows(world, ask, UNLINKED, None).await);
+    assert_eq!(unlinked, expected, "{case}: the rows with no EHR source");
+    let paged = ids(rows(world, ask, UNLINKED, Some((1, 2))).await);
+    let window: Vec<String> = expected.iter().skip(1).take(2).cloned().collect();
+    assert_eq!(paged, window, "{case}: a page with no EHR source");
+    let counted = rows(world, ask, UNLINKED_COUNT, None).await;
+    assert_eq!(
+        counted[0][0],
+        json!(expected.len()),
+        "{case}: the count with no EHR source"
+    );
+    for (index, (ehr_id, _, objects)) in world.ehrs.iter().enumerate() {
+        let of_ehr: Vec<String> = expected
+            .iter()
+            .filter(|id| objects.contains(id))
+            .cloned()
+            .collect();
+        let pinned = pinned_to(COMPOSITIONS, *ehr_id);
+        let whole = ids(rows(world, ask, &pinned, None).await);
+        assert_eq!(whole, of_ehr, "{case}: the rows of EHR {index} pinned");
+        let mut paged = Vec::new();
+        for offset in 0..=i64::try_from(of_ehr.len()).expect("a count") {
+            paged.extend(ids(rows(world, ask, &pinned, Some((offset, 1))).await));
+        }
+        assert_eq!(
+            paged, of_ehr,
+            "{case}: one row per page of EHR {index} pinned"
+        );
+        let counted = rows(world, ask, &pinned_to(COUNT, *ehr_id), None).await;
+        assert_eq!(
+            counted[0][0],
+            json!(of_ehr.len()),
+            "{case}: the count of EHR {index} pinned"
+        );
+    }
+}
+
+/// `aql`, a query over `EHR e`, pinned to `ehr_id` by its own `WHERE`
+/// clause, which the service decides before the statement (#5746).
+fn pinned_to(aql: &str, ehr_id: EhrId) -> String {
+    let filter = format!(" WHERE e/ehr_id/value = '{ehr_id}'");
+    match aql.find(" ORDER BY") {
+        Some(at) => format!("{}{filter}{}", &aql[..at], &aql[at..]),
+        None => format!("{aql}{filter}"),
+    }
 }
 
 /// Settings of `default` holding `directives` and `labels`.
@@ -457,14 +678,14 @@ async fn step_3_a_consent_deny_leaves_the_query() {
     .await;
 }
 
-/// Step 4: a labelled object the caller is not cleared for contributes no
-/// row.
+/// Step 6: a labelled object no permit names contributes no row; a permit
+/// rule naming the caller's role clears it.
 #[tokio::test]
-async fn step_4_a_sensitive_object_leaves_the_query() {
+async fn step_6_a_sensitive_object_leaves_the_query() {
     let world = Box::pin(World::new()).await;
     let labelled = world.objects(0)[1].clone();
     let label = json!({ "_type": "ACCESS_LABEL", "target": object_ref(&labelled),
-                        "sensitivities": [coded("2.16.840.1.113883.5.25", "HIV")] });
+                        "sensitivities": [coded("v3-ActCode", "HIV")] });
     world.settings(0, &settings("open", &[], &[label])).await;
     assert_reads(
         &world,
@@ -474,21 +695,36 @@ async fn step_4_a_sensitive_object_leaves_the_query() {
     )
     .await;
     let mut cleared = Ask::professional(&world);
-    cleared.caller.facts = cleared_for_hiv();
-    assert_reads(&world, &cleared, &world.every(), "cleared").await;
+    cleared.policy = Some(policy(&json!({ "rules": [{
+        "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "HIV specialists" },
+        "archetype_node_id": "at0001", "kind": term("controller_rule"), "effect": provision("permit"),
+        "applies_to": [{ "role": coded(ROLES, "HIV_SPECIALIST") }],
+        "data": [{ "sensitivities": [coded("v3-ActCode", "HIV")] }],
+        "emergency_override": false }] })));
+    assert_reads(
+        &world,
+        &cleared,
+        &except(&world, &[], &[&labelled]),
+        "another role",
+    )
+    .await;
+    cleared.caller.facts = performing("HIV_SPECIALIST");
+    assert_reads(&world, &cleared, &world.every(), "cleared by a rule").await;
 }
 
-/// A caller's facts clearing `HIV`.
-fn cleared_for_hiv() -> CallerFacts {
+/// The roles of the role code system [`ROLES`]: a caller performing `role`.
+fn performing(role: &str) -> CallerFacts {
     CallerFacts::new(
         vec![ForeignCode {
-            terminology: "2.16.840.1.113883.5.25".to_owned(),
-            code: "HIV".to_owned(),
+            terminology: ROLES.to_owned(),
+            code: role.to_owned(),
         }],
-        Vec::new(),
         Vec::new(),
     )
 }
+
+/// The jurisdiction's role code system.
+const ROLES: &str = "urn:example:roles";
 
 /// An `ACCESS_POLICY` with `members`.
 fn policy(members: &Value) -> AccessPolicy {
@@ -507,11 +743,11 @@ fn policy(members: &Value) -> AccessPolicy {
     openehr_its::json::from_canonical_value(&p).expect("the test policy reads")
 }
 
-/// Step 5: where the policy requires a care relationship, a professional
+/// Step 7: where the policy requires a care relationship, a professional
 /// reads only the EHRs of the subjects in their care, with or without
 /// settings.
 #[tokio::test]
-async fn step_5_only_the_ehrs_in_care_are_queried() {
+async fn step_7_only_the_ehrs_in_care_are_queried() {
     let world = Box::pin(World::new()).await;
     world.settings(1, &settings("open", &[], &[])).await;
     let mut ask = Ask::professional(&world);
@@ -527,32 +763,138 @@ async fn step_5_only_the_ehrs_in_care_are_queried() {
     .await;
 }
 
-/// Step 6: where the policy requires a purpose, a query without one reads
-/// nothing, and one the caller may declare reads everything.
+/// The care projection reads a relationship's dates as the evaluator reads
+/// them (`CareTeam::live_on`): begun, and open or ended less than the grace
+/// before the day of the request (#5699).
 #[tokio::test]
-async fn step_6_a_missing_purpose_reads_nothing() {
+async fn the_projection_reads_the_dates_of_care_as_the_evaluator() {
+    use ferroehr::party_binding::grants::caller::CareTeam;
+    let world = Box::pin(World::new()).await;
+    world.settings(1, &settings("open", &[], &[])).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    let access = request_of(&ask);
+    let today = access.today();
+    let day = |days: i64| {
+        today
+            .checked_add(jiff::Span::new().days(days))
+            .expect("a date")
+    };
+    let cases: [(Option<jiff::civil::Date>, Option<jiff::civil::Date>, &str); 7] = [
+        (None, None, "P14D"),
+        (Some(day(1)), None, "P14D"),
+        (Some(today), Some(day(1)), "P0D"),
+        (None, Some(today), "P0D"),
+        (None, Some(day(-13)), "P14D"),
+        (None, Some(day(-14)), "P14D"),
+        (None, Some(day(-1)), "P1M"),
+    ];
+    for (from, until, grace) in cases {
+        let span: jiff::Span = grace.parse().expect("a grace");
+        let live = CareTeam::spanning(TEAM, from, until).live_on(today, span);
+        project(&world, &[(world.subject(0), from, until)]).await;
+        let run = async {
+            let classes = world
+                .svc
+                .ehr_access_classes()
+                .await
+                .expect("the classes read");
+            let request = AqlQueryRequest {
+                ehr_access: access.condition(&classes, projected(today, grace)),
+                ..AqlQueryRequest::default()
+            };
+            Box::pin(world.svc.execute_aql(COMPOSITIONS, None, &request))
+                .await
+                .expect("the query runs")
+        };
+        let outcome = Box::pin(with_request_access(Arc::clone(&access), run)).await;
+        let read: Vec<String> = outcome.result_set["rows"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|row| row[0].as_str())
+            .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+            .collect();
+        let expected = if live { world.objects(0) } else { Vec::new() };
+        assert_eq!(
+            read, expected,
+            "from {from:?} until {until:?} with grace {grace}"
+        );
+    }
+}
+
+/// A care census far larger than the store reads exactly the EHRs whose
+/// subjects it names, with or without settings, whatever else it holds: the
+/// subjects bound once as a `jsonb` object match as the bound array matched
+/// (#5645).
+#[tokio::test]
+async fn a_large_care_census_reads_exactly_the_ehrs_in_care() {
+    let world = Box::pin(World::new()).await;
+    world.settings(1, &settings("open", &[], &[])).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    let others: Vec<EhrSubject> = (0..5000)
+        .map(|_| {
+            EhrSubject::new(
+                ferroehr::config::binding::PartyBindingConfig::default().namespace,
+                uuid::Uuid::now_v7().to_string(),
+            )
+        })
+        .collect();
+    ask.cared.clone_from(&others);
+    assert_reads(&world, &ask, &[], "a census naming no subject of the store").await;
+    let upper = world.subject(1);
+    ask.cared
+        .push(EhrSubject::new(upper.namespace, upper.id.to_uppercase()));
+    assert_reads(&world, &ask, &[], "a subject named in another case").await;
+    ask.cared
+        .extend([world.subject(2), world.subject(0), world.subject(2)]);
+    assert_reads(
+        &world,
+        &ask,
+        &except(&world, &[1], &[]),
+        "two subjects among five thousand, one named twice",
+    )
+    .await;
+    ask.cared.push(world.subject(1));
+    assert_reads(&world, &ask, &world.every(), "every subject in care").await;
+}
+
+/// Step 4: where the policy requires a purpose, a query without one reads
+/// nothing, whatever rules exist; step 5: a rule limiting the purposes a
+/// professional declares reads nothing for another purpose.
+#[tokio::test]
+async fn step_4_a_missing_purpose_reads_nothing() {
     let world = Box::pin(World::new()).await;
     let mut ask = Ask::professional(&world);
     ask.policy = Some(policy(&json!({ "purpose_required": true })));
     assert_reads(&world, &ask, &[], "no purpose").await;
     ask.purpose = Some("TREAT");
-    assert_reads(&world, &ask, &[], "a purpose not permitted").await;
-    ask.caller.facts = CallerFacts::new(
-        Vec::new(),
-        vec![ForeignCode {
-            terminology: "2.16.840.1.113883.5.8".to_owned(),
-            code: "TREAT".to_owned(),
-        }],
-        Vec::new(),
-    );
+    assert_reads(&world, &ask, &world.every(), "a purpose").await;
+    ask.policy = Some(policy(&json!({ "purpose_required": true, "rules": [{
+        "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "Treatment only" },
+        "archetype_node_id": "at0001", "kind": term("controller_rule"), "effect": provision("deny"),
+        "applies_to": [{ "caller_kind": term("professional") }],
+        "exceptions": [{
+            "_type": "ACCESS_DIRECTIVE", "name": { "_type": "DV_TEXT", "value": "Treatment" },
+            "archetype_node_id": "at0002", "kind": term("controller_rule"),
+            "effect": provision("permit"),
+            "purposes": [coded("v3-ActReason", "TREAT")],
+            "emergency_override": false }],
+        "emergency_override": false }] })));
     assert_reads(&world, &ask, &world.every(), "a permitted purpose").await;
+    ask.purpose = Some("HRESCH");
+    assert_reads(&world, &ask, &[], "a purpose the rule denies").await;
+    ask.purpose = None;
+    assert_reads(&world, &ask, &[], "no purpose under the rule").await;
 }
 
-/// Step 7: an EHR that requires consent contributes only the rows a permit
+/// Step 8: an EHR that requires consent contributes only the rows a permit
 /// covers, and the server's restricted default withholds every EHR with no
 /// settings.
 #[tokio::test]
-async fn step_7_the_default_disposition_bounds_the_query() {
+async fn step_8_the_default_disposition_bounds_the_query() {
     let world = Box::pin(World::new()).await;
     let permitted = world.objects(0)[0].clone();
     let permit = directive(
@@ -759,7 +1101,7 @@ async fn a_shared_class_reads_each_ehrs_labels() {
     let world = Box::pin(World::new()).await;
     let label = |object: &str| {
         json!({ "_type": "ACCESS_LABEL", "target": object_ref(object),
-                "sensitivities": [coded("2.16.840.1.113883.5.25", "HIV")] })
+                "sensitivities": [coded("v3-ActCode", "HIV")] })
     };
     let (first, second) = (world.objects(0)[0].clone(), world.objects(2)[1].clone());
     world
@@ -778,11 +1120,12 @@ async fn a_shared_class_reads_each_ehrs_labels() {
     .await;
 }
 
-/// A query judged on classes read before a commit made a new one withholds
-/// every EHR of the new class, never admits it under what it held before;
-/// once the classes are read again the EHR is back (#5588).
+/// A query judged on classes read before a commit made a new one never
+/// answers an EHR of the new class under what it held before, nor leaves it
+/// out: the statement fails, the service reads the classes again and
+/// answers every EHR as the classes in force decide it (#5588, #5794).
 #[tokio::test]
-async fn an_ehr_of_a_class_the_condition_does_not_hold_is_withheld() {
+async fn an_ehr_of_a_class_the_condition_does_not_hold_is_judged_again() {
     let world = Box::pin(World::new()).await;
     let ask = Ask::professional(&world);
     let access = request_of(&ask);
@@ -793,7 +1136,7 @@ async fn an_ehr_of_a_class_the_condition_does_not_hold_is_withheld() {
                 .ehr_access_classes()
                 .await
                 .expect("the classes read"),
-            Vec::new(),
+            Care::Census(Vec::new().into()),
         )
     }))
     .await;
@@ -816,11 +1159,7 @@ async fn an_ehr_of_a_class_the_condition_does_not_hold_is_withheld() {
         .filter_map(|row| row[0].as_str())
         .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
         .collect();
-    assert_eq!(
-        served,
-        except(&world, &[1], &[]),
-        "the new class is withheld"
-    );
+    assert_eq!(served, world.every(), "the new class is read again");
     assert_reads(&world, &ask, &world.every(), "the classes read again").await;
 }
 
@@ -964,6 +1303,463 @@ async fn a_patient_is_refused_every_ehr_but_their_own() {
             nobody.outcome(*ehr, &item),
             refused,
             "a patient context naming no EHR reaches none"
+        );
+    }
+}
+
+/// The condition `access` applies to a query of the running request, with
+/// its care unread, as the protocol adapter hands it to the service.
+async fn unresolved(world: &World, access: &Arc<RequestAccess>) -> AccessCondition {
+    let classes = world
+        .svc
+        .ehr_access_classes()
+        .await
+        .expect("the classes read");
+    access.condition(&classes, Care::Unresolved)
+}
+
+/// A query pinned to one EHR is decided before its statement, from the
+/// copy of that EHR's settings, so the statement carries only what the
+/// verdict leaves to each object; a query over several EHRs keeps the class
+/// condition (#5746).
+#[tokio::test]
+async fn a_query_pinned_to_one_ehr_is_decided_before_the_statement() {
+    let world = Box::pin(World::new()).await;
+    let hidden = world.objects(1)[0].clone();
+    let restriction = directive(
+        "restriction",
+        "deny",
+        &json!({ "data": [{ "objects": [object_ref(&hidden)] }] }),
+    );
+    world
+        .settings(1, &settings("open", &[restriction], &[]))
+        .await;
+    let ask = Ask::professional(&world);
+    let access = request_of(&ask);
+    let (one, two) = (world.ehrs[1].0, world.ehrs[0].0);
+    let svc = &world.svc;
+    let (pinned, unpinned, several) = Box::pin(with_request_access(Arc::clone(&access), async {
+        let condition = unresolved(&world, &access).await;
+        let pin = |ehrs: Option<Vec<EhrId>>| {
+            let condition = condition.clone();
+            async move {
+                Box::pin(svc.query_access_condition(&condition, ehrs.as_deref()))
+                    .await
+                    .expect("the condition reads")
+            }
+        };
+        (
+            pin(Some(vec![one])).await,
+            pin(None).await,
+            pin(Some(vec![one, two])).await,
+        )
+    }))
+    .await;
+    let decided = pinned.pinned().expect("the one EHR is decided");
+    assert_eq!(decided.ehr, one.0);
+    assert!(decided.settled, "EHR 1 has a settings row");
+    assert_ne!(
+        decided.admitted,
+        Pred::True,
+        "the restriction is left to each object"
+    );
+    assert_ne!(
+        decided.admitted,
+        Pred::False,
+        "the rest of the EHR is admitted"
+    );
+    assert!(
+        unpinned.pinned().is_none(),
+        "a query over any EHR is not pinned"
+    );
+    assert!(
+        several.pinned().is_none(),
+        "a query over two EHRs is not pinned"
+    );
+    let request = AqlQueryRequest {
+        ehr_access: pinned,
+        ..AqlQueryRequest::default()
+    };
+    let outcome = Box::pin(with_request_access(
+        Arc::clone(&access),
+        svc.execute_aql(&pinned_to(COMPOSITIONS, one), None, &request),
+    ))
+    .await
+    .expect("the query runs");
+    let served: Vec<String> = outcome.result_set["rows"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|row| row[0].as_str())
+        .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+        .collect();
+    let expected: Vec<String> = world
+        .objects(1)
+        .into_iter()
+        .filter(|id| *id != hidden)
+        .collect();
+    assert_eq!(served, expected, "the restricted object is withheld");
+}
+
+/// A verdict judged on a copy of the EHR's settings older than the row in
+/// force never answers from that copy: the statement fails, the service
+/// reads the copy again and answers what the row in force admits; a store
+/// whose revision keeps moving past every copy is refused with `503` once
+/// the wait has passed, never answered with no rows (#5746, #5794).
+#[tokio::test]
+async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
+    let world = Box::pin(World::new()).await;
+    world.settings(0, &settings("open", &[], &[])).await;
+    let ask = Ask::professional(&world);
+    let access = request_of(&ask);
+    let ehr_id = world.ehrs[0].0;
+    let svc = &world.svc;
+    let aql = pinned_to(COMPOSITIONS, ehr_id);
+    let run = |older: bool| {
+        let access = Arc::clone(&access);
+        let aql = aql.clone();
+        let world = &world;
+        async move {
+            Box::pin(with_request_access(Arc::clone(&access), async {
+                let condition = unresolved(world, &access)
+                    .await
+                    .with_care(Care::Ehrs(Vec::new().into()));
+                let mut entry = svc.ehr_access_entry(ehr_id).await.expect("the copy reads");
+                if older {
+                    entry.revision.settings = entry.revision.settings.map(|ordinal| ordinal - 1);
+                }
+                let request = AqlQueryRequest {
+                    ehr_access: access.pin(&condition, ehr_id, &entry),
+                    ..AqlQueryRequest::default()
+                };
+                assert!(request.ehr_access.pinned().is_some(), "the EHR is decided");
+                Box::pin(svc.execute_aql(&aql, None, &request)).await
+            }))
+            .await
+        }
+    };
+    for older in [false, true] {
+        let outcome = run(older).await.expect("the query runs");
+        let served: Vec<String> = outcome.result_set["rows"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|row| row[0].as_str())
+            .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+            .collect();
+        assert_eq!(
+            served,
+            world.objects(0),
+            "a copy older than the row: {older}"
+        );
+    }
+    // NOTE: our own design (#5794), a store that moves past every read of the copy is
+    // simulated by a revision check that always finds the copy older.
+    sqlx::query(
+        "CREATE OR REPLACE FUNCTION access_in_force(ehr uuid, judged text) RETURNS boolean \
+         LANGUAGE plpgsql STABLE AS $$ BEGIN \
+         RAISE EXCEPTION 'moved' USING ERRCODE = 'ZA001'; END $$",
+    )
+    .execute(&world.db.pool())
+    .await
+    .expect("the revision check is replaced");
+    let started = std::time::Instant::now();
+    let refused = run(true)
+        .await
+        .expect_err("a copy that never catches up is refused");
+    assert!(
+        matches!(refused, ferroehr::error::ServiceError::AccessRefreshing(_)),
+        "the refusal is the 503 of a refreshing access state: {refused:?}"
+    );
+    assert!(
+        started.elapsed() >= std::time::Duration::from_millis(100),
+        "the service asked again for the bounded wait first"
+    );
+}
+
+/// Break-glass: where the policy requires a care relationship, the
+/// break-glass role declaring an emergency purpose reads every EHR without
+/// one, a restriction whose `emergency_override` holds lifted and a consent
+/// deny without it still in force (EHDS Art. 11(5)); without the emergency
+/// it reads nothing.
+#[tokio::test]
+async fn break_glass_reads_what_the_emergency_lifts() {
+    let world = Box::pin(World::new()).await;
+    let restricted = world.objects(1)[0].clone();
+    let mut restriction = directive(
+        "restriction",
+        "deny",
+        &json!({ "data": [{ "objects": [object_ref(&restricted)] }] }),
+    );
+    restriction["emergency_override"] = json!(true);
+    world
+        .settings(1, &settings("open", &[restriction], &[]))
+        .await;
+    let deny = directive(
+        "consent",
+        "deny",
+        &json!({ "applies_to": [{ "party": {
+        "_type": "PARTY_REF", "namespace": "local", "type": "PERSON",
+        "id": { "_type": "HIER_OBJECT_ID", "value": world.nurse } } }] }),
+    );
+    world.settings(2, &settings("open", &[deny], &[])).await;
+    let mut ask = Ask::professional(&world);
+    ask.policy = Some(policy(&json!({ "care_relationship_required": true })));
+    assert_reads(&world, &ask, &[], "no relationship and no emergency").await;
+    ask.emergency = Emergency {
+        declared: true,
+        break_glass: true,
+        opt_out_override: false,
+    };
+    assert_reads(&world, &ask, &except(&world, &[2], &[]), "break-glass").await;
+}
+
+/// The newest compositions, as the benchmark's population page asks for
+/// them (#5782).
+const NEWEST: &str = "SELECT c/uid/value, c/context/start_time/value FROM EHR e \
+     CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC, c/uid/value ASC";
+
+/// The composition ids of the rows of `aql` `ask` reads, sorted.
+async fn sorted_ids(world: &World, ask: &Ask, aql: &str) -> Vec<String> {
+    let mut ids: Vec<String> = rows(world, ask, aql, None)
+        .await
+        .iter()
+        .filter_map(|row| row[0].as_str())
+        .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// The composition ids `access` serves for `aql` under `condition`, in row
+/// order.
+async fn served_under(
+    world: &World,
+    access: &Arc<RequestAccess>,
+    condition: AccessCondition,
+    aql: &str,
+) -> Vec<String> {
+    let request = AqlQueryRequest {
+        ehr_access: condition,
+        ..AqlQueryRequest::default()
+    };
+    let outcome = Box::pin(with_request_access(
+        Arc::clone(access),
+        world.svc.execute_aql(aql, None, &request),
+    ))
+    .await
+    .expect("the query runs");
+    outcome.result_set["rows"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|row| row[0].as_str())
+        .map(|uid| uid.split("::").next().unwrap_or_default().to_owned())
+        .collect()
+}
+
+/// Whether the condition of `ask` admits every item of every class it
+/// knows, of an EHR held closed and of an EHR with no settings, so the
+/// statement reads it as "the EHR's class is known" (#5782).
+async fn admits_every_known(world: &World, ask: &Ask) -> bool {
+    let access = request_of(ask);
+    let classes = world.svc.ehr_access_classes().await.expect("the classes");
+    let condition = Box::pin(with_request_access(Arc::clone(&access), async {
+        access.condition(&classes, Care::Census(Vec::new().into()))
+    }))
+    .await;
+    let groups = condition.groups().expect("a condition over the classes");
+    groups.default.is_none()
+        && groups.closed.admits_all()
+        && groups.groups.iter().all(|(_, pair)| pair.admits_all())
+}
+
+/// A restriction scoped by root archetype withholds the objects whose trunk
+/// head has that root, case-folded, read from the head row the commit
+/// writes, and no object of another root (#5782).
+#[tokio::test]
+async fn an_archetype_scope_reads_the_root_of_the_trunk_head() {
+    let world = Box::pin(World::new()).await;
+    let restriction = |archetype: &str| {
+        directive(
+            "restriction",
+            "deny",
+            &json!({ "data": [{ "archetypes": [
+                { "_type": "ARCHETYPE_ID", "value": archetype }] }] }),
+        )
+    };
+    let mut report = composition("report");
+    report["archetype_node_id"] = json!("openEHR-EHR-COMPOSITION.report.v1");
+    report["archetype_details"]["archetype_id"]["value"] =
+        json!("openEHR-EHR-COMPOSITION.report.v1");
+    let reported = world
+        .svc
+        .create_composition(world.ehrs[1].0, uv(&report, "249", None))
+        .await
+        .expect("the report commits")
+        .vo_id
+        .0
+        .to_string();
+    let ask = Ask::professional(&world);
+    let mut unrestricted = world.every();
+    unrestricted.push(reported.clone());
+    unrestricted.sort();
+    assert_eq!(
+        sorted_ids(&world, &ask, UNLINKED).await,
+        unrestricted,
+        "no scope withholds nothing"
+    );
+    world
+        .settings(
+            0,
+            &settings(
+                "open",
+                &[restriction("openEHR-EHR-COMPOSITION.ENCOUNTER.v1")],
+                &[],
+            ),
+        )
+        .await;
+    world
+        .settings(
+            1,
+            &settings(
+                "open",
+                &[restriction("openEHR-EHR-COMPOSITION.report.v1")],
+                &[],
+            ),
+        )
+        .await;
+    let expected = except(&world, &[0], &[]);
+    assert!(!expected.contains(&reported), "the report is EHR 1's own");
+    assert_reads(&world, &ask, &expected, "the encounters and the report").await;
+}
+
+/// A caller every known class, an EHR held closed and an EHR with no
+/// settings admit in full reads every EHR of a known class, by every query
+/// shape, and an EHR of a class its condition does not hold once the
+/// classes are read again (#5794); a caller
+/// a class refuses keeps the full condition and reads without that class's
+/// EHR (#5782).
+#[tokio::test]
+async fn a_condition_admitting_every_known_class_reads_as_the_full_one() {
+    let world = Box::pin(World::new()).await;
+    world
+        .settings(
+            0,
+            &settings("open", &[directive("opt_out", "deny", &json!({}))], &[]),
+        )
+        .await;
+    world.settings(1, &settings("restricted", &[], &[])).await;
+    let mut administrator = Ask::professional(&world);
+    administrator.caller.administrator = true;
+    assert!(
+        admits_every_known(&world, &administrator).await,
+        "the administrator's condition admits every known class"
+    );
+    assert_reads(&world, &administrator, &world.every(), "the administrator").await;
+    assert_eq!(
+        sorted_ids(&world, &administrator, NEWEST).await,
+        world.every(),
+        "the administrator's newest compositions"
+    );
+    let professional = Ask::professional(&world);
+    assert!(
+        !admits_every_known(&world, &professional).await,
+        "a class refuses the professional something"
+    );
+    let expected = except(&world, &[1], &[]);
+    assert_reads(&world, &professional, &expected, "the professional").await;
+    assert_eq!(
+        sorted_ids(&world, &professional, NEWEST).await,
+        expected,
+        "the professional's newest compositions"
+    );
+    let access = request_of(&administrator);
+    let stale = Box::pin(with_request_access(Arc::clone(&access), async {
+        access.condition(
+            &world
+                .svc
+                .ehr_access_classes()
+                .await
+                .expect("the classes read"),
+            Care::Census(Vec::new().into()),
+        )
+    }))
+    .await;
+    world
+        .settings(
+            2,
+            &settings("open", &[opt_out_from("2020-01-01T00:00:00Z")], &[]),
+        )
+        .await;
+    for aql in [COMPOSITIONS, UNLINKED] {
+        assert_eq!(
+            served_under(&world, &access, stale.clone(), aql).await,
+            world.every(),
+            "the administrator's stale condition is judged again: {aql}"
+        );
+    }
+    assert!(
+        admits_every_known(&world, &administrator).await,
+        "the classes read again"
+    );
+    assert_reads(
+        &world,
+        &administrator,
+        &world.every(),
+        "the classes read again",
+    )
+    .await;
+}
+
+/// The `EHR_ACCESS` of an EHR a pinned query reads is answered as the query
+/// over every EHR answers it: to an administrator, who reads every EHR's
+/// settings, and to a caller of no administrator role, whom no settings name
+/// a gate-keeper, and who reads none (#5746).
+#[tokio::test]
+async fn a_pinned_query_reads_the_settings_the_caller_may_read() {
+    use ferroehr::system_log::access_context::with_roles;
+    use ferroehr::versioning::committer::with_committer;
+    let world = Box::pin(World::new()).await;
+    world.settings(0, &settings("open", &[], &[])).await;
+    let aql = "SELECT a/uid/value FROM EHR e CONTAINS EHR_ACCESS a ORDER BY a/uid/value";
+    let ask = Ask::professional(&world);
+    for (role, each) in [("ADMIN", 1), ("USER", 0)] {
+        let roles = || vec![role.to_owned()];
+        let doctor = || {
+            Some(CommitterIdentity {
+                subject: "doctor".to_owned(),
+                ..administrator()
+            })
+        };
+        let every = Box::pin(with_roles(
+            roles(),
+            with_committer(doctor(), first_column(&world, &ask, aql)),
+        ))
+        .await;
+        assert_eq!(every.len(), world.ehrs.len() * each, "{role}: the census");
+        let mut pinned_all = Vec::new();
+        for (index, (ehr_id, _, _)) in world.ehrs.iter().enumerate() {
+            let pinned = Box::pin(with_roles(
+                roles(),
+                with_committer(
+                    doctor(),
+                    first_column(&world, &ask, &pinned_to(aql, *ehr_id)),
+                ),
+            ))
+            .await;
+            assert_eq!(pinned.len(), each, "{role}: EHR {index} pinned");
+            pinned_all.extend(pinned);
+        }
+        pinned_all.sort_by_key(ToString::to_string);
+        let mut every = every;
+        every.sort_by_key(ToString::to_string);
+        assert_eq!(
+            pinned_all, every,
+            "{role}: the pinned answers are the census's"
         );
     }
 }

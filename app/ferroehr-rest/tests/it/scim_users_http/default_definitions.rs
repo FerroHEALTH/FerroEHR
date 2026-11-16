@@ -84,7 +84,7 @@ fn documented_config() -> ferroehr_rest::config::AppConfig {
 /// The harness configuration with no mapping key and no group issuer: its
 /// persons log in under the default key type, and its clients' Groups take
 /// the group issuer derived from their `binding_issuer`.
-fn zero_config() -> ferroehr_rest::config::AppConfig {
+pub(super) fn zero_config() -> ferroehr_rest::config::AppConfig {
     let mut config = config();
     config.party_binding = party_binding("");
     for table in &mut config.auth.shared.party {
@@ -96,11 +96,24 @@ fn zero_config() -> ferroehr_rest::config::AppConfig {
 }
 
 /// A service over `pool` with the default definitions seeded and the
-/// mapping of `config` installed and judged, as `serve` does at boot.
+/// mapping of `config` installed and judged, as `serve` does at boot, and
+/// the two provisioning clients granted.
 async fn booted(
     config: &ferroehr_rest::config::AppConfig,
     pool: &sqlx::PgPool,
 ) -> Arc<FerroEhrService> {
+    let service = seeded(config, pool).await;
+    super::grant_clients(&service).await;
+    Arc::new(service)
+}
+
+/// A service over `pool` with the default definitions seeded and the
+/// mapping of `config` installed and judged, as `serve` does at boot, with
+/// no client granted.
+pub(super) async fn seeded(
+    config: &ferroehr_rest::config::AppConfig,
+    pool: &sqlx::PgPool,
+) -> FerroEhrService {
     FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(pool))
         .seed_default_definitions()
         .await
@@ -126,9 +139,11 @@ async fn booted(
         .take_binding_lease(uuid::Uuid::now_v7())
         .await
         .expect("the side table is prepared")
-        .expect("the mapping derives rows");
-    super::grant_clients(&service).await;
-    Arc::new(service)
+        .expect("the mapping derives rows")
+        .release()
+        .await
+        .expect("the preparing replica stops");
+    service
 }
 
 /// The current version uid and body of the `PERSON` `id`.
@@ -178,7 +193,7 @@ fn representation(code: &str, label: &str, representative: &str, subject: &str) 
             "items": [
                 { "_type": "ELEMENT", "archetype_node_id": "id4",
                     "name": { "_type": "DV_TEXT", "value": "Representation code" },
-                    "value": coded("ferroehr-operations", "represents", "represents") },
+                    "value": coded(ferroehr::party_binding::policy_mark::TERMINOLOGY, "represents", "represents") },
                 { "_type": "ELEMENT", "archetype_node_id": "id6",
                     "name": { "_type": "DV_TEXT", "value": "Relationship" },
                     "value": coded("openehr", "254", "parent") }

@@ -24,7 +24,7 @@
 use std::sync::OnceLock;
 
 use opentelemetry::KeyValue;
-use opentelemetry::metrics::{Counter, Histogram, Meter};
+use opentelemetry::metrics::{Counter, Gauge, Histogram, Meter};
 
 use crate::telemetry::build_info::BuildInfo;
 
@@ -41,6 +41,8 @@ pub const BINDING_REFUSALS: &str = "binding_refusals";
 pub const DB_POOL_CONNECTIONS: &str = "db_pool_connections";
 /// Database connection-acquire latency.
 pub const DB_POOL_ACQUIRE_DURATION: &str = "db_pool_acquire_duration";
+/// How long a request held each pooled connection it checked out (#5774).
+pub const DB_POOL_HOLD_DURATION: &str = "db_pool_hold_duration";
 /// Service transactions (`outcome`).
 pub const DB_TRANSACTIONS: &str = "db_transactions";
 /// AQL queries (`outcome`).
@@ -49,6 +51,9 @@ pub const AQL_QUERIES: &str = "aql_queries";
 pub const AQL_QUERY_DURATION: &str = "aql_query_duration";
 /// AQL plan-cache events (`event`).
 pub const AQL_PLAN_CACHE_EVENTS: &str = "aql_plan_cache_events";
+/// AQL statements that found an access copy older than the store (`copy`,
+/// `outcome`).
+pub const AQL_STALE_ACCESS: &str = "aql_stale_access";
 /// Committed compositions (`change_type`, the numeric openEHR audit group code).
 pub const COMPOSITIONS_COMMITTED: &str = "compositions_committed";
 /// Validation failures (`pass`).
@@ -57,11 +62,9 @@ pub const VALIDATION_FAILURES: &str = "validation_failures";
 pub const VERSION_SIGNATURE_INVALID: &str = "version_signature_invalid";
 /// `WebTemplate` cache events (`event`).
 pub const WEBTEMPLATE_CACHE_EVENTS: &str = "webtemplate_cache_events";
-/// ATNA audit records emitted.
+/// ATNA audit records written to the intake before their response.
 pub const ATNA_AUDIT_EMITTED: &str = "atna_audit_emitted";
-/// ATNA audit records dropped because the queue was full.
-pub const ATNA_AUDIT_DROPPED: &str = "atna_audit_dropped";
-/// ATNA audit records rejected as malformed.
+/// ATNA audit records that could not be written, whose access was refused.
 pub const ATNA_AUDIT_REJECTED: &str = "atna_audit_rejected";
 /// ATNA audit records that failed to serialize.
 pub const ATNA_AUDIT_SERIALIZE_FAILED: &str = "atna_audit_serialize_failed";
@@ -75,6 +78,8 @@ pub const ATNA_AUDIT_REAPED: &str = "atna_audit_reaped";
 pub const ATNA_AUDIT_CHAIN_FINDINGS: &str = "atna_audit_chain_findings";
 /// Refusal records the system log could not take (`kind`).
 pub const ATNA_AUDIT_REFUSALS_UNWRITTEN: &str = "atna_audit_refusals_unwritten";
+/// Refused ITI-93 messages still to retry or settle, sampled as a gauge.
+pub const PMIR_MESSAGES_REFUSED: &str = "pmir_messages_refused";
 /// Process start time, unix seconds.
 pub const PROCESS_START_TIME: &str = "process_start_time";
 /// Build identity, always `1`, carrying `version`/`git_sha`/`rm_version`.
@@ -95,6 +100,12 @@ pub const PROCESS_RESIDENT_MEMORY: &str = "process_resident_memory";
 pub const DB_ACQUIRE_BUCKETS: &[f64] = &[
     0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,
 ];
+/// How long a request holds a connection: 100 µs … 60 s, the statement
+/// timeout's reach.
+pub const DB_HOLD_BUCKETS: &[f64] = &[
+    0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5,
+    10.0, 60.0,
+];
 /// AQL query duration: 1 ms … 30 s.
 pub const AQL_DURATION_BUCKETS: &[f64] = &[
     0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0,
@@ -110,8 +121,24 @@ pub const AQL_DURATION_BUCKETS: &[f64] = &[
 pub fn histogram_views() -> Vec<(&'static str, &'static [f64])> {
     vec![
         (DB_POOL_ACQUIRE_DURATION, DB_ACQUIRE_BUCKETS),
+        (DB_POOL_HOLD_DURATION, DB_HOLD_BUCKETS),
         (AQL_QUERY_DURATION, AQL_DURATION_BUCKETS),
     ]
+}
+
+/// A latency histogram in seconds over `ladder`.
+fn seconds(
+    meter: &Meter,
+    name: &'static str,
+    description: &'static str,
+    ladder: &[f64],
+) -> Histogram<f64> {
+    meter
+        .f64_histogram(name)
+        .with_description(description)
+        .with_unit("s")
+        .with_boundaries(ladder.to_vec())
+        .build()
 }
 
 /// The instruments, built once and reachable from every emitting site.
@@ -127,6 +154,8 @@ pub struct Metrics {
     pub binding_refusals: Counter<u64>,
     /// Database connection-acquire latency, seconds.
     pub db_pool_acquire_duration: Histogram<f64>,
+    /// How long a request held each pooled connection, seconds.
+    pub db_pool_hold_duration: Histogram<f64>,
     /// Service transactions by outcome.
     pub db_transactions: Counter<u64>,
     /// AQL queries by outcome.
@@ -135,6 +164,8 @@ pub struct Metrics {
     pub aql_query_duration: Histogram<f64>,
     /// AQL plan-cache events.
     pub aql_plan_cache_events: Counter<u64>,
+    /// AQL statements that found a stale access copy, by copy and outcome.
+    pub aql_stale_access: Counter<u64>,
     /// Committed compositions.
     pub compositions_committed: Counter<u64>,
     /// Validation failures by pass.
@@ -143,11 +174,9 @@ pub struct Metrics {
     pub version_signature_invalid: Counter<u64>,
     /// `WebTemplate` cache events.
     pub webtemplate_cache_events: Counter<u64>,
-    /// ATNA audit records emitted.
+    /// ATNA audit records written to the intake before their response.
     pub atna_audit_emitted: Counter<u64>,
-    /// ATNA audit records dropped because the queue was full.
-    pub atna_audit_dropped: Counter<u64>,
-    /// ATNA audit records rejected as malformed.
+    /// ATNA audit records that could not be written, whose access was refused.
     pub atna_audit_rejected: Counter<u64>,
     /// ATNA audit records that failed to serialize.
     pub atna_audit_serialize_failed: Counter<u64>,
@@ -161,6 +190,8 @@ pub struct Metrics {
     pub atna_audit_chain_findings: Counter<u64>,
     /// Refusal records the system log could not take.
     pub atna_audit_refusals_unwritten: Counter<u64>,
+    /// Refused ITI-93 messages still to retry or settle.
+    pub pmir_messages_refused: Gauge<u64>,
 }
 
 impl Metrics {
@@ -170,6 +201,11 @@ impl Metrics {
     /// in one place, which is what makes an omission obvious. Splitting it into
     /// themed halves would hide exactly that.
     #[must_use]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one flat struct literal of every instrument, so an omission is visible in one \
+                  place; it grows by four lines with each instrument"
+    )]
     pub fn new(meter: &Meter) -> Self {
         Self {
             auth_failures: meter
@@ -180,12 +216,19 @@ impl Metrics {
                 .u64_counter(BINDING_REFUSALS)
                 .with_description("Login-binding refusals by issuer and outcome")
                 .build(),
-            db_pool_acquire_duration: meter
-                .f64_histogram(DB_POOL_ACQUIRE_DURATION)
-                .with_description("Database connection acquire latency")
-                .with_unit("s")
-                .with_boundaries(DB_ACQUIRE_BUCKETS.to_vec())
-                .build(),
+            db_pool_acquire_duration: seconds(
+                meter,
+                DB_POOL_ACQUIRE_DURATION,
+                "Database connection acquire latency",
+                DB_ACQUIRE_BUCKETS,
+            ),
+            db_pool_hold_duration: seconds(
+                meter,
+                DB_POOL_HOLD_DURATION,
+                "How long a request held each pooled connection, from its checkout \
+                 to the handler's answer",
+                DB_HOLD_BUCKETS,
+            ),
             db_transactions: meter
                 .u64_counter(DB_TRANSACTIONS)
                 .with_description("Service transactions by outcome")
@@ -199,6 +242,13 @@ impl Metrics {
                 .with_description("AQL query phase latency")
                 .with_unit("s")
                 .with_boundaries(AQL_DURATION_BUCKETS.to_vec())
+                .build(),
+            aql_stale_access: meter
+                .u64_counter(AQL_STALE_ACCESS)
+                .with_description(
+                    "AQL statements judged on an access copy older than the store, by copy \
+                     and outcome",
+                )
                 .build(),
             aql_plan_cache_events: meter
                 .u64_counter(AQL_PLAN_CACHE_EVENTS)
@@ -222,15 +272,13 @@ impl Metrics {
                 .build(),
             atna_audit_emitted: meter
                 .u64_counter(ATNA_AUDIT_EMITTED)
-                .with_description("ATNA audit records emitted")
-                .build(),
-            atna_audit_dropped: meter
-                .u64_counter(ATNA_AUDIT_DROPPED)
-                .with_description("ATNA audit records dropped because the queue was full")
+                .with_description("ATNA audit records written to the intake before their response")
                 .build(),
             atna_audit_rejected: meter
                 .u64_counter(ATNA_AUDIT_REJECTED)
-                .with_description("ATNA audit records rejected as malformed")
+                .with_description(
+                    "ATNA audit records that could not be written, whose access was refused",
+                )
                 .build(),
             atna_audit_serialize_failed: meter
                 .u64_counter(ATNA_AUDIT_SERIALIZE_FAILED)
@@ -258,6 +306,10 @@ impl Metrics {
             atna_audit_refusals_unwritten: meter
                 .u64_counter(ATNA_AUDIT_REFUSALS_UNWRITTEN)
                 .with_description("Refusal records the system log could not take, by kind")
+                .build(),
+            pmir_messages_refused: meter
+                .u64_gauge(PMIR_MESSAGES_REFUSED)
+                .with_description("Refused ITI-93 messages still to retry or settle")
                 .build(),
         }
     }
@@ -338,10 +390,12 @@ mod tests {
             BINDING_REFUSALS,
             DB_POOL_CONNECTIONS,
             DB_POOL_ACQUIRE_DURATION,
+            DB_POOL_HOLD_DURATION,
             DB_TRANSACTIONS,
             AQL_QUERIES,
             AQL_QUERY_DURATION,
             AQL_PLAN_CACHE_EVENTS,
+            AQL_STALE_ACCESS,
             COMPOSITIONS_COMMITTED,
             VALIDATION_FAILURES,
             VERSION_SIGNATURE_INVALID,
@@ -349,6 +403,7 @@ mod tests {
             ATNA_AUDIT_EMITTED,
             ATNA_AUDIT_SENT,
             ATNA_AUDIT_REFUSALS_UNWRITTEN,
+            PMIR_MESSAGES_REFUSED,
             PROCESS_START_TIME,
             TOKIO_WORKERS,
             TOKIO_GLOBAL_QUEUE_DEPTH,
@@ -371,7 +426,11 @@ mod tests {
     #[test]
     fn every_histogram_has_an_explicit_bucket_ladder() {
         let with_views: Vec<&str> = histogram_views().iter().map(|(name, _)| *name).collect();
-        for name in [DB_POOL_ACQUIRE_DURATION, AQL_QUERY_DURATION] {
+        for name in [
+            DB_POOL_ACQUIRE_DURATION,
+            DB_POOL_HOLD_DURATION,
+            AQL_QUERY_DURATION,
+        ] {
             assert!(
                 with_views.contains(&name),
                 "histogram {name} has no bucket view — it would take OTel's defaults"

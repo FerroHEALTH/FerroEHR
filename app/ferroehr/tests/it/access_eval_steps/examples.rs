@@ -108,8 +108,8 @@ fn the_ward_with_its_grace_period() {
         );
         access.judge(None, None, access.cared(&mr_e))
     };
-    let dr_d = || with_facts(professional(NURSE), &[], &[], &[CARDIOLOGY]);
-    let dr_f = with_facts(professional(DR_B), &[], &[], &[NEPHROLOGY]);
+    let dr_d = || with_facts(professional(NURSE), &[], &[CARDIOLOGY]);
+    let dr_f = with_facts(professional(DR_B), &[], &[NEPHROLOGY]);
     let refused = Outcome::Refused(Refusal::NoCareRelationship);
     for (name, verdict, expected) in [
         (
@@ -129,9 +129,9 @@ fn the_ward_with_its_grace_period() {
     }
 }
 
-/// HIV results: the policy classifies the HIV laboratory template; the
-/// infectious-disease specialist cleared for it reads the results, and the
-/// dermatologist reads the rest of the record without them.
+/// HIV results: the policy classifies the HIV laboratory template and clears
+/// the infectious-disease role for it; the specialist reads the results, and
+/// the dermatologist reads the rest of the record without them.
 #[test]
 fn hiv_results() {
     let classified = policy(&json!({ "classifications": [{
@@ -139,19 +139,16 @@ fn hiv_results() {
         "name": { "_type": "DV_TEXT", "value": "HIV results" },
         "archetype_node_id": "at0002",
         "data": { "_type": "ACCESS_DATA_SCOPE", "templates": ["lab_hiv.v1"] },
-        "sensitivities": [coded(CONFIDENTIALITY, "HIV")] }] }));
+        "sensitivities": [coded(CONFIDENTIALITY, "HIV")] }],
+        "rules": [rule("permit", &json!({ "applies_to": [role_scope("INFECTIOUS_DISEASE")],
+            "data": [{ "sensitivities": [coded(CONFIDENTIALITY, "HIV")] }] }))] }));
     let case = Case {
         policy: Some(classified),
         ..Case::default()
     };
     let results = object(OBJECT, Some("lab_hiv.v1"));
     let vitals = object(OTHER, Some("vitals.v1"));
-    let specialist = with_facts(
-        professional(DR_C),
-        &[code(CONFIDENTIALITY, "HIV")],
-        &[],
-        &[],
-    );
+    let specialist = performing(CallerKind::Professional, DR_C, "INFECTIOUS_DISEASE");
     let specialist = case.verdict(&specialist, read(None));
     assert_outcome(&specialist, &results, Outcome::Admit, "the specialist");
     let dermatologist = case.verdict(&professional(NURSE), read(None));

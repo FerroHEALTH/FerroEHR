@@ -29,7 +29,6 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
-use crate::storage::row::NodeRow;
 use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
@@ -44,9 +43,11 @@ pub(crate) mod precondition;
 mod project;
 pub(crate) mod resolve;
 mod sign;
+mod written;
 
 use resolve::{Content, Placing, resolve_create, resolve_delete, resolve_modify};
 use sign::body_and_signature;
+use written::{admit_written, nodes, root_archetype};
 
 /// The outcome of a versioned-object write: the object id, the new version's
 /// tree id, and the provenance carried into the event-outbox envelope.
@@ -507,8 +508,9 @@ struct ResolvedWrite {
     /// A client-supplied `UPDATE_VERSION.signature`, stored verbatim (master06
     /// §Digital Signature); `None` on the direct endpoints.
     client_signature: Option<String>,
-    /// The decomposed node rows (empty for a logical delete — data Void).
-    rows: Vec<NodeRow>,
+    /// The accepted, uid-stamped body, decomposed into node rows only by the
+    /// write (#5759); `Value::Null` for a logical delete (data Void).
+    body: Value,
     /// The canonical body BYTES, serialized from the accepted, uid-stamped
     /// value BEFORE decomposition — the stored `version.body` text a point
     /// read serves verbatim. `None` for a logical delete.
@@ -530,8 +532,8 @@ struct ResolvedWrite {
     /// every kind but a party.
     party_facts: Option<Box<crate::party_binding::derive::Facts>>,
     /// The version whose node rows this one reads when its content equals the
-    /// preceding tip's (`version.content_sys_version`, #4415); the rows are
-    /// then decomposed for the signature and not written.
+    /// preceding tip's (`version.content_sys_version`, #4415); the body is
+    /// then signed and not decomposed.
     shared_from: Option<i32>,
     /// The preceding tip of a modify, which the opt-in re-send answer names
     /// instead of committing.
@@ -633,7 +635,7 @@ pub(crate) fn stamp_version_uid(
 /// and the shared transaction timestamp — travels together.
 ///
 /// A single-object write builds one of these per call
-/// ([`ContributionCtx::New`], no `known_now`); a CONTRIBUTION commit builds it
+/// ([`ContributionCtx::New`], nothing `known`); a CONTRIBUTION commit builds it
 /// once and applies every change of the set under it, which is what makes the
 /// whole set share one contribution id and one commit instant (RM common
 /// `master06-change_control_package.adoc` §Committal and Audits).
@@ -646,10 +648,10 @@ struct CommitScope<'a> {
     audit: &'a AuditInput,
     /// System id, signer, multimedia engine and outbox switch for the write.
     ctx: &'a SigningCtx<'a>,
-    /// The transaction timestamp already read by the caller (the CONTRIBUTION
-    /// path reads `now()` once for the whole set); `None` makes this change
-    /// read its own.
-    known_now: Option<jiff::Timestamp>,
+    /// What the caller already read: the transaction timestamp (the CONTRIBUTION
+    /// path reads `now()` once for the whole set) and the EHR's restriction;
+    /// what it did not, this change reads.
+    known: restriction::Known,
     /// A placement the caller already read under the advisory lock it already
     /// holds (the composition-update mega-read); `None` makes the Modify /
     /// Delete arm take the lock and read its own.
@@ -667,13 +669,14 @@ async fn apply_change(
         contribution,
         audit,
         ctx,
-        known_now,
+        known,
         preplaced,
     } = scope;
-    restriction::ensure_not_restricted_tx(tx, ehr_id, change.target_vo_id()).await?;
+    let target = change.target_vo_id();
+    let gate = restriction::ensure_not_restricted_tx(tx, ehr_id, target, known.restriction).await?;
     let at = Placing {
         ehr_id,
-        known_now,
+        known_now: known.now,
         preplaced,
     };
     let access = crate::service::ehr::access_projection::AccessCommit::of(&change);
@@ -743,6 +746,7 @@ async fn apply_change(
             .await?
         }
     };
+    admit_written(gate.as_ref(), &resolved)?;
     if skip_identical && let Some(existing) = skipped_resend(&resolved, audit) {
         return Ok((existing, Uuid::nil()));
     }
@@ -811,6 +815,9 @@ async fn commit_resolved(
 
     let (signature, signature_client_supplied) =
         body_and_signature(ctx, audit, contribution_id, &r, &at_committal_attestations)?;
+    let archetype = root_archetype(&r.body);
+    // A version that shares its predecessor's rows writes none of its own.
+    let (rows, fragments, blob_uris) = nodes(r.body, r.shared_from.is_some())?;
 
     let folded = crate::storage::version_repo::commit::FoldedVersion {
         vo_id: r.vo_id,
@@ -831,15 +838,12 @@ async fn commit_resolved(
         origins: &r.origins,
         body: r.canonical_text.as_deref(),
         time_committed: r.time_committed,
-        // A version that shares its predecessor's rows writes none of its
-        // own; the rows still served the signature above.
-        rows: if r.shared_from.is_some() {
-            &[]
-        } else {
-            &r.rows
-        },
+        rows: &rows,
+        fragments,
+        blob_uris,
         content_digest: r.content_digest.as_ref().map(<[u8; 32]>::as_slice),
         content_sys_version: r.shared_from,
+        root_archetype: archetype.as_deref(),
         // Nothing is superseded in place: the head row advancing past the
         // previous version inside the SAME statement is what makes this one
         // current (master06 §The 'Virtual Version Tree').
@@ -850,11 +854,11 @@ async fn commit_resolved(
     let statement = match contribution {
         ContributionCtx::New => Folded::Standalone {
             id: contribution_id,
-            version: &folded,
+            version: folded,
         },
         ContributionCtx::Existing(id) => Folded::Into {
             id,
-            version: &folded,
+            version: folded,
         },
     };
     let time_committed = commit_folded(tx, &audit_row, statement)
@@ -886,7 +890,7 @@ async fn commit_resolved(
             kind: r.kind,
             change_type: audit.change_type.clone(),
             template_id: r.template_id,
-            root_archetype: root_archetype(&r.rows),
+            root_archetype: archetype,
             time_committed,
             skipped: false,
             content_digest: r.content_digest,
@@ -913,21 +917,11 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
         kind: r.kind,
         change_type: audit.change_type.clone(),
         template_id: r.template_id.clone(),
-        root_archetype: root_archetype(&r.rows),
+        root_archetype: root_archetype(&r.body),
         time_committed: preceding.committed_at,
         skipped: true,
         content_digest: r.content_digest,
     })
-}
-
-/// The root's `archetype_node_id` off the decomposed rows, for the outbox
-/// envelope and the audit record.
-fn root_archetype(rows: &[NodeRow]) -> Option<String> {
-    rows.first()
-        .filter(|root| root.num == 0)
-        .and_then(|root| root.data.get("archetype_node_id"))
-        .and_then(Value::as_str)
-        .map(str::to_owned)
 }
 
 /// Serializes the accepted, uid-stamped canonical value to the body bytes a
@@ -974,8 +968,8 @@ pub(crate) struct Write {
     pub(crate) change: Change,
     /// This version's own `commit_audit`.
     pub(crate) audit: AuditInput,
-    /// The transaction timestamp the caller already read, if any.
-    pub(crate) known_now: Option<jiff::Timestamp>,
+    /// What the caller already read of the commit instant and the EHR.
+    pub(crate) known: restriction::Known,
     /// A placement the caller already read under the per-object lock it holds
     /// ([`precondition::lock_current`], or the composition-update mega-read); `None` makes
     /// the write take the lock and read its own.
@@ -990,7 +984,7 @@ impl Write {
             ehr_id,
             change,
             audit,
-            known_now: None,
+            known: restriction::Known::default(),
             placement: None,
         }
     }
@@ -998,7 +992,10 @@ impl Write {
     /// The same write at the commit instant `now` the caller already read.
     pub(crate) fn at(self, now: jiff::Timestamp) -> Self {
         Self {
-            known_now: Some(now),
+            known: restriction::Known {
+                now: Some(now),
+                ..self.known
+            },
             ..self
         }
     }
@@ -1033,7 +1030,7 @@ pub(crate) async fn commit(
         ehr_id,
         change,
         audit,
-        known_now,
+        known,
         placement,
     } = write;
     let references: Vec<_> = crate::versioning::party_refs::of_change(&change)
@@ -1047,7 +1044,7 @@ pub(crate) async fn commit(
             contribution: ContributionCtx::New,
             audit: &audit,
             ctx,
-            known_now,
+            known,
             preplaced: placement,
         },
         change,
@@ -1055,6 +1052,7 @@ pub(crate) async fn commit(
     )
     .await?;
     crate::versioning::party_refs::check(tx, &references).await?;
+    crate::party_binding::grants::caller::subject::settle(tx, [committed.kind]).await?;
     if !committed.skipped {
         write_single_outbox(tx, ctx, contribution_id, ehr_id, &committed).await?;
     }
@@ -1091,7 +1089,8 @@ pub(crate) fn record_commit(committed: &Committed) {
 /// writers sharing several objects queue instead of deadlocking.
 ///
 /// # Errors
-/// The per-change [`apply_change`] errors; the attestation-completion
+/// The per-change [`apply_change`] errors; the `409` of two `PERSON`s
+/// declaring one record subject; the attestation-completion
 /// `Unprocessable` rejections and the `NotFound` of a missing attestation
 /// target; the storage errors of the contribution/outbox writes.
 pub(crate) async fn commit_contribution(
@@ -1110,9 +1109,8 @@ pub(crate) async fn commit_contribution(
             .filter_map(|(_, change)| change.target_vo_id()),
     )
     .await?;
-    // The CONTRIBUTION's own audit + contribution rows in one round trip (the
-    // per-version `commit_audit`s are inserted per change below). A uid the
-    // client did not supply is minted here, stamped, never by the database.
+    // The CONTRIBUTION's own audit and contribution rows in one round trip; a
+    // uid the client did not supply is minted and stamped here.
     let uid = supplied_uid.unwrap_or_else(|| ctx.stamp.mint());
     let FoldedRows {
         contribution_id,
@@ -1135,10 +1133,9 @@ pub(crate) async fn commit_contribution(
         .collect();
     let mut committed = Vec::with_capacity(changes.len() + attests.len());
     for (version_audit, change) in changes {
-        // Each change writes its own `commit_audit` + `version` under the
-        // shared contribution, always through the folded CTE — the commit
-        // instant is the contribution's transaction timestamp (one `now()`
-        // for the whole set), so the signature is computable up front.
+        // Each change writes its own `commit_audit` + `version` under the shared
+        // contribution through the folded CTE, at the contribution's one `now()`,
+        // so the signature is computable up front.
         let (change_committed, _cid) = apply_change(
             tx,
             CommitScope {
@@ -1146,7 +1143,7 @@ pub(crate) async fn commit_contribution(
                 contribution: ContributionCtx::Existing(contribution_id),
                 audit: &version_audit,
                 ctx,
-                known_now: Some(contribution_time),
+                known: restriction::Known::at(contribution_time),
                 preplaced: None,
             },
             change,
@@ -1156,10 +1153,11 @@ pub(crate) async fn commit_contribution(
         committed.push(change_committed);
     }
     crate::versioning::party_refs::check(tx, &references).await?;
-    // Standalone 666 attestations of existing versions (no new version) —
-    // completed with the contribution's commit-act time.
+    let kinds = committed.iter().map(|c| c.kind);
+    crate::party_binding::grants::caller::subject::settle(tx, kinds).await?;
+    // Standalone 666 attestations of existing versions, at the commit-act time.
     for item in attests {
-        restriction::ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id)).await?;
+        restriction::ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id), None).await?;
         let full =
             attestation::complete_attestation(&item.partial, &item.system_id, contribution_time);
         committed.push(
@@ -1176,9 +1174,8 @@ pub(crate) async fn commit_contribution(
             .await?,
         );
     }
-    // One PHI-free outbox event for the whole CONTRIBUTION (same transaction),
-    // skipped entirely — including the envelope collection — when no eventing
-    // consumer is configured (our own extension; no openEHR spec governs it).
+    // One PHI-free outbox event for the whole CONTRIBUTION, skipped with no
+    // eventing consumer (our own extension; no openEHR spec governs it).
     if ctx.outbox_enabled {
         let versions = committed.iter().map(Committed::envelope_entry).collect();
         crate::storage::version_repo::commit::write_outbox(

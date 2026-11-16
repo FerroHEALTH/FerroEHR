@@ -133,6 +133,74 @@ fn config_subcommands_parse() -> Result<(), clap::Error> {
     Ok(())
 }
 
+/// `pmir` lists, retries and settles a refused ITI-93 message, and every
+/// step names its operator (#5725).
+#[test]
+fn pmir_subcommands_parse_and_name_their_operator() -> Result<(), clap::Error> {
+    let settle = Cli::try_parse_from([
+        "ferroehr",
+        "pmir",
+        "settle",
+        "m-1",
+        "--decision",
+        "lift-splits",
+        "--reason",
+        "the Registry is corrected",
+        "--operator",
+        "steward",
+    ])?;
+    let rendered = format!("{settle:?}");
+    assert!(
+        rendered.contains("Settle") && rendered.contains("lift-splits"),
+        "not the settle step: {rendered}"
+    );
+    let retry = Cli::try_parse_from(["ferroehr", "pmir", "retry", "m-1", "--operator", "steward"])?;
+    assert!(format!("{retry:?}").contains("Retry"), "not the retry step");
+    for args in [
+        &["ferroehr", "pmir", "list"][..],
+        &["ferroehr", "pmir", "retry", "m-1"][..],
+        &[
+            "ferroehr",
+            "pmir",
+            "settle",
+            "m-1",
+            "--decision",
+            "discard",
+            "--operator",
+            "s",
+        ][..],
+    ] {
+        assert!(
+            Cli::try_parse_from(args).is_err(),
+            "{args:?} must name its operator and reason"
+        );
+    }
+    Ok(())
+}
+
+/// The CLI's operator acts run as the stated operator, with the effective
+/// user of the process as the client every access record names (#5725).
+#[cfg(unix)]
+#[test]
+fn a_pmir_act_names_the_operator_and_the_effective_user() {
+    let account = ferroehr_server::pmir::os_account().expect("the effective user reads");
+    assert!(
+        account.starts_with("os:"),
+        "the account is the operating system's"
+    );
+    let uid = nix::unistd::geteuid().to_string();
+    assert!(
+        account.ends_with(&uid),
+        "the account names the effective uid"
+    );
+    let committer = ferroehr_server::pmir::committer(" steward ", &account);
+    assert_eq!(committer.subject, "steward");
+    assert!(
+        committer.client.as_deref() == Some(account.as_str()),
+        "the committer's client is the account"
+    );
+}
+
 /// `config` without a utility is rejected (the inner subcommand is required).
 #[test]
 fn config_without_a_utility_is_rejected() {

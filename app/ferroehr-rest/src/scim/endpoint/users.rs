@@ -23,6 +23,7 @@ use ferroehr::ids::VoId;
 use ferroehr::party_binding::provisioned::UserFilter;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::demographic::provision::{NewUser, ProvisionedUser};
+use ferroehr::service::demographic::user_roles::RoleWrite;
 use ferroehr::service::demographic::user_write::{Deactivations, UserUpdate, UserWriteError};
 use http::{HeaderMap, HeaderValue, Method, StatusCode, header};
 use serde_json::Value;
@@ -31,7 +32,7 @@ use crate::scim::endpoint::listing::{
     ListQuery, Listing, ReadQuery, audited, equalities, json_body, listed,
 };
 use crate::scim::endpoint::user_map::{self, UserMap};
-use crate::scim::endpoint::{ScimCaller, refusal, scim_json};
+use crate::scim::endpoint::{ScimCaller, ScimClient, refusal, scim_json};
 use crate::scim::protocol::error::{ScimError, ScimType};
 use crate::scim::protocol::etag::{self, ReadPrecondition};
 use crate::scim::protocol::filter::Filter;
@@ -96,18 +97,25 @@ pub(crate) async fn create(
         }
         let map = &users.inner.map;
         let values = map
-            .values(&users.service, resource, &client.binding_issuer)
+            .values(
+                &users.service,
+                resource,
+                (&client.binding_issuer, client.portal),
+            )
             .await?;
         let user = NewUser {
-            template_id: map.template_id().to_owned(),
+            template_id: map.template_id(client.portal)?.to_owned(),
             namespace: map.namespace().to_owned(),
             values,
         };
-        users
+        let wanted = wanted_roles(resource)?;
+        admit_roles(&client, &wanted)?;
+        let user = users
             .service
             .provision_user(&client.binding_issuer, map.role_template(), user)
             .await
-            .map_err(|error| user_map::service_refusal(&error.classified()))
+            .map_err(|error| user_map::service_refusal(&error.classified()))?;
+        sync_roles(&users, &client, user, wanted).await
     }
     .await;
     match outcome {
@@ -224,7 +232,7 @@ pub(crate) async fn modify(
 ) -> Response {
     let issuer = client.binding_issuer.as_str();
     let patching = method == Method::PATCH;
-    let outcome = async {
+    let outcome = Box::pin(async {
         let body = json_body(&body)?;
         let request = patching.then(|| PatchRequest::parse(&body)).transpose()?;
         let (user, current) = current(&users, issuer, &id, &headers).await?;
@@ -250,8 +258,18 @@ pub(crate) async fn modify(
             let active = active_of(&replaced);
             (replaced, active)
         };
-        write(&users, issuer, user, (&current, &after), active).await
-    }
+        let wanted = wanted_roles(&after)?;
+        admit_roles(&client, &wanted)?;
+        let user = write(
+            &users,
+            (issuer, client.portal),
+            user,
+            (&current, &after),
+            active,
+        )
+        .await?;
+        sync_roles(&users, &client, user, wanted).await
+    })
     .await;
     let op = if patching {
         "scim_user_patch"
@@ -297,11 +315,12 @@ async fn current(
     Ok((user, current))
 }
 
-/// Commits the User `user` going from `old` to `new` with the request's
-/// `active`, returning the User after.
+/// Commits the User `user` of the client of `issuer`, a portal client when
+/// `portal`, going from `old` to `new` with the request's `active`,
+/// returning the User after.
 async fn write(
     users: &Users,
-    issuer: &str,
+    (issuer, portal): (&str, bool),
     user: ProvisionedUser,
     (old, new): (&Resource, &Resource),
     active: Option<bool>,
@@ -309,7 +328,7 @@ async fn write(
     let (set, clear) = users
         .inner
         .map
-        .changes(&users.service, &user.body, (old, new), issuer)
+        .changes(&users.service, &user.body, (old, new), (issuer, portal))
         .await?;
     let update = UserUpdate {
         set,
@@ -324,6 +343,120 @@ async fn write(
         .await
         .map_err(write_refusal)?
         .ok_or_else(missing)
+}
+
+/// The role codes `resource` asks its User to hold: the `value` of each
+/// entry of its `roles` (RFC 7643 §4.1.2), sorted and distinct; none when it
+/// has no `roles`.
+///
+/// # Errors
+/// A `400` `invalidValue` for an entry whose `value` is no non-empty string.
+fn wanted_roles(resource: &Resource) -> Result<Vec<String>, ScimError> {
+    let listed = match resource.get(Container::Core, "roles") {
+        None | Some(Value::Null) => return Ok(Vec::new()),
+        Some(Value::Array(listed)) => listed,
+        Some(_) => {
+            return Err(ScimError::bad_request(
+                ScimType::InvalidValue,
+                "roles is a list of values (RFC 7643 §4.1.2).",
+            ));
+        }
+    };
+    let mut wanted = Vec::with_capacity(listed.len());
+    for entry in listed {
+        match entry.get("value").and_then(Value::as_str) {
+            Some(value) if !value.trim().is_empty() => wanted.push(value.to_owned()),
+            _ => {
+                return Err(ScimError::bad_request(
+                    ScimType::InvalidValue,
+                    "Each roles entry names its role in value.",
+                ));
+            }
+        }
+    }
+    wanted.sort_unstable();
+    wanted.dedup();
+    Ok(wanted)
+}
+
+/// Refuses `wanted` when it names a role the client's `scim_provision`
+/// grants do not admit, or any role when they name no `role_terminology`
+/// (#5625), or any role for a patient portal's representative, who performs
+/// no `ROLE` (#5622).
+///
+/// # Errors
+/// A `403` naming the first role outside the ceiling, or naming the portal.
+fn admit_roles(client: &ScimClient, wanted: &[String]) -> Result<(), ScimError> {
+    if wanted.is_empty() {
+        return Ok(());
+    }
+    if client.portal {
+        return Err(ScimError::new(
+            StatusCode::FORBIDDEN,
+            "the client provisions a patient portal's representatives, who hold no role: a \
+             representative acts only through a representation the patient or an \
+             administrator records",
+        ));
+    }
+    if client.roles.terminology.is_none() {
+        return Err(ScimError::new(
+            StatusCode::FORBIDDEN,
+            "the client's scim_provision grant names no role_terminology, so its Users hold \
+             no roles",
+        ));
+    }
+    match wanted
+        .iter()
+        .find(|role| !client.roles.allowed.contains(role))
+    {
+        Some(role) => Err(ScimError::new(
+            StatusCode::FORBIDDEN,
+            format!("the client's scim_provision grant admits no role {role:?}"),
+        )),
+        None => Ok(()),
+    }
+}
+
+/// `user` holding exactly the roles `wanted` in the client's role
+/// terminology, read back after the change: each added role a new `ROLE`
+/// the User's `PERSON` performs and each removed one ended, which decide the
+/// next request (#5625).
+async fn sync_roles(
+    users: &Users,
+    client: &ScimClient,
+    user: ProvisionedUser,
+    wanted: Vec<String>,
+) -> Result<ProvisionedUser, ScimError> {
+    let Some(terminology) = client.roles.terminology.as_deref() else {
+        return Ok(user);
+    };
+    let mut held: Vec<String> = user
+        .roles
+        .iter()
+        .filter(|role| role.terminology == terminology)
+        .map(|role| role.code.clone())
+        .collect();
+    held.sort_unstable();
+    held.dedup();
+    if held == wanted {
+        return Ok(user);
+    }
+    let party = user.row.party;
+    let map = &users.inner.map;
+    let write = RoleWrite {
+        binding_issuer: &client.binding_issuer,
+        role_template: map.role_template(),
+        namespace: map.namespace(),
+        terminology,
+        person_state: &user.row.lifecycle_state,
+        wanted,
+    };
+    users
+        .service
+        .set_user_roles(party, &write)
+        .await
+        .map_err(write_refusal)?;
+    find(users, &client.binding_issuer, &party.to_string()).await
 }
 
 /// `DELETE /Users/{id}` (RFC 7644 §3.6): the User's `PERSON` and its

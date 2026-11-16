@@ -50,7 +50,6 @@ pub(crate) mod record;
 pub(crate) mod refusal;
 mod scope;
 pub(crate) mod trc;
-mod wabvpz;
 
 use std::sync::Arc;
 
@@ -528,7 +527,7 @@ fn upper_cased(roles: &[String]) -> Vec<String> {
 
 tokio::task_local! {
     /// The authenticated principal for the request currently being handled.
-    static REQUEST_PRINCIPAL: Option<Principal>;
+    static REQUEST_PRINCIPAL: Option<Arc<Principal>>;
 }
 
 /// Returns the authenticated principal for the current request, if any.
@@ -537,7 +536,7 @@ tokio::task_local! {
 /// layers read it without the principal being threaded through the generated
 /// trait signatures. `None` when unauthenticated or called outside a request.
 #[must_use]
-pub fn current_principal() -> Option<Principal> {
+pub fn current_principal() -> Option<Arc<Principal>> {
     REQUEST_PRINCIPAL.try_with(Clone::clone).ok().flatten()
 }
 
@@ -579,13 +578,11 @@ pub(crate) async fn middleware(
                     .get::<MatchedPath>()
                     .map(MatchedPath::as_str),
             ) {
-                refusal.extensions_mut().insert(principal);
+                refusal.extensions_mut().insert(Arc::new(principal));
                 return refusal;
             }
-            let granted = match grants::resolve(live, &principal).await {
-                Ok(granted) => granted,
-                Err(e) => return refusal::response(auth, req.headers(), &e),
-            };
+            // NOTE: our own design (#5754), the gates above add grants and extensions to
+            // the caller and never change its issuer, client or party, so `granted` holds.
             // NOTE: master08 §Resource Scopes, a `system/aql-*` grant reaches every
             // query, so it counts only for a client the CDR grants `query_system_wide`.
             principal.honoured.backend = grants::client_holds(&granted, Operation::QuerySystemWide);
@@ -615,21 +612,21 @@ pub(crate) async fn middleware(
                 return refusal;
             }
             let patient = gates::patient_person(&layer, &req, &principal).await;
-            req.extensions_mut().insert(principal.clone());
-            let for_audit = principal.clone();
+            let principal = Arc::new(principal);
+            req.extensions_mut().insert(Arc::clone(&principal));
             let (committer, patient) =
-                match portal::committer(auth, &for_audit, &granted, patient).await {
+                match portal::committer(auth, &principal, &granted, patient).await {
                     Ok(committer) => committer,
                     Err(e) => return refusal::response(auth, req.headers(), &e),
                 };
             // The roles ride beside the committer identity for the request
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
-            let roles = for_audit.roles.clone();
-            let binding = record::of_request(&for_audit, &committer, &granted, Some(auth));
+            let roles = principal.roles.clone();
+            let binding = record::of_request(&principal, &committer, &granted, Some(auth));
             let mut resp = REQUEST_PRINCIPAL
                 .scope(
-                    Some(principal),
+                    Some(Arc::clone(&principal)),
                     ferroehr::system_log::access_context::with_roles(
                         roles,
                         record::recorded(
@@ -647,7 +644,7 @@ pub(crate) async fn middleware(
                 .await;
             // The outer ATNA audit layer cannot observe request-extension
             // mutations, so the principal is republished onto the response.
-            resp.extensions_mut().insert(for_audit);
+            resp.extensions_mut().insert(principal);
             resp.extensions_mut().insert(actor);
             if fresh {
                 resp.extensions_mut().insert(FreshAuthentication);
@@ -673,7 +670,7 @@ pub fn client_of(principal: &Principal) -> Option<String> {
 /// Extractor for handlers and the service layer to read the authenticated
 /// caller, yielding a 401 when no principal is present.
 #[derive(Debug, Clone)]
-pub struct AuthenticatedUser(pub Principal);
+pub struct AuthenticatedUser(pub Arc<Principal>);
 
 impl<S: Sync> FromRequestParts<S> for AuthenticatedUser {
     type Rejection = RestError;
@@ -688,7 +685,7 @@ impl<S: Sync> FromRequestParts<S> for AuthenticatedUser {
         std::future::ready(
             parts
                 .extensions
-                .get::<Principal>()
+                .get::<Arc<Principal>>()
                 .cloned()
                 .map(AuthenticatedUser)
                 .ok_or_else(|| {

@@ -133,8 +133,10 @@ impl FerroEhrService {
             },
         };
         let executed = substitute_params(aql, params);
-        let mut outcome =
-            QueryOutcome::plain(result_set_json(aql, &executed, name, result(plan, rows)));
+        let mut outcome = QueryOutcome::plain(
+            result_set_json(aql, &executed, name, result(plan, rows))
+                .map_err(|error| Failure::analysis(error.into()))?,
+        );
         outcome.served_rows = served_rows;
         outcome.log_read = Some(log_read);
         Ok(outcome)
@@ -148,15 +150,16 @@ impl FerroEhrService {
 /// A `403` for a refused caller, and a `404` for the person scoping an EHR
 /// other than their own.
 fn reader_of(request: &AqlQueryRequest) -> Result<(LogReader, Vec<EhrId>), Failure> {
-    match request.log_standing {
+    match &request.log_standing {
         LogStanding::Refused => Err(Failure::analysis(ServiceError::not_permitted(LOG_REFUSED))),
-        LogStanding::Person(own) => match request.ehr_ids.iter().find(|ehr| **ehr != own) {
+        LogStanding::Person(own) => match request.ehr_ids.iter().find(|ehr| !own.contains(ehr)) {
             // NOTE: EHDS Art. 9(2), another EHR answers as an unknown one does.
             Some(other) => Err(Failure::analysis(ServiceError::not_found(
                 Missing::Ehr,
                 format!("no EHR with id {other}"),
             ))),
-            None => Ok((LogReader::Person, vec![own])),
+            None if request.ehr_ids.is_empty() => Ok((LogReader::Person, own.to_vec())),
+            None => Ok((LogReader::Person, request.ehr_ids.clone())),
         },
         LogStanding::Reviewer => Ok((LogReader::Reviewer, request.ehr_ids.clone())),
     }

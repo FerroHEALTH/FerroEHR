@@ -38,16 +38,16 @@ mod import;
 pub mod import_policy;
 
 use crate::error::ServiceError;
-use crate::ids::EhrId;
+use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 
 impl FerroEhrService {
     /// Emit one IHE-ATNA EHR-Extract audit event for a completed export or
-    /// import of `ehr_id`, honouring the configured fail mode: under
-    /// `[audit] fail_mode = "closed"` a record the sender rejects withholds the
-    /// operation's result ([`FerroEhrService::record_access`]).
+    /// import of `ehr_id`, written before the result is reported: a record
+    /// that cannot be written withholds the operation's result
+    /// ([`FerroEhrService::record_access`]).
     ///
     /// EHR-Extract communication carries patient-identifiable clinical data
     /// across systems and is audited for **non-repudiation** — the security
@@ -66,9 +66,8 @@ impl FerroEhrService {
     /// categories (Annex II 3.2(c), `docs/law/eu/ehds/text.html`).
     ///
     /// # Errors
-    /// [`ServiceError::Unrecorded`] when the sender rejected the record under
-    /// `fail_mode = "closed"`.
-    pub(super) fn emit_extract_audit(
+    /// [`ServiceError::Unrecorded`] when the record cannot be written.
+    pub(super) async fn emit_extract_audit(
         &self,
         ehr_id: EhrId,
         action: EventActionCode,
@@ -81,9 +80,46 @@ impl FerroEhrService {
         let id = ehr_id.to_string();
         event.ehr_id = Some(id.clone());
         event.object_id = Some(id);
+        // NOTE: EHDS Annex II 3.2 and Art. 9 (`docs/law/eu/ehds/text.html`), the record of an
+        // export names the request and the bound accessor, as the adapter's records do (#5638).
+        let origin = crate::system_log::access_context::current_origin();
+        event.request_id = origin.request_id;
+        event.client_ip = origin.client_address;
+        event.binding = crate::system_log::access_context::current_binding();
         event.purpose = crate::system_log::access_context::current_purpose();
         event.permit = crate::system_log::access_context::current_permit();
         event.category = content.and_then(|content| self.audit_classify(&content, action));
-        self.record_access(event)
+        self.record_access(event).await
+    }
+
+    /// Emit the EHR-Extract audit event of the import of `ehr_id`, whose
+    /// record names the content of the versioned objects `landed`.
+    ///
+    /// # Errors
+    /// As [`Self::emit_extract_audit`].
+    async fn emit_import_audit(&self, ehr_id: EhrId, landed: &[VoId]) -> Result<(), ServiceError> {
+        let content = self.landed_content(landed).await;
+        self.emit_extract_audit(ehr_id, EventActionCode::Create, Some(content))
+            .await
+    }
+
+    /// What an import landed, for its access record's EHDS priority category
+    /// (Annex II 3.2(c), `docs/law/eu/ehds/text.html`): the newest content of
+    /// each received versioned object.
+    ///
+    /// The import has committed by then, so a failed read is logged and the
+    /// record is written `unclassified` rather than failing a completed import.
+    async fn landed_content(&self, landed: &[VoId]) -> AccessedContent {
+        match self.audit_content_of_objects(landed).await {
+            Ok(content) => AccessedContent::Objects(content),
+            Err(e) => {
+                tracing::warn!(
+                    error = %crate::error::ErrorChain::new(&e),
+                    "reading the categories of an imported Extract failed; the access \
+                     record is written unclassified"
+                );
+                AccessedContent::Objects(Vec::new())
+            }
+        }
     }
 }

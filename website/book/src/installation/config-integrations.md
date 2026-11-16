@@ -1,8 +1,8 @@
 # Integrations
 
-Query execution, the patient identity source and the three optional
-integrations: `[record.query]`, `[pixm]`, `[record.change_feed]`, `[terminology]`,
-`[record.multimedia]`. Everything except the query knobs and the identity source is
+Query execution, the patient identity source and the optional
+integrations: `[record.query]`, `[pixm]`, `[pix]`, `[record.change_feed]`,
+`[terminology]`, `[record.multimedia]`. Everything except the query knobs and the identity source is
 off by default, and a disabled integration contacts nothing and mounts no
 routes. Precedence, the environment-name grammar, and file discovery are on the
 [Configuration reference](configuration.md) index.
@@ -93,6 +93,55 @@ subject-id posture by accepting the `open_subject_namespace` gap by name
 ([`deployment.profile`](configuration.md#deploymentprofile)), which boot and
 `GET /management/status` then state.
 
+**Care relationships and representations reach a pseudonymous EHR through
+the patient's `PERSON`.** Under `pixm` an EHR names its subject by the
+pseudonym, which is no party of the CDR's party store, so the patient's
+`PERSON` declares the subject reference it stands for: an element of its
+`details` named by the `record_subject` code of FerroEHR's operation
+terminology whose value is a
+`DV_IDENTIFIER` with `issuer` set to the `[pixm] assigning_authority` and `id`
+to the pseudonym. The registering system writes it in the same demographic
+contribution as the `PERSON`, from the pseudonym ITI-83 answered, and FerroEHR
+asks the identity source nothing for it. A subject reference under
+`[authz.party_binding] namespace` names a `PERSON` by its container, as under
+`local`, and any other reference names the `PERSON` that declares it. One
+reference stands for one `PERSON`. After a PIX merge, one demographic
+contribution moves the merged patient's pseudonym onto the survivor's
+`PERSON`, and both EHRs inherit the survivor's care relationships and
+representatives from the next request. Writing the element needs the
+`write_care_relationship` grant or an administrator, as a care relationship
+does ([The pseudonymisation boundary](../security.md#the-subject-link-in-the-party-domain)
+names what this changes).
+
+### The patient's EHRs
+
+A lookup through the index reaches every EHR of the patient. ITI-83 turns
+the identifier into the pseudonym of FerroEHR's domain. The EHRs are the one
+whose `EHR_STATUS` names that pseudonym, and the one of each other
+`record_subject` reference of the `PERSON` that declares it. After a PIX
+merge FerroPIX answers the survivor's pseudonym for the merged patient's
+identifier (PIXm 3.1.0 §2:3.83.4.2.2.5 leaves this to policy). Once the
+merge contribution has moved the merged patient's pseudonym onto the
+survivor's `PERSON`, the lookup finds both EHRs. Before that contribution, it
+finds the survivor's EHR alone. Under [`[pix]`](#pix) FerroEHR commits that
+contribution itself from FerroPIX's feed. A subject cohort reads the same set.
+
+A contact point's TRC patient asks the identity source nothing. Its
+identifier is matched against the identifiers the patient's `PERSON` carries
+at the `[authz.party_binding.patient] identifier` path, by issuer and value,
+and its EHRs are the ones that `PERSON`'s references name. FerroEHR projects
+those identifiers into the party table `binding_patient_identifier` at the
+commit of the `PERSON`. An identifier of a protected scheme
+(`[privacy.identifier_protection]`) is held there as the stored reference, and
+FerroEHR finds it through its lookup digest. So the registering system writes
+the patient's identifiers in the same contribution as its record subjects,
+and a merge contribution moves both onto the survivor's `PERSON`. No request
+of a contact point waits on the PIX Manager, and an unavailable PIX Manager
+does not refuse one. **Our own design:** the projection, the match on issuer
+and value, and the refusal of an identifier two `PERSON`s carry. eHDSI XCA
+Profile 8.0.1 §4.2.1 names the TRC patient and leaves finding its record to
+the data holder.
+
 **`subject_index` alone switches the index**, in the file or as
 `FERROEHR__RECORD__SUBJECT_INDEX`. A `[pixm]` table kept beside `"local"` is not
 used, and boot names its keys, so a configuration written for the IHE
@@ -162,6 +211,108 @@ search answers with the demographic `Patient`, which FerroEHR would only
 discard, so asking for it breaks data minimisation
 ([GDPR Art. 5(1)(c)](https://eur-lex.europa.eu/eli/reg/2016/679/oj)), and its
 `$match` is patient matching.
+
+## `[pix]`
+
+**`[pix]` applies FerroPIX's merges, unmerges and links.** FerroEHR becomes
+an IHE PMIR Patient Identity Consumer: it subscribes to the Patient Identity
+Registry with [ITI-94](https://profiles.ihe.net/ITI/PMIR/ITI-94.html) for
+every `Patient`, and the Registry posts each change as an
+[ITI-93](https://profiles.ihe.net/ITI/PMIR/ITI-93.html) message to
+`POST {public_base_url}/pmir/feed`. Any instance answers. The route admits
+only the client `[pix]` names, by the access token it presents (IUA,
+§2:3.93.5); any other caller gets `403`. The table holds the Registry's
+endpoint and that trust alone, and it needs `[server] public_base_url`, under
+which the subscription names the feed route.
+
+What a message does to the patient `PERSON`s:
+
+| The Registry announces | FerroEHR commits |
+|---|---|
+| a merge of A into B | A's `record_subject` references move onto B's `PERSON`, and B's identifiers follow B's announcement |
+| the revert of that merge (A `active` again, no `replaced-by` link) | the moved references go back to A's `PERSON`, and each `PERSON` carries its own identifiers again |
+| a link (an identifier added) | the `PERSON` carries it, moved from the `PERSON` that gave it up, or written in its domain's `DV_IDENTIFIER` type: the one `[[pix.identifier_domain]]` names, else the one the patient `PERSON`s carry that domain with |
+| an unlink (an identifier dropped) | the `PERSON` no longer carries it |
+| a delete | the `PERSON` carries none of its patient identifiers |
+
+**A split closes at receipt.** FerroEHR stores each message before it
+answers, and in the same transaction the identifiers and record subjects an
+unmerge or an unlink splits off a `PERSON` stop resolving on every instance:
+a contact point's TRC patient, the index and the care relationships no longer
+reach the other patient. One instance then applies the messages in arrival
+order, each as one demographic contribution committed as the Registry's
+client, and records it in the access log as `pmir-message:<id>`. A
+redelivered message changes nothing. The Registry's client needs the
+`write_care_relationship` grant, which a record subject takes.
+
+**A message is refused, never guessed.** A message about a merged identity
+that states neither the merge nor its revert, an identity two `PERSON`s
+carry, an identifier another identity still holds, a linked identifier of a
+domain with no `DV_IDENTIFIER` type (the log names the domain), or a
+contribution the commit checks refuse, is kept unapplied with its split in force and logged as
+an error. An identity is bound to its `PERSON` when the feed first announces
+it while one `PERSON` carries one of its identifiers; a merge of two
+identities the feed never bound is refused.
+
+**An operator settles a refused message.** A refused message keeps what it
+split unresolved until an administrator acts on it, through the admin API
+(the Admin class and `[auth] product_scope`, with `[api] admin` on) or the
+CLI:
+
+| Step | Admin API | CLI |
+|---|---|---|
+| List the refused messages: each with its refusal code, receipt and refusal time, apply attempts, the Registry's `Patient.id`s it names and the `PERSON`s it keeps split, as counts; no identifier value | `GET /admin/pmir/messages` | `ferroehr pmir list --operator <name>` |
+| Retry a message once its cause is fixed, such as a `[[pix.identifier_domain]]` entry or a grant added: it goes back to its arrival position and a running instance applies it next | `POST /admin/pmir/messages/{message_id}/retry` | `ferroehr pmir retry <id> --operator <name>` |
+| Settle it without applying it: `discard` keeps its splits, `lift-splits` removes them so its identifiers and record subjects resolve as before the message; the reason is recorded | `POST /admin/pmir/messages/{message_id}/settle` with `{"decision": …, "reason": …}` | `ferroehr pmir settle <id> --decision <decision> --reason <text> --operator <name>` |
+
+A retry is refused (`409`) once a message received after it that names one of
+the same identities has applied: applying the older announcement would roll
+the identity back, so settle it instead. A discarded message can still have
+its splits lifted. No step applies a message by the operator's choice of
+`PERSON`, identifier or survivor; an identity conflict is corrected at the
+Registry, whose next message applies. Every list (one record per message),
+retry and settlement is an access record naming the operator and
+`pmir-message:<id>`. The CLI records the `--operator` name as the
+principal and the operating-system account that ran it, its effective user as
+`os:<name>/<uid>`, as the record's client.
+
+While refused messages wait, the `pmir_messages_refused` gauge counts them,
+and the `pmir_refused_messages` health indicator reads `DEGRADED` from
+`pix.refused_degraded_at` of them on. It never withdraws readiness.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `pix.endpoint` | [endpoint table](#the-endpoint-table) | required | The Registry: `url`, its FHIR base (`[base]` of `[base]/Subscription`), `timeout` for one ITI-94 exchange, `retry`, the TLS and the credential the Registry authorizes a subscriber by. |
+| `pix.feed_issuer` | URL | required | The issuer of the access token the Registry presents with each ITI-93 message, one of the `[auth]` issuers. |
+| `pix.feed_client_id` | string | required | The `client_id` of that token. |
+| `pix.identifier_domain` | array of tables | none | Per identifier domain, its `system` and the `identifier_type` a linked identifier of it is written with, such as `MR`; a protected scheme's code keeps the identifier sealed. |
+| `pix.refused_degraded_at` | integer | `1` | How many refused messages still to retry or settle turn the `pmir_refused_messages` indicator `DEGRADED`; at least 1. |
+
+```toml
+[server]
+public_base_url = "https://cdr.example.org"
+
+[pix]
+feed_issuer = "https://idp.example.org/realms/hospital"
+feed_client_id = "ferropix"
+
+[[pix.identifier_domain]]
+system = "urn:oid:2.999.1.1"
+identifier_type = "MR"
+
+[pix.endpoint]
+url = "https://pix.example.org/fhir"
+
+[pix.endpoint.credentials.oauth]
+token_endpoint = "https://idp.example.org/realms/hospital/protocol/openid-connect/token"
+client_id = "ferroehr"
+client_secret_file = "/run/secrets/pix-client"
+```
+
+**Our own design:** the subscription criteria, acknowledging once a message
+is stored, the binding of an identity to its `PERSON`, the split at receipt,
+the refusals and their retry and settlement. PMIR 1.6.0 §2:3.93.4.1.3 leaves a Consumer's handling of a
+message to its capabilities.
 
 ## `[record.change_feed]`
 

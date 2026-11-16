@@ -67,10 +67,17 @@ guarded_handler! {
              description = "The first `time_recorded` selected, an ISO 8601 date-time."),
             ("to" = Option<String>, Query,
              description = "The last `time_recorded` selected, an ISO 8601 date-time."),
-            ("action" = Option<String>, Query, description = "An `access action` rubric."),
-            ("outcome" = Option<String>, Query, description = "An `access outcome` rubric."),
+            ("action" = Option<String>, Query,
+             description = "A term of the `access action` group by its coded content, the token \
+                            `terminology_id|code`, such as `audit-event-action|R` or \
+                            `openehr_access|query`."),
+            ("outcome" = Option<String>, Query,
+             description = "A term of the `access outcome` group by its coded content, the token \
+                            `terminology_id|code`, such as `openehr_access|refused`."),
             ("accessor_kind" = Option<String>, Query,
-             description = "An `accessor kind` rubric."),
+             description = "A term of the `accessor kind` group by its coded content, the token \
+                            `terminology_id|code`, such as \
+                            `extra-security-role-type|datasubject`."),
             ("emergency" = Option<bool>, Query,
              description = "Only the entries whose `is_emergency` is this."),
             ("include_self" = Option<bool>, Query,
@@ -201,7 +208,11 @@ fn reader(state: &AppState, ehr: &str) -> Result<LogReader, RestError> {
         LogStanding::Reviewer => Ok(LogReader::Reviewer),
         // NOTE: EHDS Art. 9(2), the person reads the log of their own EHR only, and another
         // EHR answers as an unknown one does, so its existence is not disclosed.
-        LogStanding::Person(confined) if confined.to_string().eq_ignore_ascii_case(ehr) => {
+        LogStanding::Person(confined)
+            if confined
+                .iter()
+                .any(|own| own.to_string().eq_ignore_ascii_case(ehr)) =>
+        {
             Ok(LogReader::Person)
         }
         LogStanding::Person(_) => Err(unknown()),

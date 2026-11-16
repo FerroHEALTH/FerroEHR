@@ -2,34 +2,77 @@
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-//! The access control groups of FerroEHR's terminology, the only codes the
-//! access evaluator and the access write checks read.
+//! The groups of the draft access terminology, the only codes the access
+//! evaluator, the access write checks and the access log read.
 //!
-//! Each group is a closed set of codes of [`TERMINOLOGY_ID_ACCESS_CONTROL`],
-//! FerroEHR's operation terminology, which the operation grants are coded in
-//! too, and each code is the group's rubric until
-//! codes are assigned. A coded value is read into its group's type with
-//! [`Term::read`]: a value of another terminology, or of a code outside the
-//! group, is refused with [`OutsideGroup`], never read as a default.
-//! Sensitivity, category, purpose and legal-ground codes come from the
-//! terminology a jurisdiction names, so FerroEHR holds no group for them and
-//! [`ForeignCode::read`] compares them by terminology id and code.
+//! Each group is a closed set of terms. A term is a code of
+//! [`TERMINOLOGY_ID_ACCESS`], the draft `openehr_access` terminology both
+//! draft packages propose, or, where an HL7 code system publishes a code
+//! of the same meaning, that system's code under its HL7 code system id,
+//! such as [`TERMINOLOGY_ID_CONSENT_PROVISION_TYPE`]. Each draft code is its
+//! rubric until codes are assigned. A coded value is read into its group's
+//! type with [`Term::read`]: a value of a terminology the group holds no
+//! term of, or of a code outside the group, is refused with
+//! [`OutsideGroup`], never read as a default. Sensitivity, category, purpose
+//! and legal-ground codes come from the terminology a jurisdiction names, so
+//! the draft holds no group for them and [`ForeignCode::read`] compares them
+//! by terminology id and code.
 //!
 //! The RM leaves `ACCESS_CONTROL_SETTINGS` "Currently implementation
 //! dependent" (RM EHR IM, `org.openehr.rm.ehr.access_control_settings.adoc`)
 //! and openEHR defines no access control terminology, so every group, code
-//! and refusal here is our own design; the draft BMM names the terminology
-//! `Terminology_id_access_control` and each group `Group_id_<group>`.
+//! and refusal here is our own design; the draft BMMs name the terminology
+//! `Terminology_id_access` and each group `Group_id_<group>`.
 
 use std::fmt;
 
+use crate::v1_2::data_types::text::code_phrase::CodePhrase;
 use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
+use openehr_base::prelude::TerminologyId;
 
-/// The BMM's `Terminology_id_access_control`: FerroEHR's operation terminology,
-/// which holds the access control groups until openEHR adopts them.
-pub const TERMINOLOGY_ID_ACCESS_CONTROL: &str = "ferroehr-operations";
+use log::{AccessorKind, Action, Authorisation, CredentialBinding, Outcome, RefusalReason};
 
-/// One access control group of [`TERMINOLOGY_ID_ACCESS_CONTROL`].
+/// The BMMs' `Terminology_id_access`: the draft `openehr_access` terminology,
+/// which holds the access groups' own codes until openEHR adopts them.
+pub const TERMINOLOGY_ID_ACCESS: &str = "openehr_access";
+
+/// HL7 FHIR `http://hl7.org/fhir/consent-provision-type`, by its code system
+/// id: the `permit` and `deny` of a consent provision.
+pub const TERMINOLOGY_ID_CONSENT_PROVISION_TYPE: &str = "consent-provision-type";
+
+/// HL7 Terminology `http://terminology.hl7.org/CodeSystem/extra-security-role-type`,
+/// by its code system id: its `datasubject` is the subject of the data.
+pub const TERMINOLOGY_ID_SECURITY_ROLE_TYPE: &str = "extra-security-role-type";
+
+/// HL7 Terminology `http://terminology.hl7.org/CodeSystem/v3-RoleClass`, by its
+/// code system id: its `MBR` is the member of a group.
+pub const TERMINOLOGY_ID_ROLE_CLASS: &str = "v3-RoleClass";
+
+/// HL7 FHIR `http://hl7.org/fhir/audit-event-action`, by its code system id:
+/// the create, read, update and delete of an audited access.
+pub const TERMINOLOGY_ID_AUDIT_EVENT_ACTION: &str = "audit-event-action";
+
+/// A `DV_CODED_TEXT` of `code` in `terminology`, displayed as `rubric`.
+#[must_use]
+pub fn coded_text(terminology: &str, code: &str, rubric: &str) -> DvCodedText {
+    DvCodedText {
+        value: rubric.to_owned(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+        defining_code: CodePhrase {
+            terminology_id: TerminologyId {
+                value: terminology.to_owned(),
+            },
+            code_string: code.to_owned(),
+            preferred_term: None,
+        },
+    }
+}
+
+/// One group of the draft access terminology.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Group {
     /// `access default`: the disposition of an EHR where no directive applies.
@@ -44,36 +87,59 @@ pub enum Group {
     AccessCallerKind,
     /// `access operation`: the operation classes a directive names.
     AccessOperation,
-    /// `access sensitivity clearance`: the credentials element whose value is
-    /// a sensitivity code the capability clears.
-    AccessSensitivityClearance,
-    /// `access permitted purpose`: the credentials element whose value is a
-    /// purpose of use the capability lets its holder declare.
-    AccessPermittedPurpose,
     /// `care relationship`: the demographic relationships that put a caller
     /// in care of a subject.
     CareRelationship,
+    /// `group kind`: what kind of group a demographic `GROUP` is.
+    GroupKind,
+    /// `record subject`: the demographic element naming an EHR subject
+    /// reference the `PERSON` stands for.
+    RecordSubject,
+    /// `representation`: the demographic relationship that makes its source
+    /// a representative of its target.
+    Representation,
     /// `access refusal`: the code an access refusal is recorded under.
     AccessRefusal,
     /// `access log withheld`: the attributes of an access-log accessor the
     /// subject view withholds under EHDS Art. 9(3).
     AccessLogWithheld,
+    /// `access action`: what an access recorded in the access log did.
+    AccessAction,
+    /// `access outcome`: the result of an access the access log records.
+    AccessOutcome,
+    /// `accessor kind`: the kind of accessor the access log records.
+    AccessorKind,
+    /// `access authorisation`: the kind of ground an access ran under.
+    AccessAuthorisation,
+    /// `access refusal reason`: why an access was refused, beside the
+    /// `access refusal` codes of the decision procedure.
+    AccessRefusalReason,
+    /// `credential binding`: how the system bound a credential to a party,
+    /// or why it could not.
+    CredentialBinding,
 }
 
 impl Group {
     /// Every group, in contract order.
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 18] = [
         Self::AccessDefault,
         Self::AccessDirectiveKind,
         Self::AccessEffect,
         Self::AccessRelationship,
         Self::AccessCallerKind,
         Self::AccessOperation,
-        Self::AccessSensitivityClearance,
-        Self::AccessPermittedPurpose,
         Self::CareRelationship,
+        Self::GroupKind,
+        Self::RecordSubject,
+        Self::Representation,
         Self::AccessRefusal,
         Self::AccessLogWithheld,
+        Self::AccessAction,
+        Self::AccessOutcome,
+        Self::AccessorKind,
+        Self::AccessAuthorisation,
+        Self::AccessRefusalReason,
+        Self::CredentialBinding,
     ];
 
     /// The group's rubric, such as `access default`.
@@ -86,37 +152,57 @@ impl Group {
             Self::AccessRelationship => "access relationship",
             Self::AccessCallerKind => "access caller kind",
             Self::AccessOperation => "access operation",
-            Self::AccessSensitivityClearance => "access sensitivity clearance",
-            Self::AccessPermittedPurpose => "access permitted purpose",
             Self::CareRelationship => "care relationship",
+            Self::GroupKind => "group kind",
+            Self::RecordSubject => "record subject",
+            Self::Representation => "representation",
             Self::AccessRefusal => "access refusal",
             Self::AccessLogWithheld => "access log withheld",
+            Self::AccessAction => "access action",
+            Self::AccessOutcome => "access outcome",
+            Self::AccessorKind => "accessor kind",
+            Self::AccessAuthorisation => "access authorisation",
+            Self::AccessRefusalReason => "access refusal reason",
+            Self::CredentialBinding => "credential binding",
         }
     }
 
-    /// The codes of the group, in contract order.
+    /// The `(terminology id, code)` of every term of the group, in contract
+    /// order.
     #[must_use]
-    pub const fn codes(self) -> &'static [&'static str] {
+    pub fn phrases(self) -> Vec<(&'static str, &'static str)> {
         match self {
-            Self::AccessDefault => AccessDefault::CODES,
-            Self::AccessDirectiveKind => DirectiveKind::CODES,
-            Self::AccessEffect => Effect::CODES,
-            Self::AccessRelationship => Relationship::CODES,
-            Self::AccessCallerKind => CallerKind::CODES,
-            Self::AccessOperation => OperationClass::CODES,
-            Self::AccessSensitivityClearance => SensitivityClearance::CODES,
-            Self::AccessPermittedPurpose => PermittedPurpose::CODES,
-            Self::CareRelationship => CareRelationship::CODES,
-            Self::AccessRefusal => Refusal::CODES,
-            Self::AccessLogWithheld => Withheld::CODES,
+            Self::AccessDefault => phrases::<AccessDefault>(),
+            Self::AccessDirectiveKind => phrases::<DirectiveKind>(),
+            Self::AccessEffect => phrases::<Effect>(),
+            Self::AccessRelationship => phrases::<Relationship>(),
+            Self::AccessCallerKind => phrases::<CallerKind>(),
+            Self::AccessOperation => phrases::<OperationClass>(),
+            Self::CareRelationship => phrases::<CareRelationship>(),
+            Self::GroupKind => phrases::<GroupKind>(),
+            Self::RecordSubject => phrases::<RecordSubject>(),
+            Self::Representation => phrases::<Representation>(),
+            Self::AccessRefusal => phrases::<Refusal>(),
+            Self::AccessLogWithheld => phrases::<Withheld>(),
+            Self::AccessAction => phrases::<Action>(),
+            Self::AccessOutcome => phrases::<Outcome>(),
+            Self::AccessorKind => phrases::<AccessorKind>(),
+            Self::AccessAuthorisation => phrases::<Authorisation>(),
+            Self::AccessRefusalReason => phrases::<RefusalReason>(),
+            Self::CredentialBinding => phrases::<CredentialBinding>(),
         }
     }
 
-    /// Whether `code` of [`TERMINOLOGY_ID_ACCESS_CONTROL`] is a code of the group.
+    /// Whether `code` of `terminology` is a term of the group.
     #[must_use]
-    pub fn holds(self, code: &str) -> bool {
-        self.codes().contains(&code)
+    pub fn holds(self, terminology: &str, code: &str) -> bool {
+        self.phrases().contains(&(terminology, code))
     }
+}
+
+/// The `(terminology id, code)` of every term of `T`.
+fn phrases<T: Term>() -> Vec<(&'static str, &'static str)> {
+    T::ALL.iter().map(|term| term.phrase()).collect()
 }
 
 impl fmt::Display for Group {
@@ -125,12 +211,12 @@ impl fmt::Display for Group {
     }
 }
 
-/// A coded value that is no code of the group its attribute is bound to.
+/// A coded value that is no term of the group its attribute is bound to.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum OutsideGroup {
-    /// The value is of another terminology than [`TERMINOLOGY_ID_ACCESS_CONTROL`].
+    /// The value is of a terminology the group holds no term of.
     #[error(
-        "{terminology}::{code} is of no access control group: the {group} group is of {TERMINOLOGY_ID_ACCESS_CONTROL}"
+        "{terminology}::{code} is of no access group: the {group} group holds no {terminology} code"
     )]
     Terminology {
         /// The group the attribute is bound to.
@@ -140,47 +226,69 @@ pub enum OutsideGroup {
         /// The value's code.
         code: String,
     },
-    /// The value is a code of [`TERMINOLOGY_ID_ACCESS_CONTROL`] the group does not hold.
-    #[error("{TERMINOLOGY_ID_ACCESS_CONTROL}::{code} is no code of the {group} group")]
+    /// The value is a code of a terminology of the group that the group does
+    /// not hold.
+    #[error("{terminology}::{code} is no code of the {group} group")]
     Code {
         /// The group the attribute is bound to.
         group: Group,
+        /// The value's terminology id.
+        terminology: String,
         /// The value's code.
         code: String,
     },
 }
 
-/// The terms of one access control group, read from coded values.
+/// The terms of one access group, read from coded values.
 pub trait Term: Copy + PartialEq + Sized + 'static {
     /// The group the terms belong to.
     const GROUP: Group;
     /// Every term of the group, in contract order.
     const ALL: &'static [Self];
-    /// The code of every term, in the order of [`Term::ALL`].
-    const CODES: &'static [&'static str];
 
-    /// The term's code in [`TERMINOLOGY_ID_ACCESS_CONTROL`].
+    /// The term's terminology id: [`TERMINOLOGY_ID_ACCESS`], or the HL7 code
+    /// system whose code the term is.
+    fn terminology(self) -> &'static str;
+
+    /// The term's code in [`Term::terminology`].
     fn code(self) -> &'static str;
+
+    /// The term's rubric, the text a `DV_CODED_TEXT` of it shows.
+    fn rubric(self) -> &'static str;
+
+    /// The term's `(terminology id, code)`.
+    fn phrase(self) -> (&'static str, &'static str) {
+        (self.terminology(), self.code())
+    }
+
+    /// The term as a `DV_CODED_TEXT`, displayed as its rubric.
+    fn coded(self) -> DvCodedText {
+        coded_text(self.terminology(), self.code(), self.rubric())
+    }
 
     /// Reads the term a `CODE_PHRASE` of `terminology` and `code` names.
     ///
     /// # Errors
-    /// [`OutsideGroup`] when `terminology` is not [`TERMINOLOGY_ID_ACCESS_CONTROL`] or `code`
-    /// is no code of the group, compared exactly.
+    /// [`OutsideGroup`] when no term of the group is of `terminology`, or
+    /// none of `terminology` has `code`, compared exactly.
     fn read(terminology: &str, code: &str) -> Result<Self, OutsideGroup> {
-        if terminology != TERMINOLOGY_ID_ACCESS_CONTROL {
+        let mut of_terminology = Self::ALL
+            .iter()
+            .copied()
+            .filter(|term| term.terminology() == terminology)
+            .peekable();
+        if of_terminology.peek().is_none() {
             return Err(OutsideGroup::Terminology {
                 group: Self::GROUP,
                 terminology: terminology.to_owned(),
                 code: code.to_owned(),
             });
         }
-        Self::ALL
-            .iter()
-            .copied()
+        of_terminology
             .find(|term| term.code() == code)
             .ok_or_else(|| OutsideGroup::Code {
                 group: Self::GROUP,
+                terminology: terminology.to_owned(),
                 code: code.to_owned(),
             })
     }
@@ -203,11 +311,19 @@ pub trait Term: Copy + PartialEq + Sized + 'static {
 }
 
 /// Defines one group's term type, its [`Term`] impl and its `Display`.
+///
+/// A term is `Name => "code"`, a code of [`TERMINOLOGY_ID_ACCESS`] that is
+/// its own rubric, or `Name => "code" of TERMINOLOGY, "rubric"`, the code of
+/// another terminology.
 macro_rules! group {
+    (@terminology) => { TERMINOLOGY_ID_ACCESS };
+    (@terminology $terminology:ident) => { $terminology };
+    (@rubric $code:literal) => { $code };
+    (@rubric $code:literal $rubric:literal) => { $rubric };
     (
         $(#[$doc:meta])*
         $name:ident in $group:ident {
-            $( $(#[$term_doc:meta])* $term:ident => $code:literal, )+
+            $( $(#[$term_doc:meta])* $term:ident => $code:literal $(of $terminology:ident, $rubric:literal)?, )+
         }
     ) => {
         $(#[$doc])*
@@ -219,11 +335,22 @@ macro_rules! group {
         impl Term for $name {
             const GROUP: Group = Group::$group;
             const ALL: &'static [Self] = &[$(Self::$term),+];
-            const CODES: &'static [&'static str] = &[$($code),+];
+
+            fn terminology(self) -> &'static str {
+                match self {
+                    $(Self::$term => group!(@terminology $($terminology)?),)+
+                }
+            }
 
             fn code(self) -> &'static str {
                 match self {
                     $(Self::$term => $code,)+
+                }
+            }
+
+            fn rubric(self) -> &'static str {
+                match self {
+                    $(Self::$term => group!(@rubric $code $($rubric)?),)+
                 }
             }
         }
@@ -235,6 +362,8 @@ macro_rules! group {
         }
     };
 }
+
+pub mod log;
 
 group! {
     /// The disposition of an EHR where no directive applies
@@ -262,16 +391,21 @@ group! {
         OptOut => "opt_out",
         /// The scope of what a proxy may do (EHDS Art. 4(2)).
         Delegation => "delegation",
+        /// A rule of the controller's `ACCESS_POLICY` for every EHR it keeps,
+        /// never a directive of an EHR (EHDS Art. 11(3)).
+        ControllerRule => "controller_rule",
     }
 }
 
 group! {
     /// Whether a directive permits or denies (`ACCESS_DIRECTIVE.effect`).
     Effect in AccessEffect {
-        /// The directive admits what it covers.
-        Permit => "permit",
-        /// The directive refuses what it covers; a deny overrides a permit.
-        Deny => "deny",
+        /// The directive admits what it covers: HL7 FHIR
+        /// `consent-provision-type#permit`.
+        Permit => "permit" of TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, "permit",
+        /// The directive refuses what it covers; a deny overrides a permit:
+        /// HL7 FHIR `consent-provision-type#deny`.
+        Deny => "deny" of TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, "deny",
     }
 }
 
@@ -297,8 +431,8 @@ group! {
         /// An EHDS Art. 4 and 12 access service: a caller holding the
         /// `access_service` grant.
         AccessService => "access_service",
-        /// The subject of the EHR.
-        Subject => "subject",
+        /// The subject of the EHR: HL7 `extra-security-role-type#datasubject`.
+        Subject => "datasubject" of TERMINOLOGY_ID_SECURITY_ROLE_TYPE, "subject",
         /// A representative or proxy of the subject.
         Representative => "representative",
         /// A system client acting on its own account.
@@ -322,34 +456,48 @@ group! {
 }
 
 group! {
-    /// The credentials element naming a sensitivity clearance: its value is
-    /// a sensitivity code of the jurisdiction's terminology.
-    SensitivityClearance in AccessSensitivityClearance {
-        /// The element whose value is a sensitivity code the capability
-        /// clears.
-        SensitivityClearance => "sensitivity_clearance",
-    }
-}
-
-group! {
-    /// The credentials element naming a permitted purpose: its value is a
-    /// purpose-of-use code of the jurisdiction's terminology.
-    PermittedPurpose in AccessPermittedPurpose {
-        /// The element whose value is a purpose of use the capability lets
-        /// its holder declare.
-        PermittedPurpose => "permitted_purpose",
-    }
-}
-
-group! {
     /// The demographic relationships of care, coded in the `name` of a
     /// `PARTY_RELATIONSHIP`.
     CareRelationship in CareRelationship {
-        /// A professional's `PERSON` is a member of a care-team `GROUP`.
-        MemberOf => "member_of",
+        /// A professional's `PERSON` is a member of a care-team `GROUP`: HL7
+        /// v3 `RoleClass#MBR`, "a member of a group".
+        MemberOf => "MBR" of TERMINOLOGY_ID_ROLE_CLASS, "member of",
         /// A patient's `PERSON` is under the care of a team `GROUP` or an
         /// organisational unit.
         UnderCareOf => "under_care_of",
+    }
+}
+
+group! {
+    /// What kind of group a demographic `GROUP` is, coded in its `name`: RM
+    /// demographic `party.adoc` makes `type()` the `name` (`Type_valid`).
+    GroupKind in GroupKind {
+        /// The `GROUP` is a care team: a membership (`MBR`) relationship to it puts
+        /// its member in the care of the subjects under its care.
+        CareTeam => "care_team",
+    }
+}
+
+group! {
+    /// The element of a `PERSON`'s `details` naming an EHR subject reference.
+    ///
+    /// The reference is one the `PERSON` stands for, such as a pseudonym an
+    /// identity source issued: the element's value is a `DV_IDENTIFIER` whose
+    /// `issuer` is the reference's namespace and whose `id` is its id.
+    RecordSubject in RecordSubject {
+        /// The element naming an `EHR_STATUS` subject reference.
+        RecordSubject => "record_subject",
+    }
+}
+
+group! {
+    /// The demographic relationship of representation, coded in the `name`
+    /// or `details` of a `PARTY_RELATIONSHIP`.
+    Representation in Representation {
+        /// The relationship's source represents its target, the subject, on
+        /// the subject's own record; the openEHR `subject_relationship` code
+        /// beside it says how.
+        Represents => "represents",
     }
 }
 
@@ -363,14 +511,15 @@ group! {
         Restricted => "refused-restricted",
         /// A deny directive applies, with no exception that applies.
         ConsentDenied => "refused-consent-denied",
+        /// A deny rule of the controller's policy applies, with no exception
+        /// that applies; no permit of the subject lifts it.
+        PolicyDenied => "refused-policy-denied",
         /// The data carry a sensitivity the caller is not cleared for.
         Sensitivity => "refused-sensitivity",
         /// The policy needs a care relationship and the caller has none.
         NoCareRelationship => "refused-no-care-relationship",
         /// The policy needs a declared purpose and the request has none.
         PurposeMissing => "refused-purpose-missing",
-        /// The caller's capabilities do not permit the declared purpose.
-        PurposeNotPermitted => "refused-purpose-not-permitted",
         /// The EHR needs consent and no permit directive applies.
         ConsentRequired => "refused-consent-required",
         /// A subject caller asks for an EHR other than the one its patient
@@ -380,6 +529,9 @@ group! {
         /// subject a recorded representation names: it acts for that
         /// subject alone.
         NotRepresented => "refused-not-represented",
+        /// A caller admitted under an agreement that conditions its reads on
+        /// a consent decision asks to read with no reference to one.
+        ConsentReferenceMissing => "refused-consent-reference-missing",
     }
 }
 
@@ -433,6 +585,12 @@ pub enum ForeignKind {
     Purpose,
     /// A legal provision, such as GDPR Art. 9(2)(a).
     LegalGround,
+    /// A role a `ROLE` is named by, such as a professional role code
+    /// (RM Demographic IM, `PARTY.type()`).
+    Role,
+    /// A type an `ORGANISATION` is named by, such as a healthcare facility
+    /// type code (RM Demographic IM, `PARTY.type()`).
+    OrganisationType,
 }
 
 impl fmt::Display for ForeignKind {
@@ -442,14 +600,17 @@ impl fmt::Display for ForeignKind {
             Self::Category => "category",
             Self::Purpose => "purpose",
             Self::LegalGround => "legal ground",
+            Self::Role => "role",
+            Self::OrganisationType => "organisation type",
         })
     }
 }
 
-/// A coded value FerroEHR's terminology names no code for.
+/// A coded value of [`TERMINOLOGY_ID_ACCESS`], which holds no code of any
+/// [`ForeignKind`].
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error(
-    "{TERMINOLOGY_ID_ACCESS_CONTROL}::{code} is no {kind}: {TERMINOLOGY_ID_ACCESS_CONTROL} holds no {kind} codes"
+    "{TERMINOLOGY_ID_ACCESS}::{code} is no {kind}: {TERMINOLOGY_ID_ACCESS} holds no {kind} codes"
 )]
 pub struct NotForeign {
     /// What the value stands for.
@@ -472,11 +633,11 @@ impl ForeignCode {
     /// Reads `coded` as a code of `kind`.
     ///
     /// # Errors
-    /// [`NotForeign`] when `coded` is of [`TERMINOLOGY_ID_ACCESS_CONTROL`], which holds no code
+    /// [`NotForeign`] when `coded` is of [`TERMINOLOGY_ID_ACCESS`], which holds no code
     /// of any [`ForeignKind`].
     pub fn read(kind: ForeignKind, coded: &DvCodedText) -> Result<Self, NotForeign> {
         let phrase = &coded.defining_code;
-        if phrase.terminology_id.value == TERMINOLOGY_ID_ACCESS_CONTROL {
+        if phrase.terminology_id.value == TERMINOLOGY_ID_ACCESS {
             return Err(NotForeign {
                 kind,
                 code: phrase.code_string.clone(),
@@ -490,84 +651,4 @@ impl ForeignCode {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::v1_2::data_types::text::code_phrase::CodePhrase;
-    use openehr_base::prelude::TerminologyId;
-
-    use super::*;
-
-    #[test]
-    fn every_group_reads_back_each_code_and_codes_are_unique_in_a_group() {
-        for group in Group::ALL {
-            let codes = group.codes();
-            assert!(!codes.is_empty(), "{group}");
-            for (i, code) in codes.iter().enumerate() {
-                assert!(group.holds(code));
-                assert!(!codes[i + 1..].contains(code), "{code} twice in {group}");
-            }
-        }
-        assert_eq!(
-            AccessDefault::read(TERMINOLOGY_ID_ACCESS_CONTROL, "open"),
-            Ok(AccessDefault::Open)
-        );
-        assert_eq!(
-            Refusal::read(TERMINOLOGY_ID_ACCESS_CONTROL, "refused-opt-out"),
-            Ok(Refusal::OptOut)
-        );
-    }
-
-    #[test]
-    fn a_code_outside_its_group_is_refused() {
-        assert_eq!(
-            Effect::read(TERMINOLOGY_ID_ACCESS_CONTROL, "open"),
-            Err(OutsideGroup::Code {
-                group: Group::AccessEffect,
-                code: "open".to_owned()
-            })
-        );
-        assert!(matches!(
-            DirectiveKind::read("local", "consent"),
-            Err(OutsideGroup::Terminology {
-                group: Group::AccessDirectiveKind,
-                ..
-            })
-        ));
-        assert!(OperationClass::read(TERMINOLOGY_ID_ACCESS_CONTROL, "commit_composition").is_err());
-        assert!(AccessDefault::read(TERMINOLOGY_ID_ACCESS_CONTROL, " open").is_err());
-    }
-
-    #[test]
-    fn a_foreign_code_is_of_another_terminology() {
-        let coded = |terminology: &str, code: &str| DvCodedText {
-            value: code.to_owned(),
-            hyperlink: None,
-            formatting: None,
-            mappings: None,
-            language: None,
-            encoding: None,
-            defining_code: CodePhrase {
-                terminology_id: TerminologyId {
-                    value: terminology.to_owned(),
-                },
-                code_string: code.to_owned(),
-                preferred_term: None,
-            },
-        };
-        assert_eq!(
-            ForeignCode::read(ForeignKind::Sensitivity, &coded("Confidentiality", "R")),
-            Ok(ForeignCode {
-                terminology: "Confidentiality".to_owned(),
-                code: "R".to_owned()
-            })
-        );
-        assert!(
-            ForeignCode::read(
-                ForeignKind::Purpose,
-                &coded(TERMINOLOGY_ID_ACCESS_CONTROL, "TREAT")
-            )
-            .is_err()
-        );
-        assert!(Effect::Deny.is(&coded(TERMINOLOGY_ID_ACCESS_CONTROL, "deny")));
-        assert!(!Effect::Deny.is(&coded("local", "deny")));
-    }
-}
+mod tests;

@@ -5,12 +5,19 @@
 //! Art. 18 restriction of processing and the EHDS Art. 8 restriction of
 //! access. No openEHR spec governs either: our own design/extension.
 
+use std::sync::Arc;
+
 use sqlx::PgConnection;
 
+use crate::access_eval::condition::RequestAccess;
+use crate::access_eval::procedure::{Outcome, Verdict};
+use crate::access_eval::scope::Item;
+
 use crate::error::ServiceError;
-use crate::error::refusal::Missing;
+use crate::error::refusal::{Missing, Refused};
 use crate::ids::{EhrId, VoId};
 use crate::storage::access_projection::Revision;
+use crate::storage::ehr_repo::Restriction;
 
 /// Refuse a write that would process an object whose processing is restricted.
 ///
@@ -25,6 +32,14 @@ use crate::storage::access_projection::Revision;
 /// recorded. No openEHR spec governs restriction of processing — our own
 /// design/extension.
 ///
+/// `known` is the EHR's mark and settings revision the caller already read on
+/// the commit's connection ([`Known`]), taken instead of reading them again
+/// (#5775).
+///
+/// The answer carries the access evaluator's verdict of the EHR, which
+/// [`WriteGate::admit_written`] then holds the content the write is about to
+/// store to.
+///
 /// # Errors
 /// [`ServiceError::Restricted`] (`403`) when either grain is marked;
 /// [`ServiceError::Database`] if the marks cannot be read.
@@ -32,10 +47,14 @@ pub(crate) async fn ensure_not_restricted_tx(
     tx: &mut PgConnection,
     ehr_id: Option<EhrId>,
     vo_id: Option<VoId>,
-) -> Result<(), ServiceError> {
+    known: Option<Restriction>,
+) -> Result<Option<WriteGate>, ServiceError> {
     let mut seen = Revision::default();
     if let Some(ehr_id) = ehr_id {
-        let read = crate::storage::ehr_repo::restriction_and_revision(&mut *tx, ehr_id).await?;
+        let read = match known {
+            Some(read) => read,
+            None => crate::storage::ehr_repo::restriction_and_revision(&mut *tx, ehr_id).await?,
+        };
         if let Some((restricted, revision)) = read {
             if restricted {
                 return Err(ServiceError::restricted(&format!("EHR {ehr_id}")));
@@ -50,8 +69,72 @@ pub(crate) async fn ensure_not_restricted_tx(
             "versioned object {vo_id}"
         )));
     }
-    ensure_not_access_restricted_tx(tx, ehr_id, vo_id, seen).await?;
-    crate::versioning::access_delay::ensure_not_withheld_tx(tx, vo_id).await
+    let gate = ensure_not_access_restricted_tx(tx, ehr_id, vo_id, seen).await?;
+    crate::versioning::access_delay::ensure_not_withheld_tx(tx, vo_id).await?;
+    Ok(gate)
+}
+
+/// The access evaluator's verdict of the EHR a write reaches, for the content
+/// the write is about to store.
+#[derive(Debug)]
+pub(crate) struct WriteGate {
+    access: Arc<RequestAccess>,
+    ehr_id: EhrId,
+    verdict: Arc<Verdict>,
+    named: bool,
+}
+
+impl WriteGate {
+    /// Refuse the write of `written`, the object as it will be stored, before
+    /// anything is stored, as steps 3 to 8 would refuse a read of it: a
+    /// directive or a controller rule whose data scope names the template,
+    /// archetype or origin of a body the store does not hold yet refuses it
+    /// (RM EHR IM §EHR Access; BASE Architecture Overview §Access Control
+    /// decides before the access). Our own design (#5626, #5621).
+    ///
+    /// An opt-out and a restriction never judge the content: EHDS Art. 8
+    /// restricts who may see data, not its recording, so refusing a
+    /// professional's write would stop care being documented and its `404`
+    /// would hint at the restriction. They decide a write for the EHR alone,
+    /// and the data written stay covered by them for reading.
+    ///
+    /// # Errors
+    /// [`ServiceError::Forbidden`] naming the refusal code under steps 3 to 8
+    /// of an EHR the request names.
+    pub(crate) fn admit_written(&self, written: &Item<'_>) -> Result<(), ServiceError> {
+        // NOTE: EHDS Art. 8 restricts access, not recording (owner ruling on #5621), so the
+        // opt-out and restriction rules leave a write's content to the other steps.
+        let judged = Verdict {
+            rules: self
+                .verdict
+                .rules
+                .iter()
+                .filter(|rule| !matches!(rule.then, Outcome::Absent(_)))
+                .cloned()
+                .collect(),
+            ..(*self.verdict).clone()
+        };
+        let Outcome::Refused(code) = judged.outcome(written) else {
+            if let Item::Object(object) = written {
+                self.access.wrote(object.vo_id);
+            }
+            return Ok(());
+        };
+        if !self.named {
+            return Ok(());
+        }
+        self.access.note(self.ehr_id, &judged, written);
+        Err(ServiceError::refused(
+            Refused {
+                code,
+                legal_grounds: self.access.refusal_grounds(Some(self.ehr_id)),
+            },
+            format!(
+                "{code}: the access directives of EHR {} refuse this write",
+                self.ehr_id
+            ),
+        ))
+    }
 }
 
 /// Refuse a write the access evaluator refuses for the running request: as
@@ -75,11 +158,9 @@ async fn ensure_not_access_restricted_tx(
     ehr_id: Option<EhrId>,
     vo_id: Option<VoId>,
     seen: Revision,
-) -> Result<(), ServiceError> {
-    use crate::access_eval::procedure::Outcome;
-    use crate::access_eval::scope::Item;
+) -> Result<Option<WriteGate>, ServiceError> {
     let (Some(access), Some(ehr_id)) = (crate::access_eval::condition::current(), ehr_id) else {
-        return Ok(());
+        return Ok(None);
     };
     let judged = access.judgement(ehr_id);
     let named = judged.is_some();
@@ -98,15 +179,13 @@ async fn ensure_not_access_restricted_tx(
             None => None,
         };
         let (subject, version) = Box::pin(subject_and_access_version(&mut *tx, ehr_id)).await?;
-        access.judge_ehr(
-            ehr_id,
-            &crate::access_eval::condition::EhrEntry {
-                version: settings.as_ref().and(version),
-                settings: std::sync::Arc::new(settings),
-                subject,
-                revision: seen,
-            },
-        )
+        let entry = crate::access_eval::condition::EhrEntry {
+            version: settings.as_ref().and(version),
+            settings: Arc::new(settings),
+            subject,
+            revision: seen,
+        };
+        Box::pin(access.judge_ehr(ehr_id, &entry)).await?
     };
     let facts = match vo_id {
         Some(vo_id) if verdict.item_dependent() => {
@@ -119,11 +198,22 @@ async fn ensure_not_access_restricted_tx(
     };
     let item = facts.as_ref().map_or(Item::Ehr, |facts| facts.item());
     let outcome = verdict.outcome(&item);
-    if matches!(outcome, Outcome::Absent(_)) || (named && matches!(outcome, Outcome::Refused(_))) {
+    // NOTE: our own design (#5627), a create is judged as the datum it writes once resolved,
+    // so no step about the EHR alone decides before a step about that datum.
+    let deferred = vo_id.is_none() && verdict.item_dependent();
+    if matches!(outcome, Outcome::Absent(_))
+        || (named && !deferred && matches!(outcome, Outcome::Refused(_)))
+    {
         access.note(ehr_id, &verdict, &item);
     }
+    let gate = WriteGate {
+        access: Arc::clone(&access),
+        ehr_id,
+        verdict: Arc::clone(&verdict),
+        named,
+    };
     match (outcome, vo_id) {
-        (Outcome::Admit, _) => Ok(()),
+        (Outcome::Admit, _) => Ok(Some(gate)),
         (Outcome::Absent(_), Some(vo_id)) if facts.is_some() => Err(ServiceError::not_found(
             Missing::VersionedObject,
             format!("versioned object {vo_id}"),
@@ -134,25 +224,36 @@ async fn ensure_not_access_restricted_tx(
         )),
         // NOTE: our own design (#5513), a write to an EHR the request does not name, such
         // as the one it creates or imports, is held to steps 1 and 2 only, as before.
-        (Outcome::Refused(_), _) if !named => Ok(()),
-        (Outcome::Refused(code), _) => Err(ServiceError::not_permitted(format!(
-            "{code}: the access directives of EHR {ehr_id} refuse this write"
-        ))),
+        (Outcome::Refused(_), _) if !named => Ok(Some(gate)),
+        (Outcome::Refused(_), None) if deferred => Ok(Some(gate)),
+        (Outcome::Refused(code), _) => Err(ServiceError::refused(
+            Refused {
+                code,
+                legal_grounds: access.refusal_grounds(Some(ehr_id)),
+            },
+            format!("{code}: the access directives of EHR {ehr_id} refuse this write"),
+        )),
     }
 }
 
-/// The `PERSON` the EHR `ehr_id` names as its subject and the uid of its
-/// current `EHR_ACCESS` version, read on the commit's own transaction.
+/// The subject reference the EHR `ehr_id` names and the uid of its current
+/// `EHR_ACCESS` version, read on the commit's own transaction.
 ///
 /// # Errors
 /// [`ServiceError::Database`] on a driver failure.
 async fn subject_and_access_version(
     tx: &mut PgConnection,
     ehr_id: EhrId,
-) -> Result<(Option<uuid::Uuid>, Option<String>), ServiceError> {
+) -> Result<
+    (
+        Option<crate::storage::access_projection::EhrSubject>,
+        Option<String>,
+    ),
+    ServiceError,
+> {
     use sqlx::Row as _;
     let row = sqlx::query(
-        "SELECT e.subject_id, h.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, \
+        "SELECT e.subject_namespace, e.subject_id, h.vo_id, v.creating_system_id, v.trunk_version, v.branch_number, \
                 v.branch_version \
          FROM ehr e \
          LEFT JOIN vo_head h ON h.ehr_id = e.id AND h.kind = 'EHR_ACCESS' \
@@ -165,9 +266,45 @@ async fn subject_and_access_version(
     let Some(row) = row else {
         return Ok((None, None));
     };
-    let subject = crate::storage::access_projection::subject_of(
-        row.try_get::<Option<String>, _>("subject_id")?.as_deref(),
+    let subject = crate::storage::access_projection::EhrSubject::stored(
+        row.try_get("subject_namespace")?,
+        row.try_get("subject_id")?,
     );
     let version = crate::storage::access_projection::version_of(&row)?;
     Ok((subject, version))
+}
+
+/// What a write's caller already read on the commit's connection: the commit
+/// instant, and the EHR's restriction mark with its settings revision, which
+/// [`ensure_not_restricted_tx`] takes instead of reading them again (#5775).
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Known {
+    /// The transaction timestamp; `None` makes the write read its own.
+    pub(crate) now: Option<jiff::Timestamp>,
+    /// The restriction read; `None` makes the gate read its own.
+    pub(crate) restriction: Option<Restriction>,
+}
+
+impl Known {
+    /// The commit instant `now`, and no restriction read.
+    pub(crate) fn at(now: jiff::Timestamp) -> Self {
+        Self {
+            now: Some(now),
+            restriction: None,
+        }
+    }
+}
+
+impl super::change::Write {
+    /// The same write, its EHR's restriction mark and settings revision
+    /// already read as `restriction` on the commit's connection.
+    pub(crate) fn gated(self, restriction: Restriction) -> Self {
+        Self {
+            known: Known {
+                restriction: Some(restriction),
+                ..self.known
+            },
+            ..self
+        }
+    }
 }

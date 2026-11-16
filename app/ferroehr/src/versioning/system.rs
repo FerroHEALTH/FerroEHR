@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The checks on what a system caller commits: only a client whose `ACTOR`
-//! performs a `ROLE` granting `commit_composition` commits into an EHR, a COMPOSITION only of a template a grant lists, and
+//! performs a `ROLE` granting `commit_composition` commits into an EHR, and
 //! each COMPOSITION names a facility of that grant and is either a device act
-//! of a `device` grant or a relayed person act of a `relay` grant.
+//! of a `device` grant or a relayed person act of a `relay` grant. Which
+//! templates any caller may commit is a rule of the controller's
+//! `ACCESS_POLICY`, which the access evaluator applies to the committed
+//! version ([`crate::versioning::restriction`]).
 //!
 //! The grants are read from the policy parties per request through
-//! [`Capabilities::current`], by the codes of the operation terminology
+//! [`Capabilities::current`], by the codes of the draft access terminology
 //! (`crate::party_binding::grants::operation`).
 //! EHDS Art. 13(4) (`docs/law/eu/ehds/text.html`) asks the record to
 //! "identify the health professional and healthcare provider that carried out
@@ -30,10 +33,8 @@
 use std::sync::Arc;
 
 use serde_json::Value;
-use sqlx::PgConnection;
 
 use crate::error::{ServiceError, Violation};
-use crate::ids::VoId;
 use crate::party_binding::grants::capabilities::{Capabilities, Credentials, Grant};
 use crate::party_binding::grants::operation::{
     DEVICE, DEVICE_IDENTIFIER_ISSUER, FACILITY_PARTS, ORIGIN, Operation, RELAY, SCOPES,
@@ -60,7 +61,7 @@ fn composing_grants(kind: Kind) -> Result<Option<Arc<Capabilities>>, ServiceErro
         return Err(ServiceError::not_permitted(
             "a system caller commits into an EHR only under a commit_composition grant: a \
              CAPABILITY of a ROLE its client's ACTOR performs, coding \
-             ferroehr-operations::commit_composition",
+             openehr_access::commit_composition",
         ));
     }
     Ok((kind == Kind::Composition).then_some(capabilities))
@@ -71,16 +72,12 @@ fn composing_grants(kind: Kind) -> Result<Option<Arc<Capabilities>>, ServiceErro
 ///
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) for a caller without a grant, a
-/// template no grant lists, a person act under no `relay` grant
-/// and a device act under no `device` grant;
+/// person act under no `relay` grant and a device act under no `device`
+/// grant;
 /// [`ServiceError::Unprocessable`] (`422`) for an organisation composer, a
 /// person act naming no professional by an identifier, and a COMPOSITION
 /// naming no facility of an admitting grant.
-pub(crate) fn admit_content(
-    kind: Kind,
-    canonical: &Value,
-    template_id: Option<&str>,
-) -> Result<(), ServiceError> {
+pub(crate) fn admit_content(kind: Kind, canonical: &Value) -> Result<(), ServiceError> {
     let Some(capabilities) = composing_grants(kind)? else {
         return Ok(());
     };
@@ -88,17 +85,11 @@ pub(crate) fn admit_content(
         .of(Operation::CommitComposition)
         .map(Grant::credentials)
         .collect();
-    judge(&grants, canonical, template_of(canonical, template_id))
+    judge(&grants, canonical)
 }
 
-/// Judges `canonical`, of `template`, against the `commit_composition` grants
-/// `grants`.
-fn judge(
-    grants: &[Credentials<'_>],
-    canonical: &Value,
-    template: Option<&str>,
-) -> Result<(), ServiceError> {
-    let writing = admit_template(grants, template)?;
+/// Judges `canonical` against the `commit_composition` grants `grants`.
+fn judge(grants: &[Credentials<'_>], canonical: &Value) -> Result<(), ServiceError> {
     if organisation_composer(canonical) {
         return Err(ServiceError::content_invalid(
             Violation::new(
@@ -109,13 +100,13 @@ fn judge(
             .with_path("COMPOSITION.composer"),
         ));
     }
-    let devices: Vec<Credentials<'_>> = writing
+    let devices: Vec<Credentials<'_>> = grants
         .iter()
         .copied()
         .filter(|grant| device_act(*grant, canonical))
         .collect();
     let admitting: Vec<Credentials<'_>> = if devices.is_empty() {
-        let relays = of_origin(&writing, RELAY);
+        let relays = of_origin(grants, RELAY);
         if relays.is_empty() {
             return Err(ServiceError::not_permitted(
                 "a COMPOSITION that is no device act records a person's act, which a system \
@@ -172,45 +163,9 @@ pub(crate) fn template_of<'a>(
 /// caller; any other caller passes.
 ///
 /// # Errors
-/// [`ServiceError::Forbidden`] (`403`) for a caller without a grant, or a
-/// COMPOSITION of a template no grant lists; the storage
-/// error of the template read.
-pub(crate) async fn admit_delete(
-    tx: &mut PgConnection,
-    kind: Kind,
-    vo_id: VoId,
-) -> Result<(), ServiceError> {
-    let Some(capabilities) = composing_grants(kind)? else {
-        return Ok(());
-    };
-    let grants: Vec<Credentials<'_>> = capabilities
-        .of(Operation::CommitComposition)
-        .map(Grant::credentials)
-        .collect();
-    let template = crate::storage::version_repo::placement::head_template(tx, vo_id).await?;
-    admit_template(&grants, template.as_deref()).map(drop)
-}
-
-/// The grants of `grants` that list `template`.
-///
-/// # Errors
-/// [`ServiceError::Forbidden`] (`403`) when none does.
-fn admit_template<'a>(
-    grants: &[Credentials<'a>],
-    template: Option<&str>,
-) -> Result<Vec<Credentials<'a>>, ServiceError> {
-    let writing: Vec<Credentials<'a>> = grants
-        .iter()
-        .copied()
-        .filter(|grant| template.is_some_and(|template| grant.texts(SCOPES[0]).contains(&template)))
-        .collect();
-    if writing.is_empty() {
-        return Err(ServiceError::not_permitted(
-            "the system client may commit only a COMPOSITION of a template a \
-             commit_composition grant lists in an element coded ferroehr-operations::template",
-        ));
-    }
-    Ok(writing)
+/// [`ServiceError::Forbidden`] (`403`) for a caller without a grant.
+pub(crate) fn admit_delete(kind: Kind) -> Result<(), ServiceError> {
+    composing_grants(kind).map(drop)
 }
 
 /// One facility a grant covers: an identifier issuer with the identifier,
@@ -268,7 +223,7 @@ fn admit_facility(admitting: &[Credentials<'_>], canonical: &Value) -> Result<()
     Err(ServiceError::content_invalid(
         Violation::new(
             "carries no identifier of a facility a commit_composition grant of the client \
-             covers (ferroehr-operations::facility); the server writes no facility (EHDS \
+             covers (openehr_access::facility); the server writes no facility (EHDS \
              Art. 13(4))",
         )
         .with_path(path),
@@ -378,12 +333,11 @@ mod tests {
         json!({ "_type": "CLUSTER", "name": coded(code), "items": items })
     }
 
-    /// A `commit_composition` grant of `origins`, writing `Lab result` at
-    /// ward 7 of one issuer and any site of another.
+    /// A `commit_composition` grant of `origins`, writing at ward 7 of one
+    /// issuer and any site of another.
     fn grant(origins: &[&str]) -> Grant {
         let mut items = vec![
             element("operation", &coded("commit_composition")),
-            text("template", "Lab result"),
             cluster(
                 "facility",
                 &[
@@ -490,15 +444,14 @@ mod tests {
             json!({ "composer": party("urn:oid:2.999.5", "hp-1"), "context": at_ward });
         let relay = grant(&[RELAY]);
         let device = grant(&[DEVICE]);
-        let template = Some("Lab result");
-        assert!(judge(&[relay.credentials()], &person_act, template).is_ok());
+        assert!(judge(&[relay.credentials()], &person_act).is_ok());
         assert!(matches!(
-            judge(&[relay.credentials()], &device_act, template),
+            judge(&[relay.credentials()], &device_act),
             Err(ServiceError::Forbidden(_))
         ));
-        assert!(judge(&[device.credentials()], &device_act, template).is_ok());
+        assert!(judge(&[device.credentials()], &device_act).is_ok());
         assert!(matches!(
-            judge(&[device.credentials()], &person_act, template),
+            judge(&[device.credentials()], &person_act),
             Err(ServiceError::Forbidden(_))
         ));
     }
@@ -519,14 +472,5 @@ mod tests {
         assert!(!names_professional(
             &json!({ "composer": { "_type": "PARTY_SELF" } })
         ));
-    }
-
-    #[test]
-    fn only_a_listed_template_is_written() {
-        let lab = grant(&[RELAY]);
-        let lab = [lab.credentials()];
-        assert!(admit_template(&lab, Some("Lab result")).is_ok());
-        assert!(admit_template(&lab, Some("Vital signs")).is_err());
-        assert!(admit_template(&lab, None).is_err());
     }
 }

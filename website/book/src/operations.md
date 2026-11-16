@@ -697,16 +697,20 @@ audited requests about 10 GB.
 
 ### Audit retention
 
-`[audit.store] retention = 0`, the default, keeps every audit record
-forever, so the access log grows with every request for the life of the
-database. A horizon (`retention`, or `retention` in calendar years)
-makes the reaper delete each record on or after its end date, hourly, and the
-`audit_event` table then levels off at roughly the horizon times the request
-rate. The space of a deleted row is not returned to the operating system:
+An access policy with no `log_retention`, the default, keeps every audit
+record forever, so the access log grows with every request for the life of
+the database. A period (`ACCESS_POLICY.log_retention.period`, in years or
+days) makes the reaper delete each record on or after its end date, hourly,
+and the `audit_event` table then levels off at roughly the period times the
+request rate. The space of a deleted row is not returned to the operating system:
 `VACUUM` marks it free and later records reuse it (PostgreSQL 18 docs,
 [Routine Vacuuming, Recovering Disk Space][pg-vacuum]).
 The reaper also deletes the search tokens no remaining record names. The
-horizon is a legal choice with floors per jurisdiction, set out on the audit page.
+period is the controller's legal choice, within the floors and ceilings it
+declares, set out on the audit page.
+The openEHR access log levels off too: each entry is kept for its own period,
+its tombstone as long again, and then a run of tombstones folds into one gap
+row ([steady-state size](audit.md#the-access-log-at-steady-state)).
 
 ### `pg_wal`
 
@@ -949,6 +953,17 @@ why they are written as your checklist rather than as our claim.
   default `none` and asked for no certificate, and from 5.6.0 such a table is
   refused at load (GHSA-52mf-qg39-4q4j). See
   [`[server.tls]`](installation/config-server.md#servertls-native-tls-and-mutual-tls-client-authentication).
+- **Upgrading to 5.7.2 starts on an empty audit store.** Audit migration
+  0040 refuses a store that holds a render policy written before it, naming
+  each by its digest: those policies state the `[audit.store] retention`
+  horizon this release removes, and a stored record is never rewritten.
+  Export what you need over ITI-81 with the earlier release, drop the `audit`
+  schema, and start again. Then write the access log retention into the
+  controller's access policy (`ACCESS_POLICY.log_retention`,
+  [Audit trail](audit.md#retention-and-who-chooses-it)), and remove
+  `retention` and `sgb_v_309_controller` from `[audit.store]`, which are now
+  refused as unknown keys. Nothing is in production; a 5.7.1-rc1 store holds
+  test data.
 - **Bound the DDL yourself.** Every pooled connection carries the
   `[database] statement_timeout` value (60 seconds by default), and the migration
   step runs on that pool, so a runaway statement is cut off, but there is **no
@@ -963,7 +978,8 @@ why they are written as your checklist rather than as our claim.
 - **Stay available.** Keep at least two replicas (or autoscaling) and a pod
   disruption budget so node drains and upgrades never fully interrupt the
   API. The default 30-second termination grace period covers the server's
-  short shutdown drain of the audit outbox.
+  shutdown; the audit records are stored before each response, so a
+  replica that stops leaves nothing in memory.
 
 ### How long the version you pinned is supported
 
@@ -1206,10 +1222,12 @@ Not every indicator blocks readiness, and the distinction is deliberate:
 |---|---|---|
 | `db` | a pooled connection answers | yes |
 | `migrations` | this build's schema is present, re-tested on every probe | yes |
-| `audit_sender` | the audit posture: `DEGRADED` with the consequence stated when auditing is off (no access log, no EHDS logging component); `UP` with `fail_mode`, the local store and its retention in the detail, and a stated caution under `fail_mode = "open"` | no: reports `DEGRADED`, never `503` |
+| `audit_sender` | the audit posture: `DEGRADED` with the consequence stated when auditing is off (no access log, no EHDS logging component), and `DEGRADED` with its age when the oldest intake record has waited more than 10 seconds for the chainer | no: reports `DEGRADED`, never `503` |
 | `audit_delivery` | each forwarder to an external Audit Record Repository (present when `[audit.syslog]` or `[audit.fhir_feed]` is on): the records waiting, those the repository refused, those delivered, and whether the last attempt reached it; `DEGRADED` when the repository is unreachable or a record was refused | no: records wait in their spool or the store, so delivery problems never take the instance out of rotation |
-| `audit_chain` | the latest scheduled verification of the local audit store's hash chain (incremental from the last intact link, with a periodic full pass) (present when the local store is on and `[audit.store] verify_interval` is not `0`): `UP` while intact or before the first run, `DEGRADED` naming the finding count and the first damaged position, or the reason the verification could not run; `audit_chain_intact` and [its runbook](operations-access-path.md#a-chain-verification-that-fails) | no: a damaged chain reports `DEGRADED` in the body, never `503`, because the trail keeps recording while the damage is investigated |
-| `policy_listeners` | whether each policy copy's `LISTEN` connection is up: `ehr_access`, `grants`, `policy_registers` and `access_policy` (always present): `UP` while all four listen, `DEGRADED` naming each lost listener, while that copy reads the database on every request ([Running several instances](installation/several-instances.md)); `policy_listener_up` and [its runbook](operations-access-path.md#a-lost-policy-listener) | no: every decision stays correct while a listener is down, so the instance stays in rotation |
+| `audit_chain` | the latest scheduled verification of the local audit store's hash chain (incremental from the last intact link, with a periodic full pass) (present when the local store is on and `[audit.store] verify_interval` is not `0`): `UP` while intact or before the first run, `DEGRADED` naming the finding count and the first damaged position, the reason the verification could not run, or the chain whose oldest unverified record waited longer than `[audit.store] max_verify_lag`; `audit_chain_intact` and [its runbook](operations-access-path.md#a-chain-verification-that-fails) | no: a damaged chain reports `DEGRADED` in the body, never `503`, because the trail keeps recording while the damage is investigated |
+| `access_log_checkpoints` | whether the access log is sealed and its checkpoints published outside the database (present when the local store is on): `UP` with an OpenPGP key and `[audit.access_log] publish_directory` while publication works, `DEGRADED` without the key, without the directory (removing the newest entries then goes undetected), or while a publication fails, naming which; [its runbook](operations-access-path.md#a-checkpoint-publication-that-fails) | no: the log keeps recording |
+| `policy_listeners` | whether each policy copy's `LISTEN` connection is up: `ehr_access`, `grants`, `party_binding`, `policy_registers` and `access_policy` (always present): `UP` while all five listen, `DEGRADED` naming each lost listener, while that copy reads the database on every request ([Running several instances](installation/several-instances.md)); `policy_listener_up` and [its runbook](operations-access-path.md#a-lost-policy-listener) | no: every decision stays correct while a listener is down, so the instance stays in rotation |
+| `pmir_refused_messages` | the refused ITI-93 messages still to retry or settle (present when `[pix]` is set): `UP` below `[pix] refused_degraded_at`, `DEGRADED` naming their count from it on, each keeping the identifiers it split unresolved; the `pmir_messages_refused` gauge carries the count, and [`[pix]`](installation/config-integrations.md#pix) lists, retries and settles them | no: a split fails closed, so the instance stays in rotation |
 | `instances` | whether every instance of the deployment that touched its row in the last 90 seconds signs with this instance's key and runs its configuration (always present): `UP` while they agree, `DEGRADED` naming each instance that runs another signing key or another configuration, or when the comparison could not run ([Running several instances](installation/several-instances.md)) | no: each instance keeps serving, so a difference is reported without taking any out of rotation |
 
 An instance whose audit repository is unreachable therefore keeps taking
@@ -1278,7 +1296,7 @@ not a default you already have.
 
 | Endpoint | Endpoint name to set | Purpose | Level to give it |
 |---|---|---|---|
-| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `deployment.spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, the `audit` posture (`enabled`, `fail_mode`, `local_store`, `retention`), the `manufacturer` of the release (`name`, `postal_address`, `email`, `website`), and the `support` period (`release_date`, `support_ends`, `status`) | `admin_only` |
+| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `deployment.spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, the `audit` posture (`enabled`), the `manufacturer` of the release (`name`, `postal_address`, `email`, `website`), and the `support` period (`release_date`, `support_ends`, `status`) | `admin_only` |
 | `GET /management/prometheus` | `prometheus` | Prometheus text exposition | `admin_only`, or `public` only when the port is not reachable outside the cluster; a `public` endpoint is served OUTSIDE authentication |
 | `GET /management/metrics` | `metrics` | JSON list of the registered metric names | `admin_only` |
 | `GET /management/metrics/{name}` | `metrics` | the current value(s) of one metric; `404` for a name that is not registered | `admin_only` |

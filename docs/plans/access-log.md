@@ -142,10 +142,12 @@ offered to that work (§Proposal path).
 5. **Purpose of use and policy.** FHIR has `purposeOfEvent` (R4) or
    `authorization` (R5) and `agent.policy`; the DICOM A.5.1 schema has no
    element for either. A DICOM projection loses them.
-6. **Integrity.** eHDSI §2.2 asks for a signature on each event; FHIR asks
-   only that servers refuse update and delete; DICOM and BALP say nothing.
-   The design chains every entry, signs each entry's link and signs
-   checkpoints whenever the system holds a signing key (#5562).
+6. **Integrity.** eHDSI §2.2 asks each MyHealth@EU National Contact Point
+   to sign each event with its NCP signature; FHIR asks only that servers
+   refuse update and delete; DICOM and BALP say nothing, and neither the
+   EHDS Regulation nor the GDPR names a signature. The design chains every
+   entry and seals each append in one signed checkpoint whenever the system
+   holds a signing key (#5704).
 7. **The patient identifier.** BALP and FHIR R5 name the patient as a
    `Patient` resource; DICOM names a patient id. openEHR keeps the EHR apart
    from identifying data (BASE §Security Policy, "Anonymity") and identifies
@@ -182,7 +184,7 @@ flowchart LR
     E1["ACCESS_LOG_ENTRY seq n-1"]
     E2["ACCESS_LOG_TOMBSTONE seq n<br/>content removed, link kept"]
     E3["ACCESS_LOG_ENTRY seq n+1"]
-    CP["ACCESS_LOG_CHECKPOINT<br/>signed head"]
+    CP["ACCESS_LOG_CHECKPOINT<br/>signed, one per append"]
     E1 -- "link.digest" --> E2
     E2 -- "link.digest" --> E3
     E3 -. "sealed by" .-> CP
@@ -477,8 +479,13 @@ governs, it is cited; otherwise "our own design".
    disclosing the others (our own design).
 3. **The entry exists before the data leave.** The system writes the entry,
    or a durable reservation of it, before it sends a response that carries
-   EHR data, and refuses the access when it cannot (our own design; FerroEHR
-   does this today).
+   EHR data, and refuses the access when it cannot (our own design). FerroEHR
+   writes every record of a request into a durable, append-only intake in
+   the audit store before it answers, and refuses the request with `503`
+   when that write fails (#5747); the chainer links the intake into the
+   chain moments later (§Integrity). A write's record is written after its
+   clinical commit, in the audit cluster, which production keeps apart, so
+   the reservation that closes the window between the two commits is #5762.
 4. **Reading the log is an access, and it MUST be recorded.** A read of an
    access log writes an entry with an `ACCESSED_ITEM` whose `object` names
    the log, by every route: ITS-REST, ITI-81, AQL, an export, a reviewer's
@@ -549,8 +556,17 @@ sequenceDiagram
 
 ## Integrity
 
-**Decision: a hash chain over every record, a signature per entry and
-signed checkpoints, whenever the system holds a signing key.**
+**Decision: a hash chain over every record and one signed checkpoint per
+append, whenever the system holds a signing key; the checkpoints published
+outside the database is the recommended setup (#5704).**
+
+No text this design reads requires a signature on each entry of an EHR
+system's log. EHDS Art 9 and Annex II 3.2 ask for a complete log each
+person can read, and GDPR Art 5(1)(f) and Art 32(1)(b) for integrity by
+measures appropriate to the risk. The eHDSI Audit Trail Profile §2.2 asks
+for a payload signature on each event, and it binds the MyHealth@EU
+National Contact Points, which sign with their NCP certificate; a CDR is no
+NCP. How the log is protected is therefore our own design.
 
 - **The chain.** Each record carries an `ACCESS_LOG_LINK`. `content_digest`
   is the digest of the record serialised without its link: the canonical
@@ -560,29 +576,80 @@ signed checkpoints, whenever the system holds a signing key.**
   `content_digest`. A removed, inserted or reordered record breaks every
   later link. The digest algorithm is named per link, so a system can move
   to a new algorithm at a known sequence.
+- **How an entry is stored.** The canonical form is what the chain
+  digests, and how it is stored is FerroEHR's choice (#5703): the part the
+  caller's entries share is stored once and each row keeps the rest; the
+  writer computes `content_digest` over the whole form, and the verifier
+  joins the parts back into it. A tombstone still replaces one person's row.
 - **Why digest the content separately.** Retention removes entries in the
   middle of the log, since periods differ per category and origin (Annex II
   3.4). A tombstone keeps the uid, the time, and the link with its
   `content_digest`, so the chain still verifies after the content is gone.
-  FerroEHR's chain today reaps only the oldest span and leaves one tombstone
-  (`app/ferroehr/migrations/audit/0003_tamper_chain.sql`), which cannot
-  serve a period per category.
-- **Signed checkpoints.** A hash chain alone proves order and completeness
-  against an attacker who cannot rewrite the whole tail. A signed
-  `ACCESS_LOG_CHECKPOINT` of the head, written on a schedule and on demand,
-  fixes the tail: a verifier holding a checkpoint detects any later rewrite
-  of the records it covers. The `proof` takes the form
-  `ATTESTATION._proof_` uses. Publishing checkpoints outside the system
-  (to FerroSYS, to a timestamping service, to the data protection officer)
-  is a deployment choice (our own design).
-- **A signature per entry** (`ACCESS_LOG_LINK.signature`), as the eHDSI
-  Audit Trail Profile §2.2 asks of each NCP event, is written whenever the
-  keyring holds an OpenPGP key (#5562). The writer locks the head, computes
-  the links its records will get, signs them and stores each signature with
-  its record in one `INSERT`, so signing adds no statement. Measured with
-  the keyring's rPGP signing, a signature costs 13 µs with an Ed25519 key
-  and 1.0 to 5.5 ms with an RSA key of 2048 to 4096 bits; an access writes
-  one entry per EHR it reached, so Ed25519 is the recommended key.
+- **One signed checkpoint per append.** Every append ends, in its own
+  transaction, with an `ACCESS_LOG_CHECKPOINT` of the last link it wrote,
+  signed in the form `ATTESTATION._proof_` uses. An entry is covered by a
+  signature from the moment it commits, so no unsigned window opens, and
+  any replica writes the checkpoint of its own append. Someone who can write
+  the database but holds no key cannot change, remove, insert or reorder a
+  record below a checkpoint without breaking the chain under that
+  checkpoint's signature, which a signature per entry would detect no
+  better. One signature per append replaces one per entry: with an RSA key
+  a signature costs 1.0 to 5.5 ms, and a population query writes one entry
+  per EHR it reached. The first insert of the append's transaction locks
+  the head of the chain until it commits; the checkpoint is signed on the
+  blocking pool while the rest of the transaction is written, so the head
+  is held for one signature at most. `ACCESS_LOG_LINK.signature` stays
+  optional in the draft, and this system writes none.
+- **Publication outside the database.** Someone who can write the database
+  can remove the newest entries together with the checkpoints that seal
+  them, and nothing left in the database shows it. A checkpoint published
+  where that person cannot write does: the log no longer reaches it. The
+  server publishes the newest checkpoint every 30 seconds as its own file,
+  written once, in a directory the deployment places on write-once storage
+  (`[audit.access_log] publish_directory`); without one the
+  `access_log_checkpoints` health indicator reads `DEGRADED`. Publication
+  to FerroAUDIT needs a receiving service there and is not built yet.
+- **A person's proof.** Their entry, the links from it to the checkpoint of
+  its append (`AccessLogStore::links`), and that checkpoint's signature.
+- **Against the server process.** Someone who controls the server process
+  holds the key, under a checkpoint per append as under a signature per
+  entry; the published checkpoints bound what that person can rewrite to
+  what came after the newest one published.
+- **The intake and its window.** An entry is written into
+  `audit.access_log_intake` before the response that reports its access,
+  and the chainer links it into the chain afterwards (#5747, #5745; our own
+  design). The intake is unchained, so no request waits on the head. It is
+  append-only by the database's rules: the runtime role may insert and read
+  it and nothing else, the table refuses every update, delete and truncate,
+  and only `audit.access_log_chain_move()`, a `SECURITY DEFINER` function,
+  removes a row, by writing it into the chain in the same statement. The
+  window between the intake and the chain is about a fifth of a second: a
+  request wakes its replica's chainer, which gathers what the requests of
+  the next 200 ms write into one round, so the rounds grow with the rate and
+  an idle server runs none; every replica also looks at both intakes every
+  2 seconds for the rows a stopped replica left, and a graceful stop chains
+  what its intake holds. Within the window someone
+  with the database owner's rights can remove an intake row, and the chain
+  does not show it; that is the same exposure an in-memory queue had,
+  without the loss on a crash. The `audit_sender` indicator reads
+  `DEGRADED` when the oldest intake row waits longer than 10 seconds.
+- **The chainer's critical section.** A round takes the head without
+  waiting (`FOR UPDATE SKIP LOCKED`), so any replica may chain and one does
+  at a time. Under the head it reads the intake's content digests, computes
+  the links, inserts the records with every column the server supplied,
+  their index and outbox rows, writes the head, signs and stores the
+  checkpoint, and commits. The derive of the columns from the content left
+  the insert path: the insert trigger checks each link against the head,
+  and the verifier derives every column again and compares. The rendering,
+  the search tokens and the index row are built on the request path, so
+  nothing per entry beyond the link needs the head.
+- **Partitioned chains, the recorded next step.** One chain carries about
+  15 000 entries per second on the reference host (#5745), against about
+  5 300 the target of 3000 mix requests per second needs. Past it the
+  chain splits by `hash(ehr_id) mod K`, each with its own head and
+  checkpoint (or one checkpoint over the K heads), which changes
+  `ACCESS_LOG_LINK` and `ACCESS_LOG_CHECKPOINT` and is decided with the
+  draft model when such a target is set.
 - **One chain per system.** `sequence` has no gaps within a `system_id`.
   Several writers of one system serialise on the head, as FerroEHR's chain
   cursor does today (`app/ferroehr/migrations/audit/0011_chain_digest_v2.sql`).
@@ -1106,7 +1173,7 @@ Art 36(1), due 26 March 2027), a note would contain:
 | Fail-closed recording | EHDS Annex II 3.2 ("every access event"); our own design against BALP 1:52.4.1.5 |
 | Hash chain over a content digest, tombstones in place | our own design, for Annex II 3.4 |
 | RFC 8785 canonical JSON as the digest input | our own design |
-| Signed checkpoints; optional signature per entry | our own design; eHDSI Audit Trail Profile §2.2 for the per-entry case |
+| One signed checkpoint per append, published outside the database; no signature per entry | our own design (#5704); the eHDSI Audit Trail Profile §2.2 per-event signature binds National Contact Points only |
 | Retention stated on each entry | EHDS Annex II 3.4, Art 9(2) |
 | Every read of the log and every change to the log recorded | DICOM PS3.15 A.5.3.2; NEN 7513 (by Kamerstuk 27529 nr. 228); GDPR Art 32(2) |
 | A permission for the log alone | GDPR Art 32(1)(b); our own design for the separation from clinical rights |

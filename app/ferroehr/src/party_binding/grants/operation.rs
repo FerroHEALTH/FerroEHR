@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! FerroEHR's operation terminology, the codes a capability grants by, and
-//! the ceiling `[authz.grants] allowed` puts on them.
+//! The operations a capability grants by, codes of the draft `openehr_access`
+//! terminology, and the ceiling `[authz.grants] allowed` puts on them.
 //!
 //! A `CAPABILITY` grants an operation when its `credentials` hold, anywhere
 //! in their tree, a `DV_CODED_TEXT` whose `defining_code` names
@@ -30,9 +30,9 @@ use serde::{Deserialize, Serialize};
 use crate::party_binding::grants::admission::{
     ADMIT_ASSURANCE, ADMIT_GROUP, ADMIT_GUESTS, ADMIT_IDP, ADMIT_ROLE, LOGIN_ISSUER,
 };
-use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS};
+use crate::party_binding::policy_mark::{ACTS_FOR, REPRESENTS, TERMINOLOGY};
 use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, PermittedPurpose, SensitivityClearance, Term,
+    CareRelationship, GroupKind, RecordSubject, Term,
 };
 
 /// The code naming the credentials element whose `DV_DATE_TIME` is the
@@ -83,10 +83,9 @@ pub const TOKEN_SCOPE: &str = "token_scope";
 
 /// The codes naming the elements of a federation agreement's credentials,
 /// which [`crate::party_binding::grants::agreement::Agreement`] reads.
-pub const AGREEMENT: [&str; 17] = [
+pub const AGREEMENT: [&str; 16] = [
     "agreement_name",
     "agreement_version",
-    "jurisdiction",
     "exchange",
     "purpose",
     "gdpr_art_6_1",
@@ -104,8 +103,13 @@ pub const AGREEMENT: [&str; 17] = [
 ];
 
 /// The code naming the credentials element whose text is a role a
-/// [`Operation::HoldRoles`] grant gives a Basic user.
+/// [`Operation::HoldRoles`] grant gives a Basic user, or a role code a
+/// [`Operation::ScimProvision`] grant lets its client assign.
 pub const ROLE: &str = "role";
+
+/// The code naming a [`Operation::ScimProvision`] grant's element whose text
+/// is the terminology the client's User `roles` are coded in.
+pub const ROLE_TERMINOLOGY: &str = "role_terminology";
 
 /// The code naming the credentials element whose text is a SMART scope a
 /// [`Operation::HoldScopes`] grant gives a Basic user.
@@ -140,9 +144,8 @@ pub const SCOPES: [&str; 8] = [
     TOKEN_SCOPE,
 ];
 
-/// Whether `code` names a grant's bound or scope element, a capability's
-/// clearance or permitted purpose element, or the acts-for, representation
-/// or care relationship.
+/// Whether `code` names a grant's bound or scope element, or the acts-for,
+/// representation or care relationship.
 fn names_no_operation(code: &str) -> bool {
     [
         ACTS_FOR,
@@ -150,6 +153,7 @@ fn names_no_operation(code: &str) -> bool {
         NOT_BEFORE,
         NOT_AFTER,
         ROLE,
+        ROLE_TERMINOLOGY,
         SCOPE,
         LOGIN_ISSUER,
         ADMIT_IDP,
@@ -167,9 +171,9 @@ fn names_no_operation(code: &str) -> bool {
     ]
     .contains(&code)
         || SCOPES.contains(&code)
-        || SensitivityClearance::CODES.contains(&code)
-        || PermittedPurpose::CODES.contains(&code)
-        || CareRelationship::CODES.contains(&code)
+        || CareRelationship::read(TERMINOLOGY, code).is_ok()
+        || GroupKind::read(TERMINOLOGY, code).is_ok()
+        || RecordSubject::read(TERMINOLOGY, code).is_ok()
 }
 
 /// One operation a capability may grant.
@@ -236,9 +240,10 @@ pub enum Operation {
     /// Be admitted, as a system caller whose token carries no resource
     /// scope, to every SMART on openEHR requirement.
     AccessWithoutScope,
-    /// Write the `member_of` and `under_care_of` relationships of
-    /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] through the
-    /// Demographic API, as a hospital's ADT system does.
+    /// Write the membership (`MBR`) and `under_care_of` relationships of
+    /// [`openehr_rm::draft::access_control::terminology::CareRelationship`] and the
+    /// [`openehr_rm::draft::access_control::terminology::RecordSubject`] element of a
+    /// `PERSON` through the Demographic API, as a hospital's ADT system does.
     WriteCareRelationship,
     /// Write the controller's `ACCESS_POLICY`.
     WriteAccessPolicy,
@@ -398,10 +403,11 @@ mod tests {
     fn no_access_control_code_is_a_grant() {
         let grants = Operation::ALL.map(Operation::code);
         for group in Group::ALL {
-            for code in group.codes() {
+            let codes = group.phrases().into_iter();
+            for (_, code) in codes.filter(|(terminology, _)| *terminology == TERMINOLOGY) {
                 // NOTE: own design: an access service caller kind is the caller holding that grant.
                 assert!(
-                    *code == "access_service" || !grants.contains(code),
+                    code == "access_service" || !grants.contains(&code),
                     "{code}"
                 );
             }
@@ -420,8 +426,10 @@ mod tests {
         assert!(is_qualifier(RELAY) && is_qualifier(DEVICE) && is_qualifier("identifier_prefix"));
         assert!(is_qualifier(LOGIN_ISSUER) && is_qualifier(ADMIT_GUESTS));
         assert!(is_qualifier(NO_SUBJECT_NAMESPACE));
-        assert!(is_qualifier("sensitivity_clearance") && is_qualifier("permitted_purpose"));
-        assert!(is_qualifier("member_of") && is_qualifier("under_care_of"));
+        assert!(!is_qualifier("sensitivity_clearance") && !is_qualifier("permitted_purpose"));
+        assert!(is_qualifier("under_care_of") && !is_qualifier("member_of"));
+        assert!(is_qualifier("care_team"));
+        assert!(is_qualifier("record_subject"));
     }
 
     #[test]

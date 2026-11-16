@@ -25,17 +25,54 @@ uploads its record on every run, passing or failing. A failed run is exactly
 when the per-probe layer attribution and the not-exercised ledger are worth
 reading.
 
+The **hospital** family (#5610) runs a hospital scenario on two instances
+with Keycloak as the `persons` issuer, the quickstart's `machines` issuer and a
+patient portal's `patients` issuer. It sets everything up through public
+interfaces (SCIM, the demographic API, ITS-REST and the admin API) and checks
+RBAC, the access evaluator, AQL, the SCIM lifecycle, the access log and SMART
+discovery over HTTP, each change made on one instance and read on the other.
+It runs the care-relationship and representation assertions again under the
+default `pixm` subject index. It does not run in the required `deploy-probe`
+job yet: its own lane, `deploy-probe-hospital.yml`, runs it with
+`PROBE_ONLY=hospital` and writes `hospital.json`. A pull request, a push, the
+schedule and a dispatch probe the server and database images built from the
+tree they check out; a completed Containers run on main probes the server and
+postgres images that run published, each pinned by its digest, never the
+mutable `:main` tag (#5673). An image the run did not rebuild is the one
+`:main` names when the probe starts, pinned by its digest, and a run that
+rebuilt neither image probes those two. A failed call
+prints the lines both instances logged for its request id, and the instances
+log `ferrohealth_smart` at `debug`, so a `401` shows the reason its body leaves
+out. Each failing probe names the issue it is tracked by, and
+`scripts/deploy-probes/hospital_summary.sh` refuses a failing probe whose
+tracking issues are all closed, or one that names none. The family moves into
+the required job once its findings land (#5642).
+
+The Kubernetes harness runs its **EHR-index** family in CI on a one-node kind
+cluster (`deploy-probe-k8s.yml`, #5813): every six hours, on a dispatch, and on
+a pull request that changes the harness. It probes the server and database
+images built from the tree it checks out, loaded into the kind node, with the
+chart's default two replicas, and `P-K8S-INDEX-LOCAL` runs `helm upgrade` with
+no changed value before it creates an EHR, the sequence that once answered
+`POST /ehr` with 500 (#5109). Every run uploads `kubernetes.json` and the log
+of every server pod. The other Kubernetes families run by hand.
+
 The **terminology** family does not run there. It needs a licensed SNOMED
 release that may not be fetched onto a shared runner, and it is opt-in locally.
 
 A record is a measurement of **one SUT**, so it is only meaningful with the
-image it was taken against. The harness names that image in its output, and
-the record carries the per-probe outcome plus the layer each failure indicts.
+image it was taken against. The harness reads the image from the running
+container and names it in its output and in the record's `image` (the
+reference, the local image id and the registry digests, empty for an image
+built on the runner), and the record carries the per-probe outcome plus the
+layer each failure indicts.
 
 ## Reading a record
 
 ```json
-{"platform":"compose","passed":9,"failed":1,"uncovered":7,
+{"platform":"compose",
+ "image":{"ref":"ferroehr:deploy-probe","id":"sha256:…","digests":""},
+ "passed":9,"failed":1,"uncovered":7,
  "probes":[{"id":"P-MM-EXPAND","state":"working","outcome":"fail",
             "layer":"server","issue":"#2197","title":"…"}],
  "not_exercised":[{"what":"kubernetes platform","why":"…"}]}

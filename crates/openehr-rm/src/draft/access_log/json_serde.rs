@@ -2768,6 +2768,9 @@ impl ::serde::Serialize
         if self.retain_until.is_some() {
             __n += 1;
         }
+        if self.policy.is_some() {
+            __n += 1;
+        }
         let mut __st =
             ::serde::Serializer::serialize_struct(__serializer, "ACCESS_RETENTION", __n)?;
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "_type", "ACCESS_RETENTION")?;
@@ -2775,6 +2778,9 @@ impl ::serde::Serialize
             ::serde::ser::SerializeStruct::serialize_field(&mut __st, "retain_until", __v)?;
         }
         ::serde::ser::SerializeStruct::serialize_field(&mut __st, "grounds", &self.grounds)?;
+        if let Some(__v) = &self.policy {
+            ::serde::ser::SerializeStruct::serialize_field(&mut __st, "policy", __v)?;
+        }
         ::serde::ser::SerializeStruct::end(__st)
     }
 }
@@ -2785,11 +2791,12 @@ impl<'de> ::serde::Deserialize<'de>
     fn deserialize<__D: ::serde::Deserializer<'de>>(
         __deserializer: __D,
     ) -> ::core::result::Result<Self, __D::Error> {
-        const __FIELDS: &[&str] = &["grounds", "retain_until"];
+        const __FIELDS: &[&str] = &["grounds", "policy", "retain_until"];
         enum __Field {
             __Type,
             __F0,
             __F1,
+            __F2,
         }
         impl<'de> ::serde::Deserialize<'de> for __Field {
             fn deserialize<__D: ::serde::Deserializer<'de>>(
@@ -2812,6 +2819,7 @@ impl<'de> ::serde::Deserialize<'de>
                             "_type" => ::core::result::Result::Ok(__Field::__Type),
                             "retain_until" => ::core::result::Result::Ok(__Field::__F0),
                             "grounds" => ::core::result::Result::Ok(__Field::__F1),
+                            "policy" => ::core::result::Result::Ok(__Field::__F2),
                             _ => ::core::result::Result::Err(
                                 ::openehr_base::serde_support::unknown_field(
                                     __v,
@@ -2838,6 +2846,7 @@ impl<'de> ::serde::Deserialize<'de>
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
+                let mut __s2: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
                         __Field::__Type => {
@@ -2868,6 +2877,14 @@ impl<'de> ::serde::Deserialize<'de>
                             }
                             __s1 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
                         }
+                        __Field::__F2 => {
+                            if __s2.is_some() {
+                                return ::core::result::Result::Err(
+                                    ::serde::de::Error::duplicate_field("policy"),
+                                );
+                            }
+                            __s2 = Some(::serde::de::MapAccess::next_value(&mut __map)?);
+                        }
                     }
                 }
                 ::core::result::Result::Ok(
@@ -2876,6 +2893,7 @@ impl<'de> ::serde::Deserialize<'de>
                         grounds: __s1
                             .flatten()
                             .ok_or_else(|| ::serde::de::Error::missing_field("grounds"))?,
+                        policy: __s2.flatten(),
                     },
                 )
             }

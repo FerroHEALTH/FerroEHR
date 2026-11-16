@@ -489,6 +489,10 @@ const TEXT_HELPERS: &[&str] = &[
 /// Open a transaction carrying the first generation's helpers in a `gen1`
 /// schema that leads the `search_path`, so their unqualified calls to each
 /// other reach the first generation. The transaction is never committed.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn with_generation_1(pool: &PgPool, time_zone: &str) -> Transaction<'static, Postgres> {
     let mut tx = pool.begin().await.expect("open transaction");
     tx.execute("CREATE SCHEMA gen1")

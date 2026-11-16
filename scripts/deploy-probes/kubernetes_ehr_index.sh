@@ -6,7 +6,7 @@
 #
 #   1. `ferropix.enabled: true`, the default: the chart deploys FerroPIX and
 #      points `[pixm]` at it.
-#   2. `ferropix.enabled: false` with `pixm.url`: another PIX Manager over
+#   2. `ferropix.enabled: false` with `pixm.endpoint.url`: another PIX Manager over
 #      PIXm (ITI-83). The probe installs FerroPIX as its own release and names
 #      its Service, so the path runs without a second product.
 #   3. `ferropix.enabled: false` with `subject_index: local`: FerroEHR on its own.
@@ -343,11 +343,11 @@ probes_k8s_ehr_index() {
 
   # The BROKEN state: FerroPIX off and no other identity source named.
   probe "P-K8S-INDEX-NEITHER" "$PROBE_BROKEN" "chart" "#5108" \
-    "ferropix.enabled=false with neither pixm.url nor subject_index=local is refused at render, naming both"
+    "ferropix.enabled=false with neither pixm.endpoint.url nor subject_index=local is refused at render, naming both"
   local guard
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
              -f "$K8S_AUTH_VALUES" --set config.record.subject_index=null 2>&1)"
-  assert_contains "$guard" "config.pixm.url" \
+  assert_contains "$guard" "config.pixm.endpoint.url" \
     "the other PIX Manager is one way forward and the refusal must name its key"
   assert_contains "$guard" "config.record.subject_index=local" \
     "the in-instance index is the other and must be named too"
@@ -375,9 +375,9 @@ probes_k8s_ehr_index() {
   fi
   k8s_pix_issuer_route
 
-  # Mode 2: FerroPIX as a release of its own, named by pixm.url.
+  # Mode 2: FerroPIX as a release of its own, named by pixm.endpoint.url.
   probe "P-K8S-INDEX-PIXM" "$PROBE_WORKING" "server" "#5108" \
-    "ferropix.enabled=false with pixm.url naming a PIX Manager's Service: an EHR is found by its source identifier"
+    "ferropix.enabled=false with pixm.endpoint.url naming a PIX Manager's Service: an EHR is found by its source identifier"
   k8s_pix_values > "$PROBE_TMP/pix-values.yaml"
   k8s_pix_cdr_values "http://$K8S_PIX_RELEASE:8080/fhir" > "$PROBE_TMP/index-pixm.yaml"
   if ! helm upgrade --install "$K8S_PIX_RELEASE" "$K8S_PIX_CHART" -n "$K8S_NS" \
@@ -385,7 +385,7 @@ probes_k8s_ehr_index() {
     probe_fail "the FerroPIX release rolled out" \
       "$(kc logs -l "$K8S_PIX_LABEL" --tail=6 --all-containers 2>&1 | tail -6)"
   elif ! k8s_index_install "$PROBE_TMP/index-pixm.yaml"; then
-    probe_fail "the CDR serving with pixm.url" \
+    probe_fail "the CDR serving with pixm.endpoint.url" \
       "$(kc logs -l app.kubernetes.io/name=ferroehr --tail=6 2>&1 | tail -6)"
   else
     k8s_index_ihe_roundtrip

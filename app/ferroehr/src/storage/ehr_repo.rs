@@ -57,23 +57,26 @@ pub async fn insert_ehr(
     tx: &mut PgConnection,
     ehr_id: EhrId,
     system_id: &str,
-    subject_id: Option<&str>,
-    subject_namespace: Option<&str>,
-    is_queryable: bool,
-    is_modifiable: bool,
+    columns: PromotedColumns<'_>,
 ) -> Result<Option<jiff::Timestamp>, StorageError> {
+    let PromotedColumns {
+        subject_id,
+        subject_namespace,
+        ..
+    } = columns;
     let row = sqlx::query(
         "INSERT INTO ehr (id, system_id, subject_id, subject_namespace, is_queryable, \
-         is_modifiable) \
-         VALUES ($1, $2, $3, $4, $5, $6) \
+         is_modifiable, subject_digest) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7) \
          ON CONFLICT (id) DO NOTHING RETURNING time_created",
     )
     .bind(ehr_id)
     .bind(system_id)
     .bind(subject_id)
     .bind(subject_namespace)
-    .bind(is_queryable)
-    .bind(is_modifiable)
+    .bind(columns.is_queryable)
+    .bind(columns.is_modifiable)
+    .bind(columns.subject_digest)
     .fetch_optional(&mut *tx)
     .await
     .map_err(|e| {
@@ -475,15 +478,17 @@ pub async fn ehr_is_modifiable_locked(
         .await?)
 }
 
-/// The two content-write pre-checks plus the server clock in ONE round trip:
-/// whether the EHR exists, whether it is modifiable, and the database `now()`.
+/// The content-write pre-checks plus the server clock in ONE round trip.
+///
+/// Whether the EHR exists, whether it is modifiable, whether it is restricted
+/// with the revision of its access settings row, and the database `now()`.
 ///
 /// Reads the `ehr` row directly — a present row is the existence signal and
 /// carries the promoted `is_modifiable` column (synced with the current
 /// `EHR_STATUS` by `sync_ehr_subject` and its import/archive-load
-/// re-promotion over [`current_status_root`]). Returns `(exists,
-/// is_modifiable, now)` where `is_modifiable` is `None` exactly when the EHR
-/// does not exist and `now` is the database transaction timestamp of this
+/// re-promotion over [`current_status_root`]). In the [`Writability`] it
+/// returns `is_modifiable` is `None` exactly when the EHR does not exist and
+/// `now` is the database transaction timestamp of this
 /// probe, carried forward as the commit instant of a create that follows it
 /// (the database stays the only clock; the fresh versioned object has no
 /// stored interval the slightly earlier instant could disorder). The concepts
@@ -496,17 +501,46 @@ pub async fn ehr_is_modifiable_locked(
 pub async fn ehr_writability<'e>(
     executor: impl PgExecutor<'e>,
     ehr_id: EhrId,
-) -> Result<(bool, Option<bool>, jiff::Timestamp), StorageError> {
-    let row = sqlx::query(
-        "SELECT (SELECT is_modifiable FROM ehr WHERE id = $1) AS is_modifiable, now() AS ts",
-    )
+) -> Result<Writability, StorageError> {
+    let row = sqlx::query(concat!(
+        "SELECT e.is_modifiable, e.restricted_at IS NOT NULL AS restricted, ",
+        access_revision!("e.id"),
+        ", now() AS ts FROM (VALUES (1)) AS one (x) LEFT JOIN ehr e ON e.id = $1"
+    ))
     .bind(ehr_id)
     .fetch_one(executor)
     .await?;
     let is_modifiable: Option<bool> = row.try_get("is_modifiable")?;
-    let now = row.try_get::<jiff_sqlx::Timestamp, _>("ts")?.to_jiff();
-    Ok((is_modifiable.is_some(), is_modifiable, now))
+    let restriction = match row.try_get::<Option<bool>, _>("restricted")? {
+        Some(restricted) if is_modifiable.is_some() => Some((
+            restricted,
+            crate::storage::access_projection::Revision::read(&row)?,
+        )),
+        _ => None,
+    };
+    Ok(Writability {
+        is_modifiable,
+        now: row.try_get::<jiff_sqlx::Timestamp, _>("ts")?.to_jiff(),
+        restriction,
+    })
 }
+
+/// What [`ehr_writability`] read of an EHR in one statement (#5775).
+#[derive(Debug, Clone)]
+pub struct Writability {
+    /// The promoted `is_modifiable`; `None` exactly when the EHR does not
+    /// exist.
+    pub is_modifiable: Option<bool>,
+    /// The database transaction timestamp of the read.
+    pub now: jiff::Timestamp,
+    /// Whether the EHR is restricted and its access settings revision, as
+    /// [`restriction_and_revision`] reads them; `None` when it does not exist.
+    pub restriction: Restriction,
+}
+
+/// Whether an EHR is restricted and the revision of its access settings row;
+/// `None` when the EHR does not exist.
+pub type Restriction = Option<(bool, crate::storage::access_projection::Revision)>;
 
 /// Whether ANY live (non-deleted) folder hierarchy is indexed for the EHR —
 /// the `POST /directory` conflict probe.
@@ -598,7 +632,7 @@ pub async fn live_folder_root_exists(
 pub async fn restriction_and_revision(
     tx: &mut PgConnection,
     ehr_id: EhrId,
-) -> Result<Option<(bool, crate::storage::access_projection::Revision)>, StorageError> {
+) -> Result<Restriction, StorageError> {
     let row = sqlx::query(concat!(
         "SELECT e.restricted_at IS NOT NULL AS restricted, ",
         access_revision!("e.id"),
@@ -680,6 +714,10 @@ pub struct PromotedColumns<'a> {
     pub is_queryable: bool,
     /// `EHR_STATUS.is_modifiable`.
     pub is_modifiable: bool,
+    /// The keyed digest of the subject reference the care projection is
+    /// matched by (`clinical/0047_access_care.sql`); `None` without a subject
+    /// or while identifier protection is off.
+    pub subject_digest: Option<&'a [u8]>,
 }
 
 /// Write the promoted `ehr` columns of `ehr_id` on the status commit's
@@ -697,7 +735,7 @@ pub async fn update_promoted_columns(
     // the EHR's access facts, whose care relationships are its subject's.
     sqlx::query(
         "WITH changed AS (UPDATE ehr SET subject_id = $2, subject_namespace = $3, \
-         is_queryable = $4, is_modifiable = $5 WHERE id = $1 \
+         is_queryable = $4, is_modifiable = $5, subject_digest = $7 WHERE id = $1 \
          RETURNING OLD.subject_id IS DISTINCT FROM NEW.subject_id AS moved) \
          SELECT pg_notify($6, $1::text) FROM changed WHERE moved",
     )
@@ -707,6 +745,7 @@ pub async fn update_promoted_columns(
     .bind(columns.is_queryable)
     .bind(columns.is_modifiable)
     .bind(crate::storage::access_projection::CHANNEL)
+    .bind(columns.subject_digest)
     .execute(tx)
     .await
     .map_err(|e| match &e {

@@ -22,6 +22,8 @@ pub mod check;
 pub(crate) mod derive;
 pub mod fill;
 pub mod grants;
+pub mod key_space;
+pub mod live;
 pub mod lookup;
 pub mod policy;
 pub mod policy_mark;
@@ -32,7 +34,7 @@ pub mod shipped;
 pub mod source;
 pub mod store;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::templates::identity::canonical_key;
 
@@ -407,6 +409,25 @@ pub struct BindingMapping {
     admin_role: Option<String>,
     /// Whether the policy parties are recognised and guarded.
     policy: bool,
+    /// The `patients` issuers: a binding key under one is a portal login,
+    /// held with no professional `ROLE` and bound only as a representative
+    /// through a live representation (#5622).
+    portal_issuers: BTreeSet<String>,
+    /// The patient's `PERSON` template with the path of its identifiers.
+    patient: Option<PatientSelector>,
+}
+
+/// The patient's `PERSON` template and the path of the `ELEMENT` holding its
+/// identifiers, each a `DV_IDENTIFIER` of any type and issuer
+/// (`[authz.party_binding.patient]`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PatientSelector {
+    /// The canonical template id.
+    template: String,
+    /// The identifier path as configured.
+    path: String,
+    /// The parsed identifier path.
+    parsed: Vec<Step>,
 }
 
 impl BindingMapping {
@@ -484,6 +505,65 @@ impl BindingMapping {
         self.policy
     }
 
+    /// Returns this mapping holding a binding key under each of `issuers`, the
+    /// `patients` issuers, as a portal login: its key row is held with no
+    /// professional `ROLE`, and a SCIM client whose `binding_issuer` is one
+    /// provisions its Users in the patient template with no `ROLE` (#5622).
+    /// Our own design.
+    #[must_use]
+    pub fn with_portal_issuers<I, S>(mut self, issuers: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.portal_issuers = issuers.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// Returns this mapping reading the identifiers of a patient's `PERSON`
+    /// of `template_id` at `path`, each a `DV_IDENTIFIER` in `details` of any
+    /// type and issuer (RM Demographic IM §2.1.3).
+    ///
+    /// # Errors
+    /// [`SelectorError::Path`] naming the path when a step is not an
+    /// attribute name with an optional node id predicate.
+    pub fn with_patient(mut self, template_id: &str, path: &str) -> Result<Self, SelectorError> {
+        let Some(parsed) = parse(path) else {
+            return Err(SelectorError::Path {
+                path: path.to_owned(),
+            });
+        };
+        self.patient = Some(PatientSelector {
+            template: canonical_key(template_id),
+            path: path.to_owned(),
+            parsed,
+        });
+        Ok(self)
+    }
+
+    /// The patient template's canonical id and the path of the `ELEMENT`s
+    /// holding a patient's identifiers, when `[authz.party_binding.patient]`
+    /// maps them.
+    #[must_use]
+    pub fn patient_identifier_path(&self) -> Option<(&str, &str)> {
+        self.patient
+            .as_ref()
+            .map(|patient| (patient.template.as_str(), patient.path.as_str()))
+    }
+
+    /// The `patients` issuers, sorted ([`Self::with_portal_issuers`]).
+    #[must_use]
+    pub fn portal_issuers(&self) -> Vec<String> {
+        self.portal_issuers.iter().cloned().collect()
+    }
+
+    /// Whether `issuer` is a `patients` issuer, under which a binding key is
+    /// a portal login.
+    #[must_use]
+    pub fn is_portal_issuer(&self, issuer: &str) -> bool {
+        self.portal_issuers.contains(issuer)
+    }
+
     /// The binding-key selector of the person template `template_id`, in any
     /// case.
     #[must_use]
@@ -536,10 +616,13 @@ impl BindingMapping {
     }
 
     /// Returns the digest of everything the side-table rows are derived
-    /// under: two mappings with one digest derive the same rows.
+    /// under apart from the key issuers: two mappings with one digest and one
+    /// set of [`Self::key_spaces`] derive the same rows.
     ///
     /// It is the SHA-256 of a canonical text of the templates, selectors,
-    /// archetypes and relationship codes, in lower-case hex.
+    /// archetypes and relationship codes, in lower-case hex. A key selector
+    /// adds only whether it holds listed issuers or every issuer, since each
+    /// listed issuer is a key space of its own ([`fill`]).
     #[must_use]
     pub fn digest(&self) -> String {
         let mut text = String::new();
@@ -549,13 +632,18 @@ impl BindingMapping {
         };
         for (template, selectors) in &self.persons {
             for (selector, chosen) in selectors.each() {
+                let issuers = match (selector, chosen.issuers().is_empty()) {
+                    ("key", true) => "*".to_owned(),
+                    ("key", false) => "listed".to_owned(),
+                    _ => chosen.issuers().join(","),
+                };
                 line(&[
                     "person",
                     template,
                     selector,
                     chosen.path(),
                     chosen.identifier_type(),
-                    &chosen.issuers().join(","),
+                    &issuers,
                 ]);
             }
         }
@@ -578,98 +666,19 @@ impl BindingMapping {
         }
         crate::digest::sha256_hex(&text)
     }
+
+    /// The key spaces the mapping derives key rows in: each issuer a key
+    /// selector lists, with whether it is a `patients` issuer, under which a
+    /// key is a portal login.
+    #[must_use]
+    pub fn key_spaces(&self) -> BTreeMap<String, bool> {
+        self.persons
+            .values()
+            .flat_map(|selectors| selectors.key.issuers())
+            .map(|issuer| (issuer.clone(), self.is_portal_issuer(issuer)))
+            .collect()
+    }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_policy_moves_no_digest() {
-        assert_eq!(
-            BindingMapping::default().with_policy().digest(),
-            BindingMapping::default().digest(),
-            "the policy derives no row, so it moves no digest"
-        );
-    }
-
-    #[test]
-    fn a_path_parses_into_its_steps_and_reads_the_element_value() {
-        let selector = IdentifierSelector::new(
-            "/details[at0001]/items[openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1]/items[at0001]",
-            "guid",
-        )
-        .expect("parses");
-        let step = |attribute: &str, node_id: Option<&str>| Step {
-            attribute: attribute.to_owned(),
-            node_id: node_id.map(str::to_owned),
-        };
-        assert_eq!(
-            selector.parsed,
-            vec![
-                step("details", Some("at0001")),
-                step(
-                    "items",
-                    Some("openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v1")
-                ),
-                step("items", Some("at0001")),
-                step("value", None),
-            ]
-        );
-    }
-
-    #[test]
-    fn a_path_ending_at_the_value_reads_it_once() {
-        let selector = IdentifierSelector::new("/details[at0001]/items[at0002]/value", "guid")
-            .expect("parses");
-        assert_eq!(
-            selector
-                .parsed
-                .iter()
-                .filter(|step| step.attribute == "value")
-                .count(),
-            1
-        );
-    }
-
-    #[test]
-    fn a_name_path_compiles_with_its_node_ids_as_variables() {
-        let selector = NameSelector::new("/identities[at0001]/details[at0002]/items[at0003]")
-            .expect("compiles");
-        assert_eq!(
-            selector.json_path,
-            "$.identities[*] ? (@.archetype_node_id == $p0).details[*] ? (@.archetype_node_id \
-             == $p1).items[*] ? (@.archetype_node_id == $p2).value[*] ? (@._type == \"DV_TEXT\" \
-             || @._type == \"DV_CODED_TEXT\")"
-        );
-        assert_eq!(
-            selector.variables,
-            r#"{"p0":"at0001","p1":"at0002","p2":"at0003"}"#
-        );
-    }
-
-    #[test]
-    fn a_path_that_is_not_attribute_steps_is_refused() {
-        for path in [
-            "details[at0001]",
-            "/details[at0001",
-            "/Details[at0001]",
-            "/details[at0001 and name/value='x']",
-            "/details[at0001\"]",
-            "//items",
-            "/",
-        ] {
-            assert_eq!(
-                IdentifierSelector::new(path, "guid"),
-                Err(SelectorError::Path {
-                    path: path.to_owned()
-                }),
-                "{path}"
-            );
-        }
-        assert!(matches!(
-            IdentifierSelector::new("/details[at0001]", " "),
-            Err(SelectorError::Type { .. })
-        ));
-    }
-}
+mod tests;

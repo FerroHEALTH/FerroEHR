@@ -96,11 +96,25 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
 /// checks a connection out of each pool once and keeps it until it answers.
 ///
 /// No openEHR spec governs connection handling: our own design.
-async fn one_connection_per_request(
+pub(crate) async fn one_connection_per_request(
     request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> Response {
     ferroehr::db::acquire::request_scope(next.run(request)).await
+}
+
+/// Returns the request's connections to their pools once the handler has
+/// answered ([`ferroehr::db::acquire::release_held`]), so the layers after it
+/// (the authorization post-check, the audit record) hold none (#5774).
+///
+/// No openEHR spec governs connection handling: our own design.
+pub(crate) async fn release_after_handler(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    let response = next.run(request).await;
+    ferroehr::db::acquire::release_held();
+    response
 }
 
 /// The management surface inside the audit trail (#3244): every management
@@ -137,7 +151,8 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     // Methods) is honoured for a recognised but unimplemented operation via
     // `ApiError::NotImplemented`.
     let api = crate::api::api_router(&namespaces)
-        .method_not_allowed_fallback(error::method_not_allowed_handler);
+        .method_not_allowed_fallback(error::method_not_allowed_handler)
+        .layer(axum::middleware::from_fn(release_after_handler));
     // Added before the authentication layer, which in axum's outermost-last
     // ordering puts it inside: the subject it keys on exists only after auth.
     let api = match cfg.server.caller_rate {
@@ -178,6 +193,11 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     // Above the audit layer so an over-large body is refused before it is read,
     // buffered or audited; the stack's body limit is the ceiling of every route.
     let api = api.layer(from_fn_with_state(state.clone(), crate::limits::middleware));
+    // Around the authentication, whose first login may create a PERSON.
+    let api = api.layer(from_fn_with_state(
+        state.backend_handle(),
+        crate::binding_changes::middleware,
+    ));
     // Outermost, so every statement of the request, its authorization
     // lookups included, runs on the one connection each pool lent it.
     let api = api.layer(axum::middleware::from_fn(one_connection_per_request));
@@ -292,7 +312,7 @@ pub(crate) async fn caller_key(
     mut request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> Response {
-    let subject = request.extensions().get::<Principal>().map_or_else(
+    let subject = request.extensions().get::<Arc<Principal>>().map_or_else(
         || Arc::from("-"),
         |principal| Arc::from(principal.subject.as_str()),
     );
@@ -378,12 +398,25 @@ fn mount_public_surface(
         // Every SCIM request is an access record of its client, run on one
         // connection per pool like an API request.
         inner = inner.merge(
-            scim.layer(from_fn_with_state(
-                state.clone(),
-                crate::system_log::middleware::middleware,
-            ))
-            .layer(axum::middleware::from_fn(one_connection_per_request)),
+            scim.layer(axum::middleware::from_fn(release_after_handler))
+                .layer(from_fn_with_state(
+                    state.clone(),
+                    crate::system_log::middleware::middleware,
+                ))
+                .layer(from_fn_with_state(
+                    state.backend_handle(),
+                    crate::binding_changes::middleware,
+                ))
+                .layer(axum::middleware::from_fn(one_connection_per_request)),
         );
+    }
+
+    if let Some(feed) =
+        crate::extensions::pmir::router(cfg, authenticator, state.backend_handle(), state.clone())
+    {
+        // NOTE: PMIR 1.6.0 §2:3.93.5, the Registry authenticates by IUA; each message is an
+        // access record of its client, run on one connection per pool like an API request.
+        inner = inner.merge(feed);
     }
 
     match cfg.api.openapi_ui {

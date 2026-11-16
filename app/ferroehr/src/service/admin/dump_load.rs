@@ -694,14 +694,14 @@ fn original_version_envelope(
         .filter(|a| !a.at_committal)
         .map(|a| a.data.clone())
         .collect();
-    let mut ov = build_original_version(&OriginalVersionParts {
+    let mut ov = build_original_version(OriginalVersionParts {
         creating_system_id: &v.creating_system_id,
         vo_id: v.vo_id,
         tree,
         preceding_version_uid: v.preceding_version_uid.as_deref(),
         other_input_version_uids: &other_input_version_uids,
-        contribution: &contribution,
-        commit_audit: &commit_audit,
+        contribution,
+        commit_audit,
         lifecycle_state: &v.lifecycle_state,
         data: &v.body,
         attestations: &at_committal,
@@ -963,8 +963,7 @@ impl FerroEhrService {
     /// - `exception` — a database/codec fault while collecting records or
     ///   serializing a version payload, or a blob-store fault while exporting
     ///   referenced multimedia.
-    /// - `service_overloaded` — the export record of an EHR was refused under
-    ///   `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — the export record of an EHR could not be written.
     pub async fn export_ehrs(
         &self,
         file_sys_loc: String,
@@ -1078,7 +1077,8 @@ impl FerroEhrService {
         archive.write(MANIFEST_ENTRY, &manifest_bytes)?;
         archive.finish()?;
         for record in &records {
-            self.emit_extract_audit(record.ehr.id, EventActionCode::Read, None)?;
+            self.emit_extract_audit(record.ehr.id, EventActionCode::Read, None)
+                .await?;
         }
         // Every EHR dumped successfully → no failure entries.
         Ok(Vec::new())
@@ -1113,8 +1113,7 @@ impl FerroEhrService {
     ///   transaction is rolled back).
     /// - `exception` — a database/codec fault while re-persisting, or a
     ///   blob-store fault while importing.
-    /// - `service_overloaded` — the import record of a loaded EHR was refused
-    ///   under `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — the import record of a loaded EHR could not be written.
     pub async fn load_ehrs(
         &self,
         file_sys_loc: String,
@@ -1211,7 +1210,8 @@ impl FerroEhrService {
             parent_statistics::report(&parent_statistics::refresh_store(pool, store).await);
         }
         for ehr_id in loaded {
-            self.emit_extract_audit(ehr_id, EventActionCode::Create, None)?;
+            self.emit_extract_audit(ehr_id, EventActionCode::Create, None)
+                .await?;
         }
         Ok(reports)
     }

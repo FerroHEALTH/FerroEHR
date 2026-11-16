@@ -8,11 +8,16 @@
 //! and a person acting for them (EHDS Art. 3 and 4(2)), an access service
 //! (an `access_service` grant in the CDR, or a verified caller of a
 //! `federation` issuer; EHDS Art. 10), a system client, and every other
-//! caller a professional. Its party, clearances, permitted purposes and care
-//! teams are the 5.7.1 demographic facts the request already holds
-//! (`ferroehr::party_binding::grants`), and it acts for its care teams, the
+//! caller a professional. Its party, the roles of the `ROLE`s it performs and
+//! its care teams are the demographic facts the request already holds
+//! (`ferroehr::party_binding::grants`); a token's role claims drive no rule,
+//! except that a caller admitted under a federation agreement adds the
+//! professional roles and the facility types its verified credential
+//! attests (`professional.hp_professional_role` and `provider.facility_type`,
+//! eHDSI SAML Profile 10.0.0 §2.3), each a code of the system it names (#5691).
+//! It acts for its care teams, the
 //! provider its client acts for and the `GROUP`s that provider is a member
-//! of (RM demographic `PARTY_RELATIONSHIP`, coded `member_of`; #5575). The
+//! of (RM demographic `PARTY_RELATIONSHIP`, coded HL7 v3 `RoleClass#MBR`; #5575). The
 //! purpose is the declared code the audit layer accepted, and an emergency
 //! is that code being one of `[audit] emergency_purpose_codes`, with
 //! `[authz.rbac] emergency_access_role` for the break-glass steps (EHDS Art. 11(5)). No openEHR spec governs the
@@ -27,16 +32,20 @@ use ferroehr::ids::EhrId;
 use ferroehr::party_binding::grants::agreement::Accessor;
 use ferroehr::party_binding::grants::capabilities::Capabilities;
 use ferroehr::party_binding::grants::operation::Operation;
+use ferrohealth_smart::federation::{Attribute, Field};
 use ferrohealth_smart::kind::CallerKind as SmartKind;
 use ferrohealth_smart::openehr;
 use ferrohealth_smart::openehr::smart_scopes::{
     Compartment, Permission, ResourceFamily, SmartScope,
 };
-use openehr_rm::draft::access_control::terminology::{AccessDefault, CallerKind, OperationClass};
+use openehr_rm::draft::access_control::terminology::{
+    AccessDefault, CallerKind, ForeignCode, OperationClass,
+};
 use uuid::Uuid;
 
 use super::authn::trc::TrcPatientEhr;
 use super::authn::{Principal, current_principal};
+use super::authz::AuthzHandle;
 use crate::api::operation::{Verb, operation};
 use crate::state::AppState;
 
@@ -49,55 +58,21 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
         return None;
     }
     let principal = current_principal();
-    let principal = principal.as_ref();
+    let principal = principal.as_deref();
     let backend = state.backend();
-    let settings = backend.settings_caller();
     let capabilities = Capabilities::current();
-    let kind = kind(principal, settings.subject(), &capabilities);
-    let roles = principal.map_or_else(Vec::new, |p| p.roles.clone());
-    let authz = state.authz();
-    let (server_default, admin_role) = authz
-        .as_deref()
-        .map_or((EhrAccessDefault::Open, "ADMIN".to_owned()), |handle| {
-            (handle.ehr_access_default(), handle.admin_role().to_owned())
-        });
-    let mut acts_for: Vec<String> = capabilities
-        .facts()
-        .care_teams()
-        .iter()
-        .map(|team| team.team().to_string())
-        .collect();
-    if let Some(provider) = capabilities
-        .client()
-        .and_then(|client| client.provider.as_ref())
-    {
-        acts_for.push(provider.party.to_string());
-    }
-    acts_for.extend(
-        capabilities
-            .facts()
-            .provider_groups()
-            .iter()
-            .map(Uuid::to_string),
-    );
-    let patient_grants_only = patient_grants_only(principal, op);
-    let caller = Caller {
-        kind,
-        party: settings.party().map(str::to_owned),
-        own_ehr: own_ehr(principal, kind, patient_grants_only),
-        patient_grants_only,
-        acts_for,
-        administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
-        roles,
-        facts: capabilities.facts().clone(),
-        settings,
-    };
+    let caller = caller_of(state, principal, &capabilities, Some(op));
+    let kind = caller.kind;
     let purpose = ferroehr::system_log::access_context::current_purpose();
     let asking = Asking {
         operation: operation_class(op),
         emergency: emergency(state, principal, kind, purpose.as_deref()),
         purpose,
     };
+    let server_default = state
+        .authz()
+        .as_deref()
+        .map_or(EhrAccessDefault::Open, AuthzHandle::ehr_access_default);
     let default = match server_default {
         EhrAccessDefault::Open => AccessDefault::Open,
         EhrAccessDefault::Restricted => AccessDefault::Restricted,
@@ -118,19 +93,132 @@ pub(crate) fn request_access(state: &AppState, op: &str) -> Option<Arc<RequestAc
     ))
 }
 
+/// The evaluator's caller of the running request, as the access log's
+/// standing reads it: one source for who the caller is and which EHR a
+/// confined caller reaches (#5614).
+pub(crate) fn current_caller(state: &AppState) -> Caller {
+    let principal = current_principal();
+    caller_of(state, principal.as_deref(), &Capabilities::current(), None)
+}
+
+/// The evaluator's caller `principal` is, holding `capabilities`, asking
+/// for `op`; with no operation, its grants are read as reaching more than
+/// one patient's EHR.
+fn caller_of(
+    state: &AppState,
+    principal: Option<&Principal>,
+    capabilities: &Capabilities,
+    op: Option<&str>,
+) -> Caller {
+    let settings = state.backend().settings_caller();
+    let kind = kind(principal, settings.subject(), capabilities);
+    let roles = principal.map_or_else(Vec::new, |p| p.roles.clone());
+    let admin_role = state.authz().as_deref().map_or_else(
+        || "ADMIN".to_owned(),
+        |handle| handle.admin_role().to_owned(),
+    );
+    let mut acts_for: Vec<String> = capabilities
+        .facts()
+        .care_teams()
+        .iter()
+        .map(|team| team.team().to_string())
+        .collect();
+    if let Some(provider) = capabilities
+        .client()
+        .and_then(|client| client.provider.as_ref())
+    {
+        acts_for.push(provider.party.to_string());
+    }
+    acts_for.extend(
+        capabilities
+            .facts()
+            .provider_groups()
+            .iter()
+            .map(Uuid::to_string),
+    );
+    let patient_grants_only = op.is_some_and(|op| patient_grants_only(principal, op));
+    Caller {
+        kind,
+        party: settings.party().map(str::to_owned),
+        own_ehrs: own_ehrs(principal, kind, patient_grants_only),
+        patient_grants_only,
+        acts_for,
+        administrator: roles.iter().any(|r| r.eq_ignore_ascii_case(&admin_role)),
+        facts: principal.map_or_else(
+            || capabilities.facts().clone(),
+            |principal| {
+                let (roles, types) = attested(principal);
+                capabilities.facts().clone().with_attested(roles, types)
+            },
+        ),
+        settings,
+        lacks_consent_reference: principal.is_some_and(lacks_consent_reference),
+    }
+}
+
+/// The professional roles and the organisation types the verified credential
+/// of `principal` attests, when it was admitted under a federation agreement:
+/// each coded value of `professional.hp_professional_role` and
+/// `provider.facility_type` read as a code of the system it names. A value
+/// that names no system is no code a rule can match, so it is left out.
+fn attested(principal: &Principal) -> (Vec<ForeignCode>, Vec<ForeignCode>) {
+    let external = super::authn::declared::admitted(&principal.access)
+        .and(principal.access.caller())
+        .and_then(|caller| caller.kind().external());
+    let Some(external) = external else {
+        return (Vec::new(), Vec::new());
+    };
+    let coded = |field: Field| -> Vec<ForeignCode> {
+        match external.field(field) {
+            Some(Attribute::Codes(codes)) => codes
+                .iter()
+                .filter_map(|code| {
+                    // NOTE: our own design (#5691), a value with no system is legitimately no code
+                    // of any terminology, so no rule matches it and a deny over it holds.
+                    code.system.as_ref().map(|system| ForeignCode {
+                        terminology: system.clone(),
+                        code: code.code.clone(),
+                    })
+                })
+                .collect(),
+            Some(Attribute::Text(_)) | None => Vec::new(),
+        }
+    };
+    (
+        coded(Field::ProfessionalHpProfessionalRole),
+        coded(Field::ProviderFacilityType),
+    )
+}
+
+/// Whether `principal` was admitted under a federation agreement whose
+/// `consent` condition applies and names no consent decision reference, the
+/// token's mapped `consent.reference` (Wabvpz Art. 1(j) and Art. 15a(1),
+/// `docs/law/nl/wabvpz/text.html`, for the condition the agreement carries).
+fn lacks_consent_reference(principal: &Principal) -> bool {
+    super::authn::declared::admitted(&principal.access)
+        .is_some_and(|agreement| agreement.consent.is_some())
+        && principal
+            .access
+            .caller()
+            .and_then(ferrohealth_smart::resource::Caller::consent_reference)
+            .is_none()
+}
+
 /// The caller's kind (`access caller kind`).
 fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilities) -> CallerKind {
     let Some(principal) = principal else {
         return CallerKind::Professional;
     };
     let smart = principal.access.caller();
-    if subject || smart.is_some_and(ferrohealth_smart::resource::Caller::is_the_person) {
-        return CallerKind::Subject;
-    }
+    // NOTE: EHDS Art. 4(2), whoever acts for someone else is their representative whatever
+    // issuer it logged in through, so the representation is read before the person (#5613).
     let represents =
         smart.is_some_and(|caller| matches!(caller.kind(), SmartKind::Representative { .. }));
     if represents || principal.represented.is_some() {
         return CallerKind::Representative;
+    }
+    if subject || smart.is_some_and(ferrohealth_smart::resource::Caller::is_the_person) {
+        return CallerKind::Subject;
     }
     let external = smart.is_some_and(|caller| {
         matches!(
@@ -147,39 +235,44 @@ fn kind(principal: Option<&Principal>, subject: bool, capabilities: &Capabilitie
     CallerKind::Professional
 }
 
-/// The EHR a confined caller of `kind` reaches: for a representative, the
-/// EHR whose `EHR_STATUS.subject` names the subject its recorded
+/// The EHRs a confined caller of `kind` reaches: for a representative, each
+/// EHR whose `EHR_STATUS.subject` reference names the `PERSON` its recorded
 /// representation `PARTY_RELATIONSHIP` names, which authentication resolved
 /// ([`Principal::represented`]); otherwise the EHR of its SMART App Launch
 /// patient context (`ehrId`, ITS-REST `master07` §Context Selection), or,
 /// for a contact point's caller, the EHR of its TRC patient, which stands in
 /// for the launch context its token does not carry (eHDSI XCA Profile 8.0.1
 /// §4.2.1).
-fn own_ehr(
+fn own_ehrs(
     principal: Option<&Principal>,
     kind: CallerKind,
     patient_grants_only: bool,
-) -> Option<EhrId> {
-    let principal = principal?;
+) -> Vec<EhrId> {
+    let Some(principal) = principal else {
+        return Vec::new();
+    };
     if kind == CallerKind::Representative {
         // NOTE: our own design (#5609), a representative whose subject has no EHR, or one
         // authentication did not resolve, reaches none, so the evaluator refuses it on every EHR.
         return principal
             .represented
             .as_ref()
-            .and_then(|represented| represented.ehr_id.as_deref())
-            .and_then(|ehr| ehr.parse().ok());
+            .map_or_else(Vec::new, |represented| represented.ehr_ids.clone());
     }
     if kind != CallerKind::Subject && !patient_grants_only {
-        return None;
+        return Vec::new();
     }
     let access = &principal.access;
     if let Some(TrcPatientEhr(ehr)) = access.extension::<TrcPatientEhr>() {
-        return Some(*ehr);
+        return vec![*ehr];
     }
     // NOTE: our own design (#5586), a launch context that names no EHR id names no EHR, so
     // the evaluator refuses the confined caller on every EHR.
-    access.ehr_id()?.parse().ok()
+    access
+        .ehr_id()
+        .and_then(|ehr| ehr.parse().ok())
+        .into_iter()
+        .collect()
 }
 
 /// Whether the caller's grants on the EHR data `op` reaches are `patient/`

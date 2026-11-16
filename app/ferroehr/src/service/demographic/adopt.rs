@@ -180,7 +180,7 @@ impl FerroEhrService {
         tx.commit().await?;
         report.contribution = Some(committed.id);
         for adopted in &report.adopted {
-            self.record_adoption(admin, adopted)?;
+            self.record_adoption(admin, adopted).await?;
         }
         Ok(report)
     }
@@ -291,7 +291,11 @@ impl FerroEhrService {
 
     /// Records the adoption `adopted` by the administrator `admin`; nothing
     /// while auditing is off.
-    fn record_adoption(&self, admin: Uuid, adopted: &AdoptedPerson) -> Result<(), ServiceError> {
+    async fn record_adoption(
+        &self,
+        admin: Uuid,
+        adopted: &AdoptedPerson,
+    ) -> Result<(), ServiceError> {
         if !self.audit_enabled() {
             return Ok(());
         }
@@ -307,7 +311,7 @@ impl FerroEhrService {
         ));
         event.user_id = admin.to_string();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_access(event).await
     }
 }
 

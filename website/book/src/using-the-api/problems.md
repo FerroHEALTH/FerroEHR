@@ -92,13 +92,16 @@ The caller is authenticated, and the access policy (roles, SMART scopes, EHR
 access, assurance level) refuses the operation. `detail` names the missing
 grant. When the EHR's access directives or the access policy refuse, `detail`
 starts with the refusal code (`refused-consent-denied`,
-`refused-consent-required`, `refused-sensitivity`,
+`refused-policy-denied`, `refused-consent-required`, `refused-sensitivity`,
 `refused-no-care-relationship`, `refused-purpose-missing`,
-`refused-purpose-not-permitted`, `refused-not-subject`,
-`refused-not-represented`; see
+`refused-not-subject`, `refused-not-represented`,
+`refused-consent-reference-missing`; see
 [Access directives](../security.md)).
 
-With `Prefer: return=representation`: `refusal`, that code. A restriction or an
+With `Prefer: return=representation`: `refusal`, that code, and for
+`refused-policy-denied` `legal_grounds`, the provisions the refusing
+controller rules name, each as `{ "terminology", "code", "value" }`, when
+they name any. A restriction or an
 opt-out never answers `403`: the data read as absent (`404`), with nothing in
 the body that names them.
 
@@ -117,6 +120,18 @@ unavailable.
 
 The server or its database is overloaded or draining. Retry after the
 `Retry-After` header's delay.
+
+## `access-refreshing`
+
+**Status:** `503 Service Unavailable`. **Title:** The access state the query
+is judged by is being refreshed.
+
+An AQL query is judged by this replica's copy of the access settings. When
+the store holds a newer revision than the copy, the server reads it again
+and asks once more, for a short bounded time. If the copy still lags, the
+server withholds the answer instead of serving rows, a count or a page judged
+on the old state. Retry after the `Retry-After` header's delay. The
+`aql_stale_access_total` counter counts these cases.
 
 ## `rate-limited`
 

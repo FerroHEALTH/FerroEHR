@@ -23,6 +23,8 @@
 //! condition of its one SQL statement (`query_condition`). The procedure and
 //! its codes are our own design (#5487, #5513).
 
+use std::sync::Arc;
+
 use axum::response::{IntoResponse, Response};
 use ferroehr::access_eval::condition::{AccessCondition, RequestAccess, current};
 use ferroehr::access_eval::procedure::{Outcome, Verdict};
@@ -30,9 +32,12 @@ use ferroehr::access_eval::scope::Item;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Missing;
 use ferroehr::ids::{EhrId, VoId};
+use ferroehr::service::ehr::composition_read::JudgedRead;
+use ferroehr::service::response::RawServiceResponse;
 use ferroehr::system_log::event::ObjectClass;
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::draft::access_control::terminology::{Refusal, Term as _};
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
 use crate::api::RequestParts;
@@ -80,15 +85,135 @@ pub(crate) async fn enforce(
         .ehr_verdict(&access, ehr_id)
         .await
         .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
-    if let Some(refusal) = refusal_of(&access, op, principal.as_ref(), ehr_id, &verdict) {
+    // NOTE: our own design (#5773), a COMPOSITION read judges the object it names on its
+    // own row, before anything of the version leaves the server ([`admit_read`]).
+    if defers(state, op, parts, &verdict) {
+        return Ok(());
+    }
+    // NOTE: our own design (#5627), a datum the path names is judged before any step about
+    // its EHR alone, so the first step that refuses that datum answers.
+    let objects = named_objects(parts);
+    let judged = !objects.is_empty()
+        && verdict.item_dependent()
+        && enforce_objects(state, op, principal.as_ref(), &objects).await?;
+    if !judged
+        && !written_at_commit(op, &verdict)
+        && let Some(refusal) =
+            refusal_of(state, &access, op, principal.as_ref(), ehr_id, &verdict).await?
+    {
         return Err(Box::new(refusal));
     }
-    record_overrides(state, &[ehr_id]).await?;
-    let objects = named_objects(parts);
-    if !objects.is_empty() && verdict.item_dependent() {
-        return enforce_objects(state, op, principal.as_ref(), &objects).await;
+    record_overrides(state, &[ehr_id]).await
+}
+
+/// The operation that judges the object it names on its read's own row, in
+/// the one statement that reads the version (#5773).
+const JUDGED_ON_READ: &str = "composition_get";
+
+/// What a read that judges its own row is judged under: the request's access,
+/// and the EHR its path names with that EHR's verdict.
+#[derive(Debug)]
+pub(crate) struct Deferred {
+    /// The request's access.
+    pub(crate) access: Arc<RequestAccess>,
+    ehr_id: EhrId,
+    verdict: Arc<Verdict>,
+}
+
+/// Whether `op` judges the object `parts` names on its read's own row under
+/// `verdict`, the verdict of the EHR its path names: a COMPOSITION read by its
+/// version or its latest, whose answer depends on the object, outside an
+/// EHDS Art. 3(3) delay, which answers before the read.
+fn defers(state: &AppState, op: &str, parts: &RequestParts, verdict: &Verdict) -> bool {
+    op == JUDGED_ON_READ
+        && verdict.item_dependent()
+        && query_param(parts.query.as_deref(), "version_at_time").is_none()
+        && !super::delay::applies(state, op)
+        && !named_objects(parts).is_empty()
+}
+
+/// The judgement [`enforce`] left to the read of `op`, `None` when it judged
+/// the request itself.
+///
+/// # Errors
+/// The `503` or fail-closed `500` of a settings store that cannot answer.
+pub(crate) async fn deferred(
+    state: &AppState,
+    op: &str,
+    parts: &RequestParts,
+) -> Result<Option<Deferred>, Box<Response>> {
+    if op != JUDGED_ON_READ {
+        return Ok(None);
     }
-    Ok(())
+    let Some(access) = current() else {
+        return Ok(None);
+    };
+    let Some(ehr_id) = parts
+        .path
+        .get("ehr_id")
+        .and_then(|raw| Uuid::parse_str(raw).ok())
+        .map(EhrId)
+    else {
+        return Ok(None);
+    };
+    let verdict = state
+        .backend()
+        .ehr_verdict(&access, ehr_id)
+        .await
+        .map_err(|e| Box::new(unavailable(current_principal().as_ref(), e)))?;
+    Ok(defers(state, op, parts, &verdict).then_some(Deferred {
+        access,
+        ehr_id,
+        verdict,
+    }))
+}
+
+/// The answer to a read of `op` that judged its own row (`read`) under
+/// `deferred`, the object named `raw`: the `404` of an object that reads as
+/// absent, the `403` of one refused, the refusal of the EHR alone when the
+/// store holds no such object, else the read's own answer, each as
+/// [`enforce`] answers it before a dispatch.
+///
+/// # Errors
+/// The refusal response, or the `503` or fail-closed `500` of a store that
+/// cannot answer.
+pub(crate) async fn admit_read(
+    state: &AppState,
+    op: &str,
+    deferred: &Deferred,
+    raw: &str,
+    read: JudgedRead,
+) -> Result<Result<RawServiceResponse, ServiceError>, Box<Response>> {
+    let principal = current_principal();
+    let principal = principal.as_ref();
+    let answer = match read {
+        JudgedRead::Unjudged(error) => return Err(Box::new(unavailable(principal, error))),
+        JudgedRead::Absent => {
+            return Err(Box::new(recorded(object_not_found(op, raw), principal)));
+        }
+        JudgedRead::Refused { ehr_id, code } => {
+            let grounds = deferred.access.refusal_grounds(Some(ehr_id));
+            return Err(Box::new(forbidden(principal, code, &grounds)));
+        }
+        JudgedRead::Unheld(missing) => {
+            let ehr_wide = refusal_of(
+                state,
+                &deferred.access,
+                op,
+                principal,
+                deferred.ehr_id,
+                &deferred.verdict,
+            )
+            .await?;
+            if let Some(refusal) = ehr_wide {
+                return Err(Box::new(refusal));
+            }
+            Err(missing)
+        }
+        JudgedRead::Admitted(read) => read,
+    };
+    record_overrides(state, &[deferred.ehr_id]).await?;
+    Ok(answer)
 }
 
 /// How an operation whose path names no EHR addresses one.
@@ -138,7 +263,7 @@ async fn enforce_unnamed(
     access: &RequestAccess,
     op: &str,
     parts: &RequestParts,
-    principal: Option<&Principal>,
+    principal: Option<&Arc<Principal>>,
 ) -> Result<(), Box<Response>> {
     if !access.caller().confined() {
         return Ok(());
@@ -151,9 +276,11 @@ async fn enforce_unnamed(
     let Some(raw) = scope else {
         return match access.judge_unnamed() {
             Outcome::Admit => Ok(()),
-            Outcome::Absent(code) | Outcome::Refused(code) => {
-                Err(Box::new(forbidden(principal, code)))
-            }
+            Outcome::Absent(code) | Outcome::Refused(code) => Err(Box::new(forbidden(
+                principal,
+                code,
+                &access.refusal_grounds(None),
+            ))),
         };
     };
     let Ok(ehr_id) = Uuid::parse_str(&raw).map(EhrId) else {
@@ -165,34 +292,37 @@ async fn enforce_unnamed(
         .ehr_verdict(access, ehr_id)
         .await
         .map_err(|e| Box::new(unavailable(principal, e)))?;
-    match refusal_of(access, op, principal, ehr_id, &verdict) {
+    match refusal_of(state, access, op, principal, ehr_id, &verdict).await? {
         Some(refusal) => Err(Box::new(refusal)),
         None => Ok(()),
     }
 }
 
 /// Judge each object `objects` names by the verdict of its own EHR: the
-/// `404` of an object that reads as absent, the `403` of one refused. An
-/// object this store does not hold is the dispatch's to answer.
+/// `404` of an object that reads as absent, the `403` of one refused.
+/// `Ok(true)` when the store holds one of them; an object it does not hold
+/// is the dispatch's to answer.
 async fn enforce_objects(
     state: &AppState,
     op: &str,
-    principal: Option<&Principal>,
+    principal: Option<&Arc<Principal>>,
     objects: &[(&str, VoId)],
-) -> Result<(), Box<Response>> {
+) -> Result<bool, Box<Response>> {
     let Some(access) = current() else {
-        return Ok(());
+        return Ok(false);
     };
     let backend = state.backend();
     let ids: Vec<VoId> = objects.iter().map(|(_, vo_id)| *vo_id).collect();
     let fault = |e: ServiceError| Box::new(unavailable(principal, e));
     let facts = backend.object_access_facts(&ids).await.map_err(fault)?;
+    let mut held_any = false;
     for held in &facts {
         let Some(ehr_id) = held.ehr_id else {
             continue;
         };
+        held_any = true;
         let verdict = backend
-            .ehr_verdict_at(&access, ehr_id, held.revision)
+            .ehr_verdict_at(&access, ehr_id, &held.revision)
             .await
             .map_err(fault)?;
         let raw = objects
@@ -201,11 +331,16 @@ async fn enforce_objects(
             .map_or("", |(raw, _)| raw);
         match access.note(ehr_id, &verdict, &held.item()) {
             Outcome::Admit => {}
-            Outcome::Absent(_) => return Err(Box::new(object_not_found(op, raw))),
-            Outcome::Refused(code) => return Err(Box::new(forbidden(principal, code))),
+            Outcome::Absent(_) => {
+                return Err(Box::new(recorded(object_not_found(op, raw), principal)));
+            }
+            Outcome::Refused(code) => {
+                let grounds = access.refusal_grounds(Some(ehr_id));
+                return Err(Box::new(forbidden(principal, code, &grounds)));
+            }
         }
     }
-    Ok(())
+    Ok(held_any)
 }
 
 /// Enforce the evaluator on every EHR an operation names in its body, such as
@@ -228,7 +363,9 @@ pub(crate) async fn enforce_each(
             .ehr_verdict(&access, *ehr_id)
             .await
             .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
-        if let Some(refusal) = refusal_of(&access, op, principal.as_ref(), *ehr_id, &verdict) {
+        if let Some(refusal) =
+            refusal_of(state, &access, op, principal.as_ref(), *ehr_id, &verdict).await?
+        {
             return Err(Box::new(refusal));
         }
     }
@@ -238,21 +375,53 @@ pub(crate) async fn enforce_each(
 /// The refusal an EHR-wide `verdict` answers for `ehr_id`, noted for the
 /// access record of the request; `None` when it admits some data, which the
 /// reads then judge one by one.
-fn refusal_of(
+///
+/// An EHR the store does not hold answers the `404` of an unknown EHR before
+/// any step refuses, for every caller under every disposition, so a
+/// restriction's `404` is never told apart from it (EHDS Art. 8). Existence
+/// is read only when the verdict refuses (#5623).
+async fn refusal_of(
+    state: &AppState,
     access: &RequestAccess,
     op: &str,
-    principal: Option<&Principal>,
+    principal: Option<&Arc<Principal>>,
     ehr_id: EhrId,
     verdict: &Verdict,
-) -> Option<Response> {
+) -> Result<Option<Response>, Box<Response>> {
     if verdict.item_dependent() && verdict.admits_any() {
-        return None;
+        return Ok(None);
     }
-    match access.note(ehr_id, verdict, &Item::Ehr) {
+    if verdict.outcome(&Item::Ehr) == Outcome::Admit {
+        return Ok(None);
+    }
+    let held = state
+        .backend()
+        .ehr_held(ehr_id)
+        .await
+        .map_err(|e| Box::new(unavailable(principal, e)))?;
+    if !held {
+        return Ok(Some(recorded(ehr_not_found(op, ehr_id), principal)));
+    }
+    Ok(match access.note(ehr_id, verdict, &Item::Ehr) {
         Outcome::Admit => None,
-        Outcome::Absent(_) => Some(ehr_not_found(op, ehr_id)),
-        Outcome::Refused(code) => Some(forbidden(principal, code)),
-    }
+        Outcome::Absent(_) => Some(recorded(ehr_not_found(op, ehr_id), principal)),
+        Outcome::Refused(code) => Some(forbidden(
+            principal,
+            code,
+            &access.refusal_grounds(Some(ehr_id)),
+        )),
+    })
+}
+
+/// Whether `op`, a write into the EHR its path names, is refused under
+/// `verdict` only for a datum: its commit judges the version it writes
+/// (`ferroehr::versioning::restriction`), so no step about the EHR alone
+/// decides first, while an EHR that reads as absent is refused at once.
+fn written_at_commit(op: &str, verdict: &Verdict) -> bool {
+    // NOTE: our own design (#5627), the first step that refuses the written datum answers.
+    operation(op).is_some_and(|row| matches!(row.verb, Verb::Create | Verb::Update))
+        && verdict.item_dependent()
+        && matches!(verdict.outcome(&Item::Ehr), Outcome::Refused(_))
 }
 
 /// Record the EHDS Art. 10(2) override of each opt-out an emergency lifted
@@ -296,6 +465,16 @@ fn reads_ehr_access(op: &str) -> bool {
     op.starts_with("ehr_access_get") || op.starts_with("versioned_ehr_access")
 }
 
+/// `resp`, the `404` of data that read as absent, carrying the principal so
+/// the access record names the refused access, whose response says nothing
+/// (EHDS Art. 8, `ferroehr::access_eval::record::stamp`).
+fn recorded(mut resp: Response, principal: Option<&Arc<Principal>>) -> Response {
+    if let Some(principal) = principal {
+        resp.extensions_mut().insert(Arc::clone(principal));
+    }
+    resp
+}
+
 /// The `404` an unknown EHR answers for `op`, worded as the dispatch words it.
 fn ehr_not_found(op: &str, ehr_id: EhrId) -> Response {
     let message = if op.contains("ehr_status") {
@@ -331,7 +510,7 @@ fn not_found(missing: Missing, message: String) -> Response {
 
 /// The `503` of a settings store that cannot answer, and the fail-closed
 /// `500` of settings that cannot be read.
-fn unavailable(principal: Option<&Principal>, error: ServiceError) -> Response {
+fn unavailable(principal: Option<&Arc<Principal>>, error: ServiceError) -> Response {
     let mut resp = match error {
         overloaded @ ServiceError::Overloaded(_) => RestError::from(overloaded).into_response(),
         other => {
@@ -342,24 +521,31 @@ fn unavailable(principal: Option<&Principal>, error: ServiceError) -> Response {
         }
     };
     if let Some(principal) = principal {
-        resp.extensions_mut().insert(principal.clone());
+        resp.extensions_mut().insert(Arc::clone(principal));
     }
     resp
 }
 
 /// The `403` of a refusal under `code`, naming the code in `detail` and in the
-/// `refusal` member, carrying the principal so the ATNA layer records the
-/// deny (ITS-REST `401`/`403` discipline).
-fn forbidden(principal: Option<&Principal>, code: Refusal) -> Response {
-    let mut resp = RestError::from(ApiError::Forbidden(format!(
+/// `refusal` member, and the `legal_grounds` the refusing controller rules
+/// name, carrying the principal so the ATNA layer records the deny (ITS-REST
+/// `401`/`403` discipline).
+fn forbidden(
+    principal: Option<&Arc<Principal>>,
+    code: Refusal,
+    grounds: &[DvCodedText],
+) -> Response {
+    let refused = RestError::from(ApiError::Forbidden(format!(
         "access denied: {}: {}",
         code.code(),
         reason(code)
-    )))
-    .with_detail(Detail::Refusal(code.code()))
-    .into_response();
+    )));
+    let mut resp = Detail::of_refusal(code, grounds)
+        .into_iter()
+        .fold(refused, RestError::with_detail)
+        .into_response();
     if let Some(principal) = principal {
-        resp.extensions_mut().insert(principal.clone());
+        resp.extensions_mut().insert(Arc::clone(principal));
     }
     resp
 }
@@ -368,31 +554,33 @@ fn forbidden(principal: Option<&Principal>, code: Refusal) -> Response {
 const fn reason(code: Refusal) -> &'static str {
     match code {
         Refusal::ConsentDenied => "a directive of the subject denies this access",
+        Refusal::PolicyDenied => "a rule of the controller's access policy denies this access",
         Refusal::Sensitivity => "the data carry a sensitivity the caller is not cleared for",
         Refusal::NoCareRelationship => {
             "the access policy requires a care relationship to the subject and the caller has none"
         }
         Refusal::PurposeMissing => "the access policy requires a declared purpose of use",
-        Refusal::PurposeNotPermitted => {
-            "the caller's capabilities do not permit the declared purpose of use"
-        }
         Refusal::ConsentRequired => "the EHR needs consent and no permit directive applies",
         Refusal::NotSubject => "the caller's patient context names another EHR",
         Refusal::NotRepresented => "the caller represents the subject of another EHR",
+        Refusal::ConsentReferenceMissing => {
+            "the caller's agreement conditions this read on a consent decision it names no \
+             reference to"
+        }
         Refusal::OptOut | Refusal::Restricted => "the data cannot be read",
     }
 }
 
 /// A `500` (fail-closed) when the settings cannot be read: an access decision
 /// must never proceed on unknown policy.
-fn server_error(principal: Option<&Principal>, detail: &str) -> Response {
+fn server_error(principal: Option<&Arc<Principal>>, detail: &str) -> Response {
     let mut resp = RestError::from(crate::overview::error::internal_fault(
         "read the EHR access-control settings",
         &detail,
     ))
     .into_response();
     if let Some(principal) = principal {
-        resp.extensions_mut().insert(principal.clone());
+        resp.extensions_mut().insert(Arc::clone(principal));
     }
     resp
 }
@@ -425,16 +613,20 @@ mod tests {
     fn a_visible_refusal_is_403() {
         for code in [
             Refusal::ConsentDenied,
+            Refusal::PolicyDenied,
             Refusal::Sensitivity,
             Refusal::NoCareRelationship,
             Refusal::PurposeMissing,
-            Refusal::PurposeNotPermitted,
             Refusal::ConsentRequired,
             Refusal::NotSubject,
             Refusal::NotRepresented,
+            Refusal::ConsentReferenceMissing,
         ] {
             assert!(!code.is_invisible());
-            assert_eq!(forbidden(None, code).status(), http::StatusCode::FORBIDDEN);
+            assert_eq!(
+                forbidden(None, code, &[]).status(),
+                http::StatusCode::FORBIDDEN
+            );
         }
     }
 }

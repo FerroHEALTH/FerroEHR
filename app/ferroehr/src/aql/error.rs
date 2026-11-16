@@ -446,6 +446,63 @@ pub enum SqlError {
          correct the value"
     )]
     UncoercibleTemporal,
+
+    /// A query value of a kind the compared path never holds: a Boolean
+    /// against a number, or a number against a Boolean (→ 400). No reading of
+    /// QUERY master03 §Comparison operators compares the two; refusing is our
+    /// own design. The message names the two kinds only, never the value.
+    #[error(
+        "a query value that is {value} cannot be compared with {compared}; \
+         correct the value"
+    )]
+    UncoercibleComparison {
+        /// The kind of the query value.
+        value: &'static str,
+        /// The kind of the path it is compared with.
+        compared: &'static str,
+    },
+}
+
+/// Which access copy a statement found older than the store (#5794).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StaleCopy {
+    /// The settings and subject of the one EHR a pinned query was judged on
+    /// (SQLSTATE `ZA001`).
+    Pinned,
+    /// The settings classes: a row's EHR is of a class the condition does
+    /// not hold (SQLSTATE `ZA002`).
+    Classes,
+}
+
+impl StaleCopy {
+    /// The metric label of the copy.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Pinned => "pinned",
+            Self::Classes => "classes",
+        }
+    }
+}
+
+impl AqlError {
+    /// The access copy the statement found older than the store, when that
+    /// is why it failed (`clinical/0049_access_stale_copy.sql`).
+    #[must_use]
+    pub fn stale_copy(&self) -> Option<StaleCopy> {
+        let Self::Exec(ExecError::Database(db)) = self else {
+            return None;
+        };
+        match db
+            .as_database_error()
+            .and_then(sqlx::error::DatabaseError::code)
+            .as_deref()
+        {
+            Some("ZA001") => Some(StaleCopy::Pinned),
+            Some("ZA002") => Some(StaleCopy::Classes),
+            _ => None,
+        }
+    }
 }
 
 /// An execution / `RESULT_SET` assembly failure.

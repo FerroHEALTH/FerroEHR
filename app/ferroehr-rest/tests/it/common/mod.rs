@@ -60,6 +60,7 @@ const EXTENSION_ROOTS: &[&str] = &[
     "/admin/load",
     "/admin/outbox",
     "/admin/party",
+    "/admin/pmir",
     "/admin/query",
     "/admin/registers",
     "/admin/report",
@@ -101,8 +102,16 @@ pub(crate) fn full(relative: &str) -> String {
 
 /// A fresh, fully migrated database from the shared harness.
 pub(crate) async fn test_db() -> testkit::TestDb {
-    testkit::db().await.expect("testkit database")
+    let db = testkit::db().await.expect("testkit database");
+    if let Ok(mut pools) = TEST_POOLS.lock() {
+        pools.push(db.pool());
+    }
+    db
 }
+
+/// Every database this test process made through [`test_db`], which
+/// [`first_party`] records the configuration's key spaces in.
+static TEST_POOLS: std::sync::Mutex<Vec<PgPool>> = std::sync::Mutex::new(Vec::new());
 
 /// A fresh, fully-migrated database and its pool. Hold the guard with the
 /// pool.
@@ -280,6 +289,7 @@ pub(crate) fn allowing(service: &FerroEhrService, operations: &[Operation]) {
 /// `config` but the Basic users' own, as a deployment grants the client its
 /// persons sign in through: a person's test token comes through it.
 pub(crate) async fn first_party(service: &FerroEhrService, config: &AppConfig) {
+    open_configured_key_spaces(config).await;
     let issuers: Vec<String> = config
         .auth
         .shared
@@ -569,6 +579,7 @@ pub(crate) async fn grant_basic_users(
     pool: &PgPool,
     users: &[(&str, &[&str])],
 ) {
+    open_key_spaces(pool, &[(BASIC_LOGIN, false)]).await;
     let honoured = [Operation::HoldRoles, Operation::HoldScopes];
     allowing(service, &honoured);
     let committer = binding_service(pool)
@@ -644,7 +655,7 @@ pub(crate) async fn audited_app(
             })
         })
     });
-    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(
@@ -715,11 +726,9 @@ pub(crate) fn local_audit() -> ferroehr::system_log::config::AuditConfig {
     ferroehr::system_log::config::AuditConfig {
         enabled: true,
         store: ferroehr::system_log::config::StoreConfig {
-            enabled: true,
-            retention: None,
-            sgb_v_309_controller: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..ferroehr::system_log::config::AuditConfig::default()
     }
@@ -777,6 +786,7 @@ pub(crate) async fn bind_subjects(pool: &PgPool, bound: &[(&str, &str)]) {
     let committer = binding_service(pool);
     for (issuer, sub) in bound {
         let logins = logins_of(issuer);
+        open_key_spaces(pool, &[(logins.as_str(), false)]).await;
         if !bound_already(pool, &logins, sub).await {
             crate::party_binding_http::professional_of(&committer, &logins, sub, "532").await;
         }
@@ -864,12 +874,19 @@ pub(crate) fn access_directive(kind: &str, objects: &[&str]) -> Value {
                     "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                 "code_string": code } })
     };
+    let provision = |code: &str| {
+        let mut value = term(code);
+        value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+            openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+        );
+        value
+    };
     let mut directive = serde_json::json!({
         "_type": "ACCESS_DIRECTIVE",
         "name": { "_type": "DV_TEXT", "value": kind },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term("deny"),
+        "effect": provision("deny"),
         "emergency_override": true
     });
     if !objects.is_empty() {
@@ -909,8 +926,69 @@ pub(crate) async fn commit_access_settings(svc: &FerroEhrService, ehr_id: EhrId,
         .expect("the controller commits the settings");
 }
 
+/// Records each of `issuers` as an `active` key space in `pool`, as a
+/// replica's first fill does for its mapping's key issuers: a key binds only
+/// under an active key space (`ferroehr::party_binding::key_space`), and a
+/// test service takes no lease.
+pub(crate) async fn open_key_spaces(pool: &PgPool, issuers: &[(&str, bool)]) {
+    for (issuer, portal) in issuers {
+        sqlx::query(
+            "INSERT INTO party.binding_key_space (issuer, portal, state) \
+             VALUES ($1, $2, 'active') \
+             ON CONFLICT (issuer) DO UPDATE SET portal = EXCLUDED.portal, state = 'active'",
+        )
+        .bind(issuer)
+        .bind(portal)
+        .execute(pool)
+        .await
+        .expect("the key space is recorded");
+    }
+}
+
+/// Records the key issuers `config` declares, each `[[auth.party]]`
+/// `identifier_issuer` and each `patients` issuer, as `active` key spaces in
+/// every live database of this test process that holds no lease, as a
+/// replica booting on `config` fills them; a database with a lease has its
+/// key spaces kept by its replicas.
+pub(crate) async fn open_configured_key_spaces(config: &AppConfig) {
+    let Ok(resolved) = ferroehr::config::auth::resolve(&config.auth.shared) else {
+        return;
+    };
+    let portal = ferroehr::config::binding::portal_issuers(&resolved);
+    let spaces: Vec<(String, bool)> = ferroehr::config::binding::key_issuers(&resolved)
+        .into_iter()
+        .map(|issuer| {
+            let flag = portal.contains(&issuer);
+            (issuer, flag)
+        })
+        .collect();
+    let pools = TEST_POOLS
+        .lock()
+        .map(|pools| pools.clone())
+        .unwrap_or_default();
+    let spaces: Vec<(&str, bool)> = spaces.iter().map(|(i, p)| (i.as_str(), *p)).collect();
+    for pool in &pools {
+        // A database whose test dropped it answers no query and serves no
+        // request, so it is no database to record the key spaces in.
+        let Ok(leased) =
+            sqlx::query_scalar::<_, bool>("SELECT EXISTS (SELECT 1 FROM party.binding_lease)")
+                .fetch_one(pool)
+                .await
+        else {
+            continue;
+        };
+        if !leased {
+            open_key_spaces(pool, &spaces).await;
+        }
+    }
+}
+
 /// The live `PERSON` in `pool` carrying the key `key` under `issuer`.
-async fn bound_person(pool: &PgPool, issuer: &str, key: &str) -> Option<uuid::Uuid> {
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+pub(crate) async fn bound_person(pool: &PgPool, issuer: &str, key: &str) -> Option<uuid::Uuid> {
     let party = ferroehr::db::domain_pool_from(pool, ferroehr::db::domain::Domain::Party);
     let today = jiff::Zoned::now()
         .with_time_zone(jiff::tz::TimeZone::UTC)
@@ -1210,19 +1288,38 @@ pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
     .fetch_all(pool)
     .await
     .expect("read the stored audit rows");
-    let entries: Vec<String> =
-        sqlx::query_scalar("SELECT content FROM audit.access_log_record ORDER BY chain_seq")
-            .fetch_all(pool)
-            .await
-            .expect("read the stored access-log entries");
+    let entries: Vec<String> = sqlx::query_as::<_, (String, Option<String>)>(
+        "SELECT r.content, sh.content FROM audit.access_log_record r \
+         LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared ORDER BY r.chain_seq",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("read the stored access-log entries")
+    .into_iter()
+    .map(|(content, shared)| joined_entry(&content, shared.as_deref()))
+    .collect();
     texts.extend(entries);
-    let (_, documents) = AuditStore::new(pool.clone())
+    let documents = AuditStore::new(pool.clone())
         .search(&AuditSearchFilter {
             count: 1000,
             ..AuditSearchFilter::default()
         })
         .await
-        .expect("render the stored audit records");
-    texts.extend(documents.iter().map(ToString::to_string));
+        .expect("render the stored audit records")
+        .documents;
+    texts.extend(documents.iter().map(|document| {
+        serde_json::to_value(document)
+            .expect("a served document")
+            .to_string()
+    }));
     texts
+}
+
+/// The canonical form of the access-log entry a row stores as `content`
+/// with its `shared` part, joined as the server reads it (#5703).
+pub(crate) fn joined_entry(content: &str, shared: Option<&str>) -> String {
+    let parse = |text: &str| serde_json::from_str::<Value>(text).expect("a stored part");
+    let joined = ferroehr::access_log::stored_form::join(parse(content), shared.map(parse));
+    openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json(&joined)
+        .expect("the canonical form")
 }

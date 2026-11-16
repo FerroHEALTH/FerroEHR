@@ -4,7 +4,7 @@ h|*Class*
 2+^h|*ACCESS_RETENTION*
 
 h|*Description*
-2+a|How long an entry is kept, set when it is written from the categories and origins of the data and the laws that apply.
+2+a|How long an entry is kept, set when it is written from the access policy in force and the laws that bind its controller.
 
 h|*Attributes*
 ^h|*Signature*
@@ -16,6 +16,10 @@ a|The last day the entry is kept; Void when it is kept without end.
 
 h|*1..1*
 |*grounds*: `xref:{class_list}[List]<xref:data_types:text_package.adoc#_dv_coded_text_class[DV_CODED_TEXT]>`
-a|The provisions that set the period, such as a minimum period from the date of access and a national maximum.
+a|The provisions that set the period, such as a minimum period from the date of access and a national maximum, coded in a terminology the jurisdiction names.
+
+h|*0..1*
+|*policy*: `xref:{class_object_version_id}[OBJECT_VERSION_ID]`
+a|The version of the controller's access policy the period was taken from; Void where the entry was kept under no policy, or was imported from another system.
 
 |===

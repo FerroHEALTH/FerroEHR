@@ -29,13 +29,13 @@ Answers:: the problem report above
 Reason:: Fills the slot RM EHR IM §EHR Access and BASE Architecture Overview §Access Control leave open with one concrete scheme, so that the subject's directives and the sensitivity of data are recorded as versioned, exchangeable facts with one decision procedure. Carries the rights of Regulation (EU) 2025/327 Art 8, 10, 11(5) and 4(2), and maps to HL7 FHIR `Consent` (R4, R5), IHE BPPC and IHE APPC (xref:mappings.adoc[Mappings]).
 
 Change description::
-* A new RM package `org.openehr.rm.access_control` (xref:access_control_package.adoc[The access_control Package]) with the classes `ACCESS_DIRECTIVE_SETTINGS` (a subtype of `ACCESS_CONTROL_SETTINGS`, the scheme `access_directives`), `ACCESS_DIRECTIVE`, `ACCESS_ACTOR_SCOPE`, `ACCESS_DATA_SCOPE`, `ACCESS_LABEL`, `ACCESS_POLICY`, `ACCESS_CLASSIFICATION` and `VERSIONED_ACCESS_POLICY`, and its BMM `openehr_access_control_0.1.0.bmm.json`, which includes `openehr_rm_1.2.0`.
+* A new RM package `org.openehr.rm.access_control` (xref:access_control_package.adoc[The access_control Package]) with the classes `ACCESS_DIRECTIVE_SETTINGS` (a subtype of `ACCESS_CONTROL_SETTINGS`, the scheme `access_directives`), `ACCESS_DIRECTIVE`, `ACCESS_ACTOR_SCOPE`, `ACCESS_DATA_SCOPE`, `ACCESS_LABEL`, `ACCESS_POLICY`, `ACCESS_CLASSIFICATION`, `ACCESS_LOG_RESTRICTION`, `ACCESS_LOG_RETENTION`, `ACCESS_RETENTION_BOUND` and `VERSIONED_ACCESS_POLICY`, and its BMM `openehr_access_control_0.1.0.bmm.json`, which includes `openehr_rm_1.2.0`.
 * The decision procedure of the scheme (xref:decision_procedure.adoc[The Decision Procedure]) as normative text of the package.
 * In the EHR Package, EHR Access: a sentence naming `access_directives` as a published scheme and pointing at the package; the reference to "the Security Information Model" pointed at it.
 * No existing class changes.
 
 Related changes::
-* SPECTERM: the terminology groups of xref:terminology.adoc[Terminology].
+* SPECTERM: the draft terminology `openehr_access` ("openEHR access (draft)", `Terminology_id_access`) and the groups the access control and access log packages code in it (xref:terminology.adoc[Terminology]); a term with the meaning of a published HL7 code is that code, and the other codes carry their `TERM_MAPPING`s. The identifier is proposed and not assigned, and the groups move into the openEHR Terminology with numeric codes if openEHR adopts them.
 * SPECITS: the `EHR_ACCESS` and `ACCESS_POLICY` resources of xref:its_rest.adoc[ITS-REST Resources], and the ITS-JSON schema of the package.
 * SPECBASE: in the Architecture Overview, Security and Confidentiality, Access Control, Overview, a paragraph naming the published scheme, and the class name corrected to `ACCESS_CONTROL_SETTINGS`.
 
@@ -49,6 +49,9 @@ No openEHR or other specification governs the following; each is this proposal's
 * facts with a fixed procedure, deny-overrides, and one level of exceptions;
 * the order of the procedure's steps and its refusals;
 * care relationships through care-team `GROUP` membership and an under-care-of relationship, with a grace period;
-* sensitivity clearances and permitted purposes as codes on a `CAPABILITY`;
+* `ACCESS_POLICY._rules_`, the `controller_rule` kind, the place of step 4 in the procedure, and where a permit may decide;
+* reading `ACCESS_ACTOR_SCOPE._role_` from the coded `_name_` of a `ROLE` the caller performs;
+* reading `ACCESS_ACTOR_SCOPE._organisation_type_` from the coded `_name_` of the `ORGANISATION` the caller acts for, and both from what an admitted caller's verified credential attests;
+* the draft terminology `openehr_access`, its groups and its codes;
 * `ACCESS_POLICY` as a versioned root outside the EHR and the demographic service, and its ITS-REST resources;
 * the read and write rule for `EHR_ACCESS`.

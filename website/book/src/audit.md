@@ -8,15 +8,13 @@ system log "IHE ATNA-compliant"). It is **on by default**: every
 deployment records a queryable audit trail with zero external dependencies.
 
 > [!WARNING]
-> Two postures are legitimate to run and wrong to run silently, so the server
-> says them at `warn` on boot (structured field `posture = "audit"`), in the
-> `audit_sender` readiness indicator and on `/management/info`: **auditing
-> off** (`[audit] enabled = false`) writes no access log and leaves the EHDS
-> logging component off, and the shipped default **`fail_mode = "open"`**
-> drops a record the audit queue cannot take while the request succeeds, so
-> an access under load can go unrecorded. A deployment that must never serve
-> an unrecorded access sets `fail_mode = "closed"`, which answers `503` and
-> `Retry-After` instead. A deployment declaring
+> **Auditing off** (`[audit] enabled = false`) writes no access log and leaves
+> the EHDS logging component off. It is legitimate to run and wrong to run
+> silently, so the server says it at `warn` on boot (structured field
+> `posture = "audit"`), in the `audit_sender` readiness indicator and on
+> `/management/info`. With auditing on, FerroEHR refuses an access it cannot
+> record, at any rate: see [how a record is written](#how-a-record-is-written).
+> A deployment declaring
 > [`deployment.profile = "production"`](installation/configuration.md#deploymentprofile)
 > refuses to start with auditing off.
 
@@ -115,7 +113,8 @@ restriction, research-objection, access-delay and access-repair registers and
 the `EHR_ACCESS` settings commit that carries a restriction or an opt-out;
 archiving an EHR and restoring it; its retention anchor and the retention hold
 on one of its objects; the repository dump and load; and the EHR Extract
-export and import. The import of another system's access log (`ferroehr
+export and import. An export's entry names the request it answered, the bound
+party and the provider, as every other access entry does. The import of another system's access log (`ferroehr
 access-log import`) writes its `import` entry through the same path. SCIM
 provisioning touches party data only and writes none.
 
@@ -141,7 +140,7 @@ whose `name` and `version` name the document the ground is defined in:
 | `consent` | a consent permit admitted the access, or the caller is a gate-keeper of the settings | `EHR_ACCESS` and the uid of its version; the directive by its uid, its first identifier or its position from 1, and its legal grounds |
 | `representation` | a `delegation` permit admitted a representative | as `consent` |
 | `treatment relationship` | the decision read a live care relationship | `ACCESS_POLICY` and the uid of its version |
-| `emergency` | an emergency lifted a directive or steps 4 to 7 | the directive it lifted, or the `ACCESS_POLICY` version |
+| `emergency` | an emergency lifted a directive, a controller rule or steps 6 to 8 | the directive it lifted, or the `ACCESS_POLICY` version with the rule it lifted by its uid, its first identifier or its position from 1; an entry naming the objects it delivered names only the directives and rules whose data scope covers one of them |
 
 The entry of each EHR an AQL query served names the same grounds a read of
 that EHR alone names. The query's condition is built from this replica's copy
@@ -150,7 +149,15 @@ of every EHR's settings, which holds each EHR's subject and the uid of its
 For an EHR with no settings, which the copy does not hold, a care relationship
 is named when only a caller in care could have been served its rows.
 
-A refusal names its code in `outcome.reason`, in the `ferroehr-operations`
+`accessor.binding` says how FerroEHR bound the login to the party, or why
+it could not, in the `credential binding` group of the `openehr_access`
+terminology: `bound`, `provisional`, `subject of care`, `external`,
+`organisation` and `system` for a login it bound, and the cause for one it
+refused, such as `unbound`, `party inactive`, `no agreement` or `treatment
+relationship confirmation missing`. The draft terminology page lists every
+code.
+
+A refusal names its code in `outcome.reason`, in the `openehr_access`
 terminology, and in `outcome.description` the step that refused and the
 directive or policy of that step, such as `step 2 (restriction): directive 1
 of EHR_ACCESS 5a1c…::cdr.example.org::2`. This holds for the `404` of an
@@ -172,11 +179,9 @@ log keeps and from nothing else, and none is stored as a second record.
 `audit.audit_event` keeps the records of accesses outside the access log: an
 authentication, a template or party operation, an application activity.
 
-The entry is written in one database transaction with the rest of its batch,
-and an access whose entry the store cannot take is refused under
-`fail_mode = "closed"`. The store requires `[audit.store]`; with the store off
-the drain still builds each entry and sends its projections to the syslog
-sink and the FHIR feed, and keeps nothing.
+The entry is written with every other record of its request in one database
+transaction before the response leaves, and an access whose entry cannot be
+written is refused with `503` ([how a record is written](#how-a-record-is-written)).
 
 ### FerroEHR's access details
 
@@ -341,11 +346,16 @@ served-row count. The served set is read off the rows the caller actually
 received rather than the rows the statement matched: a legal record of access
 must not name an EHR whose content was never disclosed. Each row names the EHR
 of every `EHR` source and every versioned object it was drawn from, so a
-statement that reads only the EHR is attributed too. Two query shapes carry
-no per-EHR breakdown, because the shape makes it underivable —
-`SELECT DISTINCT`, where an extra column changes which rows are distinct, and
-an aggregate projection, where a per-row EHR is not valid SQL. Those record the
-statement and its row count.
+statement that reads only the EHR is attributed too. Every EHR a query
+touches is accessed (EHDS Art. 9(1)): an EHR the query names by its `ehr_id`
+scope gets an access record whatever its rows hold, a `COUNT`, an empty page
+and a page past the end included, and an aggregate projection names, per row,
+every EHR whose data its aggregate read, so a population `COUNT` writes one
+access record per contributing EHR. A query the access evaluator refuses is
+recorded against the EHR it asked for. One shape carries no per-EHR
+breakdown, because the shape makes it underivable: `SELECT DISTINCT`, where an
+extra column changes which rows are distinct. It records the statement and its
+row count.
 
 ### NEN 7513 content, field by field
 
@@ -613,8 +623,8 @@ binding.
 ### Refusal records and their budgets
 
 Every refused request is recorded as a failed user authentication, through the
-same path as an operation record: under `[audit] fail_mode = "closed"` a
-refusal whose record the system log cannot take is answered `503`. A refusal of
+same path as an operation record: a refusal whose record cannot be written is
+answered `503`. A refusal of
 the login binding or of a caller kind carries its `refused-*` code. Refusals
 are charged to one of two budgets, which never draw on each other, so a flood
 of invalid tokens cannot hide a verified caller's probing:
@@ -713,25 +723,61 @@ An emergency the caller does not declare is not marked.
 
 ### Retention, and who chooses it
 
-`[audit.store] retention` decides how long the repository keeps a record:
-`0`, the default, keeps them forever, and any other value sets the horizon.
+The controller decides how long the log keeps a record, in its access policy
+(`ACCESS_POLICY.log_retention`, written through
+[`/admin/access_policy`](operational-policy.md)). FerroEHR provides the
+mechanism and names no national law of its own. `log_retention` holds:
+
+- `in_union`: whether Regulation (EU) 2025/327 binds the controller. When it
+  does, Art. 9(2) keeps the access information "available for at least three
+  years from each date of access to the data", and FerroEHR refuses a shorter
+  period.
+- `period`: how long each record is kept from the date of access, in whole
+  years (`P5Y`) or whole days (`P1826D`). Absent keeps every record without
+  end.
+- `floors` and `ceilings`: the minimum and maximum periods the controller's
+  law sets, each with the provision that sets it, coded in the terminology the
+  jurisdiction names (an `ACCESS_RETENTION_BOUND`).
+
+A policy whose period breaks a floor or ceiling it declares is refused when it
+is written, with `400`, and the version in force stays. So is a ceiling below
+a floor, a ceiling with no period (a record kept without end outlasts every
+ceiling), a controller outside the Union with no floor, and a period in any
+unit other than years or days. Years are counted on the calendar: three years
+admit `P1096D` as a floor but not as a ceiling, since 1 096 days can outlast
+three calendar years. A new version applies to every record written after it,
+on every replica, with no restart.
+
+**With no `log_retention`, every record is kept without end.** That meets
+every floor, so the log never forgets evidence a data subject's right of access
+is served from. It is also undecided: GDPR Art. 5(1)(e) makes the period the
+controller's to set. The `log_retention` readiness indicator reads `degraded`
+until the access policy states it, and the instance stays in rotation. `ferroehr
+config check` reads only the configuration file, so it cannot see the policy;
+check the indicator on `GET /management/health` after the first policy write.
+
+A stored policy version whose `log_retention` does not read (a damaged store;
+the write check refuses one) is named and held loud. Each replica keeps the
+last retention that read and records every access under it, so the access log
+never stops, while the reaper purges nothing and the `log_retention`
+indicator reads `down`, naming the version, until a version that reads is
+committed.
+
 Every record stores the first date it may be deleted on, and the reaper
-deletes each record hourly on or after that date and never before it. An
-access record takes its end from the retention its categories and origins
-call for (Regulation (EU) 2025/327 Annex II 3.4), so two records written the
-same day can end on different dates; every other record ends the day after
-its date of access plus the horizon. A record written before FerroEHR stored
-per-record ends is reaped by the horizon.
+deletes each record hourly on or after that date and never before it. A
+record outside the access log ends the day after its date of access plus the
+period in force when it was written.
 
 **An openEHR access-log entry states its own retention.** Each
 `ACCESS_LOG_ENTRY` carries an `ACCESS_RETENTION` when it is written:
-`retain_until`, the last day it is kept, and `grounds`, the provisions that
-set the period. The period is the one the retention policy above computes from
-the entry's categories and origins, so an entry whose categories call for
-different periods keeps the longest, and an entry kept without end states no
-`retain_until`. The grounds are coded in the `ehds-logging` terminology: the
-legal ground of the floor (`eu-2025-327-art-9-2` for Art. 9(2)) and what called
-for the period (`default`, `category:<system>|<code>` or `origin:<key>`). The
+`retain_until`, the last day it is kept; `grounds`, the provisions that set
+the period; and `policy`, the version of the access policy it was taken from.
+An entry kept without end states no `retain_until`. The grounds are Art. 9(2)
+for a controller in the Union, coded by the regulation's European Legislation
+Identifier with the subdivision as the code
+(`http://data.europa.eu/eli/reg/2025/327/oj`, `art_9.par_2`), then each
+declared floor and ceiling as the controller coded it. The ELI coding is our
+own design (Council conclusions 2012/C 325/02 define the identifier). The
 same hourly worker replaces every entry whose `retain_until` has passed by an
 `ACCESS_LOG_TOMBSTONE` in place, in any order of expiry. The tombstone keeps the
 entry's uid, `system_id`, `time_recorded` and chain link, names the grounds of
@@ -742,50 +788,100 @@ to it. An erasure a law orders before the period ends takes the same path
 through `POST {ext}/admin/access-log/erase`, with the law's provisions as the
 tombstone's grounds; the erasure is an access record of its own
 (`access-log-erasure:<uid>`) naming the administrator
-([Admin APIs](operations-admin-apis.md)). No configuration key decides an
-entry's period beyond `[audit.store] retention`, which stays the floor every
-period is held to.
+([Admin APIs](operations-admin-apis.md)).
 
-**The default is deliberate.** An access log is the evidence a data subject's right of access is served from, and a repository that silently
-forgets is worse than one that grows — so the software keeps everything until
-an operator says otherwise, rather than choosing a horizon on their behalf.
+**A tombstone is kept as long again, then folds into a gap.** A tombstone
+holds no EHR, no accessor and no purpose, but its content digest is a hash
+of the entry it replaced, and a copy of that entry elsewhere (a forwarded
+BALP `AuditEvent`, an export, a backup) can be matched against it. It is
+kept only while the records after it need it to verify (GDPR Art. 5(1)(e)):
+for one more retention horizon, its entry's own, so a tombstone stays as long
+after its removal as its entry was kept before it. After that, the same
+hourly run folds each run of consecutive tombstones that are all past their
+end into one gap of the chain (`audit.access_log_chain_gap`). The gap keeps
+the positions the run held, the link of its last record, and every ground
+its tombstones named, and it records when the run was
+folded. The record after the run links to the gap's link, so the chain
+verifies across it. The gap row is the record of the fold: it is never
+changed or removed, and a record that leaves the log any other way is
+reported as tampering. A run folds whole. A checkpoint inside the run
+that was never published leaves with it, since the checkpoints after it seal
+every link below them through the chain. A published checkpoint stays, and
+the gap records the link it sealed and the digest of its proof, so a
+checkpoint you kept outside the database verifies after the fold as it did
+before. A checkpoint at the run's last position verifies against the gap's
+link. An entry kept longer pins
+the runs on both sides apart, and each folds on its own. An erasure a law
+orders is a tombstone like any other and folds the same way. Several
+replicas fold on a PostgreSQL advisory lock, so no tombstone is folded twice.
+The metrics are `access_log_folded_total` and `access_log_gaps_total`
+([Access path](operations-access-path.md)). No configuration key sets the
+second horizon. No openEHR specification governs audit retention: our own
+design.
 
-Choosing that horizon is the deployment's, and it is a legal question:
-EHDS Art. 9(2) makes the access information "available for at least three
-years from each date of access to the data", and national law can ask for
-longer. NEN 7513 is the Dutch reference for this log and the Wabvpz for how
-long it must survive. The setting is per node, and one node serves one
-organisation, so two organisations needing different horizons run two
-instances.
+**An imported entry ends at its own `retain_until` too.** An entry imported
+with an EHR from another system
+([Checkpoints and the transfer of a log](#checkpoints-and-the-transfer-of-a-log))
+keeps the `retain_until` its recording system stated, and the same hourly
+run replaces it by its tombstone once that day has passed, on the entry's
+own grounds. Its tombstone is kept as long again, as a local one is. An
+imported log usually holds one checkpoint, at its end, and the links of the
+other EHRs' records between the moved EHR's own. A gap does not commit to
+the link before it, so a record kept before a gap would be tied to its
+checkpoint only by its own link signature, and by nothing when the
+exporting system signed no link. The fold of an imported log therefore
+takes, per exporting system and within each span between two of its
+imported checkpoints, only the positions before the first record still
+kept: the tombstones past their end and the other EHRs' links alike, one
+gap (`audit.access_log_imported_gap`) per run that holds a tombstone. Every
+kept imported record stays hash-chained to the checkpoint after it whether
+or not its links were signed, and a tombstone after a kept record waits
+until that record has folded too. A later import from the same system can
+bring another EHR's records at positions a gap already holds: they are
+kept, and verify through their own links. A repeated import does not bring
+back a tombstone or an expired entry at a position a gap holds. The
+metrics count both logs, with `chain` = `local` or `imported`. No openEHR
+specification governs this: our own design (#5664).
 
-**A floor is enforced where a jurisdiction sets one.** The jurisdictions a
-deployment answers to are the ones its `[privacy.identifier_scan]` rules name,
-and where one publishes a minimum retention for the access log the server
-refuses to boot with a shorter horizon, naming the configured value and the
-floor. `0` always passes. The floors are written in calendar years, as the law
-writes them: a horizon set as `[audit.store] retention` is compared
-against the years exactly, and one set as `retention` against the most
-days those years can span (the day count in brackets below). The floors
-registered:
-
-| Jurisdiction | Floor | Source |
-|---|---|---|
-| Every EU Member State (AT, BE, BG, CY, CZ, DE, DK, EE, ES, FI, FR, GR, HR, HU, IE, IT, LT, LU, LV, MT, NL, PL, PT, RO, SE, SI, SK) | three years from each date of access (`1096` days, the most three calendar years can span) | [Regulation (EU) 2025/327](https://eur-lex.europa.eu/eli/reg/2025/327/oj) (EHDS) Art. 9(2); a longer national floor wins. Iceland, Liechtenstein and Norway are not listed: EHDS reaches the EEA only through an EEA Joint Committee decision |
-| NL | five years from the moment the entry is written (`1830` days, the most five calendar years can span) | [Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391) (Stcrt. 2019, 38007), under Art. 5 of the [Besluit elektronische gegevensverwerking door zorgaanbieders](https://wetten.overheid.nl/BWBR0040238), which binds the period to NEN 7513 |
-| CH | one year, and kept apart from the processing system (`366` days, the most one calendar year can span) | [Datenschutzverordnung (DSV) Art. 4 Abs. 5](https://www.fedlex.admin.ch/eli/cc/2022/568/de), as amended on 1 December 2025, for the logs of a large-scale automated processing of sensitive personal data; the separate storage is the deployment's, through the [forwarding sinks](#getting-the-log-out) |
-
-For the Netherlands the five national years win over the three EHDS years;
-Switzerland is outside the Union and keeps its one year. Of the other shipped
-jurisdictions, DE, FI and SE carry the EHDS floor, while GB and NO have no
-floor registered: an unknown requirement is never guessed at, and a deployment
-there sets its own. Art. 9 applies from 26 March 2029 for patient summaries,
-prescriptions and dispensations and from 26 March 2031 for the other priority
-categories (Art. 105). The floor is enforced from this release on, so a log
-kept today already meets it when Art. 9 applies.
-The effective retention is on the boot line beside the audit-enabled facts and
-on `GET /management/info` under `audit`.
-A record takes about 1.2 KB on disk, so the horizon decides how far the log
+Choosing the period is a legal question for the controller. NEN 7513 is the
+Dutch reference for this log and the Besluit vaststelling bewaartermijn
+logging sets its five years; SGB V § 309 Abs. 1 caps the German
+telematics-infrastructure log at three years; DSV Art. 4 Abs. 5 keeps a Swiss
+log at least one year. A controller bound by one of them declares it as a
+floor or ceiling with its provision. Art. 9 applies from 26 March 2029 for
+patient summaries, prescriptions and dispensations and from 26 March 2031 for
+the other priority categories (Art. 105). FerroEHR holds the Art. 9(2) floor
+from this release on, so a log kept today already meets it when Art. 9
+applies. One instance serves one access policy, so two controllers needing
+different periods run two instances.
+The retention in force is the access policy's (`GET {ext}/admin/access_policy`).
+A record takes about 1.2 KB on disk, so the period decides how far the log
 grows ([Storage sizing](operations.md#audit-retention)).
+
+### The access log at steady state
+
+With entries written at a rate of `r` a day and kept for `P` days, the log
+levels off once the first tombstones fold, after `2P`:
+
+- the entries of the last `P` days: `r × P × 3.9 kB` (2.5 kB of row and 1.4
+  kB of indexes each, with signed links);
+- their tombstones, kept another `P` days: `r × P × 1.1 kB`;
+- the gaps: about 0.6 kB each, one for each run an entry kept longer cut
+  apart. A checkpoint inside a run leaves with it; gaps and the remaining
+  checkpoints are kept without end.
+
+These figures predate the storage of #5703, which keeps the part an
+entry's caller shares once and compresses each row in place; the
+performance gate's summary states the bytes per entry of the tree it
+measures. The access-path record of #5590 measures 2 518 bytes of row and 3 887 bytes
+stored per entry, 1 079 bytes per tombstone, and 2.08 entries per request at
+20 requests a second, which is 3.59 million entries a day. With the EHDS
+floor of three years (`P` = 1 096 days) that is about 14 GB of entries a day,
+and the log levels off near 15.3 TB of entries and 4.2 TB of tombstones,
+where before it grew by 3.9 GB of tombstones a day for as long as the
+deployment ran. The 0.6 kB of a gap was measured on the same schema with
+signed links (#5619). `VACUUM` reuses the space a fold frees for later rows
+(PostgreSQL 18 docs, Routine Vacuuming, Recovering Disk Space).
 
 ### Getting the log out
 
@@ -815,10 +911,10 @@ API's and ISO 8601 date-times.
 
 | Method and path | Who | What |
 |---|---|---|
-| `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind`, `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
+| `GET /ehr/{ehr_id}/access_log` | the subject of care, their representative, a reviewer | The entries of one EHR, newest first. Filters: `from`, `to`, `action`, `outcome`, `accessor_kind` (each a term by its coded content, the token `terminology_id\|code`, such as `audit-event-action\|R`, `openehr_access\|refused` or `extra-security-role-type\|datasubject`; a rubric or a bare code is a `400`), `emergency`, `include_self`; `offset`, `fetch` (1 to 1000, default 100). |
 | `GET /ehr/{ehr_id}/access_log/{uid}` | as above | One entry. |
 | `GET /admin/access-log` | a reviewer | Records across EHRs, entries and tombstones. Filters: `ehr_id`, `party_namespace`, `party_type`, `party_id`, `issuer`, `subject`, `request_id`, `from`, `to`, `outcome`, `emergency`; `offset`, `fetch`. |
-| `GET /admin/access-log/chain` | a reviewer | The `uid` and `link` of each record from `from_sequence` to `to_sequence` (at most 10000), without content, for verification. |
+| `GET /admin/access-log/chain` | a reviewer | The `uid` and `link` of each record from `from_sequence` to `to_sequence` (at most 10000), without content, and the `gaps` of folded tombstones between, for verification. |
 | `GET /admin/access-log/checkpoint` | a reviewer | The newest stored checkpoint, or the one at `sequence`. |
 
 A list answers `offset`, `fetch` and `entries`, and no total count, since a
@@ -863,10 +959,12 @@ accessed their data "in exceptional circumstances". If your law does, declare
 the restriction in the controller's
 [access policy](operational-policy.md), never in `ferroehr.toml`: each entry
 of `log_restrictions` names the accessor kinds it applies to (the `accessor
-kind` rubrics of the log, such as `person` or `external person`), the
+kind` terms of the log, such as `person` or `external person` of
+`openehr_access`, or `datasubject` of `extra-security-role-type` for the
+subject of care), the
 accessor members the subject view withholds (`accessor_party`,
 `accessor_provider`, `accessor_roles`, `accessor_groups`, in
-`ferroehr-operations`), and the provisions that lay it down, coded in your
+`openehr_access`), and the provisions that lay it down, coded in your
 jurisdiction's terminology. FerroEHR ships no country's restriction.
 
 ```json
@@ -876,11 +974,11 @@ jurisdiction's terminology. FerroEHR ships no country's restriction.
   "archetype_node_id": "id11",
   "accessor_kinds": [{ "_type": "DV_CODED_TEXT", "value": "external person",
     "defining_code": { "_type": "CODE_PHRASE",
-      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
       "code_string": "external person" } }],
   "withheld": [{ "_type": "DV_CODED_TEXT", "value": "accessor_party",
     "defining_code": { "_type": "CODE_PHRASE",
-      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "ferroehr-operations" },
+      "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr_access" },
       "code_string": "accessor_party" } }],
   "legal_grounds": [{ "_type": "DV_CODED_TEXT", "value": "your national provision",
     "defining_code": { "_type": "CODE_PHRASE",
@@ -897,8 +995,7 @@ jurisdiction's terminology. FerroEHR ships no country's restriction.
 - A write that changes the restrictions changes what the log means, so it
   writes an access-log entry of its own (operation
   `admin_access_policy_write`), and the policy history keeps every version.
-  Under `[audit] fail_mode = "closed"`, such a write is refused with `503`
-  while the audit trail cannot take the entry.
+  When the entry cannot be written, the write is answered `503`.
 
 ```bash
 # Who accessed my record this month? (the patient portal's token)
@@ -918,12 +1015,52 @@ Records fan out to independently configured sinks (`[audit]` in
 
 | Sink | Default | What it does |
 |---|---|---|
-| `[audit.store]` | **on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. `retention` prunes old records hourly (`0` = keep forever). |
+| `[audit.store]` | **always on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. Every record is written here before its access is reported. |
 | `[audit.syslog]` | off | The classic ATNA feed: DICOM PS3.15 XML as RFC 5424 syslog over RFC 5425 TLS to an external ARR, per IHE ITI-20. |
-| `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. With the local store on, delivery is **outbox-driven**: an ARR outage loses nothing, pending records ship on recovery. The outbox holds the records written while the feed is configured; with the feed off, no record is owed. Records stored before FerroEHR kept an outbox and never delivered ship once a feed runs. |
+| `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. Delivery is **outbox-driven** from the store: an ARR outage loses nothing, pending records ship on recovery. The outbox holds the records stored while the feed is configured; with the feed off, no record is owed. Records stored before FerroEHR kept an outbox and never delivered ship once a feed runs. |
 
-Emission never blocks the request path: a record is handed to a bounded queue
-(`queue_capacity`) and written by a background drain.
+syslog delivers from the store the same way, from its own outbox, so both
+feeds are projections of the stored records and neither holds a record in
+memory.
+
+### How a record is written
+
+Every record of a request, the operation's own, one per EHR or party it
+served, a refusal's and a login's, is written into the local store in one
+transaction **before the response leaves**. A request whose records cannot be
+written is answered `503 Service Unavailable` with `Retry-After: 1`, so no
+response reports an access the log does not hold; under load that is
+back-pressure: requests slow down, and the excess is refused rather than
+recorded late or not at all. The same holds for the records the service
+writes itself: subject resolutions, EHR-Extract transfers, the access-log
+erasure and the access-policy write. There is no queue in memory and no fail
+mode (`fail_mode` and `queue_capacity` are unknown keys).
+
+The records go into an **intake**: two append-only tables, one for the
+access-log entries and one for the other records, that no request waits on.
+A **chainer** on every replica links the intake into the hash chains
+moments later: it takes the head of the access log without waiting, so one
+replica chains at a time and the others skip, computes the links, writes the
+records with their index rows, the checkpoint and the outbox rows of the
+feeds, and commits. The intake refuses every update and delete except the
+chainer's move, which writes each row into its chain in the same statement.
+A request wakes its replica's chainer, which gathers what the requests of the
+next fifth of a second write into one round; every replica also looks at the
+intake every two seconds for the rows a stopped replica left, and a graceful
+stop chains what the intake holds. The window between the intake and the chain
+is therefore about a fifth of a second; the
+`audit_sender` readiness indicator reads `DEGRADED` when the oldest intake row
+has waited longer than 10 seconds. A record in the intake is durable: a
+restart, a crash or a lost replica leaves it for the next chainer.
+
+The reference host sustains about 15 000 chained access-log entries per
+second in one chain ([capacity](capacity.md)).
+
+A write's records are written after its clinical commit, in the audit
+cluster, which production keeps apart from the clinical one: a process that
+dies between the two commits loses that write's record until the durable
+reservation of [#5762](https://github.com/FerroHEALTH/FerroEHR/issues/5762)
+closes the window.
 
 ### While a composition is held from the person
 
@@ -961,17 +1098,6 @@ controller who answers for it. What you must not do, while a hold is in force:
 The [shared-responsibility page](compliance/shared-responsibility.md#the-delay-of-the-persons-access-ehds-art-33)
 puts the same duty on the deployment's side.
 
-The local store is the durability anchor. Under `fail_mode = "closed"`, an
-operation whose audit record cannot be recorded answers
-`503 Service Unavailable`: the deployment demanded an audit trail it cannot
-currently deliver, so no un-audited PHI access happens, and the same holds for
-the domain-level records the subject resolutions and the EHR-Extract
-transfers write. `open`, the default, drops-and-meters instead,
-and every loss path is metered (the `atna_audit_*` counters in
-[Operations](operations.md)); the server announces that default at boot and on
-the readiness indicator as a stated caution, because a metered loss is still a
-loss. Login and rejection records never gate a response in either mode.
-
 ## Tamper evidence
 
 An audit trail that anything with the application's database password can
@@ -979,8 +1105,8 @@ quietly rewrite is a log, not an accountability record. The local store is
 therefore tamper-**evident**: every record is linked into a SHA-256 hash chain
 maintained inside PostgreSQL, so each record commits to its predecessor and to
 its own content. The chain is built by the database itself, not by the server,
-which means it covers every writer: the per-event insert, the batched drain,
-and any statement typed by hand.
+which means it covers every writer: the chainer and any statement typed by
+hand.
 
 Each record's digest covers every column of the record except the digest
 itself (`row_hash`) and the two per-sink forwarding stamps
@@ -990,7 +1116,7 @@ release joins the digest in the same release.
 The store keeps a record's facts in columns and renders its FHIR `AuditEvent`
 from them when the record is read (ITI-81) or delivered (the FHIR feed). What
 the rendering takes from the configuration (`source_id`, `enterprise_site_id`,
-`server_host`, `value_if_missing`, the store horizon, the audit category register and
+`server_host`, `value_if_missing`, the access policy's log retention, the audit category register and
 `emergency_purpose_codes`) is kept once per distinct configuration in
 `audit.audit_render_policy`, keyed by the SHA-256 of its text, and every record
 names the policy it was written under. A record therefore renders the same
@@ -1035,9 +1161,18 @@ Four controls sit on top of it, and they are separate on purpose:
   `[audit.store] verify_interval` (default `3600`, one hour; `0` turns
   it off). Each run verifies the records written since the newest link an
   earlier run found intact, and the chain head, so its cost follows the
-  records written since rather than the size of the trail
-  (`audit.verify_audit_chain_incremental()` and
-  `audit.verify_access_log_chain_incremental()`, each from its own cursor).
+  records written since rather than the size of the trail. It walks each
+  chain from its own cursor to the head it started with, one statement per
+  step (`audit.verify_audit_chain_step()` and
+  `audit.verify_access_log_chain_step()`), each sized to take about half a
+  second and followed by a pause as long, and each intact step moves the
+  cursor, so a backlog of any size is verified in one run, no statement nears
+  the `[database] statement_timeout`, and a catch-up leaves the database to
+  the requests. How far a cursor is behind is
+  the `audit_chain_verification_lag` and `audit_chain_unverified_age_seconds`
+  metrics; once the oldest unverified record has waited longer than
+  `[audit.store] max_verify_lag` (default four hours), the `audit_chain`
+  indicator reads `DEGRADED` and names the chain.
   A full pass
   runs every `[audit.store] full_verify_interval` (default `604800`,
   one week; `0` leaves it to the query above) and after every run that found
@@ -1080,47 +1215,69 @@ head of the chain and is signed with the deployment's OpenPGP key, in the
 form an openEHR `ATTESTATION` carries its proof (RM common, Generic Package
 §Attestation). A verifier that holds a checkpoint detects any later rewrite
 of the records it covers. No openEHR specification governs log signing; this
-is our own design.
+is our own design. No law requires a signature on each entry: EHDS Art. 9
+and Annex II 3.2 ask for a complete log each person can read, and GDPR
+Art. 32(1)(b) for integrity appropriate to the risk. The eHDSI Audit Trail
+Profile's per-event signature binds the MyHealth@EU national contact
+points, which sign with their own certificate.
 
 - **The key** is the keyring of [version signing](signing/pgp.md):
   `[record.signing]` in `pgp` mode, with its `retired_key_files` still
-  verifying what an earlier key signed. With that key every link is signed
-  and the log is sealed; a deployment without it signs nothing, and
-  `ferroehr access-log checkpoint` answers that the keyring holds no key.
-- **Use an Ed25519 key.** Each access writes one entry per EHR it reached,
-  and each entry's link is signed in the audit writer's transaction while
-  the head of the chain is locked. RSA signing is far slower than Ed25519,
-  and every other audit write waits on it.
-- **The schedule.** The server seals the head every five minutes when the
-  chain grew since the last checkpoint; a run on a log that did not grow
-  writes nothing. There is no switch and no interval to set.
-  `ferroehr access-log checkpoint` and `POST /admin/access-log/checkpoint`
-  seal one on demand. Keep a copy of a checkpoint somewhere the database
-  owner does not control (a ticket, a timestamping service, the data
-  protection officer's mailbox): that copy is what makes a rewrite of the
-  whole tail detectable.
+  verifying what an earlier key signed. With that key the log is sealed; a
+  deployment without it seals nothing, and `ferroehr access-log checkpoint`
+  answers that the keyring holds no key.
+- **One checkpoint per append.** Every append of the audit writer ends, in
+  its own transaction, with the checkpoint of the last link it wrote, so an
+  entry is covered by a signature from the moment it commits, whichever
+  replica wrote it. A change, removal, insertion or reordering of a record
+  below a checkpoint breaks the chain under that checkpoint's signature. The
+  links carry no signature of their own. A population query that reaches
+  twenty EHRs writes twenty entries and one signature. The checkpoint is
+  signed while the rest of the append's transaction is written, so the head
+  of the chain is held for one signature at most. There is no switch and no
+  interval to set. `ferroehr access-log checkpoint` and
+  `POST /admin/access-log/checkpoint` answer the checkpoint of the head, and
+  seal one only for a head appended while the keyring held no key.
+- **Use an Ed25519 key.** An RSA signature is far slower than an Ed25519
+  one, and every other audit write waits while one append holds the head.
+- **Publish the checkpoints outside the database.** Someone who can write
+  the database can remove the newest entries together with the checkpoints
+  that seal them, and nothing left in the database shows it. A checkpoint
+  kept where that person cannot write does. Set
+  `[audit.access_log] publish_directory` to a directory on write-once
+  storage (an object-lock bucket mounted as a file system, a WORM volume, a
+  directory another system collects from): every 30 seconds the server
+  writes the newest checkpoint there as its own file,
+  `access-log-checkpoint-<sequence>.json`, created once and never
+  rewritten. Replicas publish the same files. This is the recommended
+  setup; without it the `access_log_checkpoints` health indicator reads
+  `DEGRADED`, and it reads `DEGRADED` while a publication fails. To check
+  the log against a published checkpoint, run
+  `ferroehr access-log verify --checkpoint <file>` with the newest file.
 - **Verification.** `ferroehr access-log verify` and
   `POST /admin/access-log/verify` recompute the whole chain (an entry
   replaced by its tombstone verifies through the content digest the
-  tombstone keeps), check the checkpoint's signature and that the link at its
-  position is the one it sealed, and check the signature of every signed
-  link. Each finding is reported; the command exits 1 when the log does not
+  tombstone keeps, and a gap of folded tombstones as one link whose digest
+  is its link), and check the checkpoint's signature and that the link at
+  its position, a record's or a gap's, is the one it sealed. A checkpoint
+  published outside the database whose link the log no longer holds is
+  reported as `the link at <n> is not the link the checkpoint seals`. They
+  also verify every log
+  imported from another system against each of its checkpoints: the stored
+  links, gaps and records from the checkpoint before it, through the same
+  verifier the import runs, under the keyring and
+  `[audit.access_log] trusted_key_files`, reported under `imported`. Each finding is reported; the command exits 1 when the log does not
   verify, and the route answers `200` with `intact: false`.
-- **Signed links.** Each link's digest is signed as the eHDSI Audit Trail
-  Profile §2.2 asks of a national contact point. The server locks the head
-  of the chain, computes the links the new records will get, signs them and
-  writes each signature with its record in one `INSERT`; a stored signature
-  never changes.
 - **Moving the log with the EHR.** EHDS Annex II 2.6 and Art 9(2) keep the
   access information available when an EHR moves to another system.
   `ferroehr access-log export --ehr-id <id>` and
   `GET /admin/access-log/export?ehr_id=` write the EHR's records with their
-  links, every link from the first of them to the checkpoint they verify
-  against, and that checkpoint, sealing one when none covers them. The
+  links, every link and gap from the first of them to the checkpoint they
+  verify against, and that checkpoint, sealing one when none covers them. The
   receiving system runs `ferroehr access-log import --input <file>`: it
   verifies the export against its checkpoint and the certificates in
   `[audit.access_log] trusted_key_files`, keeps the records with their
-  `system_id`, links and `retain_until` apart from its own chain, and records
+  `system_id`, links, gaps and `retain_until` apart from its own chain, and records
   the import as an `import` entry of its own log, built like every other
   entry and naming the system as its accessor. An import repeated stores
   nothing twice. The span holds the links of the other EHRs' entries between
@@ -1150,8 +1307,11 @@ GET /ferroehr/rest/fhir/r4/AuditEvent
 ```
 
 It returns a FHIR `searchset` Bundle of the matching records' `AuditEvent`
-documents, rendered from the store, newest first, with the full match `total`, a `self` link and a `next` link
-while more pages follow. The query is read by `ihe-atna`, the family's audit
+documents, rendered from the store, newest first, with a `self` link and a
+`next` link while more pages follow. The page carries the full match `total`
+only when the query asks for it with `_total=accurate` or `_total=estimate`
+(FHIR R4 Search §3.1.1.5.2): counting every match reads every record the
+filter selects, and a page alone reads one record past what it serves. The query is read by `ihe-atna`, the family's audit
 crate. At least one `date` parameter is required (RESTful ATNA
 §3.81.4.1.2.1): a query without one is a `400`. Every search parameter
 §3.81.4.1.2.2 says the repository shall support is applied. A parameter
@@ -1194,6 +1354,7 @@ record names, and never one a kept record names.
 | `outcome` | the outcome indicator: `0`, `4`, `8` or `12` (FerroEHR records `0`, `4` and `8`) |
 | `action` | the action code: `C`, `R`, `U`, `D` or `E` |
 | `_count` / `_offset` | paging; page size defaults to 50, capped at 1000; `_count=0` returns the total alone |
+| `_total` | `accurate` or `estimate` adds the full match `total`; `none`, or no `_total`, serves the page without it; any other value is a `400` |
 
 A malformed value is a `400` carrying a FHIR `OperationOutcome` with
 `invalid`; another FHIR R4 `AuditEvent` parameter, which §3.81.4.1.2.2 does

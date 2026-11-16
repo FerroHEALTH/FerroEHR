@@ -65,18 +65,19 @@ pub struct Recording {
     pub labels: LabelPolicy,
     /// The purposes of use that mark an emergency access (Art. 11(5)).
     pub emergency: EmergencyPurposes,
-    /// The store horizon, which a record outside the EHDS access record is
-    /// kept for.
-    pub horizon: crate::system_log::config::Retention,
+    /// The access log retention of the access policy in force, whose period
+    /// a record outside the EHDS access record is kept for.
+    pub log: crate::system_log::retention::LogRetention,
 }
 
 /// The first date `event` may be deleted on once stored.
 ///
 /// A classified access states its own end through `ehds-logging`'s retention
 /// policy, by its categories and origins (Regulation (EU) 2025/327 Annex II
-/// 3.4); every other record keeps the store horizon, ending the day after
-/// the date of access plus the horizon, as `ehds-logging` counts an end.
-/// A horizon whose end the calendar cannot hold keeps the record without end.
+/// 3.4); every other record keeps the access policy's period, ending the
+/// day after the date of access plus the period, as `ehds-logging` counts an
+/// end. A period whose end the calendar cannot hold keeps the record without
+/// end.
 #[must_use]
 pub fn record_end(event: &AuditEvent, ctx: &AuditContext) -> crate::system_log::store::RecordEnd {
     use crate::system_log::store::RecordEnd;
@@ -92,7 +93,7 @@ pub fn record_end(event: &AuditEvent, ctx: &AuditContext) -> crate::system_log::
                 )
                 .ends()
         }
-        None => horizon_end(event.timestamp, ctx.recording.horizon),
+        None => horizon_end(event.timestamp, ctx.recording.log.period),
     };
     ends.map_or(RecordEnd::Never, RecordEnd::On)
 }
@@ -117,6 +118,37 @@ fn horizon_end(
 
 /// Renders a resolved [`AuditEvent`] as a FHIR R4 `AuditEvent` document.
 ///
+/// The JSON value of [`to_resource`], for a caller that stores or sends the
+/// record as JSON.
+///
+/// # Errors
+///
+/// As [`to_resource`], and [`AuditError::Render`] when the document cannot be
+/// written as JSON.
+pub fn to_fhir(
+    event: &AuditEvent,
+    ctx: &AuditContext,
+    subject: Option<&str>,
+) -> Result<serde_json::Value, AuditError> {
+    to_resource(event, ctx, subject).and_then(|resource| value_of(&resource))
+}
+
+/// The JSON value of a written `resource`, as [`to_fhir`] renders it.
+///
+/// # Errors
+///
+/// [`AuditError::Render`] when the document cannot be written as JSON.
+pub(crate) fn value_of(
+    resource: &ihe_atna::balp::AuditEventResource,
+) -> Result<serde_json::Value, AuditError> {
+    resource
+        .to_value()
+        .map(ihe_atna::balp::AuditEventValue::into_value)
+        .map_err(|e| AuditError::Render(Box::new(e)))
+}
+
+/// Renders a resolved [`AuditEvent`] as the typed FHIR R4 `AuditEvent`.
+///
 /// A classified access is written as the EHDS access record through
 /// `ehds-logging`; every other record as a BALP exchange through `ihe-atna`.
 /// `subject` is the patient the subject resolver found behind the record's
@@ -124,13 +156,12 @@ fn horizon_end(
 ///
 /// # Errors
 ///
-/// [`AuditError::Render`] when the endpoint the record names is not a URL or
-/// the document cannot be written as JSON.
-pub fn to_fhir(
+/// [`AuditError::Render`] when the endpoint the record names is not a URL.
+pub fn to_resource(
     event: &AuditEvent,
     ctx: &AuditContext,
     subject: Option<&str>,
-) -> Result<serde_json::Value, AuditError> {
+) -> Result<ihe_atna::balp::AuditEventResource, AuditError> {
     let endpoint = endpoint(ctx);
     let observer = Observer {
         source_id: nonempty(&ctx.source_id, &ctx.value_if_missing),
@@ -142,10 +173,7 @@ pub fn to_fhir(
         Some(record) => ehds_logging::balp::exchange_with(&record, &endpoint, &object_ids()?),
         None => exchange(event, ctx, subject, &endpoint),
     };
-    exchange
-        .audit_event_value(&observer)
-        .map(ihe_atna::balp::AuditEventValue::into_value)
-        .map_err(|e| AuditError::Render(Box::new(e)))
+    Ok(exchange.audit_event_resource(&observer))
 }
 
 /// How an access record names the openEHR object ids FerroEHR passes as its
@@ -553,33 +581,6 @@ pub(super) fn nonempty(value: &str, fallback: &str) -> String {
         fallback.to_owned()
     } else {
         value.to_owned()
-    }
-}
-
-/// The FHIR R4 `AuditEvent` document for one resolved record, or `None` when
-/// the rendering failed (metered + logged, never silent).
-pub(crate) fn render_audit_event(
-    event: &AuditEvent,
-    ctx: &AuditContext,
-    subject: Option<&str>,
-) -> Option<serde_json::Value> {
-    metered(to_fhir(event, ctx, subject))
-}
-
-/// The rendered document, or `None` when the rendering failed (metered and
-/// logged, never silent).
-pub(crate) fn metered(
-    rendered: Result<serde_json::Value, AuditError>,
-) -> Option<serde_json::Value> {
-    match rendered {
-        Ok(document) => Some(document),
-        Err(e) => {
-            crate::telemetry::metrics::metrics()
-                .atna_audit_serialize_failed
-                .add(1, &[]);
-            tracing::warn!("ATNA audit FHIR rendering failed: {e}");
-            None
-        }
     }
 }
 

@@ -13,7 +13,7 @@ use jiff::Timestamp;
 use serde_json::json;
 use sqlx::PgPool;
 
-use ferroehr::access_log::expiry::expire;
+use ferroehr::access_log::expiry::{Log, expire};
 use ferroehr::access_log::store::{AccessLogStore, canonical_form};
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
@@ -79,7 +79,12 @@ async fn an_expired_entry_becomes_a_tombstone() {
     let pool = testdb.pool();
     let (store, entries) = log(&pool).await;
 
-    assert_eq!(expire(&store, now()).await.expect("the retention runs"), 1);
+    assert_eq!(
+        expire(&store, Log::Local, now())
+            .await
+            .expect("the retention runs"),
+        1
+    );
 
     let expired = &entries[2];
     let Some(AccessLogRecord::AccessLogTombstone(tombstone)) =
@@ -96,12 +101,15 @@ async fn an_expired_entry_becomes_a_tombstone() {
         tombstone.grounds, expired.retention.grounds,
         "the tombstone names the grounds of the period that ended"
     );
-    let content: String =
-        sqlx::query_scalar("SELECT content FROM audit.access_log_record WHERE uid = $1")
-            .bind(uid(3))
-            .fetch_one(&pool)
-            .await
-            .expect("the stored record");
+    let content: String = sqlx::query_as::<_, (String, Option<String>)>(
+        "SELECT r.content, sh.content FROM audit.access_log_record r \
+         LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared WHERE r.uid = $1::uuid",
+    )
+    .bind(uid(3))
+    .fetch_one(&pool)
+    .await
+    .map(|(content, shared)| crate::fixtures::joined_entry(&content, shared.as_deref()))
+    .expect("the stored record");
     assert!(
         !content.contains("ehr_id") && !content.contains("accessor"),
         "nothing of the entry's content is left: {content}"
@@ -127,7 +135,12 @@ async fn the_chain_still_verifies_after_tombstoning() {
     let (store, _) = log(&pool).await;
     assert_eq!(findings(&pool).await, [], "the log verifies before");
 
-    assert_eq!(expire(&store, now()).await.expect("the middle expires"), 1);
+    assert_eq!(
+        expire(&store, Log::Local, now())
+            .await
+            .expect("the middle expires"),
+        1
+    );
     assert_eq!(
         findings(&pool).await,
         [],
@@ -136,7 +149,7 @@ async fn the_chain_still_verifies_after_tombstoning() {
 
     let later = "2032-01-01T00:00:00Z".parse().expect("an instant");
     assert_eq!(
-        expire(&store, later)
+        expire(&store, Log::Local, later)
             .await
             .expect("the first and second expire"),
         2
@@ -156,11 +169,16 @@ async fn a_tombstone_never_comes_back() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let (store, entries) = log(&pool).await;
-    assert_eq!(expire(&store, now()).await.expect("the retention runs"), 1);
+    assert_eq!(
+        expire(&store, Log::Local, now())
+            .await
+            .expect("the retention runs"),
+        1
+    );
     let before = store.read(&uid(3)).await.expect("read");
 
     assert_eq!(
-        expire(&store, now())
+        expire(&store, Log::Local, now())
             .await
             .expect("the retention runs again"),
         0,

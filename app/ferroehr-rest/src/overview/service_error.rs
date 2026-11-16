@@ -66,7 +66,9 @@ pub(crate) fn api_error(e: ServiceError) -> ApiError {
         e @ (ServiceError::Storage(_) | ServiceError::Database(_) | ServiceError::Acquire(_)) => {
             api_error(e.classified())
         }
-        ServiceError::Overloaded(err) => ApiError::ServiceUnavailable(err.message.to_owned()),
+        ServiceError::Overloaded(err) | ServiceError::AccessRefreshing(err) => {
+            ApiError::ServiceUnavailable(err.message.to_owned())
+        }
         // A malformed payload the server was asked to read is a client defect
         // → `400`, and the body names it (that IS the strict reader's
         // contract). A failure to serialize the server's own data is a server
@@ -90,9 +92,8 @@ pub(crate) fn api_error(e: ServiceError) -> ApiError {
         ServiceError::Unrecorded(err) => ApiError::ServiceUnavailable(err.message),
         // Our own refusal (no openEHR spec governs restriction of processing);
         // RFC 9110 §15.5.4 is the HTTP authority for the 403.
-        ServiceError::Restricted(err) | ServiceError::Forbidden(err) => {
-            ApiError::Forbidden(err.message)
-        }
+        ServiceError::Restricted(err) => ApiError::Forbidden(err.message),
+        ServiceError::Forbidden(err) => ApiError::Forbidden(err.message),
         ServiceError::Timeout(err) => ApiError::Internal(err.message),
     }
 }
@@ -203,7 +204,7 @@ mod tests {
         ));
         rows.push((
             "Forbidden".to_owned(),
-            ServiceError::Forbidden(refusal((), with_cause)),
+            ServiceError::Forbidden(refusal(None, with_cause)),
             C::FORBIDDEN,
         ));
         rows.push((

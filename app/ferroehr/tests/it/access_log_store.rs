@@ -12,6 +12,7 @@
 
 use jiff::Timestamp;
 use openehr_base::containers::NonEmptyVec;
+use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use serde_json::{Value, json};
@@ -19,6 +20,7 @@ use sha2::{Digest, Sha256};
 use sqlx::{AssertSqlSafe, Connection, PgConnection, PgPool, Row};
 
 use ferroehr::access_log::store::{AccessLogStore, canonical_form};
+use ferroehr::access_log::stored_form;
 use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr::system_log::store::chains::{AuditChain, VerifyScope};
@@ -85,6 +87,10 @@ async fn findings(pool: &PgPool) -> Vec<(Option<i64>, String)> {
 
 /// Run `statements` with the table's triggers off, as only its owner can: the
 /// attacker the chain detects.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn tamper(pool: &PgPool, statements: &[&str]) {
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
@@ -121,11 +127,13 @@ fn at(value: &str) -> DvDateTime {
         .expect("the time reads")
 }
 
-/// An entry is stored as its canonical form, read back with its link, and
-/// the link is the draft's: the content digest over the canonical form and
-/// the digest over the previous digest, the sequence and the content digest.
+/// An entry is stored as its row part and the shared part its caller's
+/// entries name once, which join back into its canonical form; it is read
+/// back with its link, and the link is the draft's: the content digest over
+/// the whole canonical form and the digest over the previous digest, the
+/// sequence and the content digest (#5703).
 #[tokio::test]
-async fn entries_are_stored_as_their_canonical_form_and_chained_by_their_links() {
+async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();
     let store = AccessLogStore::new(pool.clone());
@@ -154,17 +162,39 @@ async fn entries_are_stored_as_their_canonical_form_and_chained_by_their_links()
 
         let read = store.read(entry.uid.value()).await.expect("read");
         assert_eq!(read, Some(AccessLogRecord::AccessLogEntry(entry.clone())));
-        let stored: String =
-            sqlx::query_scalar("SELECT content FROM audit.access_log_record WHERE chain_seq = $1")
-                .bind(expected)
-                .fetch_one(&pool)
-                .await
-                .expect("content");
-        assert_eq!(stored, canonical, "the record is its canonical form");
+        let (own, shared): (String, Option<String>) = sqlx::query_as(
+            "SELECT r.content, sh.content FROM audit.access_log_record r \
+             LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
+             WHERE r.chain_seq = $1",
+        )
+        .bind(expected)
+        .fetch_one(&pool)
+        .await
+        .expect("content");
+        assert!(
+            !own.contains("\"accessor\""),
+            "the row keeps no accessor: {own}"
+        );
+        let parse = |text: &str| serde_json::from_str::<Value>(text).expect("a stored part");
+        let joined = stored_form::join(parse(&own), shared.as_deref().map(parse));
+        assert_eq!(
+            canonical_json(&joined).expect("canonical"),
+            canonical,
+            "the two parts join into the canonical form"
+        );
     }
+    let shared: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_shared")
+        .fetch_one(&pool)
+        .await
+        .expect("the shared parts");
+    assert_eq!(
+        shared, 1,
+        "the caller's part is stored once for its three entries"
+    );
 
     let row = sqlx::query(
-        "SELECT ehr_id, action, result, party_id, request_id, retain_until::text, \
+        "SELECT ehr_id, action_terminology, action_code, result_terminology, result_code, \
+                party_id, retain_until::text, \
                 time_recorded = '2026-11-07T09:14:03.120Z'::timestamptz AS at \
            FROM audit.access_log_record WHERE chain_seq = 2",
     )
@@ -175,13 +205,17 @@ async fn entries_are_stored_as_their_canonical_form_and_chained_by_their_links()
         row.get::<String, _>("ehr_id"),
         "7d44b88c-4199-4bad-97dc-000000000002"
     );
-    assert_eq!(row.get::<String, _>("action"), "read");
-    assert_eq!(row.get::<String, _>("result"), "granted");
+    assert_eq!(
+        row.get::<String, _>("action_terminology"),
+        "audit-event-action"
+    );
+    assert_eq!(row.get::<String, _>("action_code"), "R");
+    assert_eq!(row.get::<String, _>("result_terminology"), "openehr_access");
+    assert_eq!(row.get::<String, _>("result_code"), "granted");
     assert_eq!(
         row.get::<String, _>("party_id"),
         "6f1c2d3e-4b5a-4c6d-8e7f-90a1b2c3d4e5"
     );
-    assert_eq!(row.get::<String, _>("request_id"), "01JC2Q7N3X");
     assert_eq!(row.get::<String, _>("retain_until"), "2031-11-07");
     assert!(row.get::<bool, _>("at"));
 
@@ -208,10 +242,11 @@ async fn an_entry_that_breaks_an_invariant_is_not_written() {
     assert_eq!(count, 0, "the batch leaves nothing behind");
 }
 
-/// An openEHR-coded term of the draft's groups.
-fn openehr(rubric: &str) -> Value {
+/// A term of the draft `openehr_access` groups, its code the rubric.
+fn access(rubric: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": rubric,
-            "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": rubric } })
+            "defining_code": { "terminology_id": { "value": "openehr_access" },
+                "code_string": rubric } })
 }
 
 /// An entry carries the grounds of its access decision and its emergency
@@ -227,23 +262,23 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
     let mut grounded = serde_json::to_value(entry(1)).expect("the entry writes");
     grounded["is_emergency"] = json!(true);
     grounded["authorisations"] = json!([
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("role") },
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("treatment relationship") },
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("consent"),
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("role") },
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("treatment relationship") },
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("consent"),
           "reference": { "_type": "DV_IDENTIFIER", "issuer": "cdr.example.org",
               "id": "8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::2",
               "type": "EHR_ACCESS" } },
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("agreement"),
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("agreement"),
           "policy": { "_type": "DV_URI", "value": "ehr://cdr.example.org/access_policy/1" },
           "name": "access policy", "version": "3",
-          "legal_grounds": [openehr("legal obligation")] },
-        { "_type": "ACCESS_AUTHORISATION", "kind": openehr("emergency") }
+          "legal_grounds": [access("legal obligation")] },
+        { "_type": "ACCESS_AUTHORISATION", "kind": access("emergency") }
     ]);
     let grounded: AccessLogEntry =
         serde_json::from_value(grounded).expect("the grounded entry reads");
 
     let mut refused = serde_json::to_value(entry(2)).expect("the entry writes");
-    refused["outcome"] = json!({ "_type": "ACCESS_OUTCOME", "result": openehr("refused"),
+    refused["outcome"] = json!({ "_type": "ACCESS_OUTCOME", "result": access("refused"),
         "reason": { "_type": "DV_CODED_TEXT", "value": "no grant",
             "defining_code": { "terminology_id": { "value": "local" }, "code_string": "no-grant" } },
         "delivered": 0 });
@@ -264,12 +299,16 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
     assert_eq!(grounds.len(), 5, "every ground is kept");
     assert!(written[0].is_emergency);
 
-    let row = sqlx::query("SELECT ehr_id, result FROM audit.access_log_record WHERE chain_seq = 2")
-        .fetch_one(&pool)
-        .await
-        .expect("the refusal's search columns");
+    let row = sqlx::query(
+        "SELECT ehr_id, result_terminology, result_code FROM audit.access_log_record \
+         WHERE chain_seq = 2",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the refusal's search columns");
     assert_eq!(row.get::<Option<String>, _>("ehr_id"), None);
-    assert_eq!(row.get::<String, _>("result"), "refused");
+    assert_eq!(row.get::<String, _>("result_terminology"), "openehr_access");
+    assert_eq!(row.get::<String, _>("result_code"), "refused");
     assert_eq!(findings(&pool).await, Vec::new(), "both verify");
 }
 
@@ -282,11 +321,14 @@ const INSERTED: &[&str] = &[
      SELECT (audit.access_log_record_derive(forged)).* FROM ( \
        SELECT jsonb_populate_record(NULL::audit.access_log_record, jsonb_build_object( \
          'chain_seq', 2, 'content', c.content, 'algorithm', 'SHA-256', \
-         'previous_digest', p.digest, 'content_digest', audit.access_log_content_digest(c.content), \
-         'digest', audit.access_log_link_digest(p.digest, 2, audit.access_log_content_digest(c.content)), \
+         'previous_digest', '\\x' || encode(p.digest, 'hex'), \
+         'content_digest', '\\x' || audit.access_log_content_digest(c.content), \
+         'digest', '\\x' || audit.access_log_link_digest(encode(p.digest, 'hex'), 2, \
+                       audit.access_log_content_digest(c.content)), \
+         'shared', '\\x' || encode(c.shared, 'hex'), \
          'stored_at', now())) AS forged \
          FROM audit.access_log_record p, \
-              (SELECT replace(content, '000000000003', '0000000000ff') AS content \
+              (SELECT replace(content, '000000000003', '0000000000ff') AS content, shared \
                  FROM audit.access_log_record WHERE chain_seq = 4) c \
         WHERE p.chain_seq = 1) AS f",
 ];
@@ -328,7 +370,8 @@ async fn the_verifier_finds_a_removed_an_inserted_and_a_reordered_record() {
 #[tokio::test]
 async fn the_verifier_finds_a_modified_entry_and_a_modified_search_column() {
     for statement in [
-        "UPDATE audit.access_log_record SET content = replace(content, '\"read\"', '\"update\"') \
+        "UPDATE audit.access_log_record \
+         SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
          WHERE chain_seq = 2",
         "UPDATE audit.access_log_record SET ehr_id = 'someone-else' WHERE chain_seq = 2",
     ] {
@@ -346,6 +389,83 @@ async fn the_verifier_finds_a_modified_entry_and_a_modified_search_column() {
             "`{statement}` must be found"
         );
     }
+}
+
+/// A changed shared part is found at every entry that names it, by the
+/// server's content check, even when its key check is dropped (#5703).
+#[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
+async fn a_changed_shared_part_is_found_at_every_entry_naming_it() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    append(&AccessLogStore::new(pool.clone()), 1..=3).await;
+    let mut conn = pool.acquire().await.expect("connection");
+    let mut tx = conn.begin().await.expect("begin");
+    for statement in [
+        "ALTER TABLE audit.access_log_shared DROP CONSTRAINT ck_access_log_shared_digest",
+        "ALTER TABLE audit.access_log_shared DISABLE TRIGGER USER",
+        "UPDATE audit.access_log_shared \
+         SET content = replace(content, '\"is_emergency\":false', '\"is_emergency\":true')",
+        "ALTER TABLE audit.access_log_shared ENABLE TRIGGER USER",
+    ] {
+        sqlx::query(AssertSqlSafe(statement.to_owned()))
+            .execute(&mut *tx)
+            .await
+            .expect("the tampering statement itself must succeed");
+    }
+    tx.commit().await.expect("commit");
+    let found = findings(&pool).await;
+    for position in 1..=3 {
+        assert!(
+            found.contains(&(
+                Some(position),
+                "record content was modified after it was written".to_owned()
+            )),
+            "the entry at {position} names the changed part: {found:?}"
+        );
+    }
+}
+
+/// A tombstone replaces one row and keeps no shared part; the shared part
+/// leaves with the last row that named it, and the other entries read back
+/// as they were written (#5703).
+#[tokio::test]
+async fn a_tombstone_lets_go_of_the_shared_part_with_its_last_row() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+    let written = append(&store, 1..=2).await;
+    let count = || {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM audit.access_log_shared")
+                .fetch_one(&pool)
+                .await
+                .expect("the shared parts")
+        }
+    };
+    let (first, second) = (&written[0], &written[1]);
+    store
+        .tombstone(first.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
+        .await
+        .expect("the tombstone")
+        .expect("the entry");
+    assert_eq!(count().await, 1, "the other entry still names the part");
+    assert_eq!(
+        store.read(second.uid.value()).await.expect("read"),
+        Some(AccessLogRecord::AccessLogEntry(second.clone())),
+        "the other entry reads back unchanged"
+    );
+    store
+        .tombstone(second.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
+        .await
+        .expect("the tombstone")
+        .expect("the entry");
+    assert_eq!(count().await, 0, "no row names the part any more");
+    assert_eq!(findings(&pool).await, Vec::new());
 }
 
 /// A tombstone replaces an entry in the middle of the log in place: it keeps
@@ -600,7 +720,8 @@ async fn each_chain_verifies_apart_from_its_own_cursor_on() {
     append(&log, 5..=5).await;
     tamper(
         &pool,
-        &["UPDATE audit.access_log_record SET content = replace(content, '\"read\"', '\"delete\"') \
+        &["UPDATE audit.access_log_record \
+           SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
            WHERE chain_seq = 5"],
     )
     .await;

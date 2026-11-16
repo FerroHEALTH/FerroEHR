@@ -21,16 +21,17 @@ use ferrohealth_smart::resource::{Access, Caller};
 
 use super::{AuthError, Principal};
 
-/// The EHR a bound representative is confined to: the one whose
-/// `EHR_STATUS.subject.external_ref` names the subject the token asserts and the
-/// party source records a live representation of.
+/// The EHRs a bound representative is confined to: each one whose
+/// `EHR_STATUS.subject.external_ref` names the `PERSON` the token asserts
+/// and the party source records a live representation of, directly or
+/// through a record subject that `PERSON` declares.
 ///
 /// No openEHR spec governs resolving a login to a party: our own design.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RepresentedEhr {
-    /// That EHR's id, or `None` when no EHR names the subject, so the
-    /// representative reaches no EHR.
-    pub ehr_id: Option<String>,
+    /// Those EHRs, which after an identity merge can be more than one; empty
+    /// when no EHR names the subject, so the representative reaches none.
+    pub ehr_ids: Vec<ferroehr::ids::EhrId>,
     /// The representative of a `patients` issuer's token, whom FerroEHR binds
     /// itself; `None` for a representative of a `persons` issuer, whom the
     /// login binding bound.
@@ -60,13 +61,13 @@ pub struct PortalRepresentative {
     pub namespace: String,
 }
 
-/// The EHR the representative of `access` is confined to, `None` for any
+/// The EHRs the representative of `access` is confined to, `None` for any
 /// other caller.
 ///
-/// A representative of a `persons` issuer reaches the EHR whose
-/// `EHR_STATUS.subject.external_ref` names the represented subject (#5086),
-/// looked up through `service`, which records the resolution on the access
-/// log. Someone a `patients` issuer's token admits for its patient, the
+/// A representative of a `persons` issuer reaches each EHR whose
+/// `EHR_STATUS.subject.external_ref` names the represented `PERSON` (#5086,
+/// #5634), looked up through `service`, which records each resolution on the
+/// access log. Someone a `patients` issuer's token admits for its patient, the
 /// actor of its `act` claim or a login of a representative's `PERSON` under
 /// the token's issuer, reaches the EHR of the launch context while that
 /// `PERSON` represents its subject today ([`portal`]); the `PERSON`s are
@@ -102,14 +103,14 @@ pub(super) async fn represented_ehr(
         .party()
         .and_then(|outcome| super::party::represented_subject(outcome, represented))
         .ok_or_else(super::party::unrecorded)?;
-    let found = service
-        .ehr_id_for_subject(subject.id(), subject.namespace())
+    let ehr_ids = service
+        .ehr_ids_for_person(subject.id(), subject.namespace())
         .await
         .map_err(unavailable(
-            "the EHR of the represented subject could not be read",
+            "the EHRs of the represented subject could not be read",
         ))?;
     Ok(Some(RepresentedEhr {
-        ehr_id: found.map(|ehr| ehr.to_string()),
+        ehr_ids,
         portal: None,
     }))
 }
@@ -150,7 +151,7 @@ async fn portal(
             relationship,
         } => {
             return Ok(Some(RepresentedEhr {
-                ehr_id: Some(ehr.to_string()),
+                ehr_ids: vec![ferroehr::ids::EhrId(ehr)],
                 portal: Some(PortalRepresentative {
                     person,
                     subject,
@@ -164,6 +165,7 @@ async fn portal(
         PortalLogin::Unrecorded { person } => ("refused-representation-unrecorded", Some(person)),
         PortalLogin::Inactive { person } => ("refused-inactive", Some(person)),
         PortalLogin::Ambiguous => ("refused-ambiguous", None),
+        PortalLogin::Closed(closed) => return Err(super::party::closed::refusal(&closed)),
     };
     tracing::warn!(
         issuer,

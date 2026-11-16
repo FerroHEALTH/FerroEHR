@@ -29,7 +29,8 @@
 use std::sync::Arc;
 
 use crate::access_eval::class::{Class, Classes, Keepers};
-use crate::access_eval::condition::{EhrEntry, StaleCopies};
+use crate::access_eval::condition::EhrEntry;
+use crate::access_eval::stale::StaleCopies;
 use crate::aql::sql::EhrAccessReaders;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
@@ -66,24 +67,26 @@ impl FerroEhrService {
         if access.judgement(ehr_id).is_none() {
             return;
         }
-        match self.load_ehr_access(ehr_id).await {
-            Ok(entry) => {
-                access.judge_ehr(ehr_id, &entry);
-            }
-            Err(error) => {
-                let cause: &(dyn std::error::Error + 'static) = &error;
-                tracing::warn!(
-                    %ehr_id,
-                    error = cause,
-                    "the committed EHR_ACCESS settings could not be read; the request's reads refuse"
-                );
-            }
+        let judged = match self.load_ehr_access(ehr_id).await {
+            Ok(entry) => access
+                .judge_ehr(ehr_id, &entry)
+                .await
+                .map_err(ServiceError::from),
+            Err(error) => Err(error),
+        };
+        if let Err(error) = judged {
+            let cause: &(dyn std::error::Error + 'static) = &error;
+            tracing::warn!(
+                %ehr_id,
+                error = cause,
+                "the committed EHR_ACCESS settings could not be read; the request's reads refuse"
+            );
         }
     }
 
     /// The EHRs whose copy a read of the running request found stale, which
     /// the copy drops before its next read
-    /// ([`crate::access_eval::condition::StaleCopies`]).
+    /// ([`crate::access_eval::stale::StaleCopies`]).
     #[must_use]
     pub fn stale_ehr_access_copies(&self) -> Arc<StaleCopies> {
         self.ehr_access.stale()
@@ -106,12 +109,12 @@ impl FerroEhrService {
     pub(in crate::service) async fn prewarm_ehr_access_open(
         &self,
         ehr_id: EhrId,
-        subject: Option<uuid::Uuid>,
+        subject: Option<crate::storage::access_projection::EhrSubject>,
     ) {
         if self.ehr_access_listened.is_listening() {
             let entry = EhrEntry {
                 settings: Arc::new(None),
-                subject,
+                subject: subject.clone(),
                 version: None,
                 revision: Revision {
                     settings: None,
@@ -293,7 +296,8 @@ impl FerroEhrService {
     /// query applies to every EHR it could reach, where the path routes
     /// decide one EHR at a time ([`Self::current_ehr_access_settings`]). An
     /// EHR with no settings is of no class and falls to the server-wide
-    /// default; an EHR of a class this copy does not hold is withheld.
+    /// default; a query reaching an EHR of a class this copy does not hold
+    /// reads the classes again (`service::query::stale`, #5794).
     ///
     /// Copied as one entry, dropped by the notification of a new class, and
     /// read on every call while the listener is down. No openEHR spec
@@ -380,6 +384,33 @@ impl FerroEhrService {
         ))))
     }
 
+    /// The EHRs whose `EHR_ACCESS` objects a query under `condition` reads.
+    ///
+    /// A query pinned to one EHR reads that EHR's alone, so whether the
+    /// caller may read its settings is decided once from this replica's copy
+    /// ([`Self::may_read_ehr_access`]), the copy the pinned verdict was judged
+    /// on, and the statement probes no settings row for it; any other query
+    /// reads them as [`Self::ehr_access_readers`] says. No openEHR spec
+    /// governs this: our own design (#5746).
+    ///
+    /// # Errors
+    /// As [`Self::may_read_ehr_access`] and [`Self::ehr_access_readers`].
+    pub async fn query_access_readers(
+        &self,
+        condition: &crate::access_eval::condition::AccessCondition,
+    ) -> Result<EhrAccessReaders, ServiceError> {
+        let Some(pinned) = condition.pinned() else {
+            return self.ehr_access_readers().await;
+        };
+        if self.may_read_ehr_access(EhrId(pinned.ehr)).await? {
+            return Ok(EhrAccessReaders::Every);
+        }
+        Ok(EhrAccessReaders::Only(Arc::new(Keepers {
+            groups: Vec::new(),
+            party: None,
+        })))
+    }
+
     /// The miss path of [`Self::ehr_access_classes`]: every class the store
     /// holds. A class that does not read is left out, so every EHR of it is
     /// withheld.
@@ -422,7 +453,7 @@ fn entry_of(ehr_id: EhrId, stored: Stored) -> Result<EhrEntry, ServiceError> {
             None => ServiceError::internal(message, HeldClosed),
         }
     };
-    let subject = stored.revision.subject;
+    let subject = stored.revision.subject.clone();
     let settings = match stored.settings {
         StoredSettings::None => None,
         StoredSettings::HeldClosed => return Err(unreadable(None)),

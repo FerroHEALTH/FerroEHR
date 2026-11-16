@@ -150,6 +150,12 @@ pub struct FoldedVersion<'a> {
     /// on a version that shares its predecessor's rows: the unnest yields no
     /// rows and the CTE writes nothing).
     pub rows: &'a [crate::storage::row::NodeRow],
+    /// The fragment of each of `rows`, index-aligned, taken out of the rows so
+    /// the write stores them uncopied (#5759).
+    pub fragments: Vec<Value>,
+    /// The external blob URIs the body references
+    /// ([`crate::storage::blob_ref::uris_of`]).
+    pub blob_uris: Vec<String>,
     /// SHA-256 over the canonical body with the root `uid` removed
     /// (`version.content_digest`); `None` on a logical delete.
     pub content_digest: Option<&'a [u8]>,
@@ -157,6 +163,9 @@ pub struct FoldedVersion<'a> {
     /// content, when its content equalled the preceding tip's
     /// (`version.content_sys_version`, #4415); `None` for its own rows.
     pub content_sys_version: Option<i32>,
+    /// The `archetype_node_id` of the body's root, which the head row keeps
+    /// for a trunk commit (#5782); `None` on a logical delete.
+    pub root_archetype: Option<&'a str>,
 }
 
 /// The head upsert both folded commit statements carry.
@@ -167,9 +176,10 @@ pub struct FoldedVersion<'a> {
 /// and the commit instant — leaving the trunk's own head, its content key
 /// (the version insert's `content_key`, #4944), lifecycle state and template
 /// alone, because a branch does not supersede the trunk (RM common
-/// master06 §The 'Virtual Version Tree').
+/// master06 §The 'Virtual Version Tree'). The root archetype goes with the
+/// template (#5782).
 ///
-/// `{branch}`, `{ordinal}`, `{lifecycle}` and `{template}` are the caller's
+/// `{branch}`, `{ordinal}`, `{lifecycle}`, `{template}` and `{archetype}` are the caller's
 /// parameter placeholders; `FROM v` orders this CTE after the version insert.
 ///
 /// The update is MONOTONIC: it applies only when the committing version's
@@ -194,6 +204,8 @@ struct HeadUpsert<'a> {
     lifecycle: &'a str,
     /// The template the new version was validated against.
     template: &'a str,
+    /// The root archetype of the new version's content.
+    archetype: &'a str,
     /// The commit instant.
     committed_at: &'a str,
 }
@@ -209,16 +221,17 @@ impl HeadUpsert<'_> {
             branch,
             lifecycle,
             template,
+            archetype,
             committed_at,
         } = *self;
         format!(
             "INSERT INTO vo_head (vo_id, kind, ehr_id, head_sys_version, \
              trunk_head_sys_version, trunk_head_content_key, lifecycle_state, template_id, \
-             committed_at) \
+             root_archetype, committed_at) \
          SELECT {vo}, {kind}, {ehr}, {ordinal}, \
                 CASE WHEN {branch} = 0 THEN {ordinal} ELSE NULL END, \
                 CASE WHEN {branch} = 0 THEN v.content_key ELSE NULL END, \
-                {lifecycle}, {template}, {committed_at}::timestamptz \
+                {lifecycle}, {template}, {archetype}, {committed_at}::timestamptz \
          FROM v \
          ON CONFLICT (vo_id) DO UPDATE SET \
              head_sys_version = EXCLUDED.head_sys_version, \
@@ -230,7 +243,9 @@ impl HeadUpsert<'_> {
              lifecycle_state = CASE WHEN {branch} = 0 \
                  THEN EXCLUDED.lifecycle_state ELSE vo_head.lifecycle_state END, \
              template_id = CASE WHEN {branch} = 0 \
-                 THEN EXCLUDED.template_id ELSE vo_head.template_id END \
+                 THEN EXCLUDED.template_id ELSE vo_head.template_id END, \
+             root_archetype = CASE WHEN {branch} = 0 \
+                 THEN EXCLUDED.root_archetype ELSE vo_head.root_archetype END \
          WHERE EXCLUDED.head_sys_version > vo_head.head_sys_version \
            AND ({branch} <> 0 \
                 OR vo_head.trunk_head_sys_version IS NULL \
@@ -245,7 +260,7 @@ impl HeadUpsert<'_> {
 /// transaction: the round-trip-collapsed equivalent of the separate inserts,
 /// byte-identical in the rows written and the values returned. No openEHR spec
 /// governs statement batching: our own design.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub enum Folded<'a> {
     /// The CONTRIBUTION `id` and its own audit, the versions of its change set
     /// following under [`Folded::Into`]. `ehr_id` is `None` for a demographic
@@ -263,7 +278,7 @@ pub enum Folded<'a> {
         /// The CONTRIBUTION uid.
         id: Uuid,
         /// The version, its head upsert and its node rows.
-        version: &'a FoldedVersion<'a>,
+        version: FoldedVersion<'a>,
     },
     /// A version within the CONTRIBUTION `id` an earlier
     /// [`Folded::Contribution`] of this transaction wrote, under the version's
@@ -272,7 +287,7 @@ pub enum Folded<'a> {
         /// The CONTRIBUTION uid.
         id: Uuid,
         /// The version, its head upsert and its node rows.
-        version: &'a FoldedVersion<'a>,
+        version: FoldedVersion<'a>,
     },
 }
 
@@ -302,7 +317,8 @@ enum Shape {
 ///
 /// Every shape binds the same parameters in the same order: `$1` to `$5` the
 /// audit, `$6` the CONTRIBUTION uid, `$7` the owning EHR, `$8` to `$26` the
-/// version and `$27` on the node arrays, so one binder serves all three.
+/// version, `$27` the version's root archetype and `$28` on the node arrays,
+/// so one binder serves all three.
 fn folded_statement(shape: Shape) -> String {
     let contribution = matches!(shape, Shape::Contribution | Shape::Standalone);
     let version = matches!(shape, Shape::Standalone | Shape::Into);
@@ -347,10 +363,11 @@ fn folded_statement(shape: Shape) -> String {
                 branch: "$12",
                 lifecycle: "$14",
                 template: "$17",
+                archetype: "$27",
                 committed_at: "$22",
             }
             .sql(),
-            crate::storage::node_write::node_insert_cte("$8", "$10", "$7", 27)
+            crate::storage::node_write::node_insert_cte("$8", "$10", "$7", 28)
         )
     } else {
         String::new()
@@ -410,8 +427,8 @@ pub async fn commit_folded(
         .bind(&audit.attestation)
         .bind(id)
         .bind(ehr_id);
-    let row = match version {
-        None => query.fetch_one(&mut *tx).await?,
+    let (row, blobs) = match version {
+        None => (query.fetch_one(&mut *tx).await?, None),
         Some(v) => {
             let query = query
                 .bind(v.vo_id)
@@ -432,7 +449,8 @@ pub async fn commit_folded(
                 .bind(serde_json::json!(v.origins))
                 .bind(super::optional_json_array(v.other_input_version_uids))
                 .bind(v.content_digest)
-                .bind(v.content_sys_version);
+                .bind(v.content_sys_version)
+                .bind(v.root_archetype);
             let version_uid = crate::storage::compact::version_uid(
                 v.vo_id,
                 v.creating_system_id,
@@ -444,11 +462,16 @@ pub async fn commit_folded(
                 version_uid: &version_uid,
                 template_id: v.template_id,
             };
-            let node_refs: Vec<(&crate::storage::row::NodeRow, _)> =
-                v.rows.iter().map(|row| (row, &root)).collect();
-            crate::storage::node_write::bind_node_arrays(query, &node_refs)
+            let nodes = v
+                .rows
+                .iter()
+                .zip(v.fragments)
+                .map(|(row, fragment)| (row, &root, fragment))
+                .collect();
+            let row = crate::storage::node_write::bind_node_arrays(query, nodes)
                 .fetch_one(&mut *tx)
-                .await?
+                .await?;
+            (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
     };
     let contribution_id: Option<Uuid> = row.try_get("contribution_id")?;
@@ -459,8 +482,8 @@ pub async fn commit_folded(
             .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
             .to_jiff(),
     };
-    if let Some(v) = version {
-        crate::storage::blob_ref::record(tx, &[(v.vo_id, v.sys_version, v.rows)]).await?;
+    if let Some((vo_id, sys_version, uris)) = blobs {
+        crate::storage::blob_ref::record_uris(tx, vo_id, sys_version, &uris).await?;
     }
     Ok(rows)
 }

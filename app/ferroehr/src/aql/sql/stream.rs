@@ -334,8 +334,9 @@ impl Builder<'_> {
         let group_root = self.stream_root(plan, &root, &v)?;
         self.group_roots.push(group_root.clone());
         self.group_vos.push(v.clone());
-        if plan.ehr.is_some() {
-            self.roots_linked_to_ehr.insert(group_root);
+        if let Some(esid) = plan.ehr {
+            self.roots_linked_to_ehr
+                .insert(group_root, format!("e{esid}"));
         }
 
         // Contained content sources: one LATERAL per source, interval-bound
@@ -506,10 +507,10 @@ impl Builder<'_> {
             Alias::new(root_alias.as_str()),
             Expr::val(true),
         );
+        self.node_alias.insert(plan.root, root_alias.clone());
         for cond in self.rm_conds(&root_alias, root)? {
             self.q.and_where(cond);
         }
-        self.node_alias.insert(plan.root, root_alias.clone());
         Ok(root_alias)
     }
 }

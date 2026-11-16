@@ -471,7 +471,10 @@ pub(crate) async fn create_ehr_for_party(
 ) -> EhrId {
     create_ehr_subject(
         svc,
-        &ferroehr::service::ehr_index::types::SubjectRef::person(party.0.to_string(), "local"),
+        &ferroehr::service::ehr_index::types::SubjectRef::person(
+            party.0.to_string(),
+            ferroehr::config::binding::PartyBindingConfig::default().namespace,
+        ),
     )
     .await
 }
@@ -509,37 +512,50 @@ pub(crate) async fn subject_ehr_ids(
 
 /// Every finding of the full tamper checks of both chains,
 /// `audit.verify_audit_chain()` (the system chain) and
-/// `audit.verify_access_log_chain()` (the access log), the system chain's
-/// first, run on `pool` without moving either verification cursor.
+/// `audit.verify_access_log_chain()` with the server's content check of each
+/// entry (the access log, #5703), the system chain's first, run on `pool`
+/// without moving either verification cursor.
 pub(crate) async fn verify_chain(
     pool: &sqlx::PgPool,
-) -> Result<Vec<ferroehr::system_log::store::chains::AuditChainFinding>, sqlx::Error> {
+) -> Result<
+    Vec<ferroehr::system_log::store::chains::AuditChainFinding>,
+    ferroehr::system_log::AuditError,
+> {
     use ferroehr::system_log::store::chains::{AuditChain, AuditChainFinding};
     use sqlx::Row;
-    sqlx::query(
+    let (_, modified) = ferroehr::system_log::store::AuditStore::new(pool.clone())
+        .access_log_contents(true)
+        .await?;
+    let rows = sqlx::query(
         "SELECT 'system' AS chain, chain_seq, record_id, recorded_at, finding \
          FROM audit.verify_audit_chain() \
          UNION ALL \
          SELECT 'access_log', chain_seq, record_id, recorded_at, finding \
          FROM audit.verify_access_log_chain() \
+         UNION ALL \
+         SELECT 'access_log', r.chain_seq, r.uid::uuid, r.time_recorded, \
+                'record content was modified after it was written' \
+         FROM audit.access_log_record r WHERE r.chain_seq = ANY ($1) \
          ORDER BY 1 DESC, 2 NULLS FIRST",
     )
+    .bind(&modified)
     .fetch_all(pool)
-    .await?
-    .iter()
-    .map(|row| {
-        let chain: String = row.try_get("chain")?;
-        Ok(AuditChainFinding {
-            chain: AuditChain::named(&chain).unwrap_or(AuditChain::System),
-            chain_seq: row.try_get("chain_seq")?,
-            record_id: row.try_get("record_id")?,
-            recorded_at: row
-                .try_get::<Option<jiff_sqlx::Timestamp>, _>("recorded_at")?
-                .map(jiff_sqlx::Timestamp::to_jiff),
-            finding: row.try_get("finding")?,
+    .await?;
+    rows.iter()
+        .map(|row| {
+            let chain: String = row.try_get("chain")?;
+            Ok(AuditChainFinding {
+                chain: AuditChain::named(&chain).unwrap_or(AuditChain::System),
+                chain_seq: row.try_get("chain_seq")?,
+                record_id: row.try_get("record_id")?,
+                recorded_at: row
+                    .try_get::<Option<jiff_sqlx::Timestamp>, _>("recorded_at")?
+                    .map(jiff_sqlx::Timestamp::to_jiff),
+                finding: row.try_get("finding")?,
+            })
         })
-    })
-    .collect()
+        .collect::<Result<_, sqlx::Error>>()
+        .map_err(Into::into)
 }
 
 /// Whether an ADL 1.4 archetype with `id` is stored, read off the store; identity
@@ -573,6 +589,25 @@ pub(crate) async fn service() -> (testkit::TestDb, ferroehr::service::FerroEhrSe
         &ferroehr::db::domain::DomainPools::from_shared(&db.pool()),
     );
     (db, svc)
+}
+
+/// Records each of `issuers` as an `active` key space in `db`, as a
+/// replica's first fill does for its mapping's key issuers: a key binds only
+/// under an active key space (`ferroehr::party_binding::key_space`), and a
+/// test service takes no lease.
+pub(crate) async fn open_key_spaces(db: &testkit::TestDb, issuers: &[(&str, bool)]) {
+    for (issuer, portal) in issuers {
+        sqlx::query(
+            "INSERT INTO party.binding_key_space (issuer, portal, state) \
+             VALUES ($1, $2, 'active') \
+             ON CONFLICT (issuer) DO UPDATE SET portal = EXCLUDED.portal, state = 'active'",
+        )
+        .bind(issuer)
+        .bind(portal)
+        .execute(&db.pool())
+        .await
+        .expect("the key space is recorded");
+    }
 }
 
 /// Create an EHR with no subject and no supplied id; return its id.
@@ -800,4 +835,13 @@ pub(crate) fn version_pattern(text: &str) -> VersionPattern {
 /// The exact stored-query version `text`.
 pub(crate) fn query_version(text: &str) -> QueryVersion {
     text.parse().expect("a valid query version")
+}
+
+/// The canonical form of the access-log entry a row stores as `content`
+/// with its `shared` part, joined as the server reads it (#5703).
+pub(crate) fn joined_entry(content: &str, shared: Option<&str>) -> String {
+    let parse = |text: &str| serde_json::from_str::<Value>(text).expect("a stored part");
+    let joined = ferroehr::access_log::stored_form::join(parse(content), shared.map(parse));
+    openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json(&joined)
+        .expect("the canonical form")
 }

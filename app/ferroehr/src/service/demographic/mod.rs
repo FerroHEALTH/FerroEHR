@@ -66,6 +66,7 @@ pub mod default_definitions;
 pub mod group_provision;
 pub mod group_write;
 pub mod identifier;
+pub mod identity_feed;
 pub mod jit;
 pub mod mapped_write;
 pub mod mapping;
@@ -78,6 +79,7 @@ pub mod reverse;
 pub mod template;
 pub mod types;
 pub mod user_lifecycle;
+pub mod user_roles;
 pub mod user_write;
 
 mod api;

@@ -8,14 +8,16 @@
 //! The binary constructs them over the live handles and registers them into
 //! a [`ferrohealth_health::registry::Registry`] at boot; the HTTP probes live
 //! in the protocol adapter (`ferroehr-rest`). `db` and `migrations` read
-//! `down` when they fail, which withdraws readiness; every other indicator
-//! reads at worst `degraded`, so it reports without taking the instance out
-//! of rotation.
+//! `down` when they fail, which withdraws readiness, and so does
+//! `log_retention` while the access policy's retention does not read; every
+//! other indicator reads at worst `degraded`, so it reports without taking the
+//! instance out of rotation.
 //!
 //! No openEHR spec governs health probes — our own operational design.
 
 use std::sync::Arc;
 
+use crate::access_log::publish::{Publication, PublicationState};
 use crate::db::acquire::acquire;
 use crate::instance::{Agreement, Instances};
 use crate::policy_register::listen::Listened;
@@ -116,19 +118,25 @@ impl HealthIndicator for MigrationsHealth {
     }
 }
 
-/// `audit_sender` — reports the audit posture.
+/// `audit_sender`: reports the audit posture and how far the chainer is
+/// behind the intake.
 ///
-/// The sender master switch, the fail mode and the local store. Registered
-/// whether or not auditing is on (#3238): a deployment that writes no access
-/// log reads `DEGRADED` with the consequence spelled out, so monitoring can
-/// see the silence instead of a missing row. Degraded-tolerable (a missing or
-/// fail-open trail must not take the instance out of rotation), so it never
-/// flips readiness — only the aggregate to `DEGRADED`.
+/// Registered whether or not auditing is on (#3238): a deployment that writes
+/// no access log reads `DEGRADED` with the consequence spelled out, so
+/// monitoring can see the silence instead of a missing row. With auditing on,
+/// an intake whose oldest record waits longer than [`INTAKE_LAG`] for the
+/// chainer reads `DEGRADED` with its age: the records are durable, and the
+/// chains and the sinks that deliver from them are behind. Neither flips
+/// readiness, only the aggregate to `DEGRADED`.
 #[derive(Debug)]
 pub struct AuditHealth {
     sender: Option<AuditSender>,
     posture: AuditPosture,
 }
+
+/// How long the oldest intake record may wait for the chainer before the
+/// indicator reads `DEGRADED`; our own design, many chainer rounds.
+pub const INTAKE_LAG: std::time::Duration = std::time::Duration::from_secs(10);
 
 impl AuditHealth {
     /// Construct over the live audit sender and the configured posture.
@@ -157,15 +165,25 @@ impl HealthIndicator for AuditHealth {
 
     fn check(&self) -> Check<'_> {
         Box::pin(async move {
-            let live = self.sender.as_ref().is_some_and(AuditSender::enabled);
-            let cautions = self.posture.cautions();
-            if !live || !self.posture.enabled {
-                return Outcome::degraded(cautions.first().copied().unwrap_or(
+            let sender = self.sender.as_ref().filter(|sender| sender.enabled());
+            let Some(sender) = sender.filter(|_| self.posture.enabled) else {
+                return Outcome::degraded(self.posture.cautions().first().copied().unwrap_or(
                     "auditing is disabled: no access log is written and the EHDS logging \
                      component is off (set [audit] enabled = true)",
                 ));
+            };
+            match sender.store().intake_age().await {
+                Ok(Some(age)) if age > INTAKE_LAG => Outcome::degraded(format!(
+                    "the oldest audit record has waited {}s for the chainer; the records are \
+                     stored and the chains are behind",
+                    age.as_secs()
+                )),
+                Ok(_) => Outcome::up(),
+                Err(e) => {
+                    tracing::error!(error = %e, "health: the audit intake could not be read");
+                    Outcome::degraded("the audit intake could not be read")
+                }
             }
-            Outcome::up()
         })
     }
 }
@@ -239,8 +257,10 @@ impl HealthIndicator for AuditDeliveryHealth {
 /// audit store's hash chain.
 ///
 /// Damage and an unverifiable trail both read `DEGRADED`, each naming the
-/// finding; neither flips readiness, because the trail still records while the
-/// damage is investigated. Registered only when the scheduled verification
+/// finding, and so does an intact trail whose oldest unverified record is
+/// older than `[audit.store] max_verify_lag` (#5779). None flips
+/// readiness, because the trail still records while the damage or the
+/// backlog is dealt with. Registered only when the scheduled verification
 /// runs.
 #[derive(Debug)]
 pub struct AuditChainHealth {
@@ -263,7 +283,18 @@ impl HealthIndicator for AuditChainHealth {
     fn check(&self) -> Check<'_> {
         Box::pin(async move {
             match self.check.state() {
-                ChainCheckState::Pending | ChainCheckState::Intact { .. } => Outcome::up(),
+                ChainCheckState::Pending | ChainCheckState::Intact { .. } => {
+                    match self.check.lag_beyond_bound(jiff::Timestamp::now()) {
+                        None => Outcome::up(),
+                        Some((chain, lag, age)) => Outcome::degraded(format!(
+                            "the {} chain's verification is {} records behind its head; \
+                             the oldest unverified record waited {}s, beyond max_verify_lag",
+                            chain.as_str(),
+                            lag.entries,
+                            age.as_secs()
+                        )),
+                    }
+                }
                 ChainCheckState::Damaged {
                     at,
                     total,
@@ -343,6 +374,55 @@ impl HealthIndicator for PolicyListenersHealth {
     }
 }
 
+/// `log_retention`: whether the controller's access policy states how long
+/// the access log keeps an entry (`ACCESS_POLICY.log_retention`).
+///
+/// With none stated every entry is kept without end, which meets every floor
+/// a law sets but leaves the period undecided, and GDPR Art. 5(1)(e) makes
+/// that period the controller's to set. So the indicator reads `DEGRADED`,
+/// a warning that never takes the instance out of rotation. When the newest
+/// version's retention does not read it reads `DOWN`, naming the version.
+/// No openEHR spec governs this: our own design (#5660).
+#[derive(Debug)]
+pub struct LogRetentionHealth {
+    policy: Arc<crate::access_policy::LivePolicy>,
+}
+
+impl LogRetentionHealth {
+    /// Constructs over the access policy in force.
+    #[must_use]
+    pub fn new(policy: Arc<crate::access_policy::LivePolicy>) -> Self {
+        Self { policy }
+    }
+}
+
+impl HealthIndicator for LogRetentionHealth {
+    fn name(&self) -> &'static str {
+        "log_retention"
+    }
+
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            let retention = self.policy.retention_in_force();
+            if let Some(version) = retention.unreadable {
+                Outcome::down(format!(
+                    "the access log retention of access policy version {version} does not read; \
+                     records keep the last retention that read and nothing is purged until a \
+                     version that reads is committed"
+                ))
+            } else if retention.last_good.is_declared() {
+                Outcome::up()
+            } else {
+                Outcome::degraded(
+                    "the access policy states no log_retention, so every access-log entry is \
+                     kept without end; GDPR Art. 5(1)(e) makes the period the controller's to \
+                     set in ACCESS_POLICY.log_retention",
+                )
+            }
+        })
+    }
+}
+
 /// `instances` — whether every live instance of the deployment signs with
 /// this instance's key and runs its configuration ([`Instances`]).
 ///
@@ -404,10 +484,67 @@ impl HealthIndicator for InstancesHealth {
     }
 }
 
+/// `access_log_checkpoints` — reports whether the access log is sealed and
+/// its checkpoints published outside the database.
+///
+/// Every append seals itself in a checkpoint stored beside the log, so a
+/// change to a sealed entry is detected. Removing the newest entries together
+/// with the checkpoints that seal them is detected only against a checkpoint
+/// published outside the database, which is the recommended setup. The
+/// indicator reads `DEGRADED` without a signing key, without a publication
+/// directory, and while publication fails; the log still records, so it never
+/// takes the instance out of rotation. No openEHR spec governs log
+/// publication: our own design (#5704).
+#[derive(Debug)]
+pub struct AccessLogCheckpointsHealth {
+    seals: bool,
+    publication: Publication,
+}
+
+impl AccessLogCheckpointsHealth {
+    /// Constructs over whether the keyring holds a key that seals the log
+    /// and the publication of its checkpoints.
+    #[must_use]
+    pub fn new(seals: bool, publication: Publication) -> Self {
+        Self { seals, publication }
+    }
+}
+
+impl HealthIndicator for AccessLogCheckpointsHealth {
+    fn name(&self) -> &'static str {
+        "access_log_checkpoints"
+    }
+
+    fn check(&self) -> Check<'_> {
+        Box::pin(async move {
+            if !self.seals {
+                return Outcome::degraded(
+                    "no OpenPGP key in the keyring: the access log is not sealed in signed \
+                     checkpoints; configure [record.signing] in pgp mode",
+                );
+            }
+            if self.publication.directory().is_none() {
+                return Outcome::degraded(
+                    "access-log checkpoints are not published outside the database, so removing \
+                     the newest entries goes undetected; set [audit.access_log] \
+                     publish_directory",
+                );
+            }
+            match self.publication.state() {
+                PublicationState::Pending | PublicationState::Published { .. } => Outcome::up(),
+                PublicationState::Failed { at, reason } => Outcome::degraded(format!(
+                    "the access-log checkpoint could not be published at {at}: {reason}"
+                )),
+            }
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{AuditHealth, DbHealth, MigrationsHealth};
-    use crate::system_log::config::{AuditConfig, AuditPosture, FailMode};
+    use super::{AccessLogCheckpointsHealth, AuditHealth, DbHealth, MigrationsHealth};
+    use crate::access_log::publish::Publication;
+    use crate::system_log::config::{AuditConfig, AuditPosture};
     use ferrohealth_health::document::State;
     use ferrohealth_health::registry::HealthIndicator;
 
@@ -434,36 +571,21 @@ mod tests {
         );
     }
 
-    /// The fail-open default is a caution, not a health failure: the trail is
-    /// UP, and the detail says what a full queue does to a record.
+    /// Auditing on states no caution, since every access it cannot record is
+    /// refused; auditing off states the one caution.
     #[test]
-    fn the_fail_open_default_is_a_stated_caution_and_fail_closed_is_not() {
-        let open = AuditPosture::of(&AuditConfig::default());
-        assert_eq!(open.fail_mode, FailMode::Open, "the shipped default");
-        let cautions = open.cautions();
-        assert_eq!(cautions.len(), 1);
-        assert!(cautions[0].contains("fail_mode is open"), "{}", cautions[0]);
-
-        let closed = AuditPosture::of(&AuditConfig {
-            fail_mode: FailMode::Closed,
-            ..AuditConfig::default()
-        });
-        assert_eq!(closed.cautions(), Vec::<&str>::new());
-        assert!(
-            closed.summary().starts_with("fail_mode=closed"),
-            "{}",
-            closed.summary()
-        );
-
+    fn only_a_disabled_trail_is_a_stated_caution() {
+        let on = AuditPosture::of(&AuditConfig::default());
+        assert_eq!(on.cautions(), Vec::<&str>::new());
         let off = AuditPosture::of(&AuditConfig {
             enabled: false,
-            fail_mode: FailMode::Closed,
             ..AuditConfig::default()
         });
-        assert_eq!(
-            off.cautions().len(),
-            1,
-            "a disabled trail makes the fail mode moot"
+        assert_eq!(off.cautions().len(), 1);
+        assert!(
+            off.cautions()[0].contains("disabled"),
+            "{:?}",
+            off.cautions()
         );
     }
 
@@ -505,5 +627,27 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// The checkpoints indicator reads DEGRADED without a key and without a
+    /// publication directory, each naming its consequence, and UP with both
+    /// (#5704).
+    #[tokio::test]
+    async fn the_checkpoints_indicator_reads_degraded_until_they_are_published() {
+        let unsealed = AccessLogCheckpointsHealth::new(false, Publication::new(None));
+        let outcome = unsealed.check().await;
+        assert_eq!(outcome.state(), State::Degraded);
+        let detail = outcome.detail().unwrap_or_default();
+        assert!(detail.contains("not sealed"), "{detail}");
+
+        let unpublished = AccessLogCheckpointsHealth::new(true, Publication::new(None));
+        let outcome = unpublished.check().await;
+        assert_eq!(outcome.state(), State::Degraded);
+        let detail = outcome.detail().unwrap_or_default();
+        assert!(detail.contains("publish_directory"), "{detail}");
+
+        let published =
+            AccessLogCheckpointsHealth::new(true, Publication::new(Some(std::env::temp_dir())));
+        assert_eq!(published.check().await.state(), State::Up);
     }
 }

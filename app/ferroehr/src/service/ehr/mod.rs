@@ -43,7 +43,9 @@
 
 pub(in crate::service) mod access;
 pub(in crate::service) mod access_cache;
+pub mod care_projection;
 mod composition;
+pub mod composition_read;
 mod contributions;
 mod directory;
 pub(in crate::service) mod meta;

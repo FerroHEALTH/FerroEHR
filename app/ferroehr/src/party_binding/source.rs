@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! [`LocalPartySource`]: the `local` party source of `ferrohealth-smart`, read
-//! from the binding side table on the party pool, on every request, with no
-//! cache.
+//! [`LocalPartySource`]: the `local` party source of `ferrohealth-smart`.
 //!
+//! It reads the binding side table on the party pool, and holds what it read
+//! in this replica's copy ([`crate::party_binding::live::LiveBindings`]) until
+//! a change drops it.
 //! It reports every `PERSON` whose live key row carries the query's issuer,
 //! type and value, with the state of its head, its markers (`professional`
 //! for a professional `ROLE` valid today, `representative` for a recorded
@@ -25,10 +26,12 @@ use ferrohealth_smart::party::{Markers, Membership, PartyRef, PartyState, Repres
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::live::GrantsUnavailable;
-use crate::party_binding::lookup::{self, KeyRow};
+use crate::party_binding::live::{LiveBindings, LookupKey};
+use crate::party_binding::lookup::{self, KeyRow, LookupError};
 use crate::service::FerroEhrService;
 use crate::service::demographic::jit::ProvisionalPerson;
 use crate::storage::error::StorageError;
@@ -96,6 +99,9 @@ pub struct LocalPartySource {
     /// The service a provisional `PERSON` is created through; `None` for a
     /// source that creates none.
     creator: Option<Arc<FerroEhrService>>,
+    /// This replica's copy of the lookups and names; `None` reads the store
+    /// on every request.
+    live: Option<Arc<LiveBindings>>,
 }
 
 impl LocalPartySource {
@@ -108,7 +114,15 @@ impl LocalPartySource {
             namespace: namespace.into(),
             mapping: Arc::default(),
             creator: None,
+            live: None,
         }
+    }
+
+    /// Returns this source holding its lookups and names in `live`.
+    #[must_use]
+    pub fn with_live(mut self, live: Arc<LiveBindings>) -> Self {
+        self.live = Some(live);
+        self
     }
 
     /// Returns this source naming a bound `PERSON` at the name paths of
@@ -128,12 +142,21 @@ impl LocalPartySource {
     }
 
     /// Returns the name of the `PERSON` `party` at the name path of its
-    /// template, from its head version; `None` when it has none.
+    /// template, from its head version; `None` when it has none. A name this
+    /// replica holds is answered without a read.
     ///
     /// # Errors
     /// [`StorageError`] when the party pool cannot answer.
     pub async fn name(&self, party: Uuid) -> Result<Option<String>, StorageError> {
-        let mut conn = self.pool.acquire().await?;
+        match &self.live {
+            Some(live) => live.name(party, self.read_name(party)).await,
+            None => self.read_name(party).await,
+        }
+    }
+
+    /// [`Self::name`] read from the party pool.
+    async fn read_name(&self, party: Uuid) -> Result<Option<String>, StorageError> {
+        let mut conn = acquire(&self.pool).await?;
         for (template, selectors) in &self.mapping.persons {
             let Some(name) = &selectors.name else {
                 continue;
@@ -169,8 +192,10 @@ impl LocalPartySource {
     /// date.
     ///
     /// # Errors
-    /// [`StorageError`] when the party pool cannot answer; never an empty
-    /// lookup.
+    /// [`LookupError::Closed`] when `issuer`'s key space is not `active`, so
+    /// the side table cannot say who carries the key, and
+    /// [`LookupError::Storage`] when the party pool cannot answer; never an
+    /// empty lookup.
     pub async fn read(
         &self,
         issuer: &str,
@@ -178,8 +203,36 @@ impl LocalPartySource {
         value: &str,
         group_issuer: Option<&str>,
         today: &str,
-    ) -> Result<Lookup, StorageError> {
-        let mut conn = self.pool.acquire().await?;
+    ) -> Result<Lookup, LookupError> {
+        let Some(live) = &self.live else {
+            return self
+                .read_store(issuer, identifier_type, value, group_issuer, today)
+                .await;
+        };
+        let key = LookupKey {
+            issuer: issuer.to_owned(),
+            identifier_type: identifier_type.to_owned(),
+            value: value.to_owned(),
+            group_issuer: group_issuer.map(str::to_owned),
+            today: today.to_owned(),
+        };
+        live.lookup(
+            key,
+            self.read_store(issuer, identifier_type, value, group_issuer, today),
+        )
+        .await
+    }
+
+    /// [`Self::read`] from the party pool.
+    async fn read_store(
+        &self,
+        issuer: &str,
+        identifier_type: &str,
+        value: &str,
+        group_issuer: Option<&str>,
+        today: &str,
+    ) -> Result<Lookup, LookupError> {
+        let mut conn = acquire(&self.pool).await.map_err(StorageError::from)?;
         let rows = lookup::key_rows(&mut conn, issuer, identifier_type, value, today).await?;
         let (live, tombstones): (Vec<KeyRow>, Vec<KeyRow>) =
             rows.into_iter().partition(|row| row.live);
@@ -331,7 +384,45 @@ impl BindingSource for LocalPartySource {
                     person.login_issuer
                 )));
             };
-            Ok(Box::pin(service.create_provisional_person(person)).await?.0)
+            let created = Box::pin(service.create_provisional_person(person)).await?.0;
+            // NOTE: our own design (#5771), the next lookup of this login reads the PERSON just created.
+            if let Some(live) = &self.live {
+                live.forget_all();
+            }
+            Ok(created)
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use sqlx::postgres::PgPoolOptions;
+    use uuid::Uuid;
+
+    use super::LocalPartySource;
+    use crate::error::ServiceError;
+    use crate::storage::error::classify_storage;
+
+    /// A bound committer's name read on a party pool that cannot open a
+    /// connection answers `503`: no statement ran, so the caller may repeat
+    /// the request. A resolver failure is no refused connect, and read on a
+    /// raw pool checkout it answered `500` (#5109).
+    #[tokio::test]
+    async fn a_name_read_on_a_pool_that_cannot_connect_is_unavailable() {
+        let pool = PgPoolOptions::new()
+            .acquire_timeout(Duration::from_secs(5))
+            .connect_lazy("postgres://ferroehr@ferroehr-database.invalid/ferroehr")
+            .expect("a lazy pool");
+        let error = LocalPartySource::new(pool, "local")
+            .name(Uuid::nil())
+            .await
+            .expect_err("no connection can be opened");
+        let shown = format!("{error:?}");
+        assert!(
+            matches!(classify_storage(error), ServiceError::Overloaded(_)),
+            "a connect failure is a 503: {shown}"
+        );
     }
 }

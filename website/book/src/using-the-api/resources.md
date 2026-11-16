@@ -586,7 +586,7 @@ along with a content write instead of taking a second round trip; see
 | 415 | The request `Content-Type` names a format this resource cannot process. |
 | 422 | Well-formed but unfollowable: failed template or semantic validation, a body the [data-minimisation rules](../installation/config-privacy.md) refuse, an illegal version-lifecycle transition, or a change set the server cannot apply. |
 | 429 | Too many requests, with `Retry-After` and the `x-ratelimit-*` headers the limiter computed. |
-| 503 | The server cannot decide or cannot serve right now, with `Retry-After`: the admission cap is full, the token issuer is unreachable, or (under `[audit] fail_mode = "closed"`) the access record could not be taken. Retry; none of these is a statement about your request. |
+| 503 | The server cannot decide or cannot serve right now, with `Retry-After`: the admission cap is full, the token issuer is unreachable, or the access record could not be written. Retry; none of these is a statement about your request. |
 
 The [Content negotiation & errors](content-negotiation.md) chapter covers the
 error body shape and the headers referenced above in full.

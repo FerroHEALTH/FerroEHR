@@ -240,16 +240,17 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # code (`DpopSection::settings`), so `[server] public_base_url` is the one
 # public URL; 0.23 keeps a Basic user's credential alone (`with_granted_scope`,
 # `with_granted_roles`), and 0.24 asks the product for a client's standing
-# (`kind::standing`), whose 0.24.1 names a refused `[auth]` key by its path.
-# Verified on crates.io 2026-11-13.
-ferrohealth-smart = { version = "=0.24.1", default-features = false, features = ["fetch", "idp-entra"] }
+# (`kind::standing`), whose 0.24.1 names a refused `[auth]` key by its path;
+# 0.26 builds on ferrohealth-server 0.10, with one server in the lock.
+# Verified on crates.io 2026-11-16.
+ferrohealth-smart = { version = "=0.26.0", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party; 0.13 types the provider issuer and the
-# redirect URIs as `SecretUrl`, and 0.19 is the release on ferrohealth-smart
-# 0.24. Verified on crates.io 2026-11-13.
-ferrohealth-session = { version = "=0.19.0", default-features = false }
+# redirect URIs as `SecretUrl`, and 0.21 is the release on ferrohealth-smart
+# 0.26. Verified on crates.io 2026-11-16.
+ferrohealth-session = { version = "=0.21.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -273,18 +274,18 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # banner; `tls_client` reads the TLS material of an outbound HTTPS client and
 # sets it on a `reqwest::ClientBuilder` (feature `reqwest`); `api_headers` is
 # the security header set the stack puts outermost on every response. Verified on
-# crates.io 2026-11-08 (0.6.2).
-ferrohealth-server = { version = "=0.8.4", default-features = false }
+# crates.io 2026-11-16 (0.10.0).
+ferrohealth-server = { version = "=0.10.0", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
 # line. Verified on crates.io 2026-10-27 (0.2.2).
-ferrohealth-telemetry = { version = "=0.4.1", features = ["axum", "otlp", "prometheus"] }
+ferrohealth-telemetry = { version = "=0.5.0", features = ["axum", "otlp", "prometheus"] }
 # The family's installation report to FerroPULSE (FerroSYS): envelope v2, the
 # latency window the request log fills (`telemetry`, its `Recorder`), and the
 # start and daily reporter over FerroEHR's PostgreSQL state store. Verified on
 # crates.io 2026-10-27 (0.2.0).
-ferrohealth-usage-report = { version = "=0.4.1", features = ["telemetry"] }
+ferrohealth-usage-report = { version = "=0.5.0", features = ["telemetry"] }
 
 # ── Terminology (the client of the one FHIR terminology server) ───────────────
 # FerroBRIDGE's FHIR terminology client: `$lookup`, `$validate-code`,
@@ -294,10 +295,10 @@ ferrohealth-usage-report = { version = "=0.4.1", features = ["telemetry"] }
 # Licensor's BUSL-1.1 code (deny.toml). FerroBRIDGE's published crates follow
 # Cargo SemVer (a breaking change moves the minor while 0.x), so it is required
 # by a caret range (The Cargo Book, "Specifying Dependencies"). Verified on
-# crates.io 2026-11-13, on ferrohealth-smart 0.24; `smart` builds its client
+# crates.io 2026-11-16, on ferrohealth-smart 0.26; `smart` builds its client
 # from ferrohealth-smart's outbound client, and `r4b` the one wire release the
 # terminology client speaks.
-ferrobridge-term = { version = "0.10.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.11.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -308,12 +309,12 @@ ferrobridge-term = { version = "0.10.0", default-features = false, features = ["
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
-# crates.io 2026-11-13, on ferrohealth-smart 0.24.
-ihe-atna = { version = "=0.18.0", default-features = false }
-ehds-logging = { version = "=0.18.0", default-features = false }
+# crates.io 2026-11-16 (0.21.0), on ferrohealth-smart 0.26.
+ihe-atna = { version = "=0.21.0", default-features = false }
+ehds-logging = { version = "=0.21.0", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
-# the viewer reads the ITI-81 searchset, each BALP `AuditEvent` and a refusal's
-# `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
+# the CDR's ITI-81 page holds each typed BALP `AuditEvent`, and the viewer reads
+# the searchset, each `AuditEvent` and a refusal's `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
 # R4B is enabled only by `ferrobridge-term`'s `r4b`, the terminology wire,
 # without its resources. A caret range, as `ferrobridge-term`. Verified on
 # crates.io 2026-11-10.
@@ -328,9 +329,12 @@ fhir-search = { version = "0.1.131", default-features = false }
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the
 # PIXm Patient Identifier Cross-reference Consumer (ITI-83) the IHE patient
 # identity source of the EHR index is asked through (`[pixm]`), built from
-# ferrohealth-smart's outbound client. Verified on crates.io 2026-11-13, on
-# ferrohealth-smart 0.24.
-ihe-iti = { version = "=0.9.0", default-features = false }
+# ferrohealth-smart's outbound client; `pmir` is the PMIR Patient Identity
+# Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
+# Patient's `active` and links and rebuilds a subscription from its stored
+# Location. Verified on crates.io 2026-11-16 (0.12.0, on ihe-atna 0.21), on
+# ferrohealth-smart 0.26.
+ihe-iti = { version = "=0.12.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
@@ -433,6 +437,7 @@ fancy-regex = "0.20.0"               # backreferences for cADL where needed (ver
 uuid = { version = "1", features = ["serde"] }
 jiff = { version = "0.2.31", features = ["serde"] }   # 1.0 not yet out as of 2026-07; 0.2.31 pinned for ISO 8601 temporal work
 url = "2"
+nix = { version = "0.31.3", default-features = false, features = ["user"] }   # the effective user the CLI records beside a stated operator (#5725)
 urlencoding = "2.1.3"
 # Unicode normalisation (NFC) of an external professional's issuing authority
 # before it names a committer's identifier issuer (#5097). Verified on
@@ -472,8 +477,12 @@ opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio"] }
 # crate directly instead of enabling it. Its `flamegraph` feature is OFF on
 # purpose (#2406): that feature pins `inferno ^0.11`, whose quick-xml 0.26
 # carries RUSTSEC-2026-0194/0195; the SVG render goes through the direct
-# `inferno` dependency below instead, reproducing pprof's own fold.
-pprof = { version = "0.15.0" }
+# `inferno` dependency below instead, reproducing pprof's own fold. Its
+# `frame-pointer` feature walks the frame-pointer chain from the `SIGPROF`
+# handler with every read checked, instead of the platform unwinder, which is
+# not async-signal-safe and trapped on a sample inside SHA-512 (#5723); the
+# builds keep frame pointers through `.cargo/config.toml`.
+pprof = { version = "0.15.0", features = ["frame-pointer"] }
 # Flamegraph SVG renderer, at the quick-xml >= 0.41 line. `nameattr` mirrors
 # the feature pprof's flamegraph feature enabled, so the render is identical.
 inferno = { version = "0.12", features = ["nameattr"] }

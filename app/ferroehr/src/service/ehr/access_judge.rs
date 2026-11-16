@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use openehr_rm::draft::access_control::terminology::AccessDefault;
 
+use crate::access_eval::condition::care::Care;
 use crate::access_eval::condition::{AccessCondition, InForce, RequestAccess, current};
 use crate::access_eval::procedure::{Lifted, Outcome, Verdict};
 use crate::access_eval::scope::{CategoryIndex, Item};
@@ -42,6 +43,19 @@ impl FerroEhrService {
         (in_force, policy.uid.clone())
     }
 
+    /// Whether the store holds the EHR `ehr_id`, read only when a verdict
+    /// refuses, so an admitted request reads nothing more: an EHR that does
+    /// not exist answers `404` before any step of the procedure, as a
+    /// restricted one does (EHDS Art. 8; our own design, #5623).
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when no connection is free, and the
+    /// storage error of the read.
+    pub async fn ehr_held(&self, ehr_id: EhrId) -> Result<bool, ServiceError> {
+        let mut conn = crate::db::acquire::acquire(&self.pool).await?;
+        Ok(crate::storage::ehr_repo::ehr_exists(&mut *conn, ehr_id).await?)
+    }
+
     /// The verdict of `access` on `ehr_id`, judged from this replica's copy
     /// on first use and kept for the rest of the request.
     ///
@@ -58,7 +72,7 @@ impl FerroEhrService {
             return Ok(verdict);
         }
         let entry = Box::pin(self.ehr_access_entry(ehr_id)).await?;
-        Ok(access.judge_ehr(ehr_id, &entry))
+        Ok(access.judge_ehr(ehr_id, &entry).await?)
     }
 
     /// The verdict of `access` on `ehr_id` as [`Self::ehr_verdict`] gives
@@ -74,14 +88,14 @@ impl FerroEhrService {
         &self,
         access: &RequestAccess,
         ehr_id: EhrId,
-        seen: Revision,
+        seen: &Revision,
     ) -> Result<Arc<Verdict>, ServiceError> {
         match access.judgement(ehr_id) {
-            Some(judged) if judged.revision == seen => Ok(judged.verdict),
+            Some(judged) if judged.revision == *seen => Ok(judged.verdict),
             Some(_) => {
                 self.ehr_access.forget(ehr_id).await;
                 let entry = Box::pin(self.ehr_access_entry(ehr_id)).await?;
-                Ok(access.judge_ehr(ehr_id, &entry))
+                Ok(access.judge_ehr(ehr_id, &entry).await?)
             }
             None => self.ehr_verdict(access, ehr_id).await,
         }
@@ -161,7 +175,9 @@ impl FerroEhrService {
 
     /// The condition a query of the running request applies: every settings
     /// class judged from the copied classes, every EHR with no settings by
-    /// the default; unrestricted outside a request.
+    /// the default; unrestricted outside a request. Its care is
+    /// [`Care::Unresolved`] until [`Self::resolve_care`] knows which EHRs the
+    /// query reads.
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the classes cannot be read.
@@ -170,7 +186,71 @@ impl FerroEhrService {
             return Ok(AccessCondition::default());
         };
         let classes = self.ehr_access_classes().await?;
-        Ok(access.condition(&classes, access.cared_subjects()))
+        Ok(access.condition(&classes, Care::Unresolved))
+    }
+
+    /// `condition` with the caller's care read for a query whose rows all
+    /// belong to `pinned` when it names them, or to any EHR otherwise.
+    ///
+    /// A condition no verdict of which reads care, or one already resolved,
+    /// stays as it is. For pinned EHRs the care of each is read from the
+    /// evaluator's copies and only the cared ones are bound; otherwise the
+    /// subjects of every patient under the caller's care teams are (#5699).
+    /// No openEHR spec governs this: our own design.
+    ///
+    /// # Errors
+    /// `service_overloaded` (`503`) when the settings copy or the care copy
+    /// cannot be read.
+    pub async fn resolve_care(
+        &self,
+        condition: &AccessCondition,
+        pinned: Option<&[EhrId]>,
+    ) -> Result<AccessCondition, ServiceError> {
+        let unresolved = condition
+            .groups()
+            .is_some_and(|groups| groups.cared == Care::Unresolved);
+        if !unresolved || !condition.reads_care() {
+            return Ok(condition.clone());
+        }
+        let Some(access) = current() else {
+            return Ok(condition.with_care(Care::Census(Vec::new().into())));
+        };
+        let care = match pinned {
+            Some(ehrs) => {
+                let entries = self.ehr_access_entries(ehrs).await?;
+                Care::Ehrs(access.cared_ehrs(&entries).await?.into())
+            }
+            None => match projected_care(&access) {
+                Some(care) if self.care_projection_current() => Care::Projected(care),
+                _ => Care::Census(access.cared_subjects().await?.into()),
+            },
+        };
+        Ok(condition.with_care(care))
+    }
+
+    /// The condition of a query whose rows all belong to `pinned` when it
+    /// names them: its care read as [`Self::resolve_care`] reads it, and the
+    /// one EHR of a query pinned to one decided before the statement, from
+    /// this replica's copy ([`RequestAccess::pin`]), so the statement carries
+    /// only what the verdict leaves to each object (#5746). No openEHR spec
+    /// governs this: our own design.
+    ///
+    /// # Errors
+    /// As [`Self::resolve_care`], and as [`Self::ehr_access_entry`].
+    pub async fn query_access_condition(
+        &self,
+        condition: &AccessCondition,
+        pinned: Option<&[EhrId]>,
+    ) -> Result<AccessCondition, ServiceError> {
+        let resolved = Box::pin(self.resolve_care(condition, pinned)).await?;
+        let (Some(access), Some([ehr_id])) = (current(), pinned) else {
+            return Ok(resolved);
+        };
+        if resolved.groups().is_none() {
+            return Ok(resolved);
+        }
+        let entry = Box::pin(self.ehr_access_entry(*ehr_id)).await?;
+        Ok(access.pin(&resolved, *ehr_id, &entry))
     }
 
     /// Judges every EHR the query `result` of the running request served
@@ -205,7 +285,39 @@ impl FerroEhrService {
             return Ok(());
         }
         for (ehr_id, entry) in self.ehr_access_entries(&settled).await? {
-            access.judge_ehr(ehr_id, &entry);
+            access.judge_ehr(ehr_id, &entry).await?;
+        }
+        Ok(())
+    }
+}
+
+impl FerroEhrService {
+    /// Adds to `served` every EHR among `named`, the EHRs the caller named as
+    /// a query's scope, that its rows did not name, with no row: a count, an
+    /// empty or a past-the-end page still accesses the EHR it names (EHDS
+    /// Art. 9). Each is judged as a served EHR is, and a verdict that admits
+    /// none of its data notes its refusal for the EHR's access record. Our
+    /// own design (#5639).
+    ///
+    /// # Errors
+    /// As [`Self::ehr_verdict`].
+    pub async fn add_named_ehrs(
+        &self,
+        named: &[EhrId],
+        served: &mut Vec<(String, u64)>,
+    ) -> Result<(), ServiceError> {
+        for ehr_id in named {
+            let id = ehr_id.to_string();
+            if served.iter().any(|(served, _)| *served == id) {
+                continue;
+            }
+            if let Some(access) = current() {
+                let verdict = self.ehr_verdict(&access, *ehr_id).await?;
+                if !verdict.admits_any() {
+                    access.note(*ehr_id, &verdict, &Item::Ehr);
+                }
+            }
+            served.push((id, 0));
         }
         Ok(())
     }
@@ -224,7 +336,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// As [`Self::ehr_verdict`]; `service_overloaded` when an access record
-    /// was refused under `[audit] fail_mode = "closed"`.
+    /// could not be written.
     pub async fn record_access_opt_out_overrides(
         &self,
         ehr_ids: &[EhrId],
@@ -241,9 +353,32 @@ impl FerroEhrService {
                     ehr_id,
                     None,
                     OPT_OUT_OVERRIDE,
-                )?;
+                )
+                .await?;
             }
         }
         Ok(())
     }
+}
+
+/// The probe of the clinical care projection for the caller of `access`, or
+/// `None` when the policy's grace has a unit of time below a day, which a
+/// date cannot carry as [`crate::party_binding::grants::caller::CareTeam::live_on`]
+/// judges it; that query binds the census.
+fn projected_care(
+    access: &RequestAccess,
+) -> Option<crate::access_eval::condition::care::ProjectedCare> {
+    let grace = access.policy().grace;
+    let calendar = grace.get_hours() == 0
+        && grace.get_minutes() == 0
+        && grace.get_seconds() == 0
+        && grace.get_milliseconds() == 0
+        && grace.get_microseconds() == 0
+        && grace.get_nanoseconds() == 0
+        && !grace.is_negative();
+    calendar.then(|| crate::access_eval::condition::care::ProjectedCare {
+        teams: access.care_team_ids().into(),
+        day: access.today(),
+        grace: grace.to_string(),
+    })
 }

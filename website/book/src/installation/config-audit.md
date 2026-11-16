@@ -20,9 +20,7 @@ enabled = true
 source_id = "ferroehr"
 value_if_missing = "UNKNOWN"
 suppress_login_events = true
-fail_mode = "open"
 resolve_subject = true
-queue_capacity = 8192
 purpose_header = "x-purpose-of-use"
 permit_header = "x-data-permit"
 purpose_codes = []
@@ -36,9 +34,7 @@ emergency_purpose_codes = []
 | `source_id` | string | `ferroehr` | The audit source id, also used for the destination participant. |
 | `value_if_missing` | string | `UNKNOWN` | Fill value for empty mandatory fields. |
 | `suppress_login_events` | bool | `true` | Skip successful-login records. Rejected accesses (`401`/`403`) are always recorded. |
-| `fail_mode` | enum{open,closed} | `open` | What an undeliverable audit record does. `open` logs, meters and lets the request succeed; `closed` rejects auditable operations with `503` (including when the local store has stopped accepting writes) so no PHI access goes un-audited. |
-| `resolve_subject` | bool | `true` | Enrich the patient participant with a background lookup of the EHR's subject. The lookup runs on the background drain, never on the request path; the IHE BALP patient patterns and the patient-centric audit search need the subject. |
-| `queue_capacity` | int | `8192` | Bounded audit queue capacity. Sized for write-path bursts: the drain persists in multi-row batches, so the queue only needs to ride out sink latency spikes. |
+| `resolve_subject` | bool | `true` | Enrich the patient participant with an indexed lookup of the EHR's subject, remembered per EHR for an hour, so a request seldom asks. The IHE BALP patient patterns and the patient-centric audit search need the subject. |
 | `server_host` | string | unset ⇒ the `value_if_missing` fill | This node's advertised network address, reported as the destination `NetworkAccessPointID`. |
 | `purpose_header` | string | `x-purpose-of-use` | The request header a caller declares its purpose of use in, recorded on every access record. NEN 7513 asks on whose authority a record was read and EHDS Art. 9 asks why; neither is derivable from the request, so the caller declares it. IHE carries the equivalent in a SAML attribute rather than a header, so the header is FerroEHR's own. An issuer with an `[[auth.attributes]]` table states the purposes in its token, and a header naming another purpose is refused ([where the purpose comes from](../audit.md#where-the-purpose-of-use-comes-from)). |
 | `permit_header` | string | `x-data-permit` | The request header a secondary-use caller declares the data permit it acts under in (EHDS Art. 68), recorded on every access record as `permit`. The value is the permit's identifier, 1 to 128 characters of letters, digits and `.` `_` `:` `/` `#` `-`; any other value is recorded as absent. No specification names a header for it, so the header is FerroEHR's own. See [Secondary use](../compliance/secondary-use.md#the-access-record). |
@@ -46,12 +42,17 @@ emergency_purpose_codes = []
 | `emergency_purpose_codes` | list of string | `[]` | The purpose codes that mark an access as an [emergency access](../audit.md#emergency-access-ehds-art-115) in the vital interest of the patient (EHDS Art. 11(5)). Each must also be on `purpose_codes`, or the server refuses to start. Empty marks nothing. The mark is recorded on the access record and shown to the patient through the access log; it lifts no restriction. |
 | `legal_basis` | string | unset | The legal basis this deployment processes under, recorded on every access record. A deployment-level fact: the controller establishes the GDPR Art. 6/9 condition once. Unset records nothing rather than a guess. |
 
+Every record of a request is written to the local store before the response
+leaves, and a request whose records cannot be written is refused with `503`
+and `Retry-After`. There is no fail mode and no queue: `fail_mode` and
+`queue_capacity` are unknown keys, refused at load. See
+[how a record is written](../audit.md#how-a-record-is-written).
+
 > [!NOTE]
-> The local store renders a FHIR R4 `AuditEvent` from each record when it is
-> read, and the ATX:FHIR Feed sends one, so both need the `fhir` build feature, on in the published binary
-> and container images. A binary built with `--no-default-features` refuses at
-> startup if `audit.store.enabled` is set or `[audit.fhir_feed]` is configured; the
-> DICOM/syslog feed needs no FHIR and stays available.
+> The local store writes each access-log entry with its FHIR R4 `AuditEvent`
+> projection, so auditing needs the `fhir` build feature, on in the published
+> binary and container images. A binary built with `--no-default-features`
+> refuses to start with `[audit] enabled = true`.
 
 > [!NOTE]
 > There is no `[atna]` section. Configuration is strict, so a file or
@@ -62,30 +63,21 @@ emergency_purpose_codes = []
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `enabled` | bool | `true` | Persist every record in the `audit` schema, served through the ITI-81 `GET /fhir/r4/AuditEvent` search. |
-| `retention` | calendar period | unset (keep forever) | How long records are kept, an ISO 8601 period of whole years (`"P3Y"`) or days (`"P1830D"`); unset keeps them forever. Applied hourly by the retention reaper. Years are compared exactly against the floors and ceilings, which are written in years, and reaped with calendar arithmetic. A value below the retention floor of a jurisdiction the active `[privacy.identifier_scan]` rules name is a boot error naming both bounds; see [Audit trail](../audit.md#retention-and-who-chooses-it). The name is EHDS Annex II's. |
-| `sgb_v_309_controller` | bool | `false` | Set only if the deploying organisation is, or acts for, one of the controllers SGB V § 307 names for a German telematics-infrastructure application. It caps the horizon at the three-year period of SGB V § 309 Abs. 1, after which Abs. 3 requires deletion without delay, so a declared controller cannot keep records forever. |
 | `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the store's hash chain; `"0s"` turns the schedule off. Each run verifies the records written since the newest link an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
 | `full_verify_interval` | duration | `"7d"` | The time between two scheduled full passes over the hash chain, which also recompute the records before the checkpoint; `"0s"` leaves the full pass to `SELECT * FROM audit.verify_audit_chain()` on demand. A run that found damage is always followed by a full pass. |
+| `max_verify_lag` | duration | `"4h"` | How long a record may wait past its chain's verification cursor before the `audit_chain` indicator reads `DEGRADED`; `"0s"` reports the lag only as the `audit_chain_verification_lag` and `audit_chain_unverified_age_seconds` metrics. Set it above `verify_interval`. |
 
-The local store is the durability anchor of the whole subsystem: with it on, the
-FHIR feed drains from it, so a down repository loses nothing.
+The local store is always on while auditing is: every record is written to
+it before its access is reported, and syslog and the FHIR feed deliver from
+it, so a down repository loses nothing. `enabled` is an unknown key, refused
+at load.
 
-The floors and ceilings are written in calendar years. In every EU Member State
-the floor is three years (EHDS Art. 9(2)), and a longer national floor wins:
-five years in the Netherlands. Switzerland keeps its one-year floor. A
-`retention` value is compared against them exactly. A `retention`
-value is held to the most days the years can span for a floor (`1096` for three
-years, `1830` for the Dutch five, `366` for one) and to the fewest for a ceiling
-(`1095` for the German three). A declared § 309 controller in Germany therefore
-has no `retention` value that passes both the EHDS floor and the § 309
-ceiling, and sets `retention = 3`:
-
-```toml
-[audit.store]
-retention = 3
-sgb_v_309_controller = true
-```
+How long the store and the access log keep a record is the controller's
+access policy (`ACCESS_POLICY.log_retention`), not a configuration key: the
+period, whether EHDS binds the controller, and the floors and ceilings its law
+sets, each with its provision. `retention` and `sgb_v_309_controller` are
+unknown keys and refused at load. See
+[Audit trail](../audit.md#retention-and-who-chooses-it).
 
 ### The audit category register
 
@@ -195,22 +187,21 @@ audit message names a patient (ITI TF-2 §3.20.4.1.2.1.1).
 | `tls.client_identity_file` | path | unset | The client certificate chain and its private key in one PEM, for mutual TLS. |
 | `tls.client_identity` | secret | unset | The same PEM inline, in place of `client_identity_file`. |
 | `tls.min_version` | string | `"1.3"` | The oldest TLS version the client speaks; set `"1.2"` for a repository that offers no TLS 1.3. |
-| `spool_dir` | path | unset | The directory of the spool every frame is stored in before it is sent. It must give no access to the group or to other users. Unset, the spool is held in memory, and a restart loses the frames not yet delivered. |
-| `spool_max_events` | int | `100000` | The most frames the spool holds; a frame past it is refused and counted in `atna_audit_dropped`. |
-| `spool_max_size` | size | `"256MiB"` | The most the spool holds in size. |
 | `retry.max_backoff` | duration | `"1min"` | The longest wait between two delivery attempts after a failure. |
 
 `[audit.syslog.tls]` is the outbound TLS table every FerroHEALTH product
 takes, as `[pixm.endpoint.tls]` is. Concatenate the certificate chain and the private
 key into the one PEM `client_identity_file` names.
 
-The drain stores each frame in `ihe-atna`'s spool, and the crate's forwarder
-delivers it: one connection held open, a failed send retried with an
-exponential backoff and jitter, and the connection closed with a TLS
-`close_notify` on shutdown, so nothing is lost to a reset (ITI TF-2
-§3.20.4.1.1, RFC 5425 §4.4). The local audit store keeps only the FHIR
-document, never the syslog frame, so the spool, not the store, is syslog's
-outbox. `delivered_syslog_at` is no longer written.
+`ihe-atna`'s forwarder delivers from the local store, oldest record first:
+the chainer enters each stored record in `audit.syslog_outbox`, and the
+forwarder renders its DICOM message from the stored record when it reads
+it. It holds one connection open, retries a failed send with an exponential
+backoff and jitter, and closes the connection with a TLS `close_notify` on
+shutdown, so nothing is lost to a reset (ITI TF-2 §3.20.4.1.1, RFC 5425
+§4.4). A record of the system chain is stamped `delivered_syslog_at` once the
+repository takes it. `spool_dir`, `spool_max_events` and `spool_max_size` are
+unknown keys, refused at load.
 
 ### `[audit.fhir_feed]`: the RESTful-ATNA feed (ITI-20 ATX:FHIR Feed)
 
@@ -219,14 +210,14 @@ outbox. `delivered_syslog_at` is no longer written.
 | `endpoint` | [endpoint table](config-integrations.md#the-endpoint-table) | required | The repository: `url`, its FHIR base (records go to `{url}/AuditEvent`; credentials embedded in it are masked in every rendering), `timeout` for one `POST`, the `retry` of a delivery (`retry.max_backoff` defaults to `"1min"` here), the TLS and the credential. The table's presence turns the feed on. |
 | `poll_interval` | duration | `"2s"` | How long the forwarder waits for a new record before it reads the store again. |
 
-`ihe-atna`'s forwarder delivers the feed. With the local store on, it
-delivers from the store, oldest record first: a record not yet delivered has
+`ihe-atna`'s forwarder delivers the feed from the local store, oldest record
+first: a record not yet delivered has
 no `delivered_fhir_feed_at`, so a repository outage loses nothing, and the
 record is stamped once the repository accepts it. A record the repository
 refuses (a `4xx` other than `401`, `408` or `429`) is set aside until the next
 start. It is reported on `GET /management/health` as `audit_delivery`, and
-the records behind it keep flowing. With the store off, the feed delivers
-from an in-memory spool. The forwarder retries until the repository answers.
+the records behind it keep flowing. The forwarder retries until the
+repository answers.
 
 #### Authenticating the feed
 
@@ -239,22 +230,29 @@ it expires, and when the repository refuses the held token with `401` fetches
 a new one and sends the record once more. Credentials in `url` beside a
 credential stop startup.
 
-With the local store on, the feed delivers from the store and loses nothing
-across a repository outage. With the store off it delivers from an in-memory
-spool, so a restart loses what the spool holds.
+The feed delivers from the store and loses nothing across a repository
+outage or a restart.
 
-### `[audit.access_log]`: trusted systems
+### `[audit.access_log]`: publication and trusted systems
 
 | Key | Type | Default | Description |
 |---|---|---|---|
+| `publish_directory` | path | unset | A directory outside the database, ideally on write-once storage, where the server publishes the newest access-log checkpoint every 30 seconds as its own file, created once and never rewritten. Unset, the `access_log_checkpoints` health indicator reads `DEGRADED`. |
 | `trusted_key_files` | list of paths | `[]` | Armored OpenPGP public certificates of the systems whose exported logs this deployment imports. An import is refused when neither these nor the keyring's own key signed its checkpoint. |
 
 Signing the access log needs no key of this section. Whenever
 `[record.signing]` holds an OpenPGP key (`mode = "pgp"` with a `key_file`),
-the server signs each link of the access log and seals it in a signed
-checkpoint every five minutes when it grew; without one it signs nothing.
-Use an Ed25519 key: a link is signed for every entry an access writes, RSA
-signing is far slower, and every audit write waits on it. The key is the one `[record.signing]` configures for version
-signatures, with its retired certificates: one key per deployment, kept in
-the secret store its `key_file` and `key_passphrase_file` name. See the
+every append of the access log ends, in its own transaction, with one signed
+checkpoint of its last link; without one nothing is sealed. Use an Ed25519
+key: every audit write waits while an append holds the head of the chain, and
+RSA signing is far slower. The key is the one `[record.signing]` configures
+for version signatures, with its retired certificates: one key per
+deployment, kept in the secret store its `key_file` and `key_passphrase_file`
+name.
+
+Set `publish_directory` in production. Someone who can write the database
+can remove the newest entries together with the checkpoints that seal them,
+and only a checkpoint published where that person cannot write shows it.
+Mount the directory from write-once storage, or from storage another system
+collects from, and give every instance the same one. See the
 [audit page](../audit.md#checkpoints-and-the-transfer-of-a-log).

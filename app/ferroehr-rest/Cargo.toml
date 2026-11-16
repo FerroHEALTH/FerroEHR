@@ -96,9 +96,9 @@ utoipa-swagger-ui = { workspace = true }
 # The ITI-81 query grammar and its searchset Bundle (`extensions::fhir`),
 # behind `fhir`.
 ihe-atna = { workspace = true, features = ["retrieve"], optional = true }
-# The token type of an ITI-81 value (`fhir_search::token::System`), behind
-# `fhir`.
-fhir-search = { workspace = true, optional = true }
+# The token grammar of the access log's coded filters and of an ITI-81 value
+# (`fhir_search::token`).
+fhir-search = { workspace = true }
 
 [dev-dependencies]
 openehr-lang = { path = "../../crates/openehr-lang" }
@@ -131,14 +131,24 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 # The outbound HTTP stand-ins of the issuer, terminology and feed tests.
 wiremock = { workspace = true }
+# The ITI-93 feed route suite writes its messages with the Registry's own
+# notification writer, over the generated FHIR R4 `Patient`.
+ihe-iti = { workspace = true, features = ["pmir-server"] }
+fhir-types.workspace = true
 # The SCIM filter grammar properties (`tests/it/scim_protocol/filter_properties.rs`).
 proptest = { workspace = true }
+# The flamegraph-under-signing test (`tests/it/management_flamegraph_signing.rs`,
+# #5723) generates its `OpenPGP` keys; rand is pinned to the generation `pgp`
+# takes its `OsRng` from, as `app/ferroehr` pins it.
+pgp = { workspace = true }
+rand = "0.8"
+
 
 [features]
 # Forward the optional-integration gates (#1890); default mirrors ferroehr's.
 default = ["fhir", "multimedia"]
 admin-api = []
-fhir = ["ferroehr/fhir", "dep:fhir-search", "dep:ihe-atna"]
+fhir = ["ferroehr/fhir", "dep:ihe-atna"]
 multimedia = ["ferroehr/multimedia"]
 
 [lints]

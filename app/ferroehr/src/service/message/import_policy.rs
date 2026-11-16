@@ -34,6 +34,7 @@ use std::collections::BTreeSet;
 
 use serde_json::Value;
 
+use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
@@ -204,10 +205,11 @@ impl FerroEhrService {
     /// [`ServiceError::Forbidden`] (`403`) for a caller without it; a storage
     /// failure.
     pub(super) async fn admit_import_target(&self, target: EhrId) -> Result<(), ServiceError> {
+        let mut conn = acquire(&self.pool).await?;
         let stored: Option<Option<String>> =
             sqlx::query_scalar("SELECT subject_namespace FROM ehr WHERE id = $1")
                 .bind(target)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&mut *conn)
                 .await?;
         let Some(namespace) = stored else {
             return Err(ServiceError::not_found(
@@ -244,7 +246,7 @@ impl FerroEhrService {
         }
         Err(ServiceError::not_permitted(
             "a system caller exports an EHR only under a grant of \
-             ferroehr-operations::export_ehr_extract whose subject_namespace elements name the \
+             openehr_access::export_ehr_extract whose subject_namespace elements name the \
              subject namespace of the EHR, or hold no_subject_namespace for a subject with none",
         ))
     }
@@ -262,10 +264,11 @@ impl FerroEhrService {
     /// The subject namespace of the EHR `ehr_id`'s current `EHR_STATUS`;
     /// `None` for an EHR whose subject names none.
     async fn subject_namespace(&self, ehr_id: EhrId) -> Result<Option<String>, ServiceError> {
+        let mut conn = acquire(&self.pool).await?;
         let namespace: Option<Option<String>> =
             sqlx::query_scalar("SELECT subject_namespace FROM ehr WHERE id = $1")
                 .bind(ehr_id)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&mut *conn)
                 .await?;
         Ok(namespace.flatten())
     }
@@ -290,12 +293,13 @@ impl FerroEhrService {
             .and_then(|id| VoId::from_uid_head(id).ok());
         let local = match reference {
             Some(id) => {
+                let mut conn = acquire(&self.demographic_pool).await?;
                 let found: Option<i32> = sqlx::query_scalar(
                     "SELECT 1 FROM vo_head WHERE vo_id = $1 \
                      AND kind IN ('PERSON', 'ORGANISATION', 'GROUP', 'AGENT', 'ROLE')",
                 )
                 .bind(id)
-                .fetch_optional(&self.demographic_pool)
+                .fetch_optional(&mut *conn)
                 .await?;
                 found.is_some()
             }
@@ -334,7 +338,7 @@ fn imported_subjects(containers: &[ImportContainer]) -> BTreeSet<Option<String>>
 /// covering the EHR.
 fn refused_import(operation: Operation) -> ServiceError {
     ServiceError::not_permitted(format!(
-        "importing needs a grant of ferroehr-operations::{operation} whose subject_namespace \
+        "importing needs a grant of openehr_access::{operation} whose subject_namespace \
          elements name the subject namespace of the EHR, or hold no_subject_namespace for a \
          subject with none"
     ))

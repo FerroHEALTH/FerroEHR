@@ -113,18 +113,16 @@ the controller's judgement rather than a default.
 |---|---|---|
 | Clinical content and its versions | Kept until an administrator deletes it. Archiving moves a record to the cold tier without expiring it | the admin API |
 | Demographic parties | The same | the admin API |
-| Access records | Kept forever by default; reaped hourly when a retention is set | `[audit.store] retention` |
+| Access records | Kept forever by default; reaped hourly when a period is set | the access policy's `log_retention` |
 | Change-event envelopes | Pruned seven days after their commit by default, once every active reader has acknowledged them | `[record.change_feed] retention` |
 
-**The access log carries a jurisdictional floor.** Where one of the active
-identifier-scan rules names a jurisdiction with a registered retention floor, a
-shorter `audit.store.retention` is a boot error naming the floor rather
-than a silent trim. The Netherlands is the one registered floor today: five
-years from the moment the entry is written, under the
-[Besluit vaststelling bewaartermijn logging](https://wetten.overheid.nl/BWBR0042391),
-expressed as 1830 days because five calendar years never exceed that. Adding a
-jurisdiction is a code change, not a configuration one, so a deployment
-elsewhere sets its own floor by hand and records why.
+**The access log carries the controller's floors and ceilings.** The
+controller declares in its access policy whether EHDS binds it, the period
+and the floors and ceilings its law sets, each with its provision
+(`ACCESS_POLICY.log_retention`). A policy whose period is shorter than a
+declared floor, or than the three years of EHDS Art. 9(2) in the Union, or
+longer than a declared ceiling, is refused when it is written rather than
+trimmed silently. FerroEHR carries no table of national law.
 
 ## 6. Risk register
 

@@ -64,13 +64,15 @@ pub enum LogReader {
 
 /// What a caller may read of the access log, decided from who they are before
 /// any log is named (#5131): the same rules as the log's ITS-REST resources.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum LogStanding {
     /// Neither the person nor a reviewer: the log is refused.
     #[default]
     Refused,
-    /// The subject of care or their representative, confined to this EHR.
-    Person(EhrId),
+    /// The subject of care or their representative, confined to these EHRs:
+    /// the one of a patient's launch context, or each EHR whose subject
+    /// reference names the represented `PERSON`.
+    Person(std::sync::Arc<[EhrId]>),
     /// A reviewer, who reads the whole log in the full view.
     Reviewer,
 }
@@ -116,7 +118,7 @@ pub fn subject_withholds(path: &[&str], restrictions: &Restrictions) -> bool {
 }
 
 /// An accessor kind as the draft `accessor kind` group names it: the
-/// terminology id and the rubric.
+/// terminology id and the code.
 type KindCode = (String, String);
 
 /// The EHDS Art. 9(3) restrictions of the subject view a policy declares.
@@ -173,13 +175,11 @@ impl Restrictions {
     }
 }
 
-/// The terminology id and rubric of `kind`.
+/// The terminology id and code of `kind`.
 fn kind_code(kind: &DvCodedText) -> KindCode {
-    // NOTE: the draft access log's terminology invariants, a group's rubric names its term until
-    // the terminology editors assign codes (`openehr_rm::draft::access_log::invariants`).
     (
         kind.defining_code.terminology_id.value.clone(),
-        kind.value.clone(),
+        kind.defining_code.code_string.clone(),
     )
 }
 
@@ -321,7 +321,7 @@ mod tests {
                     "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
                     "code_string": code } })
         };
-        let control = openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL;
+        let access = openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
         serde_json::from_value(serde_json::json!({
             "_type": "ACCESS_POLICY",
             "name": { "_type": "DV_TEXT", "value": "Policy" },
@@ -334,8 +334,8 @@ mod tests {
             "log_restrictions": [{ "_type": "ACCESS_LOG_RESTRICTION",
                 "name": { "_type": "DV_TEXT", "value": "Restriction" },
                 "archetype_node_id": "id11",
-                "accessor_kinds": kinds.iter().map(|kind| coded("openehr", kind)).collect::<Vec<_>>(),
-                "withheld": withheld.iter().map(|code| coded(control, code)).collect::<Vec<_>>(),
+                "accessor_kinds": kinds.iter().map(|kind| coded(access, kind)).collect::<Vec<_>>(),
+                "withheld": withheld.iter().map(|code| coded(access, code)).collect::<Vec<_>>(),
                 "legal_grounds": [coded("urn:example:national-law", "art-1")] }]
         }))
         .expect("the policy reads")

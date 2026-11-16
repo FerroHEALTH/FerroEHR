@@ -82,8 +82,8 @@ impl FerroEhrService {
     /// # Errors
     /// [`Failure`] on: an `ehr_id` scope (a party is in no EHR), a paging
     /// collision, a half that does not plan, a half or a join above the result
-    /// ceiling, a database failure, or an access record refused under
-    /// `fail_mode = "closed"`.
+    /// ceiling, a database failure, or an access record
+    /// that cannot be written.
     pub(super) async fn execute_joined(
         &self,
         job: &JoinRequest<'_>,
@@ -160,7 +160,7 @@ impl FerroEhrService {
         refuse_above(ceiling, joined.len(), "joined")?;
         sort_rows(&mut joined, job.plan, &party.rows, &clinical.rows);
         let page = cut_page(joined, page);
-        self.assemble(job, halves, &page, (&party, &clinical))
+        self.assemble(job, halves, &page, (&party, &clinical)).await
     }
 
     /// Runs the clinical half over the EHRs the map names, under the caller's
@@ -182,24 +182,53 @@ impl FerroEhrService {
         }
         // NOTE: RM `ehr_status.adoc` `is_queryable` ("included in population queries"):
         // the caller named no EHR, so the linked EHRs are a population subset.
-        let ctx = SqlCtx {
-            ehr_ids: ehrs,
-            ehr_scope_kind: EhrScopeKind::PopulationSubset,
-            ehr_access: job.request.ehr_access.clone(),
-            access_settings: Box::pin(self.ehr_access_readers())
+        // NOTE: our own design (#5699), the clinical half reads only the linked EHRs, so care is
+        // read for those and never for the caller's whole census.
+        let mut ehr_access =
+            Box::pin(self.query_access_condition(&job.request.ehr_access, Some(&ehrs)))
                 .await
-                .map_err(Failure::analysis)?,
-            ..party_ctx
+                .map_err(Failure::analysis)?;
+        let mut stale_since = None;
+        let result = loop {
+            let access_settings = Box::pin(self.query_access_readers(&ehr_access))
+                .await
+                .map_err(Failure::analysis)?;
+            let ctx = SqlCtx {
+                ehr_ids: ehrs.clone(),
+                ehr_scope_kind: EhrScopeKind::PopulationSubset,
+                ehr_access: ehr_access.clone(),
+                access_settings,
+                ..party_ctx.clone()
+            };
+            let run = aql::exec::execute(
+                &self.pool,
+                &halves.clinical,
+                job.params,
+                &ctx,
+                self.spec_profile,
+            )
+            .await;
+            match run {
+                Ok(result) => break result,
+                // NOTE: our own design (#5794), a verdict judged on a stale copy is judged again,
+                // or the query is refused; it never answers fewer rows.
+                Err(e) => match e.stale_copy() {
+                    Some(copy) => {
+                        let since = *stale_since.get_or_insert_with(std::time::Instant::now);
+                        ehr_access = Box::pin(self.judged_again(
+                            copy,
+                            &job.request.ehr_access,
+                            Some(&ehrs),
+                            &ehr_access,
+                            since,
+                        ))
+                        .await
+                        .map_err(Failure::exec_refused)?;
+                    }
+                    None => return Err(Failure::exec(e)),
+                },
+            }
         };
-        let result = aql::exec::execute(
-            &self.pool,
-            &halves.clinical,
-            job.params,
-            &ctx,
-            self.spec_profile,
-        )
-        .await
-        .map_err(Failure::exec)?;
         Box::pin(self.judge_served_ehrs(&result))
             .await
             .map_err(Failure::analysis)?;
@@ -208,7 +237,7 @@ impl FerroEhrService {
 
     /// Builds the served page's rows from the two halves, records the party
     /// read, and assembles the `RESULT_SET` and the access facts.
-    fn assemble(
+    async fn assemble(
         &self,
         job: &JoinRequest<'_>,
         halves: &Halves,
@@ -247,6 +276,7 @@ impl FerroEhrService {
             );
         }
         self.record_party_query(u64::try_from(served_parties.len()).unwrap_or(u64::MAX))
+            .await
             .map_err(Failure::analysis)?;
 
         let result = QueryResult {
@@ -275,8 +305,10 @@ impl FerroEhrService {
             .collect();
         let served_rows = u64::try_from(result.rows.len()).unwrap_or(u64::MAX);
         let (accessed, _) = accessed_content(&result);
-        let mut outcome =
-            QueryOutcome::plain(result_set_json(job.aql, &executed, job.name, result));
+        let mut outcome = QueryOutcome::plain(
+            result_set_json(job.aql, &executed, job.name, result)
+                .map_err(|error| Failure::analysis(error.into()))?,
+        );
         outcome.served_ehrs = served_ehrs;
         outcome.served_rows = served_rows;
         outcome.accessed = Some(accessed);
@@ -301,6 +333,7 @@ impl FerroEhrService {
             u64::try_from(pairs.len()).unwrap_or(u64::MAX),
             true,
         )
+        .await
         .map_err(Failure::analysis)?;
         Ok(pairs)
     }
@@ -372,9 +405,9 @@ impl FerroEhrService {
     /// naming how many parties the served rows came from.
     ///
     /// # Errors
-    /// [`ServiceError::Unrecorded`] when the record is refused under `fail_mode = "closed"`;
+    /// [`ServiceError::Unrecorded`] when the record cannot be written;
     /// the caller withholds its result.
-    fn record_party_query(&self, parties: u64) -> Result<(), ServiceError> {
+    async fn record_party_query(&self, parties: u64) -> Result<(), ServiceError> {
         if !self.audit_enabled() {
             return Ok(());
         }
@@ -388,7 +421,7 @@ impl FerroEhrService {
         event.result_count = Some(parties);
         crate::service::linkage::stamp_requester(&mut event);
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_access(event).await
     }
 }
 

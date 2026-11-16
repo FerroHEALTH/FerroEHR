@@ -52,10 +52,8 @@ const CONSENT_CLAIM: &str = "consent_ref";
 /// The organisation statement's member carrying a chained request's
 /// correlation id.
 const CORRELATION_MEMBER: &str = "correlation_id";
-/// The claim the issuer carries a Dutch professional's UZI role in.
-const NL_ROLE_CLAIM: &str = "nl_role";
-/// The claim the issuer carries a Dutch organisation type in.
-const NL_TYPE_CLAIM: &str = "nl_organisation_type";
+/// The claim the issuer carries the type of a professional's facility in.
+const FACILITY_CLAIM: &str = "facility_type";
 /// The claim of a Nuts RFC021 §6 introspection response holding its
 /// Verifiable Presentations.
 const PRESENTATIONS: &str = "vps";
@@ -93,10 +91,9 @@ fn federation_table() -> FederationSection {
                 Field::CorrelationId,
                 vec![Source::AuthorizationDetails(CORRELATION_MEMBER.to_owned())],
             ),
-            (Field::NlRole, vec![Source::Claim(NL_ROLE_CLAIM.to_owned())]),
             (
-                Field::NlOrganisationType,
-                vec![Source::Claim(NL_TYPE_CLAIM.to_owned())],
+                Field::ProviderFacilityType,
+                vec![Source::Claim(FACILITY_CLAIM.to_owned())],
             ),
         ]),
         countries: vec!["DE".to_owned()],
@@ -163,11 +160,15 @@ async fn serve_observed(
 ) -> (testkit::TestDb, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = AuditConfig {
-        purpose_codes: vec!["TREAT".to_owned(), "ETREAT".to_owned()],
+        purpose_codes: vec![
+            "TREAT".to_owned(),
+            "ETREAT".to_owned(),
+            "EXAMINATION".to_owned(),
+        ],
         emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
     };
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(
@@ -423,6 +424,42 @@ async fn a_consent_conditioned_read_without_a_decision_reference_is_recorded() {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
     panic!("the refused read was not recorded");
+}
+
+/// The access evaluator refuses a consent-conditioned read that names no
+/// consent decision with `refused-consent-reference-missing`, the code its
+/// answer and its access-log entry carry (#5614).
+#[tokio::test]
+async fn a_consent_conditioned_read_without_a_decision_reference_is_refused_with_its_code() {
+    let conditioned = agreement(Accessor::Person).text("consent", "local");
+    let (db, svc, app) = serve(vec![conditioned]).await;
+    let target = ehr(&svc).await.to_string();
+    let (status, body) = common::send_body(
+        &app,
+        common::req("GET", format!("{BASE}/ehr/{target}"))
+            .auth(&professional(Some(&target), &json!({})))
+            .accept("application/json")
+            .prefer_representation()
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    let problem: Value = serde_json::from_str(&body).expect("a problem body");
+    assert_eq!(
+        problem["refusal"],
+        json!("refused-consent-reference-missing"),
+        "{body}"
+    );
+    let refused = crate::access_log_http::entries(&db.pool(), 1, |stored| {
+        stored.result.as_deref() == Some("refused")
+    })
+    .await;
+    let entry: Value = serde_json::from_str(&refused[0].content).expect("a canonical entry");
+    assert_eq!(
+        entry["outcome"]["reason"]["defining_code"]["code_string"],
+        "refused-consent-reference-missing",
+        "{entry}"
+    );
 }
 
 #[tokio::test]
@@ -898,97 +935,280 @@ async fn an_external_persons_write_records_its_committer_and_names_its_provider(
     );
 }
 
-/// An NL agreement of `accessor` for care, conditioned on the local consent.
-fn nl(accessor: Accessor) -> Terms {
-    agreement(accessor)
-        .text("jurisdiction", "NL")
-        .text("consent", "local")
-        .text("purpose", "care")
-}
-
-/// The consent decision reference an NL read carries beside `claims`.
-fn consented(claims: &Value) -> Value {
-    let mut all = json!({ CONSENT_CLAIM: "https://consent.example/fhir/Consent/c-1" });
-    if let (Some(all), Some(claims)) = (all.as_object_mut(), claims.as_object()) {
-        all.extend(claims.clone());
-    }
-    all
-}
-
-/// Under an NL agreement, Wabvpz Art. 15f refuses an occupational or insurance
-/// physician and a professional of an organisation asserting no care provider
-/// type, each recorded under its code; a care provider's professional is
-/// served (#5107).
+/// The agreement is the contract with the partner and the controller's rules
+/// are the controller's own limits: a deny rule for the access services
+/// refuses a template the agreement lets an external person write, because a
+/// deny overrides (#5621).
 #[tokio::test]
-async fn an_nl_agreement_admits_only_a_care_providers_professional() {
-    let (db, svc, app) = serve(vec![nl(Accessor::Person)]).await;
-    let target = ehr(&svc).await.to_string();
-    let asserting = |claims: Value| professional(Some(&target), &consented(&claims));
-    for admitted in [
-        json!({ NL_ROLE_CLAIM: "01.015", NL_TYPE_CLAIM: "Z3" }),
-        json!({ NL_ROLE_CLAIM: ["01.015"], NL_TYPE_CLAIM: ["V4"] }),
-    ] {
-        assert_eq!(
-            read(&app, &target, &asserting(admitted.clone()), None).await,
-            StatusCode::OK,
-            "{admitted}"
-        );
-    }
-    for role in ["01.008", "01.048"] {
-        let credential = asserting(json!({ NL_ROLE_CLAIM: role, NL_TYPE_CLAIM: "Z3" }));
-        assert_eq!(
-            read(&app, &target, &credential, None).await,
-            StatusCode::FORBIDDEN,
-            "{role}"
-        );
-    }
-    crate::party_binding_http::refusal_rows(&db.pool(), "refused-wabvpz-role", 2).await;
-    for refused in [
-        json!({ NL_ROLE_CLAIM: "01.015" }),
-        json!({ NL_ROLE_CLAIM: "01.015", NL_TYPE_CLAIM: "ZV" }),
-        json!({ NL_ROLE_CLAIM: "01.015", NL_TYPE_CLAIM: ["V4", "ZV"] }),
-    ] {
-        assert_eq!(
-            read(&app, &target, &asserting(refused.clone()), None).await,
-            StatusCode::FORBIDDEN,
-            "{refused}"
-        );
-    }
-    crate::party_binding_http::refusal_rows(&db.pool(), "refused-wabvpz-organisation-type", 3)
-        .await;
-}
-
-/// An organisation under an NL agreement is served only when it asserts a care
-/// provider type; an insurer, which asserts none, is refused (Wabvpz
-/// Art. 15f(1), #5107).
-#[tokio::test]
-async fn an_nl_agreement_admits_only_a_care_provider_organisation() {
-    let (_db, svc, app) = serve(vec![nl(Accessor::Organisation)]).await;
-    let target = ehr(&svc).await.to_string();
-    let asserting = |claims: &Value| {
-        let mut all = consented(claims);
-        all["sub"] = json!("remote-system");
-        all["client_id"] = json!("remote-system");
-        all["ehrId"] = json!(target);
-        all["authorization_details"] =
-            json!([{ "type": ORGANISATION_ACCESS, "locations": [AUDIENCE] }]);
-        token(&all)
+async fn a_controller_rule_refuses_a_template_the_agreement_allows() {
+    use openehr_rm::draft::access_control::terminology::{
+        TERMINOLOGY_ID_ACCESS, TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
     };
-    assert_eq!(
-        read(
-            &app,
-            &target,
-            &asserting(&json!({ NL_TYPE_CLAIM: "V4" })),
-            None
-        )
-        .await,
-        StatusCode::OK
+    let write = "patient/composition-*.c";
+    let writer = agreement(Accessor::Person)
+        .also("read_scope", write)
+        .text("template", "International Patient Summary");
+    let (_db, svc, app) = serve(vec![writer]).await;
+    svc.template_adl14_upload(&common::ips_opt_xml())
+        .await
+        .expect("upload the IPS template");
+    let in_terminology = |terminology: &str, code: &str| {
+        json!({ "_type": "DV_CODED_TEXT", "value": code,
+                "defining_code": { "_type": "CODE_PHRASE",
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+                    "code_string": code } })
+    };
+    let term = |code: &str| in_terminology(TERMINOLOGY_ID_ACCESS, code);
+    let provision = |code: &str| in_terminology(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, code);
+    let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
+    let policy = json!({
+        "_type": "ACCESS_POLICY",
+        "name": { "_type": "DV_TEXT", "value": "Hospital access policy" },
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.2.0" },
+        "controller": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
+        "care_relationship_required": false,
+        "purpose_required": false,
+        "rules": [{ "_type": "ACCESS_DIRECTIVE",
+            "name": { "_type": "DV_TEXT", "value": "No summaries from partners" },
+            "archetype_node_id": "id15", "kind": term("controller_rule"), "effect": provision("deny"),
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term("access_service") }],
+            "operations": [term("write")],
+            "data": [{ "_type": "ACCESS_DATA_SCOPE",
+                       "templates": ["International Patient Summary"] }],
+            "emergency_override": false }]
+    });
+    svc.put_access_policy(
+        &ferroehr::service::admin::access_policy::PolicyPrecondition::Create,
+        &policy,
+    )
+    .await
+    .expect("the policy commits");
+    svc.read_access_policy().await.expect("the policy reads");
+    let target = ehr(&svc).await.to_string();
+    let credential = professional(
+        Some(&target),
+        &json!({ "scope": format!("{READ} {write}") }),
     );
-    for refused in [json!({}), json!({ NL_TYPE_CLAIM: "ZV" })] {
+    let mut composition = common::ips_canonical_composition();
+    composition["context"]["health_care_facility"] = json!({
+        "_type": "PARTY_IDENTIFIED", "name": "Remote clinic",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "Registry",
+                          "id": "urn:oid:2.999.7" }] });
+    let (status, body) = common::send_body(
+        &app,
+        common::req("POST", format!("{BASE}/ehr/{target}/composition"))
+            .auth(&credential)
+            .json(composition.to_string())
+            .prefer_representation()
+            .build(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("refused-policy-denied"), "{body}");
+}
+
+/// The synthetic terminologies the exchange rules below name.
+const ROLE_SYSTEM: &str = "urn:example:professional-roles";
+const TYPE_SYSTEM: &str = "urn:example:organisation-types";
+const LAW: &str = "urn:example:law";
+
+/// A coded value of `terminology`.
+fn coded_in(terminology: &str, code: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": code,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+                "code_string": code } })
+}
+
+/// Commits the controller's `ACCESS_POLICY` with `rules`.
+async fn commit_rules(svc: &FerroEhrService, rules: &Value) {
+    let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
+    let policy = json!({
+        "_type": "ACCESS_POLICY",
+        "name": { "_type": "DV_TEXT", "value": "Exchange access policy" },
+        "archetype_node_id": archetype,
+        "archetype_details": { "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID", "value": archetype },
+            "rm_version": "1.2.0" },
+        "controller": { "_type": "PARTY_REF", "namespace": "demographic", "type": "ORGANISATION",
+            "id": { "_type": "HIER_OBJECT_ID", "value": "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7" } },
+        "care_relationship_required": false,
+        "purpose_required": false,
+        "rules": rules
+    });
+    svc.put_access_policy(
+        &ferroehr::service::admin::access_policy::PolicyPrecondition::Create,
+        &policy,
+    )
+    .await
+    .expect("the policy commits");
+    svc.read_access_policy().await.expect("the policy reads");
+}
+
+/// One controller rule of `effect` with `extra` members.
+fn exchange_rule(effect: &str, extra: &Value) -> Value {
+    use openehr_rm::draft::access_control::terminology::{
+        TERMINOLOGY_ID_ACCESS, TERMINOLOGY_ID_CONSENT_PROVISION_TYPE,
+    };
+    let mut rule = json!({ "_type": "ACCESS_DIRECTIVE",
+        "name": { "_type": "DV_TEXT", "value": "Exchange rule" },
+        "archetype_node_id": "id15",
+        "kind": coded_in(TERMINOLOGY_ID_ACCESS, "controller_rule"),
+        "effect": coded_in(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, effect),
+        "emergency_override": false });
+    if let (Some(rule), Some(extra)) = (rule.as_object_mut(), extra.as_object()) {
+        rule.extend(extra.clone());
+    }
+    rule
+}
+
+/// An exchange of care providers only, as a controller states it: no
+/// occupational physician, no medical examination, and no organisation but a
+/// hospital or a general practice, each resting on a provision of the
+/// synthetic law (#5691).
+fn exchange_rules() -> Value {
+    use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
+    let access_service = || {
+        json!({ "_type": "ACCESS_ACTOR_SCOPE",
+                "caller_kind": coded_in(TERMINOLOGY_ID_ACCESS, "access_service") })
+    };
+    json!([
+        exchange_rule(
+            "deny",
+            &json!({
+            "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE",
+                "caller_kind": coded_in(TERMINOLOGY_ID_ACCESS, "access_service"),
+                "role": coded_in(ROLE_SYSTEM, "OCCUPATIONAL") }],
+            "legal_grounds": [coded_in(LAW, "exchange-2")] })
+        ),
+        exchange_rule(
+            "deny",
+            &json!({
+            "applies_to": [access_service()],
+            "purposes": [coded_in("v3-ActReason", "EXAMINATION")],
+            "legal_grounds": [coded_in(LAW, "exchange-2")] })
+        ),
+        exchange_rule(
+            "deny",
+            &json!({
+            "applies_to": [access_service()],
+            "legal_grounds": [coded_in(LAW, "exchange-1")],
+            "exceptions": [exchange_rule("permit", &json!({ "applies_to": [
+                { "_type": "ACCESS_ACTOR_SCOPE",
+                  "organisation_type": coded_in(TYPE_SYSTEM, "HOSPITAL") },
+                { "_type": "ACCESS_ACTOR_SCOPE",
+                  "organisation_type": coded_in(TYPE_SYSTEM, "GP") }] }))] })
+        ),
+    ])
+}
+
+/// A professional's token in the launch context of `ehr` attesting the role
+/// `role` and, when given, its facility's type `facility`.
+fn attesting(ehr: &str, role: &str, facility: Option<&str>) -> String {
+    let mut claims = json!({
+        "sub": "hp-remote-1", "acr": "high", "client_id": "remote-portal", "ehrId": ehr,
+        "extensions": { "ihe_iua": {
+            "subject_name": "Dr Remote",
+            "subject_role": [{ "system": ROLE_SYSTEM, "code": role }],
+            "national_provider_identifier": "hp-1",
+            "subject_organization_id": "urn:oid:2.999.7",
+            "subject_organization": "Remote clinic",
+            "country": "DE",
+            "issuing_authority": "Registry",
+        } },
+    });
+    if let Some(facility) = facility {
+        claims[FACILITY_CLAIM] = json!([{ "system": TYPE_SYSTEM, "code": facility }]);
+    }
+    token(&claims)
+}
+
+/// The problem body of a read of `ehr` with `credential` under `purpose`,
+/// asking for the representation.
+async fn refused_body(app: &Router, ehr: &str, credential: &str, purpose: Option<&str>) -> Value {
+    let mut request = common::req("GET", format!("{BASE}/ehr/{ehr}"))
+        .auth(credential)
+        .accept("application/json")
+        .prefer_representation();
+    if let Some(purpose) = purpose {
+        request = request.header(PURPOSE, purpose);
+    }
+    let (status, body) = common::send_body(app, request.build()).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    serde_json::from_str(&body).expect("a problem body")
+}
+
+/// A controller states an exchange of care providers only as content: an
+/// occupational physician, a medical examination, an organisation of no
+/// admitted type and one asserting none are each refused at step 5 under
+/// `refused-policy-denied` with the provision the rule rests on, and a
+/// hospital's physician reads. Every caller declares its purpose, which the
+/// examination rule reads. With no such policy the same callers read, so no
+/// rule of one country is compiled in (#5691).
+#[tokio::test]
+async fn an_exchange_of_care_providers_only_is_stated_as_controller_rules() {
+    let (_db, svc, app) = serve(vec![agreement(Accessor::Person)]).await;
+    let target = ehr(&svc).await.to_string();
+    let refused = [
+        (
+            "an occupational physician",
+            attesting(&target, "OCCUPATIONAL", Some("HOSPITAL")),
+            Some("TREAT"),
+            "exchange-2",
+        ),
+        (
+            "a medical examination",
+            attesting(&target, "PHYSICIAN", Some("HOSPITAL")),
+            Some("EXAMINATION"),
+            "exchange-2",
+        ),
+        (
+            "an insurer",
+            attesting(&target, "PHYSICIAN", Some("INSURER")),
+            Some("TREAT"),
+            "exchange-1",
+        ),
+        (
+            "no organisation type",
+            attesting(&target, "PHYSICIAN", None),
+            Some("TREAT"),
+            "exchange-1",
+        ),
+    ];
+    for (_, credential, purpose, _) in &refused {
         assert_eq!(
-            read(&app, &target, &asserting(&refused), None).await,
-            StatusCode::FORBIDDEN,
-            "{refused}"
+            read(&app, &target, credential, *purpose).await,
+            StatusCode::OK
+        );
+    }
+    commit_rules(&svc, &exchange_rules()).await;
+    for (name, credential, purpose, ground) in &refused {
+        let body = refused_body(&app, &target, credential, *purpose).await;
+        assert_eq!(body["refusal"], "refused-policy-denied", "{name}: {body}");
+        assert_eq!(
+            body["legal_grounds"],
+            json!([{ "terminology": LAW, "code": ground, "value": ground }]),
+            "{name}: {body}"
+        );
+    }
+    for (name, credential) in [
+        (
+            "a hospital's physician",
+            attesting(&target, "PHYSICIAN", Some("HOSPITAL")),
+        ),
+        (
+            "a general practice's physician",
+            attesting(&target, "PHYSICIAN", Some("GP")),
+        ),
+    ] {
+        assert_eq!(
+            read(&app, &target, &credential, Some("TREAT")).await,
+            StatusCode::OK,
+            "{name}"
         );
     }
 }

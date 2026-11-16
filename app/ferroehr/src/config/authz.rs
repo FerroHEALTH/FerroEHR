@@ -89,6 +89,9 @@ pub struct RbacConfig {
     ///
     /// No policy grant gives `admin_role`, so this user is the administrator
     /// who writes the first policy parties through the Demographic API.
+    /// Beside an `[[auth.party]]` table it is a person's credential, mapped by
+    /// `[[authz.party_binding.basic_user]]` to the key of a `PERSON` that SCIM
+    /// provisions after the operator grant (`ferroehr party-binding grant`).
     /// Unset, no Basic user holds `admin_role`. Our own design.
     pub first_admin: Option<String>,
     /// What an EHR carrying no `ACCESS_CONTROL_SETTINGS` admits (default
@@ -137,8 +140,8 @@ impl RbacConfig {
 
 /// The ceiling on what the policy grants may grant (`[authz.grants]`).
 ///
-/// A grant is an operation of FerroEHR's operation terminology
-/// (`ferroehr-operations`) coded in the credentials of a `CAPABILITY`, which
+/// A grant is an operation of the draft access terminology
+/// (`openehr_access`) coded in the credentials of a `CAPABILITY`, which
 /// an administrator manages through the Demographic API. This key is the
 /// trust bound the party store cannot raise: a commit of a capability coding
 /// an operation it does not list is refused, and one already stored is never
@@ -153,7 +156,7 @@ pub struct GrantsConfig {
     /// The operations the party store may grant
     /// (`FERROEHR__AUTHZ__GRANTS__ALLOWED`, comma-separated).
     ///
-    /// The operations are the codes of `ferroehr-operations`
+    /// The operations are the codes of `openehr_access`
     /// ([`crate::party_binding::grants::operation::Operation`]). The default
     /// allows only `commit_composition`, which lets a client write the
     /// templates its grant names and nothing else: every other operation

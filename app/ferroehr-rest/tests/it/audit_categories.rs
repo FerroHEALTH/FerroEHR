@@ -139,10 +139,9 @@ async fn app(
 ) -> (testkit::TestDb, PgPool, Router, String) {
     let (db, pool) = common::migrated_pool().await;
     let categories: CategoryMapConfig = serde_json::from_value(map).expect("the map parses");
-    let (sender, _handle): (_, AuditHandle) =
-        start(common::local_audit(), None, Some(pool.clone()))
-            .await
-            .expect("the audit sender");
+    let (sender, _handle): (_, AuditHandle) = start(common::local_audit(), None, pool.clone())
+        .await
+        .expect("the audit sender");
     let svc = Arc::new(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender),

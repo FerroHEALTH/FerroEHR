@@ -103,107 +103,14 @@ impl FerroEhrConfig {
         }
     }
 
-    /// The access-log horizon sits between the floors and the ceilings the
-    /// jurisdictions in force declare.
-    ///
-    /// A retention shorter than a floor erases the log while the chain still
-    /// verifies (#3242); a retention longer than a ceiling keeps log data past
-    /// the point the law says to delete it (#3346), which `0` — keep forever —
-    /// always does. The jurisdictions in force are the ones the active
-    /// identifier rules name, and the German ceiling additionally waits for the
-    /// deployment to declare itself one of the SGB V § 307 controllers. Bounds
-    /// are written in calendar years: a retention in years is compared exactly,
-    /// a day count conservatively ([`crate::system_log::retention::RetentionBound`]).
-    /// Where a floor and a ceiling contradict each other in years, no horizon
-    /// satisfies both and the refusal says so; where only the day rounding
-    /// leaves no day count between them, the refusal names the year form.
     /// Every emergency purpose code must also be an agreed purpose code.
     fn validate_audit(&self, errors: &mut Vec<ConfigError>) {
-        use crate::system_log::config::Retention;
-        use crate::system_log::retention::RetentionBound;
         for code in &self.audit.emergency_purpose_codes {
             if !self.audit.purpose_codes.contains(code) {
                 errors.push(ConfigError::semantic(format!(
                     "audit.emergency_purpose_codes names {code:?}, which is not on \
                      audit.purpose_codes; an emergency code must be one of the purpose codes \
                      this deployment agrees with its callers, so add it there"
-                )));
-            }
-        }
-        let store = &self.audit.store;
-        if !(self.audit.enabled && store.enabled) {
-            return;
-        }
-        let jurisdictions: std::collections::BTreeSet<&str> = self
-            .privacy
-            .identifier_scan
-            .rules
-            .iter()
-            .filter_map(|key| crate::privacy::detect::rule(key))
-            .map(|rule| rule.jurisdiction)
-            .collect();
-        let declared = store.sgb_v_309_controller;
-        let mut floors: Vec<(&str, RetentionBound)> = Vec::new();
-        let mut ceilings: Vec<(&str, RetentionBound)> = Vec::new();
-        for jurisdiction in jurisdictions {
-            if let Some(floor) = crate::system_log::retention::retention_floor(jurisdiction) {
-                floors.push((jurisdiction, floor));
-            }
-            if let Some(ceiling) =
-                crate::system_log::retention::retention_ceiling(jurisdiction, declared)
-            {
-                ceilings.push((jurisdiction, ceiling));
-            }
-        }
-        let retention = store.horizon();
-        let hint = years_fix(&floors, &ceilings)
-            .filter(|_| !matches!(retention, Retention::Years(_)))
-            .map(|years| {
-                format!(
-                    "; no day count satisfies both the floor and the ceiling, so set \
-                     retention = \"P{years}Y\" instead"
-                )
-            })
-            .unwrap_or_default();
-        let horizon = retention.describe();
-        for &(jurisdiction, floor) in &floors {
-            let (days, years, source) = (floor.days, floor.years, floor.source);
-            for &(capped, ceiling) in &ceilings {
-                if ceiling.years < years {
-                    errors.push(ConfigError::semantic(format!(
-                        "the {capped} access-log retention ceiling of {} days ({} years) is \
-                         below the {jurisdiction} floor of {days} days ({years} years, {source}), \
-                         so no horizon satisfies both; run the two jurisdictions as separate \
-                         deployments, or drop the privacy.identifier_scan rule that does not \
-                         apply here",
-                        ceiling.days, ceiling.years
-                    )));
-                }
-            }
-            if !floor.admits_as_floor(retention) {
-                let bound = match retention {
-                    Retention::Years(_) => format!("{years} years"),
-                    Retention::Forever | Retention::Days(_) => format!("{days} days"),
-                };
-                errors.push(ConfigError::semantic(format!(
-                    "audit.store.{horizon} is below the {jurisdiction} access-log retention floor \
-                     of {bound} ({source}); keep records at least that long, or unset \
-                     retention to keep them forever{hint}"
-                )));
-            }
-        }
-        for &(jurisdiction, ceiling) in &ceilings {
-            if !ceiling.admits_as_ceiling(retention) {
-                let bound = match retention {
-                    Retention::Years(_) => format!("{} years", ceiling.years),
-                    Retention::Forever | Retention::Days(_) => format!("{} days", ceiling.days),
-                };
-                errors.push(ConfigError::semantic(format!(
-                    "audit.store.{horizon} is above the {jurisdiction} access-log retention \
-                     ceiling of {bound} ({}); set a horizon at or below it, or clear \
-                     audit.store.sgb_v_309_controller if this deployment is not one of the \
-                     § 307 controllers{hint}",
-                    ceiling.source
                 )));
             }
         }
@@ -217,11 +124,6 @@ impl FerroEhrConfig {
         };
         if let Err(e) = syslog.address() {
             errors.push(ConfigError::semantic(e));
-        }
-        if syslog.spool_max_events == 0 || syslog.spool_max_size.is_zero() {
-            errors.push(ConfigError::semantic(
-                "audit.syslog.spool_max_events and spool_max_size must be above zero".to_owned(),
-            ));
         }
         if let Err(e) =
             ferrohealth_server::tls_client::TlsClient::read("audit.syslog.tls", &syslog.tls)
@@ -243,6 +145,13 @@ impl FerroEhrConfig {
                 .into_iter()
                 .map(ConfigError::semantic),
         );
+        if let Some(pix) = &self.pix {
+            errors.extend(
+                pix.problems(self.server.public_root().is_some())
+                    .into_iter()
+                    .map(ConfigError::semantic),
+            );
+        }
     }
 
     /// A cohort predicate is only a selection criterion if the deployment can
@@ -613,29 +522,6 @@ impl FerroEhrConfig {
 /// segment may carry without percent-encoding.
 const fn is_unreserved(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '_' | '~')
-}
-
-/// The year count that satisfies every floor and ceiling in force when no day
-/// count does, or `None` when a day count can, or when no year count can.
-///
-/// A floor in years binds a day count to the most those years can span and a
-/// ceiling to the fewest, so a floor and a ceiling of the same years leave no
-/// day count between them while the year count itself satisfies both.
-fn years_fix(
-    floors: &[(&str, crate::system_log::retention::RetentionBound)],
-    ceilings: &[(&str, crate::system_log::retention::RetentionBound)],
-) -> Option<u32> {
-    let floor = floors
-        .iter()
-        .map(|(_, bound)| *bound)
-        .max_by_key(|b| b.years)?;
-    let ceiling = ceilings
-        .iter()
-        .map(|(_, bound)| *bound)
-        .min_by_key(|b| b.years)?;
-    let floor_days = floors.iter().map(|(_, bound)| bound.days).max()?;
-    let ceiling_days = ceilings.iter().map(|(_, bound)| bound.days).min()?;
-    (floor.years <= ceiling.years && floor_days > ceiling_days).then_some(floor.years)
 }
 
 /// The `record.multimedia.url` semantic checks of an enabled integration.

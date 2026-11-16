@@ -10,7 +10,7 @@ representation:
   `openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.representation.v1`.
 
 FerroEHR recognises a representation by the code its `name` or `details`
-carry, `represents` of FerroEHR's operation terminology `ferroehr-operations`,
+carry, `represents` of the draft openEHR access terminology `openehr_access`,
 in any archetype, never by this archetype's id. Its name is its type (RM
 demographic `PARTY_RELATIONSHIP` `Type_validity`), coded from the value set
 `ac1`: `at10` (parent), `at11` (guardian) and `at12` (authorised proxy). Its
@@ -48,7 +48,7 @@ exports vendored verbatim under `corpus/archetypes/ckm/adl14/` by
   guardian and authorised proxy. No CKM archetype or openEHR specification
   defines a set of representation types, so the set is our own modelling.
 - The source's `details` are replaced by two coded elements: the
-  representation code of `ferroehr-operations` and the openEHR
+  representation code of `openehr_access` and the openEHR
   `subject_relationship` code. `time_validity` bounds when the representation
   holds.
 - The node ids are ADL 2 id-codes and the terminology is English only.

@@ -8,9 +8,12 @@
 //! the class invariants of the draft BMM
 //! ([`check_policy`]), the root rules of a
 //! `LOCATABLE` and of the `controller`, and that each sensitivity and
-//! category a classification names, and each legal ground of a restriction of
-//! the access log's subject view, comes from the jurisdiction's terminology
-//! ([`ForeignCode`]).
+//! category a classification names, each role, purpose, sensitivity,
+//! category and legal ground a controller rule names, each legal ground
+//! of a restriction of the access log's subject view, and each provision of
+//! the access log retention, comes from the jurisdiction's terminology
+//! ([`ForeignCode`]); and that the access log retention is one the audit
+//! trail keeps records under ([`crate::access_policy::retention`]).
 //!
 //! The draft package is FerroEHR's change proposal and no openEHR release:
 //! our own design over our own model (#5512).
@@ -23,6 +26,7 @@
 
 use serde_json::Value;
 
+use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
 use openehr_rm::draft::access_control::invariants::check_policy;
 use openehr_rm::draft::access_control::terminology::{ForeignCode, ForeignKind, NotForeign};
@@ -58,11 +62,20 @@ pub enum PolicyDefect {
     /// `archetype_details` names an archetype of another RM class.
     #[error("archetype_details names {0:?}, which is no archetype of an ACCESS_POLICY")]
     ArchetypeClass(String),
-    /// A sensitivity or category of a classification, or a legal ground of a
-    /// log restriction, is coded in FerroEHR's own terminology, which holds
-    /// none.
+    /// A sensitivity or category of a classification, a role, purpose,
+    /// sensitivity, category or legal ground of a controller rule, or a legal
+    /// ground of a log restriction, is coded in the draft access terminology,
+    /// which holds none.
     #[error(transparent)]
     NotForeign(#[from] NotForeign),
+    /// A period of the access log retention is no whole number of years or
+    /// days.
+    #[error(transparent)]
+    RetentionPeriod(#[from] crate::access_policy::retention::PeriodForm),
+    /// The access log retention breaks a bound it declares, as
+    /// `ehds-logging` counts calendar years and days.
+    #[error(transparent)]
+    Retention(#[from] crate::system_log::retention::RetentionDefect),
     /// The controller is not an `ORGANISATION`.
     #[error("the controller is a {0:?} reference; the controller is an ORGANISATION")]
     Controller(String),
@@ -101,13 +114,62 @@ pub fn checked(body: &Value) -> Result<AccessPolicy, PolicyDefect> {
             ForeignCode::read(ForeignKind::Category, category)?;
         }
     }
+    for rule in policy.rules.as_deref().unwrap_or_default() {
+        rule_codes(rule)?;
+        for exception in rule.exceptions.as_deref().unwrap_or_default() {
+            rule_codes(exception)?;
+        }
+    }
     for restriction in policy.log_restrictions.as_deref().unwrap_or_default() {
         for ground in &restriction.legal_grounds {
             ForeignCode::read(ForeignKind::LegalGround, ground)?;
         }
     }
+    if let Some(retention) = &policy.log_retention {
+        for bound in retention
+            .floors
+            .iter()
+            .flatten()
+            .chain(retention.ceilings.iter().flatten())
+        {
+            ForeignCode::read(ForeignKind::LegalGround, &bound.ground)?;
+        }
+    }
+    crate::access_policy::retention::log_retention(policy.log_retention.as_ref(), None)?
+        .policy()?;
     if policy.controller.r#type != CONTROLLER_TYPE {
         return Err(PolicyDefect::Controller(policy.controller.r#type.clone()));
     }
     Ok(policy)
+}
+
+/// Reads every role, organisation type, purpose, sensitivity, category and legal ground `rule`
+/// names, none of which the draft access terminology holds.
+///
+/// # Errors
+/// [`NotForeign`] for the first one coded in the draft access terminology.
+fn rule_codes(rule: &AccessDirective) -> Result<(), NotForeign> {
+    for scope in rule.applies_to.as_deref().unwrap_or_default() {
+        if let Some(role) = &scope.role {
+            ForeignCode::read(ForeignKind::Role, role)?;
+        }
+        if let Some(kind) = &scope.organisation_type {
+            ForeignCode::read(ForeignKind::OrganisationType, kind)?;
+        }
+    }
+    for purpose in rule.purposes.as_deref().unwrap_or_default() {
+        ForeignCode::read(ForeignKind::Purpose, purpose)?;
+    }
+    for data in rule.data.as_deref().unwrap_or_default() {
+        for sensitivity in data.sensitivities.as_deref().unwrap_or_default() {
+            ForeignCode::read(ForeignKind::Sensitivity, sensitivity)?;
+        }
+        for category in data.categories.as_deref().unwrap_or_default() {
+            ForeignCode::read(ForeignKind::Category, category)?;
+        }
+    }
+    for ground in rule.legal_grounds.as_deref().unwrap_or_default() {
+        ForeignCode::read(ForeignKind::LegalGround, ground)?;
+    }
+    Ok(())
 }

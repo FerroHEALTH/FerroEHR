@@ -57,9 +57,6 @@ definition
                             ELEMENT[id10] occurrences matches {1} matches {
                                 value matches { DV_TEXT[id41] }
                             }
-                            ELEMENT[id11] occurrences matches {1} matches {
-                                value matches { DV_TEXT[id42] }
-                            }
                             ELEMENT[id12] occurrences matches {1} matches {
                                 value matches { DV_TEXT[id43] }
                             }
@@ -139,26 +136,25 @@ terminology
             ["id6"] = <text = <"Agreement"> description = <"The terms of the agreement for one accessor.">>
             ["id7"] = <text = <"Kind"> description = <"The kind of the grant, which is the name of the capability.">>
             ["id8"] = <text = <"Grant"> description = <"What the capability grants, held in its credentials.">>
-            ["id90"] = <text = <"Operation"> description = <"An operation the capability grants, a code of FerroEHR's operation terminology ferroehr-operations.">>
+            ["id90"] = <text = <"Operation"> description = <"An operation the capability grants, a code of the draft openEHR access terminology openehr_access.">>
             ["id9"] = <text = <"Agreement name"> description = <"The name of the agreement.">>
             ["id10"] = <text = <"Agreement version"> description = <"The version of the agreement.">>
-            ["id11"] = <text = <"Jurisdiction"> description = <"The ISO 3166-1 alpha-2 code of the jurisdiction the agreement is made under.">>
             ["id12"] = <text = <"Exchange"> description = <"The kind of exchange the agreement covers.">>
             ["id13"] = <text = <"Purpose"> description = <"What the exchange is for, a code the agreement names.">>
             ["id14"] = <text = <"Legal ground"> description = <"The legal ground of the processing.">>
             ["id15"] = <text = <"GDPR Article 6(1) point"> description = <"The point of GDPR Article 6(1), a to f.">>
             ["id16"] = <text = <"GDPR Article 9(2) point"> description = <"The point of GDPR Article 9(2), a to j.">>
             ["id17"] = <text = <"National provision"> description = <"The provision of the law that applies, which the processing rests on.">>
-            ["id18"] = <text = <"Consent source"> description = <"The source of the consent the exchange is conditioned on, the ferroehr-operations code registry (an external consent registry, whose question names the responsible professional) or local (a consent this provider records).">>
+            ["id18"] = <text = <"Consent source"> description = <"The source of the consent the exchange is conditioned on, the openehr_access code registry (an external consent registry, whose question names the responsible professional) or local (a consent this provider records).">>
             ["id19"] = <text = <"Read scope"> description = <"A patient/ scope the partner's callers may read under.">>
             ["id20"] = <text = <"Template written"> description = <"The id of a template whose COMPOSITIONs an external person may commit.">>
             ["id22"] = <text = <"Discard window"> description = <"The window, in whole hours, within which an external person may discard a dispensation of the same point of care; without it no discard is admitted.">>
-            ["id23"] = <text = <"MyHealth@EU service"> description = <"The MyHealth@EU service a national contact point's person agreement serves, the ferroehr-operations code patient_summary, eprescription or orcd.">>
+            ["id23"] = <text = <"MyHealth@EU service"> description = <"The MyHealth@EU service a national contact point's person agreement serves, the openehr_access code patient_summary, eprescription or orcd.">>
             ["id24"] = <text = <"Caller rate"> description = <"The rate one caller of the partner may send requests at.">>
             ["id25"] = <text = <"Requests per second"> description = <"The requests per second a caller may send once its burst is spent.">>
             ["id26"] = <text = <"Burst"> description = <"The requests a caller may send at once.">>
             ["id27"] = <text = <"Opt-out override"> description = <"Whether a professional of the partner may read an opted-out EHR where the law provides the vital-interest access.">>
-            ["id28"] = <text = <"Access class"> description = <"For an organisation accessor, the ferroehr-operations code automated (no natural person views the data) or chained (the requester logs the person).">>
+            ["id28"] = <text = <"Access class"> description = <"For an organisation accessor, the openehr_access code automated (no natural person views the data) or chained (the requester logs the person).">>
             ["id29"] = <text = <"Chained log retention"> description = <"For a chained access: how long the requester keeps its log.">>
             ["id30"] = <text = <"Not before"> description = <"The instant before which the grant does not hold, for a bound finer than the day of time_validity.">>
             ["id31"] = <text = <"Not after"> description = <"The instant after which the grant does not hold, for a bound finer than the day of time_validity.">>

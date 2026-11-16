@@ -18,9 +18,9 @@ use sqlx::Row;
 use sqlx::postgres::PgRow;
 use uuid::Uuid;
 
-use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 use crate::system_log::store::AuditStore;
+use crate::system_log::store::chain_walk::StepPace;
 
 /// One of the two hash chains of the audit store.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -49,20 +49,6 @@ impl AuditChain {
     #[must_use]
     pub fn named(name: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|chain| chain.as_str() == name)
-    }
-
-    /// The incremental verification of the chain, which moves its cursor.
-    const fn incremental(self) -> &'static str {
-        match self {
-            Self::System => {
-                "SELECT chain_seq, record_id, recorded_at, finding \
-                 FROM audit.verify_audit_chain_incremental($1)"
-            }
-            Self::AccessLog => {
-                "SELECT chain_seq, record_id, recorded_at, finding \
-                 FROM audit.verify_access_log_chain_incremental($1)"
-            }
-        }
     }
 }
 
@@ -100,7 +86,11 @@ impl AuditStore {
     ///
     /// [`VerifyScope::SinceCheckpoint`] recomputes only the records written
     /// after the newest link an earlier run found intact, so its cost follows
-    /// the records written since rather than the size of the chain; a change
+    /// the records written since rather than the size of the chain. The
+    /// chain is walked in steps sized to a time budget ([`StepPace`]), each its
+    /// own statement that moves the cursor ([`Self::chain_step`]),
+    /// so a backlog of any length is verified to the head the run started
+    /// with; a change
     /// to a record before that link needs [`VerifyScope::Full`], the pass
     /// `SELECT * FROM audit.verify_audit_chain()` (the system chain) or
     /// `audit.verify_access_log_chain()` (the access log) makes from `psql`.
@@ -119,11 +109,13 @@ impl AuditStore {
         chain: AuditChain,
         scope: VerifyScope,
     ) -> Result<Vec<AuditChainFinding>, AuditError> {
-        let rows = sqlx::query(chain.incremental())
-            .bind(scope == VerifyScope::Full)
-            .fetch_all(&mut *acquire(&self.pool).await?)
-            .await?;
-        rows.iter().map(|row| finding(chain, row)).collect()
+        let mut walk = self.chain_walk(chain, scope).await?;
+        let mut pace = StepPace::default();
+        let mut findings = Vec::new();
+        while !walk.done() {
+            findings.extend(self.chain_step_paced(&mut walk, &mut pace).await?.0);
+        }
+        Ok(findings)
     }
 
     /// [`Self::verify_chain_advancing`] over both chains, the system chain's
@@ -144,7 +136,7 @@ impl AuditStore {
 }
 
 /// The finding about `chain` a verification row holds.
-fn finding(chain: AuditChain, row: &PgRow) -> Result<AuditChainFinding, AuditError> {
+pub(super) fn finding(chain: AuditChain, row: &PgRow) -> Result<AuditChainFinding, AuditError> {
     Ok(AuditChainFinding {
         chain,
         chain_seq: row.try_get("chain_seq")?,

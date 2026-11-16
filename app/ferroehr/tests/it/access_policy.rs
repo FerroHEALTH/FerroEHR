@@ -14,6 +14,7 @@ use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::access_policy::PolicyPrecondition;
 use ferroehr::service::demographic::default_definitions::Seeded;
+use openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS;
 use serde_json::{Value, json};
 
 const HOSPITAL: &str = "2c3d4e5f-6a7b-4c8d-9e0f-a1b2c3d4e5f7";
@@ -36,12 +37,34 @@ fn policy(care: bool) -> Value {
             "sensitivities": [{ "_type": "DV_CODED_TEXT", "value": "HIV",
                 "defining_code": { "_type": "CODE_PHRASE",
                     "terminology_id": { "_type": "TERMINOLOGY_ID",
-                        "value": "http://terminology.hl7.org/CodeSystem/v3-ActCode" },
+                        "value": "v3-ActCode" },
                     "code_string": "HIV" } }] }],
         "care_relationship_required": care,
         "relationship_grace": { "_type": "DV_DURATION", "value": "P14D" },
         "purpose_required": false
     })
+}
+
+/// A coded value of `terminology`.
+fn coded(terminology: &str, code: &str) -> Value {
+    json!({ "_type": "DV_CODED_TEXT", "value": code,
+        "defining_code": { "_type": "CODE_PHRASE",
+            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": terminology },
+            "code_string": code } })
+}
+
+/// The nurse rule: the role `NURSE` of `urn:example:roles` may not commit
+/// the diagnosis template.
+fn nurse_rule() -> Value {
+    json!({ "_type": "ACCESS_DIRECTIVE",
+        "name": { "_type": "DV_TEXT", "value": "Nurses do not record diagnoses" },
+        "archetype_node_id": "id15",
+        "kind": coded(TERMINOLOGY_ID_ACCESS, "controller_rule"),
+        "effect": coded(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, "deny"),
+        "applies_to": [{ "_type": "ACCESS_ACTOR_SCOPE", "role": coded("urn:example:roles", "NURSE") }],
+        "operations": [coded(TERMINOLOGY_ID_ACCESS, "write")],
+        "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["diagnosis.v1"] }],
+        "emergency_override": false })
 }
 
 /// One replica over `pool`.
@@ -210,7 +233,18 @@ type Defect = (&'static str, fn(&mut Value));
 #[tokio::test]
 async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
     let (_db, svc) = crate::fixtures::service().await;
-    let cases: [Defect; 8] = [
+    let cases: [Defect; 11] = [
+        ("Rules_kind", |p| {
+            let mut rule = nurse_rule();
+            rule["kind"] = coded(TERMINOLOGY_ID_ACCESS, "consent");
+            p["rules"] = json!([rule]);
+        }),
+        ("a rule's role in the draft access terminology", |p| {
+            let mut rule = nurse_rule();
+            rule["applies_to"][0]["role"] = coded(TERMINOLOGY_ID_ACCESS, "NURSE");
+            p["rules"] = json!([rule]);
+        }),
+        ("an empty list of rules", |p| p["rules"] = json!([])),
         ("an undeclared member", |p| p["colour"] = json!("red")),
         ("a missing mandatory member", |p| {
             p.as_object_mut()
@@ -228,9 +262,9 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
                 "namespace": "local", "type": "VERSIONED_COMPOSITION",
                 "id": { "_type": "HIER_OBJECT_ID", "value": HOSPITAL } }]);
         }),
-        ("a sensitivity in FerroEHR's own terminology", |p| {
+        ("a sensitivity in the draft access terminology", |p| {
             p["classifications"][0]["sensitivities"][0]["defining_code"]["terminology_id"]["value"] =
-                json!("ferroehr-operations");
+                json!(TERMINOLOGY_ID_ACCESS);
         }),
         ("a controller that is no ORGANISATION", |p| {
             p["controller"]["type"] = json!("PERSON");
@@ -267,6 +301,27 @@ async fn a_policy_that_breaks_the_bmm_is_refused_whole() {
     assert!(
         matches!(refused, ServiceError::BadRequest(_)),
         "{refused:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_policy_carries_the_controllers_rules() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let mut body = policy(false);
+    body["rules"] = json!([nurse_rule()]);
+    create(&svc, &body).await;
+    svc.read_access_policy().await.expect("the policy reads");
+    let in_force = svc.access_policy().in_force();
+    let rules = in_force
+        .policy
+        .as_deref()
+        .and_then(|policy| policy.rules.as_deref())
+        .expect("the rules are in force");
+    assert_eq!(rules.len(), 1);
+    assert_eq!(
+        rules[0].applies_to.as_deref().map(<[_]>::len),
+        Some(1),
+        "the rule reads back whole"
     );
 }
 

@@ -49,7 +49,7 @@ use ferroehr::aql::sql::SqlCtx;
 use ferroehr::config::profile::SpecProfile;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
-use ferroehr::storage::version_repo::{meta, read};
+use ferroehr::storage::version_repo::{judged, meta, read};
 
 use crate::fixtures::{ckm_example, composition, uv};
 
@@ -148,6 +148,10 @@ const EXPLAIN: &str = "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ";
 /// Open the transaction an explain runs in: sequential scans discouraged, and
 /// rolled back by the caller so `ANALYZE` leaves nothing behind (`PostgreSQL`
 /// docs, <https://www.postgresql.org/docs/18/sql-explain.html>).
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn explain_tx(pool: &PgPool) -> Transaction<'static, Postgres> {
     let mut tx = pool.begin().await.expect("begin the explain transaction");
     tx.execute("SET LOCAL enable_seqscan = off")
@@ -368,6 +372,49 @@ async fn the_current_version_read_probes_the_head_row_by_primary_key() {
     assert!(
         hot[0].index.is_some() && hot[0].node_type != "Seq Scan",
         "H3: the version row is reached by an index:\n{}",
+        render(&scans)
+    );
+    assert_no_policy_qual(&plan, &scans);
+}
+
+/// A COMPOSITION read that judges its own row (#5773) reads the head facts
+/// and the version in one statement, every relation of it by an index: the
+/// head row by its primary key, the version and the root nodes by theirs.
+#[tokio::test]
+async fn the_judged_read_reaches_every_row_by_an_index() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let seeded = seed(&svc, &pool).await;
+
+    let mut tx = explain_tx(&pool).await;
+    let plan: Value = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "{EXPLAIN}{}",
+        judged::JUDGED_CURRENT_SQL
+    )))
+    .bind(seeded.vo)
+    .fetch_one(&mut *tx)
+    .await
+    .expect("explain the judged current-version read");
+    tx.rollback().await.expect("roll the explain back");
+
+    let scans = scans(&plan);
+    let head = on(&scans, "vo_head");
+    assert!(
+        !head.is_empty()
+            && head
+                .iter()
+                .all(|scan| scan.index.as_deref() == Some("pk_vo_head")),
+        "the head row is reached by its primary key:\n{}",
+        render(&scans)
+    );
+    let unindexed: Vec<&Scan> = scans
+        .iter()
+        .filter(|scan| scan.executed && (scan.index.is_none() || scan.node_type == "Seq Scan"))
+        .collect();
+    assert!(
+        unindexed.is_empty(),
+        "every row the judged read reads is reached by an index:\n{}",
         render(&scans)
     );
     assert_no_policy_qual(&plan, &scans);
@@ -1208,6 +1255,10 @@ fn node_types(node: &Value, out: &mut Vec<String>) {
 
 /// `EXPLAIN` an ordered population page under the server's own settings, plus
 /// `extra` (a `SET LOCAL`), inside a rolled-back transaction.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn explain_ordered_page(pool: &PgPool, aql: &str, extra: Option<&str>) -> Value {
     let prepared = aql_sql_limited(aql, Vec::new(), Some(5));
     let mut tx = pool.begin().await.expect("begin the explain transaction");
@@ -2242,6 +2293,10 @@ async fn seed_stale_parent_statistics(svc: &FerroEhrService, pool: &PgPool) -> V
 /// The reads of [`READS_BY_VO_ID`] whose custom or generic plan for `vo`
 /// reaches a commit audit row other than by one `pk_commit_audit` probe, each
 /// with its plan.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn reads_walking_the_commit_audit(pool: &PgPool, vo: VoId) -> Vec<String> {
     let mut walked = Vec::new();
     for (read, sql) in READS_BY_VO_ID {
@@ -2339,6 +2394,10 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key_over_stale_parent_stati
 /// the head join from no statistics at all and drove from every COMPOSITION
 /// root, reading all of its nodes (3 703 buffers on this seed, against 1 745).
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_population_contains_enters_through_the_archetype_index() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();

@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The access log's checkpoints, verification and transfer on the server
-//! (#5129): built at boot from `[audit.access_log]` and the keyring, the
-//! scheduled checkpoint, and `ferroehr access-log …`.
+//! (#5129).
+//!
+//! They are built at boot from `[audit.access_log]` and the keyring, with
+//! the system chain's scheduled seal, the publication of the checkpoints, and
+//! `ferroehr access-log …`.
 //!
 //! The keyring is the one `[record.signing]` configures: with an `OpenPGP`
-//! key in it the server signs each link and seals the chain on the built-in
-//! schedule, and without one it signs nothing (#5562). No openEHR spec governs log
-//! signing: our own design.
+//! key in it every append of the access log ends with a signed checkpoint
+//! (#5704), and without one nothing is sealed (#5562). No openEHR spec
+//! governs log signing: our own design.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -16,6 +19,7 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use clap::Subcommand;
 use ferroehr::access_log::checkpoint::Checkpoints;
+use ferroehr::access_log::publish::Publication;
 use ferroehr::access_log::transfer::{ImportRecord, LogExport};
 use ferroehr::config::FerroEhrConfig;
 use ferroehr::support::today_utc;
@@ -27,8 +31,8 @@ use sqlx::PgPool;
 /// `ferroehr access-log …` subcommands.
 #[derive(Debug, Subcommand)]
 pub enum AccessLogCmd {
-    /// Seal the head of the access log in a checkpoint signed with the
-    /// keyring's key, and print it.
+    /// Print the checkpoint of the head of the access log, sealing it with the
+    /// keyring's key when no append sealed it.
     Checkpoint,
     /// Verify the access log against its newest checkpoint, or the one in
     /// `--checkpoint`, and print every finding. Exits non-zero when the log
@@ -80,20 +84,39 @@ pub fn build(
     ))
 }
 
-/// Start the scheduled checkpoint when the keyring holds an `OpenPGP` key.
-pub fn spawn_schedule(checkpoints: &Checkpoints) {
+/// Start the system chain's scheduled seal and the publication of the
+/// access log's checkpoints when the keyring holds an `OpenPGP` key; the
+/// publication, which the `access_log_checkpoints` indicator reads.
+#[must_use]
+pub fn spawn_schedule(config: &FerroEhrConfig, checkpoints: &Checkpoints) -> Publication {
+    let publication = Publication::new(config.audit.access_log.publish_directory.clone());
     if !checkpoints.seals() {
-        tracing::info!(
-            "no OpenPGP key in the keyring: the access log is neither signed nor sealed"
-        );
-        return;
+        tracing::info!("no OpenPGP key in the keyring: the access log is not sealed");
+        return publication;
     }
     let interval = ferroehr::access_log::schedule::INTERVAL;
-    tracing::info!(?interval, "access-log checkpoints scheduled");
+    tracing::info!(?interval, "system chain seals scheduled");
     drop(tokio::spawn(ferroehr::access_log::schedule::scheduled(
         checkpoints.clone(),
         interval,
     )));
+    if let Some(directory) = publication.directory() {
+        tracing::info!(
+            directory = %directory.display(),
+            "access-log checkpoints published outside the database"
+        );
+        drop(tokio::spawn(ferroehr::access_log::publish::scheduled(
+            publication.clone(),
+            checkpoints.clone(),
+            ferroehr::access_log::publish::INTERVAL,
+        )));
+    } else {
+        tracing::warn!(
+            "access-log checkpoints are not published outside the database: removing the \
+             newest entries goes undetected; set [audit.access_log] publish_directory"
+        );
+    }
+    publication
 }
 
 /// Run one `ferroehr access-log …` subcommand.
@@ -187,6 +210,9 @@ async fn verify(checkpoints: &Checkpoints, file: Option<&Path>) -> anyhow::Resul
         println!("finding: {finding}");
     }
     print_chain(&verification.chain);
+    for finding in &verification.imported {
+        println!("imported finding: {finding}");
+    }
     anyhow::ensure!(verification.intact(), "the access log does not verify");
     println!("the access log verifies");
     Ok(())

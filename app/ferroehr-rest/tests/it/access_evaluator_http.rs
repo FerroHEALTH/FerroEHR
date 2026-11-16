@@ -76,7 +76,7 @@ pub(crate) async fn app() -> (
         emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
     };
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(
@@ -204,6 +204,15 @@ fn term(code: &str) -> Value {
                 "code_string": code } })
 }
 
+/// An `access effect`: a code of HL7 FHIR `consent-provision-type`.
+fn provision(code: &str) -> Value {
+    let mut value = term(code);
+    value["defining_code"]["terminology_id"]["value"] = serde_json::json!(
+        openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_CONSENT_PROVISION_TYPE
+    );
+    value
+}
+
 /// A directive of `kind` and `effect` with `extra` members.
 pub(crate) fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
     let mut d = json!({
@@ -211,7 +220,7 @@ pub(crate) fn directive(kind: &str, effect: &str, extra: &Value) -> Value {
         "name": { "_type": "DV_TEXT", "value": kind },
         "archetype_node_id": "at0001",
         "kind": term(kind),
-        "effect": term(effect),
+        "effect": provision(effect),
         "emergency_override": false
     });
     if let (Some(d), Some(extra)) = (d.as_object_mut(), extra.as_object()) {
@@ -236,7 +245,7 @@ pub(crate) fn refusal(body: &str) -> (Value, String) {
 }
 
 /// The composition ids an AQL population query returns to `user`.
-async fn queried(app: &Router, user: &str, purpose: Option<&str>) -> Vec<String> {
+pub(crate) async fn queried(app: &Router, user: &str, purpose: Option<&str>) -> Vec<String> {
     let (status, body) = send(
         app,
         "POST",
@@ -354,6 +363,20 @@ async fn a_category_restriction_with_an_exception() {
 async fn a_classification_refuses_the_uncleared() {
     let (_db, _pool, _svc, app) = Box::pin(app()).await;
     let (ehr, vo) = ehr_with_composition(&app).await;
+    let (status, body) = send(
+        &app,
+        "GET",
+        &format!("{BASE}/ehr/{ehr}/composition/{vo}"),
+        "nurse",
+        None,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "readable before the policy: {body}");
+    let v1 = serde_json::from_str::<Value>(&body).expect("COMPOSITION json")["uid"]["value"]
+        .as_str()
+        .expect("the version uid")
+        .to_owned();
     let archetype = "openEHR-EHR-ACCESS_POLICY.controller.v1";
     let policy = json!({
         "_type": "ACCESS_POLICY",
@@ -371,7 +394,7 @@ async fn a_classification_refuses_the_uncleared() {
             "data": { "_type": "ACCESS_DATA_SCOPE", "templates": ["International Patient Summary"] },
             "sensitivities": [{ "_type": "DV_CODED_TEXT", "value": "HIV",
                 "defining_code": { "_type": "CODE_PHRASE",
-                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "2.16.840.1.113883.5.25" },
+                    "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "v3-ActCode" },
                     "code_string": "HIV" } }]
         }],
         "care_relationship_required": false,
@@ -392,6 +415,23 @@ async fn a_classification_refuses_the_uncleared() {
     let (status, body) = send(&app, "GET", &read, "nurse", None, None).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     assert_eq!(refusal(&body).0, json!("refused-sensitivity"), "{body}");
+    // The read by version uid judges the object on the row it reads (#5773):
+    // the same refusal, for the version it holds and for one it does not.
+    let missing_version = v1.replace("::1", "::9");
+    for uid in [v1.as_str(), missing_version.as_str()] {
+        let read = format!("{BASE}/ehr/{ehr}/composition/{uid}");
+        let (status, body) = send(&app, "GET", &read, "nurse", None, None).await;
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "the version read is refused: {body}"
+        );
+        assert_eq!(refusal(&body).0, json!("refused-sensitivity"), "{body}");
+        assert!(!body.contains("International Patient Summary"), "{body}");
+    }
+    let unknown = format!("{BASE}/ehr/{ehr}/composition/{}", uuid::Uuid::nil());
+    let (status, body) = send(&app, "GET", &unknown, "nurse", None, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "an unknown object: {body}");
     let (status, _) = send(
         &app,
         "GET",
@@ -432,7 +472,7 @@ async fn an_absolute_restriction_holds_in_an_emergency() {
 /// settings. A system client acting for a member `ORGANISATION` reads the
 /// record and queries it; a client of a provider outside the region is
 /// refused with the default's code and queries nothing (IHE BPPC; RM
-/// Demographic IM `PARTY_RELATIONSHIP`, coded `member_of`; our own design,
+/// Demographic IM `PARTY_RELATIONSHIP`, coded HL7 v3 `RoleClass#MBR`; our own design,
 /// #5575).
 #[tokio::test]
 async fn regional_sharing_admits_a_client_of_a_member_organisation() {

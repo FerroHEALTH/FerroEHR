@@ -21,39 +21,53 @@
 
 #![expect(
     clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): the store carries an \
-              already-rendered FHIR document, never a typed resource"
+    reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): the store hands the \
+              FHIR Feed an already-rendered FHIR document; the ITI-81 page is typed (#5716)"
 )]
 
 #[cfg(feature = "fhir")]
 use std::collections::BTreeMap;
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 #[cfg(feature = "fhir")]
 use std::sync::{Mutex, PoisonError};
 
+#[cfg(feature = "fhir")]
 use jiff_sqlx::Timestamp;
+#[cfg(feature = "fhir")]
+use sqlx::Row;
 use sqlx::postgres::PgConnection;
 #[cfg(feature = "fhir")]
 use sqlx::postgres::PgRow;
-use sqlx::{Connection, PgPool, Row};
+use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
 mod access_log;
 mod batch;
+pub mod chain_walk;
 pub mod chains;
 #[cfg(feature = "fhir")]
 mod entries;
+pub mod intake;
 pub(crate) mod lax;
+#[cfg(feature = "fhir")]
+pub mod outbox;
+#[cfg(feature = "fhir")]
+mod search_page;
 mod writers;
 
+use crate::access_log::chainer::Owed;
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 #[cfg(feature = "fhir")]
 use crate::system_log::categories::{ClassifiedContent, MapDigest};
 #[cfg(feature = "fhir")]
+use crate::system_log::event::ActingMode;
+#[cfg(feature = "fhir")]
 use crate::system_log::event::{AccessDomain, EventActionCode};
-use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
+use crate::system_log::event::{AuditEvent, EventOutcome, EventType, ObjectClass};
+#[cfg(feature = "fhir")]
+use crate::system_log::fhir::value_of;
 use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
@@ -63,27 +77,14 @@ use chains::AuditChain;
 use lax::{any_equals, any_is, lax_path};
 use writers::{WritePolicy, Writers};
 
+#[cfg(feature = "fhir")]
 use ferrohealth_smart::assurance::AssuranceLevel;
 
-/// The single-record insert, returning the stored row id.
-const INSERT_ONE: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
-     event_code, operation, principal, patient_id, resource_class, resource_id, \
-     client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
-     origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
-     acting_mode, assurance_level, assurance_value, professional_id, emergency_access, permit, \
-     issuer, client_id, ehr_id, subject_namespace, subject_lookup_failed, category_content, \
-     render_policy, search_tokens, binding, guest, party, party_groups, provider, representation, \
-     external_fields, agreement, actor_chain, facilities, binding_detail, summary, \
-     token_attributes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, \
-     $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, \
-     $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50) \
-     RETURNING id";
-
-/// The batched insert: one row per element of the parallel column arrays, every
-/// row under the one render policy in `$38`; each record's search tokens arrive
-/// as the text of an `integer[]` in `$39`, since an array of arrays unnests
-/// element by element.
-const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, outcome, \
+/// The batched intake of the system chain: one row per element of the
+/// parallel column arrays, every row under the one render policy in `$38`;
+/// each record's search tokens arrive as the text of an `integer[]` in `$39`,
+/// since an array of arrays unnests element by element, and its id in `$53`.
+const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, recorded_at, action, outcome, \
      event_code, operation, principal, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
@@ -92,7 +93,7 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
      subject_lookup_failed, category_content, render_policy, search_tokens, binding, guest, \
      party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
      facilities, binding_detail, summary, token_attributes) \
-     SELECT u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
+     SELECT u.id, u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
      u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, \
      u.c26, u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, \
      $38::bytea, u.tokens::integer[], u.c40, u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
@@ -106,10 +107,10 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event (recorded_at, action, 
      $33::text[], $34::text[], $35::text[], $36::boolean[], $37::jsonb[], $39::text[], \
      $40::text[], $41::boolean[], $42::jsonb[], $43::jsonb[], $44::jsonb[], $45::jsonb[], \
      $46::jsonb[], $47::jsonb[], $48::jsonb[], $49::jsonb[], $50::jsonb[], $51::jsonb[], \
-     $52::jsonb[]) \
+     $52::jsonb[], $53::uuid[]) \
      AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, \
      c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32, c33, c34, c35, c36, \
-     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52)";
+     c37, tokens, c40, c41, c42, c43, c44, c45, c46, c47, c48, c49, c50, c51, c52, id)";
 
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
@@ -152,30 +153,12 @@ const RECORD_COLUMNS: [&str; 42] = [
     "render_policy",
     "token_attributes",
     "content",
+    "shared",
     "algorithm",
     "previous_digest",
     "content_digest",
     "digest",
-    "signature",
 ];
-
-/// The oldest record the FHIR Feed owes past the outbox ids in `$1`, its
-/// outbox id beside [`RECORD_COLUMNS`].
-#[cfg(feature = "fhir")]
-const OLDEST_OWED: &str = "SELECT o.id AS owed, \
-     e.chain, e.chain_seq, e.recorded_at, e.stored_at, e.action, e.outcome, e.operation, \
-     e.principal, e.patient_id, e.resource_class, e.resource_id, \
-     e.client_ip, e.token_id, e.domain, e.purpose, e.legal_basis, e.result_count, \
-     e.request_id, e.roles, e.origins, e.origin_count, e.category_map_digest, \
-     e.acting_mode, e.assurance_level, e.assurance_value, e.professional_id, \
-     e.emergency_access, e.permit, e.issuer, e.client_id, e.ehr_id, \
-     e.subject_namespace, e.subject_lookup_failed, e.category_content, e.render_policy, \
-     e.token_attributes, e.content, e.algorithm, e.previous_digest, e.content_digest, \
-     e.digest, e.signature \
-     FROM audit.fhir_feed_outbox o \
-     JOIN audit.audit_record e ON e.chain = o.chain AND e.chain_seq = o.chain_seq \
-     WHERE NOT (o.id = ANY($1)) \
-     ORDER BY o.id ASC LIMIT 1";
 
 /// The first date a stored record may be deleted on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -202,27 +185,6 @@ pub struct AuditRecord {
         Option<Box<openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry>>,
 }
 
-/// [`INSERT_ONE`] that also enters the record in the FHIR Feed's outbox, in
-/// the same statement.
-static INSERT_ONE_OWED: LazyLock<String> = LazyLock::new(|| {
-    format!(
-        "WITH stored AS ({INSERT_ONE}, chain_seq), \
-         owed AS (INSERT INTO audit.fhir_feed_outbox (chain, chain_seq) \
-         SELECT 'system', chain_seq FROM stored) \
-         SELECT id FROM stored"
-    )
-});
-
-/// [`INSERT_BATCH`] that also enters every record in the FHIR Feed's outbox,
-/// in the same statement.
-static INSERT_BATCH_OWED: LazyLock<String> = LazyLock::new(|| {
-    format!(
-        "WITH stored AS ({INSERT_BATCH} RETURNING chain_seq) \
-         INSERT INTO audit.fhir_feed_outbox (chain, chain_seq) \
-         SELECT 'system', chain_seq FROM stored ORDER BY chain_seq"
-    )
-});
-
 /// The policies records name, compiled once each, by digest.
 #[cfg(feature = "fhir")]
 type PolicyCache = Arc<Mutex<BTreeMap<Vec<u8>, Arc<CompiledPolicy>>>>;
@@ -238,9 +200,9 @@ type LearnedSets = ();
 #[derive(Debug, Clone)]
 pub struct AuditStore {
     pub(crate) pool: PgPool,
-    /// Whether the FHIR Feed delivers from this store, so each record written
-    /// is owed to it.
-    fhir_feed: bool,
+    /// The sinks that deliver from this store, so each record chained is
+    /// owed to them.
+    owed: Owed,
     /// The policies the records this store writes are rendered under.
     writing: Arc<Writers>,
     /// The policies of the records this store has read.
@@ -253,40 +215,62 @@ pub struct AuditStore {
     /// signs their links as `[audit.access_log]` asks once the server installs
     /// it ([`Self::use_access_log`]); an unsigning one until then.
     access_log: Arc<std::sync::OnceLock<AccessLogStore>>,
+    /// Which chains have intake rows this process wrote and no chainer
+    /// round has looked at since.
+    pending: Arc<intake::Pending>,
 }
 
 impl AuditStore {
     /// A store over the given pool, writing under the default render policy
     /// until [`Self::with_render_policy`] names the deployment's. The pool
-    /// should be the plain pool: the audit trail is the node's operator
-    /// surface, written by the drain task rather than by a request.
+    /// should be the audit pool: the audit trail is the node's operator
+    /// surface, apart from the clinical data.
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         AuditStore {
             pool,
-            fhir_feed: false,
+            owed: Owed::default(),
             writing: Arc::new(Writers::new(RenderPolicy::default())),
             #[cfg(feature = "fhir")]
             policies: Arc::new(Mutex::new(BTreeMap::new())),
             #[cfg(feature = "fhir")]
             tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
             access_log: Arc::default(),
+            pending: Arc::default(),
         }
     }
 
-    /// `owed` when the FHIR Feed delivers from this store, else `plain`.
-    fn owed(&self, plain: &'static str, owed: &'static LazyLock<String>) -> &'static str {
-        if self.fhir_feed { owed.as_str() } else { plain }
+    /// This store over `pool`, its policies, tokens and access-log store
+    /// shared with `self`.
+    #[must_use]
+    pub fn with_pool(&self, pool: PgPool) -> Self {
+        Self {
+            pool,
+            ..self.clone()
+        }
     }
 
     /// This store as the FHIR Feed's outbox when `owed`: every record it
-    /// writes from now on is owed to the feed until
-    /// [`Self::mark_fhir_feed_delivered`]. Without it a record is owed to no
-    /// sink.
+    /// chains from now on is owed to the feed until
+    /// [`Self::mark_delivered`]. Without it a record is owed to no sink.
     #[must_use]
     pub fn with_fhir_feed(mut self, owed: bool) -> Self {
-        self.fhir_feed = owed;
+        self.owed.fhir_feed = owed;
         self
+    }
+
+    /// This store as the syslog route's outbox when `owed`, as
+    /// [`Self::with_fhir_feed`] for the feed.
+    #[must_use]
+    pub fn with_syslog(mut self, owed: bool) -> Self {
+        self.owed.syslog = owed;
+        self
+    }
+
+    /// The sinks that deliver from this store.
+    #[must_use]
+    pub fn owed(&self) -> Owed {
+        self.owed
     }
 
     /// This store writing every record under `policy`, the configuration its
@@ -297,10 +281,10 @@ impl AuditStore {
         self
     }
 
-    /// This store writing every record from now on with `categories` as its
-    /// category map; a record of an earlier map keeps that map's policy.
-    pub fn set_categories(&self, categories: &crate::system_log::categories::CategoryMapConfig) {
-        self.writing.set_categories(categories);
+    /// This store writing every record from now on under the policy in force
+    /// as `change` alters it; a record of an earlier map keeps that map's.
+    pub fn change_render_policy(&self, change: impl FnOnce(&mut RenderPolicy)) {
+        self.writing.change(change);
     }
 
     /// The digest of `writing`, storing the policy the first time.
@@ -396,173 +380,99 @@ impl AuditStore {
         std::future::ready(Ok((records.iter().map(|_| "{}".to_owned()).collect(), ())))
     }
 
-    /// Persist one audit record: its facts as columns, under the store's
-    /// render policy, in one transaction with its search tokens. Returns the
-    /// stored row id (for the per-sink delivery stamps).
+    /// Store one audit record and chain it before this returns: an access
+    /// the log covers as its entry, any other record by its columns. Returns
+    /// the record's id: the entry's uid, or the system record's own.
     ///
     /// # Errors
-    /// [`AuditError::Store`] when the INSERT fails.
+    /// As [`Self::insert_batch`].
     pub async fn insert(
         &self,
         event: &AuditEvent,
         subject: Option<&str>,
     ) -> Result<Uuid, AuditError> {
-        #[cfg(feature = "fhir")]
-        if crate::access_log::entry::writes_entry(event) {
-            return self.insert_entry(event, subject).await;
-        }
-        let writing = self.writing.of(event);
-        let policy = self.writing_digest(&writing).await?;
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        #[cfg(feature = "fhir")]
-        let (tokens, learned) = {
-            let (mut tokens, learned) = self
-                .search_tokens(&writing, &mut tx, std::iter::once((event, subject)))
-                .await?;
-            (tokens.pop().ok_or(AuditError::SearchToken)?, learned)
+        let record = AuditRecord {
+            event: event.clone(),
+            subject: subject.map(str::to_owned),
+            entry: None,
         };
-        // NOTE: a slim build refuses the store at start, so no record it writes is searched.
-        #[cfg(not(feature = "fhir"))]
-        let (tokens, learned): (Vec<i32>, LearnedSets) = (Vec::new(), ());
-        let outcome = outcome_smallint(event);
-        let query = sqlx::query(self.owed(INSERT_ONE, &INSERT_ONE_OWED))
-            .bind(Timestamp::from(event.timestamp))
-            .bind(action_str(event))
-            .bind(outcome)
-            .bind(event_code(event))
-            .bind(operation(event))
-            .bind(nonempty_opt(&event.user_id))
-            .bind(subject)
-            .bind(resource_class(event.object))
-            .bind(event.object_id.as_deref())
-            .bind(event.client_ip.as_deref())
-            .bind(event.token_id.as_deref())
-            .bind(event.domain.as_str())
-            .bind(event.purpose.as_deref())
-            .bind(event.legal_basis.as_deref())
-            .bind(result_count(event))
-            .bind(event.request_id.as_deref())
-            .bind(roles_json(event))
-            .bind(origins_json(event))
-            .bind(origin_count(event))
-            .bind(categories_json(event))
-            .bind(category_basis(event))
-            .bind(category_evidence_json(event))
-            .bind(category_map_digest(event))
-            .bind(event.actor.mode.map(ActingMode::as_str))
-            .bind(event.actor.assurance_level.map(AssuranceLevel::as_str))
-            .bind(event.actor.assurance_value.as_deref())
-            .bind(event.actor.professional_id.as_deref())
-            .bind(event.emergency_access)
-            .bind(event.permit.as_deref())
-            .bind(event.issuer.as_deref())
-            .bind(event.client_id.as_deref())
-            .bind(access_ehr_id(event))
-            .bind(event.subject_namespace.as_deref())
-            .bind(event.subject_lookup_failed)
-            .bind(category_content_json(event)?)
-            .bind(policy)
-            .bind(tokens);
-        let (binding, guest, json) = binding_columns(event);
-        let mut query = query.bind(binding).bind(guest);
-        for column in json {
-            query = query.bind(column);
-        }
-        let id = query
-            .bind(token_attributes_json(event))
-            .fetch_one(&mut *tx)
-            .await?
-            .try_get::<Uuid, _>("id")
-            .map_err(AuditError::Store)?;
-        tx.commit().await?;
-        self.remember(learned);
-        Ok(id)
+        let (taken, wrote) = self.take_in_own(vec![record], &[]).await?;
+        self.settle(wrote).await?;
+        taken.first().copied().ok_or(AuditError::SearchToken)
     }
 
-    /// Persist a whole drained batch in ONE multi-row `INSERT` (UNNEST over
-    /// parallel column arrays) — the throughput path for the default
-    /// store-only posture, where per-event round trips cannot keep up with a
-    /// loaded write path. No row ids are returned: the batch path is used
-    /// only when no per-row delivery stamping is needed.
-    ///
-    /// Each record carries the first date it may be deleted on (`ends`, one
-    /// per record), which the reaper honours ([`Self::reap_due`]). With `ends`
-    /// empty no record states an end, and each keeps the store horizon.
-    ///
-    /// A record that carries its access-log entry is stored as the entry with
-    /// its search index row, every other one by its columns, in one
-    /// transaction, so a batch costs one commit whatever it writes.
+    /// Store a batch of records and chain them before this returns, each
+    /// with its own retention end (`ends`, one per record, or empty when no
+    /// record states one, so each keeps the store horizon).
     ///
     /// # Errors
-    /// [`AuditError::Store`] when the INSERT fails (the whole batch fails
-    /// together; the caller retries), [`AuditError::AccessLog`] when an entry
-    /// cannot be appended, and [`AuditError::RetentionEnds`] when `ends` is
-    /// neither empty nor one end per record.
+    /// As [`Self::write`], and the chaining errors of [`Self::settle`].
     pub async fn insert_batch(
         &self,
         records: &[AuditRecord],
         ends: &[RecordEnd],
     ) -> Result<(), AuditError> {
-        if !ends.is_empty() && ends.len() != records.len() {
-            return Err(AuditError::RetentionEnds {
-                ends: ends.len(),
-                records: records.len(),
-            });
-        }
-        if records.is_empty() {
-            return Ok(());
-        }
-        #[cfg(feature = "fhir")]
-        let entered = self.with_entries(records).await?;
-        #[cfg(feature = "fhir")]
-        let (rows, row_ends, entries) = entries::split(&entered, ends);
-        #[cfg(feature = "fhir")]
-        let (records, ends) = (rows.as_slice(), row_ends.as_slice());
-        let runs = self.writing.runs(records);
-        let mut digests = Vec::with_capacity(runs.len());
-        for (writing, _, _) in &runs {
-            digests.push(self.writing_digest(writing).await?);
-        }
-        // NOTE: one transaction holds the tokens and the records, so a batch costs one commit.
-        let mut conn = acquire(&self.pool).await?;
-        let mut tx = conn.begin().await?;
-        let mut learned_all = Vec::with_capacity(runs.len());
-        for ((writing, start, end), policy) in runs.iter().zip(digests) {
-            let run = records.get(*start..*end).unwrap_or_default();
-            let run_ends = ends.get(*start..*end).unwrap_or_default();
-            let (tokens, learned) = Self::batch_tokens(self, writing, &mut tx, run).await?;
-            self.insert_rows(&mut tx, run, run_ends, policy, tokens)
-                .await?;
-            learned_all.push(learned);
-        }
-        #[cfg(feature = "fhir")]
-        learned_all.push(self.append_entries(&mut tx, &entries).await?);
-        tx.commit().await?;
-        for learned in learned_all {
-            self.remember(learned);
-        }
-        Ok(())
+        let (_, wrote) = self.take_in_own(records.to_vec(), ends).await?;
+        self.settle(wrote).await
     }
 
-    /// The multi-row `INSERT` of [`Self::insert_batch`] on `conn`, each record
-    /// with its `search_tokens` text in `tokens`.
+    /// Write a batch of records into the intake in one transaction, each with
+    /// its own retention end (`ends`, one per record, or empty), so they are
+    /// durable when this returns; the chainer links them after.
+    ///
+    /// A record that carries its access-log entry, or whose access writes
+    /// one, is written as the entry with its index row, every other one by
+    /// its columns.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when a statement fails (the whole batch fails
+    /// together), [`AuditError::AccessLog`] when an entry has no stored form,
+    /// and [`AuditError::RetentionEnds`] when `ends` is neither empty nor one
+    /// end per record.
+    pub async fn write(
+        &self,
+        records: Vec<AuditRecord>,
+        ends: &[RecordEnd],
+    ) -> Result<(), AuditError> {
+        self.take_in_own(records, ends).await.map(drop)
+    }
+
+    /// [`Self::write`], returning the id of each record written.
+    async fn take_in_own(
+        &self,
+        records: Vec<AuditRecord>,
+        ends: &[RecordEnd],
+    ) -> Result<(Vec<Uuid>, intake::Chains), AuditError> {
+        if records.is_empty() {
+            return Ok((Vec::new(), intake::Chains::default()));
+        }
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
+        let (ids, learned, wrote) = self.take_in(&mut tx, records, ends).await?;
+        tx.commit().await?;
+        self.pending.mark(wrote);
+        self.remember(learned);
+        Ok((ids, wrote))
+    }
+
+    /// The `INSERT` of the system intake on `conn`, each record with its
+    /// `search_tokens` text in `tokens`; returns each record's id.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the INSERT fails.
     async fn insert_rows(
-        &self,
         conn: &mut PgConnection,
         records: &[AuditRecord],
         ends: &[RecordEnd],
         policy: Vec<u8>,
         tokens: Vec<String>,
-    ) -> Result<(), AuditError> {
+    ) -> Result<Vec<Uuid>, AuditError> {
         let mut c = BatchColumns::with_capacity(records.len());
         for (index, record) in records.iter().enumerate() {
             c.push(record, ends.get(index))?;
         }
-        sqlx::query(self.owed(INSERT_BATCH, &INSERT_BATCH_OWED))
+        let ids = c.ids.clone();
+        sqlx::query(INSERT_BATCH)
             .bind(c.recorded_at)
             .bind(c.actions)
             .bind(c.outcomes)
@@ -615,9 +525,10 @@ impl AuditStore {
             .bind(c.details)
             .bind(c.summaries)
             .bind(c.token_attributes)
+            .bind(c.ids)
             .execute(&mut *conn)
             .await?;
-        Ok(())
+        Ok(ids)
     }
 
     /// The compiled render policy `digest` names, read from the store the
@@ -666,15 +577,17 @@ impl AuditStore {
         Ok(compiled)
     }
 
-    /// The FHIR R4 `AuditEvent` of a stored row, rendered under the policy it
-    /// names.
+    /// The typed FHIR R4 `AuditEvent` of a stored row, rendered under the
+    /// policy it names.
     ///
     /// # Errors
     /// [`AuditError::Unreadable`] and [`AuditError::UnreadableJson`] when the
-    /// row or its policy does not read, [`AuditError::Render`] when the
-    /// document cannot be written.
+    /// row or its policy does not read.
     #[cfg(feature = "fhir")]
-    async fn render(&self, row: &PgRow) -> Result<serde_json::Value, AuditError> {
+    pub(super) async fn resource(
+        &self,
+        row: &PgRow,
+    ) -> Result<ihe_atna::balp::AuditEventResource, AuditError> {
         let (policy, stored) = self.record_of(row).await?;
         crate::system_log::render::render(stored, &policy)
     }
@@ -693,43 +606,9 @@ impl AuditStore {
         chain_seq: i64,
     ) -> Result<Option<serde_json::Value>, AuditError> {
         match self.row_at(chain, chain_seq).await? {
-            Some(row) => self.render(&row).await.map(Some),
+            Some(row) => value_of(&self.resource(&row).await?).map(Some),
             None => Ok(None),
         }
-    }
-
-    /// The oldest record the FHIR Feed still owes, past the outbox ids in
-    /// `skip`, as `(its outbox id, its FHIR document)`, and how many such
-    /// records there are. A record whose document cannot be rendered comes
-    /// back as its outbox id with the error, for the feed to hold aside.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when a SELECT fails.
-    #[cfg(feature = "fhir")]
-    pub async fn oldest_fhir_feed(
-        &self,
-        skip: &[i64],
-    ) -> Result<(Option<(i64, Result<serde_json::Value, AuditError>)>, i64), AuditError> {
-        let mut conn = acquire(&self.pool).await?;
-        let row = sqlx::query(OLDEST_OWED)
-            .bind(skip)
-            .fetch_optional(&mut *conn)
-            .await?;
-        let waiting: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM audit.fhir_feed_outbox WHERE NOT (id = ANY($1))",
-        )
-        .bind(skip)
-        .fetch_one(&mut *conn)
-        .await?;
-        drop(conn);
-        let oldest = match row {
-            Some(row) => {
-                let owed = row.try_get::<i64, _>("owed")?;
-                Some((owed, self.render(&row).await))
-            }
-            None => None,
-        };
-        Ok((oldest, waiting))
     }
 
     /// Enters the records written before the store kept an outbox, and never
@@ -743,26 +622,6 @@ impl AuditStore {
             .fetch_one(&mut *acquire(&self.pool).await?)
             .await?;
         u64::try_from(moved).map_err(|e| AuditError::Store(sqlx::Error::Decode(Box::new(e))))
-    }
-
-    /// Removes the record the outbox owes under `owed` from the outbox, and
-    /// stamps it as delivered by the FHIR Feed when it is a record of the
-    /// system chain, in one statement.
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when the statement fails; the record is then
-    /// delivered again, which the repository takes as a second copy.
-    pub async fn mark_fhir_feed_delivered(&self, owed: i64) -> Result<(), AuditError> {
-        sqlx::query(
-            "WITH delivered AS (DELETE FROM audit.fhir_feed_outbox WHERE id = $1 \
-             RETURNING chain, chain_seq) \
-             UPDATE audit.audit_event e SET delivered_fhir_feed_at = now() FROM delivered d \
-             WHERE d.chain = 'system' AND e.chain_seq = d.chain_seq",
-        )
-        .bind(owed)
-        .execute(&mut *acquire(&self.pool).await?)
-        .await?;
-        Ok(())
     }
 
     /// Delete every record whose own retention end is on or before `today`,
@@ -799,9 +658,10 @@ impl AuditStore {
     }
 
     /// The RESTful-ATNA ITI-81 retrieval: the FHIR `AuditEvent` documents of
-    /// the matching records, newest first, rendered from their columns, plus
-    /// the total match count. The filter is the supported ITI-81
-    /// search-parameter subset ([`AuditSearchFilter`]).
+    /// the matching records, newest first, rendered from their columns,
+    /// whether a match follows the page, and the total match count when
+    /// [`AuditSearchFilter::total`] asks for it. The filter is the supported
+    /// ITI-81 search-parameter subset ([`AuditSearchFilter`]).
     ///
     /// A criterion on a column is applied to that column. A criterion on an
     /// element of the document (`address` and the token parameters) is first
@@ -813,92 +673,83 @@ impl AuditStore {
     /// [`AuditError::Store`] when a query fails, and the rendering errors of a
     /// record that cannot be read back.
     #[cfg(feature = "fhir")]
-    pub async fn search(
-        &self,
-        filter: &AuditSearchFilter,
-    ) -> Result<(i64, Vec<serde_json::Value>), AuditError> {
+    pub async fn search(&self, filter: &AuditSearchFilter) -> Result<AuditPage, AuditError> {
         let Some(resolved) =
             crate::system_log::search::resolve_criteria(&self.pool, filter).await?
         else {
-            return Ok((0, Vec::new()));
+            return Ok(AuditPage::empty(filter));
         };
-        let (count_sql, count_values, sql, values) = build_search_statements(filter, &resolved);
+        let (count_sql, count_values, sql, values) =
+            search_page::build_search_statements(filter, &resolved);
         // NOTE: an unnamed statement is planned with the token ids it binds (PostgreSQL 18,
         // "PREPARE", plan_cache_mode), so a rare token reaches its index rather than a generic plan.
-        let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
-            .persistent(false)
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
-        let rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
+        let total = if filter.total {
+            let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
+                .persistent(false)
+                .fetch_one(&mut *acquire(&self.pool).await?)
+                .await?;
+            Some(total)
+        } else {
+            None
+        };
+        let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
             .persistent(false)
             .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
+        // The page statement reads one record past the page, which says whether a next
+        // page exists without counting the matches.
+        let more = rows.len() > search_page::page_size(filter);
+        rows.truncate(search_page::page_size(filter));
         let mut documents = Vec::with_capacity(rows.len());
         for row in &rows {
-            documents.push(self.render(row).await?);
+            documents.push(self.resource(row).await?.into_resource());
         }
-        Ok((total, documents))
+        Ok(AuditPage {
+            total,
+            documents,
+            more,
+        })
     }
-}
-
-/// Build the ITI-81 retrieval's two statements — the count and the page — from a
-/// filter and the token ids its criteria on the document resolved to, with no
-/// database involved.
-///
-/// Extracted from [`AuditStore::search`] so the SQL is reachable by a test. This
-/// is the server's second runtime dynamic-SQL site after the AQL engine, and the
-/// property that matters is the same one: every IDENTIFIER here — the schema, the
-/// table, every column, the sort direction — is a literal in this function, while
-/// every caller-supplied value goes through `Expr::val` and arrives as a bound
-/// parameter. `limit`/`offset` are clamped integers, never text.
-///
-/// The guard `scripts/checks/sql-string-building.sh` catches string-built SQL but
-/// cannot see an `Alias::new` argument, which is why the closed set is pinned by a
-/// test rather than only by the guard.
-#[cfg(feature = "fhir")]
-fn build_search_statements(
-    filter: &AuditSearchFilter,
-    resolved: &[Option<crate::system_log::search::TokenMatch>],
-) -> (
-    String,
-    sea_query_sqlx::SqlxValues,
-    String,
-    sea_query_sqlx::SqlxValues,
-) {
-    use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder, Query};
-    use sea_query_sqlx::SqlxBinder as _;
-
-    let table = (Alias::new("audit"), Alias::new("audit_record"));
-    let condition = crate::system_log::search::condition::search_condition(filter, resolved);
-
-    let (count_sql, count_values) = Query::select()
-        .expr(Expr::col(sea_query::Asterisk).count())
-        .from(table)
-        .cond_where(condition.clone())
-        .build_sqlx(PostgresQueryBuilder);
-
-    let (sql, values) = newest_first(condition)
-        .limit(u64::try_from(filter.count.clamp(1, 1000)).unwrap_or(50))
-        .offset(u64::try_from(Ord::max(filter.offset, 0)).unwrap_or(0))
-        .build_sqlx(PostgresQueryBuilder);
-
-    (count_sql, count_values, sql, values)
 }
 
 /// The record columns of the records `condition` selects, newest first.
 #[cfg(feature = "fhir")]
 pub(super) fn newest_first(condition: sea_query::Cond) -> sea_query::SelectStatement {
-    use sea_query::{Alias, Order, Query};
+    use sea_query::{Alias, Query};
 
-    Query::select()
-        .columns(RECORD_COLUMNS.map(Alias::new))
-        .from((Alias::new("audit"), Alias::new("audit_record")))
-        .cond_where(condition)
-        .order_by(Alias::new("recorded_at"), Order::Desc)
-        .order_by(Alias::new("stored_at"), Order::Desc)
-        .order_by(Alias::new("chain"), Order::Desc)
-        .order_by(Alias::new("chain_seq"), Order::Desc)
-        .to_owned()
+    search_page::newest_first_of(
+        Query::select()
+            .columns(RECORD_COLUMNS.map(Alias::new))
+            .from((Alias::new("audit"), Alias::new("audit_record")))
+            .cond_where(condition),
+    )
+    .to_owned()
+}
+
+/// One page of the ITI-81 retrieval.
+#[cfg(feature = "fhir")]
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct AuditPage {
+    /// Every match across all pages, counted only when the filter asks for
+    /// it (FHIR R4 Search §3.1.1.5.2, `_total`; `Bundle.total` is optional).
+    pub total: Option<i64>,
+    /// The page's documents, newest first, as `ihe-atna` wrote them.
+    pub documents: Vec<fhir_types::r4::audit_event::AuditEvent>,
+    /// Whether a match follows the page.
+    pub more: bool,
+}
+
+#[cfg(feature = "fhir")]
+impl AuditPage {
+    /// The page of a filter that matches nothing.
+    #[must_use]
+    pub fn empty(filter: &AuditSearchFilter) -> Self {
+        Self {
+            total: filter.total.then_some(0),
+            documents: Vec::new(),
+            more: false,
+        }
+    }
 }
 
 /// The ITI-81 retrieval the REST layer resolved: the `date` window, the
@@ -921,6 +772,10 @@ pub struct AuditSearchFilter {
     pub count: i64,
     /// `_offset` — page offset.
     pub offset: i64,
+    /// Whether every match is counted: `_total=accurate` or `estimate`, or
+    /// `_count=0` (FHIR R4 Search §3.1.1.5.2). A page alone reads no more
+    /// records than it serves, so its cost does not grow with the log.
+    pub total: bool,
 }
 
 /// One search parameter of the retrieval: a record matches when any of its

@@ -7,10 +7,14 @@
 //! settings", names a gate-keeper who alone changes the settings, and the
 //! `ACCESS_DIRECTIVE_SETTINGS.gate_keepers` of the draft access control hold
 //! them: `PARTY_SELF` for the subject, otherwise a party referenced into the
-//! demographic service; with none, the change is left to the system's
-//! administrators. A new version is therefore committed by a gate-keeper of
-//! the current settings or by `admin_role`, acting on the subject's
-//! instruction; every other caller is refused `403`. The settings are read by
+//! demographic service. The gate-keeper is "usually the patient for mentally
+//! competent adults", so while the current settings name no gate-keeper the
+//! subject writes their own settings. Once settings name gate-keepers, they
+//! alone write, beside `admin_role` acting on the subject's instruction: naming
+//! gate-keepers without `PARTY_SELF` takes the subject's write away, as for a
+//! subject a guardian acts for. Changing `gate_keepers` is a write like any
+//! other, so only a current writer changes them. Every other caller is refused
+//! `403`. The settings are read by
 //! the same callers and by the subject, and answered as absent to anyone
 //! else, because EHDS Art. 8 forbids a restriction being visible to a
 //! provider (`docs/law/eu/ehds/text.html`). Who reads and writes the
@@ -99,19 +103,26 @@ impl SettingsCaller {
     }
 
     /// Whether the caller may commit the next `EHR_ACCESS` version of an EHR
-    /// whose current settings are `current`.
+    /// whose current settings are `current`: an administrator, a gate-keeper
+    /// `current` names, and the subject while `current` names no gate-keeper.
+    ///
+    /// Settings held closed name no gate-keeper anyone can read, so only an
+    /// administrator writes over them.
     ///
     /// # Errors
-    /// [`ServiceError::not_permitted`] (`403`) for a caller who is neither an
-    /// administrator nor a gate-keeper of `current`.
+    /// [`ServiceError::not_permitted`] (`403`) for every other caller.
     pub fn may_write(&self, current: Option<&EhrAccessSettings>) -> Result<(), ServiceError> {
-        if self.administrator || self.is_gate_keeper(current) {
+        // NOTE: BASE Architecture Overview §Access Control, the gate-keeper is "usually the
+        // patient for mentally competent adults", so the subject writes until one is named.
+        let unkept = !matches!(current, Some(EhrAccessSettings::HeldClosed))
+            && current.is_none_or(|settings| settings.gate_keepers().is_empty());
+        if self.administrator || self.is_gate_keeper(current) || (self.subject && unkept) {
             return Ok(());
         }
         Err(ServiceError::not_permitted(
-            "only a gate-keeper the current EHR_ACCESS settings name, or an administrator acting \
-             on the subject's instruction, commits a new EHR_ACCESS version (BASE Architecture \
-             Overview, Access control of access settings)",
+            "only the subject while no gate-keeper is named, a gate-keeper the current \
+             EHR_ACCESS settings name, or an administrator acting on the subject's instruction, \
+             commits a new EHR_ACCESS version (BASE Architecture Overview, Access Control)",
         ))
     }
 
@@ -245,15 +256,28 @@ mod tests {
         );
     }
 
+    /// A competent subject writes their own settings while no gate-keeper is
+    /// named, and once gate-keepers are named only as one of them: a guardian
+    /// named without `PARTY_SELF` takes the subject's write away.
     #[test]
-    fn the_subject_writes_only_as_a_named_gate_keeper() {
-        assert!(subject().may_write(Some(&kept())).is_ok());
-        let refused = subject().may_write(Some(&settings(&[named("PARTY_IDENTIFIED", DOCTOR)])));
+    fn the_subject_writes_until_gate_keepers_are_named_without_them() {
+        assert!(subject().may_write(None).is_ok(), "no settings yet");
         assert!(
-            matches!(refused, Err(ServiceError::Forbidden(_))),
-            "{refused:?}"
+            subject().may_write(Some(&settings(&[]))).is_ok(),
+            "settings that name no gate-keeper"
         );
-        assert!(subject().may_write(None).is_err());
+        assert!(subject().may_write(Some(&kept())).is_ok(), "named");
+        let guarded = subject().may_write(Some(&settings(&[named("PARTY_RELATED", GUARDIAN)])));
+        assert!(
+            matches!(guarded, Err(ServiceError::Forbidden(_))),
+            "a guardian named without PARTY_SELF: {guarded:?}"
+        );
+        assert!(
+            subject()
+                .may_write(Some(&EhrAccessSettings::HeldClosed))
+                .is_err(),
+            "settings held closed"
+        );
     }
 
     #[test]
@@ -272,10 +296,11 @@ mod tests {
         assert!(party(NURSE).may_write(Some(&kept())).is_err());
     }
 
-    /// With no settings, or settings held closed, only an administrator writes.
+    /// With no settings, or settings held closed, no caller but an
+    /// administrator and the subject writes.
     #[test]
-    fn with_no_gate_keeper_only_an_administrator_writes() {
-        for caller in [subject(), party(DOCTOR), SettingsCaller::default()] {
+    fn with_no_gate_keeper_only_an_administrator_and_the_subject_write() {
+        for caller in [party(DOCTOR), SettingsCaller::default()] {
             assert!(caller.may_write(None).is_err());
             assert!(
                 caller

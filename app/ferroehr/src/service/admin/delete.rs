@@ -82,6 +82,7 @@ impl FerroEhrService {
         // referenced it after the count above).
         template_repo::release_template_ref(&mut tx, &stored).await?;
         tx.commit().await?;
+        self.registered_templates.changed();
         // Evict the derived-runtime cache for the deleted id (case-canonical
         // key). No openEHR spec governs the cache.
         self.web_templates
@@ -169,8 +170,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// - `exception` — a database fault while deleting.
-    /// - `service_overloaded` — the record of a removed EHR was refused under
-    ///   `[audit] fail_mode = "closed"`; its chunk is already committed.
+    /// - `service_overloaded` — the record of a removed EHR could not be written; its chunk is already committed.
     pub async fn admin_ehr_delete_all(&self, ehr_ids: &[EhrId]) -> Result<u64, ServiceError> {
         // Chunking bounds each transaction's lock/WAL footprint on a
         // full-store wipe.
@@ -198,7 +198,8 @@ impl FerroEhrService {
             let removed = self.erase_ehrs(&mut tx, chunk).await?;
             tx.commit().await?;
             for &ehr_id in &removed {
-                self.emit_mark_access(EventActionCode::Delete, ehr_id, None, "ehr-delete")?;
+                self.emit_mark_access(EventActionCode::Delete, ehr_id, None, "ehr-delete")
+                    .await?;
             }
             #[expect(
                 clippy::as_conversions,
@@ -429,6 +430,18 @@ impl FerroEhrService {
             .await?;
 
         tx.commit().await?;
+
+        // The erased PERSON's care goes from the clinical care projection in
+        // this flow; should the delete fail, the stamp the erasure wrote keeps
+        // every query off the projection until the projector applies it.
+        // No openEHR spec governs the projection: our own design (#5699).
+        if let Err(error) = self.forget_care(&[party_id.0]).await {
+            let cause: &(dyn std::error::Error + 'static) = &error;
+            tracing::warn!(
+                error = cause,
+                "the erased party's care rows were not removed yet"
+            );
+        }
 
         // After the commit, so a blob is only collected once nothing can
         // reference it again. The scan covers both domains, so a blob this

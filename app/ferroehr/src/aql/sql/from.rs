@@ -38,7 +38,9 @@ use crate::aql::ir::{
 use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow};
 
 use super::expr::{cast, col, hot, type_cond};
-use super::head::{HeadPlacement, bind_head, content_key, node_key, trunk_head_version};
+use super::head::{
+    HeadPlacement, bind_head, content_key, is_root_only, node_key, trunk_head_version,
+};
 use super::{Builder, VoGroup};
 
 /// The correlation anchor for an `OR` / `NOT CONTAINS` `EXISTS` subquery.
@@ -349,9 +351,7 @@ impl Builder<'_> {
         if let Some(n) = &r.name {
             out.push(self.name_cond(alias, n)?);
         }
-        for sp in &r.standard {
-            out.push(self.std_cond(alias, sp)?);
-        }
+        out.extend(self.source_std_conds(alias, r)?);
         Ok(out)
     }
 
@@ -812,11 +812,10 @@ impl Builder<'_> {
         }
         self.q.and_where(hot(&node, Node::Tier));
         self.node_alias.insert(sid, node.clone());
-        for cond in self.rm_conds(&node, r)? {
-            self.q.and_where(cond);
-        }
-
         if let Some(parent) = structural {
+            for cond in self.rm_conds(&node, r)? {
+                self.q.and_where(cond);
+            }
             self.q
                 .and_where(descendant_in_from(&node, &parent.node, &parent.types));
             Ok(VoGroup {
@@ -837,6 +836,9 @@ impl Builder<'_> {
             // whole version's nodes filtered by type (#4089).
             if is_root_only(&r.rm_type) {
                 self.q.and_where(col(&node, Node::Num).eq(0));
+                // NOTE: our own design (#5782), a uid-ordered walk skips other classes first.
+                let kinds = r.rm_type.names().iter().cloned();
+                self.q.and_where(col(&voa, VersionRow::Kind).is_in(kinds));
             }
             // The audit join is summoned lazily (`ensure_audit`) by the
             // version-field expressions that actually read it — a query that
@@ -846,6 +848,9 @@ impl Builder<'_> {
             self.group_roots.push(node.clone());
             self.group_vos.push(voa.clone());
             self.vo_alias.insert(sid, voa.clone());
+            for cond in self.rm_conds(&node, r)? {
+                self.q.and_where(cond);
+            }
             if let Some(e) = ehr {
                 // The EHR link binds on the version SPINE only: one owning EHR
                 // per versioned object (RM ehr master04 §EHR) makes the node
@@ -853,7 +858,7 @@ impl Builder<'_> {
                 // drives idx_version_hot_ehr with no per-node-row index.
                 self.q
                     .and_where(col(&voa, VersionRow::EhrId).eq(col(e, Ehr::Id)));
-                self.roots_linked_to_ehr.insert(node.clone());
+                self.roots_linked_to_ehr.insert(node.clone(), e.to_owned());
             }
             // FolderItems: the child's own version group is open; the
             // reference edge itself is the correlated `items` lookup over the
@@ -1120,7 +1125,7 @@ impl Builder<'_> {
                 Some(raw) => super::predicate::ehr_id_compare(alias, p.op, &raw),
                 None => cast(col(alias, Ehr::Id), "text").binary(
                     super::expr::binoper(p.op),
-                    super::value::coerce_rhs(self.bind_value(&p.value)?, Coercion::Text)?,
+                    super::coerce::coerce_rhs(self.bind_value(&p.value)?, Coercion::Text)?,
                 ),
             },
             EhrField::TimeCreated => col(alias, Ehr::TimeCreated).binary(
@@ -1150,22 +1155,6 @@ impl Builder<'_> {
 /// ([`crate::aql::error::AqlFeatureError::DemographicRootPlacement`]).
 pub(super) fn is_vo_root_type(t: &str) -> bool {
     crate::versioning::Kind::from_type(t).is_some()
-}
-
-/// Whether every class in `types` occurs only as the root (`num = 0`) of its
-/// versioned object.
-///
-/// The EHR holds its `EHR_STATUS`, `EHR_ACCESS` and `COMPOSITION`s as separate
-/// versioned objects (RM ehr master04 §The Parts of the EHR), and a
-/// `COMPOSITION` holds only `CONTENT_ITEM`s (RM ehr master05), so none of the
-/// three nests in a tree; a `FOLDER` nests in `FOLDER.folders` and is left out.
-/// Storing the root at `num = 0` is our own design (`crate::storage::codec`).
-pub(super) fn is_root_only(types: &crate::aql::ir::TypeSet) -> bool {
-    !types.is_empty()
-        && types
-            .names()
-            .iter()
-            .all(|t| matches!(t.as_str(), "COMPOSITION" | "EHR_STATUS" | "EHR_ACCESS"))
 }
 
 /// The `LATERAL` FROM item of the content node `alias` contained in the node

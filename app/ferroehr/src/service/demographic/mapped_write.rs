@@ -18,12 +18,14 @@
 )]
 
 use openehr_base::prelude::{HierObjectId, ObjectId, PartyRef};
+use openehr_rm::draft::access_control::terminology::{CareRelationship, Term};
 use openehr_rm::prelude::{DvIdentifier, DvUri, DvUriData};
 use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 use serde_json::{Map, Value};
 
 use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
+use crate::party_binding::policy_mark::coded_term;
 use crate::service::FerroEhrService;
 
 /// The RM attributes of the demographic model that hold a list.
@@ -188,7 +190,7 @@ fn remove_at(holder: &mut Value, step: &str, identifier: Option<(&str, &str)>) -
 }
 
 /// A path step as its attribute and its node id predicate.
-fn step_parts(step: &str) -> (&str, Option<&str>) {
+pub(super) fn step_parts(step: &str) -> (&str, Option<&str>) {
     match step.split_once('[') {
         Some((attribute, predicate)) => (attribute, Some(predicate.trim_end_matches(']'))),
         None => (step, None),
@@ -196,7 +198,7 @@ fn step_parts(step: &str) -> (&str, Option<&str>) {
 }
 
 /// Whether `item` carries the node id `node_id` (any item when `None`).
-fn held(item: &Value, node_id: Option<&str>) -> bool {
+pub(super) fn held(item: &Value, node_id: Option<&str>) -> bool {
     node_id.is_none_or(|id| item.get("archetype_node_id").and_then(Value::as_str) == Some(id))
 }
 
@@ -273,7 +275,8 @@ impl FerroEhrService {
     /// Returns a membership of the `GROUP` `group` held by the `PERSON`
     /// `member`: an inline `PARTY_RELATIONSHIP` of `archetype_id` whose
     /// `source` is the member and whose `target` is the group, each named
-    /// under `namespace`.
+    /// under `namespace`, named by the coded membership, HL7 v3 `RoleClass#MBR`, when the group is a
+    /// care team, as RM `PARTY_RELATIONSHIP.type()` is its `name` (#5617).
     ///
     /// RM demographic master02 §Party Relationships: a relationship is stored
     /// in the version of its source.
@@ -286,6 +289,7 @@ impl FerroEhrService {
         archetype_id: &str,
         (group, member): (VoId, VoId),
         namespace: &str,
+        care_team: bool,
     ) -> Result<Value, ServiceError> {
         let wt = self.web_template(archetype_id).await?;
         let mut body = new_party(&wt);
@@ -293,7 +297,20 @@ impl FerroEhrService {
             object.insert("source".to_owned(), party_ref(namespace, "PERSON", member));
             object.insert("target".to_owned(), party_ref(namespace, "GROUP", group));
         }
+        if care_team {
+            name_coded(&mut body, CareRelationship::MemberOf, "member of");
+        }
         Ok(body)
+    }
+}
+
+/// Names the party or relationship `body` by the access term `term`, reading
+/// `rubric`: RM demographic `party.adoc` and
+/// `party_relationship.adoc` make `type()` the `name` (`Type_valid`), so the
+/// coded name says what kind it is.
+pub(super) fn name_coded<T: Term>(body: &mut Value, term: T, rubric: &str) {
+    if let Some(object) = body.as_object_mut() {
+        object.insert("name".to_owned(), coded_term(term, rubric));
     }
 }
 

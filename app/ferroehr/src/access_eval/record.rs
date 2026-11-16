@@ -23,14 +23,20 @@
 //! included, whose response says nothing (EHDS Art. 8). Which grounds are
 //! named, and how a directive is identified, is our own design (#5514).
 
+use std::collections::{BTreeMap, BTreeSet};
+use std::sync::{Mutex, PoisonError};
+
 use openehr_rm::draft::access_control::access_control::access_directive::AccessDirective;
+use openehr_rm::draft::access_control::terminology::log::Authorisation;
 use openehr_rm::draft::access_control::terminology::{DirectiveKind, Refusal, Term as _};
 use openehr_rm::draft::access_log::access_log::access_authorisation::AccessAuthorisation;
 use openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier;
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use uuid::Uuid;
 
 use crate::access_eval::condition::{Judgement, Noted, RequestAccess};
-use crate::access_eval::procedure::Lifted;
+use crate::access_eval::procedure::{Lifted, Verdict};
+use crate::access_eval::scope::{Item, Pred};
 use crate::access_log::entry::authorisation;
 use crate::ids::EhrId;
 use crate::service::ehr::access_settings::EhrAccessSettings;
@@ -51,19 +57,24 @@ pub enum Step {
     /// 0, a representative on an EHR other than the one whose subject it
     /// represents, before the numbered steps.
     Representation,
+    /// 0, a read by a caller whose agreement conditions it on a consent
+    /// decision it names no reference to, before the numbered steps.
+    ConsentReference,
     /// 1, an opt-out (EHDS Art. 10).
     OptOut,
     /// 2, a restriction (EHDS Art. 8).
     Restriction,
     /// 3, a consent deny.
     ConsentDeny,
-    /// 4, a sensitivity the caller is not cleared for.
-    Sensitivity,
-    /// 5, a care relationship the policy requires.
-    CareRelationship,
-    /// 6, a purpose the policy requires.
+    /// 4, a purpose the policy requires.
     Purpose,
-    /// 7, the default disposition.
+    /// 5, a deny rule of the controller's policy.
+    ControllerRule,
+    /// 6, a sensitivity no applying permit names.
+    Sensitivity,
+    /// 7, a care relationship the policy requires.
+    CareRelationship,
+    /// 8, the default disposition.
     DefaultDisposition,
 }
 
@@ -75,12 +86,14 @@ impl Step {
             Refusal::OptOut => Self::OptOut,
             Refusal::Restricted => Self::Restriction,
             Refusal::ConsentDenied => Self::ConsentDeny,
+            Refusal::PolicyDenied => Self::ControllerRule,
             Refusal::Sensitivity => Self::Sensitivity,
             Refusal::NoCareRelationship => Self::CareRelationship,
-            Refusal::PurposeMissing | Refusal::PurposeNotPermitted => Self::Purpose,
+            Refusal::PurposeMissing => Self::Purpose,
             Refusal::ConsentRequired => Self::DefaultDisposition,
             Refusal::NotSubject => Self::Subject,
             Refusal::NotRepresented => Self::Representation,
+            Refusal::ConsentReferenceMissing => Self::ConsentReference,
         }
     }
 
@@ -88,14 +101,15 @@ impl Step {
     #[must_use]
     pub const fn number(self) -> u8 {
         match self {
-            Self::Subject | Self::Representation => 0,
+            Self::Subject | Self::Representation | Self::ConsentReference => 0,
             Self::OptOut => 1,
             Self::Restriction => 2,
             Self::ConsentDeny => 3,
-            Self::Sensitivity => 4,
-            Self::CareRelationship => 5,
-            Self::Purpose => 6,
-            Self::DefaultDisposition => 7,
+            Self::Purpose => 4,
+            Self::ControllerRule => 5,
+            Self::Sensitivity => 6,
+            Self::CareRelationship => 7,
+            Self::DefaultDisposition => 8,
         }
     }
 
@@ -105,12 +119,14 @@ impl Step {
         match self {
             Self::Subject => "subject",
             Self::Representation => "representation",
+            Self::ConsentReference => "consent reference",
             Self::OptOut => "opt-out",
             Self::Restriction => "restriction",
             Self::ConsentDeny => "consent deny",
+            Self::Purpose => "purpose",
+            Self::ControllerRule => "controller rule",
             Self::Sensitivity => "sensitivity",
             Self::CareRelationship => "care relationship",
-            Self::Purpose => "purpose",
             Self::DefaultDisposition => "default disposition",
         }
     }
@@ -203,9 +219,22 @@ impl RequestAccess {
             .or(noted.as_ref().and_then(|(ehr_id, _)| *ehr_id))
             .and_then(|ehr_id| self.judgement(ehr_id));
         let mut grounds = self.role_grounds();
+        if let Some((_, noted)) = &noted
+            && Step::of(noted.refusal) == Step::ControllerRule
+        {
+            // NOTE: our own design (#5691), a refusing rule is named as the legal obligation the
+            // controller's rule states, so its legal grounds reach the record.
+            grounds.extend(
+                noted
+                    .by
+                    .iter()
+                    .filter_map(|at| self.rule_ground(*at, Authorisation::LegalObligation)),
+            );
+        }
         let refused = noted.map(|(_, noted)| self.refused(&noted, judged.as_ref()));
         if let Some(judged) = &judged {
-            self.verdict_grounds(judged, refused.is_none(), &mut grounds);
+            let covering = ehr_id.and_then(|ehr_id| self.lifted_covers().of(ehr_id));
+            self.verdict_grounds(judged, refused.is_none(), covering.as_ref(), &mut grounds);
         }
         Decision {
             refused,
@@ -214,7 +243,27 @@ impl RequestAccess {
         }
     }
 
-    /// The capabilities and roles the caller held.
+    /// The legal grounds of the controller rules that refused `ehr_id`; with
+    /// no EHR, those of the request's first refusal. Empty for a refusal by
+    /// any other step and for an admitted access.
+    #[must_use]
+    pub fn refusal_grounds(&self, ehr_id: Option<EhrId>) -> Vec<DvCodedText> {
+        let Some((_, noted)) = self.noted(ehr_id) else {
+            return Vec::new();
+        };
+        if Step::of(noted.refusal) != Step::ControllerRule {
+            return Vec::new();
+        }
+        noted
+            .by
+            .iter()
+            .filter_map(|at| self.rules().get(*at))
+            .flat_map(|rule| rule.legal_grounds.as_deref().unwrap_or_default())
+            .cloned()
+            .collect()
+    }
+
+    /// The capabilities the caller held and the roles it performs.
     fn role_grounds(&self) -> Vec<AccessAuthorisation> {
         let capabilities = self
             .record_facts()
@@ -223,67 +272,103 @@ impl RequestAccess {
             .map(|(operation, role)| AccessAuthorisation {
                 name: Some((*operation).to_owned()),
                 reference: Some(role_reference(*role)),
-                ..authorisation("role")
+                ..authorisation(Authorisation::Role)
             });
-        let roles = self.caller().roles.iter().map(|role| AccessAuthorisation {
-            name: Some(role.clone()),
-            ..authorisation("role")
-        });
+        let roles = self
+            .caller()
+            .facts
+            .roles()
+            .iter()
+            .map(|role| AccessAuthorisation {
+                name: Some(format!("{}::{}", role.terminology, role.code)),
+                ..authorisation(Authorisation::Role)
+            });
         capabilities.chain(roles).collect()
     }
 
     /// The grounds `judged` rests on: those that admitted it when
-    /// `admitted`, and each emergency override.
+    /// `admitted`, and each emergency override; when the request admitted
+    /// objects of the EHR, only the lifted denies and rules `covering` them
+    /// (#5630, #5676).
     fn verdict_grounds(
         &self,
         judged: &Judgement,
         admitted: bool,
+        covering: Option<&Covering>,
         grounds: &mut Vec<AccessAuthorisation>,
     ) {
         let verdict = &judged.verdict;
         let found = &verdict.grounds;
         let directives = directives_of((*judged.settings).as_ref());
         let version = judged.version.as_deref();
-        let directive = |at: usize, kind: Option<&'static str>| {
+        let directive = |at: usize, kind: Option<Authorisation>| {
             directives
                 .get(at)
                 .map(|d| directive_ground(d, at, version, kind))
         };
         if admitted {
             if found.subject {
-                grounds.push(authorisation("subject of care"));
+                grounds.push(authorisation(Authorisation::SubjectOfCare));
             }
             grounds.extend(found.permits.iter().filter_map(|at| directive(*at, None)));
             if found.keeper && !self.caller().administrator {
                 grounds.push(AccessAuthorisation {
                     name: Some(EHR_ACCESS.to_owned()),
                     version: version.map(str::to_owned),
-                    ..authorisation("consent")
+                    ..authorisation(Authorisation::Consent)
                 });
             }
             if found.cared {
-                grounds.push(self.policy_ground("treatment relationship"));
+                grounds.push(self.policy_ground(Authorisation::TreatmentRelationship));
             }
         }
         grounds.extend(
             found
                 .lifted
                 .iter()
-                .filter_map(|at| directive(*at, Some("emergency"))),
+                .map(|(at, _)| *at)
+                .filter(|at| covering.is_none_or(|covering| covering.directives.contains(at)))
+                .filter_map(|at| directive(at, Some(Authorisation::Emergency))),
+        );
+        grounds.extend(
+            found
+                .lifted_rules
+                .iter()
+                .map(|(at, _)| *at)
+                .filter(|at| covering.is_none_or(|covering| covering.rules.contains(at)))
+                .filter_map(|at| self.rule_ground(at, Authorisation::Emergency)),
         );
         if verdict.lifted.contains(&Lifted::Policy) {
-            grounds.push(self.policy_ground("emergency"));
+            grounds.push(self.policy_ground(Authorisation::Emergency));
         }
     }
 
     /// A ground of `kind` defined in the access policy in force.
-    fn policy_ground(&self, kind: &str) -> AccessAuthorisation {
+    fn policy_ground(&self, kind: Authorisation) -> AccessAuthorisation {
         let version = self.record_facts().policy_version.clone();
         AccessAuthorisation {
             name: version.as_ref().map(|_| ACCESS_POLICY.to_owned()),
             version,
             ..authorisation(kind)
         }
+    }
+
+    /// The rules of the access policy in force.
+    fn rules(&self) -> &[AccessDirective] {
+        crate::access_eval::procedure::rules_of(self.policy.as_deref())
+    }
+
+    /// The ground the rule at `at` of the access policy gives, of `kind`.
+    fn rule_ground(&self, at: usize, kind: Authorisation) -> Option<AccessAuthorisation> {
+        let rule = self.rules().get(at)?;
+        Some(AccessAuthorisation {
+            reference: Some(identify(rule, at)),
+            legal_grounds: rule
+                .legal_grounds
+                .as_ref()
+                .map(|grounds| grounds.iter().cloned().collect()),
+            ..self.policy_ground(kind)
+        })
     }
 
     /// The refusal `noted` names, with what decided it.
@@ -302,12 +387,27 @@ impl RequestAccess {
                 |version| format!("{ACCESS_POLICY} {version}"),
             )
         };
-        let by = if noted.by.is_empty() {
+        let by = if step == Step::ControllerRule {
+            let named: Vec<String> = noted
+                .by
+                .iter()
+                .map(|at| {
+                    self.rules()
+                        .get(*at)
+                        .map_or_else(|| position(*at), |rule| identify(rule, *at))
+                        .id
+                })
+                .collect();
+            format!("rule {} of {}", named.join(", "), policy())
+        } else if noted.by.is_empty() {
             match step {
                 Step::Sensitivity => format!("{} and the labels of {}", policy(), carrier()),
                 Step::CareRelationship | Step::Purpose => policy(),
                 Step::Subject => "the EHR of the caller's patient context".to_owned(),
                 Step::Representation => "the EHR of the subject the caller represents".to_owned(),
+                Step::ConsentReference => {
+                    "the consent condition of the caller's agreement".to_owned()
+                }
                 Step::DefaultDisposition if settings_of(judged).is_some() => {
                     format!("the default_access of {}", carrier())
                 }
@@ -335,6 +435,61 @@ impl RequestAccess {
     }
 }
 
+/// The lifted denies and deny rules whose data scope covered an object the
+/// request admitted of one EHR.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Covering {
+    /// Positions in the settings' `directives`.
+    directives: BTreeSet<usize>,
+    /// Positions in the policy's `rules`.
+    rules: BTreeSet<usize>,
+}
+
+/// For each EHR with a lift where the request admitted an object, the lifted
+/// denies and deny rules whose data scope covered such an object: the access
+/// record names a lift only for the data it lifted (EHDS Art. 11(5) and
+/// Art. 9(1); our own design, #5630, #5676).
+#[derive(Debug, Default)]
+pub(crate) struct LiftedCovers(Mutex<BTreeMap<EhrId, Covering>>);
+
+impl LiftedCovers {
+    /// Note which denies and rules `verdict` lifted on `ehr_id` cover the
+    /// admitted `item`; the EHR itself is no object, and a request naming no
+    /// EHR names no lift, so neither notes anything.
+    pub(crate) fn note(&self, ehr_id: Option<EhrId>, verdict: &Verdict, item: &Item<'_>) {
+        let Some(ehr_id) = ehr_id else {
+            return;
+        };
+        let found = &verdict.grounds;
+        if found.lifted.is_empty() && found.lifted_rules.is_empty()
+            || !matches!(item, Item::Object(_))
+        {
+            return;
+        }
+        let covering = |lifted: &[(usize, Pred)]| -> Vec<usize> {
+            lifted
+                .iter()
+                .filter(|(_, cover)| cover.holds(item))
+                .map(|(at, _)| *at)
+                .collect()
+        };
+        let mut covers = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        let covered = covers.entry(ehr_id).or_default();
+        covered.directives.extend(covering(&found.lifted));
+        covered.rules.extend(covering(&found.lifted_rules));
+    }
+
+    /// What was noted for `ehr_id`; `None` when the request admitted no
+    /// object of it, so the record names every lift of the EHR's verdict.
+    pub(crate) fn of(&self, ehr_id: EhrId) -> Option<Covering> {
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&ehr_id)
+            .cloned()
+    }
+}
+
 /// Stamp `event` with the decision `access` gave the EHR it names.
 ///
 /// The record carries the grounds, the policies they are defined in, and the
@@ -351,6 +506,13 @@ pub fn stamp(event: &mut AuditEvent, access: &RequestAccess) {
     let decision = access.decision(ehr_id);
     if decision.refused.is_some() {
         event.decision = AccessDecision::Refused;
+        // NOTE: EHDS Art. 9(1), a refused request that named its EHR outside its path, such
+        // as a query's scope, is recorded against that EHR (#5639).
+        if event.ehr_id.is_none()
+            && let Some((Some(refused_on), _)) = access.noted(None)
+        {
+            event.ehr_id = Some(refused_on.to_string());
+        }
     }
     event.decided = Some(Box::new(decision));
 }
@@ -377,13 +539,13 @@ fn directive_ground(
     directive: &AccessDirective,
     at: usize,
     version: Option<&str>,
-    kind: Option<&'static str>,
+    kind: Option<Authorisation>,
 ) -> AccessAuthorisation {
     let kind = kind.unwrap_or_else(|| {
         if DirectiveKind::read_coded(&directive.kind) == Ok(DirectiveKind::Delegation) {
-            "representation"
+            Authorisation::Representation
         } else {
-            "consent"
+            Authorisation::Consent
         }
     });
     AccessAuthorisation {
@@ -458,7 +620,7 @@ mod tests {
         let ground = |name: &str, version: &str| AccessAuthorisation {
             name: Some(name.to_owned()),
             version: Some(version.to_owned()),
-            ..authorisation("consent")
+            ..authorisation(Authorisation::Consent)
         };
         let grounds = [
             ground(EHR_ACCESS, "ehr-access::cdr::2"),
@@ -471,7 +633,10 @@ mod tests {
             policies: policies_of(&grounds),
             grounds: grounds.to_vec(),
         }));
-        let retention = crate::access_log::entry::horizon_retention(None);
+        let retention = crate::access_log::retention::stated(
+            None,
+            &crate::system_log::retention::LogRetention::default(),
+        );
         let entry =
             crate::access_log::entry::entry_of(&event, None, "cdr", retention).expect("an entry");
         let stored = crate::access_log::recorded::stored(&entry, 1).expect("it reads back");
@@ -493,11 +658,14 @@ mod tests {
                 "refused-opt-out" => 1,
                 "refused-restricted" => 2,
                 "refused-consent-denied" => 3,
-                "refused-sensitivity" => 4,
-                "refused-no-care-relationship" => 5,
-                "refused-purpose-missing" | "refused-purpose-not-permitted" => 6,
-                "refused-consent-required" => 7,
-                "refused-not-subject" | "refused-not-represented" => 0,
+                "refused-purpose-missing" => 4,
+                "refused-policy-denied" => 5,
+                "refused-sensitivity" => 6,
+                "refused-no-care-relationship" => 7,
+                "refused-consent-required" => 8,
+                "refused-not-subject"
+                | "refused-not-represented"
+                | "refused-consent-reference-missing" => 0,
                 other => panic!("an unknown refusal code {other}"),
             };
             assert_eq!(number, expected, "{code}");

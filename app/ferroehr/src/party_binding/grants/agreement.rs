@@ -202,8 +202,6 @@ pub struct Agreement {
     pub name: String,
     /// Its version (`agreement_version`).
     pub version: String,
-    /// The jurisdiction it holds for, upper-cased (`jurisdiction`).
-    pub jurisdiction: String,
     /// The kind of exchange it covers (`exchange`).
     pub exchange: String,
     /// What the exchange is for (`purpose`).
@@ -320,9 +318,6 @@ impl Agreement {
             accessor,
             name: first_text("agreement_name").unwrap_or_default(),
             version: first_text("agreement_version").unwrap_or_default(),
-            jurisdiction: first_word("jurisdiction")
-                .unwrap_or_default()
-                .to_ascii_uppercase(),
             exchange: first_text("exchange").unwrap_or_default(),
             purpose: first_word("purpose"),
             legal_ground,
@@ -455,8 +450,8 @@ impl Agreement {
         };
         if !covers(period, holder) {
             errors.push(format!(
-                "it keeps the requester's log for \"{period}\", shorter than this node's \
-                 audit.store {}",
+                "it keeps the requester's log for \"{period}\", shorter than the access \
+                 policy's log retention of {}",
                 holder.describe()
             ));
         }
@@ -602,7 +597,6 @@ mod tests {
         let mut items = rated();
         items.extend([
             element("agreement_name", &text("Regional exchange")),
-            element("jurisdiction", &text("de")),
             element("gdpr_art_6_1", &text("e")),
             element("gdpr_art_9_2", &text("h")),
             element(
@@ -613,7 +607,6 @@ mod tests {
         ]);
         let agreement = read(Accessor::Person, &items).expect("it reads");
         assert_eq!(agreement.name, "Regional exchange");
-        assert_eq!(agreement.jurisdiction, "DE");
         assert_eq!(agreement.discard_window_hours, Some(24));
         assert_eq!(agreement.writes, ["T.v1"]);
         assert_eq!(

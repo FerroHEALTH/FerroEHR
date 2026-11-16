@@ -247,6 +247,14 @@ pub(crate) struct TokenRegistry {
 #[must_use = "the sets are remembered only once the write commits"]
 pub(crate) struct LearnedSets(BTreeMap<Vec<i32>, i32>);
 
+impl LearnedSets {
+    /// The sets of `self` and of `other`, the parts of one write.
+    pub(crate) fn merge(mut self, other: Self) -> Self {
+        self.0.extend(other.0);
+        self
+    }
+}
+
 impl TokenRegistry {
     /// The `search_tokens` value of each of `records`, storing every token and
     /// set the store does not hold yet on `conn`, with the sets this call

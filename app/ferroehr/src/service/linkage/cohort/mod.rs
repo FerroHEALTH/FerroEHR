@@ -266,7 +266,7 @@ impl FerroEhrService {
     /// [`CohortError::Subject`] when a named subject cannot be resolved,
     /// [`CohortError::Query`] when the AQL execution fails, and
     /// [`CohortError::Unrecorded`] when the access record could not be taken
-    /// under `fail_mode = "closed"`.
+    /// that cannot be written.
     pub async fn execute_cohort_query(
         &self,
         request: CohortQueryRequest,
@@ -278,7 +278,8 @@ impl FerroEhrService {
             .or_else(crate::system_log::access_context::current_purpose);
         let outcome = self.cohort_query_inner(&request, &hash).await;
         let served = outcome.as_ref().map_or(0, |served| served.served_ehrs);
-        self.emit_cohort_access(&hash, purpose, served, outcome.is_ok())?;
+        self.emit_cohort_access(&hash, purpose, served, outcome.is_ok())
+            .await?;
         outcome
     }
 
@@ -318,7 +319,8 @@ impl FerroEhrService {
             return Ok(self.suppress(
                 CohortOutcome {
                     query: QueryOutcome::plain(
-                        crate::service::query::result_set::empty_result_set(&request.aql),
+                        crate::service::query::result_set::empty_result_set(&request.aql)
+                            .map_err(|error| CohortError::Query(error.into()))?,
                     ),
                     cohort_size,
                     served_ehrs: 0,
@@ -383,7 +385,8 @@ impl FerroEhrService {
     /// The EHRs of the subjects the cohort names, each resolved by the
     /// installed provider into the clinical domain (under an IHE identity
     /// source through the forward PIXm translation) and matched against the
-    /// subject of each EHR's `EHR_STATUS`. A subject no EHR belongs to adds
+    /// subject of each EHR's `EHR_STATUS`, with the EHRs of the other record
+    /// subjects of that subject's `PERSON`. A subject no EHR belongs to adds
     /// nothing.
     ///
     /// # Errors
@@ -401,7 +404,7 @@ impl FerroEhrService {
         let mut ehrs = BTreeSet::new();
         for subject in subjects {
             let found = self
-                .subject_ehr(subject)
+                .subject_ehrs(subject)
                 .await
                 .map_err(CohortError::Subject)?;
             ehrs.extend(found);
@@ -488,9 +491,9 @@ impl FerroEhrService {
     /// clinical content it reached.
     ///
     /// # Errors
-    /// [`CohortError::Unrecorded`] when the sender rejected the record under
-    /// `fail_mode = "closed"`; the caller withholds its result.
-    fn emit_cohort_access(
+    /// [`CohortError::Unrecorded`] when the record
+    /// cannot be written; the caller withholds its result.
+    async fn emit_cohort_access(
         &self,
         hash: &str,
         purpose: Option<String>,
@@ -513,7 +516,9 @@ impl FerroEhrService {
         event.purpose = purpose;
         event.permit = crate::system_log::access_context::current_permit();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event).map_err(CohortError::Unrecorded)
+        self.record_access(event)
+            .await
+            .map_err(CohortError::Unrecorded)
     }
 }
 
@@ -632,7 +637,7 @@ mod tests {
             (
                 CohortError::Unrecorded(ServiceError::Unrecorded(Refusal::new(
                     (),
-                    "audit trail unavailable (fail-closed)",
+                    "audit trail unavailable",
                 ))),
                 &unrecorded,
             ),

@@ -88,17 +88,15 @@ impl FerroEhrService {
                 format!("{} {vo_id}", kind.rm_type()),
             )
         };
-        // The stored kind (constant per versioned object) must match the route.
-        let stored = object_kind(&self.demographic_pool, vo_id).await?;
-        if stored != Some(support::kind_of(kind)) {
-            return Err(miss());
-        }
+        // The stored kind (constant per versioned object) must match the
+        // route; the loaded row carries it (#5776).
         support::load_ehrless(
             &self.demographic_pool,
             self.spec_profile,
             vo_id,
             version,
             at,
+            Some(support::kind_of(kind)),
         )
         .await?
         .ok_or_else(miss)

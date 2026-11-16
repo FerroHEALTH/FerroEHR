@@ -42,6 +42,9 @@ pub(crate) struct IdentifierRow {
     /// Whether the `PERSON` is the source of a representation relationship,
     /// inline or of its own; read on a key row only.
     pub(crate) representative: bool,
+    /// Whether the key is a portal login, issued by a `patients` issuer,
+    /// held with no professional `ROLE` (#5622); read on a key row only.
+    pub(crate) portal: bool,
 }
 
 /// The validity a professional `ROLE` gives the `PERSON` that performs it.
@@ -69,11 +72,12 @@ pub(crate) struct RepresentationRow {
 /// The identifier rows the parties should hold, with the professional date
 /// ranges and the stored compared form beside each: the `wanted` relation the
 /// two identifier statements of [`write_identifiers`] share, over the
-/// parameters `$3` to `$11`.
+/// parameters `$3` to `$12`.
 ///
-/// A key row is held only while the `PERSON` performs a professional `ROLE`
-/// or represents someone. A display name is held once per folded value, the
-/// first in document order.
+/// A key row is held only while the `PERSON` performs a professional `ROLE`,
+/// represents someone, or the key is a portal login (`$12`), which binds
+/// only through a live representation. A display name is held once per
+/// folded value, the first in document order.
 macro_rules! wanted_identifiers {
     () => {
         "WITH professional AS ( \
@@ -88,11 +92,12 @@ macro_rules! wanted_identifiers {
                      ELSE '{}'::datemultirange END AS professional, \
                 w.selector = 'key' AND w.representative AS representative, w.ord \
          FROM unnest($3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], \
-                     $9::boolean[]) WITH ORDINALITY \
+                     $9::boolean[], $12::boolean[]) WITH ORDINALITY \
               AS w(party, selector, issuer, identifier_type, value, lifecycle_state, \
-                   representative, ord) \
+                   representative, portal, ord) \
          LEFT JOIN professional pr ON pr.party = w.party \
          WHERE w.selector <> 'key' OR NOT isempty(coalesce(pr.dates, '{}')) OR w.representative \
+            OR w.portal \
      ), wanted AS ( \
          SELECT DISTINCT ON (h.party, h.selector, h.issuer, \
                              CASE WHEN h.selector = 'group_display_name' THEN h.folded \
@@ -123,6 +128,7 @@ const RETIRE_IDENTIFIERS: &str = concat!(
     wanted_identifiers!(),
     "UPDATE binding_identifier b SET retired_at = now() \
      WHERE b.party_id = ANY($1) AND b.selector = ANY($2) AND b.retired_at IS NULL \
+       AND ($13::text IS NULL OR b.issuer = $13) \
        AND NOT EXISTS (SELECT 1 FROM wanted w WHERE ",
     same_identifier!(),
     ")"
@@ -141,8 +147,9 @@ const INSERT_IDENTIFIERS: &str = concat!(
     same_identifier!(),
     ")"
 );
-/// Writes the identifier rows of `selectors` the parties `parties` should
-/// hold: `rows`, with the key rows' date ranges from `professional`.
+/// Writes the identifier rows of `selectors`, under `issuer` alone when it is
+/// given, the parties `parties` should hold: `rows`, with the key rows' date
+/// ranges from `professional`.
 ///
 /// The retirement runs before the insert, as its own statement, so a value
 /// that moves between rows never meets its old row in a unique index.
@@ -153,20 +160,32 @@ const INSERT_IDENTIFIERS: &str = concat!(
 pub(crate) async fn write_identifiers(
     tx: &mut PgConnection,
     parties: &[Uuid],
-    selectors: &[&str],
+    (selectors, issuer): (&[&str], Option<&str>),
     rows: &[IdentifierRow],
     professional: &[Professional],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if parties.is_empty() {
         return Ok(());
     }
     let columns = IdentifierColumns::of(rows, professional);
-    for statement in [RETIRE_IDENTIFIERS, INSERT_IDENTIFIERS] {
-        columns
-            .bind(sqlx::query(statement).bind(parties).bind(selectors))
-            .execute(&mut *tx)
-            .await?;
-    }
+    columns
+        .bind(
+            sqlx::query(RETIRE_IDENTIFIERS)
+                .bind(parties)
+                .bind(selectors),
+        )
+        .bind(issuer)
+        .execute(&mut *tx)
+        .await?;
+    columns
+        .bind(
+            sqlx::query(INSERT_IDENTIFIERS)
+                .bind(parties)
+                .bind(selectors),
+        )
+        .execute(&mut *tx)
+        .await?;
     Ok(())
 }
 
@@ -181,6 +200,7 @@ struct IdentifierColumns<'a> {
     lifecycle_state: Vec<&'a str>,
     representative: Vec<bool>,
     professional_party: Vec<Uuid>,
+    portal: Vec<bool>,
     professional_validity: Vec<Option<&'a Value>>,
 }
 
@@ -196,6 +216,7 @@ impl<'a> IdentifierColumns<'a> {
             representative: rows.iter().map(|r| r.representative).collect(),
             professional_party: professional.iter().map(|p| p.party).collect(),
             professional_validity: professional.iter().map(|p| p.validity.as_ref()).collect(),
+            portal: rows.iter().map(|r| r.portal).collect(),
         }
     }
 
@@ -213,11 +234,13 @@ impl<'a> IdentifierColumns<'a> {
             .bind(&self.representative)
             .bind(&self.professional_party)
             .bind(&self.professional_validity)
+            .bind(&self.portal)
     }
 }
 
 /// Inserts the tombstones `rows`, the binding keys of deleted `PERSON`s,
-/// retired and deprovisioned, for each party that carries none yet.
+/// retired and deprovisioned, for each party that carries none yet under the
+/// row's issuer.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
@@ -225,6 +248,7 @@ pub(crate) async fn insert_tombstones(
     tx: &mut PgConnection,
     rows: &[IdentifierRow],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if rows.is_empty() {
         return Ok(());
     }
@@ -237,7 +261,8 @@ pub(crate) async fn insert_tombstones(
          FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[]) \
               AS w(party, issuer, identifier_type, value, lifecycle_state) \
          WHERE NOT EXISTS (SELECT 1 FROM binding_identifier t \
-                           WHERE t.party_id = w.party AND t.deprovisioned_at IS NOT NULL)",
+                           WHERE t.party_id = w.party AND t.issuer = w.issuer \
+                             AND t.deprovisioned_at IS NOT NULL)",
     )
     .bind(rows.iter().map(|r| r.party).collect::<Vec<_>>())
     .bind(rows.iter().map(|r| r.issuer.as_str()).collect::<Vec<_>>())
@@ -265,6 +290,7 @@ pub(crate) async fn revive_keys(
     tx: &mut PgConnection,
     parties: &[Uuid],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if parties.is_empty() {
         return Ok(());
     }
@@ -362,6 +388,7 @@ pub(crate) async fn write_representations(
     parties: &[Uuid],
     rows: &[RepresentationRow],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if parties.is_empty() {
         return Ok(());
     }
@@ -386,6 +413,7 @@ pub(crate) async fn write_standalone(
     container: Uuid,
     row: Option<&RepresentationRow>,
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     let rows: Vec<RepresentationRow> = row.into_iter().cloned().collect();
     write(
         tx,
@@ -457,6 +485,7 @@ pub(crate) async fn write_history(
     tx: &mut PgConnection,
     held: &[(RepresentationRow, Option<Uuid>)],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if held.is_empty() {
         return Ok(());
     }
@@ -516,6 +545,7 @@ pub(crate) async fn write_memberships(
     members: &[Uuid],
     rows: &[(Uuid, Uuid)],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if members.is_empty() {
         return Ok(());
     }

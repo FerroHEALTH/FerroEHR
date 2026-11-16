@@ -125,13 +125,9 @@ pub enum DeploymentGap {
     /// `privacy.subject_namespaces` is empty, so the rule that refuses a real
     /// identifier as an `EHR_STATUS` subject is out of force.
     OpenSubjectNamespace,
-    /// Auditing is off, or on with no durable sink, so access is not recorded
-    /// (EHDS Annex II 3.2 is not satisfiable by a deployment that logs nothing).
+    /// Auditing is off, so access is not recorded (EHDS Annex II 3.2 is not
+    /// satisfiable by a deployment that logs nothing).
     AuditOff,
-    /// Auditing is on and `audit.fail_mode` is `open`, so a record the queue
-    /// cannot take is dropped and the request succeeds: the access happened and
-    /// nothing says so.
-    AuditFailsOpen,
     /// Auditing is on and no category map applies: the audit category
     /// register declares no template and no archetype and `shipped_map` is
     /// `false`, so every access is recorded `unclassified`. The register is
@@ -208,7 +204,6 @@ impl DeploymentGap {
             Self::SharedCluster => "shared_cluster",
             Self::OpenSubjectNamespace => "open_subject_namespace",
             Self::AuditOff => "audit_off",
-            Self::AuditFailsOpen => "audit_fails_open",
             Self::NoCategoryMap => "no_category_map",
             Self::OpenEhrAccessDefault => "open_ehr_access_default",
             Self::MigrateOnRuntimeCredential => "migrate_on_runtime_credential",
@@ -240,13 +235,7 @@ impl DeploymentGap {
                  identifier; declare the pseudonym namespaces this deployment issues"
             }
             Self::AuditOff => {
-                "no access log is written: [audit] is disabled or has no durable sink; enable it \
-                 with the local store, syslog or the FHIR feed on"
-            }
-            Self::AuditFailsOpen => {
-                "[audit] fail_mode is `open`, so a record the audit queue cannot take is dropped \
-                 and the request succeeds; set [audit] fail_mode = \"closed\" to refuse the \
-                 operation instead"
+                "no access log is written: [audit] is disabled; set [audit] enabled = true"
             }
             Self::NoCategoryMap => {
                 "no category map applies: the audit category register declares no template and \
@@ -386,14 +375,8 @@ impl DeploymentPosture {
             gaps.push(DeploymentGap::OpenSubjectNamespace);
         }
         let audit = &config.audit;
-        if !audit.enabled
-            || !(audit.store.enabled || audit.syslog.is_some() || audit.fhir_feed.is_some())
-        {
+        if !audit.enabled {
             gaps.push(DeploymentGap::AuditOff);
-        } else if audit.fail_mode == crate::system_log::config::FailMode::Open {
-            // Only while a trail exists: a disabled trail makes the fail mode
-            // moot, and naming both would report one posture twice.
-            gaps.push(DeploymentGap::AuditFailsOpen);
         }
         // NOTE: no openEHR spec governs this, our own design/extension; the configured default is the
         // effective one: the REST layer applies it with RBAC off, and validation refuses it unenforced.

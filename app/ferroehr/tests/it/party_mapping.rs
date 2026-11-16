@@ -97,6 +97,7 @@ fn mapping() -> BindingMapping {
 /// A service over a fresh database with `mapping` installed.
 async fn service_with(mapping: BindingMapping) -> (testkit::TestDb, FerroEhrService) {
     let (db, svc) = crate::fixtures::service().await;
+    crate::fixtures::open_key_spaces(&db, &[(LOGIN, false)]).await;
     (db, svc.with_binding_mapping(mapping))
 }
 
@@ -615,7 +616,7 @@ async fn only_an_administrator_writes_a_protected_party() {
                 "value": { "_type": "DV_CODED_TEXT", "value": "represents",
                     "defining_code": { "_type": "CODE_PHRASE",
                         "terminology_id": { "_type": "TERMINOLOGY_ID",
-                            "value": "ferroehr-operations" },
+                            "value": ferroehr::party_binding::policy_mark::TERMINOLOGY },
                         "code_string": "represents" } } }] },
         "source": party_ref("PERSON", plain),
         "target": party_ref("PERSON", plain)

@@ -24,7 +24,7 @@ use std::sync::Arc;
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::party_binding::grants::caller::CallerFacts;
+use crate::party_binding::grants::caller::facts::CallerFacts;
 use crate::party_binding::grants::derive::walk;
 use crate::party_binding::grants::operation::{NO_SUBJECT_NAMESPACE, Operation, SCOPES};
 use crate::party_binding::policy_mark::coded;
@@ -147,7 +147,7 @@ impl Grant {
         self.role
     }
 
-    /// Its credentials, read by the elements the operation terminology names.
+    /// Its credentials, read by the elements the draft access terminology names.
     #[must_use]
     pub fn credentials(&self) -> Credentials<'_> {
         Credentials(self.credentials.as_deref())
@@ -158,7 +158,7 @@ impl Grant {
 /// elements [`crate::party_binding::policy_mark::TERMINOLOGY`] names.
 ///
 /// An element or a cluster is read by the code of its `name`, a
-/// `DV_CODED_TEXT` of the operation terminology, wherever it sits in the
+/// `DV_CODED_TEXT` of the draft access terminology, wherever it sits in the
 /// tree, so a check reads a grant's scope (such as `template` or `facility`)
 /// in any archetype that codes it.
 #[derive(Debug, Clone, Copy)]
@@ -270,7 +270,7 @@ impl<'a> Credentials<'a> {
 /// evaluator reads.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Capabilities {
-    client: Option<Client>,
+    client: Option<Arc<Client>>,
     grants: Vec<Grant>,
     facts: CallerFacts,
 }
@@ -278,7 +278,7 @@ pub struct Capabilities {
 impl Capabilities {
     /// The capabilities of the client `client` or of a party, holding
     /// `grants` and no caller facts.
-    pub(crate) fn new(client: Option<Client>, grants: Vec<Grant>) -> Self {
+    pub(crate) fn new(client: Option<Arc<Client>>, grants: Vec<Grant>) -> Self {
         Self {
             client,
             grants,
@@ -293,7 +293,7 @@ impl Capabilities {
         self
     }
 
-    /// The caller's clearances, permitted purposes and care teams in force
+    /// The caller's roles and care teams in force
     /// on the request.
     #[must_use]
     pub fn facts(&self) -> &CallerFacts {
@@ -312,7 +312,7 @@ impl Capabilities {
     /// or a client no `ACTOR` carries.
     #[must_use]
     pub fn client(&self) -> Option<&Client> {
-        self.client.as_ref()
+        self.client.as_deref()
     }
 
     /// Every grant in force.

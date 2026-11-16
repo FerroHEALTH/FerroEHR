@@ -31,6 +31,18 @@
 # entries in each arm's store and adds them to the summary, so the report
 # shows the per-EHR entry cost beside the base's (#5564).
 #
+# An arm whose tree configures the clinician Basic user runs with the access
+# path in force (#5590, scripts/perf/access-seed.sh): an access policy that
+# requires a care relationship, the clinician a member of the care team with
+# a coded role an access-policy rule lets read HIV data, every seeded EHR's
+# subject under that team's care with five
+# directives on the EHR, and the clinical groups sent as the clinician. Its
+# access log seals every append in a checkpoint signed with an OpenPGP key the
+# gate generates for the run (PERF_SIGNING_KEY), mounted where the tree's
+# configuration names it.
+# A base that accepts this tree's configuration runs under it as well, so the
+# two arms differ in the code alone (base_config_tree).
+#
 # Usage:
 #   scripts/perf/gate.sh install                     the pinned ferrohealth-perf into target/tools/perf
 #   scripts/perf/gate.sh ab <image> <pg-image> <base-image> <base-pg-image> [<base-rev>]
@@ -41,21 +53,31 @@
 #   scripts/perf/gate.sh self-test <image> <pg-image>
 #       an idle busy-loop against the database must fail the idle phase,
 #       naming idle.transactions_per_second
+#   scripts/perf/gate.sh replicas <image> <pg-image> [<instances>...]
+#       the reload load of 1, 2 and 3 instances (or the counts given) on one
+#       PostgreSQL, one JSON line per count and change in $PERF_OUT/replicas.jsonl
+#       (scripts/perf/replicas.sh)
 #   scripts/perf/gate.sh pin                         print the pinned version
 #
 # Environment:
 #   PERF_OUT      the report directory (default target/perf)
 #   PERF_POPULATION  the EHRs the seed adds for the population query
 #                 (default 2000; the release lane seeds 20000)
+#   PERF_SIGNING_KEY the algorithm of the generated signing key, ed25519
+#                 (default) or rsa3072
 #   PERF_BIN      a ferrohealth-perf binary (default target/tools/perf/bin/ferrohealth-perf)
 #   PERF_SERVER   with PERF_DATABASE and PERF_TARGET, measure a server already
 #                 running (its base URL), whose database URL and ferrohealth-perf
 #                 target (`--pid N` or `--cgroup DIR`) they name, and start no
-#                 container: a developer machine without docker
+#                 container: a developer machine without docker; PERF_FERROEHR
+#                 is then the command that runs its binary against its
+#                 database, for the access seed's grants
 #
 # Exit codes: 0 the run passed, 1 a breach, 2 the run could not be judged or a
 # usage or harness error, as ferrohealth-perf answers.
 set -euo pipefail
+# A failure inside a command substitution, such as a seed call, stops the gate.
+shopt -s inherit_errexit
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 readonly ROOT
@@ -86,6 +108,10 @@ readonly BASE_TREE="$ROOT/target/perf-base"
 readonly POPULATION_AQL="SELECT e/ehr_id/value FROM EHR e LIMIT 20"
 OUT="${PERF_OUT:-$ROOT/target/perf}"
 readonly OUT
+# shellcheck source=scripts/perf/access-seed.sh
+source "$ROOT/scripts/perf/access-seed.sh"
+# shellcheck source=scripts/perf/replicas.sh
+source "$ROOT/scripts/perf/replicas.sh"
 
 usage() {
   sed -n '/^# Usage:$/,/^#$/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2
@@ -137,6 +163,34 @@ teardown() {
   docker network rm "$NETWORK" >/dev/null 2>&1 || true
 }
 
+# signing_key: the OpenPGP key the access log seals each append with, generated
+# for this run into $OUT/signing (a committed key would be a defect of its
+# own): PERF_SIGNING_KEY's algorithm, its passphrase in a file beside it.
+signing_key() {
+  local algorithm="${PERF_SIGNING_KEY:-ed25519}" home fpr
+  [[ "$algorithm" == ed25519 || "$algorithm" == rsa3072 ]] \
+    || die "PERF_SIGNING_KEY must be ed25519 or rsa3072, got '$algorithm'"
+  command -v gpg >/dev/null || die "gpg is needed to generate the signing key"
+  mkdir -p "$OUT/signing"
+  # gpg-agent's socket path is bounded, so its home is short-lived and short.
+  home=$(mktemp -d)
+  GNUPGHOME="$home" gpg --batch --pinentry-mode loopback --passphrase perf \
+    --quick-generate-key "FerroEHR perf gate <perf@ferroehr.invalid>" "$algorithm" sign never \
+    >/dev/null 2>&1 || die "gpg would not generate an $algorithm key"
+  fpr=$(GNUPGHOME="$home" gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr:/ { print $10; exit }')
+  GNUPGHOME="$home" gpg --batch --pinentry-mode loopback --passphrase perf --armor \
+    --export-secret-keys "$fpr" >"$OUT/signing/signing.asc"
+  printf perf >"$OUT/signing/passphrase"
+  GNUPGHOME="$home" gpgconf --kill gpg-agent 2>/dev/null || true
+  rm -rf "$home"
+  # The identifier-protection root key, whose clinical lookup subkey digests
+  # the subject references of the care projection (#5699), generated per run.
+  od -An -tx1 -N32 /dev/urandom | tr -d ' \n' >"$OUT/signing/identifier-key"
+  # The container runs as the distroless nonroot uid.
+  chmod 644 "$OUT/signing/signing.asc" "$OUT/signing/passphrase" "$OUT/signing/identifier-key"
+  echo "$algorithm" >"$OUT/signing/algorithm"
+}
+
 wait_for() { # <what> <seconds> <command...>
   local what="$1" seconds="$2" i
   shift 2
@@ -158,8 +212,11 @@ up() {
   docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
   docker run -d --name "$pg" --network "$NETWORK" -p "127.0.0.1:${pg_port}:5432" \
     -e "POSTGRES_PASSWORD=$PG_SUPER_SECRET" -e PG_INIT_USER=ferroehr -e "PG_INIT_PASSWORD=$PG_SECRET" \
-    -e PG_INIT_DB=ferroehr "$pg_image" >/dev/null
+    -e PG_INIT_DB=ferroehr "$pg_image" -c shared_preload_libraries=pg_stat_statements \
+    -c pg_stat_statements.track=all -c pg_stat_statements.track_planning=on >/dev/null
   wait_for "PostgreSQL$suffix" 60 docker exec "$pg" pg_isready -h 127.0.0.1 -U ferroehr -d ferroehr
+  docker exec "$pg" psql -U postgres -d ferroehr -Atq \
+    -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements" >/dev/null
   STARTED=1
   local -a process=(--network "$NETWORK" --read-only --tmpfs /tmp --cap-drop ALL
     --security-opt no-new-privileges:true
@@ -168,7 +225,10 @@ up() {
     -e FERROEHR__USAGE_REPORT__ENABLED=false
     -v "$tree/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro"
     -v "$tree/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro"
-    -v "$tree/deploy/definitions/professional:/etc/ferroehr/definitions:ro")
+    -v "$tree/deploy/definitions/professional:/etc/ferroehr/definitions:ro"
+    -v "$OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro"
+    -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro"
+    -v "$OUT/signing/identifier-key:/etc/ferroehr/identifier-key:ro")
   # A base tree whose configuration still names the professional templates
   # predates the default party mapping, and its server stores no default
   # definitions, so they are stored before serve; a newer server stores them
@@ -193,32 +253,58 @@ up() {
   else
     bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users ferroehr >/dev/null
   fi
+  if access_arm "$tree"; then
+    ACCESS_IDS="$OUT/scim-ids$suffix"
+    : >"$ACCESS_IDS"
+    SCIM_IDS="$ACCESS_IDS" SCIM_GRANT="docker exec $server /usr/local/bin/ferroehr" \
+      bash "$tree/scripts/scim-provision.sh" "$SERVER_URL" basic-users urn:ferroehr:basic-user \
+      --roles USER clinician >/dev/null
+    ACCESS_FERROEHR=(docker exec "$server" /usr/local/bin/ferroehr)
+  fi
   seed "$tree"
 }
 
 # call <method> <path> <content-type> <body-file|-> <want-status>: the
-# response body on stdout and the headers in $HEADERS.
+# response body on stdout. A <path> under the openEHR base is given below it;
+# one under /ferroehr/ is given whole. Each process answers into a file of its
+# own, so the access seed's calls run side by side.
 call() {
   local method="$1" path="$2" type="$3" body="$4" want="$5" status
+  local answer="$OUT/seed.$BASHPID.body"
   local -a data=()
   [[ "$body" != - ]] && data=(--data-binary "@$body" -H "content-type: $type")
-  status=$(curl -sS -o "$OUT/seed.body" -D "$OUT/seed.headers" -w '%{http_code}' -X "$method" \
+  [[ "$path" == /ferroehr/* ]] || path="$BASE$path"
+  status=$(curl -sS -o "$answer" -w '%{http_code}' -X "$method" \
     -H "authorization: $AUTH" -H "accept: application/json" -H "prefer: return=representation" \
-    ${data[@]+"${data[@]}"} "$SERVER_URL$BASE$path")
-  [[ "$status" == "$want" ]] || die "seed: $method $path answered $status, want $want: $(head -c 400 "$OUT/seed.body")"
-  cat "$OUT/seed.body"
+    ${data[@]+"${data[@]}"} "$SERVER_URL$path")
+  [[ "$status" == "$want" ]] || die "seed: $method $path answered $status, want $want: $(head -c 400 "$answer")"
+  cat "$answer"
+  rm -f "$answer"
 }
 
-# seed <tree>: the arm's records, from its tree's corpus.
+# seed <tree>: the arm's records, from its tree's corpus; with the access
+# path in force when the tree runs the clinician.
 seed() {
-  local tree="$1" read_ehr write_ehr uid party
+  local tree="$1" read_ehr write_ehr uid party clinical="$AUTH"
   call POST /definition/template/adl1.4 application/xml "$tree/$TEMPLATE_PATH" 201 >/dev/null
-  read_ehr=$(call POST /ehr "" - 201 | jq -er '.ehr_id.value')
-  write_ehr=$(call POST /ehr "" - 201 | jq -er '.ehr_id.value')
+  if access_arm "$tree"; then
+    access_seed
+    read_ehr=$(access_patient_ehr "$ACCESS_TEAM")
+    write_ehr=$(access_patient_ehr "$ACCESS_TEAM")
+    clinical="$CLINICIAN_AUTH"
+  else
+    read_ehr=$(call POST /ehr "" - 201 | jq -er '.ehr_id.value')
+    write_ehr=$(call POST /ehr "" - 201 | jq -er '.ehr_id.value')
+  fi
   uid=$(call POST "/ehr/$read_ehr/composition" application/json "$tree/$COMPOSITION_PATH" 201 | jq -er '.uid.value')
   party=$(call POST /demographic/person application/json "$tree/$PERSON_PATH" 201 | jq -er '.uid.value')
-  populate
+  if access_arm "$tree"; then
+    access_population "$(population_count)"
+  else
+    populate
+  fi
   SEED=(
+    "CLINICAL_AUTH=$clinical"
     "READ_EHR=$read_ehr"
     "WRITE_EHR=$write_ehr"
     "READ_COMPOSITION=$uid"
@@ -229,9 +315,15 @@ seed() {
 
 # populate: PERF_POPULATION more EHRs, created eight at a time through the
 # arm's own server.
-populate() {
-  local count="${PERF_POPULATION:-2000}" created
+population_count() {
+  local count="${PERF_POPULATION:-2000}"
   [[ "$count" =~ ^[0-9]+$ ]] || die "PERF_POPULATION must be a whole number, got '$count'"
+  echo "$count"
+}
+
+populate() {
+  local count created
+  count=$(population_count)
   ((count > 0)) || return 0
   seq "$count" | xargs -P 8 -I{} curl -sS -o /dev/null -w '%{http_code}\n' -X POST \
     -H "authorization: $AUTH" -H "prefer: return=minimal" "$SERVER_URL$BASE/ehr" \
@@ -279,6 +371,86 @@ population_summary() {
         echo "| $arm | $statements | $per_ehr | $(awk -v e="$per_ehr" -v s="$statements" 'BEGIN { if (s > 0) printf "%.1f", e / s; else print "-" }') |"
       else
         echo "| $arm | $counts | | |"
+      fi
+    done
+  } >>"$1"
+}
+
+# statements_summary <summary>: each arm's statements by PostgreSQL time over
+# the measured run, its planning counted beside its execution
+# (pg_stat_statements.track_planning): the AQL is custom-planned per call, so
+# its execution alone leaves out about half of its cost at a small answer
+# (#5746).
+statements_summary() {
+  local arm container
+  {
+    echo
+    echo "### Statements by PostgreSQL time, planning included"
+    for arm in head base; do
+      container="$PG"
+      [[ "$arm" == base ]] && container="$PG-base"
+      echo
+      echo "#### $arm"
+      echo
+      echo "| calls | plan ms (mean) | execution ms (mean) | rows per call | buffer hits per call | statement |"
+      echo "|---:|---:|---:|---:|---:|---|"
+      docker exec "$container" psql -U postgres -d ferroehr -Atq -F '|' -c "SELECT calls, \
+        round(mean_plan_time::numeric, 3), round(mean_exec_time::numeric, 3), \
+        round(rows::numeric / calls, 1), round(shared_blks_hit::numeric / calls, 1), \
+        replace(left(regexp_replace(query, '\s+', ' ', 'g'), 120), '|', '/') \
+        FROM pg_stat_statements WHERE calls > 0 AND query NOT ILIKE '%pg_stat%' \
+        ORDER BY total_plan_time + total_exec_time DESC LIMIT 10" 2>/dev/null \
+        | awk -F'|' '{ printf "| %s | %s | %s | %s | %s | `%s` |\n", $1, $2, $3, $4, $5, $6 }' \
+        || echo "| unreadable | | | | | |"
+    done
+  } >>"$1"
+}
+
+# statements_reset: both arms' statement counters zeroed, so the summary
+# covers the measured run and not the seed.
+statements_reset() {
+  local container
+  for container in "$PG" "$PG-base"; do
+    docker exec "$container" psql -U postgres -d ferroehr -Atq \
+      -c "SELECT pg_stat_statements_reset()" >/dev/null
+  done
+}
+
+# access_log_storage <pg-container>: the access log's entries, its
+# checkpoints and the bytes its record, shared-part and checkpoint tables hold
+# with their indexes and TOAST, as "<entries> <checkpoints> <bytes>", or "none" for a
+# store with no access log.
+access_log_storage() {
+  local -a psql=(docker exec "$1" psql -U postgres -d ferroehr -Atq -c)
+  if [[ "$("${psql[@]}" "SELECT to_regclass('audit.access_log_record') IS NOT NULL")" != t ]]; then
+    echo none
+    return 0
+  fi
+  "${psql[@]}" "SELECT (SELECT count(*) FROM audit.access_log_record) || ' ' || \
+    (SELECT count(*) FROM audit.access_log_checkpoint) || ' ' || \
+    (pg_total_relation_size('audit.access_log_record') \
+     + pg_total_relation_size('audit.access_log_checkpoint') \
+     + coalesce(pg_total_relation_size(to_regclass('audit.access_log_shared')), 0))"
+}
+
+# storage_summary <summary>: each arm's access-log storage appended to the
+# summary, with the bytes one entry takes (#5590).
+storage_summary() {
+  local arm container counts
+  {
+    echo
+    echo "### The access log's storage"
+    echo
+    echo "| arm | entries | checkpoints | stored bytes | per entry |"
+    echo "|---|---:|---:|---:|---:|"
+    for arm in head base; do
+      container="$PG"
+      [[ "$arm" == base ]] && container="$PG-base"
+      counts=$(access_log_storage "$container" 2>/dev/null) || counts="unreadable"
+      if [[ "$counts" =~ ^([0-9]+)\ ([0-9]+)\ ([0-9]+)$ ]]; then
+        echo "| $arm | ${BASH_REMATCH[1]} | ${BASH_REMATCH[2]} | ${BASH_REMATCH[3]} | $(awk -v b="${BASH_REMATCH[3]}" -v e="${BASH_REMATCH[1]}" 'BEGIN { if (e > 0) printf "%.0f", b / e; else print "-" }') |"
+      else
+        echo "| $arm | $counts | | | |"
       fi
     done
   } >>"$1"
@@ -333,10 +505,19 @@ prepare() { # <image> <pg-image>
     SERVER_URL="$PERF_SERVER"
     DATABASE_URL="$PERF_DATABASE"
     read -r -a TARGET <<<"$PERF_TARGET"
+    if access_arm "$ROOT"; then
+      [[ -n "${PERF_FERROEHR:-}" ]] || die "PERF_SERVER needs PERF_FERROEHR for the access seed"
+      read -r -a ACCESS_FERROEHR <<<"$PERF_FERROEHR"
+      ACCESS_IDS="$OUT/scim-ids"
+      : >"$ACCESS_IDS"
+      SCIM_IDS="$ACCESS_IDS" SCIM_GRANT="$PERF_FERROEHR" bash "$ROOT/scripts/scim-provision.sh" \
+        "$SERVER_URL" basic-users urn:ferroehr:basic-user --roles USER clinician >/dev/null
+    fi
     seed "$ROOT"
   else
     [[ "$#" -eq 2 ]] || usage
     teardown
+    signing_key
     up "$1" "$2"
   fi
 }
@@ -363,6 +544,28 @@ base_tree() {
   echo "perf gate: the base is $rev"
 }
 
+# base_config_tree <base-image>: the tree the base arm runs under. When the
+# base binary accepts this tree's gate configuration (`ferroehr config check`),
+# both arms run one configuration, signing key, access seed and request
+# credentials, so the gate measures the code alone (#5590); an older base
+# that refuses it runs under its own tree's, as BASE_TREE holds it.
+base_config_tree() {
+  if docker run --rm -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml \
+    -e FERROEHR__DATABASE__URL=postgres://check:check@localhost/check \
+    -v "$ROOT/perf/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro" \
+    -v "$ROOT/docs/conformance/party/scim/jwks.json:/etc/ferroehr/scim-jwks.json:ro" \
+    -v "$OUT/signing/signing.asc:/etc/ferroehr/signing.asc:ro" \
+    -v "$OUT/signing/passphrase:/etc/ferroehr/signing-passphrase:ro" \
+    -v "$OUT/signing/identifier-key:/etc/ferroehr/identifier-key:ro" \
+    "$1" config check >/dev/null 2>&1; then
+    echo "perf gate: the base runs under this tree's configuration" >&2
+    echo "$ROOT"
+  else
+    echo "perf gate: the base refuses this tree's configuration and runs under its own" >&2
+    echo "$BASE_TREE"
+  fi
+}
+
 # ab <image> <pg-image> <base-image> <base-pg-image>: the head and the base
 # side by side, each seeded and provisioned from its own tree, judged by
 # `ferrohealth-perf ab` over this checkout's plan with each arm's ids.
@@ -373,18 +576,22 @@ ab() {
   mkdir -p "$OUT"
   teardown
   base_tree "$3" "${5:-}"
+  signing_key
   up "$1" "$2"
   local head_url="$SERVER_URL" head_db="$DATABASE_URL" head_container="${TARGET[1]}"
   local -a vars=()
   for entry in "${SEED[@]}"; do vars+=(--head-var "$entry"); done
-  up "$3" "$4" "$BASE_TREE" -base "$BASE_HTTP_PORT" "$BASE_PG_PORT"
+  up "$3" "$4" "$(base_config_tree "$3")" -base "$BASE_HTTP_PORT" "$BASE_PG_PORT"
   for entry in "${SEED[@]}"; do vars+=(--base-var "$entry"); done
   render "$ROOT/perf/plan.toml" "$OUT/plan.toml" per-arm
+  statements_reset
   "$bin" ab --plan "$OUT/plan.toml" \
     --head-url "$head_url" --head-container "$head_container" --head-database-url "$head_db" \
     --base-url "$SERVER_URL" --base-container "${TARGET[1]}" --base-database-url "$DATABASE_URL" \
     "${vars[@]}" --out-dir "$OUT" --summary "$OUT/summary.md" || status=$?
   population_summary "$OUT/summary.md"
+  storage_summary "$OUT/summary.md"
+  statements_summary "$OUT/summary.md"
   return "$status"
 }
 
@@ -425,6 +632,9 @@ self_test() { # <image> <pg-image>
   echo "perf gate: self-test OK (an idle busy-loop fails idle.transactions_per_second)"
 }
 
+# Sourced by scripts/perf/capacity.sh for the seed and its helpers, the gate
+# dispatches nothing.
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
 [[ "$#" -ge 1 ]] || usage
 command="$1"
 shift
@@ -437,6 +647,10 @@ ab | self-test)
   ab) ab "$@" ;;
   self-test) self_test "$@" ;;
   esac
+  ;;
+replicas)
+  trap replicas_teardown EXIT
+  replicas "$@"
   ;;
 *) usage ;;
 esac

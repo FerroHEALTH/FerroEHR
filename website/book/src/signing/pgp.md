@@ -128,8 +128,27 @@ key's self-signature with the signing flag.
 The choice holds until the next restart, so restart after adding, revoking
 or expiring a subkey, and before the chosen component expires.
 
+**The signing component is unlocked once, at boot.** The passphrase in
+`key_passphrase_file` decrypts the chosen component when the server loads the
+key and runs its boot check. The server then holds that unlocked component in
+memory and drops the passphrase. This is the usual practice for a signing
+service: the string-to-key derivation that protects a key at rest is slow on
+purpose (RFC 9580
+[§3.7](https://www.rfc-editor.org/rfc/rfc9580#section-3.7)), and running it
+for every signature would put it on every write and every access-log entry.
+Holding the unlocked component exposes nothing that holding the passphrase
+did not. Protect the process memory as you protect the key file: no core
+dumps, no swap to unencrypted disk, no debugger attached in production.
+
 **Sign with Ed25519.** It is the one algorithm the server signs with that
-has neither a refusal nor a warning.
+has neither a refusal nor a warning, and the only one to use when the
+server carries clinical load. The server signs every committed version and
+every access-log link, so an access log that records an access to each EHR
+a query serves makes several signatures per request. An RSA private-key
+operation costs some hundred times an Ed25519 signature, so under an RSA key
+the CPU per request rises several times over and every write that signs a
+version (an EHR create, a composition commit) is slower. That cost is the
+RSA operation itself and no setting removes it.
 
 **An ECDSA or Ed448 signing key is refused at boot.** The private-key
 arithmetic of both runs on `crypto-bigint` 0.5, whose operations meant to be

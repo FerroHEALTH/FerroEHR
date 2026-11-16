@@ -22,28 +22,31 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use openehr_rm::draft::access_control::access_control::access_policy::AccessPolicy;
-use openehr_rm::draft::access_control::terminology::{
-    AccessDefault, OperationClass, Refusal, Term as _,
-};
-use opentelemetry::KeyValue;
+use openehr_rm::draft::access_control::terminology::{AccessDefault, OperationClass, Refusal};
 use tokio::task_local;
 use uuid::Uuid;
 
 use crate::access_eval::class::{Class, Classes};
+use crate::access_eval::condition::care::Care;
 use crate::access_eval::procedure::{
-    Asked, Caller, Ehr, Emergency, Judged, Lifted, Outcome, Policy, Verdict, decide,
+    Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide, rules_of,
 };
+use crate::access_eval::record::LiftedCovers;
 use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
+use crate::access_eval::stale::StaleCopies;
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
-use crate::party_binding::grants::live::LiveGrants;
+use crate::party_binding::grants::live::{GrantsUnavailable, LiveGrants};
 use crate::service::ehr::access_settings::EhrAccessSettings;
-use crate::storage::access_projection::Revision;
+use crate::storage::access_projection::{EhrSubject, Revision};
 
 task_local! {
     static REQUEST_ACCESS: Arc<RequestAccess>;
 }
 
+pub mod care;
+mod decisions;
+pub mod pinned;
 /// The evaluator of one request: the caller, what it asks, the policy and
 /// the category map in force when it began, and each EHR's verdict once
 /// judged.
@@ -53,7 +56,7 @@ pub struct RequestAccess {
     operation: OperationClass,
     purpose: Option<String>,
     emergency: Emergency,
-    policy: Option<Arc<AccessPolicy>>,
+    pub(super) policy: Option<Arc<AccessPolicy>>,
     categories: CategoryIndex,
     server_default: AccessDefault,
     now: jiff::Timestamp,
@@ -61,33 +64,7 @@ pub struct RequestAccess {
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
     recorded: Recorded,
     stale: Option<Arc<StaleCopies>>,
-}
-
-/// The EHRs whose copy on this replica a read found older than the row in
-/// force: the copy drops each before its next read of the EHR.
-///
-/// A replica learns of a change committed on another one by its
-/// notification, which arrives after the commit. A read in between compares
-/// the revision its verdict was judged on with the row it reads, refuses on
-/// a mismatch, and marks the copy here, so the next request reads the row.
-/// No openEHR spec governs this: our own design (#5589).
-#[derive(Debug, Default)]
-pub struct StaleCopies(Mutex<BTreeSet<EhrId>>);
-
-impl StaleCopies {
-    /// Marks the copy of `ehr_id` stale.
-    pub fn mark(&self, ehr_id: EhrId) {
-        self.0
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .insert(ehr_id);
-    }
-
-    /// The EHRs marked since the last call, which are no longer marked.
-    #[must_use]
-    pub fn take(&self) -> BTreeSet<EhrId> {
-        std::mem::take(&mut *self.0.lock().unwrap_or_else(PoisonError::into_inner))
-    }
+    pub(super) written: Mutex<BTreeSet<Uuid>>,
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -97,9 +74,10 @@ impl StaleCopies {
 pub struct EhrEntry {
     /// The settings; `None` when the EHR's `EHR_ACCESS` carries none.
     pub settings: Arc<Option<EhrAccessSettings>>,
-    /// The subject's `PERSON` container; `None` when the status names no
-    /// party of this store.
-    pub subject: Option<Uuid>,
+    /// The subject reference its `EHR_STATUS` names, whose `PERSON` the
+    /// evaluator finds through [`LiveGrants::person_of`]; `None` when it
+    /// names none.
+    pub subject: Option<EhrSubject>,
     /// The uid of the `EHR_ACCESS` version the settings were read from, which
     /// the access record names; `None` for an EHR with no settings.
     pub version: Option<String>,
@@ -128,6 +106,7 @@ pub struct Judgement {
 struct Recorded {
     facts: RecordFacts,
     refusals: Mutex<BTreeMap<Option<EhrId>, Noted>>,
+    lifted: LiftedCovers,
 }
 
 /// The facts of a request the access record names that the decision does
@@ -196,6 +175,7 @@ impl RequestAccess {
             verdicts: Mutex::new(BTreeMap::new()),
             recorded: Recorded::default(),
             stale: None,
+            written: Mutex::new(BTreeSet::new()),
         }
     }
 
@@ -224,6 +204,11 @@ impl RequestAccess {
     #[must_use]
     pub fn emergency(&self) -> Emergency {
         self.emergency
+    }
+
+    /// The lifted denies that covered an object this request admitted.
+    pub(crate) fn lifted_covers(&self) -> &LiftedCovers {
+        &self.recorded.lifted
     }
 
     /// The facts the access record names that the decision does not read.
@@ -271,7 +256,10 @@ impl RequestAccess {
         let rule = verdict.rule_for(item);
         let outcome = rule.map_or(verdict.otherwise, |rule| rule.then);
         let refusal = match outcome {
-            Outcome::Admit => return outcome,
+            Outcome::Admit => {
+                self.recorded.lifted.note(ehr_id, verdict, item);
+                return outcome;
+            }
             Outcome::Absent(refusal) | Outcome::Refused(refusal) => refusal,
         };
         self.recorded
@@ -367,13 +355,13 @@ impl RequestAccess {
         self.decide(settings, cared, own, &scopes)
     }
 
-    /// Whether `ehr_id` is the subject caller's own EHR.
+    /// Whether `ehr_id` is one of the confined caller's own EHRs.
     fn owns(&self, ehr_id: Option<EhrId>) -> bool {
-        ehr_id.is_some() && ehr_id == self.caller.own_ehr
+        ehr_id.is_some_and(|ehr_id| self.caller.own_ehrs.contains(&ehr_id))
     }
 
     /// Whether the caller is confined, whom a query reads only in
-    /// [`Caller::own_ehr`] (`ConditionGroups::confined`).
+    /// [`Caller::own_ehrs`] (`ConditionGroups::confined`).
     fn confined(&self) -> bool {
         self.caller.confined()
     }
@@ -415,6 +403,7 @@ impl RequestAccess {
                 emergency: self.emergency,
             },
             policy: self.policy(),
+            rules: rules_of(self.policy.as_deref()),
             ehr: Ehr {
                 settings,
                 server_default: self.server_default,
@@ -426,46 +415,24 @@ impl RequestAccess {
         })
     }
 
-    /// The subjects the caller has a live care relationship to, by their
-    /// `PERSON` container id.
-    #[must_use]
-    pub fn cared_subjects(&self) -> Vec<String> {
-        let teams: Vec<Uuid> = self
-            .caller
-            .facts
-            .care_teams()
-            .iter()
-            .map(CareTeam::team)
-            .collect();
-        self.grants.as_ref().map_or_else(Vec::new, |grants| {
-            grants
-                .cared_for_by(&teams, self.today(), self.policy().grace)
-                .iter()
-                .map(Uuid::to_string)
-                .collect()
-        })
-    }
-
     /// Judges the EHR `ehr_id` as `entry` reads it, and keeps the verdict for
     /// the rest of the request.
-    pub fn judge_ehr(&self, ehr_id: EhrId, entry: &EhrEntry) -> Arc<Verdict> {
-        let judged = self.judgement_of(ehr_id, entry, self.cares_for(entry));
+    ///
+    /// # Errors
+    /// [`GrantsUnavailable`] when the subject's care relationships are not
+    /// held and cannot be read.
+    pub async fn judge_ehr(
+        &self,
+        ehr_id: EhrId,
+        entry: &EhrEntry,
+    ) -> Result<Arc<Verdict>, GrantsUnavailable> {
+        let judged = self.judgement_of(ehr_id, entry, self.cares_for(entry).await?);
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .insert(ehr_id, judged);
-        verdict
-    }
-
-    /// Whether the caller has a live care relationship to the subject of
-    /// `entry`.
-    fn cares_for(&self, entry: &EhrEntry) -> bool {
-        let under_care_of = match (&self.grants, entry.subject) {
-            (Some(grants), Some(subject)) => grants.under_care_of(subject),
-            _ => Vec::new(),
-        };
-        self.cared(&under_care_of)
+        Ok(verdict)
     }
 
     /// The judgement of the EHR `ehr_id` as `entry` reads it, the caller
@@ -475,7 +442,7 @@ impl RequestAccess {
             verdict: Arc::new(self.judge(Some(ehr_id), (*entry.settings).as_ref(), cared)),
             settings: Arc::clone(&entry.settings),
             version: entry.version.clone(),
-            revision: entry.revision,
+            revision: entry.revision.clone(),
         }
     }
 
@@ -515,7 +482,11 @@ impl RequestAccess {
     #[must_use]
     pub fn outcome(&self, ehr_id: EhrId, item: &Item<'_>) -> Outcome {
         if let Some(verdict) = self.verdict(ehr_id) {
-            verdict.outcome(item)
+            let outcome = verdict.outcome(item);
+            if outcome == Outcome::Admit {
+                self.recorded.lifted.note(Some(ehr_id), &verdict, item);
+            }
+            outcome
         } else {
             tracing::error!(%ehr_id, "an EHR this request did not judge is withheld");
             Outcome::Absent(Refusal::Restricted)
@@ -526,11 +497,11 @@ impl RequestAccess {
     /// row other than `seen`, the revision a read found in force; such a
     /// copy is marked stale. An EHR the request has not judged is not.
     #[must_use]
-    pub fn stale(&self, ehr_id: EhrId, seen: Revision) -> bool {
+    pub fn stale(&self, ehr_id: EhrId, seen: &Revision) -> bool {
         let Some(judged) = self.judgement(ehr_id) else {
             return false;
         };
-        if judged.revision == seen {
+        if judged.revision == *seen {
             return false;
         }
         tracing::warn!(
@@ -543,59 +514,12 @@ impl RequestAccess {
         true
     }
 
-    /// Count the request's decisions once it ended: one per EHR it judged or
-    /// refused, refused under the first code noted for it, and each
-    /// directive or step an emergency lifted. The labels are the closed sets
-    /// of the outcome, the `refused-*` code and [`Lifted`], never the EHR.
-    /// No openEHR spec governs the metrics: our own design (#5591).
-    fn count_decisions(&self) {
-        let metrics = crate::telemetry::access_path::metrics();
-        let mut refused: BTreeMap<Option<EhrId>, Refusal> = self
-            .recorded
-            .refusals
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .iter()
-            .map(|(ehr_id, noted)| (*ehr_id, noted.refusal))
-            .collect();
-        let verdicts = self.verdicts.lock().unwrap_or_else(PoisonError::into_inner);
-        for (ehr_id, judged) in verdicts.iter() {
-            let decision = match refused.remove(&Some(*ehr_id)) {
-                Some(refusal) => [("outcome", "refused"), ("code", refusal.code())],
-                None => [("outcome", "admitted"), ("code", "none")],
-            };
-            metrics
-                .decisions
-                .add(1, &decision.map(|(key, value)| KeyValue::new(key, value)));
-            for lifted in &judged.verdict.lifted {
-                let lifted = match lifted {
-                    Lifted::OptOut => "opt_out",
-                    Lifted::Restriction => "restriction",
-                    Lifted::Consent => "consent",
-                    Lifted::Policy => "policy",
-                };
-                metrics
-                    .emergency_overrides
-                    .add(1, &[KeyValue::new("lifted", lifted)]);
-            }
-        }
-        for refusal in refused.into_values() {
-            metrics.decisions.add(
-                1,
-                &[
-                    KeyValue::new("outcome", "refused"),
-                    KeyValue::new("code", refusal.code()),
-                ],
-            );
-        }
-    }
-
     /// The condition a query applies, over every EHR of a class among
     /// `classes`, an EHR held closed, and the default for an EHR with no
-    /// settings, the caller caring for the subjects `cared`. An EHR of a
-    /// class this replica does not hold is withheld.
+    /// settings, the caller's care read as `care` says. An EHR of a class
+    /// this replica does not hold is withheld.
     #[must_use]
-    pub fn condition(&self, classes: &Classes, cared: Vec<String>) -> AccessCondition {
+    pub fn condition(&self, classes: &Classes, care: Care) -> AccessCondition {
         let confined = self.confined();
         let pair = |settings: Option<&EhrAccessSettings>| VerdictPair {
             cared: self.judge_as(confined, settings, true).bare(),
@@ -622,11 +546,14 @@ impl RequestAccess {
             groups,
             pair(Some(&EhrAccessSettings::HeldClosed)),
             pair(None),
-            cared,
+            care,
+            self.grants
+                .as_ref()
+                .map_or_else(|| Arc::from(""), |grants| grants.namespace()),
             facts,
             // NOTE: our own design (#5586), a confined caller reads only the EHR its patient
             // context names, so a query of it reaches no other EHR whatever its class.
-            confined.then(|| self.caller.own_ehr.iter().map(|own| own.0).collect()),
+            confined.then(|| self.caller.own_ehrs.iter().map(|own| own.0).collect()),
         )
     }
 }
@@ -672,8 +599,11 @@ pub struct ConditionGroups {
     pub closed: Arc<VerdictPair>,
     /// The verdicts of an EHR with no settings; `None` admits every row.
     pub default: Option<Arc<VerdictPair>>,
-    /// The subjects the caller has a live care relationship to.
-    pub cared: Arc<[String]>,
+    /// Which EHRs' subjects the caller has a live care relationship to.
+    pub cared: Care,
+    /// The namespace this CDR names its parties under, whose references name
+    /// a `PERSON` by its container.
+    pub subject_namespace: Arc<str>,
     /// What the facts of a class are read against.
     pub facts: CallerKeys,
     /// For a subject caller, the EHRs it reaches: its own, or none; `None`
@@ -698,12 +628,15 @@ pub struct CallerKeys {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AccessCondition {
     groups: Option<Arc<ConditionGroups>>,
+    /// The verdict of the one EHR a pinned query reads ([`pinned::PinnedEhr`]).
+    pinned: Option<Arc<pinned::PinnedEhr>>,
 }
 
 impl From<ConditionGroups> for AccessCondition {
     fn from(groups: ConditionGroups) -> Self {
         Self {
             groups: Some(Arc::new(groups)),
+            pinned: None,
         }
     }
 }
@@ -715,7 +648,8 @@ impl AccessCondition {
         groups: BTreeMap<VerdictPair, Vec<i64>>,
         closed: VerdictPair,
         default: VerdictPair,
-        cared: Vec<String>,
+        cared: Care,
+        subject_namespace: Arc<str>,
         facts: CallerKeys,
         confined: Option<Arc<[Uuid]>>,
     ) -> Self {
@@ -728,11 +662,38 @@ impl AccessCondition {
             groups,
             closed: Arc::new(closed),
             default: (!default_admits).then(|| Arc::new(default)),
-            cared: cared.into(),
+            cared,
+            subject_namespace,
             facts,
             confined,
         }
         .into()
+    }
+
+    /// Whether a verdict of the condition reads care, so the statement needs
+    /// [`ConditionGroups::cared`] resolved.
+    #[must_use]
+    pub fn reads_care(&self) -> bool {
+        self.groups().is_some_and(|condition| {
+            std::iter::once(&condition.closed)
+                .chain(condition.groups.iter().map(|(_, pair)| pair))
+                .chain(condition.default.iter())
+                .any(|pair| pair.cared != pair.uncared)
+        })
+    }
+
+    /// The condition with its care read as `care`.
+    #[must_use]
+    pub fn with_care(&self, care: Care) -> Self {
+        Self {
+            groups: self.groups.as_deref().map(|condition| {
+                Arc::new(ConditionGroups {
+                    cared: care,
+                    ..condition.clone()
+                })
+            }),
+            pinned: self.pinned.clone(),
+        }
     }
 
     /// The verdicts of a condition that withholds something; `None` when it
@@ -764,13 +725,19 @@ where
 
 /// Whether `item` of `ehr_id` may leave the store for the running request.
 ///
-/// `seen` is the revision of the EHR's settings row the read found beside
+/// The object a write of this request committed leaves for its response
+/// ([`RequestAccess::wrote`]). `seen` is the revision of the EHR's settings row the read found beside
 /// the item. Always outside a request, and for an object of no EHR; a
 /// verdict judged on another revision admits nothing
 /// ([`RequestAccess::stale`]).
 #[must_use]
-pub fn admits(ehr_id: Option<EhrId>, seen: Revision, item: &Item<'_>) -> bool {
+pub fn admits(ehr_id: Option<EhrId>, seen: &Revision, item: &Item<'_>) -> bool {
     match (current(), ehr_id) {
+        // NOTE: our own design (owner ruling on #5621), a write's response is built from the
+        // version that request committed, so the writer's own object is no read of stored data.
+        (Some(access), Some(_)) if matches!(item, Item::Object(object) if access.written(object.vo_id)) => {
+            true
+        }
         (Some(access), Some(ehr_id)) => {
             !access.stale(ehr_id, seen) && access.outcome(ehr_id, item) == Outcome::Admit
         }
@@ -781,6 +748,6 @@ pub fn admits(ehr_id: Option<EhrId>, seen: Revision, item: &Item<'_>) -> bool {
 /// Whether the running request judged `ehr_id` on a revision of its settings
 /// row other than `seen`; `false` outside a request.
 #[must_use]
-pub fn stale(ehr_id: EhrId, seen: Revision) -> bool {
+pub fn stale(ehr_id: EhrId, seen: &Revision) -> bool {
     current().is_some_and(|access| access.stale(ehr_id, seen))
 }

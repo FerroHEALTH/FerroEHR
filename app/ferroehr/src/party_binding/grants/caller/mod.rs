@@ -4,16 +4,18 @@
 //! The caller facts: what the access evaluator reads about a caller beside
 //! its grants, and the care relationships of a subject.
 //!
-//! A `CAPABILITY` clears a sensitivity, and lets its holder declare a
-//! purpose of use, by an element anywhere in its `credentials` named by the
-//! code [`SensitivityClearance`] or [`PermittedPurpose`] whose value is a
-//! `DV_CODED_TEXT` of the terminology the jurisdiction names (RM demographic
-//! `org.openehr.rm.demographic.capability.adoc`: `credentials` are "the
-//! qualifications of the performer of the role for this capability"). A
+//! A `ROLE` whose `name` is a `DV_CODED_TEXT` of a terminology the
+//! jurisdiction names is a role its `performer` holds while the `ROLE` is in
+//! force: the role's type is its name (RM demographic
+//! `org.openehr.rm.demographic.party.adoc`, `PARTY.type()` with the invariant
+//! `type = name`, and `org.openehr.rm.demographic.role.adoc`). The rules of
+//! the controller's `ACCESS_POLICY` name callers by such a role
+//! (`ACCESS_ACTOR_SCOPE.role`), so the demographic service is the one source
+//! of who holds which role. A
 //! `PARTY_RELATIONSHIP` of a `PERSON` whose `name` or `details` carry a code
 //! of [`CareRelationship`] is a care relationship
 //! (`org.openehr.rm.demographic.party_relationship.adoc`: `source`, `target`,
-//! `time_validity`): the professional is `member_of` a care team, and the
+//! `time_validity`): the professional is a member (HL7 v3 `RoleClass#MBR`) of a care team, and the
 //! patient is `under_care_of` a team or a unit, with the admission as its
 //! `time_validity`. The care delivery environment, such as a hospital's ADT
 //! system, writes them under a [`Operation::WriteCareRelationship`] grant
@@ -25,15 +27,15 @@
 //! is its membership of a `GROUP`, such as the providers of a region (RM
 //! demographic `org.openehr.rm.demographic.group.adoc`), written under the
 //! same grant. A client acting for that `ORGANISATION` acts for the `GROUP`
-//! too ([`CallerFacts::provider_groups`]): one level of membership, our own
+//! too ([`facts::CallerFacts::provider_groups`]): one level of membership, our own
 //! design (#5575).
 //!
 //! [`store`] writes the facts in each commit's transaction and stamps the
 //! parties whose facts changed, and [`crate::party_binding::grants::live`]
 //! holds them on each replica beside the grants, so a request reads them with
-//! no transaction of its own. Nothing is read by archetype: every fact is
-//! read by its code. No openEHR spec gives a capability or a relationship an
-//! access meaning: our own design.
+//! no transaction of its own. Nothing is read by archetype: a role is read by
+//! its coded name, every other fact by its code. No openEHR spec gives a role
+//! or a relationship an access meaning: our own design (#5621).
 
 #![expect(
     clippy::disallowed_types,
@@ -41,7 +43,10 @@
               the caller facts are derived from"
 )]
 
+pub mod facts;
+pub mod patient;
 pub mod store;
+pub mod subject;
 
 use serde_json::Value;
 use uuid::Uuid;
@@ -50,22 +55,24 @@ use crate::error::{ServiceError, Violation};
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::capabilities::Capabilities;
-use crate::party_binding::grants::derive::{Bound, GrantFacts, bounds, walk};
+use crate::party_binding::grants::derive::{Bound, GrantFacts};
 use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::grants::store::Dates;
-use crate::party_binding::policy_mark::{TERMINOLOGY, carries, coded};
+use crate::party_binding::policy_mark::{TERMINOLOGY, carries};
+use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 use openehr_rm::draft::access_control::terminology::{
-    CareRelationship, ForeignCode, ForeignKind, PermittedPurpose, SensitivityClearance, Term,
+    CareRelationship, ForeignCode, ForeignKind, Term,
 };
+use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
-/// What a caller fact is, by the code it is read by.
+/// What a caller fact is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum FactKind {
-    /// A sensitivity the capability clears.
-    Clearance,
-    /// A purpose of use the capability lets its holder declare.
-    Purpose,
+    /// The performer holds the role the `ROLE`'s coded name names.
+    Role,
+    /// The `ORGANISATION` is of the type its coded name names.
+    OrganisationType,
     /// The professional is a member of the care team.
     MemberOf,
     /// The patient is in the care of the team or unit.
@@ -75,20 +82,31 @@ pub(crate) enum FactKind {
 impl FactKind {
     /// Every kind, in contract order.
     const ALL: [Self; 4] = [
-        Self::Clearance,
-        Self::Purpose,
+        Self::Role,
+        Self::OrganisationType,
         Self::MemberOf,
         Self::UnderCareOf,
     ];
 
-    /// The code of [`TERMINOLOGY`] the kind is read by, as the side table
-    /// stores it.
+    /// The care relationship term the kind is read by; `None` for a role or
+    /// an organisation type, which a party's coded name names in the
+    /// jurisdiction's terminology.
+    pub(crate) fn care(self) -> Option<CareRelationship> {
+        match self {
+            Self::Role | Self::OrganisationType => None,
+            Self::MemberOf => Some(CareRelationship::MemberOf),
+            Self::UnderCareOf => Some(CareRelationship::UnderCareOf),
+        }
+    }
+
+    /// The kind as the side table stores it: `role` for a role,
+    /// `organisation_type` for an organisation type, and the code a care
+    /// relationship is read by.
     pub(crate) fn code(self) -> &'static str {
         match self {
-            Self::Clearance => SensitivityClearance::SensitivityClearance.code(),
-            Self::Purpose => PermittedPurpose::PermittedPurpose.code(),
-            Self::MemberOf => CareRelationship::MemberOf.code(),
-            Self::UnderCareOf => CareRelationship::UnderCareOf.code(),
+            Self::Role => "role",
+            Self::OrganisationType => "organisation_type",
+            Self::MemberOf | Self::UnderCareOf => self.care().map_or("", |care| care.code()),
         }
     }
 
@@ -98,12 +116,20 @@ impl FactKind {
     }
 }
 
-/// What one fact names: the `CODE_PHRASE` of a clearance or a purpose, or the
-/// container a care relationship targets.
+impl From<CareRelationship> for FactKind {
+    fn from(term: CareRelationship) -> Self {
+        match term {
+            CareRelationship::MemberOf => Self::MemberOf,
+            CareRelationship::UnderCareOf => Self::UnderCareOf,
+        }
+    }
+}
+
+/// What one fact names: the `CODE_PHRASE` of a role, or the container a care
+/// relationship targets.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum FactValue {
-    /// A sensitivity or purpose code of the terminology the jurisdiction
-    /// names.
+    /// A role code of the terminology the jurisdiction names.
     Code(ForeignCode),
     /// The care team `GROUP` or the organisational unit.
     Team(Uuid),
@@ -112,86 +138,87 @@ pub(crate) enum FactValue {
 /// One caller fact a body holds.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct CallerFact {
-    /// The capability's or the relationship's position.
+    /// The relationship's position; `0` for a role.
     pub(crate) ordinal: i32,
     /// What the fact is.
     pub(crate) kind: FactKind,
     /// What it names.
     pub(crate) value: FactValue,
-    /// The capability's or the relationship's `time_validity`.
+    /// The relationship's `time_validity`; `None` for a role, which holds
+    /// while its `ROLE` does.
     pub(crate) validity: Option<Value>,
-    /// The `Not before` bound of a capability's credentials.
+    /// Always [`Bound::Open`]: no fact has a credentials bound.
     pub(crate) not_before: Bound,
-    /// The `Not after` bound of a capability's credentials.
+    /// Always [`Bound::Open`].
     pub(crate) not_after: Bound,
 }
 
-/// Pushes onto `facts` the clearances and permitted purposes `capability`, at
-/// `ordinal` of a `ROLE`, holds, and why one cannot be read.
-pub(crate) fn qualifiers(ordinal: i32, capability: &Value, facts: &mut GrantFacts) {
-    let Some(credentials) = capability.get("credentials") else {
+/// Pushes onto `facts` the fact of `kind` the coded `name` of `body` names.
+///
+/// For a `ROLE` it is the role its performer holds, for an `ORGANISATION` its
+/// own type, when that `name` is a `DV_CODED_TEXT` of a terminology the
+/// jurisdiction names (RM demographic `PARTY.type()`, invariant
+/// `type = name`). A party named in text, or by a code of
+/// [`crate::party_binding::policy_mark::TERMINOLOGY`], names none, and a care
+/// relationship kind names nothing here.
+pub(crate) fn coded_name(body: &Value, kind: FactKind, facts: &mut GrantFacts) {
+    let (class, foreign) = match kind {
+        FactKind::Role => ("ROLE", ForeignKind::Role),
+        FactKind::OrganisationType => ("ORGANISATION", ForeignKind::OrganisationType),
+        FactKind::MemberOf | FactKind::UnderCareOf => return,
+    };
+    let Some(name) = body
+        .get("name")
+        .filter(|name| name.get("_type").and_then(Value::as_str) == Some("DV_CODED_TEXT"))
+    else {
         return;
     };
-    let (not_before, not_after) = bounds(credentials);
-    walk(credentials, &mut |node| {
-        let (kind, foreign) = match node.get("name").and_then(coded) {
-            Some(code) if SensitivityClearance::read(TERMINOLOGY, code).is_ok() => {
-                (FactKind::Clearance, ForeignKind::Sensitivity)
-            }
-            Some(code) if PermittedPurpose::read(TERMINOLOGY, code).is_ok() => {
-                (FactKind::Purpose, ForeignKind::Purpose)
-            }
-            _ => return,
-        };
-        match foreign_code(foreign, node.get("value")) {
-            Ok(code) => facts.facts.push(CallerFact {
-                ordinal,
-                kind,
-                value: FactValue::Code(code),
-                validity: capability.get("time_validity").cloned(),
-                not_before,
-                not_after,
-            }),
-            Err(why) => facts.unread.push(format!(
-                "ROLE.capabilities[{ordinal}].credentials: the {TERMINOLOGY}::{} element {why}",
-                kind.code()
-            )),
+    let coded: DvCodedText = match openehr_its::json::from_canonical_value(name) {
+        Ok(coded) => coded,
+        Err(error) => {
+            facts.unread.push(format!(
+                "{class}.name: the DV_CODED_TEXT does not read: {error}"
+            ));
+            return;
         }
-    });
-}
-
-/// The foreign code of `value`, the value of a clearance or purpose element:
-/// a `DV_CODED_TEXT` of the terminology the jurisdiction names, which no
-/// code of [`TERMINOLOGY`] is.
-fn foreign_code(kind: ForeignKind, value: Option<&Value>) -> Result<ForeignCode, String> {
-    let coded = value
-        .filter(|value| value.get("_type").and_then(Value::as_str) == Some("DV_CODED_TEXT"))
-        .and_then(|value| openehr_its::json::from_canonical_value(value).ok())
-        .ok_or_else(|| format!("holds no DV_CODED_TEXT of the {kind} terminology"))?;
-    ForeignCode::read(kind, &coded).map_err(|refused| format!("holds no {kind}: {refused}"))
+    };
+    // NOTE: our own design (#5621, #5691), a rule names a role or an organisation type only in
+    // a jurisdiction's terminology, so a name coded in the access terminology names none.
+    if let Ok(code) = ForeignCode::read(foreign, &coded) {
+        facts.facts.push(CallerFact {
+            ordinal: 0,
+            kind,
+            value: FactValue::Code(code),
+            validity: None,
+            not_before: Bound::Open,
+            not_after: Bound::Open,
+        });
+    }
 }
 
 /// Pushes onto `facts` the care relationships `body`, a party of `kind`,
 /// holds, and why one cannot be read: a care relationship is a relationship
 /// of a `PERSON`, its source, to a party of this store, its target, and a
-/// `member_of` of an `ORGANISATION` is its membership of a `GROUP`, such as
+/// membership (`MBR`) of an `ORGANISATION` is its membership of a `GROUP`, such as
 /// the providers of a region.
 pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
     if kind == Kind::PartyRelationship {
-        if let Some(care) = care_kind(body) {
+        if let Some(term) = care_kind(body) {
             facts.unread.push(format!(
-                "a {TERMINOLOGY}::{} relationship is held in its source PERSON's \
+                "a {}::{} relationship is held in its source PERSON's \
                  relationships, never as a PARTY_RELATIONSHIP of its own",
-                care.code()
+                term.terminology(),
+                term.code()
             ));
         }
         return;
     }
     let held = body.get("relationships").and_then(Value::as_array);
     for (ordinal, relationship) in held.into_iter().flatten().enumerate() {
-        let Some(care) = care_kind(relationship) else {
+        let Some(code) = care_kind(relationship) else {
             continue;
         };
+        let care = FactKind::from(code);
         let target = relationship
             .pointer("/target/id/value")
             .and_then(Value::as_str)
@@ -213,29 +240,59 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
                 "targets no party of this store by its container"
             }
             (Kind::Organisation, _, _) => {
-                "is a relationship of a PERSON, its source; an ORGANISATION holds only member_of"
+                "is a relationship of a PERSON, its source; an ORGANISATION holds only a membership"
             }
-            _ => "is a relationship of a PERSON, or a member_of of an ORGANISATION, its source",
+            _ => "is a relationship of a PERSON, or a membership of an ORGANISATION, its source",
         };
         facts.unread.push(format!(
-            "relationships[{ordinal}]: a {TERMINOLOGY}::{} relationship {refusal}",
-            care.code()
+            "relationships[{ordinal}]: a {}::{} relationship {refusal}",
+            code.terminology(),
+            code.code()
         ));
     }
 }
 
 /// The care relationship code `relationship` carries in its `name` or its
 /// `details`, the first of [`CareRelationship`] in contract order.
-fn care_kind(relationship: &Value) -> Option<FactKind> {
-    [FactKind::MemberOf, FactKind::UnderCareOf]
-        .into_iter()
-        .find(|kind| carries(relationship, kind.code()))
+fn care_kind(relationship: &Value) -> Option<CareRelationship> {
+    CareRelationship::ALL
+        .iter()
+        .copied()
+        .find(|term| carries(relationship, term.terminology(), term.code()))
+}
+
+/// Whether the stored `PERSON` bodies `before` and `after`, two versions of
+/// one party, differ only in their care relationships: each with its `uid`
+/// and every relationship carrying a [`CareRelationship`] code taken out is
+/// the same tree.
+///
+/// The party protection leaves such a version to [`check_care_writer`], so a
+/// caller holding [`Operation::WriteCareRelationship`] rosters a provisioned
+/// professional and changes nothing else (#5617). Our own design.
+///
+/// # Errors
+/// [`StorageError::BodyDecode`] when a stored body is no JSON.
+pub(crate) fn only_care_differs(before: &str, after: &str) -> Result<bool, StorageError> {
+    let without_care = |body: &str| -> Result<Value, StorageError> {
+        let mut value: Value = serde_json::from_str(body).map_err(StorageError::BodyDecode)?;
+        if let Some(object) = value.as_object_mut() {
+            object.remove("uid");
+            if let Some(Value::Array(relationships)) = object.get_mut("relationships") {
+                relationships.retain(|relationship| care_kind(relationship).is_none());
+                if relationships.is_empty() {
+                    object.remove("relationships");
+                }
+            }
+        }
+        Ok(value)
+    };
+    Ok(without_care(before)? == without_care(after)?)
 }
 
 /// Refuses the committed body `facts` when a caller fact it carries cannot be
-/// read: a clearance or purpose element whose value is no code of the
-/// jurisdiction's terminology, and a care relationship that is not a
-/// `PERSON`'s or names no target of this store.
+/// read: a `ROLE` name that is a `DV_CODED_TEXT` that does not read, and a
+/// care relationship that is not a `PERSON`'s or names no target of this
+/// store.
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] (`422`) naming the first such fact.
@@ -248,52 +305,94 @@ pub(crate) fn check_content(facts: Option<&Facts>) -> Result<(), ServiceError> {
     }
 }
 
-/// The care relationships of a committed `PERSON`, or the memberships of a
-/// committed `ORGANISATION`, before its commit writes them, which
-/// [`CareBefore::check`] compares with what it wrote.
-#[derive(Debug)]
-pub(crate) struct CareBefore(Option<(Uuid, Vec<String>)>);
-
-impl CareBefore {
-    /// The stored care relationships of the party `committed` writes, when
-    /// it is a `PERSON` or an `ORGANISATION`, read on its commit transaction
-    /// `tx`.
-    ///
-    /// # Errors
-    /// A storage failure.
-    pub(crate) async fn read(
-        tx: &mut sqlx::PgConnection,
-        committed: &crate::versioning::change::Committed,
-    ) -> Result<Self, ServiceError> {
-        if !matches!(committed.kind, Kind::Person | Kind::Organisation) {
-            return Ok(Self(None));
-        }
-        let party = committed.vo_id.0;
-        Ok(Self(Some((party, store::care(tx, party).await?))))
+/// Refuses the commit `committed` of a `PERSON` or an `ORGANISATION` when
+/// its version changes what the care relationships or memberships say, or
+/// the record subjects it declares, and its caller may not
+/// ([`check_care_writer`]).
+///
+/// The care relationships and record subjects of `facts`, what the committed
+/// body holds, are compared with those of the last earlier version that
+/// holds a body: a relationship by kind, target and `time_validity`, a
+/// subject by namespace and id, never by position (#5640). A logical
+/// deletion holds no body and changes none: its earlier versions keep them
+/// (RM common `master06-change_control_package.adoc` §Logical Deletion). A
+/// lifecycle state is no relationship content, so a deactivation that keeps
+/// them needs no grant (#5628). Our own design.
+///
+/// # Errors
+/// The `403` of [`check_care_writer`], and a storage failure.
+pub(crate) async fn check_care(
+    tx: &mut sqlx::PgConnection,
+    mapping: &BindingMapping,
+    committed: &crate::versioning::change::Committed,
+    facts: Option<&Facts>,
+) -> Result<(), ServiceError> {
+    if !matches!(committed.kind, Kind::Person | Kind::Organisation) {
+        return Ok(());
     }
-
-    /// Refuses the commit when it changed the care relationships and its
-    /// caller may not ([`check_care_writer`]).
-    ///
-    /// # Errors
-    /// The `403` of [`check_care_writer`] and a storage failure.
-    pub(crate) async fn check(
-        self,
-        tx: &mut sqlx::PgConnection,
-        mapping: &BindingMapping,
-    ) -> Result<(), ServiceError> {
-        let Some((party, before)) = self.0 else {
-            return Ok(());
-        };
-        if store::care(tx, party).await? == before {
-            return Ok(());
+    let Some(after) = facts else {
+        return Ok(());
+    };
+    let before: Option<String> = sqlx::query_scalar(
+        "SELECT v.body FROM version v WHERE v.vo_id = $1 AND v.sys_version < $2 \
+         AND v.body IS NOT NULL ORDER BY v.sys_version DESC LIMIT 1",
+    )
+    .bind(committed.vo_id)
+    .bind(committed.sys_version)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(StorageError::from)?;
+    let before = match before {
+        Some(body) => {
+            let body: Value = serde_json::from_str(&body).map_err(StorageError::BodyDecode)?;
+            GrantFacts::of(committed.kind, &body)
         }
-        check_care_writer(mapping, party)
+        None => GrantFacts::default(),
+    };
+    if same_care(&before.facts, &after.grants.facts)
+        && same_subjects(&before.subjects, &after.grants.subjects)
+    {
+        return Ok(());
     }
+    check_care_writer(mapping, committed.vo_id.0)
 }
 
-/// Refuses a commit that changed the care relationships or memberships of
-/// the party `party` when its caller holds no
+/// Whether the care relationships among `before` and `after` say the same:
+/// each of one matches one of the other by kind, target and
+/// `time_validity`, whatever their order.
+fn same_care(before: &[CallerFact], after: &[CallerFact]) -> bool {
+    let care = |fact: &&CallerFact| matches!(fact.value, FactValue::Team(_));
+    let mut unmatched: Vec<&CallerFact> = after.iter().filter(care).collect();
+    before.iter().filter(care).all(|fact| {
+        let found = unmatched.iter().position(|other| {
+            other.kind == fact.kind && other.value == fact.value && other.validity == fact.validity
+        });
+        found.map(|at| unmatched.swap_remove(at)).is_some()
+    }) && unmatched.is_empty()
+}
+
+/// Whether `before` and `after` declare the same record subjects, by
+/// namespace and id, whatever their order.
+fn same_subjects(before: &[subject::DeclaredSubject], after: &[subject::DeclaredSubject]) -> bool {
+    let sorted = |held: &[subject::DeclaredSubject]| {
+        let mut subjects: Vec<_> = held
+            .iter()
+            .map(|declared| declared.subject.clone())
+            .collect();
+        subjects.sort();
+        subjects
+    };
+    sorted(before) == sorted(after)
+}
+
+/// Whether `relationship` carries a code of [`CareRelationship`] in its
+/// `name` or its `details`: a care relationship, which SCIM never changes.
+pub(crate) fn is_care(relationship: &Value) -> bool {
+    care_kind(relationship).is_some()
+}
+
+/// Refuses a commit that changed the care relationships, memberships or
+/// record subjects of the party `party` when its caller holds no
 /// [`Operation::WriteCareRelationship`] grant and is no administrator of
 /// `mapping`.
 ///
@@ -306,11 +405,15 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
         return Ok(());
     }
     Err(ServiceError::not_permitted(format!(
-        "this version changes the care relationships of party {party} ({TERMINOLOGY}::{} or \
-         {TERMINOLOGY}::{}): only a caller holding the {} grant, such as the care delivery \
-         environment's ADT system, or an administrator writes them",
-        FactKind::MemberOf.code(),
-        FactKind::UnderCareOf.code(),
+        "this version changes the care relationships of party {party} ({}::{} or {}::{}) or \
+         the record subjects it declares ({TERMINOLOGY}::{}): only a caller holding the {} \
+         grant, such as the care delivery environment's ADT system, or an administrator \
+         writes them",
+        CareRelationship::MemberOf.terminology(),
+        CareRelationship::MemberOf.code(),
+        CareRelationship::UnderCareOf.terminology(),
+        CareRelationship::UnderCareOf.code(),
+        openehr_rm::draft::access_control::terminology::RecordSubject::RecordSubject.code(),
         Operation::WriteCareRelationship
     )))
 }
@@ -318,7 +421,7 @@ fn check_care_writer(mapping: &BindingMapping, party: Uuid) -> Result<(), Servic
 /// One care relationship: the team or unit it targets and the dates its
 /// `time_validity` holds.
 ///
-/// The evaluator reads a caller's from [`CallerFacts::care_teams`] and a
+/// The evaluator reads a caller's from [`facts::CallerFacts::care_teams`] and a
 /// subject's from
 /// [`crate::party_binding::grants::live::LiveGrants::under_care_of`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -391,95 +494,6 @@ impl CareTeam {
     }
 }
 
-/// What the access evaluator reads about one caller beside its grants.
-///
-/// They are the sensitivities and purposes the capabilities in force clear
-/// and permit, the care teams the caller is a member of on the request's
-/// date, and the `GROUP`s the provider a client acts for is a member of on
-/// that date.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct CallerFacts {
-    clearances: Vec<ForeignCode>,
-    purposes: Vec<ForeignCode>,
-    care_teams: Vec<CareTeam>,
-    provider_groups: Vec<Uuid>,
-}
-
-impl CallerFacts {
-    /// The facts holding `clearances`, `purposes` and `care_teams`, each
-    /// sorted and distinct.
-    #[must_use]
-    pub fn new(
-        mut clearances: Vec<ForeignCode>,
-        mut purposes: Vec<ForeignCode>,
-        mut care_teams: Vec<CareTeam>,
-    ) -> Self {
-        for codes in [&mut clearances, &mut purposes] {
-            codes.sort();
-            codes.dedup();
-        }
-        care_teams.sort();
-        care_teams.dedup();
-        Self {
-            clearances,
-            purposes,
-            care_teams,
-            provider_groups: Vec::new(),
-        }
-    }
-
-    /// These facts with `groups`, the `GROUP`s the client's provider is a
-    /// member of, sorted and distinct.
-    #[must_use]
-    pub fn with_provider_groups(mut self, mut groups: Vec<Uuid>) -> Self {
-        groups.sort_unstable();
-        groups.dedup();
-        self.provider_groups = groups;
-        self
-    }
-
-    /// The sensitivity codes the caller's capabilities in force clear.
-    #[must_use]
-    pub fn clearances(&self) -> &[ForeignCode] {
-        &self.clearances
-    }
-
-    /// Whether a capability in force clears `sensitivity`, compared by
-    /// terminology id and code.
-    #[must_use]
-    pub fn clears(&self, sensitivity: &ForeignCode) -> bool {
-        self.clearances.binary_search(sensitivity).is_ok()
-    }
-
-    /// The purposes of use the caller's capabilities in force let it
-    /// declare.
-    #[must_use]
-    pub fn purposes(&self) -> &[ForeignCode] {
-        &self.purposes
-    }
-
-    /// Whether a capability in force lets the caller declare `purpose`,
-    /// compared by terminology id and code.
-    #[must_use]
-    pub fn permits(&self, purpose: &ForeignCode) -> bool {
-        self.purposes.binary_search(purpose).is_ok()
-    }
-
-    /// The care teams the caller is a member of on the request's date.
-    #[must_use]
-    pub fn care_teams(&self) -> &[CareTeam] {
-        &self.care_teams
-    }
-
-    /// The containers of the `GROUP`s the provider a client acts for is a
-    /// member of on the request's date, by a `member_of` relationship of the
-    /// provider `ORGANISATION`.
-    #[must_use]
-    pub fn provider_groups(&self) -> &[Uuid] {
-        &self.provider_groups
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -506,13 +520,20 @@ mod tests {
 
     const TEAM: &str = "0190a1bc-3a1e-72e4-b7c5-f78a24c01308";
 
-    fn relationship(code: &str, target: &str) -> Value {
+    /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
+    const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+    /// A patient under the care of a team or unit.
+    const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
+    /// A representation.
+    const REPRESENTS: (&str, &str) = (TERMINOLOGY, "represents");
+
+    fn relationship((terminology, code): (&str, &str), target: &str) -> Value {
         json!({"_type": "PARTY_RELATIONSHIP",
                "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.ward.v4",
                "name": {"_type": "DV_TEXT", "value": "ward"},
                "details": {"_type": "ITEM_TREE", "archetype_node_id": "at2",
                            "items": [element(&json!({"_type": "DV_TEXT", "value": "kind"}),
-                                             &coded(TERMINOLOGY, code))]},
+                                             &coded(terminology, code))]},
                "time_validity": {"_type": "DV_INTERVAL",
                                  "lower": {"_type": "DV_DATE", "value": "2026-11-03"},
                                  "lower_unbounded": false, "upper_unbounded": true},
@@ -520,27 +541,16 @@ mod tests {
     }
 
     #[test]
-    fn a_capability_clears_and_permits_by_coded_element_anywhere_in_its_credentials() {
-        let body = json!({
-            "_type": "ROLE", "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-ROLE.psychiatrist.v2",
-            "capabilities": [
-                {"_type": "CAPABILITY", "credentials": {"items": [
-                    {"items": [element(&coded(TERMINOLOGY, "sensitivity_clearance"),
-                                       &coded("2.16.840.1.113883.5.25", "PSY"))]},
-                    element(&coded(TERMINOLOGY, "permitted_purpose"),
-                            &coded("2.16.840.1.113883.5.8", "TREAT")),
-                    element(&json!({"_type": "DV_TEXT", "value": "sensitivity_clearance"}),
-                            &coded("2.16.840.1.113883.5.25", "HIV"))
-                ]}},
-                {"_type": "CAPABILITY", "credentials": {"items": [
-                    element(&coded(TERMINOLOGY, "sensitivity_clearance"),
-                            &coded(TERMINOLOGY, "open")),
-                    element(&coded(TERMINOLOGY, "permitted_purpose"),
-                            &json!({"_type": "DV_TEXT", "value": "TREAT"}))
-                ]}}
-            ]
-        });
-        let facts = GrantFacts::of(Kind::Role, &body);
+    fn a_role_is_read_from_the_coded_name_of_a_role() {
+        let role = |name: Value| {
+            json!({"_type": "ROLE",
+                   "archetype_node_id": "org.example::openEHR-DEMOGRAPHIC-ROLE.nurse.v2",
+                   "name": name,
+                   "capabilities": [{"_type": "CAPABILITY", "credentials": {"items": [
+                       element(&json!({"_type": "DV_TEXT", "value": "operation"}),
+                               &coded(TERMINOLOGY, "access_demographic"))]}}]})
+        };
+        let facts = GrantFacts::of(Kind::Role, &role(coded("urn:example:roles", "NURSE")));
         let read: Vec<(i32, FactKind, FactValue)> = facts
             .facts
             .iter()
@@ -548,36 +558,73 @@ mod tests {
             .collect();
         assert_eq!(
             read,
-            vec![
-                (
-                    0,
-                    FactKind::Clearance,
-                    FactValue::Code(code("2.16.840.1.113883.5.25", "PSY"))
-                ),
-                (
-                    0,
-                    FactKind::Purpose,
-                    FactValue::Code(code("2.16.840.1.113883.5.8", "TREAT"))
-                ),
-            ],
-            "an element whose name is no code of the terminology clears nothing"
+            vec![(
+                0,
+                FactKind::Role,
+                FactValue::Code(code("urn:example:roles", "NURSE"))
+            )]
         );
-        assert_eq!(facts.unread.len(), 2, "{:?}", facts.unread);
-        assert!(facts.unread[0].contains("sensitivity_clearance"));
-        assert!(facts.unread[1].contains("permitted_purpose"));
         assert!(
-            facts.capabilities.is_empty(),
-            "a clearance grants no operation"
+            facts.facts[0].validity.is_none(),
+            "a role holds while its ROLE does"
         );
+        assert_eq!(facts.unread, Vec::<String>::new());
+        let text = GrantFacts::of(
+            Kind::Role,
+            &role(json!({"_type": "DV_TEXT", "value": "Nurse"})),
+        );
+        assert_eq!(text.facts, Vec::new(), "a ROLE named in text names no role");
+        let operation = GrantFacts::of(Kind::Role, &role(coded(TERMINOLOGY, "NURSE")));
+        assert_eq!(
+            operation.facts,
+            Vec::new(),
+            "an operation code names no role"
+        );
+        assert_eq!(operation.unread, Vec::<String>::new());
+    }
+
+    #[test]
+    fn an_organisation_type_is_read_from_the_coded_name_of_an_organisation() {
+        let organisation = |name: Value| {
+            json!({"_type": "ORGANISATION",
+                   "archetype_node_id": "openEHR-DEMOGRAPHIC-ORGANISATION.healthcare_provider.v1",
+                   "name": name})
+        };
+        let facts = GrantFacts::of(
+            Kind::Organisation,
+            &organisation(coded("urn:example:organisation-types", "HOSPITAL")),
+        );
+        let read: Vec<(FactKind, FactValue)> = facts
+            .facts
+            .iter()
+            .map(|fact| (fact.kind, fact.value.clone()))
+            .collect();
+        assert_eq!(
+            read,
+            vec![(
+                FactKind::OrganisationType,
+                FactValue::Code(code("urn:example:organisation-types", "HOSPITAL"))
+            )]
+        );
+        let text = GrantFacts::of(
+            Kind::Organisation,
+            &organisation(json!({"_type": "DV_TEXT", "value": "Hospital"})),
+        );
+        assert_eq!(text.facts, Vec::new(), "a name in text names no type");
+        let access = GrantFacts::of(
+            Kind::Organisation,
+            &organisation(coded(TERMINOLOGY, "HOSPITAL")),
+        );
+        assert_eq!(access.facts, Vec::new(), "an access code names no type");
     }
 
     #[test]
     fn a_persons_care_relationships_are_read_by_their_code_in_any_archetype() {
         let body = json!({"_type": "PERSON", "relationships": [
-            relationship("member_of", TEAM),
-            relationship("represents", TEAM),
-            relationship("under_care_of", TEAM),
-            relationship("under_care_of", "1.2.840.113619")
+            relationship(MEMBER, TEAM),
+            relationship(REPRESENTS, TEAM),
+            relationship(UNDER_CARE, TEAM),
+            relationship(UNDER_CARE, "1.2.840.113619")
         ]});
         let facts = GrantFacts::of(Kind::Person, &body);
         let team = Uuid::parse_str(TEAM).expect("a uuid");
@@ -599,18 +646,26 @@ mod tests {
     }
 
     #[test]
+    fn a_membership_is_read_by_the_hl7_code_alone() {
+        let body = json!({"_type": "PERSON", "relationships": [
+            relationship((TERMINOLOGY, "member_of"), TEAM),
+            relationship(("v3-RoleCode", "MBR"), TEAM)
+        ]});
+        let facts = GrantFacts::of(Kind::Person, &body);
+        assert_eq!(facts.facts, Vec::new());
+        assert_eq!(facts.unread, Vec::<String>::new());
+    }
+
+    #[test]
     fn a_care_relationship_is_a_persons_and_never_one_of_its_own() {
-        let body = json!({"_type": "GROUP", "relationships": [relationship("member_of", TEAM)]});
+        let body = json!({"_type": "GROUP", "relationships": [relationship(MEMBER, TEAM)]});
         let facts = GrantFacts::of(Kind::Group, &body);
         assert_eq!(facts.facts, Vec::new());
         assert_eq!(facts.unread.len(), 1);
-        let standalone = GrantFacts::of(
-            Kind::PartyRelationship,
-            &relationship("under_care_of", TEAM),
-        );
+        let standalone = GrantFacts::of(Kind::PartyRelationship, &relationship(UNDER_CARE, TEAM));
         assert_eq!(standalone.unread.len(), 1);
         assert_eq!(
-            GrantFacts::of(Kind::PartyRelationship, &relationship("represents", TEAM)).unread,
+            GrantFacts::of(Kind::PartyRelationship, &relationship(REPRESENTS, TEAM)).unread,
             Vec::<String>::new()
         );
     }
@@ -618,9 +673,9 @@ mod tests {
     #[test]
     fn an_organisations_member_of_is_its_membership_of_a_group() {
         let body = json!({"_type": "ORGANISATION", "relationships": [
-            relationship("member_of", TEAM),
-            relationship("under_care_of", TEAM),
-            relationship("member_of", "1.2.840.113619")
+            relationship(MEMBER, TEAM),
+            relationship(UNDER_CARE, TEAM),
+            relationship(MEMBER, "1.2.840.113619")
         ]});
         let facts = GrantFacts::of(Kind::Organisation, &body);
         let group = Uuid::parse_str(TEAM).expect("a uuid");
@@ -633,7 +688,7 @@ mod tests {
         assert_eq!(facts.unread.len(), 2, "{:?}", facts.unread);
         assert!(
             facts.unread[0].starts_with("relationships[1]")
-                && facts.unread[0].contains("holds only member_of"),
+                && facts.unread[0].contains("holds only a membership"),
             "an ORGANISATION is never under care: {:?}",
             facts.unread
         );
@@ -641,10 +696,50 @@ mod tests {
     }
 
     #[test]
-    fn provider_groups_are_sorted_and_distinct() {
-        let (a, b) = (Uuid::from_u128(2), Uuid::from_u128(1));
-        let facts = CallerFacts::default().with_provider_groups(vec![a, b, a]);
-        assert_eq!(facts.provider_groups(), &[b, a]);
+    fn care_compares_what_relationships_say_never_their_order_or_other_facts() {
+        let facts = |relationships: Vec<Value>| {
+            GrantFacts::of(
+                Kind::Person,
+                &json!({"_type": "PERSON", "relationships": relationships}),
+            )
+            .facts
+        };
+        let other = "0190a1bc-3a1e-72e4-b7c5-f78a24c01309";
+        let both = facts(vec![
+            relationship(MEMBER, TEAM),
+            relationship(UNDER_CARE, other),
+        ]);
+        let swapped = facts(vec![
+            relationship(REPRESENTS, TEAM),
+            relationship(UNDER_CARE, other),
+            relationship(MEMBER, TEAM),
+        ]);
+        assert!(same_care(&both, &swapped), "order and other relationships");
+        assert!(!same_care(&both, &both[..1]), "a relationship removed");
+        assert!(!same_care(&both[..1], &both), "a relationship added");
+        let mut ended = relationship(MEMBER, TEAM);
+        ended["time_validity"]["upper"] = json!({"_type": "DV_DATE", "value": "2026-11-14"});
+        ended["time_validity"]["upper_unbounded"] = json!(false);
+        let ended = facts(vec![ended, relationship(UNDER_CARE, other)]);
+        assert!(!same_care(&both, &ended), "a relationship ended");
+        let twice = facts(vec![relationship(MEMBER, TEAM), relationship(MEMBER, TEAM)]);
+        assert!(!same_care(&twice, &both[..1]), "a repeat removed");
+    }
+
+    #[test]
+    fn record_subjects_compare_by_reference_never_by_position() {
+        let declared = |ordinal: i32, id: &str| subject::DeclaredSubject {
+            ordinal,
+            subject: crate::storage::access_projection::EhrSubject::new("pixm", id),
+        };
+        let both = [declared(0, "p-1"), declared(1, "p-2")];
+        let swapped = [declared(0, "p-2"), declared(1, "p-1")];
+        assert!(same_subjects(&both, &swapped));
+        assert!(!same_subjects(&both, &both[..1]));
+        assert!(!same_subjects(
+            &both,
+            &[declared(0, "p-1"), declared(1, "p-3")]
+        ));
     }
 
     #[test]
@@ -653,20 +748,6 @@ mod tests {
             assert_eq!(FactKind::of(kind.code()), Some(kind));
         }
         assert_eq!(FactKind::of("represents"), None);
-    }
-
-    #[test]
-    fn caller_facts_answer_by_terminology_and_code() {
-        let facts = CallerFacts::new(
-            vec![code("ActCode", "PSY"), code("ActCode", "PSY")],
-            vec![code("PurposeOfUse", "TREAT")],
-            Vec::new(),
-        );
-        assert_eq!(facts.clearances().len(), 1);
-        assert!(facts.clears(&code("ActCode", "PSY")));
-        assert!(!facts.clears(&code("local", "PSY")));
-        assert!(facts.permits(&code("PurposeOfUse", "TREAT")));
-        assert!(!facts.permits(&code("PurposeOfUse", "HOPERAT")));
     }
 
     #[test]

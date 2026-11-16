@@ -44,15 +44,19 @@ fn store_over(pool: &sqlx::PgPool) -> AuditStore {
 
 /// Every stored record's FHIR document as the store serves it, oldest first.
 async fn served(store: &AuditStore) -> Vec<serde_json::Value> {
-    let (_, mut documents) = store
+    let mut documents = store
         .search(&AuditSearchFilter {
             count: 1000,
             ..AuditSearchFilter::default()
         })
         .await
-        .expect("search");
+        .expect("search")
+        .documents;
     documents.reverse();
     documents
+        .iter()
+        .map(|document| serde_json::to_value(document).expect("a served document"))
+        .collect()
 }
 
 fn record(event: &AuditEvent, subject: Option<&str>) -> AuditRecord {
@@ -699,7 +703,7 @@ async fn the_access_trail_refuses_rewriting_deletion_and_truncation() {
         .await
         .expect("the record's chain position");
     store
-        .mark_fhir_feed_delivered(seq)
+        .mark_delivered(ferroehr::system_log::store::outbox::Sink::FhirFeed, seq)
         .await
         .expect("a delivery stamp is the one sanctioned mutation");
 
@@ -843,8 +847,8 @@ async fn both_inserts_persist_the_emergency_mark_and_it_cannot_be_rewritten() {
 }
 
 /// The policy of [`a_record_renders_the_document_the_drain_rendered`]: a
-/// category map, an emergency purpose and a ten-year horizon, so every part
-/// of the EHDS access record has something to write.
+/// category map, an emergency purpose and an access policy's ten-year log
+/// retention, so every part of the EHDS access record has something to write.
 fn classifying_policy() -> RenderPolicy {
     let config: ferroehr::system_log::config::AuditConfig = toml::from_str(
         r#"
@@ -853,8 +857,6 @@ fn classifying_policy() -> RenderPolicy {
         server_host = "10.42.23.77"
         purpose_codes = ["TREAT", "ETREAT"]
         emergency_purpose_codes = ["ETREAT"]
-        [store]
-        retention = "P10Y"
         "#,
     )
     .expect("parse");
@@ -865,7 +867,16 @@ fn classifying_policy() -> RenderPolicy {
         "#,
     )
     .expect("parse the map");
-    RenderPolicy::of(&config, &categories)
+    RenderPolicy {
+        retention: ferroehr::system_log::retention::LogRetention {
+            in_union: true,
+            period: ferroehr::system_log::config::Retention::Years(10),
+            floors: Vec::new(),
+            ceilings: Vec::new(),
+            policy: Some("5e6f7a8b-9c0d-4e1f-8a2b-c3d4e5f6a7b8::cdr.example.org::1".to_owned()),
+        },
+        ..RenderPolicy::of(&config, &categories)
+    }
 }
 
 /// One event of every rendering path, each field filled that the path reads.
@@ -1177,15 +1188,24 @@ async fn every_search_parameter_matches_what_the_document_says() {
             .filter(|document| criterion.matches(document))
             .map(ToString::to_string)
             .collect();
-        let (total, found) = store
+        let page = store
             .search(&AuditSearchFilter {
                 count: 1000,
                 criteria: vec![criterion.clone()],
+                total: true,
                 ..AuditSearchFilter::default()
             })
             .await
             .expect("search");
-        let mut found: Vec<String> = found.iter().map(ToString::to_string).collect();
+        let (total, found) = (page.total.expect("a counted search"), page.documents);
+        let mut found: Vec<String> = found
+            .iter()
+            .map(|document| {
+                serde_json::to_value(document)
+                    .expect("a served document")
+                    .to_string()
+            })
+            .collect();
         expected.sort();
         found.sort();
         assert_eq!(
@@ -1248,15 +1268,24 @@ async fn finds_what_the_documents_say(
         .filter(|document| criterion.matches(document))
         .map(ToString::to_string)
         .collect();
-    let (total, found) = store
+    let page = store
         .search(&AuditSearchFilter {
             count: 1000,
             criteria: vec![criterion.clone()],
+            total: true,
             ..AuditSearchFilter::default()
         })
         .await
         .expect("search");
-    let mut found: Vec<String> = found.iter().map(ToString::to_string).collect();
+    let (total, found) = (page.total.expect("a counted search"), page.documents);
+    let mut found: Vec<String> = found
+        .iter()
+        .map(|document| {
+            serde_json::to_value(document)
+                .expect("a served document")
+                .to_string()
+        })
+        .collect();
     expected.sort();
     found.sort();
     assert_eq!(
@@ -1385,6 +1414,10 @@ async fn request_ids_and_version_uids_add_no_token_and_stay_searchable() {
 /// after; outside reaping no token can be deleted, and within it no token a
 /// record names.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn retention_removes_the_tokens_only_its_records_named() {
     use ferroehr::system_log::config::Retention;
 

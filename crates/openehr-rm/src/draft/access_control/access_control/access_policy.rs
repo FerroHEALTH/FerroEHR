@@ -9,6 +9,7 @@
 use crate::draft::access_control::access_control::access_classification::AccessClassification;
 use crate::draft::access_control::access_control::access_directive::AccessDirective;
 use crate::draft::access_control::access_control::access_log_restriction::AccessLogRestriction;
+use crate::draft::access_control::access_control::access_log_retention::AccessLogRetention;
 use crate::v1_2::common::archetyped::archetyped::Archetyped;
 use crate::v1_2::common::archetyped::feeder_audit::FeederAudit;
 use crate::v1_2::common::archetyped::link::Link;
@@ -20,7 +21,7 @@ use openehr_base::v1_3::base_types::identification::uid_based_id::UidBasedId;
 
 /// The access policy of a system or of one controller in it: facts that hold for every EHR the controller keeps.
 ///
-/// It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, lists the named directives a subject can accept by reference, and states what the subject's view of the access log withholds. Kept in its own versioned container, outside any EHR and outside the demographic service.
+/// It classifies kinds of data into sensitivities, states whether clinical access needs a care relationship and a declared purpose, holds the controller's own rules on which callers may perform which operations on which kinds of data, lists the named directives a subject can accept by reference, states what the subject's view of the access log withholds, and states how long the access log keeps an entry. Kept in its own versioned container, outside any EHR and outside the demographic service.
 #[doc(alias = "ACCESS_POLICY")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccessPolicy {
@@ -51,14 +52,20 @@ pub struct AccessPolicy {
     pub care_relationship_required: bool,
     /// How long after a care relationship ends it still admits access, for follow-up (BASE Architecture Overview, Security, Time-limitation of access).
     pub relationship_grace: Option<DvDuration>,
-    /// Whether an access to clinical data must declare a purpose of use.
+    /// Whether an access to clinical data must declare a purpose of use. An access without one is refused before the controller's rules are read, whatever rules the policy holds.
     pub purpose_required: bool,
+    /// The controller's rules for every EHR it keeps: which callers may perform which operations on which kinds of data, such as the rules a Member State lays down under EHDS Art.
+    ///
+    /// 11(3). Each is an `ACCESS_DIRECTIVE` of kind `controller_rule`. A deny rule that applies refuses whatever the subject's directives permit; a permit rule acts only on sensitivity, and a permit exception only narrows the deny rule it sits in.
+    pub rules: Option<openehr_base::containers::NonEmptyVec<AccessDirective>>,
     /// Named directives a subject can accept by an identifier, such as an IHE BPPC policy or a national consent choice. Each carries at least one identifier.
     pub catalogue: Option<openehr_base::containers::NonEmptyVec<AccessDirective>>,
     /// The restrictions a Member State law lays on the subject's view of the access log under EHDS Article 9(3).
     ///
     /// Each names the kinds of accessor and the attributes of the accessor the subject view withholds; the full entry is unchanged.
     pub log_restrictions: Option<openehr_base::containers::NonEmptyVec<AccessLogRestriction>>,
+    /// How long the access log keeps each entry, and the legal bounds the controller declares on that period. Void keeps every entry without end.
+    pub log_retention: Option<AccessLogRetention>,
     /// Further archetyped detail. The decision procedure never reads it.
     pub details: Option<ItemStructure>,
 }

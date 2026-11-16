@@ -205,6 +205,17 @@ impl super::ServiceError {
         })
     }
 
+    /// A `503` for a query whose access copy is still older than the store
+    /// ([`AccessRefreshing`](super::ServiceError::AccessRefreshing)).
+    #[must_use]
+    pub fn access_refreshing() -> Self {
+        Self::AccessRefreshing(Curated {
+            message: "the access state this replica judges queries by is being refreshed; \
+                      ask again shortly",
+            source: None,
+        })
+    }
+
     /// The client-visible text of this error: a refusal's message, the
     /// rendered violation of a `422`, the joined validation violations, the
     /// curated internal message of a server fault, and the `Display` text of a
@@ -216,10 +227,9 @@ impl super::ServiceError {
             E::NotFound(r) => r.message.clone(),
             E::BadRequest(r) => r.message.clone(),
             E::Conflict(r) => r.message.clone(),
-            E::VersionConflict(r) | E::Unrecorded(r) | E::Restricted(r) | E::Forbidden(r) => {
-                r.message.clone()
-            }
-            E::Fault(f) | E::Overloaded(f) => f.message.to_owned(),
+            E::VersionConflict(r) | E::Unrecorded(r) | E::Restricted(r) => r.message.clone(),
+            E::Forbidden(r) => r.message.clone(),
+            E::Fault(f) | E::Overloaded(f) | E::AccessRefreshing(f) => f.message.to_owned(),
             // A server fault's detail is a log record, never client text.
             E::Internal(_)
             | E::JsonWrite(_)
@@ -256,4 +266,15 @@ fn storage_message(e: &crate::storage::error::StorageError) -> String {
         | S::BodyDecode(_) => CODEC_MESSAGE.to_owned(),
         S::Database(_) | S::Acquire(_) => INTERNAL_MESSAGE.to_owned(),
     }
+}
+
+/// A refusal of the access evaluator: its `refused-*` code and the legal
+/// grounds of the controller rules that decided it, empty for any other
+/// step.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Refused {
+    /// The `refused-*` code.
+    pub code: openehr_rm::draft::access_control::terminology::Refusal,
+    /// The legal grounds the deciding rules name.
+    pub legal_grounds: Vec<openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText>,
 }

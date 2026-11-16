@@ -880,6 +880,10 @@ async fn archetype_predicate_child_releases_follow_their_own_parent_release() {
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn all_versions_includes_a_branch_row() {
     use ferroehr::ids::{EhrId, VoId};
     use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_versions_verbatim};

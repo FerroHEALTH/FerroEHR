@@ -4,7 +4,7 @@
 //! The federation agreements in the CDR (#5440) over a real PostgreSQL 18: an
 //! agreement is a grant of `federated_person_access` or
 //! `federated_organisation_access` held by the partner's `ACTOR`, its terms
-//! the coded elements of `ferroehr-operations` in the capability's
+//! the coded elements of `openehr_access` in the capability's
 //! credentials, and every legal check the configuration once ran at boot
 //! refuses the `ROLE` at its commit with `422`, a test per check. A
 //! conforming agreement is listed as in force, and a change reaches the next
@@ -92,7 +92,7 @@ fn text(value: &str) -> Value {
     json!({ "_type": "DV_TEXT", "value": value })
 }
 
-/// A `DV_CODED_TEXT` of the operation terminology.
+/// A `DV_CODED_TEXT` of the draft access terminology.
 fn coded(code: &str) -> Value {
     json!({ "_type": "DV_CODED_TEXT", "value": code,
             "defining_code": { "_type": "CODE_PHRASE",

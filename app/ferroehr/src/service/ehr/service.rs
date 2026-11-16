@@ -93,15 +93,22 @@ impl FerroEhrService {
         // another EHR is a distinct 409 (RM ehr master04 §EHR Status).
         let (subject_id, subject_namespace, is_queryable, is_modifiable) =
             super::status::ehr_promoted_columns(status);
-        let subject = subject_id.and_then(|subject| subject.parse::<uuid::Uuid>().ok());
+        let subject = crate::storage::access_projection::EhrSubject::stored(
+            subject_namespace.map(str::to_owned),
+            subject_id.map(str::to_owned),
+        );
+        let digest = self.care_subject_digest(subject.as_ref());
         let time_created = match crate::storage::ehr_repo::insert_ehr(
             &mut tx,
             ehr_id,
             &self.effective_system_id(),
-            subject_id,
-            subject_namespace,
-            is_queryable,
-            is_modifiable,
+            crate::storage::ehr_repo::PromotedColumns {
+                subject_id,
+                subject_namespace,
+                is_queryable,
+                is_modifiable,
+                subject_digest: digest.as_deref(),
+            },
         )
         .await
         {
@@ -242,7 +249,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// [`ServiceError::Database`] on a storage failure, and the access-record
-    /// refusal under `fail_mode = "closed"`.
+    /// refusal of a record that cannot be written.
     pub async fn ehr_id_for_subject(
         &self,
         subject_id: &str,
@@ -260,7 +267,7 @@ impl FerroEhrService {
             Some(id) if self.ehr_hidden_from_request(id).await? => None,
             other => other,
         };
-        self.emit_subject_resolution(namespace, found)?;
+        self.emit_subject_resolution(namespace, found).await?;
         Ok(found)
     }
 
@@ -272,7 +279,7 @@ impl FerroEhrService {
     /// and an access log is the last place that should be the copy that
     /// outlives it. A miss is recorded like a hit — it says someone asked
     /// whether this deployment holds a record for that subject.
-    fn emit_subject_resolution(
+    async fn emit_subject_resolution(
         &self,
         namespace: &str,
         resolved: Option<EhrId>,
@@ -289,13 +296,7 @@ impl FerroEhrService {
         event.object_id = Some(format!("subject-namespace:{namespace}"));
         event.ehr_id = resolved.map(|id| id.to_string());
         event.result_count = Some(u64::from(resolved.is_some()));
-        event.purpose = crate::system_log::access_context::current_purpose();
-        event.permit = crate::system_log::access_context::current_permit();
-        if let Some(committer) = crate::versioning::committer::current_committer() {
-            event.user_id = committer.subject;
-        }
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_committer_access(event).await
     }
 
     /// The canonical RM `EHR` wire object with its [`ResourceMeta`]: the
@@ -314,7 +315,7 @@ impl FerroEhrService {
             .ok_or_else(|| ServiceError::not_found(Missing::Ehr, format!("EHR {ehr_id}")))?;
         // NOTE: our own design (#5589), a verdict judged on settings older than the row
         // this statement read is refused, as an absent EHR is.
-        if crate::access_eval::condition::stale(ehr_id, read.access_revision) {
+        if crate::access_eval::condition::stale(ehr_id, &read.access_revision) {
             return Err(ServiceError::not_found(
                 Missing::Ehr,
                 format!("EHR {ehr_id}"),

@@ -301,6 +301,18 @@ impl FerroEhrService {
             .map(Some)
     }
 
+    /// The key spaces of the binding side table, by issuer
+    /// ([`crate::party_binding::key_space`]).
+    ///
+    /// # Errors
+    /// [`crate::storage::error::StorageError`] when the party store fails.
+    pub async fn binding_key_spaces(
+        &self,
+    ) -> Result<Vec<crate::party_binding::key_space::KeySpace>, crate::storage::error::StorageError>
+    {
+        crate::party_binding::key_space::list(&self.demographic_pool).await
+    }
+
     /// Refills the binding side table under the installed mapping once no
     /// replica's lease was renewed within `ttl` ([`crate::party_binding::fill::refill`]),
     /// or, with no mapping installed, the grant rows alone
@@ -328,6 +340,15 @@ impl FerroEhrService {
         self
     }
 
+    /// Name this CDR's parties under `namespace`, `[authz.party_binding]
+    /// namespace`, which the access evaluator compares an EHR's subject
+    /// reference with to find its `PERSON`.
+    #[must_use]
+    pub fn with_party_namespace(self, namespace: &str) -> Self {
+        self.grants.set_namespace(namespace);
+        self
+    }
+
     /// Judge the federation agreements against `trust`: a commit of one that
     /// breaks a rule is refused, and a request is admitted only under one that
     /// keeps them.
@@ -344,6 +365,13 @@ impl FerroEhrService {
     #[must_use]
     pub fn grants(&self) -> &std::sync::Arc<crate::party_binding::grants::live::LiveGrants> {
         &self.grants
+    }
+
+    /// This replica's copy of the binding lookups and the bound `PERSON`s'
+    /// names.
+    #[must_use]
+    pub fn bindings(&self) -> &std::sync::Arc<crate::party_binding::live::LiveBindings> {
+        &self.bindings
     }
 
     /// Fills the grant rows when they were never filled, then reads them, as

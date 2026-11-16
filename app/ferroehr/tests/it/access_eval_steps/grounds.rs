@@ -23,11 +23,13 @@ use serde_json::json;
 use super::*;
 use ferroehr::access_eval::condition::{Asking, EhrEntry, InForce, RecordFacts, RequestAccess};
 use ferroehr::access_eval::record::{Decision, Step};
-use ferroehr::access_log::entry::{entry_of, horizon_retention};
+use ferroehr::access_log::entry::entry_of;
+use ferroehr::access_log::retention::stated;
 use ferroehr::ids::EhrId;
 use ferroehr::system_log::event::{
     AccessDecision, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
+use ferroehr::system_log::retention::LogRetention;
 
 /// The EHR of the tests.
 const EHR: &str = "7d44b88c-4199-4bad-97dc-d78268e01398";
@@ -39,6 +41,8 @@ const EHR_ACCESS_VERSION: &str = "5a1c0b8e-55a6-4d0b-9a63-3f0f6c3c2a11::cdr.exam
 const POLICY_VERSION: &str = "1f2e3d4c-5b6a-4978-8a9b-0c1d2e3f4a5b::cdr.example.org::3";
 /// The `ROLE` whose `CAPABILITY` grants the caller an operation.
 const ROLE: &str = "0190b3a2-5a3e-7c1d-9e2f-3b4c5d6e7fa0";
+/// The uid of a controller rule.
+const RULE_UID: &str = "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f";
 
 /// The request of `caller` asking `asked` under `policy`, naming the grant
 /// of `access_service` by [`ROLE`] and the policy version in its record.
@@ -67,7 +71,7 @@ fn request(caller: Caller, asked: Asked<'_>, policy: Option<AccessPolicy>) -> Re
 /// The subject of [`EHR`], through its patient context.
 fn subject_of_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(EHR))),
+        own_ehrs: vec![EhrId(uuid(EHR))],
         ..caller(CallerKind::Subject, GUARDIAN)
     }
 }
@@ -76,7 +80,7 @@ fn subject_of_ehr() -> Caller {
 /// that EHR.
 fn subject_of_other_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(OTHER_EHR))),
+        own_ehrs: vec![EhrId(uuid(OTHER_EHR))],
         ..caller(CallerKind::Subject, GUARDIAN)
     }
 }
@@ -85,7 +89,7 @@ fn subject_of_other_ehr() -> Caller {
 /// representation names.
 fn representative_of_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(EHR))),
+        own_ehrs: vec![EhrId(uuid(EHR))],
         ..caller(CallerKind::Representative, GUARDIAN)
     }
 }
@@ -93,7 +97,7 @@ fn representative_of_ehr() -> Caller {
 /// A representative of the subject of another patient's EHR.
 fn representative_of_other_ehr() -> Caller {
     Caller {
-        own_ehr: Some(EhrId(uuid(OTHER_EHR))),
+        own_ehrs: vec![EhrId(uuid(OTHER_EHR))],
         ..caller(CallerKind::Representative, GUARDIAN)
     }
 }
@@ -107,15 +111,15 @@ fn decide_on(
 ) -> (Outcome, Decision) {
     let ehr_id = EhrId(uuid(EHR));
     let version = settings.as_ref().map(|_| EHR_ACCESS_VERSION.to_owned());
-    let verdict = access.judge_ehr(
-        ehr_id,
-        &EhrEntry {
-            settings: Arc::new(settings),
-            subject: None,
-            version,
-            revision: ferroehr::storage::access_projection::Revision::default(),
-        },
-    );
+    let entry = EhrEntry {
+        settings: Arc::new(settings),
+        subject: None,
+        version,
+        revision: ferroehr::storage::access_projection::Revision::default(),
+    };
+    // NOTE: an EHR with no subject reads no care relationship, so the judgement awaits nothing.
+    let verdict = futures::executor::block_on(access.judge_ehr(ehr_id, &entry))
+        .expect("an EHR with no subject reads no care relationship");
     let outcome = access.note(ehr_id, &verdict, item);
     (outcome, access.decision(Some(ehr_id)))
 }
@@ -129,12 +133,12 @@ fn of_kind<'a>(decision: &'a Decision, kind: &str) -> Vec<&'a AccessAuthorisatio
         .collect()
 }
 
-/// The capabilities and roles the caller held are `role` grounds: each
-/// grant by its operation code and `ROLE`, each functional role by its code.
+/// The capabilities the caller held and the roles it performs are `role`
+/// grounds: each grant by its operation code and `ROLE`, each role by its
+/// terminology and code.
 #[test]
 fn a_role_ground_names_each_capability_and_role() {
-    let mut nurse = professional(NURSE);
-    nurse.roles = vec!["NURSE".to_owned()];
+    let nurse = performing(CallerKind::Professional, NURSE, "NURSE");
     let access = request(nurse, read(None), None);
     let (outcome, decision) = decide_on(&access, None, &Item::Ehr);
     assert_eq!(outcome, Outcome::Admit);
@@ -146,7 +150,7 @@ fn a_role_ground_names_each_capability_and_role() {
         (role.id.as_str(), role.r#type.as_deref()),
         (ROLE, Some("ROLE"))
     );
-    assert_eq!(roles[1].name.as_deref(), Some("NURSE"));
+    assert_eq!(roles[1].name.as_deref(), Some("urn:example:roles::NURSE"));
     assert!(decision.refused.is_none());
 }
 
@@ -241,8 +245,8 @@ fn a_delegation_is_a_representation_ground() {
 }
 
 /// The break-glass role lifting a restriction in an emergency is an
-/// `emergency` ground naming the directive it lifted, and lifting steps 4 to
-/// 7 one naming the `ACCESS_POLICY` version; the entry marks the access as
+/// `emergency` ground naming the directive it lifted, and lifting steps 6 to
+/// 8 one naming the `ACCESS_POLICY` version; the entry marks the access as
 /// an emergency, so the patient sees it (EHDS Art. 11(5)).
 #[test]
 fn an_emergency_override_is_marked_with_what_it_lifted() {
@@ -276,8 +280,13 @@ fn an_emergency_override_is_marked_with_what_it_lifted() {
 
     let mut event = event_of(&access);
     event.emergency_access = true;
-    let entry =
-        entry_of(&event, None, "cdr.example.org", horizon_retention(None)).expect("an entry");
+    let entry = entry_of(
+        &event,
+        None,
+        "cdr.example.org",
+        stated(None, &LogRetention::default()),
+    )
+    .expect("an entry");
     assert!(entry.is_emergency);
     let kinds: Vec<&str> = entry
         .authorisations
@@ -290,6 +299,85 @@ fn an_emergency_override_is_marked_with_what_it_lifted() {
         kinds.iter().filter(|kind| **kind == "emergency").count(),
         2,
         "the override marks the access once per lift, with no bare mark: {kinds:?}"
+    );
+}
+
+/// An emergency lifts a consent deny over the mental-health template; a read
+/// of another template names no `emergency` ground of that directive, only
+/// the `ACCESS_POLICY` of the lifted steps 6 to 8, and a read of the
+/// mental-health note names it (EHDS Art. 11(5) and Art. 9(1), #5630).
+#[test]
+fn the_emergency_grounds_name_only_the_directives_covering_the_data_read() {
+    let deny = directive(
+        "consent",
+        "deny",
+        &json!({ "emergency_override": true,
+                 "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["Mental health note"] }] }),
+    );
+    let lifted = |template: &str| {
+        let access = request(professional(DR_B), break_glass(read(Some("ETREAT"))), None);
+        let item = object(OBJECT, Some(template));
+        let (outcome, decision) = decide_on(
+            &access,
+            Some(settings("open", std::slice::from_ref(&deny), &[], &[])),
+            &item,
+        );
+        assert_eq!(outcome, Outcome::Admit, "{template}");
+        of_kind(&decision, "emergency")
+            .iter()
+            .map(|ground| ground.name.clone().unwrap_or_default())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(lifted("HIV result"), ["ACCESS_POLICY"]);
+    assert_eq!(
+        lifted("Mental health note"),
+        ["EHR_ACCESS", "ACCESS_POLICY"]
+    );
+}
+
+/// An emergency lifts a controller deny rule over the mental-health
+/// template; a read of another template names no `emergency` ground of that
+/// rule, and a read of the mental-health note names it by its uid, else its
+/// position (EHDS Art. 11(5) and Art. 9(1), #5676).
+#[test]
+fn the_emergency_grounds_name_only_the_rules_covering_the_data_read() {
+    let deny = |uid: Option<&str>| {
+        let mut rule = rule(
+            "deny",
+            &json!({ "applies_to": [role_scope("NURSE")], "emergency_override": true,
+                     "data": [{ "_type": "ACCESS_DATA_SCOPE", "templates": ["Mental health note"] }] }),
+        );
+        if let Some(uid) = uid {
+            rule["uid"] = json!({ "_type": "HIER_OBJECT_ID", "value": uid });
+        }
+        rule
+    };
+    let lifted = |rule: &Value, template: &str| {
+        let access = request(
+            performing(CallerKind::Professional, NURSE, "NURSE"),
+            break_glass(read(Some("ETREAT"))),
+            Some(policy(&json!({ "rules": [rule] }))),
+        );
+        let item = object(OBJECT, Some(template));
+        let (outcome, decision) = decide_on(&access, None, &item);
+        assert_eq!(outcome, Outcome::Admit, "{template}");
+        of_kind(&decision, "emergency")
+            .iter()
+            .filter_map(|ground| ground.reference.as_ref())
+            .map(|reference| (reference.r#type.clone(), reference.id.clone()))
+            .collect::<Vec<_>>()
+    };
+    let by_position = deny(None);
+    assert_eq!(lifted(&by_position, "HIV result"), []);
+    assert_eq!(
+        lifted(&by_position, "Mental health note"),
+        [(Some("position".to_owned()), "1".to_owned())]
+    );
+    let by_uid = deny(Some(RULE_UID));
+    assert_eq!(lifted(&by_uid, "HIV result"), []);
+    assert_eq!(
+        lifted(&by_uid, "Mental health note"),
+        [(Some("uid".to_owned()), RULE_UID.to_owned())]
     );
 }
 
@@ -394,19 +482,21 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             Refusal::PurposeMissing,
             professional(DR_B),
             None,
-            Some(purpose.clone()),
+            Some(purpose),
             settings("open", &[], &[], &[]),
             Item::Ehr,
             "ACCESS_POLICY",
         ),
         (
-            Refusal::PurposeNotPermitted,
-            professional(DR_B),
-            Some("HRESCH"),
-            Some(purpose),
+            Refusal::PolicyDenied,
+            performing(CallerKind::Professional, DR_B, "NURSE"),
+            None,
+            Some(policy(&json!({ "rules": [
+                rule("permit", &json!({})),
+                rule("deny", &json!({ "applies_to": [role_scope("NURSE")] }))] }))),
             settings("open", &[], &[], &[]),
             Item::Ehr,
-            "ACCESS_POLICY",
+            "rule 2 of ACCESS_POLICY",
         ),
         (
             Refusal::ConsentRequired,
@@ -445,6 +535,18 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
             Item::Ehr,
             "the EHR of the subject the caller represents",
         ),
+        (
+            Refusal::ConsentReferenceMissing,
+            Caller {
+                lacks_consent_reference: true,
+                ..caller(CallerKind::AccessService, DR_B)
+            },
+            None,
+            None,
+            settings("open", &[], &[], &[]),
+            Item::Ehr,
+            "the consent condition of the caller's agreement",
+        ),
     ];
     assert_eq!(rows.len(), Refusal::ALL.len(), "a row per refusal code");
     for (refusal, who, declared, policy, settings, item, by) in rows {
@@ -464,8 +566,13 @@ fn every_refusal_is_recorded_with_its_code_and_step() {
 
         let event = event_of(&access);
         assert_eq!(event.decision, AccessDecision::Refused, "{code}");
-        let entry =
-            entry_of(&event, None, "cdr.example.org", horizon_retention(None)).expect("an entry");
+        let entry = entry_of(
+            &event,
+            None,
+            "cdr.example.org",
+            stated(None, &LogRetention::default()),
+        )
+        .expect("an entry");
         assert_eq!(entry.outcome.result.value, "refused", "{code}");
         let reason = entry.outcome.reason.as_ref().expect("the reason");
         assert_eq!(reason.defining_code.code_string, code);
@@ -491,4 +598,56 @@ fn a_query_served_ehr_with_no_settings_names_the_grounds_of_a_direct_read() {
     let queried = queried.decision(Some(EhrId(uuid(EHR))));
     assert_eq!(queried, direct);
     assert_eq!(of_kind(&queried, "subject of care").len(), 1, "{queried:?}");
+}
+
+/// A refusal by a controller rule names the rule as a legal obligation
+/// ground carrying its legal grounds, and the request answers them for the
+/// problem body; a refusal by another step names none (#5691).
+#[test]
+fn a_rule_refusal_carries_the_legal_grounds_of_the_rule() {
+    let ground = coded("urn:example:law", "exchange-1");
+    let rules = policy(&json!({ "rules": [
+        rule("deny", &json!({ "applies_to": [role_scope("NURSE")],
+                              "legal_grounds": [ground] }))] }));
+    let access = request(
+        performing(CallerKind::Professional, DR_B, "NURSE"),
+        read(None),
+        Some(rules),
+    );
+    let (outcome, decision) = decide_on(&access, Some(settings("open", &[], &[], &[])), &Item::Ehr);
+    assert_eq!(outcome, Outcome::Refused(Refusal::PolicyDenied));
+    let obligations = of_kind(&decision, "legal obligation");
+    assert_eq!(obligations.len(), 1, "{decision:?}");
+    let named: Vec<(&str, &str)> = obligations[0]
+        .legal_grounds
+        .iter()
+        .flatten()
+        .map(|g| {
+            (
+                g.defining_code.terminology_id.value.as_str(),
+                g.defining_code.code_string.as_str(),
+            )
+        })
+        .collect();
+    assert_eq!(named, [("urn:example:law", "exchange-1")]);
+    let answered = access.refusal_grounds(Some(EhrId(uuid(EHR))));
+    assert_eq!(answered.len(), 1);
+    assert_eq!(answered[0].defining_code.code_string, "exchange-1");
+
+    let other = request(professional(DR_B), read(None), None);
+    let deny = directive(
+        "consent",
+        "deny",
+        &json!({ "legal_grounds": [coded("urn:example:law", "x")] }),
+    );
+    let (_, decision) = decide_on(
+        &other,
+        Some(settings("open", std::slice::from_ref(&deny), &[], &[])),
+        &Item::Ehr,
+    );
+    assert!(
+        of_kind(&decision, "legal obligation").is_empty(),
+        "{decision:?}"
+    );
+    assert_eq!(other.refusal_grounds(Some(EhrId(uuid(EHR)))).len(), 0);
 }

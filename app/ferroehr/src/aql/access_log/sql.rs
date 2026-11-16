@@ -29,6 +29,8 @@ use crate::ids::EhrId;
 
 /// The alias of the record table in the statement.
 const RECORD: &str = "r";
+/// The alias of the shared part each record names (#5703).
+const SHARED: &str = "sh";
 
 /// Whom a statement reads the log for, and which page of it.
 #[derive(Debug, Clone, Copy)]
@@ -63,23 +65,44 @@ enum Typed {
 /// The search columns the record row keeps, by the entry path each holds.
 const COLUMNS: &[(&[&str], &str, Typed)] = &[
     (&["uid", "value"], "uid", Typed::Text),
-    (&["system_id"], "system_id", Typed::Text),
     (&["time_recorded", "value"], "time_recorded", Typed::Instant),
     (&["ehr_id", "value"], "ehr_id", Typed::Text),
-    (&["action", "value"], "action", Typed::Text),
-    (&["outcome", "result", "value"], "result", Typed::Text),
+    (
+        &["action", "defining_code", "terminology_id", "value"],
+        "action_terminology",
+        Typed::Text,
+    ),
+    (
+        &["action", "defining_code", "code_string"],
+        "action_code",
+        Typed::Text,
+    ),
+    (
+        &[
+            "outcome",
+            "result",
+            "defining_code",
+            "terminology_id",
+            "value",
+        ],
+        "result_terminology",
+        Typed::Text,
+    ),
+    (
+        &["outcome", "result", "defining_code", "code_string"],
+        "result_code",
+        Typed::Text,
+    ),
     (
         &["accessor", "party", "external_ref", "id", "value"],
         "party_id",
         Typed::Text,
     ),
-    (&["channel", "request_id"], "request_id", Typed::Text),
     (&["link", "sequence"], "chain_seq", Typed::Integer),
     (&["link", "algorithm"], "algorithm", Typed::Text),
     (&["link", "previous_digest"], "previous_digest", Typed::Text),
     (&["link", "content_digest"], "content_digest", Typed::Text),
     (&["link", "digest"], "digest", Typed::Text),
-    (&["link", "signature"], "signature", Typed::Text),
 ];
 
 /// Where a path's values are read.
@@ -112,20 +135,26 @@ pub fn statement(
     let mut select = Query::select();
     select
         .columns(
-            [
-                "chain_seq",
-                "content",
-                "algorithm",
-                "previous_digest",
-                "content_digest",
-                "digest",
-                "signature",
-            ]
-            .map(|name| (Alias::new(RECORD), Alias::new(name))),
+            ["chain_seq", "content", "algorithm"]
+                .map(|name| (Alias::new(RECORD), Alias::new(name))),
+        )
+        .expr_as(column("previous_digest"), Alias::new("previous_digest"))
+        .expr_as(column("content_digest"), Alias::new("content_digest"))
+        .expr_as(column("digest"), Alias::new("digest"))
+        .expr_as(
+            Expr::col((Alias::new(SHARED), Alias::new("content"))),
+            Alias::new("shared"),
         )
         .from_as(
             (Alias::new("audit"), Alias::new("access_log_record")),
             Alias::new(RECORD),
+        )
+        .join_as(
+            sea_query::JoinType::LeftJoin,
+            (Alias::new("audit"), Alias::new("access_log_shared")),
+            Alias::new(SHARED),
+            Expr::col((Alias::new(SHARED), Alias::new("digest")))
+                .equals((Alias::new(RECORD), Alias::new("shared"))),
         )
         .and_where(column("record_type").eq("ACCESS_LOG_ENTRY"));
     match scope.ehrs {
@@ -162,9 +191,17 @@ pub fn statement(
     Ok(select.build_sqlx(PostgresQueryBuilder))
 }
 
-/// The column `name` of the record table.
+/// The column `name` of the record table, as the entry's path reads it: a
+/// digest in lower-case hexadecimal and the uid as text, though the row keeps
+/// them as bytes and a uuid (#5714).
 fn column(name: &str) -> Expr {
-    Expr::col((Alias::new(RECORD), Alias::new(name)))
+    match name {
+        "previous_digest" | "content_digest" | "digest" => {
+            Expr::cust(format!("encode({RECORD}.{name}, 'hex')"))
+        }
+        "uid" => Expr::cust(format!("{RECORD}.uid::text")),
+        _ => Expr::col((Alias::new(RECORD), Alias::new(name))),
+    }
 }
 
 /// The sort order `descending` names.
@@ -230,11 +267,12 @@ impl Builder<'_> {
             // NOTE: our own design, the link is kept in columns, never in the canonical form.
             _ if path.steps == ["link"] => truth(true),
             Reach::Column(name, _) => column(name).is_not_null(),
-            Reach::Single(steps) => {
-                Expr::cust_with_values("(r.content::jsonb #> $1::text[]) IS NOT NULL", [steps])
-            }
+            Reach::Single(steps) => Expr::cust_with_values(
+                "(audit.access_log_document(r.content, sh.content) #> $1::text[]) IS NOT NULL",
+                [steps],
+            ),
             Reach::Many(jsonpath) => Expr::cust_with_values(
-                "jsonb_path_exists(r.content::jsonb, $1::jsonpath)",
+                "jsonb_path_exists(audit.access_log_document(r.content, sh.content), $1::jsonpath)",
                 [jsonpath],
             ),
         }
@@ -254,11 +292,14 @@ impl Builder<'_> {
             Reach::Withheld => on(Expr::cust("NULL::text"), typed)?,
             Reach::Column(name, column_typed) => on(column(name), column_typed)?,
             Reach::Single(steps) => on(
-                Expr::cust_with_values("(r.content::jsonb #>> $1::text[])", [steps]),
+                Expr::cust_with_values(
+                    "(audit.access_log_document(r.content, sh.content) #>> $1::text[])",
+                    [steps],
+                ),
                 typed,
             )?,
             Reach::Many(jsonpath) => Expr::cust_with_exprs(
-                "EXISTS (SELECT 1 FROM jsonb_path_query(r.content::jsonb, $1::jsonpath) AS m(v) \
+                "EXISTS (SELECT 1 FROM jsonb_path_query(audit.access_log_document(r.content, sh.content), $1::jsonpath) AS m(v) \
                      WHERE $2)",
                 [
                     Expr::val(jsonpath),
@@ -332,7 +373,7 @@ impl Builder<'_> {
         // NOTE: QUERY §LIKE, a date-time matches by its string representation.
         let operand = if typed == Typed::Instant {
             Expr::cust_with_values(
-                "(r.content::jsonb #>> $1::text[])",
+                "(audit.access_log_document(r.content, sh.content) #>> $1::text[])",
                 [format!("{{{}}}", path.steps.join(","))],
             )
         } else {
@@ -361,7 +402,10 @@ impl Builder<'_> {
         match self.reach(path) {
             Reach::Column(name, _) => column(name),
             Reach::Single(steps) => cast(
-                Expr::cust_with_values("(r.content::jsonb #>> $1::text[])", [steps]),
+                Expr::cust_with_values(
+                    "(audit.access_log_document(r.content, sh.content) #>> $1::text[])",
+                    [steps],
+                ),
                 typed,
             ),
             // NOTE: our own design, a key the reader may not see orders as an absent value.

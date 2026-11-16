@@ -43,10 +43,12 @@
               (#1694)"
 )]
 
-mod leaf;
+pub(crate) mod leaf;
 pub(crate) mod node_ids;
+pub(crate) mod plan;
 mod presence;
-mod subtype;
+pub(crate) mod subtype;
+mod unique;
 
 use indexmap::IndexMap;
 use openehr_rm::v1_2::paths::{PathSegment, is_archetype_root_node_id};
@@ -57,7 +59,8 @@ use crate::rm_instance::{ValidationKind, ValidationMessage};
 use crate::flat::path;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode, is_present};
-use crate::flat::webtemplate::model::{WebTemplate, WebTemplateArchetypeSlot, WebTemplateNode};
+use crate::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
+use plan::{ChildGroup, NodeWalk};
 
 /// Validate only the archetype-conformance pass against a resolved
 /// [`WebTemplate`] (type conformance, occurrences, cardinality, and leaf
@@ -388,192 +391,6 @@ fn find_node_by_segments<'a>(
 /// **except** those bearing a name a name-qualified sibling claims.
 pub(crate) type SiblingNameIndex = std::collections::HashMap<(String, String), Vec<String>>;
 
-// ── pre-parsed archetype-conformance walk plan ─────────────────────────────────
-//
-// The archetype-conformance walk ([`Validator::walk`]) is guided by the
-// constraint paths a [`WebTemplateNode`] carries, which are template-static:
-// [`prepare_walk`] parses them once at build time into the cached
-// [`WebTemplateNode::walk`]; a node without a cached plan gets an identical
-// [`NodeWalk`] built per visit, so there is one code path. No openEHR spec
-// governs the WebTemplate model or this plan — our own design/extension.
-
-/// A pre-parsed archetype-conformance walk plan for one [`WebTemplateNode`].
-///
-/// Every `Vec` is index-aligned with the corresponding node constraint vector so
-/// the walk can zip them; `None` marks a constraint path that is not an
-/// extension of the node's own `aqlPath`.
-#[derive(Debug, Clone)]
-pub(crate) struct NodeWalk {
-    /// Child sibling groups, in first-seen order (grouping the node's `children`
-    /// by `aqlPath`).
-    pub(crate) child_groups: Vec<ChildGroup>,
-    /// Name-based sibling routing index over the child groups.
-    pub(crate) child_names: SiblingNameIndex,
-    /// Parsed relative segments per `existence` constraint (index-aligned with
-    /// [`WebTemplateNode::existence`]).
-    pub(crate) existence: Vec<Option<Vec<PathSegment>>>,
-    /// Parsed relative segments per `card_all` constraint (index-aligned with
-    /// [`WebTemplateNode::card_all`]).
-    pub(crate) cardinalities: Vec<Option<Vec<PathSegment>>>,
-    /// Parsed relative segments per `closed_attributes` constraint (index-aligned
-    /// with [`WebTemplateNode::closed_attributes`]).
-    pub(crate) closed: Vec<Option<Vec<PathSegment>>>,
-    /// Slot groups (grouped by slot path, first-seen order).
-    pub(crate) slot_groups: Vec<SlotGroup>,
-    /// Name-based sibling routing index over the slot groups.
-    pub(crate) slot_names: SiblingNameIndex,
-    /// Per-step id-only name fallback over every template path under this node
-    /// ([`rmpath::NameFallback`]), so a step whose name conjunct a renamed
-    /// instance does not match still reaches it when the name is redundant.
-    pub(crate) name_fallback: rmpath::NameFallback,
-}
-
-/// A sibling group of `WebTemplate` children sharing one `aqlPath` (a single
-/// node, or a set of polymorphic type alternatives).
-#[derive(Debug, Clone)]
-pub(crate) struct ChildGroup {
-    /// Indices into [`WebTemplateNode::children`] of the group's members.
-    pub(crate) members: Vec<usize>,
-    /// The group's `aqlPath` parsed relative to the parent node's `aqlPath`; an
-    /// empty vec means the child path is not a strict extension of the parent's
-    /// (or equals it) — the walk skips such a group.
-    pub(crate) segments: Vec<PathSegment>,
-}
-
-/// A group of hoisted-wrapper slot constraints sharing one absolute path.
-#[derive(Debug, Clone)]
-pub(crate) struct SlotGroup {
-    /// The allowed RM types (first-seen order — the `join(", ")` message order).
-    pub(crate) allowed: Vec<String>,
-    /// The absolute slot path (the violation path the walk pushes).
-    pub(crate) path: String,
-    /// The slot path parsed relative to the node's `aqlPath` (empty = not an
-    /// extension; the walk skips it).
-    pub(crate) segments: Vec<PathSegment>,
-}
-
-impl NodeWalk {
-    /// Build the walk plan for `node` from its (final, post-compaction) constraint
-    /// vectors and children. Parses each constraint path once.
-    #[expect(
-        clippy::indexing_slicing,
-        reason = "`gi` is either an index already recorded in the `child_idx`/`slot_idx` map or `next == len` immediately after the matching `push`, so both `child_groups[gi]` and `slot_groups[gi]` are in bounds by construction"
-    )]
-    pub(crate) fn build(node: &WebTemplateNode) -> Self {
-        let aql = node.aql_path.as_str();
-
-        // Child groups: iterate children in order, grouping by `aqlPath`.
-        let mut child_groups: Vec<ChildGroup> = Vec::new();
-        let mut child_idx: std::collections::HashMap<&str, usize> =
-            std::collections::HashMap::new();
-        for (i, child) in node.children.iter().enumerate() {
-            let key = child.aql_path.as_str();
-            let next = child_groups.len();
-            let gi = *child_idx.entry(key).or_insert(next);
-            if gi == next {
-                let segments = key.strip_prefix(aql).map(rmpath::parse).unwrap_or_default();
-                child_groups.push(ChildGroup {
-                    members: Vec::new(),
-                    segments,
-                });
-            }
-            child_groups[gi].members.push(i);
-        }
-        let child_names =
-            sibling_index_from_segments(child_groups.iter().map(|g| g.segments.as_slice()));
-
-        // Slot groups: grouped by absolute slot path, first-seen order.
-        let mut slot_groups: Vec<SlotGroup> = Vec::new();
-        let mut slot_idx: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
-        for slot in &node.slots {
-            let key = slot.path.as_str();
-            let next = slot_groups.len();
-            let gi = *slot_idx.entry(key).or_insert(next);
-            if gi == next {
-                let segments = key.strip_prefix(aql).map(rmpath::parse).unwrap_or_default();
-                slot_groups.push(SlotGroup {
-                    allowed: Vec::new(),
-                    path: slot.path.clone(),
-                    segments,
-                });
-            }
-            slot_groups[gi].allowed.push(slot.rm_type.clone());
-        }
-        let slot_names =
-            sibling_index_from_segments(slot_groups.iter().map(|g| g.segments.as_slice()));
-        let name_fallback = rmpath::name_fallback_from_segments(
-            child_groups
-                .iter()
-                .map(|g| g.segments.as_slice())
-                .chain(slot_groups.iter().map(|g| g.segments.as_slice())),
-        );
-
-        let rel = |p: &str| p.strip_prefix(aql).map(rmpath::parse);
-
-        Self {
-            child_groups,
-            child_names,
-            existence: node.existence.iter().map(|e| rel(&e.path)).collect(),
-            cardinalities: node.card_all.iter().map(|c| rel(&c.path)).collect(),
-            closed: node
-                .closed_attributes
-                .iter()
-                .map(|c| rel(&c.path))
-                .collect(),
-            slot_groups,
-            slot_names,
-            name_fallback,
-        }
-    }
-}
-
-/// Build the name-based sibling routing index from a set of already-parsed
-/// relative sibling paths (one per distinct child/slot `aqlPath`).
-///
-/// Per identity `(attribute, archetype_node_id)`, count the distinct sibling
-/// paths carrying it and collect the explicit `name/value` constraints; keep only
-/// identities carried by more than one sibling. A path with no predicate-bearing
-/// segment, or no `archetype_node_id`, is skipped.
-fn sibling_index_from_segments<'a>(
-    groups: impl Iterator<Item = &'a [PathSegment]>,
-) -> SiblingNameIndex {
-    let mut acc: std::collections::HashMap<(String, String), (u32, Vec<String>)> =
-        std::collections::HashMap::new();
-    for segs in groups {
-        let Some(id_seg) = segs.iter().rfind(|s| !s.predicate.is_empty()) else {
-            continue;
-        };
-        let Some(id) = &id_seg.predicate.archetype_node_id else {
-            continue;
-        };
-        let entry = acc
-            .entry((id_seg.attribute.clone(), id.clone()))
-            .or_default();
-        entry.0 += 1;
-        if let Some(name) = &id_seg.predicate.name_value
-            && !entry.1.contains(name)
-        {
-            entry.1.push(name.clone());
-        }
-    }
-    acc.into_iter()
-        .filter(|(_, (count, _))| *count > 1)
-        .map(|(k, (_, names))| (k, names))
-        .collect()
-}
-
-/// Populate the archetype-conformance walk plan on `node` and, recursively, every
-/// descendant — called once by [`crate::flat::webtemplate::builder::build_web_template`] on the
-/// finalized tree so the validation walk never re-parses a template-static
-/// constraint path.
-pub(crate) fn prepare_walk(node: &mut WebTemplateNode) {
-    let plan = NodeWalk::build(node);
-    node.walk = Some(Box::new(plan));
-    for child in node.children.iter_mut().chain(node.alternatives.iter_mut()) {
-        prepare_walk(child);
-    }
-}
-
 #[derive(Default)]
 struct Validator {
     out: Vec<ValidationMessage>,
@@ -793,6 +610,13 @@ impl Validator {
             self.collect_node_bindings(instance, wt);
         }
 
+        // An ELEMENT kept as a choice carries its own null constraints; a
+        // promoted ELEMENT's are checked by `check_group`, which holds the
+        // ELEMENT instance.
+        if wt.rm_type == "ELEMENT" {
+            self.check_null_constraints(instance, &wt.null_constraints);
+        }
+
         // The archetype-conformance walk is driven by the node's pre-parsed
         // [`NodeWalk`]: child sibling groups (polymorphic type choices resolved
         // together, never each flagged), the name-routing index, and the parsed
@@ -866,7 +690,7 @@ impl Validator {
     fn match_closed_children(
         &mut self,
         container: &Value,
-        ca: &crate::flat::webtemplate::model::WebTemplateClosedAttribute,
+        ca: &crate::flat::webtemplate::constraint::WebTemplateClosedAttribute,
         attribute: &str,
     ) -> Vec<usize> {
         let mut counts = vec![0usize; ca.slots.len()];
@@ -906,7 +730,7 @@ impl Validator {
             {
                 continue;
             }
-            match ca.slots.iter().position(|s| slot_admits(s, ct, nid)) {
+            match ca.slots.iter().position(|s| s.admits(ct, nid)) {
                 Some(i) => counts[i] += 1,
                 None => self.push(
                     &ca.path,
@@ -928,7 +752,7 @@ impl Validator {
     )]
     fn check_slot_occurrences(
         &mut self,
-        ca: &crate::flat::webtemplate::model::WebTemplateClosedAttribute,
+        ca: &crate::flat::webtemplate::constraint::WebTemplateClosedAttribute,
         attribute: &str,
         counts: &[usize],
     ) {
@@ -1107,6 +931,64 @@ impl Validator {
             }
             for node in matched {
                 self.walk_group_targets(node, trailing, &members, name_fallback);
+                // A member promoted from an ELEMENT (`…/items[atNNNN]/value`)
+                // reaches the ELEMENT itself here, the owner of its null
+                // constraints (RM data_structures §ELEMENT).
+                if let [value] = trailing
+                    && value.attribute == "value"
+                    && value.predicate.is_empty()
+                {
+                    for member in &members {
+                        self.check_null_constraints(node, &member.null_constraints);
+                        self.check_element_existence(node, member);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Checks the `null_flavour` and `null_reason` an ELEMENT instance carries
+    /// against the template's constraints on them (RM `data_structures`
+    /// §ELEMENT; AOM 1.4 `C_ATTRIBUTE`: the constraint applies to the
+    /// attribute's value).
+    fn check_null_constraints(&mut self, element: &Value, constraints: &[WebTemplateNode]) {
+        for constraint in constraints {
+            let attribute = constraint.id.trim_start_matches('_');
+            if let Some(value) = element.get(attribute).filter(|v| !v.is_null()) {
+                self.walk(value, constraint);
+            }
+        }
+    }
+
+    /// Checks the mandatory existence of the attributes of an ELEMENT promoted to
+    /// its value (AOM 1.4 `master04-constraint_model_package.adoc` §existence),
+    /// which the value node's own walk cannot reach: `value` and `null_flavour`
+    /// are attributes of the ELEMENT, the parent of the promoted node.
+    fn check_element_existence(&mut self, element: &Value, promoted: &WebTemplateNode) {
+        if self.relax_lower_bounds {
+            return;
+        }
+        let Some(element_path) = promoted.aql_path.strip_suffix("/value") else {
+            return;
+        };
+        for ex in promoted.existence.iter().filter(|ex| ex.min >= 1) {
+            let Some(attribute) = ex
+                .path
+                .strip_prefix(element_path)
+                .and_then(|rest| rest.strip_prefix('/'))
+                .filter(|a| !a.contains(['/', '[']))
+            else {
+                continue;
+            };
+            if rm_declares_attribute(attribute) && presence::attr_absent(element, attribute) {
+                self.push(
+                    ex.path.clone(),
+                    format!(
+                        "mandatory attribute '{attribute}' is missing (existence {}..)",
+                        ex.min
+                    ),
+                    ValidationKind::Required,
+                );
             }
         }
     }
@@ -1246,7 +1128,7 @@ impl Validator {
 
     /// Container-cardinality check: for each constraining cardinality on this
     /// node, count the children under the constrained attribute path and compare
-    /// to `min`/`max`. Iterates [`WebTemplateNode::card_all`] — the full AOM 1.4
+    /// to `min`/`max`, and refuse two value-equal members under `unique`. Iterates [`WebTemplateNode::card_all`] — the full AOM 1.4
     /// §cardinality set (`0..1`/`1..1`/`1..*` included), a superset of the
     /// serialized `cardinalities` (which the metadata document filters).
     fn check_cardinalities(&mut self, instance: &Value, wt: &WebTemplateNode, plan: &NodeWalk) {
@@ -1271,9 +1153,20 @@ impl Validator {
                 if matches!(container.get(&last.attribute), None | Some(Value::Null)) {
                     continue;
                 }
-                let count =
-                    i32::try_from(openehr_rm::v1_2::paths::select_children(container, last).len())
-                        .unwrap_or(i32::MAX);
+                let members = openehr_rm::v1_2::paths::select_children(container, last);
+                if card.unique
+                    && let Some((first, second)) = unique::first_duplicate(&members)
+                {
+                    self.push(
+                        card.path.clone(),
+                        format!(
+                            "cardinality unique violated: members {first} and {second} are equal \
+                             by value"
+                        ),
+                        ValidationKind::Cardinality,
+                    );
+                }
+                let count = i32::try_from(members.len()).unwrap_or(i32::MAX);
                 let min = card.min.unwrap_or(0).max(0);
                 // The cardinality lower bound is relaxed away for a
                 // `553|incomplete|` commit (master06 §"Incomplete Content": "all
@@ -1422,36 +1315,6 @@ fn children_under_attr<'a>(node: &'a Value, attr: &str) -> Vec<&'a Value> {
     }
 }
 
-/// Whether an open `ARCHETYPE_SLOT` admits a filler of RM type `child_type` and
-/// archetype id `archetype_id` (AOM 1.4 `ARCHETYPE_SLOT`): the type must conform
-/// to the slot's `rm_type`, the id must match at least one `includes` regex (an
-/// empty `includes` = open to the type), and match no `excludes` regex. A blanket
-/// match-all (`.*`) exclude is ignored when `includes` is non-empty — the ADL 1.4
-/// closed-slot idiom (AOM 1.4 has no `is_closed`; NOTE: includes then win,
-/// matching de-facto CDR behaviour).
-fn slot_admits(slot: &WebTemplateArchetypeSlot, child_type: &str, archetype_id: &str) -> bool {
-    if !slot.rm_type.is_empty() && !subtype::conforms(child_type, &slot.rm_type) {
-        return false;
-    }
-    let include_ok = slot.includes.is_empty()
-        || slot
-            .includes
-            .iter()
-            .any(|p| leaf::matches_pattern(p, archetype_id));
-    if !include_ok {
-        return false;
-    }
-    for ex in &slot.excludes {
-        if !slot.includes.is_empty() && matches!(ex.trim(), ".*" | ".+") {
-            continue; // closed-slot idiom: a specific includes list wins.
-        }
-        if leaf::matches_pattern(ex, archetype_id) {
-            return false;
-        }
-    }
-    true
-}
-
 #[cfg(test)]
 mod tests {
     //! Per-rule unit tests for the composition validator, built on hand-shaped
@@ -1462,10 +1325,13 @@ mod tests {
     use serde_json::{Value, json};
 
     use super::*;
+    use crate::flat::webtemplate::constraint::{
+        WebTemplateArchetypeSlot, WebTemplateClosedAttribute, WebTemplateCodeList,
+        WebTemplateExistence, WebTemplateSlot,
+    };
     use crate::flat::webtemplate::model::{
-        WebTemplateCardinality, WebTemplateClosedAttribute, WebTemplateCodeList,
-        WebTemplateCodedValue, WebTemplateExistence, WebTemplateInput, WebTemplateInputType,
-        WebTemplateRange, WebTemplateSlot, WebTemplateValidation,
+        WebTemplateCardinality, WebTemplateCodedValue, WebTemplateInput, WebTemplateInputType,
+        WebTemplateRange, WebTemplateValidation,
     };
 
     fn node(rm: &str, path: &str) -> WebTemplateNode {
@@ -1553,6 +1419,7 @@ mod tests {
             max: 2,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
         let inst = json!({
@@ -1639,6 +1506,7 @@ mod tests {
             max: -1,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
         let one_child = json!({
@@ -1656,6 +1524,7 @@ mod tests {
             max: 2,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let three = json!({
             "_type": "COMPOSITION", "archetype_node_id": "x",
@@ -2040,6 +1909,7 @@ mod tests {
             max: -1,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let inst = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": []});
         let msgs = walk_only(&inst, &root);

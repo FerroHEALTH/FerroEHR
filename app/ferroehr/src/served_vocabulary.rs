@@ -14,12 +14,11 @@
 //! unchanged. No openEHR spec governs either set: our own design/extension.
 
 /// Every deployment gap code the server reports, in declaration order.
-pub const DEPLOYMENT_GAPS: [&str; 13] = [
+pub const DEPLOYMENT_GAPS: [&str; 12] = [
     "shared_credential",
     "shared_cluster",
     "open_subject_namespace",
     "audit_off",
-    "audit_fails_open",
     "no_category_map",
     "open_ehr_access_default",
     "migrate_on_runtime_credential",

@@ -6,24 +6,73 @@ include::partial$draft_notice.adoc[]
 
 NOTE: This page proposes a change to the xref:TERM::index.adoc[openEHR Terminology] (SPECTERM).
 
+== The Draft Terminology
+
+The groups of this package and of the Access Log Information Model are coded in one draft terminology:
+
+[horizontal]
+Terminology identifier:: `openehr_access`, the value of `Terminology_id_access` in the invariants of both packages
+Name:: openEHR access (draft)
+
+The identifier is a `TERMINOLOGY_ID` of the form BASE gives (xref:BASE:base_types:identification.adoc[Identification], `TERMINOLOGY_ID`), and of the form openEHR gives its own code sets, such as `openehr_normal_statuses`. It carries no version part, since a code never changes meaning. An archetype binds a code of it in its `term_bindings` by the URI `http://openehr.org/openehr_access/id/<code>`, on the model of openEHR's own `http://openehr.org/id/<code>`; the URI is proposed with the identifier. The `openehr_` prefix is openEHR's namespace: the identifier is proposed and is not assigned. If openEHR adopts the groups, they move into the openEHR Terminology with numeric codes, `Terminology_id_access` becomes `openehr`, and `openehr_access` is retired. Until then each code is its own rubric, and a code that appears in more than one group is one concept.
+
+== Codes from HL7 Code Systems
+
+Where an HL7 code system publishes a code with the same meaning as a term of a group, the group's term is that code, and a record carries it under the code system's identifier. The draft holds no code of its own for it. Each HL7 code system has one terminology identifier, its code system `id`, since a URI or an OID is no valid `TERMINOLOGY_ID`:
+
+[cols="2,4,3", options="header"]
+|===
+|Terminology identifier |Canonical URI |Codes used
+
+|`consent-provision-type`
+|`http://hl7.org/fhir/consent-provision-type`
+|`permit`, `deny`
+
+|`extra-security-role-type`
+|`http://terminology.hl7.org/CodeSystem/extra-security-role-type`
+|`datasubject`
+
+|`v3-RoleClass`
+|`http://terminology.hl7.org/CodeSystem/v3-RoleClass`
+|`MBR`
+
+|`audit-event-action`
+|`http://hl7.org/fhir/audit-event-action`
+|`C`, `R`, `U`, `D`
+
+|`v3-ActReason`
+|`http://terminology.hl7.org/CodeSystem/v3-ActReason`
+|PurposeOfUse codes, such as `TREAT` and `ETREAT` (see <<Codes from Other Terminologies>>)
+
+|`v3-Confidentiality`
+|`http://terminology.hl7.org/CodeSystem/v3-Confidentiality`
+|`U`, `L`, `M`, `N`, `R`, `V` (see <<Codes from Other Terminologies>>)
+
+|`v3-ActCode`
+|`http://terminology.hl7.org/CodeSystem/v3-ActCode`
+|`_InformationSensitivityPolicy` codes (see <<Codes from Other Terminologies>>)
+|===
+
+A group is the set of its terms, whichever terminology each is of, so `has_code_for_group_id` in an invariant holds for each term the group lists below.
+
 == Groups
 
-Eleven groups are added to the openEHR Terminology. The codes are for the terminology editors to assign; until then each rubric serves as its code, as it does in FerroEHR's `ferroehr-operations` terminology, which defines these groups today. If openEHR adopts them, `Terminology_id_access_control` in the invariants is `openehr`; until then a system names the terminology it documents for them.
+The groups of this package follow. The codes in `openehr_access` are proposed; a term given as `system::code` is the HL7 code above.
 
 [cols="2,3,3", options="header"]
 |===
-|Group |Rubrics |Coded attribute or use
+|Group |Terms |Coded attribute or use
 
 |access default
 |open, restricted, consent_required
 |`ACCESS_DIRECTIVE_SETTINGS._default_access_` (`Group_id_access_default`)
 
 |access directive kind
-|consent, restriction, opt_out, delegation
-|`ACCESS_DIRECTIVE._kind_` (`Group_id_access_directive_kind`)
+|consent, restriction, opt_out, delegation, controller_rule
+|`ACCESS_DIRECTIVE._kind_` (`Group_id_access_directive_kind`); `controller_rule` only in `ACCESS_POLICY._rules_`
 
 |access effect
-|permit, deny
+|`consent-provision-type::permit`, `consent-provision-type::deny`
 |`ACCESS_DIRECTIVE._effect_` (`Group_id_access_effect`)
 
 |access relationship
@@ -31,27 +80,31 @@ Eleven groups are added to the openEHR Terminology. The codes are for the termin
 |`ACCESS_ACTOR_SCOPE._relationship_` (`Group_id_access_relationship`)
 
 |access caller kind
-|professional, access_service, subject, representative, system
+|professional, access_service, `extra-security-role-type::datasubject` (the subject), representative, system
 |`ACCESS_ACTOR_SCOPE._caller_kind_` (`Group_id_access_caller_kind`)
 
 |access operation
 |read, write, export, query
 |`ACCESS_DIRECTIVE._operations_`: the classes of operation a directive applies to
 
-|access sensitivity clearance
-|sensitivity_clearance
-|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a sensitivity code the capability clears
-
-|access permitted purpose
-|permitted_purpose
-|The `_name_` of an `ELEMENT` in `CAPABILITY._credentials_` whose value is a purpose of use the capability permits
-
 |care relationship
-|member_of, under_care_of
-|The `_name_` of a `PARTY_RELATIONSHIP`: a professional's membership of a care-team `GROUP`, and the subject being under the care of a team or unit
+|`v3-RoleClass::MBR` (a member of a care-team `GROUP`), under_care_of
+|The `_name_` or `_details_` of a `PARTY_RELATIONSHIP`: a professional's membership of a care-team `GROUP`, and the subject being under the care of a team or unit
+
+|representation
+|represents
+|The `_name_` or `_details_` of a `PARTY_RELATIONSHIP` whose source represents its target, the subject; the openEHR `subject_relationship` code beside it says how, such as 264 guardian or 254 parent
+
+|group kind
+|care_team
+|The `_name_` of a `GROUP`: the `GROUP` is a care team, whose members' memberships are named `v3-RoleClass::MBR`
+
+|record subject
+|record_subject
+|The `_name_` of an `ELEMENT` in a `PERSON`'s `PARTY._details_` whose value is a `DV_IDENTIFIER` naming an `EHR_STATUS._subject_` reference the `PERSON` stands for: `_issuer_` is the reference's `_namespace_` and `_id_` its `_id_`, such as a pseudonym an identity source issued. An identifier another organisation issued belongs in `_details_` (Demographic IM §2.1.3), and the cross-reference stays out of the EHR (EHR IM §EHR Status)
 
 |access refusal
-|refused-opt-out, refused-restricted, refused-consent-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-purpose-not-permitted, refused-consent-required, refused-not-subject, refused-not-represented
+|refused-opt-out, refused-restricted, refused-consent-denied, refused-policy-denied, refused-sensitivity, refused-no-care-relationship, refused-purpose-missing, refused-consent-required, refused-not-subject, refused-not-represented, refused-consent-reference-missing
 |The refusal of each step of xref:decision_procedure.adoc#_procedure[the procedure]
 
 |access log withheld
@@ -59,10 +112,76 @@ Eleven groups are added to the openEHR Terminology. The codes are for the termin
 |`ACCESS_LOG_RESTRICTION._withheld_` (`Group_id_access_log_withheld`): the `_party_`, `_provider_`, `_roles_` and `_groups_` of an `ACCESSOR` the subject view withholds (EHDS Art 9(3))
 |===
 
-The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other five are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a clearance, a permitted purpose or a care relationship by the code in an element's or a relationship's `_name_`. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
+The first five groups and `access log withheld` have constants on `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS`, since the invariants of the package name them. The other five are read from the Demographic IM and from a system's access record, where the RM has no coded attribute to bind them to: a system finds a care relationship or a representation by the code in a relationship's `_name_` or `_details_`, a record subject by the code in an element's `_name_`, and a care team by the `group kind` code in a `GROUP`'s `_name_`, never by its archetype or a path. The Demographic IM makes a party's type its name (`PARTY.type()`, invariant `Type_valid: type = name`; `PARTY_RELATIONSHIP.type()` likewise) and names "the specialist care team, e.g. cardiology team" as the typical `GROUP` (`GROUP` class), so a coded name says what kind of group or relationship it is; the codes are this proposal's design. A role is no code of these groups: it is the coded `_name_` of a `ROLE`, in the terminology the jurisdiction names, and a sensitivity a caller may read and a purpose it may declare are rules of the controller's policy. The caller kind `access_service` is a caller acting through the electronic health data access services of EHDS Art 4 and 12, which an Art 10 opt-out binds.
 
-A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code; `refused-opt-out` and `refused-restricted` correspond to its `opted out` and `restricted by the subject` reasons. `ACCESS_LOG_RESTRICTION._accessor_kinds_` is coded in that model's own `accessor kind` group, so a restriction names exactly the kinds its entries record.
+A system that keeps the access log of the Access Log Information Model records a refusal of this procedure in `ACCESS_OUTCOME._reason_` with its `access refusal` code, which is that model's reason for an opt-out or a restriction. `ACCESS_LOG_RESTRICTION._accessor_kinds_` is coded in that model's `accessor kind` group, so a restriction names exactly the kinds its entries record. The Access Log Information Model lists its own groups on its Terminology page, in the same terminology.
+
+== Mappings to Standard Codes
+
+A draft code whose closest standard code is broader or narrower stays in `openehr_access`. The terminology records the standard code as a `TERM_MAPPING` of the term, with its match (RM Data Types, `TERM_MAPPING._match_`: `>` the target is broader, `<` the target is narrower), so an exporter has the mapping and the record keeps its precision:
+
+[cols="2,2,3,1", options="header"]
+|===
+|Group |Code |Mapped to |Match
+
+|access default
+|consent_required
+|`v3-ActCode::OPTIN`
+|`>`
+
+|access directive kind
+|consent
+|`v3-ActCode::_ActConsentDirective`
+|`>`
+
+|access directive kind
+|opt_out
+|`v3-ActCode::OPTOUT`
+|`>`
+
+|access relationship
+|representative
+|`v3-RoleCode::RESPRSN`
+|`>`
+
+|access relationship
+|proxy
+|`v3-RoleCode::DELEGATEE`
+|`>`
+
+|access caller kind
+|professional
+|`v3-RoleClass::PROV`
+|`<`
+
+|access caller kind
+|representative
+|`v3-RoleCode::RESPRSN`
+|`>`
+
+|access operation
+|export
+|`consentaction::disclose`
+|`<`
+
+|access operation
+|query
+|`audit-event-action::E`
+|`<`
+
+|care relationship
+|under_care_of
+|`v3-RoleClass::PAT`
+|`<`
+
+|representation
+|represents
+|`v3-RoleCode::RESPRSN`
+|`>`
+|===
+
+`v3-RoleCode` is `http://terminology.hl7.org/CodeSystem/v3-RoleCode` and `consentaction` is `http://terminology.hl7.org/CodeSystem/consentaction`. No code of this page is mapped to SNOMED CT: every concept either has a freely usable HL7 or openEHR code or has no published code, and a SNOMED CT code in a published openEHR artefact would carry the SNOMED CT Affiliate Licence to every implementer.
 
 == Codes from Other Terminologies
 
-Sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the HL7 v3 `Confidentiality` and `ActCode` sensitivity codes, the EHDS categories, and the HL7 `PurposeOfUse` codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).
+Role, sensitivity, category and purpose-of-use codes are not part of these groups. They come from the terminology the jurisdiction names, such as the HL7 `v3-Confidentiality` codes and the `v3-ActCode` sensitivity codes, the EHDS categories, and the HL7 `v3-ActReason` PurposeOfUse codes, and a system compares them by terminology identifier and code. This keeps the privacy levels "defined by standards or agreements within jurisdictions of use" (xref:BASE:architecture_overview:security.adoc[Security Policy], Privacy).

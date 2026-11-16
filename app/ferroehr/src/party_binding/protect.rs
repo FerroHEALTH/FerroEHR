@@ -22,7 +22,10 @@
 //! how a patient authorises a proxy. A SCIM client
 //! writes the ones it owns: a `PERSON` whose binding keys its
 //! `binding_issuer` issues, a professional `ROLE` that `PERSON` performs, and
-//! a `GROUP` it created (RFC 7644 §3: a client manages its own resources). A present
+//! a `GROUP` it created (RFC 7644 §3: a client manages its own resources). A
+//! holder of the `write_care_relationship` grant, the care delivery
+//! environment's ADT system, writes a version of a protected `PERSON` that
+//! changes only its care relationships, which the care check decides (#5617). A present
 //! binding key is immutable: RFC 7643 §2.2 `mutability: "immutable"`, "SHALL
 //! NOT be updated", and only [`rekey`] changes one. An administrator's version
 //! that leaves a protected identifier out is refused, so nothing is carried
@@ -40,6 +43,9 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::Facts;
+use crate::party_binding::grants::caller::only_care_differs;
+use crate::party_binding::grants::capabilities::Capabilities;
+use crate::party_binding::grants::operation::Operation;
 use crate::party_binding::policy_mark::{self, PolicyContent};
 use crate::party_binding::store::parsed;
 use crate::versioning::Kind;
@@ -146,7 +152,9 @@ impl Protected {
 /// # Errors
 /// [`ServiceError::Forbidden`] (`403`) when a caller who is neither an
 /// administrator nor, inside [`provisioning`], the SCIM client that owns it
-/// writes a protected party, a caller who is no administrator writes a
+/// writes a protected party, other than a `write_care_relationship` holder's
+/// version of a `PERSON` changing only its care relationships, a caller who
+/// is no administrator writes a
 /// policy party, or a write changes a present
 /// binding key outside [`rekey`]; [`ServiceError::Unprocessable`] (`422`)
 /// naming the identifier when an administrator's version leaves a protected
@@ -184,6 +192,9 @@ pub(crate) async fn check(
         return Ok(());
     }
     refuse_policy(mapping, (kind, vo_id), &before, &after)?;
+    if kind == Kind::Person && PROVISIONER.try_with(|_| ()).is_ok() {
+        refuse_scim_representation(tx, mapping, vo_id, previous, facts).await?;
+    }
     let owner = match PROVISIONER.try_with(Clone::clone) {
         Ok(issuer) => {
             let held = [current, previous];
@@ -199,11 +210,10 @@ pub(crate) async fn check(
         Err(_) => false,
     };
     if !(owner || administrator(mapping)) {
-        return Err(ServiceError::not_permitted(format!(
-            "the {} {vo_id} is protected by the party binding: only an administrator, or the \
-             SCIM client that owns it, writes it",
-            kind.as_str()
-        )));
+        if care_writer_roster(tx, (kind, vo_id), [current, previous]).await? {
+            return Ok(());
+        }
+        return Err(unowned(kind, vo_id));
     }
     if current.is_none() {
         return Ok(());
@@ -253,6 +263,93 @@ pub(crate) async fn check(
         ));
     }
     Ok(())
+}
+
+/// The refusal of a write of the protected party `vo_id` of `kind` by a
+/// caller who neither administers nor owns it.
+fn unowned(kind: Kind, vo_id: VoId) -> ServiceError {
+    ServiceError::not_permitted(format!(
+        "the {} {vo_id} is protected by the party binding: only an administrator, or the \
+         SCIM client that owns it, writes it",
+        kind.as_str()
+    ))
+}
+
+/// Refuses a SCIM client's version of the `PERSON` `vo_id` that adds,
+/// changes or drops a representation: its stored version `previous` and the
+/// committed `facts` (`None` for a deletion) must hold the same ones.
+///
+/// SCIM provisions an identity, never the authority to act for someone: a
+/// representation is written by the patient it represents or by an
+/// administrator (Regulation (EU) 2025/327 Art. 4(2)), so a portal client's
+/// representative reaches a record only once one of them records it
+/// (#5622). Our own design.
+async fn refuse_scim_representation(
+    tx: &mut PgConnection,
+    mapping: &BindingMapping,
+    vo_id: VoId,
+    previous: Option<i32>,
+    facts: Option<&Facts>,
+) -> Result<(), ServiceError> {
+    let before = match previous {
+        Some(sys_version) => match body(tx, vo_id, sys_version).await? {
+            Some(body) => parsed(Kind::Person, &body, mapping)?.representations,
+            None => Vec::new(),
+        },
+        None => Vec::new(),
+    };
+    let after = facts.map(|facts| facts.representations.as_slice());
+    match after {
+        Some(after) if after != before.as_slice() => Err(ServiceError::not_permitted(format!(
+            "this version of PERSON {vo_id} changes its representations ({}::{}): a SCIM client \
+             provisions the identity only, and a representation is written by the patient it \
+             represents or an administrator",
+            policy_mark::TERMINOLOGY,
+            policy_mark::REPRESENTS
+        ))),
+        _ => Ok(()),
+    }
+}
+
+/// Whether the commit of the `PERSON` `vo_id`, whose versions `held` are the
+/// new head and the one before it, is a holder of
+/// [`Operation::WriteCareRelationship`] changing only its care relationships.
+///
+/// Such a version touches nothing the protection guards, so the care check
+/// beside it decides it by that grant: the care delivery environment's ADT
+/// system rosters a provisioned professional (#5617). A version in another
+/// lifecycle state than the one before is no roster: the ADT system neither
+/// reactivates a deactivated login nor revives a deleted one (#5628). Our
+/// own design.
+async fn care_writer_roster(
+    tx: &mut PgConnection,
+    (kind, vo_id): (Kind, VoId),
+    held: [Option<i32>; 2],
+) -> Result<bool, ServiceError> {
+    let [Some(current), Some(previous)] = held else {
+        return Ok(false);
+    };
+    if kind != Kind::Person || !Capabilities::current().holds(Operation::WriteCareRelationship) {
+        return Ok(false);
+    }
+    let states: i64 = sqlx::query_scalar(
+        "SELECT count(DISTINCT v.lifecycle_state) FROM version v \
+         WHERE v.vo_id = $1 AND v.sys_version = ANY($2)",
+    )
+    .bind(vo_id)
+    .bind([current, previous])
+    .fetch_one(&mut *tx)
+    .await?;
+    if states != 1 {
+        return Ok(false);
+    }
+    let (Some(after), Some(before)) = (
+        body(tx, vo_id, current).await?,
+        body(tx, vo_id, previous).await?,
+    ) else {
+        return Ok(false);
+    };
+    Ok(only_care_differs(&before, &after)?)
 }
 
 /// Judges the write of the standalone `PARTY_RELATIONSHIP` `vo_id`, whose

@@ -29,12 +29,13 @@ An instance reports its own copies and its own listeners; with
 
 ## The policy copies and their listeners
 
-An instance holds four policy copies, each kept fresh by a `LISTEN` on its
+An instance holds five policy copies, each kept fresh by a `LISTEN` on its
 own notification channel. The `listener` label names the copy as the
 `policy_listeners` health indicator does: `ehr_access` (each EHR's
 `EHR_ACCESS` settings and the settings classes), `grants` (the grants and the
-caller facts), `policy_registers` (the operational-policy registers) and
-`access_policy`.
+caller facts), `party_binding` (the lookups of the binding side table and the
+bound `PERSON`s' names), `policy_registers` (the operational-policy registers)
+and `access_policy`.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
@@ -50,11 +51,31 @@ Alert on `policy_listener_up == 0` held for a few minutes, and on a rate of
 instance answers every request with a database read. A rise of
 `grants_refresh_duration_seconds` is the grant and fact refresh lag.
 
+## The binding copy
+
+The `party_binding` copy holds what resolves a login to its `PERSON`: the
+lookup of each login's key, for at most 65536 logins, and the name of each
+bound `PERSON`, so a request whose caller it holds reads neither. A change of
+the binding side table drops every lookup, and a new version of a `PERSON`
+drops its name, on every instance once the notification arrives; the instance
+whose own commit made the change drops its copy before it answers, so a
+deprovisioned login is refused on its next request. In `access_copy_lookups`,
+`access_copy_refills` and `access_copy_drops` the `copy` label is `binding`
+for the lookups and `party_name` for the names.
+
 ## The per-EHR access copy and the class copy
 
 The `ehr_access` copy holds at most 4096 EHRs' settings, and beside them the
 settings classes a query is judged over
 ([the bound](security.md#per-ehr-access-control-ehr_access)). The `copy` label is `ehr` or `classes`.
+
+The care relationships of the EHRs' subjects sit beside the grants, in two
+caches with fixed defaults: the care relationships of at most 4096 subjects,
+and the patients of care teams holding at most 262144 patients together. A
+team with more patients than that is read on each use and never held. A miss
+reads one indexed statement on the party pool, and the `grants` listener's
+notification drops what it changed. A care relationship that cannot be read
+answers `503`, so no decision is made without it.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
@@ -62,6 +83,9 @@ settings classes a query is judged over
 | `access_copy_lookups_total` | counter | `copy`, `result` | Lookups while the listener is up: `hit` (served from the copy) or `miss` (this request read the database). A request that waited on another request's read counts as a hit. |
 | `access_copy_refills_total` | counter | `copy`, `outcome` | Reads of the settings projection that fill the copy: `ok`, or `failed` (the request answered `503`). |
 | `access_copy_drops_total` | counter | `scope` | Drops: `ehr` (one EHR's settings changed), `classes` (a new class), `every` (a listener connected or was lost, or a refill notification). |
+
+What the copies and the care caches hold at scale is on the
+[Performance](performance.md#the-access-path-at-scale) page.
 
 The hit ratio is `rate(access_copy_lookups_total{result="hit"}[5m]) /
 rate(access_copy_lookups_total[5m])`. Alert on any rate of
@@ -74,13 +98,14 @@ these lookups are not counted: each request reads the database and counts in
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
 | `access_decisions_total` | counter | `outcome`, `code` | One decision per EHR a request reached: `outcome` is `admitted` or `refused`, and `code` is the `refused-*` code of the refusal (`none` for an admitted access). |
-| `access_emergency_overrides_total` | counter | `lifted` | What an emergency lifted: `opt_out` (EHDS Art. 10(2)), `restriction` (EHDS Art. 11(5)), `consent` (a consent deny) or `policy` (steps 4 to 7, by the break-glass role). |
+| `access_emergency_overrides_total` | counter | `lifted` | What an emergency lifted: `opt_out` (EHDS Art. 10(2)), `restriction` (EHDS Art. 11(5)), `consent` (a consent deny), `rule` (a deny rule of the access policy) or `policy` (steps 6 to 8, by the break-glass role). |
 
 The `refused-*` codes are the evaluator's own (`refused-opt-out`,
-`refused-restricted`, `refused-consent-denied`, `refused-sensitivity`,
-`refused-no-care-relationship`, `refused-purpose-missing`,
-`refused-purpose-not-permitted`, `refused-consent-required`,
-`refused-not-subject`, `refused-not-represented`); the access
+`refused-restricted`, `refused-consent-denied`, `refused-policy-denied`,
+`refused-sensitivity`, `refused-no-care-relationship`,
+`refused-purpose-missing`, `refused-consent-required`,
+`refused-not-subject`, `refused-not-represented`,
+`refused-consent-reference-missing`); the access
 record of each refusal names the step and the directive that decided it. A
 refusal is the evaluator working as configured, so alert on a change in the
 rate of a code against its usual level. Alert on every increase of
@@ -91,14 +116,17 @@ controller reviews.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
-| `access_log_entries_total` | counter | `outcome` | Entries written to the access log in a transaction: `ok` or `failed`. The rate of `ok` is the append rate. |
-| `access_log_append_duration_seconds` | histogram | `outcome` | Time to link and insert one transaction's entries, link signing included. |
-| `access_log_sign_duration_seconds` | histogram | `outcome` | Time to sign the links of one append, while the head of the chain is locked. Present only with an OpenPGP key. |
-| `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run: `chain` is `access_log` (the checkpoint) or `system` (the system chain's seal); `outcome` is `sealed`, `empty` or `failed`. |
-| `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run that did not fail. `time() - audit_seal_last_success_seconds` is the checkpoint age. |
-| `access_log_tombstones_total` | counter | (none) | Entries the retention run replaced by their tombstones. |
+| `access_log_entries_total` | counter | `outcome` | Audit records a request wrote into the intake before its response: `ok` or `failed`. A `failed` write refused its request with `503`. |
+| `access_log_append_duration_seconds` | histogram | `outcome` | Time of one request's intake write, one transaction: the time a request waits for its records. |
+| `access_log_chain_hold_duration_seconds` | histogram | `outcome` | How long one chainer round held the head of the access log. Its rate of sum is the lock occupancy: the fraction of time the head is held. |
+| `audit_chained_total` | counter | `chain` | Records the chainer linked, `access_log` or `system`. Beside `access_log_entries_total` it shows whether the chainer keeps up. |
+| `access_log_sign_duration_seconds` | histogram | `outcome` | Time from the start of a chainer round's checkpoint signature to its end, measured when the round stores the checkpoint; it runs beside the insert of the records while the head is held. Present only with an OpenPGP key. |
+| `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run of the system chain (`chain` is `system`); `outcome` is `sealed`, `empty` or `failed`. The access log needs no schedule: every append seals itself. |
+| `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run of the system chain that did not fail. |
+| `access_log_tombstones_total` | counter | `chain` | Entries the retention run replaced by their tombstones, `local` or `imported` from another system. |
+| `access_log_folded_total` | counter | `chain` | Tombstones the retention run folded into gaps of the chain once they were past their own end, `local` or `imported`. |
+| `access_log_gaps_total` | counter | `chain` | Gaps the retention run wrote, one per folded run of tombstones, `local` or `imported`. |
 | `access_log_retention_duration_seconds` | histogram | `outcome` | Each hourly retention run over the access log. |
-| `audit_drain_queue_depth` | gauge | (none) | Records waiting in the audit drain's queue, out of `[audit] queue_capacity`. |
 
 The seals run every five minutes when `[record.signing]` holds an OpenPGP
 key, so a checkpoint age above fifteen minutes means at least two runs in a
@@ -112,10 +140,20 @@ row failed.
 | `audit_chain_last_verification_seconds` | gauge | (none) | Unix time of the newest finished verification. |
 | `audit_chain_intact` | gauge | (none) | `1` when the newest verification found both chains intact, `0` when it found damage or could not run. |
 | `atna_audit_chain_findings_total` | counter | `kind` | Findings of the verifications, `damage` or `unverifiable`. |
+| `audit_chain_verification_lag` | gauge | `chain` | Positions of the chain (`system` or `access_log`) past its verification cursor: the head minus the cursor, measured after each step of a run. |
+| `audit_chain_unverified_age_seconds` | gauge | `chain` | Seconds since the oldest record past the chain's cursor was recorded, `0` at the head. |
 
-Alert on `audit_chain_intact == 0`, and on `time() -
+Alert on `audit_chain_intact == 0`, on `time() -
 audit_chain_last_verification_seconds` above twice `[audit.store]
-verify_interval`.
+verify_interval`, and on `audit_chain_unverified_age_seconds` above
+`[audit.store] max_verify_lag`.
+
+A run walks each chain in steps, one statement each, and every intact step
+moves the cursor. Each step is sized to take about half a second, adapting to
+how long the step before it took, and the run waits as long as a step took
+before the next, so a catch-up takes at most about half a core of the
+database. A long backlog therefore shows as a lag that falls during the run,
+never as `unverifiable`.
 
 ## The instances of a deployment
 
@@ -140,7 +178,7 @@ recording while you investigate.
 | `policy_listeners` | a listener is lost, naming each one |
 | `instances` | another live instance signs with another key or runs another configuration, naming each one |
 | `audit_chain` | the newest verification found damage, or could not run |
-| `audit_sender` | auditing is off; under `fail_mode = "open"` it reads `UP` with a stated caution |
+| `audit_sender` | auditing is off, or the oldest intake record has waited more than 10 seconds for the chainer |
 | `audit_delivery` | a forwarder cannot reach its Audit Record Repository |
 
 ## Runbooks
@@ -187,26 +225,39 @@ recording while you investigate.
      `access_copy_drops_total{scope="every"}`: a listener connecting and
      losing its connection in a loop. Treat it as a lost listener.
 
-### The audit drain backs up under `fail_mode = "closed"`
+### Requests answer `503` because their records cannot be written
 
-- **Metric:** `audit_drain_queue_depth` near `[audit] queue_capacity`, and
+- **Metric:** `access_log_entries_total{outcome="failed"}` and
   `atna_audit_rejected_total` rising.
-- **Health:** `audit_sender` names the fail mode and the local store.
-- **What happens:** under `fail_mode = "closed"` an auditable operation
-  answers `503` when the queue is full or the local store stops accepting
-  writes, so no access goes unrecorded.
+- **Health:** the readiness checks of the audit database.
+- **What happens:** every record is written before its response, so a
+  request whose records cannot be written is refused with `503` and
+  `Retry-After: 1`. Nothing is dropped and nothing waits in memory.
 - **What to do:**
-  1. Check `access_log_append_duration_seconds` and
-     `access_log_sign_duration_seconds`. Signing runs while the head of the
-     chain is locked, so a slow key slows every audit write. An RSA key is far
-     slower than Ed25519 ([PGP signing](signing/pgp.md)).
-  2. Check `access_log_entries_total{outcome="failed"}` and the log for the
-     error of the failed append: a full disk, a lost audit database or a
-     statement timeout.
-  3. Check the audit pool: `db_pool_acquire_duration_seconds` and the audit
-     database's own load.
-  4. Raise `[audit] queue_capacity` only for a burst the drain catches up
-     with. A queue that stays full needs a faster store.
+  1. Read the log line `the audit records could not be written` for the
+     cause: a full disk, a lost audit database, a statement timeout.
+  2. Check the audit pool: `db_pool_acquire_duration_seconds` and the audit
+     database's own load. `access_log_append_duration_seconds` is the time a
+     request waits for its records.
+
+### The chainer falls behind
+
+- **Metric:** `audit_chained_total` growing slower than
+  `access_log_entries_total{outcome="ok"}`, and the rate of
+  `access_log_chain_hold_duration_seconds_sum` near 1.
+- **Health:** `audit_sender` reads `DEGRADED` with the age of the oldest
+  intake record.
+- **What happens:** the records are stored and nothing is lost; the chains,
+  the checkpoints and the feeds that deliver from the store are behind.
+- **What to do:**
+  1. Check `access_log_sign_duration_seconds`: each round signs one
+     checkpoint while the head is held, and an RSA key is far slower than
+     Ed25519 ([PGP signing](signing/pgp.md)).
+  2. Read the log for `an audit chainer round failed`: a round that fails
+     repeats every half second, and the error names the record it refused.
+  3. One chain carries about 15 000 entries per second on the reference
+     host; a sustained rate above it needs partitioned chains, the recorded
+     next step (#5745).
 
 ### A chain verification that fails
 
@@ -224,8 +275,9 @@ recording while you investigate.
      database.
   2. For `damaged`, run `SELECT * FROM audit.verify_audit_chain();` and
      `SELECT * FROM audit.verify_access_log_chain();` to list each finding.
-     Then run `ferroehr access-log verify` to check the newest checkpoint and
-     every link signature.
+     Then run `ferroehr access-log verify` to check the newest checkpoint,
+     and `ferroehr access-log verify --checkpoint <file>` with the newest
+     checkpoint published outside the database.
   3. Compare the findings with a checkpoint kept outside the database
      ([Checkpoints and the transfer of a log](audit.md#checkpoints-and-the-transfer-of-a-log)).
      A record changed or deleted outside retention is a security incident:
@@ -236,23 +288,22 @@ recording while you investigate.
 ### A signing key mismatch between instances
 
 - **Metric:** `instance_mismatches{differs="signing_key"}` above `0` from the
-  moment the second key starts. Links signed before you fixed it show as
-  link-signature findings of `ferroehr access-log verify` while
-  `audit_chain_intact` reads `1`: the digests verify and the signatures do
-  not.
+  moment the second key starts. A checkpoint signed with the other key fails
+  its proof under `ferroehr access-log verify` while `audit_chain_intact`
+  reads `1`: the digests verify and the signature does not.
 - **Health:** `instances` reads `DEGRADED` on every instance and names each
   one that signs with another key, from start
   ([Running several instances](installation/several-instances.md#every-instance-shares-the-same-signing-key-and-configuration)).
-- **What happens:** every instance appends to one chain and signs each link
-  with its own `[record.signing]` key. An instance that verifies with
-  another key reports each link the other signed.
+- **What happens:** every instance appends to one chain and seals each of
+  its appends with its own `[record.signing]` key. An instance that verifies
+  with another key reports each checkpoint the other signed.
 - **What to do:**
   1. Give every instance the same `[record.signing]` key and the same
      configuration file
      ([Running several instances](installation/several-instances.md)).
-  2. Keep the links already signed verifiable: list the public certificate
-     of the key that signed them in `retired_key_files`.
-  3. Run `ferroehr access-log verify` again; it exits 0 when every link
+  2. Keep the checkpoints already signed verifiable: list the public
+     certificate of the key that signed them in `retired_key_files`.
+  3. Run `ferroehr access-log verify` again; it exits 0 when the checkpoint
      verifies. `instances` reads `UP` again once the instance with the other
      key has stopped, and within 90 seconds of its last heartbeat when it
      stopped without removing its row.
@@ -261,43 +312,65 @@ recording while you investigate.
 
 - **Metric:** `audit_seal_duration_seconds_count{outcome="failed"}` and
   `access_log_sign_duration_seconds_count{outcome="failed"}` after the
-  change show a key the server cannot sign with.
+  change show a key the server cannot sign with; an append whose checkpoint
+  cannot be signed is not stored, and `access_log_entries_total` stops.
 - **What to do:**
   1. Add a new signing subkey to the certificate, or move the old
      certificate's public half to `retired_key_files` and configure the new
      key ([Retired keys and rotation](signing/pgp.md#retired-keys-and-rotation)).
-     A link and a checkpoint record no key identifier, so the old key has to
-     stay verifiable.
+     A checkpoint records no key identifier, so the old key has to stay
+     verifiable.
   2. Roll the change to every instance together. Instances that sign with
-     different keys in the meantime write links the others cannot verify
-     until the old public certificate is retired everywhere.
-  3. Seal a checkpoint with `ferroehr access-log checkpoint` and run
-     `ferroehr access-log verify`. Watch `audit_seal_last_success_seconds`
-     move for both chains at the next run.
+     different keys in the meantime write checkpoints the others cannot
+     verify until the old public certificate is retired everywhere.
+  3. Run `ferroehr access-log verify` after the next append. Watch
+     `audit_seal_last_success_seconds` move for the system chain at the next
+     run.
 
-### A seal or checkpoint that keeps failing
+### A system chain seal that keeps failing
 
-- **Metric:** `time() - audit_seal_last_success_seconds{chain="…"}` above
-  fifteen minutes, with `audit_seal_duration_seconds_count{outcome="failed"}`
-  rising.
-- **What to do:** read the log for `the access-log checkpoint could not be
-  sealed` or `the system chain could not be sealed`. A sign error means the
-  keyring lost its OpenPGP key or its passphrase; a store error means the
-  audit database. The next run tries again five minutes later, and
-  `ferroehr access-log checkpoint` seals one on demand.
+- **Metric:** `time() - audit_seal_last_success_seconds{chain="system"}`
+  above fifteen minutes, with
+  `audit_seal_duration_seconds_count{outcome="failed"}` rising.
+- **What to do:** read the log for `the system chain could not be sealed`. A
+  sign error means the keyring lost its OpenPGP key or its passphrase; a
+  store error means the audit database. The next run tries again five
+  minutes later, and `ferroehr audit-chain seal` seals one on demand.
+
+### A checkpoint publication that fails
+
+- **Health:** `access_log_checkpoints` reads `DEGRADED` and names the
+  failure; the log says `the access-log checkpoint could not be published`.
+- **What happens:** the log keeps recording and every append is still
+  sealed in the database. Entries newer than the newest published checkpoint
+  could be removed with their checkpoints without a trace outside the
+  database until publication resumes.
+- **What to do:**
+  1. A write error names the file: check that the directory in
+     `[audit.access_log] publish_directory` is mounted, writable by the
+     server and not full.
+  2. `already holds another checkpoint at the same sequence` means a file
+     there holds a checkpoint this log did not seal at that position. Keep
+     both: run `ferroehr access-log verify --checkpoint <file>` against the
+     file and treat a finding as a security incident
+     ([complaints, incidents and vulnerabilities](compliance/post-market.md)).
+  3. The next run, 30 seconds later, publishes the newest checkpoint, which
+     covers every entry below it.
 
 ### A retention run that falls behind
 
 - **Metric:** `access_log_retention_duration_seconds` approaching the hourly
   interval, `access_log_retention_duration_seconds_count{outcome="failed"}`
-  rising, or `access_log_tombstones_total` flat while entries pass their
-  `retain_until`.
+  rising, `access_log_tombstones_total` flat while entries pass their
+  `retain_until`, or `access_log_folded_total` flat while tombstones pass
+  their own end.
 - **What happens:** an entry past its retention stays readable until a run
   replaces it by its tombstone. A failed run keeps the batches it replaced
   and the next run continues.
 - **What to do:**
   1. Read the log for `access-log retention failed` and its error.
   2. Check the audit database's load and locks: retention replaces entries
-     in batches of 500, each in its own transaction.
+     in batches of 500 and folds tombstones in batches of 5000, each in its
+     own transaction.
   3. Size the audit store for the access rate
      ([Storage sizing](operations.md#storage-sizing)).
