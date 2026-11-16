@@ -51,5 +51,8 @@ disallowed-methods = [
   { path = "std::env::var_os", reason = "configuration flows through the config tree (ferroehr::config), never ad-hoc env reads" },
   { path = "uuid::Uuid::new_v4", allow-invalid = true, reason = "DB keys are uuidv7 (Uuid::now_v7) for index locality; v4 only for non-key randomness with a scoped expect" },
   { path = "core::option::Option::as_slice", reason = "on Option<Vec<T>> this yields &[Vec<T>] (0-or-1 vectors), not &[T] — it compiles silently after a container-shape flip; spell it .as_deref().unwrap_or_default() (Vec::as_slice stays fine)" },
+  { path = "sqlx::Pool::acquire", reason = "take a connection with ferroehr::db::acquire::acquire, which answers a connect failure 503 and keeps the request's one checkout (#4389, #5109)" },
+  { path = "sqlx::Pool::begin", reason = "begin on a connection from ferroehr::db::acquire::acquire, which answers a connect failure 503 and keeps the request's one checkout (#4389, #5109)" },
+  { path = "sqlx::Pool::try_begin", reason = "begin on a connection from ferroehr::db::acquire::acquire, which answers a connect failure 503 and keeps the request's one checkout (#4389, #5109)" },
   { path = "core::option::Option::as_mut_slice", reason = "on Option<Vec<T>> this yields &mut [Vec<T>] (0-or-1 vectors), not &mut [T] — same shape-flip trap as Option::as_slice; match on the Option instead" },
 ]

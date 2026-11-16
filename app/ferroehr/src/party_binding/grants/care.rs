@@ -27,6 +27,7 @@ use moka::future::Cache;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::party_binding::grants::caller::store::{self, FactRow};
 use crate::party_binding::grants::caller::{CareTeam, FactKind, FactValue};
 use crate::policy_register::listen::{Dropping, Subscriber};
@@ -103,7 +104,7 @@ impl CareCopy {
             return Ok(held);
         }
         let seen = self.drops.load(Ordering::Acquire);
-        let mut conn = pool.acquire().await?;
+        let mut conn = acquire(pool).await?;
         let rows = store::care_of_subject(&mut conn, subject).await?;
         let teams: Arc<[CareTeam]> = care_teams(&rows).into();
         self.subjects.insert(subject, Arc::clone(&teams)).await;
@@ -127,7 +128,7 @@ impl CareCopy {
             return Ok(held);
         }
         let seen = self.drops.load(Ordering::Acquire);
-        let mut conn = pool.acquire().await?;
+        let mut conn = acquire(pool).await?;
         let person = super::caller::subject::declaring(&mut conn, subject).await?;
         self.persons.insert(subject.clone(), person).await;
         if self.drops.load(Ordering::Acquire) != seen {
@@ -150,7 +151,7 @@ impl CareCopy {
             return Ok(held);
         }
         let seen = self.drops.load(Ordering::Acquire);
-        let mut conn = pool.acquire().await?;
+        let mut conn = acquire(pool).await?;
         let mut census: Vec<Cared> = store::care_of_team(&mut conn, team)
             .await?
             .into_iter()

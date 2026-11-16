@@ -559,6 +559,10 @@ async fn acquire_unmetered(pool: &PgPool) -> Result<PoolConnection<Postgres>, Ac
     }
     // Boxed as sqlx's own `&Pool` executor boxes it: the connect future is
     // large, and every caller's state machine would otherwise carry it inline.
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "the one place the crate takes a pooled connection: the ban routes every other caller here"
+    )]
     let mut waiting = Box::pin(pool.acquire());
     if let Ok(result) = tokio::time::timeout(PROBE_AFTER, &mut waiting).await {
         return result.map_err(|error| pool_failed(&key, error));
