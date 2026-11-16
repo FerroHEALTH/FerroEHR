@@ -349,9 +349,7 @@ impl Builder<'_> {
         if let Some(n) = &r.name {
             out.push(self.name_cond(alias, n)?);
         }
-        for sp in &r.standard {
-            out.push(self.std_cond(alias, sp)?);
-        }
+        out.extend(self.source_std_conds(alias, r)?);
         Ok(out)
     }
 
@@ -812,11 +810,10 @@ impl Builder<'_> {
         }
         self.q.and_where(hot(&node, Node::Tier));
         self.node_alias.insert(sid, node.clone());
-        for cond in self.rm_conds(&node, r)? {
-            self.q.and_where(cond);
-        }
-
         if let Some(parent) = structural {
+            for cond in self.rm_conds(&node, r)? {
+                self.q.and_where(cond);
+            }
             self.q
                 .and_where(descendant_in_from(&node, &parent.node, &parent.types));
             Ok(VoGroup {
@@ -846,6 +843,9 @@ impl Builder<'_> {
             self.group_roots.push(node.clone());
             self.group_vos.push(voa.clone());
             self.vo_alias.insert(sid, voa.clone());
+            for cond in self.rm_conds(&node, r)? {
+                self.q.and_where(cond);
+            }
             if let Some(e) = ehr {
                 // The EHR link binds on the version SPINE only: one owning EHR
                 // per versioned object (RM ehr master04 §EHR) makes the node
@@ -1120,7 +1120,7 @@ impl Builder<'_> {
                 Some(raw) => super::predicate::ehr_id_compare(alias, p.op, &raw),
                 None => cast(col(alias, Ehr::Id), "text").binary(
                     super::expr::binoper(p.op),
-                    super::value::coerce_rhs(self.bind_value(&p.value)?, Coercion::Text)?,
+                    super::coerce::coerce_rhs(self.bind_value(&p.value)?, Coercion::Text)?,
                 ),
             },
             EhrField::TimeCreated => col(alias, Ehr::TimeCreated).binary(

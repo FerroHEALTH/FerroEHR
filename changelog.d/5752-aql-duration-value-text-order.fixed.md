@@ -1,0 +1,1 @@
+- `ORDER BY` on a `DV_DURATION`'s `value` sorts the ISO 8601 string as text, as AQL 1.1.0 orders a String, and the whole `DV_DURATION` sorts by the duration it names; before, the string sorted as a duration and the whole value in no defined order.
