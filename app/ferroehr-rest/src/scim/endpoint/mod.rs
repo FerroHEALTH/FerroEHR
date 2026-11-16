@@ -340,7 +340,8 @@ async fn admit(State(gate): State<Gate>, request: Request, next: Next) -> Respon
     request
         .extensions_mut()
         .insert(ScimCaller(Arc::new(client)));
-    request.extensions_mut().insert(principal.clone());
+    let principal = Arc::new(principal);
+    request.extensions_mut().insert(Arc::clone(&principal));
     Box::pin(authn::grants::scoped(
         grants,
         capabilities,

@@ -80,7 +80,8 @@ fn composition_template(parts: &RequestParts) -> Option<String> {
 fn forbidden(principal: &Principal, detail: &str) -> Response {
     let mut resp =
         RestError::from(ApiError::Forbidden(format!("access denied: {detail}"))).into_response();
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut()
+        .insert(std::sync::Arc::new(principal.clone()));
     resp
 }
 
@@ -108,7 +109,8 @@ fn lookup_error(
         None => RestError::from(crate::overview::error::internal_fault_caused(step, error))
             .into_response(),
     };
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut()
+        .insert(std::sync::Arc::new(principal.clone()));
     resp
 }
 

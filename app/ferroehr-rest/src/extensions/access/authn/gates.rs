@@ -7,6 +7,8 @@
 //! assurance is too low. Role semantics are our own design; the SMART grammar is
 //! the ITS-REST SMART on openEHR draft (`crate::smart::routes`).
 
+use std::sync::Arc;
+
 use axum::extract::{MatchedPath, OriginalUri, Request};
 use axum::response::{IntoResponse, Response};
 use ferroehr::party_binding::grants::capabilities::Capabilities;
@@ -76,7 +78,7 @@ pub(super) fn rbac_refusal(
     };
     count_auth_failure(mechanism_label(principal.method), "403");
     let mut resp = RestError::from(ApiError::Forbidden(reason)).into_response();
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut().insert(Arc::new(principal.clone()));
     Some(resp)
 }
 
@@ -128,7 +130,7 @@ pub(super) fn smart_refusal(
             .authenticator
             .challenge(Some(&AuthError::Forbidden(String::new()))),
     );
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut().insert(Arc::new(principal.clone()));
     Some(resp)
 }
 
@@ -228,7 +230,7 @@ pub(super) fn patient_data_refusal(
             resp
         }
     };
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut().insert(Arc::new(principal.clone()));
     resp.extensions_mut().insert(actor);
     resp
 }

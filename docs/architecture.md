@@ -825,7 +825,9 @@ which is what makes an optional stage safe to disable:
    object, the EHR id compared with a constant, and one uncorrelated check,
    which PostgreSQL runs once, that the revision of the EHR's settings row
    and subject in force is the one the verdict was judged on, so a copy older
-   than the store admits no row. Every other query keeps the class condition
+   than the store admits no row. Whether the caller reads that EHR's
+   `EHR_ACCESS` objects is decided from the same copy, so no settings row is
+   probed for it either. Every other query keeps the class condition
    and its probe of the settings row per object. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the
