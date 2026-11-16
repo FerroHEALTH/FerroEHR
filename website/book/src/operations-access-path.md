@@ -29,12 +29,13 @@ An instance reports its own copies and its own listeners; with
 
 ## The policy copies and their listeners
 
-An instance holds four policy copies, each kept fresh by a `LISTEN` on its
+An instance holds five policy copies, each kept fresh by a `LISTEN` on its
 own notification channel. The `listener` label names the copy as the
 `policy_listeners` health indicator does: `ehr_access` (each EHR's
 `EHR_ACCESS` settings and the settings classes), `grants` (the grants and the
-caller facts), `policy_registers` (the operational-policy registers) and
-`access_policy`.
+caller facts), `party_binding` (the lookups of the binding side table and the
+bound `PERSON`s' names), `policy_registers` (the operational-policy registers)
+and `access_policy`.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
@@ -49,6 +50,18 @@ Alert on `policy_listener_up == 0` held for a few minutes, and on a rate of
 `policy_copy_reads_total{reason="unlistened"}` above zero: both mean the
 instance answers every request with a database read. A rise of
 `grants_refresh_duration_seconds` is the grant and fact refresh lag.
+
+## The binding copy
+
+The `party_binding` copy holds what resolves a login to its `PERSON`: the
+lookup of each login's key, for at most 65536 logins, and the name of each
+bound `PERSON`, so a request whose caller it holds reads neither. A change of
+the binding side table drops every lookup, and a new version of a `PERSON`
+drops its name, on every instance once the notification arrives; the instance
+whose own commit made the change drops its copy before it answers, so a
+deprovisioned login is refused on its next request. In `access_copy_lookups`,
+`access_copy_refills` and `access_copy_drops` the `copy` label is `binding`
+for the lookups and `party_name` for the names.
 
 ## The per-EHR access copy and the class copy
 

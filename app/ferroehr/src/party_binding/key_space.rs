@@ -162,6 +162,7 @@ pub(crate) async fn reset(
     tx: &mut PgConnection,
     mapping: &BindingMapping,
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     sqlx::query("DELETE FROM binding_key_space")
         .execute(&mut *tx)
         .await?;
@@ -232,6 +233,7 @@ pub(crate) async fn reconcile(
     tx: &mut PgConnection,
     ttl: Duration,
 ) -> Result<Vec<String>, StorageError> {
+    crate::party_binding::live::note_change();
     let leases = live(tx, ttl).await?;
     if leases.is_empty() {
         return Ok(Vec::new());
@@ -297,6 +299,7 @@ async fn set_state(
     issuer: &str,
     state: KeySpaceState,
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     sqlx::query(
         "UPDATE binding_key_space SET state = $2, fill_after = NULL, changed_at = now() \
          WHERE issuer = $1",
@@ -315,6 +318,7 @@ async fn set_state(
 
 /// Deletes the key space of `issuer` and every key row under it.
 async fn prune(tx: &mut PgConnection, issuer: &str) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     sqlx::query("DELETE FROM binding_identifier WHERE selector = 'key' AND issuer = $1")
         .bind(issuer)
         .execute(&mut *tx)
@@ -344,6 +348,7 @@ pub(crate) async fn start_fill(
     issuer: &str,
     ttl: Duration,
 ) -> Result<bool, StorageError> {
+    crate::party_binding::live::note_change();
     let Some(&portal) = mapping.key_spaces().get(issuer) else {
         return Ok(false);
     };

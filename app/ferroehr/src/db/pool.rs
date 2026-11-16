@@ -25,7 +25,7 @@ pub const POOL_PER_CORE: u32 = 4;
 pub const POOL_FLOOR: u32 = 10;
 
 /// The largest pool an unset [`DbConfig::max_connections`] gives: three
-/// pools of 30 and the five listeners fit one instance in `PostgreSQL`'s
+/// pools of 30 and the six listeners fit one instance in `PostgreSQL`'s
 /// default `max_connections` of 100, less its three reserved slots.
 pub const POOL_CEILING: u32 = 30;
 

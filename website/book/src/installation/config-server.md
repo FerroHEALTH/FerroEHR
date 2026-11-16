@@ -378,9 +378,9 @@ core busy, and the burst above it waits in the pool rather than failing.
 
 The budget is PostgreSQL's `max_connections`, less its
 `superuser_reserved_connections` (3 by default) and what your tools use, over
-your instances: each instance holds three pools and five listener connections
+your instances: each instance holds three pools and six listener connections
 ([Running several instances](several-instances.md#connection-budget)). The
-default ceiling of 30 keeps one instance, 3 × 30 + 5 = 95 connections, inside
+default ceiling of 30 keeps one instance, 3 × 30 + 6 = 96 connections, inside
 PostgreSQL's default of 100. With more than one instance, set
 `max_connections` on each, or raise PostgreSQL's.
 

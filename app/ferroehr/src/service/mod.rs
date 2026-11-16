@@ -264,6 +264,9 @@ pub struct FerroEhrService {
     /// The policy grants in force on the party pool, under the default
     /// `[authz.grants] allowed` until the binary sets the configured one.
     pub(in crate::service) grants: Arc<crate::party_binding::grants::live::LiveGrants>,
+    /// This replica's copy of the binding lookups and the bound `PERSON`s'
+    /// names, which every party source of this service reads (#5771).
+    pub(in crate::service) bindings: Arc<crate::party_binding::live::LiveBindings>,
     /// Who may import and which wrapped committers an import may carry;
     /// [`Self::new`] lets every caller import with no wrapped-committer rule
     /// beyond its own issuer.
@@ -344,6 +347,7 @@ impl FerroEhrService {
             party_templates: Arc::default(),
             binding: Arc::default(),
             grants,
+            bindings: Arc::default(),
             import_policy: Arc::default(),
         }
     }
@@ -424,6 +428,7 @@ impl FerroEhrService {
         grants.set_federation((*self.grants.federation()).clone());
         grants.set_namespace(&self.grants.namespace());
         self.grants = Arc::new(grants);
+        self.bindings = Arc::default();
         self.demographic_pool = pool;
         self
     }
