@@ -1,0 +1,1 @@
+- The shipped patient `PERSON` archetype, `openEHR-DEMOGRAPHIC-PERSON.patient.v1.0.0`, gains a slot for a representation. An administrator can now record a representation inline on the `PERSON` that a patient portal's SCIM client provisioned for a representative. Before, that write was refused `422` (#5852).

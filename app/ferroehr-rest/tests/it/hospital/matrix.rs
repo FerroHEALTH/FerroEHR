@@ -69,7 +69,7 @@ fn table(world: &World) -> Vec<Row> {
         export,
         visible,
     };
-    let no_care = Outcome::Refused("refused-no-care-relationship", 6);
+    let no_care = Outcome::Refused("refused-no-care-relationship", 7);
     let no_consent = Outcome::Refused("refused-consent-required", 8);
     let restricted = Outcome::Absent("refused-restricted", 2);
     let consent = Outcome::Read(&["consent"]);

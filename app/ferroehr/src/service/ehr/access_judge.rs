@@ -130,7 +130,8 @@ impl FerroEhrService {
 
     /// Whether the EHR `ehr_id` reads as absent to the running request: an
     /// opt-out or a whole-EHR restriction binds the caller (EHDS Art. 8 and
-    /// 10, `docs/law/eu/ehds/text.html`); `false` outside a request.
+    /// 10, `docs/law/eu/ehds/text.html`), noting the refusal for the
+    /// request's access record; `false` outside a request.
     ///
     /// # Errors
     /// As [`Self::ehr_verdict`].
@@ -142,7 +143,13 @@ impl FerroEhrService {
             return Ok(false);
         };
         let verdict = self.ehr_verdict(&access, ehr_id).await?;
-        Ok(matches!(verdict.outcome(&Item::Ehr), Outcome::Absent(_)))
+        let hidden = matches!(verdict.outcome(&Item::Ehr), Outcome::Absent(_));
+        // NOTE: EHDS Art. 9(1) and Annex II 3.2, the refusal that hides the EHR is noted for the
+        // request's access record, so a query or a lookup it answers as absent is logged (#5611).
+        if hidden {
+            access.note(ehr_id, &verdict, &Item::Ehr);
+        }
+        Ok(hidden)
     }
 
     /// The ids of `ids` that name an EHR of this store the running request

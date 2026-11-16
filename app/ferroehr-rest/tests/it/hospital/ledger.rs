@@ -11,6 +11,7 @@
 
 use std::time::{Duration, Instant};
 
+use ferroehr::access_log::stored_form;
 use ferroehr::system_log::store::AuditStore;
 use ferroehr::system_log::store::chains::VerifyScope;
 use serde_json::Value;
@@ -131,17 +132,25 @@ impl Ledger {
 async fn landed(world: &World, marker: &str) -> Vec<(Option<String>, Value)> {
     let deadline = Instant::now() + Duration::from_secs(20);
     loop {
-        let rows: Vec<(Option<String>, String)> = sqlx::query_as(
-            "SELECT request_id, content FROM audit.access_log_record \
-             WHERE record_type = 'ACCESS_LOG_ENTRY' ORDER BY chain_seq",
+        let rows: Vec<(Option<String>, String, Option<String>)> = sqlx::query_as(
+            "SELECT s.request_id, r.content, sh.content FROM audit.access_log_record r \
+             JOIN audit.access_log_search s ON s.chain_seq = r.chain_seq \
+             LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
+             WHERE r.record_type = 'ACCESS_LOG_ENTRY' ORDER BY r.chain_seq",
         )
         .fetch_all(&world.pool)
         .await
         .expect("read the access log");
-        if rows.iter().any(|(id, _)| id.as_deref() == Some(marker)) {
+        if rows.iter().any(|(id, _, _)| id.as_deref() == Some(marker)) {
+            let parse = |text: &str| serde_json::from_str::<Value>(text).expect("a stored part");
             return rows
                 .into_iter()
-                .map(|(id, content)| (id, serde_json::from_str(&content).expect("an entry")))
+                .map(|(id, own, shared)| {
+                    (
+                        id,
+                        stored_form::join(parse(&own), shared.as_deref().map(parse)),
+                    )
+                })
                 .collect();
         }
         assert!(Instant::now() < deadline, "the marker access never landed");
@@ -191,11 +200,12 @@ fn check(noted: &Noted, entry: &Value) {
         described.starts_with(&format!("step {step} (")),
         "{label}: the step: {described}"
     );
-    // NOTE: the procedure of #5621, step 4 the controller's rules, steps 5 to 7 the policy, 8 the default.
+    // NOTE: the procedure of #5737, steps 4 to 7 read the access policy (purpose, rules, classifications, care), 8 the default.
     let decided = match step {
         1..=3 => format!("of EHR_ACCESS {}", noted.access),
         4..=7 => format!("ACCESS_POLICY {}", noted.policy),
         8 => format!("EHR_ACCESS {}", noted.access),
+        _ if code == "refused-not-represented" => "the subject the caller represents".to_owned(),
         _ => "patient context".to_owned(),
     };
     assert!(

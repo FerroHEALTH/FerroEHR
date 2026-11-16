@@ -221,9 +221,19 @@ pub(crate) fn coded_in(terminology: &str, code: &str) -> Value {
                 "code_string": code } })
 }
 
-/// A code of FerroEHR's terminology.
+/// A code of the access control groups: an HL7 code where the group reuses
+/// one (#5655), else a code of the draft `openehr_access` terminology.
 pub(crate) fn term(code: &str) -> Value {
-    coded_in(TERMINOLOGY, code)
+    use openehr_rm::draft::access_control::terminology::{
+        TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, TERMINOLOGY_ID_ROLE_CLASS,
+        TERMINOLOGY_ID_SECURITY_ROLE_TYPE,
+    };
+    match code {
+        "permit" | "deny" => coded_in(TERMINOLOGY_ID_CONSENT_PROVISION_TYPE, code),
+        "MBR" => coded_in(TERMINOLOGY_ID_ROLE_CLASS, code),
+        "datasubject" => coded_in(TERMINOLOGY_ID_SECURITY_ROLE_TYPE, code),
+        _ => coded_in(TERMINOLOGY, code),
+    }
 }
 
 /// A `PARTY_REF` of `kind` to `id`.
@@ -716,7 +726,7 @@ pub(crate) async fn provider(app: &Router, id: &str, groups: &[&str]) -> String 
             .iter()
             .map(|group| {
                 json!({ "_type": "PARTY_RELATIONSHIP", "archetype_node_id": "at0050",
-                        "name": term("member_of"),
+                        "name": term("MBR"),
                         "source": party_ref("ORGANISATION", &organisation_id),
                         "target": party_ref("GROUP", group) })
             })
@@ -819,7 +829,7 @@ pub(crate) async fn admit(
 }
 
 /// `writer` writes the rostering of `name` on `teams` from `from` to
-/// `until`: a `member_of` relationship per team on their `PERSON`, beside
+/// `until`: an `MBR` membership per team on their `PERSON`, beside
 /// the memberships SCIM keeps there; the answer.
 pub(crate) async fn roster(
     world: &World,
@@ -835,12 +845,12 @@ pub(crate) async fn roster(
         .cloned()
         .unwrap_or_default()
         .into_iter()
-        .filter(|relationship| relationship["details"]["items"][0]["value"] != term("member_of"))
+        .filter(|relationship| relationship["details"]["items"][0]["value"] != term("MBR"))
         .collect();
     relationships.extend(
         teams
             .iter()
-            .map(|team| care("member_of", person, &world.teams[team], span)),
+            .map(|team| care("MBR", person, &world.teams[team], span)),
     );
     body["relationships"] = Value::Array(relationships);
     update_party(&world.app, writer, ("person", person, &version), &body).await

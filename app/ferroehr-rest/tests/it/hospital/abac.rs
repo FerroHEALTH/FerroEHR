@@ -168,7 +168,7 @@ async fn past_the_grace_dr_jansen_is_refused_without_a_care_relationship() {
         &world,
         "past the grace",
         &answer,
-        Expect::refused("refused-no-care-relationship", 6),
+        Expect::refused("refused-no-care-relationship", 7),
     );
     let (rows, _) = queried(&world, "jansen", Some("TREAT")).await;
     assert!(rows.is_empty(), "the query leaves the record out: {rows:?}");
@@ -190,7 +190,7 @@ async fn nurse_de_vries_reads_vitals_but_not_the_hiv_result() {
         &world,
         "the HIV result",
         &answer,
-        Expect::refused("refused-sensitivity", 5),
+        Expect::refused("refused-sensitivity", 6),
     );
     let (rows, _) = queried(&world, "devries", Some("TREAT")).await;
     assert!(
@@ -248,8 +248,39 @@ async fn gina_is_refused_everything_and_never_sees_the_restriction() {
     )
     .await;
     says_nothing(&settings);
-    let (rows, _) = queried(&world, "gina", Some("TREAT")).await;
-    assert!(rows.is_empty(), "the query returns nothing: {rows:?}");
+    let query = |ehr: &str| {
+        let world = &world;
+        let ehr = ehr.to_owned();
+        async move {
+            let body = json!({ "q": "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c" });
+            ask(
+                &world.app,
+                "gina",
+                ("POST", &format!("{BASE}/query/aql")),
+                Ask {
+                    purpose: Some("TREAT"),
+                    body: Some(&body),
+                    scope: Some(&ehr),
+                },
+            )
+            .await
+        }
+    };
+    let answer = query(&world.ehr).await;
+    says_nothing(&answer);
+    ledger.note(
+        &world,
+        "a query of the EHR",
+        &answer,
+        Expect::refused("refused-restricted", 2),
+    );
+    let unknown = query("00000000-0000-4000-8000-000000000000").await;
+    assert_eq!(
+        unknown.status, answer.status,
+        "a query of an unknown EHR: {}",
+        unknown.body
+    );
+    assert_eq!(unknown.json()["title"], answer.json()["title"]);
     ledger.verify(&world).await;
 }
 
@@ -277,7 +308,9 @@ async fn the_mental_health_note_is_refused_to_dr_jansen_and_read_by_dr_smit() {
     ledger.verify(&world).await;
 }
 
-/// Dr. Bakker, in no care relationship, is refused; with the emergency role
+/// Dr. Bakker, cleared for no sensitivity, is refused the HIV result under
+/// an ordinary purpose at step 6, which comes before care (#5737); with the
+/// emergency role
 /// and the emergency purpose he reads the restricted HIV result and the
 /// restricted mental-health note, each access marked an emergency with the
 /// ground it rests on.
@@ -286,16 +319,12 @@ async fn dr_bakker_breaks_the_glass_and_the_log_marks_the_emergency() {
     let world = Box::pin(world()).await;
     let mut ledger = Ledger::default();
     let answer = read(&world, "bakker", &world.hiv, Some("TREAT")).await;
-    answered(
-        &answer,
-        StatusCode::FORBIDDEN,
-        Some("refused-no-care-relationship"),
-    );
+    answered(&answer, StatusCode::FORBIDDEN, Some("refused-sensitivity"));
     ledger.note(
         &world,
         "an ordinary purpose",
         &answer,
-        Expect::refused("refused-no-care-relationship", 6),
+        Expect::refused("refused-sensitivity", 6),
     );
     let answer = read(&world, "bakker", &world.hiv, Some("ETREAT")).await;
     answered(&answer, StatusCode::OK, None);
@@ -363,12 +392,16 @@ async fn frank_reads_evas_record_and_no_other() {
     }
     // NOTE: SMART App Launch 2.2.0 §Launch context, the authorization server chooses the EHR a token names, so his token names Eva's.
     let answer = read_ehr(&world, &frank, &world.other_ehr, None).await;
-    answered(&answer, StatusCode::FORBIDDEN, Some("refused-not-subject"));
+    answered(
+        &answer,
+        StatusCode::FORBIDDEN,
+        Some("refused-not-represented"),
+    );
     ledger.note(
         &world,
         "Gina's record",
         &answer,
-        Expect::refused("refused-not-subject", 0),
+        Expect::refused("refused-not-represented", 0),
     );
     ledger.verify(&world).await;
 }

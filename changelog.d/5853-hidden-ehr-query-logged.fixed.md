@@ -1,0 +1,1 @@
+- A query, an EHR Extract export or a subject lookup that a restriction or an opt-out answers as absent now writes its access-log entry, with the refusal and its step. The answer is unchanged: the one an unknown EHR gets (EHDS Art. 8, Art. 9(1)) (#5853).

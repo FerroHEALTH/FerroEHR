@@ -25,12 +25,14 @@ use crate::hospital::world::{
     CONFIDENTIALITY, DEVICES, Doc, ENCOUNTER, LAB_TEMPLATE, LOGIN, MACHINES, MENTAL_HEALTH,
     PATIENTS, PORTAL_SCIM, PROVIDERS, Provisioned, ROLES, ROOT, SCIM, SCIM_SCOPE, STAFF, TEAMS,
     VITALS, World, admit, call, capability, client, coded_in, config, create_party, day, named,
-    party_ref, patient_body, provider, read_party, region, replica, roster, router, scim, term,
-    text, update_party,
+    party_ref, patient_body, provider, read_party, region, replica, router, scim, term, text,
+    update_party,
 };
 
 /// The extension FerroEHR's User attributes sit in.
 const EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:User";
+/// FerroEHR's SCIM Group extension, which marks a care team.
+const GROUP_EXTENSION: &str = "urn:ietf:params:scim:schemas:extension:ferrohealth:2.0:Group";
 
 /// The audit configuration of every replica: the purposes of use the
 /// hospital declares, `ETREAT` its emergency purpose, recorded to the local
@@ -51,7 +53,7 @@ pub(crate) fn audit() -> AuditConfig {
 pub(crate) async fn world() -> World {
     let config = config();
     let (db, pool) = common::migrated_pool().await;
-    let (sender, drain) = start(audit(), None, Some(pool.clone()))
+    let (sender, drain) = start(audit(), None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(replica(&config, &pool, Some(sender)).await);
@@ -123,23 +125,6 @@ pub(crate) async fn world() -> World {
         .map(|team| (*team, admitted.as_str(), None))
         .collect();
     world.eva_version = admit(&world, &world.eva_version, &stays).await;
-    for staff in STAFF.iter().filter(|staff| !staff.groups.is_empty()) {
-        let answer = roster(
-            &world,
-            "client:adt",
-            staff.name,
-            staff.groups,
-            (&day(-30), None),
-        )
-        .await;
-        assert_eq!(
-            answer.status,
-            StatusCode::OK,
-            "{}'s roster: {}",
-            staff.name,
-            answer.body
-        );
-    }
     world.policy = policy(&world, &hospital, None).await;
     directives(&mut world, None).await;
     world
@@ -171,13 +156,15 @@ pub(crate) async fn user(
     }
 }
 
-/// The SCIM Group `name` of the hospital's client with `members`; its id.
-async fn group(app: &axum::Router, name: &str, members: &[&str]) -> String {
+/// The SCIM care-team Group `name` of the hospital's client with `members`
+/// (FerroEHR's Group extension, `careTeam`); its id.
+pub(crate) async fn group(app: &axum::Router, name: &str, members: &[&str]) -> String {
     let body = json!({
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group", GROUP_EXTENSION],
         "displayName": name,
         "externalId": crate::hospital::world::external_id(name),
         "members": members.iter().map(|id| json!({ "value": id })).collect::<Vec<_>>(),
+        GROUP_EXTENSION: { "careTeam": true },
     });
     let (status, created) = scim(app, SCIM, "POST", "/Groups", Some(&body)).await;
     assert_eq!(status, StatusCode::CREATED, "{name}: {created}");
@@ -186,7 +173,8 @@ async fn group(app: &axum::Router, name: &str, members: &[&str]) -> String {
 
 /// The operator grants the hospital's SCIM client, as `ferroehr
 /// party-binding grant` does before any person is provisioned (#5620): it
-/// provisions the logins of [`LOGIN`] and assigns the staff's role codes.
+/// provisions the logins of [`LOGIN`], assigns the staff's role codes and
+/// keeps the care-team Groups.
 async fn bootstrap(svc: &FerroEhrService) {
     let mut elements = vec![
         ("binding_issuer".to_owned(), LOGIN.to_owned()),
@@ -209,6 +197,14 @@ async fn bootstrap(svc: &FerroEhrService) {
     })
     .await
     .expect("the operator grants the SCIM client");
+    svc.grant_client(&ClientGrant {
+        issuer: MACHINES.to_owned(),
+        client_id: SCIM.to_owned(),
+        operation: Operation::WriteCareRelationship,
+        elements: Vec::new(),
+    })
+    .await
+    .expect("the operator grants the SCIM client its care teams");
 }
 
 /// The operator grants `root`'s `PERSON` the writing of the controller's
@@ -542,10 +538,10 @@ pub(crate) async fn policy(world: &World, controller: &str, preceding: Option<&s
         "log_restrictions": [{ "_type": "ACCESS_LOG_RESTRICTION",
             "name": text("Professionals withheld"),
             "archetype_node_id": "id11",
-            "accessor_kinds": [coded_in("openehr", "person")],
+            "accessor_kinds": [term("person")],
             "withheld": [
-                coded_in(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL, "accessor_party"),
-                coded_in(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS_CONTROL, "accessor_provider")
+                coded_in(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS, "accessor_party"),
+                coded_in(openehr_rm::draft::access_control::terminology::TERMINOLOGY_ID_ACCESS, "accessor_provider")
             ],
             "legal_grounds": [coded_in("urn:sint-example:national-law", "art-9-3")] }]
     });
@@ -577,20 +573,29 @@ fn purposes_of(codes: &[&str]) -> Value {
         .collect()
 }
 
-/// The controller's rules (#5621): per staff role, the purposes it may
-/// declare and the sensitivities it is cleared for; the nurse's ban on
-/// writing the diagnosis summary under the national rule of EHDS Art. 11(3);
-/// and each system client's purpose of treatment.
+/// The controller's rules (#5621, #5737): a professional reaches the record
+/// only under a role of the staff table declaring a purpose that role may
+/// declare, a deny with one permit exception per role; each role's
+/// sensitivity clearances; the nurse's ban on writing the diagnosis summary
+/// under the national rule of EHDS Art. 11(3); and the system clients and
+/// access services of the hospital's clients for treatment alone.
 fn rules(world: &World) -> Value {
     let rule = |effect: &str, extra: &Value| directive("controller_rule", effect, extra);
+    let kinds = |kinds: &[&str]| -> Value {
+        kinds
+            .iter()
+            .map(|kind| json!({ "_type": "ACCESS_ACTOR_SCOPE", "caller_kind": term(kind) }))
+            .collect()
+    };
     let mut seen: Vec<&str> = Vec::new();
+    let mut exceptions = Vec::new();
     let mut rules = Vec::new();
     for staff in STAFF {
         if seen.contains(&staff.role) {
             continue;
         }
         seen.push(staff.role);
-        rules.push(rule(
+        exceptions.push(rule(
             "permit",
             &json!({ "applies_to": role_scope(staff.role), "purposes": purposes_of(staff.purposes) }),
         ));
@@ -607,6 +612,13 @@ fn rules(world: &World) -> Value {
             ));
         }
     }
+    rules.insert(
+        0,
+        rule(
+            "deny",
+            &json!({ "applies_to": kinds(&["professional"]), "exceptions": exceptions }),
+        ),
+    );
     rules.push(rule(
         "deny",
         &json!({
@@ -616,13 +628,20 @@ fn rules(world: &World) -> Value {
             "legal_grounds": [coded_in("urn:sint-example:national-law", "art-11-3")]
         }),
     ));
-    for agent in ["hie-member", "hie-outside", "access-service", "lab"] {
-        rules.push(rule(
-            "permit",
-            &json!({ "applies_to": naming("AGENT", &world.agents[agent]),
-                     "purposes": purposes_of(&["TREAT"]) }),
-        ));
-    }
+    let agents: Vec<Value> = ["hie-member", "hie-outside", "access-service", "lab"]
+        .iter()
+        .map(|agent| {
+            rule(
+                "permit",
+                &json!({ "applies_to": naming("AGENT", &world.agents[agent]),
+                         "purposes": purposes_of(&["TREAT"]) }),
+            )
+        })
+        .collect();
+    rules.push(rule(
+        "deny",
+        &json!({ "applies_to": kinds(&["system", "access_service"]), "exceptions": agents }),
+    ));
     Value::Array(rules)
 }
 

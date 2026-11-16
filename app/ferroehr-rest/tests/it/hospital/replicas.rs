@@ -25,7 +25,7 @@ use crate::hospital::world::{
 /// The second replica over the world's database, auditing to the same
 /// store, its listeners connected; with its audit drain.
 async fn second(world: &World) -> (Router, AuditHandle) {
-    let (sender, drain) = start(audit(), None, Some(world.pool.clone()))
+    let (sender, drain) = start(audit(), None, world.pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(replica(&world.config, &world.pool, Some(sender)).await);

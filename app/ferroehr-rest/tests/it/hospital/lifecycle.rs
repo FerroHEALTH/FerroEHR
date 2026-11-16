@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 use crate::common::BASE;
 use crate::hospital::abac::{answered, read};
 use crate::hospital::build::{
-    composition, directive, eva_directives, lab_result, naming, settle, world,
+    composition, directive, eva_directives, group, lab_result, naming, settle, world,
 };
 use crate::hospital::ledger::{Expect, Ledger};
 use crate::hospital::world::{SCIM, VITALS, World, call, day, patch_op, roster, scim};
@@ -86,7 +86,8 @@ async fn a_nurse_reads_the_vital_signs() {
 
 /// The controller's rule bans the nurse role from writing the diagnosis
 /// summary: her commit of a vital signs record is accepted, and her commit of
-/// the summary is refused `refused-policy-denied` at step 4 (#5621, #5624).
+/// the summary is refused `refused-policy-denied` at step 5 (#5621, #5624,
+/// #5737).
 #[tokio::test]
 async fn a_nurse_cannot_commit_a_diagnosis_template_her_role_does_not_allow() {
     let world = Box::pin(world()).await;
@@ -124,15 +125,15 @@ async fn a_nurse_cannot_commit_a_diagnosis_template_her_role_does_not_allow() {
         &world,
         "the diagnosis summary",
         &refused,
-        Expect::refused("refused-policy-denied", 4),
+        Expect::refused("refused-policy-denied", 5),
     );
     ledger.verify(&world).await;
 }
 
 /// SCIM removes the nurse's role code from her User, which ends her
-/// `ROLE`, and on the next request she declares a purpose no rule of a role
-/// she performs permits: `refused-purpose-not-permitted` at step 7 (#5621,
-/// #5625).
+/// `ROLE`, and on the next request no exception of the controller's rule on
+/// professionals covers her: `refused-policy-denied` at step 5 (#5621,
+/// #5625, #5737).
 #[tokio::test]
 async fn a_role_removed_through_scim_stops_working_on_the_next_request() {
     let world = Box::pin(world()).await;
@@ -148,13 +149,13 @@ async fn a_role_removed_through_scim_stops_working_on_the_next_request() {
     answered(
         &answer,
         StatusCode::FORBIDDEN,
-        Some("refused-purpose-not-permitted"),
+        Some("refused-policy-denied"),
     );
     ledger.note(
         &world,
         "no longer a nurse",
         &answer,
-        Expect::refused("refused-purpose-not-permitted", 7),
+        Expect::refused("refused-policy-denied", 5),
     );
     ledger.verify(&world).await;
 }
@@ -211,7 +212,7 @@ async fn a_user_scim_creates_reads_on_the_next_request() {
         &world,
         "not rostered",
         &answer,
-        Expect::refused("refused-no-care-relationship", 6),
+        Expect::refused("refused-no-care-relationship", 7),
     );
     let rostered = roster(&world, "client:adt", "nieuw", &["Ward 3"], (&day(-1), None)).await;
     assert_eq!(
@@ -226,14 +227,16 @@ async fn a_user_scim_creates_reads_on_the_next_request() {
     ledger.verify(&world).await;
 }
 
-/// A directive naming the SCIM Group Ward 3 binds its members: the nurse is
-/// refused while SCIM keeps her in it, and reads again on the next request
-/// after SCIM removes her.
+/// A directive naming a SCIM care-team Group binds its members: the nurse,
+/// whose care of Eva comes through Ward 3, is refused while SCIM keeps her in
+/// the night shift, and reads again on the next request after SCIM removes
+/// her from it.
 #[tokio::test]
 async fn a_scim_group_change_decides_the_next_request() {
     let mut world = Box::pin(world()).await;
     let mut ledger = Ledger::default();
-    let ward = world.teams["Ward 3"].clone();
+    let member = world.people["devries"].person.clone();
+    let ward = group(&world.app, "Night shift", &[&member]).await;
     let deny = directive(
         "consent",
         "deny",
@@ -253,7 +256,6 @@ async fn a_scim_group_change_decides_the_next_request() {
         &answer,
         Expect::refused("refused-consent-denied", 3),
     );
-    let member = &world.people["devries"].person;
     let remove =
         patch_op(json!([{ "op": "remove", "path": format!("members[value eq \"{member}\"]") }]));
     let (status, body) = scim(
