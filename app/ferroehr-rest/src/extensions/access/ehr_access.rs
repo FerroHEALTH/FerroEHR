@@ -32,6 +32,8 @@ use ferroehr::access_eval::scope::Item;
 use ferroehr::error::ServiceError;
 use ferroehr::error::refusal::Missing;
 use ferroehr::ids::{EhrId, VoId};
+use ferroehr::service::ehr::composition_read::JudgedRead;
+use ferroehr::service::response::RawServiceResponse;
 use ferroehr::system_log::event::ObjectClass;
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::draft::access_control::terminology::{Refusal, Term as _};
@@ -83,6 +85,11 @@ pub(crate) async fn enforce(
         .ehr_verdict(&access, ehr_id)
         .await
         .map_err(|e| Box::new(unavailable(principal.as_ref(), e)))?;
+    // NOTE: our own design (#5773), a COMPOSITION read judges the object it names on its
+    // own row, before anything of the version leaves the server ([`admit_read`]).
+    if defers(state, op, parts, &verdict) {
+        return Ok(());
+    }
     // NOTE: our own design (#5627), a datum the path names is judged before any step about
     // its EHR alone, so the first step that refuses that datum answers.
     let objects = named_objects(parts);
@@ -97,6 +104,116 @@ pub(crate) async fn enforce(
         return Err(Box::new(refusal));
     }
     record_overrides(state, &[ehr_id]).await
+}
+
+/// The operation that judges the object it names on its read's own row, in
+/// the one statement that reads the version (#5773).
+const JUDGED_ON_READ: &str = "composition_get";
+
+/// What a read that judges its own row is judged under: the request's access,
+/// and the EHR its path names with that EHR's verdict.
+#[derive(Debug)]
+pub(crate) struct Deferred {
+    /// The request's access.
+    pub(crate) access: Arc<RequestAccess>,
+    ehr_id: EhrId,
+    verdict: Arc<Verdict>,
+}
+
+/// Whether `op` judges the object `parts` names on its read's own row under
+/// `verdict`, the verdict of the EHR its path names: a COMPOSITION read by its
+/// version or its latest, whose answer depends on the object, outside an
+/// EHDS Art. 3(3) delay, which answers before the read.
+fn defers(state: &AppState, op: &str, parts: &RequestParts, verdict: &Verdict) -> bool {
+    op == JUDGED_ON_READ
+        && verdict.item_dependent()
+        && query_param(parts.query.as_deref(), "version_at_time").is_none()
+        && !super::delay::applies(state, op)
+        && !named_objects(parts).is_empty()
+}
+
+/// The judgement [`enforce`] left to the read of `op`, `None` when it judged
+/// the request itself.
+///
+/// # Errors
+/// The `503` or fail-closed `500` of a settings store that cannot answer.
+pub(crate) async fn deferred(
+    state: &AppState,
+    op: &str,
+    parts: &RequestParts,
+) -> Result<Option<Deferred>, Box<Response>> {
+    if op != JUDGED_ON_READ {
+        return Ok(None);
+    }
+    let Some(access) = current() else {
+        return Ok(None);
+    };
+    let Some(ehr_id) = parts
+        .path
+        .get("ehr_id")
+        .and_then(|raw| Uuid::parse_str(raw).ok())
+        .map(EhrId)
+    else {
+        return Ok(None);
+    };
+    let verdict = state
+        .backend()
+        .ehr_verdict(&access, ehr_id)
+        .await
+        .map_err(|e| Box::new(unavailable(current_principal().as_ref(), e)))?;
+    Ok(defers(state, op, parts, &verdict).then_some(Deferred {
+        access,
+        ehr_id,
+        verdict,
+    }))
+}
+
+/// The answer to a read of `op` that judged its own row (`read`) under
+/// `deferred`, the object named `raw`: the `404` of an object that reads as
+/// absent, the `403` of one refused, the refusal of the EHR alone when the
+/// store holds no such object, else the read's own answer, each as
+/// [`enforce`] answers it before a dispatch.
+///
+/// # Errors
+/// The refusal response, or the `503` or fail-closed `500` of a store that
+/// cannot answer.
+pub(crate) async fn admit_read(
+    state: &AppState,
+    op: &str,
+    deferred: &Deferred,
+    raw: &str,
+    read: JudgedRead,
+) -> Result<Result<RawServiceResponse, ServiceError>, Box<Response>> {
+    let principal = current_principal();
+    let principal = principal.as_ref();
+    let answer = match read {
+        JudgedRead::Unjudged(error) => return Err(Box::new(unavailable(principal, error))),
+        JudgedRead::Absent => {
+            return Err(Box::new(recorded(object_not_found(op, raw), principal)));
+        }
+        JudgedRead::Refused { ehr_id, code } => {
+            let grounds = deferred.access.refusal_grounds(Some(ehr_id));
+            return Err(Box::new(forbidden(principal, code, &grounds)));
+        }
+        JudgedRead::Unheld(missing) => {
+            let ehr_wide = refusal_of(
+                state,
+                &deferred.access,
+                op,
+                principal,
+                deferred.ehr_id,
+                &deferred.verdict,
+            )
+            .await?;
+            if let Some(refusal) = ehr_wide {
+                return Err(Box::new(refusal));
+            }
+            Err(missing)
+        }
+        JudgedRead::Admitted(read) => read,
+    };
+    record_overrides(state, &[deferred.ehr_id]).await?;
+    Ok(answer)
 }
 
 /// How an operation whose path names no EHR addresses one.
