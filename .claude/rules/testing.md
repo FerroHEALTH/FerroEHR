@@ -104,7 +104,9 @@ as its own process, so isolation is unchanged; only the compile/link waste
 goes. Shared helpers live in a plain module under `tests/it/` (the
 `tests/common/mod.rs` rule generalizes: helper modules are never top-level
 test files). A second binary in one crate needs a real reason (e.g. a
-different harness) stated in a comment.
+different harness) stated in a comment. A file under `tests/it/` that no `mod`
+reaches from `main.rs` compiles nowhere, so its tests never run;
+`scripts/checks/test-modules.sh` fails on one in CI's lint job (#5765).
 
 **A binary-only crate is untestable by construction** (Book ch11.3): its
 `main.rs` cannot be imported from `tests/`. The wiring binary

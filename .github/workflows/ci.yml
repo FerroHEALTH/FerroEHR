@@ -615,6 +615,17 @@ jobs:
         if: ${{ !cancelled() }}
         run: bash scripts/checks/forwarders.sh
 
+      # ---- test-modules ------------------------------------------------
+      # Every file under a tests/it/ directory is a module its main.rs
+      # reaches: an undeclared file compiles nowhere and its tests never run
+      # (#5765).
+      - name: test-modules / The unreached-module detector catches what it claims to
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/test-modules.sh --self-test
+      - name: test-modules / Every integration-test file is reachable from its main.rs
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/test-modules.sh
+
       # ---- chart-appversion-guard --------------------------------------
       # appVersion guard (issue #2108, narrowed by #2779). It used to hold
       # `appVersion` and the `artifacthub.io/images` tags equal to the WORKSPACE

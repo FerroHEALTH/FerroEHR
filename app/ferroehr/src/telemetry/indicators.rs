@@ -279,8 +279,10 @@ impl HealthIndicator for AuditDeliveryHealth {
 /// audit store's hash chain.
 ///
 /// Damage and an unverifiable trail both read `DEGRADED`, each naming the
-/// finding; neither flips readiness, because the trail still records while the
-/// damage is investigated. Registered only when the scheduled verification
+/// finding, and so does an intact trail whose oldest unverified record is
+/// older than `[audit.store] max_verify_lag` (#5779). None flips
+/// readiness, because the trail still records while the damage or the
+/// backlog is dealt with. Registered only when the scheduled verification
 /// runs.
 #[derive(Debug)]
 pub struct AuditChainHealth {
@@ -303,7 +305,18 @@ impl HealthIndicator for AuditChainHealth {
     fn check(&self) -> Check<'_> {
         Box::pin(async move {
             match self.check.state() {
-                ChainCheckState::Pending | ChainCheckState::Intact { .. } => Outcome::up(),
+                ChainCheckState::Pending | ChainCheckState::Intact { .. } => {
+                    match self.check.lag_beyond_bound(jiff::Timestamp::now()) {
+                        None => Outcome::up(),
+                        Some((chain, lag, age)) => Outcome::degraded(format!(
+                            "the {} chain's verification is {} records behind its head; \
+                             the oldest unverified record waited {}s, beyond max_verify_lag",
+                            chain.as_str(),
+                            lag.entries,
+                            age.as_secs()
+                        )),
+                    }
+                }
                 ChainCheckState::Damaged {
                     at,
                     total,

@@ -1465,3 +1465,52 @@ async fn break_glass_reads_what_the_emergency_lifts() {
     };
     assert_reads(&world, &ask, &except(&world, &[2], &[]), "break-glass").await;
 }
+
+/// The `EHR_ACCESS` of an EHR a pinned query reads is answered as the query
+/// over every EHR answers it: to an administrator, who reads every EHR's
+/// settings, and to a caller of no administrator role, whom no settings name
+/// a gate-keeper, and who reads none (#5746).
+#[tokio::test]
+async fn a_pinned_query_reads_the_settings_the_caller_may_read() {
+    use ferroehr::system_log::access_context::with_roles;
+    use ferroehr::versioning::committer::with_committer;
+    let world = Box::pin(World::new()).await;
+    world.settings(0, &settings("open", &[], &[])).await;
+    let aql = "SELECT a/uid/value FROM EHR e CONTAINS EHR_ACCESS a ORDER BY a/uid/value";
+    let ask = Ask::professional(&world);
+    for (role, each) in [("ADMIN", 1), ("USER", 0)] {
+        let roles = || vec![role.to_owned()];
+        let doctor = || {
+            Some(CommitterIdentity {
+                subject: "doctor".to_owned(),
+                ..administrator()
+            })
+        };
+        let every = Box::pin(with_roles(
+            roles(),
+            with_committer(doctor(), first_column(&world, &ask, aql)),
+        ))
+        .await;
+        assert_eq!(every.len(), world.ehrs.len() * each, "{role}: the census");
+        let mut pinned_all = Vec::new();
+        for (index, (ehr_id, _, _)) in world.ehrs.iter().enumerate() {
+            let pinned = Box::pin(with_roles(
+                roles(),
+                with_committer(
+                    doctor(),
+                    first_column(&world, &ask, &pinned_to(aql, *ehr_id)),
+                ),
+            ))
+            .await;
+            assert_eq!(pinned.len(), each, "{role}: EHR {index} pinned");
+            pinned_all.extend(pinned);
+        }
+        pinned_all.sort_by_key(ToString::to_string);
+        let mut every = every;
+        every.sort_by_key(ToString::to_string);
+        assert_eq!(
+            pinned_all, every,
+            "{role}: the pinned answers are the census's"
+        );
+    }
+}

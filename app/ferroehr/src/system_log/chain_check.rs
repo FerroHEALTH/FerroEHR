@@ -15,19 +15,30 @@
 //! and after any run that found damage, so damage to an older record stays
 //! reported until a full pass finds the trail intact again.
 //!
+//! Each chain is walked in bounded steps, each of which moves its cursor
+//! ([`AuditStore::chain_step`]), so a run verifies a backlog of any length
+//! to the head it started with, and a backlog reads as a lag: the
+//! `audit_chain_verification_lag` and `audit_chain_unverified_age` metrics
+//! by chain, and an `audit_chain` indicator that reads `DEGRADED` once the
+//! oldest unverified record is older than `[audit.store] max_verify_lag`
+//! (#5779).
+//!
 //! A run that finds damage logs it at `ERROR`, adds to the
 //! `atna_audit_chain_findings` counter and leaves the result in a
 //! [`ChainCheck`] the `audit_chain` health indicator reads. A run that cannot
 //! verify at all is reported the same way, because an unverifiable trail is
 //! never a pass.
 
+use std::collections::BTreeMap;
 use std::sync::{Arc, PoisonError, RwLock};
 use std::time::Duration;
 
 use jiff::Timestamp;
 
+use crate::system_log::AuditError;
 use crate::system_log::store::AuditStore;
-use crate::system_log::store::chains::{AuditChainFinding, VerifyScope};
+use crate::system_log::store::chain_walk::{VERIFY_STEP_RECORDS, VerificationLag};
+use crate::system_log::store::chains::{AuditChain, AuditChainFinding, VerifyScope};
 use crate::telemetry::access_path;
 
 /// How many findings one run keeps for the health surface and logs one by one;
@@ -72,9 +83,49 @@ pub enum ChainCheckState {
 #[derive(Debug, Clone, Default)]
 pub struct ChainCheck {
     state: Arc<RwLock<ChainCheckState>>,
+    lags: Arc<RwLock<BTreeMap<AuditChain, VerificationLag>>>,
+    max_lag: Option<Duration>,
 }
 
 impl ChainCheck {
+    /// A check whose access-log lag reads as beyond its bound once the
+    /// oldest unverified entry is older than `max_lag`; `None` never does.
+    #[must_use]
+    pub fn new(max_lag: Option<Duration>) -> Self {
+        Self {
+            max_lag,
+            ..Self::default()
+        }
+    }
+
+    /// `chain`'s lag as the most recent step measured it, `None` before the
+    /// first.
+    #[must_use]
+    pub fn lag(&self, chain: AuditChain) -> Option<VerificationLag> {
+        self.lags
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&chain)
+            .copied()
+    }
+
+    /// The first chain whose lag is past the bound at `now`, with its lag and
+    /// the age of its oldest unverified record; `None` while every chain is
+    /// within it or with no bound.
+    #[must_use]
+    pub fn lag_beyond_bound(
+        &self,
+        now: Timestamp,
+    ) -> Option<(AuditChain, VerificationLag, Duration)> {
+        let max_lag = self.max_lag?;
+        AuditChain::ALL.into_iter().find_map(|chain| {
+            let lag = self.lag(chain)?;
+            // NOTE: our own design; a record recorded after `now` (clock skew) has waited no time.
+            let age = Duration::try_from(now.duration_since(lag.oldest?)).ok()?;
+            (age > max_lag).then_some((chain, lag, age))
+        })
+    }
+
     /// Returns the outcome of the most recent run.
     #[must_use]
     pub fn state(&self) -> ChainCheckState {
@@ -94,7 +145,7 @@ impl ChainCheck {
     pub async fn run_scope(&self, store: &AuditStore, scope: VerifyScope) -> ChainCheckState {
         let at = Timestamp::now();
         let started = std::time::Instant::now();
-        let state = match store.verify_chains_advancing(scope).await {
+        let state = match self.verify(store, scope).await {
             Ok(findings) if findings.is_empty() => {
                 tracing::debug!(?scope, "audit hash chain verified intact");
                 ChainCheckState::Intact { at }
@@ -137,6 +188,55 @@ impl ChainCheck {
         measured(scope, started, &state);
         *self.state.write().unwrap_or_else(PoisonError::into_inner) = state.clone();
         state
+    }
+}
+
+impl ChainCheck {
+    /// Walk each chain step by step, the system chain first, measuring its
+    /// lag after each step.
+    async fn verify(
+        &self,
+        store: &AuditStore,
+        scope: VerifyScope,
+    ) -> Result<Vec<AuditChainFinding>, AuditError> {
+        let mut findings = Vec::new();
+        for chain in AuditChain::ALL {
+            let mut walk = store.chain_walk(chain, scope).await?;
+            while !walk.done() {
+                findings.extend(store.chain_step(&mut walk, VERIFY_STEP_RECORDS).await?);
+                self.refresh_lag(store, chain).await?;
+            }
+        }
+        Ok(findings)
+    }
+
+    /// Read `chain`'s lag into the gauges and the health surface.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the lag cannot be read.
+    pub async fn refresh_lag(
+        &self,
+        store: &AuditStore,
+        chain: AuditChain,
+    ) -> Result<(), AuditError> {
+        let lag = store.chain_lag(chain).await?;
+        let metrics = access_path::metrics();
+        let attributes = [opentelemetry::KeyValue::new("chain", chain.as_str())];
+        metrics
+            .chain_verification_lag
+            .record(lag.entries.unsigned_abs(), &attributes);
+        let age = lag.oldest.map_or(0.0, |oldest| {
+            Timestamp::now()
+                .duration_since(oldest)
+                .as_secs_f64()
+                .max(0.0)
+        });
+        metrics.chain_unverified_age.record(age, &attributes);
+        self.lags
+            .write()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(chain, lag);
+        Ok(())
     }
 }
 

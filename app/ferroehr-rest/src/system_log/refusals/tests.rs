@@ -243,6 +243,7 @@ async fn a_summary_the_system_log_cannot_write_is_counted() {
         store: ferroehr::system_log::config::StoreConfig {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..ferroehr::system_log::config::AuditConfig::default()
     };

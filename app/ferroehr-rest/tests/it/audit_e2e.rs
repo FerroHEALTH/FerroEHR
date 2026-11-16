@@ -138,6 +138,7 @@ async fn audit_capture(suppress_login: bool) -> (testkit::TestDb, SyslogTlsListe
         store: StoreConfig {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         syslog: Some(SyslogConfig {
             url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
@@ -166,6 +167,7 @@ async fn audit_capture_unwritable() -> AuditSender {
         store: StoreConfig {
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
+            max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         suppress_login_events: true,
         ..AuditConfig::default()

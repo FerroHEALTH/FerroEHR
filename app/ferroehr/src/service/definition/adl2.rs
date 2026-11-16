@@ -559,6 +559,7 @@ impl FerroEhrService {
         }
         self.commit_definition(tx).await?;
         if is_template {
+            self.registered_templates.changed();
             // Evict the built `WebTemplate` so a re-uploaded template is never
             // served from the deleted artefact's compiled form (the OPT 1.4
             // delete paths do the same; no openEHR spec governs the cache).

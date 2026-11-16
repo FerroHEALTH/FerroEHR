@@ -54,6 +54,7 @@ pub(super) mod lineage;
 pub mod load;
 mod opt14;
 mod query;
+pub mod registered;
 mod version_selector;
 mod wire;
 

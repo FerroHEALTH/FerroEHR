@@ -635,7 +635,7 @@ pub(crate) fn stamp_version_uid(
 /// and the shared transaction timestamp — travels together.
 ///
 /// A single-object write builds one of these per call
-/// ([`ContributionCtx::New`], no `known_now`); a CONTRIBUTION commit builds it
+/// ([`ContributionCtx::New`], nothing `known`); a CONTRIBUTION commit builds it
 /// once and applies every change of the set under it, which is what makes the
 /// whole set share one contribution id and one commit instant (RM common
 /// `master06-change_control_package.adoc` §Committal and Audits).
@@ -648,10 +648,10 @@ struct CommitScope<'a> {
     audit: &'a AuditInput,
     /// System id, signer, multimedia engine and outbox switch for the write.
     ctx: &'a SigningCtx<'a>,
-    /// The transaction timestamp already read by the caller (the CONTRIBUTION
-    /// path reads `now()` once for the whole set); `None` makes this change
-    /// read its own.
-    known_now: Option<jiff::Timestamp>,
+    /// What the caller already read: the transaction timestamp (the CONTRIBUTION
+    /// path reads `now()` once for the whole set) and the EHR's restriction;
+    /// what it did not, this change reads.
+    known: restriction::Known,
     /// A placement the caller already read under the advisory lock it already
     /// holds (the composition-update mega-read); `None` makes the Modify /
     /// Delete arm take the lock and read its own.
@@ -669,13 +669,14 @@ async fn apply_change(
         contribution,
         audit,
         ctx,
-        known_now,
+        known,
         preplaced,
     } = scope;
-    let gate = restriction::ensure_not_restricted_tx(tx, ehr_id, change.target_vo_id()).await?;
+    let target = change.target_vo_id();
+    let gate = restriction::ensure_not_restricted_tx(tx, ehr_id, target, known.restriction).await?;
     let at = Placing {
         ehr_id,
-        known_now,
+        known_now: known.now,
         preplaced,
     };
     let access = crate::service::ehr::access_projection::AccessCommit::of(&change);
@@ -966,8 +967,8 @@ pub(crate) struct Write {
     pub(crate) change: Change,
     /// This version's own `commit_audit`.
     pub(crate) audit: AuditInput,
-    /// The transaction timestamp the caller already read, if any.
-    pub(crate) known_now: Option<jiff::Timestamp>,
+    /// What the caller already read of the commit instant and the EHR.
+    pub(crate) known: restriction::Known,
     /// A placement the caller already read under the per-object lock it holds
     /// ([`precondition::lock_current`], or the composition-update mega-read); `None` makes
     /// the write take the lock and read its own.
@@ -982,7 +983,7 @@ impl Write {
             ehr_id,
             change,
             audit,
-            known_now: None,
+            known: restriction::Known::default(),
             placement: None,
         }
     }
@@ -990,7 +991,10 @@ impl Write {
     /// The same write at the commit instant `now` the caller already read.
     pub(crate) fn at(self, now: jiff::Timestamp) -> Self {
         Self {
-            known_now: Some(now),
+            known: restriction::Known {
+                now: Some(now),
+                ..self.known
+            },
             ..self
         }
     }
@@ -1025,7 +1029,7 @@ pub(crate) async fn commit(
         ehr_id,
         change,
         audit,
-        known_now,
+        known,
         placement,
     } = write;
     let references: Vec<_> = crate::versioning::party_refs::of_change(&change)
@@ -1039,7 +1043,7 @@ pub(crate) async fn commit(
             contribution: ContributionCtx::New,
             audit: &audit,
             ctx,
-            known_now,
+            known,
             preplaced: placement,
         },
         change,
@@ -1138,7 +1142,7 @@ pub(crate) async fn commit_contribution(
                 contribution: ContributionCtx::Existing(contribution_id),
                 audit: &version_audit,
                 ctx,
-                known_now: Some(contribution_time),
+                known: restriction::Known::at(contribution_time),
                 preplaced: None,
             },
             change,
@@ -1152,7 +1156,7 @@ pub(crate) async fn commit_contribution(
     crate::party_binding::grants::caller::subject::settle(tx, kinds).await?;
     // Standalone 666 attestations of existing versions, at the commit-act time.
     for item in attests {
-        restriction::ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id)).await?;
+        restriction::ensure_not_restricted_tx(tx, ehr_id, Some(item.vo_id), None).await?;
         let full =
             attestation::complete_attestation(&item.partial, &item.system_id, contribution_time);
         committed.push(

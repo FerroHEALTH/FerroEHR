@@ -245,7 +245,7 @@ impl FerroEhrService {
         &self,
         template_id: &str,
     ) -> Result<Arc<WebTemplate>, ServiceError> {
-        if !template_repo::template_ref_exists(&self.pool, template_id).await? {
+        if !self.registered_templates.holds(template_id).await? {
             return Err(ServiceError::content_invalid(Violation::new(format!(
                 "operational template not known: {template_id}"
             ))));

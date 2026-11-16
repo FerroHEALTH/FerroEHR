@@ -446,6 +446,21 @@ pub enum SqlError {
          correct the value"
     )]
     UncoercibleTemporal,
+
+    /// A query value of a kind the compared path never holds: a Boolean
+    /// against a number, or a number against a Boolean (→ 400). No reading of
+    /// QUERY master03 §Comparison operators compares the two; refusing is our
+    /// own design. The message names the two kinds only, never the value.
+    #[error(
+        "a query value that is {value} cannot be compared with {compared}; \
+         correct the value"
+    )]
+    UncoercibleComparison {
+        /// The kind of the query value.
+        value: &'static str,
+        /// The kind of the path it is compared with.
+        compared: &'static str,
+    },
 }
 
 /// An execution / `RESULT_SET` assembly failure.

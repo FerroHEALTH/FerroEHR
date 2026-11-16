@@ -239,7 +239,7 @@ pub(crate) async fn modify(
         "scim_user_replace"
     };
     crate::system_log::written::learn_op(op);
-    let outcome = async {
+    let outcome = Box::pin(async {
         let body = json_body(&body)?;
         let request = patching.then(|| PatchRequest::parse(&body)).transpose()?;
         let (user, current) = current(&users, issuer, &id, &headers).await?;
@@ -276,7 +276,7 @@ pub(crate) async fn modify(
         )
         .await?;
         sync_roles(&users, &client, user, wanted).await
-    }
+    })
     .await;
     match outcome {
         Ok(user) => {

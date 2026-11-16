@@ -202,6 +202,14 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   grants name move over the outbox feed (`extensions::outbox`); and
   `blob_ref`, which records that a version references an externalized
   multimedia blob so collection is an index probe rather than a scan of `node`.
+  Each replica holds the addresses `template_ref` registers in memory
+  (`service::definition::registered`), refreshed through `LISTEN` on
+  `ferroehr_template_ref`, which a registration or a release notifies, so a
+  COMPOSITION commit asks the store only of an address the copy does not hold
+  (#5775, our own design); the `version.template_id` foreign key and the
+  template delete guard still refuse a template released at the same moment.
+  A COMPOSITION commit reads its EHR's existence, `is_modifiable`, restriction
+  mark and settings revision in one statement (`ehr_repo::ehr_writability`).
   Every write emits contribution + commit audit in the same transaction
   (openEHR requirement).
 - **`restriction`, `retention_policy`, `retention_anchor`** — the registers
@@ -298,9 +306,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   content digest over the whole canonical form, which the writer computes
   (`access_log::stored_form`), and the digest over the previous digest, the
   sequence and the content digest. The server recomputes each content digest
-  from the joined parts (`AuditStore::access_log_contents`) and the database
-  checks the links, so an incremental run advances no further than the
-  server checked. An access detail the core states as the record holds it
+  from the joined parts and the database checks the links, so an
+  incremental run advances no further than the server checked. A run walks
+  each chain from its cursor to the head it started with in windows of at
+  most `VERIFY_STEP_RECORDS` records, one statement each, and every intact
+  window moves the cursor, so no statement grows with the backlog and a
+  backlog reads as a lag, never as unverifiable (#5779, our own design,
+  `audit/0041_chain_verification_steps.sql`). An access detail the core states as the record holds it
   (the principal and issuer the credential names, the count the outcome
   delivered, the action and outcome the core codes) is not written
   (`access_log::recorded::Core`). A tombstone keeps no shared part, and a
@@ -308,7 +320,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   The two tables are two hash chains (#5573, our own design): the access log
   holds only the accesses to EHR data, one chain per system from 1 with no
   gaps, under its own head (`access_log_chain_state`), verified by
-  `audit.verify_access_log_chain()` and its incremental form; `audit_event`,
+  `audit.verify_access_log_chain()` and its stepped form; `audit_event`,
   the system chain, keeps its head (`audit_chain_state`), its retention gaps
   and `audit.verify_audit_chain()`. Writers of a chain serialise on its head
   row, which holds across replicas, and the scheduled chain check verifies
@@ -409,7 +421,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   policy) and every column the log derives from its content, into the
   intake in one short transaction of the audit pool: `access_log_intake`
   for the entries, `audit_event_intake` for the other records
-  (`audit/0041_audit_intake.sql`). A write that fails refuses the request
+  (`audit/0042_audit_intake.sql`). A write that fails refuses the request
   with `503`, so back-pressure replaces loss; there is no queue in memory and
   no fail mode. The intake is append-only: the runtime role may insert and
   read, the tables refuse every update, delete and truncate, and only the
@@ -522,7 +534,15 @@ abstract→concrete descendants — generated, not reflected, not hand-written)
 CONTAINS chains; `jsonb_path_query_first` for leaf extraction and
 `jsonb_path_query` as a lateral set-returning function for array unnesting;
 `ext.openehr_magnitude` and `ext.openehr_timestamp` for typed comparison and
-ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0). The emitter uses no
+ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0). A path whose candidate
+types are mixed (an `ELEMENT`'s whole `DATA_VALUE`) compares and orders by
+keys read off each value's own `_type` (`aql::sql::coerce`): a number against
+a JSON number or the magnitude of a whole numeric `DV_ORDERED`, an ISO 8601
+date/time against the instant of a whole `DV_DATE`, `DV_TIME` or
+`DV_DATE_TIME` of its kind, text against a JSON scalar, and never the
+serialized JSON; AQL 1.1.0 leaves this open, so the reading is our own
+(#5751). A Real binds as its shortest round-trip decimal cast to `numeric`,
+never through `float8` (#5753). The emitter uses no
 jsonpath item methods (their date/time conversions depend on the session
 TimeZone and are not index-legal), no `JSON_TABLE`, and no GIN index (it
 emits no GIN-servable operator; the baseline removed the index). The one
@@ -752,7 +772,12 @@ which is what makes an optional stage safe to disable:
    `refused-consent-reference-missing`, a fact of the `Caller` (#5614; the
    SMART layer checks scopes alone). An EHR id the store does not hold
    answers `404` before any step refuses, read only when a verdict refuses,
-   so a restriction's `404` is never told apart from it (#5623). A write is
+   so a restriction's `404` is never told apart from it (#5623). A
+   COMPOSITION read by its version or its latest is judged on the facts of
+   its object that the statement reading the version returns, after the read
+   and before anything of the version is served, so the read is one statement
+   and a refused read answers and is recorded as before (#5773, our own
+   design). A write is
    judged on the template, root archetype, origins and commit instant of the
    content it is about to store, inside the commit transaction and before
    anything is stored (#5626, `versioning::restriction::WriteGate`), by
@@ -855,7 +880,9 @@ which is what makes an optional stage safe to disable:
    object, the EHR id compared with a constant, and one uncorrelated check,
    which PostgreSQL runs once, that the revision of the EHR's settings row
    and subject in force is the one the verdict was judged on, so a copy older
-   than the store admits no row. Every other query keeps the class condition
+   than the store admits no row. Whether the caller reads that EHR's
+   `EHR_ACCESS` objects is decided from the same copy, so no settings row is
+   probed for it either. Every other query keeps the class condition
    and its probe of the settings row per object. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the

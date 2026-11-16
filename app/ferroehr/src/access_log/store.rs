@@ -14,7 +14,7 @@
 //! ([`crate::access_log::chainer`]) gives it its link in this system's own
 //! access log, one chain from 1 with no gaps, under the head's lock, which
 //! the insert trigger of `audit.access_log_record`
-//! (`migrations/audit/0041_audit_intake.sql`) checks. The retention rules (§Retention) let an entry be replaced by
+//! (`migrations/audit/0042_audit_intake.sql`) checks. The retention rules (§Retention) let an entry be replaced by
 //! a tombstone that keeps its uid, `system_id`, `time_recorded` and link, the
 //! one change the table's triggers admit.
 //!

@@ -138,9 +138,8 @@ async fn resolve_binding(
 mod tests {
     use std::sync::Arc;
 
-    use openehr_sdt::flat::webtemplate::model::{
-        WebTemplate, WebTemplateConstraintBinding, WebTemplateNode,
-    };
+    use openehr_sdt::flat::webtemplate::constraint::WebTemplateConstraintBinding;
+    use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
     use serde_json::json;
     use wiremock::matchers::{body_string_contains, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};

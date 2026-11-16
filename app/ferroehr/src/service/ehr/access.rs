@@ -384,6 +384,33 @@ impl FerroEhrService {
         ))))
     }
 
+    /// The EHRs whose `EHR_ACCESS` objects a query under `condition` reads.
+    ///
+    /// A query pinned to one EHR reads that EHR's alone, so whether the
+    /// caller may read its settings is decided once from this replica's copy
+    /// ([`Self::may_read_ehr_access`]), the copy the pinned verdict was judged
+    /// on, and the statement probes no settings row for it; any other query
+    /// reads them as [`Self::ehr_access_readers`] says. No openEHR spec
+    /// governs this: our own design (#5746).
+    ///
+    /// # Errors
+    /// As [`Self::may_read_ehr_access`] and [`Self::ehr_access_readers`].
+    pub async fn query_access_readers(
+        &self,
+        condition: &crate::access_eval::condition::AccessCondition,
+    ) -> Result<EhrAccessReaders, ServiceError> {
+        let Some(pinned) = condition.pinned() else {
+            return self.ehr_access_readers().await;
+        };
+        if self.may_read_ehr_access(EhrId(pinned.ehr)).await? {
+            return Ok(EhrAccessReaders::Every);
+        }
+        Ok(EhrAccessReaders::Only(Arc::new(Keepers {
+            groups: Vec::new(),
+            party: None,
+        })))
+    }
+
     /// The miss path of [`Self::ehr_access_classes`]: every class the store
     /// holds. A class that does not read is left out, so every EHR of it is
     /// withheld.

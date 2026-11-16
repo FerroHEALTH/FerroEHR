@@ -142,6 +142,23 @@ pub async fn list_templates(pool: &PgPool) -> Result<Vec<TemplateRow>, StorageEr
     rows.iter().map(template_row).collect()
 }
 
+/// The channel a `template_ref` registration or release notifies when it
+/// commits, and every replica's registered-template copy listens on (#5775).
+pub const CHANNEL: &str = "ferroehr_template_ref";
+
+/// Every registered template address, lower-cased.
+///
+/// # Errors
+/// [`StorageError::Database`] on a driver failure.
+pub async fn registered_template_ids(
+    pool: &PgPool,
+) -> Result<std::collections::BTreeSet<String>, StorageError> {
+    let ids: Vec<String> = sqlx::query_scalar("SELECT lower(template_id) FROM template_ref")
+        .fetch_all(&mut *acquire(pool).await?)
+        .await?;
+    Ok(ids.into_iter().collect())
+}
+
 /// Register `template_id` in `template_ref`, the target of the
 /// `version.template_id` foreign key; an address already registered by
 /// either template dialect stays as it is.
@@ -152,10 +169,15 @@ pub async fn register_template_ref(
     tx: &mut PgConnection,
     template_id: &str,
 ) -> Result<(), StorageError> {
-    sqlx::query("INSERT INTO template_ref (template_id) VALUES ($1) ON CONFLICT DO NOTHING")
-        .bind(template_id)
-        .execute(tx)
-        .await?;
+    // NOTE: PostgreSQL 18 NOTIFY (sql-notify) delivers at commit, to every listening replica.
+    sqlx::query(
+        "WITH r AS (INSERT INTO template_ref (template_id) VALUES ($1) \
+         ON CONFLICT DO NOTHING RETURNING 1) SELECT pg_notify($2, '') FROM r",
+    )
+    .bind(template_id)
+    .bind(CHANNEL)
+    .execute(tx)
+    .await?;
     Ok(())
 }
 
@@ -172,13 +194,16 @@ pub async fn release_template_ref(
     tx: &mut PgConnection,
     template_id: &str,
 ) -> Result<(), StorageError> {
+    // NOTE: PostgreSQL 18 NOTIFY (sql-notify) delivers at commit, to every listening replica.
     sqlx::query(
-        "DELETE FROM template_ref WHERE template_id = $1 \
+        "WITH r AS (DELETE FROM template_ref WHERE template_id = $1 \
          AND NOT EXISTS (SELECT 1 FROM template_store WHERE lower(template_id) = lower($1)) \
          AND NOT EXISTS (SELECT 1 FROM adl2_artefact WHERE lower(hrid) = lower($1) \
-                         AND kind IN ('template', 'operational_template'))",
+                         AND kind IN ('template', 'operational_template')) \
+         RETURNING 1) SELECT pg_notify($2, '') FROM r",
     )
     .bind(template_id)
+    .bind(CHANNEL)
     .execute(tx)
     .await?;
     Ok(())
