@@ -1,0 +1,147 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# The Kubernetes deployment probe on kind (#5813).
+#
+# It runs scripts/deploy-probe-k8s.sh --ehr-index-only on a one-node kind
+# cluster: the chart installs with its default two replicas (P-K8S-BOOT), and
+# P-K8S-INDEX-LOCAL then runs `helm upgrade` with no changed value and creates
+# an EHR on the local index. That is the sequence that once answered
+# `POST /ehr` with 500 (#5109); the probe ran by hand only, so a recurrence
+# could not be seen.
+#
+# WHAT IT PROBES. The server and database images built from the tree it checks
+# out, packaged the way ci.yml's deploy-probe job packages them and loaded into
+# the kind node, so the scripts, the chart and the images are one generation.
+#
+# EVIDENCE. Every run uploads the probe record and the log of every server
+# pod, read before the cluster goes away; a failing P-K8S-INDEX-LOCAL row also
+# quotes the status, the problem body and the server's first ERROR or WARN
+# lines in the record.
+#
+# RUN COLOUR. Red when a probe fails. It gates nothing.
+name: deploy-probe (kubernetes)
+
+on:
+  pull_request:
+    paths:
+      - scripts/deploy-probe-k8s.sh
+      - scripts/deploy-probes/kubernetes*.sh
+      - scripts/deploy-probes/lib.sh
+      - .github/workflows/deploy-probe-k8s.yml
+  schedule:
+    # Every six hours at 41 minutes past. Off the hour: GitHub documents that
+    # runs scheduled on the hour are delayed by load spikes
+    # (https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: deploy-probe-k8s-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The server binary of the tree under probe, from the action ci.yml's
+  # ui-e2e-binary runs: the same container, profile and binary cache key, so a
+  # tree CI already built is restored and not compiled.
+  binary:
+    name: kubernetes server binary
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    container: rust:1.99.1-slim-trixie@sha256:00544ccc9431a2fe93e65185d21381b0a039342f5cefcf84fbddac273c9e573d
+    env:
+      SOURCE_DATE_EPOCH: "1700000000"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/server-binary # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          artifact-name: k8s-server-binary
+
+  kubernetes:
+    name: deploy-probe (kubernetes)
+    needs: binary
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      KIND_CLUSTER: ferroehr-probe
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: k8s-server-binary
+          path: bin/amd64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Package the app image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr:deploy-probe
+      # The database image of the tree checked out, since its initdb
+      # provisions the roles the tree expects.
+      - name: Package the postgres image (base + security updates)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: docker/postgres
+          file: docker/postgres/Dockerfile
+          load: true
+          tags: ferroehr-postgres:deploy-probe
+      # The pinned helm, read from deploy/helm/.tool-versions (#2775), and the
+      # FerroPIX dependency chart the IHE modes install.
+      - uses: ./.github/actions/helm-pinned # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+      - name: Build the chart's dependencies
+        run: helm dependency build deploy/helm/ferroehr
+      # kind and kubectl are the runner image's, trusted as its docker is.
+      - name: Start a kind cluster and load the server image
+        run: |
+          set -euo pipefail
+          command -v kind >/dev/null || { echo "::error::the runner image carries no kind"; exit 1; }
+          kind version
+          kind create cluster --name "$KIND_CLUSTER" --wait 120s
+          kind load docker-image ferroehr:deploy-probe --name "$KIND_CLUSTER"
+          kubectl cluster-info
+      # A pod reaches the host database through the gateway of the kind
+      # network, where compose publishes it on 0.0.0.0.
+      - name: Probe the EHR index on two replicas
+        env:
+          PROBE_K8S_IMAGE: ferroehr:deploy-probe
+          FERROEHR_POSTGRES_IMAGE: ferroehr-postgres:deploy-probe
+          FERROEHR__USAGE_REPORT__ENABLED: "false"
+          PROBE_OUT: docs/conformance/deployment/kubernetes.json
+        run: |
+          set -euo pipefail
+          gateway="$(docker network inspect kind \
+            | jq -r '[.[0].IPAM.Config[].Gateway | select(test("^[0-9.]+$"))][0] // empty')"
+          [[ -n "$gateway" ]] || { echo "::error::the kind network has no IPv4 gateway"; exit 1; }
+          PROBE_K8S_DB_HOST="$gateway" bash scripts/deploy-probe-k8s.sh --ehr-index-only --keep-up
+      - name: Read every server pod's log
+        if: always()
+        run: |
+          mkdir -p probe-logs
+          kubectl -n ferroehr-probe get pods -o wide > probe-logs/pods.txt 2>&1 || true
+          for pod in $(kubectl -n ferroehr-probe get pods -l app.kubernetes.io/name=ferroehr -o name 2>/dev/null); do
+            name="${pod#pod/}"
+            kubectl -n ferroehr-probe logs "$pod" --all-containers --timestamps > "probe-logs/$name.log" 2>&1 || true
+            kubectl -n ferroehr-probe logs "$pod" --all-containers --timestamps --previous > "probe-logs/$name.previous.log" 2>/dev/null || true
+          done
+          kubectl -n ferroehr-probe get events --sort-by=.lastTimestamp > probe-logs/events.txt 2>&1 || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: deploy-probe-k8s-record
+          path: |
+            docs/conformance/deployment/kubernetes.json
+            probe-logs/
+          if-no-files-found: warn
