@@ -11,7 +11,9 @@ between them. -->
 
 - Source: https://github.com/openEHR/adl-antlr (Apache-2.0; `LICENSE`
   vendored alongside)
-- Commit: `8db091ec3d810371cc41cd072fee81ce893fea47` (2024-04-06)
+- Commit: `d64ffeb6f2e2c0325558532bfd820dff9a7d8efc` (2026-11-06, the merge of
+  adl-antlr PR 35 after PR 37); `--check` on the vendoring script proves the
+  files still match it
 - Files: `src/main/antlr/adl/{odin.g4, odin_values.g4, base_lexer.g4,
   base_expressions.g4}`, copied verbatim.
 

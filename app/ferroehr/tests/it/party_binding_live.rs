@@ -9,12 +9,11 @@
 //! and with the listener down every request reads the store. No openEHR spec
 //! governs resolving a login to a party: our own design.
 
-use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 
 use ferrohealth_smart::party::PartyRef;
 use ferrohealth_smart::party::source::Lookup;
-use sqlx::postgres::PgConnectOptions;
 
 use crate::party_binding_source::{
     GUID, LOGIN, NAMESPACE, PERSON_TEMPLATE, TODAY, delete, identities, key, mapping, person,
@@ -49,10 +48,9 @@ async fn replicas() -> (testkit::TestDb, FerroEhrService, FerroEhrService) {
     let first = first.with_binding_mapping(named());
     let second =
         FerroEhrService::new(&DomainPools::from_shared(&db.pool())).with_binding_mapping(named());
-    let options = PgConnectOptions::from_str(db.url()).expect("the test DSN parses");
     for replica in [&first, &second] {
         let listened = replica.bindings().listened();
-        listened.spawn_listener(options.clone());
+        crate::policy_fixtures::listen(&db, &[Arc::clone(listened)]);
         for _ in 0..250 {
             if listened.is_listening() {
                 break;
@@ -114,6 +112,10 @@ async fn settled(replica: &FerroEhrService) {
 
 /// The side table changed under the triggers' backs, as only its owner can:
 /// no replica hears of it.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn unheard(db: &testkit::TestDb, statement: &str) {
     let pool = db.pool();
     let mut tx = pool.begin().await.expect("begin");

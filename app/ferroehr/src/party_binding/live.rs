@@ -19,6 +19,7 @@
 //! drop overtook keeps nothing. No openEHR spec governs resolving a login to a
 //! party: our own design.
 
+use crate::db::domain::Domain;
 use std::future::Future;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -159,14 +160,14 @@ impl Default for LiveBindings {
 
 impl LiveBindings {
     /// An empty copy whose listener is not yet connected, so every request
-    /// reads the store until [`Listened::spawn_listener`] connects it.
+    /// reads the store until [`crate::policy_register::listen::Listeners::spawn`] connects it.
     #[must_use]
     pub fn new() -> Self {
         let copy = Arc::new(BindingCopy::new(CAPACITY));
         let dropping: Arc<dyn Subscriber> = Arc::<BindingCopy>::clone(&copy);
         Self {
             copy,
-            listened: Arc::new(Listened::with_subscriber(CHANNEL, dropping)),
+            listened: Arc::new(Listened::with_subscriber(CHANNEL, Domain::Party, dropping)),
         }
     }
 

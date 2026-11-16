@@ -890,6 +890,10 @@ async fn commit_probe(svc: &FerroEhrService, pool: &PgPool, corpus: &Corpus) -> 
 /// statement, inside a transaction that is rolled back
 /// (`PostgreSQL` docs §EXPLAIN, "ANALYZE … use it inside a transaction and
 /// roll back afterwards").
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn explain_population(pool: &PgPool, corpus: &Corpus) -> Value {
     let aql = population_aql(corpus);
     let ast = openehr_query::parser::parse_str(&aql).expect("the population AQL parses");

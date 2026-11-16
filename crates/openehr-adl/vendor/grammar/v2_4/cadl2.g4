@@ -14,7 +14,7 @@ import cadl2_primitives, odin, base_expressions;
 //  ======================= Top-level Objects ========================
 //
 
-c_complex_object: rm_type_id '[' ( ROOT_ID_CODE | ID_CODE ) ']' c_occurrences? ( SYM_MATCHES '{' c_attribute_def+ default_value? '}' )? ;
+c_complex_object: rm_type_id '[' ( ROOT_ID_CODE | ID_CODE ) ']' c_occurrences? ( SYM_MATCHES '{' ( c_attribute_def+ default_value? | default_value ) '}' )? ;
 
 // ======================== Components =======================
 
@@ -32,7 +32,7 @@ c_regular_object:
     | c_regular_primitive_object
     ;
 
-c_archetype_root: SYM_USE_ARCHETYPE rm_type_id '[' ID_CODE ',' archetype_ref ']' c_occurrences? ;
+c_archetype_root: SYM_USE_ARCHETYPE rm_type_id '[' ID_CODE ',' archetype_ref ']' c_occurrences? ( SYM_MATCHES '{' c_attribute_def+ default_value? '}' )? ;
 
 archetype_ref : ARCHETYPE_HRID | ARCHETYPE_REF ;
 
@@ -45,7 +45,9 @@ c_attribute_def:
     | c_attribute_tuple
     ;
 
-default_value: SYM_DEFAULT SYM_EQ '<' odin_text '>';
+// default value as an ODIN object block, optionally typed, e.g. _default = (DV_CODED_TEXT) <...>,
+// or as a block in another syntax, e.g. _default = (json) <# ... #>
+default_value: SYM_DEFAULT SYM_EQ ( object_value_block | INCLUDED_LANGUAGE_FRAGMENT ) ;
 
 c_regular_primitive_object: rm_type_id '[' ID_CODE ']' c_occurrences? ( SYM_MATCHES '{' c_inline_primitive_object '}' )? ;
 

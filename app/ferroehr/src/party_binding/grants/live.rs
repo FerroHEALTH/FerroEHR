@@ -20,6 +20,7 @@
 //! admit is never honoured. No openEHR spec governs operational policy: our
 //! own design.
 
+use crate::db::domain::Domain;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::future::Future;
@@ -29,6 +30,7 @@ use std::sync::{Arc, PoisonError, RwLock};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::caller::facts::CallerFacts;
@@ -173,7 +175,7 @@ impl LiveGrants {
         let care = Arc::new(CareCopy::new());
         let dropping: Arc<dyn Subscriber> = Arc::<CareCopy>::clone(&care);
         Self {
-            listened: Arc::new(Listened::with_subscriber(CHANNEL, dropping)),
+            listened: Arc::new(Listened::with_subscriber(CHANNEL, Domain::Party, dropping)),
             care,
             pool,
             namespace: RwLock::new(Arc::from(
@@ -241,7 +243,7 @@ impl LiveGrants {
     }
 
     /// The listener that says when the copy must be read again;
-    /// [`Listened::spawn_listener`] starts it.
+    /// [`crate::policy_register::listen::Listeners::spawn`] starts it.
     #[must_use]
     pub fn listened(&self) -> &Arc<Listened> {
         &self.listened
@@ -306,7 +308,7 @@ impl LiveGrants {
         let started = std::time::Instant::now();
         let mut kind = "unchanged";
         let read = async {
-            let mut conn = self.pool.acquire().await?;
+            let mut conn = acquire(&self.pool).await?;
             let (revision, facts_revision) = store::revisions(&mut conn).await?;
             if Some(revision) != self.revision() {
                 kind = "grants";

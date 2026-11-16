@@ -115,6 +115,9 @@ fragment TERM_CODE_CHAR: NAME_CHAR | '.';
 // http://www.w3.org/Addressing/URL/5_URI_BNF.html
 EMBEDDED_URI: '<' ([ \t\r\n]|CMT_LINE)* URI ([ \t\r\n]|CMT_LINE)* '>';
 
+// block in another syntax, e.g. (json) <# ... #>, as used in ADL2 default values
+INCLUDED_LANGUAGE_FRAGMENT: '(' ALPHANUM_CHAR+ ')' [ \t\r\n]* '<#' .*? '#>';
+
 fragment URI : URI_SCHEME ':' URI_HIER_PART ( '?' URI_QUERY )? ('#' URI_FRAGMENT)? ;
 
 fragment URI_HIER_PART : ( '//' URI_AUTHORITY ) URI_PATH_ABEMPTY

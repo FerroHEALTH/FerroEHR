@@ -87,6 +87,10 @@ async fn findings(pool: &PgPool) -> Vec<(Option<i64>, String)> {
 
 /// Run `statements` with the table's triggers off, as only its owner can: the
 /// attacker the chain detects.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn tamper(pool: &PgPool, statements: &[&str]) {
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
@@ -390,6 +394,10 @@ async fn the_verifier_finds_a_modified_entry_and_a_modified_search_column() {
 /// A changed shared part is found at every entry that names it, by the
 /// server's content check, even when its key check is dropped (#5703).
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_changed_shared_part_is_found_at_every_entry_naming_it() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();

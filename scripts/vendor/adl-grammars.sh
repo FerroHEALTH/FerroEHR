@@ -22,12 +22,26 @@
 # is vendored in BOTH crates' dirs from the same commit.
 #
 # Apache-2.0 upstream (LICENSE vendored alongside).
+#
+# Usage: re-run to vendor at the pins below; `--check` reports drift and
+# writes nothing.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)/crates/openehr-adl/vendor/grammar"
+VENDORED="$(cd "$(dirname "$0")/../.." && pwd)/crates/openehr-adl/vendor/grammar"
+
+# `--check` fetches the pinned files into a scratch tree and fails when any
+# differs from the vendored copy; it writes nothing.
+CHECK=0
+[[ "${1:-}" == "--check" ]] && CHECK=1
+if [[ $CHECK == 1 ]]; then
+  ROOT=$(mktemp -d)
+  trap 'rm -rf "$ROOT"' EXIT
+else
+  ROOT="$VENDORED"
+fi
 
 ADL_ANTLR_REPO="openEHR/adl-antlr"
-ADL_ANTLR_COMMIT="8db091ec3d810371cc41cd072fee81ce893fea47" # 2024-04-06
+ADL_ANTLR_COMMIT="d64ffeb6f2e2c0325558532bfd820dff9a7d8efc" # 2026-11-06
 
 fetch() {
   local path="$1" out="$2"
@@ -47,3 +61,16 @@ done
 
 fetch "src/main/antlr/PCRE.g4" "${ROOT}/PCRE.g4"
 fetch "LICENSE" "${ROOT}/LICENSE"
+
+if [[ $CHECK == 1 ]]; then
+  status=0
+  while IFS= read -r -d '' fetched; do
+    rel="${fetched#"$ROOT"/}"
+    if ! cmp -s "$fetched" "$VENDORED/$rel"; then
+      echo "drift: $rel differs from the pinned upstream file" >&2
+      status=1
+    fi
+  done < <(find "$ROOT" -type f -print0)
+  [[ $status == 0 ]] && echo "check: every vendored grammar matches its pin"
+  exit "$status"
+fi

@@ -123,6 +123,7 @@ fn cardinality_violation() {
         max: 2,
         ids: None,
         path: "/content".to_owned(),
+        unique: false,
     }];
     let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
     let inst = json!({
@@ -204,6 +205,7 @@ fn incomplete_suppresses_cardinality_lower_but_keeps_upper() {
         max: -1,
         ids: None,
         path: "/content".to_owned(),
+        unique: false,
     }];
     let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
     let one_child = json!({
@@ -221,6 +223,7 @@ fn incomplete_suppresses_cardinality_lower_but_keeps_upper() {
         max: 2,
         ids: None,
         path: "/content".to_owned(),
+        unique: false,
     }];
     let three = json!({
         "_type": "COMPOSITION", "archetype_node_id": "x",
@@ -890,6 +893,7 @@ fn cardinality_one_plus_empty_rejected() {
         max: -1,
         ids: None,
         path: "/content".to_owned(),
+        unique: false,
     }];
     let inst = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": []});
     let msgs = walk_only(&inst, &root);

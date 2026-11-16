@@ -1575,7 +1575,7 @@ carried. The facts added since, checked in every text in scope:
 
 ### Left open on 2026-11-13, for 5.7.1-rc1
 
-- **The [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html)** at the pinned revision (2026-10-26) name keys 5.7.0 and 5.7.1 refuse at start: `deployment_profile`, `[audit.store] retention_years`, `[audit.syslog] host`, `[authz.professional]` and `[audit.categories]`, and say FerroEHR ships no category map. The page lives in the FerroHEALTH book, whose repository is paused, so it is tracked on #5534 for the owner's call.
+- **The [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html)** at the pinned revision (2026-10-26) name keys 5.7.0 and 5.7.1 refuse at start: `deployment_profile`, `[audit.store] retention_years`, `[audit.syslog] host`, `[authz.professional]` and `[audit.categories]`, and say FerroEHR ships no category map. The page lives in the FerroHEALTH book, whose repository was paused. It was left open for the owner's call, and #5534 closed it: the pin moved to the 2026-11-16 revision, which names only keys FerroEHR reads.
 - The public sandbox follows the `latest` image tags and stays on 5.7.0, since a pre-release moves no tag.
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is accepted, tracked on #5258 for 5.8.0.
 - The performance page keeps its earlier figures until a record measured on the reference host replaces them.

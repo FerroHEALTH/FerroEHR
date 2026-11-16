@@ -19,13 +19,15 @@ async fn wait_until(holds: impl Fn() -> bool, what: &str) {
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_registration_holds_at_once_and_a_release_reaches_the_copy() {
     let (db, svc) = crate::fixtures::service().await;
     let pool = db.pool();
     let registered = svc.registered_templates();
-    registered
-        .listened()
-        .spawn_listener((*pool.connect_options()).clone());
+    crate::policy_fixtures::listen(&db, &[std::sync::Arc::clone(registered.listened())]);
     wait_until(
         || registered.listened().is_listening(),
         "the listener connects",

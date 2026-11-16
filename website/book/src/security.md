@@ -531,6 +531,56 @@ restriction and Art. 10 opt-out registers below with their rows and their
 admin routes: record each restriction and opt-out that stood again as a
 directive.
 
+### Care relationships
+
+Where the [access policy](#the-access-policy) sets
+`care_relationship_required`, a professional reads a patient's clinical data
+only while a care relationship to the patient is live: the professional's
+`PERSON` is a member of a care team or unit the patient's `PERSON` is under
+the care of, and the admission has begun and has not ended more than the
+policy's `relationship_grace` ago. Otherwise step 7 refuses with
+`403 refused-no-care-relationship`. openEHR leaves it to the care delivery
+environment to say who cares for whom (BASE Architecture Overview, §The
+Problem of Roles), so your ADT system writes admissions and team rosters
+under the `write_care_relationship` grant, or your identity provider
+provisions care teams as SCIM Groups. An admission, a transfer, a discharge
+or a membership change decides the next request on every replica.
+
+A query that names no EHR reads care from the care projection, which a
+replica uses only while it reflects the care facts the replica holds, so a
+discharge or a removed membership never admits from a stale row
+([The care projection](installation/config-privacy.md#the-care-projection)).
+How the relationships are modelled is on
+[Caller facts: roles and care relationships](operational-policy.md#caller-facts-roles-and-care-relationships).
+
+### Sensitivity
+
+Data carries a sensitivity from two places: a label on a single object in
+the person's `EHR_ACCESS` settings, and a classification in the access
+policy that gives every object it covers (by template, root archetype,
+category or origin) its sensitivities. Sensitivity codes are those of your
+jurisdiction's terminology, such as HL7 `v3-Confidentiality` and
+`v3-ActCode`. Step 6 refuses data with a sensitivity that no applying permit
+names, with `403 refused-sensitivity`. Two permits clear a caller: a consent
+permit of the person whose `data` names the sensitivity, and a permit rule
+of the access policy, such as one that clears the psychiatrist role for
+`PSY`. No capability or token claim clears a caller.
+
+### The access policy
+
+The controller's access policy is one versioned `ACCESS_POLICY` that holds
+for every EHR this FerroEHR keeps: the classifications above, whether access
+needs a declared purpose (step 4) and a care relationship (step 7), the
+controller's rules (step 5, EHDS Art. 11(3)), the catalogue of named
+directives a person accepts by reference, and the restrictions of the
+access log's subject view. An administrator holding the
+`write_access_policy` grant writes it over the admin API, and it decides the
+next request on every replica. The trust and the floor stay in
+`ferroehr.toml`: `authz.rbac.admin_role`, `emergency_access_role`,
+`ehr_access_default` and `[audit] emergency_purpose_codes`. The policy can
+only tighten them. Until you write one, nothing is tightened. The model and
+the rules are on [The access policy](operational-policy.md#the-access-policy).
+
 ### Restriction of access by health professionals (EHDS Art. 8)
 
 Regulation (EU) 2025/327 Art. 8 gives a person the right to restrict the

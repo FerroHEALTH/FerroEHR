@@ -34,6 +34,7 @@ readonly TREES=(
   docs/specs/microsoft-entra
   docs/specs/scim-reference-code
   docs/specs/keycloak
+  docs/specs/zitadel
   docs/specs/ehdsi-specifications
   docs/specs/okta
   docs/specs/oasis-saml

@@ -502,6 +502,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   kept between its statements and returns to the pool when the request
   answers, so the access checks and the read or commit of one request queue
   for the pool once, and the pool's release round trip is paid once. A background task outside a scope checks out per statement.
+  Every checkout goes through `db::acquire::acquire`, which answers a
+  failure to open a connection `503` whatever the driver reports (a refused
+  connect, a resolver failure, a timeout); the `clippy.toml` ban on
+  `sqlx::Pool::acquire`, `begin` and `try_begin` holds the server to it, and a
+  test or tool that reads on a raw pool connection says so with a scoped
+  `#[expect]` (#5109).
 - **Four `NOINHERIT` runtime roles** hold the domains: `ferroehr_clinical` and
   its read-only twin hold `clinical`, and `ferroehr_party` and its twin hold
   `party`. Each is revoked from
@@ -698,10 +704,13 @@ which is what makes an optional stage safe to disable:
    check and judges the EHR again from its own transaction; a replica's own
    `EHR_ACCESS` commit judges the request's EHR again after it commits. A
    change committed on another replica is therefore never admitted under the
-   old settings, with no added statement. Each policy listener holds a
-   connection of its own (`[database] listen_url`, `[database.<domain>]
-   listen_url`), named `ferroehr policy listener`, so the request pools may
-   run through a transaction-mode pooler. Each instance writes its signing
+   old settings, with no added statement. Every channel of one database is
+   held on one `LISTEN` connection apart from the pools
+   (`policy_register::listen::Listeners`, #5845; `[database] listen_url`,
+   `[database.<domain>] listen_url`), named `ferroehr policy listener`, so
+   the request pools may run through a transaction-mode pooler; the
+   connections an instance opens, its pools and those sessions, stay inside
+   `[database] connection_budget` (`db::pool`). Each instance writes its signing
    key fingerprint and configuration digest into `clinical.instance`
    (migration `clinical/0045`, `instance::Instances`) and the `instances` indicator
    names an instance that differs.
@@ -954,6 +963,199 @@ Configuration is boot-validated rather than degraded at the first request: a
 mandatory audience list, an `https` issuer, an algorithm set bound to its key
 source, an HMAC entropy floor, the OWASP Argon2id parameter floor, and a policy
 rule per resource kind the PEP consults.
+
+### ABAC as openEHR content: the design record (#5487)
+
+The question #5487 put was whether the attribute-based rules, which a Cedar
+policy register held through 5.7.1, could become openEHR content beside the
+coded roles and capabilities of the RBAC model. The owner approved the
+design on 2026-11-13 and ruled the same day that the remote PDP goes too.
+What ships is described in the access layer above; this record answers the
+issue's questions and says where each answer rests on a specification and
+where it is FerroEHR's own.
+
+**The vocabulary is NIST SP 800-162** (Guide to Attribute Based Access
+Control Definition and Considerations, January 2014, §2.2 and §2.3,
+<https://doi.org/10.6028/NIST.SP.800-162>): access is decided from "assigned
+attributes of the subject, assigned attributes of the object, environment
+conditions, and a set of policies that are specified in terms of those
+attributes and conditions". FerroEHR places each term in openEHR content:
+
+| NIST SP 800-162 | FerroEHR | Where it lives |
+|---|---|---|
+| Subject attributes | the caller facts: the coded `name` of each `ROLE` in force it performs, its care-team memberships, the `ORGANISATION` its client acts for with that organisation's coded type and `GROUP` memberships, its caller kind, its recorded representation | the demographic service (RM Demographic IM), held per replica by `party_binding::grants::live` |
+| Object attributes | the data facts: the object, its template, root archetype, category through the category map, origins, commit time, and the sensitivities its labels and the controller's classifications give it | the record, read by its head row (`storage::access_facts`) |
+| Environment conditions | the request instant, the declared purpose of use, an emergency purpose | the request |
+| Policy | the subject's directives and labels; the controller's rules, classifications and requirements | `EHR_ACCESS.settings` per EHR, `ACCESS_POLICY` per controller |
+| PDP | the fixed evaluator | `access_eval` |
+| PEP | the route guard, the AQL condition in the query's one statement, the commit's write gate | `extensions::access`, `aql::sql::access`, `versioning::restriction::WriteGate` |
+| PIP | the per-replica copies, kept fresh by `LISTEN`/`NOTIFY` | `policy_register::listen::Listened` and its subscribers |
+| PAP | a CONTRIBUTION of an `EHR_ACCESS` version, the admin `ACCESS_POLICY` resource, the Demographic API and SCIM | the commit paths that version each change |
+
+**What the RM offers, and what it leaves open.** RM EHR IM §EHR Access
+(`docs/specs/openehr/RM/docs/ehr/master04-ehr_package.adoc`) makes
+`EHR_ACCESS` the authority: "All access decisions to data in the EHR must be
+made in accordance with the policies and rules in this object", its changes
+"versioned via the normal mechanism". Its `settings` is an
+`ACCESS_CONTROL_SETTINGS`, abstract and "Currently implementation
+dependent", with `scheme` naming the subtype in use. BASE Architecture
+Overview §Access Control, Overview
+(`docs/specs/openehr/BASE/docs/architecture_overview/master07-security.adoc`)
+gives the reason: "there is currently no published formal, proven model of
+access control for shared health information", so each model is a subtype
+and "the 'scheme' in use at any given time is always indicated in the EHR
+Access object". The same chapter supplies the facts the design reads:
+consent controls sharing (§Privacy, Confidentiality and Consent), the
+gate-keeper is "usually the patient for mentally competent adults",
+privacy levels are defined "by standards or agreements within jurisdictions
+of use" and access is bounded by the episode of care "plus some further
+time" (§Security Policy, Access Control), and roles resolve to identities
+"in each care delivery environment, not in the EHR" (§The Problem of
+Roles). The RM Entry package records a patient consent as an `ADMIN_ENTRY`
+(`master08-entry_package.adoc` §Standard Clinical Types of Data); a
+directive points at it through `evidence` and never takes its place. openEHR
+gives no concrete settings class, no consent model, no rule language and no
+home for a policy that holds for every EHR. CKM archetypes for consent or
+privacy were not consulted, and nothing depends on one.
+
+The answer is a concrete subtype, `ACCESS_DIRECTIVE_SETTINGS`, under the
+scheme `access_directives`, and a controller root, `ACCESS_POLICY`, both
+classes of FerroEHR's draft package `org.openehr.rm.access_control`
+(`tools/openehr-codegen/draft/bmm/openehr_access_control_0.1.0.bmm.json`,
+generated into `openehr_rm::draft::access_control` by #5506). The settings
+hold the default disposition, the gate-keepers, the subject's directives
+(consent permit and deny, restriction, opt-out, delegation) and sensitivity
+labels on single objects, so a patient's choices are versioned with the EHR
+and travel in an EHR Extract (`X_VERSIONED_EHR_ACCESS`, RM EHR Extract IM).
+Their codes are those of the draft `openehr_access` terminology and the HL7
+code systems it reuses (#5507, #5655). FerroEHR never reads an archetype id,
+so a deployment's own archetypes are first-class. The draft is written up as
+an openEHR RM change request under `docs/specifications/access-control/antora/`
+(#5519); nothing is submitted without the owner's approval. Our own design:
+the scheme, every class of the package and the terminology.
+
+**Facts with a fixed evaluator.** The CDR holds the facts the decision
+reads, and one Rust evaluator holds the procedure. A rule language inside
+archetyped content would make a record's meaning depend on a program stored
+beside it. Facts keep the meaning in RM attributes and codes that any
+openEHR system reads. They map onto FHIR `Consent` and IHE APPC, project at
+commit into the columns an AQL statement filters on (so `COUNT` and paging
+stay exact in one statement), and name the directive and policy version
+behind each refusal. No rule can error at evaluation or open data through
+an unintended permit. The cost: a deployment cannot invent a new kind of
+condition. It combines the attributes the model has (scope, exceptions,
+effect, time, purpose, sensitivity, care), and a new kind of condition is a
+new code or attribute in the model. Our own design.
+
+**The decision procedure** is the one above: step 0 (subject,
+representation, consent reference), then opt-out, restriction, consent
+deny, purpose, controller rule, sensitivity, care relationship and the
+default. Deny overrides permit, one level of exceptions of the opposite
+effect narrows each directive, and every refusal has a `refused-*` code
+recorded with its step. Deny-overrides across an EHR is the deny-overrides
+combining algorithm of XACML 2.0 (`docs/specs/xacml/`, Appendix C.1), the
+algorithm the APPC example uses. The order, the codes and the single level
+of exceptions are our own design.
+
+**Standards and regulation, one model for exchange.**
+
+- **EHDS** (Regulation (EU) 2025/327, `docs/law/eu/ehds/text.html`): Art. 8
+  is the `restriction` directive, invisible to the provider (`404`, and the
+  settings absent from every read but the subject's, the gate-keepers' and
+  the administrator's); Art. 11(5) is its `emergency_override`, lifted for
+  `[authz.rbac] emergency_access_role` with an emergency purpose and logged
+  with the emergency mark; Art. 10 is the `opt_out` directive for access
+  services, Art. 10(2) its emergency lift and recital 55 an override held
+  false; Art. 4(2) is the representation `PARTY_RELATIONSHIP` narrowed by
+  `delegation` directives; Art. 11(3) is the controller's rules; Annex II 3.4
+  is the categories and origins a data scope names; Art. 9 and Annex II 3.2
+  are the access record with its grounds. Art. 3(3), the delay of the
+  person's own access, stays the access-delay register: a controller rule on
+  categories, not a patient's choice. Art. 3 is why the subject skips every
+  step on their own EHR.
+- **GDPR** (`docs/law/eu/gdpr/text.html`): care runs on Art. 9(2)(h) with
+  Art. 6(1)(c) or (e), so a directive in care is often a choice under
+  national law and no GDPR consent. A directive and a controller rule carry
+  their ground in `legal_grounds`, and a refusing rule's grounds are
+  recorded as a `legal obligation` ground.
+- **ISO 22600-1 and -2:2014,** by their public scope only
+  (`docs/specs/iso-health-informatics/PROVENANCE.md`, not vendored): the
+  three fact sets are a patient's policy per EHR, a controller's policy and
+  the role and delegation model of the demographic service. Nothing is
+  checked against the standard's text.
+- **HL7 FHIR `Consent` (R4, R5), IHE BPPC and IHE APPC** (vendored by #5505
+  under `docs/specs/fhir-consent/` and `docs/specs/ihe-consents/`, XACML 2.0
+  by #5525): a directive with one level of exceptions is FHIR's "base policy
+  ... followed by a listing of exceptions" (§6.2.3 of both releases); a BPPC
+  acknowledgement names an `ACCESS_POLICY.catalogue` entry by its policy
+  code (ITI TF-3 5.1.2.2.6); an APPC policy maps by its base rule and its
+  rule-combining algorithm (APPC TF-3 5.6.2.1). FerroEHR implements none of
+  them (owner decision of 2026-11-14 on #5517): FerroBRIDGE translates,
+  reaching the directives through FerroEHR's `EHR_ACCESS` reads and the
+  CONTRIBUTION write. The element-by-element mapping is the draft
+  specification's `mappings.adoc`.
+
+**Cedar's place: removed.** Cedar, its policy register, its configuration
+keys, schema, example policies and tests went in #5515, and the remote PDP
+in #5516; a remote PDP over the openEHR access model is a later feature
+(#5520). Each was a second policy world that received none of the openEHR
+access facts. What a Cedar policy could say moved as follows: an
+organisation condition to the acts-for relationship and its organisation
+type; a patient match to the evaluator's confinement of a subject and a
+representative; a template allow-list or a revoked template to a controller
+deny rule with a permit exception; a break-glass role to
+`emergency_access_role` with a declared emergency purpose; a read-only
+client to the SMART scope layer and the operation codes; a category or
+origin rule to a classification or a data scope; a rule on one caller to a
+directive or rule naming that caller's party. A condition on a raw scope,
+claim or `sub` string, and free boolean composition, have no form, by
+design. Cedar could not express purpose, care relationships, the subject's
+own directives or per-object sensitivity; the model has them. What stays in
+`ferroehr.toml` is trust and the floor the policy can only tighten:
+`[authz.rbac] admin_role`, `emergency_access_role` and
+`ehr_access_default`, and `[audit] emergency_purpose_codes`.
+
+**Operations.**
+
+- **Versioning.** An `EHR_ACCESS` change is a version in a CONTRIBUTION (RM
+  Common IM change control); `ACCESS_POLICY` is one `VERSIONED_ACCESS_POLICY`
+  committed the same way; a caller fact is a version of a demographic party.
+- **Audit.** Every decision, a refusal included, is one access-log entry
+  naming its step, code and grounds as draft `ACCESS_AUTHORISATION`s with the
+  `EHR_ACCESS` and `ACCESS_POLICY` version uids (#5514, #5581).
+- **Emergency.** Lifted only where a directive's or rule's
+  `emergency_override` holds, only for a declared emergency purpose, and
+  always marked.
+- **Performance and freshness.** The request path adds no transaction: the
+  settings, their classes, the caller facts and the policy are per-replica
+  copies, dropped on the `NOTIFY` of the commit that changes them, and read
+  per request while a listener is down. NIST SP 800-162 §3.3.1 (Attribute
+  Caching) names the risk of a copy: "a subject's access privileges may have
+  changed since the last refresh". FerroEHR closes it. A verdict carries the
+  revision of the EHR's settings row and subject, and a read that finds
+  another revision refuses and marks the copy stale (#5589). A query pinned
+  to one EHR checks the revision once in its statement, `access_in_force`
+  raising SQLSTATE `ZA001`, and a query reaching an EHR of a settings class
+  its condition does not hold fails through `access_class_unknown`, `ZA002`
+  (`clinical/0049_access_stale_copy.sql`). The service then judges again
+  from a fresh read, and answers `503` `access-refreshing` when the copy has
+  not caught up within 100 ms (#5794). The care projection a population
+  query reads is used only while the party facts revision it reflects
+  covers the one the replica holds; otherwise the query binds the census
+  (`service::ehr::care_projection`, #5645). A stale copy therefore never
+  admits under old facts and never answers fewer rows. Our own design.
+
+**Our own design, in one list:** the `access_directives` scheme and every
+class of the draft package; facts with a fixed evaluator; the decision
+procedure, its order and its `refused-*` codes; care relationships through
+care-team `GROUP`s and `under_care_of` relationships, with the grace after
+discharge; roles read from a `ROLE`'s coded name and organisation types from
+an `ORGANISATION`'s, with clearances and permitted purposes as controller
+rules (the capability codes first proposed for them are gone, #5621);
+`ACCESS_POLICY` as a versioned root outside the EHR and the demographic
+service, and its extension resource; the `EHR_ACCESS` read and write rule
+and its wire reads; the projection with its classes and facts, the copies,
+their invalidation and their staleness checks.
 
 ### Operational policy as demographic data
 

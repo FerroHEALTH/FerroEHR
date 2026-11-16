@@ -32,21 +32,17 @@ interfaces (SCIM, the demographic API, ITS-REST and the admin API) and checks
 RBAC, the access evaluator, AQL, the SCIM lifecycle, the access log and SMART
 discovery over HTTP, each change made on one instance and read on the other.
 It runs the care-relationship and representation assertions again under the
-default `pixm` subject index. It does not run in the required `deploy-probe`
-job yet: its own lane, `deploy-probe-hospital.yml`, runs it with
-`PROBE_ONLY=hospital` and writes `hospital.json`. A pull request, a push, the
-schedule and a dispatch probe the server and database images built from the
-tree they check out; a completed Containers run on main probes the server and
-postgres images that run published, each pinned by its digest, never the
-mutable `:main` tag (#5673). An image the run did not rebuild is the one
-`:main` names when the probe starts, pinned by its digest, and a run that
-rebuilt neither image probes those two. A failed call
-prints the lines both instances logged for its request id, and the instances
-log `ferrohealth_smart` at `debug`, so a `401` shows the reason its body leaves
-out. Each failing probe names the issue it is tracked by, and
-`scripts/deploy-probes/hospital_summary.sh` refuses a failing probe whose
-tracking issues are all closed, or one that names none. The family moves into
-the required job once its findings land (#5642).
+default `pixm` subject index. It runs in the required `deploy-probe` job as
+one family of the default run, with its own stack of two instances and
+Keycloak on fresh volumes, which it takes down before the next family (#5642).
+The same default run, every family the required job runs, also runs from
+`deploy-probe-scheduled.yml`: daily and on a dispatch against the images built
+from the tree it checks out, and after each completed Containers run on main
+against the server and postgres images that run published, each pinned by its
+digest, never the mutable `:main` tag (#5673). It uploads `compose.json`.
+A failed call prints the lines both instances logged for its request id, and
+the instances log `ferrohealth_smart` at `debug`, so a `401` shows the reason
+its body leaves out.
 
 The Kubernetes harness runs its **EHR-index** family in CI on a one-node kind
 cluster (`deploy-probe-k8s.yml`, #5813): every six hours, on a dispatch, and on

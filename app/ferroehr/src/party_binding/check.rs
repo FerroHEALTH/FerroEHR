@@ -19,9 +19,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Serialize;
-use sqlx::{PgConnection, PgPool, Row};
+use sqlx::{Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::{AcquireError, acquire};
 use crate::party_binding::BindingMapping;
 use crate::party_binding::derive::Identifier;
 use crate::party_binding::fill::{self, Duplicate};
@@ -80,6 +81,12 @@ pub enum CheckError {
 impl From<sqlx::Error> for CheckError {
     fn from(e: sqlx::Error) -> Self {
         Self::Storage(StorageError::Database(e))
+    }
+}
+
+impl From<AcquireError> for CheckError {
+    fn from(e: AcquireError) -> Self {
+        Self::Storage(StorageError::Acquire(e))
     }
 }
 
@@ -346,7 +353,8 @@ pub async fn check(
     mapping: &BindingMapping,
     input: &CheckInput,
 ) -> Result<Report, CheckError> {
-    let mut tx = pool.begin().await?;
+    let mut conn = acquire(pool).await?;
+    let mut tx = conn.begin().await?;
     let report = run(&mut tx, mapping, input).await;
     tx.rollback().await?;
     report
@@ -377,7 +385,8 @@ pub(crate) async fn candidates(
     input: &CheckInput,
     parties: &[Uuid],
 ) -> Result<(Vec<NamedAdministrator>, Vec<Candidate>), CheckError> {
-    let mut tx = pool.begin().await?;
+    let mut conn = acquire(pool).await?;
+    let mut tx = conn.begin().await?;
     let read = read_candidates(&mut tx, mapping, input, parties).await;
     tx.rollback().await?;
     read

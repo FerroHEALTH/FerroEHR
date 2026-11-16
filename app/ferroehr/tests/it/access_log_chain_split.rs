@@ -96,6 +96,10 @@ async fn findings(pool: &sqlx::PgPool) -> Vec<String> {
 /// access log's export span no longer holds a record outside it, and both
 /// chains go on from their heads.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn the_shared_chain_splits_into_two_that_verify() {
     let db = testkit::empty_db().await.expect("an empty database");
     let pool = db.pool();

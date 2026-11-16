@@ -347,6 +347,10 @@ fn engine(pool: &sqlx::PgPool) -> ferroehr::identifier_protection::engine::Ident
 /// Write the care projection of `cared`, each relationship from `from` until
 /// `until`, under [`TEAM`], and every EHR row's keyed digest: what the care
 /// projector writes from the party domain.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn project(
     world: &World,
     cared: &[(

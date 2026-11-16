@@ -221,6 +221,10 @@ async fn an_acknowledgement_moves_forward_and_never_past_the_tail() {
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_read_waits_for_a_commit_that_drew_a_lower_seq() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
