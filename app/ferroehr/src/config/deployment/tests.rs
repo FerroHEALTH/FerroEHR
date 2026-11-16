@@ -14,10 +14,6 @@ fn separated() -> FerroEhrConfig {
                 subject_namespaces: vec!["urn:example:pseudonym".to_owned()],
                 ..crate::privacy::config::PrivacyConfig::default()
             },
-            audit: crate::system_log::config::AuditConfig {
-                fail_mode: crate::system_log::config::FailMode::Closed,
-                ..crate::system_log::config::AuditConfig::default()
-            },
             authz: crate::config::authz::AuthzConfig {
                 rbac: crate::config::authz::RbacConfig {
                     ehr_access_default: crate::config::authz::EhrAccessDefault::Restricted,
@@ -105,7 +101,6 @@ fn the_default_is_sandbox_and_a_stock_deployment_names_its_gaps() {
             DeploymentGap::SharedCredential,
             DeploymentGap::SharedCluster,
             DeploymentGap::OpenSubjectNamespace,
-            DeploymentGap::AuditFailsOpen,
             DeploymentGap::OpenEhrAccessDefault,
             DeploymentGap::MigrateOnRuntimeCredential,
             DeploymentGap::PlaintextListener,
@@ -157,10 +152,6 @@ fn production_refuses_each_open_gap_and_names_the_remedy() {
     assert!(
         !posture.gaps.contains(&DeploymentGap::SharedCluster),
         "an unknown cluster identity is never read as a gap"
-    );
-    assert!(
-        !posture.gaps.contains(&DeploymentGap::AuditFailsOpen),
-        "a disabled trail makes the fail mode moot, so it is named once"
     );
 }
 
@@ -218,7 +209,6 @@ fn tokens_round_trip() {
         DeploymentGap::SharedCluster,
         DeploymentGap::OpenSubjectNamespace,
         DeploymentGap::AuditOff,
-        DeploymentGap::AuditFailsOpen,
         DeploymentGap::NoCategoryMap,
         DeploymentGap::OpenEhrAccessDefault,
         DeploymentGap::MigrateOnRuntimeCredential,
@@ -245,15 +235,14 @@ fn every_gap_token_is_the_shared_vocabulary() {
         DeploymentGap::SharedCluster => 1,
         DeploymentGap::OpenSubjectNamespace => 2,
         DeploymentGap::AuditOff => 3,
-        DeploymentGap::AuditFailsOpen => 4,
-        DeploymentGap::NoCategoryMap => 5,
-        DeploymentGap::OpenEhrAccessDefault => 6,
-        DeploymentGap::MigrateOnRuntimeCredential => 7,
-        DeploymentGap::AuthOff => 8,
-        DeploymentGap::RbacOff => 9,
-        DeploymentGap::PlaintextListener => 10,
-        DeploymentGap::PlaintextAuditFeed => 11,
-        DeploymentGap::PlaintextObjectStore => 12,
+        DeploymentGap::NoCategoryMap => 4,
+        DeploymentGap::OpenEhrAccessDefault => 5,
+        DeploymentGap::MigrateOnRuntimeCredential => 6,
+        DeploymentGap::AuthOff => 7,
+        DeploymentGap::RbacOff => 8,
+        DeploymentGap::PlaintextListener => 9,
+        DeploymentGap::PlaintextAuditFeed => 10,
+        DeploymentGap::PlaintextObjectStore => 11,
     };
     for (i, token) in DEPLOYMENT_GAPS.iter().enumerate() {
         let gap: DeploymentGap =
@@ -263,69 +252,54 @@ fn every_gap_token_is_the_shared_vocabulary() {
     }
 }
 
-/// The two compatibility defaults are open gaps under `production`, each
-/// named with its key, its value and its remedy, and each accepted only by
-/// name.
+/// The compatibility access default is an open gap under `production`,
+/// named with its key, its value and its remedy, and accepted only by name.
 ///
-/// The shipped defaults do not change: they serve the conformance
-/// instrument and the development stacks, where a closed `EHR_ACCESS` default
-/// would refuse every read of a fresh EHR. What changes is that a
-/// production deployment has to say it wants them.
-/// `docs/law/eu/gdpr/text.html Art. 25(2)` is the ground for the access
-/// default: measures "shall ensure that by default personal data are not
-/// made accessible without the individual's intervention to an indefinite
-/// number of natural persons".
+/// The shipped default does not change: it serves the conformance instrument
+/// and the development stacks, where a closed `EHR_ACCESS` default would
+/// refuse every read of a fresh EHR. What changes is that a production
+/// deployment has to say it wants it.
+/// `docs/law/eu/gdpr/text.html Art. 25(2)` is the ground: measures "shall
+/// ensure that by default personal data are not made accessible without the
+/// individual's intervention to an indefinite number of natural persons".
 #[test]
-fn production_refuses_the_open_access_default_and_the_open_audit_fail_mode() {
+fn production_refuses_the_open_access_default() {
     let mut open = separated();
-    open.audit.fail_mode = crate::system_log::config::FailMode::Open;
     open.authz.rbac.ehr_access_default = crate::config::authz::EhrAccessDefault::Open;
     let config = production(open);
     let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
-    assert_eq!(
-        posture.gaps,
-        [
-            DeploymentGap::AuditFailsOpen,
-            DeploymentGap::OpenEhrAccessDefault
-        ]
-    );
+    assert_eq!(posture.gaps, [DeploymentGap::OpenEhrAccessDefault]);
     assert!(!posture.permits_boot());
     let message = posture.refusal_message();
-    for gap in [
-        DeploymentGap::AuditFailsOpen,
-        DeploymentGap::OpenEhrAccessDefault,
-    ] {
-        assert!(message.contains(gap.as_str()), "{message}");
-        assert!(message.contains(gap.describe()), "{message}");
-    }
+    assert!(
+        message.contains(DeploymentGap::OpenEhrAccessDefault.as_str()),
+        "{message}"
+    );
+    assert!(
+        message.contains(DeploymentGap::OpenEhrAccessDefault.describe()),
+        "{message}"
+    );
     assert!(message.contains("ehr_access_default"), "{message}");
-    assert!(message.contains("fail_mode"), "{message}");
     assert!(message.contains("restricted"), "{message}");
-    assert!(message.contains("closed"), "{message}");
 
-    // Accepted by name: the deployment boots and both stay listed.
+    // Accepted by name: the deployment boots and the gap stays listed.
     let accepted = DeploymentPosture::evaluate(
-        &accepting(
-            config,
-            vec![
-                DeploymentGap::AuditFailsOpen,
-                DeploymentGap::OpenEhrAccessDefault,
-            ],
-        ),
+        &accepting(config, vec![DeploymentGap::OpenEhrAccessDefault]),
         &distinct_clusters(),
     );
     assert!(accepted.permits_boot());
-    assert_eq!(
-        accepted.accepted,
-        [
-            DeploymentGap::AuditFailsOpen,
-            DeploymentGap::OpenEhrAccessDefault
-        ]
-    );
+    assert_eq!(accepted.accepted, [DeploymentGap::OpenEhrAccessDefault]);
 }
 
-/// A `sandbox` deployment runs on the shipped defaults and says so; the two
-/// gaps refuse nothing there.
+/// The removed audit fail mode is no gap a deployment can accept: its token
+/// is unknown (#5747).
+#[test]
+fn the_audit_fail_mode_is_no_gap() {
+    assert!(serde_json::from_str::<DeploymentGap>("\"audit_fails_open\"").is_err());
+}
+
+/// A `sandbox` deployment runs on the shipped defaults and says so; the
+/// open access default refuses nothing there.
 #[test]
 fn sandbox_runs_the_shipped_defaults_and_only_names_them() {
     let config = FerroEhrConfig::default();
@@ -334,13 +308,7 @@ fn sandbox_runs_the_shipped_defaults_and_only_names_them() {
         crate::config::authz::EhrAccessDefault::Open,
         "the shipped access default is unchanged"
     );
-    assert_eq!(
-        config.audit.fail_mode,
-        crate::system_log::config::FailMode::Open,
-        "the shipped audit fail mode is unchanged"
-    );
     let posture = DeploymentPosture::evaluate(&config, &distinct_clusters());
-    assert!(posture.gaps.contains(&DeploymentGap::AuditFailsOpen));
     assert!(posture.gaps.contains(&DeploymentGap::OpenEhrAccessDefault));
     assert!(posture.permits_boot(), "sandbox refuses nothing");
 }

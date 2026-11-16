@@ -65,12 +65,14 @@ that information.
 classification, and an unknown operation falls back to the audited default.
 The extension routes that change a record carry one too: the physical delete
 of a demographic party is recorded as a delete of that party, as the physical
-EHR delete is of the EHR. A rejected access (`401`, `403`) is always recorded. Under
-`[audit] fail_mode = "closed"` a request whose record cannot be taken is
-answered `503` and the domain-level operations withhold their result. An AQL
-execution emits one record per EHR it served. `deployment.profile =
-"production"` refuses audit switched off, audit with no durable sink and
-audit failing open, unless each is accepted by name.
+EHR delete is of the EHR. A rejected access (`401`, `403`) is always recorded.
+Every record of a request is written into the audit store before the
+response leaves, and a request whose record cannot be written is answered
+`503`; the domain-level operations withhold their result the same way. No
+record waits in memory, so a crash, a restart or overload loses none of a
+request already answered. An AQL execution writes one record per EHR it
+served. `deployment.profile = "production"` refuses audit switched off
+unless it is accepted by name.
 
 **Shown by:**
 
@@ -84,15 +86,16 @@ audit failing open, unless each is accepted by name.
 - `app/ferroehr-rest/tests/it/audit_e2e.rs`: one test per resource family
   (for example `composition_get_emits_read_record`,
   `aql_execute_emits_execute_record`), `unauthenticated_request_emits_401_record`,
-  `fail_closed_returns_503_when_channel_full`,
-  `fail_closed_503_carries_openehr_error_body_and_retry_after`,
+  `a_response_leaves_after_its_record_is_stored`,
+  `a_request_whose_record_cannot_be_written_is_refused`,
+  `the_refusal_carries_an_openehr_error_body_and_retry_after`,
   `aql_execute_emits_one_access_record_per_served_ehr`;
 - `app/ferroehr/tests/it/access_event_fail_closed.rs`:
   `a_subject_lookup_is_withheld_when_its_record_is_rejected`,
   `an_extract_export_is_withheld_when_its_record_is_rejected`;
 - `app/ferroehr/src/config/deployment.rs`:
   `production_refuses_each_open_gap_and_names_the_remedy`,
-  `production_refuses_the_open_access_default_and_the_open_audit_fail_mode`;
+  `the_audit_fail_mode_is_no_gap`;
 - `app/ferroehr/tests/it/legal_marks.rs`:
   `setting_and_lifting_a_mark_is_recorded_in_the_access_trail`;
 - `app/ferroehr-rest/tests/it/audit_route_coverage.rs`:
@@ -103,10 +106,11 @@ audit failing open, unless each is accepted by name.
   documents, the OpenAPI document and Swagger UI, the `OPTIONS` manifest and
   the management surface) are listed in the test with the reason.
 
-**Remains:** the shipped `fail_mode` is `open`, so under the `sandbox`
-profile a full queue drops a record and the request succeeds
-(`fail_open_serves_request_when_channel_full` pins that behaviour). Database
-access outside the server is recorded nowhere.
+**Remains:** a write's record is written after its clinical commit, in the
+audit cluster, so a process that dies between the two commits loses that
+write's record until the durable reservation of
+[#5762](https://github.com/FerroHEALTH/FerroEHR/issues/5762) closes the
+window. Database access outside the server is recorded nowhere.
 
 ## H2: a record names the wrong person, organisation or patient
 
@@ -274,11 +278,11 @@ floor, or under the three years of Art. 9(2) for a controller in the Union, is
 refused. With no period declared every record is kept without end, and the
 `log_retention` readiness indicator reads degraded. The reaper deletes only
 records past their end, in calendar years where the period is given in years, and
-the chain stays verifiable after it runs. The forwarding outbox keeps
-records until the sink takes them, and the audit drain closes its syslog
-connection with a TLS `close_notify` when it exits, so the records it sent
-last are not lost to a reset. `production` refuses audit with no
-durable sink unless accepted by name.
+the chain stays verifiable after it runs. The forwarding outboxes keep
+records in the store until the sink takes them, and the syslog route closes
+its connection with a TLS `close_notify` when it stops, so the records it
+sent last are not lost to a reset. `production` refuses audit switched off
+unless accepted by name.
 
 **Shown by:**
 
@@ -297,7 +301,7 @@ durable sink unless accepted by name.
 - `app/ferroehr/tests/it/audit_feed.rs`:
   `arr_outage_leaves_rows_pending_then_delivers_on_recovery`;
 - `app/ferroehr/tests/it/system_log_tls_roundtrip.rs`:
-  `the_drain_closes_its_connection_with_close_notify_when_it_exits`.
+  `the_route_closes_its_connection_with_close_notify_when_it_stops`.
 
 **Remains:** a local store shares the fate of its database, so backups and
 an off-box sink are the deploying organisation's

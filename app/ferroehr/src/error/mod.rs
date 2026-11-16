@@ -290,10 +290,10 @@ pub enum ServiceError {
     /// or it rolled back; [`ServiceError::overloaded`].
     #[error(transparent)]
     Overloaded(Curated),
-    /// The access record for a completed read or write could not be taken
-    /// and the deployment fails closed (`[audit] fail_mode = "closed"`), so
-    /// the result is withheld — the wire's `503`, `Retry-After` set, the same
-    /// answer the REST layer gives when its own request record is rejected.
+    /// The access record for a completed read or write could not be written
+    /// durably, so the result is withheld: the wire's `503`, `Retry-After`
+    /// set, the same answer the REST layer gives when its own request record
+    /// cannot be written.
     ///
     /// Carries the refusal
     /// [`FerroEhrService::record_access`](crate::service::FerroEhrService::record_access)

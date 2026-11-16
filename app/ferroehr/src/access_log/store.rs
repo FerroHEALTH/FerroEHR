@@ -9,12 +9,12 @@
 //! the chain: the canonical form of a record is its ITS-JSON serialisation
 //! without its link, canonicalised by RFC 8785; `content_digest` is the
 //! SHA-256 of that form and `digest` the SHA-256 of `previous_digest`, the
-//! sequence and `content_digest`, one per line. The store writes the
-//! canonical form, and the insert trigger of `audit.access_log_record`
-//! (`migrations/audit/0031_access_log_own_chain.sql`) gives it its link in
-//! this system's own access log, one chain from 1 with no gaps, apart from
-//! the records outside the log, so the database is the one place a position
-//! is decided. The retention rules (§Retention) let an entry be replaced by
+//! sequence and `content_digest`, one per line. An entry is written to the
+//! intake first ([`crate::access_log::intake`]) and the chainer
+//! ([`crate::access_log::chainer`]) gives it its link in this system's own
+//! access log, one chain from 1 with no gaps, under the head's lock, which
+//! the insert trigger of `audit.access_log_record`
+//! (`migrations/audit/0041_audit_intake.sql`) checks. The retention rules (§Retention) let an entry be replaced by
 //! a tombstone that keeps its uid, `system_id`, `time_recorded` and link, the
 //! one change the table's triggers admit.
 //!
@@ -40,11 +40,11 @@ use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgConnection, PgPool, Row};
 
+use crate::access_log::chainer::Owed;
 use crate::access_log::checkpoint::{PendingSeal, Sealer};
+use crate::access_log::intake::{IntakeEntry, take_in};
 use crate::access_log::stored_form;
 use crate::db::acquire::{AcquireError, acquire};
-use crate::digest::sha256_hex;
-use crate::telemetry::access_path;
 use crate::versioning::signature::signer::{AttestError, Signer};
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
@@ -108,6 +108,9 @@ pub enum AccessLogError {
     /// The clock gave a time a checkpoint cannot name to the microsecond.
     #[error("the time of the access-log checkpoint is out of range")]
     Clock(#[source] jiff::Error),
+    /// The chain reached the last position a link can name.
+    #[error("the access-log chain has no position left")]
+    Exhausted,
     /// The store wrote an entry and returned no link for its uid.
     #[error("the access-log store returned no link for the entry {uid}")]
     Unlinked {
@@ -144,7 +147,7 @@ pub fn canonical_form(record: &impl serde::Serialize) -> Result<String, AccessLo
 /// columns [`stored`] reads.
 macro_rules! records {
     () => {
-        "SELECT r.chain_seq, r.content, sh.content AS shared, r.algorithm, \
+        "SELECT r.uid, r.chain_seq, r.content, sh.content AS shared, r.algorithm, \
          encode(r.previous_digest, 'hex') AS previous_digest, \
          encode(r.content_digest, 'hex') AS content_digest, encode(r.digest, 'hex') AS digest \
          FROM audit.access_log_record r \
@@ -152,86 +155,6 @@ macro_rules! records {
     };
 }
 pub(crate) use records;
-
-/// An entry as the store writes it ([`stored_form`]).
-#[derive(Debug)]
-struct Stored {
-    /// The row part's canonical form.
-    row: String,
-    /// The shared part's digest and canonical form.
-    shared: Option<(String, String)>,
-    /// The SHA-256 of the whole canonical form.
-    content_digest: String,
-}
-
-impl Stored {
-    /// The parts and the content digest of `entry`.
-    fn of(entry: &AccessLogEntry) -> Result<Self, AccessLogError> {
-        let value = serde_json::to_value(entry).map_err(AccessLogError::Canonical)?;
-        let Value::Object(mut members) = value else {
-            let whole = canonical_form(entry)?;
-            return Ok(Self {
-                content_digest: sha256_hex(&whole),
-                row: whole,
-                shared: None,
-            });
-        };
-        members.remove(LINK);
-        let whole =
-            canonical_json(&Value::Object(members.clone())).map_err(AccessLogError::Canonical)?;
-        let content_digest = sha256_hex(&whole);
-        let form = stored_form::split(&members);
-        let row = canonical_json(&form.row).map_err(AccessLogError::Canonical)?;
-        let shared = form
-            .shared
-            .map(|shared| {
-                canonical_json(&shared)
-                    .map(|text| (sha256_hex(&text), text))
-                    .map_err(AccessLogError::Canonical)
-            })
-            .transpose()?;
-        Ok(Self {
-            row,
-            shared,
-            content_digest,
-        })
-    }
-}
-
-/// The entries an append wrote, with the checkpoint its transaction still
-/// owes when the store seals.
-#[derive(Debug)]
-#[must_use = "an append owes its checkpoint in its own transaction: seal it before the commit"]
-pub struct Appended {
-    entries: Vec<AccessLogEntry>,
-    seal: Option<PendingSeal>,
-}
-
-impl Appended {
-    /// The entries, each with the link the chain gave it.
-    #[must_use]
-    pub fn entries(&self) -> &[AccessLogEntry] {
-        &self.entries
-    }
-
-    /// Write the checkpoint the append owes on `conn`, the transaction it
-    /// was made in, and return the entries.
-    ///
-    /// # Errors
-    /// [`AccessLogError::Sign`] when the keyring cannot sign the checkpoint,
-    /// [`AccessLogError::Signing`] when the task signing it ends without an
-    /// answer, [`AccessLogError::Invalid`] for a checkpoint that breaks an
-    /// invariant, and the store errors when the insert fails.
-    pub async fn seal(
-        self,
-        conn: &mut PgConnection,
-    ) -> Result<Vec<AccessLogEntry>, AccessLogError> {
-        if let Some(seal) = self.seal {
-            seal.write(conn).await?;
-        }
-        Ok(self.entries)
-    }
-}
 
 /// The access-log records in the `audit` schema.
 #[derive(Debug, Clone)]
@@ -249,6 +172,15 @@ impl AccessLogStore {
         Self { pool, sealer: None }
     }
 
+    /// This store over `pool`, sealing as `self` does.
+    #[must_use]
+    pub fn with_pool(&self, pool: PgPool) -> Self {
+        Self {
+            pool,
+            sealer: self.sealer.clone(),
+        }
+    }
+
     /// The audit pool the records are kept in.
     pub(super) fn pool(&self) -> &PgPool {
         &self.pool
@@ -263,20 +195,19 @@ impl AccessLogStore {
         self
     }
 
-    /// Append `entries` to the chain in their order, in one transaction, and
-    /// return them with the links the chain gave them.
+    /// Append `entries` to the chain in their order and return them with the
+    /// links the chain gave them: written to the intake in one transaction,
+    /// then chained, with every row written before them, before this returns.
     ///
     /// The link an entry arrives with is replaced: its position and digests
     /// are the chain's to decide. Each entry is checked against the draft's
-    /// invariants with its link before the transaction commits, so an entry
-    /// that breaks one leaves no record. With a sealer the transaction ends
-    /// with the checkpoint of the last link.
+    /// invariants with its link.
     ///
     /// # Errors
     /// [`AccessLogError::Canonical`] for an entry with no canonical form,
     /// [`AccessLogError::Invalid`] for one that breaks an invariant, the
-    /// sealing errors of [`Appended::seal`], and the store errors when a
-    /// statement fails (a repeated uid among them).
+    /// errors of [`Self::settle`], and the store errors when a statement
+    /// fails (a repeated uid among them).
     pub async fn append(
         &self,
         entries: Vec<AccessLogEntry>,
@@ -284,115 +215,68 @@ impl AccessLogStore {
         if entries.is_empty() {
             return Ok(entries);
         }
+        let mut entries = entries;
+        let intake = entries
+            .iter_mut()
+            .map(|entry| IntakeEntry::of(entry, None))
+            .collect::<Result<Vec<_>, _>>()?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        let appended = self.append_in(&mut tx, entries).await?;
-        let entries = appended.seal(&mut tx).await?;
+        take_in(&mut tx, intake).await?;
         tx.commit().await?;
-        Ok(entries)
+        drop(conn);
+        self.settle(Owed::default()).await?;
+        self.linked(entries).await
     }
 
-    /// [`Self::append`] inside the caller's transaction on `conn`, so the
-    /// entries commit with what the caller writes beside them; the caller
-    /// ends the append with [`Appended::seal`] before it commits.
-    ///
-    /// The first insert of the transaction locks the head of the chain until
-    /// the transaction ends. With a sealer the checkpoint of the last link is
-    /// signed on the blocking pool while the caller writes the rest of its
-    /// transaction, so the signature adds to the time the head is held only
-    /// what outlasts that work.
+    /// `entries`, chained, each with the link the chain gave it.
     ///
     /// # Errors
-    /// As [`Self::append`] before the seal.
-    pub async fn append_in(
+    /// [`AccessLogError::Unlinked`] for an entry the log does not hold,
+    /// [`AccessLogError::Invalid`] for one that breaks an invariant with its
+    /// link, and the store errors.
+    pub(super) async fn linked(
         &self,
-        conn: &mut PgConnection,
         entries: Vec<AccessLogEntry>,
-    ) -> Result<Appended, AccessLogError> {
-        let started = std::time::Instant::now();
-        let count = u64::try_from(entries.len()).unwrap_or(u64::MAX);
-        let appended = self.link_in(conn, entries).await;
-        let metrics = access_path::metrics();
-        let outcome = access_path::outcome(&appended);
-        metrics.log_append_duration.record(
-            access_path::seconds_since(started),
-            std::slice::from_ref(&outcome),
-        );
-        metrics.log_entries.add(count, &[outcome]);
-        let entries = appended?;
-        let seal = match (&self.sealer, entries.last()) {
-            (Some(sealer), Some(last)) => {
-                Some(sealer.begin(last.link.sequence, &last.link.digest)?)
-            }
-            _ => None,
-        };
-        Ok(Appended { entries, seal })
-    }
-
-    /// Link and insert `entries` on `conn`, the work of [`Self::append_in`].
-    async fn link_in(
-        &self,
-        conn: &mut PgConnection,
-        mut entries: Vec<AccessLogEntry>,
     ) -> Result<Vec<AccessLogEntry>, AccessLogError> {
-        let mut contents = Vec::with_capacity(entries.len());
-        let mut parts = Vec::with_capacity(entries.len());
-        let mut digests = Vec::with_capacity(entries.len());
-        let mut shared = BTreeMap::new();
-        for entry in &entries {
-            let stored = Stored::of(entry)?;
-            if let Some((digest, content)) = stored.shared {
-                parts.push(Some(digest.clone()));
-                shared.insert(digest, content);
-            } else {
-                parts.push(None);
-            }
-            contents.push(stored.row);
-            digests.push(stored.content_digest);
-        }
-        let (keys, texts): (Vec<String>, Vec<String>) = shared.into_iter().unzip();
-        sqlx::query(
-            "INSERT INTO audit.access_log_shared (digest, content) \
-             SELECT decode(t.digest, 'hex'), t.content \
-             FROM unnest($1::text[], $2::text[]) AS t(digest, content) \
-             ON CONFLICT (digest) DO NOTHING",
-        )
-        .bind(&keys)
-        .bind(&texts)
-        .execute(&mut *conn)
-        .await?;
-        // NOTE: the ordinality orders the insert, which is the order the row trigger links the records in.
-        let rows = sqlx::query(
-            "INSERT INTO audit.access_log_record (content, shared, content_digest) \
-             SELECT t.content, decode(t.shared, 'hex'), decode(t.content_digest, 'hex') \
-             FROM unnest($1::text[], $2::text[], $3::text[]) WITH ORDINALITY \
-             AS t(content, shared, content_digest, n) \
-             ORDER BY t.n \
-             RETURNING uid::text AS uid, chain_seq, algorithm, \
-             encode(previous_digest, 'hex') AS previous_digest, \
-             encode(content_digest, 'hex') AS content_digest, encode(digest, 'hex') AS digest",
-        )
-        .bind(&contents)
-        .bind(&parts)
-        .bind(&digests)
-        .fetch_all(&mut *conn)
-        .await?;
+        let uids = entries
+            .iter()
+            .map(|entry| uuid::Uuid::parse_str(entry.uid.value()).ok())
+            .collect::<Vec<_>>();
+        let rows = sqlx::query(concat!(records!(), " WHERE r.uid = ANY($1)"))
+            .bind(&uids)
+            .fetch_all(&mut *acquire(&self.pool).await?)
+            .await?;
         let mut links = rows
             .iter()
-            .map(|row| Ok((row.try_get::<String, _>("uid")?, own_link(row)?)))
+            .map(|row| Ok((row.try_get::<uuid::Uuid, _>("uid")?, own_link(row)?)))
             .collect::<Result<BTreeMap<_, _>, sqlx::Error>>()?;
-        for entry in &mut entries {
+        let mut linked = entries;
+        for (entry, uid) in linked.iter_mut().zip(uids) {
             entry.link =
-                links
-                    .remove(entry.uid.value())
+                uid.and_then(|uid| links.remove(&uid))
                     .ok_or_else(|| AccessLogError::Unlinked {
                         uid: entry.uid.value().to_owned(),
                     })?;
-        }
-        for entry in &entries {
             check_entry(entry)?;
         }
-        Ok(entries)
+        Ok(linked)
+    }
+
+    /// The checkpoint a round that ends at the link `digest` at `sequence`
+    /// owes, its signature begun; `None` without a sealer.
+    ///
+    /// # Errors
+    /// The errors of starting the signature.
+    pub(super) fn begin_seal(
+        &self,
+        sequence: i64,
+        digest: &str,
+    ) -> Result<Option<PendingSeal>, AccessLogError> {
+        self.sealer
+            .as_ref()
+            .map(|sealer| sealer.begin(sequence, digest))
+            .transpose()
     }
 
     /// The records whose `ehr_id` is `ehr_id`, in chain order, each with its

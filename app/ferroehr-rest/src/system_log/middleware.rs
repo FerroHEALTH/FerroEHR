@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The IHE ATNA audit tower layer: request, resolved [`AuditEvent`], emit.
+//! The IHE ATNA audit tower layer: request, resolved [`AuditEvent`], record.
 //!
 //! One middleware installed outermost on the API router, wrapping the auth layer
 //! so it observes every response, including the auth rejections the inner
@@ -20,21 +20,22 @@
 //! mounted operation is classified in [`crate::system_log::classify`]; the
 //! response of an operation without a class is refused rather than recorded
 //! under a guessed one. Where no `ResourceMeta` exists the participant-object
-//! id comes from the request path. An operation whose act wrote and emitted
-//! its own record ([`EntryScope::Written`]) gets no second operation record,
-//! so each sink carries one record of it.
+//! id comes from the request path. An operation whose act wrote its own
+//! record ([`EntryScope::Written`]) gets no second operation record, so the
+//! store holds one record of it.
 //!
-//! A genuine authentication additionally emits a login record (DICOM `EventID`
+//! A genuine authentication additionally records a login (DICOM `EventID`
 //! 110114, `EventTypeCode` 110122) unless `suppress_login_events` is on. Genuine
 //! means a real authentication event: the auth layer marks it only on a Basic
 //! verified-credential cache miss, where the credentials were actually checked.
-//! Auth rejections always emit a failure record, with a refused credential's
+//! Auth rejections always record a failure, with a refused credential's
 //! caller `UNKNOWN` (a patient-data step-up `401` carries its caller) —
 //! surveillance of failed access is the point of ATNA.
 //!
-//! Emission is non-blocking (`try_send` onto a bounded queue), so the request
-//! path never blocks on auditing. Under `fail_mode=closed` a rejected operation
-//! record turns the response into `503`; the auth records never gate it.
+//! Every record of the request is written durably, in one transaction of the
+//! local audit store, before the response leaves; a record that cannot be
+//! written turns the response into `503`, so no response reports an access
+//! the log does not hold (#5747).
 
 #![expect(
     clippy::disallowed_types,
@@ -55,8 +56,8 @@ use ferroehr::access_eval::condition::RequestAccess;
 use ferroehr::system_log::access_context;
 use ferroehr::system_log::categories::{AccessedContent, ResourceKind};
 use ferroehr::system_log::event::{
-    AccessDecision, AccessDomain, ActorAuthentication, AuditEvent, EmitOutcome, EntryScope,
-    EventActionCode, EventOutcome, EventType, ObjectClass, QueryNaming,
+    AccessDecision, AccessDomain, ActorAuthentication, AuditEvent, EntryScope, EventActionCode,
+    EventOutcome, EventType, ObjectClass, QueryNaming,
 };
 
 use crate::extensions::access::authn::{FreshAuthentication, Principal};
@@ -110,8 +111,8 @@ pub struct AuditObject {
     pub query: Option<QueryNaming>,
     /// Whether the operation's record writes an access-log entry by its
     /// domain or as a read of the access log itself, or whether the act wrote
-    /// and emitted the record itself ([`EntryScope::Written`]), so the
-    /// middleware emits none.
+    /// wrote the record itself ([`EntryScope::Written`]), so the
+    /// middleware writes none.
     pub entry: EntryScope,
 }
 
@@ -264,9 +265,9 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let fresh_auth = resp.extensions().get::<FreshAuthentication>().is_some();
     let refusal = crate::system_log::refusals::is_refusal(&resp);
 
-    let mut op_rejected = false;
-    // NOTE: our own design (#5602), the act wrote its record and emitted it to every sink, so
-    // a second operation record would be a second record of one event.
+    let mut records = Vec::new();
+    // NOTE: our own design (#5602), the act wrote its record in its own transaction, so a
+    // second operation record would be a second record of one event.
     let written = object
         .as_ref()
         .is_some_and(|object| object.entry == EntryScope::Written);
@@ -303,8 +304,8 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         }
         categorise(&mut event, &state, op, object.as_ref());
         fill_access(&mut event, &access, &state);
-        op_rejected = state.backend().emit(event) == EmitOutcome::Rejected;
-        op_rejected |= crate::system_log::served::emit(
+        records.push(event);
+        records.extend(crate::system_log::served::records(
             &state,
             &resp,
             op,
@@ -312,7 +313,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             client_ip.as_deref(),
             timestamp,
             &access,
-        );
+        ));
     }
 
     // The authentication record: a rejected access attempt is a failed
@@ -320,7 +321,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     // `EventTypeCode` 110122), and the success record fires only on a genuine
     // authentication event, gated by `suppress_login_events`.
     if refusal {
-        op_rejected |= crate::system_log::refusals::refused(
+        records.extend(crate::system_log::refusals::refused(
             &state,
             &resp,
             caller,
@@ -329,21 +330,19 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             &access,
             route_ehr_id,
             op_recorded,
-        );
+        ));
     } else if fresh_auth && !state.backend().suppress_login_events() {
-        login(&state, caller, client_ip, timestamp);
+        records.push(login(caller, client_ip, timestamp));
     }
 
     if let Some((op, None)) = classified {
         return unclassified(op);
     }
-    if op_rejected {
-        // Fail-closed: an auditable operation whose record cannot be delivered
-        // must not be reported as having succeeded. No openEHR spec governs the
-        // error-body shape (a MAY, `Requests_and_responses.md` §HTTP status
-        // codes) — our own design keeps every error path consistent.
+    // NOTE: our own design (#5747), an access whose record cannot be written durably is
+    // refused, so no response reports an access the log does not hold; the sender logs why.
+    if state.backend().record_events(records).await.is_err() {
         let mut resp = RestError::from(ApiError::ServiceUnavailable(
-            "audit trail unavailable (fail-closed)".to_owned(),
+            "audit trail unavailable".to_owned(),
         ))
         .into_response();
         resp.headers_mut()
@@ -385,9 +384,9 @@ fn categorise(event: &mut AuditEvent, state: &AppState, op: &str, object: Option
     }
 }
 
-/// Emit the record of a genuine authentication (DICOM PS3.15 §A.5.1 `EventID`
+/// The record of a genuine authentication (DICOM PS3.15 §A.5.1 `EventID`
 /// 110114 with `EventTypeCode` 110122 "Login").
-fn login(state: &AppState, caller: Caller<'_>, client_ip: Option<String>, at: jiff::Timestamp) {
+fn login(caller: Caller<'_>, client_ip: Option<String>, at: jiff::Timestamp) -> AuditEvent {
     let mut event = AuditEvent::new(
         EventActionCode::Execute,
         ObjectClass::Authentication,
@@ -395,7 +394,7 @@ fn login(state: &AppState, caller: Caller<'_>, client_ip: Option<String>, at: ji
     );
     event.event_type = Some(EventType::Login);
     fill_common(&mut event, caller, client_ip, at);
-    let _ = state.backend().emit(event);
+    event
 }
 
 /// The refusal of the response of `op`, an operation without an audit

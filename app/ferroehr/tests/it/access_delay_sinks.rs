@@ -25,9 +25,7 @@ use ferroehr::extensions::outbox::OutboxDomain;
 use ferroehr::policy_register::Register;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FhirFeedConfig, StoreConfig, SyslogConfig};
-use ferroehr::system_log::event::{
-    AuditEvent, EmitOutcome, EventActionCode, EventOutcome, ObjectClass,
-};
+use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 use ferroehr::system_log::sender::{AuditHandle, AuditSender, start};
 use testkit::syslog_tls::SyslogTlsListener;
 
@@ -43,7 +41,6 @@ async fn service(
     let mut audit = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
         },
@@ -75,7 +72,7 @@ async fn service(
             poll_interval: ferrohealth_config::units::Duration::from_millis(100),
         });
     }
-    let (sender, handle) = start(audit, None, Some(pool.clone()))
+    let (sender, handle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = crate::policy_fixtures::granting(
@@ -135,11 +132,10 @@ async fn the_syslog_feed_carries_a_record_about_a_held_composition() {
     "dr".clone_into(&mut read.user_id);
     read.ehr_id = Some(ehr);
     read.object_id = Some(format!("{vo}::ferroehr::1"));
-    assert_eq!(
-        sender.emit(read),
-        EmitOutcome::Enqueued,
-        "the read is recorded"
-    );
+    sender
+        .record(vec![read])
+        .await
+        .expect("the read is recorded");
 
     let mut marks = vec![
         format!("ParticipantObjectID=\"access-delay:{vo}\""),

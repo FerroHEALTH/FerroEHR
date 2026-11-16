@@ -1839,7 +1839,7 @@ async fn the_split_clinical_role_writes_and_reads_the_audit_trail() {
         .await
         .expect("the record's chain position");
     store
-        .mark_fhir_feed_delivered(seq)
+        .mark_delivered(ferroehr::system_log::store::outbox::Sink::FhirFeed, seq)
         .await
         .expect("a delivery stamp is the one sanctioned mutation");
     crate::fixtures::verify_chain(&clinical)

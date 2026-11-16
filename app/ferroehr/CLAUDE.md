@@ -142,9 +142,12 @@ module.**
   boot; a file in no release yet is fixed in place, never papered over. For a
   shipped file a schema change is a NEW file.
   Rules: `.claude/rules/sqlx-conventions.md`.
-- **System log** (`src/system_log/`): the ARR drain batches (`recv_many` → one
-  multi-row UNNEST INSERT) with concurrent memoized subject resolution and
-  rate-limited drop warnings; default `audit.queue_capacity` 8192.
+- **System log** (`src/system_log/`): every record of a request is written
+  into the audit intake in one transaction before the response
+  (`AuditSender::record`, a failure is a `503`), with memoized subject
+  resolution; the chainer (`sender/chainer.rs`, any replica under the head's
+  `SKIP LOCKED` lock) links the intake into the chains, and syslog and the
+  FHIR Feed deliver from the store's outboxes (#5747, #5745).
   The EHDS access record, the categories, the classification, the retention
   floor and the emergency mark come from `ehds-logging`; the BALP and DICOM
   renderings and the delivery come from `ihe-atna` (FerroAUDIT, pinned

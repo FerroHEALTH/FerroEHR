@@ -57,11 +57,9 @@ pub const VALIDATION_FAILURES: &str = "validation_failures";
 pub const VERSION_SIGNATURE_INVALID: &str = "version_signature_invalid";
 /// `WebTemplate` cache events (`event`).
 pub const WEBTEMPLATE_CACHE_EVENTS: &str = "webtemplate_cache_events";
-/// ATNA audit records emitted.
+/// ATNA audit records written to the intake before their response.
 pub const ATNA_AUDIT_EMITTED: &str = "atna_audit_emitted";
-/// ATNA audit records dropped because the queue was full.
-pub const ATNA_AUDIT_DROPPED: &str = "atna_audit_dropped";
-/// ATNA audit records rejected as malformed.
+/// ATNA audit records that could not be written, whose access was refused.
 pub const ATNA_AUDIT_REJECTED: &str = "atna_audit_rejected";
 /// ATNA audit records that failed to serialize.
 pub const ATNA_AUDIT_SERIALIZE_FAILED: &str = "atna_audit_serialize_failed";
@@ -143,11 +141,9 @@ pub struct Metrics {
     pub version_signature_invalid: Counter<u64>,
     /// `WebTemplate` cache events.
     pub webtemplate_cache_events: Counter<u64>,
-    /// ATNA audit records emitted.
+    /// ATNA audit records written to the intake before their response.
     pub atna_audit_emitted: Counter<u64>,
-    /// ATNA audit records dropped because the queue was full.
-    pub atna_audit_dropped: Counter<u64>,
-    /// ATNA audit records rejected as malformed.
+    /// ATNA audit records that could not be written, whose access was refused.
     pub atna_audit_rejected: Counter<u64>,
     /// ATNA audit records that failed to serialize.
     pub atna_audit_serialize_failed: Counter<u64>,
@@ -222,15 +218,13 @@ impl Metrics {
                 .build(),
             atna_audit_emitted: meter
                 .u64_counter(ATNA_AUDIT_EMITTED)
-                .with_description("ATNA audit records emitted")
-                .build(),
-            atna_audit_dropped: meter
-                .u64_counter(ATNA_AUDIT_DROPPED)
-                .with_description("ATNA audit records dropped because the queue was full")
+                .with_description("ATNA audit records written to the intake before their response")
                 .build(),
             atna_audit_rejected: meter
                 .u64_counter(ATNA_AUDIT_REJECTED)
-                .with_description("ATNA audit records rejected as malformed")
+                .with_description(
+                    "ATNA audit records that could not be written, whose access was refused",
+                )
                 .build(),
             atna_audit_serialize_failed: meter
                 .u64_counter(ATNA_AUDIT_SERIALIZE_FAILED)

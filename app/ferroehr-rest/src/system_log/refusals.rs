@@ -26,7 +26,7 @@ use std::sync::{Mutex, PoisonError};
 use axum::response::Response;
 use ferroehr::system_log::binding::{BindingRecord, Summary};
 use ferroehr::system_log::event::{
-    AccessDecision, AuditEvent, EmitOutcome, EntryScope, EventActionCode, EventType, ObjectClass,
+    AccessDecision, AuditEvent, EntryScope, EventActionCode, EventType, ObjectClass,
 };
 use http::StatusCode;
 use tokio::time::{Duration, Instant};
@@ -367,39 +367,53 @@ fn anonymous(event: &AuditEvent) -> AuditEvent {
     event
 }
 
-/// Records `refusal` within its budget, writing the summaries a closed window
-/// left; whether its own record was rejected under `fail_mode = "closed"`.
-pub(super) fn record(state: &AppState, refusal: &Refusal<'_>) -> bool {
+/// Charges `refusal` to its budget and writes the summaries a closed window
+/// left; the refusal's own record when it is recorded one by one, for the
+/// request to write with its other records before it answers.
+pub(super) fn record(state: &AppState, refusal: &Refusal<'_>) -> Option<AuditEvent> {
     let ledger = state.refusals();
     let charge = ledger.charge(Instant::now(), refusal);
-    for summary in charge.due {
-        write(state, summary, "summary");
+    if !charge.due.is_empty() {
+        let state = state.clone();
+        drop(tokio::spawn(async move {
+            write_summaries(&state, charge.due).await;
+        }));
     }
     if let Some(at) = charge.close_at {
         let state = state.clone();
         drop(tokio::spawn(async move {
             tokio::time::sleep_until(at).await;
-            for summary in state.refusals().close_due(Instant::now()) {
-                write(&state, summary, "summary");
-            }
+            let due = state.refusals().close_due(Instant::now());
+            write_summaries(&state, due).await;
         }));
     }
-    charge.disposition == Disposition::Record
-        && write(state, refusal.event.clone(), "refusal") == EmitOutcome::Rejected
+    (charge.disposition == Disposition::Record).then(|| refusal.event.clone())
 }
 
-/// Emits `event`, counting and logging at `error` a record the system log
-/// could not take.
-fn write(state: &AppState, event: AuditEvent, kind: &'static str) -> EmitOutcome {
-    let outcome = state.backend().emit(event);
-    if outcome != EmitOutcome::Enqueued {
-        state.refusals().unwritten.fetch_add(1, Ordering::Relaxed);
+/// Writes the summary records of closed windows, counting and logging at
+/// `error` the ones the system log could not write.
+///
+/// A summary is the count of refusals already answered, kept in this
+/// replica's memory until its window closes; no specification governs it:
+/// our own design.
+pub(super) async fn write_summaries(state: &AppState, summaries: Vec<AuditEvent>) {
+    if summaries.is_empty() {
+        return;
+    }
+    let count = u64::try_from(summaries.len()).unwrap_or(u64::MAX);
+    if let Err(error) = state.backend().record_events(summaries).await {
+        state
+            .refusals()
+            .unwritten
+            .fetch_add(count, Ordering::Relaxed);
         ferroehr::telemetry::metrics::metrics()
             .atna_audit_refusals_unwritten
-            .add(1, &[opentelemetry::KeyValue::new("kind", kind)]);
-        tracing::error!(kind, "the system log could not take a refusal record");
+            .add(count, &[opentelemetry::KeyValue::new("kind", "summary")]);
+        tracing::error!(
+            error = %ferroehr::error::ErrorChain::new(&error),
+            "the system log could not write the refusal summaries"
+        );
     }
-    outcome
 }
 
 /// Whether `resp` refused the request: a `401`, a `403`, a caller above its
@@ -420,7 +434,7 @@ pub(super) fn is_refusal(resp: &Response) -> bool {
 /// (DICOM PS3.15 §A.5.1 `EventID` 110114, `EventTypeCode` 110122), charged
 /// to the verified caller when there is one and to the client's network
 /// otherwise, and counted into the caller's summary when it is [`OverRate`];
-/// whether its record was rejected under `fail_mode = "closed"`. A refusal no
+/// its own record when it is recorded one by one. A refusal no
 /// operation record of the request covers (`op_recorded` false) is the
 /// access-log entry of the refused access.
 #[expect(
@@ -436,7 +450,7 @@ pub(super) fn refused(
     access: &AccessContext,
     ehr_id: Option<String>,
     op_recorded: bool,
-) -> bool {
+) -> Option<AuditEvent> {
     let mut event = AuditEvent::new(
         EventActionCode::Execute,
         ObjectClass::Authentication,
@@ -490,284 +504,4 @@ pub(super) fn refused(
 }
 
 #[cfg(test)]
-mod tests {
-    use ferroehr::system_log::binding::BindingCode;
-    use ferroehr::system_log::event::{EventActionCode, EventOutcome, ObjectClass};
-
-    use super::*;
-
-    fn limits() -> RefusalLimits {
-        RefusalLimits {
-            window: Duration::from_secs(60),
-            per_caller: 2,
-            budget: 3,
-        }
-    }
-
-    fn event(code: Option<BindingCode>, issuer: &str, user: &str) -> AuditEvent {
-        let mut event = AuditEvent::new(
-            EventActionCode::Execute,
-            ObjectClass::Authentication,
-            EventOutcome::MinorFailure,
-        );
-        event.issuer = Some(issuer.to_owned());
-        event.user_id = user.to_owned();
-        event.binding = code.map(BindingRecord::of);
-        event
-    }
-
-    fn caller(subject: &str) -> Charged {
-        Charged::Caller {
-            issuer: "https://idp".to_owned(),
-            subject: subject.to_owned(),
-        }
-    }
-
-    fn charge(
-        ledger: &RefusalLedger,
-        now: Instant,
-        charged: Charged,
-        ehr: Option<&str>,
-        event: &AuditEvent,
-    ) -> Charge {
-        ledger.charge(
-            now,
-            &Refusal {
-                charged,
-                outcome: event
-                    .binding
-                    .as_ref()
-                    .map_or("invalid_token", |binding| binding.code.as_str()),
-                ehr_id: ehr,
-                event,
-                summarised: false,
-            },
-        )
-    }
-
-    #[test]
-    fn over_its_limit_a_callers_refusals_become_one_summary_with_the_ehr_ids() {
-        let ledger = RefusalLedger::new(limits());
-        let now = Instant::now();
-        let refused = event(Some(BindingCode::RefusedInactive), "https://idp", "u1");
-        let mut dispositions = Vec::new();
-        let mut close_at = Vec::new();
-        for ehr in ["e1", "e2", "e3", "e4", "e3"] {
-            let charged = charge(&ledger, now, caller("u1"), Some(ehr), &refused);
-            dispositions.push(charged.disposition);
-            close_at.extend(charged.close_at);
-        }
-        assert_eq!(
-            dispositions,
-            [
-                Disposition::Record,
-                Disposition::Record,
-                Disposition::Summarised,
-                Disposition::Summarised,
-                Disposition::Summarised
-            ]
-        );
-        assert_eq!(close_at, [now + limits().window], "one close per window");
-        assert!(ledger.close_due(now).is_empty(), "the window is still open");
-        let due = ledger.close_due(now + limits().window);
-        assert_eq!(due.len(), 1);
-        assert_eq!(
-            due[0].summary,
-            Some(Summary {
-                count: 3,
-                ehr_ids: vec!["e3".to_owned(), "e4".to_owned()],
-            })
-        );
-        assert_eq!(due[0].user_id, "u1");
-        assert_eq!(
-            due[0].binding.as_ref().map(|b| b.code),
-            Some(BindingCode::RefusedInactive)
-        );
-    }
-
-    #[test]
-    fn a_flood_of_invalid_tokens_never_stops_a_verified_callers_record() {
-        let ledger = RefusalLedger::new(limits());
-        let now = Instant::now();
-        let invalid = event(None, "", "");
-        for host in 0..50u8 {
-            let address = IpAddr::from([198, 51, host, 7]);
-            charge(
-                &ledger,
-                now,
-                Charged::network(Some(address)),
-                None,
-                &invalid,
-            );
-        }
-        let probing = event(Some(BindingCode::RefusedUnbound), "https://idp", "u1");
-        assert_eq!(
-            charge(&ledger, now, caller("u1"), Some("e1"), &probing).disposition,
-            Disposition::Record
-        );
-    }
-
-    #[test]
-    fn beyond_the_budget_one_summary_is_written_per_issuer_and_outcome() {
-        let ledger = RefusalLedger::new(limits());
-        let now = Instant::now();
-        let refused = |user: &str| event(Some(BindingCode::RefusedUnbound), "https://idp", user);
-        let mut dispositions = Vec::new();
-        for user in ["u1", "u2", "u3", "u4", "u5"] {
-            dispositions.push(charge(&ledger, now, caller(user), None, &refused(user)).disposition);
-        }
-        let other = event(Some(BindingCode::RefusedGuest), "https://idp", "u6");
-        dispositions.push(charge(&ledger, now, caller("u6"), Some("e9"), &other).disposition);
-        assert_eq!(
-            dispositions,
-            [
-                Disposition::Record,
-                Disposition::Record,
-                Disposition::Record,
-                Disposition::Summarised,
-                Disposition::Summarised,
-                Disposition::Summarised
-            ]
-        );
-        // A caller recorded before the budget ran out keeps its own tally.
-        assert_eq!(
-            charge(&ledger, now, caller("u1"), None, &refused("u1")).disposition,
-            Disposition::Record
-        );
-        let due = ledger.close_due(now + limits().window);
-        let summaries: Vec<(Option<BindingCode>, u64, &str)> = due
-            .iter()
-            .map(|event| {
-                (
-                    event.binding.as_ref().map(|b| b.code),
-                    event.summary.as_ref().map_or(0, |s| s.count),
-                    event.user_id.as_str(),
-                )
-            })
-            .collect();
-        assert_eq!(
-            summaries,
-            [
-                (Some(BindingCode::RefusedGuest), 1, ""),
-                (Some(BindingCode::RefusedUnbound), 2, ""),
-            ],
-            "an issuer-and-outcome summary names no caller"
-        );
-    }
-
-    #[test]
-    fn a_security_event_is_recorded_for_every_answered_request() {
-        let ledger = RefusalLedger::new(limits());
-        let now = Instant::now();
-        let mismatch = event(
-            Some(BindingCode::RefusedTrcPatientMismatch),
-            "https://ncp",
-            "u1",
-        );
-        for _ in 0..20 {
-            let charged = charge(&ledger, now, caller("u1"), Some("e1"), &mismatch);
-            assert_eq!(charged.disposition, Disposition::Record);
-            assert_eq!(charged.close_at, None);
-        }
-        assert!(ledger.close_due(now + limits().window).is_empty());
-    }
-
-    #[test]
-    fn a_closed_window_hands_its_summaries_to_the_next_refusal() {
-        let ledger = RefusalLedger::new(limits());
-        let now = Instant::now();
-        let refused = event(Some(BindingCode::RefusedAmbiguous), "https://idp", "u1");
-        for _ in 0..3 {
-            charge(&ledger, now, caller("u1"), None, &refused);
-        }
-        let later = charge(&ledger, now + limits().window, caller("u1"), None, &refused);
-        assert_eq!(later.disposition, Disposition::Record, "a new window");
-        assert_eq!(later.due.len(), 1);
-        assert_eq!(later.due[0].summary.as_ref().map(|s| s.count), Some(1));
-    }
-
-    #[tokio::test]
-    async fn a_refusal_the_system_log_cannot_take_is_counted() {
-        let service = ferroehr::service::FerroEhrService::new(
-            &ferroehr::db::domain::DomainPools::from_shared(
-                &sqlx::postgres::PgPoolOptions::new()
-                    .connect_lazy_with(sqlx::postgres::PgConnectOptions::new()),
-            ),
-        );
-        let state = AppState::with_backend(
-            crate::config::AppConfig::default(),
-            std::sync::Arc::new(service),
-        );
-        let refused = event(Some(BindingCode::RefusedUnbound), "https://idp", "u1");
-        let rejected = record(
-            &state,
-            &Refusal {
-                charged: caller("u1"),
-                outcome: "refused-unbound",
-                ehr_id: None,
-                event: &refused,
-                summarised: false,
-            },
-        );
-        assert!(!rejected, "a dropped record is not a fail-closed rejection");
-        assert_eq!(state.refusals().unwritten(), 1);
-    }
-
-    #[test]
-    fn a_refusal_above_a_caller_rate_goes_into_the_callers_summary_from_the_first() {
-        let ledger = RefusalLedger::new(limits());
-        let now = Instant::now();
-        let over = event(Some(BindingCode::External), "https://federation", "hp-1");
-        let charged = Charged::Caller {
-            issuer: "https://federation".to_owned(),
-            subject: "hp-1".to_owned(),
-        };
-        let mut close_at = Vec::new();
-        for ehr in ["e1", "e2", "e1"] {
-            let charge = ledger.charge(
-                now,
-                &Refusal {
-                    charged: charged.clone(),
-                    outcome: "caller-rate",
-                    ehr_id: Some(ehr),
-                    event: &over,
-                    summarised: true,
-                },
-            );
-            assert_eq!(charge.disposition, Disposition::Summarised);
-            close_at.extend(charge.close_at);
-        }
-        assert_eq!(
-            close_at.len(),
-            1,
-            "the first summarised refusal closes the window"
-        );
-        let due = ledger.close_due(now + limits().window);
-        assert_eq!(due.len(), 1);
-        assert_eq!(
-            due[0].summary,
-            Some(Summary {
-                count: 3,
-                ehr_ids: vec!["e1".to_owned(), "e2".to_owned()],
-            })
-        );
-        assert_eq!(due[0].user_id, "hp-1", "the summary names its caller");
-    }
-
-    #[test]
-    fn a_network_is_its_ipv4_slash_24_or_its_ipv6_slash_64() {
-        assert_eq!(
-            Charged::network(Some(IpAddr::from([203, 0, 113, 9]))),
-            Charged::Network("203.0.113.0/24".to_owned())
-        );
-        let v6: IpAddr = "2001:db8:1:2:3:4:5:6".parse().expect("an address");
-        assert_eq!(
-            Charged::network(Some(v6)),
-            Charged::Network("2001:db8:1:2::/64".to_owned())
-        );
-        assert_eq!(
-            Charged::network(None),
-            Charged::Network("unknown".to_owned())
-        );
-    }
-}
+mod tests;

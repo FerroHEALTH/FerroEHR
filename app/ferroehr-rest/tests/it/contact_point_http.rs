@@ -91,10 +91,9 @@ async fn serve_over(
     pool: &sqlx::PgPool,
     svc: FerroEhrService,
 ) -> (Arc<FerroEhrService>, Router) {
-    let (sender, _handle): (_, AuditHandle) =
-        start(common::local_audit(), None, Some(pool.clone()))
-            .await
-            .expect("the audit sender");
+    let (sender, _handle): (_, AuditHandle) = start(common::local_audit(), None, pool.clone())
+        .await
+        .expect("the audit sender");
     let svc = Arc::new(
         svc.with_audit(sender)
             .with_audit_store(ferroehr::system_log::store::AuditStore::new(pool.clone())),

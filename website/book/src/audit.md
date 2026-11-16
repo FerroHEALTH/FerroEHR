@@ -8,15 +8,13 @@ system log "IHE ATNA-compliant"). It is **on by default**: every
 deployment records a queryable audit trail with zero external dependencies.
 
 > [!WARNING]
-> Two postures are legitimate to run and wrong to run silently, so the server
-> says them at `warn` on boot (structured field `posture = "audit"`), in the
-> `audit_sender` readiness indicator and on `/management/info`: **auditing
-> off** (`[audit] enabled = false`) writes no access log and leaves the EHDS
-> logging component off, and the shipped default **`fail_mode = "open"`**
-> drops a record the audit queue cannot take while the request succeeds, so
-> an access under load can go unrecorded. A deployment that must never serve
-> an unrecorded access sets `fail_mode = "closed"`, which answers `503` and
-> `Retry-After` instead. A deployment declaring
+> **Auditing off** (`[audit] enabled = false`) writes no access log and leaves
+> the EHDS logging component off. It is legitimate to run and wrong to run
+> silently, so the server says it at `warn` on boot (structured field
+> `posture = "audit"`), in the `audit_sender` readiness indicator and on
+> `/management/info`. With auditing on, FerroEHR refuses an access it cannot
+> record, at any rate: see [how a record is written](#how-a-record-is-written).
+> A deployment declaring
 > [`deployment.profile = "production"`](installation/configuration.md#deploymentprofile)
 > refuses to start with auditing off.
 
@@ -181,11 +179,9 @@ log keeps and from nothing else, and none is stored as a second record.
 `audit.audit_event` keeps the records of accesses outside the access log: an
 authentication, a template or party operation, an application activity.
 
-The entry is written in one database transaction with the rest of its batch,
-and an access whose entry the store cannot take is refused under
-`fail_mode = "closed"`. The store requires `[audit.store]`; with the store off
-the drain still builds each entry and sends its projections to the syslog
-sink and the FHIR feed, and keeps nothing.
+The entry is written with every other record of its request in one database
+transaction before the response leaves, and an access whose entry cannot be
+written is refused with `503` ([how a record is written](#how-a-record-is-written)).
 
 ### FerroEHR's access details
 
@@ -627,8 +623,8 @@ binding.
 ### Refusal records and their budgets
 
 Every refused request is recorded as a failed user authentication, through the
-same path as an operation record: under `[audit] fail_mode = "closed"` a
-refusal whose record the system log cannot take is answered `503`. A refusal of
+same path as an operation record: a refusal whose record cannot be written is
+answered `503`. A refusal of
 the login binding or of a caller kind carries its `refused-*` code. Refusals
 are charged to one of two budgets, which never draw on each other, so a flood
 of invalid tokens cannot hide a verified caller's probing:
@@ -999,8 +995,7 @@ jurisdiction's terminology. FerroEHR ships no country's restriction.
 - A write that changes the restrictions changes what the log means, so it
   writes an access-log entry of its own (operation
   `admin_access_policy_write`), and the policy history keeps every version.
-  Under `[audit] fail_mode = "closed"`, such a write is refused with `503`
-  while the audit trail cannot take the entry.
+  When the entry cannot be written, the write is answered `503`.
 
 ```bash
 # Who accessed my record this month? (the patient portal's token)
@@ -1020,12 +1015,48 @@ Records fan out to independently configured sinks (`[audit]` in
 
 | Sink | Default | What it does |
 |---|---|---|
-| `[audit.store]` | **on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. `retention` prunes old records hourly (`0` = keep forever). |
+| `[audit.store]` | **always on** | The local **Audit Record Repository**: records persist in the dedicated `audit` PostgreSQL schema (append-only and tamper-evident, strictly outside the EHR content), served back via the ITI-81 search below. Every record is written here before its access is reported. |
 | `[audit.syslog]` | off | The classic ATNA feed: DICOM PS3.15 XML as RFC 5424 syslog over RFC 5425 TLS to an external ARR, per IHE ITI-20. |
-| `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. With the local store on, delivery is **outbox-driven**: an ARR outage loses nothing, pending records ship on recovery. The outbox holds the records written while the feed is configured; with the feed off, no record is owed. Records stored before FerroEHR kept an outbox and never delivered ship once a feed runs. |
+| `[audit.fhir_feed]` | off | The RESTful-ATNA feed (ITI-20 **ATX: FHIR Feed**): each FHIR `AuditEvent` is `POST`ed to an external FHIR ARR. Delivery is **outbox-driven** from the store: an ARR outage loses nothing, pending records ship on recovery. The outbox holds the records stored while the feed is configured; with the feed off, no record is owed. Records stored before FerroEHR kept an outbox and never delivered ship once a feed runs. |
 
-Emission never blocks the request path: a record is handed to a bounded queue
-(`queue_capacity`) and written by a background drain.
+syslog delivers from the store the same way, from its own outbox, so both
+feeds are projections of the stored records and neither holds a record in
+memory.
+
+### How a record is written
+
+Every record of a request, the operation's own, one per EHR or party it
+served, a refusal's and a login's, is written into the local store in one
+transaction **before the response leaves**. A request whose records cannot be
+written is answered `503 Service Unavailable` with `Retry-After: 1`, so no
+response reports an access the log does not hold; under load that is
+back-pressure: requests slow down, and the excess is refused rather than
+recorded late or not at all. The same holds for the records the service
+writes itself: subject resolutions, EHR-Extract transfers, the access-log
+erasure and the access-policy write. There is no queue in memory and no fail
+mode (`fail_mode` and `queue_capacity` are unknown keys).
+
+The records go into an **intake**: two append-only tables, one for the
+access-log entries and one for the other records, that no request waits on.
+A **chainer** on every replica links the intake into the hash chains
+moments later: it takes the head of the access log without waiting, so one
+replica chains at a time and the others skip, computes the links, writes the
+records with their index rows, the checkpoint and the outbox rows of the
+feeds, and commits. The intake refuses every update and delete except the
+chainer's move, which writes each row into its chain in the same statement.
+The window between the intake and the chain is milliseconds; the
+`audit_sender` readiness indicator reads `DEGRADED` when the oldest intake row
+has waited longer than 10 seconds. A record in the intake is durable: a
+restart, a crash or a lost replica leaves it for the next chainer.
+
+The reference host sustains about 15 000 chained access-log entries per
+second in one chain ([capacity](capacity.md)).
+
+A write's records are written after its clinical commit, in the audit
+cluster, which production keeps apart from the clinical one: a process that
+dies between the two commits loses that write's record until the durable
+reservation of [#5762](https://github.com/FerroHEALTH/FerroEHR/issues/5762)
+closes the window.
 
 ### While a composition is held from the person
 
@@ -1063,17 +1094,6 @@ controller who answers for it. What you must not do, while a hold is in force:
 The [shared-responsibility page](compliance/shared-responsibility.md#the-delay-of-the-persons-access-ehds-art-33)
 puts the same duty on the deployment's side.
 
-The local store is the durability anchor. Under `fail_mode = "closed"`, an
-operation whose audit record cannot be recorded answers
-`503 Service Unavailable`: the deployment demanded an audit trail it cannot
-currently deliver, so no un-audited PHI access happens, and the same holds for
-the domain-level records the subject resolutions and the EHR-Extract
-transfers write. `open`, the default, drops-and-meters instead,
-and every loss path is metered (the `atna_audit_*` counters in
-[Operations](operations.md)); the server announces that default at boot and on
-the readiness indicator as a stated caution, because a metered loss is still a
-loss. Login and rejection records never gate a response in either mode.
-
 ## Tamper evidence
 
 An audit trail that anything with the application's database password can
@@ -1081,8 +1101,8 @@ quietly rewrite is a log, not an accountability record. The local store is
 therefore tamper-**evident**: every record is linked into a SHA-256 hash chain
 maintained inside PostgreSQL, so each record commits to its predecessor and to
 its own content. The chain is built by the database itself, not by the server,
-which means it covers every writer: the per-event insert, the batched drain,
-and any statement typed by hand.
+which means it covers every writer: the chainer and any statement typed by
+hand.
 
 Each record's digest covers every column of the record except the digest
 itself (`row_hash`) and the two per-sink forwarding stamps

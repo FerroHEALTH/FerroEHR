@@ -79,7 +79,8 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::Storage)?;
         tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Create, ehr_id, vo_id, "restriction")?;
+        self.emit_mark_access(EventActionCode::Create, ehr_id, vo_id, "restriction")
+            .await?;
         Ok(())
     }
 
@@ -103,7 +104,8 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::Storage)?;
         tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Delete, ehr_id, vo_id, "restriction")?;
+        self.emit_mark_access(EventActionCode::Delete, ehr_id, vo_id, "restriction")
+            .await?;
         Ok(())
     }
 
@@ -115,14 +117,14 @@ impl FerroEhrService {
     /// # Errors
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault.
-    /// - `service_overloaded` — the access record was refused under
-    ///   `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — the access record could not be written.
     pub async fn restriction_register(
         &self,
         ehr_id: EhrId,
     ) -> Result<Vec<marks::RestrictionRow>, ServiceError> {
         self.check_mark_target(ehr_id, None).await?;
-        self.emit_mark_access(EventActionCode::Read, ehr_id, None, "restriction")?;
+        self.emit_mark_access(EventActionCode::Read, ehr_id, None, "restriction")
+            .await?;
         marks::restrictions(&self.pool, ehr_id)
             .await
             .map_err(ServiceError::Storage)
@@ -169,7 +171,8 @@ impl FerroEhrService {
         } else {
             EventActionCode::Delete
         };
-        self.emit_mark_access(action, ehr_id, None, "research-objection")?;
+        self.emit_mark_access(action, ehr_id, None, "research-objection")
+            .await?;
         Ok(())
     }
 
@@ -279,8 +282,7 @@ impl FerroEhrService {
     ///   ground.
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    /// - `service_overloaded` — the access record was refused under
-    ///   `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — the access record could not be written.
     pub async fn put_retention_anchor(
         &self,
         ehr_id: EhrId,
@@ -299,7 +301,8 @@ impl FerroEhrService {
                 ))
             })?;
         tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Update, ehr_id, None, "retention-anchor")?;
+        self.emit_mark_access(EventActionCode::Update, ehr_id, None, "retention-anchor")
+            .await?;
         Ok(())
     }
 
@@ -313,8 +316,7 @@ impl FerroEhrService {
     /// # Errors
     /// - `versioned_object_does_not_exist` (`404`) — the object is unknown.
     /// - `exception` — a database fault mid-transaction (rolled back).
-    /// - `service_overloaded` — the access record was refused under
-    ///   `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — the access record could not be written.
     pub async fn set_retention_hold(&self, vo_id: VoId, held: bool) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
@@ -334,7 +336,8 @@ impl FerroEhrService {
             } else {
                 EventActionCode::Delete
             };
-            self.emit_mark_access(action, ehr_id, Some(vo_id), "retention-hold")?;
+            self.emit_mark_access(action, ehr_id, Some(vo_id), "retention-hold")
+                .await?;
         }
         Ok(())
     }
@@ -397,7 +400,7 @@ impl FerroEhrService {
     /// The record names the EHR, the object when the act was object-scoped, and
     /// which register moved — never a subject identifier, which the clinical
     /// domain does not hold in readable form anyway.
-    pub(in crate::service) fn emit_mark_access(
+    pub(in crate::service) async fn emit_mark_access(
         &self,
         action: EventActionCode,
         ehr_id: EhrId,
@@ -415,12 +418,6 @@ impl FerroEhrService {
         });
         event.ehr_id = Some(ehr_id.to_string());
         event.result_count = Some(1);
-        event.purpose = crate::system_log::access_context::current_purpose();
-        event.permit = crate::system_log::access_context::current_permit();
-        if let Some(committer) = crate::versioning::committer::current_committer() {
-            event.user_id = committer.subject;
-        }
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_committer_access(event).await
     }
 }

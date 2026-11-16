@@ -76,7 +76,7 @@ pub(crate) async fn app() -> (
         emergency_purpose_codes: vec!["ETREAT".to_owned()],
         ..common::local_audit()
     };
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(

@@ -48,9 +48,9 @@ pub const GRANTS_REFRESH_DURATION: &str = "grants_refresh_duration";
 pub const ACCESS_DECISIONS: &str = "access_decisions";
 /// Directives and steps an emergency lifted (`lifted`).
 pub const ACCESS_EMERGENCY_OVERRIDES: &str = "access_emergency_overrides";
-/// Access-log entries appended (`outcome`).
+/// Audit records written to the intake (`outcome`).
 pub const ACCESS_LOG_ENTRIES: &str = "access_log_entries";
-/// Access-log append latency, one transaction's entries (`outcome`).
+/// Intake write latency, one request's records (`outcome`).
 pub const ACCESS_LOG_APPEND_DURATION: &str = "access_log_append_duration";
 /// Access-log checkpoint signing latency, one append's checkpoint (`outcome`).
 pub const ACCESS_LOG_SIGN_DURATION: &str = "access_log_sign_duration";
@@ -72,14 +72,17 @@ pub const AUDIT_CHAIN_VERIFICATION_DURATION: &str = "audit_chain_verification_du
 pub const AUDIT_CHAIN_LAST_VERIFICATION: &str = "audit_chain_last_verification";
 /// Whether the newest chain verification found the chains intact, `1` or `0`.
 pub const AUDIT_CHAIN_INTACT: &str = "audit_chain_intact";
-/// Records waiting in the audit drain's queue.
-pub const AUDIT_DRAIN_QUEUE_DEPTH: &str = "audit_drain_queue_depth";
+/// How long one round of the audit chainer held the head of the access log
+/// (`outcome`).
+pub const ACCESS_LOG_CHAIN_HOLD: &str = "access_log_chain_hold_duration";
+/// Records the audit chainer linked into a chain (`chain`).
+pub const AUDIT_CHAINED: &str = "audit_chained";
 /// Live instances of the deployment that differ from this one, by what
 /// differs (`differs`), at its last comparison (#5589).
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 26] = [
+pub const NAMES: [&str; 27] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
@@ -104,7 +107,8 @@ pub const NAMES: [&str; 26] = [
     AUDIT_CHAIN_VERIFICATION_DURATION,
     AUDIT_CHAIN_LAST_VERIFICATION,
     AUDIT_CHAIN_INTACT,
-    AUDIT_DRAIN_QUEUE_DEPTH,
+    ACCESS_LOG_CHAIN_HOLD,
+    AUDIT_CHAINED,
     INSTANCE_MISMATCHES,
 ];
 
@@ -128,6 +132,7 @@ pub fn histogram_views() -> Vec<(&'static str, &'static [f64])> {
         (GRANTS_REFRESH_DURATION, PATH_BUCKETS),
         (ACCESS_LOG_APPEND_DURATION, PATH_BUCKETS),
         (ACCESS_LOG_SIGN_DURATION, PATH_BUCKETS),
+        (ACCESS_LOG_CHAIN_HOLD, PATH_BUCKETS),
         (AUDIT_SEAL_DURATION, SCHEDULED_BUCKETS),
         (ACCESS_LOG_RETENTION_DURATION, SCHEDULED_BUCKETS),
         (AUDIT_CHAIN_VERIFICATION_DURATION, SCHEDULED_BUCKETS),
@@ -156,6 +161,10 @@ pub struct AccessPathMetrics {
     pub log_append_duration: Histogram<f64>,
     /// Access-log checkpoint signing latency, seconds.
     pub log_sign_duration: Histogram<f64>,
+    /// How long each chainer round held the head of the access log, seconds.
+    pub log_chain_hold: Histogram<f64>,
+    /// Records the chainer linked into a chain.
+    pub log_chained: Counter<u64>,
     /// Scheduled seal runs, seconds.
     pub seal_duration: Histogram<f64>,
     /// The Unix time of each chain's newest successful seal run.
@@ -215,12 +224,21 @@ impl AccessPathMetrics {
             ),
             log_entries: make.counter(
                 ACCESS_LOG_ENTRIES,
-                "Access-log entries appended (outcome = ok | failed)",
+                "Audit records a request wrote to the intake (outcome = ok | failed)",
             ),
             log_append_duration: make.histogram(
                 ACCESS_LOG_APPEND_DURATION,
-                "Access-log append latency per transaction (outcome = ok | failed)",
+                "A request's intake write (outcome = ok | failed)",
                 PATH_BUCKETS,
+            ),
+            log_chain_hold: make.histogram(
+                ACCESS_LOG_CHAIN_HOLD,
+                "A chainer round's hold of the head (outcome = ok | failed)",
+                PATH_BUCKETS,
+            ),
+            log_chained: make.counter(
+                AUDIT_CHAINED,
+                "Audit records the chainer linked (chain = access_log | system)",
             ),
             log_sign_duration: make.histogram(
                 ACCESS_LOG_SIGN_DURATION,
@@ -348,8 +366,8 @@ pub fn unix_now() -> f64 {
 }
 
 /// Register the instruments read at collection time over `service`: each
-/// policy listener's state, the size of the per-EHR access copy and the
-/// class copy, and the depth of the audit drain's queue.
+/// policy listener's state, and the size of the per-EHR access copy and the
+/// class copy.
 pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
     let listeners = service.policy_listeners();
     observe_listeners(meter, &listeners);
@@ -362,17 +380,6 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
             let (ehrs, classes) = held.ehr_access_held();
             observer.observe(ehrs, &[KeyValue::new("copy", "ehr")]);
             observer.observe(classes, &[KeyValue::new("copy", "classes")]);
-        })
-        .build();
-
-    let drained = Arc::clone(service);
-    let _queue = meter
-        .u64_observable_gauge(AUDIT_DRAIN_QUEUE_DEPTH)
-        .with_description("Records waiting in the audit drain's queue")
-        .with_callback(move |observer| {
-            if let Some(queued) = drained.audit_queued() {
-                observer.observe(queued, &[]);
-            }
         })
         .build();
 }

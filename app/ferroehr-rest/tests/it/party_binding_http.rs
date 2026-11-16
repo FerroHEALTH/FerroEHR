@@ -284,7 +284,7 @@ pub(crate) async fn audited_service() -> (
     let (db, pool) = common::migrated_pool().await;
     common::open_key_spaces(&pool, &[(LOGIN, false)]).await;
     let (sender, handle) =
-        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+        ferroehr::system_log::sender::start(common::local_audit(), None, pool.clone())
             .await
             .expect("the audit sender");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
@@ -559,7 +559,7 @@ pub(crate) async fn refusal_rows(
 async fn a_login_binding_refusal_is_recorded_with_its_code_and_party() {
     let (db, pool) = common::migrated_pool().await;
     let (sender, _handle): (_, ferroehr::system_log::sender::AuditHandle) =
-        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+        ferroehr::system_log::sender::start(common::local_audit(), None, pool.clone())
             .await
             .expect("the audit sender");
     let svc = Arc::new(

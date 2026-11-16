@@ -261,7 +261,7 @@ impl Checkpoints {
             }
         }
         self.verified(export)?;
-        let entry = import_entry(self.system_id(), &export.ehr_id, record)?;
+        let mut entry = import_entry(self.system_id(), &export.ehr_id, record)?;
         let mut conn = acquire(self.pool()).await.map_err(AccessLogError::from)?;
         let mut tx = conn.begin().await.map_err(AccessLogError::from)?;
         store_links(&mut tx, system_id, &export.links).await?;
@@ -279,12 +279,25 @@ impl Checkpoints {
         .execute(&mut *tx)
         .await
         .map_err(AccessLogError::from)?;
-        let appended = self.store().append_in(&mut tx, vec![entry]).await?;
-        let mut appended = appended.seal(&mut tx).await?;
+        crate::access_log::intake::take_in(
+            &mut tx,
+            vec![crate::access_log::intake::IntakeEntry::of(
+                &mut entry, None,
+            )?],
+        )
+        .await?;
         tx.commit().await.map_err(AccessLogError::from)?;
-        let entry = appended.pop().ok_or_else(|| AccessLogError::Unlinked {
-            uid: export.ehr_id.clone(),
-        })?;
+        self.store()
+            .settle(crate::access_log::chainer::Owed::default())
+            .await?;
+        let entry = self
+            .store()
+            .linked(vec![entry])
+            .await?
+            .pop()
+            .ok_or_else(|| AccessLogError::Unlinked {
+                uid: export.ehr_id.clone(),
+            })?;
         Ok(Imported {
             system_id: system_id.clone(),
             records: export.records.len(),

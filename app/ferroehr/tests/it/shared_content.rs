@@ -527,13 +527,12 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
     let config = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..AuditConfig::default()
     };
-    let (audit, _handle) = sender::start(config, None, Some(pool.clone()))
+    let (audit, _handle) = sender::start(config, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))

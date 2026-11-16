@@ -83,7 +83,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
 /// [`app`] over the audit sinks `audit` configures.
 async fn app_auditing(audit: AuditConfig) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = common::binding_service(&pool)

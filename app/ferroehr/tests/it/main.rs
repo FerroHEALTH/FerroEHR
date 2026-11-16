@@ -67,6 +67,7 @@ mod aql_template_like;
 mod audit_chain;
 mod audit_ehds_mapping;
 mod audit_feed;
+mod audit_intake;
 mod audit_render_policy_shape;
 mod audit_search_pages;
 mod audit_store;

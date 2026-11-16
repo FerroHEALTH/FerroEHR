@@ -10,9 +10,11 @@
 //! of `audit.access_log_search` beside it: the columns the search filters on,
 //! read from the entry's projection, and the render policy that projection is
 //! written under (`migrations/audit/0030_access_log_projections.sql`). A read
-//! renders the document from the entry's content. A record an act wrote as
-//! its entry in its own transaction ([`EntryScope::Written`]) is stored by
-//! that act alone, so it is stored once. No openEHR spec governs
+//! renders the document from the entry's content. Both are written into the
+//! intake before the response and chained after
+//! (`migrations/audit/0041_audit_intake.sql`). A record an act wrote as its
+//! entry in its own transaction ([`EntryScope::Written`]) is written by that
+//! act alone, so it is stored once. No openEHR spec governs
 //! audit storage: our own design.
 
 #![expect(
@@ -24,7 +26,6 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use jiff_sqlx::Timestamp;
 use openehr_base::containers::NonEmptyVec;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_tombstone::AccessLogTombstone;
@@ -32,6 +33,8 @@ use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use sqlx::postgres::{PgConnection, PgRow};
 use sqlx::{Connection, Row};
+
+use crate::access_log::intake::{IndexRow, IntakeEntry};
 
 use super::chains::AuditChain;
 use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd, stored_record};
@@ -41,128 +44,75 @@ use crate::system_log::AuditError;
 use crate::system_log::event::{AuditEvent, EntryScope, EventOutcome};
 use crate::system_log::render::{CompiledPolicy, StoredRecord};
 
-/// The index rows of a batch of entries, one element per entry, as the
-/// `unnest` of [`INDEX`] reads them.
-#[derive(Debug, Default)]
-struct IndexRows {
-    chain_seqs: Vec<i64>,
-    recorded_at: Vec<Timestamp>,
-    actions: Vec<&'static str>,
-    outcomes: Vec<i16>,
-    principals: Vec<Option<String>>,
-    patient_ids: Vec<Option<String>>,
-    resource_ids: Vec<Option<String>>,
-    request_ids: Vec<Option<String>>,
-    client_ips: Vec<Option<String>>,
-    ehr_ids: Vec<Option<String>>,
-    tokens: Vec<String>,
-    policies: Vec<Vec<u8>>,
-}
-
-/// The index rows of a batch of entries.
-const INDEX: &str = "INSERT INTO audit.access_log_search (chain_seq, recorded_at, action, \
-     outcome, principal, patient_id, resource_id, request_id, client_ip, ehr_id, search_tokens, \
-     render_policy) \
-     SELECT u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11::integer[], u.c12 \
-     FROM UNNEST($1::bigint[], $2::timestamptz[], $3::text[], $4::smallint[], $5::text[], \
-     $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], $12::bytea[]) \
-     AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12)";
-
 /// The records of a batch that are stored by their columns, with their
 /// retention ends, and the records that are stored as their entry; a record
 /// whose act wrote its entry itself is neither.
-pub(super) fn split<'a>(
-    records: &'a [AuditRecord],
+pub(super) fn split(
+    records: Vec<AuditRecord>,
     ends: &[RecordEnd],
-) -> (Vec<AuditRecord>, Vec<RecordEnd>, Vec<&'a AuditRecord>) {
+) -> (Vec<AuditRecord>, Vec<RecordEnd>, Vec<AuditRecord>) {
     let mut rows = Vec::new();
     let mut row_ends = Vec::new();
     let mut entries = Vec::new();
-    for (index, record) in records.iter().enumerate() {
+    for (index, record) in records.into_iter().enumerate() {
         if record.event.entry == EntryScope::Written {
             continue;
         }
         if record.entry.is_some() {
             entries.push(record);
         } else {
-            rows.push(record.clone());
             row_ends.extend(ends.get(index).copied());
+            rows.push(record);
         }
     }
     (rows, row_ends, entries)
 }
 
 impl AuditStore {
-    /// Append the entry of each of `records` on `conn`, with its index row,
-    /// and enter it in the FHIR Feed's outbox when the feed delivers from this
-    /// store; returns the shared token sets learned.
+    /// Write the entry of each of `records` into the intake on `conn`, each
+    /// with its index row; returns the entries' uids and the shared token
+    /// sets learned.
     ///
     /// # Errors
-    /// [`AuditError::AccessLog`] when an entry cannot be appended, and the
+    /// [`AuditError::AccessLog`] when an entry has no stored form, and the
     /// projection and store errors of the index rows.
-    pub(super) async fn append_entries(
+    pub(super) async fn intake_entries(
         &self,
         conn: &mut PgConnection,
-        records: &[&AuditRecord],
-    ) -> Result<LearnedSets, AuditError> {
-        let entries: Vec<AccessLogEntry> = records
-            .iter()
-            .filter_map(|record| record.entry.as_deref().cloned())
-            .collect();
-        if entries.is_empty() {
-            return Ok(LearnedSets::default());
-        }
-        let access_log = self
-            .access_log()
-            .unwrap_or_else(|| AccessLogStore::new(self.pool.clone()));
-        let appended = access_log.append_in(conn, entries).await?;
-        let linked = appended.entries();
-        let mut rows = IndexRows::default();
-        let mut tokens = Vec::with_capacity(linked.len());
-        for (record, entry) in records.iter().zip(linked) {
+        records: Vec<AuditRecord>,
+    ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
+        let mut entered = Vec::with_capacity(records.len());
+        let mut tokens = Vec::with_capacity(records.len());
+        for record in records {
+            let Some(entry) = record.entry else {
+                continue;
+            };
             let writing = self.writing.of(&record.event);
             let digest = self.writing_digest(&writing).await?;
             let policy = writing.compiled().await?;
-            let chain_seq = entry.link.sequence;
             let projection = Projection {
                 context: &policy.context,
                 categories: &policy.categories,
             };
-            let (event, subject) = projection.record(entry, chain_seq)?;
+            let (event, subject) = projection.record(&entry, 0)?;
             let document =
                 crate::system_log::fhir::to_fhir(&event, projection.context, subject.as_deref());
             tokens.push(tokens_of(document, &event));
-            rows.push(chain_seq, &event, subject, digest);
+            entered.push((entry, index_row(&event, subject, digest)));
+        }
+        if entered.is_empty() {
+            return Ok((Vec::new(), LearnedSets::default()));
         }
         let (ids, learned) = self.tokens.record_tokens(conn, &tokens).await?;
-        rows.tokens = token_texts(&ids);
-        sqlx::query(INDEX)
-            .bind(&rows.chain_seqs)
-            .bind(&rows.recorded_at)
-            .bind(&rows.actions)
-            .bind(&rows.outcomes)
-            .bind(&rows.principals)
-            .bind(&rows.patient_ids)
-            .bind(&rows.resource_ids)
-            .bind(&rows.request_ids)
-            .bind(&rows.client_ips)
-            .bind(&rows.ehr_ids)
-            .bind(&rows.tokens)
-            .bind(&rows.policies)
-            .execute(&mut *conn)
-            .await?;
-        if self.fhir_feed {
-            sqlx::query(
-                "INSERT INTO audit.fhir_feed_outbox (chain, chain_seq) \
-                 SELECT 'access_log', u.chain_seq FROM unnest($1::bigint[]) WITH ORDINALITY \
-                 AS u(chain_seq, n) ORDER BY u.n",
-            )
-            .bind(&rows.chain_seqs)
-            .execute(&mut *conn)
-            .await?;
+        let mut uids = Vec::with_capacity(entered.len());
+        let mut intake = Vec::with_capacity(entered.len());
+        for ((mut entry, mut index), search_tokens) in entered.into_iter().zip(token_texts(&ids)) {
+            index.search_tokens = search_tokens;
+            uids.push(uuid::Uuid::parse_str(entry.uid.value()).map_err(AuditError::EntryUid)?);
+            intake.push(IntakeEntry::of(&mut entry, Some(index))?);
         }
-        appended.seal(conn).await?;
-        Ok(learned)
+        crate::access_log::intake::take_in(conn, intake).await?;
+        Ok((uids, learned))
     }
 
     /// `records`, each whose access writes an access-log entry carrying it:
@@ -174,11 +124,9 @@ impl AuditStore {
     /// The [`crate::system_log::render::RenderPolicy::compile`] errors.
     pub(super) async fn with_entries(
         &self,
-        records: &[AuditRecord],
+        mut records: Vec<AuditRecord>,
     ) -> Result<Vec<AuditRecord>, AuditError> {
-        let mut entered = Vec::with_capacity(records.len());
-        for record in records {
-            let mut record = record.clone();
+        for record in &mut records {
             if record.entry.is_none() && crate::access_log::entry::writes_entry(&record.event) {
                 let policy = self.writing.of(&record.event).compiled().await?;
                 record.entry = crate::access_log::entry::for_store(
@@ -187,23 +135,25 @@ impl AuditStore {
                     &policy.context,
                 );
             }
-            entered.push(record);
         }
-        Ok(entered)
+        Ok(records)
     }
-
     /// Replace the access-log entry `uid` by its tombstone, removed at
-    /// `time_removed` on `grounds`, and store `event`, the record of the
-    /// change, as its own entry with its index row and the FHIR Feed's debt,
-    /// in one transaction, so the log holds the tombstone and the record of
-    /// its making or neither; `None` when no entry has the uid.
+    /// `time_removed` on `grounds`, and write `event`, the record of the
+    /// change, into the intake as its own entry, in one transaction, so the
+    /// log holds the tombstone and the record of its making or neither;
+    /// `None` when no entry has the uid.
     ///
-    /// The record is stored once, as its entry: the act emits it after as
-    /// [`EntryScope::Written`], which the store leaves to this write.
+    /// Every intake row is chained first, so an entry written moments ago is
+    /// in the log the tombstone replaces it in, and the record of the
+    /// erasure is chained before this returns. The record is written once,
+    /// as its entry: the act names it [`EntryScope::Written`], so the request
+    /// writes no second record of it.
     ///
     /// # Errors
     /// [`AuditError::AccessLog`] when the tombstone or the entry cannot be
-    /// written, and the projection and store errors of the index row.
+    /// written, the chaining errors of [`Self::settle`], and the projection
+    /// and store errors of the index row.
     pub async fn erase_entry(
         &self,
         uid: &str,
@@ -211,47 +161,24 @@ impl AuditStore {
         grounds: NonEmptyVec<DvCodedText>,
         event: &AuditEvent,
     ) -> Result<Option<AccessLogTombstone>, AuditError> {
+        self.settle().await?;
         let record = AuditRecord {
             event: event.clone(),
             subject: None,
             entry: None,
         };
-        let entered = self.with_entries(std::slice::from_ref(&record)).await?;
-        let recorded: Vec<&AuditRecord> = entered.iter().collect();
+        let recorded = self.with_entries(vec![record]).await?;
         let mut conn = crate::db::acquire::acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let tombstone = AccessLogStore::tombstone_in(&mut tx, uid, time_removed, grounds).await?;
         if tombstone.is_none() {
             return Ok(None);
         }
-        let learned = Box::pin(self.append_entries(&mut tx, &recorded)).await?;
+        let (_uids, learned) = Box::pin(self.intake_entries(&mut tx, recorded)).await?;
         tx.commit().await?;
         self.remember(learned);
+        self.settle().await?;
         Ok(tombstone)
-    }
-
-    /// Store `event`, an access the log covers, as its entry; returns the
-    /// entry's uid.
-    ///
-    /// # Errors
-    /// As [`AuditStore::insert_batch`].
-    pub(super) async fn insert_entry(
-        &self,
-        event: &AuditEvent,
-        subject: Option<&str>,
-    ) -> Result<uuid::Uuid, AuditError> {
-        let record = AuditRecord {
-            event: event.clone(),
-            subject: subject.map(str::to_owned),
-            entry: None,
-        };
-        let entered = self.with_entries(std::slice::from_ref(&record)).await?;
-        self.insert_batch(&entered, &[]).await?;
-        entered
-            .first()
-            .and_then(|record| record.entry.as_ref())
-            .and_then(|entry| uuid::Uuid::parse_str(entry.uid.value()).ok())
-            .ok_or(AuditError::SearchToken)
     }
 
     /// The row of `audit.audit_record` at position `chain_seq` of `chain`.
@@ -353,34 +280,27 @@ pub(super) fn token_texts(ids: &[Vec<i32>]) -> Vec<String> {
         .collect()
 }
 
-impl IndexRows {
-    /// Adds the index row of the entry at `chain_seq` whose record is
-    /// `event`, written under the policy `digest`.
-    fn push(
-        &mut self,
-        chain_seq: i64,
-        event: &AuditEvent,
-        subject: Option<String>,
-        digest: Vec<u8>,
-    ) {
-        let nonempty = |value: &str| (!value.is_empty()).then(|| value.to_owned());
-        self.chain_seqs.push(chain_seq);
-        self.recorded_at.push(Timestamp::from(event.timestamp));
-        self.actions.push(event.action.as_code());
-        self.outcomes.push(match event.outcome {
+/// The index row of the entry whose record is `event`, written under the
+/// policy `digest`, its search tokens still to be filled in.
+fn index_row(event: &AuditEvent, subject: Option<String>, digest: Vec<u8>) -> IndexRow {
+    let nonempty = |value: &str| (!value.is_empty()).then(|| value.to_owned());
+    IndexRow {
+        recorded_at: event.timestamp,
+        action: event.action.as_code(),
+        outcome: match event.outcome {
             EventOutcome::Success => 0,
             EventOutcome::MinorFailure => 4,
             EventOutcome::SeriousFailure => 8,
-        });
-        self.principals.push(nonempty(&event.user_id));
-        self.patient_ids.push(subject);
-        self.resource_ids.push(event.object_id.clone());
-        self.request_ids.push(event.request_id.clone());
-        self.client_ips.push(event.client_ip.clone());
+        },
+        principal: nonempty(&event.user_id),
+        patient_id: subject,
+        resource_id: event.object_id.clone(),
+        request_id: event.request_id.clone(),
+        client_ip: event.client_ip.clone(),
         // NOTE: no specification governs this: our own design; only a classified access names its
         // EHR in the index, as only its EHDS access record names it.
-        self.ehr_ids
-            .push(event.category.as_ref().and(event.ehr_id.clone()));
-        self.policies.push(digest);
+        ehr_id: event.category.as_ref().and(event.ehr_id.clone()),
+        search_tokens: String::new(),
+        render_policy: digest,
     }
 }

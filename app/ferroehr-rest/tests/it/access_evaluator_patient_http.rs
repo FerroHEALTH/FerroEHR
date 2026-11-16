@@ -22,7 +22,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
+use ferroehr::system_log::config::{AuditConfig, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
@@ -205,13 +205,13 @@ async fn seed_ehr_in(seed: &Router, ehr_id: &str, namespace: &str, patient: &str
 
 // ── ATNA capture ───────────────────────────────────────────────────────────────
 
-async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
+async fn audit_capture() -> (testkit::TestDb, SyslogTlsListener, AuditSender) {
+    let db = testkit::db().await.expect("the audit store");
     let socket = SyslogTlsListener::bind(0).await.expect("syslog listener");
     let port = socket.port;
     let cfg = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
         },
@@ -224,12 +224,10 @@ async fn audit_capture() -> (SyslogTlsListener, AuditSender) {
             ..SyslogConfig::default()
         }),
         suppress_login_events: true,
-        fail_mode: FailMode::Open,
-        queue_capacity: 64,
         ..AuditConfig::default()
     };
-    let (sender, _handle) = start(cfg, None, None).await.expect("audit start");
-    (socket, sender)
+    let (sender, _handle) = start(cfg, None, db.pool()).await.expect("audit start");
+    (db, socket, sender)
 }
 
 /// How long a test waits for the audit record it asserts on. A pass returns
@@ -519,7 +517,7 @@ async fn a_patient_deny_is_audited() {
     // A 403 from the evaluator carries the Principal, so the ATNA layer records a
     // failure audit for the denied caller: a minor-failure outcome
     // (`EventOutcomeIndicator="4"`) attributed to `svc`.
-    let (mut socket, sender) = audit_capture().await;
+    let (_audit, mut socket, sender) = audit_capture().await;
     let (_pg, svc) = service(Some(sender)).await;
     seed_ehrs(&svc, &[EHR_OTHER]).await;
     let app = gated_app(svc).await;

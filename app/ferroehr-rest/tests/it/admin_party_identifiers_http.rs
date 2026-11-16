@@ -64,7 +64,7 @@ fn config() -> AppConfig {
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = common::local_audit();
-    let (sender, _handle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let key = ferrohealth_secret::secret::Secret::new(TEST_ROOT_KEY);

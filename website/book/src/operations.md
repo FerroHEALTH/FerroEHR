@@ -978,7 +978,8 @@ why they are written as your checklist rather than as our claim.
 - **Stay available.** Keep at least two replicas (or autoscaling) and a pod
   disruption budget so node drains and upgrades never fully interrupt the
   API. The default 30-second termination grace period covers the server's
-  short shutdown drain of the audit outbox.
+  shutdown; the audit records are stored before each response, so a
+  replica that stops leaves nothing in memory.
 
 ### How long the version you pinned is supported
 
@@ -1221,7 +1222,7 @@ Not every indicator blocks readiness, and the distinction is deliberate:
 |---|---|---|
 | `db` | a pooled connection answers | yes |
 | `migrations` | this build's schema is present, re-tested on every probe | yes |
-| `audit_sender` | the audit posture: `DEGRADED` with the consequence stated when auditing is off (no access log, no EHDS logging component); `UP` with `fail_mode`, the local store and its retention in the detail, and a stated caution under `fail_mode = "open"` | no: reports `DEGRADED`, never `503` |
+| `audit_sender` | the audit posture: `DEGRADED` with the consequence stated when auditing is off (no access log, no EHDS logging component), and `DEGRADED` with its age when the oldest intake record has waited more than 10 seconds for the chainer | no: reports `DEGRADED`, never `503` |
 | `audit_delivery` | each forwarder to an external Audit Record Repository (present when `[audit.syslog]` or `[audit.fhir_feed]` is on): the records waiting, those the repository refused, those delivered, and whether the last attempt reached it; `DEGRADED` when the repository is unreachable or a record was refused | no: records wait in their spool or the store, so delivery problems never take the instance out of rotation |
 | `audit_chain` | the latest scheduled verification of the local audit store's hash chain (incremental from the last intact link, with a periodic full pass) (present when the local store is on and `[audit.store] verify_interval` is not `0`): `UP` while intact or before the first run, `DEGRADED` naming the finding count and the first damaged position, or the reason the verification could not run; `audit_chain_intact` and [its runbook](operations-access-path.md#a-chain-verification-that-fails) | no: a damaged chain reports `DEGRADED` in the body, never `503`, because the trail keeps recording while the damage is investigated |
 | `access_log_checkpoints` | whether the access log is sealed and its checkpoints published outside the database (present when the local store is on): `UP` with an OpenPGP key and `[audit.access_log] publish_directory` while publication works, `DEGRADED` without the key, without the directory (removing the newest entries then goes undetected), or while a publication fails, naming which; [its runbook](operations-access-path.md#a-checkpoint-publication-that-fails) | no: the log keeps recording |
@@ -1294,7 +1295,7 @@ not a default you already have.
 
 | Endpoint | Endpoint name to set | Purpose | Level to give it |
 |---|---|---|---|
-| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `deployment.spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, the `audit` posture (`enabled`, `fail_mode`, `local_store`, `retention`), the `manufacturer` of the release (`name`, `postal_address`, `email`, `website`), and the `support` period (`release_date`, `support_ends`, `status`) | `admin_only` |
+| `GET /management/info` | `info` | product name and version, build SHA, build date, `rustc`, the active `deployment.spec_profile`, the openEHR specification versions that profile selects, the PostgreSQL target, the `audit` posture (`enabled`), the `manufacturer` of the release (`name`, `postal_address`, `email`, `website`), and the `support` period (`release_date`, `support_ends`, `status`) | `admin_only` |
 | `GET /management/prometheus` | `prometheus` | Prometheus text exposition | `admin_only`, or `public` only when the port is not reachable outside the cluster; a `public` endpoint is served OUTSIDE authentication |
 | `GET /management/metrics` | `metrics` | JSON list of the registered metric names | `admin_only` |
 | `GET /management/metrics/{name}` | `metrics` | the current value(s) of one metric; `404` for a name that is not registered | `admin_only` |

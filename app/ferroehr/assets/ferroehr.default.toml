@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 859 keys. A deployment that holds real data sets the 10
+# This file lists 853 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1289,19 +1289,11 @@ system_id = "ferroehr.local"
 # Skip successful-login records (`FERROEHR__AUDIT__SUPPRESS_LOGIN_EVENTS`).
 # Rejected accesses (401/403) are always recorded. Optional.
 #? suppress_login_events = true
-# Failure mode (`FERROEHR__AUDIT__FAIL_MODE`): `open` | `closed`. Optional
-# (trust).
-#? fail_mode = "open"
-# Enrich the patient participant via a background indexed lookup of
-# `ehr.subject_id` (`FERROEHR__AUDIT__RESOLVE_SUBJECT`). On by default — the
+# Enrich the patient participant through an indexed lookup of `ehr.subject_id`
+# (`FERROEHR__AUDIT__RESOLVE_SUBJECT`), memoized per EHR. On by default: the
 # IHE BALP `Patient*` patterns and the patient-centric audit search need the
-# subject; the lookup runs only on the background drain. Optional.
+# subject. Optional.
 #? resolve_subject = true
-# Bounded audit queue capacity (`FERROEHR__AUDIT__QUEUE_CAPACITY`). Sized for
-# write-path bursts: the drain persists in multi-row batches, so the queue only
-# needs to ride out sink latency spikes, but a loaded write path can enqueue
-# thousands per second. Optional.
-#? queue_capacity = 8192
 # This node's advertised network address → the destination
 # network-access-point (`FERROEHR__AUDIT__SERVER_HOST`); the `value_if_missing`
 # fill when unset. Optional, unset by default (infrastructure).
@@ -1328,10 +1320,6 @@ system_id = "ferroehr.local"
 
 # The local Audit Record Repository.
 #? [audit.store]
-# Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`). **On by
-# default** (owner posture: compliance out of the box). Optional
-# (infrastructure).
-#? enabled = true
 # The time between two scheduled verifications of the store's hash chain
 # (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL`); `"0s"` turns the schedule off.
 # Default one hour. Optional.
@@ -1349,17 +1337,6 @@ system_id = "ferroehr.local"
 # (`FERROEHR__AUDIT__SYSLOG__URL`): RFC 5425 TLS, on the §4.1 port 6514 by
 # default. Optional (infrastructure).
 #? url = "tls://localhost:6514"
-# The directory of the `ihe-atna` spool every record is stored in before it is
-# sent (`FERROEHR__AUDIT__SYSLOG__SPOOL_DIR`), owner-only; unset, the spool is
-# held in memory and a restart loses what it holds. Optional, unset by default
-# (infrastructure).
-#? spool_dir = ""
-# The most records the spool holds
-# (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_EVENTS`). Optional.
-#? spool_max_events = 100000
-# The most the spool holds in size (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_SIZE`).
-# Optional.
-#? spool_max_size = "256MiB"
 
 # The TLS material of the connection to the ARR (`[audit.syslog.tls]`): the
 # family's outbound TLS keys, the client identity for mutual TLS and the trust

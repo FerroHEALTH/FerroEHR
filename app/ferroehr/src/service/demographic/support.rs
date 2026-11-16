@@ -382,7 +382,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// [`ServiceError::Unrecorded`] when the audit trail refuses the record.
-    pub(in crate::service::demographic) fn record_party_access(
+    pub(in crate::service::demographic) async fn record_party_access(
         &self,
         action: EventActionCode,
         object_id: String,
@@ -398,6 +398,6 @@ impl FerroEhrService {
             .map(|committer| committer.subject)
             .unwrap_or_default();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_access(event).await
     }
 }

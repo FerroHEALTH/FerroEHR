@@ -2877,7 +2877,7 @@
             }
           },
           "503": {
-            "description": "The access record could not be written under `audit.fail_mode = \"closed\"`; the values are withheld.",
+            "description": "The access record could not be written; the values are withheld.",
             "content": {
               "application/problem+json": {
                 "schema": {

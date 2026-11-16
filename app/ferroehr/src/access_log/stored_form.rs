@@ -94,59 +94,72 @@ fn shared_detail(item: &Value) -> bool {
 }
 
 /// The stored form of the entry whose canonical form, without its link, is
-/// the object `members`.
+/// the object `members`, its members moved into the part that keeps them.
 #[must_use]
-pub fn split(members: &Map<String, Value>) -> StoredForm {
+pub fn split(members: Map<String, Value>) -> StoredForm {
     let mut row = Map::new();
     let mut shared = Map::new();
     for (name, member) in members {
         if SHARED.contains(&name.as_str()) {
-            shared.insert(name.clone(), member.clone());
-        } else if let (Some((_, own_keys)), Value::Object(object)) =
-            (SPLIT.iter().find(|(split, _)| split == name), member)
-        {
-            let (own, common): (Map<String, Value>, Map<String, Value>) = object
-                .clone()
-                .into_iter()
-                .partition(|(key, _)| own_keys.contains(&key.as_str()));
-            shared.insert(name.clone(), Value::Object(common));
-            if !own.is_empty() {
-                row.insert(name.clone(), Value::Object(own));
-            }
-        } else if name == DETAILS
-            && let Value::Object(tree) = member
-        {
-            let mut envelope = Map::new();
-            let mut own = Vec::new();
-            let mut common = Vec::new();
-            for (field, value) in tree {
-                if field == ITEMS
-                    && let Value::Array(items) = value
-                {
-                    for item in items {
-                        if shared_detail(item) {
-                            common.push(item.clone());
-                        } else {
-                            own.push(item.clone());
-                        }
-                    }
-                } else {
-                    envelope.insert(field.clone(), value.clone());
+            shared.insert(name, member);
+            continue;
+        }
+        let member = match (SPLIT.iter().find(|(split, _)| *split == name), member) {
+            (Some((_, own_keys)), Value::Object(object)) => {
+                let (own, common): (Map<String, Value>, Map<String, Value>) = object
+                    .into_iter()
+                    .partition(|(key, _)| own_keys.contains(&key.as_str()));
+                if !own.is_empty() {
+                    row.insert(name.clone(), Value::Object(own));
                 }
+                shared.insert(name, Value::Object(common));
+                continue;
             }
-            envelope.insert(ITEMS.to_owned(), Value::Array(common));
-            shared.insert(DETAILS.to_owned(), Value::Object(envelope));
-            let mut kept = Map::new();
-            kept.insert(ITEMS.to_owned(), Value::Array(own));
-            row.insert(DETAILS.to_owned(), Value::Object(kept));
-        } else {
-            row.insert(name.clone(), member.clone());
+            (_, member) => member,
+        };
+        match member {
+            Value::Object(tree) if name == DETAILS => {
+                let (envelope, own) = split_details(tree);
+                shared.insert(DETAILS.to_owned(), Value::Object(envelope));
+                let mut kept = Map::new();
+                kept.insert(ITEMS.to_owned(), Value::Array(own));
+                row.insert(DETAILS.to_owned(), Value::Object(kept));
+            }
+            member => {
+                row.insert(name, member);
+            }
         }
     }
     StoredForm {
         row: Value::Object(row),
         shared: (!shared.is_empty()).then_some(Value::Object(shared)),
     }
+}
+
+/// The details tree `tree` split: its envelope with the shared elements, and
+/// the elements of the row.
+fn split_details(tree: Map<String, Value>) -> (Map<String, Value>, Vec<Value>) {
+    let mut envelope = Map::new();
+    let mut own = Vec::new();
+    let mut common = Vec::new();
+    for (field, value) in tree {
+        match value {
+            Value::Array(items) if field == ITEMS => {
+                for item in items {
+                    if shared_detail(&item) {
+                        common.push(item);
+                    } else {
+                        own.push(item);
+                    }
+                }
+            }
+            value => {
+                envelope.insert(field, value);
+            }
+        }
+    }
+    envelope.insert(ITEMS.to_owned(), Value::Array(common));
+    (envelope, own)
 }
 
 /// The record `row` and `shared` store, joined back into its canonical form's
@@ -157,23 +170,33 @@ pub fn split(members: &Map<String, Value>) -> StoredForm {
 /// written in ([`crate::access_log::details::DetailsWriter::finish`]).
 #[must_use]
 pub fn join(row: Value, shared: Option<Value>) -> Value {
-    let (Value::Object(mut members), Some(Value::Object(common))) = (row.clone(), shared) else {
-        return row;
+    let (row, common) = match (row, shared) {
+        (Value::Object(row), Some(Value::Object(common))) => (row, common),
+        (row, _) => return row,
     };
-    let own_details = members.remove(DETAILS);
+    let mut members = row;
+    let mut own_details = members.remove(DETAILS);
     for (name, member) in common {
         if name == DETAILS {
-            members.insert(name, joined_details(member, own_details.clone()));
-        } else if let (Some(Value::Object(own)), Value::Object(mut object)) =
-            (members.remove(&name), member.clone())
-        {
-            object.extend(own);
-            members.insert(name, Value::Object(object));
-        } else {
-            members.insert(name, member);
+            members.insert(name, joined_details(member, own_details.take()));
+            continue;
+        }
+        match (members.remove(&name), member) {
+            (Some(Value::Object(own)), Value::Object(mut object)) => {
+                object.extend(own);
+                members.insert(name, Value::Object(object));
+            }
+            (_, member) => {
+                members.insert(name, member);
+            }
         }
     }
     Value::Object(members)
+}
+
+/// The at-code an element of the details tree names.
+fn code(item: &Value) -> Option<&str> {
+    item.get(NODE).and_then(Value::as_str)
 }
 
 /// The details tree `common` holds with the elements of `own` merged in, in
@@ -186,11 +209,13 @@ fn joined_details(common: Value, own: Option<Value>) -> Value {
         Some(Value::Array(items)) => items,
         _ => Vec::new(),
     };
-    let own_items = match own.and_then(|own| own.get(ITEMS).cloned()) {
-        Some(Value::Array(items)) => items,
+    let own_items = match own {
+        Some(Value::Object(mut own)) => match own.remove(ITEMS) {
+            Some(Value::Array(items)) => items,
+            _ => Vec::new(),
+        },
         _ => Vec::new(),
     };
-    let code = |item: &Value| item.get(NODE).and_then(Value::as_str).map(str::to_owned);
     let mut merged = Vec::with_capacity(shared_items.len() + own_items.len());
     let mut left = shared_items.into_iter().peekable();
     let mut right = own_items.into_iter().peekable();
@@ -244,7 +269,7 @@ mod tests {
         let Some(members) = entry.as_object() else {
             panic!("an object");
         };
-        let stored = split(members);
+        let stored = split(members.clone());
         assert!(stored.row.get("accessor").is_none());
         assert_eq!(stored.row["outcome"], json!({ "delivered": 1 }));
         assert!(
@@ -297,7 +322,7 @@ mod tests {
         let Some(members) = tombstone.as_object() else {
             panic!("an object");
         };
-        let stored = split(members);
+        let stored = split(members.clone());
         assert_eq!(stored.shared, None);
         assert_eq!(join(stored.row, None), tombstone);
     }

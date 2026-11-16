@@ -169,8 +169,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// - `exception` — a database fault while deleting.
-    /// - `service_overloaded` — the record of a removed EHR was refused under
-    ///   `[audit] fail_mode = "closed"`; its chunk is already committed.
+    /// - `service_overloaded` — the record of a removed EHR could not be written; its chunk is already committed.
     pub async fn admin_ehr_delete_all(&self, ehr_ids: &[EhrId]) -> Result<u64, ServiceError> {
         // Chunking bounds each transaction's lock/WAL footprint on a
         // full-store wipe.
@@ -198,7 +197,8 @@ impl FerroEhrService {
             let removed = self.erase_ehrs(&mut tx, chunk).await?;
             tx.commit().await?;
             for &ehr_id in &removed {
-                self.emit_mark_access(EventActionCode::Delete, ehr_id, None, "ehr-delete")?;
+                self.emit_mark_access(EventActionCode::Delete, ehr_id, None, "ehr-delete")
+                    .await?;
             }
             #[expect(
                 clippy::as_conversions,

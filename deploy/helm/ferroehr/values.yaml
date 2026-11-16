@@ -603,8 +603,7 @@ config:
     # GET /ferroehr/rest/status reports the profile. `production` refuses to
     # boot while a separation is missing and not named in `accepts`. These
     # chart defaults leave several open (one DSN for every domain, an empty
-    # privacy.subject_namespaces, audit.fail_mode open, the open
-    # authz.rbac.ehr_access_default, database.migrations apply on the runtime
+    # privacy.subject_namespaces, the open authz.rbac.ehr_access_default, database.migrations apply on the runtime
     # credential, a plaintext listener behind the ingress), so a deployment
     # holding patient data starts from values-production.yaml, or sets
     # `production` and closes or accepts each one by name, e.g.

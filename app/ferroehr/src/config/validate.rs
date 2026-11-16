@@ -125,11 +125,6 @@ impl FerroEhrConfig {
         if let Err(e) = syslog.address() {
             errors.push(ConfigError::semantic(e));
         }
-        if syslog.spool_max_events == 0 || syslog.spool_max_size.is_zero() {
-            errors.push(ConfigError::semantic(
-                "audit.syslog.spool_max_events and spool_max_size must be above zero".to_owned(),
-            ));
-        }
         if let Err(e) =
             ferrohealth_server::tls_client::TlsClient::read("audit.syslog.tls", &syslog.tls)
         {

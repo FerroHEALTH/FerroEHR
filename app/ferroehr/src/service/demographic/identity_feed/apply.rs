@@ -313,7 +313,8 @@ impl FerroEhrService {
         self.record_party_access(
             EventActionCode::Update,
             format!("pmir-message:{}", message.message_id),
-        )?;
+        )
+        .await?;
         tx.commit().await?;
         tracing::info!(
             changes = message.events.len(),

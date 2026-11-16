@@ -59,7 +59,7 @@ impl FerroEhrService {
     /// - `ehr_id_does_not_exist` / `versioned_object_does_not_exist` (`404`) —
     ///   the EHR is unknown, or the object is not in it.
     /// - `exception` — a database fault (rolled back); `service_overloaded`
-    ///   when the access record is refused under `[audit] fail_mode = "closed"`.
+    ///   when the access record cannot be written.
     pub async fn delay_person_access(
         &self,
         ehr_id: EhrId,
@@ -98,7 +98,8 @@ impl FerroEhrService {
             )));
         }
         tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Create, ehr_id, Some(vo_id), REGISTER)?;
+        self.emit_mark_access(EventActionCode::Create, ehr_id, Some(vo_id), REGISTER)
+            .await?;
         Ok(())
     }
 
@@ -121,7 +122,8 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::Storage)?;
         tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Delete, ehr_id, Some(vo_id), REGISTER)?;
+        self.emit_mark_access(EventActionCode::Delete, ehr_id, Some(vo_id), REGISTER)
+            .await?;
         Ok(())
     }
 
@@ -135,7 +137,8 @@ impl FerroEhrService {
         ehr_id: EhrId,
     ) -> Result<Vec<access_delay::AccessDelayRow>, ServiceError> {
         self.check_mark_target(ehr_id, None).await?;
-        self.emit_mark_access(EventActionCode::Read, ehr_id, None, REGISTER)?;
+        self.emit_mark_access(EventActionCode::Read, ehr_id, None, REGISTER)
+            .await?;
         access_delay::register(&self.pool, ehr_id)
             .await
             .map_err(ServiceError::Storage)
@@ -161,7 +164,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `exception` — a database fault; `service_overloaded` when an access
-    /// record is refused under `[audit] fail_mode = "closed"`, and then no
+    /// record cannot be written, and then no
     /// expiry is marked recorded.
     pub async fn record_access_delay_expiries(&self) -> Result<usize, ServiceError> {
         let mut conn = acquire(&self.pool).await?;
@@ -175,7 +178,8 @@ impl FerroEhrService {
                 hold.ehr_id,
                 Some(hold.vo_id),
                 EXPIRY,
-            )?;
+            )
+            .await?;
         }
         tx.commit().await.map_err(ServiceError::Database)?;
         Ok(expired.len())

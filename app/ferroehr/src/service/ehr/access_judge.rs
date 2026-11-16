@@ -311,7 +311,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// As [`Self::ehr_verdict`]; `service_overloaded` when an access record
-    /// was refused under `[audit] fail_mode = "closed"`.
+    /// could not be written.
     pub async fn record_access_opt_out_overrides(
         &self,
         ehr_ids: &[EhrId],
@@ -328,7 +328,8 @@ impl FerroEhrService {
                     ehr_id,
                     None,
                     OPT_OUT_OVERRIDE,
-                )?;
+                )
+                .await?;
             }
         }
         Ok(())
