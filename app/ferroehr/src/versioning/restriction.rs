@@ -17,6 +17,7 @@ use crate::error::ServiceError;
 use crate::error::refusal::{Missing, Refused};
 use crate::ids::{EhrId, VoId};
 use crate::storage::access_projection::Revision;
+use crate::storage::ehr_repo::Restriction;
 
 /// Refuse a write that would process an object whose processing is restricted.
 ///
@@ -31,6 +32,10 @@ use crate::storage::access_projection::Revision;
 /// recorded. No openEHR spec governs restriction of processing — our own
 /// design/extension.
 ///
+/// `known` is the EHR's mark and settings revision the caller already read on
+/// the commit's connection ([`Known`]), taken instead of reading them again
+/// (#5775).
+///
 /// The answer carries the access evaluator's verdict of the EHR, which
 /// [`WriteGate::admit_written`] then holds the content the write is about to
 /// store to.
@@ -42,10 +47,14 @@ pub(crate) async fn ensure_not_restricted_tx(
     tx: &mut PgConnection,
     ehr_id: Option<EhrId>,
     vo_id: Option<VoId>,
+    known: Option<Restriction>,
 ) -> Result<Option<WriteGate>, ServiceError> {
     let mut seen = Revision::default();
     if let Some(ehr_id) = ehr_id {
-        let read = crate::storage::ehr_repo::restriction_and_revision(&mut *tx, ehr_id).await?;
+        let read = match known {
+            Some(read) => read,
+            None => crate::storage::ehr_repo::restriction_and_revision(&mut *tx, ehr_id).await?,
+        };
         if let Some((restricted, revision)) = read {
             if restricted {
                 return Err(ServiceError::restricted(&format!("EHR {ehr_id}")));
@@ -263,4 +272,39 @@ async fn subject_and_access_version(
     );
     let version = crate::storage::access_projection::version_of(&row)?;
     Ok((subject, version))
+}
+
+/// What a write's caller already read on the commit's connection: the commit
+/// instant, and the EHR's restriction mark with its settings revision, which
+/// [`ensure_not_restricted_tx`] takes instead of reading them again (#5775).
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Known {
+    /// The transaction timestamp; `None` makes the write read its own.
+    pub(crate) now: Option<jiff::Timestamp>,
+    /// The restriction read; `None` makes the gate read its own.
+    pub(crate) restriction: Option<Restriction>,
+}
+
+impl Known {
+    /// The commit instant `now`, and no restriction read.
+    pub(crate) fn at(now: jiff::Timestamp) -> Self {
+        Self {
+            now: Some(now),
+            restriction: None,
+        }
+    }
+}
+
+impl super::change::Write {
+    /// The same write, its EHR's restriction mark and settings revision
+    /// already read as `restriction` on the commit's connection.
+    pub(crate) fn gated(self, restriction: Restriction) -> Self {
+        Self {
+            known: Known {
+                restriction: Some(restriction),
+                ..self.known
+            },
+            ..self
+        }
+    }
 }

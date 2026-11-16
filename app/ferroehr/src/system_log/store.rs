@@ -40,6 +40,7 @@ use uuid::Uuid;
 
 mod access_log;
 mod batch;
+pub mod chain_walk;
 pub mod chains;
 #[cfg(feature = "fhir")]
 mod entries;
