@@ -11,6 +11,8 @@
 
 use openehr_am::v2_4::aom2::constraint_model::archetype_slot::ArchetypeSlot;
 use openehr_am::v2_4::aom2::constraint_model::c_archetype_root::CArchetypeRoot;
+use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
+use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object_proxy::CComplexObjectProxy;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
@@ -38,7 +40,15 @@ struct SlotBody {
 // ── slots, archetype roots, internal references ───────────────────────────
 impl Parser<'_> {
     /// `c_archetype_root : SYM_USE_ARCHETYPE rm_type_id '[' ID_CODE ','
-    /// archetype_ref ']' c_occurrences?`.
+    /// archetype_ref ']' c_occurrences? ( SYM_MATCHES '{' c_attribute_def+
+    /// default_value? '}' )?` (adl-antlr `d64ffeb6f`, SPECPR-217).
+    ///
+    /// The body constrains the referenced archetype further at this node
+    /// (`ADL2/master10-templates.adoc`, the OPT2 example).
+    ///
+    /// # Errors
+    /// A malformed reference, a body without an attribute definition, or the
+    /// body's own syntax errors.
     pub(crate) fn parse_c_archetype_root(&mut self) -> PResult<CObject> {
         self.pos += 1; // SYM_USE_ARCHETYPE
         let rm_type = self.parse_rm_type_id()?;
@@ -83,6 +93,15 @@ impl Parser<'_> {
         } else {
             None
         };
+        if self.at_negated_matches() {
+            return self.negated_matches_reject(SyntaxErrorCode::Suas);
+        }
+        let (attributes, attribute_tuples, default_value) =
+            if matches!(self.peek(), Some(Token::SymMatches)) {
+                self.parse_archetype_root_body()?
+            } else {
+                (Vec::new(), Vec::new(), None)
+            };
         Ok(CObject::CComplexObject(CComplexObject::CArchetypeRoot(
             Box::new(CArchetypeRoot {
                 parent: None,
@@ -93,12 +112,54 @@ impl Parser<'_> {
                 alternative_ids: openehr_base::containers::present(Vec::new()),
                 is_deprecated: None,
                 sibling_order: None,
-                default_value: None,
-                attributes: openehr_base::containers::present(Vec::new()),
-                attribute_tuples: openehr_base::containers::present(Vec::new()),
+                default_value,
+                attributes: openehr_base::containers::present(attributes),
+                attribute_tuples: openehr_base::containers::present(attribute_tuples),
                 archetype_ref,
             }),
         )))
+    }
+
+    /// The `matches { c_attribute_def+ default_value? }` body of a
+    /// `use_archetype` reference. Unlike a `c_complex_object` body it needs at
+    /// least one attribute definition, so neither `{ }` nor a lone `_default`
+    /// is a body here (`cadl2.g4` `c_archetype_root`).
+    #[expect(
+        clippy::disallowed_types,
+        reason = "ODIN-to-JSON conversion targets the JSON data model by specification (LANG odin \
+                  spec) (#1694)"
+    )]
+    fn parse_archetype_root_body(
+        &mut self,
+    ) -> PResult<(
+        Vec<CAttribute>,
+        Vec<CAttributeTuple>,
+        Option<serde_json::Value>,
+    )> {
+        self.pos += 1; // SYM_MATCHES
+        self.expect(
+            |t| matches!(t, Token::LCurly),
+            SyntaxErrorCode::Suas,
+            "expecting '{' after 'matches'",
+        )?;
+        let defines_an_attribute = match self.peek() {
+            Some(Token::RCurly) | None => false,
+            Some(Token::AlphaUnderscoreId(s)) => s != "_default",
+            Some(_) => true,
+        };
+        if !defines_an_attribute {
+            return self.err(
+                SyntaxErrorCode::Suas,
+                "expecting attribute definition(s) in the 'use_archetype' body",
+            );
+        }
+        let body = self.parse_object_body()?;
+        self.expect(
+            |t| matches!(t, Token::RCurly),
+            SyntaxErrorCode::Suas,
+            "expecting '}' closing the 'use_archetype' body",
+        )?;
+        Ok(body)
     }
 
     /// `c_complex_object_proxy : SYM_USE_NODE rm_type_id '[' ID_CODE ']'
