@@ -462,11 +462,12 @@ wal_counts() {
 # wal_summary <summary> <report>: each arm's WAL bytes and WAL flushes over
 # the run and per request the arm was sent, then the head judged against the
 # base (wal_judge). Sets WAL_STATUS: 0 within the limits, 1 a breach, 2 not
-# judged.
+# judged, and WAL_VERDICT to the lines that say why.
 wal_summary() {
   local arm container counts sent judged
   local -A sents=() bytes=() flushes=()
   WAL_STATUS=0
+  WAL_VERDICT=""
   {
     echo
     echo "### Write-ahead log"
@@ -489,16 +490,48 @@ wal_summary() {
     done
     echo
     if [[ -z "${sents[head]:-}" || -z "${sents[base]:-}" ]]; then
-      echo "- the WAL per request cannot be judged: an arm's counts or requests are unreadable"
+      WAL_VERDICT="- the WAL per request cannot be judged: an arm's counts or requests are unreadable"
       WAL_STATUS=2
     elif judged=$(wal_judge "${sents[head]}" "${bytes[head]}" "${flushes[head]}" \
       "${sents[base]}" "${bytes[base]}" "${flushes[base]}"); then
-      echo "The head's WAL per request is within ${WAL_FLUSHES} flushes and ${WAL_BYTES_PERCENT} % bytes of the base's: pass."
+      WAL_VERDICT="The head's WAL per request is within ${WAL_FLUSHES} flushes and ${WAL_BYTES_PERCENT} % bytes of the base's: pass."
     else
       WAL_STATUS=$?
-      echo "$judged"
+      WAL_VERDICT="$judged"
     fi
-  } >>"$1"
+    echo "$WAL_VERDICT"
+  } >"$OUT/wal.md"
+  cat "$OUT/wal.md" >>"$1"
+}
+
+# gate_verdict <tool-status> <wal-status> <wal-verdict> <wal-section>: the
+# gate's exit status from the ferrohealth-perf run's and the WAL judge's, with
+# the WAL section added to the job summary and every failing judgement named
+# in the log, since ferrohealth-perf's own report says nothing of the WAL.
+gate_verdict() {
+  local status="$1" line
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    cat "$4" >>"$GITHUB_STEP_SUMMARY"
+  fi
+  case "$2" in
+    0) echo "perf gate: WAL: $3" ;;
+    1)
+      status=1
+      while IFS= read -r line; do
+        echo "::error::perf gate: WAL breach: ${line#- }" >&2
+      done <<<"$3"
+      ;;
+    *)
+      [[ "$status" == 0 ]] && status=2
+      echo "::error::perf gate: ${3#- }" >&2
+      ;;
+  esac
+  case "$status" in
+    0) echo "perf gate: the head passed against the base" ;;
+    1) echo "perf gate: the head breached a limit against the base; the breaches are above and in $OUT/summary.md" >&2 ;;
+    *) echo "perf gate: the run could not be judged (exit $status); the reason is above and in $OUT/summary.md" >&2 ;;
+  esac
+  return "$status"
 }
 
 # wal_self_test: wal_judge passes the head within both limits and fails a
@@ -521,8 +554,24 @@ wal_self_test() {
   wal_case "eleven percent more bytes per request fails" 1 5600 106600000 9400 5600 96000000 9400
   wal_case "fewer flushes and bytes pass" 0 5600 80000000 8000 5600 96000000 9400
   wal_case "an arm that sent nothing is not judged" 2 0 0 0 5600 96000000 9400
+  verdict_case() { # <label> <want-exit> <want-in-log> <tool-status> <wal-status> <wal-verdict>
+    local label="$1" want="$2" needle="$3" got=0 log section
+    shift 3
+    section=$(mktemp)
+    log=$(GITHUB_STEP_SUMMARY='' gate_verdict "$@" "$section" 2>&1) || got=$?
+    rm -f "$section"
+    if [[ "$got" != "$want" || "$log" != *"$needle"* ]]; then
+      echo "::error::self-test: verdict: ${label}: exit ${got}, want ${want}, log: ${log}" >&2
+      fail=1
+    fi
+  }
+  verdict_case "a pass on both passes" 0 "the head passed" 0 0 "within: pass."
+  verdict_case "a WAL breach fails and says why" 1 "WAL breach: WAL flushes per request" 0 1 "- WAL flushes per request: over"
+  verdict_case "a tool breach fails beside a WAL pass" 1 "breached a limit" 1 0 "within: pass."
+  verdict_case "an unjudged WAL is not judged" 2 "cannot be judged" 0 2 "- the WAL per request cannot be judged"
+  verdict_case "a tool breach outranks an unjudged WAL" 1 "cannot be judged" 1 2 "- the WAL per request cannot be judged"
   [[ "$fail" == 0 ]] || die "self-test: the WAL judge failed its cases"
-  echo "perf gate: self-test OK (the WAL judge passes noise and fails a flush or byte rise)"
+  echo "perf gate: self-test OK (the WAL judge passes noise and fails a flush or byte rise, and the gate names a breach in the log)"
 }
 
 # access_log_storage <pg-container>: the access log's entries, its
@@ -702,12 +751,7 @@ ab() {
   storage_summary "$OUT/summary.md"
   statements_summary "$OUT/summary.md"
   wal_summary "$OUT/summary.md" "$OUT/latest.json"
-  if [[ "$WAL_STATUS" == 1 ]]; then
-    status=1
-  elif [[ "$WAL_STATUS" == 2 && "$status" == 0 ]]; then
-    status=2
-  fi
-  return "$status"
+  gate_verdict "$status" "$WAL_STATUS" "$WAL_VERDICT" "$OUT/wal.md"
 }
 
 # The plan with a short idle window and a short load, so the self-test spends
