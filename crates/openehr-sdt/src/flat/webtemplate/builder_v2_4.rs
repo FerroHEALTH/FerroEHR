@@ -132,6 +132,7 @@ pub fn build_web_template_v2_4(
     tree.max = 1;
 
     let tree = shape::finish(tree);
+    super::constraint::check_slots(&tree)?;
 
     Ok(WebTemplate {
         template_id,
@@ -1190,6 +1191,7 @@ fn cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
                 max,
                 ids: None,
                 path: format!("{node_path}/{}", attr.rm_attribute_name),
+                unique: card.is_unique,
             });
         }
     }
@@ -1226,7 +1228,7 @@ fn requires_cardinality(card: &Cardinality, children_count: usize) -> bool {
 /// Capture EVERY constraining `C_ATTRIBUTE.cardinality` (AOM2 §C_ATTRIBUTE:
 /// "Cardinality constraint of attribute, if a container attribute") for the
 /// validation walk: any interval with a lower bound `>= 1` or a bounded upper
-/// bound constrains the container. A superset of the serialized [`cardinalities`]
+/// bound constrains the container, and so does `unique`. A superset of the serialized [`cardinalities`]
 /// selection, so `0..1`/`1..1`/`1..*` container bounds are enforced from
 /// [`WebTemplateNode::card_all`] too (mirrors the OPT-1.4 front end).
 fn all_cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
@@ -1236,12 +1238,13 @@ fn all_cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinalit
             continue;
         };
         let (min, max) = occ(&card.interval);
-        if min.unwrap_or(0) >= 1 || max != -1 {
+        if min.unwrap_or(0) >= 1 || max != -1 || card.is_unique {
             out.push(WebTemplateCardinality {
                 min,
                 max,
                 ids: None,
                 path: format!("{node_path}/{}", attr.rm_attribute_name),
+                unique: card.is_unique,
             });
         }
     }

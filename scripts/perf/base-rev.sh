@@ -13,10 +13,8 @@
 # push the queue verified skips its test shards (#4546), so its `conclusion`
 # alone says nothing about the tree.
 #
-# The queue's commit and the commit it lands on main share a tree and never a
-# SHA (main's commit is one GitHub writes and signs), so a merge-queue run is
-# matched by its head commit's tree (#5826). No openEHR spec governs this: our
-# own design.
+# A merge-queue run is matched by its head commit's tree
+# (`scripts/lib/queue-runs.sh`). No openEHR spec governs this: our own design.
 #
 # Usage:
 #   scripts/perf/base-rev.sh <start-rev> [max-commits]
@@ -27,50 +25,22 @@
 #       runs the walk over a stub history and stub CI runs.
 set -euo pipefail
 
-# How far before the oldest commit read the merge-queue runs are listed: a
-# queue entry's run starts before its commit lands on main.
-QUEUE_LEAD_DAYS=7
+# shellcheck source=scripts/lib/queue-runs.sh
+. "$(dirname "$0")/../lib/queue-runs.sh"
 
-# BASE_REV_STUB names a directory that answers instead of the API (the
-# self-test): `runs` holds `push <sha> <run>` and `merge_group <tree> <run>`
-# lines, `jobs` holds `<run><TAB><job name><TAB><conclusion>` lines.
 QUEUE_INDEX=""
-
-# queue_index SINCE FILE: writes `<tree> <run>` to FILE for every completed
-# merge-queue CI run created on or after SINCE (YYYY-MM-DD).
-queue_index() {
-  local since="$1" file="$2"
-  if [[ -n "${BASE_REV_STUB:-}" ]]; then
-    awk '$1 == "merge_group" { print $2, $3 }' "$BASE_REV_STUB/runs" >"$file"
-  else
-    gh api --paginate \
-      "repos/$REPO/actions/workflows/ci.yml/runs?event=merge_group&status=completed&created=>=$since&per_page=100" \
-      --jq '.workflow_runs[] | "\(.head_commit.tree_id) \(.id)"' >"$file"
-  fi
-}
 
 # runs SHA TREE: the completed CI runs of SHA on push, then the merge-queue
 # runs whose head commit carries TREE.
 runs() {
   local sha="$1" tree="$2"
-  if [[ -n "${BASE_REV_STUB:-}" ]]; then
-    awk -v sha="$sha" '$1 == "push" && $2 == sha { print $3 }' "$BASE_REV_STUB/runs"
+  if [[ -n "${CI_RUNS_STUB:-}" ]]; then
+    awk -v sha="$sha" '$1 == "push" && $2 == sha { print $3 }' "$CI_RUNS_STUB/runs"
   else
     gh api "repos/$REPO/actions/workflows/ci.yml/runs?event=push&head_sha=$sha&per_page=20" \
       --jq '.workflow_runs[] | select(.status == "completed") | .id'
   fi
   awk -v tree="$tree" '$1 == tree { print $2 }' "$QUEUE_INDEX"
-}
-
-# jobs RUN: `<name><TAB><conclusion>` for the latest attempt of each job.
-jobs() {
-  local run="$1"
-  if [[ -n "${BASE_REV_STUB:-}" ]]; then
-    awk -F'\t' -v run="$run" '$1 == run { print $2 "\t" $3 }' "$BASE_REV_STUB/jobs"
-  else
-    gh api --paginate "repos/$REPO/actions/runs/$run/jobs?filter=latest&per_page=100" \
-      --jq '.jobs[] | "\(.name)\t\(.conclusion)"'
-  fi
 }
 
 # verdict SHA: `green` when a CI run of SHA, or a merge-queue run of its tree,
@@ -82,7 +52,7 @@ verdict() {
   list="$(runs "$sha" "$tree")" || { echo unreadable; return; }
   while IFS= read -r run; do
     [[ -n "$run" ]] || continue
-    found="$(jobs "$run")" || { seen=unreadable; continue; }
+    found="$(run_jobs "$run")" || { seen=unreadable; continue; }
     conclusion="$(awk -F'\t' '$1 == "conclusion" { print $2 }' <<<"$found")"
     ran="$(awk -F'\t' '$1 ~ /^build & test \(pg18\)/ && $2 != "skipped"' <<<"$found" | wc -l | tr -d ' ')"
     failed="$(awk -F'\t' '$1 ~ /^build & test \(pg18\)/ && $2 != "skipped" && $2 != "success"' <<<"$found" | wc -l | tr -d ' ')"
@@ -96,14 +66,12 @@ verdict() {
 }
 
 walk() {
-  local start="$1" max="$2" sha state oldest since read=() shas=()
+  local start="$1" max="$2" sha state since read=() shas=()
   while IFS= read -r sha; do shas+=("$sha"); done \
     < <(git rev-list --first-parent --max-count="$max" "$start")
-  oldest="$(git log -1 --format=%ct "${shas[${#shas[@]}-1]}")"
-  since=$((oldest - QUEUE_LEAD_DAYS * 86400))
-  since="$(date -u -d "@$since" +%F 2>/dev/null || date -u -r "$since" +%F)"
+  since="$(queue_since "${shas[${#shas[@]}-1]}")"
   QUEUE_INDEX="$(mktemp)"
-  if ! queue_index "$since" "$QUEUE_INDEX"; then
+  if ! queue_runs_since "$since" "$QUEUE_INDEX"; then
     rm -f "$QUEUE_INDEX"
     echo "::error::base-rev: could not list the merge-queue runs created since $since" >&2
     return 1
@@ -161,7 +129,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
   expect() {
     local label="$1" max="$2" want="$3" got
     touch "$work/stub/runs" "$work/stub/jobs"
-    got="$(cd "$work" && BASE_REV_STUB="$work/stub" bash "$script" "$c4" "$max" 2>/dev/null \
+    got="$(cd "$work" && CI_RUNS_STUB="$work/stub" bash "$script" "$c4" "$max" 2>/dev/null \
       | sed -n 's/^rev=//p' || true)"
     if [[ "$got" != "$want" ]]; then
       echo "::error::--self-test: ${label}: wanted '${want}', got '${got}'." >&2

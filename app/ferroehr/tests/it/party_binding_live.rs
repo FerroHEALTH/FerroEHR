@@ -112,6 +112,10 @@ async fn settled(replica: &FerroEhrService) {
 
 /// The side table changed under the triggers' backs, as only its owner can:
 /// no replica hears of it.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn unheard(db: &testkit::TestDb, statement: &str) {
     let pool = db.pool();
     let mut tx = pool.begin().await.expect("begin");

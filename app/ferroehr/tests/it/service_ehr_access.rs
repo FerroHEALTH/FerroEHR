@@ -474,6 +474,10 @@ async fn a_missing_ehr_access_is_restored_at_boot() {
 /// removed scheme, whole, and leaves every other EHR's alone; the boot then
 /// restores the default.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn the_migration_drops_an_ehr_access_of_the_removed_scheme() {
     let (db, svc, ehr_id, _guardian) = setup().await;
     let other = crate::fixtures::create_ehr(&svc).await;

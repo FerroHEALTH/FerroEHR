@@ -25,6 +25,7 @@
 
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::party_binding::key_space::KeySpaceClosed;
@@ -89,7 +90,7 @@ impl FerroEhrService {
         value: &str,
         ehr_id: EhrId,
     ) -> Result<PortalLogin, ServiceError> {
-        let mut conn = self.demographic_pool.acquire().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
         let mut found = match lookup::representative_keys(&mut conn, issuer, value).await {
             Ok(found) => found,
             Err(LookupError::Closed(closed)) => return Ok(PortalLogin::Closed(closed)),

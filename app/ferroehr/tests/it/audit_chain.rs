@@ -620,6 +620,10 @@ async fn audit_event_columns(pool: &PgPool) -> Vec<(String, String)> {
 
 /// Run `statements` with the user triggers off inside a transaction, read the
 /// verifier's findings as `(chain_seq, finding)`, and roll everything back.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn findings_after(pool: &PgPool, statements: &[String]) -> Vec<(Option<i64>, String)> {
     let mut tx = pool.begin().await.expect("begin");
     sqlx::query("ALTER TABLE audit.audit_event DISABLE TRIGGER USER")
@@ -740,6 +744,10 @@ async fn the_digest_covers_every_column() {
 /// records are version 4, and a version-1 insert after a version-4 record is
 /// refused.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_store_holding_both_digest_versions_verifies_and_refuses_a_downgrade() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = testdb.pool();

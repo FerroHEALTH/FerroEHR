@@ -30,6 +30,7 @@ use std::sync::{Arc, PoisonError, RwLock};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::party_binding::grants::admission::Admission;
 use crate::party_binding::grants::agreement::{Accessor, Agreement};
 use crate::party_binding::grants::caller::facts::CallerFacts;
@@ -306,7 +307,7 @@ impl LiveGrants {
         let started = std::time::Instant::now();
         let mut kind = "unchanged";
         let read = async {
-            let mut conn = self.pool.acquire().await?;
+            let mut conn = acquire(&self.pool).await?;
             let (revision, facts_revision) = store::revisions(&mut conn).await?;
             if Some(revision) != self.revision() {
                 kind = "grants";

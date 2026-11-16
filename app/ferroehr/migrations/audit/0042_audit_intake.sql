@@ -403,7 +403,128 @@ $$;
 
 -- ── grants ───────────────────────────────────────────────────────────────────
 
+-- One request's entries in one statement (#5770): the search tokens and the
+-- shared sets they name are stored or found, the shared parts inserted and the
+-- intake rows written, so a request's intake write is one round trip that
+-- commits on its own. A token or set another writer stores at the same moment
+-- is read again, as the server's own statements did. Our own design.
+CREATE FUNCTION audit.access_log_intake_take(
+    p_record_types text[], p_uids text[], p_times text[], p_contents text[],
+    p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[],
+    p_retain_until text[], p_action_terminologies text[], p_action_codes text[],
+    p_result_terminologies text[], p_result_codes text[], p_recorded_at timestamptz[],
+    p_actions text[], p_outcomes smallint[], p_principals text[], p_patient_ids text[],
+    p_resource_ids text[], p_request_ids text[], p_client_ips text[],
+    p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[],
+    p_shared_digests text[], p_shared_contents text[],
+    p_token_entries integer[], p_token_parameters text[], p_token_systems text[],
+    p_token_codes text[], p_token_shares boolean[])
+    RETURNS void
+    LANGUAGE plpgsql
+    SET search_path = pg_catalog
+    AS $$
+DECLARE
+    v_digests bytea[];
+    v_ids integer[];
+    v_set_keys text[];
+    v_own text[];
+    v_set_ids integer[];
+BEGIN
+    IF cardinality(p_token_entries) > 0 THEN
+        PERFORM audit.hold_search_tokens();
+        v_digests := ARRAY(
+            SELECT audit.search_token_digest(t.p, t.s, t.c)
+              FROM unnest(p_token_parameters, p_token_systems, p_token_codes)
+                   WITH ORDINALITY AS t(p, s, c, i)
+             ORDER BY t.i);
+        FOR v_attempt IN 1..4 LOOP
+            v_ids := ARRAY(
+                SELECT h.id
+                  FROM unnest(v_digests) WITH ORDINALITY AS d(digest, i)
+                  LEFT JOIN audit.audit_search_token h ON h.digest = d.digest
+                 ORDER BY d.i);
+            EXIT WHEN array_position(v_ids, NULL) IS NULL;
+            IF v_attempt = 4 THEN
+                RAISE EXCEPTION 'a search token of the intake could not be stored or read';
+            END IF;
+            INSERT INTO audit.audit_search_token (parameter, system, code, digest)
+            SELECT DISTINCT ON (t.digest) t.p, t.s, t.c, t.digest
+              FROM unnest(p_token_parameters, p_token_systems, p_token_codes, v_digests, v_ids)
+                   AS t(p, s, c, digest, id)
+             WHERE t.id IS NULL
+            ON CONFLICT (digest) DO NOTHING;
+        END LOOP;
+        v_set_keys := ARRAY(
+            SELECT (SELECT array_agg(t.id ORDER BY t.id)::text
+                      FROM unnest(p_token_entries, v_ids, p_token_shares) AS t(e, id, shares)
+                     WHERE t.e = g AND t.shares)
+              FROM generate_subscripts(p_uids, 1) AS g
+             ORDER BY g);
+        v_own := ARRAY(
+            SELECT (SELECT array_agg(t.id ORDER BY t.id)::text
+                      FROM unnest(p_token_entries, v_ids, p_token_shares) AS t(e, id, shares)
+                     WHERE t.e = g AND NOT t.shares)
+              FROM generate_subscripts(p_uids, 1) AS g
+             ORDER BY g);
+        FOR v_attempt IN 1..4 LOOP
+            v_set_ids := ARRAY(
+                SELECT x.id
+                  FROM unnest(v_set_keys) WITH ORDINALITY AS k(tokens, i)
+                  LEFT JOIN audit.audit_search_set x ON x.tokens = k.tokens::integer[]
+                 ORDER BY k.i);
+            EXIT WHEN NOT EXISTS (
+                SELECT FROM unnest(v_set_keys, v_set_ids) AS k(tokens, id)
+                 WHERE k.tokens IS NOT NULL AND k.id IS NULL);
+            IF v_attempt = 4 THEN
+                RAISE EXCEPTION 'a shared search set of the intake could not be stored or read';
+            END IF;
+            INSERT INTO audit.audit_search_set (tokens, digest)
+            SELECT DISTINCT k.tokens::integer[], audit.search_set_digest(k.tokens::integer[])
+              FROM unnest(v_set_keys, v_set_ids) AS k(tokens, id)
+             WHERE k.tokens IS NOT NULL AND k.id IS NULL
+            ON CONFLICT (tokens) DO NOTHING;
+        END LOOP;
+    END IF;
+    INSERT INTO audit.access_log_shared (digest, content)
+    SELECT decode(t.digest, 'hex'), t.content
+      FROM unnest(p_shared_digests, p_shared_contents) AS t(digest, content)
+    ON CONFLICT (digest) DO NOTHING;
+    INSERT INTO audit.access_log_intake (record_type, uid, time_recorded, content, shared,
+        content_digest, ehr_id, party_id, retain_until, action_terminology, action_code,
+        result_terminology, result_code, recorded_at, action, outcome, principal, patient_id,
+        resource_id, request_id, client_ip, index_ehr_id, search_tokens, render_policy)
+    SELECT u.c1, u.c2::uuid, u.c3::timestamptz, u.c4, decode(u.c5, 'hex'), decode(u.c6, 'hex'),
+           u.c7, u.c8, u.c9::date, u.c10, u.c11, u.c12, u.c13, u.c14, u.c15, u.c16, u.c17, u.c18,
+           u.c19, u.c20, u.c21, u.c22,
+           CASE
+               WHEN u.c23 IS NULL THEN NULL
+               WHEN u.c23 <> '' THEN u.c23::integer[]
+               WHEN v_set_ids[u.n] IS NULL THEN coalesce(v_own[u.n], '{}')::integer[]
+               ELSE ARRAY[-v_set_ids[u.n]] || coalesce(v_own[u.n], '{}')::integer[]
+           END,
+           u.c24
+      FROM unnest(p_record_types, p_uids, p_times, p_contents, p_shared, p_digests, p_ehr_ids,
+                  p_party_ids, p_retain_until, p_action_terminologies, p_action_codes,
+                  p_result_terminologies, p_result_codes, p_recorded_at, p_actions, p_outcomes,
+                  p_principals, p_patient_ids, p_resource_ids, p_request_ids, p_client_ips,
+                  p_index_ehr_ids, p_search_tokens, p_policies) WITH ORDINALITY
+           AS u(c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18,
+                c19, c20, c21, c22, c23, c24, n)
+     ORDER BY u.n;
+END
+$$;
+
+COMMENT ON FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
+    text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
+    text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
+    text[], text[], text[], boolean[]) IS
+    'One request''s access-log entries into the intake in one statement: their search tokens and shared sets stored or found, their shared parts, their rows (#5770).';
+
 REVOKE ALL ON FUNCTION audit.audit_intake_reject_change() FROM PUBLIC;
+REVOKE ALL ON FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
+    text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
+    text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
+    text[], text[], text[], boolean[]) FROM PUBLIC;
 REVOKE ALL ON FUNCTION audit.access_log_chain_take() FROM PUBLIC;
 REVOKE ALL ON FUNCTION audit.access_log_chain_move(bigint[], bigint[], text[], text[], boolean, boolean)
     FROM PUBLIC;
@@ -424,6 +545,11 @@ BEGIN
             audit.access_log_chain_move(bigint[], bigint[], text[], text[], boolean, boolean)
             TO ferroehr_clinical;
         GRANT EXECUTE ON FUNCTION audit.audit_event_chain_move(integer, boolean, boolean)
+            TO ferroehr_clinical;
+        GRANT EXECUTE ON FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
+            text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
+            text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
+            text[], text[], text[], boolean[])
             TO ferroehr_clinical;
     ELSE
         RAISE NOTICE 'skipping the audit intake grants (roles absent: see the ext role block NOTICE)';

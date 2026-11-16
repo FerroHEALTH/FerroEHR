@@ -26,10 +26,11 @@
 //! This module carries what every production shares — the dialect selector, the
 //! parser state, the entry points, the cursor/error helpers — and the
 //! productions live in [`parser`] (structure / attribute / tuple), [`refs`]
-//! (slot / root / internal reference), [`primitives`], [`values`] and
-//! [`patterns`]. The ADL 1.4-only productions are in [`crate::adl14::lower`],
+//! (slot / root / internal reference), [`default_value`], [`primitives`],
+//! [`values`] and [`patterns`]. The ADL 1.4-only productions are in [`crate::adl14::lower`],
 //! reached from three dialect-gated dispatch points.
 
+pub mod default_value;
 pub mod parser;
 pub mod patterns;
 pub mod primitives;

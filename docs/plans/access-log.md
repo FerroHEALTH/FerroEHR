@@ -618,7 +618,12 @@ NCP. How the log is protected is therefore our own design.
 - **The intake and its window.** An entry is written into
   `audit.access_log_intake` before the response that reports its access,
   and the chainer links it into the chain afterwards (#5747, #5745; our own
-  design). The intake is unchained, so no request waits on the head. It is
+  design). The write is one statement, `audit.access_log_intake_take()`,
+  which stores or finds the entries' search tokens and shared sets and
+  inserts the rows, and it commits on its own; four writers gather the
+  entries of the requests waiting into each statement, so one commit and one
+  flush of the write-ahead log serve many requests (#5770). The intake is
+  unchained, so no request waits on the head. It is
   append-only by the database's rules: the runtime role may insert and read
   it and nothing else, the table refuses every update, delete and truncate,
   and only `audit.access_log_chain_move()`, a `SECURITY DEFINER` function,

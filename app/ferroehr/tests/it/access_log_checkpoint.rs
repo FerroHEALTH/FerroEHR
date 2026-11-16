@@ -127,6 +127,10 @@ async fn append_from(
 
 /// Run `statements` with the table's triggers off, as only its owner can: the
 /// attacker the chain and the checkpoint detect.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 pub(crate) async fn tamper(pool: &PgPool, table: &str, statements: &[&str]) {
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
@@ -540,6 +544,10 @@ async fn appends_each_seal_their_last_link() {
 /// An intake write whose transaction rolls back leaves nothing to chain: no
 /// entry and no checkpoint, so no entry is ever stored unsealed under a key.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_rolled_back_intake_leaves_no_entry_and_no_checkpoint() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = &testdb.pool();
@@ -549,7 +557,7 @@ async fn a_rolled_back_intake_leaves_no_entry_and_no_checkpoint() {
     let intake =
         ferroehr::access_log::intake::IntakeEntry::of(&mut entry(1, SYSTEM_A, MOVED), None)
             .expect("the entry has a stored form");
-    ferroehr::access_log::intake::take_in(&mut tx, vec![intake])
+    ferroehr::access_log::intake::take_in(&mut tx, vec![intake], &[])
         .await
         .expect("the intake write");
     tx.rollback().await.expect("rollback");
