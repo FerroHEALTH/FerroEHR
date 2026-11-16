@@ -55,9 +55,9 @@ use crate::flat::convert::composition_from_flat;
 use crate::flat::error::FlatError;
 use crate::flat::identity::{recorded_archetype_id, stamp_archetype_details};
 use crate::flat::uid::deterministic_uuid;
+use crate::flat::webtemplate::constraint::WebTemplateStructuralStub;
 use crate::flat::webtemplate::model::{
     WebTemplate, WebTemplateInput, WebTemplateInputType, WebTemplateNode, WebTemplateRange,
-    WebTemplateStructuralStub,
 };
 
 mod party;
@@ -317,7 +317,7 @@ fn walk(
         return emit_leaf(node, prefix, out);
     }
 
-    let (groups, null_branch) = split_null_branch(node);
+    let groups = child_groups(node);
     let cx = WalkCtx {
         prefix,
         opt_depth,
@@ -337,8 +337,11 @@ fn walk(
         emitted |= walk(child, &child_prefix, opt_depth, level, true, out);
     }
 
-    if !null_branch.is_empty() && (emitted || force) && !value_emitted(&groups, prefix, out) {
-        emitted |= walk_null_flavour(&null_branch, &cx, out);
+    if !node.null_constraints.is_empty()
+        && (emitted || force)
+        && !value_emitted(&groups, prefix, out)
+    {
+        emitted |= walk_null_flavour(&node.null_constraints, &cx, out);
     }
     emitted
 }
@@ -557,24 +560,6 @@ fn tail_attribute(aql_path: &str) -> &str {
     tail.split('[').next().unwrap_or(tail)
 }
 
-/// The ELEMENT attributes that describe a value-less ELEMENT: RM
-/// `data_structures` §ELEMENT `null_flavour`, and `null_reason`, which
-/// `Inv_null_reason_valid` admits only on a null ELEMENT.
-const NULL_BRANCH: [&str; 2] = ["null_flavour", "null_reason"];
-
-/// Splits a node's child groups into the ones walked as data and, for an
-/// ELEMENT, its null branch ([`NULL_BRANCH`]), which [`walk_null_flavour`]
-/// emits only for a value-less ELEMENT.
-fn split_null_branch(node: &WebTemplateNode) -> (Vec<&WebTemplateNode>, Vec<&WebTemplateNode>) {
-    let groups = child_groups(node);
-    if node.rm_type != "ELEMENT" {
-        return (groups, Vec::new());
-    }
-    groups
-        .into_iter()
-        .partition(|c| !NULL_BRANCH.contains(&tail_attribute(&c.aql_path)))
-}
-
 /// Whether a `value` child of `groups` emitted a flat entry under `prefix`.
 fn value_emitted(groups: &[&WebTemplateNode], prefix: &str, out: &Map<String, Value>) -> bool {
     groups.iter().any(|c| {
@@ -588,13 +573,13 @@ fn value_emitted(groups: &[&WebTemplateNode], prefix: &str, out: &Map<String, Va
 /// Emits the `null_flavour` of a value-less ELEMENT, the one shape in which RM
 /// `data_structures` §ELEMENT `Inv_null_flavour_indicated` requires it.
 fn walk_null_flavour(
-    null_branch: &[&WebTemplateNode],
+    null_constraints: &[WebTemplateNode],
     cx: &WalkCtx<'_>,
     out: &mut Map<String, Value>,
 ) -> bool {
-    null_branch
+    null_constraints
         .iter()
-        .find(|c| tail_attribute(&c.aql_path) == "null_flavour")
+        .find(|c| c.id == "_null_flavour")
         .is_some_and(|child| {
             let child_prefix = format!("{}/{}", cx.prefix, seg_for(child));
             walk(child, &child_prefix, cx.opt_depth, cx.level, true, out)

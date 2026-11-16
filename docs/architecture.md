@@ -298,9 +298,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   content digest over the whole canonical form, which the writer computes
   (`access_log::stored_form`), and the digest over the previous digest, the
   sequence and the content digest. The server recomputes each content digest
-  from the joined parts (`AuditStore::access_log_contents`) and the database
-  checks the links, so an incremental run advances no further than the
-  server checked. An access detail the core states as the record holds it
+  from the joined parts and the database checks the links, so an
+  incremental run advances no further than the server checked. A run walks
+  each chain from its cursor to the head it started with in windows of at
+  most `VERIFY_STEP_RECORDS` records, one statement each, and every intact
+  window moves the cursor, so no statement grows with the backlog and a
+  backlog reads as a lag, never as unverifiable (#5779, our own design,
+  `audit/0041_chain_verification_steps.sql`). An access detail the core states as the record holds it
   (the principal and issuer the credential names, the count the outcome
   delivered, the action and outcome the core codes) is not written
   (`access_log::recorded::Core`). A tombstone keeps no shared part, and a
@@ -308,7 +312,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   The two tables are two hash chains (#5573, our own design): the access log
   holds only the accesses to EHR data, one chain per system from 1 with no
   gaps, under its own head (`access_log_chain_state`), verified by
-  `audit.verify_access_log_chain()` and its incremental form; `audit_event`,
+  `audit.verify_access_log_chain()` and its stepped form; `audit_event`,
   the system chain, keeps its head (`audit_chain_state`), its retention gaps
   and `audit.verify_audit_chain()`. Writers of a chain serialise on its head
   row, which holds across replicas, and the scheduled chain check verifies
@@ -730,7 +734,12 @@ which is what makes an optional stage safe to disable:
    `refused-consent-reference-missing`, a fact of the `Caller` (#5614; the
    SMART layer checks scopes alone). An EHR id the store does not hold
    answers `404` before any step refuses, read only when a verdict refuses,
-   so a restriction's `404` is never told apart from it (#5623). A write is
+   so a restriction's `404` is never told apart from it (#5623). A
+   COMPOSITION read by its version or its latest is judged on the facts of
+   its object that the statement reading the version returns, after the read
+   and before anything of the version is served, so the read is one statement
+   and a refused read answers and is recorded as before (#5773, our own
+   design). A write is
    judged on the template, root archetype, origins and commit instant of the
    content it is about to store, inside the commit transaction and before
    anything is stored (#5626, `versioning::restriction::WriteGate`), by

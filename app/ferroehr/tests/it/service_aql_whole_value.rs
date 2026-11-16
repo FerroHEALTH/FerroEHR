@@ -73,7 +73,7 @@ async fn column(
     let result = svc
         .execute_aql(aql, None, &request(ehr, params))
         .await
-        .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
+        .unwrap_or_else(|e| panic!("the query failed: {e:?}"))
         .result_set;
     result["rows"]
         .as_array()
@@ -350,17 +350,20 @@ async fn a_uid_predicate_in_a_class_expression_selects_its_version() {
     let uid = || BTreeMap::from([("uid".to_owned(), one.clone())]);
     let cases = [
         (
+            "a parameter in the class expression",
             "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c[uid/value=$uid]".to_owned(),
             uid(),
             vec![one.clone()],
         ),
         (
+            "the same comparison in WHERE",
             "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c WHERE c/uid/value = $uid"
                 .to_owned(),
             uid(),
             vec![one.clone()],
         ),
         (
+            "a literal in the class expression",
             format!(
                 "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c[uid/value='{}']",
                 uids[0]
@@ -369,6 +372,7 @@ async fn a_uid_predicate_in_a_class_expression_selects_its_version() {
             vec![one.clone()],
         ),
         (
+            "a `!=` literal in the class expression",
             format!(
                 "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c[uid/value!='{}']",
                 uids[0]
@@ -377,6 +381,7 @@ async fn a_uid_predicate_in_a_class_expression_selects_its_version() {
             vec![two.clone()],
         ),
         (
+            "the class expression under CONTAINS",
             format!(
                 "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c[uid/value=$uid] \
                  CONTAINS OBSERVATION o[{OBS}]"
@@ -385,9 +390,10 @@ async fn a_uid_predicate_in_a_class_expression_selects_its_version() {
             vec![one.clone()],
         ),
     ];
-    for (aql, params, want) in cases {
+    // The uids stay out of the failure message: it names the case only.
+    for (case, aql, params, want) in cases {
         let got = column(&svc, &ehr, &aql, params).await;
-        assert_eq!(got, want, "{aql}");
+        assert!(got == want, "{case}: the version it names, and no other");
     }
     // A population query with a LIMIT takes the streaming shape.
     let got = svc
@@ -402,7 +408,7 @@ async fn a_uid_predicate_in_a_class_expression_selects_its_version() {
         .await
         .unwrap_or_else(|e| panic!("population query: {e:?}"))
         .result_set;
-    assert_eq!(got["rows"], json!([[one]]), "the streaming root");
+    assert!(got["rows"] == json!([[one]]), "the streaming root");
 }
 
 /// A `uid` predicate on a composition no version is bound beside is refused,

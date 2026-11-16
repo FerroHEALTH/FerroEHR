@@ -49,7 +49,7 @@ use ferroehr::aql::sql::SqlCtx;
 use ferroehr::config::profile::SpecProfile;
 use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
-use ferroehr::storage::version_repo::{meta, read};
+use ferroehr::storage::version_repo::{judged, meta, read};
 
 use crate::fixtures::{ckm_example, composition, uv};
 
@@ -368,6 +368,49 @@ async fn the_current_version_read_probes_the_head_row_by_primary_key() {
     assert!(
         hot[0].index.is_some() && hot[0].node_type != "Seq Scan",
         "H3: the version row is reached by an index:\n{}",
+        render(&scans)
+    );
+    assert_no_policy_qual(&plan, &scans);
+}
+
+/// A COMPOSITION read that judges its own row (#5773) reads the head facts
+/// and the version in one statement, every relation of it by an index: the
+/// head row by its primary key, the version and the root nodes by theirs.
+#[tokio::test]
+async fn the_judged_read_reaches_every_row_by_an_index() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let seeded = seed(&svc, &pool).await;
+
+    let mut tx = explain_tx(&pool).await;
+    let plan: Value = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "{EXPLAIN}{}",
+        judged::JUDGED_CURRENT_SQL
+    )))
+    .bind(seeded.vo)
+    .fetch_one(&mut *tx)
+    .await
+    .expect("explain the judged current-version read");
+    tx.rollback().await.expect("roll the explain back");
+
+    let scans = scans(&plan);
+    let head = on(&scans, "vo_head");
+    assert!(
+        !head.is_empty()
+            && head
+                .iter()
+                .all(|scan| scan.index.as_deref() == Some("pk_vo_head")),
+        "the head row is reached by its primary key:\n{}",
+        render(&scans)
+    );
+    let unindexed: Vec<&Scan> = scans
+        .iter()
+        .filter(|scan| scan.executed && (scan.index.is_none() || scan.node_type == "Seq Scan"))
+        .collect();
+    assert!(
+        unindexed.is_empty(),
+        "every row the judged read reads is reached by an index:\n{}",
         render(&scans)
     );
     assert_no_policy_qual(&plan, &scans);

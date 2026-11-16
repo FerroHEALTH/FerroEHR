@@ -49,6 +49,7 @@ mod access_log_gaps;
 mod access_log_imported;
 mod access_log_retention;
 mod access_log_store;
+mod access_log_verify_steps;
 mod access_origins;
 mod access_path_metrics;
 mod access_policy;
