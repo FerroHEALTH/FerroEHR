@@ -162,7 +162,7 @@ impl AuditStore {
         grounds: NonEmptyVec<DvCodedText>,
         event: &AuditEvent,
     ) -> Result<Option<AccessLogTombstone>, AuditError> {
-        self.settle().await?;
+        self.settle(super::intake::Chains::BOTH).await?;
         let record = AuditRecord {
             event: event.clone(),
             subject: None,
@@ -180,7 +180,7 @@ impl AuditStore {
         // rows.
         tx.commit().await?;
         self.remember(learned);
-        self.settle().await?;
+        self.settle(super::intake::Chains::BOTH).await?;
         Ok(tombstone)
     }
 

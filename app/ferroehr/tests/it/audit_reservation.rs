@@ -18,6 +18,7 @@ use ferroehr::system_log::event::{
 };
 use ferroehr::system_log::recorder::{WriteFacts, WriteRecorder, with_recorder};
 use ferroehr::system_log::sender::{self, AuditSender, reconciler};
+use ferroehr::system_log::store::intake::Chains;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -154,7 +155,11 @@ async fn a_write_whose_process_stopped_before_the_release_is_recorded_once() {
     assert_eq!(entries.len(), 1, "the EHR's access-log entry is held");
     assert_eq!(records.len(), 1, "the system-log record is held");
 
-    sender.store().settle().await.expect("a settled chain");
+    sender
+        .store()
+        .settle(Chains::BOTH)
+        .await
+        .expect("a settled chain");
     let uids: Vec<Uuid> = entries.iter().map(|(uid, _)| *uid).collect();
     assert!(
         chained(&pool, &uids).await.is_empty(),
@@ -166,7 +171,11 @@ async fn a_write_whose_process_stopped_before_the_release_is_recorded_once() {
         .expect("a reconciliation");
     assert_eq!(first.released, 1, "{first:?}");
     assert_eq!(first.discarded, 0, "{first:?}");
-    sender.store().settle().await.expect("a settled chain");
+    sender
+        .store()
+        .settle(Chains::BOTH)
+        .await
+        .expect("a settled chain");
     assert_eq!(
         chained(&pool, &uids).await,
         entries,
@@ -187,7 +196,11 @@ async fn a_write_whose_process_stopped_before_the_release_is_recorded_once() {
         !reserved(&pool, reservation).await,
         "the spent reservation is removed"
     );
-    sender.store().settle().await.expect("a settled chain");
+    sender
+        .store()
+        .settle(Chains::BOTH)
+        .await
+        .expect("a settled chain");
     assert_eq!(chained(&pool, &uids).await.len(), 1, "never twice");
     assert_eq!(stored(&pool, &records).await, 1, "never twice");
 }
@@ -245,7 +258,11 @@ async fn records_of_a_write_that_never_committed_are_discarded() {
         .expect("a reconciliation");
     assert_eq!(reconciled.discarded, 1, "{reconciled:?}");
     assert_eq!(held(&pool, reservation).await, (Vec::new(), Vec::new()));
-    sender.store().settle().await.expect("a settled chain");
+    sender
+        .store()
+        .settle(Chains::BOTH)
+        .await
+        .expect("a settled chain");
     let uids: Vec<Uuid> = entries.iter().map(|(uid, _)| *uid).collect();
     assert!(
         chained(&pool, &uids).await.is_empty(),
