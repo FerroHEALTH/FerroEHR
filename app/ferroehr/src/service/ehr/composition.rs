@@ -140,61 +140,8 @@ impl FerroEhrService {
                 )
                 .await?
             }
-        }
-        .filter(|r| r.read.ehr_id == Some(ehr_id) && r.read.kind == Kind::Composition)
-        .ok_or_else(|| {
-            ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"))
-        })?;
-        if raw.read.deleted() {
-            return Ok(RawServiceResponse {
-                body: ReadBody::Value(Value::Null),
-                meta: None,
-            });
-        }
-        let read = raw.read;
-        let meta = self
-            .version_meta(
-                ehr_id,
-                vo_id,
-                &read.creating_system_id,
-                read.tree,
-                read.time_committed,
-            )
-            .with_origins(crate::versioning::origins::of_stored(
-                read.origins.as_ref(),
-                &read.canonical,
-                &read.creating_system_id,
-            ))
-            .with_content(vec![read.content.clone()]);
-        let Some(text) = raw.raw_json else {
-            let stamped =
-                self.with_uid(read.canonical, vo_id, &read.creating_system_id, read.tree)?;
-            return Ok(RawServiceResponse {
-                body: ReadBody::Value(stamped),
-                meta: Some(meta),
-            });
         };
-        let uid = crate::versioning::object_version_id::object_version_id(
-            vo_id,
-            &read.creating_system_id,
-            read.tree,
-        );
-        if carries_version_uid(&text, &uid) {
-            return Ok(RawServiceResponse {
-                body: ReadBody::RawJson(text),
-                meta: Some(meta),
-            });
-        }
-        let value: Value = serde_json::from_str(&text).map_err(|e| {
-            ServiceError::exception(format!(
-                "the stored body of COMPOSITION {vo_id} is not decodable JSON: {e}"
-            ))
-        })?;
-        let stamped = self.with_uid(value, vo_id, &read.creating_system_id, read.tree)?;
-        Ok(RawServiceResponse {
-            body: ReadBody::Value(stamped),
-            meta: Some(meta),
-        })
+        self.composition_served(ehr_id, vo_id, raw)
     }
 
     /// The COMPOSITION current at `a_time` (time-travel), or the latest when
@@ -778,14 +725,4 @@ impl FerroEhrService {
     pub async fn expand_multimedia(&self, body: Value) -> Result<Value, ServiceError> {
         Ok(body)
     }
-}
-
-/// Whether `text`, a stored body in the compact form the commit writes
-/// (`canonical_body_text`), carries `uid` as its stamped `OBJECT_VERSION_ID`
-/// member, so the JSON read can serve it verbatim (#5755).
-fn carries_version_uid(text: &str, uid: &str) -> bool {
-    const OPEN: &str = r#""uid":{"_type":"OBJECT_VERSION_ID","value":""#;
-    text.split(OPEN)
-        .skip(1)
-        .any(|rest| rest.strip_prefix(uid).is_some_and(|r| r.starts_with("\"}")))
 }
