@@ -1044,7 +1044,11 @@ replica chains at a time and the others skip, computes the links, writes the
 records with their index rows, the checkpoint and the outbox rows of the
 feeds, and commits. The intake refuses every update and delete except the
 chainer's move, which writes each row into its chain in the same statement.
-The window between the intake and the chain is milliseconds; the
+A request wakes its replica's chainer, which gathers what the requests of the
+next 200 ms write into one round; every replica also looks at the intake every
+2 seconds for the rows a stopped replica left, and a graceful stop chains what
+the intake holds. The window between the intake and the chain is therefore
+about a fifth of a second; the
 `audit_sender` readiness indicator reads `DEGRADED` when the oldest intake row
 has waited longer than 10 seconds. A record in the intake is durable: a
 restart, a crash or a lost replica leaves it for the next chainer.

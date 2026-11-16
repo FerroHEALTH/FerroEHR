@@ -118,6 +118,7 @@ pub async fn reconcile(
             .removed
             .saturating_add(remove_released(store, pool, grace).await?);
     }
+    // NOTE: our own design (#5762), the lease's transaction, which no request makes.
     tx.commit().await?;
     for (outcome, count) in [
         ("released", done.released),

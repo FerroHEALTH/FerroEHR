@@ -230,6 +230,18 @@ impl AuditSender {
         self.write(events, Some(reservation)).await
     }
 
+    /// Release the records held under `reservations`, whose writes
+    /// committed, to the chainer, and wake it (#5762).
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the release fails; the records stay held
+    /// for the reconciler.
+    pub async fn release(&self, reservations: &[uuid::Uuid]) -> Result<u64, AuditError> {
+        let released = self.inner.store.release(reservations).await?;
+        self.inner.chain.notify_one();
+        Ok(released)
+    }
+
     /// The work of [`Self::record`] and [`Self::record_held`].
     async fn write(
         &self,

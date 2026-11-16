@@ -138,7 +138,7 @@ impl FerroEhrService {
             return;
         }
         let ids: Vec<Uuid> = reserved.iter().map(|reserved| reserved.id).collect();
-        if let Err(error) = sender.store().release(&ids).await {
+        if let Err(error) = sender.release(&ids).await {
             tracing::warn!(
                 error = %crate::error::ErrorChain::new(&error),
                 "the held audit records of a committed write were not released; the reconciler \
