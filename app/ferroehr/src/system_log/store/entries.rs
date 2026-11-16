@@ -161,7 +161,7 @@ impl AuditStore {
         grounds: NonEmptyVec<DvCodedText>,
         event: &AuditEvent,
     ) -> Result<Option<AccessLogTombstone>, AuditError> {
-        self.settle().await?;
+        self.settle(super::intake::Chains::BOTH).await?;
         let record = AuditRecord {
             event: event.clone(),
             subject: None,
@@ -177,7 +177,7 @@ impl AuditStore {
         let (_uids, learned) = Box::pin(self.intake_entries(&mut tx, recorded)).await?;
         tx.commit().await?;
         self.remember(learned);
-        self.settle().await?;
+        self.settle(super::intake::Chains::BOTH).await?;
         Ok(tombstone)
     }
 

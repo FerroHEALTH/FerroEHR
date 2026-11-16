@@ -396,7 +396,7 @@ impl AuditStore {
             entry: None,
         };
         let (taken, wrote) = self.take_in_own(vec![record], &[]).await?;
-        self.settle_chains(wrote).await?;
+        self.settle(wrote).await?;
         taken.first().copied().ok_or(AuditError::SearchToken)
     }
 
@@ -412,7 +412,7 @@ impl AuditStore {
         ends: &[RecordEnd],
     ) -> Result<(), AuditError> {
         let (_, wrote) = self.take_in_own(records.to_vec(), ends).await?;
-        self.settle_chains(wrote).await
+        self.settle(wrote).await
     }
 
     /// Write a batch of records into the intake in one transaction, each with

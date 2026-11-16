@@ -233,21 +233,14 @@ impl AuditStore {
         })
     }
 
-    /// Chain every intake row written before the call into its chain,
-    /// waiting out another chainer that holds the access log's head.
+    /// Chain every intake row of the chains `look` names written before the
+    /// call, waiting out another chainer that holds the access log's head;
+    /// a write settles the chains it wrote and leaves the other to its
+    /// chainer.
     ///
     /// # Errors
     /// As [`Self::chain_round`].
-    pub async fn settle(&self) -> Result<(), AuditError> {
-        self.settle_chains(Chains::BOTH).await
-    }
-
-    /// [`Self::settle`] for the chains `look` names only, so a write chains
-    /// what it wrote and leaves the other chain to its chainer.
-    ///
-    /// # Errors
-    /// As [`Self::chain_round`].
-    pub(super) async fn settle_chains(&self, look: Chains) -> Result<(), AuditError> {
+    pub async fn settle(&self, look: Chains) -> Result<(), AuditError> {
         if look.access_log {
             self.chaining_store().settle(self.owed).await?;
         }
