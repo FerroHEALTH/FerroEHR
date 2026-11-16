@@ -96,15 +96,13 @@ impl FerroEhrService {
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
         };
-        if object_kind(&self.demographic_pool, vo_id).await? != Some(Kind::PartyRelationship) {
-            return Err(miss());
-        }
         support::load_ehrless(
             &self.demographic_pool,
             self.spec_profile,
             vo_id,
             version,
             at,
+            Some(Kind::PartyRelationship),
         )
         .await?
         .ok_or_else(miss)

@@ -78,6 +78,30 @@ impl FerroEhrService {
             .collect::<Result<Vec<_>, _>>()
     }
 
+    /// Both `ITEM_TAG` collections of a party in one read: the container's,
+    /// and the VERSION `version` names' (its `tag_target_tail`), `None` when
+    /// it names none.
+    ///
+    /// # Errors
+    /// [`ServiceError`] on a storage/database fault reading the tag store.
+    pub(super) async fn party_tag_sets(
+        &self,
+        vo_id: VoId,
+        version: Option<&str>,
+    ) -> Result<(Vec<ItemTag>, Option<Vec<ItemTag>>), ServiceError> {
+        let (container, versioned) =
+            tag_repo::list_tag_sets(&self.demographic_pool, None, vo_id, version).await?;
+        let sid = self.effective_system_id();
+        let tags = |rows: &[tag_repo::TagRow]| {
+            rows.iter()
+                .map(|r| party_item_tag(&sid, r))
+                .collect::<Result<Vec<_>, _>>()
+        };
+        let container = tags(&container)?;
+        let versioned = version.map(|_| tags(&versioned)).transpose()?;
+        Ok((container, versioned))
+    }
+
     /// The demographic tag-target guard, mirroring the EHR side
     /// (`service::ehr::tags::ensure_tag_target`): the addressed versioned
     /// object must exist AND be a party of the routed kind (a person route

@@ -727,12 +727,23 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
 /// A connection, migration or domain-isolation failure, contextualized for the
 /// operator.
 async fn connect_pool(config: &ferroehr::config::FerroEhrConfig) -> anyhow::Result<DomainPools> {
-    let pools = db::connect_domains(&config.database)
+    let concurrency =
+        u32::try_from(config.server.shared.max_concurrent_requests.get()).unwrap_or(u32::MAX);
+    let database = config.database.for_serving(concurrency);
+    let pools = db::connect_domains(&database)
         .await
         .context("connecting to PostgreSQL")?;
     db::prepare(&config.database, &pools, config.deployment.profile)
         .await
         .context("preparing the database schema")?;
+    db::pool::open_kept(&database, &pools)
+        .await
+        .context("opening the pooled connections")?;
+    tracing::info!(
+        pool_size = database.pool_size(),
+        kept_open = database.pool_kept(),
+        "each domain pool is open"
+    );
     for domain in Domain::ALL {
         if config.database.is_separated(domain) {
             tracing::info!(

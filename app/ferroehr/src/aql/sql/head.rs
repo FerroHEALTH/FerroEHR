@@ -186,3 +186,19 @@ impl Builder<'_> {
         Ok(())
     }
 }
+
+/// Whether every class in `types` occurs only as the root (`num = 0`) of its
+/// versioned object.
+///
+/// The EHR holds its `EHR_STATUS`, `EHR_ACCESS` and `COMPOSITION`s as separate
+/// versioned objects (RM ehr master04 §The Parts of the EHR), and a
+/// `COMPOSITION` holds only `CONTENT_ITEM`s (RM ehr master05), so none of the
+/// three nests in a tree; a `FOLDER` nests in `FOLDER.folders` and is left out.
+/// Storing the root at `num = 0` is our own design (`crate::storage::codec`).
+pub(super) fn is_root_only(types: &crate::aql::ir::TypeSet) -> bool {
+    !types.is_empty()
+        && types
+            .names()
+            .iter()
+            .all(|t| matches!(t.as_str(), "COMPOSITION" | "EHR_STATUS" | "EHR_ACCESS"))
+}

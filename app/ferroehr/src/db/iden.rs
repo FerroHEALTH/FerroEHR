@@ -225,6 +225,9 @@ pub enum VoHead {
     LifecycleState,
     /// `template_id` — the template of the trunk head.
     TemplateId,
+    /// `root_archetype` — the `archetype_node_id` of the trunk head's root
+    /// (#5782).
+    RootArchetype,
     /// `committed_at` — the trunk head's commit instant.
     CommittedAt,
     /// `restricted_at` — when restriction of processing was recorded for this

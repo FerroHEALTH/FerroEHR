@@ -56,6 +56,7 @@ mod coerce;
 mod compact;
 mod condition;
 pub(crate) mod expr;
+mod fold;
 mod from;
 mod gates;
 mod head;
@@ -379,10 +380,10 @@ struct Builder<'a> {
     /// Node aliases that root a VO group (targets of the REST `ehr_id` filter).
     group_roots: Vec<String>,
     /// The subset of `group_roots` whose rows are join-linked to a bound EHR
-    /// alias (`node.ehr_id = e.id`) — the population gate on the EHR alias
-    /// already covers them, so gating the root again would be a duplicate
-    /// full-population subquery per query.
-    roots_linked_to_ehr: BTreeSet<String>,
+    /// alias (`node.ehr_id = e.id`), each with that alias: the population gate
+    /// on the EHR alias already covers them, so gating the root again would be
+    /// a duplicate full-population subquery per query.
+    roots_linked_to_ehr: BTreeMap<String, String>,
     /// The `version` alias for each entry in `group_roots` (parallel vec).
     group_vos: Vec<String>,
     /// The `(node, version)` left-binding aliases of each `OR` branch operand
@@ -435,7 +436,7 @@ impl<'a> Builder<'a> {
             version_vo: BTreeMap::new(),
             joined_heads: BTreeSet::new(),
             group_roots: Vec::new(),
-            roots_linked_to_ehr: BTreeSet::new(),
+            roots_linked_to_ehr: BTreeMap::new(),
             group_vos: Vec::new(),
             branch_roots: Vec::new(),
             sub_ctr: 0,
@@ -463,13 +464,16 @@ impl<'a> Builder<'a> {
     }
 
     /// The EHR id of every EHR a row of this query is drawn from: each bound
-    /// `EHR` source's `id`, then each served root's `ehr_id`.
+    /// `EHR` source's `id`, then the `ehr_id` of each served root no source
+    /// covers.
     ///
     /// A query that reads only the `ehr` row (`FROM EHR e` with no
     /// containment, or an `ehr_status` path) binds no versioned-object root
     /// and still serves the EHR its row names, so the access log
-    /// ([`ACCESS_EHR_PREFIX`]) reads this one list. No openEHR spec governs
-    /// this: our own design.
+    /// ([`ACCESS_EHR_PREFIX`]) reads this one list. A root linked to an `EHR`
+    /// source names that source's EHR, so its column would repeat the
+    /// source's and its settings probe the source's (#5782). No openEHR spec
+    /// governs this: our own design.
     fn served_ehr_ids(&self) -> Vec<sea_query::Expr> {
         self.ehr_alias
             .values()
@@ -477,6 +481,7 @@ impl<'a> Builder<'a> {
             .chain(
                 self.served_roots()
                     .iter()
+                    .filter(|(root, _)| !self.roots_linked_to_ehr.contains_key(root))
                     .map(|(root, _)| col(root, Node::EhrId)),
             )
             .collect()

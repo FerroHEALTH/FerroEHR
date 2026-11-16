@@ -28,7 +28,8 @@ use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 use ferrohealth_health::registry::HealthIndicator;
 
 /// `ferroehr pmir …` subcommands. Each names its operator, whom the access
-/// record of every message it lists, retries or settles names.
+/// record of every message it lists, retries or settles names, beside the
+/// operating-system account that ran the command.
 #[derive(Debug, Subcommand)]
 pub enum PmirCmd {
     /// Print the refused messages still to retry or settle, oldest first, as
@@ -143,7 +144,8 @@ pub async fn act(service: &FerroEhrService, cmd: &PmirCmd) -> anyhow::Result<Str
     | PmirCmd::Retry { operator, .. }
     | PmirCmd::Settle { operator, .. }) = cmd;
     anyhow::ensure!(!operator.trim().is_empty(), "--operator names the operator");
-    with_committer(Some(committer(operator)), async {
+    let account = os_account()?;
+    with_committer(Some(committer(operator, &account)), async {
         match cmd {
             PmirCmd::List { .. } => {
                 let listed = service.pmir_refused().await.context("listing")?;
@@ -173,14 +175,19 @@ pub async fn act(service: &FerroEhrService, cmd: &PmirCmd) -> anyhow::Result<Str
     .await
 }
 
-/// The committer an operator's act runs as: the operator's name, from the
-/// command line of a process that holds the database credentials.
-fn committer(operator: &str) -> CommitterIdentity {
+/// The committer an operator's act runs as.
+///
+/// Its subject is the operator's name from the command line of a process that
+/// holds the database credentials; its client is the operating-system
+/// `account` that ran it, which every access record of the act names beside
+/// the operator.
+#[must_use]
+pub fn committer(operator: &str, account: &str) -> CommitterIdentity {
     CommitterIdentity {
         subject: operator.trim().to_owned(),
         id_type: "operator",
         issuer: None,
-        client: None,
+        client: Some(account.to_owned()),
         person: false,
         party: None,
         representative: false,
@@ -189,6 +196,32 @@ fn committer(operator: &str) -> CommitterIdentity {
         agent: None,
         external: None,
     }
+}
+
+/// The operating-system account this process runs as: its effective user's
+/// name and id, as `os:<name>/<uid>`, or `os:<uid>` when the user database
+/// names none.
+///
+/// # Errors
+/// When the user database cannot be read.
+#[cfg(unix)]
+pub fn os_account() -> anyhow::Result<String> {
+    let uid = nix::unistd::geteuid();
+    let user = nix::unistd::User::from_uid(uid).context("reading the effective user")?;
+    Ok(match user {
+        Some(user) => format!("os:{}/{uid}", user.name),
+        None => format!("os:{uid}"),
+    })
+}
+
+/// The operating-system account this process runs as; a platform without
+/// Unix user ids names none, so an operator's act is refused there.
+///
+/// # Errors
+/// Always.
+#[cfg(not(unix))]
+pub fn os_account() -> anyhow::Result<String> {
+    anyhow::bail!("ferroehr pmir records the effective user, which this platform does not name")
 }
 
 /// Checks the subscription now and every [`CHECK_EVERY`], every [`RETRY`]

@@ -38,6 +38,7 @@ pub mod acquire;
 pub mod domain;
 pub mod iden;
 pub mod parent_statistics;
+pub mod pool;
 mod session;
 
 use std::path::PathBuf;
@@ -134,11 +135,25 @@ pub struct DbConfig {
     /// Path to a file holding [`Self::listen_url`], read at boot in place of
     /// it. Setting both is a boot error.
     pub listen_url_file: Option<PathBuf>,
-    /// Upper bound of the connection pool.
-    pub max_connections: u32,
-    /// Connections the pool keeps open when idle (avoids cold reopen +
-    /// `SET search_path` churn under variable load).
-    pub min_connections: u32,
+    /// Upper bound of each domain's connection pool (clinical, party and
+    /// audit each have one). Unset, it follows the instance: four per core
+    /// the process may run on, at least 10 and at most 30
+    /// ([`pool::POOL_PER_CORE`], [`pool::POOL_FLOOR`], [`pool::POOL_CEILING`]), and the server
+    /// bounds it by `server.max_concurrent_requests`, since a request holds at
+    /// most one connection of a pool.
+    ///
+    /// The need is the arrival rate times how long a request holds a
+    /// connection (`db_pool_hold_duration`) times a burst factor; the budget
+    /// is `PostgreSQL`'s `max_connections`, less its reserved slots and your
+    /// tools, over the instances, each holding three pools and its listeners.
+    /// No openEHR spec governs connection handling: our own design (#5774).
+    pub max_connections: Option<u32>,
+    /// Connections each pool keeps open while idle. The server opens them
+    /// before it answers ready, so an instance started under load serves its
+    /// first requests without opening connections; unset, the server keeps one
+    /// per core, at least 2 and at most the pool size, and a one-shot command
+    /// opens what it uses.
+    pub min_connections: Option<u32>,
     /// How long to wait for a free connection before failing.
     pub acquire_timeout: units::Duration,
     /// `statement_timeout` applied to every pooled connection; `"0s"` leaves
@@ -185,10 +200,10 @@ impl Default for DbConfig {
             migrate_url_file: None,
             listen_url: None,
             listen_url_file: None,
-            // Deliberate defaults: 20 max (10 hard-capped realistic write
-            // concurrency ×2), 2 min (no cold reopen churn at idle).
-            max_connections: 20,
-            min_connections: 2,
+            // Unset: sized from the instance's cores, and one connection per
+            // core opened before the server answers ready (#5774).
+            max_connections: None,
+            min_connections: None,
             acquire_timeout: units::Duration::from_secs(30),
             // Twice the engine's own 30 s budget, so the engine refuses first
             // and this remains a backstop rather than the primary control.
@@ -461,8 +476,8 @@ fn pool_options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
     });
     let search_path = domain.search_path();
     PgPoolOptions::new()
-        .max_connections(settings.max_connections)
-        .min_connections(settings.min_connections)
+        .max_connections(settings.pool_size())
+        .min_connections(settings.pool_kept())
         .acquire_timeout(settings.acquire_timeout.get())
         // No liveness ping per checkout: `test_before_acquire` (default true)
         // pings each connection before handing it out, one round trip per

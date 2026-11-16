@@ -164,7 +164,6 @@ config:
     terminology: true
   database:
     max_connections: 10
-    min_connections: 0
   record:
     signing:
       mode: pgp
