@@ -250,3 +250,7 @@ fn count(outcome: &'static str) {
         .care_stale
         .add(1, &[opentelemetry::KeyValue::new("outcome", outcome)]);
 }
+
+#[cfg(test)]
+#[path = "care_tests.rs"]
+mod tests;

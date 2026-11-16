@@ -19,6 +19,18 @@ pub struct Revisions {
 }
 
 impl LiveGrants {
+    /// The revision this replica holds; `None` before its first read.
+    #[must_use]
+    pub fn revision(&self) -> Option<i64> {
+        self.held().revision
+    }
+
+    /// The facts revision this replica holds; `None` before its first read.
+    #[must_use]
+    pub fn facts_revision(&self) -> Option<i64> {
+        self.held_facts().revision
+    }
+
     /// The revisions in force in the store when this replica's copy is older
     /// than them, read in one indexed statement; `None` when the copy holds
     /// them.
@@ -42,5 +54,15 @@ impl LiveGrants {
             && self
                 .facts_revision()
                 .is_some_and(|held| held >= store.facts)
+    }
+}
+
+#[cfg(test)]
+impl LiveGrants {
+    /// Hold every later read of the copy back, as a store that keeps moving
+    /// past each read would.
+    pub(crate) fn hold_back(&self) {
+        self.held_back
+            .store(true, std::sync::atomic::Ordering::Release);
     }
 }
