@@ -226,6 +226,7 @@ impl From<ServiceError> for RestError {
         let kind = match &e {
             ServiceError::Restricted(_) => Some(Kind::ProcessingRestricted),
             ServiceError::Timeout(_) => Some(Kind::QueryTimeout),
+            ServiceError::AccessRefreshing(_) => Some(Kind::AccessRefreshing),
             _ => None,
         };
         let archive = crate::overview::service_error::archive_fault(&e);

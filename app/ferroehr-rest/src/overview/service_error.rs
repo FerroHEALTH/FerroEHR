@@ -66,7 +66,9 @@ pub(crate) fn api_error(e: ServiceError) -> ApiError {
         e @ (ServiceError::Storage(_) | ServiceError::Database(_) | ServiceError::Acquire(_)) => {
             api_error(e.classified())
         }
-        ServiceError::Overloaded(err) => ApiError::ServiceUnavailable(err.message.to_owned()),
+        ServiceError::Overloaded(err) | ServiceError::AccessRefreshing(err) => {
+            ApiError::ServiceUnavailable(err.message.to_owned())
+        }
         // A malformed payload the server was asked to read is a client defect
         // → `400`, and the body names it (that IS the strict reader's
         // contract). A failure to serialize the server's own data is a server

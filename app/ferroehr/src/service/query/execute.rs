@@ -163,42 +163,63 @@ impl FerroEhrService {
         // Multi-EHR scoping (`ehr_ids: List<UUID>`): an absent id raises
         // `ehr_id_does_not_exist`.
         self.check_ehr_ids(&request.ehr_ids).await?;
-        let ehr_access = Box::pin(self.query_access_condition(
-            &request.ehr_access,
-            pinned_ehrs(ir, params, request).as_deref(),
-        ))
-        .await
-        .map_err(Failure::analysis)?;
-        let access_settings = Box::pin(self.query_access_readers(&ehr_access))
-            .await
-            .map_err(Failure::analysis)?;
-        let ctx = SqlCtx {
-            system_id: self.effective_system_id(),
-            ehr_ids: request.ehr_ids.clone(),
-            ehr_scope_kind: request.ehr_scope_kind,
-            ehr_access,
-            limit,
-            offset,
-            // The stored specialisation graph an archetype predicate widens a
-            // parent query through (BASE Artefact Identification
-            // §Supporting Archetype-based Querying): resolved here, once per execution,
-            // because SQL building is synchronous.
-            archetype_lineage: self.archetype_lineage().await,
-            policy_parties: PolicyParties::of_request(&self.binding),
-            access_settings,
-        };
-
+        let pinned = pinned_ehrs(ir, params, request);
+        let mut ehr_access =
+            Box::pin(self.query_access_condition(&request.ehr_access, pinned.as_deref()))
+                .await
+                .map_err(Failure::analysis)?;
+        // The stored specialisation graph an archetype predicate widens a
+        // parent query through (BASE Artefact Identification
+        // §Supporting Archetype-based Querying): resolved here, once per execution,
+        // because SQL building is synchronous.
+        let archetype_lineage = self.archetype_lineage().await;
         let exec_start = Instant::now();
-        // `[record.query] timeout` bounds the DB execution so an over-long query is
-        // `408` rather than hanging to the global request timeout.
-        // The demographic domain runs the same SQL on the party pool, whose
-        // `search_path` names the `party` schema.
-        let pool = match ir.domain {
-            QueryDomain::Clinical => &self.pool,
-            QueryDomain::Demographic => &self.demographic_pool,
+        let mut stale_since = None;
+        let result = loop {
+            let access_settings = Box::pin(self.query_access_readers(&ehr_access))
+                .await
+                .map_err(Failure::analysis)?;
+            let ctx = SqlCtx {
+                system_id: self.effective_system_id(),
+                ehr_ids: request.ehr_ids.clone(),
+                ehr_scope_kind: request.ehr_scope_kind,
+                ehr_access: ehr_access.clone(),
+                limit,
+                offset,
+                archetype_lineage: Arc::clone(&archetype_lineage),
+                policy_parties: PolicyParties::of_request(&self.binding),
+                access_settings,
+            };
+            // `[record.query] timeout` bounds the DB execution so an over-long query is
+            // `408` rather than hanging to the global request timeout.
+            // The demographic domain runs the same SQL on the party pool, whose
+            // `search_path` names the `party` schema.
+            let pool = match ir.domain {
+                QueryDomain::Clinical => &self.pool,
+                QueryDomain::Demographic => &self.demographic_pool,
+            };
+            let run = aql::exec::execute(pool, ir, params, &ctx, self.spec_profile);
+            match self.within_budget(run).await? {
+                Ok(result) => break result,
+                // NOTE: our own design (#5794), a verdict judged on a stale copy is judged again,
+                // or the query is refused; it never answers fewer rows.
+                Err(e) => match e.stale_copy() {
+                    Some(copy) => {
+                        let since = *stale_since.get_or_insert_with(Instant::now);
+                        ehr_access = Box::pin(self.judged_again(
+                            copy,
+                            &request.ehr_access,
+                            pinned.as_deref(),
+                            &ehr_access,
+                            since,
+                        ))
+                        .await
+                        .map_err(Failure::exec_refused)?;
+                    }
+                    None => return Err(Failure::exec(e)),
+                },
+            }
         };
-        let run = aql::exec::execute(pool, ir, params, &ctx, self.spec_profile);
-        let result = self.within_budget(run).await?.map_err(Failure::exec)?;
         record_phase("execute", exec_start);
         Box::pin(self.judge_served_ehrs(&result))
             .await
@@ -410,6 +431,16 @@ impl Failure {
         Self {
             outcome: outcome_of(&e),
             error: Box::new(map_exec_error(e)),
+        }
+    }
+
+    /// A query the service withheld after its execution: the access copy
+    /// it was judged on stayed older than the store
+    /// ([`ServiceError::AccessRefreshing`]).
+    pub(super) fn exec_refused(error: ServiceError) -> Self {
+        Self {
+            outcome: "exec_error",
+            error: Box::new(error),
         }
     }
 

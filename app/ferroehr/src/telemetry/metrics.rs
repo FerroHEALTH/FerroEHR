@@ -49,6 +49,9 @@ pub const AQL_QUERIES: &str = "aql_queries";
 pub const AQL_QUERY_DURATION: &str = "aql_query_duration";
 /// AQL plan-cache events (`event`).
 pub const AQL_PLAN_CACHE_EVENTS: &str = "aql_plan_cache_events";
+/// AQL statements that found an access copy older than the store (`copy`,
+/// `outcome`).
+pub const AQL_STALE_ACCESS: &str = "aql_stale_access";
 /// Committed compositions (`change_type`, the numeric openEHR audit group code).
 pub const COMPOSITIONS_COMMITTED: &str = "compositions_committed";
 /// Validation failures (`pass`).
@@ -137,6 +140,8 @@ pub struct Metrics {
     pub aql_query_duration: Histogram<f64>,
     /// AQL plan-cache events.
     pub aql_plan_cache_events: Counter<u64>,
+    /// AQL statements that found a stale access copy, by copy and outcome.
+    pub aql_stale_access: Counter<u64>,
     /// Committed compositions.
     pub compositions_committed: Counter<u64>,
     /// Validation failures by pass.
@@ -203,6 +208,13 @@ impl Metrics {
                 .with_description("AQL query phase latency")
                 .with_unit("s")
                 .with_boundaries(AQL_DURATION_BUCKETS.to_vec())
+                .build(),
+            aql_stale_access: meter
+                .u64_counter(AQL_STALE_ACCESS)
+                .with_description(
+                    "AQL statements judged on an access copy older than the store, by copy \
+                     and outcome",
+                )
                 .build(),
             aql_plan_cache_events: meter
                 .u64_counter(AQL_PLAN_CACHE_EVENTS)
@@ -350,6 +362,7 @@ mod tests {
             AQL_QUERIES,
             AQL_QUERY_DURATION,
             AQL_PLAN_CACHE_EVENTS,
+            AQL_STALE_ACCESS,
             COMPOSITIONS_COMMITTED,
             VALIDATION_FAILURES,
             VERSION_SIGNATURE_INVALID,

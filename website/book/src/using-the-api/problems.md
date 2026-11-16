@@ -121,6 +121,18 @@ unavailable.
 The server or its database is overloaded or draining. Retry after the
 `Retry-After` header's delay.
 
+## `access-refreshing`
+
+**Status:** `503 Service Unavailable`. **Title:** The access state the query
+is judged by is being refreshed.
+
+An AQL query is judged by this replica's copy of the access settings. When
+the store holds a newer revision than the copy, the server reads it again
+and asks once more for up to 100 ms. If the copy still lags, the server
+withholds the answer instead of serving rows, a count or a page judged on the
+old state. Retry after the `Retry-After` header's delay. The
+`aql_stale_access_total` counter counts these cases.
+
 ## `rate-limited`
 
 **Status:** `429 Too Many Requests`. **Title:** The caller sent more requests

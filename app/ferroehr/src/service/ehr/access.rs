@@ -296,7 +296,8 @@ impl FerroEhrService {
     /// query applies to every EHR it could reach, where the path routes
     /// decide one EHR at a time ([`Self::current_ehr_access_settings`]). An
     /// EHR with no settings is of no class and falls to the server-wide
-    /// default; an EHR of a class this copy does not hold is withheld.
+    /// default; a query reaching an EHR of a class this copy does not hold
+    /// reads the classes again (`service::query::stale`, #5794).
     ///
     /// Copied as one entry, dropped by the notification of a new class, and
     /// read on every call while the listener is down. No openEHR spec

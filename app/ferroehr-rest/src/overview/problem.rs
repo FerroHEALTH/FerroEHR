@@ -61,6 +61,8 @@ pub enum Kind {
     ProcessingRestricted,
     /// A server that is temporarily unable to answer.
     Unavailable,
+    /// A query judged on access state the replica is still refreshing.
+    AccessRefreshing,
     /// A caller past its request rate.
     RateLimited,
     /// A dump/load archive the server cannot read as an export archive.
@@ -72,7 +74,7 @@ pub enum Kind {
 
 impl Kind {
     /// Every kind, in the order the book lists them.
-    pub const ALL: [Self; 13] = [
+    pub const ALL: [Self; 14] = [
         Self::AqlInvalid,
         Self::QueryTimeout,
         Self::ValidationFailed,
@@ -83,6 +85,7 @@ impl Kind {
         Self::Forbidden,
         Self::ProcessingRestricted,
         Self::Unavailable,
+        Self::AccessRefreshing,
         Self::RateLimited,
         Self::ArchiveInvalid,
         Self::TrcPatientMismatch,
@@ -102,6 +105,7 @@ impl Kind {
             Self::Forbidden => "forbidden",
             Self::ProcessingRestricted => "processing-restricted",
             Self::Unavailable => "unavailable",
+            Self::AccessRefreshing => "access-refreshing",
             Self::RateLimited => "rate-limited",
             Self::ArchiveInvalid => "archive-invalid",
             Self::TrcPatientMismatch => "trc-patient-mismatch",
@@ -122,6 +126,7 @@ impl Kind {
             Self::Forbidden => "The caller may not perform this operation",
             Self::ProcessingRestricted => "Processing of this record is restricted",
             Self::Unavailable => "The server is temporarily unavailable",
+            Self::AccessRefreshing => "The access state the query is judged by is being refreshed",
             Self::RateLimited => "The caller sent more requests than its rate allows",
             Self::ArchiveInvalid => "The archive cannot be loaded",
             Self::TrcPatientMismatch => {
@@ -141,7 +146,7 @@ impl Kind {
             Self::VersionConflict => StatusCode::PRECONDITION_FAILED,
             Self::Unauthenticated => StatusCode::UNAUTHORIZED,
             Self::Forbidden | Self::ProcessingRestricted => StatusCode::FORBIDDEN,
-            Self::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
+            Self::Unavailable | Self::AccessRefreshing => StatusCode::SERVICE_UNAVAILABLE,
             Self::RateLimited => StatusCode::TOO_MANY_REQUESTS,
             Self::TrcPatientMismatch => StatusCode::NOT_FOUND,
         }

@@ -43,10 +43,13 @@ pub(super) fn on_ehr_id(pinned: &PinnedEhr, target: &Expr) -> Expr {
 
 /// The revision of the pinned EHR's settings row and subject in force is the
 /// one its verdict was judged on: a scalar subquery with no outer reference,
-/// which PostgreSQL evaluates once per execution.
+/// which PostgreSQL evaluates once per execution, and which fails the
+/// statement with SQLSTATE `ZA001` when the revision moved
+/// (`clinical/0049_access_stale_copy.sql`), so a stale verdict answers no
+/// row, count or page (#5794).
 pub(super) fn in_force(pinned: &PinnedEhr) -> Expr {
     Expr::cust_with_exprs(
-        "(SELECT CAST(access_revision($1) AS jsonb)) = CAST($2 AS jsonb)",
+        "(SELECT access_in_force($1, $2))",
         [Expr::val(pinned.ehr), Expr::val(pinned.revision_json())],
     )
 }

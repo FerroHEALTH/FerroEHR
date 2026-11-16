@@ -94,7 +94,7 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
         .default
         .as_deref()
         .map(|pair| admits(pair, none).unwrap_or_else(|| Expr::val(false)));
-    let held = by_settings(target.clone(), or_all(branches), default);
+    let held = by_settings(condition, target.clone(), or_all(branches), default);
     Some(confine(condition, &target, held))
 }
 
@@ -150,7 +150,7 @@ pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Ex
         .default
         .as_deref()
         .map(|pair| reaches(pair, none).unwrap_or_else(|| Expr::val(false)));
-    let held = by_settings(target.clone(), or_all(branches), default);
+    let held = by_settings(condition, target.clone(), or_all(branches), default);
     Some(confine(condition, target, held))
 }
 
@@ -170,19 +170,46 @@ fn admits_every_known(condition: &ConditionGroups) -> bool {
 ///
 /// The EHRs of an unknown class are read by one uncorrelated subquery,
 /// which PostgreSQL hashes once per execution, where `by_settings` probed
-/// the settings row once per candidate row. A row with no EHR, a party's
-/// head, has no settings row and is admitted, as the default admits it. No
-/// openEHR spec governs this: our own design (#5782).
+/// the settings row once per candidate row. A row of such an EHR fails the
+/// statement as `by_settings` does ([`unknown_class`]). A row with no EHR, a
+/// party's head, has no settings row and is admitted, as the default admits
+/// it. No openEHR spec governs this: our own design (#5782).
 fn class_known(condition: &ConditionGroups, target: Expr) -> Expr {
-    let known: Vec<i64> = condition
+    Expr::cust_with_exprs(
+        "CASE WHEN COALESCE($1 NOT IN (SELECT access_unknown.ehr_id \
+         FROM access_settings access_unknown \
+         WHERE NOT access_unknown.held_closed AND access_unknown.class_id <> ALL($2)), true) \
+         THEN true ELSE access_class_unknown($1) END",
+        [target, Expr::val(known_classes(condition))],
+    )
+}
+
+/// Every settings class `condition` holds a verdict for.
+fn known_classes(condition: &ConditionGroups) -> Vec<i64> {
+    condition
         .groups
         .iter()
         .flat_map(|(ids, _)| ids.iter().copied())
-        .collect();
+        .collect()
+}
+
+/// The settings row is held closed or of a class `condition` holds; any
+/// other row fails the statement through `access_class_unknown` (SQLSTATE
+/// `ZA002`, `clinical/0049_access_stale_copy.sql`), so a class this
+/// replica's copy has not yet heard of is waited for or refused, and never
+/// answered as an EHR with nothing to read. The function takes the row's
+/// EHR id, so the planner cannot fold it as a constant. No openEHR spec
+/// governs this: our own design (#5794).
+fn unknown_class(condition: &ConditionGroups, with: Expr) -> Expr {
     Expr::cust_with_exprs(
-        "COALESCE($1 NOT IN (SELECT access_unknown.ehr_id FROM access_settings access_unknown \
-         WHERE NOT access_unknown.held_closed AND access_unknown.class_id <> ALL($2)), true)",
-        [target, Expr::val(known)],
+        "CASE WHEN $1 OR $2 = ANY($3) THEN COALESCE($4, false) ELSE access_class_unknown($5) END",
+        [
+            col(SETTINGS, AccessSettings::HeldClosed),
+            col(SETTINGS, AccessSettings::ClassId),
+            Expr::val(known_classes(condition)),
+            with,
+            col(SETTINGS, AccessSettings::EhrId),
+        ],
     )
 }
 
@@ -236,19 +263,26 @@ pub(super) fn settled(condition: &AccessCondition, target: Expr) -> Expr {
     )
 }
 
-/// For the EHR `target`: with a settings row, `with` over that row; with
-/// none, `default`, or every row when `default` is `None`.
+/// For the EHR `target`: with a settings row of a class `condition` holds,
+/// `with` over that row; with one of a class it does not hold, a failed
+/// statement ([`unknown_class`]); with none, `default`, or every row when
+/// `default` is `None`.
 ///
-/// One scalar probe of the settings row by its key decides both: it answers
+/// One scalar probe of the settings row by its key decides each: it answers
 /// `with` (an unknown `with` is false) when the row exists and NULL when it
 /// does not, which `default` then replaces. An `EXISTS` beside a `NOT
 /// EXISTS` under an `OR` was planned as two hashed `SubPlans` over every
 /// settings row before the first row came back (#5701). No openEHR spec
 /// governs this: our own design.
-fn by_settings(target: Expr, with: Expr, default: Option<Expr>) -> Expr {
+fn by_settings(
+    condition: &ConditionGroups,
+    target: Expr,
+    with: Expr,
+    default: Option<Expr>,
+) -> Expr {
     let mut row = settings_row(target);
     row.clear_selects();
-    row.expr(Expr::cust_with_exprs("COALESCE($1, false)", [with]));
+    row.expr(unknown_class(condition, with));
     Expr::cust_with_exprs(
         "COALESCE($1, $2)",
         [
