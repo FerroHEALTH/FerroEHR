@@ -354,6 +354,20 @@ check_definition_assets() {
 
 check_docs_claims() { bash scripts/checks/docs-claims.sh --all; }
 
+# EHDS Art. 28(b): the pinned information sheet and instructions for use name
+# only keys this release reads, or the operator who follows them starts a
+# server that refuses its configuration (#5534).
+check_ehds_config_keys() {
+  local dir rc=0 page
+  dir="$(mktemp -d)"
+  for page in information-sheet instructions-for-use; do
+    bash scripts/release/system-documents.sh fetch "$page" "$dir/$page.md" || rc=1
+  done
+  [[ "$rc" -eq 0 ]] && { bash scripts/checks/ifu-config-keys.sh "$dir/information-sheet.md" "$dir/instructions-for-use.md" || rc=1; }
+  rm -rf "$dir"
+  return "$rc"
+}
+
 # The lockstep version the crates leg stamps answers the change since the
 # newest openehr-* release by Cargo SemVer (#5353). The plan job hands the
 # version it planned in CRATE_VERSION; preflight plans it here.
@@ -383,6 +397,7 @@ check_zenodo .zenodo.json is in sync with CITATION.cff
 check_compose_tags The compose files pin :main, and the attached quickstart this release
 check_definition_assets The default demographic definitions stage as release assets with their checksums
 check_docs_claims Documented keys resolve in their source
+check_ehds_config_keys The pinned EHDS system documents name only configuration keys this release reads
 check_crate_semver The openehr-* crate version answers the change by Cargo SemVer (cargo-semver-checks)
 EOF
 }
