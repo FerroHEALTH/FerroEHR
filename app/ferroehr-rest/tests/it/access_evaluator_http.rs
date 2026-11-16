@@ -421,7 +421,11 @@ async fn a_classification_refuses_the_uncleared() {
     for uid in [v1.as_str(), missing_version.as_str()] {
         let read = format!("{BASE}/ehr/{ehr}/composition/{uid}");
         let (status, body) = send(&app, "GET", &read, "nurse", None, None).await;
-        assert_eq!(status, StatusCode::FORBIDDEN, "the version read is refused: {body}");
+        assert_eq!(
+            status,
+            StatusCode::FORBIDDEN,
+            "the version read is refused: {body}"
+        );
         assert_eq!(refusal(&body).0, json!("refused-sensitivity"), "{body}");
         assert!(!body.contains("International Patient Summary"), "{body}");
     }
