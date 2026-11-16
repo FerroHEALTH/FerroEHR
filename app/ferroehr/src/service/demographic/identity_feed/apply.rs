@@ -43,6 +43,10 @@ const LEASE_SECONDS: f64 = 60.0;
 /// The longest the applier waits between two looks at the queue.
 const IDLE: Duration = Duration::from_secs(10);
 
+/// The transaction-level advisory lock an apply holds, and an operator's
+/// retry takes, so the two never interleave ("pmia" in ASCII).
+pub(super) const APPLY_LOCK: i64 = 0x706d_6961;
+
 /// What one turn of the applier did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Applied {
@@ -227,8 +231,9 @@ impl FerroEhrService {
     async fn refuse(&self, message_id: &str, refusal: Refusal) -> Result<(), ServiceError> {
         let mut conn = acquire(&self.demographic_pool).await?;
         sqlx::query(
-            "UPDATE pmir_message SET state = 'refused', reason = $2, settled_at = now(), \
-             leased_by = NULL, leased_until = NULL WHERE message_id = $1 AND state = 'received'",
+            "UPDATE pmir_message SET state = 'refused', reason = $2, refused_at = now(), \
+             attempts = attempts + 1, leased_by = NULL, leased_until = NULL \
+             WHERE message_id = $1 AND state = 'received'",
         )
         .bind(message_id)
         .bind(refusal.code())
@@ -240,6 +245,7 @@ impl FerroEhrService {
             reason = refusal.code(),
             "an ITI-93 message is refused: what it splits stays unresolved until it is settled"
         );
+        self.pmir_refused_count().await?;
         Ok(())
     }
 
@@ -249,6 +255,10 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::from)?;
         let mut tx = conn.begin().await?;
+        sqlx::query("SELECT pg_advisory_xact_lock($1)")
+            .bind(APPLY_LOCK)
+            .execute(&mut *tx)
+            .await?;
         let state: Option<String> =
             sqlx::query_scalar("SELECT state FROM pmir_message WHERE message_id = $1 FOR UPDATE")
                 .bind(&message.message_id)
@@ -305,14 +315,16 @@ impl FerroEhrService {
         crate::party_binding::grants::caller::store::finish(&mut tx, holders).await?;
         sqlx::query(
             "UPDATE pmir_message SET state = 'applied', events = NULL, settled_at = now(), \
-             leased_by = NULL, leased_until = NULL WHERE message_id = $1",
+             attempts = attempts + 1, leased_by = NULL, leased_until = NULL \
+             WHERE message_id = $1",
         )
         .bind(&message.message_id)
         .execute(&mut *tx)
         .await?;
         self.record_party_access(
             EventActionCode::Update,
-            format!("pmir-message:{}", message.message_id),
+            format!("{}:{}", super::operator::OBJECT, message.message_id),
+            None,
         )
         .await?;
         tx.commit().await?;
@@ -354,6 +366,12 @@ async fn applier(service: Arc<FerroEhrService>, replica: Uuid) {
                     break;
                 }
             }
+        }
+        if let Err(error) = service.pmir_refused_count().await {
+            tracing::warn!(
+                error = %crate::error::ErrorChain::new(&error),
+                "the refused ITI-93 messages could not be counted"
+            );
         }
         match listener.as_mut() {
             Some(listening) => {

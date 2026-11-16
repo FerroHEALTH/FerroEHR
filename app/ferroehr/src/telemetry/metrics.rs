@@ -24,7 +24,7 @@
 use std::sync::OnceLock;
 
 use opentelemetry::KeyValue;
-use opentelemetry::metrics::{Counter, Histogram, Meter};
+use opentelemetry::metrics::{Counter, Gauge, Histogram, Meter};
 
 use crate::telemetry::build_info::BuildInfo;
 
@@ -73,6 +73,8 @@ pub const ATNA_AUDIT_REAPED: &str = "atna_audit_reaped";
 pub const ATNA_AUDIT_CHAIN_FINDINGS: &str = "atna_audit_chain_findings";
 /// Refusal records the system log could not take (`kind`).
 pub const ATNA_AUDIT_REFUSALS_UNWRITTEN: &str = "atna_audit_refusals_unwritten";
+/// Refused ITI-93 messages still to retry or settle, sampled as a gauge.
+pub const PMIR_MESSAGES_REFUSED: &str = "pmir_messages_refused";
 /// Process start time, unix seconds.
 pub const PROCESS_START_TIME: &str = "process_start_time";
 /// Build identity, always `1`, carrying `version`/`git_sha`/`rm_version`.
@@ -157,6 +159,8 @@ pub struct Metrics {
     pub atna_audit_chain_findings: Counter<u64>,
     /// Refusal records the system log could not take.
     pub atna_audit_refusals_unwritten: Counter<u64>,
+    /// Refused ITI-93 messages still to retry or settle.
+    pub pmir_messages_refused: Gauge<u64>,
 }
 
 impl Metrics {
@@ -253,6 +257,10 @@ impl Metrics {
                 .u64_counter(ATNA_AUDIT_REFUSALS_UNWRITTEN)
                 .with_description("Refusal records the system log could not take, by kind")
                 .build(),
+            pmir_messages_refused: meter
+                .u64_gauge(PMIR_MESSAGES_REFUSED)
+                .with_description("Refused ITI-93 messages still to retry or settle")
+                .build(),
         }
     }
 }
@@ -343,6 +351,7 @@ mod tests {
             ATNA_AUDIT_EMITTED,
             ATNA_AUDIT_SENT,
             ATNA_AUDIT_REFUSALS_UNWRITTEN,
+            PMIR_MESSAGES_REFUSED,
             PROCESS_START_TIME,
             TOKIO_WORKERS,
             TOKIO_GLOBAL_QUEUE_DEPTH,

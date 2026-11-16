@@ -37,6 +37,8 @@
 
 pub mod apply;
 pub mod config;
+pub mod health;
+pub mod operator;
 pub mod receive;
 pub mod subscribe;
 

@@ -253,7 +253,12 @@ async fn listed(app: &Router, credential: &str) -> (StatusCode, Option<Principal
     )
     .await
     .expect("a response");
-    (resp.status(), resp.extensions().get::<Principal>().cloned())
+    (
+        resp.status(),
+        resp.extensions()
+            .get::<Arc<Principal>>()
+            .map(|principal| Principal::clone(principal)),
+    )
 }
 
 #[tokio::test]

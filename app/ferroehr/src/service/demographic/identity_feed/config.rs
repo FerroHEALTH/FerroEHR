@@ -14,7 +14,7 @@ use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
 /// The `[pix]` table.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 pub struct PixConfig {
@@ -41,6 +41,24 @@ pub struct PixConfig {
     /// message linking one is refused and names the domain.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub identifier_domain: Vec<IdentifierDomain>,
+    /// How many refused ITI-93 messages still to retry or settle turn the
+    /// `pmir_refused_messages` health indicator `DEGRADED`; at least 1. A
+    /// refused message keeps the identifiers it split unresolved until an
+    /// operator acts on it.
+    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
+    pub refused_degraded_at: u32,
+}
+
+impl Default for PixConfig {
+    fn default() -> Self {
+        Self {
+            endpoint: EndpointSection::default(),
+            feed_issuer: String::new(),
+            feed_client_id: String::new(),
+            identifier_domain: Vec::new(),
+            refused_degraded_at: 1,
+        }
+    }
 }
 
 /// One `[[pix.identifier_domain]]` entry.
@@ -100,6 +118,13 @@ impl PixConfig {
                 ));
             }
         }
+        if self.refused_degraded_at == 0 {
+            problems.push(
+                "pix.refused_degraded_at must be at least 1: one refused message keeps the \
+                 identifiers it split unresolved"
+                    .to_owned(),
+            );
+        }
         if !public_root {
             problems.push(
                 "[pix] needs [server] public_base_url: the subscription names the feed route \
@@ -127,7 +152,19 @@ mod tests {
                 system: "urn:oid:2.999.1.1".to_owned(),
                 identifier_type: "MR".to_owned(),
             }],
+            refused_degraded_at: 1,
         }
+    }
+
+    #[test]
+    fn the_refused_threshold_is_at_least_one() {
+        let problems = PixConfig {
+            refused_degraded_at: 0,
+            ..pix()
+        }
+        .problems(true);
+        assert_eq!(problems.len(), 1, "{problems:?}");
+        assert!(problems[0].contains("refused_degraded_at"), "{problems:?}");
     }
 
     #[test]

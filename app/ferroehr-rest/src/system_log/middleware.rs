@@ -141,7 +141,7 @@ impl<'a> Caller<'a> {
     /// Reads the caller off a response.
     fn of(resp: &'a Response) -> Self {
         Self {
-            principal: resp.extensions().get::<Principal>(),
+            principal: resp.extensions().get::<Arc<Principal>>().map(Arc::as_ref),
             actor: resp.extensions().get::<ActorAuthentication>(),
             binding: resp
                 .extensions()

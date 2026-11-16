@@ -64,6 +64,11 @@ impl Builder<'_> {
         {
             self.q.and_where(cond);
         }
+        // NOTE: our own design (#5746), a verdict the service judged on a copy of the EHR's
+        // settings admits rows only while that copy's revision is the one in force.
+        if let Some(pinned) = self.ctx.ehr_access.pinned() {
+            self.q.and_where(super::pinned::in_force(pinned));
+        }
     }
 
     /// The explicit `ehr_ids` scope on the EHR id `target`, when the query is

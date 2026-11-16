@@ -65,7 +65,7 @@ pub mod db_cmd;
 pub mod definitions;
 pub mod instances;
 pub mod party_binding;
-mod pmir;
+pub mod pmir;
 pub mod policy;
 pub mod process;
 mod usage_report_cmd;
@@ -154,6 +154,12 @@ pub enum Command {
         #[command(subcommand)]
         cmd: party_binding::PartyBindingCmd,
     },
+    /// The PMIR feed messages the consumer refused: list, retry or settle them.
+    Pmir {
+        /// Which step to run.
+        #[command(subcommand)]
+        cmd: pmir::PmirCmd,
+    },
     /// Write a redacted report of what this deployment runs (build, features,
     /// specification pins, migration level, posture, licence, manufacturer and
     /// configuration), the file a complaint or an incident report attaches.
@@ -203,6 +209,9 @@ pub(crate) async fn dispatch(cli: Cli) -> anyhow::Result<()> {
         Some(Command::AuditChain { cmd }) => Box::pin(audit_chain::run(&cmd, config, set)).await,
         Some(Command::PartyBinding { cmd }) => {
             Box::pin(party_binding::run(&cmd, config, set)).await
+        }
+        Some(Command::Pmir { cmd }) => {
+            Box::pin(pmir::run(&cmd, &ferroehr::config::load(config, set)?)).await
         }
         Some(Command::UsageReport { print: _, event }) => {
             usage_report_cmd::run(event, config, set).await
@@ -986,7 +995,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         .context("mirroring the audit category register into the retention register")?;
     // NOTE: EHDS Art. 3(3), a hold stops withholding at its limit; this only writes the record.
     service.spawn_access_delay_expiries(Duration::from_secs(60));
-    pmir::start(&service, &config).context("starting the PMIR Patient Identity Consumer")?;
+    pmir::start(&service, &config, &mut indicators).context("starting the PMIR consumer")?;
     // The commit-event outbox: a commit writes its row only while a change-feed
     // grant names a reader, and every reader no grant names any more is marked
     // inactive, so it holds the prune back no longer.

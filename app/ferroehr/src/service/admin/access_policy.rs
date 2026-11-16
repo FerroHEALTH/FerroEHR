@@ -89,14 +89,14 @@ impl PolicyVersion {
         let tree = TreeId::trunk(row.version);
         let data: Value = serde_json::from_str(&row.data)?;
         let commit_audit: Value = serde_json::from_str(&row.commit_audit)?;
-        let original_version = build_original_version(&OriginalVersionParts {
+        let original_version = build_original_version(OriginalVersionParts {
             creating_system_id: &row.system_id,
             vo_id,
             tree,
             preceding_version_uid: preceding,
             other_input_version_uids: &[],
-            contribution: &contribution_ref(row.contribution_id),
-            commit_audit: &commit_audit,
+            contribution: contribution_ref(row.contribution_id),
+            commit_audit,
             lifecycle_state: &row.lifecycle_state,
             data: &data,
             attestations: &[],

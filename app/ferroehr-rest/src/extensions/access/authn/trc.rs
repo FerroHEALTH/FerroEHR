@@ -215,7 +215,7 @@ fn mismatch(principal: &Principal, not_found: &'static str) -> Response {
             .insert("ehdsi-code".to_owned(), vec![not_found.to_owned()]);
         resp.extensions_mut().insert(record);
     }
-    resp.extensions_mut().insert(principal.clone());
+    resp.extensions_mut().insert(Arc::new(principal.clone()));
     resp
 }
 

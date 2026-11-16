@@ -57,6 +57,9 @@ struct Facts<'a> {
 /// The predicate on the head row `h` of a versioned object; `None` when the
 /// condition admits every row.
 pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
+    if let Some(pinned) = condition.pinned() {
+        return Some(super::pinned::on_head(pinned, h));
+    }
     let condition = condition.groups()?;
     let target = col(h, VoHead::EhrId);
     let admits = |pair: &VerdictPair, facts: Facts<'_>| -> Option<Expr> {
@@ -93,6 +96,9 @@ pub(super) fn on_head(condition: &AccessCondition, h: &str) -> Option<Expr> {
 /// item of which the caller may read is left out; whether an item is read is
 /// [`on_head`]'s.
 pub(super) fn on_ehr_id(condition: &AccessCondition, target: &Expr) -> Option<Expr> {
+    if let Some(pinned) = condition.pinned() {
+        return Some(super::pinned::on_ehr_id(pinned, target));
+    }
     let condition = condition.groups()?;
     let reaches = |pair: &VerdictPair, facts: Facts<'_>| -> Option<Expr> {
         let (cared, uncared) = (
@@ -170,8 +176,12 @@ pub(super) fn keeper_reads(keepers: &Keepers, h: &str) -> Expr {
 
 /// Whether the EHR `target` carries `EHR_ACCESS` settings: one probe of the
 /// row by its key, as a scalar subquery, which PostgreSQL runs per row and
-/// never turns into a hashed scan of every settings row (#5701).
-pub(super) fn settled(target: Expr) -> Expr {
+/// never turns into a hashed scan of every settings row (#5701); for a
+/// pinned query the answer the service read.
+pub(super) fn settled(condition: &AccessCondition, target: Expr) -> Expr {
+    if let Some(pinned) = condition.pinned() {
+        return Expr::val(pinned.settled);
+    }
     let mut row = settings_row(target);
     row.clear_selects();
     row.expr(Expr::val(true));
@@ -253,6 +263,9 @@ fn admitted(
 /// the object's sorted keys (PostgreSQL 18 §9.16, `jsonb ? text`). No openEHR
 /// spec governs this: our own design (#5645).
 pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
+    if condition.pinned().is_some() {
+        return None;
+    }
     let condition = condition.groups()?;
     let pairs = std::iter::once(&condition.closed)
         .chain(condition.groups.iter().map(|(_, pair)| pair))
@@ -437,6 +450,11 @@ fn pred(pred: &Pred, h: &str, facts: Facts<'_>) -> Expr {
         Pred::Data(data, polarity) => data_match(data, *polarity, h),
         Pred::Ehr(fact) => ehr_fact(*fact, facts),
     }
+}
+
+/// `pred` on the head row `h`, over the facts of the object alone.
+pub(super) fn item_pred(pred: &Pred, h: &str) -> Expr {
+    self::pred(&simplified(pred), h, Facts { caller: None })
 }
 
 /// The text of the fact at `at` of the settings row.

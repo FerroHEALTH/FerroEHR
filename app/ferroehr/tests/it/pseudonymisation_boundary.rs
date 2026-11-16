@@ -1787,8 +1787,7 @@ async fn a_sealed_identifier_resolves_on_the_separated_demographic_credential() 
 /// The store writes through the clinical pool. Before the grant migration the
 /// Audit Record Repository was held by the single-domain pair only, so a
 /// deployment whose clinical credential is a member of `ferroehr_clinical` alone
-/// wrote no access record at all: dropped and metered under
-/// `fail_mode = "open"`, every auditable operation refused under `"closed"`.
+/// wrote no access record at all, and every auditable operation was refused.
 /// Runs as a fresh login role IN ROLE `ferroehr_clinical`, never as the superuser
 /// the testkit pool is.
 #[tokio::test]

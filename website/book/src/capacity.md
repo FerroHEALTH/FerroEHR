@@ -27,7 +27,10 @@ with the performance gate's access seed (`scripts/perf/access-seed.sh`):
 The access check and the access log stay on, as in production. On top of
 the gate's seed, the first 500 population EHRs get one composition each, so
 the single-EHR groups read across 500 EHRs, and the commits go to the next
-500, so a query's answer does not grow while the sweep runs.
+500, so a query's answer does not grow while the sweep runs. The single-EHR
+AQL reads EHRs of its own, filled as a chart is: the next 500 hold 20 lab
+results each, a typical answer, and the 50 after them 100 each, a whole
+chart.
 
 The load is `ferrohealth-perf`, the version `docs/VERSIONS.md` pins for the
 gate, run open loop at a constant arrival rate. Each latency counts from the
@@ -45,14 +48,15 @@ FerroEHR's access path at scale and sweeps each request group on its own.
 | `ehr_read` | `GET /ehr/{id}` over 500 EHRs | clinician with a care relationship | 3 |
 | `composition_read` | `GET /ehr/{id}/composition/{uid}` over 500 EHRs | clinician | 5 |
 | `composition_commit` | `POST /ehr/{id}/composition` over 500 EHRs | clinician | 3 |
-| `aql_ehr` | the lab-results AQL with `ORDER BY`, one EHR, over 500 EHRs | clinician | 3 |
+| `aql_ehr` | the lab-results AQL with `ORDER BY`, one EHR of 20 results, over 500 EHRs | clinician | 3 |
+| `aql_chart` | the same AQL, one EHR of 100 results, over 50 EHRs | clinician | 1 |
 | `aql_population` | `SELECT e/ehr_id/value FROM EHR e LIMIT 20` | clinician | 1 |
 | `access_log_read` | ITI-81 `AuditEvent?date=ge2026-01-01&_count=20` | administrator | 1 |
 | `party_read` | `GET /demographic/person/{id}` | administrator | 2 |
 | `export` | the EHR export, over 500 EHRs | clinician | 0 |
 | `health` | `GET /health/liveness`, the harness's own ceiling | none | 0 |
 
-The mix is 18 requests per round: 14 single-EHR clinical requests (3 of
+The mix is 19 requests per round: 15 single-EHR clinical requests (3 of
 them writes), one population query, one access-log read and two
 demographic reads. `capacity.sh groups` prints the table the script reads.
 
@@ -124,8 +128,8 @@ The script's header lists every setting: the pool size
 concurrent-request bound (`CAPACITY_MAX_CONCURRENT`, 256 as in the
 quickstart, so a step past the knee fails on `503` refusals instead of the
 server running out of memory), the
-population, the spread, the warm-up and measured window per step, and the
-SLOs.
+population, the spread, the results in each EHR the AQL groups read, the
+warm-up and measured window per step, and the SLOs.
 
 ## Reading a step
 
@@ -139,7 +143,10 @@ one line in `steps.jsonl`:
   PostgreSQL's commits and rollbacks over the step. `host_load_1m` against
   `host_cores` shows a host that was busy with something else.
 - `statements.json`: the 15 statements of `pg_stat_statements` that took the
-  most time in the step.
+  most time in the step, planning included: PostgreSQL counts each
+  statement's planning beside its execution (`track_planning`), and an AQL
+  statement is planned for its values on every call, so at a small answer
+  its execution alone leaves out about half of what it costs.
 - `activity.json`: the database's client backends by state and wait event,
   sampled four times a second, as a mean count; `peak_active` is the most
   backends active at once. A `Lock:advisory` or `LWLock` wait there is

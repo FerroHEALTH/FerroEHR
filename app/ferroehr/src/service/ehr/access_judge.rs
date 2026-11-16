@@ -228,6 +228,31 @@ impl FerroEhrService {
         Ok(condition.with_care(care))
     }
 
+    /// The condition of a query whose rows all belong to `pinned` when it
+    /// names them: its care read as [`Self::resolve_care`] reads it, and the
+    /// one EHR of a query pinned to one decided before the statement, from
+    /// this replica's copy ([`RequestAccess::pin`]), so the statement carries
+    /// only what the verdict leaves to each object (#5746). No openEHR spec
+    /// governs this: our own design.
+    ///
+    /// # Errors
+    /// As [`Self::resolve_care`], and as [`Self::ehr_access_entry`].
+    pub async fn query_access_condition(
+        &self,
+        condition: &AccessCondition,
+        pinned: Option<&[EhrId]>,
+    ) -> Result<AccessCondition, ServiceError> {
+        let resolved = Box::pin(self.resolve_care(condition, pinned)).await?;
+        let (Some(access), Some([ehr_id])) = (current(), pinned) else {
+            return Ok(resolved);
+        };
+        if resolved.groups().is_none() {
+            return Ok(resolved);
+        }
+        let entry = Box::pin(self.ehr_access_entry(*ehr_id)).await?;
+        Ok(access.pin(&resolved, *ehr_id, &entry))
+    }
+
     /// Judges every EHR the query `result` of the running request served
     /// that the request has not judged; nothing outside a request. An EHR
     /// that carried settings is judged from the per-EHR copy, the EHRs it

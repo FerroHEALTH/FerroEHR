@@ -107,7 +107,7 @@ impl FerroEhrService {
             "party:{}#binding-key:{}|{}>{}|{}",
             party.0, from.issuer, from.value, to.issuer, to.value
         );
-        Box::pin(self.record_party_access(EventActionCode::Update, object_id)).await
+        Box::pin(self.record_party_access(EventActionCode::Update, object_id, None)).await
     }
 }
 
