@@ -1225,12 +1225,11 @@ fn requires_cardinality(card: &Cardinality, children_count: usize) -> bool {
 // `AM/docs/AOM2/master03-archetype_package.adoc` §C_ATTRIBUTE,
 // §ARCHETYPE_SLOT), captured before compaction hoists wrappers.
 
-/// Capture EVERY constraining `C_ATTRIBUTE.cardinality` (AOM2 §C_ATTRIBUTE:
-/// "Cardinality constraint of attribute, if a container attribute") for the
-/// validation walk: any interval with a lower bound `>= 1` or a bounded upper
-/// bound constrains the container, and so does `unique`. A superset of the serialized [`cardinalities`]
-/// selection, so `0..1`/`1..1`/`1..*` container bounds are enforced from
-/// [`WebTemplateNode::card_all`] too (mirrors the OPT-1.4 front end).
+/// Capture EVERY constraining `C_ATTRIBUTE.cardinality` (AOM2 §C_ATTRIBUTE: "Cardinality
+/// constraint of attribute, if a container attribute") for the validation walk: a lower
+/// bound `>= 1`, a bounded upper bound or `unique` constrains the container. A superset of
+/// the serialized [`cardinalities`] selection, so `0..1`/`1..1`/`1..*` container bounds are
+/// enforced from [`WebTemplateNode::card_all`] too (mirrors the OPT-1.4 front end).
 fn all_cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
     let mut out = Vec::new();
     for attr in co_attributes(co) {
