@@ -145,7 +145,7 @@ jobs:
           bash scripts/render/access-index-bench.sh
           bash scripts/render/access-path-bench.sh
       - name: Perf-assets drift gate (regenerated SVGs match the committed assets)
-        run: git diff --exit-code website/book/src/perf-assets
+        run: git diff --exit-code -- website/book/src/perf-assets
       - name: Markdown lint gate
         run: mdbook-lint lint website/book/src
       - name: Assemble _site (landing + /docs/dev/)
