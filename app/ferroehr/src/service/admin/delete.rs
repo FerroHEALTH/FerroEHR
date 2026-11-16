@@ -82,6 +82,7 @@ impl FerroEhrService {
         // referenced it after the count above).
         template_repo::release_template_ref(&mut tx, &stored).await?;
         tx.commit().await?;
+        self.registered_templates.changed();
         // Evict the derived-runtime cache for the deleted id (case-canonical
         // key). No openEHR spec governs the cache.
         self.web_templates

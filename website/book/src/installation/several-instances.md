@@ -63,9 +63,11 @@ a transaction for this.
 
 ## The listeners hold connections of their own
 
-Each instance runs five listeners, one per copy, and each holds one
-connection for its `LISTEN`, apart from the request pools: three on the
-clinical database and two on the party database. Each listener session
+Each instance runs six listeners, one per copy, and each holds one
+connection for its `LISTEN`, apart from the request pools: four on the
+clinical database and two on the party database. One of the clinical ones
+holds the registered template addresses, so a COMPOSITION commit learns
+whether its template is registered without a statement. Each listener session
 names itself `ferroehr policy listener` in `pg_stat_activity`.
 
 PgBouncer in transaction mode hands a connection back after each transaction
@@ -98,25 +100,25 @@ one, two and three instances is on the
 ## Connection budget
 
 Each instance opens three pools, one per domain (clinical, party and audit).
-Each pool holds at most `[database] max_connections` connections, and the five
+Each pool holds at most `[database] max_connections` connections, and the six
 listeners hold one each beside them. With the default of 20, one instance uses
-at most 3 × 20 + 5 = 65 connections:
+at most 3 × 20 + 6 = 66 connections:
 
 | Instances | Connections at most | Fits PostgreSQL's default `max_connections = 100` |
 |---|---|---|
-| 1 | 65 | yes |
-| 2 | 130 | no |
-| 3 | 195 | no |
+| 1 | 66 | yes |
+| 2 | 132 | no |
+| 3 | 198 | no |
 
-Keep `instances × (3 × max_connections + 5)` below PostgreSQL's
+Keep `instances × (3 × max_connections + 6)` below PostgreSQL's
 `max_connections` minus `superuser_reserved_connections` (3 by default) and
 the connections your operators and tools need. With the default pool size,
-PostgreSQL needs `max_connections` of at least 65 + 3 = 68 for one instance,
-130 + 3 = 133 for two and 195 + 3 = 198 for three, before your own
+PostgreSQL needs `max_connections` of at least 66 + 3 = 69 for one instance,
+132 + 3 = 135 for two and 198 + 3 = 201 for three, before your own
 connections; the default of 100 fits one instance only. To fit two instances
 in the default of 100, set `[database] max_connections = 12` on each:
-(3 × 12 + 5) × 2 = 82, which leaves 15 for the reserved slots and your tools.
-The Compose overlay above sets 10 on each instance, 70 in all. Through a
+(3 × 12 + 6) × 2 = 84, which leaves 13 for the reserved slots and your tools.
+The Compose overlay above sets 10 on each instance, 72 in all. Through a
 transaction-mode pooler, the pools count against the pooler's server
 connections and only the listeners against PostgreSQL's.
 
