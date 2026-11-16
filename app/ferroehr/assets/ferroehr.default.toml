@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 859 keys. A deployment that holds real data sets the 10
+# This file lists 860 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -2699,6 +2699,11 @@ subject_namespaces = []
 # The `client_id` that access token names: the only client whose ITI-93
 # messages are applied. Optional (trust).
 #? feed_client_id = ""
+# How many refused ITI-93 messages still to retry or settle turn the
+# `pmir_refused_messages` health indicator `DEGRADED`; at least 1. A refused
+# message keeps the identifiers it split unresolved until an operator acts on
+# it. Optional.
+#? refused_degraded_at = 1
 
 # `[pix.endpoint]`, the family's outbound endpoint: the FHIR base URL of the
 # Patient Identity Registry (`url`, the `[base]` of `[base]/Subscription`, PMIR

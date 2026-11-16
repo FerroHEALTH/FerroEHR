@@ -144,6 +144,17 @@ fn events(feed: &Feed) -> Vec<FeedEvent> {
         .collect()
 }
 
+/// The Registry's `Patient.id`s `events` name, their survivors included,
+/// sorted and once each.
+fn identities(events: &[FeedEvent]) -> Vec<String> {
+    let named: std::collections::BTreeSet<&str> = events
+        .iter()
+        .flat_map(|event| std::iter::once(event.id.as_str()).chain(event.replaced_by.as_deref()))
+        .filter(|id| !id.is_empty())
+        .collect();
+    named.into_iter().map(str::to_owned).collect()
+}
+
 /// One identifier or record subject a received message stops resolving.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct Split {
@@ -200,13 +211,14 @@ impl FerroEhrService {
             .map_err(ServiceError::from)?;
         let mut tx = conn.begin().await?;
         let stored: Option<i64> = sqlx::query_scalar(
-            "INSERT INTO pmir_message (message_id, issuer, client_id, events) \
-             VALUES ($1, $2, $3, $4) ON CONFLICT (message_id) DO NOTHING RETURNING sequence",
+            "INSERT INTO pmir_message (message_id, issuer, client_id, events, identities) \
+             VALUES ($1, $2, $3, $4, $5) ON CONFLICT (message_id) DO NOTHING RETURNING sequence",
         )
         .bind(message_id)
         .bind(&sender.issuer)
         .bind(&sender.client_id)
         .bind(sqlx::types::Json(events))
+        .bind(identities(events))
         .fetch_optional(&mut *tx)
         .await?;
         if stored.is_some() {

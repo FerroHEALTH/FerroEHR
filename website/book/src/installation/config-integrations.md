@@ -254,12 +254,37 @@ an error. An identity is bound to its `PERSON` when the feed first announces
 it while one `PERSON` carries one of its identifiers; a merge of two
 identities the feed never bound is refused.
 
+**An operator settles a refused message.** A refused message keeps what it
+split unresolved until an administrator acts on it, through the admin API
+(the Admin class and `[auth] product_scope`, with `[api] admin` on) or the
+CLI:
+
+| Step | Admin API | CLI |
+|---|---|---|
+| List the refused messages: each with its refusal code, receipt and refusal time, apply attempts, the Registry's `Patient.id`s it names and the `PERSON`s it keeps split, as counts; no identifier value | `GET /admin/pmir/messages` | `ferroehr pmir list --operator <name>` |
+| Retry a message once its cause is fixed, such as a `[[pix.identifier_domain]]` entry or a grant added: it goes back to its arrival position and a running instance applies it next | `POST /admin/pmir/messages/{message_id}/retry` | `ferroehr pmir retry <id> --operator <name>` |
+| Settle it without applying it: `discard` keeps its splits, `lift-splits` removes them so its identifiers and record subjects resolve as before the message; the reason is recorded | `POST /admin/pmir/messages/{message_id}/settle` with `{"decision": …, "reason": …}` | `ferroehr pmir settle <id> --decision <decision> --reason <text> --operator <name>` |
+
+A retry is refused (`409`) once a message received after it that names one of
+the same identities has applied: applying the older announcement would roll
+the identity back, so settle it instead. A discarded message can still have
+its splits lifted. No step applies a message by the operator's choice of
+`PERSON`, identifier or survivor; an identity conflict is corrected at the
+Registry, whose next message applies. Every list (one record per message),
+retry and settlement is an access record naming the operator and
+`pmir-message:<id>`; the CLI records the `--operator` name.
+
+While refused messages wait, the `pmir_messages_refused` gauge counts them,
+and the `pmir_refused_messages` health indicator reads `DEGRADED` from
+`pix.refused_degraded_at` of them on. It never withdraws readiness.
+
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `pix.endpoint` | [endpoint table](#the-endpoint-table) | required | The Registry: `url`, its FHIR base (`[base]` of `[base]/Subscription`), `timeout` for one ITI-94 exchange, `retry`, the TLS and the credential the Registry authorizes a subscriber by. |
 | `pix.feed_issuer` | URL | required | The issuer of the access token the Registry presents with each ITI-93 message, one of the `[auth]` issuers. |
 | `pix.feed_client_id` | string | required | The `client_id` of that token. |
 | `pix.identifier_domain` | array of tables | none | Per identifier domain, its `system` and the `identifier_type` a linked identifier of it is written with, such as `MR`; a protected scheme's code keeps the identifier sealed. |
+| `pix.refused_degraded_at` | integer | `1` | How many refused messages still to retry or settle turn the `pmir_refused_messages` indicator `DEGRADED`; at least 1. |
 
 ```toml
 [server]
@@ -283,8 +308,8 @@ client_secret_file = "/run/secrets/pix-client"
 ```
 
 **Our own design:** the subscription criteria, acknowledging once a message
-is stored, the binding of an identity to its `PERSON`, the split at receipt
-and the refusals. PMIR 1.6.0 §2:3.93.4.1.3 leaves a Consumer's handling of a
+is stored, the binding of an identity to its `PERSON`, the split at receipt,
+the refusals and their retry and settlement. PMIR 1.6.0 §2:3.93.4.1.3 leaves a Consumer's handling of a
 message to its capabilities.
 
 ## `[record.change_feed]`

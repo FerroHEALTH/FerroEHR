@@ -378,7 +378,8 @@ impl FerroEhrService {
 
 impl FerroEhrService {
     /// Records `action` on the demographic object `object_id` as an access
-    /// record of the request's committer; nothing while auditing is off.
+    /// record of the request's committer, naming the extension `operation`
+    /// when one is given; nothing while auditing is off.
     ///
     /// # Errors
     /// [`ServiceError::Unrecorded`] when the audit trail refuses the record.
@@ -386,6 +387,7 @@ impl FerroEhrService {
         &self,
         action: EventActionCode,
         object_id: String,
+        operation: Option<&'static str>,
     ) -> Result<(), ServiceError> {
         if !self.audit_enabled() {
             return Ok(());
@@ -393,6 +395,7 @@ impl FerroEhrService {
         let mut event = AuditEvent::new(action, ObjectClass::Demographic, EventOutcome::Success);
         event.domain = AccessDomain::Demographic;
         event.object_id = Some(object_id);
+        event.event_type = operation.map(crate::system_log::event::EventType::rest);
         // NOTE: a write outside a request (a sweep, an unwired re-key) names no reader.
         event.user_id = crate::versioning::committer::current_committer()
             .map(|committer| committer.subject)

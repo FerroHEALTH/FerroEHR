@@ -21,7 +21,8 @@
 //! restriction and the Art. 10 opt-out as directives, [`access_log_erasure`] the
 //! erasure of an access-log entry a law orders, [`identifiers`] serves the audited
 //! read of a party's protected national identifiers, [`binding_key`] the re-key of a
-//! `PERSON`'s binding key, and [`outbox`] the feed of
+//! `PERSON`'s binding key, [`pmir_messages`] the retry and settlement of a
+//! refused PMIR feed message, and [`outbox`] the feed of
 //! commit events to the readers the `read_change_feed` grants name, and
 //! [`registers`] the operational-policy registers (the audit category map and
 //! the access delay), and [`access_policy`] the
@@ -44,5 +45,6 @@ pub mod marks;
 pub(crate) mod openapi_routes;
 pub(crate) mod operations;
 pub mod outbox;
+pub mod pmir_messages;
 pub mod registers;
 pub mod report;
