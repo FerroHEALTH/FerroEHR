@@ -111,8 +111,9 @@ impl Authenticator {
     /// whose key set is a `jwks_file`, so its discovery document can name a
     /// `token_endpoint`. When the SMART discovery document is served, it
     /// describes the issuer `ferrohealth-smart`'s `describe` chooses:
-    /// `[auth] described_issuer`, else the one issuer that is not `machines`
-    /// and whose metadata is available. The `DPoP` proof
+    /// `[auth] described_issuer`, else the one issuer of a user-token kind whose
+    /// metadata is available, else, with only `machines` issuers trusted, the one
+    /// `machines` issuer, for SMART Backend Services alone. The `DPoP` proof
     /// check of `[auth.dpop]` compares a proof's `htu` with the server's
     /// public root (`[server] public_base_url` with `server.base_path`) and
     /// the request path, and records each accepted proof in `replay`, which
@@ -184,7 +185,8 @@ impl Authenticator {
             if config.auth.smart.discovery {
                 let described = describe(candidates, resolved.described_issuer.as_ref())
                     .map_err(|e| refusal(&e))?;
-                primary = Some(described.into_check());
+                let purpose = described.purpose();
+                primary = Some((described.into_check(), purpose));
             }
             if !issuers.is_empty() {
                 gate = gate.with_bearer(Arc::new(issuers));
