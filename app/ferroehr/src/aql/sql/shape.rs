@@ -177,13 +177,7 @@ impl Shapes {
                 self.settle(&entry, state);
             }
             Some(_) => {}
-            None => self.remember(Key::of(
-                ir,
-                &self.live_params,
-                params,
-                ctx,
-                person_withheld,
-            )),
+            None => self.remember(Key::of(ir, &self.live_params, params, ctx, person_withheld)),
         }
         Ok(prepared)
     }
@@ -259,7 +253,8 @@ impl Shapes {
                 .filter_map(|live| Some((*live, live.eval(&self.live_params, params, ctx)?)))
                 .collect()
         };
-        let (images_one, images_two) = (images(&params_one, &ctx_one), images(&params_two, &ctx_two));
+        let (images_one, images_two) =
+            (images(&params_one, &ctx_one), images(&params_two, &ctx_two));
         let first_values = &first.values.0.0;
         let second_values = &second.values.0.0;
         if first_values.len() != second_values.len() {
@@ -309,15 +304,26 @@ fn same_as_built(bound: &PreparedQuery, built: &PreparedQuery) {
 }
 
 impl Ring {
+    /// Remembers `entry`; when the ring is full it replaces the oldest key
+    /// with no shape, or the oldest key when every key has one, so a stream
+    /// of keys seen once does not push out the shapes in use.
     fn push(&mut self, entry: Arc<Entry>) {
         if self.entries.len() < KEYS_PER_PLAN {
             self.entries.push(entry);
             return;
         }
-        if let Some(held) = self.entries.get_mut(self.next) {
+        let shapeless = (0..KEYS_PER_PLAN)
+            .map(|step| (self.next + step) % KEYS_PER_PLAN)
+            .find(|at| {
+                self.entries
+                    .get(*at)
+                    .is_some_and(|held| !matches!(held.state, State::Shaped(_)))
+            });
+        let at = shapeless.unwrap_or(self.next);
+        if let Some(held) = self.entries.get_mut(at) {
             *held = entry;
         }
-        self.next = (self.next + 1) % KEYS_PER_PLAN;
+        self.next = (at + 1) % KEYS_PER_PLAN;
     }
 }
 

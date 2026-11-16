@@ -68,7 +68,12 @@ impl Sentinels {
     /// `params` and `ctx` with every live source replaced by its stand-in:
     /// a source the request does not carry stays absent, so the stand-ins
     /// take the request's shape.
-    pub(super) fn mask(&self, live_params: &[String], params: &Params, ctx: &SqlCtx) -> (Params, SqlCtx) {
+    pub(super) fn mask(
+        &self,
+        live_params: &[String],
+        params: &Params,
+        ctx: &SqlCtx,
+    ) -> (Params, SqlCtx) {
         let mut masked_params = params.clone();
         for name in live_params {
             if super::key::is_ehr_id(live_params, name, params) {

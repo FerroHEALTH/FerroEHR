@@ -122,7 +122,11 @@ pub async fn execute(
     ctx: &SqlCtx,
     profile: crate::config::profile::SpecProfile,
 ) -> Result<QueryResult, AqlError> {
-    let PreparedQuery { sql, values, layout } = match shapes {
+    let PreparedQuery {
+        sql,
+        values,
+        layout,
+    } = match shapes {
         Some(shapes) => shapes.prepare(ir, params, ctx)?,
         None => super::sql::build(ir, params, ctx)?,
     };

@@ -123,7 +123,11 @@ fn classes(
         subject_namespace: "local".into(),
         facts: CallerKeys {
             now,
-            parties: parties.iter().map(|p| (*p).to_owned()).collect::<Vec<_>>().into(),
+            parties: parties
+                .iter()
+                .map(|p| (*p).to_owned())
+                .collect::<Vec<_>>()
+                .into(),
             keeper: None,
         },
         confined: confined.map(Into::into),
@@ -141,7 +145,9 @@ fn projected(teams: Vec<Uuid>, day: jiff::civil::Date) -> Care {
 /// Prepares the request through `shapes` and holds it to the request's own
 /// build.
 fn prepared(shapes: &Shapes, ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> PreparedQuery {
-    let bound = shapes.prepare(ir, params, ctx).expect("the request prepares");
+    let bound = shapes
+        .prepare(ir, params, ctx)
+        .expect("the request prepares");
     let built = crate::aql::sql::build(ir, params, ctx).expect("the request builds");
     assert_eq!(bound.sql, built.sql, "the text of the request's own build");
     assert_eq!(
@@ -162,7 +168,11 @@ fn a_pinned_query_binds_every_ehr_from_one_shape() {
         let ctx = ctx(pinned(ehr, ordinal, lab_results()), &lineage);
         prepared(&shapes, &ir, &ehr_param(ehr), &ctx);
     }
-    assert_eq!(shapes.bound(), 4, "the third request on binds from the shape");
+    assert_eq!(
+        shapes.bound(),
+        4,
+        "the third request on binds from the shape"
+    );
 }
 
 #[test]
@@ -172,7 +182,12 @@ fn an_id_in_any_case_binds_its_canonical_form() {
     let lineage = Arc::new(ArchetypeLineage::default());
     for ehr in (0..4).map(|_| Uuid::now_v7()) {
         let params = Params::default().with("ehr", ParamValue::Str(ehr.to_string().to_uppercase()));
-        prepared(&shapes, &ir, &params, &ctx(pinned(ehr, 1, Pred::True), &lineage));
+        prepared(
+            &shapes,
+            &ir,
+            &params,
+            &ctx(pinned(ehr, 1, Pred::True), &lineage),
+        );
     }
     assert_eq!(shapes.bound(), 2);
 }
@@ -184,11 +199,25 @@ fn another_verdict_is_another_shape() {
     let lineage = Arc::new(ArchetypeLineage::default());
     for admitted in [lab_results(), Pred::True, lab_results(), Pred::True] {
         let ehr = Uuid::now_v7();
-        prepared(&shapes, &ir, &ehr_param(ehr), &ctx(pinned(ehr, 1, admitted), &lineage));
+        prepared(
+            &shapes,
+            &ir,
+            &ehr_param(ehr),
+            &ctx(pinned(ehr, 1, admitted), &lineage),
+        );
     }
-    assert_eq!(shapes.bound(), 0, "each verdict is seen twice and derived once");
+    assert_eq!(
+        shapes.bound(),
+        0,
+        "each verdict is seen twice and derived once"
+    );
     let ehr = Uuid::now_v7();
-    prepared(&shapes, &ir, &ehr_param(ehr), &ctx(pinned(ehr, 1, Pred::True), &lineage));
+    prepared(
+        &shapes,
+        &ir,
+        &ehr_param(ehr),
+        &ctx(pinned(ehr, 1, Pred::True), &lineage),
+    );
     assert_eq!(shapes.bound(), 1);
 }
 
@@ -215,10 +244,18 @@ fn a_parameter_read_as_a_name_keys_by_value() {
          WHERE e/ehr_id/value = $ehr AND c/name/value = $ehr",
     );
     let shapes = Shapes::new(&ir);
-    assert!(shapes.live_params.is_empty(), "the parameter is no EHR id alone");
+    assert!(
+        shapes.live_params.is_empty(),
+        "the parameter is no EHR id alone"
+    );
     let lineage = Arc::new(ArchetypeLineage::default());
     for ehr in (0..4).map(|_| Uuid::now_v7()) {
-        prepared(&shapes, &ir, &ehr_param(ehr), &ctx(AccessCondition::default(), &lineage));
+        prepared(
+            &shapes,
+            &ir,
+            &ehr_param(ehr),
+            &ctx(AccessCondition::default(), &lineage),
+        );
     }
     assert_eq!(shapes.bound(), 0, "every value is a key of its own");
 }
@@ -228,7 +265,13 @@ fn a_class_condition_binds_the_caller_values() {
     let ir = plan(POPULATION);
     let shapes = Shapes::new(&ir);
     let lineage = Arc::new(ArchetypeLineage::default());
-    let days = ["2026-11-14", "2026-11-15", "2026-11-16", "2026-11-17", "2026-11-18"];
+    let days = [
+        "2026-11-14",
+        "2026-11-15",
+        "2026-11-16",
+        "2026-11-17",
+        "2026-11-18",
+    ];
     for (round, day) in days.iter().enumerate() {
         let day: jiff::civil::Date = day.parse().expect("a day");
         let now = jiff::Timestamp::now();
@@ -274,7 +317,12 @@ fn a_pinned_care_read_binds_from_a_slot() {
     let lineage = Arc::new(ArchetypeLineage::default());
     for round in 0..4 {
         let ehrs: Vec<Uuid> = (0..round).map(|_| Uuid::now_v7()).collect();
-        let condition = classes(jiff::Timestamp::now(), &["party"], Care::Ehrs(ehrs.into()), None);
+        let condition = classes(
+            jiff::Timestamp::now(),
+            &["party"],
+            Care::Ehrs(ehrs.into()),
+            None,
+        );
         prepared(&shapes, &ir, &Params::default(), &ctx(condition, &lineage));
     }
     assert_eq!(shapes.bound(), 2);
@@ -287,7 +335,47 @@ fn another_lineage_is_another_key() {
     for _ in 0..3 {
         let lineage = Arc::new(ArchetypeLineage::default());
         let ehr = Uuid::now_v7();
-        prepared(&shapes, &ir, &ehr_param(ehr), &ctx(pinned(ehr, 1, Pred::True), &lineage));
+        prepared(
+            &shapes,
+            &ir,
+            &ehr_param(ehr),
+            &ctx(pinned(ehr, 1, Pred::True), &lineage),
+        );
     }
     assert_eq!(shapes.bound(), 0);
+}
+
+#[test]
+fn keys_seen_once_leave_the_shapes_in_use() {
+    let ir = plan(PINNED);
+    let shapes = Shapes::new(&ir);
+    let lineage = Arc::new(ArchetypeLineage::default());
+    let request = |admitted: Pred| {
+        let ehr = Uuid::now_v7();
+        prepared(
+            &shapes,
+            &ir,
+            &ehr_param(ehr),
+            &ctx(pinned(ehr, 1, admitted), &lineage),
+        );
+    };
+    for _ in 0..3 {
+        request(lab_results());
+    }
+    assert_eq!(shapes.bound(), 1);
+    for n in 0..2 * super::KEYS_PER_PLAN {
+        request(Pred::Data(
+            Arc::new(DataMatch {
+                templates: Some(vec![format!("template {n}")]),
+                ..DataMatch::default()
+            }),
+            Polarity::Deny,
+        ));
+    }
+    request(lab_results());
+    assert_eq!(
+        shapes.bound(),
+        2,
+        "the shape in use outlives the keys seen once"
+    );
 }

@@ -259,8 +259,14 @@ impl Uses {
             | PathTarget::Attestations { leaf, .. } => leaf,
             PathTarget::Version { .. } | PathTarget::Ehr { .. } => return,
         };
-        let anchor = leaf.anchor.iter().filter_map(|step| step.predicate.as_ref());
-        let fragment = leaf.fragment.iter().filter_map(|step| step.predicate.as_ref());
+        let anchor = leaf
+            .anchor
+            .iter()
+            .filter_map(|step| step.predicate.as_ref());
+        let fragment = leaf
+            .fragment
+            .iter()
+            .filter_map(|step| step.predicate.as_ref());
         for c in leaf.root_predicate.iter().chain(anchor).chain(fragment) {
             self.node_constraint(c);
         }

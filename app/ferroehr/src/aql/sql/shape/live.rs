@@ -69,7 +69,12 @@ impl Live {
 
     /// The value this source binds in a request of `params` and `ctx`;
     /// `None` when the request has no such value.
-    pub(super) fn eval(self, live_params: &[String], params: &Params, ctx: &SqlCtx) -> Option<Value> {
+    pub(super) fn eval(
+        self,
+        live_params: &[String],
+        params: &Params,
+        ctx: &SqlCtx,
+    ) -> Option<Value> {
         let groups = ctx.ehr_access.groups();
         let pinned = ctx.ehr_access.pinned();
         match self {
@@ -106,7 +111,9 @@ impl Live {
                 .map(|ehrs| Value::from(ehrs.to_vec())),
             Self::PinnedEhr => pinned.map(|pinned| Value::from(pinned.ehr)),
             Self::PinnedRevision => pinned.map(|pinned| Value::from(pinned.revision_json())),
-            Self::ParamText(at) => text(live_params, at, params).map(|text| Value::from(text.to_owned())),
+            Self::ParamText(at) => {
+                text(live_params, at, params).map(|text| Value::from(text.to_owned()))
+            }
             Self::ParamId(at) => text(live_params, at, params)
                 .and_then(|text| text.parse::<Uuid>().ok())
                 .map(|id| Value::from(id.to_string())),

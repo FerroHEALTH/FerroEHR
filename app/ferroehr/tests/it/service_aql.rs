@@ -2010,9 +2010,17 @@ async fn statement_shapes_answer_each_ehr_its_own_rows() {
         }
     }
     for query in [by_parameter, by_scope] {
-        let plan = svc.plan_cache().get(query).await.expect("the plan is cached");
+        let plan = svc
+            .plan_cache()
+            .get(query)
+            .await
+            .expect("the plan is cached");
         let shapes = plan.shapes.as_ref().expect("a cached plan has shapes");
-        assert_eq!(shapes.bound(), 7, "nine requests, the first two built: {query}");
+        assert_eq!(
+            shapes.bound(),
+            7,
+            "nine requests, the first two built: {query}"
+        );
     }
 }
 

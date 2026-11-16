@@ -2581,13 +2581,20 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
     );
     // NOTE: our own design (#5782), a root linked to the EHR source names the source's EHR,
     // so the statement names it once and the source's column serves both.
-    assert_eq!(rooted.layout.access_ehr_cols, vec!["access_ehr_0".to_owned()]);
+    assert_eq!(
+        rooted.layout.access_ehr_cols,
+        vec!["access_ehr_0".to_owned()]
+    );
     assert!(
         rooted.sql.contains(r#""e0"."id" AS "access_ehr_0""#),
         "the linked root's rows name the EHR source's id: {}",
         rooted.sql
     );
-    assert_eq!(rooted.layout.access_version_cols.len(), 1, "the root's version");
+    assert_eq!(
+        rooted.layout.access_version_cols.len(),
+        1,
+        "the root's version"
+    );
     let unlinked = prepare(
         "SELECT c/uid/value FROM COMPOSITION c",
         Vec::new(),
@@ -2604,21 +2611,28 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
             Vec::new(),
             None
         )
-        .layout.access_ehr_cols
+        .layout
+        .access_ehr_cols
         .is_empty(),
         "an extra column would change which rows are distinct"
     );
     // NOTE: EHDS Art. 9(1), every EHR an aggregate read is accessed, so the aggregate
     // names them as an array of the distinct EHRs beside its own columns (#5639).
     let counted = prepare("SELECT COUNT(e/ehr_id/value) FROM EHR e", Vec::new(), None);
-    assert_eq!(counted.layout.access_ehr_cols, vec!["access_ehr_0".to_owned()]);
+    assert_eq!(
+        counted.layout.access_ehr_cols,
+        vec!["access_ehr_0".to_owned()]
+    );
     assert!(counted.layout.access_aggregated);
     assert!(
         counted.sql.contains(r#"array_agg(DISTINCT "e0"."id")"#),
         "the aggregate names the EHRs it read: {}",
         counted.sql
     );
-    assert_eq!(counted.layout.access_version_cols, Vec::<(String, String)>::new());
+    assert_eq!(
+        counted.layout.access_version_cols,
+        Vec::<(String, String)>::new()
+    );
 }
 
 /// A LIMIT does not move an OR read onto the streaming shape: the bindings

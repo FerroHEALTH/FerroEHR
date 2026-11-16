@@ -107,7 +107,10 @@ impl FerroEhrService {
             record_phase("plan", plan_start);
         });
         let outcome = match planned {
-            Ok(Planned::Single(plan)) => self.execute_single(&plan, aql, name, request, &params).await,
+            Ok(Planned::Single(plan)) => {
+                self.execute_single(&plan, aql, name, request, &params)
+                    .await
+            }
             Ok(Planned::AccessLog(plan)) => {
                 let exec_start = Instant::now();
                 let outcome =
