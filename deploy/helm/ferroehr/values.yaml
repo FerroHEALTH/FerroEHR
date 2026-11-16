@@ -659,7 +659,7 @@ config:
   # [database] — pool bounds (the DSN itself is the FERROEHR__DATABASE__URL secret, above).
   # Each replica holds three pools of up to max_connections, opening one
   # connection per core in each before it answers ready; keep
-  # replicas × (3 × max_connections + 4) inside PostgreSQL's max_connections.
+  # replicas × (3 × max_connections + 5) inside PostgreSQL's max_connections.
   database:
     max_connections: 10
 
