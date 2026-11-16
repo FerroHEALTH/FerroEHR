@@ -191,6 +191,14 @@ the corpus it loads and the manifest's pins are the deployed version's. A
 change to the walker or the dataset on `main` reaches the sandbox with the
 next release, and a version with no tag fails the run by name.
 
+That rule paused the nightly reseed between 5.6.3 and 5.7.0 (#5052). The
+v5.6.3 tag carried a walker that expected `422` for a refused library
+archetype and seeded the directory without `archetype_details`, so a run
+against it wiped the sandbox and stopped at the first refused archetype. The
+schedule was disabled on 2026-11-05, the sandbox was seeded by hand from
+`main` meanwhile, and the schedule ran again from 2026-11-11, once v5.7.0,
+whose tag carries both fixes, was deployed.
+
 ### The demo PERSON
 
 The demo login `ferroehr` is a Basic user, and a Basic user is a person: it
