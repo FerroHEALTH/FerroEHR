@@ -200,6 +200,10 @@ pub struct AccessPathMetrics {
 impl AccessPathMetrics {
     /// Create every event instrument on `meter`.
     #[must_use]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one instrument per field, each named with its description"
+    )]
     pub fn new(meter: &Meter) -> Self {
         let make = Make(meter);
         Self {
