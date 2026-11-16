@@ -11,7 +11,11 @@
 //! repeated runs and the share saved. The documents are a record shaped like
 //! an access-log entry (ASCII names, identifiers and codes), a vendored
 //! composition, and a text-heavy document of non-ASCII prose with escapes.
-//! No specification governs this measurement: our own design.
+//!
+//! A second set of rows times a typed composition both ways #5849 compares:
+//! `canonical_json(&serde_json::to_value(x))` and the serializer that writes
+//! the form straight from `x`. No specification governs this measurement: our
+//! own design.
 
 #![expect(
     clippy::expect_used,
@@ -35,6 +39,8 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
+use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::canonical_to_string;
+use openehr_rm::v1_2::composition::composition::Composition;
 use serde_json::{Value, json};
 
 /// The timed runs per writer and document, of which the median is reported.
@@ -99,7 +105,7 @@ fn prose() -> Value {
 }
 
 /// The median nanoseconds one call of `write` takes over `value`.
-fn median_nanos(value: &Value, write: impl Fn(&Value) -> String) -> f64 {
+fn median_nanos<T>(value: &T, write: impl Fn(&T) -> String) -> f64 {
     let mut samples: Vec<f64> = (0..SAMPLES)
         .map(|_| {
             let start = Instant::now();
@@ -143,4 +149,30 @@ fn main() {
             })
         );
     }
+    let typed: Composition =
+        serde_json::from_value(composition()).expect("the vendored composition is a COMPOSITION");
+    let through_value = |value: &Composition| {
+        canonical_json(&serde_json::to_value(value).expect("a composition serialises"))
+            .expect("the composition canonicalises")
+    };
+    let straight =
+        |value: &Composition| canonical_to_string(value).expect("the composition canonicalises");
+    let form = straight(&typed);
+    assert_eq!(
+        form,
+        through_value(&typed),
+        "the two paths agree on the composition"
+    );
+    let before = median_nanos(&typed, through_value);
+    let after = median_nanos(&typed, straight);
+    println!(
+        "{}",
+        json!({
+            "document": "typed_composition",
+            "bytes": form.len(),
+            "through_value_ns": before.round(),
+            "serializer_ns": after.round(),
+            "saved_percent": ((100.0 - 100.0 * after / before) * 10.0).round() / 10.0,
+        })
+    );
 }

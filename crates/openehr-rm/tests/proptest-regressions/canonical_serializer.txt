@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc dbd7692d12d7e6de1f02c5971f9e053e1fe15f09dbefdad97edf5f2e29557923 # shrinks to members = [("bb", Null), ("bb", Null)]

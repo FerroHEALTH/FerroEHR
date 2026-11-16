@@ -2181,6 +2181,7 @@ dependencies = [
  "opentelemetry_sdk",
  "pgp",
  "pprof",
+ "proptest",
  "quick-xml 0.42.0",
  "rand 0.8.7",
  "regex",

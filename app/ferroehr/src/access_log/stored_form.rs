@@ -27,6 +27,8 @@
 
 use serde_json::{Map, Value};
 
+pub mod parts;
+
 /// The members of an entry the shared part holds.
 const SHARED: [&str; 8] = [
     "accessor",
