@@ -23,7 +23,9 @@ use crate::system_log::event::{
     AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass, QueryNaming,
 };
 use crate::system_log::retention::LogRetention;
-use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
+use openehr_rm::v1_2::common::change_control::canonical_form_impl::{
+    canonical_json, canonical_object,
+};
 
 /// The member the chain fills and the stored parts leave out.
 const LINK: &str = "link";
@@ -262,6 +264,20 @@ proptest! {
             let value = serde_json::to_value(&entry).expect("the entry serialises");
             let written = parts(&entry, &[LINK]).expect("the parts write");
             prop_assert_eq!(written, through_value(&value));
+            let Value::Object(members) = &value else {
+                panic!("an entry is an object");
+            };
+            let whole = canonical_object(
+                members
+                    .iter()
+                    .filter(|(name, _)| name.as_str() != LINK && name.as_str() != "proof")
+                    .map(|(name, member)| (name.as_str(), member)),
+            )
+            .expect("the whole form canonicalises");
+            prop_assert_eq!(
+                crate::access_log::store::canonical_form(&entry).expect("the canonical form"),
+                whole
+            );
         }
     }
 }
