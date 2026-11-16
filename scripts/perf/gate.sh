@@ -426,7 +426,7 @@ statements_reset() {
 # the run, and per request the arm was sent (#5866), so a change in what a
 # request writes durably shows although the cluster lives in memory.
 wal_summary() {
-  local arm container counts sent
+  local arm container counts sent bytes flushes
   {
     echo
     echo "### Write-ahead log"
@@ -440,8 +440,10 @@ wal_summary() {
       counts=$(docker exec "$container" psql -U postgres -d ferroehr -Atq -F ' ' -c \
         "SELECT (SELECT wal_bytes FROM pg_stat_wal), (SELECT sum(fsyncs) FROM pg_stat_io WHERE object = 'wal')" \
         2>/dev/null) || counts="unreadable"
-      if [[ "$counts" =~ ^([0-9]+)\ ([0-9]+)$ && "$sent" =~ ^[1-9][0-9]*$ ]]; then
-        echo "| $arm | $sent | ${BASH_REMATCH[1]} | $((BASH_REMATCH[1] / sent)) | ${BASH_REMATCH[2]} | $(awk -v f="${BASH_REMATCH[2]}" -v s="$sent" 'BEGIN { printf "%.2f", f / s }') |"
+      if [[ "$sent" =~ ^[1-9][0-9]*$ && "$counts" =~ ^([0-9]+)\ ([0-9]+)$ ]]; then
+        bytes="${BASH_REMATCH[1]}"
+        flushes="${BASH_REMATCH[2]}"
+        echo "| $arm | $sent | $bytes | $((bytes / sent)) | $flushes | $(awk -v f="$flushes" -v s="$sent" 'BEGIN { printf "%.2f", f / s }') |"
       else
         echo "| $arm | $sent | $counts | | | |"
       fi
