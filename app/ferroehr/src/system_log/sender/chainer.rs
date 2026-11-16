@@ -13,10 +13,12 @@
 //! once per round, and an idle server runs no round but the poll's. A round
 //! that found the head held by another replica's chainer, or filled its batch,
 //! runs again at once. A round seals its last link in a signed checkpoint
-//! when the last checkpoint is [`SEAL_EVERY`] old, and a chainer that comes to
-//! rest seals the head, so a checkpoint covers every entry within
-//! [`SEAL_EVERY`] under load and at once at rest. The bounds are our own design, set from the capacity runs of
-//! #5745 and #5770 and the performance gate; no specification governs them.
+//! when it is the first after a rest or the last checkpoint is
+//! [`SEAL_EVERY`] old, and a chainer that comes to rest unsealed seals the
+//! head, so a checkpoint covers every entry within [`SEAL_EVERY`] under load
+//! and at once at rest. The bounds are our own design, set from the capacity
+//! runs of #5745 and #5770 and the performance gate; no specification governs
+//! them.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -116,14 +118,16 @@ async fn run(
     let mut look = Chains::BOTH;
     let mut sealed_at = tokio::time::Instant::now();
     let mut unsealed = false;
+    let mut rested = true;
     while !stopping.load(Ordering::Acquire) {
         let began = tokio::time::Instant::now();
-        let seal = if began.duration_since(sealed_at) >= SEAL_EVERY {
+        let seal = if rested || began.duration_since(sealed_at) >= SEAL_EVERY {
             Seal::Now
         } else {
             Seal::Later
         };
         let round = store.chain_round(BATCH, look, seal).await;
+        rested = false;
         look = Chains::default();
         match round {
             Ok(round) => {
@@ -196,6 +200,7 @@ async fn run(
                 ),
             }
         }
+        rested = true;
         tokio::select! {
             () = wake.notified() => tokio::time::sleep(GATHER).await,
             () = tokio::time::sleep(POLL) => look = Chains::BOTH,
