@@ -38,7 +38,9 @@ use crate::aql::ir::{
 use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow};
 
 use super::expr::{cast, col, hot, type_cond};
-use super::head::{HeadPlacement, bind_head, content_key, node_key, trunk_head_version};
+use super::head::{
+    HeadPlacement, bind_head, content_key, is_root_only, node_key, trunk_head_version,
+};
 use super::{Builder, VoGroup};
 
 /// The correlation anchor for an `OR` / `NOT CONTAINS` `EXISTS` subquery.
@@ -837,6 +839,9 @@ impl Builder<'_> {
             // whole version's nodes filtered by type (#4089).
             if is_root_only(&r.rm_type) {
                 self.q.and_where(col(&node, Node::Num).eq(0));
+                // NOTE: our own design (#5782), a uid-ordered walk skips other classes first.
+                let kinds = r.rm_type.names().iter().cloned();
+                self.q.and_where(col(&voa, VersionRow::Kind).is_in(kinds));
             }
             // The audit join is summoned lazily (`ensure_audit`) by the
             // version-field expressions that actually read it — a query that
@@ -1150,22 +1155,6 @@ impl Builder<'_> {
 /// ([`crate::aql::error::AqlFeatureError::DemographicRootPlacement`]).
 pub(super) fn is_vo_root_type(t: &str) -> bool {
     crate::versioning::Kind::from_type(t).is_some()
-}
-
-/// Whether every class in `types` occurs only as the root (`num = 0`) of its
-/// versioned object.
-///
-/// The EHR holds its `EHR_STATUS`, `EHR_ACCESS` and `COMPOSITION`s as separate
-/// versioned objects (RM ehr master04 §The Parts of the EHR), and a
-/// `COMPOSITION` holds only `CONTENT_ITEM`s (RM ehr master05), so none of the
-/// three nests in a tree; a `FOLDER` nests in `FOLDER.folders` and is left out.
-/// Storing the root at `num = 0` is our own design (`crate::storage::codec`).
-pub(super) fn is_root_only(types: &crate::aql::ir::TypeSet) -> bool {
-    !types.is_empty()
-        && types
-            .names()
-            .iter()
-            .all(|t| matches!(t.as_str(), "COMPOSITION" | "EHR_STATUS" | "EHR_ACCESS"))
 }
 
 /// The `LATERAL` FROM item of the content node `alias` contained in the node
