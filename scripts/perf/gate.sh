@@ -158,6 +158,8 @@ teardown() {
   if [[ "${STARTED:-0}" == 1 ]]; then
     docker logs --tail 40 "$SERVER" >"$OUT/server.log" 2>&1 || true
     docker logs --tail 40 "$SERVER-base" >"$OUT/base-server.log" 2>&1 || true
+    mkdir -p "$OUT/diag"
+    for c in "$SERVER" "$SERVER-base" "$PG" "$PG-base"; do docker logs "$c" >"$OUT/diag/$c.log" 2>&1 || true; done
   fi
   docker rm -f "$SERVER" "$PG" "$SERVER-base" "$PG-base" >/dev/null 2>&1 || true
   docker network rm "$NETWORK" >/dev/null 2>&1 || true
@@ -213,7 +215,10 @@ up() {
   docker run -d --name "$pg" --network "$NETWORK" -p "127.0.0.1:${pg_port}:5432" \
     -e "POSTGRES_PASSWORD=$PG_SUPER_SECRET" -e PG_INIT_USER=ferroehr -e "PG_INIT_PASSWORD=$PG_SECRET" \
     -e PG_INIT_DB=ferroehr "$pg_image" -c shared_preload_libraries=pg_stat_statements \
-    -c pg_stat_statements.track=all -c pg_stat_statements.track_planning=on >/dev/null
+    -c pg_stat_statements.track=all -c pg_stat_statements.track_planning=on \
+    -c log_lock_waits=on -c deadlock_timeout=10ms -c log_min_duration_statement=40 \
+    -c log_checkpoints=on -c track_io_timing=on -c track_wal_io_timing=on \
+    -c log_autovacuum_min_duration=0 -c log_line_prefix="%m [%p] %a " >/dev/null
   wait_for "PostgreSQL$suffix" 60 docker exec "$pg" pg_isready -h 127.0.0.1 -U ferroehr -d ferroehr
   docker exec "$pg" psql -U postgres -d ferroehr -Atq \
     -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements" >/dev/null
@@ -585,10 +590,30 @@ ab() {
   for entry in "${SEED[@]}"; do vars+=(--base-var "$entry"); done
   render "$ROOT/perf/plan.toml" "$OUT/plan.toml" per-arm
   statements_reset
+  mkdir -p "$OUT/diag"
+  local -a samplers=()
+  vmstat -t 1 >"$OUT/diag/vmstat.txt" 2>&1 &
+  samplers+=($!)
+  local pgc
+  for pgc in "$PG" "$PG-base"; do
+    docker exec "$pgc" psql -U postgres -d ferroehr -Atq \
+      -c "SELECT pg_stat_reset_shared('wal'), pg_stat_reset_shared('io'), pg_stat_reset_shared('checkpointer')" >/dev/null 2>&1 || true
+    (while :; do
+      echo "SELECT clock_timestamp(), pid, application_name, state, coalesce(wait_event_type,'-'), coalesce(wait_event,'-'), round(extract(epoch FROM clock_timestamp() - query_start)::numeric * 1000, 1), replace(left(regexp_replace(query, '\s+', ' ', 'g'), 70), '|', '/') FROM pg_stat_activity WHERE backend_type = 'client backend' AND pid <> pg_backend_pid() AND state <> 'idle' AND clock_timestamp() - query_start > interval '20 ms'; SELECT pg_sleep(0.02);"
+    done | docker exec -i "$pgc" psql -U postgres -d ferroehr -Atq -F '|' >"$OUT/diag/$pgc-activity.txt" 2>&1) &
+    samplers+=($!)
+  done
   "$bin" ab --plan "$OUT/plan.toml" \
     --head-url "$head_url" --head-container "$head_container" --head-database-url "$head_db" \
     --base-url "$SERVER_URL" --base-container "${TARGET[1]}" --base-database-url "$DATABASE_URL" \
     "${vars[@]}" --out-dir "$OUT" --summary "$OUT/summary.md" || status=$?
+  kill "${samplers[@]}" 2>/dev/null || true
+  for pgc in "$PG" "$PG-base"; do
+    docker exec "$pgc" psql -U postgres -d ferroehr -x \
+      -c "SELECT * FROM pg_stat_wal" -c "SELECT * FROM pg_stat_checkpointer" \
+      -c "SELECT backend_type, object, context, writes, write_time, fsyncs, fsync_time, extends, extend_time FROM pg_stat_io WHERE fsyncs > 0 OR writes > 0" \
+      >"$OUT/diag/$pgc-stats.txt" 2>&1 || true
+  done
   population_summary "$OUT/summary.md"
   storage_summary "$OUT/summary.md"
   statements_summary "$OUT/summary.md"

@@ -316,7 +316,7 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/perf/base-rev.sh --self-test
-          bash scripts/perf/base-rev.sh "$(git rev-parse HEAD^1)" 30 | tee -a "$GITHUB_OUTPUT"
+          printf "rev=a9cca09b0f29a72e245ecdd9ec90f9d18673cd07\nreason=stall probe: the base before the gathered intake\n" | tee -a "$GITHUB_OUTPUT"
       - id: push
         shell: bash
         env:
