@@ -1,0 +1,1 @@
+- A JSON read of a locally committed COMPOSITION serves its stored canonical body as stored again. The check that decides the passthrough looked for a spaced uid prefix the compact stored body never carries, so every read parsed the body and serialised it back. The bytes served are unchanged.

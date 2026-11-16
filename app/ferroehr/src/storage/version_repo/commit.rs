@@ -150,6 +150,12 @@ pub struct FoldedVersion<'a> {
     /// on a version that shares its predecessor's rows: the unnest yields no
     /// rows and the CTE writes nothing).
     pub rows: &'a [crate::storage::row::NodeRow],
+    /// The fragment of each of `rows`, index-aligned, taken out of the rows so
+    /// the write stores them uncopied (#5759).
+    pub fragments: Vec<Value>,
+    /// The external blob URIs the body references
+    /// ([`crate::storage::blob_ref::uris_of`]).
+    pub blob_uris: Vec<String>,
     /// SHA-256 over the canonical body with the root `uid` removed
     /// (`version.content_digest`); `None` on a logical delete.
     pub content_digest: Option<&'a [u8]>,
@@ -245,7 +251,7 @@ impl HeadUpsert<'_> {
 /// transaction: the round-trip-collapsed equivalent of the separate inserts,
 /// byte-identical in the rows written and the values returned. No openEHR spec
 /// governs statement batching: our own design.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub enum Folded<'a> {
     /// The CONTRIBUTION `id` and its own audit, the versions of its change set
     /// following under [`Folded::Into`]. `ehr_id` is `None` for a demographic
@@ -263,7 +269,7 @@ pub enum Folded<'a> {
         /// The CONTRIBUTION uid.
         id: Uuid,
         /// The version, its head upsert and its node rows.
-        version: &'a FoldedVersion<'a>,
+        version: FoldedVersion<'a>,
     },
     /// A version within the CONTRIBUTION `id` an earlier
     /// [`Folded::Contribution`] of this transaction wrote, under the version's
@@ -272,7 +278,7 @@ pub enum Folded<'a> {
         /// The CONTRIBUTION uid.
         id: Uuid,
         /// The version, its head upsert and its node rows.
-        version: &'a FoldedVersion<'a>,
+        version: FoldedVersion<'a>,
     },
 }
 
@@ -410,8 +416,8 @@ pub async fn commit_folded(
         .bind(&audit.attestation)
         .bind(id)
         .bind(ehr_id);
-    let row = match version {
-        None => query.fetch_one(&mut *tx).await?,
+    let (row, blobs) = match version {
+        None => (query.fetch_one(&mut *tx).await?, None),
         Some(v) => {
             let query = query
                 .bind(v.vo_id)
@@ -444,11 +450,16 @@ pub async fn commit_folded(
                 version_uid: &version_uid,
                 template_id: v.template_id,
             };
-            let node_refs: Vec<(&crate::storage::row::NodeRow, _)> =
-                v.rows.iter().map(|row| (row, &root)).collect();
-            crate::storage::node_write::bind_node_arrays(query, &node_refs)
+            let nodes = v
+                .rows
+                .iter()
+                .zip(v.fragments)
+                .map(|(row, fragment)| (row, &root, fragment))
+                .collect();
+            let row = crate::storage::node_write::bind_node_arrays(query, nodes)
                 .fetch_one(&mut *tx)
-                .await?
+                .await?;
+            (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
     };
     let contribution_id: Option<Uuid> = row.try_get("contribution_id")?;
@@ -459,8 +470,8 @@ pub async fn commit_folded(
             .try_get::<jiff_sqlx::Timestamp, _>("time_committed")?
             .to_jiff(),
     };
-    if let Some(v) = version {
-        crate::storage::blob_ref::record(tx, &[(v.vo_id, v.sys_version, v.rows)]).await?;
+    if let Some((vo_id, sys_version, uris)) = blobs {
+        crate::storage::blob_ref::record_uris(tx, vo_id, sys_version, &uris).await?;
     }
     Ok(rows)
 }

@@ -71,6 +71,47 @@ pub async fn record(
             uris.push(uri);
         }
     }
+    insert(tx, &vo_ids, &sys_versions, &uris).await
+}
+
+/// The external blob URIs a whole canonical `body` references, each once.
+///
+/// What [`record_uris`] records for its version when the body is decomposed
+/// into rows that give up their fragments to the write (#5759).
+#[must_use]
+pub fn uris_of(body: &Value) -> Vec<String> {
+    let mut found: Vec<&str> = Vec::new();
+    collect_uris(body, &mut found);
+    found.sort_unstable();
+    found.dedup();
+    found.into_iter().map(str::to_owned).collect()
+}
+
+/// Record `uris` ([`uris_of`]), the external blob URIs version `sys_version`
+/// of `vo_id` references, as [`record`] records those of node rows.
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver/insert failure.
+pub async fn record_uris(
+    tx: &mut PgConnection,
+    vo_id: VoId,
+    sys_version: i32,
+    uris: &[String],
+) -> Result<(), StorageError> {
+    let vo_ids = vec![vo_id.0; uris.len()];
+    let sys_versions = vec![sys_version; uris.len()];
+    let uris: Vec<&str> = uris.iter().map(String::as_str).collect();
+    insert(tx, &vo_ids, &sys_versions, &uris).await
+}
+
+/// Insert one `blob_ref` row per index of the three aligned columns, with no
+/// statement when they are empty.
+async fn insert(
+    tx: &mut PgConnection,
+    vo_ids: &[uuid::Uuid],
+    sys_versions: &[i32],
+    uris: &[&str],
+) -> Result<(), StorageError> {
     if uris.is_empty() {
         return Ok(());
     }
@@ -82,9 +123,9 @@ pub async fn record(
          SELECT * FROM unnest($1::uuid[], $2::int[], $3::text[]) \
          ON CONFLICT DO NOTHING",
     )
-    .bind(&vo_ids)
-    .bind(&sys_versions)
-    .bind(&uris)
+    .bind(vo_ids)
+    .bind(sys_versions)
+    .bind(uris)
     .execute(&mut *tx)
     .await?;
     Ok(())
