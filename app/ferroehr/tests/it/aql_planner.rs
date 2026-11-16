@@ -48,6 +48,7 @@ fn build_sql(q: &str) -> String {
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
         .sql
+        .to_string()
 }
 
 #[expect(
@@ -1645,6 +1646,7 @@ fn build_sql_limited(q: &str) -> String {
     ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
         .sql
+        .to_string()
 }
 
 const WARD_QUERY: &str = "SELECT e/ehr_id/value, c/uid/value \
@@ -2544,8 +2546,8 @@ fn or_branch_bindings_are_logged_as_served_roots() {
         vec![ferroehr::ids::EhrId(uuid::Uuid::nil())],
         None,
     );
-    assert_eq!(prepared.access_ehr_cols.len(), 3);
-    assert_eq!(prepared.access_version_cols.len(), 2);
+    assert_eq!(prepared.layout.access_ehr_cols.len(), 3);
+    assert_eq!(prepared.layout.access_version_cols.len(), 2);
 }
 
 /// A statement that reads only the `ehr` row, with no versioned object under
@@ -2561,7 +2563,7 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
     ] {
         let prepared = prepare(q, Vec::new(), Some(20));
         assert_eq!(
-            prepared.access_ehr_cols,
+            prepared.layout.access_ehr_cols,
             vec!["access_ehr_0".to_owned()],
             "{q}"
         );
@@ -2570,7 +2572,7 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
             "{q}: the statement selects the EHR source's id: {}",
             prepared.sql
         );
-        assert!(prepared.access_version_cols.is_empty(), "{q}");
+        assert!(prepared.layout.access_version_cols.is_empty(), "{q}");
     }
     let rooted = prepare(
         "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c",
@@ -2579,20 +2581,27 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
     );
     // NOTE: our own design (#5782), a root linked to the EHR source names the source's EHR,
     // so the statement names it once and the source's column serves both.
-    assert_eq!(rooted.access_ehr_cols, vec!["access_ehr_0".to_owned()]);
+    assert_eq!(
+        rooted.layout.access_ehr_cols,
+        vec!["access_ehr_0".to_owned()]
+    );
     assert!(
         rooted.sql.contains(r#""e0"."id" AS "access_ehr_0""#),
         "the linked root's rows name the EHR source's id: {}",
         rooted.sql
     );
-    assert_eq!(rooted.access_version_cols.len(), 1, "the root's version");
+    assert_eq!(
+        rooted.layout.access_version_cols.len(),
+        1,
+        "the root's version"
+    );
     let unlinked = prepare(
         "SELECT c/uid/value FROM COMPOSITION c",
         Vec::new(),
         Some(20),
     );
     assert_eq!(
-        unlinked.access_ehr_cols,
+        unlinked.layout.access_ehr_cols,
         vec!["access_ehr_0".to_owned()],
         "a root no EHR source covers names its own EHR"
     );
@@ -2602,6 +2611,7 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
             Vec::new(),
             None
         )
+        .layout
         .access_ehr_cols
         .is_empty(),
         "an extra column would change which rows are distinct"
@@ -2609,14 +2619,20 @@ fn an_ehr_only_statement_names_the_ehrs_it_serves() {
     // NOTE: EHDS Art. 9(1), every EHR an aggregate read is accessed, so the aggregate
     // names them as an array of the distinct EHRs beside its own columns (#5639).
     let counted = prepare("SELECT COUNT(e/ehr_id/value) FROM EHR e", Vec::new(), None);
-    assert_eq!(counted.access_ehr_cols, vec!["access_ehr_0".to_owned()]);
-    assert!(counted.access_aggregated);
+    assert_eq!(
+        counted.layout.access_ehr_cols,
+        vec!["access_ehr_0".to_owned()]
+    );
+    assert!(counted.layout.access_aggregated);
     assert!(
         counted.sql.contains(r#"array_agg(DISTINCT "e0"."id")"#),
         "the aggregate names the EHRs it read: {}",
         counted.sql
     );
-    assert_eq!(counted.access_version_cols, Vec::<(String, String)>::new());
+    assert_eq!(
+        counted.layout.access_version_cols,
+        Vec::<(String, String)>::new()
+    );
 }
 
 /// A LIMIT does not move an OR read onto the streaming shape: the bindings
@@ -2909,6 +2925,7 @@ fn build_sql_with(q: &str, params: &Params) -> String {
     ferroehr::aql::sql::build(&ir, params, &ctx)
         .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
         .sql
+        .to_string()
 }
 
 /// The value anchors of a statement: the FROM items of the versions whose

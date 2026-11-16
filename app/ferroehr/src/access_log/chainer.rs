@@ -54,6 +54,12 @@ impl AccessLogStore {
     pub async fn chain_round(&self, limit: u32, owed: Owed) -> Result<Round, AccessLogError> {
         let mut conn = acquire(self.pool()).await?;
         let mut tx = conn.begin().await?;
+        // NOTE: PostgreSQL 18 §19.7.1 (enable_seqscan); the intake's deleted rows leave it many
+        // pages for few live rows, so the planner scanned 266 MB and sorted under the head where
+        // the primary key reads the oldest rows in 0.4 ms (#5770).
+        sqlx::query("SET LOCAL enable_seqscan = off")
+            .execute(&mut *tx)
+            .await?;
         let head: Option<(i64, String)> =
             sqlx::query_as("SELECT head_seq, head_digest FROM audit.access_log_chain_take()")
                 .fetch_optional(&mut *tx)

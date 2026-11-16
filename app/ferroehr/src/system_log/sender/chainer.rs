@@ -6,13 +6,14 @@
 //! replicas left (#5745).
 //!
 //! It runs on the audit runtime, never on a worker that serves requests
-//! (#5770). A wake starts a round [`GATHER`] later, so one round takes what
-//! every request of that window wrote, up to [`BATCH`] per chain: the batch
-//! grows with the rate, the head is taken once per batch, and an idle server
-//! runs no round but the poll's. A round that found the head held by another
-//! replica's chainer, or filled its batch, runs again at once. The bounds are
-//! our own design, set from the capacity runs of #5745 and the performance
-//! gate; no specification governs them.
+//! (#5770). A wake of an idle chainer starts a round [`GATHER`] later, and
+//! while requests keep writing, rounds start one [`ROUND`] apart, so one round
+//! takes what every request of that window wrote, up to [`BATCH`] per chain:
+//! the batch grows with the rate, the head and its signed checkpoint are taken
+//! once per round, and an idle server runs no round but the poll's. A round
+//! that found the head held by another replica's chainer, or filled its batch,
+//! runs again at once. The bounds are our own design, set from the capacity runs of
+//! #5745 and #5770 and the performance gate; no specification governs them.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -30,9 +31,16 @@ use crate::system_log::store::intake::Chains;
 /// The most intake rows of each chain one round takes.
 const BATCH: u32 = 512;
 
-/// How long after a wake the chainer starts its round, gathering the rows
+/// How long after a wake an idle chainer starts its round, gathering the rows
 /// the requests of that window write.
 const GATHER: Duration = Duration::from_millis(200);
+
+/// While requests keep writing, the time from the start of one round to the
+/// start of the next, unless a round filled its batch: at 3000 entries a
+/// second a round takes about 150, where back-to-back rounds took about 10,
+/// each with its own signed checkpoint and commit, and rounds 200 ms apart
+/// put bursts of 600 on the database (#5770).
+const ROUND: Duration = Duration::from_millis(50);
 
 /// How long the chainer waits for a wake before it looks at both chains,
 /// for the rows a stopped replica left.
@@ -97,6 +105,7 @@ async fn run(
     let metrics = crate::telemetry::access_path::metrics();
     let mut look = Chains::BOTH;
     while !stopping.load(Ordering::Acquire) {
+        let began = tokio::time::Instant::now();
         let round = store.chain_round(BATCH, look).await;
         look = Chains::default();
         match round {
@@ -131,7 +140,11 @@ async fn run(
                     tokio::time::sleep(BUSY).await;
                     continue;
                 }
+                if round.filled(BATCH) {
+                    continue;
+                }
                 if store.is_pending() {
+                    tokio::time::sleep_until(began + ROUND).await;
                     continue;
                 }
             }
