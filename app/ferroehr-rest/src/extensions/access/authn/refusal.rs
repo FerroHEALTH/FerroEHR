@@ -5,6 +5,8 @@
 //! challenge, the auth-failure count, the log line, and the refused caller
 //! and binding record the access log reads.
 
+use std::sync::Arc;
+
 use axum::response::{IntoResponse, Response};
 use http::{HeaderValue, StatusCode, header};
 
@@ -66,7 +68,7 @@ pub(super) fn refused(
         resp.extensions_mut().insert(record);
     }
     if let Some(principal) = principal {
-        resp.extensions_mut().insert(principal);
+        resp.extensions_mut().insert(Arc::new(principal));
     }
     resp
 }

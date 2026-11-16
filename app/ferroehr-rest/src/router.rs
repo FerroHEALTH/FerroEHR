@@ -292,7 +292,7 @@ pub(crate) async fn caller_key(
     mut request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> Response {
-    let subject = request.extensions().get::<Principal>().map_or_else(
+    let subject = request.extensions().get::<Arc<Principal>>().map_or_else(
         || Arc::from("-"),
         |principal| Arc::from(principal.subject.as_str()),
     );

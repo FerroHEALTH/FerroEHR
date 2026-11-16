@@ -694,14 +694,14 @@ fn original_version_envelope(
         .filter(|a| !a.at_committal)
         .map(|a| a.data.clone())
         .collect();
-    let mut ov = build_original_version(&OriginalVersionParts {
+    let mut ov = build_original_version(OriginalVersionParts {
         creating_system_id: &v.creating_system_id,
         vo_id: v.vo_id,
         tree,
         preceding_version_uid: v.preceding_version_uid.as_deref(),
         other_input_version_uids: &other_input_version_uids,
-        contribution: &contribution,
-        commit_audit: &commit_audit,
+        contribution,
+        commit_audit,
         lifecycle_state: &v.lifecycle_state,
         data: &v.body,
         attestations: &at_committal,

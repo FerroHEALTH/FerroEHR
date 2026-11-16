@@ -179,10 +179,6 @@ static WRITE_NODES_BATCH_SQL: std::sync::LazyLock<String> =
 /// # Errors
 ///
 /// Returns [`StorageError::Database`] on any driver/insert failure.
-// The versioning commit path calls `decompose` + `reassemble` (for the signed
-// served form) itself, then hands the rows here — deliberately, so the signed
-// bytes and the stored rows come from the one transform. This function stays a
-// pure row-writer over pre-decomposed rows.
 pub async fn write_nodes(
     tx: &mut PgConnection,
     vo_id: VoId,
@@ -198,8 +194,11 @@ pub async fn write_nodes(
         .bind(vo_id)
         .bind(sys_version)
         .bind(ehr_id);
-    let refs: Vec<(&NodeRow, &RootIdentity<'_>)> = rows.iter().map(|row| (row, root)).collect();
-    bind_node_arrays(query, &refs).execute(&mut *tx).await?;
+    let refs = rows
+        .iter()
+        .map(|row| (row, root, row.data.clone()))
+        .collect();
+    bind_node_arrays(query, refs).execute(&mut *tx).await?;
     crate::storage::blob_ref::record(tx, &[(vo_id, sys_version, rows)]).await?;
     Ok(())
 }
@@ -259,20 +258,20 @@ pub async fn write_nodes_batch(
     let mut sys_versions: Vec<i32> = Vec::with_capacity(n);
     let mut ehr_ids: Vec<Option<Uuid>> = Vec::with_capacity(n);
     let roots: Vec<RootIdentity<'_>> = versions.iter().map(VersionNodes::root).collect();
-    let mut refs: Vec<(&NodeRow, &RootIdentity<'_>)> = Vec::with_capacity(n);
+    let mut refs: Vec<(&NodeRow, &RootIdentity<'_>, Value)> = Vec::with_capacity(n);
     for (version, root) in versions.iter().zip(&roots) {
         for row in &version.rows {
             vo_ids.push(version.vo_id.0);
             sys_versions.push(version.sys_version);
             ehr_ids.push(version.ehr_id.map(|e| e.0));
-            refs.push((row, root));
+            refs.push((row, root, row.data.clone()));
         }
     }
     let query = sqlx::query(sqlx::AssertSqlSafe(WRITE_NODES_BATCH_SQL.as_str()))
         .bind(vo_ids)
         .bind(sys_versions)
         .bind(ehr_ids);
-    bind_node_arrays(query, &refs).execute(&mut *tx).await?;
+    bind_node_arrays(query, refs).execute(&mut *tx).await?;
     let blob_refs: Vec<(VoId, i32, &[NodeRow])> = versions
         .iter()
         .map(|version| (version.vo_id, version.sys_version, version.rows.as_slice()))
@@ -290,10 +289,11 @@ pub async fn write_nodes_batch(
 /// five value columns instead, the header columns hold the archetype header,
 /// language and encoding, and the four markers say which keys the row left
 /// out beyond those. Each row comes with the identity of its version, which
-/// the root row (`num = 0`) is slimmed against.
+/// the root row (`num = 0`) is slimmed against, and its fragment by value, so a
+/// caller done with its rows gives the fragments up uncopied (#5759).
 pub(crate) fn bind_node_arrays<'q>(
     mut query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
-    rows: &[(&'q NodeRow, &'q RootIdentity<'q>)],
+    rows: Vec<(&'q NodeRow, &'q RootIdentity<'q>, Value)>,
 ) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
     let n = rows.len();
     let mut nums = Vec::with_capacity(n);
@@ -321,7 +321,9 @@ pub(crate) fn bind_node_arrays<'q>(
     let mut time_compacts: Vec<Option<bool>> = Vec::with_capacity(n);
     let mut party_selfs: Vec<Option<bool>> = Vec::with_capacity(n);
     let mut uid_deriveds: Vec<Option<bool>> = Vec::with_capacity(n);
-    for (row, root) in rows {
+    let mut written: Vec<&'q NodeRow> = Vec::with_capacity(n);
+    for (row, root, data) in rows {
+        written.push(row);
         nums.push(row.num);
         num_caps.push(row.num_cap);
         parent_nums.push(row.parent_num);
@@ -334,11 +336,7 @@ pub(crate) fn bind_node_arrays<'q>(
         name_codes.push(row.name_code.as_deref());
         name_terminologies.push(row.name_terminology.as_deref());
         paths.push(&row.path);
-        let stored = crate::storage::slim::slim(
-            &row.rm_type,
-            (row.num == 0).then_some(*root),
-            row.data.clone(),
-        );
+        let stored = crate::storage::slim::slim(&row.rm_type, (row.num == 0).then_some(root), data);
         datas.push(stored.data);
         rm_versions.push(stored.header.rm_version);
         languages.push(stored.header.language);
@@ -347,12 +345,15 @@ pub(crate) fn bind_node_arrays<'q>(
         time_compacts.push(stored.compact.time.then_some(true));
         party_selfs.push(stored.compact.party_self.then_some(true));
         uid_deriveds.push(stored.compact.uid_derived.then_some(true));
-        let value = stored.value;
-        value_types.push(value.as_ref().map(|v| v.value_type.clone()));
-        value_nums.push(value.as_ref().and_then(|v| v.num.clone()));
-        value_texts.push(value.as_ref().and_then(|v| v.text.clone()));
-        value_codes.push(value.as_ref().and_then(|v| v.code.clone()));
-        value_terminologies.push(value.and_then(|v| v.terminology));
+        let (value_type, num, text, code, terminology) = stored
+            .value
+            .map(|v| (Some(v.value_type), v.num, v.text, v.code, v.terminology))
+            .unwrap_or_default();
+        value_types.push(value_type);
+        value_nums.push(num);
+        value_texts.push(text);
+        value_codes.push(code);
+        value_terminologies.push(terminology);
     }
     query = query
         .bind(nums)
@@ -381,9 +382,9 @@ pub(crate) fn bind_node_arrays<'q>(
         .bind(party_selfs)
         .bind(uid_deriveds);
     for (i, _leaf) in crate::storage::promoted::PROMOTED_LEAVES.iter().enumerate() {
-        let leaf_values: Vec<Option<&str>> = rows
+        let leaf_values: Vec<Option<&str>> = written
             .iter()
-            .map(|(row, _)| row.promoted.get(i).and_then(Option::as_deref))
+            .map(|row| row.promoted.get(i).and_then(Option::as_deref))
             .collect();
         query = query.bind(leaf_values);
     }

@@ -234,7 +234,7 @@ pub(super) fn over_rate(principal: &super::Principal) -> Option<Response> {
     refusal
         .extensions_mut()
         .insert(crate::system_log::refusals::OverRate);
-    refusal.extensions_mut().insert(principal.clone());
+    refusal.extensions_mut().insert(Arc::new(principal.clone()));
     Some(refusal)
 }
 

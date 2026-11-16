@@ -79,7 +79,7 @@ pub(crate) fn sign_version(
     // `sign_canonical_with_data` — the commit path never deep-copies the body
     // into the envelope. RFC 8785 orders keys, so the join point is
     // byte-identical to a fully-assembled ORIGINAL_VERSION's canonical form.
-    let ov = build_original_version(&OriginalVersionParts {
+    let ov = build_original_version(OriginalVersionParts {
         creating_system_id: &ctx.system_id,
         vo_id,
         tree,
@@ -87,8 +87,8 @@ pub(crate) fn sign_version(
         // NOTE: RM common master06 §Version Merging commits a merge as a local
         // `ORIGINAL_VERSION`, so its merge provenance is signed with it.
         other_input_version_uids,
-        contribution: &contribution_ref(contribution_id),
-        commit_audit: &audit.canonical(&time_committed),
+        contribution: contribution_ref(contribution_id),
+        commit_audit: audit.canonical(&time_committed),
         lifecycle_state,
         data: &Value::Null,
         attestations,
