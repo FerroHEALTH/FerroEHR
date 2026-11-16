@@ -92,6 +92,25 @@ delta over PG 16 and where each app phase (P09/P12/P16/P11/P20) uses it —
 regression was found post-wrap). Managed providers may lag on `io_uring`; still
 target PG 18 and let the AIO benefit follow.
 
+## Example identity providers
+
+The ZITADEL example (`docker-compose.zitadel.yml`, #5830) runs ZITADEL and its
+Login v2 UI from these images, unmodified. They are pinned here by the digest
+of each release's multi-platform index, and the `zitadel` job of
+`.github/workflows/base-image-watcher.yml` reads this table each week against
+the release zitadel/zitadel marks Latest. The documentation and sources the
+example cites are vendored at the same release (`scripts/vendor/zitadel-docs.sh`,
+`docs/specs/zitadel/`). Bumping ZITADEL moves both rows, and the vendor
+script's tag, together.
+
+| Image | Pin | Licence |
+|---|---|---|
+| `zitadel` | `ghcr.io/zitadel/zitadel:v4.20.3@sha256:1b30fea7ed88826dc0a98dacee4e2f2c8b05201fd26f5e4cb5386615b29f7638` | AGPL-3.0-only, run unmodified |
+| `zitadel-login` | `ghcr.io/zitadel/zitadel-login:v4.20.3@sha256:8f730428dfd65cd8979d07ef4e34a59d44978e956692b7dbbc3bba4e4abb4f92` | MIT (`apps/login/`) |
+
+Both digests were resolved from `ghcr.io` on 2026-11-16 and checked against the
+sha256 of the index manifest each one names.
+
 ## openEHR specification matrix
 
 There is no umbrella "openEHR Release" version; each component versions

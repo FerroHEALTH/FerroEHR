@@ -167,9 +167,7 @@ run_family observability && probes_observability
 run_family terminology_ferroterm && probes_terminology_ferroterm
 run_family terminology && probes_terminology
 run_family replicas && probes_replicas
-# The hospital scenario runs only when asked for by name: its own lane,
-# deploy-probe-hospital.yml, runs it until its tracked findings land (#5610).
-[[ "${PROBE_ONLY:-}" = hospital ]] && probes_hospital
+run_family hospital && probes_hospital
 # Last: it deletes the stack's volumes, which is the procedure under test.
 run_family original_state && probes_original_state
 run_family decommission && probes_decommission
