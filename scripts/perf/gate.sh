@@ -210,7 +210,12 @@ up() {
   local http_port="${5:-$HTTP_PORT}" pg_port="${6:-$PG_PORT}"
   local pg="$PG$suffix" server="$SERVER$suffix"
   docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
+  # The cluster lives in memory (#5866): every request commits before it
+  # answers (#5789), and a hosted runner's WAL fsync ranges from 0.08 to
+  # 1.4 ms a call between runs, which tails every route on both arms. A commit
+  # still flushes; wal_summary reports each arm's WAL and flushes per request.
   docker run -d --name "$pg" --network "$NETWORK" -p "127.0.0.1:${pg_port}:5432" \
+    --tmpfs /var/lib/postgresql:rw,mode=0755 \
     -e "POSTGRES_PASSWORD=$PG_SUPER_SECRET" -e PG_INIT_USER=ferroehr -e "PG_INIT_PASSWORD=$PG_SECRET" \
     -e PG_INIT_DB=ferroehr "$pg_image" -c shared_preload_libraries=pg_stat_statements \
     -c pg_stat_statements.track=all -c pg_stat_statements.track_planning=on >/dev/null
@@ -412,8 +417,36 @@ statements_reset() {
   local container
   for container in "$PG" "$PG-base"; do
     docker exec "$container" psql -U postgres -d ferroehr -Atq \
-      -c "SELECT pg_stat_statements_reset()" >/dev/null
+      -c "SELECT pg_stat_statements_reset(), pg_stat_reset_shared('wal'), pg_stat_reset_shared('io')" \
+      >/dev/null
   done
+}
+
+# wal_summary <summary> <report>: each arm's WAL bytes and WAL flushes over
+# the run, and per request the arm was sent (#5866), so a change in what a
+# request writes durably shows although the cluster lives in memory.
+wal_summary() {
+  local arm container counts sent
+  {
+    echo
+    echo "### Write-ahead log"
+    echo
+    echo "| arm | requests | WAL bytes | per request | WAL flushes | per request |"
+    echo "|---|---:|---:|---:|---:|---:|"
+    for arm in head base; do
+      container="$PG"
+      [[ "$arm" == base ]] && container="$PG-base"
+      sent=$(jq --arg arm "$arm" '[.pairs[][$arm].sent] | add // 0' "$2" 2>/dev/null) || sent=0
+      counts=$(docker exec "$container" psql -U postgres -d ferroehr -Atq -F ' ' -c \
+        "SELECT (SELECT wal_bytes FROM pg_stat_wal), (SELECT sum(fsyncs) FROM pg_stat_io WHERE object = 'wal')" \
+        2>/dev/null) || counts="unreadable"
+      if [[ "$counts" =~ ^([0-9]+)\ ([0-9]+)$ && "$sent" =~ ^[1-9][0-9]*$ ]]; then
+        echo "| $arm | $sent | ${BASH_REMATCH[1]} | $((BASH_REMATCH[1] / sent)) | ${BASH_REMATCH[2]} | $(awk -v f="${BASH_REMATCH[2]}" -v s="$sent" 'BEGIN { printf "%.2f", f / s }') |"
+      else
+        echo "| $arm | $sent | $counts | | | |"
+      fi
+    done
+  } >>"$1"
 }
 
 # access_log_storage <pg-container>: the access log's entries, its
@@ -592,6 +625,7 @@ ab() {
   population_summary "$OUT/summary.md"
   storage_summary "$OUT/summary.md"
   statements_summary "$OUT/summary.md"
+  wal_summary "$OUT/summary.md" "$OUT/latest.json"
   return "$status"
 }
 
