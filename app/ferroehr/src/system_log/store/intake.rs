@@ -95,6 +95,17 @@ impl ChainRound {
         };
         entries.saturating_add(usize::try_from(self.system).unwrap_or(usize::MAX))
     }
+
+    /// Whether the round took a whole batch of `limit` on either chain, so
+    /// rows may be waiting behind it.
+    #[must_use]
+    pub fn filled(self, limit: u32) -> bool {
+        let entries = match self.access_log {
+            Round::Chained { entries, .. } => u64::try_from(entries).unwrap_or(u64::MAX),
+            Round::Busy => 0,
+        };
+        entries >= u64::from(limit) || self.system >= u64::from(limit)
+    }
 }
 
 impl AuditStore {
@@ -291,5 +302,33 @@ impl AuditStore {
         .fetch_one(&mut *acquire(&self.pool).await?)
         .await?;
         Ok(seconds.map(|seconds| std::time::Duration::from_secs_f64(seconds.max(0.0))))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ChainRound;
+    use crate::access_log::chainer::Round;
+
+    /// A round that took its whole batch on either chain may have left rows
+    /// behind, so the chainer runs again at once; one that took less waits
+    /// for the next round's start (#5770).
+    #[test]
+    fn a_round_is_filled_when_either_chain_took_its_batch() {
+        let round = |entries, system| ChainRound {
+            access_log: Round::Chained {
+                entries,
+                held: std::time::Duration::ZERO,
+            },
+            system,
+        };
+        assert!(round(512, 0).filled(512));
+        assert!(round(3, 512).filled(512));
+        assert!(!round(511, 511).filled(512));
+        let busy = ChainRound {
+            access_log: Round::Busy,
+            system: 0,
+        };
+        assert!(!busy.filled(512));
     }
 }

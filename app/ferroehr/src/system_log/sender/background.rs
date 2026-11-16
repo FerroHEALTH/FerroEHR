@@ -100,3 +100,24 @@ impl Background {
         drop(self.thread.take());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Background;
+
+    /// The chainer, the forwarders and the upkeep run on the audit runtime's
+    /// own thread, never on a worker of the runtime that serves requests,
+    /// whatever a round costs (#5770).
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn spawned_work_runs_on_the_audit_thread() {
+        let background = Background::start().expect("the audit runtime starts");
+        let request_worker = std::thread::current().id();
+        let ran_on = background
+            .spawn(async { std::thread::current() })
+            .await
+            .expect("the task completes");
+        assert_eq!(ran_on.name(), Some("ferroehr-audit"));
+        assert_ne!(ran_on.id(), request_worker);
+        background.stop();
+    }
+}
