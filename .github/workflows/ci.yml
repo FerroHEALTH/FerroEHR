@@ -836,6 +836,9 @@ jobs:
       - name: shellcheck / The attached information sheet and instructions for use carry the stamp, the frozen links and the release's facts
         if: ${{ !cancelled() }}
         run: bash scripts/release/accompanying-documents.sh --self-test
+      - name: shellcheck / The EHDS system documents are refused when they name a configuration key this release refuses
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/ifu-config-keys.sh --self-test
       - name: shellcheck / The release milestone check refuses open items and closes only after every leg
         if: ${{ !cancelled() }}
         run: bash scripts/release/milestone.sh --self-test
