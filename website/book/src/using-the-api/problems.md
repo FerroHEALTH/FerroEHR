@@ -128,9 +128,9 @@ is judged by is being refreshed.
 
 An AQL query is judged by this replica's copy of the access settings. When
 the store holds a newer revision than the copy, the server reads it again
-and asks once more for up to 100 ms. If the copy still lags, the server
-withholds the answer instead of serving rows, a count or a page judged on the
-old state. Retry after the `Retry-After` header's delay. The
+and asks once more, for a short bounded time. If the copy still lags, the
+server withholds the answer instead of serving rows, a count or a page judged
+on the old state. Retry after the `Retry-After` header's delay. The
 `aql_stale_access_total` counter counts these cases.
 
 ## `rate-limited`
