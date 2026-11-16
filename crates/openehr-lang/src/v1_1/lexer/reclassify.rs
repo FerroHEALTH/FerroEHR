@@ -250,11 +250,13 @@ pub(super) fn reclassify(
             Language::Adl | Language::Bel => None,
         },
         // `<# … #>` is the ODIN plug-in-syntax block
-        // (`LANG/docs/odin/master09-plug_in_syntaxes`); neither the ADL nor
-        // the BEL grammar has any `#` production, so both refuse it.
+        // (`LANG/docs/odin/master09-plug_in_syntaxes`) and the block of the
+        // ADL `INCLUDED_LANGUAGE_FRAGMENT` a `_default` takes (`base_lexer.g4`
+        // at adl-antlr `d64ffeb6f`); the BEL and EL grammars have no `#`
+        // production, so both refuse it.
         Token::PlugInBlock(_) => match language {
-            Language::Odin => Some(token.clone()),
-            Language::Adl | Language::Bel | Language::El => None,
+            Language::Odin | Language::Adl => Some(token.clone()),
+            Language::Bel | Language::El => None,
         },
         Token::AdlPath(text) => path(language, text).then(|| token.clone()),
 

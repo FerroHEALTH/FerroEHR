@@ -243,4 +243,4 @@
 242|AlphaLcId("x")@0..1 SymEq@2..3 SymLt@4..5 SymFalse@5..10 SymGt@10..11
 243|SymIvlDelim@0..1 Integer("0")@1..2 SymIvlSep@2..4 SymInfinity@4..12 SymIvlDelim@12..13
 244|SymAt@0..1 AlphaLcId("schema")@1..7 SymEq@8..9 EmbeddedUri("<http://openehr.org/bmm>")@10..34
-245|ERROR@12..13
+245|AlphaLcId("a")@0..1 SymEq@2..3 LParen@4..5 AlphaLcId("cadl")@5..9 RParen@9..10 PlugInBlock("<# x #>")@11..18

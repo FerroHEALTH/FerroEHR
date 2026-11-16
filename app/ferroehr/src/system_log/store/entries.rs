@@ -68,6 +68,14 @@ pub(super) fn split(
     (rows, row_ends, entries)
 }
 
+/// The intake rows of a batch of entries: each one's uid, its row and its
+/// search tokens.
+pub(super) type EntryRows = (
+    Vec<uuid::Uuid>,
+    Vec<IntakeEntry>,
+    Vec<Vec<crate::access_log::intake::IntakeToken>>,
+);
+
 impl AuditStore {
     /// Write the entry of each of `records` into the intake on `conn`, each
     /// with its index row; returns the entries' uids and the shared token
@@ -81,6 +89,20 @@ impl AuditStore {
         conn: &mut PgConnection,
         records: Vec<AuditRecord>,
     ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
+        let (uids, intake, tokens) = self.entry_rows(records).await?;
+        crate::access_log::intake::take_in(conn, intake, &tokens).await?;
+        Ok((uids, LearnedSets::default()))
+    }
+
+    /// The intake rows of the entries `records` carry, with each one's uid
+    /// and search tokens, in their order.
+    ///
+    /// # Errors
+    /// As [`Self::intake_entries`], less the store's.
+    pub(super) async fn entry_rows(
+        &self,
+        records: Vec<AuditRecord>,
+    ) -> Result<EntryRows, AuditError> {
         let mut entered = Vec::with_capacity(records.len());
         let mut tokens = Vec::with_capacity(records.len());
         for record in records {
@@ -97,22 +119,26 @@ impl AuditStore {
             let (event, subject) = projection.record(&entry, 0)?;
             let document =
                 crate::system_log::fhir::to_fhir(&event, projection.context, subject.as_deref());
-            tokens.push(tokens_of(document, &event));
+            tokens.push(
+                tokens_of(document, &event)
+                    .into_iter()
+                    .map(|token| crate::access_log::intake::IntakeToken {
+                        shares: super::AuditElement::shares(token.parameter),
+                        parameter: token.parameter,
+                        system: token.system,
+                        code: token.code,
+                    })
+                    .collect::<Vec<_>>(),
+            );
             entered.push((entry, index_row(&event, subject, digest)));
         }
-        if entered.is_empty() {
-            return Ok((Vec::new(), LearnedSets::default()));
-        }
-        let (ids, learned) = self.tokens.record_tokens(conn, &tokens).await?;
         let mut uids = Vec::with_capacity(entered.len());
         let mut intake = Vec::with_capacity(entered.len());
-        for ((mut entry, mut index), search_tokens) in entered.into_iter().zip(token_texts(&ids)) {
-            index.search_tokens = search_tokens;
+        for (mut entry, index) in entered {
             uids.push(uuid::Uuid::parse_str(entry.uid.value()).map_err(AuditError::EntryUid)?);
             intake.push(IntakeEntry::of(&mut entry, Some(index))?);
         }
-        crate::access_log::intake::take_in(conn, intake).await?;
-        Ok((uids, learned))
+        Ok((uids, intake, tokens))
     }
 
     /// `records`, each whose access writes an access-log entry carrying it:

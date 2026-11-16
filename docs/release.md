@@ -35,6 +35,7 @@ The checks, in the order the plan job runs them:
 | The technical documentation and the CRA risk assessment follow their paths since the previous release | `scripts/checks/technical-documentation.sh`, `scripts/checks/cra-risk-assessment.sh` |
 | The changelog section becomes the notes, with the support period and the CRA user-information link | `plan.sh notes`, `scripts/checks/release-notes.sh` |
 | The chart's `appVersion`, its unpublished version, the party statement, `CITATION.cff`, `.zenodo.json`, the compose image tags, the default demographic definitions' release assets and the documented keys | the scripts `plan.sh` names |
+| The information sheet and the instructions for use at the commit `docs/ehds/system-documents.env` pins name only configuration keys this release reads (EHDS Art. 28(b)): every `[table]`, `[table] key`, `FERROEHR__` form, dotted key and `toml` block in a section whose heading names FerroEHR resolves in the shipped default configuration, and a paragraph that names a key as unknown names one this release refuses. A refused key fails the plan, and the fix is a corrected page in the FerroHEALTH book and the pin moved to it. `accompanying-documents.sh` refuses the same pages when it attaches them | `scripts/checks/ifu-config-keys.sh` |
 
 The previous release is resolved the way the plan job resolves it: from
 `git ls-remote --tags origin 'v*'`, by version order. A tag that was pushed but

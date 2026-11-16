@@ -43,7 +43,7 @@
               (#1694)"
 )]
 
-pub(crate) mod leaf;
+mod leaf;
 pub(crate) mod node_ids;
 pub(crate) mod plan;
 mod presence;

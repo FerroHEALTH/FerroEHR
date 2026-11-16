@@ -546,6 +546,27 @@ precedence = "override"
 SPDX-FileCopyrightText = "Keycloak contributors"
 SPDX-License-Identifier = "Apache-2.0"
 
+# The ZITADEL excerpt (#5829): LICENSING.md puts apps/docs/ under Apache-2.0
+# and the rest of zitadel/zitadel under AGPL-3.0-only; zitadel/oidc is
+# Apache-2.0. The AGPL files are copied verbatim for citation, never built.
+[[annotations]]
+path = "docs/specs/zitadel/**"
+precedence = "override"
+SPDX-FileCopyrightText = "ZITADEL contributors"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+[[annotations]]
+path = "docs/specs/zitadel/apps/docs/**"
+precedence = "override"
+SPDX-FileCopyrightText = "ZITADEL contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "docs/specs/zitadel/zitadel-oidc/**"
+precedence = "override"
+SPDX-FileCopyrightText = "ZITADEL contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
 # The eHDSI documents (#5055): each cover states "Reuse is authorised, provided
 # the source is acknowledged." with distribution level PU. Not an SPDX-listed
 # licence, so the LicenseRef text records the statement.
@@ -644,6 +665,7 @@ path = [
   "docs/specs/microsoft-entra/PROVENANCE.md",
   "docs/specs/scim-reference-code/PROVENANCE.md",
   "docs/specs/keycloak/PROVENANCE.md",
+  "docs/specs/zitadel/PROVENANCE.md",
   "docs/specs/ehdsi-specifications/PROVENANCE.md",
   "docs/specs/okta/PROVENANCE.md",
   "docs/specs/oasis-saml/PROVENANCE.md",
