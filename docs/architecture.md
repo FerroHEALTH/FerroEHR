@@ -444,7 +444,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `FerroEhrService::commit_recorded` (`system_log::reservation`, #5762): its
   records go into the intake held under a reservation id (`reserved_by`,
   which the moves skip), the id into the write's own domain
-  (`clinical/0048`, `party/0050` `audit_reservation`) in the write's
+  (`clinical/0049`, `party/0051` `audit_reservation`) in the write's
   transaction, and the REST layer releases them once the response is built;
   `system_log::sender::reconciler` releases or discards what a stopped
   replica left, and `scripts/checks/request-commits.sh` guards the choke
