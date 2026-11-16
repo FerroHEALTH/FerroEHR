@@ -281,7 +281,7 @@ impl Checkpoints {
         .map_err(AccessLogError::from)?;
         crate::access_log::intake::take_in(
             &mut tx,
-            vec![crate::access_log::intake::IntakeEntry::of(
+            &[crate::access_log::intake::IntakeEntry::of(
                 &mut entry, None,
             )?],
             &[],

@@ -226,7 +226,7 @@ impl AccessLogStore {
             .collect::<Result<Vec<_>, _>>()?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        take_in(&mut tx, intake, &[]).await?;
+        take_in(&mut tx, &intake, &[]).await?;
         tx.commit().await?;
         drop(conn);
         self.settle(Owed::default()).await?;
