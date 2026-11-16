@@ -358,21 +358,21 @@ mod tests {
     #[test]
     fn layering_file_env_set() {
         let file = toml_file("[database]\nmax_connections = 5\n");
-        // file overrides default (20).
+        // file overrides the default (unset).
         let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(c.database.max_connections, 5);
+        assert_eq!(c.database.max_connections, Some(5));
         let c = assemble_ok(
             Some(file.path()),
             &env(&[("FERROEHR__DATABASE__MAX_CONNECTIONS", "9")]),
             &[],
         );
-        assert_eq!(c.database.max_connections, 9);
+        assert_eq!(c.database.max_connections, Some(9));
         let c = assemble_ok(
             Some(file.path()),
             &env(&[("FERROEHR__DATABASE__MAX_CONNECTIONS", "9")]),
             &[("database.max_connections".to_owned(), "11".to_owned())],
         );
-        assert_eq!(c.database.max_connections, 11);
+        assert_eq!(c.database.max_connections, Some(11));
     }
 
     #[test]
@@ -828,7 +828,7 @@ mod tests {
             &env(&[("FERROEHR__DATABASE__MAX_CONNECTIONS", "7")]),
             &[],
         );
-        assert_eq!(c.database.max_connections, 7);
+        assert_eq!(c.database.max_connections, Some(7));
     }
 
     /// The `[privacy]` section is reachable from the environment, both scalars
