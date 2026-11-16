@@ -58,7 +58,7 @@ fn requires_cardinality(card: &Cardinality, children_count: usize) -> bool {
 /// validation walk: any interval with a lower bound `>= 1` or a bounded upper
 /// bound constrains the container, and so does `unique`. A superset of the serialized [`cardinalities`]
 /// selection, so `0..1`/`1..1`/`1..*` container bounds are enforced from
-/// [`WebTemplateNode::card_all`] too (mirrors the OPT-1.4 front end).
+/// [`super::model::WebTemplateNode::card_all`] too (mirrors the OPT-1.4 front end).
 pub(super) fn all_cardinalities(co: &CObject, node_path: &str) -> Vec<WebTemplateCardinality> {
     let mut out = Vec::new();
     for attr in co_attributes(co) {
