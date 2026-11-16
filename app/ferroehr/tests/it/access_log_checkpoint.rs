@@ -84,7 +84,7 @@ pub(crate) fn trusting(key: &SignedSecretKey) -> Arc<TrustedCertificates> {
 }
 
 /// The checkpoints of `pool` for `system_id` under `signer`.
-fn checkpoints(pool: &PgPool, system_id: &str, signer: Arc<Signer>) -> Checkpoints {
+pub(crate) fn checkpoints(pool: &PgPool, system_id: &str, signer: Arc<Signer>) -> Checkpoints {
     Checkpoints::new(
         pool.clone(),
         system_id.to_owned(),
@@ -94,7 +94,7 @@ fn checkpoints(pool: &PgPool, system_id: &str, signer: Arc<Signer>) -> Checkpoin
 }
 
 /// The proposal's example entry, number `n`, of `system_id` about `ehr_id`.
-fn entry(n: u32, system_id: &str, ehr_id: &str) -> AccessLogEntry {
+pub(crate) fn entry(n: u32, system_id: &str, ehr_id: &str) -> AccessLogEntry {
     let mut value = crate::access_log_store::example();
     value["uid"]["value"] = json!(format!("0193f1a2-7c1e-7b4a-9f00-{n:012x}"));
     value["system_id"] = json!(system_id);
@@ -509,35 +509,23 @@ async fn a_stored_checkpoint_is_never_changed_and_names_a_held_link() {
     assert_eq!(sealed_positions(pool).await, [head]);
 }
 
-/// Two appends in one transaction each seal their own last link, the second
-/// linked from the head the first one moved.
+/// Two appends each seal their own last link, the second linked from the
+/// head the first one moved.
 #[tokio::test]
-async fn appends_in_one_transaction_each_seal_their_last_link() {
+async fn appends_each_seal_their_last_link() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = &testdb.pool();
     let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
-    let mut conn = pool.acquire().await.expect("connection");
-    let mut tx = conn.begin().await.expect("begin");
     let first = log
         .store()
-        .append_in(
-            &mut tx,
-            vec![entry(1, SYSTEM_A, MOVED), entry(2, SYSTEM_A, STAYS)],
-        )
+        .append(vec![entry(1, SYSTEM_A, MOVED), entry(2, SYSTEM_A, STAYS)])
         .await
-        .expect("the first append")
-        .seal(&mut tx)
-        .await
-        .expect("the first seal");
+        .expect("the first append");
     let second = log
         .store()
-        .append_in(&mut tx, vec![entry(3, SYSTEM_A, MOVED)])
+        .append(vec![entry(3, SYSTEM_A, MOVED)])
         .await
-        .expect("the second append")
-        .seal(&mut tx)
-        .await
-        .expect("the second seal");
-    tx.commit().await.expect("commit");
+        .expect("the second append");
     let last = first.last().expect("an entry");
     let next = second.first().expect("an entry");
     assert_eq!(next.link.previous_digest, last.link.digest);
@@ -549,23 +537,26 @@ async fn appends_in_one_transaction_each_seal_their_last_link() {
     assert!(verification.intact(), "{verification:?}");
 }
 
-/// An append whose transaction rolls back leaves neither its entries nor its
-/// checkpoint: no entry is ever stored unsealed under a key.
+/// An intake write whose transaction rolls back leaves nothing to chain: no
+/// entry and no checkpoint, so no entry is ever stored unsealed under a key.
 #[tokio::test]
-async fn a_rolled_back_append_leaves_no_checkpoint() {
+async fn a_rolled_back_intake_leaves_no_entry_and_no_checkpoint() {
     let testdb = testkit::db().await.expect("testkit database");
     let pool = &testdb.pool();
     let log = checkpoints(pool, SYSTEM_A, keyring(&generate_key()));
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
-    log.store()
-        .append_in(&mut tx, vec![entry(1, SYSTEM_A, MOVED)])
+    let intake =
+        ferroehr::access_log::intake::IntakeEntry::of(&mut entry(1, SYSTEM_A, MOVED), None)
+            .expect("the entry has a stored form");
+    ferroehr::access_log::intake::take_in(&mut tx, vec![intake])
         .await
-        .expect("the append")
-        .seal(&mut tx)
-        .await
-        .expect("the seal");
+        .expect("the intake write");
     tx.rollback().await.expect("rollback");
+    log.store()
+        .settle(ferroehr::access_log::chainer::Owed::default())
+        .await
+        .expect("the chainer runs");
     assert_eq!(sealed_positions(pool).await, Vec::<i64>::new());
     let entries: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_record")
         .fetch_one(pool)

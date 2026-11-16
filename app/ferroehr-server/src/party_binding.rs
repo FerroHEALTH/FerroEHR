@@ -443,7 +443,7 @@ pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<
         .context("adopting the PERSONs");
     drop(service);
     if let Some(handle) = handle {
-        handle.shutdown(crate::AUDIT_DRAIN_TIMEOUT).await;
+        handle.shutdown(crate::AUDIT_STOP_TIMEOUT).await;
     }
     adopted
 }
@@ -501,7 +501,7 @@ pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<
     };
     drop(service);
     if let Some(handle) = handle {
-        handle.shutdown(crate::AUDIT_DRAIN_TIMEOUT).await;
+        handle.shutdown(crate::AUDIT_STOP_TIMEOUT).await;
     }
     granted
 }
@@ -652,7 +652,7 @@ async fn audited(
     FerroEhrService,
     Option<ferroehr::system_log::sender::AuditHandle>,
 )> {
-    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await;
+    let (sender, handle) = crate::start_audit(&config.audit, &pools.clinical, &pools.audit).await?;
     let mut service = judged(pools, config).await?;
     if let Some(sender) = sender {
         service = service.with_audit(sender);

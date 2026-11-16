@@ -51,10 +51,10 @@ impl FerroEhrService {
     /// trail depend on which door was used.
     ///
     /// # Errors
-    /// [`ServiceError::Unrecorded`] when the sender rejected the record under
-    /// `fail_mode = "closed"`: a crossing of the pseudonymisation boundary nobody
+    /// [`ServiceError::Unrecorded`] when the record
+    /// cannot be written: a crossing of the pseudonymisation boundary nobody
     /// can reconstruct afterwards is refused, and the caller withholds its result.
-    pub(crate) fn emit_linkage_access(
+    pub(crate) async fn emit_linkage_access(
         &self,
         action: EventActionCode,
         object_id: String,
@@ -77,7 +77,7 @@ impl FerroEhrService {
         event.result_count = Some(result_count);
         stamp_requester(&mut event);
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_access(event).await
     }
 }
 

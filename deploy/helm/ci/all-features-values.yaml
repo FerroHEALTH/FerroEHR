@@ -139,7 +139,6 @@ config:
       loggers: admin_only
   audit:
     source_id: ferroehr-prod
-    fail_mode: closed
     enterprise_site_id: site-1
     syslog:
       url: tls://arr.example.com:6514

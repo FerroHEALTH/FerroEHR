@@ -1061,8 +1061,6 @@ deployment|profile|"production"
 deployment|accepts|["plaintext_listener"]
 database|migrations|"verify"
 audit|enabled|true
-audit|fail_mode|"closed"
-audit.store|enabled|true
 authz.rbac|ehr_access_default|"restricted"
 authz.rbac|enabled|true
 auth|enabled|true

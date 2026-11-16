@@ -360,22 +360,19 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   link whose digest is its link; a missing position no gap accounts for is
   still a deletion (our own design, #5619). An erasure a law orders takes
   the tombstone path through
-  `POST /admin/access-log/erase`, which writes the access-log entry recording
-  the erasure, with its index row and the FHIR Feed's debt, in the
-  tombstone's own transaction through the audit store
-  (`AuditStore::erase_entry`), after the audit sender has said it would take
-  the record, so the log holds both or neither and the act is stored once,
-  as its entry; the record the act then emits as `EntryScope::Written`
-  reaches syslog and the store-off feed, named by the request id and client
-  address the audit middleware publishes (`access_context::with_origin`), and
-  the middleware writes no operation record of its own for such a response,
-  so each sink carries one record of the act. Every mounted operation has a
+  `POST /admin/access-log/erase`, which first chains every intake row, then
+  writes the tombstone and the access-log entry recording the erasure, with
+  its index row, into the intake in one transaction through the audit store
+  (`AuditStore::erase_entry`), so the log holds both or neither and the act
+  is stored once, as its entry; the act names its record
+  `EntryScope::Written`, and the middleware writes no operation record of
+  its own for such a response. Every mounted operation has a
   row in `ferroehr-rest::api::operation` naming its audit action and resource
   class; there is no fallback class, the dispatcher refuses an operation
   without a row before its handler runs, and the route-coverage test fails on
   a mounted route without one. Every entry
-  is built by `access_log::entry` from an `AuditEvent`: the drain's per-access
-  entries, the erasure's, and the import's (`access_log::transfer`). An AQL
+  is built by `access_log::entry` from an `AuditEvent`: the request's
+  per-access entries, the erasure's, and the import's (`access_log::transfer`). An AQL
   statement attributes each served row to the EHR of every bound `EHR` source
   and versioned-object root (`aql::sql` `served_ehr_ids`, the list the patient-scope
   collection reads too), so an EHR-only statement writes its per-EHR
@@ -385,12 +382,10 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   columns their canonical form is rebuilt from, signed with the
   version-signing keyring's OpenPGP key. Whenever the keyring holds one,
   every append ends, in its own transaction, with one checkpoint of the last
-  link it wrote: `AccessLogStore::append_in` inserts the rows, whose first
-  insert locks the head until the transaction ends, begins the checkpoint's
-  signature on the blocking pool and hands back an `Appended` the caller
-  seals before it commits, so the signature runs beside the rest of the
-  transaction (the drain's index rows, tokens and feed debt) and the head is
-  held for one signature at most. No link carries a signature; a checkpoint
+  link it wrote: a chainer round (`access_log::chainer`) begins the
+  checkpoint's signature on the blocking pool as soon as it has computed the
+  links, so the signature runs beside the insert of the records, and the
+  head is held for one signature at most. No link carries a signature; a checkpoint
   insert must name the link the log holds at its position
   (`audit/0037_access_log_batch_checkpoint.sql`, our own design, #5704).
   Without a key nothing is sealed, and no key of `[audit.access_log]`
@@ -418,10 +413,36 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   `access_log::imported`, our own design, #5664). `Checkpoints::verify`
   verifies each imported checkpoint's stored span through `chain::verify`.
   Every access to EHR data writes one entry per EHR it
-  reached, refusals and reads of the log included: the drain builds it from
-  the access's `AuditEvent` (`access_log::entry`) and `AuditStore::insert_batch`
-  appends it in the transaction that stores the batch, so an access adds no
-  transaction. The entry keeps in its `other_details` the facts its
+  reached, refusals and reads of the log included, and every record is
+  durable before the response that reports its access (#5747, #5745):
+  `AuditSender::record` builds the entries from the request's `AuditEvent`s
+  (`access_log::entry`) and `AuditStore::write` puts every record of the
+  request, with each entry's index row (projection, search tokens, render
+  policy) and every column the log derives from its content, into the
+  intake in one short transaction of the audit pool: `access_log_intake`
+  for the entries, `audit_event_intake` for the other records
+  (`audit/0042_audit_intake.sql`). A write that fails refuses the request
+  with `503`, so back-pressure replaces loss; there is no queue in memory and
+  no fail mode. The intake is append-only: the runtime role may insert and
+  read, the tables refuse every update, delete and truncate, and only the
+  two `SECURITY DEFINER` moves remove a row, each by chaining it. The
+  chainer (`system_log::sender::chainer`) runs on every replica on the audit
+  runtime: a request's write wakes it and it runs one round 200 ms later for
+  what that window wrote, touching only the chains written since the last
+  round, and it polls both chains every 2 seconds for the rows a stopped
+  replica left. A round takes the access log's head
+  with `audit.access_log_chain_take()` (`FOR UPDATE SKIP LOCKED`, so one
+  replica chains at a time and the others skip), reads up to 512 intake
+  digests, computes the links in Rust, and `audit.access_log_chain_move()`
+  inserts the records with every column supplied, their index rows and the
+  outbox rows of the FHIR Feed and syslog, and deletes the intake rows; the
+  checkpoint and the commit end the round. The insert trigger derives
+  nothing: it checks each link against the head, and the verifier derives
+  every column again and compares (0039). `audit.audit_event_chain_move()`
+  moves the system intake into the system chain the same way. Our own
+  design; one chain carries about 15 000 entries per second on the
+  reference host (#5745), and partitioned chains (one per EHR hash, a
+  draft-model change) are the recorded next step past that. The entry keeps in its `other_details` the facts its
   projections carry that the draft's core does not hold, FerroEHR's access
   details (`access_log::details`, `access_log::recorded`): the audit forms of
   the action, the outcome and the resource class, the subject of care of the
@@ -437,10 +458,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   the access log's candidates from `access_log_search` with the records tied
   on the last instant, and takes the page from their union. The exact total
   counts the access log on its index rows alone, one per entry
-  (`system_log::store::search_page`, #5646). The drain sends the
-  syslog message and the store-off feed's document from the entry it built
-  (`audit/0030_access_log_projections.sql`, `system_log::store::entries`,
-  `system_log::sender::records`).
+  (`system_log::store::search_page`, #5646). syslog and the FHIR Feed are
+  projections of the stored records, delivered by `ihe-atna`'s forwarders
+  from `syslog_outbox` and `fhir_feed_outbox` (`system_log::store::outbox`,
+  `system_log::feed`), so a record waits for its repository in the store,
+  never in memory.
   The log is read over ITS-REST (#5130): `GET {ext}/ehr/{ehr_id}/access_log`
   and its `/{uid}` serve the subject view (`access_log::view`) to the
   patient token's launch-context EHR and a bound representative's

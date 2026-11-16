@@ -1112,14 +1112,13 @@ async fn a_subject_join_is_recorded_in_the_party_and_linkage_domains() {
     let audit_config = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..AuditConfig::default()
     };
-    let (sender, _handle): (_, AuditHandle) = start(audit_config, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit_config, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))

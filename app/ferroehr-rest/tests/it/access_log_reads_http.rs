@@ -60,7 +60,7 @@ pub(crate) struct Fixture {
 pub(crate) async fn fixture() -> Fixture {
     let (db, pool) = common::migrated_pool().await;
     let (sender, drain) =
-        ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+        ferroehr::system_log::sender::start(common::local_audit(), None, pool.clone())
             .await
             .expect("the audit sender");
     let svc = Arc::new(

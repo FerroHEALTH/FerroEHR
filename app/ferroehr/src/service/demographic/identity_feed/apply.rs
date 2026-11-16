@@ -325,7 +325,8 @@ impl FerroEhrService {
             EventActionCode::Update,
             format!("{}:{}", super::operator::OBJECT, message.message_id),
             None,
-        )?;
+        )
+        .await?;
         tx.commit().await?;
         tracing::info!(
             changes = message.events.len(),

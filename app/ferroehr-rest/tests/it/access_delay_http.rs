@@ -46,7 +46,7 @@ const PROFESSIONAL: &str = "dr-jansen";
 async fn app(delayed: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, Router) {
     let (db, pool) = common::migrated_pool().await;
     let audit = common::local_audit();
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(

@@ -373,9 +373,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 - **Every read is recorded.** Each scheme expanded is one access record in the
   `demographic` domain, naming the reader, the party and the scheme
   (`party:<id>#national-identifier:<scheme>`), never the value. A version that
-  holds no protected identifier still leaves one record. Under
-  `audit.fail_mode = "closed"` a record the trail cannot take withholds the
-  values with **503**.
+  holds no protected identifier still leaves one record. A record that
+  cannot be written withholds the values with **503**.
 - **Refusals.** **400** for a missing or malformed `version_uid`, or a
   deployment that configures no identifier protection; **404** when no party
   holds that version.

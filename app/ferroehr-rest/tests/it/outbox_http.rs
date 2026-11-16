@@ -50,10 +50,9 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
             .await
             .expect("the boot that drops `former`");
     }
-    let (sender, _handle): (_, AuditHandle) =
-        start(common::local_audit(), None, Some(pool.clone()))
-            .await
-            .expect("the audit sender");
+    let (sender, _handle): (_, AuditHandle) = start(common::local_audit(), None, pool.clone())
+        .await
+        .expect("the audit sender");
     let svc = crate::policy_fixture::granting(
         FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))
             .with_audit(sender)

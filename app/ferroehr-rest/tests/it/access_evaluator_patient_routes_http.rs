@@ -45,7 +45,7 @@ pub(crate) const PROBE: &str = "0b8f7c5e-0000-4000-8000-000000000001";
 /// both EHRs seeded.
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let (sender, _handle) = start(common::local_audit(), None, Some(pool.clone()))
+    let (sender, _handle) = start(common::local_audit(), None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(

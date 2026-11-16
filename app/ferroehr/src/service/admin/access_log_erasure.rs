@@ -47,7 +47,7 @@ impl FerroEhrService {
     ///   draft model, such as a ground with an empty code.
     /// - `exception`: the store failed.
     /// - `service_overloaded`: the access record of the erasure was refused
-    ///   under `[audit] fail_mode = "closed"`.
+    ///   when it cannot be written.
     pub async fn erase_access_log_entry(
         &self,
         uid: &str,
@@ -74,13 +74,9 @@ impl FerroEhrService {
             .ehr_id
             .as_ref()
             .and_then(|id| id.value().parse::<EhrId>().ok());
-        let mut event = self.erasure_event(uid, ehr_id);
-        if self.audit.as_ref().is_some_and(|sender| !sender.admits()) {
-            return Err(ServiceError::Unrecorded(Refusal::new(
-                (),
-                "audit trail unavailable (fail-closed)",
-            )));
-        }
+        let event = self.erasure_event(uid, ehr_id);
+        #[cfg(not(feature = "fhir"))]
+        drop(event);
         let time_removed = dv_date_time(&jiff::Timestamp::now());
         let removed = || {
             ServiceError::conflict(format!(
@@ -92,9 +88,12 @@ impl FerroEhrService {
             Some(sender) => {
                 let mut named = event.clone();
                 named.object_id = Some(uid.to_owned());
-                sender
-                    .erase_entry(uid, time_removed.clone(), grounds.clone(), &named)
-                    .await
+                Some(
+                    sender
+                        .store()
+                        .erase_entry(uid, time_removed.clone(), grounds.clone(), &named)
+                        .await,
+                )
             }
             None => None,
         };
@@ -108,10 +107,6 @@ impl FerroEhrService {
                 .map_err(refused)?,
         }
         .ok_or_else(removed)?;
-        event.entry = EntryScope::Written;
-        // NOTE: our own design (#5602), the entry was stored with the tombstone, so the emitted
-        // record reaches only syslog and the store-off feed, the act's one record on each.
-        let _outcome = self.emit(event);
         Ok(tombstone)
     }
 
@@ -137,8 +132,10 @@ impl FerroEhrService {
 /// The service error of a failed erasure through the audit store.
 fn unrecorded(error: AuditError) -> ServiceError {
     match error {
-        AuditError::AccessLog(error) => refused(error),
-        other => ServiceError::internal("the audit store", other),
+        AuditError::AccessLog(error @ AccessLogError::Invalid(_)) => refused(error),
+        other => {
+            ServiceError::Unrecorded(Refusal::new((), "audit trail unavailable").with_source(other))
+        }
     }
 }
 

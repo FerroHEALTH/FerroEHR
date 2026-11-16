@@ -703,7 +703,7 @@ async fn the_access_trail_refuses_rewriting_deletion_and_truncation() {
         .await
         .expect("the record's chain position");
     store
-        .mark_fhir_feed_delivered(seq)
+        .mark_delivered(ferroehr::system_log::store::outbox::Sink::FhirFeed, seq)
         .await
         .expect("a delivery stamp is the one sanctioned mutation");
 

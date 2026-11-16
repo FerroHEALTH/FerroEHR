@@ -171,11 +171,11 @@ probes_deployment_posture() {
   # the running server actually discloses them (GDPR Art. 25(2),
   # docs/law/eu/gdpr/text.html).
   probe "P-POSTURE-03" "$PROBE_WORKING" "image" "#3323" \
-    "the two compatibility defaults are reported as open gaps"
+    "the compatibility default is reported as an open gap, and no audit fail mode exists"
   assert_contains "$full_status" '"open_ehr_access_default"' \
     "the open EHR_ACCESS default is disclosed rather than silent"
-  assert_contains "$full_status" '"audit_fails_open"' \
-    "the open audit fail mode is disclosed rather than silent"
+  assert_not_contains "$full_status" '"audit_fails_open"' \
+    "no audit fail mode exists to disclose: a record that cannot be written refuses its request (#5747)"
   probe_done
 
   uncovered "the production profile's refusal" \

@@ -105,7 +105,7 @@ on three levels (high, medium, low).
 | C2 | An authenticated caller reaches EHRs outside their remit | high | medium: the shipped `EHR_ACCESS` default is `open`, which `production` refuses unless accepted by name | RBAC, the access evaluator over per-EHR `EHR_ACCESS` and the access policy, which confines a patient to their own EHR; `production` refuses the role gate off (`rbac_off`) and an `open` `EHR_ACCESS` default (`open_ehr_access_default`) unless each is accepted by name; every access recorded | (d), (l) |
 | C3 | Data in transit is read or altered on the network | high | low behind a TLS ingress or with the server's TLS; high on a plaintext listener | rustls TLS 1.3 and mutual TLS, off by default; `production` refuses a plaintext main listener on a routable address and a separate plain-HTTP management listener unless `plaintext_listener` is accepted by name; the syslog audit feed sends over TLS only (`ihe-atna`); a boot warning on a plaintext routable bind | (e) |
 | C4 | Someone with a database connection reads, rewrites or deletes data, bypassing the API | high | depends on the deploying organisation's database protection | least-privilege roles per domain; append-only versions; version signatures verified on read; the hash-chained access log | (e), (f) |
-| C5 | An access happens and the log does not show it, or the log is altered | high | low with `fail_mode = "closed"` and an off-box sink; medium with the shipped `fail_mode = "open"` | refusals always recorded; `production` refuses audit off and audit failing open unless accepted; the hash chain | (f), (l) |
+| C5 | An access happens and the log does not show it, or the log is altered | high | low with an off-box sink; a write's record waits on #5762 between its clinical commit and the audit intake | every record written before its response and an access refused when it cannot be; refusals always recorded; `production` refuses audit off unless accepted; the hash chain | (f), (l) |
 | C6 | A national identifier or identifying content leaks into the clinical record, telemetry or a report | high | low | the identifier scanner in `strict` mode; log sanitising; reports with no identifiers | (e), (g) |
 | C7 | A malformed or hostile payload crashes or corrupts the server | medium | low | memory-safe Rust with `unsafe` forbidden; overflow checks in release; fuzzed parsers; caught panics | (j), (k) |
 | C8 | The service is made unavailable | high (clinical availability) | medium: an authorised caller holding resources is not defended against | admission limit with `503` shedding; rate limits; body, header and statement limits; replicas and a disruption budget | (h) |
@@ -224,7 +224,7 @@ reset the product to its original state"
   shipped rule, and the audit trail on with the local store and
   no `retention`, which the server refuses at boot where a jurisdiction
   in force sets a ceiling. These must change, and `production` refuses them:
-  `authz.rbac.ehr_access_default = "open"`, `audit.fail_mode = "open"`, an
+  `authz.rbac.ehr_access_default = "open"`, an
   empty `privacy.subject_namespaces`, one database credential for every
   domain, and `database.migrations = "apply"` on the runtime credential. Three may be
   accepted by name when the deployment closes them outside the server:
@@ -511,9 +511,8 @@ or functions, with an opt-out mechanism for the user"
 - **How:** the access log records every API access, every record a read or a
   query served, and every refusal, in DICOM PS3.15 and FHIR `AuditEvent`
   form, with syslog and FHIR-feed sinks and ITI-81 retrieval; metrics and
-  traces cover the rest. The opt-out is `[audit] enabled` and
-  `[audit.store] enabled`; `production` refuses audit off unless accepted by
-  name.
+  traces cover the rest. The opt-out is `[audit] enabled`; `production`
+  refuses audit off unless accepted by name.
 - **Evidence:** `app/ferroehr/src/system_log/`;
   `app/ferroehr-rest/src/system_log/`; [audit trail](../audit.md);
   [observability](../operations.md#observability).

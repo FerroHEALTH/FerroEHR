@@ -118,19 +118,25 @@ impl HealthIndicator for MigrationsHealth {
     }
 }
 
-/// `audit_sender` — reports the audit posture.
+/// `audit_sender`: reports the audit posture and how far the chainer is
+/// behind the intake.
 ///
-/// The sender master switch, the fail mode and the local store. Registered
-/// whether or not auditing is on (#3238): a deployment that writes no access
-/// log reads `DEGRADED` with the consequence spelled out, so monitoring can
-/// see the silence instead of a missing row. Degraded-tolerable (a missing or
-/// fail-open trail must not take the instance out of rotation), so it never
-/// flips readiness — only the aggregate to `DEGRADED`.
+/// Registered whether or not auditing is on (#3238): a deployment that writes
+/// no access log reads `DEGRADED` with the consequence spelled out, so
+/// monitoring can see the silence instead of a missing row. With auditing on,
+/// an intake whose oldest record waits longer than [`INTAKE_LAG`] for the
+/// chainer reads `DEGRADED` with its age: the records are durable, and the
+/// chains and the sinks that deliver from them are behind. Neither flips
+/// readiness, only the aggregate to `DEGRADED`.
 #[derive(Debug)]
 pub struct AuditHealth {
     sender: Option<AuditSender>,
     posture: AuditPosture,
 }
+
+/// How long the oldest intake record may wait for the chainer before the
+/// indicator reads `DEGRADED`; our own design, many chainer rounds.
+pub const INTAKE_LAG: std::time::Duration = std::time::Duration::from_secs(10);
 
 impl AuditHealth {
     /// Construct over the live audit sender and the configured posture.
@@ -159,15 +165,25 @@ impl HealthIndicator for AuditHealth {
 
     fn check(&self) -> Check<'_> {
         Box::pin(async move {
-            let live = self.sender.as_ref().is_some_and(AuditSender::enabled);
-            let cautions = self.posture.cautions();
-            if !live || !self.posture.enabled {
-                return Outcome::degraded(cautions.first().copied().unwrap_or(
+            let sender = self.sender.as_ref().filter(|sender| sender.enabled());
+            let Some(sender) = sender.filter(|_| self.posture.enabled) else {
+                return Outcome::degraded(self.posture.cautions().first().copied().unwrap_or(
                     "auditing is disabled: no access log is written and the EHDS logging \
                      component is off (set [audit] enabled = true)",
                 ));
+            };
+            match sender.store().intake_age().await {
+                Ok(Some(age)) if age > INTAKE_LAG => Outcome::degraded(format!(
+                    "the oldest audit record has waited {}s for the chainer; the records are \
+                     stored and the chains are behind",
+                    age.as_secs()
+                )),
+                Ok(_) => Outcome::up(),
+                Err(e) => {
+                    tracing::error!(error = %e, "health: the audit intake could not be read");
+                    Outcome::degraded("the audit intake could not be read")
+                }
             }
-            Outcome::up()
         })
     }
 }
@@ -528,7 +544,7 @@ impl HealthIndicator for AccessLogCheckpointsHealth {
 mod tests {
     use super::{AccessLogCheckpointsHealth, AuditHealth, DbHealth, MigrationsHealth};
     use crate::access_log::publish::Publication;
-    use crate::system_log::config::{AuditConfig, AuditPosture, FailMode};
+    use crate::system_log::config::{AuditConfig, AuditPosture};
     use ferrohealth_health::document::State;
     use ferrohealth_health::registry::HealthIndicator;
 
@@ -555,36 +571,21 @@ mod tests {
         );
     }
 
-    /// The fail-open default is a caution, not a health failure: the trail is
-    /// UP, and the detail says what a full queue does to a record.
+    /// Auditing on states no caution, since every access it cannot record is
+    /// refused; auditing off states the one caution.
     #[test]
-    fn the_fail_open_default_is_a_stated_caution_and_fail_closed_is_not() {
-        let open = AuditPosture::of(&AuditConfig::default());
-        assert_eq!(open.fail_mode, FailMode::Open, "the shipped default");
-        let cautions = open.cautions();
-        assert_eq!(cautions.len(), 1);
-        assert!(cautions[0].contains("fail_mode is open"), "{}", cautions[0]);
-
-        let closed = AuditPosture::of(&AuditConfig {
-            fail_mode: FailMode::Closed,
-            ..AuditConfig::default()
-        });
-        assert_eq!(closed.cautions(), Vec::<&str>::new());
-        assert!(
-            closed.summary().starts_with("fail_mode=closed"),
-            "{}",
-            closed.summary()
-        );
-
+    fn only_a_disabled_trail_is_a_stated_caution() {
+        let on = AuditPosture::of(&AuditConfig::default());
+        assert_eq!(on.cautions(), Vec::<&str>::new());
         let off = AuditPosture::of(&AuditConfig {
             enabled: false,
-            fail_mode: FailMode::Closed,
             ..AuditConfig::default()
         });
-        assert_eq!(
-            off.cautions().len(),
-            1,
-            "a disabled trail makes the fail mode moot"
+        assert_eq!(off.cautions().len(), 1);
+        assert!(
+            off.cautions()[0].contains("disabled"),
+            "{:?}",
+            off.cautions()
         );
     }
 

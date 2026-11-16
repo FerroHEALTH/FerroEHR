@@ -479,8 +479,13 @@ governs, it is cited; otherwise "our own design".
    disclosing the others (our own design).
 3. **The entry exists before the data leave.** The system writes the entry,
    or a durable reservation of it, before it sends a response that carries
-   EHR data, and refuses the access when it cannot (our own design; FerroEHR
-   does this today).
+   EHR data, and refuses the access when it cannot (our own design). FerroEHR
+   writes every record of a request into a durable, append-only intake in
+   the audit store before it answers, and refuses the request with `503`
+   when that write fails (#5747); the chainer links the intake into the
+   chain moments later (§Integrity). A write's record is written after its
+   clinical commit, in the audit cluster, which production keeps apart, so
+   the reservation that closes the window between the two commits is #5762.
 4. **Reading the log is an access, and it MUST be recorded.** A read of an
    access log writes an entry with an `ACCESSED_ITEM` whose `object` names
    the log, by every route: ITS-REST, ITI-81, AQL, an export, a reviewer's
@@ -610,6 +615,41 @@ NCP. How the log is protected is therefore our own design.
   holds the key, under a checkpoint per append as under a signature per
   entry; the published checkpoints bound what that person can rewrite to
   what came after the newest one published.
+- **The intake and its window.** An entry is written into
+  `audit.access_log_intake` before the response that reports its access,
+  and the chainer links it into the chain afterwards (#5747, #5745; our own
+  design). The intake is unchained, so no request waits on the head. It is
+  append-only by the database's rules: the runtime role may insert and read
+  it and nothing else, the table refuses every update, delete and truncate,
+  and only `audit.access_log_chain_move()`, a `SECURITY DEFINER` function,
+  removes a row, by writing it into the chain in the same statement. The
+  window between the intake and the chain is about a fifth of a second: a
+  request wakes its replica's chainer, which gathers what the requests of
+  the next 200 ms write into one round, so the rounds grow with the rate and
+  an idle server runs none; every replica also looks at both intakes every
+  2 seconds for the rows a stopped replica left, and a graceful stop chains
+  what its intake holds. Within the window someone
+  with the database owner's rights can remove an intake row, and the chain
+  does not show it; that is the same exposure an in-memory queue had,
+  without the loss on a crash. The `audit_sender` indicator reads
+  `DEGRADED` when the oldest intake row waits longer than 10 seconds.
+- **The chainer's critical section.** A round takes the head without
+  waiting (`FOR UPDATE SKIP LOCKED`), so any replica may chain and one does
+  at a time. Under the head it reads the intake's content digests, computes
+  the links, inserts the records with every column the server supplied,
+  their index and outbox rows, writes the head, signs and stores the
+  checkpoint, and commits. The derive of the columns from the content left
+  the insert path: the insert trigger checks each link against the head,
+  and the verifier derives every column again and compares. The rendering,
+  the search tokens and the index row are built on the request path, so
+  nothing per entry beyond the link needs the head.
+- **Partitioned chains, the recorded next step.** One chain carries about
+  15 000 entries per second on the reference host (#5745), against about
+  5 300 the target of 3000 mix requests per second needs. Past it the
+  chain splits by `hash(ehr_id) mod K`, each with its own head and
+  checkpoint (or one checkpoint over the K heads), which changes
+  `ACCESS_LOG_LINK` and `ACCESS_LOG_CHECKPOINT` and is decided with the
+  draft model when such a target is set.
 - **One chain per system.** `sequence` has no gaps within a `system_id`.
   Several writers of one system serialise on the head, as FerroEHR's chain
   cursor does today (`app/ferroehr/migrations/audit/0011_chain_digest_v2.sql`).

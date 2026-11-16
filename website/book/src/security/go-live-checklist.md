@@ -71,17 +71,17 @@ in deployment.accepts (which is then stated on every boot and on /management/sta
 ```
 
 The gaps are `shared_credential`, `shared_cluster`, `open_subject_namespace`,
-`audit_off`, `audit_fails_open`, `no_category_map`, `open_ehr_access_default`,
+`audit_off`, `no_category_map`, `open_ehr_access_default`,
 `migrate_on_runtime_credential`, `auth_off`, `rbac_off`, `plaintext_listener`,
 `plaintext_audit_feed` and `plaintext_object_store`. `shared_cluster` is read from
 `pg_control_system().system_identifier` on each pool, the audit pool included,
 rather than from the DSN text, so two names for one cluster do not pass it.
 
-Two of them are the shipped compatibility defaults, kept as they are because
-the conformance instrument and the development stacks need them: the
-`EHR_ACCESS` default is `open`, and the audit trail fails open. A production
-deployment either changes both, or names each in `deployment.accepts` and
-carries the decision.
+One of them is a shipped compatibility default, kept as it is because the
+conformance instrument and the development stacks need it: the `EHR_ACCESS`
+default is `open`. A production deployment either changes it, or names it in
+`deployment.accepts` and carries the decision. The audit trail has no fail
+mode: it refuses an access it cannot record.
 
 `plaintext_listener` opens whenever the main listener speaks plain HTTP on an
 address reachable off the host. Behind a TLS-terminating ingress, accept it by
@@ -104,8 +104,8 @@ then stated on every boot and on `GET /management/status`, so it is run
 rather than hidden.
 
 - [ ] `deployment.profile = "production"` and the server starts.
-- [ ] `[authz.rbac] ehr_access_default` and `[audit] fail_mode` are the values
-      this deployment intends, not the ones it inherited.
+- [ ] `[authz.rbac] ehr_access_default` is the value this deployment
+      intends, not the one it inherited.
 - [ ] Every entry in `deployment.accepts` is a decision someone recorded, not a
       leftover.
 - [ ] `GET /management/status` shows the profile and an accepted-gap list you
@@ -217,9 +217,9 @@ url = "tls://arr.example:6514"
 url = "https://arr.example/fhir"
 ```
 
-Decide `fail_mode` deliberately. `open` logs a dropped record and serves the
-request; `closed` refuses an auditable operation with `503` when the record
-cannot be taken. `closed` is the posture that makes "no unaudited access" true.
+Every record is written before its response, and a request whose record
+cannot be written is refused with `503`, so "no unaudited access" holds
+without a setting.
 
 Decide the access log retention and write it into the access policy
 (`ACCESS_POLICY.log_retention`): whether EHDS binds you, the period, and each
@@ -237,10 +237,9 @@ SELECT * FROM audit.verify_audit_chain();
 SELECT * FROM audit.verify_access_log_chain();
 ```
 
-- [ ] `[audit] enabled = true` with a durable sink.
+- [ ] `[audit] enabled = true`.
 - [ ] A copy is forwarded off the box, to a sink the server's own identity
       cannot rewrite.
-- [ ] `fail_mode` is a decision, not a default.
 - [ ] `retention` (or `retention`) is `0` or at or above the floor
       that applies to you.
 - [ ] `audit.verify_audit_chain()` and `audit.verify_access_log_chain()`

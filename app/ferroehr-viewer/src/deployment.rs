@@ -92,7 +92,6 @@ pub fn gap_text(code: &str) -> String {
         "shared_cluster" => tr(ServerMsg::TwoDomainsReachSamePostgresqlCluster),
         "open_subject_namespace" => tr(ServerMsg::NoSubjectPseudonymNamespaceDeclaredSo),
         "audit_off" => tr(ServerMsg::AccessNotRecordedDurableAuditTrail),
-        "audit_fails_open" => tr(ServerMsg::AccessRecordAuditQueueCannotTake),
         "no_category_map" => tr(ServerMsg::AccessRecordedWithoutCategoryData),
         "open_ehr_access_default" => tr(ServerMsg::EhrWithoutOwnAccessSettingsAdmits),
         "migrate_on_runtime_credential" => {

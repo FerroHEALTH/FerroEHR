@@ -249,7 +249,7 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// [`ServiceError::Database`] on a storage failure, and the access-record
-    /// refusal under `fail_mode = "closed"`.
+    /// refusal of a record that cannot be written.
     pub async fn ehr_id_for_subject(
         &self,
         subject_id: &str,
@@ -267,7 +267,7 @@ impl FerroEhrService {
             Some(id) if self.ehr_hidden_from_request(id).await? => None,
             other => other,
         };
-        self.emit_subject_resolution(namespace, found)?;
+        self.emit_subject_resolution(namespace, found).await?;
         Ok(found)
     }
 
@@ -279,7 +279,7 @@ impl FerroEhrService {
     /// and an access log is the last place that should be the copy that
     /// outlives it. A miss is recorded like a hit — it says someone asked
     /// whether this deployment holds a record for that subject.
-    fn emit_subject_resolution(
+    async fn emit_subject_resolution(
         &self,
         namespace: &str,
         resolved: Option<EhrId>,
@@ -296,13 +296,7 @@ impl FerroEhrService {
         event.object_id = Some(format!("subject-namespace:{namespace}"));
         event.ehr_id = resolved.map(|id| id.to_string());
         event.result_count = Some(u64::from(resolved.is_some()));
-        event.purpose = crate::system_log::access_context::current_purpose();
-        event.permit = crate::system_log::access_context::current_permit();
-        if let Some(committer) = crate::versioning::committer::current_committer() {
-            event.user_id = committer.subject;
-        }
-        event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_committer_access(event).await
     }
 
     /// The canonical RM `EHR` wire object with its [`ResourceMeta`]: the
