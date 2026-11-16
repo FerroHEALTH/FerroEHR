@@ -27,7 +27,7 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use clap::Subcommand;
 use ferroehr::config::FerroEhrConfig;
-use ferroehr::db::domain::{Domain, DomainPools};
+use ferroehr::db::domain::DomainPools;
 use ferroehr::ids::VoId;
 use ferroehr::party_binding::check::{Administrator, BasicUser, CheckInput, Expected, Report};
 use ferroehr::party_binding::fill::{LEASE_RENEWAL, LEASE_TTL, Lease};
@@ -205,9 +205,8 @@ pub fn install(
 ///
 /// Seeds the default policy, demographic and `EHR_ACCESS` definitions,
 /// commits the default `EHR_ACCESS` of every EHR without one, fills the
-/// `EHR_ACCESS` projection once and starts its listener, reads the policy
-/// grants, starts their listener and logs the federation agreements in
-/// force, judges the mapping against its
+/// `EHR_ACCESS` projection once, reads the policy grants and logs the
+/// federation agreements in force, judges the mapping against its
 /// templates, prepares the side table and takes this replica's lease,
 /// renewed in the background with the key spaces tended
 /// ([`Lease::tend`]) until it is released.
@@ -233,20 +232,9 @@ pub async fn prepare(
         .await
         .context("filling the EHR_ACCESS projection")?;
     service
-        .ehr_access_listened()
-        .spawn_listener(listen_options(config, Domain::Clinical)?);
-    service
         .read_grants()
         .await
         .context("reading the policy grants")?;
-    service
-        .grants()
-        .listened()
-        .spawn_listener(listen_options(config, Domain::Party)?);
-    service
-        .bindings()
-        .listened()
-        .spawn_listener(listen_options(config, Domain::Party)?);
     service.grants().log_agreements();
     service
         .grants()
@@ -336,7 +324,7 @@ pub async fn run(
         PartyBindingCmd::Refill => {
             let config = ferroehr::config::load(file, sets)?;
             config.validate()?;
-            let pools = crate::connect_pool(&config).await?;
+            let pools = crate::pools::connect(&config, crate::pools::Opening::OneShot).await?;
             let service = judged(&pools, &config).await?;
             service
                 .refill_binding(LEASE_TTL)
@@ -434,7 +422,7 @@ pub async fn adopt(args: &AdoptArgs, config: &FerroEhrConfig) -> anyhow::Result<
         parties: args.parties.iter().map(|party| VoId(*party)).collect(),
         namespace: config.authz.party_binding.namespace.clone(),
     };
-    let pools = crate::connect_pool(config).await?;
+    let pools = crate::pools::connect(config, crate::pools::Opening::OneShot).await?;
     input.check.scim_clients = scim_clients(&pools).await?;
     let (service, handle) = audited(&pools, config).await?;
     let adopted = service
@@ -472,7 +460,7 @@ pub async fn grant(args: &GrantArgs, config: &FerroEhrConfig) -> anyhow::Result<
                 .with_context(|| format!("--element {element:?} is not CODE=TEXT"))
         })
         .collect::<anyhow::Result<Vec<_>>>()?;
-    let pools = crate::connect_pool(config).await?;
+    let pools = crate::pools::connect(config, crate::pools::Opening::OneShot).await?;
     let (service, handle) = audited(&pools, config).await?;
     let granted = match (&args.basic_user, &args.issuer, &args.client_id) {
         (Some(user), _, _) => match basic_user_person(user, config, &pools).await {
@@ -669,17 +657,4 @@ async fn judged(pools: &DomainPools, config: &FerroEhrConfig) -> anyhow::Result<
         errors.join("; ")
     );
     Ok(service)
-}
-
-/// The connect options of the `LISTEN` sessions of `domain`
-/// ([`ferroehr::db::domain::listen_options`]).
-///
-/// # Errors
-/// The listener DSN does not parse.
-pub(crate) fn listen_options(
-    config: &FerroEhrConfig,
-    domain: Domain,
-) -> anyhow::Result<sqlx::postgres::PgConnectOptions> {
-    ferroehr::db::domain::listen_options(&config.database, domain)
-        .with_context(|| format!("reading the {domain} listener DSN"))
 }

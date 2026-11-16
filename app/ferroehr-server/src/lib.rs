@@ -26,7 +26,7 @@ use clap::{Parser, Subcommand};
 use ferroehr::config::deployment::{DatabaseFacts, DeploymentPosture, DeploymentProfile};
 use ferroehr::config::management::EndpointLevels;
 use ferroehr::config::management::ManagementConfig;
-use ferroehr::db::domain::{Domain, DomainPools};
+use ferroehr::db::domain::DomainPools;
 use ferroehr::extensions::outbox::{self, OutboxGate};
 use ferroehr::ids::EhrId;
 use ferroehr::manufacturer::MANUFACTURER;
@@ -67,6 +67,7 @@ pub mod instances;
 pub mod party_binding;
 pub mod pmir;
 pub mod policy;
+mod pools;
 pub mod process;
 mod usage_report_cmd;
 
@@ -707,54 +708,6 @@ fn warn_boot_postures(config: &ferroehr::config::FerroEhrConfig) {
     }
 }
 
-/// Connects the four domain pools and prepares every database they reach.
-///
-/// Each pool carries its own domain's `search_path`, and a domain a deployment
-/// gave `[database.<domain>] url` carries its own credential — which is what
-/// makes the pseudonymisation boundary a role boundary rather than only a
-/// schema one. The domain split is our own deployment extension; no openEHR
-/// spec governs it.
-///
-/// Schema preparation is [`ferroehr::db::prepare`], which spans every schema of
-/// each database on that database's migration DSN (`[database] migrate_url` for every
-/// domain reaching the database it reaches, `[database.<domain>] migrate_url`
-/// for a database of its own, the domain's own DSN when that is unset) and then
-/// measures the runtime pools' own reach with
-/// [`ferroehr::db::verify_domain_isolation`], refusing to boot a database whose
-/// grants let one runtime role read another domain.
-///
-/// # Errors
-/// A connection, migration or domain-isolation failure, contextualized for the
-/// operator.
-async fn connect_pool(config: &ferroehr::config::FerroEhrConfig) -> anyhow::Result<DomainPools> {
-    let concurrency =
-        u32::try_from(config.server.shared.max_concurrent_requests.get()).unwrap_or(u32::MAX);
-    let database = config.database.for_serving(concurrency);
-    let pools = db::connect_domains(&database)
-        .await
-        .context("connecting to PostgreSQL")?;
-    db::prepare(&config.database, &pools, config.deployment.profile)
-        .await
-        .context("preparing the database schema")?;
-    db::pool::open_kept(&database, &pools)
-        .await
-        .context("opening the pooled connections")?;
-    tracing::info!(
-        pool_size = database.pool_size(),
-        kept_open = database.pool_kept(),
-        "each domain pool is open"
-    );
-    for domain in Domain::ALL {
-        if config.database.is_separated(domain) {
-            tracing::info!(
-                %domain,
-                "the domain connects on its own DSN: its credential is a database role of its own"
-            );
-        }
-    }
-    Ok(pools)
-}
-
 /// Wires the opt-in FHIR terminology server (`[terminology]`), the
 /// "terminology query server" BASE
 /// `architecture_overview/master12-terminology.adoc` §Binding Terminology
@@ -882,7 +835,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // The support statement at boot, and a WARN at boot and daily once the
     // period has ended (CRA Art. 13(19)).
     let support_watch = tokio::spawn(ferroehr::support::watch(SupportPeriod::current()));
-    let pools = connect_pool(&config).await?;
+    let pools = pools::connect(&config, pools::Opening::Serving).await?;
     let pool = pools.clinical.clone();
     // The partitioned parents' planner statistics, which autovacuum never
     // collects: now and then hourly (#4453).
@@ -999,7 +952,7 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     let binding_lease = party_binding::prepare(&service, &config).await?;
     // The policy in force before the listeners take traffic, and the retention
     // register keyed on the category register in force.
-    policy::read_and_listen(&service, &config).await?;
+    policy::read(&service).await?;
     service
         .mirror_category_map()
         .await
@@ -1007,6 +960,12 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     // NOTE: EHDS Art. 3(3), a hold stops withholding at its limit; this only writes the record.
     service.spawn_access_delay_expiries(Duration::from_secs(60));
     pmir::start(&service, &config, &mut indicators).context("starting the PMIR consumer")?;
+    let listener_sessions = policy::listen(&service, &config, config.pix.is_some())?;
+    tracing::info!(
+        budget = config.database.connection_budget,
+        listener_sessions,
+        "every listened channel is held on one session per database"
+    );
     // The commit-event outbox: a commit writes its row only while a change-feed
     // grant names a reader, and every reader no grant names any more is marked
     // inactive, so it holds the prune back no longer.

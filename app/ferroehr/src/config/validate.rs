@@ -64,6 +64,12 @@ impl FerroEhrConfig {
             )));
         }
         self.validate_body_tier(&mut errors);
+        errors.extend(
+            self.database
+                .budget_errors()
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
         if self.database.audit.listen_url.is_some() {
             // NOTE: our own design (#5589), every policy listener listens on the clinical or
             // the party database, so an audit listener DSN would connect nothing.

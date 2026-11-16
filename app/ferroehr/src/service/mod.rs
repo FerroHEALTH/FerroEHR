@@ -163,6 +163,10 @@ pub struct FerroEhrService {
     /// The listener whose notifications drop entries of [`Self::ehr_access`];
     /// while it is down every request reads the projection.
     pub(in crate::service) ehr_access_listened: Arc<crate::policy_register::listen::Listened>,
+    /// The listener whose notifications wake the ITI-93 applier when a
+    /// message is stored; while it is down the applier looks every ten
+    /// seconds.
+    pub(in crate::service) pmir_listened: Arc<crate::policy_register::listen::Listened>,
     /// Bounded cache of lowered AQL plans keyed on the query text. Shared
     /// across service clones (moka-backed). No openEHR spec governs it — our
     /// own performance design.
@@ -323,6 +327,10 @@ impl FerroEhrService {
             multimedia: None,
             ehr_access: Arc::clone(&ehr_access),
             ehr_access_listened: Arc::new(ehr::access_cache::listened(&ehr_access)),
+            pmir_listened: Arc::new(crate::policy_register::listen::Listened::new(
+                demographic::identity_feed::receive::CHANNEL,
+                crate::db::domain::Domain::Party,
+            )),
             plan_cache: PlanCache::default(),
             archetype_lineage: archetype_lineage_cache(),
             query_timeout: None,

@@ -65,7 +65,7 @@ use crate::config::loader::{ConfigError, ConfigErrors};
 #[serde(default, deny_unknown_fields)]
 #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-must-set" = ["database.url"],
     "x-ferroehr-class" = { "server": "infrastructure", "telemetry": "infrastructure", "usage_report": "infrastructure", "database": "infrastructure",
-    "database.max_connections": "optional", "database.min_connections": "optional", "database.acquire_timeout": "optional", "database.statement_timeout": "optional" })))]
+    "database.connection_budget": "optional", "database.max_connections": "optional", "database.min_connections": "optional", "database.acquire_timeout": "optional", "database.statement_timeout": "optional" })))]
 pub struct FerroEhrConfig {
     /// `[deployment]`: the declared posture, the openEHR specification set
     /// and the licence token.
