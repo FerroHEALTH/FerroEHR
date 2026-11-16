@@ -163,7 +163,7 @@ config:
     admin: true
     terminology: true
   database:
-    connection_budget: 35
+    connection_budget: 36
     max_connections: 10
   record:
     signing:

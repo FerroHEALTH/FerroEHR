@@ -700,7 +700,7 @@ data:
         role_issuers = ["https://keycloak.example.com/realms/ferroehr"]
     
     [database]
-      connection_budget = 35
+      connection_budget = 36
       max_connections = 10
     
     [deployment]
