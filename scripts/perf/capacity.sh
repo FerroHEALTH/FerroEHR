@@ -400,7 +400,8 @@ cpu_table() {
     ;;
   container:*)
     id="${spec#container:}"
-    stat=$(find /sys/fs/cgroup -maxdepth 3 -type d \( -name "docker-$id.scope" -o -name "$id" \) 2>/dev/null | sed -n 1p)
+    # A host with no cgroup tree (macOS) has nothing to find, which is no failure.
+    stat=$({ find /sys/fs/cgroup -maxdepth 3 -type d \( -name "docker-$id.scope" -o -name "$id" \) 2>/dev/null || true; } | sed -n 1p)
     if [[ -n "$stat" ]]; then
       awk '$1 == "usage_usec" { printf "c %.3f\n", $2 / 1e6 }' "$stat/cpu.stat"
     else
