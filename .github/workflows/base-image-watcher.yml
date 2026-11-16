@@ -197,3 +197,93 @@ jobs:
           body-file: body.md
           type: Task
           labels: chore
+
+  # The ZITADEL example's images (docs/VERSIONS.md, Example identity
+  # providers, #5829), digest-pinned, which no Dependabot ecosystem reads. The
+  # newest release is the one zitadel/zitadel marks Latest on GitHub, and its
+  # digest is the index ghcr.io serves for that tag.
+  zitadel:
+    name: compare pinned ZITADEL to upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # file/update the one tracking issue below
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compare the pinned ZITADEL images to upstream
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          newest_tag=$(gh api repos/zitadel/zitadel/releases/latest --jq '.tag_name')
+          if ! grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$' <<<"$newest_tag"; then
+            echo "::error::zitadel/zitadel's latest release '${newest_tag}' is not a vX.Y.Z tag"
+            exit 1
+          fi
+
+          # The index digest a tag resolves to on ghcr.io, the form the pin holds.
+          digest_of() {
+            local token
+            token=$(curl -fsSL --retry 3 "https://ghcr.io/token?scope=repository:$1:pull" | jq -er '.token')
+            curl -fsSL --retry 3 -o /dev/null -D - \
+                -H "Authorization: Bearer ${token}" \
+                -H 'Accept: application/vnd.oci.image.index.v1+json' \
+                "https://ghcr.io/v2/$1/manifests/$2" \
+              | tr -d '\r' | awk 'tolower($1) == "docker-content-digest:" { print $2 }' | grep -E '^sha256:[0-9a-f]{64}$'
+          }
+
+          stale=""
+          : > details.md
+          for image in zitadel zitadel-login; do
+            ref=$(awk -F'|' -v k="\`${image}\`" '{ c = $2; gsub(/ /, "", c) } c == k { v = $3; gsub(/[` ]/, "", v); print v; exit }' docs/VERSIONS.md)
+            if ! grep -qE "^ghcr\.io/zitadel/${image}:v[0-9]+\.[0-9]+\.[0-9]+@sha256:[0-9a-f]{64}$" <<<"$ref"; then
+              echo "::error::docs/VERSIONS.md pins '${ref}' for ${image}; the form is ghcr.io/zitadel/${image}:vX.Y.Z@sha256:<digest>"
+              exit 1
+            fi
+            pinned_tag=${ref#*:}; pinned_tag=${pinned_tag%@*}
+            pinned_digest=${ref#*@}
+            current_digest=$(digest_of "zitadel/${image}" "$pinned_tag")
+            newest_digest=$(digest_of "zitadel/${image}" "$newest_tag")
+            {
+              echo "Pinned: \`${ref}\`"
+              if [ "$newest_tag" != "$pinned_tag" ]; then
+                stale=1
+                echo "- a newer release exists upstream: \`ghcr.io/zitadel/${image}:${newest_tag}@${newest_digest}\`"
+              fi
+              if [ "$current_digest" != "$pinned_digest" ]; then
+                stale=1
+                echo "- the pinned tag has been re-pointed upstream: \`${pinned_tag}\` now resolves to \`${current_digest}\`"
+              fi
+            } >> details.md
+          done
+          if [ -z "$stale" ]; then
+            echo "- upstream has nothing newer; the pins are current" >> details.md
+          fi
+          echo "stale=${stale:-0}" >> "$GITHUB_OUTPUT"
+          cat details.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write the tracking-issue body
+        if: steps.check.outputs.stale == '1'
+        run: |
+          set -euo pipefail
+          {
+            printf 'The weekly base-image watcher found the digest-pinned ZITADEL images behind upstream.\n\n'
+            cat details.md
+            printf '\nRemedy: move both rows of docs/VERSIONS.md (Example identity providers) and the tag of\n'
+            printf '`scripts/vendor/zitadel-docs.sh` to the new release in one change, re-run the vendor script,\n'
+            printf 'and read the ZITADEL release notes for every version in between.\n'
+          } > body.md
+
+      - name: File or update the tracking issue
+        if: steps.check.outputs.stale == '1'
+        uses: ./.github/actions/file-watcher-issue # zizmor: ignore[self-repository] actionlint 1.7.12 refuses the $/ form (rhysd/actionlint#711)
+        with:
+          title: "chore(images): the pinned ZITADEL is stale, a newer upstream release exists"
+          body-file: body.md
+          type: Task
+          labels: chore

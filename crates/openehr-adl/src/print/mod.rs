@@ -94,6 +94,17 @@ pub enum PrintError {
         /// The code string of the assumed value, if any.
         assumed_value: Option<String>,
     },
+    /// A `C_ARCHETYPE_ROOT` that carries a default value and no attribute
+    /// constraint.
+    #[error(
+        "the archetype root {node_id} carries a default value and no attribute constraint, which \
+         has no ADL2 syntax: a 'use_archetype' body holds at least one attribute definition \
+         (cadl2.g4 c_archetype_root)"
+    )]
+    ArchetypeRootDefaultOnly {
+        /// The node id of the refused archetype root.
+        node_id: String,
+    },
 }
 
 /// Serializes an assembled [`Archetype`] to ADL2 source text.

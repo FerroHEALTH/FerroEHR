@@ -836,6 +836,9 @@ jobs:
       - name: shellcheck / The attached information sheet and instructions for use carry the stamp, the frozen links and the release's facts
         if: ${{ !cancelled() }}
         run: bash scripts/release/accompanying-documents.sh --self-test
+      - name: shellcheck / The EHDS system documents are refused when they name a configuration key this release refuses
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/ifu-config-keys.sh --self-test
       - name: shellcheck / The release milestone check refuses open items and closes only after every leg
         if: ${{ !cancelled() }}
         run: bash scripts/release/milestone.sh --self-test
@@ -2022,7 +2025,13 @@ jobs:
   # Families needing a dependency the harness composes itself (Keycloak, the
   # broker, the collector) run here; terminology does NOT — it needs a licensed
   # SNOMED release that may not be fetched onto a shared runner, and its own
-  # opt-in local lane covers it.
+  # opt-in local lane covers it. The hospital scenario runs here since its
+  # findings landed (#5642).
+  #
+  # The timeout, measured on 2026-11-16: the job took 10 to 10.5 minutes
+  # before the hospital family joined it, and the family's probe step took
+  # 5.6 to 6.2 minutes in its own lane, so the job runs about 17 minutes.
+  # 45 leaves a slow runner more than twice that.
   deploy-probe:
     name: deploy-probe
     needs: [changes, ui-e2e-binary]
@@ -2146,8 +2155,8 @@ jobs:
   # The fourth is `deploy-probe`, on its own lanes, so a change to the
   # deployment harness alone builds the binary its probe runs (#5271);
   # scripts/checks/binary-consumers.sh holds every consumer's lanes here.
-  # The steps are .github/actions/server-binary, which perf-base-binary and the
-  # hospital deploy-probe lane run too, so all three share one cache key (#5673).
+  # The steps are .github/actions/server-binary, which perf-base-binary runs
+  # too, so both share one cache key (#5673).
   # A push the merge queue verified keeps this job and skips its consumers:
   # it is main's writer of the binary cache and the sccache entries (#4546).
   # The base arm of the performance gate (#5326): the server binary of the

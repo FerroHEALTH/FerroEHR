@@ -2,7 +2,9 @@
 
 - Source: https://github.com/openEHR/adl-antlr (Apache-2.0; `LICENSE`
   vendored alongside)
-- Commit: `8db091ec3d810371cc41cd072fee81ce893fea47` (2024-04-06)
+- Commit: `d64ffeb6f2e2c0325558532bfd820dff9a7d8efc` (2026-11-06, the merge of
+  adl-antlr PR 35 after PR 37); `--check` on the vendoring script proves the
+  files still match it
 - Vendored by: `scripts/vendor/adl-grammars.sh` (re-run it to refresh;
   never hand-edit a grammar file)
 - Layout: **version-scoped by AM generation** (#1936/#1946), mirroring the
@@ -36,3 +38,13 @@ the shared lexer — plus the ADL 1.4 grammar set used as reference for the
 These files are **reference input for the hand-written `logos`/`chumsky`
 parser** in this crate — they are not a build input and no ANTLR runtime
 is ever a dependency.
+
+## Pin history
+
+- `d64ffeb6f` (2026-11-06), from `8db091ec3`: two upstream changes, both
+  adopted by the parser. PR 35 (SPECPR-217, SPECAM-87) lets
+  `c_archetype_root` end in `matches { c_attribute_def+ default_value? }`;
+  PR 37 (SPECPR-146) makes `default_value` an optionally typed ODIN object
+  block or an `INCLUDED_LANGUAGE_FRAGMENT` (`(json) <# … #>`, new in
+  `base_lexer.g4`), and lets `_default` be the only content of a
+  `c_complex_object` body.

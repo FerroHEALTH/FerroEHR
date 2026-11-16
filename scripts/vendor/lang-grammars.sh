@@ -22,12 +22,26 @@
 #   prose with no grammar; BEL does not exist in 1.0.0 — neither has files.
 #
 # Both repos are Apache-2.0 (LICENSE vendored alongside).
+#
+# Usage: re-run to vendor at the pins below; `--check` reports drift and
+# writes nothing.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)/crates/openehr-lang/vendor/grammar"
+VENDORED="$(cd "$(dirname "$0")/../.." && pwd)/crates/openehr-lang/vendor/grammar"
+
+# `--check` fetches the pinned files into a scratch tree and fails when any
+# differs from the vendored copy; it writes nothing.
+CHECK=0
+[[ "${1:-}" == "--check" ]] && CHECK=1
+if [[ $CHECK == 1 ]]; then
+  ROOT=$(mktemp -d)
+  trap 'rm -rf "$ROOT"' EXIT
+else
+  ROOT="$VENDORED"
+fi
 
 ADL_ANTLR_REPO="openEHR/adl-antlr"
-ADL_ANTLR_COMMIT="8db091ec3d810371cc41cd072fee81ce893fea47" # 2024-04-06
+ADL_ANTLR_COMMIT="d64ffeb6f2e2c0325558532bfd820dff9a7d8efc" # 2026-11-06
 ANTLR4_REPO="openEHR/openEHR-antlr4"
 ANTLR4_COMMIT="3494da942f3ed35963279837447b3039dd098e20" # master 2025-12-15
 
@@ -70,3 +84,16 @@ mkdir -p "${DEST10}"
 for f in odin.g4 odin_values.g4 base_patterns.g4 base_lexer.g4; do
   fetch "${ADL_ANTLR_REPO}" "${ADL_ANTLR_100_COMMIT}" "src/main/antlr/adl2/${f}" "${DEST10}/${f}"
 done
+
+if [[ $CHECK == 1 ]]; then
+  status=0
+  while IFS= read -r -d '' fetched; do
+    rel="${fetched#"$ROOT"/}"
+    if ! cmp -s "$fetched" "$VENDORED/$rel"; then
+      echo "drift: $rel differs from the pinned upstream file" >&2
+      status=1
+    fi
+  done < <(find "$ROOT" -type f -print0)
+  [[ $status == 0 ]] && echo "check: every vendored grammar matches its pin"
+  exit "$status"
+fi

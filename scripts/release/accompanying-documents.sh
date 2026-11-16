@@ -80,6 +80,10 @@ main() {
     bash "$DOCS" fetch "$page" "$WORK/$page.md"
   done
   check_sheet "$WORK/information-sheet.md"
+  # EHDS Art. 28(b): a page that names a key this release refuses would have
+  # the operator start a server that does not boot (#5534).
+  bash scripts/checks/ifu-config-keys.sh "$WORK/information-sheet.md" "$WORK/instructions-for-use.md" >/dev/null \
+    || die "the pinned pages name configuration keys this release refuses"
   for page in information-sheet instructions-for-use; do
     render "$page" "$tag" "$WORK/$page.md" "$out/ferroehr-${tag}-${page}.md"
     echo "$out/ferroehr-${tag}-${page}.md"
@@ -119,7 +123,13 @@ self_test() {
   if (EHDS_PAGES_DIR="$tmp/pages" main "$tag" "$tmp/out2") >/dev/null 2>&1; then
     die "self-test: a sheet without Art. 38(2)(c) was attached"
   fi
-  echo "accompanying-documents: self-test OK (stamp, absolute family links, frozen FerroEHR links, facts replace 'This copy', a sheet missing a point refused)."
+  mv "$tmp/pages/information-sheet.md.bak" "$tmp/pages/information-sheet.md"
+  # shellcheck disable=SC2016 # the backticks are Markdown, not an expansion
+  printf '### FerroEHR settings\n\n```toml\ndeployment_profile = "production"\n```\n' >>"$tmp/pages/instructions-for-use.md"
+  if (EHDS_PAGES_DIR="$tmp/pages" main "$tag" "$tmp/out3") >/dev/null 2>&1; then
+    die "self-test: instructions naming a key this release refuses were attached"
+  fi
+  echo "accompanying-documents: self-test OK (stamp, absolute family links, frozen FerroEHR links, facts replace 'This copy', a sheet missing a point and a page naming a refused key refused)."
 }
 
 case "${1:-}" in
