@@ -132,7 +132,7 @@ pub fn build_web_template_v2_4(
     tree.max = 1;
 
     let tree = shape::finish(tree);
-    super::constraint::check_slots(&tree)?;
+    super::constraint::check_evaluable(&tree)?;
 
     Ok(WebTemplate {
         template_id,

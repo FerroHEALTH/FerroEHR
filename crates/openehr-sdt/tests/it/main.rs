@@ -42,6 +42,7 @@ mod raw_attributes;
 mod shape_tolerance;
 mod slot_admission;
 mod spec_vectors;
+mod string_pattern;
 mod structured;
 mod template_navigation;
 mod untagged_nodes;
