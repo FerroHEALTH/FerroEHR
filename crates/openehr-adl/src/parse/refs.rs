@@ -88,14 +88,7 @@ impl Parser<'_> {
             SyntaxErrorCode::Suaid,
             "expecting ']' after the archetype id",
         )?;
-        let occurrences = if matches!(self.peek(), Some(Token::SymOccurrences)) {
-            Some(self.parse_occurrences()?)
-        } else {
-            None
-        };
-        if self.at_negated_matches() {
-            return self.negated_matches_reject(SyntaxErrorCode::Suas);
-        }
+        let occurrences = self.parse_occurrences_clause(SyntaxErrorCode::Suas)?;
         let (attributes, attribute_tuples, default_value) =
             if matches!(self.peek(), Some(Token::SymMatches)) {
                 self.parse_archetype_root_body()?

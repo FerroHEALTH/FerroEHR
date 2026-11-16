@@ -130,6 +130,23 @@ impl Parser<'_> {
     }
 
     /// `multiplicity : INTEGER | '*' | INTEGER '..' ( INTEGER | '*' )`.
+    /// An optional `c_occurrences`, then the refusal of a negated `matches`
+    /// after it, reported under `code`.
+    pub(crate) fn parse_occurrences_clause(
+        &mut self,
+        code: SyntaxErrorCode,
+    ) -> PResult<Option<MultiplicityInterval>> {
+        let occurrences = if matches!(self.peek(), Some(Token::SymOccurrences)) {
+            Some(self.parse_occurrences()?)
+        } else {
+            None
+        };
+        if self.at_negated_matches() {
+            return self.negated_matches_reject(code);
+        }
+        Ok(occurrences)
+    }
+
     fn parse_multiplicity(&mut self, code: SyntaxErrorCode) -> PResult<MultiplicityInterval> {
         if self.eat(|t| matches!(t, Token::SymStar)) {
             // `*` == 0..* .
@@ -278,15 +295,7 @@ impl Parser<'_> {
         let type_span = self.cur_span();
         let rm_type = self.parse_rm_type_id()?;
         let (node_id, archetype_ref) = self.parse_node_bracket()?;
-        let occurrences = if matches!(self.peek(), Some(Token::SymOccurrences)) {
-            Some(self.parse_occurrences()?)
-        } else {
-            None
-        };
-
-        if self.at_negated_matches() {
-            return self.negated_matches_reject(SyntaxErrorCode::Sccog);
-        }
+        let occurrences = self.parse_occurrences_clause(SyntaxErrorCode::Sccog)?;
         let mut obj = if matches!(self.peek(), Some(Token::SymMatches)) {
             self.parse_matches_body(&rm_type, &node_id)?
         } else if let Some(prim) = Self::primitive_any(&rm_type, &node_id) {
