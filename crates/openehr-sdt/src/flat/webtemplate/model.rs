@@ -654,4 +654,10 @@ pub struct WebTemplateCardinality {
     /// Build-time scratch: the archetype path used to resolve `ids` from child json-ids (never serialized).
     #[serde(skip)]
     pub path: String,
+    /// Whether the cardinality is `unique`: no two members of the container
+    /// may be equal by value (ADL 1.4 `master05-cadl.adoc` and ADL2
+    /// `master04.3-cadl_complex_types.adoc` §Container attributes). Validation
+    /// only, never serialized.
+    #[serde(skip)]
+    pub unique: bool,
 }

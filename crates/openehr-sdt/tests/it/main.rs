@@ -18,6 +18,7 @@ mod common;
 mod adl2_content_constraints;
 mod archetype_id_grammar;
 mod canonical_json_literals;
+mod cardinality_unique;
 mod category_default;
 mod ckm_full_pack;
 mod cnf_vitals_template;
