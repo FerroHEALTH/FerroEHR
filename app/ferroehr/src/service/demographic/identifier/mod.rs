@@ -41,7 +41,7 @@ impl FerroEhrService {
     /// `object_version_does_not_exist` [`ServiceError`] when no party holds that
     /// version, `exception` when a sealed value cannot be read or does not
     /// authenticate, and `service_overloaded` when the access record is
-    /// refused under `fail_mode = "closed"`, which withholds the values.
+    /// when it cannot be written, which withholds the values.
     pub async fn read_party_identifiers(
         &self,
         party: VoId,
@@ -63,7 +63,7 @@ impl FerroEhrService {
                 error,
             )
         })?;
-        self.emit_identifier_expansion(party, &schemes)?;
+        self.emit_identifier_expansion(party, &schemes).await?;
         Ok((version, schemes))
     }
 
@@ -72,8 +72,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// The `service_overloaded` [`ServiceError`] when the sender rejected a record
-    /// under `fail_mode = "closed"`; the values are then withheld.
-    fn emit_identifier_expansion(
+    /// when it cannot be written; the values are then withheld.
+    async fn emit_identifier_expansion(
         &self,
         party: VoId,
         schemes: &[String],
@@ -103,13 +103,7 @@ impl FerroEhrService {
                 None => format!("party:{}#national-identifier", party.0),
             });
             event.result_count = Some(u64::from(scheme.is_some()));
-            event.purpose = crate::system_log::access_context::current_purpose();
-            event.permit = crate::system_log::access_context::current_permit();
-            if let Some(committer) = crate::versioning::committer::current_committer() {
-                event.user_id = committer.subject;
-            }
-            event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-            self.record_access(event)?;
+            self.record_committer_access(event).await?;
         }
         Ok(())
     }

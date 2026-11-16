@@ -51,6 +51,24 @@ async fn shared_append(pool: &sqlx::PgPool, entries: &[AccessLogEntry]) {
     .expect("the entries of the shared chain");
 }
 
+/// A record outside the access log, a read of a party, written as the
+/// shared chain's writer took it: one row of `audit_event`, which its
+/// triggers link (`migrations/audit/0017` to `0030`).
+async fn shared_record(pool: &sqlx::PgPool) {
+    let policy = serde_json::to_value(ferroehr::system_log::render::RenderPolicy::default())
+        .expect("the default render policy");
+    sqlx::query(
+        "INSERT INTO audit.audit_event (recorded_at, action, outcome, event_code, principal, \
+         resource_class, domain, render_policy, search_tokens) \
+         VALUES (now(), 'R', 0, '110110', 'alice', 'demographic', 'party', \
+         audit.register_render_policy($1), '{}')",
+    )
+    .bind(policy)
+    .execute(pool)
+    .await
+    .expect("a record outside the access log");
+}
+
 /// A record outside the access log: a read of a party.
 fn outside() -> AuditEvent {
     let mut event = AuditEvent::new(
@@ -101,9 +119,9 @@ async fn the_shared_chain_splits_into_two_that_verify() {
     // Shared positions: 1 outside, 2 and 3 entries, 4 outside, 5 an entry.
     let audit = AuditStore::new(pool.clone());
     let log = AccessLogStore::new(pool.clone());
-    audit.insert(&outside(), None).await.expect("record 1");
+    shared_record(&pool).await;
     shared_append(&pool, &[entry(1), entry(2)]).await;
-    audit.insert(&outside(), None).await.expect("record 4");
+    shared_record(&pool).await;
     shared_append(&pool, &[entry(3)]).await;
     sqlx::raw_sql(
         "INSERT INTO audit.fhir_feed_outbox (chain_seq) VALUES (3), (4); \

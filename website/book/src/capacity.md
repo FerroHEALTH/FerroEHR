@@ -153,8 +153,9 @@ one line in `steps.jsonl`:
   contention; `ClientRead` means PostgreSQL waits on FerroEHR.
 - `prometheus-<n>.txt`: each instance's metrics after the step, among them
   `db_pool_connections`, `db_pool_acquire_duration_seconds`,
-  `db_pool_hold_duration_seconds`,
-  `audit_drain_queue_depth` and the access log's append and sign timings.
+  `db_pool_hold_duration_seconds`, `audit_chained_total`,
+  `access_log_chain_hold_duration_seconds` and the access log's intake and
+  sign timings.
 
 Read the first failing step against the last passing one. When the server's
 cores approach what the host gives it while PostgreSQL has room, the server

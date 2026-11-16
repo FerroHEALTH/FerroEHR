@@ -753,7 +753,7 @@ async fn a_management_request_is_recorded_in_the_audit_trail() {
 
     let (pg, pool) = common::migrated_pool().await;
     let audit = common::local_audit();
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let service = Arc::new(common::binding_service(&pool).with_audit(sender));

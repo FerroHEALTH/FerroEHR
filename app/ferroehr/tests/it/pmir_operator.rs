@@ -307,13 +307,9 @@ async fn every_list_retry_and_settlement_is_an_access_record_naming_the_operator
     let db = testkit::db().await.expect("testkit database");
     let audit = ferroehr::system_log::config::AuditConfig {
         enabled: true,
-        store: ferroehr::system_log::config::StoreConfig {
-            enabled: true,
-            ..Default::default()
-        },
         ..Default::default()
     };
-    let (sender, handle) = ferroehr::system_log::sender::start(audit, None, Some(db.pool()))
+    let (sender, handle) = ferroehr::system_log::sender::start(audit, None, db.pool())
         .await
         .expect("the audit sender");
     let svc = consumer(&db, true).await.with_audit(sender);

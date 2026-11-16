@@ -6,7 +6,7 @@
 //! disclosed through `reverse_relationships`.
 //!
 //! The handler that knows what it served sets a response extension, and the
-//! audit middleware ([`crate::system_log::middleware`]) emits one record per
+//! audit middleware ([`crate::system_log::middleware`]) writes one record per
 //! entry beside the operation's own, so the caller identity stays in the one
 //! place that has it. No openEHR spec governs the audit trail: our own design,
 //! after IHE ATNA.
@@ -17,16 +17,15 @@ use axum::response::Response;
 
 use ferroehr::system_log::categories::{AccessedContent, ContentIds};
 use ferroehr::system_log::event::{
-    AuditEvent, EmitOutcome, EventActionCode, EventOutcome, EventType, ObjectClass, QueryNaming,
+    AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass, QueryNaming,
 };
 
 use crate::state::AppState;
 use crate::system_log::middleware::{AccessContext, Caller, fill_access, fill_common};
 
-/// Emit the access records for everything the response served beyond the
-/// addressed object: [`AuditServedEhrs`] and [`AuditServedParties`]. Returns
-/// whether any record was refused under `fail_mode = closed`.
-pub(super) fn emit(
+/// The access records for everything the response served beyond the
+/// addressed object: [`AuditServedEhrs`] and [`AuditServedParties`].
+pub(super) fn records(
     state: &AppState,
     resp: &Response,
     op: &'static str,
@@ -34,10 +33,12 @@ pub(super) fn emit(
     client_ip: Option<&str>,
     timestamp: jiff::Timestamp,
     access: &AccessContext,
-) -> bool {
-    let ehrs = emit_served_ehr_records(state, resp, op, caller, client_ip, timestamp, access);
-    let parties = emit_served_party_records(state, resp, op, caller, client_ip, timestamp, access);
-    ehrs || parties
+) -> Vec<AuditEvent> {
+    let mut records = served_ehr_records(state, resp, op, caller, client_ip, timestamp, access);
+    records.extend(served_party_records(
+        resp, op, caller, client_ip, timestamp, access, state,
+    ));
+    records
 }
 
 /// The EHRs a query served, each with its served-row count and the
@@ -70,13 +71,12 @@ pub struct AuditServedParties {
     pub parties: Vec<String>,
 }
 
-/// Emit one access record per EHR a query served, beside the statement's own
+/// One access record per EHR a query served, beside the statement's own
 /// operation record.
 ///
 /// The statement record answers "who ran what"; these answer "whose record was
 /// disclosed", which is the question NEN 7513 and EHDS Art. 9 put per record.
-/// Returns whether any record was refused under `fail_mode = closed`.
-fn emit_served_ehr_records(
+fn served_ehr_records(
     state: &AppState,
     resp: &Response,
     op: &'static str,
@@ -84,16 +84,16 @@ fn emit_served_ehr_records(
     client_ip: Option<&str>,
     timestamp: jiff::Timestamp,
     access: &AccessContext,
-) -> bool {
+) -> Vec<AuditEvent> {
     let Some(AuditServedEhrs {
         served,
         content,
         query,
     }) = resp.extensions().get::<AuditServedEhrs>()
     else {
-        return false;
+        return Vec::new();
     };
-    let mut rejected = false;
+    let mut records = Vec::with_capacity(served.len());
     for (ehr_id, rows) in served {
         let mut event = AuditEvent::new(
             EventActionCode::Read,
@@ -113,27 +113,26 @@ fn emit_served_ehr_records(
                 .audit_classify(&AccessedContent::Objects(objects.clone()), event.action)
         });
         fill_access(&mut event, access, state);
-        rejected |= state.backend().emit(event) == EmitOutcome::Rejected;
+        records.push(event);
     }
-    rejected
+    records
 }
 
-/// Emit one access record per party a read disclosed beside the one it
+/// One access record per party a read disclosed beside the one it
 /// addressed ([`AuditServedParties`]), under the operation's own event type.
-/// Returns whether any record was refused under `fail_mode = closed`.
-fn emit_served_party_records(
-    state: &AppState,
+fn served_party_records(
     resp: &Response,
     op: &'static str,
     caller: Caller<'_>,
     client_ip: Option<&str>,
     timestamp: jiff::Timestamp,
     access: &AccessContext,
-) -> bool {
+    state: &AppState,
+) -> Vec<AuditEvent> {
     let Some(AuditServedParties { parties }) = resp.extensions().get::<AuditServedParties>() else {
-        return false;
+        return Vec::new();
     };
-    let mut rejected = false;
+    let mut records = Vec::with_capacity(parties.len());
     for party in parties {
         let mut event = AuditEvent::new(
             EventActionCode::Read,
@@ -144,7 +143,7 @@ fn emit_served_party_records(
         fill_common(&mut event, caller, client_ip.map(str::to_owned), timestamp);
         event.object_id = Some(party.clone());
         fill_access(&mut event, access, state);
-        rejected |= state.backend().emit(event) == EmitOutcome::Rejected;
+        records.push(event);
     }
-    rejected
+    records
 }

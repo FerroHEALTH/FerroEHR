@@ -24,8 +24,8 @@ every access through the API is recorded, by `ehds-logging` and `ihe-atna`
 through `ferroehr::system_log`, in the local store, and retrieved through IHE
 ITI-81. The claims hold under the deployment posture the
 [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html)
-set for real data: the access log on, the local store on, and
-`[audit] fail_mode = "closed"`.
+set for real data: the access log on. Every record is written before its
+response, and an access whose record cannot be written is refused with `503`.
 
 | Claim | Stated performance | How it is checked |
 |---|---|---|

@@ -164,7 +164,7 @@ impl FerroEhrService {
                 }
             };
             if committed.skipped {
-                self.record_resend(ehr_id, &committed)?;
+                self.record_resend(ehr_id, &committed).await?;
             } else {
                 record_commit(&committed);
             }
@@ -185,8 +185,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// [`ServiceError::Unrecorded`] when the audit sender rejected the record
-    /// under `[audit] fail_mode = "closed"`.
-    fn record_resend(
+    /// that cannot be written.
+    async fn record_resend(
         &self,
         ehr_id: Option<EhrId>,
         committed: &Committed,
@@ -219,7 +219,7 @@ impl FerroEhrService {
             None => String::new(),
         };
         event.object_id = Some(format!("{}#sha256:{digest}", committed.version_uid()));
-        self.record_one_access(event)
+        self.record_one_access(event).await
     }
 }
 

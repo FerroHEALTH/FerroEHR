@@ -22,7 +22,6 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-use crate::system_log::sender::AuditSender;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
@@ -181,7 +180,7 @@ impl FerroEhrService {
         Ok(self
             .audit
             .as_ref()
-            .and_then(AuditSender::access_log)
+            .and_then(|sender| sender.store().access_log())
             .unwrap_or_else(|| AccessLogStore::new(audit_store.pool.clone())))
     }
 }

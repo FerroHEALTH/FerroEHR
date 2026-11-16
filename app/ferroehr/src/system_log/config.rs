@@ -5,45 +5,29 @@
 //! config tree ([`crate::config::FerroEhrConfig`]); no loader of its own.
 //!
 //! No openEHR spec governs configuration — our own design. The tree is
-//! sink-structured: the shared event/queue settings at the root, one
-//! sub-table per sink — `[audit.store]` (the local Audit Record Repository,
-//! the durability anchor, **on by default**), `[audit.syslog]` (the classic
+//! sink-structured: the shared event settings at the root, one sub-table per
+//! sink: `[audit.store]` (the local Audit Record Repository every record is
+//! written to before its access is reported, always on), `[audit.syslog]` (the classic
 //! IHE ITI-20 DICOM-over-syslog feed, opt-in), `[audit.fhir_feed]` (the
 //! RESTful-ATNA ITI-20 ATX:FHIR Feed, opt-in). Auditing itself is **on by
 //! default** with only the local store active: compliance out of the box,
 //! nothing leaves the node.
 
-use ferrohealth_config::units::{ByteSize, Duration};
+use ferrohealth_config::units::Duration;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::endpoint::EndpointSection;
 use serde::{Deserialize, Serialize};
 
 use ferrohealth_config::tls::TlsClientSection;
 
-/// Behaviour when an audit record cannot be enqueued/delivered.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(rename_all = "lowercase")]
-pub enum FailMode {
-    /// Log + meter the drop and let the request succeed (common ATNA default).
-    #[default]
-    Open,
-    /// Reject auditable operations with `503` when auditing cannot be
-    /// delivered — a full queue, or (with the store on) a store that stopped
-    /// accepting writes. No un-audited PHI access.
-    Closed,
-}
-
-/// The local Audit Record Repository (`[audit.store]`) — the PG-backed store
-/// ([`crate::system_log::store`]), the durability anchor of the subsystem.
+/// The local Audit Record Repository (`[audit.store]`): the PG-backed store
+/// ([`crate::system_log::store`]) every record is written to before its
+/// access is reported, always on while auditing is.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
 #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct StoreConfig {
-    /// Persist every record locally (`FERROEHR__AUDIT__STORE__ENABLED`).
-    /// **On by default** (owner posture: compliance out of the box).
-    pub enabled: bool,
     /// The time between two scheduled verifications of the store's hash chain
     /// (`FERROEHR__AUDIT__STORE__VERIFY_INTERVAL`); `"0s"` turns the schedule
     /// off. Default one hour.
@@ -78,7 +62,6 @@ pub struct StoreConfig {
 impl Default for StoreConfig {
     fn default() -> Self {
         Self {
-            enabled: true,
             // One hour: a run recomputes only the records written since the
             // last one, so the hour bounds how long damage to them goes
             // unreported; a week bounds it for older records.
@@ -155,16 +138,6 @@ pub struct SyslogConfig {
     /// identity for mutual TLS and the trust roots beside the platform's.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
     pub tls: TlsClientSection,
-    /// The directory of the `ihe-atna` spool every record is stored in before
-    /// it is sent (`FERROEHR__AUDIT__SYSLOG__SPOOL_DIR`), owner-only; unset,
-    /// the spool is held in memory and a restart loses what it holds.
-    pub spool_dir: Option<std::path::PathBuf>,
-    /// The most records the spool holds (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_EVENTS`).
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
-    pub spool_max_events: usize,
-    /// The most the spool holds in size (`FERROEHR__AUDIT__SYSLOG__SPOOL_MAX_SIZE`).
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
-    pub spool_max_size: ByteSize,
     /// `[audit.syslog.retry]`: the wait between two delivery attempts.
     pub retry: SinkRetry,
 }
@@ -177,9 +150,6 @@ impl Default for SyslogConfig {
                 ihe_atna::atna::syslog::TLS_PORT
             )),
             tls: TlsClientSection::default(),
-            spool_dir: None,
-            spool_max_events: 100_000,
-            spool_max_size: ByteSize::from_mib(256),
             retry: SinkRetry::default(),
         }
     }
@@ -215,9 +185,8 @@ impl SyslogConfig {
 /// HTTP `POST {url}/AuditEvent` of the FHIR R4 `AuditEvent` (IHE BALP shape)
 /// to an external Audit Record Repository. Present, records are shipped.
 ///
-/// `ihe-atna`'s forwarder delivers it. With the local store on it delivers
-/// from the store (`audit.fhir_feed_outbox`), so a down ARR loses
-/// nothing; with the store off it delivers from an in-memory spool.
+/// `ihe-atna`'s forwarder delivers it from the local store
+/// (`audit.fhir_feed_outbox`), so a down ARR loses nothing.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(default, deny_unknown_fields)]
@@ -280,21 +249,12 @@ pub struct AuditConfig {
     /// Rejected accesses (401/403) are always recorded.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub suppress_login_events: bool,
-    /// Failure mode (`FERROEHR__AUDIT__FAIL_MODE`): `open` | `closed`.
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "trust")))]
-    pub fail_mode: FailMode,
-    /// Enrich the patient participant via a background indexed lookup of
-    /// `ehr.subject_id` (`FERROEHR__AUDIT__RESOLVE_SUBJECT`). On by default —
-    /// the IHE BALP `Patient*` patterns and the patient-centric audit search
-    /// need the subject; the lookup runs only on the background drain.
+    /// Enrich the patient participant through an indexed lookup of
+    /// `ehr.subject_id` (`FERROEHR__AUDIT__RESOLVE_SUBJECT`), memoized per
+    /// EHR. On by default: the IHE BALP `Patient*` patterns and the
+    /// patient-centric audit search need the subject.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub resolve_subject: bool,
-    /// Bounded audit queue capacity (`FERROEHR__AUDIT__QUEUE_CAPACITY`).
-    /// Sized for write-path bursts: the drain persists in multi-row batches,
-    /// so the queue only needs to ride out sink latency spikes, but a loaded
-    /// write path can enqueue thousands per second.
-    #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
-    pub queue_capacity: usize,
     /// This node's advertised network address → the destination
     /// network-access-point (`FERROEHR__AUDIT__SERVER_HOST`); the
     /// `value_if_missing` fill when unset.
@@ -372,9 +332,7 @@ impl Default for AuditConfig {
             source_id: "ferroehr".to_owned(),
             value_if_missing: "UNKNOWN".to_owned(),
             suppress_login_events: true,
-            fail_mode: FailMode::default(),
             resolve_subject: true,
-            queue_capacity: 8192,
             server_host: None,
             purpose_header: "x-purpose-of-use".to_owned(),
             permit_header: "x-data-permit".to_owned(),
@@ -392,19 +350,15 @@ impl Default for AuditConfig {
 /// The audit posture a deployment runs under, as boot, `/health/readiness` and
 /// `/management/info` report it.
 ///
-/// Two of its states are legitimate to run and wrong to run silently (#3238):
-/// auditing off leaves no access log and no EHDS logging component, and
-/// `fail_mode = "open"` drops a record the queue cannot take while the request
-/// succeeds. Each is stated once as a [caution](Self::cautions), the same
-/// sentence on every surface, so a collector can alert on it without parsing.
+/// Auditing off is legitimate to run and wrong to run silently (#3238): it
+/// leaves no access log and no EHDS logging component. It is stated once as
+/// a [caution](Self::cautions), the same sentence on every surface, so a
+/// collector can alert on it without parsing. With auditing on, every access
+/// is refused that cannot be recorded, so no other posture needs a caution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct AuditPosture {
     /// The `[audit] enabled` master switch.
     pub enabled: bool,
-    /// The behaviour when a record cannot be taken.
-    pub fail_mode: FailMode,
-    /// Whether the local Audit Record Repository is on.
-    pub local_store: bool,
 }
 
 impl AuditPosture {
@@ -413,46 +367,30 @@ impl AuditPosture {
     pub fn of(config: &AuditConfig) -> Self {
         Self {
             enabled: config.enabled,
-            fail_mode: config.fail_mode,
-            local_store: config.store.enabled,
         }
     }
 
-    /// The postures worth a warning, as the one sentence every surface shows.
-    ///
-    /// Empty when auditing is on and fails closed. Order is severity: a
-    /// disabled trail makes the fail mode moot, so it is the only caution then.
+    /// The postures worth a warning, as the one sentence every surface shows;
+    /// empty when auditing is on.
     #[must_use]
     pub fn cautions(self) -> Vec<&'static str> {
-        if !self.enabled {
-            return vec![
-                "auditing is disabled: no access log is written and the EHDS logging \
-                 component is off (set [audit] enabled = true)",
-            ];
+        if self.enabled {
+            return Vec::new();
         }
-        match self.fail_mode {
-            FailMode::Open => vec![
-                "fail_mode is open: a record the audit queue cannot take is dropped and \
-                 metered while the request succeeds (set [audit] fail_mode = \"closed\" to \
-                 refuse an unrecorded access with 503)",
-            ],
-            FailMode::Closed => Vec::new(),
-        }
+        vec![
+            "auditing is disabled: no access log is written and the EHDS logging \
+             component is off (set [audit] enabled = true)",
+        ]
     }
 
     /// The one-line summary the readiness indicator carries when the trail is on.
     #[must_use]
     pub fn summary(self) -> String {
-        let store = if self.local_store {
-            "local store on"
+        if self.enabled {
+            "every access is recorded before it is reported".to_owned()
         } else {
-            "local store off"
-        };
-        let mode = match self.fail_mode {
-            FailMode::Open => "open",
-            FailMode::Closed => "closed",
-        };
-        format!("fail_mode={mode}; {store}")
+            "auditing is disabled".to_owned()
+        }
     }
 }
 
@@ -464,7 +402,6 @@ mod tests {
     fn defaults_are_on_with_store_only() {
         let c = AuditConfig::default();
         assert!(c.enabled, "auditing is on by default (owner posture)");
-        assert!(c.store.enabled, "the local store is the default sink");
         assert!(c.syslog.is_none(), "forwarding is opt-in");
         assert!(c.fhir_feed.is_none(), "forwarding is opt-in");
         // RFC 5425 §4.1: syslog over TLS listens on 6514, the one transport
@@ -474,7 +411,6 @@ mod tests {
         assert_eq!(c.value_if_missing, "UNKNOWN");
         assert!(c.suppress_login_events);
         assert!(c.resolve_subject);
-        assert_eq!(c.fail_mode, FailMode::Open);
         assert_eq!(
             FhirFeedConfig::default().endpoint.retry.max_backoff,
             Duration::from_mins(1)

@@ -17,7 +17,7 @@ use std::time::Duration;
 use axum::Router;
 use ferroehr::party_binding::grants::operation::Operation;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig};
+use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender::start;
 use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
 use ferrohealth_smart::config::IssuerEntry;
@@ -64,17 +64,13 @@ async fn app(delegates: &[&str], audited: bool) -> (testkit::TestDb, PgPool, Rou
         let audit = AuditConfig {
             enabled: true,
             store: StoreConfig {
-                enabled: true,
                 ..StoreConfig::default()
             },
             syslog: None,
             suppress_login_events: true,
-            fail_mode: FailMode::Open,
             ..AuditConfig::default()
         };
-        let (sender, _handle) = start(audit, None, Some(pool.clone()))
-            .await
-            .expect("audit start");
+        let (sender, _handle) = start(audit, None, pool.clone()).await.expect("audit start");
         service = service.with_audit(sender);
     }
     let router = common::router_with(config, Arc::new(service)).await;

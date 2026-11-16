@@ -214,7 +214,7 @@ The README badges come from the runs on `main`: every push and the twice-weekly 
 
 The one deployment runs the SMART resource-server role with a trusted test
 issuer, digest version signing, and FerroTERM as its terminology server, in the
-**fail-open** posture.
+**fail-open** terminology posture.
 
 - **SMART is part of the posture.** The tokens the SMART documents present are
   signed by a committed test issuer: public test key material for the harness,

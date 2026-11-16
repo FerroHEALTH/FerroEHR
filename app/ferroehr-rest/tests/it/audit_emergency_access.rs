@@ -73,7 +73,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
             })
         })
     });
-    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(

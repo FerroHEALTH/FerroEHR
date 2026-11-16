@@ -166,7 +166,8 @@ impl FerroEhrService {
             EventActionCode::Delete,
             format!("party:{}#contacts", party.0),
             None,
-        )?;
+        )
+        .await?;
         Ok(true)
     }
 }

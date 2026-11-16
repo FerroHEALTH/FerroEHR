@@ -201,21 +201,24 @@ fn token(system: AuditTokenSystem, code: Option<&str>) -> AuditToken {
     }
 }
 
-/// The FHIR Feed reads a record back by the same columns the search does,
-/// after the outbox id it delivers the record by.
+/// Each sink that delivers from the store reads a record back by the same
+/// columns the search does, after the outbox id it delivers the record by.
 #[test]
-fn the_feed_reads_every_record_column() {
-    let selected: Vec<&str> = super::OLDEST_OWED
-        .split(" FROM ")
-        .next()
-        .unwrap_or_default()
-        .trim_start_matches("SELECT")
-        .split(',')
-        .map(|column| column.trim().trim_start_matches("e."))
-        .collect();
-    let (owed, record) = selected.split_first().expect("the select list");
-    assert_eq!(*owed, "o.id AS owed");
-    assert_eq!(record, RECORD_COLUMNS);
+fn every_sink_reads_every_record_column() {
+    for sink in [super::outbox::Sink::FhirFeed, super::outbox::Sink::Syslog] {
+        let selected: Vec<&str> = sink
+            .oldest()
+            .split(" FROM ")
+            .next()
+            .unwrap_or_default()
+            .trim_start_matches("SELECT")
+            .split(',')
+            .map(|column| column.trim().trim_start_matches("e."))
+            .collect();
+        let (owed, record) = selected.split_first().expect("the select list");
+        assert_eq!(*owed, "o.id AS owed");
+        assert_eq!(record, RECORD_COLUMNS, "{sink:?}");
+    }
 }
 
 /// A rendered document with an agent, the patient and an object entity.

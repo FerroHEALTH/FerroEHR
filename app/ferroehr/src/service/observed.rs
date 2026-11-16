@@ -34,13 +34,4 @@ impl FerroEhrService {
     pub fn ehr_access_held(&self) -> (u64, u64) {
         self.ehr_access.held_counts()
     }
-
-    /// The records waiting in the audit drain's queue; `None` when auditing
-    /// is off.
-    #[must_use]
-    pub fn audit_queued(&self) -> Option<u64> {
-        self.audit
-            .as_ref()
-            .map(|sender| u64::try_from(sender.queued()).unwrap_or(u64::MAX))
-    }
 }

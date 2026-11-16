@@ -82,9 +82,8 @@ guarded_handler! {
              body = serde_json::Value),
             (status = 405, description = "The admin API is disabled on this server.",
              body = serde_json::Value),
-            (status = 503, description = "The access record could not be written under \
-                                          `audit.fail_mode = \"closed\"`; the values are \
-                                          withheld.",
+            (status = 503, description = "The access record could not be written; the \
+                                          values are withheld.",
              body = serde_json::Value)
         )
     )]

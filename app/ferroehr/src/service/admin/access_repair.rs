@@ -72,8 +72,7 @@ impl FerroEhrService {
     ///   first defect.
     /// - `version_conflict` — the `EHR_ACCESS` moved on while the repair ran.
     /// - `exception` — a database fault (rolled back).
-    /// - `service_overloaded` — the access record was refused under
-    ///   `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — the access record could not be written.
     pub async fn repair_ehr_access_settings(
         &self,
         ehr_id: EhrId,
@@ -94,7 +93,8 @@ impl FerroEhrService {
                 "EHR_ACCESS settings repair",
             )
             .await?;
-        self.emit_mark_access(EventActionCode::Update, ehr_id, Some(vo_id), ACT)?;
+        self.emit_mark_access(EventActionCode::Update, ehr_id, Some(vo_id), ACT)
+            .await?;
         Ok(self.version_meta(
             ehr_id,
             committed.vo_id,
@@ -122,8 +122,7 @@ impl FerroEhrService {
     /// - `version_conflict` (`412`) — `preceding_version_uid` is not the
     ///   current version, or the `EHR_ACCESS` moved on while the commit ran.
     /// - `exception` — a database fault (rolled back).
-    /// - `service_overloaded` — the access record was refused under
-    ///   `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — the access record could not be written.
     pub async fn commit_ehr_access_settings(
         &self,
         ehr_id: EhrId,
@@ -146,7 +145,8 @@ impl FerroEhrService {
                 "EHR_ACCESS settings committed on the person's instruction",
             )
             .await?;
-        self.emit_mark_access(EventActionCode::Update, ehr_id, None, SETTINGS)?;
+        self.emit_mark_access(EventActionCode::Update, ehr_id, None, SETTINGS)
+            .await?;
         Ok(self.version_meta(
             ehr_id,
             committed.vo_id,
@@ -164,8 +164,7 @@ impl FerroEhrService {
     /// - `ehr_id_does_not_exist` (`404`) — the EHR is unknown or has no
     ///   `EHR_ACCESS`.
     /// - `exception` — a database fault.
-    /// - `service_overloaded` — the access record was refused under
-    ///   `[audit] fail_mode = "closed"`.
+    /// - `service_overloaded` — the access record could not be written.
     pub async fn ehr_access_versions(
         &self,
         ehr_id: EhrId,
@@ -193,7 +192,8 @@ impl FerroEhrService {
             ));
         }
         versions.reverse();
-        self.emit_mark_access(EventActionCode::Read, ehr_id, None, SETTINGS)?;
+        self.emit_mark_access(EventActionCode::Read, ehr_id, None, SETTINGS)
+            .await?;
         Ok(versions)
     }
 

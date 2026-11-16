@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The render policy and context the drain writes under, replaced when the
+//! The render policy and context records are written under, replaced when the
 //! access policy's retention or the category register changes, and the
 //! retention reaper that reads the period in force on each run.
 //!
@@ -89,9 +89,9 @@ impl AuditSender {
     /// Write every record from now on under `retention`, the access log
     /// retention of the access policy in force.
     pub fn set_retention(&self, retention: &LogRetention) {
-        if let Some(store) = &self.inner.store {
-            store.change_render_policy(|policy| policy.retention = retention.clone());
-        }
+        self.inner
+            .store
+            .change_render_policy(|policy| policy.retention = retention.clone());
         self.inner
             .context
             .replace(|render| render.retention = retention.clone());
@@ -117,7 +117,7 @@ impl AuditSender {
         self.inner.context.retention()
     }
 
-    /// Have the drain's context render with `map` as its category map.
+    /// Have the context records are written under render with `map` as its category map.
     pub(super) fn set_context_categories(&self, map: &CategoryMapConfig) {
         self.inner
             .context

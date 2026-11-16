@@ -358,14 +358,12 @@ record:**
 > ship audit records to your log platform for convenience, that copy is a
 > convenience, not the record.
 
-The audit trail's own failure behaviour is configurable, and the default is worth
-knowing rather than inheriting: **`config.audit.fail_mode` defaults to `open`**, so
-an operation whose audit record cannot be written still proceeds, and the failure
-is metered rather than refused. `closed` answers `503` instead, the stronger
-compliance posture, and one that turns an audit outage into a clinical outage.
-Which is correct depends on whether your regulatory position can tolerate an
-unaudited access more or less than a refused one; it is a policy choice either way,
-and the shipped default chooses availability.
+The audit trail's own failure behaviour is fixed: every record is written
+before its response, and an operation whose record cannot be written is
+refused with `503`. An audit database outage is therefore a clinical outage,
+and the audit database belongs in the same availability plan as the clinical
+one. EHDS Annex II 3.2 asks for a record of every access event, so FerroEHR
+offers no setting that serves an access it did not record.
 
 **Cluster API audit logging is the operator's.** Enable it on the API server with
 an audit policy (`None` / `Metadata` / `Request` / `RequestResponse` per rule).

@@ -51,10 +51,9 @@ async fn restricted_to(pool: &PgPool, user: &str) -> Value {
 /// [`HELD`], whose stored settings no longer parse, and [`OPEN`].
 async fn app() -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
-    let (sender, _handle): (_, AuditHandle) =
-        start(common::local_audit(), None, Some(pool.clone()))
-            .await
-            .expect("the audit sender");
+    let (sender, _handle): (_, AuditHandle) = start(common::local_audit(), None, pool.clone())
+        .await
+        .expect("the audit sender");
     let svc = common::binding_service(&pool)
         .with_audit(sender)
         .with_audit_store(AuditStore::new(pool.clone()));

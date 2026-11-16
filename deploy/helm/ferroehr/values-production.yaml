@@ -30,8 +30,7 @@
 #                                and the server verifies it on
 #                                database.<domain>.migrateExistingSecret below.
 #   open_subject_namespace       made: privacy.subject_namespaces is declared.
-#   audit_off                    made: the audit trail is on with its local store.
-#   audit_fails_open             made: audit.fail_mode is `closed`.
+#   audit_off                    made: the audit trail is on.
 #   open_ehr_access_default      made: authz.rbac.ehr_access_default is `restricted`.
 #   migrate_on_runtime_credential made: db.migrate is `verify`; the migration Job
 #                                prepares the schema on its own credential.
@@ -154,11 +153,9 @@ config:
   # own (extraEnv below).
 
   audit:
-    # Refuse an auditable operation with 503 when its record cannot be queued.
-    fail_mode: closed
-    # The local store, stated as a claimed separation.
-    store:
-      enabled: true
+    # The audit trail, stated as a claimed separation; it refuses an access
+    # it cannot record.
+    enabled: true
   pixm:
     assigning_authority: urn:oid:2.999.7.1
     endpoint:
