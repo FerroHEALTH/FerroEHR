@@ -31,36 +31,32 @@ impl Builder<'_> {
         // gate: GDPR Art. 18(2) leaves storage as the only processing a
         // restriction admits (`docs/law/eu/gdpr/text.html`), so naming the
         // `ehr_id` does not make the content answerable.
-        for alias in self.ehr_alias.values().cloned().collect::<Vec<_>>() {
-            self.q.and_where(col(&alias, Ehr::RestrictedAt).is_null());
+        for alias in self.ehr_alias.values() {
+            self.q.and_where(col(alias, Ehr::RestrictedAt).is_null());
         }
         // Multi-EHR scoping restricts every VO root and every EHR source. A
         // bare `FROM EHR e` (no CONTAINS) has no VO root — the scope
         // must bind the EHR source itself, or a scoped query would run
         // over the whole population (ITS-REST query Request.md: `ehr_id`
         // "used to execute the query within a single EHR context").
-        let roots = self.group_roots.clone();
-        let ehrs = self.ehr_alias.values().cloned().collect::<Vec<_>>();
-        let scoped = roots
-            .iter()
-            .map(|root| col(root, Node::EhrId))
-            .chain(ehrs.iter().map(|alias| col(alias, Ehr::Id)));
-        for cond in scoped
-            .filter_map(|target| self.ehr_ids_cond(target))
-            .collect::<Vec<_>>()
-        {
-            self.q.and_where(cond);
-        }
         // The access evaluator's per-EHR decision (RM ehr `ehr_access.adoc`
         // §`EHR_ACCESS` Class) binds every VO root and EHR source the way the
         // explicit scope does, so no query shape reaches an EHR it hides.
-        for cond in self
-            .accessed_ehr_ids()
+        let (ctx, gates) = (self.ctx, self.gates);
+        let targets = self
+            .group_roots
             .iter()
-            .filter_map(|t| self.gates.on_ehr_id(t))
-            .collect::<Vec<_>>()
-        {
-            self.q.and_where(cond);
+            .map(|root| col(root, Node::EhrId))
+            .chain(self.ehr_alias.values().map(|alias| col(alias, Ehr::Id)));
+        for target in targets {
+            if let Some(scoped) = scope_cond(ctx, target) {
+                self.q.and_where(scoped);
+            }
+        }
+        for target in self.accessed_ehr_ids() {
+            if let Some(gate) = gates.on_ehr_id(&target) {
+                self.q.and_where(gate);
+            }
         }
         // NOTE: our own design (#5746), a verdict the service judged on a copy of the EHR's
         // settings admits rows only while that copy's revision is the one in force.
@@ -116,11 +112,7 @@ impl Builder<'_> {
     /// §Frontend/Backend Protocol, Bind, whose parameter count is an `int16`,
     /// <https://www.postgresql.org/docs/18/protocol-message-formats.html>).
     pub(super) fn ehr_ids_cond(&self, target: Expr) -> Option<Expr> {
-        if self.ctx.ehr_ids.is_empty() {
-            return None;
-        }
-        let ids: Vec<Uuid> = self.ctx.ehr_ids.iter().map(|id| id.0).collect();
-        Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
+        scope_cond(self.ctx, target)
     }
 
     /// Every [`Self::apply_ehr_scope`] condition a versioned-object root puts
@@ -170,9 +162,9 @@ impl Builder<'_> {
         }
         // An EHR source already has its `ehr` row in the FROM — filter its
         // promoted `is_queryable` column directly.
-        for alias in self.ehr_alias.values().cloned().collect::<Vec<_>>() {
-            self.q.and_where(col(&alias, Ehr::IsQueryable).eq(true));
-            self.q.and_where(research_objection_clear(&alias));
+        for alias in self.ehr_alias.values() {
+            self.q.and_where(col(alias, Ehr::IsQueryable).eq(true));
+            self.q.and_where(research_objection_clear(alias));
         }
     }
 
@@ -210,4 +202,14 @@ impl Builder<'_> {
         self.q.and_where(col(&alias, Ehr::IsQueryable).eq(true));
         self.gate_ehr_marks(&alias);
     }
+}
+
+/// The explicit `ehr_ids` scope of `ctx` on the EHR id `target`
+/// ([`Builder::ehr_ids_cond`]).
+fn scope_cond(ctx: &super::SqlCtx, target: Expr) -> Option<Expr> {
+    if ctx.ehr_ids.is_empty() {
+        return None;
+    }
+    let ids: Vec<Uuid> = ctx.ehr_ids.iter().map(|id| id.0).collect();
+    Some(target.eq(Expr::from(PgFunc::any(Expr::val(ids)))))
 }

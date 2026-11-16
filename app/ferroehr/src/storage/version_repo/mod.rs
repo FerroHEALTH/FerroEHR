@@ -71,11 +71,64 @@ macro_rules! audit_of_version {
     };
 }
 
+/// The `version`⋈`audit` column list every version read selects, as a
+/// compile-time string concatenation so each query stays a static literal
+/// (`sqlx` 0.9 `SqlSafeStr` — no runtime SQL assembly).
+///
+/// The version's `ATTESTATION`s (RM common master06 §Attestation) are folded in
+/// as aggregated jsonb columns via a `LEFT JOIN LATERAL`, so one statement
+/// carries the whole version read instead of a second round trip per versioned
+/// read (empty in the common case → `[]`). The aggregates order by
+/// `time_committed, id`: attestations committed in one transaction share
+/// `now()`, so the `uuidv7()` `id` breaks ties in insertion order.
+///
+/// They arrive split on `at_committal`, the two halves standing in different
+/// relations to `VERSION.signature`: an attestation present at the act of
+/// committal is inside the version's signed canonical form ("serialising the
+/// entire Version object", master06 §Digital Signature) while one added later is
+/// not (§Attestation). The split uses the standard aggregate `FILTER` clause
+/// (<https://www.postgresql.org/docs/18/sql-expressions.html#SYNTAX-AGGREGATES>).
+///
+/// The version's canonical body is the row's own `v.body` column, materialized
+/// at write time from the same value the node rows decompose from, so a point
+/// read is one statement and one TOAST detoast rather than a node-subtree
+/// re-aggregation. `NULL` is a logically deleted version (RM common master06
+/// §Logical Deletion).
+macro_rules! version_select {
+    ($tail:literal) => {
+        concat!(
+            "SELECT v.vo_id, v.kind, v.ehr_id, v.sys_version, v.trunk_version, v.branch_number, ",
+            "v.branch_version, v.lifecycle_state, v.creating_system_id, v.preceding_version_uid, ",
+            "v.other_input_version_uids, v.contribution_id, v.template_id, v.signature, ",
+            "v.signature_client_supplied, v.wrapped_original, v.stable_compatible, v.origins, ",
+            "v.body, h.restricted_at, h.committed_at AS head_committed_at, (h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
+            access_revision!("v.ehr_id"), ", ",
+            "(SELECT COALESCE(n.data->>'archetype_node_id', ext.node_archetype_node_id(n.archetype, n.rm_version)) FROM node n WHERE n.tier = v.tier AND n.vo_id = v.vo_id ",
+            "AND n.sys_version = v.content_key AND n.num = 0) AS root_archetype, ",
+            "a.system_id, a.change_type, a.description, a.committer, a.attestation, ",
+            "a.time_committed, ",
+            "att.attestations_at_committal, att.attestations_after_committal ",
+            "FROM version v JOIN vo_head h ON h.vo_id = v.vo_id ",
+            audit_of_version!(),
+            "LEFT JOIN LATERAL (",
+            "SELECT coalesce(jsonb_agg(x.data ORDER BY x.time_committed, x.id) ",
+            "FILTER (WHERE x.at_committal), '[]'::jsonb) AS attestations_at_committal, ",
+            "coalesce(jsonb_agg(x.data ORDER BY x.time_committed, x.id) ",
+            "FILTER (WHERE NOT x.at_committal), '[]'::jsonb) AS attestations_after_committal ",
+            "FROM vo_attestation x ",
+            "WHERE x.vo_id = v.vo_id AND x.sys_version = v.sys_version",
+            ") att ON true ",
+            $tail
+        )
+    };
+}
+
 pub mod attestation;
 pub mod commit;
 pub mod contribution;
 pub mod ehr_access;
 pub mod import;
+pub mod judged;
 pub mod meta;
 pub mod placement;
 pub mod read;

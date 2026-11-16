@@ -492,7 +492,15 @@ abstract→concrete descendants — generated, not reflected, not hand-written)
 CONTAINS chains; `jsonb_path_query_first` for leaf extraction and
 `jsonb_path_query` as a lateral set-returning function for array unnesting;
 `ext.openehr_magnitude` and `ext.openehr_timestamp` for typed comparison and
-ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0). The emitter uses no
+ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0). A path whose candidate
+types are mixed (an `ELEMENT`'s whole `DATA_VALUE`) compares and orders by
+keys read off each value's own `_type` (`aql::sql::coerce`): a number against
+a JSON number or the magnitude of a whole numeric `DV_ORDERED`, an ISO 8601
+date/time against the instant of a whole `DV_DATE`, `DV_TIME` or
+`DV_DATE_TIME` of its kind, text against a JSON scalar, and never the
+serialized JSON; AQL 1.1.0 leaves this open, so the reading is our own
+(#5751). A Real binds as its shortest round-trip decimal cast to `numeric`,
+never through `float8` (#5753). The emitter uses no
 jsonpath item methods (their date/time conversions depend on the session
 TimeZone and are not index-legal), no `JSON_TABLE`, and no GIN index (it
 emits no GIN-servable operator; the baseline removed the index). The one
@@ -722,7 +730,12 @@ which is what makes an optional stage safe to disable:
    `refused-consent-reference-missing`, a fact of the `Caller` (#5614; the
    SMART layer checks scopes alone). An EHR id the store does not hold
    answers `404` before any step refuses, read only when a verdict refuses,
-   so a restriction's `404` is never told apart from it (#5623). A write is
+   so a restriction's `404` is never told apart from it (#5623). A
+   COMPOSITION read by its version or its latest is judged on the facts of
+   its object that the statement reading the version returns, after the read
+   and before anything of the version is served, so the read is one statement
+   and a refused read answers and is recorded as before (#5773, our own
+   design). A write is
    judged on the template, root archetype, origins and commit instant of the
    content it is about to store, inside the commit transaction and before
    anything is stored (#5626, `versioning::restriction::WriteGate`), by

@@ -30,9 +30,10 @@ use openehr_sdt::flat::error::FlatError;
 use openehr_sdt::flat::sim::flat::parse_flat;
 use openehr_sdt::flat::validation::validate_context;
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
+use openehr_sdt::flat::webtemplate::constraint::WebTemplateClosedAttribute;
 use openehr_sdt::flat::webtemplate::model::{
-    WebTemplate, WebTemplateCardinality, WebTemplateClosedAttribute, WebTemplateCodedValue,
-    WebTemplateInput, WebTemplateInputType, WebTemplateNode,
+    WebTemplate, WebTemplateCardinality, WebTemplateCodedValue, WebTemplateInput,
+    WebTemplateInputType, WebTemplateNode,
 };
 use openehr_sdt::rm_instance::{ValidationKind, ValidationMessage, validate_composition};
 use serde_json::{Map, Value, json};

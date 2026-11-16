@@ -21,9 +21,10 @@ use crate::aql::error::{AqlError, SqlError};
 use crate::aql::ir::LeafPath;
 use crate::db::iden::{VersionRow, VoAttestation};
 
+use super::coerce::coerce_value;
 use super::expr::{call, cast, col, hot, jsonb_path};
 use super::jsonpath::jsonpath_vars;
-use super::value::{ItemWalk, coerce_value, fragment_items};
+use super::value::{ItemWalk, fragment_items};
 use super::{Builder, ValueMode};
 
 impl Builder<'_> {
