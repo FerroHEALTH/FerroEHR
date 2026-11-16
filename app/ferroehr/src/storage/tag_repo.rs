@@ -113,6 +113,39 @@ pub async fn list_tags(
     rows.iter().map(tag_row).collect()
 }
 
+/// Both tag collections of one target in one scope, in one statement.
+///
+/// The container's and, when `version` names one, that VERSION's, each in the
+/// [`list_tags`] order. The two headers that carry them stay two (ITS-REST
+/// overview §"openehr-item-tag and openehr-version-item-tag"); one read
+/// saves a round trip on every read that serves both (#5776).
+///
+/// # Errors
+/// Returns [`StorageError::Database`] on a driver failure.
+pub async fn list_tag_sets(
+    pool: &PgPool,
+    ehr_scope: Option<EhrId>,
+    target_vo_id: VoId,
+    version: Option<&str>,
+) -> Result<(Vec<TagRow>, Vec<TagRow>), StorageError> {
+    let rows = sqlx::query(
+        "SELECT target_vo_id, target_version, target_type, key, value, target_path \
+         FROM item_tag \
+         WHERE ehr_id IS NOT DISTINCT FROM $1 AND target_vo_id = $2 \
+         AND (target_version IS NULL OR target_version = $3) \
+         ORDER BY key, target_path NULLS FIRST",
+    )
+    .bind(ehr_scope)
+    .bind(target_vo_id)
+    .bind(version)
+    .fetch_all(&mut *acquire(pool).await?)
+    .await?;
+    let rows = rows.iter().map(tag_row).collect::<Result<Vec<_>, _>>()?;
+    Ok(rows
+        .into_iter()
+        .partition(|row| row.target_version.is_none()))
+}
+
 /// Replaces the whole tag collection of one target in one scope.
 ///
 /// Drops the existing collection, inserts the given set (`PUT`

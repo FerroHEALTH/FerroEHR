@@ -41,6 +41,8 @@ pub const BINDING_REFUSALS: &str = "binding_refusals";
 pub const DB_POOL_CONNECTIONS: &str = "db_pool_connections";
 /// Database connection-acquire latency.
 pub const DB_POOL_ACQUIRE_DURATION: &str = "db_pool_acquire_duration";
+/// How long a request held each pooled connection it checked out (#5774).
+pub const DB_POOL_HOLD_DURATION: &str = "db_pool_hold_duration";
 /// Service transactions (`outcome`).
 pub const DB_TRANSACTIONS: &str = "db_transactions";
 /// AQL queries (`outcome`).
@@ -100,6 +102,12 @@ pub const PROCESS_RESIDENT_MEMORY: &str = "process_resident_memory";
 pub const DB_ACQUIRE_BUCKETS: &[f64] = &[
     0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0,
 ];
+/// How long a request holds a connection: 100 µs … 60 s, the statement
+/// timeout's reach.
+pub const DB_HOLD_BUCKETS: &[f64] = &[
+    0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5,
+    10.0, 60.0,
+];
 /// AQL query duration: 1 ms … 30 s.
 pub const AQL_DURATION_BUCKETS: &[f64] = &[
     0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0,
@@ -115,8 +123,24 @@ pub const AQL_DURATION_BUCKETS: &[f64] = &[
 pub fn histogram_views() -> Vec<(&'static str, &'static [f64])> {
     vec![
         (DB_POOL_ACQUIRE_DURATION, DB_ACQUIRE_BUCKETS),
+        (DB_POOL_HOLD_DURATION, DB_HOLD_BUCKETS),
         (AQL_QUERY_DURATION, AQL_DURATION_BUCKETS),
     ]
+}
+
+/// A latency histogram in seconds over `ladder`.
+fn seconds(
+    meter: &Meter,
+    name: &'static str,
+    description: &'static str,
+    ladder: &[f64],
+) -> Histogram<f64> {
+    meter
+        .f64_histogram(name)
+        .with_description(description)
+        .with_unit("s")
+        .with_boundaries(ladder.to_vec())
+        .build()
 }
 
 /// The instruments, built once and reachable from every emitting site.
@@ -132,6 +156,8 @@ pub struct Metrics {
     pub binding_refusals: Counter<u64>,
     /// Database connection-acquire latency, seconds.
     pub db_pool_acquire_duration: Histogram<f64>,
+    /// How long a request held each pooled connection, seconds.
+    pub db_pool_hold_duration: Histogram<f64>,
     /// Service transactions by outcome.
     pub db_transactions: Counter<u64>,
     /// AQL queries by outcome.
@@ -189,12 +215,19 @@ impl Metrics {
                 .u64_counter(BINDING_REFUSALS)
                 .with_description("Login-binding refusals by issuer and outcome")
                 .build(),
-            db_pool_acquire_duration: meter
-                .f64_histogram(DB_POOL_ACQUIRE_DURATION)
-                .with_description("Database connection acquire latency")
-                .with_unit("s")
-                .with_boundaries(DB_ACQUIRE_BUCKETS.to_vec())
-                .build(),
+            db_pool_acquire_duration: seconds(
+                meter,
+                DB_POOL_ACQUIRE_DURATION,
+                "Database connection acquire latency",
+                DB_ACQUIRE_BUCKETS,
+            ),
+            db_pool_hold_duration: seconds(
+                meter,
+                DB_POOL_HOLD_DURATION,
+                "How long a request held each pooled connection, from its checkout \
+                 to the handler's answer",
+                DB_HOLD_BUCKETS,
+            ),
             db_transactions: meter
                 .u64_counter(DB_TRANSACTIONS)
                 .with_description("Service transactions by outcome")
@@ -358,6 +391,7 @@ mod tests {
             BINDING_REFUSALS,
             DB_POOL_CONNECTIONS,
             DB_POOL_ACQUIRE_DURATION,
+            DB_POOL_HOLD_DURATION,
             DB_TRANSACTIONS,
             AQL_QUERIES,
             AQL_QUERY_DURATION,
@@ -393,7 +427,11 @@ mod tests {
     #[test]
     fn every_histogram_has_an_explicit_bucket_ladder() {
         let with_views: Vec<&str> = histogram_views().iter().map(|(name, _)| *name).collect();
-        for name in [DB_POOL_ACQUIRE_DURATION, AQL_QUERY_DURATION] {
+        for name in [
+            DB_POOL_ACQUIRE_DURATION,
+            DB_POOL_HOLD_DURATION,
+            AQL_QUERY_DURATION,
+        ] {
             assert!(
                 with_views.contains(&name),
                 "histogram {name} has no bucket view — it would take OTel's defaults"

@@ -1301,8 +1301,8 @@ async fn a_pooled_connection_applies_the_configured_statement_timeout() {
     let settings = db::DbConfig {
         url: ferrohealth_secret::secret_url::SecretUrl::new(db.url()),
         statement_timeout: ferrohealth_config::units::Duration::from_millis(12_345),
-        max_connections: 2,
-        min_connections: 0,
+        max_connections: Some(2),
+        min_connections: Some(0),
         ..db::DbConfig::default()
     };
 
