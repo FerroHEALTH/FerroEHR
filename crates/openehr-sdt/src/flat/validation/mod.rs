@@ -940,6 +940,7 @@ impl Validator {
                 {
                     for member in &members {
                         self.check_null_constraints(node, &member.null_constraints);
+                        self.check_element_existence(node, member);
                     }
                 }
             }
@@ -955,6 +956,39 @@ impl Validator {
             let attribute = constraint.id.trim_start_matches('_');
             if let Some(value) = element.get(attribute).filter(|v| !v.is_null()) {
                 self.walk(value, constraint);
+            }
+        }
+    }
+
+    /// Checks the mandatory existence of the attributes of an ELEMENT promoted to
+    /// its value (AOM 1.4 `master04-constraint_model_package.adoc` §existence),
+    /// which the value node's own walk cannot reach: `value` and `null_flavour`
+    /// are attributes of the ELEMENT, the parent of the promoted node.
+    fn check_element_existence(&mut self, element: &Value, promoted: &WebTemplateNode) {
+        if self.relax_lower_bounds {
+            return;
+        }
+        let Some(element_path) = promoted.aql_path.strip_suffix("/value") else {
+            return;
+        };
+        for ex in promoted.existence.iter().filter(|ex| ex.min >= 1) {
+            let Some(attribute) = ex
+                .path
+                .strip_prefix(element_path)
+                .and_then(|rest| rest.strip_prefix('/'))
+                .filter(|a| !a.contains(['/', '[']))
+            else {
+                continue;
+            };
+            if rm_declares_attribute(attribute) && presence::attr_absent(element, attribute) {
+                self.push(
+                    ex.path.clone(),
+                    format!(
+                        "mandatory attribute '{attribute}' is missing (existence {}..)",
+                        ex.min
+                    ),
+                    ValidationKind::Required,
+                );
             }
         }
     }

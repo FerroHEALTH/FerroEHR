@@ -386,7 +386,7 @@ fn extend_by_key<T, K: PartialEq>(acc: &mut Vec<T>, extra: Vec<T>, key: impl Fn(
 /// root). Hoists the always-/single-compactable wrapper children into `node`,
 /// recurses, and then applies the child-level fix-ups; returns `None` when the
 /// node itself collapses out.
-fn compact(mut node: WebTemplateNode, depth: usize) -> Option<WebTemplateNode> {
+pub(super) fn compact(mut node: WebTemplateNode, depth: usize) -> Option<WebTemplateNode> {
     // Medium: hoist ALWAYS/SINGLE-compactable wrapper children into this node.
     let children = std::mem::take(&mut node.children);
     let mut hoisted = Hoisted {

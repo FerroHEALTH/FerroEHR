@@ -31,12 +31,17 @@ const HEADING: &str = "encounter/demonstration:0/any_event/heading1:0";
 const NOW: &str = "2026-11-16T10:00:00Z";
 
 fn web_template() -> WebTemplate {
+    web_template_with(|xml| xml)
+}
+
+/// The `Demonstration.v1` web template, its OPT first passed through `edit`.
+fn web_template_with(edit: impl Fn(String) -> String) -> WebTemplate {
     let xml = std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/demonstration/Demonstration.v1.opt"
     ))
     .unwrap_or_else(|e| panic!("read Demonstration.v1 OPT: {e}"));
-    let opt = opt14::from_xml(&xml).unwrap_or_else(|e| panic!("parse OPT: {e}"));
+    let opt = opt14::from_xml(&edit(xml)).unwrap_or_else(|e| panic!("parse OPT: {e}"));
     build_web_template(&opt).unwrap_or_else(|e| panic!("build WT: {e}"))
 }
 
@@ -281,4 +286,49 @@ fn a_choice_keeps_its_alternatives_and_takes_a_null_flavour_on_the_element() {
     let back = composition_to_flat(&composition, &wt).expect("FLAT emits");
     let rebuilt = commits(&back, &wt);
     assert_eq!(element(&rebuilt, "at0025"), choice);
+}
+
+/// `Demonstration.v1` with the Boolean's `attribute` existence made `1..1`.
+fn web_template_mandating(attribute: &str) -> WebTemplate {
+    web_template_with(|xml| {
+        let marker = format!("<rm_attribute_name>{attribute}</rm_attribute_name>");
+        let (head, tail) = xml
+            .split_once("<node_id>at0016</node_id>")
+            .unwrap_or_else(|| panic!("the Boolean element"));
+        let (middle, rest) = tail
+            .split_once(&marker)
+            .unwrap_or_else(|| panic!("the Boolean's {attribute} attribute"));
+        // The first lower bound after the attribute name is its existence.
+        let rest = rest.replacen("<lower>0</lower>", "<lower>1</lower>", 1);
+        format!("{head}<node_id>at0016</node_id>{middle}{marker}{rest}")
+    })
+}
+
+#[test]
+fn a_promoted_element_keeps_its_mandatory_value() {
+    // AOM 1.4 §existence on the ELEMENT's `value`: the promotion must not hide it.
+    let wt = web_template_mandating("value");
+    let composition = composition_from_flat(&flat(&null_flavour_271()), &wt, NOW)
+        .unwrap_or_else(|e| panic!("FLAT builds: {e}"));
+    let findings = validate_composition(&composition, &wt);
+    assert!(
+        findings.iter().any(|f| f.kind == ValidationKind::Required
+            && f.path.ends_with("/items[at0016]/value")),
+        "{findings:#?}"
+    );
+    commits(&flat(&[("boolean", json!(true))]), &wt);
+}
+
+#[test]
+fn a_promoted_element_keeps_its_mandatory_null_flavour() {
+    let wt = web_template_mandating("null_flavour");
+    let composition = composition_from_flat(&flat(&[("boolean", json!(true))]), &wt, NOW)
+        .unwrap_or_else(|e| panic!("FLAT builds: {e}"));
+    let findings = validate_composition(&composition, &wt);
+    assert!(
+        findings.iter().any(|f| f.kind == ValidationKind::Required
+            && f.path.ends_with("/items[at0016]/null_flavour")),
+        "{findings:#?}"
+    );
+    commits(&flat(&null_flavour_271()), &wt);
 }
