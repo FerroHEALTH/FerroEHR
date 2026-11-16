@@ -439,9 +439,14 @@ pub async fn sync_heads(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), St
     sqlx::query(
         "INSERT INTO vo_head (vo_id, kind, ehr_id, tier, head_sys_version, \
              trunk_head_sys_version, trunk_head_content_key, lifecycle_state, template_id, \
-             committed_at) \
+             root_archetype, committed_at) \
          SELECT a.vo_id, t.kind, t.ehr_id, t.tier, a.head_sys_version, t.sys_version, \
-                t.content_key, t.lifecycle_state, t.template_id, t.committed_at \
+                t.content_key, t.lifecycle_state, t.template_id, \
+                (SELECT COALESCE(n.data ->> 'archetype_node_id', \
+                                 ext.node_archetype_node_id(n.archetype, n.rm_version)) \
+                 FROM node n WHERE n.tier = t.tier AND n.vo_id = a.vo_id \
+                   AND n.sys_version = t.content_key AND n.num = 0), \
+                t.committed_at \
          FROM (SELECT vo_id, max(sys_version) AS head_sys_version \
                FROM version WHERE vo_id = ANY($1) GROUP BY vo_id) a \
          JOIN LATERAL (SELECT kind, ehr_id, tier, sys_version, content_key, lifecycle_state, \
@@ -458,6 +463,7 @@ pub async fn sync_heads(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), St
              trunk_head_content_key = EXCLUDED.trunk_head_content_key, \
              lifecycle_state = EXCLUDED.lifecycle_state, \
              template_id = EXCLUDED.template_id, \
+             root_archetype = EXCLUDED.root_archetype, \
              committed_at = EXCLUDED.committed_at",
     )
     .bind(vo_ids)

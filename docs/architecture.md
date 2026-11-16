@@ -853,12 +853,22 @@ which is what makes an optional stage safe to disable:
    than the store admits no row. Whether the caller reads that EHR's
    `EHR_ACCESS` objects is decided from the same copy, so no settings row is
    probed for it either. Every other query keeps the class condition
-   and its probe of the settings row per object. Before it renders a verdict, the emitter
+   and its probe of the settings row per object, once per row (#5782): a root
+   linked to an `EHR` source has that source's id as its EHR id, and since an
+   admitted object is one its EHR reaches, the head condition of the linked
+   root decides the source's EHR too, so neither repeats the probe. The head
+   row carries the root archetype of the trunk head (`vo_head.root_archetype`,
+   written by every commit and import, `clinical/0048_head_root_archetype.sql`),
+   which an archetype or category scope compares instead of probing the root
+   node row. A condition whose every known class, closed verdict and default
+   admit every item, an administrator's, reduces exactly to "the EHR carries
+   no settings row of a class the condition does not know", one uncorrelated
+   subquery PostgreSQL hashes once. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the
    disjunction (a fact of the EHR, which may be unknown, is never folded). A
    scope that names an empty list covers nothing. Each `EXISTS` folded away is
-   one subquery fewer to plan (`aql::sql::access::simplified`, #5667). The request path
+   one subquery fewer to plan (`aql::sql::fold::simplified`, #5667). The request path
    adds no transaction: every fact is a copy, and a named object is read by
    its head row only when the verdict depends on the object. The procedure,
    its order and its codes are our own design; RM EHR IM §EHR Access only
@@ -1163,7 +1173,7 @@ which the performance gate's transactions-per-request measure refuses
 each login key's lookup of the side table (its parties, their states,
 markers, groups and represented subjects, under the date its states were
 judged on) and each bound `PERSON`'s name, read on a miss, listening on
-`ferroehr_party_binding`. Triggers of `party/0050` notify it with an empty
+`ferroehr_party_binding`. Triggers of `party/0051` notify it with an empty
 payload on any change of a key row, a membership, a representation or a key
 space's state, which drops every lookup, and with a `PERSON`'s container on
 a write of its version, which drops its name. A request whose own commit
