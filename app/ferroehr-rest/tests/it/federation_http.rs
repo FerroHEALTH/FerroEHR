@@ -397,7 +397,8 @@ async fn a_consent_conditioned_read_without_a_decision_reference_is_refused() {
 /// recorded through the gated refusal path as a failed user authentication
 /// (DICOM PS3.15 §A.5.1 `EventID` 110114) charged to the verified
 /// professional (Wabvpz Art. 15a(1) for the condition; the record is our own
-/// design, #5007).
+/// design, #5007). The read's own operation record (110110) is in the trail
+/// beside it, and the chainer may link either first.
 #[tokio::test]
 async fn a_consent_conditioned_read_without_a_decision_reference_is_recorded() {
     let conditioned = agreement(Accessor::Person).text("consent", "local");
@@ -410,15 +411,21 @@ async fn a_consent_conditioned_read_without_a_decision_reference_is_recorded() {
     );
     let pool = db.pool();
     for _ in 0..50 {
-        let recorded: Option<(String, String)> = sqlx::query_as(
+        let recorded: Vec<(String, String)> = sqlx::query_as(
             "SELECT event_code, issuer FROM audit.access_trail \
-             WHERE principal = 'hp-remote-1' AND summary IS NULL",
+             WHERE principal = 'hp-remote-1' AND summary IS NULL ORDER BY event_code",
         )
-        .fetch_optional(&pool)
+        .fetch_all(&pool)
         .await
         .expect("query");
-        if let Some(recorded) = recorded {
-            assert_eq!(recorded, ("110114".to_owned(), FEDERATION.to_owned()));
+        if recorded.len() >= 2 {
+            assert_eq!(
+                recorded,
+                [
+                    ("110110".to_owned(), FEDERATION.to_owned()),
+                    ("110114".to_owned(), FEDERATION.to_owned()),
+                ]
+            );
             return;
         }
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
