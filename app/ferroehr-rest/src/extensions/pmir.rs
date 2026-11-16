@@ -64,12 +64,17 @@ pub(crate) fn router(
         pix: Arc::clone(pix),
         source: source.into(),
     };
+    let backend = state.backend_handle();
     Some(
         Router::new()
             .route(FEED_PATH, post(receive).with_state(feed))
             .layer(from_fn_with_state(
                 state,
                 crate::system_log::middleware::middleware,
+            ))
+            .layer(from_fn_with_state(
+                backend,
+                crate::binding_changes::middleware,
             ))
             .layer(axum::middleware::from_fn(
                 crate::router::one_connection_per_request,

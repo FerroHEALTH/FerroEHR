@@ -44,6 +44,7 @@
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
 #![doc(test(attr(deny(warnings))))]
 pub mod api;
+mod binding_changes;
 pub mod config;
 pub mod extensions;
 pub mod formats;

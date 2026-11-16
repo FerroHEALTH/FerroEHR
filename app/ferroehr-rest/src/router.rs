@@ -178,6 +178,11 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     // Above the audit layer so an over-large body is refused before it is read,
     // buffered or audited; the stack's body limit is the ceiling of every route.
     let api = api.layer(from_fn_with_state(state.clone(), crate::limits::middleware));
+    // Around the authentication, whose first login may create a PERSON.
+    let api = api.layer(from_fn_with_state(
+        state.backend_handle(),
+        crate::binding_changes::middleware,
+    ));
     // Outermost, so every statement of the request, its authorization
     // lookups included, runs on the one connection each pool lent it.
     let api = api.layer(axum::middleware::from_fn(one_connection_per_request));
@@ -381,6 +386,10 @@ fn mount_public_surface(
             scim.layer(from_fn_with_state(
                 state.clone(),
                 crate::system_log::middleware::middleware,
+            ))
+            .layer(from_fn_with_state(
+                state.backend_handle(),
+                crate::binding_changes::middleware,
             ))
             .layer(axum::middleware::from_fn(one_connection_per_request)),
         );
