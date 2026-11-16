@@ -9,24 +9,22 @@
 //! every lookup compares `lower(archetype_id) = lower($1)`. No openEHR spec
 //! governs the SQL: our own design.
 
-use sqlx::Connection as _;
-use sqlx::PgPool;
+use sqlx::{PgConnection, PgPool};
 
 use crate::db::acquire::acquire;
 use crate::storage::error::StorageError;
 
 /// Store the ADL 1.4 source `adl` under `archetype_id`, removing any
-/// case-variant of the id in the same transaction, so a re-upload replaces.
+/// case-variant of the id on `tx`, the caller's transaction, so a re-upload
+/// replaces.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn replace_archetype(
-    pool: &PgPool,
+    tx: &mut PgConnection,
     archetype_id: &str,
     adl: &str,
 ) -> Result<(), StorageError> {
-    let mut conn = acquire(pool).await?;
-    let mut tx = conn.begin().await?;
     sqlx::query("DELETE FROM archetype_store WHERE lower(archetype_id) = lower($1)")
         .bind(archetype_id)
         .execute(&mut *tx)
@@ -36,7 +34,6 @@ pub async fn replace_archetype(
         .bind(adl)
         .execute(&mut *tx)
         .await?;
-    tx.commit().await?;
     Ok(())
 }
 
@@ -79,10 +76,13 @@ pub async fn archetype_ids(
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
-pub async fn delete_archetype(pool: &PgPool, archetype_id: &str) -> Result<bool, StorageError> {
+pub async fn delete_archetype(
+    conn: &mut PgConnection,
+    archetype_id: &str,
+) -> Result<bool, StorageError> {
     let deleted = sqlx::query("DELETE FROM archetype_store WHERE lower(archetype_id) = lower($1)")
         .bind(archetype_id)
-        .execute(&mut *acquire(pool).await?)
+        .execute(&mut *conn)
         .await?
         .rows_affected();
     Ok(deleted > 0)

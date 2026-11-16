@@ -82,3 +82,24 @@ pub(super) fn page_bounds(page: Page) -> (i64, Option<i64>) {
     let limit = page.limit().and_then(|l| i64::try_from(l).ok());
     (offset, limit)
 }
+
+impl crate::service::FerroEhrService {
+    /// Commit `tx`, a definition write in the clinical domain's store, with
+    /// the request's operation record reserved
+    /// ([`Self::commit_recorded`]).
+    ///
+    /// # Errors
+    /// As [`Self::commit_recorded`].
+    pub(super) async fn commit_definition(
+        &self,
+        tx: sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<(), crate::error::ServiceError> {
+        self.commit_recorded(
+            tx,
+            crate::db::domain::Domain::Clinical,
+            &crate::system_log::recorder::WriteFacts::default(),
+            Vec::new(),
+        )
+        .await
+    }
+}

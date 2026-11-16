@@ -126,8 +126,11 @@ impl HealthIndicator for MigrationsHealth {
 /// monitoring can see the silence instead of a missing row. With auditing on,
 /// an intake whose oldest record waits longer than [`INTAKE_LAG`] for the
 /// chainer reads `DEGRADED` with its age: the records are durable, and the
-/// chains and the sinks that deliver from them are behind. Neither flips
-/// readiness, only the aggregate to `DEGRADED`.
+/// chains and the sinks that deliver from them are behind. Records held
+/// longer than the reconciler's grace belong to a write whose process stopped
+/// before releasing them (#5762) and read `DEGRADED` with their count and
+/// age until a reconciler resolves them. None of these flips readiness, only
+/// the aggregate to `DEGRADED`.
 #[derive(Debug)]
 pub struct AuditHealth {
     sender: Option<AuditSender>,
@@ -172,7 +175,26 @@ impl HealthIndicator for AuditHealth {
                      component is off (set [audit] enabled = true)",
                 ));
             };
-            match sender.store().intake_age().await {
+            let store = sender.store();
+            let orphaned = match store
+                .held_longer_than(crate::system_log::sender::reconciler::GRACE)
+                .await
+            {
+                Ok(orphaned) => orphaned,
+                Err(e) => {
+                    tracing::error!(error = %e, "health: the audit reservations could not be read");
+                    return Outcome::degraded("the audit reservations could not be read");
+                }
+            };
+            if let Some((_, oldest)) = orphaned.first() {
+                return Outcome::degraded(format!(
+                    "{} audit reservations of stopped writes wait for the reconciler, the \
+                     oldest {}s; their records are stored and held",
+                    orphaned.len(),
+                    oldest.as_secs()
+                ));
+            }
+            match store.intake_age().await {
                 Ok(Some(age)) if age > INTAKE_LAG => Outcome::degraded(format!(
                     "the oldest audit record has waited {}s for the chainer; the records are \
                      stored and the chains are behind",

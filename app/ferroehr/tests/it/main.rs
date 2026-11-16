@@ -70,6 +70,7 @@ mod audit_ehds_mapping;
 mod audit_feed;
 mod audit_intake;
 mod audit_render_policy_shape;
+mod audit_reservation;
 mod audit_search_pages;
 mod audit_store;
 mod audit_text;

@@ -64,7 +64,7 @@ impl AccessLogStore {
         let taken = Instant::now();
         let rows: Vec<(i64, String)> = sqlx::query_as(
             "SELECT id, encode(content_digest, 'hex') FROM audit.access_log_intake \
-             ORDER BY id LIMIT $1",
+             WHERE reserved_by IS NULL ORDER BY id LIMIT $1",
         )
         .bind(i64::from(limit))
         .fetch_all(&mut *tx)
@@ -101,6 +101,8 @@ impl AccessLogStore {
         if let Some(seal) = seal {
             seal.write(&mut tx).await?;
         }
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         Ok(Round::Chained {
             entries: rows.len(),

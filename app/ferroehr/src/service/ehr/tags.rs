@@ -164,7 +164,13 @@ impl FerroEhrService {
             &new_tags,
         )
         .await?;
-        tx.commit().await?;
+        self.commit_recorded(
+            tx,
+            crate::db::domain::Domain::Clinical,
+            &crate::system_log::recorder::WriteFacts::default(),
+            Vec::new(),
+        )
+        .await?;
         stored
             .iter()
             .map(|r| Self::stored_item_tag(ehr_id, r))
@@ -247,8 +253,10 @@ impl FerroEhrService {
         // an EHR_STATUS container's tags (adjudicated).
         self.ensure_tag_target(ehr_id, target_vo_id, target_version, target_type)
             .await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         if !crate::storage::tag_repo::delete_tag(
-            &self.pool,
+            &mut tx,
             Some(ehr_id),
             target_vo_id,
             tag_target_tail(target_version),
@@ -261,7 +269,13 @@ impl FerroEhrService {
                 format!("item tag {key:?}"),
             ));
         }
-        Ok(())
+        self.commit_recorded(
+            tx,
+            crate::db::domain::Domain::Clinical,
+            &crate::system_log::recorder::WriteFacts::default(),
+            Vec::new(),
+        )
+        .await
     }
 
     /// One stored tag row as the RM `ITEM_TAG` it is (`item_tag.adoc`): `key`,

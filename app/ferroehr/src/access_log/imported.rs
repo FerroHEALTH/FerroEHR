@@ -127,6 +127,8 @@ impl AccessLogStore {
             .execute(&mut *tx)
             .await?;
         }
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         Ok(u64::try_from(rows.len()).unwrap_or(u64::MAX))
     }

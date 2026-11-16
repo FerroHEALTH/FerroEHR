@@ -214,7 +214,13 @@ impl FerroEhrService {
             &new_tags,
         )
         .await?;
-        tx.commit().await?;
+        self.commit_recorded(
+            tx,
+            crate::db::domain::Domain::Party,
+            &crate::system_log::recorder::WriteFacts::default(),
+            Vec::new(),
+        )
+        .await?;
         let sid = self.effective_system_id();
         stored
             .iter()
@@ -237,20 +243,22 @@ impl FerroEhrService {
     ) -> Result<(), ServiceError> {
         self.ensure_party_tag_target(kind, vo_id, target_version)
             .await?;
-        if !tag_repo::delete_tag(
-            &self.demographic_pool,
-            None,
-            vo_id,
-            tag_target_tail(target_version),
-            key,
-        )
-        .await?
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
+        if !tag_repo::delete_tag(&mut tx, None, vo_id, tag_target_tail(target_version), key).await?
         {
             return Err(ServiceError::not_found(
                 Missing::VersionedObject,
                 format!("item tag {key:?}"),
             ));
         }
+        self.commit_recorded(
+            tx,
+            crate::db::domain::Domain::Party,
+            &crate::system_log::recorder::WriteFacts::default(),
+            Vec::new(),
+        )
+        .await?;
         Ok(())
     }
 }

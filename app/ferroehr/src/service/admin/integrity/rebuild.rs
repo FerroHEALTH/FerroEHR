@@ -294,7 +294,17 @@ impl FerroEhrService {
         if let Some(reason) = archive_reason {
             tier::freeze(&mut tx, &[vo_id], reason.as_deref()).await?;
         }
-        tx.commit().await?;
+        let domain = match domain {
+            StorageDomain::Clinical => crate::db::domain::Domain::Clinical,
+            StorageDomain::Demographic => crate::db::domain::Domain::Party,
+        };
+        self.commit_recorded(
+            tx,
+            domain,
+            &crate::system_log::recorder::WriteFacts::default(),
+            Vec::new(),
+        )
+        .await?;
         Ok(outcome)
     }
 }

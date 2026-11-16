@@ -284,8 +284,11 @@ impl Checkpoints {
             vec![crate::access_log::intake::IntakeEntry::of(
                 &mut entry, None,
             )?],
+            None,
         )
         .await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await.map_err(AccessLogError::from)?;
         self.store()
             .settle(crate::access_log::chainer::Owed::default())

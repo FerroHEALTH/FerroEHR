@@ -1926,6 +1926,7 @@ async fn drop_owned_schemas(
             .execute(&mut *tx)
             .await?;
     }
+    // NOTE: our own design (#5762), a schema reset outside any request.
     tx.commit().await?;
     Ok((database, schemas, instance_id))
 }

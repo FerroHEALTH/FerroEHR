@@ -83,11 +83,11 @@ impl Background {
         self.handle.spawn(task)
     }
 
-    /// A pool over the audit store of `pool`, opened in the audit runtime's
+    /// A pool over the `domain` of `pool`, opened in the audit runtime's
     /// context.
-    pub(super) fn pool_over(&self, pool: &PgPool) -> PgPool {
+    pub(super) fn pool_over(&self, pool: &PgPool, domain: crate::db::domain::Domain) -> PgPool {
         let _entered = self.handle.enter();
-        crate::db::domain_pool_from(pool, crate::db::domain::Domain::Audit)
+        crate::db::domain_pool_from(pool, domain)
     }
 
     /// End the runtime once the tasks on it have been stopped.

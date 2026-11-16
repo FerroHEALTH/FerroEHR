@@ -278,10 +278,11 @@ const INTAKE: &str = "WITH shared AS (INSERT INTO audit.access_log_shared (diges
      INSERT INTO audit.access_log_intake (record_type, uid, time_recorded, \
      content, shared, content_digest, ehr_id, party_id, retain_until, action_terminology, \
      action_code, result_terminology, result_code, recorded_at, action, outcome, principal, \
-     patient_id, resource_id, request_id, client_ip, index_ehr_id, search_tokens, render_policy) \
+     patient_id, resource_id, request_id, client_ip, index_ehr_id, search_tokens, render_policy, \
+     reserved_by) \
      SELECT u.c1, u.c2::uuid, u.c3::timestamptz, u.c4, decode(u.c5, 'hex'), decode(u.c6, 'hex'), \
      u.c7, u.c8, u.c9::date, u.c10, u.c11, u.c12, u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, \
-     u.c19, u.c20, u.c21, u.c22, u.c23::integer[], u.c24 \
+     u.c19, u.c20, u.c21, u.c22, u.c23::integer[], u.c24, $27::uuid \
      FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], \
      $7::text[], $8::text[], $9::text[], $10::text[], $11::text[], $12::text[], $13::text[], \
      $14::timestamptz[], $15::text[], $16::smallint[], $17::text[], $18::text[], $19::text[], \
@@ -290,15 +291,19 @@ const INTAKE: &str = "WITH shared AS (INSERT INTO audit.access_log_shared (diges
      c20, c21, c22, c23, c24, n) \
      ORDER BY u.n";
 
-/// Write `entries` into the intake on `conn`, in their order, with the
-/// shared parts they name, in one statement; the caller's transaction
-/// commits them.
+/// Write `entries` into the intake on `conn`, in their order, in one
+/// statement.
+///
+/// The shared parts they name go in with them, and they are held under
+/// `reserved_by` when it names a reservation (#5762); the caller's
+/// transaction commits them.
 ///
 /// # Errors
 /// The store errors when a statement fails.
 pub async fn take_in(
     conn: &mut PgConnection,
     entries: Vec<IntakeEntry>,
+    reserved_by: Option<uuid::Uuid>,
 ) -> Result<(), AccessLogError> {
     if entries.is_empty() {
         return Ok(());
@@ -340,6 +345,7 @@ pub async fn take_in(
         .bind(c.policies)
         .bind(keys)
         .bind(texts)
+        .bind(reserved_by)
         .execute(&mut *conn)
         .await?;
     Ok(())

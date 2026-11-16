@@ -321,13 +321,12 @@ impl FerroEhrService {
         .bind(&message.message_id)
         .execute(&mut *tx)
         .await?;
-        self.record_party_access(
+        let record = self.party_record(
             EventActionCode::Update,
             format!("{}:{}", super::operator::OBJECT, message.message_id),
             None,
-        )
-        .await?;
-        tx.commit().await?;
+        );
+        self.commit_party_recorded(tx, vec![record]).await?;
         tracing::info!(
             changes = message.events.len(),
             "an ITI-93 message is applied"

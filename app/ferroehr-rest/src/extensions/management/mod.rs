@@ -326,6 +326,7 @@ pub fn router(state: ManagementState) -> Router {
 /// classification table names.
 async fn stamp_audit_op(req: Request, next: Next) -> Response {
     let op = audit_op_for(req.method(), req.uri().path());
+    crate::system_log::written::learn_op(op);
     let mut resp = next.run(req).await;
     resp.extensions_mut()
         .insert(crate::system_log::middleware::AuditOpId(op));

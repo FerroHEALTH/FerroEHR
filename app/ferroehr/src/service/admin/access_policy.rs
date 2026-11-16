@@ -326,17 +326,18 @@ impl FerroEhrService {
             .execute(&mut *tx)
             .await
             .map_err(ServiceError::Database)?;
-        tx.commit().await.map_err(ServiceError::Database)?;
+        let mut records = Vec::new();
+        if log_meaning_changed {
+            let version_uid = object_version_id(VoId(vo_id), &system_id, TreeId::trunk(version));
+            let mut event = log_meaning_event(&version_uid, previous.is_none());
+            self.stamp_one_access(&mut event);
+            records.push(event);
+        }
+        self.commit_clinical_recorded(tx, records).await?;
         self.read_access_policy().await?;
         let written = self.access_policy_current().await?.ok_or_else(|| {
             ServiceError::exception("the access policy version just committed does not read")
         })?;
-        if log_meaning_changed {
-            let mut event = log_meaning_event(&written.version_uid, previous.is_none());
-            self.stamp_one_access(&mut event);
-            // TODO(#5762): the record joins the policy commit through its durable reservation.
-            self.record_events(vec![event]).await?;
-        }
         Ok(written)
     }
 }

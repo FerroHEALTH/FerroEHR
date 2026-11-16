@@ -60,9 +60,8 @@ impl FerroEhrService {
             .ok_or_else(|| {
                 ServiceError::not_found(Missing::VersionedObject, format!("PERSON {party}"))
             })?;
-        let read = self
-            .read_party(PartyKind::Person, party, Some(current.tree), None)
-            .await?;
+        let read =
+            Box::pin(self.read_party(PartyKind::Person, party, Some(current.tree), None)).await?;
         let mut body = read.body;
         let template = body
             .pointer("/archetype_details/template_id/value")
@@ -91,23 +90,37 @@ impl FerroEhrService {
             to: (to.issuer.clone(), to.value.clone()),
         };
         let precondition = Precondition::parse(None, Some(current.tree))?;
-        rekey(
+        let object_id = format!(
+            "party:{}#binding-key:{}|{}>{}|{}",
+            party.0, from.issuer, from.value, to.issuer, to.value
+        );
+        let record = self.party_record(EventActionCode::Update, object_id, None);
+        // NOTE: our own design (#5762), the re-key's record joins the commit of the new
+        // version, so a committed re-key always has it.
+        let recorder = crate::system_log::recorder::current().filter(|_| self.records_writes());
+        let mut unheld = Some(record);
+        if let Some(recorder) = &recorder {
+            recorder.defer(unheld.take().into_iter().collect());
+        }
+        let committed = Box::pin(rekey(
             change,
-            Box::pin(self.commit_party_update(current, precondition, WriteRequest::new(body))),
-        )
-        .await
-        .map_err(|e| match e.classified() {
+            self.commit_party_update(current, precondition, WriteRequest::new(body)),
+        ))
+        .await;
+        if let Some(recorder) = &recorder {
+            drop(recorder.take_deferred());
+        }
+        committed.map_err(|e| match e.classified() {
             ServiceError::Conflict(_) => ServiceError::conflict(format!(
                 "the binding key {:?} of the issuer {:?} is already bound to another party",
                 to.value, to.issuer
             )),
             other => other,
         })?;
-        let object_id = format!(
-            "party:{}#binding-key:{}|{}>{}|{}",
-            party.0, from.issuer, from.value, to.issuer, to.value
-        );
-        Box::pin(self.record_party_access(EventActionCode::Update, object_id, None)).await
+        match unheld {
+            Some(record) if self.audit_enabled() => Box::pin(self.record_access(record)).await,
+            Some(_) | None => Ok(()),
+        }
     }
 }
 

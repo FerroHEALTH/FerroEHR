@@ -120,6 +120,9 @@ controller reviews.
 | `access_log_append_duration_seconds` | histogram | `outcome` | Time of one request's intake write, one transaction: the time a request waits for its records. |
 | `access_log_chain_hold_duration_seconds` | histogram | `outcome` | How long one chainer round held the head of the access log. Its rate of sum is the lock occupancy: the fraction of time the head is held. |
 | `audit_chained_total` | counter | `chain` | Records the chainer linked, `access_log` or `system`. Beside `access_log_entries_total` it shows whether the chainer keeps up. |
+| `audit_reservations_held` | gauge | none | Reservations whose records a write held and nobody released for two minutes: a replica stopped between a write's commit and its release. The reconciler resolves them within seconds; a value that stays above 0 means no reconciler runs. |
+| `audit_reservation_age_seconds` | gauge | none | Age of the oldest such reservation at the reconciler's last look. |
+| `audit_reservations_reconciled_total` | counter | `outcome` | Reservations the reconciler resolved: `released` (the write committed, its records go to the chain), `discarded` (it never did) or `removed` (a spent reservation row). |
 | `access_log_sign_duration_seconds` | histogram | `outcome` | Time from the start of a chainer round's checkpoint signature to its end, measured when the round stores the checkpoint; it runs beside the insert of the records while the head is held. Present only with an OpenPGP key. |
 | `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run of the system chain (`chain` is `system`); `outcome` is `sealed`, `empty` or `failed`. The access log needs no schedule: every append seals itself. |
 | `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run of the system chain that did not fail. |

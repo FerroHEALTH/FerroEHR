@@ -545,6 +545,7 @@ pub(crate) async fn load(conn: &mut PgConnection) -> Result<Loaded, StorageError
         });
     }
     let facts = super::caller::store::load(&mut tx, None).await?;
+    // NOTE: our own design (#5762), a read-only snapshot that writes nothing.
     tx.commit().await?;
     Ok(Loaded {
         revision,

@@ -81,7 +81,7 @@ impl FerroEhrService {
         // addresses; the FK blocks the deregistration if a concurrent commit
         // referenced it after the count above).
         template_repo::release_template_ref(&mut tx, &stored).await?;
-        tx.commit().await?;
+        self.commit_clinical_recorded(tx, Vec::new()).await?;
         self.registered_templates.changed();
         // Evict the derived-runtime cache for the deleted id (case-canonical
         // key). No openEHR spec governs the cache.
@@ -145,7 +145,7 @@ impl FerroEhrService {
                 format!("EHR {ehr_id}"),
             ));
         }
-        tx.commit().await?;
+        self.commit_clinical_recorded(tx, Vec::new()).await?;
 
         // The EHR and its versions are gone; GC any blob this EHR referenced
         // that no *surviving* version still references (content-addressed dedup
@@ -196,11 +196,13 @@ impl FerroEhrService {
             let mut conn = acquire(&self.pool).await?;
             let mut tx = conn.begin().await?;
             let removed = self.erase_ehrs(&mut tx, chunk).await?;
-            tx.commit().await?;
-            for &ehr_id in &removed {
-                self.emit_mark_access(EventActionCode::Delete, ehr_id, None, "ehr-delete")
-                    .await?;
-            }
+            let records = removed
+                .iter()
+                .map(|&ehr_id| {
+                    self.mark_record(EventActionCode::Delete, ehr_id, None, "ehr-delete")
+                })
+                .collect();
+            self.commit_clinical_recorded(tx, records).await?;
             #[expect(
                 clippy::as_conversions,
                 reason = "the removed-row count widens exactly: usize is at most 64 bits \
@@ -429,7 +431,7 @@ impl FerroEhrService {
         self.write_party_erase_tombstone(&mut tx, party_id, kind.as_deref(), &vo_ids)
             .await?;
 
-        tx.commit().await?;
+        self.commit_party_recorded(tx, Vec::new()).await?;
 
         // The erased PERSON's care goes from the clinical care projection in
         // this flow; should the delete fail, the stamp the erasure wrote keeps

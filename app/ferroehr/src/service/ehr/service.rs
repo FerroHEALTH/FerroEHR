@@ -163,7 +163,13 @@ impl FerroEhrService {
             &self.signing_ctx(),
         )
         .await?;
-        tx.commit().await?;
+        let facts = crate::system_log::recorder::WriteFacts {
+            ehr_id: Some(ehr_id.to_string()),
+            object_id: Some(ehr_id.to_string()),
+            ..crate::system_log::recorder::WriteFacts::default()
+        };
+        self.commit_recorded(tx, crate::db::domain::Domain::Clinical, &facts, Vec::new())
+            .await?;
 
         // The EHR is created with the settings-less default EHR_ACCESS
         // (default-open); seed the access cache so the first EHR-scoped request

@@ -193,7 +193,7 @@ impl FerroEhrService {
             .execute(&mut *tx)
             .await
             .map_err(ServiceError::Database)?;
-        tx.commit().await.map_err(ServiceError::Database)?;
+        self.commit_clinical_recorded(tx, Vec::new()).await?;
         self.read_policy_registers().await?;
         Ok(version)
     }

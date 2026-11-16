@@ -901,7 +901,11 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
     #[cfg(not(feature = "fhir"))]
     ferroehr::system_log::require_fhir_disabled(&config.audit).map_err(|e| anyhow::anyhow!(e))?;
     let audit_config: AuditConfig = config.audit.clone();
-    let (audit_sender, audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await?;
+    let (audit_sender, mut audit_handle) = start_audit(&audit_config, &pool, &pools.audit).await?;
+    // NOTE: our own design (#5762), any replica resolves the reservations a stopped one left.
+    if let Some(handle) = audit_handle.as_mut() {
+        handle.reconcile_reservations(&pools);
+    }
 
     // Health indicators.
     let mut indicators: Vec<Arc<dyn HealthIndicator>> = vec![

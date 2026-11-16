@@ -277,13 +277,12 @@ impl FerroEhrService {
             .execute(&mut *tx)
             .await
             .map_err(StorageError::from)?;
-        self.record_party_access(
+        let record = self.party_record(
             EventActionCode::Update,
             format!("{OBJECT}:{message_id}"),
             Some(RETRY),
-        )
-        .await?;
-        tx.commit().await.map_err(StorageError::from)?;
+        );
+        self.commit_party_recorded(tx, vec![record]).await?;
         tracing::info!(message_id, operator, "a refused ITI-93 message is retried");
         Ok(Retried {
             message_id: message_id.to_owned(),
@@ -361,13 +360,12 @@ impl FerroEhrService {
         .execute(&mut *tx)
         .await
         .map_err(StorageError::from)?;
-        self.record_party_access(
+        let record = self.party_record(
             EventActionCode::Update,
             format!("{OBJECT}:{message_id}"),
             Some(SETTLE),
-        )
-        .await?;
-        tx.commit().await.map_err(StorageError::from)?;
+        );
+        self.commit_party_recorded(tx, vec![record]).await?;
         tracing::info!(
             message_id,
             operator,

@@ -21,10 +21,14 @@ use sqlx::Connection as _;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::db::domain::Domain;
 use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::demographic::validate::Container;
+use crate::system_log::categories::AccessedContent;
+use crate::system_log::event::AccessDomain;
+use crate::system_log::recorder::WriteFacts;
 use crate::versioning::Kind;
 use crate::versioning::attestation::PendingAttest;
 use crate::versioning::audit::{AuditInput, validate_commit_audit};
@@ -312,7 +316,35 @@ async fn write_contribution(
             cx.sync_ehr_subject(&mut tx, ehr_id, status).await?;
         }
     }
-    tx.commit().await?;
+    let (domain, facts) = if party_only {
+        (
+            Domain::Party,
+            WriteFacts {
+                domain: Some(AccessDomain::Demographic),
+                ..WriteFacts::default()
+            },
+        )
+    } else {
+        (
+            Domain::Clinical,
+            WriteFacts {
+                ehr_id: ehr_id.map(|id| id.to_string()),
+                ..WriteFacts::default()
+            },
+        )
+    };
+    // NOTE: our own design (#3621), the demographic CONTRIBUTION response names no content.
+    let content = if party_only {
+        Vec::new()
+    } else {
+        cx.written_content(&outcome.versions).await
+    };
+    let facts = WriteFacts {
+        object_id: Some(outcome.id.to_string()),
+        content: (!content.is_empty()).then_some(AccessedContent::Objects(content)),
+        ..facts
+    };
+    cx.commit_recorded(tx, domain, &facts, Vec::new()).await?;
     Ok(outcome)
 }
 

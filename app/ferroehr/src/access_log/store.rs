@@ -222,7 +222,9 @@ impl AccessLogStore {
             .collect::<Result<Vec<_>, _>>()?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        take_in(&mut tx, intake).await?;
+        take_in(&mut tx, intake, None).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         drop(conn);
         self.settle(Owed::default()).await?;
@@ -343,6 +345,8 @@ impl AccessLogStore {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let tombstone = Self::tombstone_in(&mut tx, uid, time_removed, grounds).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         Ok(tombstone)
     }
@@ -425,6 +429,8 @@ impl AccessLogStore {
             .map(|(chain_seq, tombstone)| (*chain_seq, tombstone))
             .collect::<Vec<_>>();
         replace(&mut tx, &replacing).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         Ok(tombstones
             .into_iter()

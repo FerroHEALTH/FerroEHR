@@ -94,7 +94,7 @@ async fn work(replica: &Replica) {
         read.ehr_id = Some(ehr_id.to_string());
         replica
             .sender
-            .record(vec![read])
+            .record(vec![read], None)
             .await
             .expect("the read is recorded");
         let mut outside = AuditEvent::new(
