@@ -46,7 +46,7 @@ mod batch;
 pub mod chains;
 #[cfg(feature = "fhir")]
 mod entries;
-mod intake;
+pub mod intake;
 pub(crate) mod lax;
 #[cfg(feature = "fhir")]
 pub mod outbox;
@@ -214,6 +214,9 @@ pub struct AuditStore {
     /// signs their links as `[audit.access_log]` asks once the server installs
     /// it ([`Self::use_access_log`]); an unsigning one until then.
     access_log: Arc<std::sync::OnceLock<AccessLogStore>>,
+    /// Which chains have intake rows this process wrote and no chainer
+    /// round has looked at since.
+    pending: Arc<intake::Pending>,
 }
 
 impl AuditStore {
@@ -232,6 +235,7 @@ impl AuditStore {
             #[cfg(feature = "fhir")]
             tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
             access_log: Arc::default(),
+            pending: Arc::default(),
         }
     }
 
@@ -391,8 +395,8 @@ impl AuditStore {
             subject: subject.map(str::to_owned),
             entry: None,
         };
-        let taken = self.take_in_own(vec![record], &[]).await?;
-        self.settle().await?;
+        let (taken, wrote) = self.take_in_own(vec![record], &[]).await?;
+        self.settle_chains(wrote).await?;
         taken.first().copied().ok_or(AuditError::SearchToken)
     }
 
@@ -407,8 +411,8 @@ impl AuditStore {
         records: &[AuditRecord],
         ends: &[RecordEnd],
     ) -> Result<(), AuditError> {
-        self.write(records.to_vec(), ends).await?;
-        self.settle().await
+        let (_, wrote) = self.take_in_own(records.to_vec(), ends).await?;
+        self.settle_chains(wrote).await
     }
 
     /// Write a batch of records into the intake in one transaction, each with
@@ -437,16 +441,17 @@ impl AuditStore {
         &self,
         records: Vec<AuditRecord>,
         ends: &[RecordEnd],
-    ) -> Result<Vec<Uuid>, AuditError> {
+    ) -> Result<(Vec<Uuid>, intake::Chains), AuditError> {
         if records.is_empty() {
-            return Ok(Vec::new());
+            return Ok((Vec::new(), intake::Chains::default()));
         }
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        let (ids, learned) = self.take_in(&mut tx, records, ends).await?;
+        let (ids, learned, wrote) = self.take_in(&mut tx, records, ends).await?;
         tx.commit().await?;
+        self.pending.mark(wrote);
         self.remember(learned);
-        Ok(ids)
+        Ok((ids, wrote))
     }
 
     /// The `INSERT` of the system intake on `conn`, each record with its

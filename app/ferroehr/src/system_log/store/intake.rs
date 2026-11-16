@@ -23,6 +23,59 @@ use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
 
+/// Which chains a write gave intake rows, or a chainer round must look at.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Chains {
+    /// The access log.
+    pub access_log: bool,
+    /// The system chain.
+    pub system: bool,
+}
+
+impl Chains {
+    /// Both chains: a look for the rows other replicas wrote.
+    pub const BOTH: Self = Self {
+        access_log: true,
+        system: true,
+    };
+}
+
+/// The chains this process wrote intake rows into since the chainer's last
+/// round, so a round skips the transaction of a chain nobody wrote.
+#[derive(Debug, Default)]
+pub(super) struct Pending {
+    access_log: std::sync::atomic::AtomicBool,
+    system: std::sync::atomic::AtomicBool,
+}
+
+impl Pending {
+    /// Note the chains a committed write gave rows.
+    pub(super) fn mark(&self, wrote: Chains) {
+        use std::sync::atomic::Ordering;
+        if wrote.access_log {
+            self.access_log.store(true, Ordering::Release);
+        }
+        if wrote.system {
+            self.system.store(true, Ordering::Release);
+        }
+    }
+
+    /// Whether any chain is marked.
+    fn is_marked(&self) -> bool {
+        use std::sync::atomic::Ordering;
+        self.access_log.load(Ordering::Acquire) || self.system.load(Ordering::Acquire)
+    }
+
+    /// The chains written since the last take, cleared.
+    fn take(&self) -> Chains {
+        use std::sync::atomic::Ordering;
+        Chains {
+            access_log: self.access_log.swap(false, Ordering::AcqRel),
+            system: self.system.swap(false, Ordering::AcqRel),
+        }
+    }
+}
+
 /// What one round of the chainer did on each chain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ChainRound {
@@ -59,7 +112,7 @@ impl AuditStore {
         conn: &mut PgConnection,
         records: Vec<AuditRecord>,
         ends: &[RecordEnd],
-    ) -> Result<(Vec<Uuid>, LearnedSets), AuditError> {
+    ) -> Result<(Vec<Uuid>, LearnedSets, Chains), AuditError> {
         if !ends.is_empty() && ends.len() != records.len() {
             return Err(AuditError::RetentionEnds {
                 ends: ends.len(),
@@ -73,6 +126,16 @@ impl AuditStore {
         #[cfg(feature = "fhir")]
         let ends = row_ends.as_slice();
         let records = records.as_slice();
+        #[cfg(feature = "fhir")]
+        let wrote = Chains {
+            access_log: !entries.is_empty(),
+            system: !records.is_empty(),
+        };
+        #[cfg(not(feature = "fhir"))]
+        let wrote = Chains {
+            access_log: false,
+            system: !records.is_empty(),
+        };
         let runs = self.writing.runs(records);
         let mut digests = Vec::with_capacity(runs.len());
         for (writing, _, _) in &runs {
@@ -93,7 +156,7 @@ impl AuditStore {
             ids.extend(uids);
             learned_all.push(learned);
         }
-        Ok((ids, merged(learned_all)))
+        Ok((ids, merged(learned_all), wrote))
     }
 
     /// The access-log store the chainer links entries through: the one the
@@ -105,20 +168,65 @@ impl AuditStore {
         )
     }
 
-    /// One round of the chainer: up to `limit` intake rows of each chain
-    /// linked into it.
+    /// One round of the chainer: up to `limit` intake rows linked into each
+    /// chain of `look`, and of each chain this process wrote since the last
+    /// round; a chain neither names costs no transaction.
     ///
     /// # Errors
     /// [`AuditError::AccessLog`] when the access log's round fails, and
-    /// [`AuditError::Store`] when the system chain's move fails.
-    pub async fn chain_round(&self, limit: u32) -> Result<ChainRound, AuditError> {
-        let access_log = self.chaining_store().chain_round(limit, self.owed).await?;
-        let moved: i64 = sqlx::query_scalar("SELECT audit.audit_event_chain_move($1, $2, $3)")
-            .bind(i32::try_from(limit).unwrap_or(i32::MAX))
-            .bind(self.owed.fhir_feed)
-            .bind(self.owed.syslog)
-            .fetch_one(&mut *acquire(&self.pool).await?)
-            .await?;
+    /// [`AuditError::Store`] when the system chain's move fails; the chains
+    /// the round did not finish are looked at again in the next.
+    pub async fn chain_round(&self, limit: u32, look: Chains) -> Result<ChainRound, AuditError> {
+        let written = self.pending.take();
+        let look = Chains {
+            access_log: look.access_log || written.access_log,
+            system: look.system || written.system,
+        };
+        let round = self.round(limit, look).await;
+        // NOTE: our own design (#5770), a chain the round did not empty is looked at again.
+        let unfinished = match &round {
+            Ok(round) => Chains {
+                access_log: look.access_log
+                    && match round.access_log {
+                        Round::Busy => true,
+                        Round::Chained { entries, .. } => {
+                            u32::try_from(entries).unwrap_or(u32::MAX) >= limit
+                        }
+                    },
+                system: look.system && round.system >= u64::from(limit),
+            },
+            Err(_) => look,
+        };
+        self.pending.mark(unfinished);
+        round
+    }
+
+    /// Whether a chain is left for the next round: one this process wrote
+    /// since the last, or one a round did not empty.
+    #[must_use]
+    pub fn is_pending(&self) -> bool {
+        self.pending.is_marked()
+    }
+
+    async fn round(&self, limit: u32, look: Chains) -> Result<ChainRound, AuditError> {
+        let access_log = if look.access_log {
+            self.chaining_store().chain_round(limit, self.owed).await?
+        } else {
+            Round::Chained {
+                entries: 0,
+                held: std::time::Duration::ZERO,
+            }
+        };
+        let moved: i64 = if look.system {
+            sqlx::query_scalar("SELECT audit.audit_event_chain_move($1, $2, $3)")
+                .bind(i32::try_from(limit).unwrap_or(i32::MAX))
+                .bind(self.owed.fhir_feed)
+                .bind(self.owed.syslog)
+                .fetch_one(&mut *acquire(&self.pool).await?)
+                .await?
+        } else {
+            0
+        };
         Ok(ChainRound {
             access_log,
             system: u64::try_from(moved).unwrap_or(0),
@@ -131,7 +239,21 @@ impl AuditStore {
     /// # Errors
     /// As [`Self::chain_round`].
     pub async fn settle(&self) -> Result<(), AuditError> {
-        self.chaining_store().settle(self.owed).await?;
+        self.settle_chains(Chains::BOTH).await
+    }
+
+    /// [`Self::settle`] for the chains `look` names only, so a write chains
+    /// what it wrote and leaves the other chain to its chainer.
+    ///
+    /// # Errors
+    /// As [`Self::chain_round`].
+    pub(super) async fn settle_chains(&self, look: Chains) -> Result<(), AuditError> {
+        if look.access_log {
+            self.chaining_store().settle(self.owed).await?;
+        }
+        if !look.system {
+            return Ok(());
+        }
         loop {
             let moved: i64 = sqlx::query_scalar("SELECT audit.audit_event_chain_move($1, $2, $3)")
                 .bind(SETTLE_BATCH)

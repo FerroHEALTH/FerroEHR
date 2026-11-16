@@ -623,8 +623,12 @@ NCP. How the log is protected is therefore our own design.
   it and nothing else, the table refuses every update, delete and truncate,
   and only `audit.access_log_chain_move()`, a `SECURITY DEFINER` function,
   removes a row, by writing it into the chain in the same statement. The
-  window between the intake and the chain is milliseconds: each request
-  wakes the chainer, and every replica polls every 50 ms. Within it someone
+  window between the intake and the chain is about a fifth of a second: a
+  request wakes its replica's chainer, which gathers what the requests of
+  the next 200 ms write into one round, so the rounds grow with the rate and
+  an idle server runs none; every replica also looks at both intakes every
+  2 seconds for the rows a stopped replica left, and a graceful stop chains
+  what its intake holds. Within the window someone
   with the database owner's rights can remove an intake row, and the chain
   does not show it; that is the same exposure an in-memory queue had,
   without the loss on a crash. The `audit_sender` indicator reads
