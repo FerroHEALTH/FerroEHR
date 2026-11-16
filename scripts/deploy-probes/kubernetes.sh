@@ -389,15 +389,25 @@ probes_k8s_boot() {
   probe "P-K8S-AUTH-GUARD" "$PROBE_BROKEN" "chart" "-" \
     "a stock install is refused at render, naming every configured way forward"
   local guard
-  # FerroPIX stays on, as it is by default. Its dependency chart refuses a
-  # render that names no database or sealing-key Secret before the CDR's
-  # templates are reached, so both are named, as an operator must, and the
-  # refusal read here is the CDR's own on the default install (#5103).
+  # FerroPIX stays on, as it is by default. Helm renders a dependency's
+  # templates before this chart's, and the FerroPIX chart refuses a render
+  # that names no database or sealing-key Secret (#5103) or no issuer of its
+  # own API's tokens (#5823). An operator names all three for FerroPIX, so the
+  # row names them too, and the refusal read here is the CDR's own.
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
              --set config.deployment.profile=sandbox \
              --set database.existingSecret=ferroehr-db \
              --set ferropix.database.existingSecret=ferropix-db \
-             --set ferropix.dataKey.existingSecret=ferropix-data-key 2>&1)"
+             --set ferropix.dataKey.existingSecret=ferropix-data-key \
+             --set 'ferropix.config.auth.issuer[0].issuer=https://issuer.example.org' \
+             --set 'ferropix.config.auth.issuer[0].kind=machines' \
+             --set 'ferropix.config.auth.issuer[0].audience=ferropix' 2>&1)"
+  # A dependency's refusal can carry the same key names (FerroPIX's names
+  # config.auth.issuer), so the row first holds the refusal to this chart.
+  assert_contains "$guard" "(ferroehr/templates/" \
+    "the refusal must come from the CDR's own templates, or the assertions below read another chart's words"
+  assert_not_contains "$guard" "/charts/" \
+    "a dependency chart's refusal is not the CDR's guard"
   assert_contains "$guard" "no authentication mechanism is configured" \
     "without this the stock install boots into a crash loop and explains itself in a log"
   assert_contains "$guard" "config.auth.basic.users" \
