@@ -400,8 +400,8 @@ async fn bounded<T>(read: impl Future<Output = Result<T, DbError>>) -> Result<T,
 /// [`POOL_ACQUIRE_SECS`], reads the deployment facts, and closes them again.
 async fn read_facts(config: &FerroEhrConfig) -> Result<DatabaseFacts, DbError> {
     let mut db = config.database.clone();
-    db.max_connections = 1;
-    db.min_connections = 0;
+    db.max_connections = Some(1);
+    db.min_connections = Some(0);
     db.acquire_timeout = ferrohealth_config::units::Duration::from_secs(POOL_ACQUIRE_SECS);
     let pools = crate::db::connect_domains(&db).await?;
     let facts = crate::db::database_facts(&db, &pools).await;
