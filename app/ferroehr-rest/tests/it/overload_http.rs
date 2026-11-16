@@ -179,7 +179,11 @@ async fn the_defaults_bound_the_server_at_256() {
         .oneshot(common::req("GET", "/health/readiness").build())
         .await
         .expect("response");
-    assert_eq!(readiness.status(), StatusCode::OK, "readiness is never shed");
+    assert_eq!(
+        readiness.status(),
+        StatusCode::OK,
+        "readiness is never shed"
+    );
 
     for request in parked {
         request.abort();
