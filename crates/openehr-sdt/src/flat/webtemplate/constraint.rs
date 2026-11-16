@@ -231,9 +231,11 @@ pub enum SlotDefect {
     UnreadablePattern(String),
 }
 
-/// Refuses a Web Template that holds a slot [`WebTemplateArchetypeSlot::defect`]
-/// reports, naming the attribute the slot stands under.
-pub(crate) fn check_slots(
+/// Refuses a Web Template that holds a constraint no engine can evaluate: a slot
+/// [`WebTemplateArchetypeSlot::defect`] reports, naming the attribute the slot
+/// stands under, or a `C_STRING` value pattern no regex engine compiles, naming
+/// the node.
+pub(crate) fn check_evaluable(
     tree: &super::model::WebTemplateNode,
 ) -> Result<(), crate::flat::error::FlatError> {
     let mut stack = vec![tree];
@@ -250,6 +252,18 @@ pub(crate) fn check_slots(
                 });
             }
         }
+        let unreadable = node
+            .inputs
+            .iter()
+            .filter(|input| input.input_type == super::model::WebTemplateInputType::Text)
+            .filter_map(|input| input.validation.as_ref()?.pattern.as_ref())
+            .find(|pattern| compile(pattern).is_none());
+        if let Some(pattern) = unreadable {
+            return Err(crate::flat::error::FlatError::UnevaluablePattern {
+                path: node.aql_path.clone(),
+                pattern: pattern.clone(),
+            });
+        }
         stack.extend(node.children.iter().chain(&node.alternatives));
     }
     Ok(())
@@ -260,7 +274,7 @@ fn rm_type_is_known(rm_type: &str) -> bool {
     openehr_rm::v1_2::model::class(subtype::base(rm_type)).is_some()
 }
 
-/// A slot pattern compiled, anchored at both ends, by `regex` or else by
+/// An archetype regex (a slot pattern or a `C_STRING` pattern) compiled, anchored at both ends, by `regex` or else by
 /// `fancy-regex` (the ADL regex dialect is a subset of Perl, ADL 1.4
 /// `master05-cadl.adoc` §Regular Expression); `None` when neither compiles it.
 enum Compiled {
@@ -283,11 +297,11 @@ fn compile(pattern: &str) -> Option<Compiled> {
         })
 }
 
-/// Whether `pattern` matches the whole of `archetype_id`; `None` when the
-/// pattern cannot be evaluated.
-fn pattern_matches(pattern: &str, archetype_id: &str) -> Option<bool> {
+/// Whether `pattern` matches the whole of `value`; `None` when the pattern
+/// cannot be evaluated.
+pub(crate) fn pattern_matches(pattern: &str, value: &str) -> Option<bool> {
     match compile(pattern)? {
-        Compiled::Plain(re) => Some(re.is_match(archetype_id)),
-        Compiled::Fancy(re) => re.is_match(archetype_id).ok(),
+        Compiled::Plain(re) => Some(re.is_match(value)),
+        Compiled::Fancy(re) => re.is_match(value).ok(),
     }
 }
