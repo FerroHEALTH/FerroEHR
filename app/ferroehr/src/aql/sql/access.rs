@@ -355,15 +355,9 @@ pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
     let Care::Census(cared) = &condition.cared else {
         return None;
     };
-    // NOTE: our own design (#5667), each key is escaped by serde_json as it is written, with
-    // no map to build: jsonb keeps one of a repeated key, so `?` answers as before.
-    let keys: Vec<String> = cared
-        .iter()
-        .map(|subject| format!("{}:true", serde_json::Value::String(census_key(subject))))
-        .collect();
     let mut row = Query::select();
     row.expr_as(
-        Expr::val(format!("{{{}}}", keys.join(","))).cast_as(Alias::new("jsonb")),
+        Expr::val(census_text(cared)).cast_as(Alias::new("jsonb")),
         Alias::new(SUBJECTS),
     );
     let mut table = CommonTableExpression::new();
@@ -371,6 +365,18 @@ pub(super) fn census(condition: &AccessCondition) -> Option<WithClause> {
     let mut with = WithClause::new();
     with.cte(table);
     Some(with)
+}
+
+/// The [`census`] of the subjects `cared`: a `jsonb` object text keyed by
+/// [`census_key`].
+pub(super) fn census_text(cared: &[EhrSubject]) -> String {
+    // NOTE: our own design (#5667), each key is escaped by serde_json as it is written, with
+    // no map to build: jsonb keeps one of a repeated key, so `?` answers as before.
+    let keys: Vec<String> = cared
+        .iter()
+        .map(|subject| format!("{}:true", serde_json::Value::String(census_key(subject))))
+        .collect();
+    format!("{{{}}}", keys.join(","))
 }
 
 /// The key of `subject` in the [`census`]: its namespace and its id joined by

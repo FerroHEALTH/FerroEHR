@@ -642,6 +642,16 @@ impl From<ConditionGroups> for AccessCondition {
 }
 
 impl AccessCondition {
+    /// The condition of `groups`, pinned to the verdict `pinned` when one is
+    /// given.
+    #[must_use]
+    pub fn of_parts(
+        groups: Option<Arc<ConditionGroups>>,
+        pinned: Option<Arc<pinned::PinnedEhr>>,
+    ) -> Self {
+        Self { groups, pinned }
+    }
+
     /// The condition of the classes `groups`, `closed` for an EHR held
     /// closed and `default` for an EHR with no settings.
     fn new(

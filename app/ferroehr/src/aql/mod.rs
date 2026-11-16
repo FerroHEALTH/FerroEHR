@@ -105,159 +105,206 @@ pub fn check_params(ir: &QueryIr, params: &Params) -> Result<(), AqlError> {
 
 /// Collect every `$parameter` name referenced anywhere in the IR (sorted, unique).
 fn collect_params(ir: &QueryIr) -> Vec<String> {
-    let mut out = BTreeSet::new();
-    for source in &ir.sources {
-        collect_source(source, &mut out);
-    }
-    if let Some(filter) = &ir.filter {
-        collect_expr(filter, &mut out);
-    }
-    for col in &ir.select {
-        collect_select(&col.value, &mut out);
-    }
-    for key in &ir.order_by {
-        collect_path_target(&key.path, &mut out);
-    }
-    out.into_iter().collect()
+    let uses = Uses::of(ir);
+    uses.ehr_id.union(&uses.other).cloned().collect()
 }
 
-fn collect_source(source: &Source, out: &mut BTreeSet<String>) {
-    match source {
-        Source::Ehr(s) => {
-            for p in &s.predicates {
-                collect_bind(&p.value, out);
+/// The `$parameter`s of `ir` that bind only an EHR id (sorted, unique).
+///
+/// Each is compared with `ehr_id/value` (the `EHR` class predicate, or a
+/// `WHERE` comparison with the path) and with nothing else, so its value
+/// reaches the statement as that id alone.
+///
+/// The SQL text of such a query does not depend on the id it names, which
+/// lets a statement shape serve every EHR ([`sql::shape`]). No openEHR spec
+/// governs this: our own design (#5783).
+#[must_use]
+pub fn ehr_id_params(ir: &QueryIr) -> Vec<String> {
+    let uses = Uses::of(ir);
+    uses.ehr_id.difference(&uses.other).cloned().collect()
+}
+
+/// Where the `$parameter`s of a plan are read: as an EHR id, or anywhere
+/// else.
+#[derive(Default)]
+struct Uses {
+    ehr_id: BTreeSet<String>,
+    other: BTreeSet<String>,
+}
+
+impl Uses {
+    fn of(ir: &QueryIr) -> Self {
+        let mut uses = Self::default();
+        for source in &ir.sources {
+            uses.source(source);
+        }
+        if let Some(filter) = &ir.filter {
+            uses.expr(filter);
+        }
+        for col in &ir.select {
+            uses.select(&col.value);
+        }
+        for key in &ir.order_by {
+            uses.path_target(&key.path);
+        }
+        uses
+    }
+
+    fn source(&mut self, source: &Source) {
+        match source {
+            Source::Ehr(s) => {
+                for p in &s.predicates {
+                    match (&p.field, &p.value) {
+                        (ir::EhrField::EhrId, Bind::Param(name)) => {
+                            self.ehr_id.insert(name.clone());
+                        }
+                        _ => self.bind(&p.value),
+                    }
+                }
             }
-        }
-        Source::Rm(s) => {
-            if let Some(a) = &s.archetype {
-                collect_archetype(a, out);
+            Source::Rm(s) => {
+                if let Some(a) = &s.archetype {
+                    self.archetype(a);
+                }
+                if let Some(n) = &s.name {
+                    self.name(n);
+                }
+                for sp in &s.standard {
+                    self.bind(&sp.value);
+                }
+                self.scope(&s.scope);
             }
-            if let Some(n) = &s.name {
-                collect_name(n, out);
+            Source::Version(s) => self.scope(&s.scope),
+        }
+    }
+
+    fn scope(&mut self, scope: &VersionScope) {
+        if let VersionScope::Predicate(p) = scope {
+            self.bind(&p.value);
+        }
+    }
+
+    fn expr(&mut self, expr: &Expr) {
+        match expr {
+            Expr::Compare { lhs, rhs, .. } => match (lhs, rhs) {
+                (Operand::Path(path), Operand::Param(name))
+                | (Operand::Param(name), Operand::Path(path))
+                    if is_ehr_id(path) =>
+                {
+                    self.ehr_id.insert(name.clone());
+                }
+                _ => {
+                    self.operand(lhs);
+                    self.operand(rhs);
+                }
+            },
+            Expr::Exists(t) => self.path_target(t),
+            Expr::Const(_) => {}
+            Expr::Like { path, pattern } => {
+                self.path_target(path);
+                if let ir::LikePattern::Param(p) = pattern {
+                    self.other.insert(p.clone());
+                }
             }
-            for sp in &s.standard {
-                collect_bind(&sp.value, out);
+            Expr::Matches { path, values, .. } => {
+                self.path_target(path);
+                for v in values {
+                    self.bind(v);
+                }
             }
-            collect_scope(&s.scope, out);
-        }
-        Source::Version(s) => collect_scope(&s.scope, out),
-    }
-}
-
-fn collect_scope(scope: &VersionScope, out: &mut BTreeSet<String>) {
-    if let VersionScope::Predicate(p) = scope {
-        collect_bind(&p.value, out);
-    }
-}
-
-fn collect_expr(expr: &Expr, out: &mut BTreeSet<String>) {
-    match expr {
-        Expr::Compare { lhs, rhs, .. } => {
-            collect_operand(lhs, out);
-            collect_operand(rhs, out);
-        }
-        Expr::Exists(t) => collect_path_target(t, out),
-        Expr::Const(_) => {}
-        Expr::Like { path, pattern } => {
-            collect_path_target(path, out);
-            if let ir::LikePattern::Param(p) = pattern {
-                out.insert(p.clone());
+            Expr::And(a, b) | Expr::Or(a, b) => {
+                self.expr(a);
+                self.expr(b);
             }
+            Expr::Not(a) => self.expr(a),
         }
-        Expr::Matches { path, values, .. } => {
-            collect_path_target(path, out);
-            for v in values {
-                collect_bind(v, out);
+    }
+
+    fn operand(&mut self, op: &Operand) {
+        match op {
+            Operand::Path(t) => self.path_target(t),
+            Operand::Param(p) => {
+                self.other.insert(p.clone());
             }
-        }
-        Expr::And(a, b) | Expr::Or(a, b) => {
-            collect_expr(a, out);
-            collect_expr(b, out);
-        }
-        Expr::Not(a) => collect_expr(a, out),
-    }
-}
-
-fn collect_operand(op: &Operand, out: &mut BTreeSet<String>) {
-    match op {
-        Operand::Path(t) => collect_path_target(t, out),
-        Operand::Param(p) => {
-            out.insert(p.clone());
-        }
-        Operand::Function { args, .. } => {
-            for a in args {
-                collect_operand(a, out);
+            Operand::Function { args, .. } => {
+                for a in args {
+                    self.operand(a);
+                }
             }
+            Operand::Literal(_) => {}
         }
-        Operand::Literal(_) => {}
     }
-}
 
-fn collect_select(value: &SelectValue, out: &mut BTreeSet<String>) {
-    match value {
-        SelectValue::Path(t) => collect_path_target(t, out),
-        SelectValue::Aggregate { arg, .. } => {
-            if let Some(t) = arg {
-                collect_path_target(t, out);
+    fn select(&mut self, value: &SelectValue) {
+        match value {
+            SelectValue::Path(t) => self.path_target(t),
+            SelectValue::Aggregate { arg, .. } => {
+                if let Some(t) = arg {
+                    self.path_target(t);
+                }
             }
-        }
-        SelectValue::Function { args, .. } => {
-            for a in args {
-                collect_operand(a, out);
+            SelectValue::Function { args, .. } => {
+                for a in args {
+                    self.operand(a);
+                }
             }
-        }
-        SelectValue::Literal(_) => {}
-    }
-}
-
-fn collect_path_target(target: &PathTarget, out: &mut BTreeSet<String>) {
-    let leaf = match target {
-        PathTarget::Data(leaf)
-        | PathTarget::EhrStatus(leaf)
-        | PathTarget::Attestations { leaf, .. } => leaf,
-        PathTarget::Version { .. } | PathTarget::Ehr { .. } => return,
-    };
-    if let Some(c) = &leaf.root_predicate {
-        collect_node_constraint(c, out);
-    }
-    for step in &leaf.anchor {
-        if let Some(c) = &step.predicate {
-            collect_node_constraint(c, out);
+            SelectValue::Literal(_) => {}
         }
     }
-    for step in &leaf.fragment {
-        if let Some(c) = &step.predicate {
-            collect_node_constraint(c, out);
+
+    fn path_target(&mut self, target: &PathTarget) {
+        let leaf = match target {
+            PathTarget::Data(leaf)
+            | PathTarget::EhrStatus(leaf)
+            | PathTarget::Attestations { leaf, .. } => leaf,
+            PathTarget::Version { .. } | PathTarget::Ehr { .. } => return,
+        };
+        let anchor = leaf.anchor.iter().filter_map(|step| step.predicate.as_ref());
+        let fragment = leaf.fragment.iter().filter_map(|step| step.predicate.as_ref());
+        for c in leaf.root_predicate.iter().chain(anchor).chain(fragment) {
+            self.node_constraint(c);
+        }
+    }
+
+    fn node_constraint(&mut self, c: &NodeConstraint) {
+        if let Some(a) = &c.archetype {
+            self.archetype(a);
+        }
+        if let Some(n) = &c.name {
+            self.name(n);
+        }
+        for sp in &c.standard {
+            self.bind(&sp.value);
+        }
+    }
+
+    fn archetype(&mut self, a: &ArchetypeConstraint) {
+        if let ArchetypeConstraint::Param(p) = a {
+            self.other.insert(p.clone());
+        }
+    }
+
+    fn name(&mut self, n: &NameConstraint) {
+        if let NameConstraint::Param(p) = n {
+            self.other.insert(p.clone());
+        }
+    }
+
+    fn bind(&mut self, b: &Bind) {
+        if let Bind::Param(p) = b {
+            self.other.insert(p.clone());
         }
     }
 }
 
-fn collect_node_constraint(c: &NodeConstraint, out: &mut BTreeSet<String>) {
-    if let Some(a) = &c.archetype {
-        collect_archetype(a, out);
-    }
-    if let Some(n) = &c.name {
-        collect_name(n, out);
-    }
-    for sp in &c.standard {
-        collect_bind(&sp.value, out);
-    }
-}
-
-fn collect_archetype(a: &ArchetypeConstraint, out: &mut BTreeSet<String>) {
-    if let ArchetypeConstraint::Param(p) = a {
-        out.insert(p.clone());
-    }
-}
-
-fn collect_name(n: &NameConstraint, out: &mut BTreeSet<String>) {
-    if let NameConstraint::Param(p) = n {
-        out.insert(p.clone());
-    }
-}
-
-fn collect_bind(b: &Bind, out: &mut BTreeSet<String>) {
-    if let Bind::Param(p) = b {
-        out.insert(p.clone());
-    }
+/// Whether `path` is an EHR's id: `e/ehr_id/value`, or the bare `e`, which a
+/// comparison reads as its id.
+fn is_ehr_id(path: &PathTarget) -> bool {
+    matches!(
+        path,
+        PathTarget::Ehr {
+            field: ir::EhrField::EhrId | ir::EhrField::Whole,
+            ..
+        }
+    )
 }

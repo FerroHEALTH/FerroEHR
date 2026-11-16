@@ -39,6 +39,7 @@ use crate::system_log::categories::{AccessedContent, ContentIds};
 use openehr_its::rest::stored_query::{QualifiedQueryName, VersionPattern};
 
 use super::budget::{apply_result_ceiling, compose_paging};
+use super::plan_cache::Plan;
 use super::result_set::{build_params, result_set_json, substitute_params};
 
 impl FerroEhrService {
@@ -106,7 +107,7 @@ impl FerroEhrService {
             record_phase("plan", plan_start);
         });
         let outcome = match planned {
-            Ok(Planned::Single(ir)) => self.execute_single(&ir, aql, name, request, &params).await,
+            Ok(Planned::Single(plan)) => self.execute_single(&plan, aql, name, request, &params).await,
             Ok(Planned::AccessLog(plan)) => {
                 let exec_start = Instant::now();
                 let outcome =
@@ -141,7 +142,7 @@ impl FerroEhrService {
     /// every failure carrying its `aql_queries_total{outcome}` label.
     async fn execute_single(
         &self,
-        ir: &QueryIr,
+        plan: &Plan,
         aql: &str,
         name: Option<&QualifiedQueryName>,
         request: &AqlQueryRequest,
@@ -151,6 +152,7 @@ impl FerroEhrService {
         // ignoring the scope would answer rows the caller asked to exclude.
         // No openEHR spec governs AQL over a demographic repository: our own
         // design.
+        let ir = &plan.ir;
         if ir.domain == QueryDomain::Demographic && !request.ehr_ids.is_empty() {
             return Err(Failure::analysis(ServiceError::precondition(
                 "a query rooted at a demographic class reads no EHR, so an `ehr_id` scope \
@@ -198,7 +200,14 @@ impl FerroEhrService {
                 QueryDomain::Clinical => &self.pool,
                 QueryDomain::Demographic => &self.demographic_pool,
             };
-            let run = aql::exec::execute(pool, ir, params, &ctx, self.spec_profile);
+            let run = aql::exec::execute(
+                pool,
+                ir,
+                plan.shapes.as_ref(),
+                params,
+                &ctx,
+                self.spec_profile,
+            );
             match self.within_budget(run).await? {
                 Ok(result) => break result,
                 // NOTE: our own design (#5794), a verdict judged on a stale copy is judged again,
@@ -277,9 +286,9 @@ impl FerroEhrService {
     async fn plan_query(&self, aql: &str, params: &Params) -> Result<Planned, Failure> {
         // Cache hit: the plan is request-independent, but the caller's
         // bindings still must satisfy it.
-        if let Some(ir) = self.plan_cache.get(aql).await {
-            aql::check_params(&ir, params).map_err(Failure::plan)?;
-            return Ok(Planned::Single(ir));
+        if let Some(plan) = self.plan_cache.get(aql).await {
+            aql::check_params(&plan.ir, params).map_err(Failure::plan)?;
+            return Ok(Planned::Single(plan));
         }
         // Miss: full parse → terminology expansion → lowering.
         let mut ast = parse_str(aql).map_err(|e| {
@@ -302,15 +311,19 @@ impl FerroEhrService {
         if let Some(plan) = aql::join::split(&ast).map_err(Failure::plan)? {
             return Ok(Planned::Joined(Box::new(plan)));
         }
-        let ir = Arc::new(aql::lower_query(&ast, self.spec_profile).map_err(Failure::plan)?);
+        let ir = aql::lower_query(&ast, self.spec_profile).map_err(Failure::plan)?;
         // Cache only terminology-free plans (a resolved expansion may change).
-        if !expanded {
+        let plan = if expanded {
+            Arc::new(Plan::once(ir))
+        } else {
+            let plan = Arc::new(Plan::cached(ir));
             self.plan_cache
-                .insert(aql.to_owned(), Arc::clone(&ir))
+                .insert(aql.to_owned(), Arc::clone(&plan))
                 .await;
-        }
-        aql::check_params(&ir, params).map_err(Failure::plan)?;
-        Ok(Planned::Single(ir))
+            plan
+        };
+        aql::check_params(&plan.ir, params).map_err(Failure::plan)?;
+        Ok(Planned::Single(plan))
     }
 
     /// Check that every EHR the request scopes exists. An empty list scopes
@@ -354,7 +367,7 @@ fn pinned_ehrs(ir: &QueryIr, params: &Params, request: &AqlQueryRequest) -> Opti
 /// demographic root to its EHR.
 enum Planned {
     /// One single-domain statement.
-    Single(Arc<QueryIr>),
+    Single(Arc<Plan>),
     /// The party and clinical halves of a joined query.
     Joined(Box<aql::join::JoinPlan>),
     /// A query over the access log.
@@ -713,7 +726,7 @@ mod tests {
             access_settings: crate::aql::sql::EhrAccessReaders::Every,
         };
         let pool = closed_pool().await;
-        let failure = crate::aql::exec::execute(&pool, &ir, &params, &ctx, profile)
+        let failure = crate::aql::exec::execute(&pool, &ir, None, &params, &ctx, profile)
             .await
             .expect_err("a closed pool yields no connection");
         assert!(
