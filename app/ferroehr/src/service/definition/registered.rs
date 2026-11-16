@@ -14,6 +14,7 @@
 //! delete guard and the `version.template_id` foreign key. No openEHR spec
 //! governs the copy: our own design.
 
+use crate::db::domain::Domain;
 use std::collections::BTreeSet;
 use std::fmt;
 use std::sync::{Arc, PoisonError, RwLock};
@@ -46,14 +47,14 @@ impl fmt::Debug for RegisteredTemplates {
 
 impl RegisteredTemplates {
     /// An empty copy over `pool`, not yet listening, so every commit asks the
-    /// store until [`Listened::spawn_listener`] connects.
+    /// store until [`crate::policy_register::listen::Listeners::spawn`] connects.
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool,
             ids: RwLock::new(Arc::new(BTreeSet::new())),
             installing: tokio::sync::Mutex::new(()),
-            listened: Arc::new(Listened::new(CHANNEL)),
+            listened: Arc::new(Listened::new(CHANNEL, Domain::Clinical)),
         }
     }
 

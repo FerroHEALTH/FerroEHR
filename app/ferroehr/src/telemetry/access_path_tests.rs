@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 use super::*;
+use crate::db::domain::Domain;
 
 /// A provider built exactly as the server builds it, with no export.
 fn provider() -> ferrohealth_telemetry::telemetry::Telemetry {
@@ -14,7 +15,7 @@ fn provider() -> ferrohealth_telemetry::telemetry::Telemetry {
 
 /// A listener that never connects, so it reads as down.
 fn listener() -> Arc<Listened> {
-    Arc::new(Listened::new("ferroehr_test_channel"))
+    Arc::new(Listened::new("ferroehr_test_channel", Domain::Clinical))
 }
 
 /// The exporter derives `_total`, `_seconds` and `_bytes`, so a name that

@@ -229,3 +229,17 @@ pub(crate) async fn as_client<F: Future>(
 ) -> F::Output {
     with_capabilities(of_client(svc, client_id).await, fut).await
 }
+
+/// Starts the `LISTEN` sessions of `listened` on `db`, one per database as
+/// the server does ([`ferroehr::policy_register::listen::Listeners`]).
+pub(crate) fn listen(
+    db: &testkit::TestDb,
+    listened: &[Arc<ferroehr::policy_register::listen::Listened>],
+) {
+    ferroehr::policy_register::listen::Listeners::new(
+        &ferroehr::db::DbConfig::new(db.url()),
+        listened,
+    )
+    .expect("the test DSN parses")
+    .spawn();
+}
