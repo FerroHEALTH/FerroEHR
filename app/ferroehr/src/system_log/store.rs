@@ -218,6 +218,9 @@ pub struct AuditStore {
     /// Which chains have intake rows this process wrote and no chainer
     /// round has looked at since.
     pending: Arc<intake::Pending>,
+    /// The gathered intake write of the entries, started on first use.
+    #[cfg(feature = "fhir")]
+    group: Arc<std::sync::OnceLock<crate::access_log::intake::GroupWriter>>,
 }
 
 impl AuditStore {
@@ -237,6 +240,8 @@ impl AuditStore {
             tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
             access_log: Arc::default(),
             pending: Arc::default(),
+            #[cfg(feature = "fhir")]
+            group: Arc::default(),
         }
     }
 
@@ -446,13 +451,44 @@ impl AuditStore {
         if records.is_empty() {
             return Ok((Vec::new(), intake::Chains::default()));
         }
+        // NOTE: our own design (#5770), entries alone go into the gathered one-statement write.
+        #[cfg(feature = "fhir")]
+        if Self::only_entries(&records) {
+            let (uids, intake, tokens) = self.entry_rows(self.with_entries(records).await?).await?;
+            self.group().write(intake, tokens).await?;
+            let wrote = intake::Chains {
+                access_log: !uids.is_empty(),
+                system: false,
+            };
+            self.pending.mark(wrote);
+            return Ok((uids, wrote));
+        }
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let (ids, learned, wrote) = self.take_in(&mut tx, records, ends).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this
+        // transaction's rows.
         tx.commit().await?;
         self.pending.mark(wrote);
         self.remember(learned);
         Ok((ids, wrote))
+    }
+
+    /// The gathered intake writer over this store's pool, started on the
+    /// running runtime on first use.
+    #[cfg(feature = "fhir")]
+    fn group(&self) -> &crate::access_log::intake::GroupWriter {
+        self.group
+            .get_or_init(|| crate::access_log::intake::GroupWriter::spawn(&self.pool))
+    }
+
+    /// Whether every one of `records` is written as its access-log entry, so
+    /// its intake write is the one statement of [`crate::access_log::intake::take_in`].
+    #[cfg(feature = "fhir")]
+    fn only_entries(records: &[AuditRecord]) -> bool {
+        records.iter().all(|record| {
+            record.entry.is_some() || crate::access_log::entry::writes_entry(&record.event)
+        })
     }
 
     /// The `INSERT` of the system intake on `conn`, each record with its
