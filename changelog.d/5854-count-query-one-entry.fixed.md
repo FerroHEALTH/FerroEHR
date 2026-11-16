@@ -1,0 +1,1 @@
+- A `COUNT` query that the access evaluator refuses on its scoped EHR writes one access-log entry for its one access (#5854).

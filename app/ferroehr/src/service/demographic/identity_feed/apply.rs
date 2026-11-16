@@ -24,11 +24,11 @@ use sqlx::Connection as _;
 use uuid::Uuid;
 
 use super::plan::Resolved;
-use super::receive::CHANNEL;
 use super::{FeedEvent, FeedSender, Refusal};
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::party_binding::grants::capabilities::{Actor, with_capabilities};
+use crate::policy_register::listen::Listened;
 use crate::service::FerroEhrService;
 use crate::storage::error::StorageError;
 use crate::system_log::event::EventActionCode;
@@ -336,24 +336,27 @@ impl FerroEhrService {
     }
 }
 
-/// The applier of one replica: woken by a stored message's notification, and
-/// at least every [`IDLE`].
+impl FerroEhrService {
+    /// The listener whose notifications wake this replica's ITI-93 applier.
+    #[must_use]
+    pub fn pmir_listened(&self) -> &Arc<Listened> {
+        &self.pmir_listened
+    }
+}
+
+/// The applier of one replica: woken by a stored message's notification on
+/// [`FerroEhrService::pmir_listened`], and at least every [`IDLE`].
 #[expect(
     clippy::infinite_loop,
     reason = "a detached background task with no shutdown channel; it ends when the runtime \
               drops it, and `-> !` cannot be spawned on stable"
 )]
 async fn applier(service: Arc<FerroEhrService>, replica: Uuid) {
-    let mut listener = sqlx::postgres::PgListener::connect_with(&service.demographic_pool)
-        .await
-        .ok();
-    if let Some(listening) = listener.as_mut()
-        && let Err(error) = listening.listen(CHANNEL).await
-    {
-        tracing::warn!(%error, "the ITI-93 applier listens to nothing; it looks every 10 seconds");
-        listener = None;
-    }
+    let listened = Arc::clone(service.pmir_listened());
     loop {
+        // NOTE: our own design (#5845), the count is taken before the queue is read, so a
+        // message stored while this turn runs wakes the next wait at once.
+        let seen = listened.notifications();
         loop {
             match Box::pin(service.pmir_apply_next(replica)).await {
                 Ok(Some(_)) => {}
@@ -373,13 +376,6 @@ async fn applier(service: Arc<FerroEhrService>, replica: Uuid) {
                 "the refused ITI-93 messages could not be counted"
             );
         }
-        match listener.as_mut() {
-            Some(listening) => {
-                // NOTE: a notification or the idle bound, whichever comes first; a lost
-                // listener connection reconnects inside sqlx on the next recv.
-                let _woken = tokio::time::timeout(IDLE, listening.recv()).await;
-            }
-            None => tokio::time::sleep(IDLE).await,
-        }
+        let _woken = listened.notified_after(seen, IDLE).await;
     }
 }

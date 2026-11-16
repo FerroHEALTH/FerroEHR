@@ -76,7 +76,7 @@ including after the `FERROEHR` prefix.** A single underscore only ever appears
 
 | TOML | Environment variable |
 |---|---|
-| `[database] max_connections = 20` | `FERROEHR__DATABASE__MAX_CONNECTIONS=20` |
+| `[database] connection_budget = 60` | `FERROEHR__DATABASE__CONNECTION_BUDGET=60` |
 | `[authz.rbac] admin_role = "…"` | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE=…` |
 | `[management.endpoints] env = "off"` | `FERROEHR__MANAGEMENT__ENDPOINTS__ENV=off` |
 | `[terminology.endpoint] url = "…"` | `FERROEHR__TERMINOLOGY__ENDPOINT__URL=…` |

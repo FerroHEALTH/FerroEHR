@@ -20,6 +20,7 @@
 pub mod access_delay;
 pub mod listen;
 
+use crate::db::domain::Domain;
 use std::fmt;
 use std::str::FromStr;
 use std::sync::{Arc, PoisonError, RwLock};
@@ -161,7 +162,7 @@ impl LiveRegisters {
     #[must_use]
     pub fn new(pool: PgPool) -> Self {
         Self {
-            listened: Arc::new(Listened::new(CHANNEL)),
+            listened: Arc::new(Listened::new(CHANNEL, Domain::Clinical)),
             pool,
             categories: RwLock::new(Arc::new(CategoriesInForce {
                 version: 0,
@@ -213,7 +214,7 @@ impl LiveRegisters {
     }
 
     /// The listener that says when the registers in force must be read
-    /// again; [`Listened::spawn_listener`] starts it.
+    /// again; [`crate::policy_register::listen::Listeners::spawn`] starts it.
     #[must_use]
     pub fn listened(&self) -> &Arc<Listened> {
         &self.listened
