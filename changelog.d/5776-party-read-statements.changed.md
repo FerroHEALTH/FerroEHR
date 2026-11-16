@@ -1,0 +1,1 @@
+- A demographic read (a PERSON, AGENT, GROUP, ORGANISATION or ROLE, or a PARTY_RELATIONSHIP) decides the route's kind from the version it loads instead of probing the stored kind first, and reads the `openehr-item-tag` and `openehr-version-item-tag` collections in one statement: two round trips fewer per read, with the same answers, statuses and headers.
