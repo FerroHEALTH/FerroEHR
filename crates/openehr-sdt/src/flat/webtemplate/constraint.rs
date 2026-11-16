@@ -8,6 +8,8 @@
 //! metadata document (`ITS-REST simplified_formats master04 §"Web Template
 //! Metadata"`), so none is serialized.
 
+use crate::flat::validation::{leaf, subtype};
+
 /// An AOM 1.4 `C_ATTRIBUTE.existence` constraint on a single RM attribute.
 ///
 /// Existence is whether the attribute *field* is present at all — distinct from
@@ -166,4 +168,41 @@ pub struct WebTemplateArchetypeSlot {
     pub includes: Vec<String>,
     /// Archetype-id regexes a filler must match none of.
     pub excludes: Vec<String>,
+}
+
+impl WebTemplateArchetypeSlot {
+    /// Returns whether the slot admits a filler of RM type `rm_type` whose
+    /// archetype id is `archetype_id` (AOM 1.4 `ARCHETYPE_SLOT`, `includes`
+    /// and `excludes`).
+    ///
+    /// `rm_type` conforms to the slot's `rm_type` by the RM inheritance
+    /// graph, generic parameters ignored; a slot type the RM does not define
+    /// admits any filler type, and an empty one admits every type. The id
+    /// matches at least one `includes` pattern (an empty list admits every
+    /// id) and no `excludes` pattern. Each pattern constrains the whole id:
+    /// it is anchored at both ends, and the slashes ADL writes around it are
+    /// dropped. A match-all exclude (`.*` or `.+`) beside a non-empty
+    /// `includes` is the ADL 1.4 closed-slot idiom and excludes nothing the
+    /// includes admit.
+    ///
+    /// A pattern is compiled by the `regex` crate, or by `fancy-regex` when
+    /// `regex` refuses it. A pattern neither engine compiles counts as a
+    /// match: an include admits the id and an exclude refuses it.
+    #[must_use]
+    pub fn admits(&self, rm_type: &str, archetype_id: &str) -> bool {
+        if !self.rm_type.is_empty() && !subtype::conforms(rm_type, &self.rm_type) {
+            return false;
+        }
+        let included = self.includes.is_empty()
+            || self
+                .includes
+                .iter()
+                .any(|pattern| leaf::matches_pattern(pattern, archetype_id));
+        included
+            && !self.excludes.iter().any(|pattern| {
+                let closed_idiom =
+                    !self.includes.is_empty() && matches!(pattern.trim(), ".*" | ".+");
+                !closed_idiom && leaf::matches_pattern(pattern, archetype_id)
+            })
+    }
 }

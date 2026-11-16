@@ -48,6 +48,15 @@ out. Each failing probe names the issue it is tracked by, and
 tracking issues are all closed, or one that names none. The family moves into
 the required job once its findings land (#5642).
 
+The Kubernetes harness runs its **EHR-index** family in CI on a one-node kind
+cluster (`deploy-probe-k8s.yml`, #5813): every six hours, on a dispatch, and on
+a pull request that changes the harness. It probes the server and database
+images built from the tree it checks out, loaded into the kind node, with the
+chart's default two replicas, and `P-K8S-INDEX-LOCAL` runs `helm upgrade` with
+no changed value before it creates an EHR, the sequence that once answered
+`POST /ehr` with 500 (#5109). Every run uploads `kubernetes.json` and the log
+of every server pod. The other Kubernetes families run by hand.
+
 The **terminology** family does not run there. It needs a licensed SNOMED
 release that may not be fetched onto a shared runner, and it is opt-in locally.
 

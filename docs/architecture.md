@@ -1866,7 +1866,13 @@ VALIDATORS, though — the v1 one is frozen at an older RM generation, so a
 correct RM 1.2.0 document can fail against it (`docs/VERSIONS.md` §Spec
 version policy). Upstream spec changes and releases are detected
 automatically by the scheduled watcher workflows and filed as `spec-update`
-issues for triage.
+issues for triage. The spec-update watcher files only actionable changes
+(#5364): a change that lands in a master-pinned repository is listed on that
+component's one rolling issue, a Jira ticket no commit past our pin names or
+whose Jira component is `Documentation` files nothing, an amendment row
+counts only by the key that heads it, and a delta of rendered HTML, tooling
+or amendment records alone opens no issue. No openEHR specification governs
+this filtering: our own design.
 
 ## PostgreSQL 18
 
