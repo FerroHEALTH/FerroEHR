@@ -28,7 +28,7 @@ const DISCOVERY: &str = "/ferroehr/rest/.well-known/smart-configuration";
 
 /// An authorization server serving its RFC 8414 metadata and the committed test
 /// key set, advertising flows and methods the discovery document must filter.
-async fn issuer() -> MockServer {
+pub(crate) async fn issuer() -> MockServer {
     let server = MockServer::start().await;
     let uri = server.uri();
     Mock::given(method("GET"))
