@@ -48,13 +48,15 @@ use openehr_its::opt14::types::{
     TermBindingItem, Termbindingset, ValidityKind,
 };
 
+use super::constraint::{
+    WebTemplateArchetypeSlot, WebTemplateClosedAttribute, WebTemplateCodeList,
+    WebTemplateConstraintBinding, WebTemplateExistence, WebTemplateStructuralStub,
+};
 use super::existence::{existence_constraints, prohibited_attributes};
 use super::implicit::{self, attribute_existence};
 use super::inputs::{self, Labels};
 use super::model::{
-    CodedName, WebTemplate, WebTemplateArchetypeSlot, WebTemplateBindingCodedValue,
-    WebTemplateCardinality, WebTemplateClosedAttribute, WebTemplateCodeList,
-    WebTemplateConstraintBinding, WebTemplateExistence, WebTemplateNode, WebTemplateStructuralStub,
+    CodedName, WebTemplate, WebTemplateBindingCodedValue, WebTemplateCardinality, WebTemplateNode,
 };
 use super::shape;
 
@@ -316,17 +318,7 @@ pub fn build_web_template(
         None,
         shape::Identity::Archetyped,
     );
-    tree = shape::compact(tree, 1).unwrap_or_else(shape::tree_placeholder);
-    // Synthesize the in-context RM children the master04 example carries for the
-    // structural attributes an OPT commonly leaves unconstrained (COMPOSITION
-    // context/category/language/territory/composer, per-ENTRY language/encoding/
-    // subject, per-EVENT time) BEFORE id assignment, so their ids go through the
-    // normal sibling-uniqueness discipline (super::id).
-    super::in_context::synthesize_in_context(&mut tree);
-    super::id::build_ids(&mut tree);
-    // Parse the walk's template-static constraint paths ONCE, so the validation
-    // walk never re-parses them per instance-node visit.
-    crate::flat::validation::prepare_walk(&mut tree);
+    tree = shape::finish(tree);
 
     Ok(WebTemplate {
         template_id,

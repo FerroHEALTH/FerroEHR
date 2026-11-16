@@ -493,6 +493,12 @@ two mutually exclusive), and both directions preserve it:
 }
 ```
 
+The `_null_flavour` key holds even when the template constrains the null flavour,
+for example to the four openEHR codes 253, 271, 272 and 273. That constraint
+never adds a value alternative to the element: an element with one value type
+keeps its own key (`…/systolic`, not `…/systolic/quantity_value`), and a
+null flavour outside the template's list is refused on commit.
+
 ### Who the entry is about: `subject`
 
 Every entry (observation, evaluation, instruction, action, admin entry) records a
