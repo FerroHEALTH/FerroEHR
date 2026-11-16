@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Criterion benches over the AQL front half (parse → plan → SQL build), with
-//! per-bench CPU flamegraphs.
+//! Criterion benches over the AQL front half (parse → plan → SQL build), and
+//! a statement built against one bound from its shape, with per-bench CPU
+//! flamegraphs.
 //!
 //! Plain measurement: `cargo bench -p ferroehr --bench aql`.
 //! Flamegraphs: `cargo bench -p ferroehr --bench aql -- --profile-time 10`
@@ -113,6 +114,83 @@ fn aql_front_half(c: &mut Criterion) {
     });
 }
 
+/// The capacity test's single-EHR query (`scripts/perf/gate.sh`, `aql`): one
+/// EHR named by `$ehr`, lab results ordered by time.
+const PINNED: &str = "SELECT o/data[at0001]/events[at0002]/time/value, a/items[at0001]/value \
+     FROM EHR e CONTAINS COMPOSITION c \
+     CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.laboratory_test_result.v1] \
+     CONTAINS CLUSTER a[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1] \
+     WHERE e/ehr_id/value = $ehr \
+     ORDER BY o/data[at0001]/events[at0002]/time/value DESC";
+
+/// The request of [`PINNED`] for `ehr`: its parameter, and the context of a
+/// caller whose verdict on the EHR leaves one template out.
+fn pinned_request(ehr: uuid::Uuid, lineage: &Arc<ArchetypeLineage>) -> (Params, SqlCtx) {
+    use ferroehr::access_eval::condition::AccessCondition;
+    use ferroehr::access_eval::condition::pinned::PinnedEhr;
+    use ferroehr::access_eval::scope::{DataMatch, Polarity, Pred};
+    let admitted = Pred::Not(Box::new(Pred::Data(
+        Arc::new(DataMatch {
+            templates: Some(vec!["hiv results".to_owned()]),
+            ..DataMatch::default()
+        }),
+        Polarity::Deny,
+    )));
+    let condition = AccessCondition::of_parts(
+        None,
+        Some(Arc::new(PinnedEhr {
+            ehr,
+            admitted,
+            settled: true,
+            revision: ferroehr::storage::access_projection::Revision::default(),
+        })),
+    );
+    let params = Params::default().with("ehr", ferroehr::aql::ir::ParamValue::Str(ehr.to_string()));
+    let ctx = SqlCtx {
+        ehr_access: condition,
+        archetype_lineage: Arc::clone(lineage),
+        ..bench_ctx()
+    };
+    (params, ctx)
+}
+
+/// The single-EHR statement built from its plan against the same statement
+/// bound from its shape (#5783), each for a new EHR per iteration.
+fn aql_statement_shape(c: &mut Criterion) {
+    let ast = parser::parse_str(PINNED).expect("the pinned query must parse");
+    let ir = ferroehr::aql::lower_query(&ast, ferroehr::config::profile::SpecProfile::default())
+        .expect("the pinned query must lower");
+    let lineage = Arc::new(ArchetypeLineage::default());
+    let shapes = ferroehr::aql::sql::shape::Shapes::new(&ir);
+    for _ in 0..2 {
+        let (params, ctx) = pinned_request(uuid::Uuid::now_v7(), &lineage);
+        shapes
+            .prepare(&ir, &params, &ctx)
+            .expect("the pinned query must prepare");
+    }
+    c.bench_function("aql_sql_build_pinned", |b| {
+        b.iter_batched(
+            || pinned_request(uuid::Uuid::now_v7(), &lineage),
+            |(params, ctx)| {
+                ferroehr::aql::sql::build(black_box(&ir), &params, &ctx)
+                    .expect("the pinned query must lower to SQL")
+            },
+            criterion::BatchSize::SmallInput,
+        );
+    });
+    c.bench_function("aql_sql_bind_pinned", |b| {
+        b.iter_batched(
+            || pinned_request(uuid::Uuid::now_v7(), &lineage),
+            |(params, ctx)| {
+                shapes
+                    .prepare(black_box(&ir), &params, &ctx)
+                    .expect("the pinned query must bind")
+            },
+            criterion::BatchSize::SmallInput,
+        );
+    });
+}
+
 /// Criterion `Profiler` glue over the `pprof` sampler: start a guard when
 /// criterion enters profile mode, render `flamegraph.svg` into the bench's
 /// profile directory when it leaves.
@@ -182,6 +260,6 @@ impl Profiler for FlamegraphProfiler {
 criterion_group! {
     name = benches;
     config = Criterion::default().with_profiler(FlamegraphProfiler::new(999));
-    targets = aql_front_half
+    targets = aql_front_half, aql_statement_shape
 }
 criterion_main!(benches);
