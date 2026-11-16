@@ -1303,6 +1303,22 @@ access revision (`clinical/0046`) carries the namespace with the id. **Our own
 design:** the element, the projection, its uniqueness, the resolution order
 and the grant.
 
+**A care decision on a lagging replica** (#5806). The caller facts and the
+care copy reach a replica through its notification, which arrives after the
+commit. A verdict that care decides (the same EHR judged with and without
+care differs), and a query whose resolved care binds any EHR, first compare
+the replica's grant and facts revisions with `binding_grant_revision`: one
+indexed read of one row on the party pool, once per request
+(`RequestAccess::care_in_force`). When the copy is older, the request reads
+it again (the care copy drops what changed before the revision moves), keeps
+only the care teams the caller is still a member of in the copy read, and
+judges care again; a copy that stays older for 100 ms refuses with `503`
+`access-refreshing`. A care relationship that ended, a membership that ended
+and an erased `PERSON` therefore never admit on another replica; an addition
+may wait for the next request, which fails closed. The counter
+`access_care_stale_total{outcome}` counts each case. **Our own design:** the
+check, its place before the decision, and the wait.
+
 **The patient's EHRs** (#5648, #5649). `FerroEhrService::subject_ehrs`, the
 index lookup a subject cohort makes, answers the EHR the clinical subject
 names and the EHR of every other record subject of the `PERSON` that declares

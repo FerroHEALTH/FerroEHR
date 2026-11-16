@@ -126,7 +126,9 @@ impl Kind {
             Self::Forbidden => "The caller may not perform this operation",
             Self::ProcessingRestricted => "Processing of this record is restricted",
             Self::Unavailable => "The server is temporarily unavailable",
-            Self::AccessRefreshing => "The access state the query is judged by is being refreshed",
+            Self::AccessRefreshing => {
+                "The access state the request is judged by is being refreshed"
+            }
             Self::RateLimited => "The caller sent more requests than its rate allows",
             Self::ArchiveInvalid => "The archive cannot be loaded",
             Self::TrcPatientMismatch => {
