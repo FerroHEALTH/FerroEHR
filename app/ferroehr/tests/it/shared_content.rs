@@ -139,6 +139,10 @@ struct Served {
     aql: Vec<Vec<String>>,
 }
 
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn served(pool: &PgPool, svc: &FerroEhrService, chain: &Chain) -> Served {
     let mut bodies = Vec::new();
     let mut nodes = Vec::new();
@@ -313,6 +317,10 @@ async fn a_shared_tree_answers_the_same_as_its_own_copy() {
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_delete_an_archive_and_a_restore_keep_the_shared_tree() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();

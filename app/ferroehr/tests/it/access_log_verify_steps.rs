@@ -51,6 +51,10 @@ async fn cursor(pool: &PgPool) -> i64 {
 }
 
 /// Run `statement` with the table's triggers off, as only its owner can.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn tamper(pool: &PgPool, statement: &str) {
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");

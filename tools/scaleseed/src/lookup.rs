@@ -49,6 +49,10 @@ pub(crate) struct Target {
 ///
 /// # Errors
 /// When a statement fails, or a store already holds a seed of another size.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a seeding tool beside the server: it serves no request, so no request checkout applies"
+)]
 pub(crate) async fn seed(pool: &PgPool, target: Target) -> anyhow::Result<()> {
     let held: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM party.binding_identifier WHERE selector = 'key' AND issuer = $1",

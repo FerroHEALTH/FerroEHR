@@ -11,6 +11,7 @@
 use uuid::Uuid;
 
 use super::{GrantsUnavailable, LiveGrants};
+use crate::db::acquire::acquire;
 use crate::party_binding::grants::caller::CareTeam;
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
@@ -46,7 +47,7 @@ impl LiveGrants {
     /// # Errors
     /// [`GrantsUnavailable`] when the read fails.
     pub async fn subjects_of(&self, person: Uuid) -> Result<Vec<EhrSubject>, GrantsUnavailable> {
-        let mut conn = self.pool.acquire().await.map_err(StorageError::from)?;
+        let mut conn = acquire(&self.pool).await.map_err(StorageError::from)?;
         let declared =
             crate::party_binding::grants::caller::subject::declared_by(&mut conn, &[person])
                 .await?;
@@ -71,7 +72,7 @@ impl LiveGrants {
         value: &str,
         protected: &[(String, Vec<u8>)],
     ) -> Result<Vec<Uuid>, GrantsUnavailable> {
-        let mut conn = self.pool.acquire().await.map_err(StorageError::from)?;
+        let mut conn = acquire(&self.pool).await.map_err(StorageError::from)?;
         Ok(crate::party_binding::grants::caller::patient::carrying(
             &mut conn, issuer, value, protected,
         )

@@ -35,6 +35,7 @@
               fragment the seam produced once; stored-content serving"
 )]
 
+use sqlx::Connection;
 use std::sync::Arc;
 
 use openehr_base::validate::InvariantViolation;
@@ -42,6 +43,7 @@ use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use openehr_sdt::rm_instance::ValidationMessage;
 use serde_json::Value;
 
+use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::service::demographic::validate::{Container, party_check, relationship_check};
@@ -179,7 +181,8 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError`] when the party pool fails.
     pub async fn refill_binding_table(&self) -> Result<(), ServiceError> {
-        let mut tx = self.demographic_pool.begin().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut tx = conn.begin().await?;
         crate::party_binding::store::refill(&mut tx, &self.binding).await?;
         tx.commit().await?;
         Ok(())
