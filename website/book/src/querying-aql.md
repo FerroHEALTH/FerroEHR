@@ -140,7 +140,25 @@ ORDER BY systolic DESC
   (`120` and `120.0` are one value), a stored JSON `null` counts as no value,
   and `AVG` returns a decimal mean.
 - **`ORDER BY`**, **`LIMIT`**, and **`OFFSET`** behave as you expect; quantities
-  order by their openEHR magnitude semantics.
+  order by their openEHR magnitude semantics. A `DV_DURATION`'s `value` is a
+  string and orders as text (`P40D` after `P30M`); the whole `DV_DURATION`
+  orders by the duration it names.
+- **A whole data value** (a path ending on an `ELEMENT`'s `value`, not on its
+  `magnitude` or `value`) compares with a value of its own kind and never by
+  its JSON: a number with the magnitude of a whole `DV_QUANTITY`, `DV_COUNT`,
+  `DV_PROPORTION` or `DV_DURATION` or the value of a `DV_ORDINAL` or
+  `DV_SCALE`, an ISO 8601 date or date-time with a whole `DV_DATE` or
+  `DV_DATE_TIME`, and a time with a whole `DV_TIME`. Any other pair is
+  unknown, so neither the comparison nor its `NOT` keeps the row, and
+  `ORDER BY` sorts the values by the same keys. AQL 1.1.0 does not say how a
+  whole data value compares; this reading is FerroEHR's own.
+- **Numbers compare exactly**: a Real literal or parameter compares as the
+  decimal written, so a magnitude of 17 significant digits equals the same
+  literal. A Boolean compared with a number, or a number with a Boolean, is
+  refused with a 400.
+- **A `uid/value` predicate on a `COMPOSITION`** (`c[uid/value=$uid]`) selects
+  the version it names, as `WHERE c/uid/value = $uid` does. Under `OR` or
+  `NOT CONTAINS` the predicate is refused with a 400.
 - **Date/time comparisons accept reduced precision** on both sides: openEHR
   admits partial values (`2019`, `1985-06`), and the engine compares them by
   flooring to the first instant they contain (a partial date assumes the first

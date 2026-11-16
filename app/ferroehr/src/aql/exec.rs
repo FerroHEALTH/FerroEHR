@@ -294,15 +294,20 @@ fn settled_ehrs(
 ///
 /// # Errors
 /// [`ExecError`] when the column cannot be read back.
-fn ehrs_of(row: &PgRow, name: &str, aggregated: bool) -> Result<Vec<Uuid>, AqlError> {
+///
+/// One id is read with no allocation; only an aggregate's array is a vector.
+fn ehrs_of(row: &PgRow, name: &str, aggregated: bool) -> Result<RowEhrs, AqlError> {
     if aggregated {
         let ehrs: Option<Vec<Uuid>> = row.try_get(name).map_err(ExecError::from)?;
-        Ok(ehrs.unwrap_or_default())
+        Ok(None.into_iter().chain(ehrs.unwrap_or_default()))
     } else {
         let ehr: Option<Uuid> = row.try_get(name).map_err(ExecError::from)?;
-        Ok(ehr.into_iter().collect())
+        Ok(ehr.into_iter().chain(Vec::new()))
     }
 }
+
+/// The EHRs one access column of a row names ([`ehrs_of`]).
+type RowEhrs = std::iter::Chain<std::option::IntoIter<Uuid>, std::vec::IntoIter<Uuid>>;
 
 /// The result of scanning the SQL rows: the assembled cells, the subtree
 /// anchors to batch-load, and the whole-object cells awaiting them.

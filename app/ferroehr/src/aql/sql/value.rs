@@ -19,7 +19,7 @@
 
 use std::fmt::Write as _;
 
-use sea_query::{Alias, BinOper, Expr, ExprTrait as _, Order, Query};
+use sea_query::{Alias, Expr, ExprTrait as _, Order, Query};
 
 use crate::aql::error::{AnalysisError, AqlError, SqlError};
 use crate::aql::ir::{
@@ -28,9 +28,10 @@ use crate::aql::ir::{
 use crate::db::iden::{Ehr, Node, VersionRow};
 use crate::storage::promoted::{PROMOTED_LEAVES, PromotedKind};
 
+use super::coerce::{coerce_value, raw_order_modes, target_types};
 use super::compact::compact_read;
 use super::expr::{
-    as_text, call, cast, col, derived_col, extract_base, fragment_source, order_coercion, to_jsonb,
+    call, cast, col, derived_col, extract_base, fragment_source, order_coercion, to_jsonb,
     version_field_expr,
 };
 use super::from::{attribute_child, is_vo_root_type};
@@ -479,8 +480,10 @@ impl Builder<'_> {
     fn subject_column_expr(&self, leaf: &LeafPath, mode: ValueMode) -> Option<Expr> {
         // `id/value` is a String on every OBJECT_ID, so the mixed-type (`Raw`)
         // read of the abstract `id` compares it as text, as `Text` does.
-        if !matches!(mode, ValueMode::Value(Coercion::Text | Coercion::Raw))
-            || !leaf.anchor.is_empty()
+        if !matches!(
+            mode,
+            ValueMode::Value(Coercion::Text | Coercion::Raw) | ValueMode::RawText
+        ) || !leaf.anchor.is_empty()
             || leaf.root_predicate.is_some()
             || leaf.fragment.iter().any(|s| s.predicate.is_some())
         {
@@ -638,7 +641,8 @@ impl Builder<'_> {
     // ── ORDER BY / paging ─────────────────────────────────────────────────────
 
     /// ORDER BY (QUERY master03 §ORDER BY): multi-key, ASC/DESC, Ordered types
-    /// compared by ordered-magnitude via the key's own [`Coercion`].
+    /// compared by ordered-magnitude via the key's own [`Coercion`], and a
+    /// mixed-type leaf by the keys of `coerce::raw_order_modes`.
     pub(super) fn build_order_by(&mut self) -> Result<(), AqlError> {
         for key in self.ir.order_by.clone() {
             let OrderKey { path, ascending } = key;
@@ -676,6 +680,13 @@ impl Builder<'_> {
                 continue;
             }
             let coercion = order_coercion(&path);
+            if coercion == Coercion::Raw {
+                for mode in raw_order_modes(target_types(&path)) {
+                    let expr = self.value_expr(&path, mode)?;
+                    self.q.order_by_expr(expr, order.clone());
+                }
+                continue;
+            }
             let expr = self.value_expr(&path, ValueMode::Value(coercion))?;
             self.q.order_by_expr(expr, order);
         }
@@ -828,110 +839,6 @@ fn fragment_read(
         case = case.case(value_type().is_in(types.iter().copied()), read);
     }
     case.into()
-}
-
-// ── coercions ─────────────────────────────────────────────────────────────────
-
-/// Apply the value coercion to a jsonb extraction base (QUERY master03
-/// §Comparison operators; `DV_ORDERED` ordered-magnitude via `ext.openehr_magnitude`).
-pub(super) fn coerce_value(base: Expr, mode: ValueMode, leaf: &LeafPath) -> Expr {
-    match mode {
-        ValueMode::Projection => base,
-        ValueMode::Value(Coercion::Magnitude) => {
-            if leaf.types.names().iter().any(|t| t.starts_with("DV_")) {
-                call("openehr_magnitude", vec![base])
-            } else {
-                cast(as_text(base), "numeric")
-            }
-        }
-        ValueMode::Value(Coercion::Boolean) => cast(as_text(base), "boolean"),
-        // NOTE: RM data_types master07 §Partial Date/Times admits reduced
-        // precision, so the leaf reads through the total `ext.openehr_timestamp`
-        // — floor completion, NULL for garbage.
-        ValueMode::Value(Coercion::Temporal) => {
-            // NOTE: QUERY master03 §Dates and Times compares `context/start_time`, the DV
-            // object itself, as a date/time quantity, so an object leaf reads its `value`.
-            let text = if leaf.types.names().iter().any(|t| t.starts_with("DV_")) {
-                as_text(base.binary(BinOper::Custom("->"), cast(Expr::val("value"), "text")))
-            } else {
-                as_text(base)
-            };
-            call("openehr_timestamp", vec![text])
-        }
-        ValueMode::Value(Coercion::Text | Coercion::Raw) => as_text(base),
-        // a mixed-type (`Raw`) leaf being compared/matched against a
-        // numeric literal — extract numerically, but guard on the stored jsonb
-        // type so a non-number occurrence yields NULL (comparison false) instead
-        // of a cast error. "numeric for numbers, text otherwise" (QUERY master03
-        // §Comparison operators).
-        ValueMode::RawNumeric => raw_numeric(base),
-    }
-}
-
-/// Cast a bound right-hand-side value to match the comparison coercion
-/// (QUERY master03 §Comparison operators).
-///
-/// A temporal bound routes through the same total `ext.openehr_timestamp` the
-/// leaf side uses (floor completion for reduced precision), after a plan-time
-/// shape check: a bound that is no ISO-8601 date/time at all is the CALLER's
-/// defect and refuses as a typed error — never a silent empty result and
-/// never a driver error surfacing as a 500.
-///
-/// # Errors
-/// [`SqlError::UncoercibleTemporal`] when a temporal bound is not a string
-/// holding an ISO-8601 date, time, or date-time (reduced precision is
-/// accepted): a number, boolean or NULL bound is refused the same way.
-pub(super) fn coerce_rhs(value: sea_query::Value, coercion: Coercion) -> Result<Expr, AqlError> {
-    Ok(match coercion {
-        Coercion::Magnitude => cast(Expr::val(value), "numeric"),
-        Coercion::Boolean => cast(Expr::val(value), "boolean"),
-        Coercion::Temporal => {
-            // NOTE: QUERY master03 §Dates and Times reads a date/time as a string literal and
-            // §Literals, §Comparison operators give `NULL` no comparison meaning (presence is
-            // §EXISTS), so only an ISO 8601 string bounds a temporal comparison.
-            if !matches!(&value, sea_query::Value::String(Some(s)) if is_iso_temporal(s)) {
-                return Err(SqlError::UncoercibleTemporal.into());
-            }
-            call("openehr_timestamp", vec![cast(Expr::val(value), "text")])
-        }
-        Coercion::Text | Coercion::Raw => cast(Expr::val(value), "text"),
-    })
-}
-
-/// Whether `s` is an ISO-8601 date, time, or date-time literal in the shapes
-/// the temporal floor accepts — reduced precision and compact forms included
-/// (BASE `foundation_types` master06 §Time Types). Purely a plan-time shape
-/// gate: the SQL-side completion is the semantics.
-fn is_iso_temporal(s: &str) -> bool {
-    static ISO_TEMPORAL: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
-        // The separator set includes the space form PostgreSQL's own parser
-        // accepts.
-        let time = r"\d{2}(:\d{2}(:\d{2}([.,]\d+)?)?|\d{2}(\d{2}([.,]\d+)?)?)?";
-        let offset = r"([Zz]|[+-]\d{2}(:?\d{2})?)?";
-        let date = r"\d{4}(-\d{2}(-\d{2})?|\d{2}(\d{2})?)?";
-        #[expect(
-            clippy::expect_used,
-            reason = "a hardcoded regex literal should always compile; covered by \
-                      the temporal planner tests"
-        )]
-        regex::Regex::new(&format!(
-            "^({date}([Tt ]{time}{offset})?|[Tt]?{time}{offset})$"
-        ))
-        .expect("hardcoded ISO-8601 shape regex should be valid")
-    });
-    ISO_TEMPORAL.is_match(s)
-}
-
-/// Guarded numeric extraction for a mixed-type (`Raw`) leaf: number-typed jsonb
-/// occurrences extract as `numeric`; every non-number occurrence yields `NULL`,
-/// so a numeric comparison against them is false — never a cast error and never a
-/// silent lexical miscompare (QUERY master03 §Comparison operators). The `$1`/`$2`
-/// placeholders both carry the same extraction expression.
-fn raw_numeric(base: Expr) -> Expr {
-    Expr::cust_with_exprs(
-        "CASE WHEN jsonb_typeof($1) = 'number' THEN ($2 #>> '{}'::text[])::numeric END",
-        [base.clone(), base],
-    )
 }
 
 // ── VERSION / EHR fields ────────────────────────────────────────────────────

@@ -54,9 +54,9 @@ use crate::aql::ir::{
 };
 use crate::db::iden::{Node, VersionRow};
 
+use super::coerce::{RawPartner, raw_key, target_types};
 use super::expr::{binoper, call, col, hot};
 use super::from::{BoundTable, attribute_child, binding_rows};
-use super::predicate::raw_numeric_wanted;
 use super::select::bindable_leaf;
 use super::value::ItemWalk;
 use super::{Builder, StepBinding, ValueMode};
@@ -598,21 +598,27 @@ impl Builder<'_> {
                 rhs,
                 coercion,
             } => {
+                let op = binoper(*op);
+                if *coercion == Coercion::Raw
+                    && let Some((target, value, leaf_left)) = self.raw_sides(lhs, rhs)?
+                {
+                    // Each item is read whole, and the keys the partner
+                    // compares are taken off it (`coerce`).
+                    let partner = RawPartner::of(value, target_types(target));
+                    return Ok(Some((
+                        ValueMode::Projection,
+                        Box::new(move |item: Expr| {
+                            let (first, second) = partner.modes();
+                            let first = raw_key(item.clone(), first);
+                            let second = second.map(|mode| raw_key(item, mode));
+                            partner.compare(op, leaf_left, first, second)
+                        }),
+                    )));
+                }
                 let path_is_lhs = matches!(lhs, Operand::Path(_));
                 let bound = if path_is_lhs { rhs } else { lhs };
-                let raw = *coercion == Coercion::Raw && raw_numeric_wanted(&[lhs, rhs]);
-                let (mode, bound) = if raw {
-                    (
-                        ValueMode::RawNumeric,
-                        self.operand_value_raw_numeric(bound)?,
-                    )
-                } else {
-                    (
-                        ValueMode::Value(*coercion),
-                        self.operand_value(bound, *coercion)?,
-                    )
-                };
-                let op = binoper(*op);
+                let mode = ValueMode::Value(*coercion);
+                let bound = self.operand_value(bound, *coercion)?;
                 (
                     mode,
                     if path_is_lhs {

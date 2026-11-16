@@ -151,7 +151,7 @@ pub(super) fn analyze_rm_path(
     let mut in_fragment = false;
     let mut current = root_types.clone();
     // The candidate types of the *parent* of the final step, and the final
-    // attribute name — used to coerce a `.../value` leaf under a temporal DV
+    // attribute name — used to coerce a `.../value` leaf under a date/time DV
     // parent to `Temporal` (its `value` is an ISO-8601 String; QUERY §Built-in
     // Types/Dates and Times).
     let mut parent_types = current.clone();
@@ -194,7 +194,7 @@ pub(super) fn analyze_rm_path(
         }
     }
 
-    let coercion = if last_name.as_deref() == Some("value") && all_temporal(&parent_types) {
+    let coercion = if last_name.as_deref() == Some("value") && all_date_time(&parent_types) {
         Coercion::Temporal
     } else {
         classify(&current)
@@ -323,11 +323,13 @@ enum Cat {
 /// unknown/structural types.
 fn categorize(name: &str) -> Option<Cat> {
     match name {
+        // NOTE: RM `data_types` master06 §Quantity package makes a `DV_DURATION` a `DV_AMOUNT`,
+        // ordered by its magnitude in seconds, and no AQL literal is a duration (QUERY master03).
         "Integer" | "Integer64" | "Real" | "Double" | "DV_QUANTITY" | "DV_COUNT" | "DV_ORDINAL"
-        | "DV_SCALE" | "DV_PROPORTION" | "DV_AMOUNT" | "DV_QUANTIFIED" => Some(Cat::Num),
-        "DV_DATE" | "DV_TIME" | "DV_DATE_TIME" | "DV_DURATION" | "DV_TEMPORAL" => {
-            Some(Cat::Temporal)
+        | "DV_SCALE" | "DV_PROPORTION" | "DV_AMOUNT" | "DV_QUANTIFIED" | "DV_DURATION" => {
+            Some(Cat::Num)
         }
+        "DV_DATE" | "DV_TIME" | "DV_DATE_TIME" | "DV_TEMPORAL" => Some(Cat::Temporal),
         "Boolean" | "DV_BOOLEAN" => Some(Cat::Bool),
         "String" | "DV_TEXT" | "DV_CODED_TEXT" | "DV_IDENTIFIER" | "DV_URI" | "DV_EHR_URI"
         | "DV_PARSABLE" | "CODE_PHRASE" | "TERM_MAPPING" => Some(Cat::Text),
@@ -335,20 +337,25 @@ fn categorize(name: &str) -> Option<Cat> {
     }
 }
 
+/// Whether every type in the set is a date/time DV type (a non-empty set of
+/// `DV_DATE`/`DV_TIME`/`DV_DATE_TIME`/`DV_TEMPORAL`), whose `value` String
+/// QUERY master03 §Dates and Times lets the processor type as a date/time
+/// quantity. A `DV_DURATION` is not one of the three, so its `value` stays a
+/// String, ordered and compared as text (§ORDER BY).
+fn all_date_time(types: &TypeSet) -> bool {
+    !types.is_empty()
+        && types.names().iter().all(|t| {
+            matches!(
+                t.as_str(),
+                "DV_DATE" | "DV_TIME" | "DV_DATE_TIME" | "DV_TEMPORAL"
+            )
+        })
+}
+
 /// Decide the [`Coercion`] for a candidate leaf type set: a single uniform
 /// category maps to its coercion; anything mixed or unknown is
 /// [`Coercion::Raw`] (a guarded runtime dispatch — never a silent wrong-type
 /// comparison; design §Coercion table).
-/// Whether every type in the set is a temporal DV type (a non-empty set of
-/// `DV_DATE`/`DV_TIME`/`DV_DATE_TIME`/`DV_DURATION`/`DV_TEMPORAL`).
-fn all_temporal(types: &TypeSet) -> bool {
-    !types.is_empty()
-        && types
-            .names()
-            .iter()
-            .all(|t| categorize(t) == Some(Cat::Temporal))
-}
-
 fn classify(types: &TypeSet) -> Coercion {
     if types.is_empty() {
         return Coercion::Raw;

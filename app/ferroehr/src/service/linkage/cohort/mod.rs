@@ -318,7 +318,8 @@ impl FerroEhrService {
             return Ok(self.suppress(
                 CohortOutcome {
                     query: QueryOutcome::plain(
-                        crate::service::query::result_set::empty_result_set(&request.aql),
+                        crate::service::query::result_set::empty_result_set(&request.aql)
+                            .map_err(|error| CohortError::Query(error.into()))?,
                     ),
                     cohort_size,
                     served_ehrs: 0,
