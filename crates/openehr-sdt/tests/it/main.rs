@@ -47,6 +47,7 @@ mod validation;
 mod validation_checklist;
 mod validation_rules;
 mod value_alternatives;
+mod value_without_input;
 mod webtemplate;
 mod webtemplate_v2_4;
 mod webtemplate_v2_4_adl14_specialised;

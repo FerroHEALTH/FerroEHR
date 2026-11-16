@@ -529,9 +529,9 @@ async fn refuse_content_into_inactive_ehr(
     if !plan_writes_content_without_reactivating(plan) {
         return Ok(());
     }
-    let (exists, modifiable, _) =
+    let read =
         crate::storage::ehr_repo::ehr_writability(&mut *acquire(&cx.pool).await?, ehr_id).await?;
-    if exists && modifiable == Some(false) {
+    if read.is_modifiable == Some(false) {
         return Err(change::precondition::not_modifiable_error(ehr_id));
     }
     Ok(())

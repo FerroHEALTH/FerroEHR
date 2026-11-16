@@ -55,7 +55,7 @@ pub(crate) mod parties;
 pub(crate) mod structures;
 
 use openehr_rm::v1_2::typing::base_name;
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 
 use crate::flat::error::FlatError;
 use crate::flat::sim::{SimChild, SimNode};
@@ -132,10 +132,127 @@ pub(crate) fn build_leaf(
         return Ok(json!({"_type": "DV_TEXT", "value": other.clone()}));
     }
 
-    data_values::build_leaf(node, rm_type, wt_node).ok_or_else(|| FlatError::InvalidValue {
+    let built =
+        data_values::build_leaf(node, rm_type, wt_node).ok_or_else(|| FlatError::InvalidValue {
+            path: path.to_owned(),
+            reason: format!("the datum parts do not form a valid {base}"),
+        })?;
+    check_proportion_magnitude(node, &built, path)?;
+    Ok(built)
+}
+
+/// Refuses a bare DV_PROPORTION value that disagrees with its numerator and
+/// denominator.
+///
+/// master05 §DV_PROPORTION maps the bare value to `magnitude`, "calculated on
+/// output", and RM `data_types` §DV_PROPORTION computes `magnitude` as
+/// `numerator / denominator`, so the value is not stored. One that disagrees
+/// would otherwise be dropped with no trace.
+// NOTE: no specification says how close an input magnitude must be; our own
+// design accepts one that equals the quotient to the decimals the client wrote.
+fn check_proportion_magnitude(node: &SimNode, built: &Value, path: &str) -> Result<(), FlatError> {
+    let Some(given) = node.attrs.get("") else {
+        return Ok(());
+    };
+    if built.get("_type").and_then(Value::as_str) != Some("DV_PROPORTION") {
+        return Ok(());
+    }
+    let quotient = match (
+        built.get("numerator").and_then(Value::as_f64),
+        built.get("denominator").and_then(Value::as_f64),
+    ) {
+        (Some(n), Some(d)) if d != 0.0 => n / d,
+        _ => return Ok(()),
+    };
+    let refusal = |reason: String| FlatError::InvalidValue {
         path: path.to_owned(),
-        reason: format!("the datum parts do not form a valid {base}"),
-    })
+        reason,
+    };
+    let Some(magnitude) = given.as_f64() else {
+        return Err(refusal(format!(
+            "the bare DV_PROPORTION value is its magnitude, a number, not {given}"
+        )));
+    };
+    let written = given.to_string();
+    let decimals = written.split_once('.').map_or(0, |(_, fraction)| {
+        fraction.split(['e', 'E']).next().unwrap_or("").len()
+    });
+    let tolerance = 0.5 * 10f64.powi(-i32::try_from(decimals).unwrap_or(300).min(300));
+    if (magnitude - quotient).abs() <= tolerance.max(f64::EPSILON * quotient.abs()) {
+        Ok(())
+    } else {
+        Err(refusal(format!(
+            "the bare DV_PROPORTION value {written} is the magnitude, numerator / denominator \
+             = {quotient}, which it does not match"
+        )))
+    }
+}
+
+/// Applies the master05 container-level datum suffixes (`|sample_count`, the
+/// DV_INTERVAL flags) to a container node under construction.
+///
+/// # Errors
+/// [`FlatError::ValueWithoutInput`] for a bare value, which no container takes
+/// (master05 puts a value on a data value node), naming an ELEMENT's value
+/// alternatives; [`FlatError::UnknownSuffix`] for a suffix the per-type tables
+/// do not place on this container ([`container_datum_attr`]).
+pub(crate) fn apply_container_datum_attrs(
+    node: &WebTemplateNode,
+    sim: &SimNode,
+    path: &str,
+    obj: &mut Map<String, Value>,
+) -> Result<(), FlatError> {
+    if sim.attrs.contains_key("") {
+        let alternatives = if node.rm_type == "ELEMENT" {
+            node.children.iter().map(|c| c.id.clone()).collect()
+        } else {
+            Vec::new()
+        };
+        return Err(FlatError::ValueWithoutInput {
+            path: path.to_owned(),
+            rm_type: node.rm_type.clone(),
+            alternatives,
+        });
+    }
+    let host = base_name(&node.rm_type);
+    for (chain, datum) in &sim.attrs {
+        if let Some(attr) = container_datum_attr(host, chain) {
+            obj.insert(attr.to_owned(), datum.clone());
+        }
+    }
+    if let Some((chain, _)) = sim
+        .attrs
+        .iter()
+        .find(|(c, _)| container_datum_attr(host, c.as_str()).is_none())
+    {
+        return Err(FlatError::UnknownSuffix {
+            rm_type: node.rm_type.clone(),
+            suffix: chain.clone(),
+            path: path.to_owned(),
+        });
+    }
+    Ok(())
+}
+
+/// The RM attribute a datum suffix (`|suffix`) sets when the master05 per-type
+/// tables place it on a **container** node rather than on a `DATA_VALUE` leaf.
+///
+/// `master05 §INTERVAL_EVENT`: `|sample_count` (INTEGER → `sample_count`, the
+/// count of samples the interval summarises) is spelled directly on the event
+/// node — the section's second example block is
+/// `…/any_event:0|sample_count: 5`, not a sub-path. The mirror of
+/// [`crate::flat::flatten`]'s INTERVAL_EVENT emission.
+fn container_datum_attr(host: &str, suffix: &str) -> Option<&'static str> {
+    match (host, suffix) {
+        ("INTERVAL_EVENT", "sample_count") => Some("sample_count"),
+        // master05 §DV_INTERVAL: the four BOOLEAN flags sit on the interval
+        // itself when the template gives its bounds their own nodes.
+        ("DV_INTERVAL", "lower_unbounded") => Some("lower_unbounded"),
+        ("DV_INTERVAL", "upper_unbounded") => Some("upper_unbounded"),
+        ("DV_INTERVAL", "lower_included") => Some("lower_included"),
+        ("DV_INTERVAL", "upper_included") => Some("upper_included"),
+        _ => None,
+    }
 }
 
 /// One `_`-segment child of a sim node → `(rm_attribute_name, canonical JSON
@@ -226,7 +343,7 @@ pub(super) fn code_phrase_obj(
     terminology: &str,
     preferred_term: Option<Value>,
 ) -> Value {
-    let mut o = serde_json::Map::new();
+    let mut o = Map::new();
     o.insert("_type".to_owned(), json!("CODE_PHRASE"));
     o.insert(
         "terminology_id".to_owned(),

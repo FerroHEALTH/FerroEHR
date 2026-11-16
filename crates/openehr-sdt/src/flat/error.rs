@@ -40,6 +40,25 @@ pub enum FlatError {
     #[error("unknown simplified path: {0}")]
     UnknownPath(String),
 
+    /// A value given on a node that takes no value of its own: an ELEMENT
+    /// whose `value` admits several types, or a structural node. master05
+    /// puts a value on a data value node (its per-type tables), and master04
+    /// §Validation checks that "field identifiers match WT metadata
+    /// structure", so the value is refused, never dropped.
+    #[error(
+        "{path} is a {rm_type}, which takes no value of its own{}",
+        value_hint(alternatives)
+    )]
+    ValueWithoutInput {
+        /// The simplified path the value was given on.
+        path: String,
+        /// The RM type of the node the path resolved to.
+        rm_type: String,
+        /// For an ELEMENT with value alternatives, the ids of the alternatives
+        /// the value belongs on; empty for a structural node.
+        alternatives: Vec<String>,
+    },
+
     /// An attribute suffix is not defined for the RM type at its path
     /// (master05 per-type tables).
     #[error("unknown attribute suffix |{suffix} for {rm_type} at {path}")]
@@ -203,4 +222,16 @@ pub enum FlatError {
         #[source]
         source: openehr_its::json::JsonParseError,
     },
+}
+
+/// The hint a [`FlatError::ValueWithoutInput`] gives: where the value goes.
+fn value_hint(alternatives: &[String]) -> String {
+    if alternatives.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "; give it on one of its value alternatives: {}",
+            alternatives.join(", ")
+        )
+    }
 }

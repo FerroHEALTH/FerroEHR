@@ -65,6 +65,7 @@ emergency_purpose_codes = []
 | `enabled` | bool | `true` | Persist every record in the `audit` schema, served through the ITI-81 `GET /fhir/r4/AuditEvent` search. |
 | `verify_interval` | duration | `"1h"` | The time between two scheduled verifications of the store's hash chain; `"0s"` turns the schedule off. Each run verifies the records written since the newest link an earlier run found intact. A finding is logged at `ERROR`, counted in `atna_audit_chain_findings` and reported by the `audit_chain` indicator on `GET /health/readiness`. See [Tamper evidence](../audit.md#tamper-evidence). |
 | `full_verify_interval` | duration | `"7d"` | The time between two scheduled full passes over the hash chain, which also recompute the records before the checkpoint; `"0s"` leaves the full pass to `SELECT * FROM audit.verify_audit_chain()` on demand. A run that found damage is always followed by a full pass. |
+| `max_verify_lag` | duration | `"4h"` | How long a record may wait past its chain's verification cursor before the `audit_chain` indicator reads `DEGRADED`; `"0s"` reports the lag only as the `audit_chain_verification_lag` and `audit_chain_unverified_age_seconds` metrics. Set it above `verify_interval`. |
 
 The local store is the durability anchor of the whole subsystem: with it on, the
 FHIR feed drains from it, so a down repository loses nothing.
