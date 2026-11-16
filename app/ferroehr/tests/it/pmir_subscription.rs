@@ -27,6 +27,7 @@ fn subscription(registry: &MockServer) -> Subscription {
         feed_issuer: "https://as.example".to_owned(),
         feed_client_id: "ferropix".to_owned(),
         identifier_domain: Vec::new(),
+        refused_degraded_at: 1,
     };
     Subscription::new(&config, FEED).expect("the subscriber builds")
 }

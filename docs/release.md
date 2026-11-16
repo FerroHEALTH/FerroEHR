@@ -204,6 +204,10 @@ the head breaches in most of the pairs. A run that cannot be judged exits 2
 and says why: a phase that stalled, a generator that lagged, a window that
 was not steady, or a base that fell behind the schedule. A request the head
 answered with a status other than the plan's expected one fails the run
-too. `target/perf/base-rev` names the base commit. Locally, `PERF_SERVER`,
+too. Below the verdict, each arm's ten statements by PostgreSQL time over
+the run name their calls and their mean planning and execution time:
+PostgreSQL counts planning beside execution (`pg_stat_statements.track_planning`),
+and an AQL statement is planned for its values on every call (#5746).
+`target/perf/base-rev` names the base commit. Locally, `PERF_SERVER`,
 `PERF_DATABASE` and `PERF_TARGET` point `gate.sh self-test` at a server you
 started yourself (see the script's header).

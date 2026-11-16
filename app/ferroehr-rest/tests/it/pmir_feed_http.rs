@@ -86,6 +86,7 @@ fn message(id: &str) -> Vec<u8> {
             value: Some("NAT-1".into()),
             ..Identifier::default()
         }],
+        active: Some(true.into()),
         ..Patient::default()
     };
     let bundle = notification::message(
@@ -100,7 +101,11 @@ fn message(id: &str) -> Vec<u8> {
     serde_json::to_vec(&bundle).expect("the message writes")
 }
 
-async fn post(app: &Router, token: Option<&str>, body: Vec<u8>) -> (StatusCode, http::HeaderMap, String) {
+async fn post(
+    app: &Router,
+    token: Option<&str>,
+    body: Vec<u8>,
+) -> (StatusCode, http::HeaderMap, String) {
     let mut request = common::req("POST", "/pmir/feed")
         .header(header::CONTENT_TYPE, "application/fhir+json")
         .body(body);
@@ -116,12 +121,18 @@ async fn only_the_trusted_registry_client_may_post() {
     let (status, headers, _) = post(&app, None, message("m-0")).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     assert_eq!(
-        headers.get(header::WWW_AUTHENTICATE).and_then(|v| v.to_str().ok()),
+        headers
+            .get(header::WWW_AUTHENTICATE)
+            .and_then(|v| v.to_str().ok()),
         Some("Bearer")
     );
     let other = client_token("someone-else");
     let (status, _, _) = post(&app, Some(&other), message("m-0")).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "a client [pix] does not name is refused");
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "a client [pix] does not name is refused"
+    );
 }
 
 #[tokio::test]
@@ -132,12 +143,17 @@ async fn a_message_is_answered_once_stored_and_again_when_redelivered() {
         let (status, headers, body) = post(&app, Some(&token), message("m-1")).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(
-            headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()),
+            headers
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok()),
             Some("application/fhir+json")
         );
         let response: serde_json::Value = serde_json::from_str(&body).expect("JSON");
         assert_eq!(response["type"], "message");
-        assert_eq!(response["entry"][0]["resource"]["response"]["identifier"], "m-1");
+        assert_eq!(
+            response["entry"][0]["resource"]["response"]["identifier"],
+            "m-1"
+        );
         assert_eq!(response["entry"][0]["resource"]["response"]["code"], "ok");
     }
 }
@@ -146,7 +162,12 @@ async fn a_message_is_answered_once_stored_and_again_when_redelivered() {
 async fn a_body_the_profiles_refuse_is_a_400_with_its_outcome() {
     let (_db, app) = app().await;
     let token = client_token(REGISTRY_CLIENT);
-    let (status, _, body) = post(&app, Some(&token), br#"{"resourceType":"Patient"}"#.to_vec()).await;
+    let (status, _, body) = post(
+        &app,
+        Some(&token),
+        br#"{"resourceType":"Patient"}"#.to_vec(),
+    )
+    .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     let outcome: serde_json::Value = serde_json::from_str(&body).expect("JSON");
     assert_eq!(outcome["resourceType"], "OperationOutcome");

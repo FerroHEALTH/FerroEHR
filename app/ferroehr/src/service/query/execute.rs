@@ -166,7 +166,7 @@ impl FerroEhrService {
         let access_settings = Box::pin(self.ehr_access_readers())
             .await
             .map_err(Failure::analysis)?;
-        let ehr_access = Box::pin(self.resolve_care(
+        let ehr_access = Box::pin(self.query_access_condition(
             &request.ehr_access,
             pinned_ehrs(ir, params, request).as_deref(),
         ))

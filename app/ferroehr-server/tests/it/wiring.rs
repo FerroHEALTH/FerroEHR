@@ -133,6 +133,51 @@ fn config_subcommands_parse() -> Result<(), clap::Error> {
     Ok(())
 }
 
+/// `pmir` lists, retries and settles a refused ITI-93 message, and every
+/// step names its operator (#5725).
+#[test]
+fn pmir_subcommands_parse_and_name_their_operator() -> Result<(), clap::Error> {
+    let settle = Cli::try_parse_from([
+        "ferroehr",
+        "pmir",
+        "settle",
+        "m-1",
+        "--decision",
+        "lift-splits",
+        "--reason",
+        "the Registry is corrected",
+        "--operator",
+        "steward",
+    ])?;
+    let rendered = format!("{settle:?}");
+    assert!(
+        rendered.contains("Settle") && rendered.contains("lift-splits"),
+        "not the settle step: {rendered}"
+    );
+    let retry = Cli::try_parse_from(["ferroehr", "pmir", "retry", "m-1", "--operator", "steward"])?;
+    assert!(format!("{retry:?}").contains("Retry"), "not the retry step");
+    for args in [
+        &["ferroehr", "pmir", "list"][..],
+        &["ferroehr", "pmir", "retry", "m-1"][..],
+        &[
+            "ferroehr",
+            "pmir",
+            "settle",
+            "m-1",
+            "--decision",
+            "discard",
+            "--operator",
+            "s",
+        ][..],
+    ] {
+        assert!(
+            Cli::try_parse_from(args).is_err(),
+            "{args:?} must name its operator and reason"
+        );
+    }
+    Ok(())
+}
+
 /// `config` without a utility is rejected (the inner subcommand is required).
 #[test]
 fn config_without_a_utility_is_rejected() {

@@ -23,7 +23,16 @@
 # first CAPACITY_SPREAD population EHRs get one composition each, so the
 # single-EHR groups read and write across that many EHRs, past the 4096
 # EHRs the access settings cache holds. The commits go to the next
-# CAPACITY_SPREAD population EHRs, so the reads' answers do not grow.
+# CAPACITY_SPREAD population EHRs, so the reads' answers do not grow. The
+# single-EHR AQL reads EHRs of its own, sized as a chart is (#5746): aql_ehr
+# the next CAPACITY_SPREAD EHRs with CAPACITY_AQL_ROWS lab results each (a
+# typical answer), and aql_chart the next CAPACITY_CHART_EHRS with
+# CAPACITY_CHART_ROWS each (a whole chart).
+#
+# PostgreSQL counts each statement's planning beside its execution
+# (pg_stat_statements.track_planning), and every step's statements.json names
+# both: the AQL is custom-planned per call, so its execution alone is about
+# half of what it costs PostgreSQL at a small answer.
 #
 # A step passes when every request was answered as expected, the generator
 # kept its schedule and was never saturated, the measured throughput is at
@@ -75,6 +84,10 @@
 #                        the summary must then name
 #   CAPACITY_POPULATION  the patients the seed puts under care (default 20000)
 #   CAPACITY_SPREAD      the EHRs the single-EHR groups spread over (default 500)
+#   CAPACITY_AQL_ROWS    the lab results in each EHR aql_ehr reads (default 20)
+#   CAPACITY_CHART_EHRS  the EHRs aql_chart reads (default 50)
+#   CAPACITY_CHART_ROWS  the lab results in each EHR aql_chart reads
+#                        (default 100)
 #   CAPACITY_WARMUP      seconds of warm-up per step (default 15)
 #   CAPACITY_DURATION    measured seconds per step (default 60)
 #   CAPACITY_SLO_MS      the p99 SLO of the single-EHR groups (default 100)
@@ -107,6 +120,9 @@ readonly TOPOLOGY="${CAPACITY_TOPOLOGY:-native}"
 readonly POOL="${CAPACITY_POOL:-20}"
 readonly MAX_CONCURRENT="${CAPACITY_MAX_CONCURRENT:-256}"
 readonly SPREAD="${CAPACITY_SPREAD:-500}"
+readonly AQL_ROWS="${CAPACITY_AQL_ROWS:-20}"
+readonly CHART_EHRS="${CAPACITY_CHART_EHRS:-50}"
+readonly CHART_ROWS="${CAPACITY_CHART_ROWS:-100}"
 readonly WARMUP="${CAPACITY_WARMUP:-15}"
 readonly DURATION="${CAPACITY_DURATION:-60}"
 readonly SLO_MS="${CAPACITY_SLO_MS:-100}"
@@ -129,6 +145,7 @@ ehr_read             3  clinician
 composition_read     5  clinician
 composition_commit   3  clinician
 aql_ehr              3  clinician
+aql_chart            1  clinician
 aql_population       1  clinician
 access_log_read      1  administrator
 party_read           2  administrator
@@ -187,6 +204,7 @@ max_wal_size = 8GB
 checkpoint_timeout = 15min
 shared_preload_libraries = 'pg_stat_statements'
 pg_stat_statements.track = all
+pg_stat_statements.track_planning = on
 pg_stat_statements.max = 10000
 track_io_timing = on
 log_lock_waits = on
@@ -447,6 +465,10 @@ seed_capacity() {
   # The parties the directives name, for a seed that resumes.
   NAMED_PROFESSIONAL=$(seed_value NAMED_PROFESSIONAL)
   REPRESENTATIVE=$(seed_value REPRESENTATIVE)
+  local held
+  held=$(wc -l <"$PERF_OUT/access-population.ids" | tr -d ' ')
+  ((held >= 3 * SPREAD + CHART_EHRS)) \
+    || cap_die "$held population EHRs hold no $((3 * SPREAD + CHART_EHRS)) for the reads, the commits and the AQL: raise CAPACITY_POPULATION"
   # One composition in each of the first SPREAD population EHRs, sixteen at
   # a time.
   : >"$STATE/spread.tsv"
@@ -458,8 +480,33 @@ seed_capacity() {
   [[ "$(wc -l <"$STATE/spread.tsv" | tr -d ' ')" == "$SPREAD" ]] \
     || cap_die "$(wc -l <"$STATE/spread.tsv" | tr -d ' ') of $SPREAD spread compositions were committed: $(head -c 400 "$PERF_OUT/spread.log")"
   sed -n "$((SPREAD + 1)),$((2 * SPREAD))p" "$PERF_OUT/access-population.ids" >"$STATE/writes.ids"
+  sed -n "$((2 * SPREAD + 1)),$((3 * SPREAD))p" "$PERF_OUT/access-population.ids" >"$STATE/aql.ids"
+  sed -n "$((3 * SPREAD + 1)),$((3 * SPREAD + CHART_EHRS))p" "$PERF_OUT/access-population.ids" \
+    >"$STATE/chart.ids"
+  fill "$STATE/aql.ids" "$AQL_ROWS" "$STATE/aql.tsv"
+  fill "$STATE/chart.ids" "$CHART_ROWS" "$STATE/chart.tsv"
   cap_sql "VACUUM ANALYZE" >/dev/null
-  echo "capacity: seeded $PERF_POPULATION patients under care, $SPREAD with a composition"
+  echo "capacity: seeded $PERF_POPULATION patients under care, $SPREAD with a composition," \
+    "$SPREAD with $AQL_ROWS lab results and $CHART_EHRS with $CHART_ROWS"
+}
+
+# fill <ids> <per-ehr> <out>: <per-ehr> compositions committed into each EHR
+# of <ids>, sixteen at a time, one line each in <out>; a fill already
+# complete is kept, so a seed resumes.
+fill() {
+  local ids="$1" per="$2" out="$3" ehr k want
+  want=$(($(wc -l <"$ids" | tr -d ' ') * per))
+  [[ -f "$out" && "$(wc -l <"$out" | tr -d ' ')" == "$want" ]] && return 0
+  : >"$out"
+  while read -r ehr; do
+    for ((k = 0; k < per; k++)); do
+      spread_one "$ehr" >>"$out" 2>>"$PERF_OUT/spread.log" &
+      if (($(jobs -pr | wc -l) >= 16)); then wait -n || true; fi
+    done
+  done <"$ids"
+  wait || true
+  [[ "$(wc -l <"$out" | tr -d ' ')" == "$want" ]] \
+    || cap_die "$(wc -l <"$out" | tr -d ' ') of $want compositions for $(basename "$out" .tsv) were committed: $(head -c 400 "$PERF_OUT/spread.log")"
 }
 
 seed_value() { # <name>
@@ -511,13 +558,17 @@ group_requests() {
         "$COMPOSITION" application/json
     done <"$STATE/writes.ids"
     ;;
-  aql_ehr)
-    while IFS=$'\t' read -r ehr uid; do
+  aql_ehr | aql_chart)
+    # aql_ehr reads EHRs holding a typical answer, aql_chart EHRs holding a
+    # whole chart (#5746).
+    local ids="$STATE/aql.ids"
+    [[ "$group" == aql_chart ]] && ids="$STATE/chart.ids"
+    while read -r ehr; do
       aql "$ehr" true >"$body.$i"
-      plan_request aql_ehr POST "$BASE/query/aql" 200 "$clinician" "$body.$i" application/json
+      plan_request "$group" POST "$BASE/query/aql" 200 "$clinician" "$body.$i" application/json
       rm -f "$body.$i"
       i=$((i + 1))
-    done <"$STATE/spread.tsv"
+    done <"$ids"
     ;;
   aql_population)
     jq -cn --arg q "$POPULATION_AQL" '{q: $q}' >"$body"
@@ -694,9 +745,10 @@ step() {
   xact_after=$(cap_sql "SELECT xact_commit + xact_rollback FROM pg_stat_database WHERE datname = 'ferroehr'")
   for inst in "${instances[@]}"; do scrape "$inst" "$dir/prometheus-$i.txt"; i=$((i + 1)); done
   cap_sql "SELECT json_agg(t) FROM (SELECT calls, round(total_exec_time::numeric, 1) AS total_ms, \
-    round(mean_exec_time::numeric, 3) AS mean_ms, rows, shared_blks_hit, shared_blks_read, \
+    round(mean_exec_time::numeric, 3) AS mean_ms, round(total_plan_time::numeric, 1) AS plan_total_ms, \
+    round(mean_plan_time::numeric, 3) AS plan_mean_ms, rows, shared_blks_hit, shared_blks_read, \
     left(regexp_replace(query, '\s+', ' ', 'g'), 240) AS query FROM pg_stat_statements \
-    WHERE query NOT ILIKE '%pg_stat%' ORDER BY total_exec_time DESC LIMIT 15) t" \
+    WHERE query NOT ILIKE '%pg_stat%' ORDER BY total_exec_time + total_plan_time DESC LIMIT 15) t" \
     >"$dir/statements.json"
   local report
   report=$(find "$dir" -maxdepth 1 -name '*.json' ! -name statements.json ! -name step.json | sed -n 1p)
