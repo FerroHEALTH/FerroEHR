@@ -29,13 +29,15 @@ use ferroehr::versioning::committer::{CommitterIdentity, with_committer};
 
 /// The operator every act runs as.
 const OPERATOR: &str = "steward";
+/// The operating-system account the CLI ran the acts under.
+const ACCOUNT: &str = "os:steward/1001";
 
 fn operator() -> CommitterIdentity {
     CommitterIdentity {
         subject: OPERATOR.to_owned(),
-        id_type: "basic",
+        id_type: "operator",
         issuer: None,
-        client: None,
+        client: Some(ACCOUNT.to_owned()),
         person: false,
         party: None,
         representative: false,
@@ -330,21 +332,21 @@ async fn every_list_retry_and_settlement_is_an_access_record_naming_the_operator
 
     drop(svc);
     handle.shutdown(Duration::from_secs(5)).await;
-    let recorded: Vec<(String, Option<String>)> = sqlx::query_as(
-        "SELECT action, principal FROM audit.access_trail \
+    let recorded: Vec<(String, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT action, principal, client_id FROM audit.access_trail \
          WHERE resource_id = 'pmir-message:link' ORDER BY chain_seq",
     )
     .fetch_all(&db.pool())
     .await
     .expect("the trail reads");
-    let operator = Some(OPERATOR.to_owned());
+    let (operator, account) = (Some(OPERATOR.to_owned()), Some(ACCOUNT.to_owned()));
     assert_eq!(
         recorded,
         [
-            ("R".to_owned(), operator.clone()),
-            ("U".to_owned(), operator.clone()),
-            ("U".to_owned(), operator),
+            ("R".to_owned(), operator.clone(), account.clone()),
+            ("U".to_owned(), operator.clone(), account.clone()),
+            ("U".to_owned(), operator, account),
         ],
-        "the list, the retry and the settlement, each naming the operator"
+        "the list, the retry and the settlement, each naming the operator and the account"
     );
 }

@@ -1,0 +1,1 @@
+- `ferroehr pmir list|retry|settle` records the operating-system account that ran it, its effective user as `os:<name>/<uid>`, as the client of every access record beside the stated `--operator`, so a CLI act names an account the operating system established and not only a typed name. A demographic access record the service writes now names the client of its committer.

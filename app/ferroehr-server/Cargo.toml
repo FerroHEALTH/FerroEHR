@@ -45,6 +45,9 @@ mimalloc.workspace = true
 [lints]
 workspace = true
 
+[target.'cfg(unix)'.dependencies]
+nix.workspace = true
+
 [dev-dependencies]
 # The wiring-seam tests (`tests/it/`) drive `Cli` parsing, the pure-stdout
 # `config check` dispatch and the `[privacy]` policy the run path compiles

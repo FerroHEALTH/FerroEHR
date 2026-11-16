@@ -1355,7 +1355,10 @@ before the message; either clears its identifiers. No settlement applies a
 message by an operator's choice of `PERSON`, identifier or survivor, which
 would assert an identity the Registry did not state. Every list, retry and
 settlement is an access record of the demographic domain on
-`pmir-message:<id>` naming the operator. The `pmir_messages_refused` gauge
+`pmir-message:<id>` naming the operator; the CLI's committer carries the
+stated `--operator` as its subject and the process's effective user
+(`os:<name>/<uid>`, read with `nix`) as its client, which the record names
+beside it. The `pmir_messages_refused` gauge
 and the `pmir_refused_messages` indicator (`DEGRADED` from `[pix]
 refused_degraded_at` on, never withdrawing readiness) count the refused
 messages. An identity is bound to the one `PERSON` that
