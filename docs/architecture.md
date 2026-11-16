@@ -1303,7 +1303,25 @@ names or the patient `PERSON`s already carry that domain with. A message about a
 that states neither the merge nor its revert, a linked identifier of a domain
 with no `DV_IDENTIFIER` type, an ambiguous binding, a contested identifier or a
 refused commit refuses the message: it keeps its splits and is logged, and
-the next message applies. An identity is bound to the one `PERSON` that
+the next message applies. An operator then acts on it (#5725,
+`identity_feed::operator`, `GET /admin/pmir/messages`, `POST
+…/{message_id}/retry` and `…/settle`, `ferroehr pmir`): a retry puts it back
+to `received` at its own `sequence`, so it applies next, under the
+transaction-level advisory lock every apply holds, and is refused when an
+applied message with a higher `sequence` names one of its `identities` (the
+Registry `Patient.id`s each row keeps after it applies), since each
+announcement states an identity's whole identifier set and the older one
+would roll it back. A settlement closes it unapplied with a `decision`, the
+operator (`decided_by`) and a reason: `discard` keeps its suppressions,
+`lift-splits` deletes them and stamps the holders, restoring the resolution
+before the message; either clears its identifiers. No settlement applies a
+message by an operator's choice of `PERSON`, identifier or survivor, which
+would assert an identity the Registry did not state. Every list, retry and
+settlement is an access record of the demographic domain on
+`pmir-message:<id>` naming the operator. The `pmir_messages_refused` gauge
+and the `pmir_refused_messages` indicator (`DEGRADED` from `[pix]
+refused_degraded_at` on, never withdrawing readiness) count the refused
+messages. An identity is bound to the one `PERSON` that
 carries one of its announced identifiers. A redelivery is stored once. **Our
 own design:** all of it (PMIR §2:3.93.4.1.3 leaves the Consumer's handling to
 its capabilities), including acknowledging once stored rather than once

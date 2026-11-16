@@ -165,6 +165,7 @@ impl FerroEhrService {
         self.record_party_access(
             EventActionCode::Delete,
             format!("party:{}#contacts", party.0),
+            None,
         )?;
         Ok(true)
     }

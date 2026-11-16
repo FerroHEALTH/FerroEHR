@@ -443,6 +443,8 @@ const ADMIN_READ: &[(&str, &str)] = &[
     ("GET", "/admin/party/identifiers"),
     // The outbox feed read (#4786); a read moves no cursor.
     ("GET", "/admin/outbox/{reader}"),
+    // The refused PMIR feed messages, by ids and counts (#5725).
+    ("GET", "/admin/pmir/messages"),
     // The operational-policy registers and their versions (#5442).
     ("GET", "/admin/registers/{register}"),
     ("GET", "/admin/registers/{register}/history"),
@@ -508,6 +510,10 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     ("POST", "/admin/access-log/checkpoint"),
     // The outbox acknowledgement moves the reader's cursor (#4786).
     ("POST", "/admin/outbox/{reader}/ack"),
+    // A retry puts a refused PMIR feed message back in the queue, and a
+    // settlement closes it, lifting its splits on a recorded decision (#5725).
+    ("POST", "/admin/pmir/messages/{message_id}/retry"),
+    ("POST", "/admin/pmir/messages/{message_id}/settle"),
     // A new version of an operational-policy register decides every request
     // after it (#5442).
     ("PUT", "/admin/registers/{register}"),
