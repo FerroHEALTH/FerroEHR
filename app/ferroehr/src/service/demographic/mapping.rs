@@ -367,6 +367,13 @@ impl FerroEhrService {
         &self.grants
     }
 
+    /// This replica's copy of the binding lookups and the bound `PERSON`s'
+    /// names.
+    #[must_use]
+    pub fn bindings(&self) -> &std::sync::Arc<crate::party_binding::live::LiveBindings> {
+        &self.bindings
+    }
+
     /// Fills the grant rows when they were never filled, then reads them, as
     /// a boot does before the replica takes traffic.
     ///

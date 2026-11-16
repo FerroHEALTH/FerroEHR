@@ -196,18 +196,18 @@ impl AccessPathMetrics {
         Self {
             copy_lookups: make.counter(
                 ACCESS_COPY_LOOKUPS,
-                "Lookups in the per-EHR access copy and the class copy \
-                 (copy = ehr | classes, result = hit | miss)",
+                "Lookups in the per-EHR access copy, the class copy and the binding copies \
+                 (copy = ehr | classes | binding | party_name, result = hit | miss)",
             ),
             copy_refills: make.counter(
                 ACCESS_COPY_REFILLS,
-                "Reads that refill the per-EHR access copy or the class copy \
-                 (copy = ehr | classes, outcome = ok | failed)",
+                "Reads that refill the per-EHR access copy, the class copy or a binding copy \
+                 (copy = ehr | classes | binding | party_name, outcome = ok | failed)",
             ),
             copy_drops: make.counter(
                 ACCESS_COPY_DROPS,
-                "Drops from the per-EHR access copy and the class copy \
-                 (scope = ehr | classes | every)",
+                "Drops from the per-EHR access copy, the class copy and the binding copies \
+                 (scope = ehr | classes | binding | party_name | every)",
             ),
             grants_refresh_duration: make.histogram(
                 GRANTS_REFRESH_DURATION,

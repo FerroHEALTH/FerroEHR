@@ -164,6 +164,7 @@ pub(crate) async fn write_identifiers(
     rows: &[IdentifierRow],
     professional: &[Professional],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if parties.is_empty() {
         return Ok(());
     }
@@ -247,6 +248,7 @@ pub(crate) async fn insert_tombstones(
     tx: &mut PgConnection,
     rows: &[IdentifierRow],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if rows.is_empty() {
         return Ok(());
     }
@@ -288,6 +290,7 @@ pub(crate) async fn revive_keys(
     tx: &mut PgConnection,
     parties: &[Uuid],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if parties.is_empty() {
         return Ok(());
     }
@@ -385,6 +388,7 @@ pub(crate) async fn write_representations(
     parties: &[Uuid],
     rows: &[RepresentationRow],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if parties.is_empty() {
         return Ok(());
     }
@@ -409,6 +413,7 @@ pub(crate) async fn write_standalone(
     container: Uuid,
     row: Option<&RepresentationRow>,
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     let rows: Vec<RepresentationRow> = row.into_iter().cloned().collect();
     write(
         tx,
@@ -480,6 +485,7 @@ pub(crate) async fn write_history(
     tx: &mut PgConnection,
     held: &[(RepresentationRow, Option<Uuid>)],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if held.is_empty() {
         return Ok(());
     }
@@ -539,6 +545,7 @@ pub(crate) async fn write_memberships(
     members: &[Uuid],
     rows: &[(Uuid, Uuid)],
 ) -> Result<(), StorageError> {
+    crate::party_binding::live::note_change();
     if members.is_empty() {
         return Ok(());
     }
