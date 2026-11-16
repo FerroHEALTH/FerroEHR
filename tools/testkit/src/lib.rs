@@ -277,8 +277,8 @@ async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, Testk
     let url = clone_url(server, &name);
     // Every clone pool shares one server started with `max_connections=200`.
     let mut config = DbConfig::new(url.clone());
-    config.max_connections = 10;
-    config.min_connections = 0;
+    config.max_connections = Some(10);
+    config.min_connections = Some(0);
     // Retry ESTABLISHMENT only: under a full-parallel nextest run the shared
     // server's accept path is briefly saturable, which is load, not a defect.
     let start = Instant::now();

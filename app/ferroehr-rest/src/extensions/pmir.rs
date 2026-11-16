@@ -68,6 +68,9 @@ pub(crate) fn router(
     Some(
         Router::new()
             .route(FEED_PATH, post(receive).with_state(feed))
+            .layer(axum::middleware::from_fn(
+                crate::router::release_after_handler,
+            ))
             .layer(from_fn_with_state(
                 state,
                 crate::system_log::middleware::middleware,

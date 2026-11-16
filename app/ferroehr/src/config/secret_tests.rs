@@ -211,7 +211,7 @@ fn a_file_route_works_against_the_untouched_default() {
     ));
     let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
     assert_eq!(c.database.url.expose(), "postgres://u:p@h:5432/d");
-    assert_eq!(c.database.max_connections, 7);
+    assert_eq!(c.database.max_connections, Some(7));
 }
 
 /// Userinfo written into ANY URL key reaches neither the TOML rendering

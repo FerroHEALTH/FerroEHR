@@ -103,6 +103,20 @@ pub(crate) async fn one_connection_per_request(
     ferroehr::db::acquire::request_scope(next.run(request)).await
 }
 
+/// Returns the request's connections to their pools once the handler has
+/// answered ([`ferroehr::db::acquire::release_held`]), so the layers after it
+/// (the authorization post-check, the audit record) hold none (#5774).
+///
+/// No openEHR spec governs connection handling: our own design.
+pub(crate) async fn release_after_handler(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Response {
+    let response = next.run(request).await;
+    ferroehr::db::acquire::release_held();
+    response
+}
+
 /// The management surface inside the audit trail (#3244): every management
 /// request is recorded as a system-domain access, `/management/loggers` writes
 /// included.
@@ -137,7 +151,8 @@ pub fn routes(state: AppState, authenticator: &Arc<Authenticator>) -> Router {
     // Methods) is honoured for a recognised but unimplemented operation via
     // `ApiError::NotImplemented`.
     let api = crate::api::api_router(&namespaces)
-        .method_not_allowed_fallback(error::method_not_allowed_handler);
+        .method_not_allowed_fallback(error::method_not_allowed_handler)
+        .layer(axum::middleware::from_fn(release_after_handler));
     // Added before the authentication layer, which in axum's outermost-last
     // ordering puts it inside: the subject it keys on exists only after auth.
     let api = match cfg.server.caller_rate {
@@ -383,15 +398,16 @@ fn mount_public_surface(
         // Every SCIM request is an access record of its client, run on one
         // connection per pool like an API request.
         inner = inner.merge(
-            scim.layer(from_fn_with_state(
-                state.clone(),
-                crate::system_log::middleware::middleware,
-            ))
-            .layer(from_fn_with_state(
-                state.backend_handle(),
-                crate::binding_changes::middleware,
-            ))
-            .layer(axum::middleware::from_fn(one_connection_per_request)),
+            scim.layer(axum::middleware::from_fn(release_after_handler))
+                .layer(from_fn_with_state(
+                    state.clone(),
+                    crate::system_log::middleware::middleware,
+                ))
+                .layer(from_fn_with_state(
+                    state.backend_handle(),
+                    crate::binding_changes::middleware,
+                ))
+                .layer(axum::middleware::from_fn(one_connection_per_request)),
         );
     }
 

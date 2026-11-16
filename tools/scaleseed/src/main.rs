@@ -157,7 +157,7 @@ enum Command {
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let mut config = ferroehr::db::DbConfig::new(cli.database_url.clone());
-    config.max_connections = 16;
+    config.max_connections = Some(16);
     config.statement_timeout = ferrohealth_config::units::Duration::ZERO;
     let pool = ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Clinical)
         .await

@@ -60,7 +60,7 @@ The bound counts requests in flight, not requests per second. The memory a serve
 To size it for your deployment:
 
 - **In flight at your target rate.** By Little's law, requests in flight are the rate times the latency. The capacity test's mix at 2000 requests per second held about 24 in flight on average and under 80 at the p99, so 256 refuses nothing there.
-- **A multiple of the pool.** Past a few times `database.max_connections` a request only waits for a connection. 256 is about 13 times the default pool of 20; raise the bound with the pool, not past it by much.
+- **A multiple of the pool.** Past a few times `database.max_connections` a request only waits for a connection. 256 is about 9 times the largest default pool of 30; raise the bound with the pool, not past it by much.
 - **Memory per request.** Allow a few megabytes per request in flight for clinical commits and AQL with large results, and keep the bound times that inside the replica's memory limit.
 
 A `503` with `Retry-After` under the bound tells a client to back off; add replicas when it shows at your normal load.
@@ -346,8 +346,7 @@ PostgreSQL connection.
 [database]
 url = "postgres://ferroehr:ferroehr@localhost:5432/ferroehr"
 migrations = "apply"
-max_connections = 20
-min_connections = 2
+# max_connections and min_connections: unset, sized from the instance
 acquire_timeout = "30s"
 statement_timeout = "1min"
 ```
@@ -359,10 +358,38 @@ statement_timeout = "1min"
 | `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that database's `database.<domain>.migrate_url` (on the domain's own DSN when that is unset). Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../operations.md#which-credential-prepares-the-schema). |
 | `migrate_url_file` | path | unset | Read `migrate_url` from a file instead, for a mounted secret. At most one of the pair. |
 | `migrate` | enum{apply,verify} | `apply` | Whether the server applies its embedded migrations at boot. `apply` is what makes an empty configuration boot against an empty database. `verify` issues **no DDL at all**: it checks that the database already carries exactly this build's migrations and refuses to start otherwise, so the serving DSN can authenticate as a role with no DDL rights. That check still READS every `_sqlx_migrations` table of each database, which no least-privilege role can do, so pair it with `migrate_url` above and with `ferroehr db migrate` run out of band; see [Operations](../operations.md#which-credential-prepares-the-schema). |
-| `max_connections` | int | `20` | Pool ceiling. Write-heavy deployments benefit from raising it. |
-| `min_connections` | int | `2` | Idle connections kept open, avoiding cold-reopen churn under variable load. |
+| `max_connections` | int | unset | The size of each domain's pool (clinical, party and audit each have one). Unset, it is four per core the server may run on, at least 10 and at most 30, and never more than `server.max_concurrent_requests`. See [Sizing the pool](#sizing-the-pool). |
+| `min_connections` | int | unset | Connections each pool keeps open while idle, which the server opens before it answers ready. Unset, the server keeps one per core it may run on, at least 2 and at most the pool size. A one-shot command (`ferroehr db migrate`, `party-binding refill`) opens only what it uses. |
 | `acquire_timeout` | duration | `"30s"` | How long to wait for a free connection before failing. |
 | `statement_timeout` | duration | `"1min"` | `statement_timeout` applied to every pooled connection; `"0s"` leaves the server default. |
+
+### Sizing the pool
+
+A request checks a connection out of a pool at its first statement and gives
+it back when its handler has answered, so the audit record and the response's
+way out hold none. How long that is shows in `db_pool_hold_duration_seconds`,
+and how long requests wait for a connection in
+`db_pool_acquire_duration_seconds`. A pool needs about the arrival rate times
+the hold time, and room for a burst above that: every request that arrives
+during a pause of the server or the database wants a connection when the
+pause ends. A request holds a connection about as long as it runs on a core,
+so four connections per core is about what the server keeps in use with every
+core busy, and the burst above it waits in the pool rather than failing.
+
+The budget is PostgreSQL's `max_connections`, less its
+`superuser_reserved_connections` (3 by default) and what your tools use, over
+your instances: each instance holds three pools and six listener connections
+([Running several instances](several-instances.md#connection-budget)). The
+default ceiling of 30 keeps one instance, 3 × 30 + 6 = 96 connections, inside
+PostgreSQL's default of 100. With more than one instance, set
+`max_connections` on each, or raise PostgreSQL's.
+
+Before it answers ready, the server opens the connections each pool keeps
+while idle, one per core unless `min_connections` says otherwise, so an
+instance restarted under load does not refuse its first requests while it
+opens them. The rest open when a burst asks for them. Keep the kept
+connections of every instance inside PostgreSQL's budget too: an instance
+that cannot open them does not start.
 
 `statement_timeout` is the backstop for every statement. An AQL query
 (ad hoc or stored) and the composition-count statistics stop sooner when their

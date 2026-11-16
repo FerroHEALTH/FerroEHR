@@ -72,8 +72,8 @@
 #   CAPACITY_GENERATOR_CPUS
 #                        Linux: the cores the generator runs on (taskset), so
 #                        its load stays off the server's
-#   CAPACITY_POOL        each instance's database.max_connections (default 20,
-#                        the shipped default)
+#   CAPACITY_POOL        each instance's database.max_connections (default
+#                        unset: the server sizes its pools from its cores)
 #   CAPACITY_MAX_CONCURRENT
 #                        each instance's server.max_concurrent_requests
 #                        (default 256, the quickstart's): past it a request
@@ -117,7 +117,7 @@ export PERF_POPULATION="${CAPACITY_POPULATION:-20000}"
 source "$CAPACITY_ROOT/scripts/perf/gate.sh"
 
 readonly TOPOLOGY="${CAPACITY_TOPOLOGY:-native}"
-readonly POOL="${CAPACITY_POOL:-20}"
+readonly POOL="${CAPACITY_POOL:-}"
 readonly MAX_CONCURRENT="${CAPACITY_MAX_CONCURRENT:-256}"
 readonly SPREAD="${CAPACITY_SPREAD:-500}"
 readonly AQL_ROWS="${CAPACITY_AQL_ROWS:-20}"
@@ -240,8 +240,9 @@ up_native() { # <instances>
     "$PERF_OUT/signing/passphrase" "$PERF_OUT/signing/identifier-key"
   local -a env=(FERROEHR_CONFIG="$CAP_OUT_ABS/ferroehr.toml"
     FERROEHR__DATABASE__URL="postgres://ferroehr:${PG_SECRET}@127.0.0.1:$CAP_PG_PORT/ferroehr"
-    FERROEHR__DATABASE__MAX_CONNECTIONS="$POOL" FERROEHR__USAGE_REPORT__ENABLED=false
+    FERROEHR__USAGE_REPORT__ENABLED=false
     FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS="$MAX_CONCURRENT")
+  [[ -z "$POOL" ]] || env+=(FERROEHR__DATABASE__MAX_CONNECTIONS="$POOL")
   local -a kvs=()
   read -r -a kvs <<<"${CAPACITY_SERVER_ENV:-}"
   env+=(${kvs[@]+"${kvs[@]}"})
@@ -317,6 +318,7 @@ up_docker() { # <instances>
     /etc/ferroehr/scim-jwks.json /etc/ferroehr/signing.asc /etc/ferroehr/signing-passphrase \
     /etc/ferroehr/identifier-key
   local -a extra_env=()
+  [[ -z "$POOL" ]] || extra_env+=(-e "FERROEHR__DATABASE__MAX_CONNECTIONS=$POOL")
   local kv
   local -a kvs=()
   read -r -a kvs <<<"${CAPACITY_SERVER_ENV:-}"
@@ -325,7 +327,6 @@ up_docker() { # <instances>
     --security-opt no-new-privileges:true
     -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml
     -e "FERROEHR__DATABASE__URL=postgres://ferroehr:${PG_SECRET}@${CAP_PG}:5432/ferroehr"
-    -e "FERROEHR__DATABASE__MAX_CONNECTIONS=$POOL"
     -e "FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS=$MAX_CONCURRENT"
     ${extra_env[@]+"${extra_env[@]}"}
     -e FERROEHR__USAGE_REPORT__ENABLED=false
@@ -761,7 +762,7 @@ step() {
     --argjson gen "$(awk '{ printf "%.3f", $1 + $2 }' "$dir/generator.time")" \
     --argjson xacts "$((xact_after - xact_before))" --argjson slo "$SLO_MS" \
     --argjson slo_slow "$SLO_SLOW_MS" --slurpfile activity "$dir/activity.json" \
-    --argjson instances "${#servers[@]}" --argjson pool "$POOL" \
+    --argjson instances "${#servers[@]}" --argjson pool "${POOL:-null}" \
     --argjson host_load "$load" --argjson host_cores "$cores" -f /dev/stdin >"$dir/step.json" <<'JQ'
     ($r[0].load) as $l
     | ($l.groups | to_entries | map({group: .key, answered: .value.answered,
