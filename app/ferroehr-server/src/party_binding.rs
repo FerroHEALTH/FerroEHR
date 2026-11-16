@@ -543,9 +543,7 @@ async fn basic_user_person(
         .with_time_zone(jiff::tz::TimeZone::UTC)
         .date()
         .to_string();
-    let mut conn = pools
-        .party
-        .acquire()
+    let mut conn = ferroehr::db::acquire::acquire(&pools.party)
         .await
         .context("connecting to the party store")?;
     let rows = ferroehr::party_binding::lookup::key_rows(

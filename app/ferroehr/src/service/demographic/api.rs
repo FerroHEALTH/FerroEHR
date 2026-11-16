@@ -22,6 +22,7 @@ use openehr_rm::prelude::ItemTag;
 use serde_json::Value;
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::VoId;
@@ -593,7 +594,7 @@ impl FerroEhrService {
         if !self.binding.names_policy() {
             return Ok(());
         }
-        let mut conn = self.demographic_pool.acquire().await?;
+        let mut conn = acquire(&self.demographic_pool).await?;
         crate::party_binding::protect::check_read(&mut conn, &self.binding, vo_id).await
     }
 }

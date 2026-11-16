@@ -148,6 +148,10 @@ const EXPLAIN: &str = "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ";
 /// Open the transaction an explain runs in: sequential scans discouraged, and
 /// rolled back by the caller so `ANALYZE` leaves nothing behind (`PostgreSQL`
 /// docs, <https://www.postgresql.org/docs/18/sql-explain.html>).
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn explain_tx(pool: &PgPool) -> Transaction<'static, Postgres> {
     let mut tx = pool.begin().await.expect("begin the explain transaction");
     tx.execute("SET LOCAL enable_seqscan = off")
@@ -1251,6 +1255,10 @@ fn node_types(node: &Value, out: &mut Vec<String>) {
 
 /// `EXPLAIN` an ordered population page under the server's own settings, plus
 /// `extra` (a `SET LOCAL`), inside a rolled-back transaction.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn explain_ordered_page(pool: &PgPool, aql: &str, extra: Option<&str>) -> Value {
     let prepared = aql_sql_limited(aql, Vec::new(), Some(5));
     let mut tx = pool.begin().await.expect("begin the explain transaction");
@@ -2285,6 +2293,10 @@ async fn seed_stale_parent_statistics(svc: &FerroEhrService, pool: &PgPool) -> V
 /// The reads of [`READS_BY_VO_ID`] whose custom or generic plan for `vo`
 /// reaches a commit audit row other than by one `pk_commit_audit` probe, each
 /// with its plan.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn reads_walking_the_commit_audit(pool: &PgPool, vo: VoId) -> Vec<String> {
     let mut walked = Vec::new();
     for (read, sql) in READS_BY_VO_ID {
@@ -2382,6 +2394,10 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key_over_stale_parent_stati
 /// the head join from no statistics at all and drove from every COMPOSITION
 /// root, reading all of its nodes (3 703 buffers on this seed, against 1 745).
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_population_contains_enters_through_the_archetype_index() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();

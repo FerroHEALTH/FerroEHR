@@ -502,6 +502,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   kept between its statements and returns to the pool when the request
   answers, so the access checks and the read or commit of one request queue
   for the pool once, and the pool's release round trip is paid once. A background task outside a scope checks out per statement.
+  Every checkout goes through `db::acquire::acquire`, which answers a
+  failure to open a connection `503` whatever the driver reports (a refused
+  connect, a resolver failure, a timeout); the `clippy.toml` ban on
+  `sqlx::Pool::acquire`, `begin` and `try_begin` holds the server to it, and a
+  test or tool that reads on a raw pool connection says so with a scoped
+  `#[expect]` (#5109).
 - **Four `NOINHERIT` runtime roles** hold the domains: `ferroehr_clinical` and
   its read-only twin hold `clinical`, and `ferroehr_party` and its twin hold
   `party`. Each is revoked from

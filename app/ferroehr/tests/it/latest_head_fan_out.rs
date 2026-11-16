@@ -139,6 +139,10 @@ fn lowered(aql: &str) -> ferroehr::aql::sql::PreparedQuery {
 
 /// `EXPLAIN (ANALYZE, BUFFERS)` of `aql` under the server's own planner
 /// settings, rolled back.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn explain(pool: &PgPool, aql: &str) -> Value {
     let prepared = lowered(aql);
     let mut tx = pool.begin().await.expect("begin the explain transaction");

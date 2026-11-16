@@ -11,8 +11,10 @@
 # check AND ran every `build & test (pg18)` shard to success: the run on push,
 # or a merge-queue run of the same tree. The second half matters because a
 # push the queue verified skips its test shards (#4546), so its `conclusion`
-# alone says nothing about the tree. No openEHR spec governs this: our own
-# design.
+# alone says nothing about the tree.
+#
+# A merge-queue run is matched by its head commit's tree
+# (`scripts/lib/queue-runs.sh`). No openEHR spec governs this: our own design.
 #
 # Usage:
 #   scripts/perf/base-rev.sh <start-rev> [max-commits]
@@ -20,45 +22,65 @@
 #       naming the commits it read when none of the first max-commits (default
 #       30) is green. Needs `gh` with actions: read and REPO=<owner/name>.
 #   scripts/perf/base-rev.sh --self-test
-#       runs the walk over a stub history and stub verdicts.
+#       runs the walk over a stub history and stub CI runs.
 set -euo pipefail
 
-# verdict SHA: `green` when a CI run of SHA passed `conclusion` with every
-# pg18 shard succeeding, else a word saying why not. BASE_REV_VERDICTS names a
-# file of `<sha> <verdict>` lines that answers instead (the self-test).
-verdict() {
-  local sha="$1" event run jobs conclusion shards failed
-  if [[ -n "${BASE_REV_VERDICTS:-}" ]]; then
-    awk -v sha="$sha" '$1 == sha { print $2; found = 1 } END { if (!found) print "no-run" }' \
-      "$BASE_REV_VERDICTS"
-    return
+# shellcheck source=scripts/lib/queue-runs.sh
+. "$(dirname "$0")/../lib/queue-runs.sh"
+
+QUEUE_INDEX=""
+
+# runs SHA TREE: the completed CI runs of SHA on push, then the merge-queue
+# runs whose head commit carries TREE.
+runs() {
+  local sha="$1" tree="$2"
+  if [[ -n "${CI_RUNS_STUB:-}" ]]; then
+    awk -v sha="$sha" '$1 == "push" && $2 == sha { print $3 }' "$CI_RUNS_STUB/runs"
+  else
+    gh api "repos/$REPO/actions/workflows/ci.yml/runs?event=push&head_sha=$sha&per_page=20" \
+      --jq '.workflow_runs[] | select(.status == "completed") | .id'
   fi
-  local seen=no-run
-  for event in push merge_group; do
-    while IFS= read -r run; do
-      [[ -n "$run" ]] || continue
-      jobs="$(gh api --paginate "repos/$REPO/actions/runs/$run/jobs?filter=latest&per_page=100" \
-        --jq '.jobs[] | "\(.name)\t\(.conclusion)"')" || { seen=unreadable; continue; }
-      conclusion="$(awk -F'\t' '$1 == "conclusion" { print $2 }' <<<"$jobs")"
-      shards="$(awk -F'\t' '$1 ~ /^build & test \(pg18\)/' <<<"$jobs" | wc -l | tr -d ' ')"
-      failed="$(awk -F'\t' '$1 ~ /^build & test \(pg18\)/ && $2 != "success"' <<<"$jobs" | wc -l | tr -d ' ')"
-      if [[ "$conclusion" == success && "$shards" -gt 0 && "$failed" -eq 0 ]]; then
-        echo green
-        return
-      fi
-      if [[ "$shards" -eq 0 ]]; then seen=tests-not-run; else seen=red; fi
-    done < <(gh api "repos/$REPO/actions/workflows/ci.yml/runs?event=$event&head_sha=$sha&per_page=20" \
-      --jq '.workflow_runs[] | select(.status == "completed") | .id' || true)
-  done
+  awk -v tree="$tree" '$1 == tree { print $2 }' "$QUEUE_INDEX"
+}
+
+# verdict SHA: `green` when a CI run of SHA, or a merge-queue run of its tree,
+# passed `conclusion` with every pg18 shard run and succeeding, else a word
+# saying why not.
+verdict() {
+  local sha="$1" tree list run found conclusion ran failed seen=no-run
+  tree="$(git rev-parse "$sha^{tree}")"
+  list="$(runs "$sha" "$tree")" || { echo unreadable; return; }
+  while IFS= read -r run; do
+    [[ -n "$run" ]] || continue
+    found="$(run_jobs "$run")" || { seen=unreadable; continue; }
+    conclusion="$(awk -F'\t' '$1 == "conclusion" { print $2 }' <<<"$found")"
+    ran="$(awk -F'\t' '$1 ~ /^build & test \(pg18\)/ && $2 != "skipped"' <<<"$found" | wc -l | tr -d ' ')"
+    failed="$(awk -F'\t' '$1 ~ /^build & test \(pg18\)/ && $2 != "skipped" && $2 != "success"' <<<"$found" | wc -l | tr -d ' ')"
+    if [[ "$conclusion" == success && "$ran" -gt 0 && "$failed" -eq 0 ]]; then
+      echo green
+      return
+    fi
+    if [[ "$ran" -gt 0 || "$seen" == red ]]; then seen=red; else seen=tests-not-run; fi
+  done <<<"$list"
   echo "$seen"
 }
 
 walk() {
-  local start="$1" max="$2" sha state read=()
-  while IFS= read -r sha; do
+  local start="$1" max="$2" sha state since read=() shas=()
+  while IFS= read -r sha; do shas+=("$sha"); done \
+    < <(git rev-list --first-parent --max-count="$max" "$start")
+  since="$(queue_since "${shas[${#shas[@]}-1]}")"
+  QUEUE_INDEX="$(mktemp)"
+  if ! queue_runs_since "$since" "$QUEUE_INDEX"; then
+    rm -f "$QUEUE_INDEX"
+    echo "::error::base-rev: could not list the merge-queue runs created since $since" >&2
+    return 1
+  fi
+  for sha in "${shas[@]}"; do
     state="$(verdict "$sha")"
     read+=("${sha:0:9}=$state")
     if [[ "$state" == green ]]; then
+      rm -f "$QUEUE_INDEX"
       echo "rev=$sha"
       if [[ "$sha" == "$(git rev-parse "$start")" ]]; then
         echo "reason=the base branch's head, whose database suite passed in CI"
@@ -67,7 +89,8 @@ walk() {
       fi
       return 0
     fi
-  done < <(git rev-list --first-parent --max-count="$max" "$start")
+  done
+  rm -f "$QUEUE_INDEX"
   echo "::error::base-rev: none of the ${max} commits from ${start:0:9} passed its database suite in CI: ${read[*]}" >&2
   return 1
 }
@@ -88,11 +111,25 @@ if [[ "${1:-}" == "--self-test" ]]; then
   done
   c4="$(stub_git rev-parse HEAD)"; c3="$(stub_git rev-parse HEAD~1)"
   c2="$(stub_git rev-parse HEAD~2)"; c1="$(stub_git rev-parse HEAD~3)"
+  tree4="$(stub_git rev-parse "HEAD^{tree}")"
+  mkdir "$work/stub"
   fail=0
+  # ci ID EVENT KEY CONCLUSION SHARD...: one stub CI run, its `conclusion` job
+  # and a pg18 shard job per SHARD conclusion.
+  ci() {
+    local id="$1" event="$2" key="$3" conclusion="$4" n=0 shard
+    shift 4
+    echo "$event $key $id" >>"$work/stub/runs"
+    printf '%s\tconclusion\t%s\n' "$id" "$conclusion" >>"$work/stub/jobs"
+    for shard in "$@"; do
+      n=$((n + 1))
+      printf '%s\tbuild & test (pg18) %s/%s\t%s\n' "$id" "$n" "$#" "$shard" >>"$work/stub/jobs"
+    done
+  }
   expect() {
-    local label="$1" verdicts="$2" max="$3" want="$4" got
-    printf '%s\n' "$verdicts" > "$work/verdicts"
-    got="$(cd "$work" && BASE_REV_VERDICTS="$work/verdicts" bash "$script" "$c4" "$max" 2>/dev/null \
+    local label="$1" max="$2" want="$3" got
+    touch "$work/stub/runs" "$work/stub/jobs"
+    got="$(cd "$work" && CI_RUNS_STUB="$work/stub" bash "$script" "$c4" "$max" 2>/dev/null \
       | sed -n 's/^rev=//p' || true)"
     if [[ "$got" != "$want" ]]; then
       echo "::error::--self-test: ${label}: wanted '${want}', got '${got}'." >&2
@@ -100,16 +137,35 @@ if [[ "${1:-}" == "--self-test" ]]; then
     else
       echo "  ok: ${label}"
     fi
+    rm -f "$work/stub/runs" "$work/stub/jobs"
   }
-  expect "a green head is the base" "$c4 green" 30 "$c4"
-  expect "a broken head is skipped for the newest green commit" \
-    "$c4 tests-not-run
-$c3 red
-$c2 green
-$c1 green" 30 "$c2"
-  expect "no green commit within the bound fails" "$c4 red
-$c3 red
-$c2 green" 2 ""
+  ci 1 push "$c4" success success success
+  expect "a green head is the base" 30 "$c4"
+  ci 1 push "$c4" success skipped
+  ci 2 push "$c3" failure success failure
+  ci 3 push "$c2" success success success
+  ci 4 push "$c1" success success success
+  expect "a broken head is skipped for the newest green commit" 30 "$c2"
+  ci 1 push "$c4" failure failure
+  ci 2 push "$c3" failure success
+  ci 3 push "$c2" success success
+  expect "no green commit within the bound fails" 2 ""
+  ci 1 push "$c4" success skipped
+  ci 2 merge_group "$tree4" success success success
+  ci 3 push "$c3" success success
+  expect "a push that skipped its shards counts by the queue run of its tree" 30 "$c4"
+  ci 1 push "$c4" failure success success
+  ci 2 merge_group "$tree4" success success success
+  ci 3 push "$c3" success success
+  expect "a push failed by another job counts by the queue run of its tree" 30 "$c4"
+  ci 1 push "$c4" success skipped
+  ci 2 merge_group "$tree4" success success failure
+  ci 3 push "$c3" success success
+  expect "a queue run of the tree with a failed shard does not count" 30 "$c3"
+  ci 1 push "$c4" success skipped
+  ci 2 merge_group "$c4" success success success
+  ci 3 push "$c3" success success
+  expect "a queue run is matched by its tree, never by the commit's SHA" 30 "$c3"
   exit "$fail"
 fi
 

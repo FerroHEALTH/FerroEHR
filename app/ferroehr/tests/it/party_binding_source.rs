@@ -1130,6 +1130,10 @@ async fn a_refill_rebuilds_every_row_from_the_versions() {
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn the_lookup_is_an_index_only_scan_at_fifty_thousand_persons() {
     let (db, svc) = service().await;
     let (vo, _) = professional(&svc, UPPER_KEY).await;
@@ -1251,6 +1255,10 @@ async fn intervals(pool: &sqlx::PgPool, target: VoId) -> Vec<(VoId, String, Opti
 }
 
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_rebuild_from_the_versions_writes_the_intervals_the_commits_wrote() {
     let (db, svc) = service().await;
     let pool = db.pool();
@@ -1281,6 +1289,10 @@ async fn a_rebuild_from_the_versions_writes_the_intervals_the_commits_wrote() {
 /// its source a representative with a row of its own, its deletion retires
 /// both, and a refill rebuilds the rows the commits wrote.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_standalone_representation_holds_a_row_of_its_own() {
     let (db, svc) = service().await;
     let pool = db.pool();

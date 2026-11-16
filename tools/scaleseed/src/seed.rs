@@ -136,6 +136,10 @@ pub(crate) async fn run(svc: FerroEhrService, pool: PgPool, target: Target) -> a
 
 /// Writes the EHRs `places` as chunk `id`, in one transaction that records
 /// it; returns the compositions and versions it wrote.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a seeding tool beside the server: it serves no request, so no request checkout applies"
+)]
 async fn chunk(
     sources: &Sources,
     id: u64,
