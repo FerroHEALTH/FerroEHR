@@ -118,8 +118,7 @@ configured external FHIR terminology provider. The in-process terminology
 bundle remains available in slim builds.
 
 > [!WARNING]
-> The local audit store is **on in the shipped defaults**, so a slim build
-> refuses to start on an untouched configuration. To run one, disable it
-> explicitly (`FERROEHR__AUDIT__STORE__ENABLED=false`) or configure the
-> syslog feed as the audit sink; silently dropping the audit trail is not
-> a boot mode.
+> Auditing is **on in the shipped defaults**, so a slim build refuses to
+> start on an untouched configuration. To run one, disable it explicitly
+> (`FERROEHR__AUDIT__ENABLED=false`); serving accesses the audit trail does
+> not record is not a boot mode.

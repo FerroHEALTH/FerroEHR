@@ -7,10 +7,11 @@
 //! openEHR fixes no audit-record shape, so everything below follows external
 //! standards, cited as external standards and never as openEHR spec text.
 //!
-//! One audit record per audited API operation is rendered in both official ATNA
-//! formats and fanned out to the configured sinks: the local Audit Record
-//! Repository (the `audit` schema, the durability anchor, on by default, served
-//! back via the RESTful-ATNA ITI-81 retrieval), the classic DICOM Audit Message
+//! One audit record per audited API operation is written to the local Audit
+//! Record Repository before its response (the `audit` schema, always on while
+//! auditing is, served back via the RESTful-ATNA ITI-81 retrieval) and
+//! delivered from it, in both official ATNA formats, to the configured
+//! sinks: the classic DICOM Audit Message
 //! feed (DICOM PS3.15 §A.5 XML over RFC 5424 syslog on RFC 5425 TLS; IHE ITI
 //! TF-2 ITI-20), and the FHIR R4 `AuditEvent` feed (IHE BALP shape; ITI-20 ATX:
 //! FHIR Feed). The shared FerroAUDIT crates write both formats and send them:
@@ -33,8 +34,8 @@
 //!
 //! The ITS-REST operation to classification mapping is the protocol adapter's
 //! concern (`ferroehr-rest::system_log::classify`); its audit middleware builds
-//! an [`event::AuditEvent`] per request and hands it to the platform through
-//! [`FerroEhrService::emit`]. The binary boots the subsystem via
+//! an [`event::AuditEvent`] per request and writes it through
+//! [`FerroEhrService::record_events`]. The binary boots the subsystem via
 //! [`sender::start`] and supplies the DB-backed [`sender::SubjectResolver`]; the
 //! sender is installed with
 //! [`FerroEhrService::with_audit`](crate::service::FerroEhrService::with_audit).
@@ -52,13 +53,14 @@
 //! - `fhir` — the FHIR R4 `AuditEvent` of a record (the `fhir` cargo feature):
 //!   the EHDS access record written by `ehds-logging`, every other record a
 //!   BALP exchange written by `ihe-atna`.
-//! - [`syslog`] — the ITI-20 syslog sink: `ihe-atna`'s RFC 5424 frame over its
-//!   RFC 5425 TLS connection.
+//! - `syslog` — the ITI-20 syslog sink: `ihe-atna`'s RFC 5424 frame over its
+//!   RFC 5425 TLS connection, delivered from the store (the `fhir` cargo
+//!   feature).
 //! - [`render`] — the render policy a stored record's FHIR `AuditEvent` is
 //!   rendered under, and the rendering of a stored record.
 //! - [`store`] — the local Audit Record Repository and the ITI-81 search filter.
-//! - [`sender`] — the bounded-mpsc sender, background drain, sink fan-out and
-//!   fail modes.
+//! - [`sender`] — the sender that writes each record before its response, the
+//!   chainer and the forwarders on the audit runtime.
 //! - [`config`] — the `[audit]` section struct ([`config::AuditConfig`]).
 
 #![cfg_attr(

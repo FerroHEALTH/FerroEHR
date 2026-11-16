@@ -15,7 +15,7 @@
 //!
 //! Behind the request path:
 //!
-//! - **the chainer** ([`chainer`]) links the intake into the chains, any
+//! - **the chainer** (`sender::chainer`) links the intake into the chains, any
 //!   replica under the head's lock, and owes each chained record to the
 //!   sinks that deliver from the store;
 //! - **syslog** (`[audit.syslog]`, ITI-20) and the **FHIR Feed**
@@ -31,7 +31,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use ihe_atna::atna::forwarder::{Forwarder, Outbox, Status};
+use ihe_atna::atna::forwarder::Status;
+#[cfg(feature = "fhir")]
+use ihe_atna::atna::forwarder::{Forwarder, Outbox};
 use sqlx::PgPool;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
@@ -364,6 +366,7 @@ impl DeliveryStatus {
 
 /// Spawns `forwarder` onto the audit runtime as the delivery of `sink`, with
 /// the sampler that moves its delivered and retried counts onto the metrics.
+#[cfg(feature = "fhir")]
 fn deliver<O: Outbox + 'static>(
     background: &Background,
     sink: &'static str,
@@ -383,11 +386,13 @@ fn deliver<O: Outbox + 'static>(
 }
 
 /// How often a forwarder's counts move onto the metrics.
+#[cfg(feature = "fhir")]
 const SAMPLE_INTERVAL: Duration = Duration::from_secs(15);
 
 /// Moves the delivered and retried counts of `status` onto
 /// `atna_audit_sent` and `atna_audit_send_failed` as they grow, until the
 /// runtime ends the task.
+#[cfg(feature = "fhir")]
 #[expect(
     clippy::infinite_loop,
     reason = "a detached sampler ended by the runtime, as the reaper is"
@@ -420,6 +425,13 @@ type SubjectCache = moka::future::Cache<String, Option<ResolvedSubject>>;
 /// [`AuditError`] if a sink's transport cannot be established (a TLS
 /// config or CA problem, a refused feed endpoint), or the render policy does
 /// not compile.
+#[cfg_attr(
+    not(feature = "fhir"),
+    expect(
+        clippy::unused_async,
+        reason = "a slim build starts no forwarder, which is what the full build awaits"
+    )
+)]
 pub async fn start(
     config: AuditConfig,
     resolver: Option<SubjectResolver>,
@@ -434,7 +446,15 @@ pub async fn start(
         .with_render_policy(policy.clone());
     // NOTE: our own design (#5770), the background work runs on the audit runtime over its own pool.
     let behind = store.with_pool(behind);
+    #[cfg_attr(
+        not(feature = "fhir"),
+        expect(unused_mut, reason = "a slim build has no sink")
+    )]
     let mut deliveries = Vec::new();
+    #[cfg_attr(
+        not(feature = "fhir"),
+        expect(unused_mut, reason = "a slim build has no sink")
+    )]
     let mut woken = Vec::new();
     #[cfg(feature = "fhir")]
     if let Some(syslog) = &config.syslog {

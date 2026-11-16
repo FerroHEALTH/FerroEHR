@@ -75,6 +75,8 @@ impl FerroEhrService {
             .as_ref()
             .and_then(|id| id.value().parse::<EhrId>().ok());
         let event = self.erasure_event(uid, ehr_id);
+        #[cfg(not(feature = "fhir"))]
+        drop(event);
         let time_removed = dv_date_time(&jiff::Timestamp::now());
         let removed = || {
             ServiceError::conflict(format!(

@@ -31,11 +31,14 @@ use std::sync::Arc;
 #[cfg(feature = "fhir")]
 use std::sync::{Mutex, PoisonError};
 
+#[cfg(feature = "fhir")]
 use jiff_sqlx::Timestamp;
+#[cfg(feature = "fhir")]
+use sqlx::Row;
 use sqlx::postgres::PgConnection;
 #[cfg(feature = "fhir")]
 use sqlx::postgres::PgRow;
-use sqlx::{Connection, PgPool, Row};
+use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
 mod access_log;
@@ -58,8 +61,10 @@ use crate::system_log::AuditError;
 #[cfg(feature = "fhir")]
 use crate::system_log::categories::{ClassifiedContent, MapDigest};
 #[cfg(feature = "fhir")]
+use crate::system_log::event::ActingMode;
+#[cfg(feature = "fhir")]
 use crate::system_log::event::{AccessDomain, EventActionCode};
-use crate::system_log::event::{ActingMode, AuditEvent, EventOutcome, EventType, ObjectClass};
+use crate::system_log::event::{AuditEvent, EventOutcome, EventType, ObjectClass};
 #[cfg(feature = "fhir")]
 use crate::system_log::fhir::value_of;
 use crate::system_log::render::RenderPolicy;
@@ -71,6 +76,7 @@ use chains::AuditChain;
 use lax::{any_equals, any_is, lax_path};
 use writers::{WritePolicy, Writers};
 
+#[cfg(feature = "fhir")]
 use ferrohealth_smart::assurance::AssuranceLevel;
 
 /// The batched intake of the system chain: one row per element of the

@@ -45,11 +45,32 @@ impl Sink {
         }
     }
 
-    /// The delivery stamp of a system-chain record the sink delivered.
-    const fn stamp(self) -> &'static str {
+    /// The statement that counts the records the sink owes past `$1`.
+    const fn waiting(self) -> &'static str {
         match self {
-            Self::FhirFeed => "delivered_fhir_feed_at",
-            Self::Syslog => "delivered_syslog_at",
+            Self::FhirFeed => {
+                "SELECT count(*) FROM audit.fhir_feed_outbox WHERE NOT (id = ANY($1))"
+            }
+            Self::Syslog => "SELECT count(*) FROM audit.syslog_outbox WHERE NOT (id = ANY($1))",
+        }
+    }
+
+    /// The statement that removes the record the sink owes under `$1` and
+    /// stamps it as delivered when it is a record of the system chain.
+    const fn delivered(self) -> &'static str {
+        match self {
+            Self::FhirFeed => {
+                "WITH delivered AS (DELETE FROM audit.fhir_feed_outbox WHERE id = $1 \
+                 RETURNING chain, chain_seq) \
+                 UPDATE audit.audit_event e SET delivered_fhir_feed_at = now() FROM delivered d \
+                 WHERE d.chain = 'system' AND e.chain_seq = d.chain_seq"
+            }
+            Self::Syslog => {
+                "WITH delivered AS (DELETE FROM audit.syslog_outbox WHERE id = $1 \
+                 RETURNING chain, chain_seq) \
+                 UPDATE audit.audit_event e SET delivered_syslog_at = now() FROM delivered d \
+                 WHERE d.chain = 'system' AND e.chain_seq = d.chain_seq"
+            }
         }
     }
 
@@ -112,13 +133,10 @@ impl AuditStore {
             .bind(skip)
             .fetch_optional(&mut *conn)
             .await?;
-        let waiting: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
-            "SELECT count(*) FROM {} WHERE NOT (id = ANY($1))",
-            sink.outbox()
-        )))
-        .bind(skip)
-        .fetch_one(&mut *conn)
-        .await?;
+        let waiting: i64 = sqlx::query_scalar(sink.waiting())
+            .bind(skip)
+            .fetch_one(&mut *conn)
+            .await?;
         drop(conn);
         let Some(row) = row else {
             return Ok((None, waiting));
@@ -153,16 +171,10 @@ impl AuditStore {
     /// [`AuditError::Store`] when the statement fails; the record is then
     /// delivered again, which the repository takes as a second copy.
     pub async fn mark_delivered(&self, sink: Sink, owed: i64) -> Result<(), AuditError> {
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "WITH delivered AS (DELETE FROM {} WHERE id = $1 RETURNING chain, chain_seq) \
-             UPDATE audit.audit_event e SET {} = now() FROM delivered d \
-             WHERE d.chain = 'system' AND e.chain_seq = d.chain_seq",
-            sink.outbox(),
-            sink.stamp()
-        )))
-        .bind(owed)
-        .execute(&mut *acquire(&self.pool).await?)
-        .await?;
+        sqlx::query(sink.delivered())
+            .bind(owed)
+            .execute(&mut *acquire(&self.pool).await?)
+            .await?;
         Ok(())
     }
 }
