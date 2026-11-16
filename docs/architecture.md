@@ -438,7 +438,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   outbox rows of the FHIR Feed and syslog, and deletes the intake rows; the
   checkpoint and the commit end the round. The insert trigger derives
   nothing: it checks each link against the head, and the verifier derives
-  every column again and compares (0039). `audit.audit_event_chain_move()`
+  every column again and compares (0039). The statements PostgreSQL runs
+  inside these writes are held to a budget (#5885): the digest functions are
+  inlined into the statements that call them, the records and their index
+  rows carry no foreign keys, since the chain move is their one writer and the
+  verifier derives each record from its shared part again, and the link check
+  moves the head cursor by an assignment
+  (`audit/0043_access_log_nested_statements.sql`). The ferroehr-rest test
+  `statement_budget` holds an AQL request to its round trips and nested
+  statements, read from `pg_stat_statements`. `audit.audit_event_chain_move()`
   moves the system intake into the system chain the same way. Our own
   design; one chain carries about 15 000 entries per second on the
   reference host (#5745), and partitioned chains (one per EHR hash, a

@@ -456,6 +456,15 @@ async fn start_container() -> Result<ContainerAsync<Postgres>, TestkitError> {
                 "full_page_writes=off",
                 "-c",
                 "max_connections=200",
+                // The statement budget test of ferroehr-rest reads the nested
+                // statements (#5885), as CI's server does
+                // (scripts/lib/test-postgres.sh).
+                "-c",
+                "shared_preload_libraries=pg_stat_statements",
+                "-c",
+                "pg_stat_statements.track=all",
+                "-c",
+                "pg_stat_statements.max=20000",
             ])
             .with_shm_size(SHM_SIZE_BYTES)
             .with_container_name(CONTAINER_NAME)
