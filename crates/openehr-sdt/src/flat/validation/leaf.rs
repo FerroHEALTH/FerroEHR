@@ -1060,7 +1060,7 @@ fn check_string_constraints(
 /// over-reject valid data on an engine limitation, not a spec violation), such a
 /// pattern is skipped — the residual gap is limited to patterns outside both the
 /// Rust-regex and PCRE dialects, and is caught by the corpus round-trip gate.
-pub(crate) fn matches_pattern(pattern: &str, value: &str) -> bool {
+pub(super) fn matches_pattern(pattern: &str, value: &str) -> bool {
     let body = pattern
         .strip_prefix('/')
         .and_then(|p| p.strip_suffix('/'))

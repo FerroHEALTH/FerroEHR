@@ -319,6 +319,7 @@ pub fn build_web_template(
         shape::Identity::Archetyped,
     );
     tree = shape::finish(tree);
+    super::constraint::check_slots(&tree)?;
 
     Ok(WebTemplate {
         template_id,
