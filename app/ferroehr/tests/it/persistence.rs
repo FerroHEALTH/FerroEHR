@@ -78,8 +78,8 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 12);
-    assert_eq!(applied("clinical").await, 47);
-    assert_eq!(applied("party").await, 49);
+    assert_eq!(applied("clinical").await, 48);
+    assert_eq!(applied("party").await, 50);
     assert_eq!(applied("audit").await, 42);
 
     let tables = |schema: &'static str| {
@@ -1301,8 +1301,8 @@ async fn a_pooled_connection_applies_the_configured_statement_timeout() {
     let settings = db::DbConfig {
         url: ferrohealth_secret::secret_url::SecretUrl::new(db.url()),
         statement_timeout: ferrohealth_config::units::Duration::from_millis(12_345),
-        max_connections: 2,
-        min_connections: 0,
+        max_connections: Some(2),
+        min_connections: Some(0),
         ..db::DbConfig::default()
     };
 

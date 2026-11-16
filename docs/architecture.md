@@ -875,12 +875,22 @@ which is what makes an optional stage safe to disable:
    than the store admits no row. Whether the caller reads that EHR's
    `EHR_ACCESS` objects is decided from the same copy, so no settings row is
    probed for it either. Every other query keeps the class condition
-   and its probe of the settings row per object. Before it renders a verdict, the emitter
+   and its probe of the settings row per object, once per row (#5782): a root
+   linked to an `EHR` source has that source's id as its EHR id, and since an
+   admitted object is one its EHR reaches, the head condition of the linked
+   root decides the source's EHR too, so neither repeats the probe. The head
+   row carries the root archetype of the trunk head (`vo_head.root_archetype`,
+   written by every commit and import, `clinical/0048_head_root_archetype.sql`),
+   which an archetype or category scope compares instead of probing the root
+   node row. A condition whose every known class, closed verdict and default
+   admit every item, an administrator's, reduces exactly to "the EHR carries
+   no settings row of a class the condition does not know", one uncorrelated
+   subquery PostgreSQL hashes once. Before it renders a verdict, the emitter
    folds what the SQL would decide alike. A repeated member counts once. A
    two-valued predicate beside its own negation decides the conjunction or the
    disjunction (a fact of the EHR, which may be unknown, is never folded). A
    scope that names an empty list covers nothing. Each `EXISTS` folded away is
-   one subquery fewer to plan (`aql::sql::access::simplified`, #5667). The request path
+   one subquery fewer to plan (`aql::sql::fold::simplified`, #5667). The request path
    adds no transaction: every fact is a copy, and a named object is read by
    its head row only when the verdict depends on the object. The procedure,
    its order and its codes are our own design; RM EHR IM §EHR Access only
@@ -1367,7 +1377,10 @@ before the message; either clears its identifiers. No settlement applies a
 message by an operator's choice of `PERSON`, identifier or survivor, which
 would assert an identity the Registry did not state. Every list, retry and
 settlement is an access record of the demographic domain on
-`pmir-message:<id>` naming the operator. The `pmir_messages_refused` gauge
+`pmir-message:<id>` naming the operator; the CLI's committer carries the
+stated `--operator` as its subject and the process's effective user
+(`os:<name>/<uid>`, read with `nix`) as its client, which the record names
+beside it. The `pmir_messages_refused` gauge
 and the `pmir_refused_messages` indicator (`DEGRADED` from `[pix]
 refused_degraded_at` on, never withdrawing readiness) count the refused
 messages. An identity is bound to the one `PERSON` that

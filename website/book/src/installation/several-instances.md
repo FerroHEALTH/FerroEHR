@@ -100,25 +100,27 @@ one, two and three instances is on the
 ## Connection budget
 
 Each instance opens three pools, one per domain (clinical, party and audit).
-Each pool holds at most `[database] max_connections` connections, and the four
-listeners hold one each beside them. With the default of 20, one instance uses
-at most 3 × 20 + 4 = 64 connections:
+Each pool holds at most `[database] max_connections` connections, and the five
+listeners hold one each beside them. Unset, the pool size is four per core the
+instance may run on, at least 10 and at most 30, and the server opens one
+connection per core in each pool before it answers ready ([Sizing the
+pool](config-server.md#sizing-the-pool)). An instance on eight cores or more
+therefore holds up to 3 × 30 + 5 = 95 connections under load:
 
-| Instances | Connections at most | Fits PostgreSQL's default `max_connections = 100` |
+| Instances | Connections at the default ceiling | Fits PostgreSQL's default `max_connections = 100` |
 |---|---|---|
-| 1 | 64 | yes |
-| 2 | 128 | no |
-| 3 | 192 | no |
+| 1 | 95 | yes, leaving 2 for your tools |
+| 2 | 190 | no |
+| 3 | 285 | no |
 
-Keep `instances × (3 × max_connections + 4)` below PostgreSQL's
+Keep `instances × (3 × max_connections + 5)` below PostgreSQL's
 `max_connections` minus `superuser_reserved_connections` (3 by default) and
-the connections your operators and tools need. With the default pool size,
-PostgreSQL needs `max_connections` of at least 64 + 3 = 67 for one instance,
-128 + 3 = 131 for two and 192 + 3 = 195 for three, before your own
-connections; the default of 100 fits one instance only. To fit two instances
-in the default of 100, set `[database] max_connections = 12` on each:
-(3 × 12 + 4) × 2 = 80, which leaves 17 for the reserved slots and your tools.
-The Compose overlay above sets 10 on each instance, 68 in all. Through a
+the connections your operators and tools need. To fit two instances in the
+default of 100, set `[database] max_connections = 12` on each:
+(3 × 12 + 5) × 2 = 82, which leaves 15 for the reserved slots and your tools.
+The Compose overlay above sets 10 on each instance, 70 in all. A smaller pool
+keeps a smaller burst: when `db_pool_acquire_duration_seconds` rises at your
+load, raise PostgreSQL's `max_connections` and the pool with it. Through a
 transaction-mode pooler, the pools count against the pooler's server
 connections and only the listeners against PostgreSQL's.
 

@@ -83,9 +83,10 @@ pub(super) fn inject_uid(
 
 /// Load one **ehr-less** version of a versioned object: a specific `version`,
 /// the version extant `at` an instant, or the current one when both are `None`.
-/// `None` when the version does not exist or the object is EHR-scoped — a
+/// `None` when the version does not exist, the object is EHR-scoped — a
 /// demographic surface never serves an EHR-owned object (`ehr_id = None` is
-/// the demographics repository's scope, module NOTE).
+/// the demographics repository's scope, module NOTE) — or, with `kind`, the
+/// object is of another kind, which the loaded row decides before any gate.
 ///
 /// # Errors
 /// [`ServiceError`] on a storage/database fault during the version read, or
@@ -98,17 +99,16 @@ pub(super) async fn load_ehrless(
     vo_id: VoId,
     version: Option<TreeId>,
     at: Option<jiff::Timestamp>,
+    kind: Option<Kind>,
 ) -> Result<Option<VersionRead>, ServiceError> {
-    let read = match (version, at) {
-        (Some(v), _) => {
-            crate::versioning::read::read(pool, profile, VersionAt::Tree(vo_id, v)).await?
-        }
-        (None, Some(at)) => {
-            crate::versioning::read::read(pool, profile, VersionAt::Instant(vo_id, at)).await?
-        }
-        (None, None) => {
-            crate::versioning::read::read(pool, profile, VersionAt::Current(vo_id)).await?
-        }
+    let at = match (version, at) {
+        (Some(v), _) => VersionAt::Tree(vo_id, v),
+        (None, Some(at)) => VersionAt::Instant(vo_id, at),
+        (None, None) => VersionAt::Current(vo_id),
+    };
+    let read = match kind {
+        Some(kind) => crate::versioning::read::read_of_kind(pool, profile, at, kind).await?,
+        None => crate::versioning::read::read(pool, profile, at).await?,
     };
     Ok(read.filter(|r| r.ehr_id.is_none()))
 }
@@ -330,6 +330,7 @@ impl FerroEhrService {
             vo_id,
             Some(version),
             None,
+            None,
         )
         .await?
         .ok_or_else(|| {
@@ -357,14 +358,21 @@ impl FerroEhrService {
         at: Option<jiff::Timestamp>,
         label: &str,
     ) -> Result<ServiceResponse, ServiceError> {
-        let read = load_ehrless(&self.demographic_pool, self.spec_profile, vo_id, None, at)
-            .await?
-            .ok_or_else(|| {
-                ServiceError::not_found(
-                    Missing::ObjectVersion,
-                    format!("{label} {vo_id} version at time"),
-                )
-            })?;
+        let read = load_ehrless(
+            &self.demographic_pool,
+            self.spec_profile,
+            vo_id,
+            None,
+            at,
+            None,
+        )
+        .await?
+        .ok_or_else(|| {
+            ServiceError::not_found(
+                Missing::ObjectVersion,
+                format!("{label} {vo_id} version at time"),
+            )
+        })?;
         let meta = ResourceMeta::new(
             String::new(),
             object_version_id(vo_id, &read.creating_system_id, read.tree),
@@ -397,7 +405,11 @@ impl FerroEhrService {
         event.object_id = Some(object_id);
         event.event_type = operation.map(crate::system_log::event::EventType::rest);
         // NOTE: a write outside a request (a sweep, an unwired re-key) names no reader.
-        event.user_id = crate::versioning::committer::current_committer()
+        let committer = crate::versioning::committer::current_committer();
+        event.client_id = committer
+            .as_ref()
+            .and_then(|committer| committer.client.clone());
+        event.user_id = committer
             .map(|committer| committer.subject)
             .unwrap_or_default();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);

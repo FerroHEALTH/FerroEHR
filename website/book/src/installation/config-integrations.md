@@ -272,7 +272,9 @@ its splits lifted. No step applies a message by the operator's choice of
 `PERSON`, identifier or survivor; an identity conflict is corrected at the
 Registry, whose next message applies. Every list (one record per message),
 retry and settlement is an access record naming the operator and
-`pmir-message:<id>`; the CLI records the `--operator` name.
+`pmir-message:<id>`. The CLI records the `--operator` name as the
+principal and the operating-system account that ran it, its effective user as
+`os:<name>/<uid>`, as the record's client.
 
 While refused messages wait, the `pmir_messages_refused` gauge counts them,
 and the `pmir_refused_messages` health indicator reads `DEGRADED` from

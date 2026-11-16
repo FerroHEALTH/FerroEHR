@@ -19,8 +19,8 @@ use ferroehr::db::acquire::lease;
 /// The pool under test: two connections, none kept open while idle.
 async fn small_pool(url: &str) -> PgPool {
     let mut config = DbConfig::new(url);
-    config.max_connections = 2;
-    config.min_connections = 0;
+    config.max_connections = Some(2);
+    config.min_connections = Some(0);
     ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Clinical)
         .await
         .expect("the pool connects")

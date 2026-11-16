@@ -1118,11 +1118,19 @@ system_id = "ferroehr.local"
 # Path to a file holding `Self::listen_url`, read at boot in place of it.
 # Setting both is a boot error. Optional, unset by default (infrastructure).
 #? listen_url_file = ""
-# Upper bound of the connection pool. Optional.
-#? max_connections = 20
-# Connections the pool keeps open when idle (avoids cold reopen + `SET
-# search_path` churn under variable load). Optional.
-#? min_connections = 2
+# Upper bound of each domain's connection pool (clinical, party and audit each
+# have one). Unset, it follows the instance: four per core the process may run
+# on, at least 10 and at most 30 (`pool::POOL_PER_CORE`, `pool::POOL_FLOOR`,
+# `pool::POOL_CEILING`), and the server bounds it by
+# `server.max_concurrent_requests`, since a request holds at most one
+# connection of a pool. Optional, unset by default.
+#? max_connections = 0
+# Connections each pool keeps open while idle. The server opens them before it
+# answers ready, so an instance started under load serves its first requests
+# without opening connections; unset, the server keeps one per core, at least 2
+# and at most the pool size, and a one-shot command opens what it uses.
+# Optional, unset by default.
+#? min_connections = 0
 # How long to wait for a free connection before failing. Optional.
 #? acquire_timeout = "30s"
 # `statement_timeout` applied to every pooled connection; `"0s"` leaves the

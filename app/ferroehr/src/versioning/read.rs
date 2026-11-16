@@ -296,6 +296,26 @@ pub(crate) async fn read(
         .transpose()
 }
 
+/// [`read`] of a version whose versioned object is of `kind`: `None` for one
+/// of any other kind, decided from the loaded row before any gate, so a
+/// kind-scoped route answers its `404` for it as it does for an absent one.
+/// It saves the separate probe of the stored kind (#5776).
+///
+/// # Errors
+/// As [`read`], for a version of `kind`.
+pub(crate) async fn read_of_kind(
+    pool: &sqlx::PgPool,
+    profile: crate::config::profile::SpecProfile,
+    at: VersionAt,
+    kind: Kind,
+) -> Result<Option<VersionRead>, ServiceError> {
+    read_one(pool, at, Body::Parsed)
+        .await?
+        .filter(|stored| Kind::from_type(&stored.kind) == Some(kind))
+        .map(|stored| version_read(profile, stored))
+        .transpose()
+}
+
 /// A version read whose body may still be the stored jsonb text — the
 /// JSON-accept passthrough shape.
 ///
