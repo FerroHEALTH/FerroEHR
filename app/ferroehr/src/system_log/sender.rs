@@ -51,6 +51,7 @@ mod background;
 mod categories;
 mod chainer;
 mod live;
+pub mod reconciler;
 mod records;
 
 use background::Background;
@@ -213,6 +214,28 @@ impl AuditSender {
     /// was to report (`503`), since no access is reported without its
     /// record.
     pub async fn record(&self, events: Vec<AuditEvent>) -> Result<(), AuditError> {
+        self.write(events, None).await
+    }
+
+    /// [`Self::record`], every record held under `reservation` until the
+    /// write it records is confirmed (#5762).
+    ///
+    /// # Errors
+    /// As [`Self::record`].
+    pub async fn record_held(
+        &self,
+        events: Vec<AuditEvent>,
+        reservation: uuid::Uuid,
+    ) -> Result<(), AuditError> {
+        self.write(events, Some(reservation)).await
+    }
+
+    /// The work of [`Self::record`] and [`Self::record_held`].
+    async fn write(
+        &self,
+        events: Vec<AuditEvent>,
+        reservation: Option<uuid::Uuid>,
+    ) -> Result<(), AuditError> {
         if events.is_empty() {
             return Ok(());
         }
@@ -232,7 +255,15 @@ impl AuditSender {
             render_records(events, &ctx, &self.inner.subjects, unavailable.as_ref()).await;
         let ends = crate::system_log::retention::record_ends(&records, &ctx);
         let started = std::time::Instant::now();
-        let written = self.inner.store.write(records, &ends).await;
+        let written = match reservation {
+            Some(reservation) => {
+                self.inner
+                    .store
+                    .write_held(records, &ends, reservation)
+                    .await
+            }
+            None => self.inner.store.write(records, &ends).await,
+        };
         let path = crate::telemetry::access_path::metrics();
         let outcome = crate::telemetry::access_path::outcome(&written);
         path.log_append_duration.record(
@@ -273,6 +304,9 @@ pub struct AuditHandle {
     deliveries: Vec<Delivery>,
     /// The runtime the chainer, the forwarders and the workers run on.
     background: Background,
+    /// The store the background work writes through, over the audit
+    /// runtime's pool.
+    behind: AuditStore,
     /// The result of the scheduled hash-chain verification, when it runs.
     chain_check: Option<ChainCheck>,
 }
@@ -296,6 +330,22 @@ impl AuditHandle {
                 .map(|delivery| (delivery.sink, Arc::clone(&delivery.status)))
                 .collect(),
         }
+    }
+
+    /// Run the reconciler of held audit records over the clinical and party
+    /// domains of `pools` on the audit runtime (#5762): it resolves the
+    /// reservations of writes whose process stopped between their commit and
+    /// their release.
+    pub fn reconcile_reservations(&mut self, pools: &crate::db::domain::DomainPools) {
+        use crate::db::domain::Domain;
+        let domains = reconciler::Domains {
+            clinical: self.background.pool_over(&pools.clinical, Domain::Clinical),
+            party: self.background.pool_over(&pools.party, Domain::Party),
+        };
+        self.workers.push(
+            self.background
+                .spawn(reconciler::run(self.behind.clone(), domains)),
+        );
     }
 
     /// Stop the chainer, bounded by `timeout`, then the workers and the
@@ -439,7 +489,7 @@ pub async fn start(
 ) -> Result<(AuditSender, AuditHandle), AuditError> {
     let policy = RenderPolicy::of(&config, &CategoryMapConfig::default());
     let background = Background::start()?;
-    let behind = background.pool_over(&pool);
+    let behind = background.pool_over(&pool, crate::db::domain::Domain::Audit);
     let store = AuditStore::new(pool)
         .with_fhir_feed(config.fhir_feed.is_some())
         .with_syslog(config.syslog.is_some())
@@ -495,7 +545,7 @@ pub async fn start(
     let mut workers = Vec::new();
     let chain_check = spawn_store_upkeep(&background, &behind, &config.store, &live, &mut workers);
     let chain = Arc::new(Notify::new());
-    let chainer = Chainer::spawn(&background, behind, Arc::clone(&chain), woken);
+    let chainer = Chainer::spawn(&background, behind.clone(), Arc::clone(&chain), woken);
 
     let sender = AuditSender {
         inner: Arc::new(SenderInner {
@@ -524,6 +574,7 @@ pub async fn start(
             workers,
             deliveries,
             background,
+            behind,
             chain_check,
         },
     ))

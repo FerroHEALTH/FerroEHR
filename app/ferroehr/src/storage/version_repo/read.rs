@@ -683,7 +683,7 @@ pub struct ServedContent {
 /// # Errors
 /// [`StorageError::Database`] when the read fails.
 pub async fn content_of_objects(
-    pool: &PgPool,
+    conn: &mut sqlx::PgConnection,
     vo_ids: &[VoId],
 ) -> Result<Vec<ServedContent>, StorageError> {
     if vo_ids.is_empty() {
@@ -704,7 +704,7 @@ pub async fn content_of_objects(
          ORDER BY c.ehr_id, c.kind, c.template_id, c.archetype",
     )
     .bind(&ids)
-    .fetch_all(&mut *acquire(pool).await?)
+    .fetch_all(&mut *conn)
     .await?;
     rows.iter().map(served_content_row).collect()
 }

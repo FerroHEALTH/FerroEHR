@@ -77,12 +77,19 @@ pub const AUDIT_CHAIN_INTACT: &str = "audit_chain_intact";
 pub const ACCESS_LOG_CHAIN_HOLD: &str = "access_log_chain_hold_duration";
 /// Records the audit chainer linked into a chain (`chain`).
 pub const AUDIT_CHAINED: &str = "audit_chained";
+/// Reservations whose audit records have been held past the reconciler's
+/// grace, at its last look.
+pub const AUDIT_RESERVATIONS_HELD: &str = "audit_reservations_held";
+/// The age of the oldest such reservation, at the reconciler's last look.
+pub const AUDIT_RESERVATION_AGE: &str = "audit_reservation_age";
+/// Reservations the reconciler resolved (`outcome`).
+pub const AUDIT_RESERVATIONS_RECONCILED: &str = "audit_reservations_reconciled";
 /// Live instances of the deployment that differ from this one, by what
 /// differs (`differs`), at its last comparison (#5589).
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 27] = [
+pub const NAMES: [&str; 30] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
@@ -109,6 +116,9 @@ pub const NAMES: [&str; 27] = [
     AUDIT_CHAIN_INTACT,
     ACCESS_LOG_CHAIN_HOLD,
     AUDIT_CHAINED,
+    AUDIT_RESERVATIONS_HELD,
+    AUDIT_RESERVATION_AGE,
+    AUDIT_RESERVATIONS_RECONCILED,
     INSTANCE_MISMATCHES,
 ];
 
@@ -165,6 +175,12 @@ pub struct AccessPathMetrics {
     pub log_chain_hold: Histogram<f64>,
     /// Records the chainer linked into a chain.
     pub log_chained: Counter<u64>,
+    /// Reservations held past the reconciler's grace.
+    pub reservations_held: Gauge<u64>,
+    /// The age of the oldest reservation held past the grace, seconds.
+    pub reservation_age: Gauge<f64>,
+    /// Reservations the reconciler resolved.
+    pub reservations_reconciled: Counter<u64>,
     /// Scheduled seal runs, seconds.
     pub seal_duration: Histogram<f64>,
     /// The Unix time of each chain's newest successful seal run.
@@ -188,6 +204,10 @@ pub struct AccessPathMetrics {
 impl AccessPathMetrics {
     /// Create every event instrument on `meter`.
     #[must_use]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one instrument per field, each named with its description"
+    )]
     pub fn new(meter: &Meter) -> Self {
         let make = Make(meter);
         Self {
@@ -239,6 +259,18 @@ impl AccessPathMetrics {
             log_chained: make.counter(
                 AUDIT_CHAINED,
                 "Audit records the chainer linked (chain = access_log | system)",
+            ),
+            reservations_held: make.count_gauge(
+                AUDIT_RESERVATIONS_HELD,
+                "Reservations whose audit records are held past the reconciler's grace",
+            ),
+            reservation_age: make.timestamp(
+                AUDIT_RESERVATION_AGE,
+                "Age of the oldest reservation held past the grace",
+            ),
+            reservations_reconciled: make.counter(
+                AUDIT_RESERVATIONS_RECONCILED,
+                "Reservations reconciled (outcome = released | discarded | removed)",
             ),
             log_sign_duration: make.histogram(
                 ACCESS_LOG_SIGN_DURATION,
@@ -319,7 +351,12 @@ impl Make<'_> {
             .build()
     }
 
-    /// A gauge of a Unix time in seconds.
+    /// A gauge of a count.
+    fn count_gauge(&self, name: &'static str, description: &'static str) -> Gauge<u64> {
+        self.0.u64_gauge(name).with_description(description).build()
+    }
+
+    /// A gauge in seconds: a Unix time, or an age.
     fn timestamp(&self, name: &'static str, description: &'static str) -> Gauge<f64> {
         self.0
             .f64_gauge(name)

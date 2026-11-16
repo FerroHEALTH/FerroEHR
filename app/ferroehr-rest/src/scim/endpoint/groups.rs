@@ -72,6 +72,7 @@ pub(crate) async fn create(
     Extension(ScimCaller(client)): Extension<ScimCaller>,
     body: Bytes,
 ) -> Response {
+    crate::system_log::written::learn_op("scim_group_create");
     let outcome = async {
         let parsed = groups.inner.listing.requested(&body)?;
         let state = group_map::state(parsed.resource())?;
@@ -179,6 +180,12 @@ pub(crate) async fn modify(
     body: Bytes,
 ) -> Response {
     let patching = method == Method::PATCH;
+    let op = if patching {
+        "scim_group_patch"
+    } else {
+        "scim_group_replace"
+    };
+    crate::system_log::written::learn_op(op);
     let outcome = async {
         let body = json_body(&body)?;
         let request = patching.then(|| PatchRequest::parse(&body)).transpose()?;
@@ -213,11 +220,6 @@ pub(crate) async fn modify(
             .ok_or_else(|| missing(&id))
     }
     .await;
-    let op = if patching {
-        "scim_group_patch"
-    } else {
-        "scim_group_replace"
-    };
     match outcome {
         Ok(group) => {
             let party = group.row.party;
@@ -241,6 +243,7 @@ pub(crate) async fn delete(
     Path(id): Path<String>,
     headers: HeaderMap,
 ) -> Response {
+    crate::system_log::written::learn_op("scim_group_delete");
     let outcome = async {
         let group = find(&groups, &client, &id).await?;
         if let Some(tag) = group_map::entity_tag(&group) {

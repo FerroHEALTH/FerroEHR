@@ -87,7 +87,9 @@ pub mod fhir;
 #[cfg(feature = "fhir")]
 mod fhir_accessor;
 pub mod message;
+pub mod recorder;
 pub mod render;
+mod reservation;
 pub mod retention;
 pub mod seal;
 #[cfg(feature = "fhir")]
@@ -263,13 +265,19 @@ impl FerroEhrService {
         &self,
         mut event: AuditEvent,
     ) -> Result<(), ServiceError> {
+        self.stamp_committer(&mut event);
+        self.record_access(event).await
+    }
+
+    /// Stamp `event` as an act of the request's committer, under the
+    /// request's purpose and permit and the deployment's legal basis.
+    pub(crate) fn stamp_committer(&self, event: &mut AuditEvent) {
         event.purpose = access_context::current_purpose();
         event.permit = access_context::current_permit();
         if let Some(committer) = crate::versioning::committer::current_committer() {
             event.user_id = committer.subject;
         }
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event).await
     }
 
     /// Stamp `event` as one act on one object of the current request: one
@@ -386,10 +394,24 @@ impl FerroEhrService {
         &self,
         vo_ids: &[crate::ids::VoId],
     ) -> Result<Vec<categories::ContentIds>, ServiceError> {
+        let mut conn = crate::db::acquire::acquire(&self.pool).await?;
+        self.audit_content_of_objects_on(&mut conn, vo_ids).await
+    }
+
+    /// [`Self::audit_content_of_objects`] on `conn`, which a write's own
+    /// transaction can be, so it reads what the write landed.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the read fails.
+    pub(crate) async fn audit_content_of_objects_on(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        vo_ids: &[crate::ids::VoId],
+    ) -> Result<Vec<categories::ContentIds>, ServiceError> {
         if !self.audit_enabled() {
             return Ok(Vec::new());
         }
-        let served = crate::storage::version_repo::read::content_of_objects(&self.pool, vo_ids)
+        let served = crate::storage::version_repo::read::content_of_objects(conn, vo_ids)
             .await
             .map_err(ServiceError::from)?;
         Ok(served.iter().map(content_ids).collect())

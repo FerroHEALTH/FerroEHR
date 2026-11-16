@@ -706,6 +706,7 @@ async fn read_facts(
         .execute(&mut *tx)
         .await?;
     let changed = caller::store::load(&mut tx, since).await?;
+    // NOTE: our own design (#5762), a read-only snapshot that writes nothing.
     tx.commit().await?;
     Ok(changed)
 }

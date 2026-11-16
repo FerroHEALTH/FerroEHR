@@ -14,6 +14,9 @@
               ADL/OPT wire envelopes"
 )]
 
+use sqlx::Connection as _;
+
+use crate::db::acquire::acquire;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -104,13 +107,15 @@ impl FerroEhrService {
         qualified_name: &QualifiedQueryName,
         version: QueryVersion,
     ) -> Result<(), ServiceError> {
-        if !stored_query_repo::delete(&self.pool, qualified_name, version).await? {
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
+        if !stored_query_repo::delete(&mut tx, qualified_name, version).await? {
             return Err(ServiceError::not_found(
                 Missing::Artefact,
                 format!("stored query {qualified_name} at version {version}"),
             ));
         }
-        Ok(())
+        self.commit_definition(tx).await
     }
 }
 
@@ -158,13 +163,11 @@ impl FerroEhrService {
 
         let Some(pattern) = version else {
             // No-version store: case-insensitive upsert at the default version.
-            stored_query_repo::replace(
-                &self.pool,
-                qualified_name,
-                DEFAULT_QUERY_VERSION,
-                &query_text,
-            )
-            .await?;
+            let mut conn = acquire(&self.pool).await?;
+            let mut tx = conn.begin().await?;
+            stored_query_repo::replace(&mut tx, qualified_name, DEFAULT_QUERY_VERSION, &query_text)
+                .await?;
+            self.commit_definition(tx).await?;
             return Ok(DEFAULT_QUERY_VERSION);
         };
 
@@ -185,11 +188,14 @@ impl FerroEhrService {
         // Versioned store: insert-only, immutable pair. A case-insensitive match
         // at this version is a 409 (BASE master05 §Composite Identifiers and
         // Case).
-        if !stored_query_repo::insert(&self.pool, qualified_name, v, &query_text).await? {
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
+        if !stored_query_repo::insert(&mut tx, qualified_name, v, &query_text).await? {
             return Err(ServiceError::conflict(format!(
                 "a stored query '{qualified_name}' at version '{v}' already exists"
             )));
         }
+        self.commit_definition(tx).await?;
         Ok(v)
     }
 

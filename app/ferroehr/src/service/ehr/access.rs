@@ -187,6 +187,7 @@ impl FerroEhrService {
             let mut tx = sqlx::Connection::begin(&mut *conn).await?;
             self.commit_default_ehr_access(&mut tx, *ehr_id, "EHR_ACCESS restored at boot")
                 .await?;
+            // NOTE: our own design (#5762), the boot-time restore, which runs outside any request.
             tx.commit().await?;
             self.invalidate_ehr_access(*ehr_id).await;
         }

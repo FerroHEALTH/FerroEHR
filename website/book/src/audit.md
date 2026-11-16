@@ -1052,11 +1052,21 @@ restart, a crash or a lost replica leaves it for the next chainer.
 The reference host sustains about 15 000 chained access-log entries per
 second in one chain ([capacity](capacity.md)).
 
-A write's records are written after its clinical commit, in the audit
-cluster, which production keeps apart from the clinical one: a process that
-dies between the two commits loses that write's record until the durable
-reservation of [#5762](https://github.com/FerroHEALTH/FerroEHR/issues/5762)
-closes the window.
+A write's records live in the audit cluster, which production keeps apart
+from the clinical and party ones, so they cannot join the write's own
+transaction. They are written first, into the intake, **held** under a
+reservation id the chainer skips; the id goes into the write's own domain in
+the write's transaction, and the write commits. Once the response is built,
+the held records are released to the chainer and the reservation is removed.
+A replica that stops between the commit and the release leaves the
+reservation behind: two minutes later the reconciler of any running replica
+releases those records, exactly as they were written and once, and discards
+the held records of a write that never committed. The reservation holds the
+id alone, no identity of the caller. While a reservation waits past those two
+minutes the `audit_sender` indicator reads `DEGRADED` with their count and
+age, and the metrics `audit_reservations_held`,
+`audit_reservation_age_seconds` and `audit_reservations_reconciled_total`
+show them.
 
 ### While a composition is held from the person
 

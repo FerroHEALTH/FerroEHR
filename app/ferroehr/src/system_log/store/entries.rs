@@ -80,6 +80,7 @@ impl AuditStore {
         &self,
         conn: &mut PgConnection,
         records: Vec<AuditRecord>,
+        reserved_by: Option<uuid::Uuid>,
     ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
         let mut entered = Vec::with_capacity(records.len());
         let mut tokens = Vec::with_capacity(records.len());
@@ -111,7 +112,7 @@ impl AuditStore {
             uids.push(uuid::Uuid::parse_str(entry.uid.value()).map_err(AuditError::EntryUid)?);
             intake.push(IntakeEntry::of(&mut entry, Some(index))?);
         }
-        crate::access_log::intake::take_in(conn, intake).await?;
+        crate::access_log::intake::take_in(conn, intake, reserved_by).await?;
         Ok((uids, learned))
     }
 
@@ -174,7 +175,9 @@ impl AuditStore {
         if tombstone.is_none() {
             return Ok(None);
         }
-        let (_uids, learned) = Box::pin(self.intake_entries(&mut tx, recorded)).await?;
+        let (_uids, learned) = Box::pin(self.intake_entries(&mut tx, recorded, None)).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         self.remember(learned);
         self.settle().await?;

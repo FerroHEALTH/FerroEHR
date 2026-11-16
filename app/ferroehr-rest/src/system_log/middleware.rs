@@ -59,6 +59,7 @@ use ferroehr::system_log::event::{
     AccessDecision, AccessDomain, ActorAuthentication, AuditEvent, EntryScope, EventActionCode,
     EventOutcome, EventType, ObjectClass, QueryNaming,
 };
+use ferroehr::system_log::recorder::WriteRecorder;
 
 use crate::extensions::access::authn::{FreshAuthentication, Principal};
 use crate::overview::error::RestError;
@@ -123,6 +124,17 @@ pub(super) struct AccessContext {
     request_id: Option<String>,
     purpose: Option<String>,
     permit: Option<String>,
+}
+
+/// The facts of one request every operation record of it names: where it
+/// came from, what it addressed, when it arrived and its access context.
+#[derive(Debug, Clone)]
+pub(super) struct RequestFacts {
+    pub(super) client_ip: Option<String>,
+    pub(super) path: String,
+    pub(super) route_ehr_id: Option<String>,
+    pub(super) timestamp: jiff::Timestamp,
+    pub(super) access: AccessContext,
 }
 
 /// The caller as the authentication layer published it on the response: the
@@ -250,12 +262,24 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         .get::<ferrohealth_telemetry::request_log::RequestId>()
         .map(|id| id.id().to_owned());
 
-    let access = AccessContext {
-        request_id,
-        purpose,
-        permit,
+    let facts = RequestFacts {
+        client_ip,
+        path,
+        route_ehr_id,
+        timestamp,
+        access: AccessContext {
+            request_id,
+            purpose,
+            permit,
+        },
     };
-    let resp = run_published(req, next, &access, client_ip.clone()).await;
+    let recorder = WriteRecorder::default();
+    recorder.prime(crate::system_log::written::builder(&state, &facts));
+    let resp = crate::system_log::written::run(
+        recorder.clone(),
+        run_published(req, next, &facts.access, facts.client_ip.clone()),
+    )
+    .await;
     let status = resp.status();
 
     let op = resp.extensions().get::<AuditOpId>().copied();
@@ -266,53 +290,37 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let refusal = crate::system_log::refusals::is_refusal(&resp);
 
     let mut records = Vec::new();
-    // NOTE: our own design (#5602), the act wrote its record in its own transaction, so a
-    // second operation record would be a second record of one event.
-    let written = object
-        .as_ref()
-        .is_some_and(|object| object.entry == EntryScope::Written);
+    // NOTE: our own design (#5602, #5762), the act or its commit wrote the operation record
+    // itself, so a second one would be a second record of one event.
+    let written = recorder.holds_operation_record()
+        || object
+            .as_ref()
+            .is_some_and(|object| object.entry == EntryScope::Written);
     let mut op_recorded = written;
 
     let classified = op.map(|AuditOpId(op)| (op, audit_for(op)));
-    if let Some((op, Some((action, object_class)))) = classified
+    if let Some((op, Some(classes))) = classified
         && !written
     {
-        let mut event = AuditEvent::new(action, object_class, outcome_from_status(status));
-        // The concrete operation is the `EventTypeCode` (DICOM PS3.15 §A.5
-        // EventIdentification); the id is ours.
-        event.event_type = Some(EventType::rest(op));
-        if refusal {
-            event.decision = AccessDecision::Refused;
-        }
         op_recorded = true;
-        fill_common(&mut event, caller, client_ip.clone(), timestamp);
-        fill_object(
-            &mut event,
-            object.as_ref(),
-            route_ehr_id.as_deref(),
+        records.push(operation_record(
+            &state,
             op,
-            &path,
-        );
-        caller.stamp_decision(&mut event);
-        // NOTE: our own design (#5606), an evaluator refusal refuses EHR data, so its record
-        // writes an access-log entry whatever the operation's resource class.
-        if event.decided.as_ref().is_some_and(|d| d.refused.is_some())
-            && event.domain != AccessDomain::Ehr
-            && event.entry == EntryScope::ByDomain
-        {
-            event.entry = EntryScope::Refusal;
-        }
-        categorise(&mut event, &state, op, object.as_ref());
-        fill_access(&mut event, &access, &state);
-        records.push(event);
+            classes,
+            status,
+            refusal,
+            caller,
+            &facts,
+            object.as_ref(),
+        ));
         records.extend(crate::system_log::served::records(
             &state,
             &resp,
             op,
             caller,
-            client_ip.as_deref(),
-            timestamp,
-            &access,
+            facts.client_ip.as_deref(),
+            facts.timestamp,
+            &facts.access,
         ));
     }
 
@@ -325,16 +333,19 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             &state,
             &resp,
             caller,
-            client_ip,
-            timestamp,
-            &access,
-            route_ehr_id,
+            facts.client_ip,
+            facts.timestamp,
+            &facts.access,
+            facts.route_ehr_id,
             op_recorded,
         ));
     } else if fresh_auth && !state.backend().suppress_login_events() {
-        records.push(login(caller, client_ip, timestamp));
+        records.push(login(caller, facts.client_ip, facts.timestamp));
     }
 
+    // NOTE: our own design (#5762), the records of what the request committed are held until
+    // here, and are released whatever this response becomes, since the writes committed.
+    state.backend().confirm_reserved(&recorder.reserved()).await;
     if let Some((op, None)) = classified {
         return unclassified(op);
     }
@@ -350,6 +361,52 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         return resp;
     }
     resp
+}
+
+/// The operation record of `op`, classified as `classes`, for a response of
+/// `status`: the caller, what the handler said it touched and the request's
+/// shared facts.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the record's parts as the middleware and the commit choke point both hold them"
+)]
+pub(super) fn operation_record(
+    state: &AppState,
+    op: &'static str,
+    (action, object_class): (EventActionCode, ObjectClass),
+    status: StatusCode,
+    refusal: bool,
+    caller: Caller<'_>,
+    facts: &RequestFacts,
+    object: Option<&AuditObject>,
+) -> AuditEvent {
+    let mut event = AuditEvent::new(action, object_class, outcome_from_status(status));
+    // The concrete operation is the `EventTypeCode` (DICOM PS3.15 §A.5
+    // EventIdentification); the id is ours.
+    event.event_type = Some(EventType::rest(op));
+    if refusal {
+        event.decision = AccessDecision::Refused;
+    }
+    fill_common(&mut event, caller, facts.client_ip.clone(), facts.timestamp);
+    fill_object(
+        &mut event,
+        object,
+        facts.route_ehr_id.as_deref(),
+        op,
+        &facts.path,
+    );
+    caller.stamp_decision(&mut event);
+    // NOTE: our own design (#5606), an evaluator refusal refuses EHR data, so its record
+    // writes an access-log entry whatever the operation's resource class.
+    if event.decided.as_ref().is_some_and(|d| d.refused.is_some())
+        && event.domain != AccessDomain::Ehr
+        && event.entry == EntryScope::ByDomain
+    {
+        event.entry = EntryScope::Refusal;
+    }
+    categorise(&mut event, state, op, object);
+    fill_access(&mut event, &facts.access, state);
+    event
 }
 
 /// Run the rest of the stack with the request's origin and declared purpose

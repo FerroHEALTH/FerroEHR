@@ -82,8 +82,9 @@ use ferrohealth_smart::assurance::AssuranceLevel;
 /// The batched intake of the system chain: one row per element of the
 /// parallel column arrays, every row under the one render policy in `$38`;
 /// each record's search tokens arrive as the text of an `integer[]` in `$39`,
-/// since an array of arrays unnests element by element, and its id in `$53`.
-const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, recorded_at, action, outcome, \
+/// since an array of arrays unnests element by element, and its id in `$53`;
+/// every row is held under the reservation in `$54`, or none.
+const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, reserved_by, recorded_at, action, outcome, \
      event_code, operation, principal, patient_id, resource_class, resource_id, \
      client_ip, token_id, domain, purpose, legal_basis, result_count, request_id, roles, \
      origins, origin_count, categories, category_basis, category_evidence, category_map_digest, \
@@ -92,7 +93,7 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, recorded_a
      subject_lookup_failed, category_content, render_policy, search_tokens, binding, guest, \
      party, party_groups, provider, representation, external_fields, agreement, actor_chain, \
      facilities, binding_detail, summary, token_attributes) \
-     SELECT u.id, u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
+     SELECT u.id, $54::uuid, u.c1, u.c2, u.c3, u.c4, u.c5, u.c6, u.c7, u.c8, u.c9, u.c10, u.c11, u.c12, \
      u.c13, u.c14, u.c15, u.c16, u.c17, u.c18, u.c19, u.c20, u.c21, u.c22, u.c23, u.c24, u.c25, \
      u.c26, u.c27, u.c28, u.c29, u.c30, u.c31, u.c32, u.c33, u.c34, u.c35, u.c36, u.c37, \
      $38::bytea, u.tokens::integer[], u.c40, u.c41, u.c42, u.c43, u.c44, u.c45, u.c46, u.c47, \
@@ -391,7 +392,7 @@ impl AuditStore {
             subject: subject.map(str::to_owned),
             entry: None,
         };
-        let taken = self.take_in_own(vec![record], &[]).await?;
+        let taken = self.take_in_own(vec![record], &[], None).await?;
         self.settle().await?;
         taken.first().copied().ok_or(AuditError::SearchToken)
     }
@@ -429,7 +430,23 @@ impl AuditStore {
         records: Vec<AuditRecord>,
         ends: &[RecordEnd],
     ) -> Result<(), AuditError> {
-        self.take_in_own(records, ends).await.map(drop)
+        self.take_in_own(records, ends, None).await.map(drop)
+    }
+
+    /// [`Self::write`], every record held under `reservation` until it is
+    /// released ([`Self::release`]) or discarded (#5762).
+    ///
+    /// # Errors
+    /// As [`Self::write`].
+    pub async fn write_held(
+        &self,
+        records: Vec<AuditRecord>,
+        ends: &[RecordEnd],
+        reservation: Uuid,
+    ) -> Result<(), AuditError> {
+        self.take_in_own(records, ends, Some(reservation))
+            .await
+            .map(drop)
     }
 
     /// [`Self::write`], returning the id of each record written.
@@ -437,13 +454,16 @@ impl AuditStore {
         &self,
         records: Vec<AuditRecord>,
         ends: &[RecordEnd],
+        reserved_by: Option<Uuid>,
     ) -> Result<Vec<Uuid>, AuditError> {
         if records.is_empty() {
             return Ok(Vec::new());
         }
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        let (ids, learned) = self.take_in(&mut tx, records, ends).await?;
+        let (ids, learned) = self.take_in(&mut tx, records, ends, reserved_by).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         self.remember(learned);
         Ok(ids)
@@ -460,6 +480,7 @@ impl AuditStore {
         ends: &[RecordEnd],
         policy: Vec<u8>,
         tokens: Vec<String>,
+        reserved_by: Option<Uuid>,
     ) -> Result<Vec<Uuid>, AuditError> {
         let mut c = BatchColumns::with_capacity(records.len());
         for (index, record) in records.iter().enumerate() {
@@ -520,6 +541,7 @@ impl AuditStore {
             .bind(c.summaries)
             .bind(c.token_attributes)
             .bind(c.ids)
+            .bind(reserved_by)
             .execute(&mut *conn)
             .await?;
         Ok(ids)

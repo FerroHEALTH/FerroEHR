@@ -97,9 +97,8 @@ impl FerroEhrService {
                 policy.hours()
             )));
         }
-        tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Create, ehr_id, Some(vo_id), REGISTER)
-            .await?;
+        let record = self.mark_record(EventActionCode::Create, ehr_id, Some(vo_id), REGISTER);
+        self.commit_clinical_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -121,9 +120,8 @@ impl FerroEhrService {
         access_delay::release(&mut tx, vo_id)
             .await
             .map_err(ServiceError::Storage)?;
-        tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Delete, ehr_id, Some(vo_id), REGISTER)
-            .await?;
+        let record = self.mark_record(EventActionCode::Delete, ehr_id, Some(vo_id), REGISTER);
+        self.commit_clinical_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -172,16 +170,18 @@ impl FerroEhrService {
         let expired = access_delay::take_expired(&mut tx)
             .await
             .map_err(ServiceError::Storage)?;
-        for hold in &expired {
-            self.emit_mark_access(
-                EventActionCode::Delete,
-                hold.ehr_id,
-                Some(hold.vo_id),
-                EXPIRY,
-            )
-            .await?;
-        }
-        tx.commit().await.map_err(ServiceError::Database)?;
+        let records = expired
+            .iter()
+            .map(|hold| {
+                self.mark_record(
+                    EventActionCode::Delete,
+                    hold.ehr_id,
+                    Some(hold.vo_id),
+                    EXPIRY,
+                )
+            })
+            .collect();
+        self.commit_clinical_recorded(tx, records).await?;
         Ok(expired.len())
     }
 

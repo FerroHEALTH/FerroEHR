@@ -30,7 +30,7 @@ use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::storage::version_repo::tier;
-use crate::system_log::event::EventActionCode;
+use crate::system_log::event::{AuditEvent, EventActionCode};
 
 impl FerroEhrService {
     /// Move every versioned object of each EHR to the cold archival tier
@@ -50,8 +50,8 @@ impl FerroEhrService {
             let vo_ids = tier::hot_objects(&mut tx, ehr_id).await?;
             tier::freeze(&mut tx, &vo_ids, Some("archive_ehrs")).await?;
         }
-        tx.commit().await?;
-        self.emit_archive_access(ehr_ids, "archive").await
+        let records = self.archive_records(ehr_ids, "archive");
+        self.commit_clinical_recorded(tx, records).await
     }
 
     /// Move each party's versioned object to the cold archival tier
@@ -83,8 +83,7 @@ impl FerroEhrService {
             live.push(party_id);
         }
         tier::freeze(&mut tx, &live, Some("archive_parties")).await?;
-        tx.commit().await?;
-        Ok(())
+        self.commit_party_recorded(tx, Vec::new()).await
     }
 
     /// Bring every archived versioned object of each EHR back from the cold
@@ -107,25 +106,17 @@ impl FerroEhrService {
             let vo_ids = tier::cold_objects(&mut tx, ehr_id).await?;
             tier::thaw(&mut tx, &vo_ids).await?;
         }
-        tx.commit().await?;
-        self.emit_archive_access(ehr_ids, "archive-restore").await
+        let records = self.archive_records(ehr_ids, "archive-restore");
+        self.commit_clinical_recorded(tx, records).await
     }
 
-    /// Record the move of each EHR between the tiers as an access to it, one
-    /// record per EHR, so its access log shows who archived or restored it.
-    ///
-    /// # Errors
-    /// `service_overloaded` when a record could not be written; the move itself is already committed.
-    async fn emit_archive_access(
-        &self,
-        ehr_ids: &[EhrId],
-        register: &str,
-    ) -> Result<(), ServiceError> {
-        for &ehr_id in ehr_ids {
-            self.emit_mark_access(EventActionCode::Update, ehr_id, None, register)
-                .await?;
-        }
-        Ok(())
+    /// The move of each EHR between the tiers as an access to it, one record
+    /// per EHR, so its access log shows who archived or restored it.
+    fn archive_records(&self, ehr_ids: &[EhrId], register: &str) -> Vec<AuditEvent> {
+        ehr_ids
+            .iter()
+            .map(|&ehr_id| self.mark_record(EventActionCode::Update, ehr_id, None, register))
+            .collect()
     }
 
     /// Bring each archived party's versioned object back from the cold tier to
@@ -154,8 +145,7 @@ impl FerroEhrService {
             ids.push(party_id);
         }
         tier::thaw(&mut tx, &ids).await?;
-        tx.commit().await?;
-        Ok(())
+        self.commit_party_recorded(tx, Vec::new()).await
     }
 }
 

@@ -85,6 +85,7 @@ pub(crate) async fn create(
     Extension(ScimCaller(client)): Extension<ScimCaller>,
     body: Bytes,
 ) -> Response {
+    crate::system_log::written::learn_op("scim_user_create");
     let outcome = async {
         let parsed = users.inner.listing.requested(&body)?;
         let resource = parsed.resource();
@@ -232,6 +233,12 @@ pub(crate) async fn modify(
 ) -> Response {
     let issuer = client.binding_issuer.as_str();
     let patching = method == Method::PATCH;
+    let op = if patching {
+        "scim_user_patch"
+    } else {
+        "scim_user_replace"
+    };
+    crate::system_log::written::learn_op(op);
     let outcome = async {
         let body = json_body(&body)?;
         let request = patching.then(|| PatchRequest::parse(&body)).transpose()?;
@@ -271,11 +278,6 @@ pub(crate) async fn modify(
         sync_roles(&users, &client, user, wanted).await
     }
     .await;
-    let op = if patching {
-        "scim_user_patch"
-    } else {
-        "scim_user_replace"
-    };
     match outcome {
         Ok(user) => {
             let party = user.row.party;
@@ -469,6 +471,7 @@ pub(crate) async fn delete(
     headers: HeaderMap,
 ) -> Response {
     let issuer = client.binding_issuer.as_str();
+    crate::system_log::written::learn_op("scim_user_delete");
     let outcome = async {
         let user = find(&users, issuer, &id).await?;
         if let Some(tag) = user_map::entity_tag(&user) {

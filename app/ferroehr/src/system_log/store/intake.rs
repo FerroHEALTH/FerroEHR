@@ -59,6 +59,7 @@ impl AuditStore {
         conn: &mut PgConnection,
         records: Vec<AuditRecord>,
         ends: &[RecordEnd],
+        reserved_by: Option<Uuid>,
     ) -> Result<(Vec<Uuid>, LearnedSets), AuditError> {
         if !ends.is_empty() && ends.len() != records.len() {
             return Err(AuditError::RetentionEnds {
@@ -84,12 +85,12 @@ impl AuditStore {
             let run = records.get(*start..*end).unwrap_or_default();
             let run_ends = ends.get(*start..*end).unwrap_or_default();
             let (tokens, learned) = Self::batch_tokens(self, writing, conn, run).await?;
-            ids.extend(Self::insert_rows(conn, run, run_ends, policy, tokens).await?);
+            ids.extend(Self::insert_rows(conn, run, run_ends, policy, tokens, reserved_by).await?);
             learned_all.push(learned);
         }
         #[cfg(feature = "fhir")]
         {
-            let (uids, learned) = self.intake_entries(conn, entries).await?;
+            let (uids, learned) = self.intake_entries(conn, entries, reserved_by).await?;
             ids.extend(uids);
             learned_all.push(learned);
         }
@@ -162,19 +163,94 @@ fn merged(parts: Vec<LearnedSets>) -> LearnedSets {
 fn merged(_parts: Vec<LearnedSets>) -> LearnedSets {}
 
 impl AuditStore {
-    /// How long the oldest record of either intake has waited for the
-    /// chainer; `None` when both are empty.
+    /// How long the oldest record of either intake that is not held has
+    /// waited for the chainer; `None` when there is none.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the read fails.
     pub async fn intake_age(&self) -> Result<Option<std::time::Duration>, AuditError> {
         let seconds: Option<f64> = sqlx::query_scalar(
             "SELECT extract(epoch FROM now() - least( \
-             (SELECT min(taken_at) FROM audit.access_log_intake), \
-             (SELECT min(taken_at) FROM audit.audit_event_intake)))::float8",
+             (SELECT min(taken_at) FROM audit.access_log_intake WHERE reserved_by IS NULL), \
+             (SELECT min(taken_at) FROM audit.audit_event_intake WHERE reserved_by IS NULL)))::float8",
         )
         .fetch_one(&mut *acquire(&self.pool).await?)
         .await?;
         Ok(seconds.map(|seconds| std::time::Duration::from_secs_f64(seconds.max(0.0))))
+    }
+}
+
+impl AuditStore {
+    /// Release the records held under the reservations `ids`, whose writes
+    /// committed, so the chainer takes them (#5762); returns how many.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the statement fails.
+    pub async fn release(&self, ids: &[Uuid]) -> Result<u64, AuditError> {
+        let released: i64 = sqlx::query_scalar("SELECT audit.audit_intake_release($1)")
+            .bind(ids)
+            .fetch_one(&mut *acquire(&self.pool).await?)
+            .await?;
+        Ok(u64::try_from(released).unwrap_or(0))
+    }
+
+    /// Discard the records held under the reservations `ids`, whose writes
+    /// never committed; returns how many.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the statement fails.
+    pub async fn discard(&self, ids: &[Uuid]) -> Result<u64, AuditError> {
+        let discarded: i64 = sqlx::query_scalar("SELECT audit.audit_intake_discard($1)")
+            .bind(ids)
+            .fetch_one(&mut *acquire(&self.pool).await?)
+            .await?;
+        Ok(u64::try_from(discarded).unwrap_or(0))
+    }
+
+    /// The reservations whose records have been held longer than `grace`,
+    /// each with how long, oldest first.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the read fails.
+    pub async fn held_longer_than(
+        &self,
+        grace: std::time::Duration,
+    ) -> Result<Vec<(Uuid, std::time::Duration)>, AuditError> {
+        let rows: Vec<(Uuid, f64)> = sqlx::query_as(
+            "SELECT h.reserved_by, extract(epoch FROM now() - min(h.taken_at))::float8 \
+             FROM (SELECT reserved_by, taken_at FROM audit.access_log_intake \
+                   WHERE reserved_by IS NOT NULL \
+                   UNION ALL SELECT reserved_by, taken_at FROM audit.audit_event_intake \
+                   WHERE reserved_by IS NOT NULL) AS h \
+             GROUP BY h.reserved_by \
+             HAVING min(h.taken_at) < now() - make_interval(secs => $1) \
+             ORDER BY 2 DESC",
+        )
+        .bind(grace.as_secs_f64())
+        .fetch_all(&mut *acquire(&self.pool).await?)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, age)| (id, std::time::Duration::from_secs_f64(age.max(0.0))))
+            .collect())
+    }
+}
+
+impl AuditStore {
+    /// Which of the reservations `ids` still hold records in the intake.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the read fails.
+    pub async fn held_among(&self, ids: &[Uuid]) -> Result<Vec<Uuid>, AuditError> {
+        let held: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT DISTINCT h.reserved_by FROM ( \
+             SELECT reserved_by FROM audit.access_log_intake WHERE reserved_by = ANY($1) \
+             UNION ALL SELECT reserved_by FROM audit.audit_event_intake WHERE reserved_by = ANY($1) \
+             ) AS h",
+        )
+        .bind(ids)
+        .fetch_all(&mut *acquire(&self.pool).await?)
+        .await?;
+        Ok(held)
     }
 }

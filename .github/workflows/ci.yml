@@ -955,6 +955,12 @@ jobs:
       - name: spec-citations / The wiring binary runs no SQL of its own
         if: ${{ !cancelled() }}
         run: bash scripts/checks/server-holds-no-sql.sh
+      - name: spec-citations / The request-commit detector catches what it claims to
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/request-commits.sh --self-test
+      - name: spec-citations / A request-scoped write commits only through the choke point
+        if: ${{ !cancelled() }}
+        run: bash scripts/checks/request-commits.sh
       - name: spec-citations / The country detector catches what it claims to
         if: ${{ !cancelled() }}
         run: bash scripts/checks/access-decides-no-country.sh --self-test

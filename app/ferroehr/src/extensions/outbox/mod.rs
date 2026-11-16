@@ -162,6 +162,7 @@ pub async fn reconcile(pool: &PgPool, readers: &[String]) -> Result<Reconciled, 
     .bind(readers)
     .fetch_all(&mut *tx)
     .await?;
+    // NOTE: our own design (#5762), the outbox delivery, which runs outside any request.
     tx.commit().await?;
     registered.sort_unstable();
     deactivated.sort_unstable();
@@ -278,6 +279,7 @@ pub async fn read(
         .bind(limit)
         .fetch_all(&mut *tx)
         .await?;
+    // NOTE: our own design (#5762), the outbox delivery, which runs outside any request.
     tx.commit().await?;
     Ok(Some(
         rows.into_iter()
@@ -351,6 +353,7 @@ pub async fn acknowledge(
     .bind(last_seq)
     .execute(&mut *tx)
     .await?;
+    // NOTE: our own design (#5762), the outbox delivery, which runs outside any request.
     tx.commit().await?;
     Ok(Acknowledged::Moved)
 }
