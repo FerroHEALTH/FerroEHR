@@ -210,7 +210,12 @@ up() {
   local http_port="${5:-$HTTP_PORT}" pg_port="${6:-$PG_PORT}"
   local pg="$PG$suffix" server="$SERVER$suffix"
   docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK" >/dev/null
+  # The cluster lives in memory (#5866): every request commits before it
+  # answers (#5789), and a hosted runner's WAL fsync ranges from 0.08 to
+  # 1.4 ms a call between runs, which tails every route on both arms. A commit
+  # still flushes; wal_summary reports each arm's WAL and flushes per request.
   docker run -d --name "$pg" --network "$NETWORK" -p "127.0.0.1:${pg_port}:5432" \
+    --tmpfs /var/lib/postgresql:rw,mode=0755 \
     -e "POSTGRES_PASSWORD=$PG_SUPER_SECRET" -e PG_INIT_USER=ferroehr -e "PG_INIT_PASSWORD=$PG_SECRET" \
     -e PG_INIT_DB=ferroehr "$pg_image" -c shared_preload_libraries=pg_stat_statements \
     -c pg_stat_statements.track=all -c pg_stat_statements.track_planning=on >/dev/null
@@ -412,8 +417,112 @@ statements_reset() {
   local container
   for container in "$PG" "$PG-base"; do
     docker exec "$container" psql -U postgres -d ferroehr -Atq \
-      -c "SELECT pg_stat_statements_reset()" >/dev/null
+      -c "SELECT pg_stat_statements_reset(), pg_stat_reset_shared('wal'), pg_stat_reset_shared('io')" \
+      >/dev/null
   done
+}
+
+# The WAL the head may write beyond the base's per request (#5866). The
+# cluster lives in memory, so the durable cost is gated by count: WAL_FLUSHES
+# more flushes per request (a tenth of a commit; a commit added to every
+# request is a whole one) and WAL_BYTES_PERCENT more bytes per request. The
+# two arms of one build differ by up to 4 % in bytes and 0.04 in flushes over
+# a run. No openEHR spec governs this: our own design.
+readonly WAL_FLUSHES=0.10
+readonly WAL_BYTES_PERCENT=10
+
+# wal_judge <head-sent> <head-bytes> <head-flushes> <base-sent> <base-bytes>
+# <base-flushes>: a line per breach of the head's WAL per request against the
+# base's; exit 0 within both limits, 1 on a breach, 2 when an arm sent nothing.
+wal_judge() {
+  awk -v hs="$1" -v hb="$2" -v hf="$3" -v bs="$4" -v bb="$5" -v bf="$6" \
+    -v flushes="$WAL_FLUSHES" -v percent="$WAL_BYTES_PERCENT" 'BEGIN {
+    if (hs <= 0 || bs <= 0) { print "- the WAL per request cannot be judged: an arm sent no request"; exit 2 }
+    breach = 0
+    hfr = hf / hs; bfr = bf / bs; hbr = hb / hs; bbr = bb / bs
+    if (hfr > bfr + flushes) {
+      printf "- WAL flushes per request: the head %.2f against the base %.2f, over the %.2f more the gate allows\n", hfr, bfr, flushes
+      breach = 1
+    }
+    if (hbr > bbr * (1 + percent / 100)) {
+      printf "- WAL bytes per request: the head %.0f against the base %.0f, over the %d %% more the gate allows\n", hbr, bbr, percent
+      breach = 1
+    }
+    exit breach
+  }'
+}
+
+# wal_counts <pg-container>: the cluster's WAL bytes and WAL flushes since the
+# reset, as "<bytes> <flushes>".
+wal_counts() {
+  docker exec "$1" psql -U postgres -d ferroehr -Atq -F ' ' -c \
+    "SELECT (SELECT wal_bytes FROM pg_stat_wal), (SELECT coalesce(sum(fsyncs), 0) FROM pg_stat_io WHERE object = 'wal')"
+}
+
+# wal_summary <summary> <report>: each arm's WAL bytes and WAL flushes over
+# the run and per request the arm was sent, then the head judged against the
+# base (wal_judge). Sets WAL_STATUS: 0 within the limits, 1 a breach, 2 not
+# judged.
+wal_summary() {
+  local arm container counts sent judged
+  local -A sents=() bytes=() flushes=()
+  WAL_STATUS=0
+  {
+    echo
+    echo "### Write-ahead log"
+    echo
+    echo "| arm | requests | WAL bytes | per request | WAL flushes | per request |"
+    echo "|---|---:|---:|---:|---:|---:|"
+    for arm in head base; do
+      container="$PG"
+      [[ "$arm" == base ]] && container="$PG-base"
+      sent=$(jq --arg arm "$arm" '[.pairs[][$arm].sent] | add // 0' "$2" 2>/dev/null) || sent=0
+      counts=$(wal_counts "$container" 2>/dev/null) || counts="unreadable"
+      if [[ "$sent" =~ ^[1-9][0-9]*$ && "$counts" =~ ^([0-9]+)\ ([0-9]+)$ ]]; then
+        sents[$arm]="$sent"
+        bytes[$arm]="${BASH_REMATCH[1]}"
+        flushes[$arm]="${BASH_REMATCH[2]}"
+        echo "| $arm | $sent | ${bytes[$arm]} | $((bytes[$arm] / sent)) | ${flushes[$arm]} | $(awk -v f="${flushes[$arm]}" -v s="$sent" 'BEGIN { printf "%.2f", f / s }') |"
+      else
+        echo "| $arm | $sent | $counts | | | |"
+      fi
+    done
+    echo
+    if [[ -z "${sents[head]:-}" || -z "${sents[base]:-}" ]]; then
+      echo "- the WAL per request cannot be judged: an arm's counts or requests are unreadable"
+      WAL_STATUS=2
+    elif judged=$(wal_judge "${sents[head]}" "${bytes[head]}" "${flushes[head]}" \
+      "${sents[base]}" "${bytes[base]}" "${flushes[base]}"); then
+      echo "The head's WAL per request is within ${WAL_FLUSHES} flushes and ${WAL_BYTES_PERCENT} % bytes of the base's: pass."
+    else
+      WAL_STATUS=$?
+      echo "$judged"
+    fi
+  } >>"$1"
+}
+
+# wal_self_test: wal_judge passes the head within both limits and fails a
+# flush or byte rise past them.
+wal_self_test() {
+  local fail=0
+  wal_case() { # <label> <want-exit> <args...>
+    local label="$1" want="$2" got=0
+    shift 2
+    wal_judge "$@" >/dev/null || got=$?
+    if [[ "$got" != "$want" ]]; then
+      echo "::error::self-test: WAL: ${label}: exit ${got}, want ${want}" >&2
+      fail=1
+    fi
+  }
+  wal_case "the same WAL passes" 0 5600 96000000 9400 5600 96000000 9400
+  wal_case "noise within the limits passes" 0 5600 100000000 9600 5600 96000000 9400
+  wal_case "a commit added to every request fails" 1 5600 96000000 15000 5600 96000000 9400
+  wal_case "a tenth of a commit more per request fails" 1 5600 96000000 9970 5600 96000000 9400
+  wal_case "eleven percent more bytes per request fails" 1 5600 106600000 9400 5600 96000000 9400
+  wal_case "fewer flushes and bytes pass" 0 5600 80000000 8000 5600 96000000 9400
+  wal_case "an arm that sent nothing is not judged" 2 0 0 0 5600 96000000 9400
+  [[ "$fail" == 0 ]] || die "self-test: the WAL judge failed its cases"
+  echo "perf gate: self-test OK (the WAL judge passes noise and fails a flush or byte rise)"
 }
 
 # access_log_storage <pg-container>: the access log's entries, its
@@ -592,6 +701,12 @@ ab() {
   population_summary "$OUT/summary.md"
   storage_summary "$OUT/summary.md"
   statements_summary "$OUT/summary.md"
+  wal_summary "$OUT/summary.md" "$OUT/latest.json"
+  if [[ "$WAL_STATUS" == 1 ]]; then
+    status=1
+  elif [[ "$WAL_STATUS" == 2 && "$status" == 0 ]]; then
+    status=2
+  fi
   return "$status"
 }
 
@@ -605,6 +720,7 @@ short_plan() { # <out>
 
 self_test() { # <image> <pg-image>
   local bin status=0 plan="$OUT/self-test-plan.toml"
+  wal_self_test
   bin=$(binary)
   prepare "$@"
   short_plan "$OUT/self-test-plan.in"

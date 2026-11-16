@@ -78,7 +78,7 @@ Two global flags and three subcommand groups round the CLI out:
 - `--config <path>` points at a configuration file, overriding
   `FERROEHR_CONFIG` (with neither, the server reads no file);
 - `--set <key>=<value>` is a repeatable dotted-path override with the highest
-  precedence of all (`--set db.max_connections=40`);
+  precedence of all (`--set database.connection_budget=60`);
 - `ferroehr config check` validates the effective configuration and prints it
   redacted, exiting 0 when valid and 78 otherwise, the fastest way to test a
   deployment's configuration before starting it;

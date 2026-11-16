@@ -15,7 +15,7 @@ Two flags are global: they apply to the server and to every subcommand:
 | Flag | Description |
 |---|---|
 | `--config <path>` | The configuration file to load, overriding `FERROEHR_CONFIG`. Fatal if missing or unreadable. |
-| `--set <key>=<value>` | A dotted-path override, repeatable, highest precedence of all layers (e.g. `--set database.max_connections=40`). |
+| `--set <key>=<value>` | A dotted-path override, repeatable, highest precedence of all layers (e.g. `--set database.connection_budget=60`). |
 
 With no subcommand, or with `serve`, the binary boots the server. `ferroehr --version` prints
 the version and the manufacturer of the release:

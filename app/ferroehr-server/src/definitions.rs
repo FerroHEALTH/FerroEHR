@@ -93,7 +93,7 @@ pub async fn run(
         DefinitionsCmd::Load { paths } => {
             let config = ferroehr::config::load(file, sets)?;
             config.validate()?;
-            let pools = crate::connect_pool(&config).await?;
+            let pools = crate::pools::connect(&config, crate::pools::Opening::OneShot).await?;
             let service = crate::attach_terminology(
                 FerroEhrService::new(&pools).with_spec_profile(config.deployment.spec_profile),
                 &config,

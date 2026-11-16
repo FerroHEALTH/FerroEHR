@@ -18,6 +18,7 @@ use sqlx::PgPool;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot;
 
+use crate::db::pool::AUDIT_RUNTIME_POOL;
 use crate::system_log::AuditError;
 
 /// The running audit runtime.
@@ -84,10 +85,19 @@ impl Background {
     }
 
     /// A pool over the audit store of `pool`, opened in the audit runtime's
-    /// context.
+    /// context, of the [`AUDIT_RUNTIME_POOL`] connections the instance's
+    /// connection budget counts (#5845).
     pub(super) fn pool_over(&self, pool: &PgPool) -> PgPool {
         let _entered = self.handle.enter();
-        crate::db::domain_pool_from(pool, crate::db::domain::Domain::Audit)
+        crate::db::pool::options(
+            &crate::db::DbConfig::default(),
+            crate::db::domain::Domain::Audit,
+        )
+        .max_connections(AUDIT_RUNTIME_POOL)
+        .min_connections(0)
+        .connect_lazy_with(sqlx::postgres::PgConnectOptions::clone(
+            &pool.connect_options(),
+        ))
     }
 
     /// End the runtime once the tasks on it have been stopped.

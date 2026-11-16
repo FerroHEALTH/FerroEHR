@@ -6,6 +6,7 @@
 //! read that finds a newer revision. No openEHR spec governs the copy: our
 //! own design (#5509, #5588, #5589).
 
+use crate::db::domain::Domain;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
@@ -216,7 +217,7 @@ impl Subscriber for EhrAccessCache {
 /// The listener on [`CHANNEL`], dropping from `cache`.
 pub(in crate::service) fn listened(cache: &Arc<EhrAccessCache>) -> Listened {
     let cache: Arc<EhrAccessCache> = Arc::clone(cache);
-    Listened::with_subscriber(CHANNEL, cache)
+    Listened::with_subscriber(CHANNEL, Domain::Clinical, cache)
 }
 
 /// The outcome of a single-flight load, with an error of the caller's own.
