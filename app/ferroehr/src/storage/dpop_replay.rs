@@ -26,6 +26,7 @@ use std::time::SystemTime;
 use ferrohealth_smart::sender::replay::{ProofId, ReplayStore, ReplayStoreError};
 use sqlx::PgPool;
 
+use crate::db::acquire::{AcquireError, acquire};
 use crate::service::FerroEhrService;
 
 /// How many records one replica writes between two sweeps.
@@ -43,6 +44,9 @@ pub enum DpopReplayError {
     /// The database refused or could not be reached.
     #[error("the DPoP replay store's database failed")]
     Database(#[source] sqlx::Error),
+    /// No connection to the database could be obtained.
+    #[error("the DPoP replay store's database could not be reached")]
+    Acquire(#[source] AcquireError),
 }
 
 /// The [`ReplayStore`] over the clinical `dpop_proof` table.
@@ -79,6 +83,9 @@ impl PgReplayStore {
         until: SystemTime,
     ) -> Result<bool, DpopReplayError> {
         let until = jiff::Timestamp::try_from(until).map_err(DpopReplayError::Instant)?;
+        let mut conn = acquire(&self.pool)
+            .await
+            .map_err(DpopReplayError::Acquire)?;
         let first: Option<bool> = sqlx::query_scalar(
             "INSERT INTO dpop_proof (proof, expires_at) VALUES ($1, $2) \
              ON CONFLICT (proof) DO UPDATE SET expires_at = EXCLUDED.expires_at \
@@ -87,7 +94,7 @@ impl PgReplayStore {
         )
         .bind(proof.as_str())
         .bind(jiff_sqlx::Timestamp::from(until))
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *conn)
         .await
         .map_err(DpopReplayError::Database)?;
         if self
@@ -95,6 +102,7 @@ impl PgReplayStore {
             .fetch_add(1, Ordering::Relaxed)
             .is_multiple_of(SWEEP_EVERY)
         {
+            drop(conn);
             self.sweep().await?;
         }
         Ok(first.is_some())
@@ -106,13 +114,16 @@ impl PgReplayStore {
     /// # Errors
     /// [`DpopReplayError::Database`] when the delete fails.
     pub async fn sweep(&self) -> Result<u64, DpopReplayError> {
+        let mut conn = acquire(&self.pool)
+            .await
+            .map_err(DpopReplayError::Acquire)?;
         let deleted = sqlx::query(
             "DELETE FROM dpop_proof WHERE proof IN ( \
                  SELECT proof FROM dpop_proof WHERE expires_at < now() \
                  ORDER BY expires_at LIMIT $1 FOR UPDATE SKIP LOCKED)",
         )
         .bind(SWEEP_BATCH)
-        .execute(&self.pool)
+        .execute(&mut *conn)
         .await
         .map_err(DpopReplayError::Database)?
         .rows_affected();

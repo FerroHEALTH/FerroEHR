@@ -186,7 +186,7 @@ impl Projector {
         let mut tx = clinical.begin().await?;
         let (held, check) = access_care::lock_state(&mut tx).await?;
         let whole = held.is_none() || check.as_deref() != Some(key_check.as_slice());
-        let mut party = self.party.acquire().await?;
+        let mut party = acquire(&self.party).await?;
         let mut snapshot = party.begin().await?;
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
             .execute(&mut *snapshot)

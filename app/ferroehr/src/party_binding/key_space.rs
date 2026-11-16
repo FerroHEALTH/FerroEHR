@@ -22,6 +22,7 @@ use std::time::Duration;
 use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::party_binding::BindingMapping;
 use crate::storage::error::StorageError;
 
@@ -113,8 +114,9 @@ pub struct KeySpace {
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn list(pool: &PgPool) -> Result<Vec<KeySpace>, StorageError> {
+    let mut conn = acquire(pool).await?;
     let rows = sqlx::query("SELECT issuer, portal, state FROM binding_key_space ORDER BY issuer")
-        .fetch_all(pool)
+        .fetch_all(&mut *conn)
         .await?;
     rows.iter().map(stored).collect()
 }

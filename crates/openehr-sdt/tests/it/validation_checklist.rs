@@ -323,6 +323,7 @@ fn bullet6_cardinality_constraints_satisfied() {
         max: 2,
         ids: None,
         path: "/content".to_owned(),
+        unique: false,
     }];
     let wt = wt_of(root);
     let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});

@@ -704,6 +704,10 @@ async fn the_append_only_versioning_model_behaves() {
 /// input, so it is guarded — and this pins both the typed refusal and the
 /// database backstop behind it.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_trunk_position_is_unique_across_creating_systems_but_a_branch_id_is_not() {
     use ferroehr::ids::{EhrId, VoId};
     use ferroehr::storage::error::StorageError;
@@ -820,6 +824,10 @@ async fn a_trunk_position_is_unique_across_creating_systems_but_a_branch_id_is_n
 /// their corresponding preceding versions on the same branch (if any) and trunk
 /// versions also being copied".
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn an_as_of_read_resolves_along_the_trunk() {
     use ferroehr::ids::{EhrId, VoId};
     use ferroehr::storage::version_repo::import::{VerbatimVersionRow, insert_versions_verbatim};
@@ -1201,6 +1209,10 @@ fn corpus_sample() -> Value {
 /// same canonical value, RM common master06 §Copying: a stored version is
 /// served verbatim).
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn materialized_body_matches_node_reassembly_on_a_real_commit() {
     use ferroehr::service::FerroEhrService;
     use ferroehr::storage::node_repo::read_version_canonical;
@@ -1239,6 +1251,10 @@ async fn materialized_body_matches_node_reassembly_on_a_real_commit() {
 /// extended-protocol parameter cap the old per-row shape hit — commits in one
 /// statement (#2668).
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn write_nodes_survives_more_than_4095_rows() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();

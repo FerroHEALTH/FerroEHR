@@ -48,6 +48,7 @@ pub(crate) mod node_ids;
 pub(crate) mod plan;
 mod presence;
 pub(crate) mod subtype;
+mod unique;
 
 use indexmap::IndexMap;
 use openehr_rm::v1_2::paths::{PathSegment, is_archetype_root_node_id};
@@ -1127,7 +1128,7 @@ impl Validator {
 
     /// Container-cardinality check: for each constraining cardinality on this
     /// node, count the children under the constrained attribute path and compare
-    /// to `min`/`max`. Iterates [`WebTemplateNode::card_all`] — the full AOM 1.4
+    /// to `min`/`max`, and refuse two value-equal members under `unique`. Iterates [`WebTemplateNode::card_all`] — the full AOM 1.4
     /// §cardinality set (`0..1`/`1..1`/`1..*` included), a superset of the
     /// serialized `cardinalities` (which the metadata document filters).
     fn check_cardinalities(&mut self, instance: &Value, wt: &WebTemplateNode, plan: &NodeWalk) {
@@ -1152,9 +1153,20 @@ impl Validator {
                 if matches!(container.get(&last.attribute), None | Some(Value::Null)) {
                     continue;
                 }
-                let count =
-                    i32::try_from(openehr_rm::v1_2::paths::select_children(container, last).len())
-                        .unwrap_or(i32::MAX);
+                let members = openehr_rm::v1_2::paths::select_children(container, last);
+                if card.unique
+                    && let Some((first, second)) = unique::first_duplicate(&members)
+                {
+                    self.push(
+                        card.path.clone(),
+                        format!(
+                            "cardinality unique violated: members {first} and {second} are equal \
+                             by value"
+                        ),
+                        ValidationKind::Cardinality,
+                    );
+                }
+                let count = i32::try_from(members.len()).unwrap_or(i32::MAX);
                 let min = card.min.unwrap_or(0).max(0);
                 // The cardinality lower bound is relaxed away for a
                 // `553|incomplete|` commit (master06 §"Incomplete Content": "all
@@ -1407,6 +1419,7 @@ mod tests {
             max: 2,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
         let inst = json!({
@@ -1493,6 +1506,7 @@ mod tests {
             max: -1,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let entry = json!({"_type": "OBSERVATION", "archetype_node_id": "a"});
         let one_child = json!({
@@ -1510,6 +1524,7 @@ mod tests {
             max: 2,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let three = json!({
             "_type": "COMPOSITION", "archetype_node_id": "x",
@@ -1894,6 +1909,7 @@ mod tests {
             max: -1,
             ids: None,
             path: "/content".to_owned(),
+            unique: false,
         }];
         let inst = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": []});
         let msgs = walk_only(&inst, &root);

@@ -27,6 +27,10 @@ use crate::fixtures::{change_type, composition, uv, vo_of};
 const ADVISORY_LOCK: &str = "SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))";
 
 /// Whether another session can take the per-object lock of `vo_id` right now.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn advisory_lock_is_free(pool: &PgPool, vo_id: Uuid) -> bool {
     let mut probe = pool.begin().await.expect("probe transaction");
     let free: bool =
@@ -71,6 +75,10 @@ fn modification(preceding: &str, name: &str) -> Value {
 /// waits on the lower one before it holds the higher one, so it takes its
 /// locks in the order an import takes them.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn a_contribution_takes_its_object_locks_in_vo_id_order() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
@@ -135,6 +143,10 @@ async fn a_contribution_takes_its_object_locks_in_vo_id_order() {
 /// An import into an existing EHR waits on the EHR row before it holds any
 /// per-object lock, the order the CONTRIBUTION path takes them in.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn an_import_takes_the_ehr_row_lock_before_its_object_locks() {
     let source_db = testkit::db().await.expect("testkit database");
     let source = FerroEhrService::new(&DomainPools::from_shared(&source_db.pool()));

@@ -22,9 +22,10 @@ use std::collections::BTreeMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use sqlx::{PgConnection, PgPool, Row};
+use sqlx::{Connection, PgConnection, PgPool, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::{AcquireError, acquire};
 use crate::party_binding::BindingMapping;
 use crate::party_binding::key_space::{self, Progress};
 use crate::party_binding::store::{
@@ -97,6 +98,12 @@ impl From<sqlx::Error> for FillError {
     }
 }
 
+impl From<AcquireError> for FillError {
+    fn from(e: AcquireError) -> Self {
+        Self::Storage(StorageError::Acquire(e))
+    }
+}
+
 /// One selector value two or more `PERSON`s carry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Duplicate {
@@ -165,7 +172,8 @@ impl Lease {
         let spaces = mapping.key_spaces();
         let issuers: Vec<&String> = spaces.keys().collect();
         let portal: Vec<&String> = spaces.iter().filter(|(_, p)| **p).map(|(i, _)| i).collect();
-        let mut tx = pool.begin().await?;
+        let mut conn = acquire(pool).await?;
+        let mut tx = conn.begin().await?;
         lock(&mut tx).await?;
         let first = match stored_digest(&mut tx).await? {
             Some(stored) if stored == running => false,
@@ -194,6 +202,7 @@ impl Lease {
         }
         // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
         tx.commit().await?;
+        drop(conn);
         Ok(Self {
             pool: pool.clone(),
             replica,
@@ -207,9 +216,10 @@ impl Lease {
     /// # Errors
     /// [`FillError::Storage`] when the party store fails.
     pub async fn renew(&self) -> Result<(), FillError> {
+        let mut conn = acquire(&self.pool).await?;
         sqlx::query("UPDATE binding_lease SET renewed_at = now() WHERE replica = $1")
             .bind(self.replica)
-            .execute(&self.pool)
+            .execute(&mut *conn)
             .await?;
         Ok(())
     }
@@ -226,17 +236,22 @@ impl Lease {
     /// when the party store fails.
     pub async fn tend(&self) -> Result<(), FillError> {
         self.renew().await?;
-        let mut tx = self.pool.begin().await?;
-        lock(&mut tx).await?;
-        let ready = key_space::reconcile(&mut tx, LEASE_TTL).await?;
-        // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
-        tx.commit().await?;
+        let ready = {
+            let mut conn = acquire(&self.pool).await?;
+            let mut tx = conn.begin().await?;
+            lock(&mut tx).await?;
+            let ready = key_space::reconcile(&mut tx, LEASE_TTL).await?;
+            // NOTE: our own design (#5762), the binding fill, which runs at boot and in the
+            // background.
+            tx.commit().await?;
+            ready
+        };
         for issuer in ready {
             if self.stalled_recently(&issuer) {
                 continue;
             }
             let held = {
-                let mut conn = self.pool.acquire().await?;
+                let mut conn = acquire(&self.pool).await?;
                 held::held_selectors(&mut conn, &self.mapping).await?
             };
             let found = issuer_duplicates(held, &issuer);
@@ -244,7 +259,8 @@ impl Lease {
                 self.stall(&issuer);
                 return Err(FillError::Duplicate { duplicates: found });
             }
-            let mut tx = self.pool.begin().await?;
+            let mut conn = acquire(&self.pool).await?;
+            let mut tx = conn.begin().await?;
             lock(&mut tx).await?;
             key_space::start_fill(&mut tx, &self.mapping, &issuer, LEASE_TTL).await?;
             // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
@@ -266,7 +282,8 @@ impl Lease {
     /// Writes one page of the fill of `issuer`'s key space; a page that
     /// meets a key two parties carry moves it back to `pending`.
     async fn fill_page(&self, issuer: &str) -> Result<Progress, FillError> {
-        let mut tx = self.pool.begin().await?;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         lock(&mut tx).await?;
         match key_space::fill_page(&mut tx, &self.mapping, issuer).await {
             Ok(progress) => {
@@ -276,13 +293,12 @@ impl Lease {
             }
             Err(e) if key_space::key_conflict(&e) => {
                 drop(tx);
-                let mut tx = self.pool.begin().await?;
+                let mut tx = conn.begin().await?;
                 lock(&mut tx).await?;
                 key_space::stall(&mut tx, issuer).await?;
                 // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
                 tx.commit().await?;
                 self.stall(issuer);
-                let mut conn = self.pool.acquire().await?;
                 let held = held::held_selectors(&mut conn, &self.mapping).await?;
                 Err(FillError::Duplicate {
                     duplicates: issuer_duplicates(held, issuer),
@@ -314,9 +330,10 @@ impl Lease {
     /// # Errors
     /// [`FillError::Storage`] when the party store fails.
     pub async fn release(self) -> Result<(), FillError> {
+        let mut conn = acquire(&self.pool).await?;
         sqlx::query("DELETE FROM binding_lease WHERE replica = $1")
             .bind(self.replica)
-            .execute(&self.pool)
+            .execute(&mut *conn)
             .await?;
         Ok(())
     }
@@ -347,7 +364,8 @@ pub async fn refill(
     mapping: &BindingMapping,
     ttl: Duration,
 ) -> Result<(), FillError> {
-    let mut tx = pool.begin().await?;
+    let mut conn = acquire(pool).await?;
+    let mut tx = conn.begin().await?;
     lock(&mut tx).await?;
     let replicas: Vec<Uuid> = sqlx::query_scalar(
         "SELECT replica FROM binding_lease \
@@ -378,7 +396,8 @@ pub async fn refill(
 /// [`FillError::Storage`] when the party store fails, two `AGENT`s naming
 /// one client included.
 pub async fn refill_grants(pool: &PgPool) -> Result<(), FillError> {
-    let mut tx = pool.begin().await?;
+    let mut conn = acquire(pool).await?;
+    let mut tx = conn.begin().await?;
     lock(&mut tx).await?;
     store::refill_grants(&mut tx).await?;
     // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
@@ -393,7 +412,8 @@ pub async fn refill_grants(pool: &PgPool) -> Result<(), FillError> {
 /// # Errors
 /// As [`refill_grants`].
 pub async fn fill_grants_once(pool: &PgPool) -> Result<(), FillError> {
-    let mut tx = pool.begin().await?;
+    let mut conn = acquire(pool).await?;
+    let mut tx = conn.begin().await?;
     lock(&mut tx).await?;
     if crate::party_binding::grants::store::revision(&mut tx).await? == 0 {
         store::refill_grants(&mut tx).await?;
@@ -408,7 +428,7 @@ pub async fn fill_grants_once(pool: &PgPool) -> Result<(), FillError> {
 /// # Errors
 /// [`FillError::Storage`] when the party store fails.
 pub async fn digest(pool: &PgPool) -> Result<Option<String>, FillError> {
-    let mut conn = pool.acquire().await?;
+    let mut conn = acquire(pool).await?;
     stored_digest(&mut conn).await
 }
 

@@ -24,6 +24,7 @@ use sqlx::postgres::PgRow;
 use sqlx::{PgConnection, Row};
 use uuid::Uuid;
 
+use crate::db::acquire::acquire;
 use crate::party_binding::derive::{Facts, container};
 use crate::party_binding::grants::derive::{Bound, GrantFacts};
 use crate::storage::error::StorageError;
@@ -483,13 +484,14 @@ pub(crate) struct Loaded {
 pub async fn provisioning_clients(
     pool: &sqlx::PgPool,
 ) -> Result<Vec<(String, String)>, StorageError> {
+    let mut conn = acquire(pool).await?;
     let rows: Vec<(String, String)> = sqlx::query_as(
         "SELECT DISTINCT c.issuer, c.client_id FROM binding_client c \
          JOIN binding_capability k ON k.performer_id = c.party_id \
          WHERE k.operation = $1 ORDER BY c.issuer, c.client_id",
     )
     .bind(crate::party_binding::grants::operation::Operation::ScimProvision.code())
-    .fetch_all(pool)
+    .fetch_all(&mut *conn)
     .await?;
     Ok(rows)
 }

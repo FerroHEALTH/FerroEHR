@@ -257,6 +257,10 @@ async fn a_refused_caller_and_a_containment_are_refused() {
 /// The person's lookup of their entries by time reads the `(ehr_id,
 /// time_recorded)` index, in the order the index keeps.
 #[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test reads the database on a raw pool connection, outside any request"
+)]
 async fn the_persons_lookup_by_time_reads_the_ehr_index() {
     let fx = logged().await;
     let query = parse_str(
