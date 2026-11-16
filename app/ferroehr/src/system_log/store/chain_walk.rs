@@ -13,6 +13,8 @@
 //! (`migrations/audit/0041_chain_verification_steps.sql`). No openEHR spec
 //! governs audit tamper detection: our own design.
 
+use std::time::{Duration, Instant};
+
 use jiff_sqlx::Timestamp;
 use sqlx::Row;
 use sqlx::postgres::{PgConnection, PgRow};
@@ -24,9 +26,70 @@ use crate::system_log::store::AuditStore;
 use crate::system_log::store::chains::{AuditChain, AuditChainFinding, VerifyScope, finding};
 use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
 
-/// How many records one step of a scheduled walk verifies at most.
-// NOTE: our own design (#5779); a step re-derives each record, well under a second for this many.
-pub const VERIFY_STEP_RECORDS: i32 = 20_000;
+/// How long one step of a walk aims to take: well under any statement
+/// timeout, and short enough that a step holds the database briefly.
+pub const STEP_BUDGET: Duration = Duration::from_millis(500);
+
+/// The fewest records a step verifies, however slow the last one was.
+pub const STEP_FLOOR: i32 = 500;
+
+/// The most records a step verifies, however fast the last one was.
+pub const STEP_CEILING: i32 = 100_000;
+
+/// The records the first step of a walk verifies.
+const STEP_FIRST: i32 = 5_000;
+
+/// The size of a walk's next step, adapted to how long its last one took.
+///
+/// A step's cost per record grows with the load on the database, so a fixed
+/// count can near the statement timeout (#5804). No openEHR spec governs the
+/// verification schedule: our own design.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StepPace {
+    records: i32,
+}
+
+impl Default for StepPace {
+    fn default() -> Self {
+        Self {
+            records: STEP_FIRST,
+        }
+    }
+}
+
+impl StepPace {
+    /// A pace whose first step verifies `records`, within [`STEP_FLOOR`]
+    /// and [`STEP_CEILING`] after it.
+    #[must_use]
+    pub fn starting_at(records: i32) -> Self {
+        Self {
+            records: records.max(1),
+        }
+    }
+
+    /// The records the next step verifies.
+    #[must_use]
+    pub fn records(self) -> i32 {
+        self.records
+    }
+
+    /// Adapt to a step of [`Self::records`] that took `took`: toward
+    /// [`STEP_BUDGET`], at most doubling, within [`STEP_FLOOR`] and
+    /// [`STEP_CEILING`].
+    pub fn took(&mut self, took: Duration) {
+        let took = i128::try_from(took.as_micros()).unwrap_or(i128::MAX).max(1);
+        let budget = i128::try_from(STEP_BUDGET.as_micros()).unwrap_or(i128::MAX);
+        let records = i128::from(self.records);
+        let next = records
+            .saturating_mul(budget)
+            .checked_div(took)
+            .unwrap_or(i128::from(STEP_CEILING))
+            .min(records.saturating_mul(2))
+            .clamp(i128::from(STEP_FLOOR), i128::from(STEP_CEILING));
+        // NOTE: our own design; the clamp above keeps it inside the i32 floor and ceiling.
+        self.records = i32::try_from(next).unwrap_or(STEP_CEILING);
+    }
+}
 
 /// How many entries one page of the content check reads.
 const CONTENT_PAGE: i64 = 1000;
@@ -175,6 +238,23 @@ impl AuditStore {
         Ok(findings)
     }
 
+    /// [`Self::chain_step`] sized by `pace`, which then adapts to how long
+    /// the step took; returns the step's findings and its duration.
+    ///
+    /// # Errors
+    /// As [`Self::chain_step`].
+    pub async fn chain_step_paced(
+        &self,
+        walk: &mut ChainWalk,
+        pace: &mut StepPace,
+    ) -> Result<(Vec<AuditChainFinding>, Duration), AuditError> {
+        let started = Instant::now();
+        let findings = self.chain_step(walk, pace.records()).await?;
+        let took = started.elapsed();
+        pace.took(took);
+        Ok((findings, took))
+    }
+
     /// How far `chain`'s verification cursor is behind its head.
     ///
     /// # Errors
@@ -314,4 +394,34 @@ fn content_intact(row: &PgRow) -> Result<bool, AuditError> {
         return Ok(false);
     };
     Ok(sha256_hex(&form) == recorded)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A step slower than the budget shrinks the next, a faster one grows it
+    /// at most twofold, and both stay within the floor and the ceiling.
+    #[test]
+    fn the_step_follows_its_duration_toward_the_budget() {
+        let mut pace = StepPace::default();
+        pace.took(STEP_BUDGET * 4);
+        assert_eq!(
+            pace.records(),
+            1_250,
+            "a fourfold slow step quarters the next"
+        );
+        pace.took(STEP_BUDGET / 100);
+        assert_eq!(pace.records(), 2_500);
+        pace.took(STEP_BUDGET);
+        assert_eq!(pace.records(), 2_500);
+        for _ in 0..20 {
+            pace.took(Duration::from_secs(60));
+        }
+        assert_eq!(pace.records(), STEP_FLOOR);
+        for _ in 0..20 {
+            pace.took(Duration::ZERO);
+        }
+        assert_eq!(pace.records(), STEP_CEILING);
+    }
 }

@@ -147,9 +147,12 @@ audit_chain_last_verification_seconds` above twice `[audit.store]
 verify_interval`, and on `audit_chain_unverified_age_seconds` above
 `[audit.store] max_verify_lag`.
 
-A run walks each chain in steps of at most 20 000 records, one statement
-each, and every intact step moves the cursor. A long backlog therefore shows
-as a lag that falls during the run, never as `unverifiable`.
+A run walks each chain in steps, one statement each, and every intact step
+moves the cursor. Each step is sized to take about half a second, adapting to
+how long the step before it took, and the run waits as long as a step took
+before the next, so a catch-up takes at most about half a core of the
+database. A long backlog therefore shows as a lag that falls during the run,
+never as `unverifiable`.
 
 ## The instances of a deployment
 
