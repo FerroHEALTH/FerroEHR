@@ -1038,6 +1038,10 @@ mode (`fail_mode` and `queue_capacity` are unknown keys).
 
 The records go into an **intake**: two append-only tables, one for the
 access-log entries and one for the other records, that no request waits on.
+A request whose records are all access-log entries hands them to a small set
+of intake writers. Each writer writes everything waiting in one statement that
+commits on its own, with the entries' search tokens, and answers each request
+once that commit is durable, so under load one commit serves many requests.
 A **chainer** on every replica links the intake into the hash chains
 moments later: it takes the head of the access log without waiting, so one
 replica chains at a time and the others skip, computes the links, writes the
