@@ -633,7 +633,7 @@ fn build(
     if let Some(raw) = sim.attrs.get("raw") {
         return build_raw(raw, path).map(Some);
     }
-    apply_container_datum_attrs(node, sim, path, &mut obj)?;
+    map::apply_container_datum_attrs(node, sim, path, &mut obj)?;
 
     let mut value = Value::Object(obj);
     if let Value::Object(m) = &mut value {
@@ -979,56 +979,6 @@ fn direct_rm_path(host: &str, seg: &str) -> Option<DirectPath> {
         ("ROLE", "performer") => Performer,
         _ => return None,
     })
-}
-
-/// The RM attribute a datum suffix (`|suffix`) sets when the master05 per-type
-/// tables place it on a **container** node rather than on a `DATA_VALUE` leaf.
-///
-/// `master05 §INTERVAL_EVENT`: `|sample_count` (INTEGER → `sample_count`, the
-/// count of samples the interval summarises) is spelled directly on the event
-/// node — the section's second example block is
-/// `…/any_event:0|sample_count: 5`, not a sub-path. The mirror of
-/// [`crate::flat::flatten`]'s INTERVAL_EVENT emission.
-/// Apply the master05 container-level datum suffixes (`|sample_count`, …) to a
-/// container node under construction, rejecting any suffix the per-type tables
-/// do not place on this container ([`container_datum_attr`]).
-fn apply_container_datum_attrs(
-    node: &WebTemplateNode,
-    sim: &SimNode,
-    path: &str,
-    obj: &mut Map<String, Value>,
-) -> Result<(), FlatError> {
-    let host = base_name(&node.rm_type);
-    for (chain, datum) in &sim.attrs {
-        if let Some(attr) = container_datum_attr(host, chain) {
-            obj.insert(attr.to_owned(), datum.clone());
-        }
-    }
-    if let Some((chain, _)) = sim
-        .attrs
-        .iter()
-        .find(|(c, _)| !c.is_empty() && container_datum_attr(host, c.as_str()).is_none())
-    {
-        return Err(FlatError::UnknownSuffix {
-            rm_type: node.rm_type.clone(),
-            suffix: chain.clone(),
-            path: path.to_owned(),
-        });
-    }
-    Ok(())
-}
-
-fn container_datum_attr(host: &str, suffix: &str) -> Option<&'static str> {
-    match (host, suffix) {
-        ("INTERVAL_EVENT", "sample_count") => Some("sample_count"),
-        // master05 §DV_INTERVAL: the four BOOLEAN flags sit on the interval
-        // itself when the template gives its bounds their own nodes.
-        ("DV_INTERVAL", "lower_unbounded") => Some("lower_unbounded"),
-        ("DV_INTERVAL", "upper_unbounded") => Some("upper_unbounded"),
-        ("DV_INTERVAL", "lower_included") => Some("lower_included"),
-        ("DV_INTERVAL", "upper_included") => Some("upper_included"),
-        _ => None,
-    }
 }
 
 /// Build and place a direct RM-attribute path onto `obj` (see [`direct_rm_path`]).
