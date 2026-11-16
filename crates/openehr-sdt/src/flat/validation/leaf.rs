@@ -26,6 +26,7 @@ use openehr_base::v1_3::base_types::definitions::definitions_impl::LOCAL_TERMINO
 use serde_json::Value;
 
 use super::{ValidationKind, Validator};
+use crate::flat::webtemplate::constraint::pattern_matches;
 use crate::flat::webtemplate::model::{
     WebTemplateCodedValue, WebTemplateInput, WebTemplateInputType, WebTemplateNode,
     WebTemplateRange,
@@ -1041,40 +1042,14 @@ fn check_string_constraints(
     }
 }
 
-/// Whether `value` matches an archetype `C_STRING` regex. ADL delimits regexes
-/// with `/`…`/`; the match is full-string (anchored).
+/// Whether `value` matches an archetype `C_STRING` regex, anchored at both ends
+/// (AOM 1.4 `C_STRING.valid_value`: a value is valid iff it matches).
 ///
-/// AOM 1.4 `C_STRING.valid_value` (`AM/docs/UML/classes/org.openehr.am.aom14.c_string.adoc`
-/// §`valid_value`; `master04-constraint_model_package.adoc` §`Valid_value` L60-62) is
-/// affirmative — a value is valid **iff** it matches the pattern, so a non-match
-/// must be reported; a pattern that fails to *compile* must not be treated as a
-/// silent pass (that would accept a value against a constraint never evaluated).
-/// The ADL regex dialect is a proper subset of Perl (`ADL1.4/master05-cadl.adoc`
-/// §Regular Expression L687) — the Rust `regex` crate covers it; the
-/// `fancy-regex` PCRE engine is the fallback for real-world patterns using
-/// features `regex` rejects (e.g. backreferences).
-///
-/// NOTE: fail-closed is spec-mandated for a *non-match*, but a
-/// pattern **neither** engine can compile cannot be evaluated at all. Rather
-/// than reject a value against an uninterpretable constraint (which would
-/// over-reject valid data on an engine limitation, not a spec violation), such a
-/// pattern is skipped — the residual gap is limited to patterns outside both the
-/// Rust-regex and PCRE dialects, and is caught by the corpus round-trip gate.
+/// A pattern no regex engine compiles is refused when the template loads
+/// (`FlatError::UnevaluablePattern`); one that reaches this check anyway, or
+/// that `fancy-regex` cannot finish evaluating, matches no value.
 pub(super) fn matches_pattern(pattern: &str, value: &str) -> bool {
-    let body = pattern
-        .strip_prefix('/')
-        .and_then(|p| p.strip_suffix('/'))
-        .unwrap_or(pattern);
-    let anchored = format!("^(?:{body})$");
-    if let Ok(re) = regex::Regex::new(&anchored) {
-        return re.is_match(value);
-    }
-    // The Rust `regex` crate rejected the pattern (e.g. a backreference); try the
-    // PCRE-capable `fancy-regex` before giving up.
-    match fancy_regex::Regex::new(&anchored) {
-        Ok(re) => re.is_match(value).unwrap_or(true),
-        Err(_) => true,
-    }
+    pattern_matches(pattern, value) == Some(true)
 }
 
 // ── numeric helpers ─────────────────────────────────────────────────────────────

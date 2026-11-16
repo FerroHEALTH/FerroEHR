@@ -65,6 +65,7 @@ mod pinned;
 mod predicate;
 mod scope;
 mod select;
+pub mod shape;
 mod stream;
 mod value;
 
@@ -239,10 +240,19 @@ pub struct ColumnSpec {
 /// A built, bindable query: the SQL text, its bound values, and the per-column
 /// read-back plan.
 pub struct PreparedQuery {
-    /// The generated SQL.
-    pub sql: String,
+    /// The generated SQL, shared with the statement shape it was bound from
+    /// ([`shape`]).
+    pub sql: Arc<str>,
     /// The bound parameter values (`sea-query-sqlx` → `sqlx`).
     pub values: SqlxValues,
+    /// How the executor reads the rows back.
+    pub layout: Arc<Layout>,
+}
+
+/// How the executor reads the rows of a statement back: the `RESULT_SET`
+/// columns and the hidden access-logging columns beside them.
+#[derive(Debug, Clone)]
+pub struct Layout {
     /// The `RESULT_SET` column read-back plan, in SELECT order.
     pub columns: Vec<ColumnSpec>,
     /// The SQL aliases of the hidden access-logging columns, one per bound
@@ -309,11 +319,7 @@ impl std::fmt::Debug for PreparedQuery {
         f.debug_struct("PreparedQuery")
             .field("sql", &self.sql)
             .field("value_count", &self.values.0.0.len())
-            .field("columns", &self.columns)
-            .field("access_ehr_cols", &self.access_ehr_cols)
-            .field("access_settled_cols", &self.access_settled_cols)
-            .field("access_aggregated", &self.access_aggregated)
-            .field("access_version_cols", &self.access_version_cols)
+            .field("layout", &self.layout)
             .finish()
     }
 }
@@ -664,15 +670,17 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
         None => b.q.build_sqlx(PostgresQueryBuilder),
     };
     Ok(PreparedQuery {
-        sql,
+        sql: sql.into(),
         values,
-        columns,
-        access_aggregated: !access_ehr_cols.is_empty()
-            && ir.select.iter().any(|column| {
-                matches!(column.value, crate::aql::ir::SelectValue::Aggregate { .. })
-            }),
-        access_ehr_cols,
-        access_settled_cols,
-        access_version_cols,
+        layout: Arc::new(Layout {
+            columns,
+            access_aggregated: !access_ehr_cols.is_empty()
+                && ir.select.iter().any(|column| {
+                    matches!(column.value, crate::aql::ir::SelectValue::Aggregate { .. })
+                }),
+            access_ehr_cols,
+            access_settled_cols,
+            access_version_cols,
+        }),
     })
 }

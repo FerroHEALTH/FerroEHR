@@ -561,6 +561,23 @@ lookup by a value reads the one object instead of every node of the
 archetype (#4437). The feature envelope is documented per construct;
 rejections are explicit typed errors.
 
+A cached plan renders its SQL once per statement shape (`aql::sql::shape`,
+#5783). The text depends on the parameters, the scope, the paging and the
+caller's access condition, and only some of their values vary between the
+requests of one caller: the EHR a single-EHR query names (a `$parameter`
+compared with `ehr_id/value` and nothing else), the `ehr_ids` scope, the
+paging bounds, the request's moment and day, the caller's parties and care
+teams, the EHRs it cares for or is confined to, and the pinned EHR and its
+revision. A shape is keyed on every other input of the build, and its
+values are numbered slots: fixed, or read from the request. The second
+request of a key derives the shape from two builds over random stand-ins for
+those values, keeping it only when both texts are the request's own, every
+value is fixed in both or the image of one source in each, and the shape
+binds exactly what the request's build bound; from the third request on, the
+statement is bound with no tree built and no text rendered. A plan remembers
+32 keys, and a key whose shape depends on a value any other way is built on
+every request. No openEHR spec governs the SQL build: our own design.
+
 A query whose outermost `FROM` class is a demographic class is the
 experimental demographic extension (no openEHR spec governs it; QUERY
 master03 §FROM gives semantics only to the clinical repository). Every class

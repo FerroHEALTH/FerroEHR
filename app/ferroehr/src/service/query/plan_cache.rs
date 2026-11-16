@@ -13,8 +13,8 @@
 //! No openEHR spec governs this cache — our own performance design/extension.
 //! Two properties keep it semantically identical to the uncached path:
 //!
-//! * Nothing request-specific is keyed or stored. The cached [`QueryIr`] records
-//!   only the names of the `$parameters` it references ([`QueryIr::params`]);
+//! * Nothing request-specific is keyed, and the IR stores nothing of a request.
+//!   The cached [`QueryIr`] records only the names of the `$parameters` it references ([`QueryIr::params`]);
 //!   the query service re-runs [`crate::aql::check_params`] against the caller's
 //!   bindings on every execution and binds the values, paging and scope
 //!   downstream, so two callers of the same text with different parameters get
@@ -25,6 +25,12 @@
 //!   ([`crate::aql::terminology::expand_matches`]), and that resolution may
 //!   differ on a later execution, so the caller excludes such a plan. There is
 //!   no staleness window rather than a TTL that could serve a stale expansion.
+//!
+//! Each cached plan carries the statement shapes it has been executed in
+//! ([`Shapes`]), so a repeated request of one shape binds its values without
+//! building its SQL. A shape is matched on every input of the build, the
+//! values its slots carry aside, so a request reads only a shape its own build
+//! would have rendered.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -32,6 +38,34 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use moka::future::Cache;
 
 use crate::aql::ir::QueryIr;
+use crate::aql::sql::shape::Shapes;
+
+/// A lowered plan, with the statement shapes of the plan when it is cached.
+#[derive(Debug)]
+pub struct Plan {
+    /// The lowered query.
+    pub ir: QueryIr,
+    /// The statement shapes of a cached plan; `None` for a plan that is
+    /// lowered for one request only.
+    pub shapes: Option<Shapes>,
+}
+
+impl Plan {
+    /// A plan to cache, its shapes none known yet.
+    #[must_use]
+    pub fn cached(ir: QueryIr) -> Self {
+        Self {
+            shapes: Some(Shapes::new(&ir)),
+            ir,
+        }
+    }
+
+    /// A plan for one request.
+    #[must_use]
+    pub fn once(ir: QueryIr) -> Self {
+        Self { ir, shapes: None }
+    }
+}
 
 /// A point-in-time view of the plan cache's activity, for observability and
 /// tests (`entries` is `moka`'s eventually-consistent estimate).
@@ -55,7 +89,7 @@ pub struct PlanCacheStats {
 #[derive(Clone)]
 pub struct PlanCache {
     /// `None` when the cache is disabled (capacity `0`).
-    inner: Option<Cache<String, Arc<QueryIr>>>,
+    inner: Option<Cache<String, Arc<Plan>>>,
     hits: Arc<AtomicU64>,
     misses: Arc<AtomicU64>,
 }
@@ -99,7 +133,7 @@ impl PlanCache {
     /// The cached plan for `aql`, or `None` on a miss (or when disabled).
     /// Records the hit/miss both on the [`AQL_PLAN_CACHE_EVENTS`](crate::telemetry::metrics::AQL_PLAN_CACHE_EVENTS) counter and
     /// on the in-process [`PlanCache::stats`] view.
-    pub async fn get(&self, aql: &str) -> Option<Arc<QueryIr>> {
+    pub async fn get(&self, aql: &str) -> Option<Arc<Plan>> {
         let hit = match &self.inner {
             Some(cache) => cache.get(aql).await,
             None => None,
@@ -118,13 +152,13 @@ impl PlanCache {
         hit
     }
 
-    /// Store the lowered `ir` under the query text `aql`. A no-op when the
+    /// Store the lowered `plan` under the query text `aql`. A no-op when the
     /// cache is disabled. The caller must only insert a plan that is a pure
     /// function of the query text — in particular, one with no resolved
     /// terminology operand (see the module docs).
-    pub async fn insert(&self, aql: String, ir: Arc<QueryIr>) {
+    pub async fn insert(&self, aql: String, plan: Arc<Plan>) {
         if let Some(cache) = &self.inner {
-            cache.insert(aql, ir).await;
+            cache.insert(aql, plan).await;
         }
     }
 
@@ -145,13 +179,13 @@ mod tests {
     use super::*;
     use openehr_query::parser::parse_str;
 
-    /// Lower a parameterless query to an `Arc<QueryIr>` for the cache tests.
-    fn ir(q: &str) -> Arc<QueryIr> {
+    /// Lower a parameterless query to a cached plan for the cache tests.
+    fn ir(q: &str) -> Arc<Plan> {
         let ast = parse_str(q).expect("parse");
-        Arc::new(
+        Arc::new(Plan::cached(
             crate::aql::lower_query(&ast, crate::config::profile::SpecProfile::default())
                 .expect("lower"),
-        )
+        ))
     }
 
     const Q1: &str = "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c";
