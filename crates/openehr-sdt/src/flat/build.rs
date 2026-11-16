@@ -43,9 +43,8 @@ use crate::flat::identity::{
 use crate::flat::map;
 use crate::flat::rmpath;
 use crate::flat::sim::{SimDocument, SimNode};
-use crate::flat::webtemplate::model::{
-    CodedName, WebTemplate, WebTemplateNode, WebTemplateStructuralStub,
-};
+use crate::flat::webtemplate::constraint::WebTemplateStructuralStub;
+use crate::flat::webtemplate::model::{CodedName, WebTemplate, WebTemplateNode};
 
 /// The RM release stamped into `ARCHETYPED.rm_version` when the caller names none.
 ///

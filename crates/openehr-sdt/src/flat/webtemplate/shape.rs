@@ -30,9 +30,11 @@
 
 use indexmap::IndexMap;
 
+use super::constraint::{
+    WebTemplateClosedAttribute, WebTemplateExistence, WebTemplateSlot, WebTemplateStructuralStub,
+};
 use super::model::{
-    WebTemplateCardinality, WebTemplateClosedAttribute, WebTemplateExistence, WebTemplateInput,
-    WebTemplateInputType, WebTemplateNode, WebTemplateSlot, WebTemplateStructuralStub,
+    WebTemplateCardinality, WebTemplateInput, WebTemplateInputType, WebTemplateNode,
 };
 
 /// The Web-Template metadata **format** version string emitted by both front
@@ -73,8 +75,26 @@ const SKIP_IF_EMPTY: [&str; 12] = [
 
 /// A placeholder root the type demands when compaction would (impossibly) drop
 /// the root; the root is never removed, so this only satisfies the type.
-pub(super) fn tree_placeholder() -> WebTemplateNode {
+fn tree_placeholder() -> WebTemplateNode {
     WebTemplateNode::new("COMPOSITION".to_owned(), String::new())
+}
+
+/// The passes both front ends run on a built tree, in order: compaction
+/// (master04 §"Level Removal"), the in-context RM children, the node ids, and
+/// the validation walk plan.
+///
+/// The in-context children (COMPOSITION context, category, language, territory
+/// and composer; per-ENTRY language, encoding and subject; per-EVENT time)
+/// that the master04 example carries and an OPT commonly leaves unconstrained
+/// are synthesized BEFORE id assignment, so their ids go through the sibling
+/// uniqueness of [`super::id`]. The walk plan parses the template-static
+/// constraint paths once, so a commit is walked without re-parsing them.
+pub(super) fn finish(tree: WebTemplateNode) -> WebTemplateNode {
+    let mut tree = compact(tree, 1).unwrap_or_else(tree_placeholder);
+    super::in_context::synthesize_in_context(&mut tree);
+    super::id::build_ids(&mut tree);
+    crate::flat::validation::plan::prepare_walk(&mut tree);
+    tree
 }
 
 // ── post-processing ──────────────────────────────────────────────────────────
@@ -89,12 +109,30 @@ pub(super) fn post_process(node: &mut WebTemplateNode) {
     }
 }
 
-/// Merges an ELEMENT's coded-text and text alternatives for ONE attribute into a
-/// coded text with `other` (master04 §"Open Value-Sets and the `|other`
-/// Suffix"), keeping the text node in the coded node's `alternatives`; a
-/// `value` beside a `null_flavour` constrains two attributes and stays two
-/// children.
+/// The ELEMENT attributes that qualify a missing value (RM `data_structures`
+/// §ELEMENT `null_flavour`, `null_reason`), which ITS-REST `simplified_formats`
+/// master05 §ELEMENT addresses as `/_null_flavour` and `/_null_reason`.
+const NULL_ATTRIBUTES: [&str; 2] = ["null_flavour", "null_reason"];
+
+/// Moves an ELEMENT's `null_flavour` and `null_reason` constraints out of its
+/// children into [`WebTemplateNode::null_constraints`], so only the `value`
+/// constraints are value alternatives and a single one is promoted (master04
+/// §"Level Removal"; master05 §ELEMENT: "no difference between an ELEMENT and
+/// its value"). Then merges the coded-text and text alternatives for ONE
+/// attribute into a coded text with `other` (master04 §"Open Value-Sets and the
+/// `|other` Suffix"), keeping the text node in the coded node's `alternatives`.
 fn post_process_element(node: &mut WebTemplateNode) {
+    let element_path = node.aql_path.clone();
+    let (null_constraints, values): (Vec<_>, Vec<_>) = std::mem::take(&mut node.children)
+        .into_iter()
+        .partition(|c| null_attribute(&element_path, c).is_some());
+    node.children = values;
+    for mut constraint in null_constraints {
+        if let Some(id) = null_attribute(&element_path, &constraint).map(|a| format!("_{a}")) {
+            constraint.id = id;
+        }
+        node.null_constraints.push(constraint);
+    }
     if let [first_child, second_child] = node.children.as_slice()
         && first_child.aql_path == second_child.aql_path
     {
@@ -115,6 +153,16 @@ fn post_process_element(node: &mut WebTemplateNode) {
             child.min = Some(0);
         }
     }
+}
+
+/// The null attribute (`null_flavour` or `null_reason`) a child of the ELEMENT
+/// at `element_path` constrains, `None` for a `value` constraint.
+fn null_attribute<'a>(element_path: &str, child: &'a WebTemplateNode) -> Option<&'a str> {
+    let attribute = child
+        .aql_path
+        .strip_prefix(element_path)?
+        .strip_prefix('/')?;
+    NULL_ATTRIBUTES.contains(&attribute).then_some(attribute)
 }
 
 fn compact_to_coded_with_other(node: &mut WebTemplateNode, coded: usize, text: usize) {
@@ -338,7 +386,7 @@ fn extend_by_key<T, K: PartialEq>(acc: &mut Vec<T>, extra: Vec<T>, key: impl Fn(
 /// root). Hoists the always-/single-compactable wrapper children into `node`,
 /// recurses, and then applies the child-level fix-ups; returns `None` when the
 /// node itself collapses out.
-pub(super) fn compact(mut node: WebTemplateNode, depth: usize) -> Option<WebTemplateNode> {
+fn compact(mut node: WebTemplateNode, depth: usize) -> Option<WebTemplateNode> {
     // Medium: hoist ALWAYS/SINGLE-compactable wrapper children into this node.
     let children = std::mem::take(&mut node.children);
     let mut hoisted = Hoisted {
@@ -448,7 +496,10 @@ fn process_children(mut node: WebTemplateNode, depth: usize) -> Option<WebTempla
         }
         copy_values(&node, &mut child);
         Some(child)
-    } else if node.children.is_empty() && SKIP_IF_EMPTY.contains(&node.rm_type.as_str()) {
+    } else if node.children.is_empty()
+        && node.null_constraints.is_empty()
+        && SKIP_IF_EMPTY.contains(&node.rm_type.as_str())
+    {
         None
     } else {
         Some(node)
@@ -633,6 +684,10 @@ fn copy_values(from: &WebTemplateNode, to: &mut WebTemplateNode) {
     to.slots.extend(from.slots.iter().cloned());
     to.closed_attributes
         .extend(from.closed_attributes.iter().cloned());
+    // The promoted value presents the collapsed ELEMENT, so the ELEMENT's null
+    // constraints move with it (master05 §ELEMENT `/_null_flavour`).
+    to.null_constraints
+        .extend(from.null_constraints.iter().cloned());
     // A collapsed wrapper may itself have carried the `CONSTRAINT_REF` proxy
     // (an ELEMENT whose `value` IS the ac-code reference), so its constraint
     // bindings move to the survivor rather than being dropped. Deduplicated —

@@ -16,6 +16,7 @@
 mod binding_v2_4;
 pub mod builder;
 pub mod builder_v2_4;
+pub mod constraint;
 mod existence;
 pub mod facts;
 mod id;
