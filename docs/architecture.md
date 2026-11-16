@@ -722,7 +722,12 @@ which is what makes an optional stage safe to disable:
    `refused-consent-reference-missing`, a fact of the `Caller` (#5614; the
    SMART layer checks scopes alone). An EHR id the store does not hold
    answers `404` before any step refuses, read only when a verdict refuses,
-   so a restriction's `404` is never told apart from it (#5623). A write is
+   so a restriction's `404` is never told apart from it (#5623). A
+   COMPOSITION read by its version or its latest is judged on the facts of
+   its object that the statement reading the version returns, after the read
+   and before anything of the version is served, so the read is one statement
+   and a refused read answers and is recorded as before (#5773, our own
+   design). A write is
    judged on the template, root archetype, origins and commit instant of the
    content it is about to store, inside the commit transaction and before
    anything is stored (#5626, `versioning::restriction::WriteGate`), by
