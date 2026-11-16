@@ -70,6 +70,10 @@ pub enum AccessLogError {
     /// No connection to the store could be obtained.
     #[error("the access-log store is unavailable")]
     Acquire(#[from] AcquireError),
+    /// The intake write this entry was gathered into failed, or its writer
+    /// stopped before answering.
+    #[error("the gathered intake write failed")]
+    Gathered(#[source] Option<Arc<AccessLogError>>),
     /// A record has no canonical form: a number in it has no finite IEEE 754
     /// double form (RFC 8785 §3.2.2.3).
     #[error("the access-log record has no canonical form")]
@@ -222,9 +226,9 @@ impl AccessLogStore {
             .collect::<Result<Vec<_>, _>>()?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        take_in(&mut tx, intake, None).await?;
-        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
-        // rows.
+        take_in(&mut tx, intake, &[], None).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this
+        // transaction's rows.
         tx.commit().await?;
         drop(conn);
         self.settle(Owed::default()).await?;

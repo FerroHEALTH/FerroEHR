@@ -14,7 +14,7 @@
 //! filled by a known conforming type.
 
 /// Strip a generic argument (`DV_INTERVAL<DV_QUANTITY>` → `DV_INTERVAL`).
-fn base(t: &str) -> &str {
+pub(crate) fn base(t: &str) -> &str {
     t.split('<').next().unwrap_or(t).trim()
 }
 
