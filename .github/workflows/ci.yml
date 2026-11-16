@@ -219,6 +219,8 @@ jobs:
           echo "image=$image" >> "$GITHUB_OUTPUT"
       - name: The path classifier finds a match first and last in a 2000-path list
         run: bash scripts/lib/change-lanes.sh --self-test
+      - name: A push finds the merge-queue run of its tree, never of its SHA
+        run: bash scripts/lib/queue-runs.sh --self-test
       - name: Every lane that starts a consumer of the server binary builds it
         run: |
           set -euo pipefail
@@ -288,11 +290,13 @@ jobs:
           # The conformance lane (#4539): the catalogue runs in this workflow on a
           # pull request and in the merge queue.
           bash scripts/lib/change-lanes.sh conformance <<<"$changed" | tee -a "$GITHUB_OUTPUT"
-      # A push to main whose commit the merge queue already passed (#4546). The
-      # queue fast-forwards main to the commit its `merge_group` run checked,
-      # so the push carries the same tree, and a lane run again gives no new
-      # verdict. A push the queue did not check (an administrator's bypass, or
-      # an answer this step cannot read) runs every lane, as before.
+      # A push to main whose tree the merge queue already passed (#4546). The
+      # commit GitHub lands on main is a new one it writes and signs: it
+      # carries the tree the `merge_group` run checked and never that run's
+      # SHA, so the run is found by tree (scripts/lib/queue-runs.sh, #5834),
+      # and a lane run again gives no new verdict. A push the queue did not
+      # check (an administrator's bypass, or an answer this step cannot read)
+      # runs every lane, as before.
       #
       # The push stays the only writer of main's cargo caches, which pull
       # requests restore: a cache a queue run writes is scoped to its
@@ -329,21 +333,14 @@ jobs:
           verified=false
           stale=()
           if [ "$EVENT_NAME" = "push" ]; then
-            if ! runs=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?event=merge_group&head_sha=$PUSH_SHA&per_page=100" --jq '.workflow_runs[].id'); then
-              echo "::warning::could not list the merge-queue runs of $PUSH_SHA, so every lane runs"
-              runs=""
+            # shellcheck source=scripts/lib/queue-runs.sh
+            . scripts/lib/queue-runs.sh
+            if run=$(queue_verified "$PUSH_SHA"); then
+              verified=true
+              echo "Merge-queue run $run passed this tree."
+            elif [ $? -eq 2 ]; then
+              echo "::warning::could not read the merge-queue runs of $PUSH_SHA's tree, so every lane runs"
             fi
-            # The run's own conclusion is no answer: a job can fail it while
-            # the required `conclusion` check passed.
-            while IFS= read -r run; do
-              [ -n "$run" ] || continue
-              if passed=$(gh api --paginate "repos/$REPO/actions/runs/$run/jobs?filter=latest&per_page=100" --jq '.jobs[] | select(.name == "conclusion") | .conclusion') \
-                && grep -qx success <<<"$passed"; then
-                verified=true
-                echo "Merge-queue run $run passed this tree."
-                break
-              fi
-            done <<<"$runs"
           fi
           if [ "$verified" = true ]; then
             read -r -a jobs <<<"$CACHE_JOBS"
