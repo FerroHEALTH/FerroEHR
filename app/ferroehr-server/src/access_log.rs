@@ -138,7 +138,7 @@ pub async fn run(
     config.validate()?;
     let signer =
         Arc::new(Signer::from_config(&config.record.signing).context("initialising the keyring")?);
-    let pools = crate::connect_pool(&config).await?;
+    let pools = crate::pools::connect(&config, crate::pools::Opening::OneShot).await?;
     let checkpoints = build(&config, pools.audit.clone(), signer)?;
     let outcome = match cmd {
         AccessLogCmd::Checkpoint => match checkpoints.seal().await? {

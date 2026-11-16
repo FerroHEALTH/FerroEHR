@@ -17,6 +17,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::policy_register::listen::Listeners;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
@@ -50,9 +51,11 @@ async fn replica(pool: &PgPool) -> (Arc<FerroEhrService>, Router) {
 /// Start `svc`'s register listener, as the binary does at boot, and wait
 /// until it is connected.
 async fn listening(svc: &Arc<FerroEhrService>, pool: &PgPool) {
-    svc.policy_registers()
-        .listened()
-        .spawn_listener((*pool.connect_options()).clone());
+    Listeners::on(
+        (*pool.connect_options()).clone(),
+        &[Arc::clone(svc.policy_registers().listened())],
+    )
+    .spawn();
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     while !svc.policy_registers().listened().is_listening() {
         assert!(

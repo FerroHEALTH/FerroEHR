@@ -104,7 +104,7 @@ serviceAccount:
 # `FERROEHR__DATABASE__URL_FILE`, so it never enters the pod's environment (an env value
 # is readable through /proc/<pid>/environ and inherited by every child process).
 # Never the ConfigMap. The non-secret pool bounds live in
-# config.database.{max_connections,min_connections,acquire_timeout}.
+# config.database.{connection_budget,max_connections,min_connections,acquire_timeout}.
 # ─────────────────────────────────────────────────────────────────────────────
 database:
   # -- Reference an existing Secret holding the app-role DSN (STRONGLY preferred
@@ -655,12 +655,15 @@ config:
     #   cors:
     #     allow_origins: [https://app.example.com]
 
-  # [database] — pool bounds (the DSN itself is the FERROEHR__DATABASE__URL secret, above).
-  # Each replica holds three pools of up to max_connections, opening one
-  # connection per core in each before it answers ready; keep
-  # replicas × (3 × max_connections + 5) inside PostgreSQL's max_connections.
+  # [database] — the connection budget (the DSN itself is the FERROEHR__DATABASE__URL secret, above).
+  # Each pod opens at most connection_budget connections: three pools sized
+  # inside it and one listener connection per database. A rollout runs
+  # replicaCount + strategy.rollingUpdate.maxSurge pods at once, so keep
+  # (replicaCount + maxSurge) × connection_budget plus your Jobs and tools
+  # inside PostgreSQL's max_connections less superuser_reserved_connections:
+  # the defaults, (2 + 1) × 30 = 90, leave 7 of PostgreSQL's default 97.
   database:
-    max_connections: 10
+    connection_budget: 30
 
   # [telemetry]: the console, the request log and the OpenTelemetry export
   # (the family's shared section). json is correct for cluster log collectors;

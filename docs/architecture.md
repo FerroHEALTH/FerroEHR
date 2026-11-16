@@ -698,10 +698,13 @@ which is what makes an optional stage safe to disable:
    check and judges the EHR again from its own transaction; a replica's own
    `EHR_ACCESS` commit judges the request's EHR again after it commits. A
    change committed on another replica is therefore never admitted under the
-   old settings, with no added statement. Each policy listener holds a
-   connection of its own (`[database] listen_url`, `[database.<domain>]
-   listen_url`), named `ferroehr policy listener`, so the request pools may
-   run through a transaction-mode pooler. Each instance writes its signing
+   old settings, with no added statement. Every channel of one database is
+   held on one `LISTEN` connection apart from the pools
+   (`policy_register::listen::Listeners`, #5845; `[database] listen_url`,
+   `[database.<domain>] listen_url`), named `ferroehr policy listener`, so
+   the request pools may run through a transaction-mode pooler; the
+   connections an instance opens, its pools and those sessions, stay inside
+   `[database] connection_budget` (`db::pool`). Each instance writes its signing
    key fingerprint and configuration digest into `clinical.instance`
    (migration `clinical/0045`, `instance::Instances`) and the `instances` indicator
    names an instance that differs.

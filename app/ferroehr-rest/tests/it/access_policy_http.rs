@@ -15,6 +15,7 @@ use axum::Router;
 use axum::body::Body;
 use ferroehr::config::authz::AuthzConfig;
 use ferroehr::party_binding::grants::operation::Operation;
+use ferroehr::policy_register::listen::Listeners;
 use ferroehr::service::FerroEhrService;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
 use ferroehr_rest::extensions::management::Observability;
@@ -47,7 +48,7 @@ async fn replica(pool: &PgPool, listening: bool, granted: bool) -> (Arc<FerroEhr
     .await;
     if listening {
         let listened = svc.access_policy().listened();
-        listened.spawn_listener((*pool.connect_options()).clone());
+        Listeners::on((*pool.connect_options()).clone(), &[Arc::clone(listened)]).spawn();
         let deadline = std::time::Instant::now() + Duration::from_secs(10);
         while !listened.is_listening() {
             assert!(

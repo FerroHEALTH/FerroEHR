@@ -21,6 +21,7 @@ use std::time::{Duration, Instant};
 use axum::Router;
 use ferroehr::access_policy::ARCHETYPE;
 use ferroehr::config::authz::AuthzConfig;
+use ferroehr::policy_register::listen::Listeners;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::access_policy::PolicyPrecondition;
 use ferroehr::system_log::store::AuditStore;
@@ -479,7 +480,11 @@ async fn an_art_9_3_restriction_applies_to_the_subject_view_alone() {
     );
 
     let listened = fx.svc.access_policy().listened();
-    listened.spawn_listener((*fx.pool.connect_options()).clone());
+    Listeners::on(
+        (*fx.pool.connect_options()).clone(),
+        &[Arc::clone(listened)],
+    )
+    .spawn();
     let deadline = Instant::now() + Duration::from_secs(10);
     while !listened.is_listening() {
         assert!(Instant::now() < deadline, "the listener connects");
