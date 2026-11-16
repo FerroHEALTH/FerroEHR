@@ -205,6 +205,11 @@ impl Metrics {
     /// in one place, which is what makes an omission obvious. Splitting it into
     /// themed halves would hide exactly that.
     #[must_use]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one flat struct literal of every instrument, so an omission is visible in one \
+                  place; it grows by four lines with each instrument"
+    )]
     pub fn new(meter: &Meter) -> Self {
         Self {
             auth_failures: meter
