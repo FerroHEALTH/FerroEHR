@@ -6,6 +6,8 @@
 
 use std::sync::Arc;
 
+use openehr_base::prelude::TerminologyId;
+use openehr_rm::prelude::{CodePhrase, DvCodedText, DvText, DvTextData};
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -13,7 +15,7 @@ use uuid::Uuid;
 use super::LiveGrants;
 use crate::party_binding::grants::caller::store::Changed;
 use crate::party_binding::grants::capabilities::Actor;
-use crate::party_binding::grants::operation::Operation;
+use crate::party_binding::grants::operation::{Operation, TEMPLATE};
 use crate::party_binding::grants::store::{CapabilityRow, ClientRow, Dates, Loaded, Term};
 use crate::party_binding::policy_mark::TERMINOLOGY;
 
@@ -22,17 +24,39 @@ const CLIENT: &str = "relay";
 
 /// A copy holding one client `ACTOR` that performs a `ROLE` granting
 /// `commit_composition` with a `template` credential.
+#[expect(
+    clippy::disallowed_types,
+    reason = "a grant row stores its credentials as the canonical JSON tree the fixture builds"
+)]
 fn live() -> LiveGrants {
     let pool = PgPool::connect_lazy("postgres://localhost/unused").expect("a lazy pool");
     let live = LiveGrants::new(pool);
     let party = Uuid::from_u128(7);
-    let credentials = json!({"_type": "ITEM_TREE", "items": [
-        {"_type": "ELEMENT", "archetype_node_id": "at1",
-         "name": {"_type": "DV_CODED_TEXT", "value": "template",
-                  "defining_code": {"terminology_id": {"value": TERMINOLOGY},
-                                    "code_string": "template"}},
-         "value": {"_type": "DV_TEXT", "value": "T.v1"}}
-    ]});
+    let name = openehr_its::json::to_canonical_value(&DvCodedText {
+        value: TEMPLATE.to_owned(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+        defining_code: CodePhrase {
+            terminology_id: TerminologyId {
+                value: TERMINOLOGY.to_owned(),
+            },
+            code_string: TEMPLATE.to_owned(),
+            preferred_term: None,
+        },
+    });
+    let value = openehr_its::json::to_canonical_value(&DvText::DvText(DvTextData {
+        value: "T.v1".to_owned(),
+        hyperlink: None,
+        formatting: None,
+        mappings: None,
+        language: None,
+        encoding: None,
+    }));
+    let credentials =
+        json!({"items": [{"archetype_node_id": "at1", "name": name, "value": value}]});
     live.install(Loaded {
         revision: 1,
         clients: vec![ClientRow {
@@ -67,8 +91,8 @@ fn live() -> LiveGrants {
     live
 }
 
-#[test]
-fn two_requests_share_the_client_and_the_credentials() {
+#[tokio::test]
+async fn two_requests_share_the_client_and_the_credentials() {
     let live = live();
     let actor = Actor::Client {
         issuer: ISSUER,
@@ -82,7 +106,7 @@ fn two_requests_share_the_client_and_the_credentials() {
             .of(Operation::CommitComposition)
             .next()
             .expect("the grant is in force");
-        let [text] = grant.credentials().texts("template")[..] else {
+        let [text] = grant.credentials().texts(TEMPLATE)[..] else {
             panic!("one template credential");
         };
         text.as_ptr()
