@@ -502,10 +502,7 @@ mod tests {
             ]),
             &[],
         );
-        assert_eq!(
-            c.server.shared.max_concurrent_requests,
-            std::num::NonZeroUsize::new(64)
-        );
+        assert_eq!(c.server.shared.max_concurrent_requests.get(), 64);
         let [issuer] = c.auth.shared.issuers() else {
             panic!("one issuer table from the env");
         };

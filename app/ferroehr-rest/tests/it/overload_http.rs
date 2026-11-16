@@ -23,9 +23,11 @@
 //! * beyond the `max_concurrent_requests` bound, an API request is shed
 //!   immediately with `503 Service Unavailable` + `Retry-After: 1` and the
 //!   problem details;
-//! * with the bound unset concurrency is unbounded;
+//! * with the defaults the bound is on at 256: the request past it is shed,
+//!   so what the server holds stays bounded;
 //! * the health routes are outside the bound and are never shed, even while
 //!   the bound is fully taken.
+use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use axum::Router;
@@ -45,13 +47,10 @@ const BASE: &str = "/ferroehr/rest/openehr/v1";
 /// A syntactically valid EHR id (the dispatcher decodes it before the backend).
 const EHR: &str = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
-/// Auth-disabled config with an explicit concurrency bound; `0` sets none.
-fn config(max_in_flight: usize) -> AppConfig {
+/// Auth-disabled config with the concurrency bound `server` carries.
+fn config(server: ServerSection) -> AppConfig {
     AppConfig {
-        server: ServerSection {
-            max_concurrent_requests: std::num::NonZeroUsize::new(max_in_flight),
-            ..ServerSection::default()
-        },
+        server,
         api: ApiConfig {
             base_path: BASE.to_owned(),
             openapi_ui: ferroehr::config::management::AccessLevel::Off,
@@ -62,9 +61,17 @@ fn config(max_in_flight: usize) -> AppConfig {
     }
 }
 
-async fn app(max_in_flight: usize) -> (testkit::TestDb, Router) {
+/// The `[server]` section with the bound `max_in_flight`.
+fn bounded(max_in_flight: usize) -> ServerSection {
+    ServerSection {
+        max_concurrent_requests: NonZeroUsize::new(max_in_flight).expect("a bound above zero"),
+        ..ServerSection::default()
+    }
+}
+
+async fn app(server: ServerSection) -> (testkit::TestDb, Router) {
     let (pg, service) = common::test_service().await;
-    (pg, common::build_with(config(max_in_flight), service).await)
+    (pg, common::build_with(config(server), service).await)
 }
 
 /// A request whose handler parks holding its API permit: a composition create
@@ -84,10 +91,6 @@ fn probe_request() -> Request<Body> {
     common::req("POST", format!("{BASE}/ehr/{EHR}/composition"))
         .header("content-type", "application/json")
         .build()
-}
-
-fn get_ehr() -> Request<Body> {
-    common::req("GET", format!("{BASE}/ehr/{EHR}")).build()
 }
 
 /// Probe the (parked) route until a request is shed (`503`), giving the parked
@@ -110,7 +113,7 @@ async fn probe_until_shed(app: &Router) -> Response<Body> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn requests_beyond_limit_are_shed_with_503() {
-    let (_pg, app) = app(2).await;
+    let (_pg, app) = app(bounded(2)).await;
 
     // Two parked handlers occupy both permits of the composition route. Let them
     // acquire the permits *before* probing: `LoadShed` sheds a request that can't
@@ -145,28 +148,47 @@ async fn requests_beyond_limit_are_shed_with_503() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn limit_zero_disables_shedding() {
-    // With no `max_concurrent_requests` no bound is installed, so concurrency is
-    // unbounded: many concurrent real requests all complete, none is shed.
-    let (_pg, app) = app(0).await;
+async fn the_defaults_bound_the_server_at_256() {
+    // A server started from the defaults holds at most 256 requests: the next
+    // one is shed at once, so offered load past capacity cannot grow memory
+    // (FerroHEALTH/FerroEHR#5743), and readiness still answers.
+    let server = ServerSection::default();
+    let bound = server.max_concurrent_requests.get();
+    assert_eq!(256, bound, "the defaults carry the bound");
+    let (_pg, app) = app(server).await;
 
-    let mut handles = Vec::new();
-    for _ in 0..8 {
-        handles.push(tokio::spawn(app.clone().oneshot(get_ehr())));
-    }
-    for h in handles {
-        let status = h.await.expect("join").expect("response").status();
-        assert_ne!(
-            status,
-            StatusCode::SERVICE_UNAVAILABLE,
-            "no request may be shed when the limit is disabled"
-        );
+    let parked: Vec<_> = (0..bound)
+        .map(|_| tokio::spawn(app.clone().oneshot(parking_request())))
+        .collect();
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert!(
+        parked.iter().all(|request| !request.is_finished()),
+        "every parked request holds a slot (none shed)"
+    );
+
+    let shed = probe_until_shed(&app).await;
+    assert_eq!(shed.status(), StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(
+        shed.headers()
+            .get(header::RETRY_AFTER)
+            .and_then(|v| v.to_str().ok()),
+        Some("1")
+    );
+    let readiness = app
+        .clone()
+        .oneshot(common::req("GET", "/health/readiness").build())
+        .await
+        .expect("response");
+    assert_eq!(readiness.status(), StatusCode::OK, "readiness is never shed");
+
+    for request in parked {
+        request.abort();
     }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_health_routes_are_never_shed() {
-    let (_pg, app) = app(1).await;
+    let (_pg, app) = app(bounded(1)).await;
 
     // Saturate the single permit of the composition route with one parked
     // handler; let it acquire the permit before probing (see the note in

@@ -84,8 +84,10 @@ profile = "sandbox"
 # (infrastructure).
 #? shutdown_timeout = "10s"
 # How many requests the server serves at once; past it a request is answered
-# `503`. Unset, there is no bound. Optional, unset by default (infrastructure).
-#? max_concurrent_requests = 0
+# `503` with `Retry-After` at once, never queued, so offered load beyond
+# capacity cannot grow the server's memory. Always bounded, 256 by default
+# (`DEFAULT_MAX_CONCURRENT_REQUESTS`); never zero. Optional (infrastructure).
+#? max_concurrent_requests = 256
 # How long a refused request is told to wait (`Retry-After`), a whole number of
 # seconds, since the header carries delay-seconds (RFC 9110 §10.2.3). Optional
 # (infrastructure).
