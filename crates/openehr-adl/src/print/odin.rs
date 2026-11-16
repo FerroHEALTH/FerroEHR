@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 
 use openehr_base::prelude::TerminologyCode;
 
+use crate::odin::code_phrase;
 use crate::print::Printer;
 
 impl Printer {
@@ -36,7 +37,7 @@ impl Printer {
     /// NOTE) — the ODIN text is the durable form either way.
     pub(super) fn default_value(&mut self, v: &serde_json::Value, depth: usize) {
         if let serde_json::Value::Object(m) = v
-            && let Some(literal) = interval_literal(m)
+            && let Some(literal) = interval_literal(m).or_else(|| code_phrase::literal(m))
         {
             self.line(depth, &format!("_default = <{literal}>"));
             return;
@@ -70,7 +71,7 @@ impl Printer {
     /// matching the parser's `odin_to_json`).
     fn odin_json_entry(&mut self, key: &str, v: &serde_json::Value, depth: usize) {
         if let serde_json::Value::Object(m) = v
-            && let Some(literal) = interval_literal(m)
+            && let Some(literal) = interval_literal(m).or_else(|| code_phrase::literal(m))
         {
             self.line(depth, &format!("{key} = <{literal}>"));
             return;
@@ -90,6 +91,15 @@ impl Printer {
                     self.odin_json_entry(k, val, depth + 1);
                 }
                 self.line(depth, ">");
+            }
+            serde_json::Value::Array(items)
+                if !items.is_empty()
+                    && let Some(codes) = items
+                        .iter()
+                        .map(|item| item.as_object().and_then(code_phrase::literal))
+                        .collect::<Option<Vec<_>>>() =>
+            {
+                self.line(depth, &format!("{key} = <{}>", codes.join(", ")));
             }
             serde_json::Value::Array(items) if items.iter().all(is_json_scalar) => {
                 let joined = items.iter().map(odin_scalar).collect::<Vec<_>>().join(", ");

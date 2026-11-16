@@ -33,6 +33,8 @@
               spec) (#1694)"
 )]
 
+pub(crate) mod code_phrase;
+
 use std::collections::BTreeMap;
 
 use openehr_base::prelude::{TerminologyCode, Uuid};
@@ -215,8 +217,7 @@ pub(crate) fn term_code_of(v: &OdinValue) -> TerminologyCode {
     }
 }
 
-/// Parse `[terminology::code]` (or `[terminology(version)::code]`) into a
-/// [`TerminologyCode`].
+/// Parse `[terminology::code]` or `[terminology(version)::code]` into a [`TerminologyCode`].
 pub(crate) fn parse_term_code(raw: &str) -> TerminologyCode {
     let inner = raw.trim().trim_start_matches('[').trim_end_matches(']');
     let (terminology_part, code_string) = match inner.split_once("::") {
@@ -266,8 +267,7 @@ pub(crate) fn is_interval(v: &OdinValue) -> bool {
     matches!(untyped(v), OdinValue::Interval(_))
 }
 
-/// Why an ODIN value carries no canonical-JSON encoding as a
-/// `C_DEFINED_OBJECT.default_value`.
+/// Why an ODIN value carries no canonical-JSON encoding as a `C_DEFINED_OBJECT.default_value`.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub(crate) enum OdinJsonError {
     /// A `|centre +/- delta|` interval over endpoints that are not numeric.
@@ -340,9 +340,9 @@ pub(crate) fn odin_to_json(v: &OdinValue) -> Result<serde_json::Value, OdinJsonE
         | OdinValue::Time(s)
         | OdinValue::DateTime(s)
         | OdinValue::Duration(s)
-        | OdinValue::TermCode(s)
         | OdinValue::Uri(s)
         | OdinValue::Path(s) => serde_json::Value::String(s.clone()),
+        OdinValue::TermCode(raw) => code_phrase::to_json(&parse_term_code(raw)),
         OdinValue::Integer(i) => serde_json::Value::from(*i),
         OdinValue::Real(r) => serde_json::Value::from(*r),
         OdinValue::Boolean(b) => serde_json::Value::from(*b),
