@@ -108,19 +108,19 @@ one, two and three instances is on the
 ## Connection budget
 
 Each instance opens at most `[database] connection_budget` connections, 40 by
-default: one listener connection per database its listeners reach, and three
-pools, one per domain (clinical, party and audit), that share the rest
-evenly. Unset, a pool holds four connections per core the instance may run
+default: one listener connection per database its listeners reach, four for
+the audit runtime, and three pools, one per domain (clinical, party and
+audit), that share the rest evenly. Unset, a pool holds four connections per core the instance may run
 on, at least 10, within that share, and the server opens one connection per
 core in each pool before it answers ready ([Sizing the
 pool](config-server.md#sizing-the-pool)). At the default budget, an instance
-on four cores or more holds up to 3 × 13 + 1 = 40 connections under load:
+on three cores or more holds up to 3 × 11 + 4 + 1 = 38 connections under load:
 
 | Instances | Connections at the default budget | Fits PostgreSQL's default `max_connections = 100` |
 |---|---|---|
-| 1 | 40 | yes, leaving 57 for your tools |
-| 2 | 80 | yes, leaving 17 for your tools |
-| 3 | 120 | no |
+| 1 | 38 | yes, leaving 59 for your tools |
+| 2 | 76 | yes, leaving 21 for your tools |
+| 3 | 114 | no |
 
 Keep `instances × connection_budget` below PostgreSQL's `max_connections`
 minus `superuser_reserved_connections` (3 by default) and the connections

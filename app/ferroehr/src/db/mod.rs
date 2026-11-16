@@ -136,7 +136,8 @@ pub struct DbConfig {
     /// it. Setting both is a boot error.
     pub listen_url_file: Option<PathBuf>,
     /// The most connections this instance opens to `PostgreSQL` while it
-    /// serves: its three pools and its listener sessions together.
+    /// serves: its three pools, the audit runtime's
+    /// [`pool::AUDIT_RUNTIME_POOL`] and its listener sessions together.
     ///
     /// The pools are sized inside it ([`Self::pool_size`]), and a
     /// [`Self::max_connections`] that does not fit is refused at load. The
@@ -208,8 +209,8 @@ impl Default for DbConfig {
             migrate_url_file: None,
             listen_url: None,
             listen_url_file: None,
-            // Two instances, 80 connections, inside PostgreSQL's default of
-            // 100 less its three reserved slots, with 17 left for tools (#5845).
+            // Two instances, 76 connections, inside PostgreSQL's default of
+            // 100 less its three reserved slots, with 21 left for tools (#5845).
             connection_budget: 40,
             // Unset: sized from the instance's cores within the budget, and one
             // connection per core opened before the server answers ready (#5774).

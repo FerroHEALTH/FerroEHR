@@ -359,7 +359,7 @@ statement_timeout = "1min"
 | `migrate_url` | secret URL | unset | DSN that PREPARES the schema, used for that one boot step and then closed. Preparation spans every schema of a database at once, which no domain-scoped runtime credential can do, so a deployment separating the runtime roles names the credential that can here. It prepares every domain whose DSN reaches the SAME DATABASE — which is the whole of the separated-credential posture, where each domain has a login role of its own on one database; a domain whose DSN reaches a different database is prepared on that database's `database.<domain>.migrate_url` (on the domain's own DSN when that is unset). Which it is, is read from the server (`pg_control_system()` plus `current_database()`), never from the DSN text. Unset, it falls back to `url`. See [Operations → Which credential prepares the schema](../operations.md#which-credential-prepares-the-schema). |
 | `migrate_url_file` | path | unset | Read `migrate_url` from a file instead, for a mounted secret. At most one of the pair. |
 | `migrate` | enum{apply,verify} | `apply` | Whether the server applies its embedded migrations at boot. `apply` is what makes an empty configuration boot against an empty database. `verify` issues **no DDL at all**: it checks that the database already carries exactly this build's migrations and refuses to start otherwise, so the serving DSN can authenticate as a role with no DDL rights. That check still READS every `_sqlx_migrations` table of each database, which no least-privilege role can do, so pair it with `migrate_url` above and with `ferroehr db migrate` run out of band; see [Operations](../operations.md#which-credential-prepares-the-schema). |
-| `connection_budget` | int | `40` | The most connections the instance opens to PostgreSQL while it serves: its three pools and its listener connections together. The pools are sized inside it, and a `max_connections` whose pools and listeners exceed it is refused at startup. The default lets two instances share PostgreSQL's default `max_connections` of 100. See [Sizing the pool](#sizing-the-pool). |
+| `connection_budget` | int | `40` | The most connections the instance opens to PostgreSQL while it serves: its three pools, the audit runtime's four and its listener connections together. The pools are sized inside it, and a `max_connections` whose pools and listeners exceed it is refused at startup. The default lets two instances share PostgreSQL's default `max_connections` of 100. See [Sizing the pool](#sizing-the-pool). |
 | `max_connections` | int | unset | The size of each domain's pool (clinical, party and audit each have one). Unset, it is four per core the server may run on, at least 10, within the pool's share of `connection_budget`, and never more than `server.max_concurrent_requests`. See [Sizing the pool](#sizing-the-pool). |
 | `min_connections` | int | unset | Connections each pool keeps open while idle, which the server opens before it answers ready. Unset, the server keeps one per core it may run on, at least 2 and at most the pool size. A one-shot command (`ferroehr db migrate`, `party-binding refill`) opens only what it uses. |
 | `acquire_timeout` | duration | `"30s"` | How long to wait for a free connection before failing. |
@@ -380,11 +380,12 @@ core busy, and the burst above it waits in the pool rather than failing.
 
 Each instance opens at most `connection_budget` connections: one listener
 connection per database its listeners reach (one when every domain shares a
-DSN), and three pools that share the rest evenly. At the default of 40 with
-one listener connection, each pool holds at most 13, so an instance opens at
-most 3 × 13 + 1 = 40, and two instances, 80, fit PostgreSQL's default
-`max_connections` of 100 less its three `superuser_reserved_connections`,
-with 17 left for your tools ([Running several
+DSN), four for the audit runtime (the access-log chainer, the forwarders and
+the chain verification), and three pools that share the rest evenly. At the
+default of 40 with one listener connection, each pool holds at most 11, so an
+instance opens at most 3 × 11 + 4 + 1 = 38, and two instances, 76, fit
+PostgreSQL's default `max_connections` of 100 less its three
+`superuser_reserved_connections`, with 21 left for your tools ([Running several
 instances](several-instances.md#connection-budget)). Set the budget to
 PostgreSQL's `max_connections`, less its reserved slots and what your tools
 use, over your instances; give a single instance at a high rate a larger

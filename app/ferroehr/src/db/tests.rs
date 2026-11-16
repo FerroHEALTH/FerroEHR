@@ -97,9 +97,10 @@ fn the_server_sizes_an_unset_pool_for_its_concurrency_and_keeps_a_core_each_open
 }
 
 /// One instance with every default opens at most its budget of 40: one
-/// listener session for every channel and three pools of at most 13, so two
-/// instances fit `PostgreSQL`'s default `max_connections` of 100 less its
-/// three `superuser_reserved_connections` (#5845).
+/// listener session for every channel, the audit runtime's four and three
+/// pools of at most 11, so two instances fit `PostgreSQL`'s default
+/// `max_connections` of 100 less its three `superuser_reserved_connections`
+/// (#5845).
 #[test]
 fn two_default_instances_fit_a_default_postgresql() {
     let settings = DbConfig::default();
@@ -110,9 +111,9 @@ fn two_default_instances_fit_a_default_postgresql() {
         1,
         "one session carries every channel"
     );
-    assert_eq!(serving.pool_share(), 13);
-    assert!(serving.pool_size() <= 13);
-    assert_eq!(serving.connections(), serving.pool_size() * 3 + 1);
+    assert_eq!(serving.pool_share(), 11);
+    assert!(serving.pool_size() <= 11);
+    assert_eq!(serving.connections(), serving.pool_size() * 3 + 4 + 1);
     assert!(serving.connections() <= 40, "{}", serving.connections());
     assert!(serving.connections() * 2 <= 100 - 3);
     assert_eq!(serving.budget_errors(), Vec::<String>::new());
@@ -127,9 +128,9 @@ fn each_listen_dsn_takes_one_session_out_of_the_budget() {
     assert_eq!(settings.listen_sessions(), 1);
     settings.party.listen_url = Some(SecretUrl::new("postgres://party/ferroehr"));
     assert_eq!(settings.listen_sessions(), 2);
-    assert_eq!(settings.pool_share(), 12);
+    assert_eq!(settings.pool_share(), 11);
     settings.connection_budget = 100;
-    assert_eq!(settings.pool_share(), 32);
+    assert_eq!(settings.pool_share(), 31);
     assert!(settings.connections() <= 100);
 }
 
@@ -145,7 +146,7 @@ fn a_pool_outside_the_budget_is_refused_naming_it() {
     assert!(
         errors
             .iter()
-            .all(|e| e.contains("database.connection_budget = 6") && e.contains("at least 7")),
+            .all(|e| e.contains("database.connection_budget = 6") && e.contains("at least 11")),
         "{errors:?}"
     );
     settings.connection_budget = 40;
@@ -155,10 +156,10 @@ fn a_pool_outside_the_budget_is_refused_naming_it() {
     assert!(
         errors
             .iter()
-            .all(|e| e.contains("91 in all") && e.contains("database.connection_budget = 40")),
+            .all(|e| e.contains("95 in all") && e.contains("database.connection_budget = 40")),
         "{errors:?}"
     );
-    settings.max_connections = Some(13);
+    settings.max_connections = Some(11);
     assert_eq!(settings.budget_errors(), Vec::<String>::new());
-    assert_eq!(settings.connections(), 40);
+    assert_eq!(settings.connections(), 38);
 }

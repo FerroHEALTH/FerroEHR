@@ -32,6 +32,13 @@ pub const POOL_FLOOR: u32 = 10;
 /// background task each take one connection of a pool at a time.
 pub const POOL_MIN: u32 = 2;
 
+/// The connections of the audit runtime's own pool, over the audit store.
+///
+/// Its chainer, its forwarders, its upkeep and the chain verification each
+/// take one at a time, and a task beyond them waits for one
+/// ([`crate::system_log::sender`]).
+pub const AUDIT_RUNTIME_POOL: u32 = 4;
+
 /// The domains whose writes notify a listened channel, so each may need a
 /// listener session of its own; no channel is notified in the audit domain.
 pub const LISTENING: [Domain; 2] = [Domain::Clinical, Domain::Party];
@@ -61,13 +68,15 @@ impl DbConfig {
     }
 
     /// The pool connections each domain may hold within
-    /// [`Self::connection_budget`]: the budget less the listener sessions,
-    /// shared evenly by the three pools.
+    /// [`Self::connection_budget`]: the budget less the listener sessions and
+    /// the audit runtime's [`AUDIT_RUNTIME_POOL`], shared evenly by the three
+    /// pools.
     #[must_use]
     pub fn pool_share(&self) -> u32 {
         let pools = u32::try_from(Domain::ALL.len()).unwrap_or(u32::MAX);
         self.connection_budget
             .saturating_sub(self.listen_sessions())
+            .saturating_sub(AUDIT_RUNTIME_POOL)
             .checked_div(pools)
             .unwrap_or(0)
     }
@@ -86,12 +95,14 @@ impl DbConfig {
     }
 
     /// The most connections this instance opens while it serves: three pools
-    /// of [`Self::pool_size`] and [`Self::listen_sessions`].
+    /// of [`Self::pool_size`], the audit runtime's [`AUDIT_RUNTIME_POOL`] and
+    /// [`Self::listen_sessions`].
     #[must_use]
     pub fn connections(&self) -> u32 {
         let pools = u32::try_from(Domain::ALL.len()).unwrap_or(u32::MAX);
         self.pool_size()
             .saturating_mul(pools)
+            .saturating_add(AUDIT_RUNTIME_POOL)
             .saturating_add(self.listen_sessions())
     }
 
@@ -105,18 +116,22 @@ impl DbConfig {
         if self.pool_share() < POOL_MIN {
             errors.push(format!(
                 "database.connection_budget = {} leaves the three pools fewer than {POOL_MIN} \
-                 connections each beside the {listeners} listener connection(s); raise it to \
-                 at least {}",
+                 connections each beside the audit runtime's {AUDIT_RUNTIME_POOL} and the \
+                 {listeners} listener connection(s); raise it to at least {}",
                 self.connection_budget,
-                POOL_MIN.saturating_mul(3).saturating_add(listeners)
+                POOL_MIN
+                    .saturating_mul(3)
+                    .saturating_add(AUDIT_RUNTIME_POOL)
+                    .saturating_add(listeners)
             ));
         }
         if let Some(size) = self.max_connections
             && self.connections() > self.connection_budget
         {
             errors.push(format!(
-                "database.max_connections = {size} needs 3 × {size} pool connections and \
-                 {listeners} listener connection(s), {} in all, over \
+                "database.max_connections = {size} needs 3 × {size} pool connections, the \
+                 audit runtime's {AUDIT_RUNTIME_POOL} and {listeners} listener connection(s), \
+                 {} in all, over \
                  database.connection_budget = {}; raise the budget within PostgreSQL's \
                  max_connections over your instances, or lower the pool",
                 self.connections(),
@@ -266,9 +281,15 @@ pub async fn server_slots(
         dsns.sort_unstable();
         dsns.dedup();
         let pools = u32::try_from(domains.len()).unwrap_or(u32::MAX);
+        let audit = if domains.contains(&Domain::Audit) {
+            AUDIT_RUNTIME_POOL
+        } else {
+            0
+        };
         let planned = settings
             .pool_size()
             .saturating_mul(pools)
+            .saturating_add(audit)
             .saturating_add(u32::try_from(dsns.len()).unwrap_or(u32::MAX));
         let admitted = u32::try_from(admitted).unwrap_or(0);
         if planned > admitted {

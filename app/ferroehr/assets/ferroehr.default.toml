@@ -1119,7 +1119,8 @@ system_id = "ferroehr.local"
 # Setting both is a boot error. Optional, unset by default (infrastructure).
 #? listen_url_file = ""
 # The most connections this instance opens to `PostgreSQL` while it serves: its
-# three pools and its listener sessions together. Optional.
+# three pools, the audit runtime's `pool::AUDIT_RUNTIME_POOL` and its listener
+# sessions together. Optional.
 #? connection_budget = 40
 # Upper bound of each domain's connection pool (clinical, party and audit each
 # have one). Unset, it follows the instance: four per core the process may run

@@ -657,7 +657,8 @@ config:
 
   # [database] — the connection budget (the DSN itself is the FERROEHR__DATABASE__URL secret, above).
   # Each pod opens at most connection_budget connections: three pools sized
-  # inside it and one listener connection per database. A rollout runs
+  # inside it, the audit runtime's four and one listener connection per
+  # database. A rollout runs
   # replicaCount + strategy.rollingUpdate.maxSurge pods at once, so keep
   # (replicaCount + maxSurge) × connection_budget plus your Jobs and tools
   # inside PostgreSQL's max_connections less superuser_reserved_connections:
