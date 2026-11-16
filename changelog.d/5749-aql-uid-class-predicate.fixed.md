@@ -1,0 +1,1 @@
+- A `uid/value` standard predicate in a class expression (`COMPOSITION c[uid/value=$uid]`) selects the composition whose version it names, as the same comparison in `WHERE` does; it matched no composition before. Under `OR` or `NOT CONTAINS`, where no version is bound, it is refused with a 400.
