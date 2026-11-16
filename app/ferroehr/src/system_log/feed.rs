@@ -4,19 +4,19 @@
 //! The ITI-20 ATX: FHIR Feed (`[audit.fhir_feed]`): `ihe-atna`'s
 //! [`FeedRepository`] over the endpoint's [`OutboundClient`], which carries
 //! the feed's IHE IUA bearer token on each request and renews it once on a
-//! `401` (RFC 6750 §3.1), and the [`StoreOutbox`] `ihe-atna`'s forwarder delivers from when
-//! the local audit store is on.
+//! `401` (RFC 6750 §3.1), and the [`StoreOutbox`] `ihe-atna`'s forwarders
+//! deliver the feed and the syslog route from.
 //!
-//! The store is the feed's outbox: a record not yet delivered has a row in
-//! `audit.fhir_feed_outbox`, naming its chain and position under an id of the
-//! outbox's own, which the store writes with the record while the feed is
+//! The store is each sink's outbox: a record not yet delivered has a row in
+//! the sink's outbox table, naming its chain and position under an id of the
+//! outbox's own, which the chainer writes with the record while the sink is
 //! configured, read oldest first by that id, and removed once the repository
-//! accepted it, when a system-chain record's `delivered_fhir_feed_at` is
-//! stamped. The document is rendered from the record's columns when it is
-//! read. A record the repository refused, or one that cannot be rendered, is
-//! held aside in memory until the next start, because the table is
-//! append-only beside its two delivery stamps (no specification governs where
-//! a refused record waits: our own design).
+//! accepted it, when a system-chain record's delivery stamp is set. The
+//! document or message is rendered from the stored record when it is read.
+//! A record the repository refused, or one that cannot be rendered, is held
+//! aside in memory until the next start, because the tables are append-only
+//! beside their delivery stamps (no specification governs where a refused
+//! record waits: our own design).
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -35,6 +35,7 @@ use tokio::sync::Notify;
 use crate::system_log::AuditError;
 use crate::system_log::config::FhirFeedConfig;
 use crate::system_log::store::AuditStore;
+use crate::system_log::store::outbox::{Delivered, Sink};
 
 /// The repository `config` names, over `ferrohealth-smart`'s outbound client
 /// of `[audit.fhir_feed.endpoint]`.
@@ -55,11 +56,15 @@ pub(super) fn repository(config: &FhirFeedConfig) -> Result<FeedRepository, Audi
     .map_err(|e| AuditError::Transport(Box::new(e)))
 }
 
-/// The local audit store as the FHIR Feed's outbox.
+/// The local audit store as one sink's outbox.
 #[derive(Debug)]
 pub(super) struct StoreOutbox {
     store: AuditStore,
-    /// Woken by the drain after it stored records.
+    /// The sink the outbox delivers to.
+    sink: Sink,
+    /// The syslog frame writer, for the syslog route.
+    framer: Option<ihe_atna::atna::syslog::Sender>,
+    /// Woken by the chainer after it chained records.
     notify: Arc<Notify>,
     /// How long to wait for a wake before reading the store again.
     idle: Duration,
@@ -72,16 +77,44 @@ pub(super) struct StoreOutbox {
 }
 
 impl StoreOutbox {
-    /// The outbox over `store`, woken by `notify`, reading the store again
-    /// at least every `idle`.
-    pub(super) fn new(store: AuditStore, notify: Arc<Notify>, idle: Duration) -> Self {
+    /// The outbox of `sink` over `store`, woken by `notify`, reading the
+    /// store again at least every `idle`.
+    pub(super) fn new(store: AuditStore, sink: Sink, notify: Arc<Notify>, idle: Duration) -> Self {
         Self {
             store,
+            sink,
+            framer: None,
             notify,
             idle,
             refused: Mutex::new(BTreeSet::new()),
             waiting: AtomicUsize::new(0),
             backlog: AtomicBool::new(false),
+        }
+    }
+
+    /// The outbox of the syslog route, whose frames `framer` writes.
+    pub(super) fn syslog(
+        store: AuditStore,
+        framer: ihe_atna::atna::syslog::Sender,
+        notify: Arc<Notify>,
+        idle: Duration,
+    ) -> Self {
+        Self {
+            framer: Some(framer),
+            ..Self::new(store, Sink::Syslog, notify, idle)
+        }
+    }
+
+    /// The bytes the forwarder sends of `delivered`.
+    fn message(&self, delivered: Delivered) -> Result<SecretSlice<u8>, OutboxError> {
+        match (delivered, &self.framer) {
+            (Delivered::Document(document), _) => serde_json::to_vec(&document)
+                .map(SecretSlice::from)
+                .map_err(|e| OutboxError(Box::new(e))),
+            (Delivered::Message(at, xml), Some(framer)) => Ok(framer.frame(at, &xml)),
+            (Delivered::Message(..), None) => Err(OutboxError(
+                "a syslog message reached an outbox with no frame writer".into(),
+            )),
         }
     }
 
@@ -104,7 +137,7 @@ fn outbox_error(error: AuditError) -> OutboxError {
 #[async_trait::async_trait]
 impl Outbox for StoreOutbox {
     async fn oldest(&self) -> Result<Option<Stored>, OutboxError> {
-        if !self.backlog.load(Ordering::Relaxed) {
+        if self.sink == Sink::FhirFeed && !self.backlog.load(Ordering::Relaxed) {
             let moved = self
                 .store
                 .enqueue_fhir_feed_backlog()
@@ -118,10 +151,10 @@ impl Outbox for StoreOutbox {
             }
             self.backlog.store(true, Ordering::Relaxed);
         }
-        let (sequence, document) = loop {
+        let (sequence, delivered) = loop {
             let (oldest, waiting) = self
                 .store
-                .oldest_fhir_feed(&self.refused())
+                .oldest_owed(self.sink, &self.refused())
                 .await
                 .map_err(outbox_error)?;
             self.waiting
@@ -130,12 +163,13 @@ impl Outbox for StoreOutbox {
                 return Ok(None);
             };
             match rendered {
-                Ok(document) => break (sequence, document),
+                Ok(delivered) => break (sequence, delivered),
                 Err(e) => {
                     tracing::error!(
+                        sink = ?self.sink,
                         owed = sequence,
                         error = %crate::error::ErrorChain::new(&e),
-                        "ATNA audit FHIR feed: the record cannot be rendered; it is held aside \
+                        "ATNA audit delivery: the record cannot be rendered; it is held aside \
                          until the next start"
                     );
                     self.refused
@@ -146,11 +180,8 @@ impl Outbox for StoreOutbox {
             }
         };
         let sequence = u64::try_from(sequence).map_err(|e| OutboxError(Box::new(e)))?;
-        let message = serde_json::to_vec(&document).map_err(|e| OutboxError(Box::new(e)))?;
-        Ok(Some(Stored {
-            sequence,
-            message: SecretSlice::from(message),
-        }))
+        let message = self.message(delivered)?;
+        Ok(Some(Stored { sequence, message }))
     }
 
     async fn stored(&self) {
@@ -163,7 +194,7 @@ impl Outbox for StoreOutbox {
     async fn remove(&self, sequence: u64) -> Result<(), OutboxError> {
         let sequence = i64::try_from(sequence).map_err(|e| OutboxError(Box::new(e)))?;
         self.store
-            .mark_fhir_feed_delivered(sequence)
+            .mark_delivered(self.sink, sequence)
             .await
             .map_err(outbox_error)
     }
@@ -171,8 +202,9 @@ impl Outbox for StoreOutbox {
     async fn quarantine(&self, sequence: u64) -> Result<(), OutboxError> {
         let sequence = i64::try_from(sequence).map_err(|e| OutboxError(Box::new(e)))?;
         tracing::error!(
+            sink = ?self.sink,
             owed = sequence,
-            "ATNA audit FHIR feed: the repository refused the record; it is held aside until \
+            "ATNA audit delivery: the repository refused the record; it is held aside until \
              the next start"
         );
         self.refused

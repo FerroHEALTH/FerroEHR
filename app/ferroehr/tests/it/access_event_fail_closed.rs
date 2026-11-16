@@ -1,19 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! `[audit] fail_mode = "closed"` reaches the DOMAIN-level access records
-//! (#3235): the subject-to-EHR lookup and the EHR-Extract export each emit
-//! their own record, and each must withhold its result when the sender rejects
-//! it.
+//! An access record that cannot be written refuses the access it reports
+//! (#3235, #5747): the subject-to-EHR lookup, the EHR-Extract export and the
+//! access-log erasure each write their own record, and each withholds its
+//! result when the record cannot be written.
 //!
-//! The rejecting sender is a real one whose store is unreachable: the drain's
-//! first write fails, the store is marked unhealthy, and from then on a
-//! fail-closed sender answers `Rejected` (`fail_closed_rejects_while_store_unhealthy`
-//! in the sender's own tests pins that transition). No test hook in production
-//! code; the posture is the one an operator meets when the audit database is
-//! down.
+//! The refusing sender is a real one whose store is unreachable, so every
+//! write of a record fails. No test hook in production code; the posture is
+//! the one an operator meets when the audit database is down.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
@@ -22,10 +19,8 @@ use uuid::Uuid;
 use ferroehr::access_log::store::AccessLogStore;
 use ferroehr::error::ServiceError;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig};
-use ferroehr::system_log::event::{
-    AuditEvent, EmitOutcome, EventActionCode, EventOutcome, ObjectClass,
-};
+use ferroehr::system_log::config::{AuditConfig, StoreConfig};
+use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr::system_log::store::AuditStore;
 use openehr_base::containers::NonEmptyVec;
@@ -35,9 +30,8 @@ use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 
 use crate::admin_fixture::seed_full_ehr;
 
-/// A fail-closed sender whose store cannot be reached, driven to the rejecting
-/// state: one probe record is enqueued, the drain fails to write it, and the
-/// sender rejects everything after.
+/// A sender whose store cannot be reached, so no record it is given is
+/// written.
 async fn rejecting_sender() -> (ferroehr::system_log::sender::AuditSender, AuditHandle) {
     let unreachable: PgPool = PgPoolOptions::new()
         .acquire_timeout(Duration::from_millis(200))
@@ -45,39 +39,25 @@ async fn rejecting_sender() -> (ferroehr::system_log::sender::AuditSender, Audit
         .expect("a lazy pool builds without connecting");
     let config = AuditConfig {
         enabled: true,
-        fail_mode: FailMode::Closed,
         store: StoreConfig {
-            enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..AuditConfig::default()
     };
-    let (sender, handle): (_, AuditHandle) = start(config, None, Some(unreachable))
+    let (sender, handle): (_, AuditHandle) = start(config, None, unreachable)
         .await
         .expect("the audit sender");
-
-    let probe = || {
-        AuditEvent::new(
-            EventActionCode::Execute,
-            ObjectClass::Ehr,
-            EventOutcome::Success,
-        )
-    };
-    assert_eq!(
-        sender.emit(probe()),
-        EmitOutcome::Enqueued,
-        "the store is healthy until a write fails"
+    let probe = AuditEvent::new(
+        EventActionCode::Execute,
+        ObjectClass::Ehr,
+        EventOutcome::Success,
     );
-    let deadline = Instant::now() + Duration::from_secs(30);
-    while sender.emit(probe()) != EmitOutcome::Rejected {
-        assert!(
-            Instant::now() < deadline,
-            "the drain never marked the store unhealthy"
-        );
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    }
+    sender
+        .record(vec![probe])
+        .await
+        .expect_err("a record the store cannot take is an error, never a drop");
     (sender, handle)
 }
 
@@ -138,8 +118,8 @@ fn grounds() -> NonEmptyVec<DvCodedText> {
     NonEmptyVec::of(ground)
 }
 
-/// An access-log erasure whose record a fail-closed sender would refuse is
-/// refused before it erases: the entry stays an entry.
+/// An access-log erasure whose record cannot be written is refused, and the
+/// entry stays an entry.
 #[tokio::test]
 async fn an_erasure_whose_record_is_refused_leaves_the_entry() {
     let db = testkit::db().await.expect("testkit database");
@@ -174,16 +154,14 @@ async fn an_erasure_writes_its_tombstone_and_its_entry_together() {
     let uid = stored_entry(&pool).await;
     let config = AuditConfig {
         enabled: true,
-        fail_mode: FailMode::Closed,
         store: StoreConfig {
-            enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..AuditConfig::default()
     };
-    let (sender, _handle): (_, AuditHandle) = start(config, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(config, None, pool.clone())
         .await
         .expect("the audit sender");
     let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool))

@@ -178,7 +178,8 @@ impl FerroEhrService {
                 EventActionCode::Read,
                 format!("{OBJECT}:{message_id}"),
                 Some(LIST),
-            )?;
+            )
+            .await?;
             listed.push(RefusedMessage {
                 message_id,
                 reason: reason.unwrap_or_default(),
@@ -280,7 +281,8 @@ impl FerroEhrService {
             EventActionCode::Update,
             format!("{OBJECT}:{message_id}"),
             Some(RETRY),
-        )?;
+        )
+        .await?;
         tx.commit().await.map_err(StorageError::from)?;
         tracing::info!(message_id, operator, "a refused ITI-93 message is retried");
         Ok(Retried {
@@ -363,7 +365,8 @@ impl FerroEhrService {
             EventActionCode::Update,
             format!("{OBJECT}:{message_id}"),
             Some(SETTLE),
-        )?;
+        )
+        .await?;
         tx.commit().await.map_err(StorageError::from)?;
         tracing::info!(
             message_id,

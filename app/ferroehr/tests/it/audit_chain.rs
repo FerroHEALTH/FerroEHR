@@ -295,9 +295,10 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
         );
     }
 
-    // Recording an event is exactly what it may do.
+    // Recording an event into the intake is exactly what it may do; the
+    // chainer moves it into the chain.
     sqlx::query(
-        "INSERT INTO audit.audit_event \
+        "INSERT INTO audit.audit_event_intake \
          (recorded_at, action, outcome, event_code, resource_class, render_policy, \
           search_tokens) \
          VALUES (now(), 'R', 0, '110110', 'composition', \
@@ -306,6 +307,11 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
     .execute(&mut conn)
     .await
     .expect("the application role must be able to record an audit event");
+    let moved: i64 = sqlx::query_scalar("SELECT audit.audit_event_chain_move(16, false, false)")
+        .fetch_one(&mut conn)
+        .await
+        .expect("the application role must be able to chain the intake");
+    assert_eq!(moved, 1, "the chainer's move links the record");
     sqlx::query(
         "INSERT INTO audit.audit_search_token (parameter, system, code, digest) \
          VALUES ('type', NULL, 'rest', audit.search_token_digest('type', NULL, 'rest'))",
@@ -314,8 +320,16 @@ async fn the_application_role_cannot_run_ddl_or_rewrite_the_audit_trail() {
     .await
     .expect("the application role must be able to store a search token");
 
-    // Rewriting or removing one is not.
+    // Writing the chain past the intake, or rewriting or removing a record,
+    // is not.
     for statement in [
+        "INSERT INTO audit.audit_event \
+         (recorded_at, action, outcome, event_code, resource_class, render_policy, \
+          search_tokens) \
+         VALUES (now(), 'R', 0, '110110', 'composition', \
+                 audit.register_render_policy('{}'::jsonb), '{}')",
+        "UPDATE audit.audit_event_intake SET principal = 'nobody'",
+        "DELETE FROM audit.audit_event_intake",
         "UPDATE audit.audit_event SET principal = 'nobody'",
         "UPDATE audit.audit_event SET row_hash = '\\x00'::bytea",
         "DELETE FROM audit.audit_event",
@@ -544,7 +558,7 @@ async fn the_audit_subsystem_schedules_the_chain_check() {
         },
         ..AuditConfig::default()
     };
-    let (sender, handle) = sender::start(config, None, Some(pool.clone()))
+    let (sender, handle) = sender::start(config, None, pool.clone())
         .await
         .expect("start the audit subsystem");
     let check = handle
@@ -573,7 +587,7 @@ async fn the_audit_subsystem_schedules_the_chain_check() {
         },
         ..AuditConfig::default()
     };
-    let (off_sender, off_handle) = sender::start(off, None, Some(pool.clone()))
+    let (off_sender, off_handle) = sender::start(off, None, pool.clone())
         .await
         .expect("start the audit subsystem");
     assert!(

@@ -82,8 +82,8 @@ impl FerroEhrService {
     /// # Errors
     /// [`Failure`] on: an `ehr_id` scope (a party is in no EHR), a paging
     /// collision, a half that does not plan, a half or a join above the result
-    /// ceiling, a database failure, or an access record refused under
-    /// `fail_mode = "closed"`.
+    /// ceiling, a database failure, or an access record
+    /// that cannot be written.
     pub(super) async fn execute_joined(
         &self,
         job: &JoinRequest<'_>,
@@ -160,7 +160,7 @@ impl FerroEhrService {
         refuse_above(ceiling, joined.len(), "joined")?;
         sort_rows(&mut joined, job.plan, &party.rows, &clinical.rows);
         let page = cut_page(joined, page);
-        self.assemble(job, halves, &page, (&party, &clinical))
+        self.assemble(job, halves, &page, (&party, &clinical)).await
     }
 
     /// Runs the clinical half over the EHRs the map names, under the caller's
@@ -237,7 +237,7 @@ impl FerroEhrService {
 
     /// Builds the served page's rows from the two halves, records the party
     /// read, and assembles the `RESULT_SET` and the access facts.
-    fn assemble(
+    async fn assemble(
         &self,
         job: &JoinRequest<'_>,
         halves: &Halves,
@@ -276,6 +276,7 @@ impl FerroEhrService {
             );
         }
         self.record_party_query(u64::try_from(served_parties.len()).unwrap_or(u64::MAX))
+            .await
             .map_err(Failure::analysis)?;
 
         let result = QueryResult {
@@ -332,6 +333,7 @@ impl FerroEhrService {
             u64::try_from(pairs.len()).unwrap_or(u64::MAX),
             true,
         )
+        .await
         .map_err(Failure::analysis)?;
         Ok(pairs)
     }
@@ -403,9 +405,9 @@ impl FerroEhrService {
     /// naming how many parties the served rows came from.
     ///
     /// # Errors
-    /// [`ServiceError::Unrecorded`] when the record is refused under `fail_mode = "closed"`;
+    /// [`ServiceError::Unrecorded`] when the record cannot be written;
     /// the caller withholds its result.
-    fn record_party_query(&self, parties: u64) -> Result<(), ServiceError> {
+    async fn record_party_query(&self, parties: u64) -> Result<(), ServiceError> {
         if !self.audit_enabled() {
             return Ok(());
         }
@@ -419,7 +421,7 @@ impl FerroEhrService {
         event.result_count = Some(parties);
         crate::service::linkage::stamp_requester(&mut event);
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event)
+        self.record_access(event).await
     }
 }
 

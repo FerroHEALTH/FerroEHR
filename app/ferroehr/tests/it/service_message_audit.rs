@@ -30,7 +30,6 @@ fn store_only_config() -> AuditConfig {
     AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
@@ -78,11 +77,11 @@ async fn export_and_import_each_record_one_directed_extract_event() {
     let (_dst_db, dst_pool, target) = repository().await;
 
     let (out_sender, _out_handle): (_, AuditHandle) =
-        start(store_only_config(), None, Some(src_pool.clone()))
+        start(store_only_config(), None, src_pool.clone())
             .await
             .expect("source audit sender");
     let (in_sender, _in_handle): (_, AuditHandle) =
-        start(store_only_config(), None, Some(dst_pool.clone()))
+        start(store_only_config(), None, dst_pool.clone())
             .await
             .expect("target audit sender");
     let source: FerroEhrService = source.with_audit(out_sender);
@@ -133,11 +132,11 @@ async fn the_extract_records_carry_the_categories_of_the_data() {
     let (_src_db, src_pool, source) = repository().await;
     let (_dst_db, dst_pool, target) = repository().await;
     let (out_sender, _out_handle): (_, AuditHandle) =
-        start(store_only_config(), None, Some(src_pool.clone()))
+        start(store_only_config(), None, src_pool.clone())
             .await
             .expect("source audit sender");
     let (in_sender, _in_handle): (_, AuditHandle) =
-        start(store_only_config(), None, Some(dst_pool.clone()))
+        start(store_only_config(), None, dst_pool.clone())
             .await
             .expect("target audit sender");
     let source: FerroEhrService = source.with_audit(out_sender);

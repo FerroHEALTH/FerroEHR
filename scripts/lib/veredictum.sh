@@ -61,10 +61,9 @@ veredictum_engine() {
   fi
 }
 
-# Each resolver below takes an optional release (default: the pin).
 veredictum_cache_root() {
   local base="${VEREDICTUM_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/ferroehr-veredictum}"
-  printf '%s/%s' "$base" "${1:-$VEREDICTUM_VERSION}"
+  printf '%s/%s' "$base" "$VEREDICTUM_VERSION"
 }
 
 # Echoes the path to the pinned binary, installing it on a cache miss.
@@ -77,8 +76,8 @@ veredictum_bin() {
     printf '%s' "$VEREDICTUM_BIN"
     return 0
   fi
-  local version="${1:-$VEREDICTUM_VERSION}" root bin
-  root="$(veredictum_cache_root "$version")/install"
+  local version="$VEREDICTUM_VERSION" root bin
+  root="$(veredictum_cache_root)/install"
   bin="$root/bin/veredictum"
   local reported=""
   [[ ! -x "$bin" ]] || reported="$("$bin" --version 2>/dev/null || true)"
@@ -103,9 +102,9 @@ veredictum_root() {
     printf '%s' "$VEREDICTUM_ROOT"
     return 0
   fi
-  local version="${1:-$VEREDICTUM_VERSION}" root tag stamp
-  root="$(veredictum_cache_root "$version")/repo"
-  tag="v$version"
+  local root tag stamp
+  root="$(veredictum_cache_root)/repo"
+  tag="v$VEREDICTUM_VERSION"
   stamp="$root/.ferroehr-pin"
   if [[ "$(cat "$stamp" 2>/dev/null || true)" != "$tag" ]]; then
     echo "==> Fetching Veredictum at $tag (shallow clone, cached in $root)" >&2

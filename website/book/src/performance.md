@@ -8,8 +8,20 @@ and enters no conformance verdict. No openEHR specification governs
 performance, so the measurement method is Veredictum's own design, described
 in its book under
 [Measured performance](https://veredictum.eu/docs/running.html#measured-performance).
-Nothing on this page is hand-typed: every number comes from the committed
+Nothing on this page is hand-typed: every number comes from a committed
 record or from charts drawn from it.
+
+No Veredictum `perf` record is published yet: one is measured on the idle
+reference host, and the page carries its figures once it is committed. Until
+then, two measurements describe FerroEHR's performance:
+
+- **The capacity test** steps the request rate up until FerroEHR degrades and
+  names what saturated first. [Capacity](capacity.md) gives the method and
+  `scripts/perf/capacity.sh`; each run's result, with the hardware it ran on,
+  is on its tracker issue, the first being #5722.
+- **The performance gate** judges each change against its base and each
+  release against the previous one on one host
+  ([The access path at scale](#the-access-path-at-scale)).
 
 <!-- toc -->
 
@@ -40,7 +52,7 @@ offered rate, and the load generator kept up. One `429` voids the record.
 
 ## How to read the record
 
-The record is a `perf-result` document,
+The record is a `perf-result` document, committed at
 `docs/conformance/ferroehr/perf-result.json`:
 
 - **The knee** is the highest offered rate whose plateau qualifies with every
@@ -262,23 +274,3 @@ log's storage and the reload load of several instances
 specification governs these budgets: they are FerroEHR's own.
 
 {{#include ../generated/access-path-bench.md}}
-
-## The published figures
-
-The figures below are the last ones measured with the earlier generation of
-the instrument, the Veredictum 0.1 line: a proof-of-concept class run, the
-step-load stress ladder and the AQL probe, against FerroEHR 4.3.0. Veredictum
-0.3.1 replaced those three instruments with `perf`, so they cannot be re-run. A `perf-result` record measured on the reference host replaces them,
-and these charts and their records go with it.
-
-![The performance class ladder](perf-assets/perf-class-ladder.svg)
-
-![Proof-of-concept class latency, re-derived from the committed histograms](perf-assets/perf-latency-class-POC.svg)
-
-![Container CPU, memory and I/O across the measured window](perf-assets/perf-resources-class-POC.svg)
-
-![Database volume growth across the run's four anchors](perf-assets/perf-disk-growth.svg)
-
-![The latency-throughput curve from the committed stress run](perf-assets/perf-stress-curve.svg)
-
-{{#include ../generated/perf-summary.md}}

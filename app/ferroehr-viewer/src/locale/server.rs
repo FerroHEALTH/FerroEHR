@@ -72,7 +72,6 @@ crate::locale::messages! {
         /// `no subject pseudonym namespace is declared, so an EHR subject may carry a real identifier`
         NoSubjectPseudonymNamespaceDeclaredSo = "no-subject-pseudonym-namespace-declared-so",
         /// `an access record the audit queue cannot take is dropped and the request still succeeds`
-        AccessRecordAuditQueueCannotTake = "access-record-audit-queue-cannot-take",
         /// `an EHR without its own access settings admits every caller the role checks let through`
         EhrWithoutOwnAccessSettingsAdmits = "ehr-without-own-access-settings-admits",
         /// `role checks are off, so every signed-in caller may use every enabled surface, the...`
