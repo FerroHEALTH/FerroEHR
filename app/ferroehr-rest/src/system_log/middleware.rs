@@ -275,11 +275,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     };
     let recorder = WriteRecorder::default();
     recorder.prime(crate::system_log::written::builder(&state, &facts));
-    let resp = crate::system_log::written::run(
-        recorder.clone(),
-        run_published(req, next, &facts.access, facts.client_ip.clone()),
-    )
-    .await;
+    let resp = run_recorded(recorder.clone(), req, next, &facts).await;
     let status = resp.status();
 
     let op = resp.extensions().get::<AuditOpId>().copied();
@@ -407,6 +403,27 @@ pub(super) fn operation_record(
     categorise(&mut event, state, op, object);
     fill_access(&mut event, &facts.access, state);
     event
+}
+
+/// Run the rest of the stack under the request's write `recorder`
+/// ([`run_published`]).
+async fn run_recorded(
+    recorder: WriteRecorder,
+    req: Request,
+    next: Next,
+    facts: &RequestFacts,
+) -> Response {
+    // NOTE: boxed, so the stack below the audit layer carries a pointer, not the request.
+    Box::pin(crate::system_log::written::run(
+        recorder,
+        Box::pin(run_published(
+            req,
+            next,
+            &facts.access,
+            facts.client_ip.clone(),
+        )),
+    ))
+    .await
 }
 
 /// Run the rest of the stack with the request's origin and declared purpose
