@@ -241,6 +241,7 @@ impl Shapes {
         let (one, two) = (Sentinels::draw(1), Sentinels::draw(2));
         let (params_one, ctx_one) = one.mask(&self.live_params, params, ctx);
         let (params_two, ctx_two) = two.mask(&self.live_params, params, ctx);
+        // NOTE: our own design (#5783), a stand-in the build refuses leaves the key unshaped.
         let first = super::build(ir, &params_one, &ctx_one).ok()?;
         let second = super::build(ir, &params_two, &ctx_two).ok()?;
         if first.sql != second.sql || first.sql != prepared.sql {

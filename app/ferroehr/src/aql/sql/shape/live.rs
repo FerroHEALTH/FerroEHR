@@ -114,6 +114,7 @@ impl Live {
             Self::ParamText(at) => {
                 text(live_params, at, params).map(|text| Value::from(text.to_owned()))
             }
+            // NOTE: our own design (#5783), a value that is no id carries no canonical form.
             Self::ParamId(at) => text(live_params, at, params)
                 .and_then(|text| text.parse::<Uuid>().ok())
                 .map(|id| Value::from(id.to_string())),
