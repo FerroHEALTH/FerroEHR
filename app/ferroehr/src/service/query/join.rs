@@ -282,8 +282,10 @@ impl FerroEhrService {
             .collect();
         let served_rows = u64::try_from(result.rows.len()).unwrap_or(u64::MAX);
         let (accessed, _) = accessed_content(&result);
-        let mut outcome =
-            QueryOutcome::plain(result_set_json(job.aql, &executed, job.name, result));
+        let mut outcome = QueryOutcome::plain(
+            result_set_json(job.aql, &executed, job.name, result)
+                .map_err(|error| Failure::analysis(error.into()))?,
+        );
         outcome.served_ehrs = served_ehrs;
         outcome.served_rows = served_rows;
         outcome.accessed = Some(accessed);

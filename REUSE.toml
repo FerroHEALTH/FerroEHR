@@ -162,6 +162,16 @@ precedence = "override"
 SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
 SPDX-License-Identifier = "CC-BY-SA-3.0"
 
+# `Demonstration.v1`, taken verbatim from Cadasto/cdr-benchmark (MIT). It
+# inlines the CKM archetypes `openEHR-EHR-COMPOSITION.encounter.v1` and
+# `openEHR-EHR-OBSERVATION.demo.v1` (CC-BY-SA 3.0, openEHR Foundation).
+# PROVENANCE.md records the upstream commit and the checksum.
+[[annotations]]
+path = ["crates/openehr-sdt/tests/fixtures/demonstration/**"]
+precedence = "override"
+SPDX-FileCopyrightText = ["openEHR Foundation", "Cadasto B.V."]
+SPDX-License-Identifier = "MIT AND CC-BY-SA-3.0"
+
 # The default demographic definitions the server stores at boot (the
 # professional PERSON and ROLE, the care-team GROUP, the membership and
 # representation PARTY_RELATIONSHIPs, the patient PERSON and the provider

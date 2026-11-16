@@ -34,6 +34,7 @@ mod flat_context_and_flags;
 mod format_parity;
 mod master05_tables;
 mod model_walkgen;
+mod null_flavour;
 mod party_build;
 mod prohibited_context;
 mod raw_attributes;

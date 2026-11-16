@@ -28,8 +28,8 @@ use crate::aql::ir::{Source, VersionScope};
 use crate::db::iden::{VersionRow, VoHead};
 
 use super::Builder;
+use super::coerce::coerce_rhs;
 use super::expr::{binoper, col, version_field_expr};
-use super::value::coerce_rhs;
 
 /// Where [`bind_head`] puts the head row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

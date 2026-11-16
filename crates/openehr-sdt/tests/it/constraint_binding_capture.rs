@@ -13,7 +13,7 @@
 //! structured) value set from that terminology". The query "is defined within a
 //! 'terminology query server'", so this crate cannot resolve it — it captures
 //! the binding
-//! ([`WebTemplateConstraintBinding`](openehr_sdt::flat::webtemplate::model::WebTemplateConstraintBinding))
+//! ([`WebTemplateConstraintBinding`](openehr_sdt::flat::webtemplate::constraint::WebTemplateConstraintBinding))
 //! and surfaces the questions
 //! ([`collect_constraint_binding_checks`](openehr_sdt::flat::validation::collect_constraint_binding_checks))
 //! for a caller that owns one.

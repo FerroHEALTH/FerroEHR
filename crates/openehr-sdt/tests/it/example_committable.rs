@@ -27,9 +27,8 @@ use openehr_its::opt14;
 use openehr_rm::v1_2::paths::{PathSegment, RmPath};
 use openehr_sdt::flat::example::{DetailLevel, example_composition};
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
-use openehr_sdt::flat::webtemplate::model::{
-    WebTemplate, WebTemplateExistence, WebTemplateNode, WebTemplateStructuralStub,
-};
+use openehr_sdt::flat::webtemplate::constraint::{WebTemplateExistence, WebTemplateStructuralStub};
+use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
 use openehr_sdt::rm_instance::validate_composition;
 use serde_json::Value;
 
@@ -401,18 +400,24 @@ fn element_with_a_value_carries_no_null_flavour() {
 #[test]
 fn value_less_mandatory_element_carries_its_null_flavour() {
     let mut wt = null_flavour_template();
-    let element_path = find_node(&wt.tree, &|n| {
-        n.rm_type == "ELEMENT"
-            && n.children
-                .iter()
-                .any(|c| c.aql_path.ends_with("/null_flavour"))
-    })
-    .unwrap_or_else(|| panic!("an ELEMENT with a null_flavour child"))
-    .aql_path
-    .clone();
+    let node_path = find_node(&wt.tree, &|n| !n.null_constraints.is_empty())
+        .unwrap_or_else(|| panic!("a node carrying an ELEMENT's null_flavour constraint"))
+        .aql_path
+        .clone();
     let element =
-        node_at_mut(&mut wt.tree, &element_path).unwrap_or_else(|| panic!("the ELEMENT node"));
-    element.children.retain(|c| !c.aql_path.ends_with("/value"));
+        node_at_mut(&mut wt.tree, &node_path).unwrap_or_else(|| panic!("the ELEMENT node"));
+    // The ELEMENT with its value constraints removed: a promoted value goes
+    // back to the ELEMENT it presents, a choice ELEMENT loses its alternatives.
+    if element.rm_type != "ELEMENT" {
+        element.rm_type = "ELEMENT".to_owned();
+        element.aql_path = node_path
+            .strip_suffix("/value")
+            .unwrap_or_else(|| panic!("a promoted value path: {node_path}"))
+            .to_owned();
+        element.inputs.clear();
+        element.alternatives.clear();
+    }
+    element.children.clear();
     element.min = Some(1);
     let node_id = element
         .node_id
