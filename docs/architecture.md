@@ -414,8 +414,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   no fail mode. The intake is append-only: the runtime role may insert and
   read, the tables refuse every update, delete and truncate, and only the
   two `SECURITY DEFINER` moves remove a row, each by chaining it. The
-  chainer (`system_log::sender::chainer`), woken by each request and polling
-  every 50 ms, runs on every replica: a round takes the access log's head
+  chainer (`system_log::sender::chainer`) runs on every replica on the audit
+  runtime: a request's write wakes it and it runs one round 200 ms later for
+  what that window wrote, touching only the chains written since the last
+  round, and it polls both chains every 2 seconds for the rows a stopped
+  replica left. a round takes the access log's head
   with `audit.access_log_chain_take()` (`FOR UPDATE SKIP LOCKED`, so one
   replica chains at a time and the others skip), reads up to 512 intake
   digests, computes the links in Rust, and `audit.access_log_chain_move()`
