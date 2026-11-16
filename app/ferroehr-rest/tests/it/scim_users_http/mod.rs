@@ -365,7 +365,7 @@ async fn app_of(
         .with_grant_ceiling(GrantCeiling::new(Operation::ALL));
     if audited {
         let (sender, _handle) =
-            ferroehr::system_log::sender::start(common::local_audit(), None, Some(pool.clone()))
+            ferroehr::system_log::sender::start(common::local_audit(), None, pool.clone())
                 .await
                 .expect("the audit sender");
         service = service

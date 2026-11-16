@@ -37,7 +37,6 @@ parameters-must-json-object-4 = parameters must be a JSON object
 stored-query-result-json = stored-query result JSON
 conformance-manifest-json = conformance manifest JSON
 no-subject-pseudonym-namespace-declared-so = no subject pseudonym namespace is declared, so an EHR subject may carry a real identifier
-access-record-audit-queue-cannot-take = an access record the audit queue cannot take is dropped and the request still succeeds
 ehr-without-own-access-settings-admits = an EHR without its own access settings admits every caller the role checks let through
 role-checks-off-so-every-signed = role checks are off, so every signed-in caller may use every enabled surface, the admin and management endpoints included
 not-version-store-stored-query-version = `{ $version }` is not a version to store at: a stored-query version is `major.minor.patch` (for example `1.0.0`). A shorter pattern like `1` or `1.0` selects the latest matching version when READING a query; leave the field empty to let the server assign the version.

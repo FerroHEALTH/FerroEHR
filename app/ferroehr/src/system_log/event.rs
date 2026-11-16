@@ -564,8 +564,8 @@ pub enum EntryScope {
     /// operation that made it; the record names the version.
     LogMeaning,
     /// No entry: the caller wrote the record's entry itself, in the
-    /// transaction of the act it records, and emits the record to the
-    /// forwarding sinks as the one record of the act.
+    /// transaction of the act it records, so the request writes no second
+    /// record of the act.
     Written,
 }
 
@@ -594,18 +594,6 @@ impl QueryNaming {
             text_digest,
         }
     }
-}
-
-/// The result of enqueuing an event onto the system log.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EmitOutcome {
-    /// Successfully enqueued for the drain task.
-    Enqueued,
-    /// Dropped (queue full / drain gone) under `fail_mode=open`.
-    Dropped,
-    /// Rejected (queue full / drain gone) under `fail_mode=closed` — the REST
-    /// layer must return `503`.
-    Rejected,
 }
 
 #[cfg(test)]

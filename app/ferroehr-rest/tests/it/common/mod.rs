@@ -655,7 +655,7 @@ pub(crate) async fn audited_app(
             })
         })
     });
-    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, Some(resolver), pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(
@@ -726,7 +726,6 @@ pub(crate) fn local_audit() -> ferroehr::system_log::config::AuditConfig {
     ferroehr::system_log::config::AuditConfig {
         enabled: true,
         store: ferroehr::system_log::config::StoreConfig {
-            enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),

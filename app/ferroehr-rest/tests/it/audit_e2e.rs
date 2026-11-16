@@ -34,8 +34,8 @@ use axum::body::Body;
 use axum::extract::ConnectInfo;
 use ferroehr::config::rest::ApiConfig;
 use ferroehr::service::FerroEhrService;
-use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
-use ferroehr::system_log::sender::{AuditSender, SubjectLookup, SubjectResolver, start};
+use ferroehr::system_log::config::{AuditConfig, StoreConfig, SyslogConfig};
+use ferroehr::system_log::sender::{AuditSender, start};
 use ferroehr_rest::config::AppConfig;
 use ferrohealth_server::client_address::ForwardedHeader;
 use http::{Request, StatusCode};
@@ -127,15 +127,15 @@ fn auth_off_config() -> AppConfig {
 
 // ── ATNA capture ───────────────────────────────────────────────────────────────
 
-/// Bind a TLS syslog listener and an [`AuditSender`] (fail-open, login suppressed by
-/// default) shipping DICOM records to it.
-async fn audit_capture(suppress_login: bool) -> (SyslogTlsListener, AuditSender) {
+/// Bind a TLS syslog listener and an [`AuditSender`] (login suppressed by
+/// default) over its own audit store, shipping DICOM records to the listener.
+async fn audit_capture(suppress_login: bool) -> (testkit::TestDb, SyslogTlsListener, AuditSender) {
+    let db = testkit::db().await.expect("the audit store");
     let socket = SyslogTlsListener::bind(0).await.expect("syslog listener");
     let port = socket.port;
     let cfg = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
@@ -149,50 +149,30 @@ async fn audit_capture(suppress_login: bool) -> (SyslogTlsListener, AuditSender)
             ..SyslogConfig::default()
         }),
         suppress_login_events: suppress_login,
-        fail_mode: FailMode::Open,
-        queue_capacity: 64,
         ..AuditConfig::default()
     };
-    let (sender, _handle) = start(cfg, None, None).await.expect("audit start");
-    (socket, sender)
+    let (sender, _handle) = start(cfg, None, db.pool()).await.expect("audit start");
+    (db, socket, sender)
 }
 
-/// A fail-closed sender whose drain is deliberately stalled (a blocking subject
-/// resolver + a 1-slot queue), so once the queue fills every further emit is
-/// `Rejected` → the middleware returns `503`.
-async fn audit_capture_fail_closed() -> AuditSender {
-    // A port nothing listens on: the drain is stalled (see below) so it never
-    // sends, and the sink connects only on its first send.
-    let port = 1;
+/// A sender whose store cannot be reached, so no record it is given is
+/// written and the middleware answers `503`.
+async fn audit_capture_unwritable() -> AuditSender {
+    let unreachable = sqlx::postgres::PgPoolOptions::new()
+        .acquire_timeout(Duration::from_millis(200))
+        .connect_lazy("postgres://nobody:nothing@127.0.0.1:9/nowhere")
+        .expect("a lazy pool builds without connecting");
     let cfg = AuditConfig {
         enabled: true,
         store: StoreConfig {
-            enabled: false,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
-        syslog: Some(SyslogConfig {
-            url: ferrohealth_secret::secret_url::SecretUrl::new(format!("tls://127.0.0.1:{port}")),
-            ..SyslogConfig::default()
-        }),
         suppress_login_events: true,
-        fail_mode: FailMode::Closed,
-        resolve_subject: true,
-        queue_capacity: 1,
         ..AuditConfig::default()
     };
-    // The resolver blocks the drain forever after the first record it dequeues,
-    // so the 1-slot queue saturates and stays saturated.
-    let resolver: SubjectResolver = Arc::new(|_ehr_id: String| {
-        Box::pin(async move {
-            // Never resolves → the drain parks here forever, so the 1-slot queue
-            // saturates and every further emit is rejected.
-            std::future::pending::<()>().await;
-            SubjectLookup::NoSubject
-        })
-    });
-    let (sender, _handle) = start(cfg, Some(resolver), None).await.expect("audit start");
+    let (sender, _handle) = start(cfg, None, unreachable).await.expect("audit start");
     sender
 }
 
@@ -251,8 +231,10 @@ const SENTINEL: Expected = Expected {
 /// Sends one more audited request after the one under test, so a test that
 /// asserts an absence can wait for this request's record instead of a silence.
 ///
-/// One drain task ships the queue in order over one connection, so every
-/// record the earlier request emitted arrives before [`SENTINEL`].
+/// The sentinel's record is a record of the system chain, which the chainer
+/// moves after the access log in each round and in intake order, and the
+/// syslog route ships its outbox in order over one connection, so every
+/// record the earlier request wrote arrives before [`SENTINEL`].
 async fn send_sentinel(app: &Router) {
     let _response = app
         .clone()
@@ -350,7 +332,7 @@ fn from_peer(peer: &str, method: &str, path: &str, auth: bool) -> Request<Body> 
 
 #[tokio::test]
 async fn ehr_create_emits_create_record() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     let resp = app.oneshot(req("POST", "/ehr", true)).await.expect("resp");
     assert_eq!(resp.status(), StatusCode::CREATED);
@@ -376,7 +358,7 @@ async fn ehr_create_emits_create_record() {
 /// whatever `X-Forwarded-For` it sends.
 #[tokio::test]
 async fn an_untrusted_peer_is_recorded_as_itself() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     let resp = app
         .oneshot(from_peer("198.51.100.7", "POST", "/ehr", true))
@@ -393,7 +375,7 @@ async fn an_untrusted_peer_is_recorded_as_itself() {
 
 #[tokio::test]
 async fn composition_get_emits_read_record() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
     let resp = app
@@ -416,7 +398,7 @@ async fn composition_get_emits_read_record() {
 
 #[tokio::test]
 async fn composition_update_emits_update_record() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
     let request = common::req("PUT", format!("{BASE}/ehr/{EHR}/composition/{vo}"))
@@ -442,7 +424,7 @@ async fn composition_update_emits_update_record() {
 
 #[tokio::test]
 async fn composition_delete_emits_delete_record() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let resp = app
         .oneshot(req(
@@ -470,7 +452,7 @@ async fn composition_tags_update_emits_update_record() {
     // spec-correct. Emitting an IHE ATNA record instead is OUR OWN DESIGN (no
     // openEHR spec governs this): a tag carries clinical meaning and a mutation
     // with no trail would be a medico-legal blind spot.
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
     let request = common::req("PUT", format!("{BASE}/ehr/{EHR}/composition/{vo}/tags"))
@@ -491,7 +473,7 @@ async fn composition_tags_update_emits_update_record() {
 
 #[tokio::test]
 async fn composition_tags_delete_emits_delete_record() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app, uid) = audit_app_with_composition(sender).await;
     let vo = uid.split("::").next().unwrap().to_owned();
     // Seed one tag through the audited app, then drain that record.
@@ -526,7 +508,7 @@ async fn composition_tags_delete_emits_delete_record() {
 
 #[tokio::test]
 async fn aql_execute_emits_execute_record() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     // A well-formed ad-hoc query reaches the (implemented) QueryService and
     // succeeds on an empty DB → outcome success (was a stub 501/serious-failure).
@@ -555,7 +537,7 @@ async fn aql_execute_emits_execute_record() {
 
 #[tokio::test]
 async fn unauthenticated_request_emits_401_record() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     let resp = app.oneshot(req("POST", "/ehr", false)).await.expect("resp");
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
@@ -579,7 +561,7 @@ async fn unauthenticated_request_emits_401_record() {
 
 #[tokio::test]
 async fn template_get_emits_template_record() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     // The template is not uploaded → 404, but the op is still audited as the
     // Template class (R); the template id is derived from the path.
@@ -606,7 +588,7 @@ async fn template_get_emits_template_record() {
 
 #[tokio::test]
 async fn demographic_get_emits_demographic_record() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     // Demographic is implemented; the person does not exist on an empty DB → 404
     // → minor-failure (was a stub 501/serious-failure); R, party uid from path.
@@ -631,7 +613,7 @@ async fn demographic_get_emits_demographic_record() {
 async fn login_event_is_suppressed_by_default() {
     // suppress_login=true: an audited operation emits the operation record and no
     // login/application-activity record.
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     let _response = app
         .clone()
@@ -658,7 +640,7 @@ async fn login_event_is_suppressed_by_default() {
 async fn login_event_emitted_when_not_suppressed() {
     // Not suppressed: both the operation record and a login (User
     // Authentication) record are emitted for the fresh Basic authentication.
-    let (mut socket, sender) = audit_capture(false).await;
+    let (_audit, mut socket, sender) = audit_capture(false).await;
     let (_pg, app) = audit_app(sender).await;
     let _response = app
         .oneshot(req("GET", "/definition/template/adl1.4", true))
@@ -685,42 +667,51 @@ async fn login_event_emitted_when_not_suppressed() {
     );
 }
 
+/// A response leaves only once its records are durable: right after the
+/// answer, the record is in the store, in the intake or already chained,
+/// with no wait for a background task (`docs/plans/access-log.md` rule 3).
 #[tokio::test]
-async fn fail_open_serves_request_when_channel_full() {
-    // Fail-open: even if the audit emit is dropped, the request still succeeds.
-    let (_socket, sender) = audit_capture(true).await;
+async fn a_response_leaves_after_its_record_is_stored() {
+    let (audit, _socket, sender) = audit_capture(true).await;
     let (_pg, app) = audit_app(sender).await;
     let resp = app.oneshot(req("POST", "/ehr", true)).await.expect("resp");
     assert_eq!(resp.status(), StatusCode::CREATED);
+    let stored: i64 = sqlx::query_scalar(
+        "SELECT (SELECT count(*) FROM audit.access_log_intake) \
+              + (SELECT count(*) FROM audit.access_log_record) \
+              + (SELECT count(*) FROM audit.audit_event_intake) \
+              + (SELECT count(*) FROM audit.audit_event)",
+    )
+    .fetch_one(&audit.pool())
+    .await
+    .expect("count the stored records");
+    assert!(
+        stored >= 1,
+        "the EHR create's record is stored before its 201"
+    );
 }
 
+/// A request whose records cannot be written is refused with `503`, never
+/// served unrecorded.
 #[tokio::test]
-async fn fail_closed_returns_503_when_channel_full() {
-    // Fail-closed: once the (stalled, 1-slot) audit queue saturates, an auditable
-    // operation whose record is rejected makes the middleware return 503.
-    let sender = audit_capture_fail_closed().await;
+async fn a_request_whose_record_cannot_be_written_is_refused() {
+    let sender = audit_capture_unwritable().await;
     let (_pg, app) = audit_app(sender).await;
     let status = drive_until_503(&app).await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
 }
 
 #[tokio::test]
-async fn fail_closed_503_carries_openehr_error_body_and_retry_after() {
-    // the fail-closed 503 must emit problem details
-    // JSON body + a `Retry-After` header, not a plain-text body.
-    let sender = audit_capture_fail_closed().await;
+async fn the_refusal_carries_an_openehr_error_body_and_retry_after() {
+    // the 503 must emit problem details JSON body + a `Retry-After` header,
+    // not a plain-text body.
+    let sender = audit_capture_unwritable().await;
     let (_pg, app) = audit_app(sender).await;
-    // Saturate, then capture the shed 503 response.
-    let resp = loop {
-        let r = app
-            .clone()
-            .oneshot(req("GET", &format!("/ehr/{EHR}/composition/{EHR}"), true))
-            .await
-            .expect("resp");
-        if r.status() == StatusCode::SERVICE_UNAVAILABLE {
-            break r;
-        }
-    };
+    let resp = app
+        .clone()
+        .oneshot(req("GET", &format!("/ehr/{EHR}/composition/{EHR}"), true))
+        .await
+        .expect("resp");
     assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
     assert_eq!(resp.headers().get(http::header::RETRY_AFTER).unwrap(), "1");
     assert_eq!(
@@ -733,8 +724,8 @@ async fn fail_closed_503_carries_openehr_error_body_and_retry_after() {
     assert!(body.get("detail").and_then(Value::as_str).is_some());
 }
 
-/// Drive an auditable, ehr-scoped request repeatedly until the fail-closed
-/// middleware sheds it with 503 (the stalled queue saturates within a few emits).
+/// Drive an auditable, ehr-scoped request until the middleware refuses it
+/// with 503 because its record cannot be written; the first one is.
 async fn drive_until_503(app: &Router) -> StatusCode {
     for _ in 0..50 {
         let status = app
@@ -747,7 +738,7 @@ async fn drive_until_503(app: &Router) -> StatusCode {
             return status;
         }
     }
-    panic!("fail-closed queue never saturated to 503");
+    panic!("a request whose record cannot be written was served");
 }
 
 /// A query that serves a record emits an access record naming the EHR it
@@ -759,7 +750,7 @@ async fn drive_until_503(app: &Router) -> StatusCode {
 /// were actually returned, so the trail names a disclosure that happened.
 #[tokio::test]
 async fn aql_execute_emits_one_access_record_per_served_ehr() {
-    let (mut socket, sender) = audit_capture(true).await;
+    let (_audit, mut socket, sender) = audit_capture(true).await;
     let (_pg, app, _uid) = audit_app_with_composition(sender).await;
 
     let resp = app
@@ -841,7 +832,7 @@ async fn composition_get_records_the_origins_of_the_served_data() {
 
     let (_pg, pool) = common::migrated_pool().await;
     let audit = common::local_audit();
-    let (sender, _handle): (_, AuditHandle) = start(audit, None, Some(pool.clone()))
+    let (sender, _handle): (_, AuditHandle) = start(audit, None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(

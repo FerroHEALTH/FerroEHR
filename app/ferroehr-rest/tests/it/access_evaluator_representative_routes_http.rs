@@ -46,7 +46,7 @@ struct Walk {
 /// stored, the subject it represents and a stranger each given an EHR.
 async fn walk() -> Walk {
     let (db, pool) = common::migrated_pool().await;
-    let (sender, _handle) = start(common::local_audit(), None, Some(pool.clone()))
+    let (sender, _handle) = start(common::local_audit(), None, pool.clone())
         .await
         .expect("the audit sender");
     let svc = Arc::new(

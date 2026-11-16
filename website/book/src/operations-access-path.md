@@ -116,16 +116,17 @@ controller reviews.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
-| `access_log_entries_total` | counter | `outcome` | Entries written to the access log in a transaction: `ok` or `failed`. The rate of `ok` is the append rate. |
-| `access_log_append_duration_seconds` | histogram | `outcome` | Time to link and insert one transaction's entries. |
-| `access_log_sign_duration_seconds` | histogram | `outcome` | Time from the start of an append's checkpoint signature to its end, measured when the transaction stores the checkpoint; it runs beside the rest of the transaction while the head of the chain is locked. Present only with an OpenPGP key. |
+| `access_log_entries_total` | counter | `outcome` | Audit records a request wrote into the intake before its response: `ok` or `failed`. A `failed` write refused its request with `503`. |
+| `access_log_append_duration_seconds` | histogram | `outcome` | Time of one request's intake write, one transaction: the time a request waits for its records. |
+| `access_log_chain_hold_duration_seconds` | histogram | `outcome` | How long one chainer round held the head of the access log. Its rate of sum is the lock occupancy: the fraction of time the head is held. |
+| `audit_chained_total` | counter | `chain` | Records the chainer linked, `access_log` or `system`. Beside `access_log_entries_total` it shows whether the chainer keeps up. |
+| `access_log_sign_duration_seconds` | histogram | `outcome` | Time from the start of a chainer round's checkpoint signature to its end, measured when the round stores the checkpoint; it runs beside the insert of the records while the head is held. Present only with an OpenPGP key. |
 | `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run of the system chain (`chain` is `system`); `outcome` is `sealed`, `empty` or `failed`. The access log needs no schedule: every append seals itself. |
 | `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run of the system chain that did not fail. |
 | `access_log_tombstones_total` | counter | `chain` | Entries the retention run replaced by their tombstones, `local` or `imported` from another system. |
 | `access_log_folded_total` | counter | `chain` | Tombstones the retention run folded into gaps of the chain once they were past their own end, `local` or `imported`. |
 | `access_log_gaps_total` | counter | `chain` | Gaps the retention run wrote, one per folded run of tombstones, `local` or `imported`. |
 | `access_log_retention_duration_seconds` | histogram | `outcome` | Each hourly retention run over the access log. |
-| `audit_drain_queue_depth` | gauge | (none) | Records waiting in the audit drain's queue, out of `[audit] queue_capacity`. |
 
 The seals run every five minutes when `[record.signing]` holds an OpenPGP
 key, so a checkpoint age above fifteen minutes means at least two runs in a
@@ -177,7 +178,7 @@ recording while you investigate.
 | `policy_listeners` | a listener is lost, naming each one |
 | `instances` | another live instance signs with another key or runs another configuration, naming each one |
 | `audit_chain` | the newest verification found damage, or could not run |
-| `audit_sender` | auditing is off; under `fail_mode = "open"` it reads `UP` with a stated caution |
+| `audit_sender` | auditing is off, or the oldest intake record has waited more than 10 seconds for the chainer |
 | `audit_delivery` | a forwarder cannot reach its Audit Record Repository |
 
 ## Runbooks
@@ -224,27 +225,39 @@ recording while you investigate.
      `access_copy_drops_total{scope="every"}`: a listener connecting and
      losing its connection in a loop. Treat it as a lost listener.
 
-### The audit drain backs up under `fail_mode = "closed"`
+### Requests answer `503` because their records cannot be written
 
-- **Metric:** `audit_drain_queue_depth` near `[audit] queue_capacity`, and
+- **Metric:** `access_log_entries_total{outcome="failed"}` and
   `atna_audit_rejected_total` rising.
-- **Health:** `audit_sender` names the fail mode and the local store.
-- **What happens:** under `fail_mode = "closed"` an auditable operation
-  answers `503` when the queue is full or the local store stops accepting
-  writes, so no access goes unrecorded.
+- **Health:** the readiness checks of the audit database.
+- **What happens:** every record is written before its response, so a
+  request whose records cannot be written is refused with `503` and
+  `Retry-After: 1`. Nothing is dropped and nothing waits in memory.
 - **What to do:**
-  1. Check `access_log_append_duration_seconds` and
-     `access_log_sign_duration_seconds`. Each append signs one checkpoint on
-     the blocking pool while the head of the chain is locked, so a slow key
-     slows every audit write but holds back no request. An RSA key is far
-     slower than Ed25519 ([PGP signing](signing/pgp.md)).
-  2. Check `access_log_entries_total{outcome="failed"}` and the log for the
-     error of the failed append: a full disk, a lost audit database or a
-     statement timeout.
-  3. Check the audit pool: `db_pool_acquire_duration_seconds` and the audit
-     database's own load.
-  4. Raise `[audit] queue_capacity` only for a burst the drain catches up
-     with. A queue that stays full needs a faster store.
+  1. Read the log line `the audit records could not be written` for the
+     cause: a full disk, a lost audit database, a statement timeout.
+  2. Check the audit pool: `db_pool_acquire_duration_seconds` and the audit
+     database's own load. `access_log_append_duration_seconds` is the time a
+     request waits for its records.
+
+### The chainer falls behind
+
+- **Metric:** `audit_chained_total` growing slower than
+  `access_log_entries_total{outcome="ok"}`, and the rate of
+  `access_log_chain_hold_duration_seconds_sum` near 1.
+- **Health:** `audit_sender` reads `DEGRADED` with the age of the oldest
+  intake record.
+- **What happens:** the records are stored and nothing is lost; the chains,
+  the checkpoints and the feeds that deliver from the store are behind.
+- **What to do:**
+  1. Check `access_log_sign_duration_seconds`: each round signs one
+     checkpoint while the head is held, and an RSA key is far slower than
+     Ed25519 ([PGP signing](signing/pgp.md)).
+  2. Read the log for `an audit chainer round failed`: a round that fails
+     repeats every half second, and the error names the record it refused.
+  3. One chain carries about 15 000 entries per second on the reference
+     host; a sustained rate above it needs partitioned chains, the recorded
+     next step (#5745).
 
 ### A chain verification that fails
 

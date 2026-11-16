@@ -191,26 +191,37 @@ the corpus it loads and the manifest's pins are the deployed version's. A
 change to the walker or the dataset on `main` reaches the sandbox with the
 next release, and a version with no tag fails the run by name.
 
+That rule paused the nightly reseed between 5.6.3 and 5.7.0 (#5052). The
+v5.6.3 tag carried a walker that expected `422` for a refused library
+archetype and seeded the directory without `archetype_details`, so a run
+against it wiped the sandbox and stopped at the first refused archetype. The
+schedule was disabled on 2026-11-05, the sandbox was seeded by hand from
+`main` meanwhile, and the schedule ran again from 2026-11-11, once v5.7.0,
+whose tag carries both fixes, was deployed.
+
 ### The demo PERSON
 
 The demo login `ferroehr` is a Basic user, and a Basic user is a person: it
 binds the `PERSON` that carries its binding key `ferroehr` under
 `urn:ferroehr:basic-user` (`[[authz.party_binding.basic_user]]`), and every
 request is refused `refused-unbound` while none does. The nightly wipe deletes
-every `PERSON`, so the compose file's `ferroehr-provision` service provisions
+every `PERSON`, so the compose file's `ferroehr-provision` one-shot provisions
 it again the way an identity provider provisions people: as the
 `sandbox-scim` client, which the `ferroehr-grant` service grants
 `scim_provision` in the CDR first (`ferroehr party-binding grant`), with a
-client credentials token for
-the scope `ferroehr/scim` from the development issuer, it asks
-`/scim/v2/Users` for `userName eq "ferroehr"` every 30 seconds and creates the
-User when it is missing (RFC 7644 §3.3). FerroEHR creates the `PERSON` and its
+client credentials token for the scope `ferroehr/scim` from the development
+issuer, it creates the User at `/scim/v2/Users` (RFC 7644 §3.3) and exits.
+The box's `deploy.sh` runs it once with every `docker compose up -d`, on a
+deploy and on the nightly reset, which brings the CDR up through `deploy`. A
+`409 uniqueness` for a User this client finds by `userName` counts as
+provisioned already, and any other answer fails the run, so nothing polls the
+SCIM endpoint between deploys. FerroEHR creates the `PERSON` and its
 professional `ROLE` and issues the `PERSON`'s id, so no party id is fixed
 anywhere, and no Basic machine user or administrator role seeds it. A Basic
 user is a credential alone, so the `ferroehr-hold` service then grants that
 `PERSON` the SMART on openEHR scopes of every resource family
-(`ferroehr party-binding grant --basic-user ferroehr --operation hold_scopes`),
-running again until the `PERSON` exists; the demo user holds ADMIN and the
+(`ferroehr party-binding grant --basic-user ferroehr --operation hold_scopes`)
+once the one-shot has succeeded; the demo user holds ADMIN and the
 product scope as `[authz.rbac] first_admin`.
 `reseed.sh` waits for the login to bind and hold its scopes before it commits anything, so every
 seeded version names the demo `PERSON`, and it reads the marker's

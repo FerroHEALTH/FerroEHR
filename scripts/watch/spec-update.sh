@@ -2,31 +2,43 @@
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
 # openEHR spec-update watcher (tracker issue #137; design dossier: recorded on tracker issue #137
-# — every mechanism live-verified 2026-07-20). Three detection sources; A and B
-# file ONE GitHub issue per completed upstream spec change, C maintains ONE
-# rolling issue per component:
+# — every mechanism live-verified 2026-07-20; the actionable-only filtering is
+# #5364). Three detection sources feed two kinds of issue: ONE rolling issue
+# per pinned component repository, and ONE per-key issue for a change no
+# rolling issue carries.
 #
+#   C. Commits-ahead cross-check, run FIRST because A and B route by it — per
+#      pinned component repo (every spec-docs.sh pin, ITS-BMM from its codegen
+#      provenance record, and adl-antlr from the grammar vendor scripts), the
+#      commits on the default branch past the vendored pin. Each commit is
+#      classified by the paths it touches (commit_class): machine-readable,
+#      normative text or other. A master pin reports "ahead of the vendored
+#      pin" (re-vendor triage, `spec-version:current`); a Release-* pin reports
+#      "unreleased commits past the vendored release" (look-ahead triage,
+#      `spec-version:next`). The rolling issue lists the delta's commits by
+#      class and the Jira keys the delta carries, inside a marked block that a
+#      re-run replaces; the rest of the body is the triager's. A delta of
+#      "other" commits alone opens no issue.
 #   A. Jira poll — anonymous search of openehr.atlassian.net for SPEC* issues
 #      newly Resolved/Closed inside the window. Uses the enhanced
 #      /rest/api/3/search/jql endpoint (token pagination; the classic
 #      /rest/api/2/search is HTTP 410 GONE). `status in (Resolved, Closed)`
 #      is the completion signal — statusCategory "done" over-captures
-#      (In Review is green-category with resolution=null).
-#   B. Amendment-record cross-check — the Jira keys present in each upstream
-#      amendment record (default branch) but absent from the vendored copy
+#      (In Review is green-category with resolution=null). A candidate is
+#      skipped when its Jira component is `Documentation`, or when no commit
+#      past our pin in any watched repository names its key (the change is
+#      inside the vendored text, or never reached a repository).
+#   B. Amendment-record cross-check — the key that heads each upstream
+#      amendment row (row_own_keys: the row's own ticket, never one it cites
+#      with "see", "see also" or "addresses") absent from the vendored copy
 #      under docs/specs/openehr/ (paths mirror the upstream repos 1:1; pins
 #      live in scripts/vendor/spec-docs.sh).
-#   C. Commits-ahead cross-check — per pinned component repo (every
-#      spec-docs.sh pin, plus ITS-BMM from its codegen provenance record), the
-#      default branch's distance ahead of the vendored pin commit. A and B are
-#      key-granular and blind to raw commits (a key adopted once dedups away
-#      every later commit under it; the amendment diff sees only NEW keys and
-#      never computable/BMM/**) — which is how 24 BASE commits accumulated
-#      silently (issue #341). A master pin reports "ahead of the vendored pin"
-#      (re-vendor triage); a Release-* tag pin reports "unreleased commits past
-#      the vendored release" (look-ahead triage: the pin waits for a release).
-#      One rolling issue per component: created when ahead, body updated in
-#      place as the delta grows, auto-closed when a re-vendor catches the pin up.
+#
+# Routing: a key from A or B whose change lands in a MASTER-pinned
+# component's repository files no issue of its own, because that component's
+# rolling issue is the work item (the pin follows master) and lists the key.
+# A key that lands only in a release-pinned repository gets its own issue,
+# labelled `spec-version:next`.
 #
 # Dedup / watermark: the issue board itself — a key already present in ANY
 # issue title (open or closed, searched with `--state all`) is never
@@ -45,9 +57,10 @@
 # FOUND is a green run that files work, per the family's run-colour rule.
 #
 # Usage: scripts/watch/spec-update.sh [--self-test]  (--self-test checks the
-#      C helpers offline over fixture records)
-# Env: DRY_RUN=1 (report, create nothing) · WINDOW_DAYS (default 14 — the scheduled cadence; run manually with a wide window, e.g. 365, to catch any backlog: dedup + the vendored baseline make that safe) ·
-#      GH_TOKEN/GITHUB_TOKEN for gh. Requires curl, jq, gh.
+#      helpers offline over fixtures: pin rows, amendment-row keys, commit
+#      classes and the marked rolling block)
+# Env: DRY_RUN=1 (report, create nothing, print the skipped set) · WINDOW_DAYS (default 14 — the scheduled cadence; run manually with a wide window, e.g. 365, to catch any backlog: dedup + the vendored baseline make that safe) ·
+#      GH_TOKEN/GITHUB_TOKEN for gh. Requires curl, jq, gh, perl.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -68,6 +81,9 @@ US=$'\x1f'
 # label, plus SPECPR (cross-cutting problem reports). SPECPROC/CDS/INTG/PUB
 # have neither a pin nor a label and are deliberately excluded.
 PROJECTS="SPECRM,SPECBASE,SPECAM,SPECLANG,SPECQUERY,SPECITS,SPECTERM,SPECSM,SPECCNF,SPECPR"
+# The markers around the part of a rolling issue body the watcher owns.
+BLOCK_BEGIN="<!-- spec-update:count -->"
+BLOCK_END="<!-- /spec-update:count -->"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -76,6 +92,8 @@ trap 'rm -rf "$tmp"' EXIT
 # ITS-BMM feeds codegen only, so its pin lives in the codegen-inputs
 # provenance record rather than in spec-docs.sh.
 BMM_PROVENANCE="tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
+ADL_GRAMMARS="scripts/vendor/adl-grammars.sh"
+LANG_GRAMMARS="scripts/vendor/lang-grammars.sh"
 
 # The kind of a human pin ref: `master…` is a branch pin, `Release-…` a
 # release-tag pin; any other ref word fails, so a mislabelled pin cannot land
@@ -88,10 +106,30 @@ pin_kind() {
   esac
 }
 
+# The triage label a pin kind starts an issue with.
+version_label() {
+  case "$1" in
+    branch) echo "spec-version:current" ;;
+    release) echo "spec-version:next" ;;
+    *) return 1 ;;
+  esac
+}
+
+# The adl-antlr commit a grammar vendor script pins (ADL_ANTLR_COMMIT="<sha>").
+grammar_pin() {
+  local line
+  line=$(grep -E '^ADL_ANTLR_COMMIT="[0-9a-f]{40}"' "$1" | sed -n 1p) || return 1
+  [[ -n "$line" ]] || return 1
+  sed -E 's/^ADL_ANTLR_COMMIT="([0-9a-f]{40})".*/\1/' <<<"$line"
+}
+
 # One `comp|repo|ref|sha|record` row per spec-docs.sh pin, then the ITS-BMM
-# row from its provenance record line "Pinned commit: `<sha>` (<ref>)".
+# row from its provenance record line "Pinned commit: `<sha>` (<ref>)", then
+# the two adl-antlr rows: the AM grammars follow master, and the LANG
+# grammars keep a deliberate pin of the LANG 1.1.0 era, which reports as
+# look-ahead.
 rolling_rows() {
-  local spec_docs=$1 bmm_record=$2 line sha ref tick=$'\x60'
+  local spec_docs=$1 bmm_record=$2 adl_script=$3 lang_script=$4 line sha ref tick=$'\x60'
   grep -E '^  "[A-Z-]+\|' "$spec_docs" | sed -e 's/^  "//' -e 's/"$//' |
     while IFS='|' read -r comp repo ref sha; do
       printf '%s|%s|%s|%s|%s\n' "$comp" "$repo" "$ref" "$sha" "$spec_docs"
@@ -101,6 +139,10 @@ rolling_rows() {
   sha=$(sed -E "s/^Pinned commit: ${tick}([0-9a-f]{40})${tick}.*/\\1/" <<<"$line")
   ref=$(sed -E "s/^Pinned commit: ${tick}[0-9a-f]{40}${tick} \\(([^)]+)\\).*/\\1/" <<<"$line")
   printf 'ITS-BMM|specifications-ITS-BMM|%s|%s|%s\n' "$ref" "$sha" "$bmm_record"
+  sha=$(grammar_pin "$adl_script") || return 1
+  printf 'ADL-ANTLR|adl-antlr|master (AM grammars)|%s|%s\n' "$sha" "$adl_script"
+  sha=$(grammar_pin "$lang_script") || return 1
+  printf 'LANG-ANTLR|adl-antlr|Release-1.1.0 era (LANG grammars)|%s|%s\n' "$sha" "$lang_script"
 }
 
 # The stable title of a component's rolling issue. The branch-pin title is the
@@ -114,7 +156,7 @@ rolling_title() {
   esac
 }
 
-# The count line a re-run compares against the open issue's body.
+# The count line of a rolling issue's marked block.
 # Args: kind ahead ref sha default head_sha.
 rolling_count_line() {
   local kind=$1 ahead=$2 ref=$3 sha=$4 default=$5 head_sha=$6
@@ -125,16 +167,127 @@ rolling_count_line() {
   esac
 }
 
-# The rolling issue body. Args: kind comp repo sha default record count_line.
+# The class of one commit from the paths it touches, read one per line on
+# stdin: `machine` (computable/**, BMM JSON, ANTLR grammars, XSD, OpenAPI,
+# terminology XML) outranks `normative` (the docs/** chapters other than the
+# amendment records), which outranks `other` (rendered HTML, repository
+# tooling, amendment records alone).
+commit_class() {
+  local path class=other
+  while IFS= read -r path; do
+    [[ -n "$path" ]] || continue
+    case "$path" in
+      computable/*|*/computable/*|*.bmm.json|*.g4|*.xsd|*.openapi.yaml|*.openapi.yml)
+        echo machine
+        return 0 ;;
+      *.xml)
+        if [[ "$(tr '[:upper:]' '[:lower:]' <<<"$path")" == *terminology* ]]; then
+          echo machine
+          return 0
+        fi ;;
+      *master00-amendment_record.adoc|*Amendment_record.md) ;;
+      docs/*.adoc|docs/*.md|*/docs/*.adoc|*/docs/*.md) class=normative ;;
+      *) ;;
+    esac
+  done
+  echo "$class"
+}
+
+# One line per row of an amendment record (stdin), the row's text joined.
+# An AsciiDoc row opens at its issue-number cell (`|2.4.3`, optionally
+# anchored `|[[latest_issue]]2.4.5`); a release header or a table edge closes
+# it. A Markdown record (ITS-REST) keeps each row in one `<tr>` element.
+amendment_rows() {
+  awk '
+    function flush() { if (row != "") print row; row = "" }
+    /^<tr>|^[[:space:]]*<tr>/ { flush(); inrow = 1; html = 1; next }
+    /<\/tr>/ { if (html) { flush(); inrow = 0 }; next }
+    /^\|(\[\[[a-z_]+\]\])?[0-9][0-9.]*[[:space:]]*$/ { flush(); inrow = 1; html = 0; row = $0; next }
+    /^\|===/ || /^[0-9]+\+/ { flush(); inrow = 0; next }
+    inrow { row = row " " $0 }
+    END { flush() }
+  '
+}
+
+# The key that heads each amendment row on stdin (one row per line), one per
+# line: the first SPEC* key once every key the row only cites ("see", "see
+# also", "addresses", "addressed by", with the keys listed after it) is
+# removed. A row naming no key of its own prints nothing.
+row_own_keys() {
+  perl -ne '
+    my $ref = qr{(?:\{spec_tickets\}/SPEC[A-Z]*-[0-9]+\[[^\]]*\]|<a\s[^>]*>SPEC[A-Z]*-[0-9]+</a>|SPEC[A-Z]*-[0-9]+)};
+    s{\b(?:see(?:\s+also)?|addresse[sd](?:\s+by)?)\s*:?\s*$ref(?:\s*(?:,|and)\s*$ref)*}{}gi;
+    print "$1\n" if /(SPEC[A-Z]*-[0-9]+)/;
+  '
+}
+
+# The marked block of a rolling issue. Args: count_line commits_file keys_file.
+# commits_file: `sha<US>class<US>subject` per classified commit, in order;
+# keys_file: `key<US>source` per key the delta carries.
+rolling_block() {
+  local count_line=$1 commits=$2 keys=$3 n_machine n_normative n_other
+  n_machine=$(awk -F"$US" '$2 == "machine"' "$commits" | wc -l | tr -d ' ')
+  n_normative=$(awk -F"$US" '$2 == "normative"' "$commits" | wc -l | tr -d ' ')
+  n_other=$(awk -F"$US" '$2 == "other"' "$commits" | wc -l | tr -d ' ')
+  echo "$BLOCK_BEGIN"
+  echo "$count_line"
+  echo "**Delta by kind:** $n_machine machine-readable, $n_normative normative text, $n_other other (merge commits not counted)"
+  if [[ -s "$keys" ]]; then
+    echo "**Keys this delta carries:** $(sort -u "$keys" | awk -F"$US" '{ printf "%s%s (%s)", sep, $1, $2; sep = ", " }')"
+  else
+    echo "**Keys this delta carries:** none named"
+  fi
+  echo
+  local class label
+  for class in machine normative other; do
+    case "$class" in
+      machine) label="Machine-readable" ;;
+      normative) label="Normative text" ;;
+      *) label="Other (rendered HTML, tooling, amendment records)" ;;
+    esac
+    if awk -F"$US" -v c="$class" '$2 == c { found = 1 } END { exit !found }' "$commits"; then
+      echo "$label:"
+      awk -F"$US" -v c="$class" '$2 == c { printf "- `%s` %s\n", substr($1, 1, 9), $3 }' "$commits"
+      echo
+    fi
+  done
+  echo "$BLOCK_END"
+}
+
+# A rolling issue body (stdin) with its marked block replaced by the block in
+# file $1; a body without the markers keeps its text and gains the block at
+# its end, so text a triager wrote is never lost.
+replace_block() {
+  local block=$1
+  awk -v begin="$BLOCK_BEGIN" -v end="$BLOCK_END" -v block="$block" '
+    { lines[NR] = $0 }
+    $0 == begin && !b { b = NR }
+    $0 == end && b && !e { e = NR }
+    END {
+      if (b && e) {
+        for (i = 1; i < b; i++) print lines[i]
+        while ((getline line < block) > 0) print line
+        for (i = e + 1; i <= NR; i++) print lines[i]
+      } else {
+        for (i = 1; i <= NR; i++) print lines[i]
+        print ""
+        while ((getline line < block) > 0) print line
+      }
+    }
+  '
+}
+
+# The rolling issue body. Args: kind comp repo sha default record block_file.
 rolling_body() {
-  local kind=$1 comp=$2 repo=$3 sha=$4 default=$5 record=$6 count_line=$7
+  local kind=$1 comp=$2 repo=$3 sha=$4 default=$5 record=$6 block=$7
   if [[ "$kind" = "release" ]]; then
     cat <<BODY
 Upstream \`openEHR/$repo\` ($comp) has commits on $default past the release we vendor. They are unreleased and the pin moves only to a released tag (\`docs/VERSIONS.md\`, spec version policy), so this is look-ahead triage, not a re-vendor.
 
-$count_line
 - **Compare:** https://github.com/openEHR/$repo/compare/${sha}...${default}
 - **Vendored pin:** \`$record\`
+
+$(cat "$block")
 
 ### Triage checklist
 
@@ -142,15 +295,16 @@ $count_line
 - [ ] File a tracker issue for each change the implementation will need once a release carries it
 - [ ] Re-vendor when a release tag carries the delta (the spec-release watcher reports new tags)
 
-_Maintained automatically by the spec-update watcher: the count above updates in place as the delta grows, and the issue closes when a re-vendor catches the pin up._
+_The spec-update watcher replaces only the block between its markers as the delta grows, and closes the issue when a re-vendor catches the pin up; the rest of this body is the triager's._
 BODY
   else
     cat <<BODY
 Upstream \`openEHR/$repo\` ($comp) has moved past our vendored pin — commit-delta triage needed (the per-commit triage pattern that closed #341).
 
-$count_line
 - **Compare:** https://github.com/openEHR/$repo/compare/${sha}...${default}
 - **Vendored pin:** \`$record\`; where this component feeds codegen, also the machine-readable vendor dirs (\`tools/openehr-codegen/vendor/bmm/\`, \`crates/openehr-its/{vendor,schemas}/\`, re-vendored by \`scripts/vendor/codegen-inputs.sh\`)
+
+$(cat "$block")
 
 ### Triage checklist
 
@@ -160,12 +314,12 @@ $count_line
 - [ ] Re-vendor + re-pin + regenerate; review the generated diff line by line
 - [ ] CNF zero-drift + changelog + \`docs/VERSIONS.md\` if anything is wire-visible
 
-_Maintained automatically by the spec-update watcher: the count above updates in place as the delta grows, and the issue closes when a re-vendor catches the pin up._
+_The spec-update watcher replaces only the block between its markers as the delta grows, and closes the issue when a re-vendor catches the pin up; the rest of this body is the triager's._
 BODY
   fi
 }
 
-# Offline checks of the C helpers over fixture records: no network, no gh.
+# Offline checks of the helpers over fixtures: no network, no gh.
 self_test() {
   local dir="$tmp/self-test" fail=0 rows
   mkdir -p "$dir"
@@ -177,6 +331,8 @@ PINS=(
 FIXTURE
   printf 'Source: x\nPinned commit: \x60%s\x60 (master)\n' 3333333333333333333333333333333333333333 > "$dir/PROVENANCE.md"
   printf 'Source: x\nPinned commit: 3333 (master)\n' > "$dir/BROKEN.md"
+  printf 'ADL_ANTLR_REPO="openEHR/adl-antlr"\nADL_ANTLR_COMMIT="%s" # 2024-04-06\n' 5555555555555555555555555555555555555555 > "$dir/adl.sh"
+  printf 'ADL_ANTLR_COMMIT="%s" # 2024-04-06\n' 6666666666666666666666666666666666666666 > "$dir/lang.sh"
   check() {
     local what="$1" actual="$2" expected="$3"
     if [[ "$actual" != "$expected" ]]; then
@@ -184,20 +340,29 @@ FIXTURE
       fail=1
     fi
   }
-  rows=$(rolling_rows "$dir/spec-docs.sh" "$dir/PROVENANCE.md")
+  rows=$(rolling_rows "$dir/spec-docs.sh" "$dir/PROVENANCE.md" "$dir/adl.sh" "$dir/lang.sh")
   check "rows" "$rows" "RM|specifications-RM|master (RM 1.2.0)|1111111111111111111111111111111111111111|$dir/spec-docs.sh
 ITS-REST|specifications-ITS-REST|Release-1.1.0 (released 19-Jul-2026)|2222222222222222222222222222222222222222|$dir/spec-docs.sh
-ITS-BMM|specifications-ITS-BMM|master|3333333333333333333333333333333333333333|$dir/PROVENANCE.md"
-  if rolling_rows "$dir/spec-docs.sh" "$dir/BROKEN.md" >/dev/null; then
+ITS-BMM|specifications-ITS-BMM|master|3333333333333333333333333333333333333333|$dir/PROVENANCE.md
+ADL-ANTLR|adl-antlr|master (AM grammars)|5555555555555555555555555555555555555555|$dir/adl.sh
+LANG-ANTLR|adl-antlr|Release-1.1.0 era (LANG grammars)|6666666666666666666666666666666666666666|$dir/lang.sh"
+  if rolling_rows "$dir/spec-docs.sh" "$dir/BROKEN.md" "$dir/adl.sh" "$dir/lang.sh" >/dev/null; then
     echo "self-test: a provenance record without a pinned commit was accepted" >&2
+    fail=1
+  fi
+  if rolling_rows "$dir/spec-docs.sh" "$dir/PROVENANCE.md" "$dir/BROKEN.md" "$dir/lang.sh" >/dev/null; then
+    echo "self-test: a grammar script without an adl-antlr pin was accepted" >&2
     fail=1
   fi
   check "branch kind" "$(pin_kind "master (RM 1.2.0)")" "branch"
   check "release kind" "$(pin_kind "Release-1.1.0 (released)")" "release"
+  check "LANG grammars kind" "$(pin_kind "Release-1.1.0 era (LANG grammars)")" "release"
   if pin_kind "development" >/dev/null; then
     echo "self-test: an unknown ref word was classified" >&2
     fail=1
   fi
+  check "branch label" "$(version_label branch)" "spec-version:current"
+  check "release label" "$(version_label release)" "spec-version:next"
   check "branch title" "$(rolling_title branch ITS-BMM)" "[spec-update] ITS-BMM spec repo is ahead of the vendored pin"
   check "release title" "$(rolling_title release ITS-REST)" "[spec-update] ITS-REST has unreleased commits past the vendored release"
   check "release count" \
@@ -206,18 +371,100 @@ ITS-BMM|specifications-ITS-BMM|master|3333333333333333333333333333333333333333|$
   check "branch count" \
     "$(rolling_count_line branch 6 master 3333333333333333333333333333333333333333 master 4444444444444444444444444444444444444444)" \
     "**Commits ahead of the pin:** 6 (pin \`333333333\`, upstream master @ \`444444444\`)"
-  if ! grep -qxF "COUNT" <<<"$(rolling_body release ITS-REST specifications-ITS-REST 2222 master "$dir/spec-docs.sh" "COUNT")"; then
-    echo "self-test: the release body lacks its count line" >&2
-    fail=1
-  fi
-  if ! grep -qF "\`$dir/PROVENANCE.md\`" <<<"$(rolling_body branch ITS-BMM specifications-ITS-BMM 3333 master "$dir/PROVENANCE.md" "COUNT")"; then
-    echo "self-test: the branch body does not name its pin record" >&2
-    fail=1
-  fi
+
+  # Commit classes, one fixture per path kind.
+  check "class: computable" "$(printf 'computable/BMM/openehr_rm_1.2.0.bmm.json\nREADME.md\n' | commit_class)" "machine"
+  check "class: OpenAPI" "$(printf 'specifications/computable/OAS/ehr.openapi.yaml\n' | commit_class)" "machine"
+  check "class: grammar" "$(printf 'src/main/antlr/adl/adl2.g4\n' | commit_class)" "machine"
+  check "class: XSD" "$(printf 'components/ITS-XML/Release-2.0.0/Archetype.xsd\n' | commit_class)" "machine"
+  check "class: terminology XML" "$(printf 'docs/terminology/openehr_terminology.xml\n' | commit_class)" "machine"
+  check "class: chapter" "$(printf 'docs/AOM2/master03-constraint_model.adoc\nAGENTS.md\n' | commit_class)" "normative"
+  check "class: REST chapter" "$(printf 'specifications/docs/ehr/ehr.md\n' | commit_class)" "normative"
+  check "class: amendment record only" "$(printf 'docs/AOM2/master00-amendment_record.adoc\n' | commit_class)" "other"
+  check "class: rendered and tooling" "$(printf 'docs/AOM2/index.html\nAGENTS.md\n.github/workflows/x.yml\n' | commit_class)" "other"
+  check "class: no paths" "$(printf '' | commit_class)" "other"
+
+  # The row's own key, one fixture per form: a heading key, a trailing key
+  # with a "see also" key, a heading key that cites with "see" and with
+  # "Addresses", a Markdown row, a row naming no key.
+  cat > "$dir/amendment.adoc" <<'FIXTURE'
+= Amendment Record
+
+[cols="1,6a,2,2", options="header"]
+|===
+|Issue|Details|Raiser, Implementer|Completed
+
+4+^h|*AM Release 2.4.0 (unreleased)*
+
+|[[latest_issue]]2.4.3
+|Add conversion rules for translators. ({spec_tickets}/SPECAM-107[SPECAM-107^], see also {spec_tickets}/SPECRM-119[SPECRM-119^])
+|S Kohler
+|[[latest_issue_date]]02 Nov 2026
+
+|2.4.2
+|{spec_tickets}/SPECAM-109[SPECAM-109^]. Add `units_system` (see <<_c_quantity_item_class>>), as on `DV_QUANTITY` (see {spec_tickets}/SPECRM-65[SPECRM-65^]).
+|S Kohler
+|16 Oct 2026
+
+|2.4.1
+|{spec_tickets}/SPECRM-65[SPECRM-65^]: Add attributes to `DV_QUANTITY`. (Addresses {spec_tickets}/SPECPR-251[SPECPR-251^])
+|S Kohler
+|01 Oct 2026
+
+4+^h|*AM Release 2.3.0*
+
+|2.3.1
+|Fix typos.
+|S Kohler
+|01 Sep 2026
+|===
+FIXTURE
+  check "adoc own keys" "$(amendment_rows < "$dir/amendment.adoc" | row_own_keys)" "SPECAM-107
+SPECAM-109
+SPECRM-65"
+  cat > "$dir/Amendment_record.md" <<'FIXTURE'
+<table>
+    <tbody>
+    <tr>
+        <th colspan="4"><a href="https://specifications.openehr.org/releases/ITS-REST/Release-1.1.0">Release-1.1.0</a></th>
+    </tr>
+    <tr>
+        <td>5.9</td>
+        <td><a href="https://specifications.openehr.org/tickets/SPECITS-95" target="_blank" rel="noopener">SPECITS-95</a>:
+            Fix typing (see also <a href="https://specifications.openehr.org/tickets/SPECPR-428" target="_blank">SPECPR-428</a>)</td>
+        <td>H Heiser</td>
+        <td>11 Jun 2026</td>
+    </tr>
+    </tbody>
+</table>
+FIXTURE
+  check "md own keys" "$(amendment_rows < "$dir/Amendment_record.md" | row_own_keys)" "SPECITS-95"
+  check "see also list" "$(echo '|1.0 |Text. (SPECPR-1, see also SPECPR-2, SPECPR-3 and SPECPR-4)' | row_own_keys)" "SPECPR-1"
+
+  # The marked block: replaced in place with the triager's text kept, and
+  # appended to a body that has no markers.
+  printf 'sha1%smachine%sAdd a BMM attribute\nsha2%sother%sRegenerate HTML\n' "$US" "$US" "$US" "$US" > "$dir/commits"
+  printf 'SPECAM-109%scommit\nSPECRM-65%samendment row\n' "$US" "$US" > "$dir/keys"
+  rolling_block "COUNT 2" "$dir/commits" "$dir/keys" > "$dir/block"
+  check "block keys" "$(grep -F 'Keys this delta carries' "$dir/block")" "**Keys this delta carries:** SPECAM-109 (commit), SPECRM-65 (amendment row)"
+  check "block kinds" "$(grep -F 'Delta by kind' "$dir/block")" "**Delta by kind:** 1 machine-readable, 0 normative text, 1 other (merge commits not counted)"
+  printf 'Intro.\n\n%s\nCOUNT 1\n%s\n\nTriaged: SPECAM-109 is #5298.\n' "$BLOCK_BEGIN" "$BLOCK_END" > "$dir/body"
+  replace_block "$dir/block" < "$dir/body" > "$dir/replaced"
+  check "replaced block" "$(grep -c '^COUNT' "$dir/replaced")/$(grep -c '^COUNT 2$' "$dir/replaced")" "1/1"
+  check "kept intro" "$(sed -n 1p "$dir/replaced")" "Intro."
+  check "kept triage" "$(tail -n 1 "$dir/replaced")" "Triaged: SPECAM-109 is #5298."
+  printf 'A body a triager rewrote.\n' > "$dir/bare"
+  replace_block "$dir/block" < "$dir/bare" > "$dir/appended"
+  check "appended keeps text" "$(sed -n 1p "$dir/appended")" "A body a triager rewrote."
+  check "appended block" "$(grep -c -xF "$BLOCK_BEGIN" "$dir/appended")" "1"
+  rolling_body branch RM specifications-RM 1111 master "$dir/spec-docs.sh" "$dir/block" > "$dir/full"
+  check "body carries block" "$(grep -c -xF "$BLOCK_END" "$dir/full")" "1"
+  replace_block "$dir/block" < "$dir/full" > "$dir/again"
+  check "replace is idempotent" "$(cmp -s "$dir/full" "$dir/again" && echo same)" "same"
   if [[ "$fail" -ne 0 ]]; then
     exit 1
   fi
-  echo "spec-update-watcher: self-test OK (pin rows incl. ITS-BMM, pin kinds, rolling titles, count lines, bodies)."
+  echo "spec-update-watcher: self-test OK (pin rows incl. ITS-BMM and adl-antlr, pin kinds, labels, titles, count lines, commit classes, amendment-row keys, the marked block)."
 }
 
 case "${1:-}" in
@@ -232,19 +479,11 @@ case "${1:-}" in
     ;;
 esac
 
-for bin in curl jq gh; do
+for bin in curl jq gh perl; do
   command -v "$bin" >/dev/null 2>&1 || { echo "spec-update-watcher: $bin is required" >&2; exit 1; }
 done
 
 # ── component maps ───────────────────────────────────────────────────────────
-label_for_project() {
-  case "$1" in
-    SPECRM) echo "spec:RM" ;; SPECBASE) echo "spec:BASE" ;; SPECAM) echo "spec:AM" ;;
-    SPECLANG) echo "spec:LANG" ;; SPECQUERY) echo "spec:QUERY" ;; SPECITS) echo "spec:ITS" ;;
-    SPECTERM) echo "spec:TERM" ;; SPECSM) echo "spec:SM" ;; SPECCNF) echo "spec:CNF" ;;
-    *) echo "" ;; # SPECPR & friends: cross-component, spec-update only
-  esac
-}
 component_for_project() {
   case "$1" in
     SPECRM) echo "RM" ;; SPECBASE) echo "BASE" ;; SPECAM) echo "AM" ;;
@@ -255,8 +494,8 @@ component_for_project() {
 }
 label_for_component() { # vendored component dir -> label
   case "$1" in
-    RM) echo "spec:RM" ;; BASE) echo "spec:BASE" ;; AM) echo "spec:AM" ;;
-    LANG) echo "spec:LANG" ;; QUERY) echo "spec:QUERY" ;; TERM) echo "spec:TERM" ;;
+    RM) echo "spec:RM" ;; BASE) echo "spec:BASE" ;; AM|ADL-ANTLR) echo "spec:AM" ;;
+    LANG|LANG-ANTLR) echo "spec:LANG" ;; QUERY) echo "spec:QUERY" ;; TERM) echo "spec:TERM" ;;
     SM) echo "spec:SM" ;; CNF) echo "spec:CNF" ;; ITS-*) echo "spec:ITS" ;;
     *) echo "" ;;
   esac
@@ -326,9 +565,68 @@ all_fixversions_inside_pin() {
   return $any
 }
 
-# ── shared: candidate sink (key<TAB>component<TAB>summary<TAB>extra) ─────────
+# ── shared sinks ─────────────────────────────────────────────────────────────
+# Candidates: key comp summary source resolved fixv comps status resolution
+# itype created fixv_plain route descr, US-separated; route is `file` or
+# `rolling:<COMP>`.
 CANDIDATES="$tmp/candidates.tsv"
 : > "$CANDIDATES"
+# Skips: key<US>reason, printed as the skipped set in a dry run.
+SKIPPED="$tmp/skipped.tsv"
+: > "$SKIPPED"
+skip() {
+  echo "  $1: $2 — skipped"
+  printf "%s${US}%s\n" "$1" "$2" >> "$SKIPPED"
+}
+# Per watched component: its pin kind, and the keys its delta carries.
+mkdir -p "$tmp/delta"
+# Every key a commit past a pin names: key<US>comp<US>kind.
+COMMIT_KEYS="$tmp/commit-keys.tsv"
+: > "$COMMIT_KEYS"
+
+# ── C, first half: read each delta, classify its commits ────────────────────
+echo "spec-update-watcher: commits-ahead cross-check against the vendored pins"
+rolling_rows scripts/vendor/spec-docs.sh "$BMM_PROVENANCE" "$ADL_GRAMMARS" "$LANG_GRAMMARS" > "$tmp/rows" ||
+  { echo "spec-update-watcher: no pinned commit in $BMM_PROVENANCE, $ADL_GRAMMARS or $LANG_GRAMMARS" >&2; exit 1; }
+while IFS='|' read -r comp repo ref sha record; do
+  [[ -n "$comp" ]] || continue
+  kind=$(pin_kind "$ref") ||
+    { echo "spec-update-watcher: $comp ref '$ref' names neither master nor a Release-* tag ($record)" >&2; exit 1; }
+  echo "$kind" > "$tmp/delta/$comp.kind"
+  default=$(gh api "repos/openEHR/$repo" --jq '.default_branch') ||
+    { echo "spec-update-watcher: failed to read openEHR/$repo default branch" >&2; exit 1; }
+  gh api "repos/openEHR/$repo/compare/${sha}...${default}" > "$tmp/compare.json" ||
+    { echo "spec-update-watcher: failed to compare ${sha}...${default} for openEHR/$repo" >&2; exit 1; }
+  jq -e 'has("ahead_by") and (.commits | type == "array")' "$tmp/compare.json" >/dev/null ||
+    { echo "spec-update-watcher: unexpected compare payload for openEHR/$repo — API changed?" >&2; exit 1; }
+  ahead=$(jq -r '.ahead_by' "$tmp/compare.json")
+  head_sha=$(gh api "repos/openEHR/$repo/branches/$default" --jq '.commit.sha') ||
+    { echo "spec-update-watcher: failed to read openEHR/$repo $default head" >&2; exit 1; }
+  printf '%s|%s|%s\n' "$ahead" "$default" "$head_sha" > "$tmp/delta/$comp.head"
+  : > "$tmp/delta/$comp.commits"
+  : > "$tmp/delta/$comp.keys"
+  # Every key a commit message names, merge commits included (a pull
+  # request's title often carries the only key).
+  jq -r '.commits[].commit.message' "$tmp/compare.json" | { grep -oE 'SPEC[A-Z]*-[0-9]+' || true; } | sort -u |
+    while IFS= read -r key; do
+      printf "%s${US}commit\n" "$key" >> "$tmp/delta/$comp.keys"
+      printf "%s${US}%s${US}%s\n" "$key" "$comp" "$kind" >> "$COMMIT_KEYS"
+    done
+  jq -r --arg us "$US" '.commits[] | select((.parents | length) < 2) |
+      [.sha, (.commit.message | split("\n")[0])] | join($us)' "$tmp/compare.json" |
+    while IFS="$US" read -r csha subject; do
+      class=$(gh api "repos/openEHR/$repo/commits/$csha" --jq '.files[]?.filename' | commit_class) ||
+        { echo "spec-update-watcher: failed to read openEHR/$repo commit $csha" >&2; exit 1; }
+      printf "%s${US}%s${US}%s\n" "$csha" "$class" "$subject" >> "$tmp/delta/$comp.commits"
+    done
+done < "$tmp/rows"
+
+# The pin kind of a watched component, empty when it has none.
+kind_of() {
+  if [[ -f "$tmp/delta/$1.kind" ]]; then
+    cat "$tmp/delta/$1.kind"
+  fi
+}
 
 # ── A. Jira poll ─────────────────────────────────────────────────────────────
 jira_fetch() { # $1 = full URL; body on stdout; one bounded retry on 429
@@ -381,19 +679,18 @@ while IFS= read -r issue; do
   key=$(echo "$issue" | jq -r '.key')
   project="${key%%-*}"
   if grep -qxF "$key" "$tmp/vendored-keys"; then
-    echo "  $key: already inside the vendored pin (amendment record carries it) — skipped"
+    skip "$key" "already inside the vendored pin (amendment record carries it)"
     continue
   fi
   # A rejected/duplicate resolution means NOTHING changed in the spec — no
-  # triage material. Skip with a note (still deduped later if it ever flips).
-  # "Rejected" was missing from this list, which is how SPECTERM-30
-  # (resolution: Rejected) got filed as tracker work (issue #175 / bug #340);
-  # "Superseded" likewise (SPECPR-124 → issue #347): the successor ticket is
-  # detected on its own resolution, the superseded one itself lands nothing.
+  # triage material. "Rejected" was missing from this list, which is how
+  # SPECTERM-30 got filed as tracker work (issue #175 / bug #340); "Superseded"
+  # likewise (SPECPR-124 → issue #347): the successor ticket is detected on its
+  # own resolution, the superseded one itself lands nothing.
   resolution=$(echo "$issue" | jq -r '.fields.resolution.name // "unresolved"')
   case "$resolution" in
     "Rejected"|"Superseded"|"Won't Do"|"Won't Fix"|"Duplicate"|"Cannot Reproduce"|"Declined"|"Abandoned"|"Not a Bug")
-      echo "  $key: resolution '$resolution' — no spec change, skipped"
+      skip "$key" "resolution '$resolution', no spec change"
       continue ;;
     *) ;;
   esac
@@ -403,9 +700,24 @@ while IFS= read -r issue; do
   # keys the amendment-record baseline cannot see).
   fixv_lines=$(echo "$issue" | jq -r '.fields.fixVersions[]?.name')
   if all_fixversions_inside_pin "$fixv_lines" "$component"; then
-    echo "  $key: fix version(s) [$(echo "$fixv_lines" | paste -sd, -)] predate our pins — already in the vendored text, skipped"
+    skip "$key" "fix version(s) [$(echo "$fixv_lines" | paste -sd, -)] predate our pins"
     continue
   fi
+  comps=$(echo "$issue" | jq -r '[.fields.components[]?.name] | join(", ") | if . == "" then "—" else . end')
+  if echo "$issue" | jq -e '[.fields.components[]?.name] | any(. == "Documentation")' >/dev/null; then
+    skip "$key" "Jira component Documentation"
+    continue
+  fi
+  # The change must have reached a watched repository past our pin; where it
+  # reached a master-pinned one, that component's rolling issue carries it.
+  landed=$(awk -F"$US" -v k="$key" '$1 == k { print $2 "|" $3 }' "$COMMIT_KEYS" | sort -u)
+  if [[ -z "$landed" ]]; then
+    skip "$key" "no commit past our pin in a watched repository names it"
+    continue
+  fi
+  route="file"
+  rolling=$(grep -E '\|branch$' <<<"$landed" | sed -n 1p | cut -d'|' -f1 || true)
+  [[ -n "$rolling" ]] && route="rolling:$rolling"
   summary=$(echo "$issue" | jq -r '.fields.summary')
   status=$(echo "$issue" | jq -r '.fields.status.name // "unknown"')
   itype=$(echo "$issue" | jq -r '.fields.issuetype.name // "unknown"')
@@ -414,13 +726,12 @@ while IFS= read -r issue; do
   # Fix versions with their release state: "Release-1.3.0 (unreleased)".
   fixv=$(echo "$issue" | jq -r '[.fields.fixVersions[]? | "\(.name) (\(if .released then "released" else "unreleased" end))"] | join(", ") | if . == "" then "—" else . end')
   fixv_plain=$(echo "$issue" | jq -r '[.fields.fixVersions[]?.name] | join(", ") | if . == "" then "—" else . end')
-  comps=$(echo "$issue" | jq -r '[.fields.components[]?.name] | join(", ") | if . == "" then "—" else . end')
   # Description arrives as Atlassian Document Format — flatten the text
   # leaves and truncate to a triage-sized excerpt.
   descr=$(echo "$issue" | jq -r '[.fields.description // {} | .. | .text? // empty] | join(" ") | .[0:700]' | tr "$US" ' ' | tr '\n' ' ')
-  printf "%s${US}%s${US}%s${US}jira${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s\n" \
+  printf "%s${US}%s${US}%s${US}jira${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s\n" \
     "$key" "$component" "$summary" "$resolved" "$fixv" "$comps" \
-    "$status" "$resolution" "$itype" "$created" "$fixv_plain" "$descr" >> "$CANDIDATES"
+    "$status" "$resolution" "$itype" "$created" "$fixv_plain" "$route" "$descr" >> "$CANDIDATES"
 done < "$tmp/jira.jsonl"
 
 # ── B. Amendment-record cross-check ─────────────────────────────────────────
@@ -443,54 +754,58 @@ while IFS= read -r local_path; do
     exit 1
   fi
   new_keys=$(comm -23 \
-    <(grep -oE 'SPEC[A-Z]*-[0-9]+' "$tmp/upstream" | sort -u) \
+    <(amendment_rows < "$tmp/upstream" | row_own_keys | sort -u) \
     <(grep -oE 'SPEC[A-Z]*-[0-9]+' "$local_path" | sort -u) || true)
-  if [[ -n "$new_keys" ]]; then
-    while IFS= read -r key; do
-      printf "%s${US}%s${US}%s${US}amendment${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s\n" \
-        "$key" "$comp" "new amendment-record row in openEHR/$repo/$rel" \
-        "see amendment record" "—" "—" \
-        "(amendment)" "(amendment)" "amendment row" "—" "—" \
-        "New row referencing $key in the upstream amendment record openEHR/$repo/$rel — not present in our vendored copy." >> "$CANDIDATES"
-    done <<< "$new_keys"
-  fi
+  [[ -n "$new_keys" ]] || continue
+  route="file"
+  [[ "$(kind_of "$comp")" = "branch" ]] && route="rolling:$comp"
+  while IFS= read -r key; do
+    if [[ "$route" != file ]]; then
+      printf "%s${US}amendment row\n" "$key" >> "$tmp/delta/$comp.keys"
+    fi
+    printf "%s${US}%s${US}%s${US}amendment${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s${US}%s\n" \
+      "$key" "$comp" "new amendment-record row in openEHR/$repo/$rel" \
+      "see amendment record" "—" "—" \
+      "(amendment)" "(amendment)" "amendment row" "—" "—" "$route" \
+      "New row headed by $key in the upstream amendment record openEHR/$repo/$rel — not present in our vendored copy." >> "$CANDIDATES"
+  done <<< "$new_keys"
 done <<< "$amendment_files"
 
-# ── C. Commits-ahead cross-check (every pinned component repo) ──────────────
-# One rolling issue per component and pin kind (rolling_title): created when
-# the default branch is ahead of the pin, updated in place as the delta grows,
-# auto-closed when a re-vendor catches the pin up.
-echo "spec-update-watcher: commits-ahead cross-check against the vendored pins"
+# ── C, second half: one rolling issue per component and pin kind ────────────
+# Created when the delta carries a machine-readable or normative commit,
+# its marked block replaced in place as the delta grows, auto-closed when a
+# re-vendor catches the pin up.
 ahead_created=0 ahead_updated=0 ahead_closed=0
-rolling_rows scripts/vendor/spec-docs.sh "$BMM_PROVENANCE" > "$tmp/rows" ||
-  { echo "spec-update-watcher: no pinned commit in $BMM_PROVENANCE" >&2; exit 1; }
 while IFS='|' read -r comp repo ref sha record; do
   [[ -n "$comp" ]] || continue
-  kind=$(pin_kind "$ref") ||
-    { echo "spec-update-watcher: $comp ref '$ref' names neither master nor a Release-* tag ($record)" >&2; exit 1; }
-  default=$(gh api "repos/openEHR/$repo" --jq '.default_branch') ||
-    { echo "spec-update-watcher: failed to read openEHR/$repo default branch" >&2; exit 1; }
-  ahead=$(gh api "repos/openEHR/$repo/compare/${sha}...${default}" --jq '.ahead_by') ||
-    { echo "spec-update-watcher: failed to compare ${sha}...${default} for openEHR/$repo" >&2; exit 1; }
-  head_sha=$(gh api "repos/openEHR/$repo/branches/$default" --jq '.commit.sha') ||
-    { echo "spec-update-watcher: failed to read openEHR/$repo $default head" >&2; exit 1; }
+  kind=$(kind_of "$comp")
+  IFS='|' read -r ahead default head_sha < "$tmp/delta/$comp.head"
   title=$(rolling_title "$kind" "$comp")
   num=$("$FILE_ISSUE" find --title "$title")
   if [[ "$ahead" -gt 0 ]]; then
     count_line=$(rolling_count_line "$kind" "$ahead" "$ref" "$sha" "$default" "$head_sha")
-    rolling_body "$kind" "$comp" "$repo" "$sha" "$default" "$record" "$count_line" > "$tmp/ahead-body.md"
-    if [[ -n "$num" ]] && grep -qF "$count_line" <<<"$(gh issue view "$num" --json body --jq '.body')"; then
-      continue # unchanged since the last run
+    rolling_block "$count_line" "$tmp/delta/$comp.commits" "$tmp/delta/$comp.keys" > "$tmp/block.md"
+    if [[ -n "$num" ]]; then
+      gh issue view "$num" --json body --jq '.body' > "$tmp/old-body.md"
+      replace_block "$tmp/block.md" < "$tmp/old-body.md" > "$tmp/ahead-body.md"
+      if [[ "$(cat "$tmp/old-body.md")" == "$(cat "$tmp/ahead-body.md")" ]]; then
+        continue # unchanged since the last run
+      fi
+    else
+      if ! awk -F"$US" '$2 != "other" { found = 1 } END { exit !found }' "$tmp/delta/$comp.commits"; then
+        echo "  $comp is $ahead commit(s) ahead ($kind pin), none machine-readable or normative — nothing filed"
+        continue
+      fi
+      rolling_body "$kind" "$comp" "$repo" "$sha" "$default" "$record" "$tmp/block.md" > "$tmp/ahead-body.md"
     fi
-    labels="spec-update,chore"
+    labels="spec-update,chore,$(version_label "$kind")"
     lbl=$(label_for_component "$comp" || true)
     [[ -n "${lbl:-}" ]] && labels="$labels,$lbl"
-    if [[ "$DRY_RUN" = "1" ]] && [[ -z "$num" ]]; then
+    if [[ "$DRY_RUN" = "1" ]]; then
       sed 's/^/    │ /' "$tmp/ahead-body.md"
     fi
     # One engine call covers both branches: create the rolling issue when it
-    # does not exist, replace its body in place when it does (the count updates
-    # as the delta grows).
+    # does not exist, write the body with only its block replaced when it does.
     "$FILE_ISSUE" file --title "$title" --body-file "$tmp/ahead-body.md" \
       --type Task --labels "$labels" --on-existing update "${engine_dry[@]+"${engine_dry[@]}"}"
     echo "  $comp is $ahead commit(s) ahead ($kind pin)"
@@ -521,8 +836,8 @@ sort -t"$US" -k1,1 -k4,4r "$CANDIDATES" | awk -F"$US" '!seen[$1]++' > "$tmp/uniq
 # priority (a Jira-window hit for the same key must not mask the landing).
 amendment_keys=$(awk -F"$US" '$4 == "amendment" { print $1 }' "$CANDIDATES" | sort -u)
 
-created=0 skipped=0 unblocked=0
-while IFS="$US" read -r key component summary source resolved fixv comps status resolution itype jcreated fixv_plain descr; do
+created=0 skipped=0 unblocked=0 routed=0
+while IFS="$US" read -r key component summary source resolved fixv comps status resolution itype jcreated fixv_plain route descr; do
   [[ -n "$key" ]] || continue
   num=$("$FILE_ISSUE" find --state all --dedup-key "$key")
   if [[ -n "$num" ]]; then
@@ -548,7 +863,13 @@ while IFS="$US" read -r key component summary source resolved fixv comps status 
       fi
       unblocked=$((unblocked + 1))
     fi
+    echo "  $key: on the board as #$num"
     skipped=$((skipped + 1))
+    continue
+  fi
+  if [[ "$route" == rolling:* ]]; then
+    echo "  $key: lands in master-pinned ${route#rolling:}, listed on its rolling issue"
+    routed=$((routed + 1))
     continue
   fi
   # Title = key + summary, nothing else (owner ruling: component and target
@@ -565,7 +886,8 @@ while IFS="$US" read -r key component summary source resolved fixv comps status 
     short_summary="${short_summary:0:87}..."
   fi
   title="[spec-update] $key — $short_summary"
-  labels="spec-update,chore"
+  # A per-key issue is a change past a release pin: look-ahead triage.
+  labels="spec-update,chore,$(version_label release)"
   lbl=$([[ -n "$component" ]] && label_for_component "$component" || true)
   [[ -n "${lbl:-}" ]] && labels="$labels,$lbl"
 
@@ -611,4 +933,8 @@ EOF
   esac
 done < "$tmp/unique.tsv"
 
-echo "spec-update-watcher: done — $created new, $unblocked unblocked, $skipped already on the board (dedup by key)."
+if [[ "$DRY_RUN" = "1" ]] && [[ -s "$SKIPPED" ]]; then
+  echo "spec-update-watcher: the skipped set ($(wc -l < "$SKIPPED" | tr -d ' ')):"
+  sort -t"$US" -k1,1 "$SKIPPED" | awk -F"$US" '{ printf "  %s  %s\n", $1, $2 }'
+fi
+echo "spec-update-watcher: done — $created new, $routed on a rolling issue, $unblocked unblocked, $skipped already on the board (dedup by key), $(wc -l < "$SKIPPED" | tr -d ' ') skipped by a filter."

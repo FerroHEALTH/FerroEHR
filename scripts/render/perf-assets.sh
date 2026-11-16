@@ -8,7 +8,8 @@
 # `scripts/conformance.sh perf` writes with the pinned release. The pinned
 # binary draws perf-saturation.svg, perf-throughput.svg and
 # perf-operations.svg from it and writes its `export --markdown` view as the
-# summary.
+# summary. With no record committed it draws nothing and the performance
+# page publishes no figure.
 #
 # Deterministic by construction: the docs CI job re-runs this script and
 # `git diff --exit-code`s the output, so a hand-drawn or stale asset fails
@@ -25,23 +26,11 @@ source scripts/lib/veredictum.sh
 OUT="${1:-website/book/src/perf-assets}"
 SUMMARY="${2:-website/book/generated/perf-summary.md}"
 RECORD="docs/conformance/ferroehr/perf-result.json"
-mkdir -p "$OUT" "$(dirname "$SUMMARY")"
 
-if [[ -f "$RECORD" ]]; then
-  "$(veredictum_bin)" perf-assets --results "$RECORD" --out "$OUT" --summary "$SUMMARY"
+if [[ ! -f "$RECORD" ]]; then
+  echo "perf-assets: no $RECORD is committed, so there is nothing to draw" >&2
   exit 0
 fi
 
-# TODO(#4452): delete this branch with measured.json, stress.json and aql-probe.json once perf-result.json is committed.
-# Until then the page keeps the figures of the Veredictum 0.1.6 record, which
-# only that release reads.
-LEGACY_VERSION="0.1.6"
-LEGACY_MEASURED="docs/conformance/ferroehr/measured.json"
-LEGACY_STRESS="docs/conformance/ferroehr/stress.json"
-args=(perf-assets
-  --root "$(veredictum_root "$LEGACY_VERSION")/artifacts"
-  --results "$LEGACY_MEASURED"
-  --out "$OUT"
-  --summary "$SUMMARY")
-[[ -f "$LEGACY_STRESS" ]] && args+=(--stress "$LEGACY_STRESS")
-"$(veredictum_bin "$LEGACY_VERSION")" "${args[@]}"
+mkdir -p "$OUT" "$(dirname "$SUMMARY")"
+"$(veredictum_bin)" perf-assets --results "$RECORD" --out "$OUT" --summary "$SUMMARY"

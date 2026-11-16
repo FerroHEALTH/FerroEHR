@@ -47,14 +47,13 @@ async fn replica(pool: &sqlx::PgPool, signer: &Arc<Signer>) -> Replica {
     let config = ferroehr::system_log::config::AuditConfig {
         enabled: true,
         store: ferroehr::system_log::config::StoreConfig {
-            enabled: true,
             verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             full_verify_interval: ferrohealth_config::units::Duration::from_secs(0),
             max_verify_lag: ferrohealth_config::units::Duration::from_secs(0),
         },
         ..ferroehr::system_log::config::AuditConfig::default()
     };
-    let (sender, drain) = start(config, None, Some(pools.audit.clone()))
+    let (sender, drain) = start(config, None, pools.audit.clone())
         .await
         .expect("the audit drain starts");
     let checkpoints = Checkpoints::new(
@@ -64,7 +63,7 @@ async fn replica(pool: &sqlx::PgPool, signer: &Arc<Signer>) -> Replica {
         Arc::new(TrustedCertificates::default()),
     );
     assert!(
-        sender.use_access_log(checkpoints.store().clone()),
+        sender.store().use_access_log(checkpoints.store().clone()),
         "the drain appends through the signing store"
     );
     let svc = FerroEhrService::new(&pools)
@@ -93,7 +92,11 @@ async fn work(replica: &Replica) {
         );
         "dr".clone_into(&mut read.user_id);
         read.ehr_id = Some(ehr_id.to_string());
-        replica.sender.emit(read);
+        replica
+            .sender
+            .record(vec![read])
+            .await
+            .expect("the read is recorded");
         let mut outside = AuditEvent::new(
             EventActionCode::Read,
             ObjectClass::Demographic,
