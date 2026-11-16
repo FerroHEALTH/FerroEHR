@@ -1,0 +1,1 @@
+- The hosted sandbox provisions its demo user once per deploy and once after each nightly reset, then stops. The `ferroehr-provision` service is now a one-shot that creates the User over SCIM and exits, where it asked `/scim/v2/Users` every 30 seconds, so the sandbox access log no longer carries a `scim_user_list` entry every half minute.
