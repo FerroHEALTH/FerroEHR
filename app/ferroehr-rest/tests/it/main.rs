@@ -35,6 +35,7 @@
 )]
 
 mod canonical_json_literals;
+mod cold_start_pools;
 mod common;
 
 mod access_delay_http;
