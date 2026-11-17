@@ -92,6 +92,7 @@ impl PgStore {
         .fetch_optional(&mut *tx)
         .await?;
         if claimed.is_none() {
+            // NOTE: our own design (#5762), the usage report, which runs in the background.
             tx.commit().await?;
             return Ok(DailyClaim::Sent);
         }
@@ -105,6 +106,7 @@ impl PgStore {
                 .fetch_all(&mut *tx)
                 .await?;
         let counts = counts_of(groups, counters)?;
+        // NOTE: our own design (#5762), the usage report, which runs in the background.
         tx.commit().await?;
         Ok(DailyClaim::Taken(counts))
     }
@@ -119,6 +121,7 @@ impl PgStore {
         sqlx::query("UPDATE usage_report_instance SET last_daily_sent_at = NULL")
             .execute(&mut *tx)
             .await?;
+        // NOTE: our own design (#5762), the usage report, which runs in the background.
         tx.commit().await?;
         Ok(())
     }

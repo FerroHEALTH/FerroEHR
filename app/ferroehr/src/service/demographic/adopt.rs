@@ -177,11 +177,14 @@ impl FerroEhrService {
             &self.signing_ctx(),
         )
         .await?;
-        tx.commit().await?;
+        let records = report
+            .adopted
+            .iter()
+            .map(|adopted| self.adoption_record(admin, adopted))
+            .collect();
+        let facts = crate::system_log::recorder::WriteFacts::of_parties(&committed);
+        self.commit_recorded(tx, &facts, records).await?;
         report.contribution = Some(committed.id);
-        for adopted in &report.adopted {
-            self.record_adoption(admin, adopted).await?;
-        }
         Ok(report)
     }
 
@@ -291,14 +294,7 @@ impl FerroEhrService {
 
     /// Records the adoption `adopted` by the administrator `admin`; nothing
     /// while auditing is off.
-    async fn record_adoption(
-        &self,
-        admin: Uuid,
-        adopted: &AdoptedPerson,
-    ) -> Result<(), ServiceError> {
-        if !self.audit_enabled() {
-            return Ok(());
-        }
+    fn adoption_record(&self, admin: Uuid, adopted: &AdoptedPerson) -> AuditEvent {
         let mut event = AuditEvent::new(
             EventActionCode::Update,
             ObjectClass::Demographic,
@@ -311,7 +307,7 @@ impl FerroEhrService {
         ));
         event.user_id = admin.to_string();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event).await
+        event
     }
 }
 

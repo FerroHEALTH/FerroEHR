@@ -1060,11 +1060,22 @@ restart, a crash or a lost replica leaves it for the next chainer.
 The reference host sustains about 15 000 chained access-log entries per
 second in one chain ([capacity](capacity.md)).
 
-A write's records are written after its clinical commit, in the audit
-cluster, which production keeps apart from the clinical one: a process that
-dies between the two commits loses that write's record until the durable
-reservation of [#5762](https://github.com/FerroHEALTH/FerroEHR/issues/5762)
-closes the window.
+A write's records live in the audit cluster, which production keeps apart
+from the clinical and party ones, so they cannot join the write's own
+transaction. They are written first, into the intake, **held** under a
+reservation id the chainer skips; the id goes into the write's own domain in
+the write's transaction, and the write commits. Once the response is built,
+the reservation goes to the chainer, whose next round releases the held
+records in the same transaction that chains them, so a write costs two
+commits. A replica that stops before that round leaves the records held:
+two minutes later the reconciler of any running replica
+releases those records, exactly as they were written and once, and discards
+the held records of a write that never committed. The reservation holds the
+id alone, no identity of the caller. While a reservation waits past those two
+minutes the `audit_sender` indicator reads `DEGRADED` with their count and
+age, and the metrics `audit_reservations_held`,
+`audit_reservation_age_seconds` and `audit_reservations_reconciled_total`
+show them.
 
 ### While a composition is held from the person
 
@@ -1230,16 +1241,19 @@ points, which sign with their own certificate.
   verifying what an earlier key signed. With that key the log is sealed; a
   deployment without it seals nothing, and `ferroehr access-log checkpoint`
   answers that the keyring holds no key.
-- **One checkpoint per append.** Every append of the audit writer ends, in
-  its own transaction, with the checkpoint of the last link it wrote, so an
-  entry is covered by a signature from the moment it commits, whichever
-  replica wrote it. A change, removal, insertion or reordering of a record
-  below a checkpoint breaks the chain under that checkpoint's signature. The
-  links carry no signature of their own. A population query that reaches
-  twenty EHRs writes twenty entries and one signature. The checkpoint is
-  signed while the rest of the append's transaction is written, so the head
-  of the chain is held for one signature at most. There is no switch and no
-  interval to set. `ferroehr access-log checkpoint` and
+- **A checkpoint a second, and one at rest.** While requests keep writing,
+  the chainer seals the last link of a round once the last checkpoint is a
+  second old, and when it comes to rest it seals the head of the chain, so
+  every chained entry is covered by a signature within a second under load
+  and at once when the load stops. A write that settles its own entries
+  (an import, an erasure) seals them in the same transaction. A change,
+  removal, insertion or reordering of a record below a checkpoint breaks the
+  chain under that checkpoint's signature. The links carry no signature of
+  their own. Within the second before a checkpoint, someone who can write
+  the database but holds no key could change the newest entries unseen; a
+  checkpoint per round closed that second at the cost of one signature and
+  its wait in every round, about 20 a second at 3000 requests a second.
+  There is no switch and no interval to set. `ferroehr access-log checkpoint` and
   `POST /admin/access-log/checkpoint` answer the checkpoint of the head, and
   seal one only for a head appended while the keyring held no key.
 - **Use an Ed25519 key.** An RSA signature is far slower than an Ed25519

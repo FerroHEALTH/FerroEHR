@@ -37,7 +37,7 @@ fn agrees_with_the_reference(value: &Value) {
 /// DEL (never escaped), Latin-1, U+2028 and U+2029, the BMP below and above
 /// the surrogate block, and supplementary characters, which UTF-16 writes as
 /// a surrogate pair.
-fn any_char() -> impl Strategy<Value = char> {
+pub(crate) fn any_char() -> impl Strategy<Value = char> {
     prop_oneof![
         (0_u32..0x20).prop_map(|code| char::from_u32(code).expect("a control character")),
         prop::sample::select(vec!['"', '\\', '/', '\u{7f}', '\u{2028}', '\u{2029}']),
@@ -51,7 +51,7 @@ fn any_char() -> impl Strategy<Value = char> {
 }
 
 /// A string of characters from [`any_char`], with long ASCII runs among them.
-fn any_text() -> impl Strategy<Value = String> {
+pub(crate) fn any_text() -> impl Strategy<Value = String> {
     prop_oneof![
         proptest::collection::vec(any_char(), 0..24).prop_map(|chars| chars.into_iter().collect()),
         "[ -~]{0,64}",
@@ -77,7 +77,7 @@ fn edge_integer() -> impl Strategy<Value = Value> {
 
 /// Any finite number: every `i64`, `u64` and finite double, the edge integers,
 /// and the integral doubles a stored float carries.
-fn any_number() -> impl Strategy<Value = Value> {
+pub(crate) fn any_number() -> impl Strategy<Value = Value> {
     prop_oneof![
         any::<i64>().prop_map(Value::from),
         any::<u64>().prop_map(Value::from),
@@ -101,7 +101,7 @@ fn any_number() -> impl Strategy<Value = Value> {
 }
 
 /// Any JSON value over [`any_text`] names and strings and [`any_number`].
-fn any_value() -> impl Strategy<Value = Value> {
+pub(crate) fn any_value() -> impl Strategy<Value = Value> {
     let leaf = prop_oneof![
         Just(Value::Null),
         any::<bool>().prop_map(Value::Bool),

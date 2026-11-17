@@ -33,6 +33,7 @@
 pub mod https;
 pub mod json_literals;
 pub mod roles;
+mod server_settings;
 pub mod syslog_tls;
 
 use std::time::{Duration, Instant};
@@ -445,18 +446,7 @@ async fn start_container() -> Result<ContainerAsync<Postgres>, TestkitError> {
         }
         let request = Postgres::default()
             .with_tag("18")
-            // PostgreSQL docs § "Non-Durable Settings": the server is disposable.
-            .with_cmd([
-                "postgres",
-                "-c",
-                "fsync=off",
-                "-c",
-                "synchronous_commit=off",
-                "-c",
-                "full_page_writes=off",
-                "-c",
-                "max_connections=200",
-            ])
+            .with_cmd(server_settings::COMMAND)
             .with_shm_size(SHM_SIZE_BYTES)
             .with_container_name(CONTAINER_NAME)
             .with_reuse(ReuseDirective::Always);

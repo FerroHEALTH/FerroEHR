@@ -16,6 +16,7 @@
 use std::time::{Duration, Instant};
 
 use sqlx::Connection;
+use uuid::Uuid;
 
 use crate::access_log::chain::link_digest;
 use crate::access_log::store::{AccessLogError, AccessLogStore};
@@ -28,6 +29,16 @@ pub struct Owed {
     pub fhir_feed: bool,
     /// The ITI-20 syslog route.
     pub syslog: bool,
+}
+
+/// Whether a round seals the last link it writes in a signed checkpoint.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Seal {
+    /// The round ends with the checkpoint of its last link.
+    Now,
+    /// The round leaves its links to a later checkpoint
+    /// ([`AccessLogStore::seal_head`] or a later round's).
+    Later,
 }
 
 /// What one round of the chainer did.
@@ -46,12 +57,20 @@ pub enum Round {
 
 impl AccessLogStore {
     /// Chain up to `limit` of the oldest intake rows, owing each to the
-    /// sinks `owed` names.
+    /// sinks `owed` names, after releasing in the same transaction the
+    /// records held under the reservations `release`, whose writes committed
+    /// (#5762); a round that finds the head held releases nothing.
     ///
     /// # Errors
     /// The store errors when a statement fails, a link the trigger refuses
     /// among them, and the sealing errors of the checkpoint.
-    pub async fn chain_round(&self, limit: u32, owed: Owed) -> Result<Round, AccessLogError> {
+    pub async fn chain_round(
+        &self,
+        limit: u32,
+        owed: Owed,
+        seal: Seal,
+        release: &[Uuid],
+    ) -> Result<Round, AccessLogError> {
         let mut conn = acquire(self.pool()).await?;
         let mut tx = conn.begin().await?;
         // NOTE: PostgreSQL 18 §19.7.1 (enable_seqscan); the intake's deleted rows leave it many
@@ -68,15 +87,27 @@ impl AccessLogStore {
             return Ok(Round::Busy);
         };
         let taken = Instant::now();
+        if !release.is_empty() {
+            sqlx::query("SELECT audit.audit_intake_release($1)")
+                .bind(release)
+                .execute(&mut *tx)
+                .await?;
+        }
         let rows: Vec<(i64, String)> = sqlx::query_as(
             "SELECT id, encode(content_digest, 'hex') FROM audit.access_log_intake \
-             ORDER BY id LIMIT $1",
+             WHERE reserved_by IS NULL ORDER BY id LIMIT $1",
         )
         .bind(i64::from(limit))
         .fetch_all(&mut *tx)
         .await?;
         if rows.is_empty() {
-            tx.rollback().await?;
+            if release.is_empty() {
+                tx.rollback().await?;
+            } else {
+                // NOTE: our own design (#5762), the audit domain's own store, whose held rows this
+                // transaction released.
+                tx.commit().await?;
+            }
             return Ok(Round::Chained {
                 entries: 0,
                 held: taken.elapsed(),
@@ -94,7 +125,10 @@ impl AccessLogStore {
             previous_digests.push(std::mem::replace(&mut previous, digest.clone()));
             digests.push(digest);
         }
-        let seal = self.begin_seal(sequence, &previous)?;
+        let seal = match seal {
+            Seal::Now => self.begin_seal(sequence, &previous)?,
+            Seal::Later => None,
+        };
         sqlx::query("SELECT audit.access_log_chain_move($1, $2, $3, $4, $5, $6)")
             .bind(&ids)
             .bind(&sequences)
@@ -107,6 +141,8 @@ impl AccessLogStore {
         if let Some(seal) = seal {
             seal.write(&mut tx).await?;
         }
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         Ok(Round::Chained {
             entries: rows.len(),
@@ -121,12 +157,46 @@ impl AccessLogStore {
     /// As [`Self::chain_round`].
     pub async fn settle(&self, owed: Owed) -> Result<(), AccessLogError> {
         loop {
-            match self.chain_round(SETTLE_BATCH, owed).await? {
+            match self.chain_round(SETTLE_BATCH, owed, Seal::Now, &[]).await? {
                 Round::Busy => tokio::time::sleep(Duration::from_millis(1)).await,
                 Round::Chained { entries: 0, .. } => return Ok(()),
                 Round::Chained { .. } => {}
             }
         }
+    }
+}
+
+impl AccessLogStore {
+    /// Seal the head of the chain in a signed checkpoint, unless one seals it
+    /// already; `false` when another chainer holds the head, which seals its
+    /// own rounds.
+    ///
+    /// # Errors
+    /// The store errors when a statement fails, and the sealing errors of the
+    /// checkpoint.
+    pub async fn seal_head(&self) -> Result<bool, AccessLogError> {
+        let mut conn = acquire(self.pool()).await?;
+        let mut tx = conn.begin().await?;
+        let head: Option<(i64, String)> =
+            sqlx::query_as("SELECT head_seq, head_digest FROM audit.access_log_chain_take()")
+                .fetch_optional(&mut *tx)
+                .await?;
+        let Some((sequence, digest)) = head else {
+            return Ok(false);
+        };
+        let sealed: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM audit.access_log_checkpoint WHERE sequence = $1)",
+        )
+        .bind(sequence)
+        .fetch_one(&mut *tx)
+        .await?;
+        if !sealed && let Some(seal) = self.begin_seal(sequence, &digest)? {
+            seal.write(&mut tx).await?;
+        }
+        // NOTE: our own design (#5762), the audit domain's own store, sealing the head no request
+        // moved.
+        tx.commit().await?;
+        Ok(true)
     }
 }
 

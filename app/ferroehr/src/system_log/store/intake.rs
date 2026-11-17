@@ -18,7 +18,7 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd};
-use crate::access_log::chainer::Round;
+use crate::access_log::chainer::{Round, Seal};
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
@@ -76,6 +76,34 @@ impl Pending {
     }
 }
 
+/// The reservations whose writes committed, waiting for the chainer's next
+/// round to release their records inside its own transaction (#5762).
+#[derive(Debug, Default)]
+pub(super) struct Releases(std::sync::Mutex<Vec<Uuid>>);
+
+impl Releases {
+    fn lock(&self) -> std::sync::MutexGuard<'_, Vec<Uuid>> {
+        self.0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Queue `ids` for the next round.
+    pub(super) fn queue(&self, ids: &[Uuid]) {
+        self.lock().extend_from_slice(ids);
+    }
+
+    /// The queued ids, cleared.
+    fn take(&self) -> Vec<Uuid> {
+        std::mem::take(&mut *self.lock())
+    }
+
+    /// Put back `ids` a round did not release.
+    fn restore(&self, ids: Vec<Uuid>) {
+        self.lock().extend(ids);
+    }
+}
+
 /// What one round of the chainer did on each chain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ChainRound {
@@ -123,6 +151,7 @@ impl AuditStore {
         conn: &mut PgConnection,
         records: Vec<AuditRecord>,
         ends: &[RecordEnd],
+        reserved_by: Option<Uuid>,
     ) -> Result<(Vec<Uuid>, LearnedSets, Chains), AuditError> {
         if !ends.is_empty() && ends.len() != records.len() {
             return Err(AuditError::RetentionEnds {
@@ -158,12 +187,12 @@ impl AuditStore {
             let run = records.get(*start..*end).unwrap_or_default();
             let run_ends = ends.get(*start..*end).unwrap_or_default();
             let (tokens, learned) = Self::batch_tokens(self, writing, conn, run).await?;
-            ids.extend(Self::insert_rows(conn, run, run_ends, policy, tokens).await?);
+            ids.extend(Self::insert_rows(conn, run, run_ends, policy, tokens, reserved_by).await?);
             learned_all.push(learned);
         }
         #[cfg(feature = "fhir")]
         {
-            let (uids, learned) = self.intake_entries(conn, entries).await?;
+            let (uids, learned) = self.intake_entries(conn, entries, reserved_by).await?;
             ids.extend(uids);
             learned_all.push(learned);
         }
@@ -172,7 +201,7 @@ impl AuditStore {
 
     /// The access-log store the chainer links entries through: the one the
     /// server installed, which seals, or an unsealing one.
-    pub(super) fn chaining_store(&self) -> AccessLogStore {
+    pub(crate) fn chaining_store(&self) -> AccessLogStore {
         self.access_log().map_or_else(
             || AccessLogStore::new(self.pool.clone()),
             |installed| installed.with_pool(self.pool.clone()),
@@ -187,13 +216,25 @@ impl AuditStore {
     /// [`AuditError::AccessLog`] when the access log's round fails, and
     /// [`AuditError::Store`] when the system chain's move fails; the chains
     /// the round did not finish are looked at again in the next.
-    pub async fn chain_round(&self, limit: u32, look: Chains) -> Result<ChainRound, AuditError> {
+    pub async fn chain_round(
+        &self,
+        limit: u32,
+        look: Chains,
+        seal: Seal,
+    ) -> Result<ChainRound, AuditError> {
         let written = self.pending.take();
+        let released = self.releases.take();
+        let releasing = !released.is_empty();
         let look = Chains {
-            access_log: look.access_log || written.access_log,
-            system: look.system || written.system,
+            access_log: look.access_log || written.access_log || releasing,
+            system: look.system || written.system || releasing,
         };
-        let round = self.round(limit, look).await;
+        let round = self.round(limit, look, seal, &released).await;
+        // NOTE: our own design (#5762), a round that did not take the head released nothing.
+        if releasing && !matches!(&round, Ok(round) if round.access_log != Round::Busy) {
+            self.releases.restore(released);
+            self.pending.mark(Chains::BOTH);
+        }
         // NOTE: our own design (#5770), a chain the round did not empty is looked at again.
         let unfinished = match &round {
             Ok(round) => Chains {
@@ -219,9 +260,17 @@ impl AuditStore {
         self.pending.is_marked()
     }
 
-    async fn round(&self, limit: u32, look: Chains) -> Result<ChainRound, AuditError> {
+    async fn round(
+        &self,
+        limit: u32,
+        look: Chains,
+        seal: Seal,
+        release: &[Uuid],
+    ) -> Result<ChainRound, AuditError> {
         let access_log = if look.access_log {
-            self.chaining_store().chain_round(limit, self.owed).await?
+            self.chaining_store()
+                .chain_round(limit, self.owed, seal, release)
+                .await?
         } else {
             Round::Chained {
                 entries: 0,
@@ -288,20 +337,105 @@ fn merged(parts: Vec<LearnedSets>) -> LearnedSets {
 fn merged(_parts: Vec<LearnedSets>) -> LearnedSets {}
 
 impl AuditStore {
-    /// How long the oldest record of either intake has waited for the
-    /// chainer; `None` when both are empty.
+    /// How long the oldest record of either intake that is not held has
+    /// waited for the chainer; `None` when there is none.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the read fails.
     pub async fn intake_age(&self) -> Result<Option<std::time::Duration>, AuditError> {
         let seconds: Option<f64> = sqlx::query_scalar(
             "SELECT extract(epoch FROM now() - least( \
-             (SELECT min(taken_at) FROM audit.access_log_intake), \
-             (SELECT min(taken_at) FROM audit.audit_event_intake)))::float8",
+             (SELECT min(taken_at) FROM audit.access_log_intake WHERE reserved_by IS NULL), \
+             (SELECT min(taken_at) FROM audit.audit_event_intake WHERE reserved_by IS NULL)))::float8",
         )
         .fetch_one(&mut *acquire(&self.pool).await?)
         .await?;
         Ok(seconds.map(|seconds| std::time::Duration::from_secs_f64(seconds.max(0.0))))
+    }
+}
+
+impl AuditStore {
+    /// Queue the reservations `ids`, whose writes committed, for the
+    /// chainer's next round, which releases their records in its own
+    /// transaction (#5762).
+    pub fn queue_release(&self, ids: &[Uuid]) {
+        self.releases.queue(ids);
+        self.pending.mark(Chains::BOTH);
+    }
+
+    /// Release the records held under the reservations `ids` now, in a
+    /// transaction of their own: the reconciler's release of a write whose
+    /// process stopped first (#5762); returns how many.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the statement fails.
+    pub async fn release(&self, ids: &[Uuid]) -> Result<u64, AuditError> {
+        let released: i64 = sqlx::query_scalar("SELECT audit.audit_intake_release($1)")
+            .bind(ids)
+            .fetch_one(&mut *acquire(&self.pool).await?)
+            .await?;
+        self.pending.mark(Chains::BOTH);
+        Ok(u64::try_from(released).unwrap_or(0))
+    }
+
+    /// Discard the records held under the reservations `ids`, whose writes
+    /// never committed; returns how many.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the statement fails.
+    pub async fn discard(&self, ids: &[Uuid]) -> Result<u64, AuditError> {
+        let discarded: i64 = sqlx::query_scalar("SELECT audit.audit_intake_discard($1)")
+            .bind(ids)
+            .fetch_one(&mut *acquire(&self.pool).await?)
+            .await?;
+        Ok(u64::try_from(discarded).unwrap_or(0))
+    }
+
+    /// The reservations whose records have been held longer than `grace`,
+    /// each with how long, oldest first.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the read fails.
+    pub async fn held_longer_than(
+        &self,
+        grace: std::time::Duration,
+    ) -> Result<Vec<(Uuid, std::time::Duration)>, AuditError> {
+        let rows: Vec<(Uuid, f64)> = sqlx::query_as(
+            "SELECT h.reserved_by, extract(epoch FROM now() - min(h.taken_at))::float8 \
+             FROM (SELECT reserved_by, taken_at FROM audit.access_log_intake \
+                   WHERE reserved_by IS NOT NULL \
+                   UNION ALL SELECT reserved_by, taken_at FROM audit.audit_event_intake \
+                   WHERE reserved_by IS NOT NULL) AS h \
+             GROUP BY h.reserved_by \
+             HAVING min(h.taken_at) < now() - make_interval(secs => $1) \
+             ORDER BY 2 DESC",
+        )
+        .bind(grace.as_secs_f64())
+        .fetch_all(&mut *acquire(&self.pool).await?)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, age)| (id, std::time::Duration::from_secs_f64(age.max(0.0))))
+            .collect())
+    }
+}
+
+impl AuditStore {
+    /// Which of the reservations `ids` still hold records in the intake.
+    ///
+    /// # Errors
+    /// [`AuditError::Store`] when the read fails.
+    pub async fn held_among(&self, ids: &[Uuid]) -> Result<Vec<Uuid>, AuditError> {
+        let held: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT DISTINCT h.reserved_by FROM ( \
+             SELECT reserved_by FROM audit.access_log_intake WHERE reserved_by = ANY($1) \
+             UNION ALL SELECT reserved_by FROM audit.audit_event_intake WHERE reserved_by = ANY($1) \
+             ) AS h",
+        )
+        .bind(ids)
+        .fetch_all(&mut *acquire(&self.pool).await?)
+        .await?;
+        Ok(held)
     }
 }
 

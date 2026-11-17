@@ -308,7 +308,7 @@ pub async fn replace_tags(
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver failure.
 pub async fn delete_tag(
-    pool: &PgPool,
+    conn: &mut PgConnection,
     ehr_scope: Option<EhrId>,
     target_vo_id: VoId,
     target_version: Option<&str>,
@@ -322,7 +322,7 @@ pub async fn delete_tag(
     .bind(target_vo_id)
     .bind(target_version)
     .bind(key)
-    .execute(&mut *acquire(pool).await?)
+    .execute(&mut *conn)
     .await?;
     Ok(deleted.rows_affected() > 0)
 }

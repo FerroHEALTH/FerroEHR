@@ -59,6 +59,7 @@ use ferroehr::system_log::event::{
     AccessDecision, AccessDomain, ActorAuthentication, AuditEvent, EntryScope, EventActionCode,
     EventOutcome, EventType, ObjectClass, QueryNaming,
 };
+use ferroehr::system_log::recorder::WriteRecorder;
 
 use crate::extensions::access::authn::{FreshAuthentication, Principal};
 use crate::overview::error::RestError;
@@ -123,6 +124,17 @@ pub(super) struct AccessContext {
     request_id: Option<String>,
     purpose: Option<String>,
     permit: Option<String>,
+}
+
+/// The facts of one request every operation record of it names: where it
+/// came from, what it addressed, when it arrived and its access context.
+#[derive(Debug, Clone)]
+pub(super) struct RequestFacts {
+    pub(super) client_ip: Option<String>,
+    pub(super) path: String,
+    pub(super) route_ehr_id: Option<String>,
+    pub(super) timestamp: jiff::Timestamp,
+    pub(super) access: AccessContext,
 }
 
 /// The caller as the authentication layer published it on the response: the
@@ -250,12 +262,20 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         .get::<ferrohealth_telemetry::request_log::RequestId>()
         .map(|id| id.id().to_owned());
 
-    let access = AccessContext {
-        request_id,
-        purpose,
-        permit,
+    let facts = RequestFacts {
+        client_ip,
+        path,
+        route_ehr_id,
+        timestamp,
+        access: AccessContext {
+            request_id,
+            purpose,
+            permit,
+        },
     };
-    let resp = run_published(req, next, &access, client_ip.clone()).await;
+    let recorder = WriteRecorder::default();
+    recorder.prime(crate::system_log::written::builder(&state, &facts));
+    let resp = run_recorded(recorder.clone(), req, next, &facts).await;
     let status = resp.status();
 
     let op = resp.extensions().get::<AuditOpId>().copied();
@@ -266,53 +286,37 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
     let refusal = crate::system_log::refusals::is_refusal(&resp);
 
     let mut records = Vec::new();
-    // NOTE: our own design (#5602), the act wrote its record in its own transaction, so a
-    // second operation record would be a second record of one event.
-    let written = object
-        .as_ref()
-        .is_some_and(|object| object.entry == EntryScope::Written);
+    // NOTE: our own design (#5602, #5762), the act or its commit wrote the operation record
+    // itself, so a second one would be a second record of one event.
+    let written = recorder.holds_operation_record()
+        || object
+            .as_ref()
+            .is_some_and(|object| object.entry == EntryScope::Written);
     let mut op_recorded = written;
 
     let classified = op.map(|AuditOpId(op)| (op, audit_for(op)));
-    if let Some((op, Some((action, object_class)))) = classified
+    if let Some((op, Some(classes))) = classified
         && !written
     {
-        let mut event = AuditEvent::new(action, object_class, outcome_from_status(status));
-        // The concrete operation is the `EventTypeCode` (DICOM PS3.15 §A.5
-        // EventIdentification); the id is ours.
-        event.event_type = Some(EventType::rest(op));
-        if refusal {
-            event.decision = AccessDecision::Refused;
-        }
         op_recorded = true;
-        fill_common(&mut event, caller, client_ip.clone(), timestamp);
-        fill_object(
-            &mut event,
-            object.as_ref(),
-            route_ehr_id.as_deref(),
+        records.push(operation_record(
+            &state,
             op,
-            &path,
-        );
-        caller.stamp_decision(&mut event);
-        // NOTE: our own design (#5606), an evaluator refusal refuses EHR data, so its record
-        // writes an access-log entry whatever the operation's resource class.
-        if event.decided.as_ref().is_some_and(|d| d.refused.is_some())
-            && event.domain != AccessDomain::Ehr
-            && event.entry == EntryScope::ByDomain
-        {
-            event.entry = EntryScope::Refusal;
-        }
-        categorise(&mut event, &state, op, object.as_ref());
-        fill_access(&mut event, &access, &state);
-        records.push(event);
+            classes,
+            status,
+            refusal,
+            caller,
+            &facts,
+            object.as_ref(),
+        ));
         records.extend(crate::system_log::served::records(
             &state,
             &resp,
             op,
             caller,
-            client_ip.as_deref(),
-            timestamp,
-            &access,
+            facts.client_ip.as_deref(),
+            facts.timestamp,
+            &facts.access,
         ));
     }
 
@@ -325,16 +329,19 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
             &state,
             &resp,
             caller,
-            client_ip,
-            timestamp,
-            &access,
-            route_ehr_id,
+            facts.client_ip,
+            facts.timestamp,
+            &facts.access,
+            facts.route_ehr_id,
             op_recorded,
         ));
     } else if fresh_auth && !state.backend().suppress_login_events() {
-        records.push(login(caller, client_ip, timestamp));
+        records.push(login(caller, facts.client_ip, facts.timestamp));
     }
 
+    // NOTE: our own design (#5762), the records of what the request committed are held until
+    // here, and are released whatever this response becomes, since the writes committed.
+    state.backend().confirm_reserved(&recorder.reserved());
     if let Some((op, None)) = classified {
         return unclassified(op);
     }
@@ -350,6 +357,73 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
         return resp;
     }
     resp
+}
+
+/// The operation record of `op`, classified as `classes`, for a response of
+/// `status`: the caller, what the handler said it touched and the request's
+/// shared facts.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the record's parts as the middleware and the commit choke point both hold them"
+)]
+pub(super) fn operation_record(
+    state: &AppState,
+    op: &'static str,
+    (action, object_class): (EventActionCode, ObjectClass),
+    status: StatusCode,
+    refusal: bool,
+    caller: Caller<'_>,
+    facts: &RequestFacts,
+    object: Option<&AuditObject>,
+) -> AuditEvent {
+    let mut event = AuditEvent::new(action, object_class, outcome_from_status(status));
+    // The concrete operation is the `EventTypeCode` (DICOM PS3.15 §A.5
+    // EventIdentification); the id is ours.
+    event.event_type = Some(EventType::rest(op));
+    if refusal {
+        event.decision = AccessDecision::Refused;
+    }
+    fill_common(&mut event, caller, facts.client_ip.clone(), facts.timestamp);
+    fill_object(
+        &mut event,
+        object,
+        facts.route_ehr_id.as_deref(),
+        op,
+        &facts.path,
+    );
+    caller.stamp_decision(&mut event);
+    // NOTE: our own design (#5606), an evaluator refusal refuses EHR data, so its record
+    // writes an access-log entry whatever the operation's resource class.
+    if event.decided.as_ref().is_some_and(|d| d.refused.is_some())
+        && event.domain != AccessDomain::Ehr
+        && event.entry == EntryScope::ByDomain
+    {
+        event.entry = EntryScope::Refusal;
+    }
+    categorise(&mut event, state, op, object);
+    fill_access(&mut event, &facts.access, state);
+    event
+}
+
+/// Run the rest of the stack under the request's write `recorder`
+/// ([`run_published`]).
+async fn run_recorded(
+    recorder: WriteRecorder,
+    req: Request,
+    next: Next,
+    facts: &RequestFacts,
+) -> Response {
+    // NOTE: boxed, so the stack below the audit layer carries a pointer, not the request.
+    Box::pin(crate::system_log::written::run(
+        recorder,
+        Box::pin(run_published(
+            req,
+            next,
+            &facts.access,
+            facts.client_ip.clone(),
+        )),
+    ))
+    .await
 }
 
 /// Run the rest of the stack with the request's origin and declared purpose
@@ -601,197 +675,4 @@ fn segment_after(path: &str, marker: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn outcome_codes_track_http_status() {
-        assert_eq!(outcome_from_status(StatusCode::OK), EventOutcome::Success);
-        assert_eq!(
-            outcome_from_status(StatusCode::NO_CONTENT),
-            EventOutcome::Success
-        );
-        // 304 Not Modified is a successful conditional read (RFC 9110 §15.4.5);
-        // redirection is not a failed action.
-        assert_eq!(
-            outcome_from_status(StatusCode::NOT_MODIFIED),
-            EventOutcome::Success
-        );
-        assert_eq!(
-            outcome_from_status(StatusCode::BAD_REQUEST),
-            EventOutcome::MinorFailure
-        );
-        assert_eq!(
-            outcome_from_status(StatusCode::UNAUTHORIZED),
-            EventOutcome::MinorFailure
-        );
-        assert_eq!(
-            outcome_from_status(StatusCode::FORBIDDEN),
-            EventOutcome::MinorFailure
-        );
-        assert_eq!(
-            outcome_from_status(StatusCode::NOT_FOUND),
-            EventOutcome::MinorFailure
-        );
-        assert_eq!(
-            outcome_from_status(StatusCode::INTERNAL_SERVER_ERROR),
-            EventOutcome::SeriousFailure
-        );
-        assert_eq!(
-            outcome_from_status(StatusCode::SERVICE_UNAVAILABLE),
-            EventOutcome::SeriousFailure
-        );
-    }
-
-    /// The EHR id `route_ehr_id` reads for `path` once `routes` matched it.
-    async fn routed_ehr_id(templates: &[&str], path: &str) -> Option<String> {
-        use tower::ServiceExt as _;
-        let mut app = axum::Router::new();
-        for template in templates {
-            app = app.route(template, axum::routing::any(|| async {}));
-        }
-        let app = app.layer(axum::middleware::from_fn(
-            |req: Request, next: Next| async move {
-                let (req, found) = route_ehr_id(req).await;
-                let mut resp = next.run(req).await;
-                if let Some(found) = found {
-                    resp.headers_mut()
-                        .insert("x-ehr", HeaderValue::from_str(&found).unwrap());
-                }
-                resp
-            },
-        ));
-        let resp = app
-            .oneshot(Request::get(path).body(axum::body::Body::empty()).unwrap())
-            .await
-            .unwrap();
-        assert_eq!(resp.status(), StatusCode::OK, "{path} should match a route");
-        resp.headers()
-            .get("x-ehr")
-            .map(|v| v.to_str().unwrap().to_owned())
-    }
-
-    #[tokio::test]
-    async fn ehr_id_from_the_matched_route() {
-        let routes = [
-            "/ehr",
-            "/ehr/{ehr_id}",
-            "/ehr/{ehr_id}/composition/{uid_based_id}",
-            "/ehr/{ehr_id}/ehr_status",
-            "/admin/ehr/all",
-            "/admin/ehr/{ehr_id}",
-            "/message/export/{ehr_id}",
-            "/message/import/{ehr_id}",
-            "/definition/template/adl1.4/{template_id}",
-        ];
-        let some = |id: &str| Some(id.to_owned());
-        assert_eq!(
-            routed_ehr_id(&routes, "/ehr/abc-123/composition/x").await,
-            some("abc-123")
-        );
-        assert_eq!(
-            routed_ehr_id(&routes, "/ehr/abc-123").await,
-            some("abc-123")
-        );
-        assert_eq!(
-            routed_ehr_id(&routes, "/ehr/abc-123/ehr_status").await,
-            some("abc-123")
-        );
-        // Create has no id parameter.
-        assert_eq!(routed_ehr_id(&routes, "/ehr").await, None);
-        // Admin delete carries the id; the literal `all` route names none.
-        assert_eq!(routed_ehr_id(&routes, "/admin/ehr/zzz").await, some("zzz"));
-        assert_eq!(routed_ehr_id(&routes, "/admin/ehr/all").await, None);
-        // The extension routes name the EHR after a segment other than `ehr`.
-        for path in ["/message/export/e-1", "/message/import/e-1"] {
-            assert_eq!(routed_ehr_id(&routes, path).await, some("e-1"), "{path}");
-        }
-        assert_eq!(
-            routed_ehr_id(&routes, "/definition/template/adl1.4/t").await,
-            None
-        );
-    }
-
-    #[test]
-    fn object_id_from_template_paths() {
-        assert_eq!(
-            object_id_from_path(
-                "definition_template_adl1.4_get",
-                "/x/definition/template/adl1.4/vital_signs.v1"
-            ),
-            Some("vital_signs.v1".to_owned())
-        );
-        // Upload/list have no id segment.
-        assert_eq!(
-            object_id_from_path(
-                "definition_template_adl1.4_upload",
-                "/x/definition/template/adl1.4"
-            ),
-            None
-        );
-        assert_eq!(
-            object_id_from_path(
-                "definition_template_adl2_version_get",
-                "/x/definition/template/adl2/t.v1/1.0.0"
-            ),
-            Some("t.v1".to_owned())
-        );
-        // The ADL 2 conversion names the template it reads.
-        assert_eq!(
-            object_id_from_path(
-                "definition_template_adl14_convert",
-                "/x/definition/template/adl1.4/vital_signs.v1/adl2"
-            ),
-            Some("vital_signs.v1".to_owned())
-        );
-    }
-
-    #[test]
-    fn object_id_from_query_paths() {
-        // Stored query execution: the qualified name is the search criteria.
-        assert_eq!(
-            object_id_from_path("query_execute_stored_query", "/x/query/eu.ferroehr::q1"),
-            Some("eu.ferroehr::q1".to_owned())
-        );
-        assert_eq!(
-            object_id_from_path("definition_query_store.yaml", "/x/definition/query/org::q2"),
-            Some("org::q2".to_owned())
-        );
-        // Ad-hoc queries stay UNKNOWN (no extraction), and so does the cohort
-        // extension: `cohort` is a route segment, not a stored-query name.
-        assert_eq!(
-            object_id_from_path("query_execute_adhoc_query", "/x/query/aql"),
-            None
-        );
-        assert_eq!(
-            object_id_from_path("query_execute_cohort", "/x/query/cohort"),
-            None
-        );
-    }
-
-    #[test]
-    fn object_id_from_demographic_paths() {
-        assert_eq!(
-            object_id_from_path("person_get", "/x/demographic/person/p-1"),
-            Some("p-1".to_owned())
-        );
-        assert_eq!(
-            object_id_from_path("role_tags_delete", "/x/demographic/role/r-9/tags/k"),
-            Some("r-9".to_owned())
-        );
-        assert_eq!(
-            object_id_from_path("versioned_party_get", "/x/demographic/versioned_party/vp-3"),
-            Some("vp-3".to_owned())
-        );
-        // Create has no id segment.
-        assert_eq!(
-            object_id_from_path("person_create", "/x/demographic/person"),
-            None
-        );
-        // The physical party delete names the party it removed.
-        assert_eq!(
-            object_id_from_path("admin_party_delete", "/x/admin/party/p-7"),
-            Some("p-7".to_owned())
-        );
-    }
-}
+mod tests;

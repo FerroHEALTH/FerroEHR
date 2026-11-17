@@ -167,7 +167,7 @@ impl FerroEhrService {
         }
         let summary = summarize(&archetype);
         Self::adl2_persist(&mut tx, &summary, source).await?;
-        tx.commit().await?;
+        self.commit_definition(tx).await?;
         self.invalidate_archetype_lineage().await;
         Ok(summary.archetype_id)
     }
@@ -557,7 +557,7 @@ impl FerroEhrService {
             // it (`template_ref` is the union of both dialects' addresses).
             template_repo::release_template_ref(&mut tx, &hrid).await?;
         }
-        tx.commit().await?;
+        self.commit_definition(tx).await?;
         if is_template {
             self.registered_templates.changed();
             // Evict the built `WebTemplate` so a re-uploaded template is never

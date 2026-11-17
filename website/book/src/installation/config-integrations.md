@@ -400,7 +400,7 @@ new token. Its keys:
 | `private_key_file` | path | unset | The PEM private key that signs the client assertion under `private_key_jwt` (RFC 7523). |
 | `kid` | string | the RFC 7638 thumbprint | The `kid` the client assertion names. |
 | `assertion_alg` | string | by key type | The algorithm the client assertion is signed with. |
-| `assertion_audience` | enum{token_endpoint,issuer} | `token_endpoint` | The `aud` of the client assertion; `issuer` needs `issuer` set. |
+| `security_profile` | enum{oauth2,fapi2} | `oauth2` | The security profile the grant is held to. Under `oauth2` a `private_key_jwt` client assertion names the token endpoint as `aud` under `typ` `JWT` (SMART App Launch 2.2.0, Client Authentication: Asymmetric); under `fapi2` it names the issuer under `typ` `client-authentication+jwt` (FAPI 2.0 Security Profile §5.3.3.1), which needs `issuer` set. |
 | `tls` | table | platform roots | The token endpoint's own TLS table, with the keys above. |
 | `refresh_margin` | duration | `"30s"` | How long before the token expires a new one is fetched. |
 | `timeout` | duration | `"10s"` | How long one call to the authorization server may take. |

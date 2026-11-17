@@ -134,7 +134,7 @@ async fn the_syslog_feed_carries_a_record_about_a_held_composition() {
     read.ehr_id = Some(ehr);
     read.object_id = Some(format!("{vo}::ferroehr::1"));
     sender
-        .record(vec![read])
+        .record(vec![read], None)
         .await
         .expect("the read is recorded");
 
