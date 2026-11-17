@@ -1455,16 +1455,17 @@ async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
             "a copy older than the row: {older}"
         );
     }
-    // NOTE: our own design (#5794), a store that moves past every read of the copy is
-    // simulated by a revision check that always finds the copy older.
-    sqlx::query(
-        "CREATE OR REPLACE FUNCTION access_in_force(ehr uuid, judged text) RETURNS boolean \
-         LANGUAGE plpgsql STABLE AS $$ BEGIN \
-         RAISE EXCEPTION 'moved' USING ERRCODE = 'ZA001'; END $$",
+    // NOTE: our own design (#5794, #5888), a store that moves past every read of the copy
+    // is simulated by a revision that moves on every read of it.
+    sqlx::raw_sql(
+        "CREATE SEQUENCE clinical.moving_revision; \
+         CREATE OR REPLACE VIEW clinical.access_revision_of AS \
+         SELECT e.id AS ehr_id, json_build_array(nextval('clinical.moving_revision'), \
+         e.subject_namespace, e.subject_id)::text AS revision FROM clinical.ehr e",
     )
     .execute(&world.db.pool())
     .await
-    .expect("the revision check is replaced");
+    .expect("the revision moves on every read");
     let started = std::time::Instant::now();
     let refused = run(true)
         .await
