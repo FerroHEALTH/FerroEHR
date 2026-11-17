@@ -585,6 +585,16 @@ NCP. How the log is protected is therefore our own design.
   caller's entries share is stored once and each row keeps the rest; the
   writer computes `content_digest` over the whole form, and the verifier
   joins the parts back into it. A tombstone still replaces one person's row.
+- **One row per entry (#5784).** The entry's ITI-81 index (the search
+  columns, its search tokens and its render policy) sits on the entry's own
+  row, and a tombstone empties it; `access_log_search` is a view of it. The
+  owner's choice on #5784 kept every entry in its own row: a block of
+  entries compressed together would have to be rewritten for one person's
+  erasure, decompressed whole for one person's read of their own log, and
+  decompressed whole by the verifier. The content stays raw: PostgreSQL
+  compresses a value only in a row above about 2 kB (PostgreSQL 18 docs,
+  "TOAST"), so neither a compression method nor a lower
+  `toast_tuple_target` compresses an entry of about 600 bytes.
 - **Why digest the content separately.** Retention removes entries in the
   middle of the log, since periods differ per category and origin (Annex II
   3.4). A tombstone keeps the uid, the time, and the link with its
