@@ -294,7 +294,12 @@ impl FerroEhrService {
         if let Some(reason) = archive_reason {
             tier::freeze(&mut tx, &[vo_id], reason.as_deref()).await?;
         }
-        tx.commit().await?;
+        self.commit_recorded(
+            tx,
+            &crate::system_log::recorder::WriteFacts::default(),
+            Vec::new(),
+        )
+        .await?;
         Ok(outcome)
     }
 }

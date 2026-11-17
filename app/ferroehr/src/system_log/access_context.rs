@@ -86,6 +86,19 @@ where
     REQUEST_ORIGIN.scope(origin, fut).await
 }
 
+/// The facilities the running request's commits identified so far; empty
+/// outside a request.
+#[must_use]
+pub fn current_facilities() -> Vec<crate::system_log::binding::Identified> {
+    COMMITTED_FACILITIES
+        .try_with(|sink| {
+            sink.lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .clone()
+        })
+        .unwrap_or_default()
+}
+
 /// How the authenticated caller of the current request was bound.
 ///
 /// A record the service layer writes itself names it as the adapter's own

@@ -281,7 +281,7 @@ pub struct IntakeToken {
 /// and the rows of a batch (`audit.access_log_intake_take`).
 const INTAKE: &str = "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6, $7, $8, $9, \
      $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, \
-     $28, $29, $30, $31)";
+     $28, $29, $30, $31, $32)";
 
 /// Write `entries` into the intake on `conn`, in their order, in one
 /// statement.
@@ -289,8 +289,9 @@ const INTAKE: &str = "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6
 /// The shared parts they name go in with them. `tokens` holds, by the
 /// position of its entry, the search tokens of each entry whose index row
 /// leaves them to the statement (an empty `search_tokens`); the statement
-/// stores or finds them and their shared set. On a connection outside a
-/// transaction the statement commits on its own.
+/// stores or finds them and their shared set. They are held under
+/// `reserved_by` when it names a reservation (#5762). On a connection
+/// outside a transaction the statement commits on its own.
 ///
 /// # Errors
 /// The store errors when the statement fails.
@@ -298,6 +299,7 @@ pub async fn take_in(
     conn: &mut PgConnection,
     entries: &[IntakeEntry],
     tokens: &[Vec<IntakeToken>],
+    reserved_by: Option<uuid::Uuid>,
 ) -> Result<(), AccessLogError> {
     if entries.is_empty() {
         return Ok(());
@@ -360,6 +362,7 @@ pub async fn take_in(
         .bind(systems)
         .bind(codes)
         .bind(in_sets)
+        .bind(reserved_by)
         .execute(&mut *conn)
         .await?;
     Ok(())
@@ -536,7 +539,7 @@ async fn write_retrying(
     loop {
         let written = async {
             let mut conn = acquire(pool).await?;
-            take_in(&mut conn, entries, tokens).await
+            take_in(&mut conn, entries, tokens, None).await
         }
         .await;
         match written {

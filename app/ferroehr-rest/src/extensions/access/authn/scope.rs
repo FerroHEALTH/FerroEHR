@@ -25,14 +25,18 @@ impl Authenticator {
         let granted = Capabilities::default();
         let committer = party::committer_identity(&principal, &granted);
         let binding = record::of_request(&principal, &committer, &granted, Some(self));
-        let mut resp = ferroehr::system_log::access_context::with_roles(
+        let scoped = ferroehr::system_log::access_context::with_roles(
             principal.roles.clone(),
             record::recorded(
                 binding,
                 ferroehr::versioning::committer::with_committer(Some(committer), fut),
             ),
-        )
-        .await;
+        );
+        // NOTE: our own design (#5762), a commit builds the caller's access record from the
+        // request scope, so the caller is published there as the API's own layer does.
+        let mut resp = super::REQUEST_PRINCIPAL
+            .scope(Some(Arc::clone(&principal)), scoped)
+            .await;
         resp.extensions_mut().insert(principal);
         resp
     }

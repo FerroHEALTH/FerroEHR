@@ -27,3 +27,4 @@ pub mod classify;
 pub mod middleware;
 pub mod refusals;
 pub mod served;
+pub mod written;

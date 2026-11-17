@@ -184,6 +184,7 @@ impl FerroEhrService {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         crate::party_binding::store::refill(&mut tx, &self.binding).await?;
+        // NOTE: our own design (#5762), the binding refill, which runs from the command line and tests.
         tx.commit().await?;
         Ok(())
     }

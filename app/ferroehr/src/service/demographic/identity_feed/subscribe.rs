@@ -180,6 +180,7 @@ impl FerroEhrService {
         .bind(status.as_str())
         .execute(&mut *tx)
         .await?;
+        // NOTE: our own design (#5762), the PMIR subscription, which runs in the background.
         tx.commit().await?;
         if matches!(status, SubscriptionStatus::Error | SubscriptionStatus::Off) {
             tracing::error!(

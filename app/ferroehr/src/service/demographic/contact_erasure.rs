@@ -46,7 +46,7 @@ use crate::service::FerroEhrService;
 use crate::service::admin::integrity::rebuild::{NodeRebuildOutcome, rebuild_in_tx};
 use crate::storage::erasure;
 use crate::storage::version_repo::tier;
-use crate::system_log::event::EventActionCode;
+use crate::system_log::event::{AuditEvent, EventActionCode};
 use crate::versioning::change::canonical_body_text;
 use crate::versioning::change::resolve::content_digest;
 
@@ -106,8 +106,8 @@ impl FerroEhrService {
         let mut erased = 0;
         for party in due {
             let mut tx = conn.begin().await?;
-            if self.erase_contacts_in(&mut tx, party).await? {
-                tx.commit().await?;
+            if let Some(record) = self.erase_contacts_in(&mut tx, party).await? {
+                self.commit_act_recorded(tx, vec![record]).await?;
                 erased += 1;
             }
         }
@@ -124,9 +124,9 @@ impl FerroEhrService {
         &self,
         tx: &mut PgConnection,
         party: VoId,
-    ) -> Result<bool, ServiceError> {
+    ) -> Result<Option<AuditEvent>, ServiceError> {
         if !provisioned::lock_contact_erasure(tx, party).await? {
-            return Ok(false);
+            return Ok(None);
         }
         // NOTE: a write always thaws first (`crate::storage::version_repo::tier`), so an
         // archived PERSON is erased in the primary tier and frozen again with its marker.
@@ -162,13 +162,11 @@ impl FerroEhrService {
         if let Some(reason) = archive_reason {
             tier::freeze(tx, &[party], reason.as_deref()).await?;
         }
-        self.record_party_access(
+        Ok(Some(self.party_record(
             EventActionCode::Delete,
             format!("party:{}#contacts", party.0),
             None,
-        )
-        .await?;
-        Ok(true)
+        )))
     }
 }
 

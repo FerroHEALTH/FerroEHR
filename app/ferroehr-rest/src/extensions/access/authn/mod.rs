@@ -611,6 +611,7 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
+            crate::system_log::written::learn_actor(&actor);
             let patient = gates::patient_person(&layer, &req, &principal).await;
             let principal = Arc::new(principal);
             req.extensions_mut().insert(Arc::clone(&principal));

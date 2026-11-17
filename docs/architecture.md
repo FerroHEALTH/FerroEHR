@@ -447,7 +447,17 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`audit/0043_access_log_nested_statements.sql`). The ferroehr-rest test
   `statement_budget` holds an AQL request to its round trips and nested
   statements, read from `pg_stat_statements`. `audit.audit_event_chain_move()`
-  moves the system intake into the system chain the same way. Our own
+  moves the system intake into the system chain the same way. A
+  request-scoped write commits through one choke point,
+  `FerroEhrService::commit_recorded` (`system_log::reservation`, #5762): its
+  records go into the intake held under a reservation id (`reserved_by`,
+  which the moves skip), the id into the write's own domain
+  (`clinical/0050`, `party/0052` `audit_reservation`) in the write's
+  transaction, and the chainer's next round releases them in its own
+  transaction once the response is built;
+  `system_log::sender::reconciler` releases or discards what a stopped
+  replica left and removes spent reservations, and
+  `scripts/checks/request-commits.sh` guards the choke point. Our own
   design; one chain carries about 15 000 entries per second on the
   reference host (#5745), and partitioned chains (one per EHR hash, a
   draft-model change) are the recorded next step past that. The entry keeps in its `other_details` the facts its

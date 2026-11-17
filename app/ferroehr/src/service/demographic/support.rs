@@ -400,6 +400,18 @@ impl FerroEhrService {
         if !self.audit_enabled() {
             return Ok(());
         }
+        self.record_access(self.party_record(action, object_id, operation))
+            .await
+    }
+
+    /// The record of one act on the party domain, as
+    /// [`Self::record_party_access`] writes it.
+    pub(in crate::service::demographic) fn party_record(
+        &self,
+        action: EventActionCode,
+        object_id: String,
+        operation: Option<&'static str>,
+    ) -> AuditEvent {
         let mut event = AuditEvent::new(action, ObjectClass::Demographic, EventOutcome::Success);
         event.domain = AccessDomain::Demographic;
         event.object_id = Some(object_id);
@@ -413,6 +425,6 @@ impl FerroEhrService {
             .map(|committer| committer.subject)
             .unwrap_or_default();
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
-        self.record_access(event).await
+        event
     }
 }
