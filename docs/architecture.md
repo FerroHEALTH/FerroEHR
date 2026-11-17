@@ -486,10 +486,19 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   the ITI-81 search reads (#5784). An ITI-81 page reads each chain's first
   `offset + count` records through its time index, the access log's
   candidates from `access_log_search` with the records tied on the last
-  instant, and takes the page from their union. The exact total counts the
-  access log on its index columns alone (`system_log::store::search_page`,
-  #5646). The entry's content is stored raw: PostgreSQL compresses a value
-  only in a row above about 2 kB, whatever `toast_tuple_target` says. syslog and the FHIR Feed are
+  instant, and takes the page from their union by the records' keys alone;
+  only the records the page serves are then read whole, so an access-log
+  entry's document is rendered once per served entry (#5965). The exact
+  total counts the
+  access log from the time index alone, which carries `render_policy_id`
+  (`system_log::store::search_page`, #5646). A row part keeps no member a
+  column holds: `_type` goes always, and `uid`, `ehr_id` and `time_recorded`
+  when their column gives back the exact text (`ehr_id` is a `uuid`, the
+  render policy is named by its `audit_render_policy` id), and
+  `audit.access_log_document` is the one reader that joins the row part, the
+  shared part and the columns back into the canonical form (#5784). The
+  content is stored raw: PostgreSQL compresses a value only in a row above
+  about 2 kB, whatever `toast_tuple_target` says. syslog and the FHIR Feed are
   projections of the stored records, delivered by `ihe-atna`'s forwarders
   from `syslog_outbox` and `fhir_feed_outbox` (`system_log::store::outbox`,
   `system_log::feed`), so a record waits for its repository in the store,

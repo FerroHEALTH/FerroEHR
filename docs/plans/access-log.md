@@ -588,6 +588,9 @@ NCP. How the log is protected is therefore our own design.
 - **One row per entry (#5784).** The entry's ITI-81 index (the search
   columns, its search tokens and its render policy) sits on the entry's own
   row, and a tombstone empties it; `access_log_search` is a view of it. The
+  row part keeps no member a column already holds, and
+  `audit.access_log_document` joins the row part, the shared part and the
+  columns back into the canonical form, so the digests are unchanged. The
   owner's choice on #5784 kept every entry in its own row: a block of
   entries compressed together would have to be rewritten for one person's
   erasure, decompressed whole for one person's read of their own log, and

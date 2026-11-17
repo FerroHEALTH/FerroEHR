@@ -36,7 +36,7 @@ use ferroehr::service::query::request::AqlQueryRequest;
 
 /// The ward's records, written on the first replica and read on both.
 struct Ward {
-    _db: testkit::TestDb,
+    db: testkit::TestDb,
     _elsewhere: testkit::TestDb,
     one: FerroEhrService,
     two: FerroEhrService,
@@ -113,7 +113,7 @@ impl Ward {
         assert!(listened.is_listening(), "the lagging listener connects");
         two.grants().refresh().await.expect("the copy reads");
         let ward = Self {
-            _db: db,
+            db,
             _elsewhere: elsewhere,
             one,
             two,
@@ -300,4 +300,31 @@ async fn a_lagging_replica_still_admits_a_care_relationship_in_force() {
             "a care relationship in force reads on every request"
         );
     }
+}
+
+/// A query that reads care on a replica whose care copy is cold holds one
+/// party connection at a time: the care census and the read ahead of the
+/// store's revisions each read the party store, and run one after the other
+/// on the connection the request keeps. Run side by side, the second asked
+/// the pool for a connection while the first held one (#5967).
+#[tokio::test]
+async fn a_query_reading_care_on_a_cold_copy_holds_one_party_connection() {
+    let ward = Box::pin(Ward::new()).await;
+    let cold = replica(&ward.db).await;
+    cold.grants().refresh().await.expect("the copy reads");
+    let ward_policy = policy(&json!({ "care_relationship_required": true }));
+    let doctor = access(&cold, ward.doctor.0, ward_policy, jiff::Timestamp::now());
+    let svc = &cold;
+    let read = async {
+        // NOTE: (#5879) a nested acquire is refused in a debug build.
+        let census = query(svc, COMPOSITIONS).await;
+        let pinned = query(svc, &pinned_to(ward.ehr_id)).await;
+        (census, pinned)
+    };
+    let (census, pinned) = Box::pin(ferroehr::db::acquire::request_scope(with_request_access(
+        doctor, read,
+    )))
+    .await;
+    assert_eq!(census.expect("the query over every EHR"), 1);
+    assert_eq!(pinned.expect("the query pinned to the EHR"), 1);
 }
