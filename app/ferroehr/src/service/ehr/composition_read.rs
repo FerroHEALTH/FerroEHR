@@ -5,9 +5,9 @@
 //!
 //! One statement reads the object's access facts beside the version, and the
 //! access evaluator judges the object before anything of the version leaves
-//! the service (#5773). A read by version id takes the version and its facts
-//! from this replica's copy when it holds them under the settings revision
-//! the access copy holds, and makes no statement (#5778). A refused read has
+//! the service (#5773). A read by version id takes the version's body from
+//! this replica's copy once one indexed read confirms its object's state
+//! (#5778). A refused read has
 //! read the version into memory and returns nothing of it. No openEHR spec
 //! governs this: our own design.
 
@@ -30,7 +30,7 @@ use crate::service::FerroEhrService;
 use crate::service::ehr::version_copy::Held;
 use crate::service::response::{RawServiceResponse, ReadBody};
 use crate::storage::access_facts::{HeadFacts, visible};
-use crate::storage::version_repo::judged::{JudgedAt, read_judged};
+use crate::storage::version_repo::judged::{JudgedAt, read_judged, read_marks};
 use crate::storage::version_repo::read::StoredVersion;
 use crate::versioning::Kind;
 use crate::versioning::object_version_id::{VersionIdError, components};
@@ -116,48 +116,57 @@ impl FerroEhrService {
     }
 
     /// The head facts of the object `at` names and the version it addresses,
-    /// from the version copy for a read by version id, or read in one
-    /// statement and kept in the copy.
+    /// for a read by version id from the version copy once the store
+    /// confirms it, otherwise read in one statement and kept in the copy.
     ///
-    /// A held version serves only while the access copy holds its EHR's
-    /// settings at the revision it was read under, so a settings change
-    /// another replica committed is judged on the store's facts. An object an
-    /// access delay withholds from the person now is never kept: the mark
-    /// lapses with time and no notification. The copy is neither read nor
-    /// filled while its listener is down.
+    /// A held version is served only when one indexed read finds its object's
+    /// head where it was read and its content digest unchanged; the
+    /// restriction and access delay marks and the settings revision the read
+    /// finds replace the held ones, so the evaluator judges the store's facts
+    /// of this moment, as the full read would (owner decision on #5891).
     ///
     /// # Errors
-    /// The storage error of the read, and the faults of the EHR's settings.
+    /// The storage error of either read.
     async fn version_judged(
         &self,
         at: JudgedAt,
     ) -> Result<Option<(HeadFacts, Option<StoredVersion>)>, ServiceError> {
         let JudgedAt::Tree(vo_id, tree) = at else {
-            return Ok(read_judged(&self.pool, at).await?);
+            return Ok(read_judged(&self.pool, at)
+                .await?
+                .map(|j| (j.facts, j.stored)));
         };
-        if self.version_copy_listened.unlistened() {
-            return Ok(read_judged(&self.pool, at).await?);
-        }
         let key = (vo_id, tree);
-        if let Some(held) = self.version_copy.get(key).await
-            && let Some(ehr_id) = held.facts.ehr_id
-            && Box::pin(self.ehr_access_entry(ehr_id)).await?.revision == held.facts.revision
-        {
-            return Ok(Some((held.facts.clone(), Some(held.stored.clone()))));
+        if let Some(held) = self.version_copy.get(key).await {
+            let marks = read_marks(&self.pool, vo_id, held.stored.sys_version).await?;
+            if let Some(marks) = marks
+                && marks.head == held.head
+                && marks.digest.as_deref() == Some(held.digest.as_slice())
+            {
+                let mut facts = held.facts.clone();
+                facts.revision = marks.revision.clone();
+                let mut stored = held.stored.clone();
+                stored.restricted_at = marks.restricted_at;
+                stored.person_withheld = marks.person_withheld;
+                stored.access_revision = marks.revision;
+                return Ok(Some((facts, Some(stored))));
+            }
+            self.version_copy.forget(key).await;
         }
-        let seen = self.version_copy.drops();
         let read = read_judged(&self.pool, at).await?;
-        if let Some((facts, Some(stored))) = &read
-            && facts.ehr_id.is_some()
-            && !stored.person_withheld
+        if let Some(judged) = &read
+            && let (Some(stored), Some(digest)) = (&judged.stored, &judged.digest)
+            && judged.facts.ehr_id.is_some()
         {
             let held = Held {
-                facts: facts.clone(),
+                facts: judged.facts.clone(),
                 stored: stored.clone(),
+                head: judged.head,
+                digest: digest.clone(),
             };
-            self.version_copy.keep(key, held, seen).await;
+            self.version_copy.keep(key, held).await;
         }
-        Ok(read)
+        Ok(read.map(|j| (j.facts, j.stored)))
     }
 
     /// The COMPOSITION response of `raw`, the version of `vo_id` a read found
