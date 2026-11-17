@@ -138,7 +138,11 @@ ORDER BY systolic DESC
   no rows, so `COUNT(*)` counts the rows the `WHERE` clause keeps whatever
   other aggregates sit beside it. `COUNT(DISTINCT)` compares numbers by value
   (`120` and `120.0` are one value), a stored JSON `null` counts as no value,
-  and `AVG` returns a decimal mean.
+  and `AVG` returns a decimal mean. `SUM` and `AVG` add numbers and amounts:
+  over a whole data value they read the magnitude of a `DV_QUANTITY`,
+  `DV_COUNT`, `DV_PROPORTION` or `DV_DURATION`, and refuse a date, time,
+  date-time, ordinal or any other value with a 400, since the RM defines
+  addition for amounts only.
 - **`ORDER BY`**, **`LIMIT`**, and **`OFFSET`** behave as you expect; quantities
   order by their openEHR magnitude semantics. A `DV_DURATION`'s `value` is a
   string and orders as text (`P40D` after `P30M`); the whole `DV_DURATION`
