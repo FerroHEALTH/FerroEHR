@@ -1146,7 +1146,7 @@ impl Validator {
             // the attribute is present; absence is C_ATTRIBUTE.existence's business
             // (the vendored Multi_list template pairs `content` cardinality 1..*
             // with existence 0..1), so an absent or null attribute is no cardinality
-            // violation — and the RM list invariants forbid a present-empty `[]`.
+            // violation, while a present `[]` is a container of zero members.
             let containers =
                 rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback);
             for container in &containers {
