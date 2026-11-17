@@ -13,7 +13,7 @@
 //! indexed statement each, and held in two caches of a fixed bound: at most
 //! [`SUBJECTS`] subjects, and teams whose censuses take at most
 //! [`CENSUS_BYTES`] together, each weighed by its patients and the record
-//! subjects they declare ([`Census::bytes`]). A team whose census alone is
+//! subjects they declare (`Census::bytes`). A team whose census alone is
 //! larger is read on every use and never held. The facts notification drops each subject it stamped and every
 //! team that holds one of them or that one of them is now under the care of;
 //! a grant reload, and a listener that connects or loses its connection, drop
@@ -39,7 +39,7 @@ use crate::storage::error::StorageError;
 pub const SUBJECTS: u64 = 4096;
 
 /// The most bytes the held care teams' censuses take together, by
-/// [`Census::bytes`]: about 270 000 patients that each declare one record
+/// `Census::bytes`: about 270 000 patients that each declare one record
 /// subject (#5760).
 pub const CENSUS_BYTES: u64 = 64 * 1024 * 1024;
 
@@ -107,7 +107,7 @@ pub struct CareHeld {
     pub patients: u64,
     /// The record subjects those patients declare.
     pub declared: u64,
-    /// The bytes those censuses take, by [`Census::bytes`].
+    /// The bytes those censuses take, by `Census::bytes`.
     pub bytes: u64,
 }
 
