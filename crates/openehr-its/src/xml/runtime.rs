@@ -876,9 +876,6 @@ impl<'a> XmlReader<'a> {
     /// The element a construction failure describes: the one closed most
     /// recently, because a `FromXml` impl builds its value right after it has
     /// consumed its own end tag. Before any element closed, the document.
-    ///
-    /// This is where the closed element's line, column and root path are
-    /// resolved, on the one path that reads them.
     fn located(&self) -> Location {
         let Some(closed) = &self.last_closed else {
             return Location {
@@ -889,8 +886,45 @@ impl<'a> XmlReader<'a> {
                 path: "/".to_owned(),
             };
         };
+        self.location_of(
+            &closed.element,
+            closed.xsi_type.as_ref(),
+            closed.offset,
+            closed.ordinal,
+            closed.ancestors,
+        )
+    }
+
+    /// The element the reader opened most recently and has not closed, which
+    /// a check on a child's start tag describes; the document before any
+    /// element opened.
+    fn located_open(&self) -> Location {
+        let Some((open, ancestors)) = self.frames.split_last() else {
+            return self.located();
+        };
+        self.location_of(
+            &open.element,
+            open.xsi_type.as_ref(),
+            open.offset,
+            open.ordinal,
+            ancestors.len(),
+        )
+    }
+
+    /// The [`Location`] of an element under the first `ancestors` open frames.
+    ///
+    /// This is where the line, column and root path are resolved, on the one
+    /// path that reads them.
+    fn location_of(
+        &self,
+        element: &str,
+        xsi_type: Option<&String>,
+        offset: usize,
+        ordinal: u32,
+        ancestors: usize,
+    ) -> Location {
         let mut path = String::new();
-        for (i, frame) in self.frames.iter().take(closed.ancestors).enumerate() {
+        for (i, frame) in self.frames.iter().take(ancestors).enumerate() {
             path.push('/');
             path.push_str(&frame.element);
             if i > 0 {
@@ -900,16 +934,16 @@ impl<'a> XmlReader<'a> {
             }
         }
         path.push('/');
-        path.push_str(&closed.element);
-        if closed.ancestors > 0 {
+        path.push_str(element);
+        if ancestors > 0 {
             path.push('[');
-            path.push_str(&closed.ordinal.to_string());
+            path.push_str(&ordinal.to_string());
             path.push(']');
         }
-        let (line, column) = line_col(self.src, closed.offset);
+        let (line, column) = line_col(self.src, offset);
         Location {
-            element: closed.element.clone(),
-            xsi_type: closed.xsi_type.clone(),
+            element: element.to_owned(),
+            xsi_type: xsi_type.cloned(),
             line,
             column,
             path,
@@ -933,6 +967,17 @@ impl<'a> XmlReader<'a> {
     pub fn missing_attribute(&self, owner: &str, attribute: &str) -> XmlError {
         XmlError::MissingAttribute {
             location: Box::new(self.located()),
+            owner: owner.to_owned(),
+            attribute: attribute.to_owned(),
+        }
+    }
+
+    /// The refusal for a mandatory `attribute` absent from the start tag of
+    /// the element just opened, checked before that element is read.
+    #[must_use]
+    pub fn missing_start_attribute(&self, owner: &str, attribute: &str) -> XmlError {
+        XmlError::MissingAttribute {
+            location: Box::new(self.located_open()),
             owner: owner.to_owned(),
             attribute: attribute.to_owned(),
         }
