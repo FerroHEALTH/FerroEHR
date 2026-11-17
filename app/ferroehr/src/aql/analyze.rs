@@ -123,7 +123,7 @@ pub(crate) fn analyze_path(
             let root_predicate = path
                 .predicate
                 .as_ref()
-                .map(resolve_node_predicate)
+                .map(|p| resolve_node_predicate(p, types, bindings.profile))
                 .transpose()?;
             let leaf = analyze_rm_path(
                 source,
@@ -165,7 +165,7 @@ pub(super) fn analyze_rm_path(
             let predicate = part
                 .predicate
                 .as_ref()
-                .map(resolve_node_predicate)
+                .map(|p| resolve_node_predicate(p, &step_types, profile))
                 .transpose()?;
 
             let is_hop = !in_fragment
@@ -194,11 +194,7 @@ pub(super) fn analyze_rm_path(
         }
     }
 
-    let coercion = if last_name.as_deref() == Some("value") && all_date_time(&parent_types) {
-        Coercion::Temporal
-    } else {
-        classify(&current)
-    };
+    let coercion = leaf_coercion(&parent_types, last_name.as_deref(), &current);
     Ok(LeafPath {
         source,
         root_predicate,
@@ -209,10 +205,45 @@ pub(super) fn analyze_rm_path(
     })
 }
 
+/// The [`Coercion`] of a leaf of `types` reached by the attribute `last` on a
+/// parent of `parent_types`: the `value` of a date/time data value is
+/// temporal (its ISO 8601 String; QUERY master03 §Dates and Times), any other
+/// leaf is classified by its own types.
+fn leaf_coercion(parent_types: &TypeSet, last: Option<&str>, types: &TypeSet) -> Coercion {
+    if last == Some("value") && all_date_time(parent_types) {
+        Coercion::Temporal
+    } else {
+        classify(types)
+    }
+}
+
+/// The candidate types and the [`Coercion`] of the leaf an object path of
+/// attribute `names` reaches from a node of `node_types`, the same typing a
+/// `WHERE` path gets ([`analyze_rm_path`]).
+///
+/// # Errors
+/// [`AnalysisError::UnresolvableAttribute`] or
+/// [`AnalysisError::AttributeNotInProfile`] for a step the RM does not define
+/// on the candidate types.
+pub(super) fn leaf_typing(
+    node_types: &TypeSet,
+    names: &[String],
+    profile: crate::config::profile::SpecProfile,
+) -> Result<(TypeSet, Coercion), AqlError> {
+    let mut parent = node_types.clone();
+    let mut current = node_types.clone();
+    for name in names {
+        parent = current;
+        current = resolve_attribute(&parent, name, profile)?.0;
+    }
+    let coercion = leaf_coercion(&parent, names.last().map(String::as_str), &current);
+    Ok((current, coercion))
+}
+
 /// Resolve `attr` across every concrete type in `current`, returning the union
 /// of concrete declared types and whether the attribute is a container on any
 /// of them.
-pub(super) fn resolve_attribute(
+fn resolve_attribute(
     current: &TypeSet,
     attr: &str,
     profile: crate::config::profile::SpecProfile,
@@ -484,28 +515,48 @@ pub(crate) fn resolve_ehr_predicate(
     Ok((field, sp.op, bind_from_operand(&sp.operand)?))
 }
 
-/// Resolve an AST [`PathPredicate`] into a typed [`NodeConstraint`].
-pub(crate) fn resolve_node_predicate(pred: &PathPredicate) -> Result<NodeConstraint, AqlError> {
+/// Resolve an AST [`PathPredicate`] on a node of `node_types` into a typed
+/// [`NodeConstraint`], each standard predicate typed as the same comparison
+/// in `WHERE` would be (QUERY master03 §Standard predicate).
+///
+/// # Errors
+/// [`AqlError`] for a malformed operand or a predicate path the RM does not
+/// define on `node_types`.
+pub(crate) fn resolve_node_predicate(
+    pred: &PathPredicate,
+    node_types: &TypeSet,
+    profile: crate::config::profile::SpecProfile,
+) -> Result<NodeConstraint, AqlError> {
     let mut out = NodeConstraint::default();
-    apply_predicate(pred, &mut out)?;
-    Ok(out)
-}
-
-fn apply_predicate(pred: &PathPredicate, out: &mut NodeConstraint) -> Result<(), AqlError> {
+    let node = NodeTyping {
+        types: node_types,
+        profile,
+    };
     match pred {
-        PathPredicate::Standard(sp) => apply_standard(sp, out),
+        PathPredicate::Standard(sp) => apply_standard(sp, &node, &mut out)?,
         PathPredicate::Archetype(ap) => {
             out.archetype = Some(match ap {
                 ArchetypePredicate::Hrid(h) => ArchetypeConstraint::Archetype(h.clone()),
                 ArchetypePredicate::Parameter(p) => ArchetypeConstraint::Param(param_name(p)),
             });
-            Ok(())
         }
-        PathPredicate::Node(np) => apply_node(np, out),
+        PathPredicate::Node(np) => apply_node(np, &node, &mut out)?,
     }
+    Ok(out)
 }
 
-fn apply_standard(sp: &StandardPredicate, out: &mut NodeConstraint) -> Result<(), AqlError> {
+/// The node a predicate constrains: its candidate types and the active
+/// profile its paths resolve under.
+struct NodeTyping<'t> {
+    types: &'t TypeSet,
+    profile: crate::config::profile::SpecProfile,
+}
+
+fn apply_standard(
+    sp: &StandardPredicate,
+    node: &NodeTyping<'_>,
+    out: &mut NodeConstraint,
+) -> Result<(), AqlError> {
     let parts: Vec<String> = sp.path.parts.iter().map(|p| p.name.clone()).collect();
     let value = bind_from_operand(&sp.operand)?;
     // `name/value = <text|param>` is the common name shortcut.
@@ -540,15 +591,22 @@ fn apply_standard(sp: &StandardPredicate, out: &mut NodeConstraint) -> Result<()
         });
         return Ok(());
     }
+    let (types, coercion) = leaf_typing(node.types, &parts, node.profile)?;
     out.standard.push(StdPredicate {
         path: parts,
         op: sp.op,
         value,
+        types,
+        coercion,
     });
     Ok(())
 }
 
-fn apply_node(np: &NodePredicate, out: &mut NodeConstraint) -> Result<(), AqlError> {
+fn apply_node(
+    np: &NodePredicate,
+    node: &NodeTyping<'_>,
+    out: &mut NodeConstraint,
+) -> Result<(), AqlError> {
     match np {
         NodePredicate::Code { code, name } => {
             out.archetype = Some(ArchetypeConstraint::NodeCode(code.clone()));
@@ -568,11 +626,11 @@ fn apply_node(np: &NodePredicate, out: &mut NodeConstraint) -> Result<(), AqlErr
             out.archetype = Some(ArchetypeConstraint::Param(param_name(p)));
             Ok(())
         }
-        NodePredicate::Standard(sp) => apply_standard(sp, out),
+        NodePredicate::Standard(sp) => apply_standard(sp, node, out),
         NodePredicate::MatchesRegex { .. } => Err(AqlFeatureError::RegexNodePredicate.into()),
         NodePredicate::And(a, b) => {
-            apply_node(a, out)?;
-            apply_node(b, out)
+            apply_node(a, node, out)?;
+            apply_node(b, node, out)
         }
         NodePredicate::Or(_, _) => Err(AqlFeatureError::OrNodePredicate.into()),
     }
