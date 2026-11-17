@@ -24,7 +24,7 @@ FROM EHR e
     CONTAINS COMPOSITION c
         CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
 WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 140
-ORDER BY systolic DESC
+ORDER BY o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude DESC
 ```
 
 - **`FROM`** binds variables to RM types (`EHR e`, `COMPOSITION c`,
@@ -139,7 +139,8 @@ ORDER BY systolic DESC
   other aggregates sit beside it. `COUNT(DISTINCT)` compares numbers by value
   (`120` and `120.0` are one value), a stored JSON `null` counts as no value,
   and `AVG` returns a decimal mean.
-- **`ORDER BY`**, **`LIMIT`**, and **`OFFSET`** behave as you expect; quantities
+- **`ORDER BY`**, **`LIMIT`**, and **`OFFSET`** behave as you expect. A sort
+  key is an identified path, not a column alias (AQL 1.1.0 §ORDER BY); quantities
   order by their openEHR magnitude semantics. A `DV_DURATION`'s `value` is a
   string and orders as text (`P40D` after `P30M`); the whole `DV_DURATION`
   orders by the duration it names.
