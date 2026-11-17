@@ -78,8 +78,9 @@ fn system_record() -> AuditEvent {
 /// their ids and their content digests.
 async fn held(pool: &PgPool, reservation: Uuid) -> (Vec<(Uuid, Vec<u8>)>, Vec<Uuid>) {
     let entries = sqlx::query_as(
-        "SELECT uid, content_digest FROM audit.access_log_intake WHERE reserved_by = $1 \
-         ORDER BY uid",
+        "SELECT e.uid, e.content_digest FROM audit.access_log_intake i \
+         CROSS JOIN LATERAL unnest(i.entries) AS n(id) JOIN audit.access_log_entry e ON e.id = n.id \
+         WHERE i.reserved_by = $1 ORDER BY e.uid",
     )
     .bind(reservation)
     .fetch_all(pool)
@@ -400,6 +401,51 @@ async fn a_held_write_under_a_cold_policy_needs_one_audit_connection() {
     assert_eq!((entries.len(), records.len()), (1, 1));
 }
 
+/// A request's first access record under a render policy the store has not
+/// registered yet, on an audit pool of one connection: the registration
+/// checks out the connection and the request keeps it, then the entry waits
+/// for the gathered writer, which needs a connection of the same pool. The
+/// request gives back what it keeps before it waits, so the write lands;
+/// keeping it, every such request of a cold burst held the pool until the
+/// acquire timeout and its access, and every ITI-81 search, was refused
+/// (#6008).
+#[tokio::test]
+async fn a_cold_entry_gives_back_its_audit_connection_before_the_gathered_write() {
+    let db = testkit::db().await.expect("testkit database");
+    let mut config = ferroehr::db::DbConfig::new(db.url());
+    config.max_connections = Some(1);
+    config.min_connections = Some(0);
+    config.acquire_timeout = ferrohealth_config::units::Duration::from_secs(3);
+    let audit = ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Audit)
+        .await
+        .expect("the audit pool connects");
+    let store = ferroehr::system_log::store::AuditStore::new(audit);
+    let mut event = AuditEvent::new(
+        EventActionCode::Read,
+        ObjectClass::Ehr,
+        EventOutcome::Success,
+    );
+    event.ehr_id = Some(Uuid::now_v7().to_string());
+    "clinician-7".clone_into(&mut event.user_id);
+    let records = vec![ferroehr::system_log::store::AuditRecord {
+        event,
+        subject: None,
+        entry: None,
+    }];
+
+    ferroehr::db::acquire::request_scope(store.write(records, &[]))
+        .await
+        .expect("the entry lands while the request waits for the gathered writer");
+    let landed: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM audit.access_log_intake i \
+         CROSS JOIN LATERAL unnest(i.entries) AS n(id)",
+    )
+    .fetch_one(&db.pool())
+    .await
+    .expect("the intake");
+    assert_eq!(landed, 1, "the one entry is in the intake");
+}
+
 /// An audited write with the subject lookup on: the subject its records name
 /// is read on the write's own transaction, so the record of an EHR creation
 /// names the subject the write gave it. A lookup on a connection of its own
@@ -460,12 +506,15 @@ async fn a_write_reads_the_subject_of_its_records_on_its_own_transaction() {
     .await;
     let reservations = recorder.reserved();
     assert_eq!(reservations.len(), 1, "the write took one reservation");
-    let named: Vec<Option<String>> =
-        sqlx::query_scalar("SELECT patient_id FROM audit.access_log_intake WHERE reserved_by = $1")
-            .bind(reservations[0].id)
-            .fetch_all(&pool)
-            .await
-            .expect("the held entries");
+    let named: Vec<Option<String>> = sqlx::query_scalar(
+        "SELECT e.patient_id FROM audit.access_log_intake i \
+             CROSS JOIN LATERAL unnest(i.entries) AS n(id) \
+             JOIN audit.access_log_entry e ON e.id = n.id WHERE i.reserved_by = $1",
+    )
+    .bind(reservations[0].id)
+    .fetch_all(&pool)
+    .await
+    .expect("the held entries");
     assert_eq!(
         named,
         vec![Some(subject.id.clone())],

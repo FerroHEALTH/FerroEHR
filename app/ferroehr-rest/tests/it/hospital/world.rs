@@ -494,12 +494,26 @@ pub(crate) async fn ask(
     if let Some(body) = ask.body {
         req = req.json(body.to_string());
     }
-    let (status, headers, body) = common::send(app, req.build()).await;
+    let (status, headers, body) = served(app, req.build()).await;
     Answer {
         status,
         headers,
         body,
     }
+}
+
+/// `req` answered by `app` on a task of its own, as `serve` polls each
+/// request at the root of its connection's task: nested in the world's
+/// setup, a debug build's stack held the setup's frames under every request
+/// and overflowed in a composition's commit.
+pub(crate) async fn served(
+    app: &Router,
+    req: http::Request<axum::body::Body>,
+) -> (StatusCode, HeaderMap, String) {
+    let app = app.clone();
+    tokio::spawn(async move { common::send(&app, req).await })
+        .await
+        .expect("the request's task")
 }
 
 /// `method uri` as `caller`, declaring `purpose`, with a JSON `body`.
@@ -533,7 +547,7 @@ pub(crate) async fn call_matching(
         .prefer_representation()
         .if_match(format!("\"{version}\""))
         .json(body.to_string());
-    let (status, headers, body) = common::send(app, req.build()).await;
+    let (status, headers, body) = served(app, req.build()).await;
     Answer {
         status,
         headers,
@@ -559,7 +573,7 @@ pub(crate) async fn scim(
             .header(header::CONTENT_TYPE, "application/scim+json")
             .body(body.to_string());
     }
-    let (status, _, body) = common::send(app, req.build()).await;
+    let (status, _, body) = served(app, req.build()).await;
     (status, serde_json::from_str(&body).unwrap_or(Value::Null))
 }
 

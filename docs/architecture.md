@@ -292,7 +292,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   as its `ACCESS_LOG_ENTRY` alone; `audit_event` keeps the records of
   accesses outside the access log (an authentication, a template or party
   operation, an application activity), with the FHIR `AuditEvent` rendered
-  from its columns. `access_log_record` holds the draft openEHR
+  from its columns. `access_log_entry` holds the draft openEHR
   `ACCESS_LOG_ENTRY` (#5121) in two parts of its ITS-JSON canonical form
   without its link (RFC 8785, #5703, our own design): the part its caller
   shares (accessor, credential, roles, authorisations, purposes, retention
@@ -419,9 +419,11 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`access_log::entry`) and `AuditStore::write` puts every record of the
   request, with each entry's index row (projection, search tokens, render
   policy) and every column the log derives from its content, into the
-  intake in one short transaction of the audit pool: `access_log_intake`
-  for the entries, `audit_event_intake` for the other records
-  (`audit/0042_audit_intake.sql`). The intake statement finds each entry's
+  intake in one short transaction of the audit pool: each entry is written
+  once, into `access_log_entry`, with one `access_log_intake` row naming the
+  entries of the statement until the chainer links them, and the other
+  records into `audit_event_intake` (`audit/0042_audit_intake.sql`,
+  `audit/0048_access_log_entry_written_once.sql`, #5968). The intake statement finds each entry's
   search tokens by the digests the server computes
   (`system_log::token_digest`, the bytes of `audit.search_token_digest`)
   and groups them by entry in one pass, so its cost grows with the batch's
@@ -437,13 +439,15 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   round, and it polls both chains every 2 seconds for the rows a stopped
   replica left. A round takes the access log's head
   with `audit.access_log_chain_take()` (`FOR UPDATE SKIP LOCKED`, so one
-  replica chains at a time and the others skip), reads up to 512 intake
+  replica chains at a time and the others skip), reads the entries of the
+  oldest intake rows, whole rows up to about 512 entries, with their content
   digests, computes the links in Rust, and `audit.access_log_chain_move()`
-  inserts the records with every column supplied, their index rows and the
-  outbox rows of the FHIR Feed and syslog, and deletes the intake rows; the
-  checkpoint and the commit end the round. The insert trigger derives
-  nothing: it checks each link against the head, and the verifier derives
-  every column again and compares (0039). The statements PostgreSQL runs
+  inserts one narrow `access_log_link` row per entry (position, previous
+  digest, digest) and the outbox rows of the FHIR Feed and syslog, and
+  deletes the intake rows; the checkpoint and the commit end the round. The
+  link table's statement trigger checks the new links together against the
+  head and the entries' content digests and moves the head; the verifier
+  derives every column of the entry again and compares (0039, 0048). The statements PostgreSQL runs
   inside these writes are held to a budget (#5885): the digest functions are
   inlined into the statements that call them, the records and their index
   rows carry no foreign keys, since the chain move is their one writer and the
@@ -452,9 +456,13 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   (`audit/0043_access_log_nested_statements.sql`). The intake rows carry no
   foreign keys either (#5887): the intake statement refuses a render policy or
   shared part the store does not hold in the statement that writes the rows,
-  and locks each distinct stored part its batch names once, so a tombstone
-  that would remove one waits for the write and then sees its rows
-  (`audit/0045_intake_without_foreign_keys.sql`). The ferroehr-rest test
+  and locks each distinct stored part its batch names once, so the
+  retention sweep's collection of shared parts skips a part a write in
+  flight names (`audit/0045_intake_without_foreign_keys.sql`). A shared part
+  keeps the latest `retain_until` of its entries, never earlier than the day
+  the intake last named it, and the sweep removes the parts past it that no
+  entry names, in batches read through the entries' `retain_until` index
+  (`audit.access_log_shared_collect`, #5968). The ferroehr-rest test
   `statement_budget` holds an AQL request to its round trips and nested
   statements, read from `pg_stat_statements`. `audit.audit_event_chain_move()`
   moves the system intake into the system chain the same way. A
@@ -479,7 +487,8 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   are projections of the stored entry (`access_log::projection`): the ITI-81
   search, the person's own trail and the FHIR Feed read it through
   `audit.audit_record`, the view of the `audit_event` records and the
-  indexed entries. An entry is one row of `access_log_record`: its index
+  indexed entries. An entry is one row of `access_log_entry`, and
+  `access_log_record` is the view of the entries with their link: its index
   columns (the search columns, the search tokens of the projection and the
   render policy) sit on the entry's own row and are emptied with its content
   when a tombstone replaces it, and `access_log_search` is the view of them
@@ -491,7 +500,9 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   entry's document is rendered once per served entry (#5965). The exact
   total counts the
   access log from the time index alone, which carries `render_policy_id`
-  (`system_log::store::search_page`, #5646). A row part keeps no member a
+  and the entry id (`system_log::store::search_page`, #5646); it also counts
+  the entries of the last fraction of a second that the chainer has not
+  linked, which a page does not serve yet (#5968). A row part keeps no member a
   column holds: `_type` goes always, and `uid`, `ehr_id` and `time_recorded`
   when their column gives back the exact text (`ehr_id` is a `uuid`, the
   render policy is named by its `audit_render_policy` id), and

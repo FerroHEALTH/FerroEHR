@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The chainer of the access log: the intake rows linked into the chain in
-//! one transaction that holds the head only for what needs it (#5745).
+//! The chainer of the access log: the entries the intake rows name linked
+//! into the chain in one transaction that holds the head only for what needs
+//! it (#5745).
 //!
 //! A round locks the head without waiting, so any replica may run it and one
-//! does at a time; reads the oldest intake rows' content digests; computes
-//! each link in Rust; writes the records, their index and outbox rows and the
-//! new head through `audit.access_log_chain_move`, whose insert trigger checks
-//! every link against the head; ends with the signed checkpoint of the last
+//! does at a time; reads the entries of the oldest intake rows with their
+//! content digests; computes each link in Rust; writes the links, the outbox
+//! rows and the new head through `audit.access_log_chain_move`, whose insert
+//! trigger checks the links against the head, and which removes the intake
+//! rows (#5968); ends with the signed checkpoint of the last
 //! link; and commits. The checkpoint is signed on the blocking pool while the
 //! records are written. No openEHR spec governs the chain's concurrency: our
 //! own design.
@@ -56,7 +58,8 @@ pub enum Round {
 }
 
 impl AccessLogStore {
-    /// Chain up to `limit` of the oldest intake rows, owing each to the
+    /// Chain the entries of the oldest intake rows, whole rows until `limit`
+    /// entries are reached, owing each to the
     /// sinks `owed` names, after releasing in the same transaction the
     /// records held under the reservations `release`, whose writes committed
     /// (#5762); a round that finds the head held releases nothing.
@@ -93,13 +96,10 @@ impl AccessLogStore {
                 .execute(&mut *tx)
                 .await?;
         }
-        let rows: Vec<(i64, String)> = sqlx::query_as(
-            "SELECT id, encode(content_digest, 'hex') FROM audit.access_log_intake \
-             WHERE reserved_by IS NULL ORDER BY id LIMIT $1",
-        )
-        .bind(i64::from(limit))
-        .fetch_all(&mut *tx)
-        .await?;
+        let rows: Vec<(i64, i64, String)> = sqlx::query_as(INTAKE_ROWS)
+            .bind(i64::from(limit))
+            .fetch_all(&mut *tx)
+            .await?;
         if rows.is_empty() {
             if release.is_empty() {
                 tx.rollback().await?;
@@ -113,11 +113,15 @@ impl AccessLogStore {
                 held: taken.elapsed(),
             });
         }
+        let mut batches: Vec<i64> = Vec::new();
         let mut ids = Vec::with_capacity(rows.len());
         let mut sequences = Vec::with_capacity(rows.len());
         let mut previous_digests = Vec::with_capacity(rows.len());
         let mut digests = Vec::with_capacity(rows.len());
-        for (id, content_digest) in &rows {
+        for (batch, id, content_digest) in &rows {
+            if batches.last() != Some(batch) {
+                batches.push(*batch);
+            }
             sequence = sequence.checked_add(1).ok_or(AccessLogError::Exhausted)?;
             let digest = link_digest(&previous, sequence, content_digest);
             ids.push(*id);
@@ -129,7 +133,8 @@ impl AccessLogStore {
             Seal::Now => self.begin_seal(sequence, &previous)?,
             Seal::Later => None,
         };
-        sqlx::query("SELECT audit.access_log_chain_move($1, $2, $3, $4, $5, $6)")
+        sqlx::query("SELECT audit.access_log_chain_move($1, $2, $3, $4, $5, $6, $7)")
+            .bind(&batches)
             .bind(&ids)
             .bind(&sequences)
             .bind(&previous_digests)
@@ -200,5 +205,17 @@ impl AccessLogStore {
     }
 }
 
-/// How many intake rows one round of [`AccessLogStore::settle`] chains.
+/// The entries of the oldest intake rows that are not held, each with its
+/// intake row and content digest, in the order they are linked: whole rows,
+/// as long as the entries before a row number fewer than `$1`.
+const INTAKE_ROWS: &str = "SELECT b.id, n.id, encode(e.content_digest, 'hex') \
+     FROM (SELECT i.id, i.entries, \
+                  sum(cardinality(i.entries)) OVER (ORDER BY i.id) - cardinality(i.entries) AS before \
+             FROM audit.access_log_intake i WHERE i.reserved_by IS NULL ORDER BY i.id LIMIT $1) AS b \
+     CROSS JOIN LATERAL unnest(b.entries) WITH ORDINALITY AS n(id, k) \
+     JOIN audit.access_log_entry e ON e.id = n.id \
+     WHERE b.before < $1 ORDER BY b.id, n.k";
+
+/// How many entries one round of [`AccessLogStore::settle`] chains, rounded
+/// up to whole intake rows.
 const SETTLE_BATCH: u32 = 512;

@@ -13,8 +13,8 @@
 //! intake first ([`crate::access_log::intake`]) and the chainer
 //! ([`crate::access_log::chainer`]) gives it its link in this system's own
 //! access log, one chain from 1 with no gaps, under the head's lock, which
-//! the insert trigger of `audit.access_log_record`
-//! (`migrations/audit/0042_audit_intake.sql`) checks. The retention rules (§Retention) let an entry be replaced by
+//! the insert trigger of `audit.access_log_link`
+//! (`migrations/audit/0048_access_log_entry_written_once.sql`) checks. The retention rules (§Retention) let an entry be replaced by
 //! a tombstone that keeps its uid, `system_id`, `time_recorded` and link, the
 //! one change the table's triggers admit.
 //!
@@ -462,6 +462,28 @@ impl AccessLogStore {
     }
 }
 
+impl AccessLogStore {
+    /// Remove up to `limit` shared parts whose `retain_until` is before
+    /// `today` and that no entry names (`audit.access_log_shared_collect`),
+    /// and return how many.
+    ///
+    /// # Errors
+    /// The store errors when the statement fails.
+    pub async fn collect_shared(
+        &self,
+        today: jiff::civil::Date,
+        limit: u16,
+    ) -> Result<u64, AccessLogError> {
+        let removed: i64 =
+            sqlx::query_scalar("SELECT audit.access_log_shared_collect($1::text::date, $2)")
+                .bind(today.to_string())
+                .bind(i32::from(limit))
+                .fetch_one(&mut *acquire(&self.pool).await?)
+                .await?;
+        Ok(u64::try_from(removed).unwrap_or(0))
+    }
+}
+
 /// The tombstone of `entry`, removed at `time_removed` on `grounds`: its uid,
 /// `system_id`, `time_recorded` and link, and nothing else of it.
 pub(super) fn tombstone_of(
@@ -483,8 +505,9 @@ pub(super) fn tombstone_of(
 /// statement, after checking every one against the draft's invariants;
 /// whether any was written.
 ///
-/// The table's update trigger admits the change only from an entry to its
-/// own tombstone (`migrations/audit/0027_access_log_record.sql`).
+/// The entry table's update trigger admits the change only from an entry to
+/// its own tombstone
+/// (`migrations/audit/0048_access_log_entry_written_once.sql`).
 async fn replace(
     tx: &mut PgConnection,
     tombstones: &[(i64, &AccessLogTombstone)],
@@ -500,9 +523,10 @@ async fn replace(
         contents.push(canonical_form(*tombstone)?);
     }
     sqlx::query(
-        "UPDATE audit.access_log_record r SET content = t.content, shared = NULL \
+        "UPDATE audit.access_log_entry e SET content = t.content, shared = NULL \
          FROM unnest($1::bigint[], $2::text[]) AS t(chain_seq, content) \
-         WHERE r.chain_seq = t.chain_seq",
+         JOIN audit.access_log_link l ON l.chain_seq = t.chain_seq \
+         WHERE e.id = l.entry_id",
     )
     .bind(&positions)
     .bind(&contents)

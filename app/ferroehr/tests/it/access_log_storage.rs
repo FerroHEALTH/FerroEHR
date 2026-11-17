@@ -77,10 +77,11 @@ fn read(n: u32) -> AuditEvent {
     event
 }
 
-/// The relations an entry takes room in: its row, its shared part, its
-/// search tokens and their sets, and the checkpoints that seal it.
-const RELATIONS: [&str; 5] = [
-    "access_log_record",
+/// The relations an entry takes room in: its row, its link, its shared part,
+/// its search tokens and their sets, and the checkpoints that seal it.
+const RELATIONS: [&str; 6] = [
+    "access_log_entry",
+    "access_log_link",
     "access_log_shared",
     "audit_search_token",
     "audit_search_set",
@@ -193,7 +194,7 @@ async fn plan(pool: &sqlx::PgPool, count: &str) -> String {
 
 /// The ITI-81 total of the access log, the whole log and a date window, is
 /// counted from the time index alone, which carries whether an entry is
-/// indexed, so it reads no entry's row (#5784).
+/// indexed, so it reads no entry's row and no link (#5784, #5968).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_iti81_total_is_counted_from_the_time_index() {
     let seeded = seed(ENTRIES).await;
@@ -207,9 +208,10 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
         let plan = plan(&pool, count).await;
         assert!(
             plan.contains("\"Index Only Scan\"")
-                && plan.contains("\"ix_access_log_record_time\"")
+                && plan.contains("\"ix_access_log_entry_time\"")
+                && !plan.contains("\"access_log_link\"")
                 && !plan.contains("\"Seq Scan\""),
-            "`{count}` is counted from the time index: {plan}"
+            "`{count}` is counted from the time index alone: {plan}"
         );
     }
 }

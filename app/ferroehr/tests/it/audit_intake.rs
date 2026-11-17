@@ -145,9 +145,12 @@ async fn the_intake_refuses_every_change_but_the_chainers_move() {
         .await
         .expect("a record of the system chain waits in its intake");
     for statement in [
-        "UPDATE audit.access_log_intake SET content = '{}'",
+        "UPDATE audit.access_log_intake SET entries = '{1}'",
         "DELETE FROM audit.access_log_intake",
         "TRUNCATE audit.access_log_intake",
+        "UPDATE audit.access_log_entry SET content = '{}'",
+        "DELETE FROM audit.access_log_entry",
+        "TRUNCATE audit.access_log_entry",
         "UPDATE audit.audit_event_intake SET action = 'R'",
         "DELETE FROM audit.audit_event_intake",
         "TRUNCATE audit.audit_event_intake",
@@ -177,7 +180,8 @@ async fn a_record_inserted_past_the_head_is_refused() {
     write(&pool, std::iter::once(1)).await;
     let refused = sqlx::query(
         "SELECT audit.access_log_chain_move( \
-         ARRAY(SELECT id FROM audit.access_log_intake), ARRAY[7]::bigint[], \
+         ARRAY(SELECT id FROM audit.access_log_intake), \
+         ARRAY(SELECT unnest(entries) FROM audit.access_log_intake), ARRAY[7]::bigint[], \
          ARRAY[repeat('0', 64)], ARRAY[repeat('0', 64)], false, false)",
     )
     .execute(&pool)

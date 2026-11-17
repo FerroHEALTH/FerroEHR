@@ -639,26 +639,31 @@ NCP. How the log is protected is therefore our own design.
   holds the key, under a checkpoint a second as under a signature per
   entry; the published checkpoints bound what that person can rewrite to
   what came after the newest one published.
-- **The intake and its window.** An entry is written into
-  `audit.access_log_intake` before the response that reports its access,
-  and the chainer links it into the chain afterwards (#5747, #5745; our own
-  design). The write is one statement, `audit.access_log_intake_take()`,
-  which stores or finds the entries' search tokens and shared sets and
-  inserts the rows, and it commits on its own; four writers gather the
+- **The intake and its window.** An entry is written once, into
+  `audit.access_log_entry`, before the response that reports its access,
+  with one `audit.access_log_intake` row naming the entries of the
+  statement, and the chainer links it into the chain afterwards by one
+  narrow `audit.access_log_link` row (#5747, #5745, #5968; our own design).
+  The write is one statement, `audit.access_log_intake_take()`, which
+  stores or finds the entries' search tokens and shared sets and inserts
+  the rows, and it commits on its own; four writers gather the
   entries of the requests waiting into each statement, so one commit and one
   flush of the write-ahead log serve many requests (#5770). The intake is
   unchained, so no request waits on the head. It is
   append-only by the database's rules: the runtime role may insert and read
-  it and nothing else, the table refuses every update, delete and truncate,
-  and only `audit.access_log_chain_move()`, a `SECURITY DEFINER` function,
-  removes a row, by writing it into the chain in the same statement. The
+  the entries and the intake rows and nothing else, the tables refuse every
+  update, delete and truncate, and only `audit.access_log_chain_move()`, a
+  `SECURITY DEFINER` function, removes an intake row, by linking all its
+  entries in the same statement. An entry was written twice before, into
+  the intake and again into the chain; written once, an entry costs about a
+  third less write-ahead log (#5968). The
   window between the intake and the chain is about a fifth of a second: a
   request wakes its replica's chainer, which gathers what the requests of
   the next 200 ms write into one round, so the rounds grow with the rate and
   an idle server runs none; every replica also looks at both intakes every
   2 seconds for the rows a stopped replica left, and a graceful stop chains
   what its intake holds. Within the window someone
-  with the database owner's rights can remove an intake row, and the chain
+  with the database owner's rights can remove an unlinked entry, and the chain
   does not show it; that is the same exposure an in-memory queue had,
   without the loss on a crash. The `audit_sender` indicator reads
   `DEGRADED` when the oldest intake row waits longer than 10 seconds.

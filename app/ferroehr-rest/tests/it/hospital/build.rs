@@ -378,7 +378,7 @@ pub(crate) async fn commit(world: &World, caller: &str, body: &Value) -> Doc {
 /// note and the lab's HIV result, each committed by its author before the
 /// policy holds them to a care relationship.
 async fn content(world: &mut World) {
-    let (status, body) = common::send_body(
+    let (status, _, body) = crate::hospital::world::served(
         &world.app,
         common::req("POST", format!("{BASE}/definition/template/adl1.4"))
             .auth(crate::hospital::world::credential(ROOT))
@@ -552,7 +552,7 @@ pub(crate) async fn policy(world: &World, controller: &str, preceding: Option<&s
         Some(version) => req.if_match(format!("\"{version}\"")),
         None => req.header(http::header::IF_NONE_MATCH, "*"),
     };
-    let (status, headers, answer) = common::send(app, req.build()).await;
+    let (status, headers, answer) = crate::hospital::world::served(app, req.build()).await;
     assert!(
         status == StatusCode::CREATED || status == StatusCode::OK,
         "the policy: {status} {answer}"

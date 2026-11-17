@@ -234,6 +234,20 @@ pub fn release_held() {
     }
 }
 
+/// Awaits `wait`, a wait for work another task does or for a pool, after
+/// giving back every connection the current [`request_scope`] keeps
+/// ([`release_held`]).
+///
+/// A request that kept a connection across such a wait would hold it while
+/// the work it waits for may need a connection of the same pool: requests
+/// each keeping one and waiting so hold the pool until the acquire timeout
+/// (#5879, #6008). Every wait of a request for another task's work goes
+/// through here. No specification governs this: our own design.
+pub async fn handoff<F: Future>(wait: F) -> F::Output {
+    release_held();
+    wait.await
+}
+
 /// Records that a request held a connection of the pool `name` from `since`
 /// until now.
 fn held_for(since: Instant, name: Option<PoolName>) {
@@ -417,8 +431,7 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
             // NOTE: our own design (#5879), a request about to wait for one pool gives back what
             // it keeps of the others: kept across the wait, they make the pools locks taken in no
             // fixed order, and requests each keeping one and waiting for another stall to timeout.
-            release_held();
-            waiting.await
+            handoff(waiting).await
         }
     };
     crate::telemetry::metrics::metrics()

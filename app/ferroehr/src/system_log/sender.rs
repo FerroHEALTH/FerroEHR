@@ -299,17 +299,14 @@ impl AuditSender {
         let Some((records, ends, count)) = self.rendered(events).await else {
             return Ok(());
         };
-        let started = std::time::Instant::now();
-        let written = match reservation {
+        let store = &self.inner.store;
+        match reservation {
             Some(reservation) => {
-                self.inner
-                    .store
-                    .write_held(records, &ends, reservation)
+                self.wrote(count, store.write_held(records, &ends, reservation))
                     .await
             }
-            None => self.inner.store.write(records, &ends).await,
-        };
-        self.wrote(written, count, started)
+            None => self.wrote(count, store.write(records, &ends)).await,
+        }
     }
 
     /// [`Self::record`] held under `reservation`, written on `conn`, a
@@ -326,13 +323,11 @@ impl AuditSender {
         let Some((records, ends, count)) = self.rendered(events).await else {
             return Ok(());
         };
-        let started = std::time::Instant::now();
-        let written = self
+        let write = self
             .inner
             .store
-            .write_held_on(conn, records, &ends, reservation)
-            .await;
-        self.wrote(written, count, started)
+            .write_held_on(conn, records, &ends, reservation);
+        self.wrote(count, write).await
     }
 
     /// `events` stamped and rendered as the store writes them, with their
@@ -364,14 +359,15 @@ impl AuditSender {
         Some((records, ends, count))
     }
 
-    /// Meters the write of `count` records begun at `started`, and wakes the
+    /// Runs `write`, the write of `count` records, metering it, and wakes the
     /// chainer once it succeeded.
-    fn wrote(
+    async fn wrote(
         &self,
-        written: Result<(), AuditError>,
         count: u64,
-        started: std::time::Instant,
+        write: impl Future<Output = Result<(), AuditError>>,
     ) -> Result<(), AuditError> {
+        let started = std::time::Instant::now();
+        let written = write.await;
         let path = crate::telemetry::access_path::metrics();
         let outcome = crate::telemetry::access_path::outcome(&written);
         path.log_append_duration.record(
@@ -771,7 +767,18 @@ async fn memoize_subjects(
         return subjects;
     }
     // NOTE: our own design (#5947), this task waits for the lookups, so it keeps no connection.
-    crate::db::acquire::release_held();
+    crate::db::acquire::handoff(lookup_all(pending, resolve, cache, &mut subjects)).await;
+    subjects
+}
+
+/// Looks up the subject of each of `pending` on a task of its own and notes
+/// each answer in `subjects`, memoizing it in `cache`.
+async fn lookup_all(
+    pending: Vec<String>,
+    resolve: &SubjectResolver,
+    cache: &SubjectCache,
+    subjects: &mut Subjects,
+) {
     let mut lookups = tokio::task::JoinSet::new();
     for ehr_id in pending {
         subjects.unavailable.insert(ehr_id.clone());
@@ -800,7 +807,6 @@ async fn memoize_subjects(
         subjects.unavailable.remove(&ehr_id);
         subjects.resolved.insert(ehr_id, subject);
     }
-    subjects
 }
 
 #[cfg(test)]
