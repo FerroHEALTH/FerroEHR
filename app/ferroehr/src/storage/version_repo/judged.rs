@@ -22,12 +22,17 @@ use crate::versioning::object_version_id::TreeId;
 
 /// The head facts of the object `$1` names beside the version `$tail`
 /// selects, `NULL` columns of the version when it holds none; the settings
-/// revision is the version's (the head's EHR is the version's).
+/// revision is the version's (the head's EHR is the version's). The head's
+/// ordinal and the version's content digest are what a copy of the version
+/// is confirmed against later ([`read_marks`], #5778).
 macro_rules! judged_select {
     ($tail:literal) => {
         concat!(
             "SELECT ",
             head_object_facts!(),
+            "h.head_sys_version AS held_head, ",
+            "(SELECT d.content_digest FROM version d WHERE d.tier = h.tier AND d.vo_id = r.vo_id ",
+            "AND d.sys_version = r.sys_version) AS held_digest, ",
             "r.* FROM vo_head h LEFT JOIN LATERAL (",
             version_select!($tail),
             ") r ON true WHERE h.vo_id = $1"
@@ -54,6 +59,22 @@ pub enum JudgedAt {
     Tree(VoId, TreeId),
 }
 
+/// What a judged read found: the object's head facts, the version it
+/// addresses, and what a copy of that version is confirmed against.
+#[derive(Debug, Clone)]
+pub struct Judged {
+    /// The facts the evaluator judges the object by.
+    pub facts: HeadFacts,
+    /// The version, its body as the stored text; `None` when the object
+    /// holds no such version.
+    pub stored: Option<StoredVersion>,
+    /// The ordinal of the object's head, which every new version moves.
+    pub head: i32,
+    /// The version's content digest, which an erasure that rewrites the body
+    /// changes; `None` beside no version.
+    pub digest: Option<Vec<u8>>,
+}
+
 /// The head facts of the object `at` names and the version it addresses.
 ///
 /// Unjudged, with the body as the stored text; `None` when the store holds no
@@ -62,10 +83,7 @@ pub enum JudgedAt {
 ///
 /// # Errors
 /// [`StorageError`] on a driver failure or a column that does not decode.
-pub async fn read_judged(
-    pool: &PgPool,
-    at: JudgedAt,
-) -> Result<Option<(HeadFacts, Option<StoredVersion>)>, StorageError> {
+pub async fn read_judged(pool: &PgPool, at: JudgedAt) -> Result<Option<Judged>, StorageError> {
     let (vo_id, query) = match at {
         JudgedAt::Current(vo_id) => (vo_id, sqlx::query(JUDGED_CURRENT_SQL).bind(vo_id)),
         JudgedAt::Tree(vo_id, tree) => {
@@ -86,5 +104,67 @@ pub async fn read_judged(
         Some(held) => Some(stored_version_raw(held, &row)?),
         None => None,
     };
-    Ok(Some((facts, stored)))
+    Ok(Some(Judged {
+        facts,
+        stored,
+        head: row.try_get("held_head")?,
+        digest: row.try_get("held_digest")?,
+    }))
+}
+
+/// The statement [`read_marks`] runs.
+pub const MARKS_SQL: &str = concat!(
+    "SELECT h.head_sys_version AS held_head, h.restricted_at, ",
+    "(h.person_withheld_until > now()) IS TRUE AS person_withheld, ",
+    "(SELECT d.content_digest FROM version d WHERE d.tier = h.tier AND d.vo_id = h.vo_id ",
+    "AND d.sys_version = $2) AS held_digest, ",
+    access_revision!("h.ehr_id"),
+    " FROM vo_head h WHERE h.vo_id = $1"
+);
+
+/// What may have changed about a version since it was read: everything a
+/// read decides by that a later commit can change while the version itself
+/// stays (RM common master06 §Version Identification).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Marks {
+    /// The ordinal of the object's head.
+    pub head: i32,
+    /// The restriction-of-processing mark (GDPR Art. 18(2)).
+    pub restricted_at: Option<jiff::Timestamp>,
+    /// Whether an EHDS Art. 3(3) delay withholds the object from the person.
+    pub person_withheld: bool,
+    /// The version's content digest; `None` when it was erased.
+    pub digest: Option<Vec<u8>>,
+    /// The revision of the owning EHR's settings row.
+    pub revision: crate::storage::access_projection::Revision,
+}
+
+/// The marks of the object `vo_id` and of its version `sys_version`, read by
+/// the head's and the version's primary keys in one statement; `None` when
+/// the store holds no such object (#5778).
+///
+/// # Errors
+/// [`StorageError`] on a driver failure or a column that does not decode.
+pub async fn read_marks(
+    pool: &PgPool,
+    vo_id: VoId,
+    sys_version: i32,
+) -> Result<Option<Marks>, StorageError> {
+    let Some(row) = sqlx::query(MARKS_SQL)
+        .bind(vo_id)
+        .bind(sys_version)
+        .fetch_optional(&mut *acquire(pool).await?)
+        .await?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(Marks {
+        head: row.try_get("held_head")?,
+        restricted_at: row
+            .try_get::<Option<jiff_sqlx::Timestamp>, _>("restricted_at")?
+            .map(jiff_sqlx::Timestamp::to_jiff),
+        person_withheld: row.try_get("person_withheld")?,
+        digest: row.try_get("held_digest")?,
+        revision: crate::storage::access_projection::Revision::read(&row)?,
+    }))
 }

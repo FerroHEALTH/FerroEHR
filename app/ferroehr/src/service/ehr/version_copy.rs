@@ -2,39 +2,32 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! This replica's copy of the COMPOSITION versions it read by their version
-//! id, so a repeated read makes no PostgreSQL statement (#5778).
+//! id, so a repeated read reads the version's body from memory (#5778).
 //!
 //! A version never changes once committed (RM common master06 §Version
 //! Identification), so the copy holds it as the store returned it, with the
 //! head facts the access evaluator judges its object by. What may change is
 //! whether it may be served: a new version moves the head facts, a
 //! restriction (GDPR Art. 18(2)) or an access delay (EHDS Art. 3(3)) marks
-//! the object, and an erasure (GDPR Art. 17) rewrites or removes it. Each of
-//! these notifies [`CHANNEL`] with the objects it changed
-//! (`clinical/0051_object_version_notify.sql`), and every replica drops them;
-//! this replica also drops what its own restriction and erasure commit. A
-//! listener that connects or loses its connection drops the whole copy, and
-//! while it is down the copy is neither read nor filled. A read that a drop
-//! overtook keeps nothing. Every read served from the copy is still judged
-//! by the evaluator and logged; the copy changes only where the bytes come
-//! from. The bound is in bytes ([`BYTES`]). No openEHR spec governs the
-//! copy: our own design.
+//! the object, the EHR's settings move, and an erasure (GDPR Art. 17)
+//! rewrites or removes it. A held version is served only after one indexed
+//! read of the store confirms, at that moment, the object's head, its marks,
+//! its EHR's settings revision and the version's content digest
+//! (`version_repo::judged::read_marks`), so no access decision rests on a
+//! notification's timing (owner decision on #5891). Every read is judged by
+//! the evaluator and logged. The bound is in bytes ([`BYTES`]). No openEHR
+//! spec governs the copy: our own design.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use moka::future::Cache;
 use moka::notification::RemovalCause;
 
-use crate::ids::{EhrId, VoId};
-use crate::policy_register::listen::{Dropping, Subscriber};
+use crate::ids::VoId;
 use crate::service::ehr::access_cache::{Lookup, dropped, looked_up};
 use crate::storage::access_facts::HeadFacts;
 use crate::storage::version_repo::read::StoredVersion;
 use crate::versioning::object_version_id::TreeId;
-
-/// The channel a change to a stored object notifies.
-pub(crate) const CHANNEL: &str = "ferroehr_object_version";
 
 /// The most bytes the copy holds, by `Held::bytes`: about 20 000 versions
 /// of a 3 kB compact composition.
@@ -49,13 +42,18 @@ const EVICTED: &str = "object_version_evicted";
 /// One version of an object, addressed by its `VERSION_TREE_ID`.
 pub(crate) type Key = (VoId, TreeId);
 
-/// A version as a judged read returned it, with its object's head facts.
+/// A version as a judged read returned it, with its object's head facts and
+/// what a later read confirms it against.
 #[derive(Debug)]
 pub(crate) struct Held {
     /// The facts the evaluator judges the object by.
     pub(crate) facts: HeadFacts,
     /// The version, its body as the stored text.
     pub(crate) stored: StoredVersion,
+    /// The ordinal of the object's head when it was read.
+    pub(crate) head: i32,
+    /// The version's content digest when it was read.
+    pub(crate) digest: Vec<u8>,
 }
 
 impl Held {
@@ -99,7 +97,7 @@ impl Held {
         .chain(stored.attestations_at_committal.iter().map(json))
         .chain(stored.attestations_after_committal.iter().map(json))
         .sum();
-        u64::try_from(size_of::<Self>() + text + values).unwrap_or(u64::MAX)
+        u64::try_from(size_of::<Self>() + text + values + self.digest.len()).unwrap_or(u64::MAX)
     }
 }
 
@@ -107,8 +105,6 @@ impl Held {
 #[derive(Debug)]
 pub(crate) struct VersionCopy {
     inner: Cache<Key, Arc<Held>>,
-    /// Moved by every drop, so a read that started before one keeps nothing.
-    drops: AtomicU64,
 }
 
 impl VersionCopy {
@@ -129,7 +125,6 @@ impl VersionCopy {
                     }
                 })
                 .build(),
-            drops: AtomicU64::new(0),
         }
     }
 
@@ -145,80 +140,20 @@ impl VersionCopy {
         held
     }
 
-    /// How many drops this copy has seen, read before a store read so
-    /// [`Self::keep`] keeps nothing a drop overtook.
-    pub(crate) fn drops(&self) -> u64 {
-        self.drops.load(Ordering::Acquire)
-    }
-
-    /// Keep `held` as `key`, read after `seen` drops, unless a drop overtook
-    /// the read.
-    pub(crate) async fn keep(&self, key: Key, held: Held, seen: u64) {
+    /// Keep `held` as `key`.
+    pub(crate) async fn keep(&self, key: Key, held: Held) {
         self.inner.insert(key, Arc::new(held)).await;
-        if self.drops() != seen {
-            self.inner.invalidate(&key).await;
-        }
     }
 
-    /// Drop every held version of `vo_id`.
-    pub(crate) async fn forget_object(&self, vo_id: VoId) {
-        self.forget_where(|held| held.facts.vo_id == vo_id).await;
-    }
-
-    /// Drop every held version of an object of `ehr_id`.
-    pub(crate) async fn forget_ehr(&self, ehr_id: EhrId) {
-        self.forget_where(|held| held.facts.ehr_id == Some(ehr_id))
-            .await;
-    }
-
-    /// Drop the held versions `drop` picks.
-    async fn forget_where(&self, drop: impl Fn(&Held) -> bool) {
-        self.drops.fetch_add(1, Ordering::AcqRel);
+    /// Drop the held version `key`, which the store no longer confirms.
+    pub(crate) async fn forget(&self, key: Key) {
         dropped(COPY);
-        let keys: Vec<Key> = self
-            .inner
-            .iter()
-            .filter(|(_, held)| drop(held))
-            .map(|(key, _)| *key)
-            .collect();
-        for key in keys {
-            self.inner.invalidate(&key).await;
-        }
-    }
-
-    /// Drop every held version.
-    pub(crate) fn forget_every(&self) {
-        self.drops.fetch_add(1, Ordering::AcqRel);
-        dropped(COPY);
-        self.inner.invalidate_all();
+        self.inner.invalidate(&key).await;
     }
 
     /// How many versions the copy holds, and their bytes.
     pub(crate) fn held(&self) -> (u64, u64) {
         (self.inner.entry_count(), self.inner.weighted_size())
-    }
-}
-
-impl Subscriber for VersionCopy {
-    fn notified<'a>(&'a self, payload: &'a str) -> Dropping<'a> {
-        // NOTE: our own design, a payload that names no object, the trigger's `*` for a
-        // statement that changed many, drops the whole copy.
-        let object = payload.parse::<uuid::Uuid>().ok().map(VoId);
-        Box::pin(self.forget(object))
-    }
-
-    fn reset(&self) -> Dropping<'_> {
-        Box::pin(self.forget(None))
-    }
-}
-
-impl VersionCopy {
-    /// Drop the held versions of `object`, or every held version.
-    async fn forget(&self, object: Option<VoId>) {
-        match object {
-            Some(vo_id) => self.forget_object(vo_id).await,
-            None => self.forget_every(),
-        }
     }
 }
 
