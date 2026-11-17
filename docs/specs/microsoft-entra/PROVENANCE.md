@@ -23,7 +23,7 @@
   the Microsoft identity platform" (`docs/identity-platform/access-tokens.md`) is not
   taken: its sample access tokens are refused by GitHub push protection as
   Entra ID tokens, and the manifest reference states the same setting.
-  The two claims references are the bytes FerroHEALTH/FerroAUTH vendors in `docs/specs/entra-docs/` at the same commit.
+  The two claims references are the bytes FerroHEALTH/FerroSMART vendors in `docs/specs/entra-docs/` at the same commit.
 - Upstream licence: the repository states two grants, both recorded here as
   read 2026-11-05. The `README.md` "Legal Notices" section reads:
   "Microsoft and any contributors grant you a license to the Microsoft

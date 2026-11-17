@@ -94,7 +94,7 @@ token"). Its footer states "Copyright © 2026 Okta. All rights reserved.",
 and <https://developer.okta.com/copyright/> grants no licence to copy it, so
 the script fetches it into the git-ignored \`.vendor-cache/okta/\` and this
 repository carries none of its content. The page is rebuilt without notice:
-FerroHEALTH/FerroAUTH recorded another sha256 for it earlier the same day, so
+FerroHEALTH/FerroSMART recorded another sha256 for it earlier the same day, so
 a refused re-run means the page moved and the pin is moved after reading the
 change.
 

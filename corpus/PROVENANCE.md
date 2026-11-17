@@ -27,6 +27,7 @@ and the license:
 | `fixtures/service/` (EHRbase v2.33.0 import) | hand-maintained, no script | `fixtures/service/PROVENANCE.md` |
 | `ferropulse/` (the usage report v2 JSON Schema + examples) | `scripts/vendor/ferropulse-schemas.sh` | `ferropulse/PROVENANCE.md` |
 | `veredictum/adl2-content/` (the catalogue's ADL 2 content cases) | `scripts/vendor/veredictum-adl2-content.sh` | `veredictum/adl2-content/PROVENANCE.md` |
+| `templates/openehr-sdk-go/` (the Go SDK corpus templates the example gates read) | `scripts/vendor/openehr-sdk-go-templates.sh` | `templates/openehr-sdk-go/PROVENANCE.md` |
 | `fixtures/**` (the rest) | hand-authored / generated conformance material | this file, below |
 
 The discipline is `.claude/rules/vendored-corpora.md`: verbatim, never
