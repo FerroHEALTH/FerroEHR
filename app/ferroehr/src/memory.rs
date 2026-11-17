@@ -54,7 +54,7 @@ pub(crate) fn gauge(bytes: usize) -> u64 {
 pub struct Held {
     /// The entries.
     pub entries: u64,
-    /// The bytes they take, as [`Weigh`] estimates them.
+    /// The bytes they take, as this module's weights estimate them.
     pub bytes: u64,
 }
 
