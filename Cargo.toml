@@ -248,17 +248,18 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # 0.29 ships the `ferrosmart` issuer preset FerroEHR reads FerroSMART's tokens
 # under, 0.29.1 refuses an issuer named in two `[[auth.issuer]]` tables, and
 # 0.29.2 names `token_endpoint_auth_signing_alg_values_supported` in the App
-# Launch discovery document beside `private_key_jwt`. Verified on crates.io
+# Launch discovery document beside `private_key_jwt`; 0.30 builds on
+# ferrohealth-server 0.11, with one server in the lock. Verified on crates.io
 # 2026-11-17.
-ferrohealth-smart = { version = "=0.29.2", default-features = false, features = ["fetch", "idp-entra"] }
+ferrohealth-smart = { version = "=0.30.0", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party; 0.13 types the provider issuer and the
 # redirect URIs as `SecretUrl`, and 0.23 is the release on ferrohealth-smart
-# 0.28, and 0.24 the release on ferrohealth-smart 0.29. Verified on crates.io
-# 2026-11-17.
-ferrohealth-session = { version = "=0.24.0", default-features = false }
+# 0.28, 0.24 the release on ferrohealth-smart 0.29, and 0.25 the release on
+# ferrohealth-smart 0.30. Verified on crates.io 2026-11-17.
+ferrohealth-session = { version = "=0.25.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
