@@ -101,14 +101,15 @@ async fn an_expired_entry_becomes_a_tombstone() {
         tombstone.grounds, expired.retention.grounds,
         "the tombstone names the grounds of the period that ended"
     );
-    let content: String = sqlx::query_as::<_, (String, Option<String>)>(
-        "SELECT r.content, sh.content FROM audit.access_log_record r \
+    let content: String = sqlx::query_scalar::<_, String>(
+        "SELECT audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
+         r.time_recorded, r.ehr_id)::text FROM audit.access_log_record r \
          LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared WHERE r.uid = $1::uuid",
     )
     .bind(uid(3))
     .fetch_one(&pool)
     .await
-    .map(|(content, shared)| crate::fixtures::joined_entry(&content, shared.as_deref()))
+    .map(|document| crate::fixtures::canonical_entry(&document))
     .expect("the stored record");
     assert!(
         !content.contains("ehr_id") && !content.contains("accessor"),

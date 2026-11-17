@@ -135,6 +135,52 @@ impl<'w> Cut<'w> {
     }
 }
 
+/// The row part `row` of an entry without the members its columns give back.
+///
+/// `_type` always goes, and `uid`, `ehr_id` and `time_recorded` when the
+/// column gives back their exact text ([`super::column_uuid`],
+/// [`super::column_instant`]); `audit.access_log_document` puts them back for
+/// a row part without `_type` (#5784).
+///
+/// # Errors
+/// A [`serde_json::Error`] when `row` is no canonical object.
+pub fn without_columns(row: &str) -> Result<String, serde_json::Error> {
+    let members = members(row).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?;
+    let mut kept = Object::default();
+    for (name, value) in members {
+        if !column_member(name, value) {
+            kept.push(name, value);
+        }
+    }
+    Ok(kept.finish())
+}
+
+/// Whether the top-level member `name` with the canonical value `value` is
+/// one a column of the record gives back exactly.
+fn column_member(name: &str, value: &str) -> bool {
+    if is_name(name, "_type") {
+        return true;
+    }
+    if is_name(name, "uid") || is_name(name, "ehr_id") {
+        return typed_value(value, "HIER_OBJECT_ID")
+            .is_some_and(|id| super::column_uuid(&id).is_some());
+    }
+    if is_name(name, "time_recorded") {
+        return typed_value(value, "DV_DATE_TIME").is_some_and(|at| super::column_instant(&at));
+    }
+    false
+}
+
+/// The `value` of the canonical object `text` when it holds that string and
+/// a `_type` of `kind` and nothing else.
+fn typed_value(text: &str, kind: &str) -> Option<String> {
+    let object: serde_json::Map<String, serde_json::Value> = serde_json::from_str(text).ok()?;
+    if object.len() != 2 || object.get("_type")?.as_str()? != kind {
+        return None;
+    }
+    object.get("value")?.as_str().map(str::to_owned)
+}
+
 /// The value of the last member of `members` named `plain`.
 fn last_named<'t>(members: &[(&'t str, &'t str)], plain: &str) -> Option<&'t str> {
     members

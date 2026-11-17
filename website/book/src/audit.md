@@ -1345,8 +1345,8 @@ parameter on an element of the document (`address` and the `.identifier`,
 `entity-type`, `entity-role`, `type` and `subtype` parameters) matches the
 search tokens the store takes from the record's rendered document when it
 writes the record (`audit.audit_search_token`, `audit.audit_search_set` and
-the record's `search_tokens`, for an entry its row in
-`audit.access_log_search`, which goes with the entry's content when a
+the record's `search_tokens`, for an entry a column of its own row in
+`audit.access_log_record`, which goes with the entry's content when a
 tombstone replaces it), so the search finds what the served document
 says and renders only the page it serves. An `entity.identifier` that carries
 the record's request id or the object it names (the version uid of a create)
