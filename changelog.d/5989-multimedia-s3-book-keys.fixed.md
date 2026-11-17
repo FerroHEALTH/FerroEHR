@@ -1,0 +1,1 @@
+- The hardening pages of the book name the multimedia store's S3 keys where they now live, `config.record.multimedia.s3.url` and `config.record.multimedia.s3.secret_access_key_file`, instead of the keys under `[record.multimedia]` that 6.0.0 removed.
