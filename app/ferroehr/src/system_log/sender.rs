@@ -371,6 +371,12 @@ pub struct AuditHandle {
 }
 
 impl AuditHandle {
+    /// Returns the audit runtime's own pool, for the pool gauges.
+    #[must_use]
+    pub fn runtime_pool(&self) -> PgPool {
+        self.behind.pool.clone()
+    }
+
     /// Returns the shared result of the scheduled hash-chain verification;
     /// `None` when `verify_interval` is `0`.
     #[must_use]

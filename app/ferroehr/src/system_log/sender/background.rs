@@ -89,7 +89,7 @@ impl Background {
     /// connection budget counts (#5845).
     pub(super) fn pool_over(&self, pool: &PgPool) -> PgPool {
         let _entered = self.handle.enter();
-        crate::db::pool::options(
+        let runtime = crate::db::pool::options(
             &crate::db::DbConfig::default(),
             crate::db::domain::Domain::Audit,
         )
@@ -97,7 +97,9 @@ impl Background {
         .min_connections(0)
         .connect_lazy_with(sqlx::postgres::PgConnectOptions::clone(
             &pool.connect_options(),
-        ))
+        ));
+        crate::db::pool_name::name(&runtime, crate::db::pool_name::PoolName::AuditRuntime);
+        runtime
     }
 
     /// End the runtime once the tasks on it have been stopped.

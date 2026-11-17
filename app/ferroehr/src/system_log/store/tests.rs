@@ -150,6 +150,10 @@ fn every_identifier_comes_from_the_closed_set() {
         "access_log_candidate",
         "access_log_page",
         "chains",
+        "page_keys",
+        "position",
+        "page_key",
+        "page_record",
     ]);
     expected.sort_unstable();
     expected.dedup();

@@ -276,6 +276,7 @@ work_mem = 16MB
 maintenance_work_mem = 512MB
 max_wal_size = 8GB
 checkpoint_timeout = 15min
+wal_compression = lz4
 shared_preload_libraries = 'pg_stat_statements'
 pg_stat_statements.track = all
 pg_stat_statements.track_planning = on

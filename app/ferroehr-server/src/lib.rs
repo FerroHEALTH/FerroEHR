@@ -883,7 +883,13 @@ async fn serve(config_path: Option<&Path>, overrides: &[(String, String)]) -> an
         indicators.push(Arc::new(indicators::AuditDeliveryHealth::new(delivery)));
     }
 
-    telemetry.start_samplers(pool.clone());
+    let mut sampled = vec![
+        pools.clinical.clone(),
+        pools.party.clone(),
+        pools.audit.clone(),
+    ];
+    sampled.extend(audit_handle.as_ref().map(AuditHandle::runtime_pool));
+    telemetry.start_samplers(sampled);
 
     // `/management/env` and `GET {base}/admin/config` serve the whole config
     // tree, redacted by its `Secret`/`SecretUrl` leaf types.
