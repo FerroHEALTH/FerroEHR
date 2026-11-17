@@ -18,7 +18,6 @@ impl FerroEhrService {
     pub fn policy_listeners(&self) -> Vec<(&'static str, Arc<Listened>)> {
         vec![
             ("ehr_access", Arc::clone(self.ehr_access_listened())),
-            ("object_versions", Arc::clone(&self.version_copy_listened)),
             ("grants", Arc::clone(self.grants().listened())),
             ("party_binding", Arc::clone(self.bindings().listened())),
             (

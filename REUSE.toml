@@ -289,6 +289,16 @@ precedence = "override"
 SPDX-FileCopyrightText = "IHE International"
 SPDX-License-Identifier = "CC-BY-4.0"
 
+# The openehr-sdk-go corpus templates are vendored verbatim at a pinned commit
+# of an MIT repository; the per-template origins and licences are in the
+# vendored THIRD_PARTY_LICENSES.md, and the subtree's PROVENANCE.md records
+# the pin.
+[[annotations]]
+path = "corpus/templates/openehr-sdk-go/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Sebastian Iancu and the openehr-sdk-go contributors"
+SPDX-License-Identifier = "MIT"
+
 # The Veredictum ADL 2 content cases are the catalogue's own Arazzo documents,
 # under the Apache-2.0 its LICENSE grants, with its NOTICE vendored beside
 # them; the subtree's PROVENANCE.md records the pin.
@@ -394,6 +404,7 @@ path = [
   "corpus/archetypes/ckm/PROVENANCE.md",
   "corpus/templates/ckm/PROVENANCE.md",
   "corpus/templates/ckm/full/PROVENANCE.md",
+  "corpus/templates/openehr-sdk-go/PROVENANCE.md",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "Cadasto B.V."

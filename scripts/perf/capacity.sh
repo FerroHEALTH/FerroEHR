@@ -38,21 +38,54 @@
 # kept its schedule and was never saturated, the measured throughput is at
 # least 98 % of the offered rate, and every group's p99 lies within its SLO
 # (CAPACITY_SLO_MS, CAPACITY_SLO_SLOW_MS for the population query, the
-# access-log read and the export). The knee is the highest rate that passes;
-# a sweep stops at the first step that fails. No openEHR spec governs this:
-# our own design.
+# access-log read and the export), as the generator measured it and as the
+# server's own request log did. The knee is the highest rate that passes
+# with every rate below it passing; a sweep stops at the first step that
+# fails unless CAPACITY_CONTINUE asks it to run every rate.
+#
+# Each step also records what makes its numbers trustworthy or not (#5777):
+# the host's and the containers' kernel's load, its clock source and the CPU
+# of every other container over the step (host.json); the peak memory of each
+# instance and of PostgreSQL (memory.json); and the store's bytes per
+# composition version and per access-log entry (storage.json). A step run
+# CAPACITY_REPEAT times reports each group's median p99 with its spread, and
+# `compare` calls a difference between two arms only outside both spreads.
+# `snapshot` keeps the seeded store and `restore` brings it back with the
+# servers restarted, so every arm, or every step under CAPACITY_FRESH,
+# starts from the same store; `arms` interleaves several configurations on
+# it. No openEHR spec governs this: our own design.
 #
 # Usage:
 #   scripts/perf/capacity.sh up <instances>
 #       start PostgreSQL, <instances> servers and, above one, the balancer
 #   scripts/perf/capacity.sh seed
 #       provision and seed the running topology
+#   scripts/perf/capacity.sh snapshot
+#       keep the seeded store as the database ferroehr_seed
+#   scripts/perf/capacity.sh restore
+#       the store back to the snapshot, the servers restarted under the
+#       current CAPACITY_SERVER_ENV
 #   scripts/perf/capacity.sh sweep <group|mix> [<rate>...]
 #       step <group> (or the mix) through the rates until one fails
+#   scripts/perf/capacity.sh step <group|mix> <rate>
+#       one rate
+#   scripts/perf/capacity.sh arms <group|mix> <rate> <arm>=<env>...
+#       CAPACITY_REPEAT rounds of one rate, each arm restored from the
+#       snapshot and run under its FERROEHR__ settings (space-separated
+#       KEY=VALUE pairs, empty for the configuration as it is), the arms'
+#       order alternating from round to round
+#   scripts/perf/capacity.sh compare <arm> <arm>
+#       each step both arms ran, group by group, with the median p99 of each
+#       and whether they differ outside both spreads
+#   scripts/perf/capacity.sh soak <group|mix> <rate> <seconds>
+#       hold one rate for <seconds>, sampling each instance's resident set,
+#       and fail when it keeps rising after the warm-up and the settling
 #   scripts/perf/capacity.sh profile <group|mix> <rate> <seconds>
 #       hold one rate while an external sampler profiles the first instance
 #   scripts/perf/capacity.sh summary
-#       the Markdown table of every step run so far
+#       the Markdown tables of every step run so far
+#   scripts/perf/capacity.sh generator
+#       build the pinned ferrohealth-perf for Linux, for CAPACITY_GENERATOR=network
 #   scripts/perf/capacity.sh down
 #       stop what `up` started
 #   scripts/perf/capacity.sh groups
@@ -98,11 +131,31 @@
 #   CAPACITY_SLO_SLOW_MS the p99 SLO of the population groups (default 500)
 #   CAPACITY_RATES       the default rates of a sweep
 #                        (default "50 100 200 500 1000 1500 2000 3000")
+#   CAPACITY_REPEAT      the runs of each step (default 1); a step that
+#                        reports a p99 a target is judged on runs at least 3
+#   CAPACITY_CONTINUE    1: a sweep runs every rate past a failed step, and
+#                        records each step's outcome (default 0)
+#   CAPACITY_FRESH       1: each run of a step starts from the snapshot
+#                        (`restore` before it), so no step reads a store an
+#                        earlier one grew (default 0)
+#   CAPACITY_ARM         the label of the configuration under test; its
+#                        steps go under steps/<arm>/ (default none)
+#   CAPACITY_SOAK_INTERVAL
+#                        seconds between a soak's samples (default 10)
+#   CAPACITY_SOAK_SETTLE seconds after the warm-up before the soak's fit
+#                        starts, for the bounded caches to fill (default 600)
+#   CAPACITY_SOAK_MAX_MIB_PER_HOUR
+#                        the resident-set slope past which a soak fails
+#                        (default 16)
+#   CAPACITY_GENERATOR   host (default) or network: docker topology, the
+#                        generator in a container on the servers' network,
+#                        so no port forwarder sits in the latency it measures
+#                        (`capacity.sh generator` builds it)
 #   PERF_BIN             a ferrohealth-perf binary (default
 #                        target/tools/perf/bin/ferrohealth-perf)
 #
-# Exit codes: 0 done, 1 a sweep's first step already failed, 2 a usage or
-# harness error.
+# Exit codes: 0 done, 1 a sweep's first step already failed (or a step
+# failed), 2 a usage or harness error.
 set -euo pipefail
 shopt -s inherit_errexit
 
@@ -133,6 +186,17 @@ readonly DURATION="${CAPACITY_DURATION:-60}"
 readonly SLO_MS="${CAPACITY_SLO_MS:-100}"
 readonly SLO_SLOW_MS="${CAPACITY_SLO_SLOW_MS:-500}"
 readonly RATES="${CAPACITY_RATES:-50 100 200 500 1000 1500 2000 3000}"
+readonly REPEAT="${CAPACITY_REPEAT:-1}"
+[[ "$REPEAT" =~ ^[1-9][0-9]*$ ]] || { echo "capacity: CAPACITY_REPEAT must be a positive count" >&2; exit 2; }
+readonly CONTINUE="${CAPACITY_CONTINUE:-0}"
+readonly FRESH="${CAPACITY_FRESH:-0}"
+readonly ARM="${CAPACITY_ARM:-}"
+[[ "$ARM" =~ ^[A-Za-z0-9._-]*$ ]] || { echo "capacity: CAPACITY_ARM takes letters, digits, '.', '_' and '-'" >&2; exit 2; }
+readonly GENERATOR="${CAPACITY_GENERATOR:-host}"
+readonly SNAPSHOT_DB=ferroehr_seed
+readonly SOAK_INTERVAL="${CAPACITY_SOAK_INTERVAL:-10}"
+readonly SOAK_SETTLE="${CAPACITY_SOAK_SETTLE:-600}"
+readonly SOAK_MAX_MIB_PER_HOUR="${CAPACITY_SOAK_MAX_MIB_PER_HOUR:-16}"
 readonly CAP_PG_PORT=55450
 readonly CAP_HTTP_PORT=58100
 readonly CAP_LB_PORT=58099
@@ -140,7 +204,12 @@ readonly CAP_NET=ferroehr-capacity
 readonly CAP_PG=ferroehr-capacity-postgres
 readonly CAP_SERVER=ferroehr-capacity
 readonly CAP_LB=ferroehr-capacity-lb
+readonly CAP_GEN=ferroehr-capacity-generator
 readonly STATE="$CAP_OUT_ABS/state"
+# shellcheck source=scripts/perf/capacity-measure.sh
+source "$CAPACITY_ROOT/scripts/perf/capacity-measure.sh"
+# shellcheck source=scripts/perf/capacity-report.sh
+source "$CAPACITY_ROOT/scripts/perf/capacity-report.sh"
 
 # The groups a sweep takes one by one, each with its caller; the mix takes
 # them at once, each as many times per round as its weight.
@@ -243,6 +312,15 @@ up_native() { # <instances>
   instance_config "$CAP_OUT_ABS" "$CAPACITY_ROOT/deploy/hosted/basic-users-jwks.json" \
     "$CAPACITY_ROOT/docs/conformance/party/scim/jwks.json" "$PERF_OUT/signing/signing.asc" \
     "$PERF_OUT/signing/passphrase" "$PERF_OUT/signing/identifier-key"
+  state_put instances "$count"
+  servers_start_native
+}
+
+# servers_start_native: the recorded number of instances under the current
+# CAPACITY_SERVER_ENV and, above one, the balancer.
+servers_start_native() {
+  local count bin="${CAPACITY_FERROEHR:?CAPACITY_FERROEHR names the ferroehr binary}" i
+  count=$(state_get instances)
   local -a env=(FERROEHR_CONFIG="$CAP_OUT_ABS/ferroehr.toml"
     FERROEHR__DATABASE__URL="postgres://ferroehr:${PG_SECRET}@127.0.0.1:$CAP_PG_PORT/ferroehr"
     FERROEHR__USAGE_REPORT__ENABLED=false
@@ -304,9 +382,8 @@ up_docker() { # <instances>
   while IFS= read -r line; do
     [[ -n "$line" ]] && pg_args+=(-c "$(sed -E "s/ = /=/; s/'//g" <<<"$line")")
   done < <(pg_settings)
-  local -a pg_cpus=() server_cpus=()
+  local -a pg_cpus=()
   [[ -n "${CAPACITY_PG_CPUS:-}" ]] && pg_cpus=(--cpuset-cpus "$CAPACITY_PG_CPUS")
-  [[ -n "${CAPACITY_SERVER_CPUS:-}" ]] && server_cpus=(--cpuset-cpus "$CAPACITY_SERVER_CPUS")
   docker network create "$CAP_NET" >/dev/null
   docker run -d --name "$CAP_PG" --network "$CAP_NET" --shm-size 1g ${pg_cpus[@]+"${pg_cpus[@]}"} \
     -p "127.0.0.1:${CAP_PG_PORT}:5432" -e "POSTGRES_PASSWORD=$PG_SUPER_SECRET" \
@@ -323,13 +400,31 @@ up_docker() { # <instances>
   instance_config "$CAP_OUT_ABS" /opt/sandbox-posture/basic-users-jwks.json \
     /etc/ferroehr/scim-jwks.json /etc/ferroehr/signing.asc /etc/ferroehr/signing-passphrase \
     /etc/ferroehr/identifier-key
+  state_put instances "$count"
+  state_put image "$image"
+  state_put server_cpus "${CAPACITY_SERVER_CPUS:-}"
+  servers_start_docker
+}
+
+# servers_start_docker: the recorded number of instances of the recorded
+# image under the current CAPACITY_SERVER_ENV and, above one, the balancer.
+servers_start_docker() {
+  local count image cpus i
+  count=$(state_get instances)
+  image=$(state_get image)
+  cpus=$(cat "$STATE/server_cpus" 2>/dev/null || true)
+  local -a server_cpus=()
+  [[ -n "$cpus" ]] && server_cpus=(--cpuset-cpus "$cpus")
   local -a extra_env=(-e "FERROEHR__DATABASE__CONNECTION_BUDGET=$BUDGET")
   [[ -z "$POOL" ]] || extra_env+=(-e "FERROEHR__DATABASE__MAX_CONNECTIONS=$POOL")
   local kv
   local -a kvs=()
   read -r -a kvs <<<"${CAPACITY_SERVER_ENV:-}"
   for kv in ${kvs[@]+"${kvs[@]}"}; do extra_env+=(-e "$kv"); done
+  # json-file: the request log is an instrument (server_latency), and journald,
+  # Podman's default, suppresses a container's lines past its rate limit.
   local -a process=(--network "$CAP_NET" ${server_cpus[@]+"${server_cpus[@]}"} --read-only --tmpfs /tmp --cap-drop ALL
+    --log-driver json-file
     --security-opt no-new-privileges:true
     -e FERROEHR_CONFIG=/etc/ferroehr/ferroehr.toml
     -e "FERROEHR__DATABASE__URL=postgres://ferroehr:${PG_SECRET}@${CAP_PG}:5432/ferroehr"
@@ -363,28 +458,104 @@ up_docker() { # <instances>
     state_put lb "container:$(docker inspect -f '{{.Id}}' "$CAP_LB")"
     wait_for "Caddy" 30 curl -fsS "http://127.0.0.1:$CAP_LB_PORT/health/readiness"
     state_put url "http://127.0.0.1:$CAP_LB_PORT"
+    state_put net_url "http://$CAP_LB:8080"
   else
     state_put url "http://127.0.0.1:$((CAP_HTTP_PORT + 1))"
+    state_put net_url "http://$CAP_SERVER-1:8080"
   fi
 }
 
-down() {
-  local spec
+# servers_stop: the balancer and every instance stopped, the store and the
+# database left as they are.
+servers_stop() {
+  local spec pid
   if [[ "$TOPOLOGY" == docker ]]; then
     docker rm -f "$CAP_LB" >/dev/null 2>&1 || true
     for spec in 1 2 3 4 5 6 7 8; do docker rm -f "$CAP_SERVER-$spec" >/dev/null 2>&1 || true; done
+  else
+    for spec in $(cat "$STATE/lb" 2>/dev/null) $(cat "$STATE/servers" 2>/dev/null); do
+      pid="${spec#pid:}"
+      kill "$pid" 2>/dev/null || true
+      while kill -0 "$pid" 2>/dev/null; do sleep 0.2; done
+    done
+  fi
+  rm -f "$STATE/lb" "$STATE/servers"
+}
+
+servers_start() {
+  if [[ "$TOPOLOGY" == docker ]]; then servers_start_docker; else servers_start_native; fi
+}
+
+down() {
+  servers_stop
+  if [[ "$TOPOLOGY" == docker ]]; then
+    docker rm -f "$CAP_GEN" >/dev/null 2>&1 || true
     # -v: the PostgreSQL image declares its data directory a volume, and a
     # container removed without it leaves that volume behind on the host.
     docker rm -f -v "$CAP_PG" >/dev/null 2>&1 || true
     docker network rm "$CAP_NET" >/dev/null 2>&1 || true
   else
-    for spec in $(cat "$STATE/lb" 2>/dev/null) $(cat "$STATE/servers" 2>/dev/null); do
-      kill "${spec#pid:}" 2>/dev/null || true
-    done
     [[ -d "$CAP_OUT_ABS/pg" && -n "${CAPACITY_PG_BIN:-}" ]] \
       && "$CAPACITY_PG_BIN/pg_ctl" -D "$CAP_OUT_ABS/pg" -m fast stop >/dev/null 2>&1 || true
   fi
   rm -rf "$STATE"
+}
+
+# cap_admin_sql <statement>: one statement as the superuser in the database
+# postgres, for the statements that copy or drop the store.
+cap_admin_sql() {
+  local line
+  line=$(state_get psql)
+  local -a psql
+  read -r -a psql <<<"${line%ferroehr}postgres"
+  "${psql[@]}" -Atq -c "$1"
+}
+
+# snapshot: the seeded store kept as a template database, the servers
+# stopped while PostgreSQL copies it (a template has no other session).
+snapshot() {
+  [[ -s "$STATE/spread.tsv" ]] || cap_die "the store is not seeded: run \`capacity.sh seed\` first"
+  servers_stop
+  cap_admin_sql "DROP DATABASE IF EXISTS $SNAPSHOT_DB" >/dev/null
+  cap_admin_sql "CREATE DATABASE $SNAPSHOT_DB TEMPLATE ferroehr STRATEGY FILE_COPY" >/dev/null
+  servers_start
+  state_put snapshot "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "capacity: the seeded store is kept as $SNAPSHOT_DB"
+}
+
+# restore: the store replaced by a copy of the snapshot, and the servers
+# started again, so no in-memory copy outlives the store it was read from.
+restore() {
+  [[ -f "$STATE/snapshot" ]] || cap_die "no snapshot: run \`capacity.sh snapshot\` after the seed"
+  servers_stop
+  cap_admin_sql "DROP DATABASE ferroehr WITH (FORCE)" >/dev/null
+  cap_admin_sql "CREATE DATABASE ferroehr TEMPLATE $SNAPSHOT_DB OWNER ferroehr STRATEGY FILE_COPY" >/dev/null
+  servers_start
+  prime
+}
+
+# prime: each instance read by each caller, 32 at a time for four rounds, so
+# a restarted server meets a step with its credential cache filled and its
+# pools open: a cold instance at a high rate stalls on opening connections,
+# which is no part of what a step measures.
+prime() {
+  local inst clinician ehr round k pid
+  clinician=$(seed_value CLINICAL_AUTH)
+  read -r ehr _ <"$STATE/spread.tsv"
+  for inst in $(state_get instance_urls); do
+    for round in 1 2 3 4; do
+      local -a pids=()
+      for ((k = 0; k < 32; k++)); do
+        curl -fsS -o /dev/null -H "authorization: $clinician" "$inst$BASE/ehr/$ehr" &
+        pids+=("$!")
+        curl -fsS -o /dev/null -H "authorization: $AUTH" "$inst$BASE/ehr/$ehr" &
+        pids+=("$!")
+      done
+      for pid in "${pids[@]}"; do
+        wait "$pid" || cap_die "priming $inst failed in round $round"
+      done
+    done
+  done
 }
 
 # cap_sql <statement>: one statement as the superuser, unaligned.
@@ -690,13 +861,59 @@ sample_activity() {
   done
 }
 
-# step <group|mix> <rate>: one rate, its instruments around it, and its
-# verdict in step.json; exits 0 when it passed and 1 when it did not.
-step() {
-  local what="$1" rate="$2" bin url dir spec status=0 instances
-  bin=$(perf_bin)
-  url=$(state_get url)
-  dir="$CAP_OUT_ABS/steps/$what/$rate"
+# The Linux generator `capacity.sh generator` builds, for a generator on the
+# servers' network: its root on this host and its path in the container.
+readonly GEN_ROOT="$CAPACITY_ROOT/target/tools/perf-linux"
+readonly GEN_BIN=/opt/perf/bin/ferrohealth-perf
+
+# builder_image: the Rust image the server's own Dockerfile builds with,
+# pinned by digest there, which builds and runs the Linux generator.
+builder_image() {
+  local version from
+  version=$(sed -n 's/^ARG RUST_VERSION=//p' "$CAPACITY_ROOT/docker/Dockerfile" | sed -n 1p)
+  # shellcheck disable=SC2016 # ${RUST_VERSION} is the Dockerfile's own text, matched literally
+  from=$(sed -n 's/^FROM rust:\${RUST_VERSION}\([^ ]*\) AS builder$/\1/p' "$CAPACITY_ROOT/docker/Dockerfile" | sed -n 1p)
+  [[ -n "$version" && "$from" == *@sha256:* ]] || cap_die "docker/Dockerfile names no pinned rust builder image"
+  echo "rust:$version$from"
+}
+
+generator_install() {
+  [[ "$TOPOLOGY" == docker ]] || cap_die "the network generator needs CAPACITY_TOPOLOGY=docker"
+  mkdir -p "$GEN_ROOT"
+  docker run --rm -v "$GEN_ROOT:/opt/perf" "$(builder_image)" \
+    cargo install ferrohealth-perf --version "=$(pin)" --locked --root /opt/perf
+}
+
+# generator_check: the Linux generator is built and is the pinned version.
+generator_check() {
+  [[ "$TOPOLOGY" == docker ]] || cap_die "CAPACITY_GENERATOR=network needs CAPACITY_TOPOLOGY=docker"
+  [[ -x "$GEN_ROOT/bin/ferrohealth-perf" ]] || cap_die "no Linux generator at $GEN_ROOT: run \`capacity.sh generator\`"
+  [[ "$(docker run --rm -v "$GEN_ROOT:/opt/perf:ro" "$(builder_image)" "$GEN_BIN" --version | awk '{ print $2 }')" == "$(pin)" ]] \
+    || cap_die "the Linux generator at $GEN_ROOT is not the ferrohealth-perf docs/VERSIONS.md pins ($(pin)): run \`capacity.sh generator\`"
+}
+
+# kernel_now: the epoch second on the clock the servers' request log reads.
+kernel_now() {
+  if [[ "$TOPOLOGY" == docker ]]; then docker exec "$CAP_PG" date +%s; else date +%s; fi
+}
+
+# step_dir <group|mix> <rate> [<arm>]: where a step's runs and verdict go.
+step_dir() {
+  local arm="${3:-$ARM}"
+  echo "$CAP_OUT_ABS/steps${arm:+/$arm}/$1/$2"
+}
+
+# step_run <group|mix> <rate> <dir>: one run of one rate with its
+# instruments around it, its verdict in <dir>/step.json.
+step_run() {
+  local what="$1" rate="$2" dir="$3" bin url spec status=0 instances
+  if [[ "$GENERATOR" == network ]]; then
+    bin="$GEN_BIN"
+    url=$(state_get net_url)
+  else
+    bin=$(perf_bin)
+    url=$(state_get url)
+  fi
   rm -rf "$dir"
   mkdir -p "$dir"
   plan "$what" "$rate" "$dir/plan.toml"
@@ -710,37 +927,53 @@ step() {
   for spec in "${servers[@]}"; do cpu_table "$spec" >"$dir/cpu.server.$n"; n=$((n + 1)); done
   cpu_table "$pg_cpu" >"$dir/cpu.pg"
   [[ -n "$lb" ]] && cpu_table "$lb" >"$dir/cpu.lb"
+  storage_json >"$dir/storage.before.json"
   cap_sql "SELECT pg_stat_statements_reset()" >/dev/null
   local xact_before
   xact_before=$(cap_sql "SELECT xact_commit + xact_rollback FROM pg_stat_database WHERE datname = 'ferroehr'")
+  host_snapshot "$dir/host.before"
   rm -f "$dir/stop"
   sample_activity "$dir/activity.txt" "$dir/stop" &
   local sampler=$!
-  local started ended
+  local started ended since
+  since=$(kernel_now)
   started=$(date +%s)
   # The generator's own CPU, from the shell's account of the child.
   local TIMEFORMAT='%U %S'
-  # ferrohealth-perf reads its target's CPU from /proc or the cgroup; a
-  # container in a VM (Podman on macOS) has neither on this host, so it is
-  # given this shell, and the step reads the container's CPU itself.
-  local -a target=(--pid "${servers[0]#pid:}")
-  if [[ "${servers[0]}" == container:* ]]; then
-    target=(--pid "$$")
-    [[ -d /sys/fs/cgroup ]] && target=(--container "${servers[0]#container:}")
-  fi
   local -a pin=()
-  [[ -n "${CAPACITY_GENERATOR_CPUS:-}" ]] && pin=(taskset -c "$CAPACITY_GENERATOR_CPUS")
-  { time ${pin[@]+"${pin[@]}"} "$bin" run --plan "$dir/plan.toml" --baseline "$dir/none.toml" "${target[@]}" \
-    --base-url "$url" --out-dir "$dir" --summary "$dir/summary.md" >"$dir/perf.log" 2>&1; } \
-    2>"$dir/generator.time" || status=$?
+  if [[ "$GENERATOR" == network ]]; then
+    # In a container on the servers' network: it reaches them by name, with
+    # no port forwarder between, and its shell times it there.
+    [[ -n "${CAPACITY_GENERATOR_CPUS:-}" ]] && pin=(--cpuset-cpus "$CAPACITY_GENERATOR_CPUS")
+    docker rm -f "$CAP_GEN" >/dev/null 2>&1 || true
+    docker run --rm --name "$CAP_GEN" --network "$CAP_NET" ${pin[@]+"${pin[@]}"} \
+      -v "$CAP_OUT_ABS:$CAP_OUT_ABS" -v "$GEN_ROOT:/opt/perf:ro" "$(builder_image)" \
+      bash -c 'TIMEFORMAT="%U %S"; d="$1"; shift; { time "$@" >"$d/perf.log" 2>&1; } 2>"$d/generator.time"' _ "$dir" \
+      "$bin" run --plan "$dir/plan.toml" --baseline "$dir/none.toml" --pid 1 \
+      --base-url "$url" --out-dir "$dir" --summary "$dir/summary.md" || status=$?
+  else
+    # ferrohealth-perf reads its target's CPU from /proc or the cgroup; a
+    # container in a VM (Podman on macOS) has neither on this host, so it is
+    # given this shell, and the step reads the container's CPU itself.
+    local -a target=(--pid "${servers[0]#pid:}")
+    if [[ "${servers[0]}" == container:* ]]; then
+      target=(--pid "$$")
+      [[ -d /sys/fs/cgroup ]] && target=(--container "${servers[0]#container:}")
+    fi
+    [[ -n "${CAPACITY_GENERATOR_CPUS:-}" ]] && pin=(taskset -c "$CAPACITY_GENERATOR_CPUS")
+    { time ${pin[@]+"${pin[@]}"} "$bin" run --plan "$dir/plan.toml" --baseline "$dir/none.toml" "${target[@]}" \
+      --base-url "$url" --out-dir "$dir" --summary "$dir/summary.md" >"$dir/perf.log" 2>&1; } \
+      2>"$dir/generator.time" || status=$?
+  fi
   ended=$(date +%s)
   # The host's one-minute load average at the end, against its cores: a
   # shared host shows here.
   local load cores
-  load=$(uptime | sed -E 's/.*load averages?: *([0-9.]+)[, ].*/\1/')
+  load=$(load_averages | awk '{ print $1 }')
   cores=$(getconf _NPROCESSORS_ONLN)
   touch "$dir/stop"
   wait "$sampler" || true
+  host_snapshot "$dir/host.after"
   local server_cpu=0 pg_cpu_s lb_cpu_s=0 i=1 inst
   n=0
   for spec in "${servers[@]}"; do
@@ -758,8 +991,16 @@ step() {
     left(regexp_replace(query, '\s+', ' ', 'g'), 240) AS query FROM pg_stat_statements \
     WHERE query NOT ILIKE '%pg_stat%' ORDER BY total_exec_time + total_plan_time DESC LIMIT 15) t" \
     >"$dir/statements.json"
+  storage_json >"$dir/storage.after.json"
+  storage_step_json "$dir/storage.before.json" "$dir/storage.after.json" >"$dir/storage.json"
+  memory_json "${servers[@]}" -- "$pg_cpu" >"$dir/memory.json"
+  host_json "$dir/host.before" "$dir/host.after" "$((ended - started))" >"$dir/host.json"
+  server_latency "$what" "$since" "$WARMUP" "$DURATION" "${servers[@]}" >"$dir/server_latency.json"
+  metrics_json "$dir"/prometheus-*.txt >"$dir/server_metrics.json"
   local report
-  report=$(find "$dir" -maxdepth 1 -name '*.json' ! -name statements.json ! -name step.json | sed -n 1p)
+  report=$(find "$dir" -maxdepth 1 -name '*.json' ! -name statements.json ! -name step.json \
+    ! -name 'storage*.json' ! -name memory.json ! -name host.json ! -name server_latency.json \
+    ! -name activity.json ! -name server_metrics.json | sed -n 1p)
   [[ -n "$report" ]] || { cat "$dir/perf.log" >&2; cap_die "ferrohealth-perf wrote no report (exit $status)"; }
   activity_json "$dir/activity.txt" >"$dir/activity.json"
   jq -n --arg what "$what" --argjson rate "$rate" --slurpfile r "$report" \
@@ -769,21 +1010,32 @@ step() {
     --argjson xacts "$((xact_after - xact_before))" --argjson slo "$SLO_MS" \
     --argjson slo_slow "$SLO_SLOW_MS" --slurpfile activity "$dir/activity.json" \
     --argjson instances "${#servers[@]}" --argjson pool "${POOL:-null}" \
-    --argjson host_load "$load" --argjson host_cores "$cores" -f /dev/stdin >"$dir/step.json" <<'JQ'
+    --argjson host_load "$load" --argjson host_cores "$cores" \
+    --slurpfile server "$dir/server_latency.json" --slurpfile host "$dir/host.json" \
+    --slurpfile memory "$dir/memory.json" --slurpfile storage "$dir/storage.json" \
+    --slurpfile metrics "$dir/server_metrics.json" \
+    --arg generator "$GENERATOR" --arg variant "${CAPACITY_SERVER_ENV:-}" -f /dev/stdin >"$dir/step.json" <<'JQ'
     ($r[0].load) as $l
-    | ($l.groups | to_entries | map({group: .key, answered: .value.answered,
+    | ($server[0]) as $s
+    | def server_of($g): ($s | map(select(.group == $g or (.group == "aql" and ($g | startswith("aql_"))))) | .[0]);
+    ($l.groups | to_entries | map(server_of(.key) as $sv | {group: .key, answered: .value.answered,
         p50: .value.quantiles.p50.value_ms, p95: .value.quantiles.p95.value_ms,
         p99: .value.quantiles.p99.value_ms,
+        server_group: $sv.group, server_count: $sv.count,
+        server_coverage: (if $sv == null then null else $sv.count / ([$l.groups | to_entries[] | select(.key == $sv.group or ($sv.group == "aql" and (.key | startswith("aql_")))) | .value.answered] | add) end),
+        server_p50: $sv.p50, server_p95: $sv.p95, server_p99: $sv.p99,
         slo: (if (.key | test("^(aql_population|access_log_read|export)$")) then $slo_slow else $slo end)})) as $g
     | ([$g[].answered] | add) as $answered
     | ($answered / $l.measured_secs) as $throughput
     | ([($l.failures // {})[] | to_entries[] | .value] | add // 0) as $failed
-    | {what: $what, rate: $rate, instances: $instances, pool: $pool,
+    | {what: $what, rate: $rate, instances: $instances, pool: $pool, generator: $generator, variant: $variant,
        throughput: $throughput, answered: $answered, failed: $failed, failures: ($l.failures // {}),
-       saturated: $l.saturated, lag_p99_ms: $l.lag_p99_ms, max_lag_ms: $l.max_lag_ms,
-       groups: $g,
+       saturated: $l.saturated, lag_p50_ms: $l.lag_p50_ms, lag_p99_ms: $l.lag_p99_ms,
+       lag_max_ms: $l.lag_max_ms, max_lag_ms: $l.max_lag_ms,
+       groups: $g, server_latency: $s,
        server_cpu_s: $server_cpu, pg_cpu_s: $pg_cpu, lb_cpu_s: $lb_cpu, generator_cpu_s: $gen,
        wall_s: $wall, host_load_1m: $host_load, host_cores: $host_cores,
+       host: $host[0], memory: $memory[0], storage: $storage[0], server_metrics: $metrics[0],
        server_cores: ($server_cpu / ($l.measured_secs + ($r[0].plan.warmup_secs))),
        pg_cores: ($pg_cpu / ($l.measured_secs + ($r[0].plan.warmup_secs))),
        server_cpu_ms_per_request: (if $answered > 0 then 1000 * $server_cpu / ($answered * (($l.measured_secs + $r[0].plan.warmup_secs) / $l.measured_secs)) else null end),
@@ -793,11 +1045,35 @@ step() {
     | .passed = (.failed == 0 and (.saturated | not)
         and (.lag_p99_ms != null and .lag_p99_ms <= .max_lag_ms)
         and .throughput >= 0.98 * .rate
-        and all(.groups[]; (.p99 // .p95) != null and (.p99 // .p95) <= .slo))
+        and all(.groups[]; (.p99 // .p95) != null and (.p99 // .p95) <= .slo
+          and (.server_p99 == null or .server_p99 <= .slo)))
 JQ
-  jq -r '"capacity: \(.what) at \(.rate) rps: \(if .passed then "PASS" else "FAIL" end), \(.throughput | floor) rps answered, failed \(.failed), p99 " + ([.groups[] | "\(.group) \(.p99)"] | join(", ")) + ", server \(.server_cores * 100 | floor / 100) cores, pg \(.pg_cores * 100 | floor / 100) cores"' "$dir/step.json"
+}
+
+# step_report <dir> <arm>: the step's runs folded into <dir>/step.json and
+# appended to steps.jsonl, with its line on stdout; 0 when it passed.
+step_report() {
+  local dir="$1" arm="$2"
+  local -a runs=()
+  mapfile -t runs < <(find "$dir" -mindepth 2 -maxdepth 2 -name step.json -path '*/run-*' | sort -V)
+  ((${#runs[@]})) || cap_die "no run of $dir wrote a verdict"
+  fold_runs "$arm" "${runs[@]}" >"$dir/step.json"
+  jq -r '"capacity: \(if .arm != "" then .arm + ": " else "" end)\(.what) at \(.rate) rps: \(if .passed then "PASS" else "FAIL" end) over \(.runs) run(s), \(.throughput | floor) rps answered, failed \(.failed), p99 " + ([.groups[] | "\(.group) \(.p99) (server \(.server_p99))"] | join(", ")) + ", server \(.server_cores * 100 | floor / 100) cores, pg \(.pg_cores * 100 | floor / 100) cores, host load \(.host_load_1m), others \(.other_cores_max) cores"' "$dir/step.json"
   jq -c . "$dir/step.json" >>"$CAP_OUT_ABS/steps.jsonl"
   [[ "$(jq -r .passed "$dir/step.json")" == true ]]
+}
+
+# step <group|mix> <rate>: CAPACITY_REPEAT runs of one rate, each from the
+# snapshot under CAPACITY_FRESH; exits 0 when the step passed.
+step() {
+  local what="$1" rate="$2" dir k
+  dir=$(step_dir "$what" "$rate")
+  rm -rf "$dir"
+  for ((k = 1; k <= REPEAT; k++)); do
+    [[ "$FRESH" == 1 ]] && restore
+    step_run "$what" "$rate" "$dir/run-$k"
+  done
+  step_report "$dir" "$ARM"
 }
 
 # activity_json <samples>: per state and wait, the mean backends over the
@@ -811,32 +1087,115 @@ activity_json() {
       print "}}" }' "$1"
 }
 
+
 # busy_host <group|mix> <rate>: whether the host's load average exceeded
 # its cores at the end of that step.
 busy_host() {
-  jq -e '.host_load_1m > .host_cores' "$CAP_OUT_ABS/steps/$1/$2/step.json" >/dev/null
+  jq -e '.host_load_1m > .host_cores' "$(step_dir "$1" "$2")/step.json" >/dev/null 2>&1
 }
 
-sweep() { # <group|mix> [<rate>...]
-  local what="$1" rate passed=0 ran=0
+# sweep <group|mix> [<rate>...]: each rate in turn, every step in a process
+# of its own so a harness error ends only that step. The knee is the highest
+# rate below the first step that did not pass.
+sweep() {
+  local what="$1" rate knee=0 broken=0 status outcome
   shift
   local -a rates=("$@")
   ((${#rates[@]})) || read -r -a rates <<<"$RATES"
   for rate in "${rates[@]}"; do
-    ran=$((ran + 1))
-    if step "$what" "$rate"; then
-      passed="$rate"
-    elif busy_host "$what" "$rate" && step "$what" "$rate"; then
+    status=0
+    "$BASH" "$CAPACITY_ROOT/scripts/perf/capacity.sh" step "$what" "$rate" || status=$?
+    if ((status == 1)) && busy_host "$what" "$rate"; then
       # A step that failed while the host ran more than its cores is run once
       # more, so another tenant's burst is not read as the knee.
-      passed="$rate"
-    else
-      break
+      status=0
+      "$BASH" "$CAPACITY_ROOT/scripts/perf/capacity.sh" step "$what" "$rate" || status=$?
     fi
+    case "$status" in
+    0) outcome=pass ;;
+    1) outcome=fail ;;
+    *) outcome=error ;;
+    esac
+    jq -cn --arg arm "$ARM" --arg what "$what" --argjson rate "$rate" --arg outcome "$outcome" \
+      --argjson exit "$status" '{arm: $arm, what: $what, rate: $rate, outcome: $outcome, exit: $exit}' \
+      >>"$CAP_OUT_ABS/sweeps.jsonl"
+    if [[ "$outcome" == pass ]] && ((broken == 0)); then
+      knee="$rate"
+      continue
+    fi
+    broken=1
+    echo "capacity: $what at $rate rps: $outcome"
+    [[ "$CONTINUE" == 1 ]] || break
   done
-  echo "capacity: the knee of $what is ${passed} rps (the highest rate that passed)"
-  state_put "knee-$what" "$passed"
-  [[ "$passed" != 0 ]] || return 1
+  echo "capacity: the knee of $what is ${knee} rps (the highest rate that passed with every rate below it)"
+  state_put "knee-${ARM:+$ARM-}$what" "$knee"
+  [[ "$knee" != 0 ]] || return 1
+}
+
+# arms <group|mix> <rate> <arm>=<env>...: CAPACITY_REPEAT rounds, each arm
+# restored from the snapshot and run once per round under its own settings,
+# the order reversed every other round so a host that drifts over the rounds
+# weighs on every arm alike.
+arms() {
+  local what="$1" rate="$2" round spec label env status=0
+  shift 2
+  (($# >= 2)) || cap_die "arms takes at least two <arm>=<env>"
+  local -a order=("$@") reversed=()
+  for spec in "${order[@]}"; do
+    label="${spec%%=*}"
+    [[ "$spec" == *=* && "$label" =~ ^[A-Za-z0-9._-]+$ ]] || cap_die "an arm is <label>=<FERROEHR__ settings>, got '$spec'"
+    reversed=("$spec" ${reversed[@]+"${reversed[@]}"})
+    rm -rf "$(step_dir "$what" "$rate" "$label")"
+  done
+  local -a this
+  for ((round = 1; round <= REPEAT; round++)); do
+    this=("${order[@]}")
+    ((round % 2 == 0)) && this=("${reversed[@]}")
+    for spec in "${this[@]}"; do
+      label="${spec%%=*}"
+      env="${spec#*=}"
+      echo "capacity: round $round, arm $label"
+      CAPACITY_SERVER_ENV="$env" restore
+      CAPACITY_SERVER_ENV="$env" step_run "$what" "$rate" "$(step_dir "$what" "$rate" "$label")/run-$round"
+    done
+  done
+  for spec in "${order[@]}"; do
+    step_report "$(step_dir "$what" "$rate" "${spec%%=*}")" "${spec%%=*}" || status=1
+  done
+  return "$status"
+}
+
+# soak <group|mix> <rate> <seconds>: one rate held for <seconds> while each
+# instance's resident set and copies are sampled, as the server reports
+# them; exits 0 when the step passed and no instance's resident set kept
+# rising after the warm-up and the settling beyond the tolerance, 1 when one
+# did, 2 when the soak is too short to fit.
+soak() {
+  local what="$1" rate="$2" seconds="$3" dir status=0 from started
+  [[ "$seconds" =~ ^[1-9][0-9]*$ ]] || cap_die "a soak's length is a count of seconds"
+  ((seconds >= SOAK_SETTLE + 3 * SOAK_INTERVAL)) \
+    || cap_die "a soak of $seconds s leaves fewer than three samples after the $SOAK_SETTLE s settling (CAPACITY_SOAK_SETTLE)"
+  dir="$CAP_OUT_ABS/soaks/$what-$rate"
+  mkdir -p "$dir"
+  rm -f "$dir/soak.tsv" "$dir/soak.stop"
+  soak_sample "$dir/soak.tsv" "$dir/soak.stop" "$SOAK_INTERVAL" &
+  local sampler=$!
+  started=$(date +%s)
+  # The plan's idle phase (5 s and 2 s settling) runs before the load.
+  from=$((started + 7 + WARMUP + SOAK_SETTLE))
+  CAPACITY_DURATION="$seconds" CAPACITY_ARM=soak CAPACITY_REPEAT=1 CAPACITY_FRESH=0 \
+    "$BASH" "$CAPACITY_ROOT/scripts/perf/capacity.sh" step "$what" "$rate" || status=$?
+  touch "$dir/soak.stop"
+  wait "$sampler" || true
+  soak_json "$dir/soak.tsv" "$from" "$SOAK_MAX_MIB_PER_HOUR" >"$dir/soak.json"
+  ((status <= 1)) || cap_die "the soak's step could not be measured (exit $status)"
+  jq -c --arg what "$what" --argjson rate "$rate" --argjson seconds "$seconds" \
+    --argjson settle "$SOAK_SETTLE" --argjson step_passed "$([[ "$status" == 0 ]] && echo true || echo false)" \
+    '{arm: "soak", what: $what, rate: $rate, seconds: $seconds, settle_s: $settle, step_passed: $step_passed,
+      memory: ., passed: ($step_passed and .passed == true)}' "$dir/soak.json" | tee -a "$CAP_OUT_ABS/soaks.jsonl" \
+    | jq -r '"capacity: soak of \(.what) at \(.rate) rps for \(.seconds) s: \(if .passed then "PASS" else "FAIL" end); RSS slope MiB per hour " + ([.memory.instances[] | "instance \(.instance) \(.slope_mib_per_hour)"] | join(", ")) + " against \(.memory.max_mib_per_hour)"'
+  [[ "$(jq -r .passed "$dir/soak.json")" != null ]] || return 2
+  [[ "$status" == 0 && "$(jq -r .passed "$dir/soak.json")" == true ]]
 }
 
 # profile <group|mix> <rate> <seconds>: one rate held while an external
@@ -859,19 +1218,9 @@ profile() {
     fi
   ) &
   local taker=$!
-  step "$what" "$rate" || true
+  "$BASH" "$CAPACITY_ROOT/scripts/perf/capacity.sh" step "$what" "$rate" || true
   wait "$taker" || true
   echo "capacity: the profile is in $dir"
-}
-
-summary() {
-  [[ -f "$CAP_OUT_ABS/steps.jsonl" ]] || cap_die "no step has run"
-  jq -rs '
-    "| what | instances | rate | answered rps | verdict | failed | p50 / p95 / p99 ms (worst group) | server cores | server CPU ms/req | PostgreSQL cores | PG CPU ms/req | xact/req |",
-    "|---|---:|---:|---:|---|---:|---|---:|---:|---:|---:|---:|",
-    (.[] | (.groups | max_by(.p99 // 1e9)) as $w
-      | "| \(.what) | \(.instances) | \(.rate) | \(.throughput | . * 10 | floor / 10) | \(if .passed then "pass" else "FAIL" end) | \(.failed) | \($w.p50) / \($w.p95) / \($w.p99) (\($w.group)) | \(.server_cores | . * 100 | floor / 100) | \(.server_cpu_ms_per_request // 0 | . * 100 | floor / 100) | \(.pg_cores | . * 100 | floor / 100) | \(.pg_cpu_ms_per_request // 0 | . * 100 | floor / 100) | \(.transactions_per_request // 0 | . * 100 | floor / 100) |")' \
-    "$CAP_OUT_ABS/steps.jsonl"
 }
 
 [[ "$#" -ge 1 ]] || cap_usage
@@ -887,10 +1236,25 @@ up)
   esac
   ;;
 seed) seed_capacity ;;
-sweep) [[ "$#" -ge 1 ]] || cap_usage; sweep "$@" ;;
-step) [[ "$#" -eq 2 ]] || cap_usage; step "$@" ;;
-profile) [[ "$#" -eq 3 ]] || cap_usage; profile "$@" ;;
+snapshot) snapshot ;;
+restore) restore ;;
+generator) generator_install ;;
+sweep | step | arms | soak | profile)
+  case "$GENERATOR" in
+  host) ;;
+  network) generator_check ;;
+  *) cap_die "CAPACITY_GENERATOR must be host or network" ;;
+  esac
+  case "$cap_command" in
+  sweep) [[ "$#" -ge 1 ]] || cap_usage; sweep "$@" ;;
+  step) [[ "$#" -eq 2 ]] || cap_usage; step "$@" ;;
+  arms) [[ "$#" -ge 4 ]] || cap_usage; arms "$@" ;;
+  soak) [[ "$#" -eq 3 ]] || cap_usage; soak "$@" ;;
+  profile) [[ "$#" -eq 3 ]] || cap_usage; profile "$@" ;;
+  esac
+  ;;
 summary) summary ;;
+compare) [[ "$#" -eq 2 ]] || cap_usage; compare "$@" ;;
 down) down ;;
 groups) printf '%s\n' "$GROUPS_TABLE" ;;
 *) cap_usage ;;

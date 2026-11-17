@@ -77,7 +77,7 @@
 /// read runs no statement of its own (#5888). Each domain's schema defines
 /// the view, so a statement both domains run reads it: the clinical one reads
 /// the row, the party one has none and reads `NULL` (migrations
-/// `clinical/0052` and `party/0053`).
+/// `clinical/0051` and `party/0053`).
 macro_rules! access_revision {
     ($ehr:literal) => {
         concat!(
