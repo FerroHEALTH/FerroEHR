@@ -135,7 +135,7 @@ impl Builder<'_> {
         let (start, rest) = self.walk_start(leaf)?;
         if rest.is_empty() {
             let base = extract(&start, self.root_version_alias(&start).as_deref());
-            let value = coerce_value(base, mode, leaf);
+            let value = coerce_value(base, mode, leaf.types.names());
             // A root predicate guards the inline read: the value only exists
             // where the source node satisfies it (QUERY master03 §Identified
             // Paths — a node predicate qualifies the object the path reads).
@@ -155,7 +155,7 @@ impl Builder<'_> {
             }
         }
         let base = extract(&last, None);
-        sub.expr(coerce_value(base, mode, leaf));
+        sub.expr(coerce_value(base, mode, leaf.types.names()));
         // NOTE: QUERY master03 §ORDER BY is silent on a key reaching several nodes;
         // an unbound step reads the first match in document order.
         sub.order_by_expr(col(&last, Node::Num), Order::Asc);
@@ -308,7 +308,7 @@ impl Builder<'_> {
         }
         Ok(Some(ItemWalk {
             sub,
-            item: coerce_value(base, mode, leaf),
+            item: coerce_value(base, mode, leaf.types.names()),
             bindings,
         }))
     }
@@ -340,7 +340,7 @@ impl Builder<'_> {
                     vars,
                     self.next_ctr(),
                 );
-                (Some(sub), coerce_value(base, mode, leaf))
+                (Some(sub), coerce_value(base, mode, leaf.types.names()))
             }
             (fragment, _) => {
                 let (jp, vars) = fragment.unzip();
@@ -352,7 +352,7 @@ impl Builder<'_> {
                     self.presence_only,
                     root.as_deref(),
                 );
-                (None, coerce_value(base, mode, leaf))
+                (None, coerce_value(base, mode, leaf.types.names()))
             }
         })
     }

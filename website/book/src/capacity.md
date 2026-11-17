@@ -77,9 +77,16 @@ A step passes when all of these hold:
 - the answered rate is at least 98 % of the offered rate;
 - every group's p99 is within its SLO: 100 milliseconds for the single-EHR groups,
   500 milliseconds for the population query, the access-log read and the export.
+  Both the generator's p99 and the server's own, from its request log, must
+  be within it.
 
-The knee is the highest rate that passes; a sweep stops at the first step
-that fails. 100 milliseconds is the response time a person reads as immediate, the
+A step run several times (`CAPACITY_REPEAT`) passes when every run kept its
+schedule and answered as expected, and each group's median p99 is within its
+SLO. The knee is the highest rate that passes with every rate below it
+passing. A sweep stops at the first step that fails; with
+`CAPACITY_CONTINUE=1` it runs every rate, records each step's outcome
+(pass, fail, or error when the harness could not measure it) in
+`sweeps.jsonl`, and the summary lists them. 100 milliseconds is the response time a person reads as immediate, the
 budget a chart view built from several reads has to fit in. A population
 query and an access-log review are reporting work, so they get five times
 that.
@@ -96,6 +103,8 @@ export CAPACITY_FERROEHR=target/release/ferroehr
 export CAPACITY_PG_BIN=/usr/lib/postgresql/18/bin CAPACITY_CADDY=$(command -v caddy)
 bash scripts/perf/capacity.sh up 1          # or 2, behind Caddy
 bash scripts/perf/capacity.sh seed          # about 30 minutes at 20 000 patients
+bash scripts/perf/capacity.sh snapshot      # keep the seeded store for `restore`
+bash scripts/perf/capacity.sh sweep health 500 1000   # the floor of the path to the server
 bash scripts/perf/capacity.sh sweep mix     # 50 100 200 500 1000 1500 2000 3000
 bash scripts/perf/capacity.sh sweep ehr_read 200 500 1000
 bash scripts/perf/capacity.sh profile mix 500 20   # an external CPU profile at one rate
@@ -119,9 +128,105 @@ containers to the others, and keeps every step as an artifact. A hosted
 runner shares its host with other jobs, so read its knee as a floor.
 
 Run `composition_commit` and the mix last when you sweep several groups on
-one store: their commits grow the store the other groups read. A variant,
-such as a longer `[auth.basic] cache_ttl`, goes in `CAPACITY_SERVER_ENV`
-and belongs in the label of every figure it produced.
+one store: their commits grow the store the other groups read, or set
+`CAPACITY_FRESH=1` so every run starts from the seeded store. A variant,
+such as a longer `[auth.basic] cache_ttl`, goes in
+`CAPACITY_SERVER_ENV` and belongs in the label of every figure it produced.
+
+## Trusting a number
+
+A latency from a shared or virtualised host can carry more of the host than
+of FerroEHR. Every step records what it ran on, so a reader can tell, and
+the harness has a way around each distortion measured in #5777.
+
+**The path to the server.** The Podman VM on macOS forwards every published
+port, and the forwarder adds about 1.6 milliseconds to each request the
+generator times. Every step therefore reports the server's own p50, p95 and
+p99 per group, read from its request log (`latency_ms`) over the measured
+window, beside the generator's. In the mix, the three AQL groups share one
+route, so the server reports them as one group, `aql`. A `health` step
+measures the floor: the summary names the client p50 of
+`/health/liveness` against the server's as the forwarder floor of the run.
+With `CAPACITY_GENERATOR=network` (docker topology) the generator runs in a
+container on the servers' network and reaches them by name, with no
+forwarder between; `capacity.sh generator` builds it once, from the Rust
+image `docker/Dockerfile` pins.
+
+**The clock.** The Podman VM runs its guest on the physical counter, so
+every clock read traps to the hypervisor: at 2000 requests per second about
+one of its 8 cores goes to reading the clock, split between FerroEHR and
+PostgreSQL (`track_io_timing` and `pg_stat_statements` timing are on). CPU
+per request and the knee from that host overstate FerroEHR's cost. The
+latency targets are judged on the **Capacity test** workflow's runner, a
+GitHub-hosted `ubuntu-26.04` x86_64 machine whose clock is read through the
+vDSO, with the generator on the servers' network and each step run three
+times. The laptop VM serves relative comparisons only. Each step's
+`host.json` records the clock source of the kernel the containers ran on.
+
+**Run-to-run spread.** On a shared host, one p99 can move by more than the
+change under test. `CAPACITY_REPEAT=3` runs each step three times; the
+summary gives each group's median p99 and the spread of the three, and
+`capacity.sh compare <arm> <arm>` calls a difference only when the two
+arms' spreads do not overlap and each ran at least three times.
+
+**A store that grows.** An arm that runs second reads a store the first one
+grew. `capacity.sh snapshot` keeps the seeded store as a template database,
+and `capacity.sh restore` copies it back and restarts the servers, so no
+in-memory copy outlives the store it was read from. To compare
+configurations on one image, interleave them:
+
+```sh
+bash scripts/perf/capacity.sh snapshot
+CAPACITY_REPEAT=3 bash scripts/perf/capacity.sh arms ehr_read 3000 \
+  base= cache=FERROEHR__AUTH__BASIC__CACHE_TTL=1h
+bash scripts/perf/capacity.sh compare base cache
+```
+
+Each round restores the snapshot before each arm and reverses the arms'
+order every other round, so a host that drifts over the rounds weighs on
+both alike. Two images are compared each on a store of its own, seeded
+fresh, since their migrations differ.
+
+**Other tenants.** Each step's `host.json` holds the host's load averages
+and cores at both ends, the same for the kernel the containers run on, and
+the CPU every container outside the harness spent during the step. The
+summary's host table shows the worst run of each step: a load above the
+cores, or other containers using a core or more, marks a step whose latency
+is an upper bound.
+
+**What the release needs besides latency.** Each step records the peak
+resident set of every instance and the peak memory of each container
+(`memory.json`), and the store's bytes per composition version and per
+access-log entry, both over the whole store and for what the step itself
+added (`storage.json`). The server's own report of its resident set and
+of each in-memory copy's entries and bytes (`process_resident_memory_bytes`,
+`access_copy_entries`, `access_copy_size_bytes`) goes into each step's
+`step.json` as `server_metrics`. The summary's memory and storage table
+carries them at every rate.
+
+## Soak: memory that does not grow
+
+A peak at each rate says nothing of a slow leak, which a step of a minute
+cannot show. A soak holds one rate for a long time and samples each
+instance's resident set and copies, as the server reports them, every
+`CAPACITY_SOAK_INTERVAL` seconds (default 10):
+
+```sh
+CAPACITY_SOAK_SETTLE=900 bash scripts/perf/capacity.sh soak mix 1000 7200
+```
+
+The soak fits a straight line to each instance's resident set over the
+samples taken after the warm-up and `CAPACITY_SOAK_SETTLE` seconds more
+(default 600), in which the bounded caches fill. It fails when an instance's
+slope exceeds `CAPACITY_SOAK_MAX_MIB_PER_HOUR` (default 16 MiB per hour)
+and its last sample is above its first in that window: a resident set that
+keeps rising after warm-up. 16 MiB per hour is about 0.4 GB a day; no
+specification governs the figure, it is FerroEHR's own. The soak
+also fails as a step fails (refusals, a lagging generator, a p99 over its
+SLO). Its step goes under `steps/soak/` as any step does; the samples
+(`soak.tsv`) and the fit and verdict per instance (`soak.json`) go under
+`soaks/<group>-<rate>/`, and a line in `soaks.jsonl` feeds the summary's
+soak table.
 
 The script's header lists every setting: the pool size
 (`CAPACITY_POOL`, the shipped default of 20 connections per instance), the
@@ -133,15 +238,32 @@ warm-up and measured window per step, and the SLOs.
 
 ## Reading a step
 
-Each step leaves a directory, `target/capacity/steps/<group>/<rate>/`, and
-one line in `steps.jsonl`:
+Each step leaves a directory, `target/capacity/steps/[<arm>/]<group>/<rate>/`,
+with one `run-<n>/` directory per run, and one line in `steps.jsonl`:
 
-- `step.json`: the verdict, the answered rate, p50, p95 and p99 per group,
-  the failures by kind, and the CPU seconds of the servers, PostgreSQL, the
+- `step.json`: the verdict over the runs, the answered rate, p50, p95 and
+  p99 per group as the generator and the server measured them (each the
+  median over the runs, a p99 with every run's value and their spread), the
+  failures by kind, and the CPU seconds of the servers, PostgreSQL, the
   balancer and the generator over the step, with the cores each used and the
   CPU milliseconds per request. `transactions_per_request` counts
   PostgreSQL's commits and rollbacks over the step. `host_load_1m` against
   `host_cores` shows a host that was busy with something else.
+
+Each `run-<n>/` holds that run's `step.json`, the files below, and the
+`statements.json`, `activity.json` and `prometheus-<n>.txt` this list
+describes after them:
+
+- `host.json`: the host's and the containers' kernel's load averages and
+  cores at the start and the end, the kernel's clock source, and every other
+  container with the CPU seconds and cores it used during the run.
+- `server_latency.json`: the server's own p50, p95 and p99 per group, from
+  its request log over the measured window.
+- `memory.json`: the peak resident set (`VmHWM`) of each instance, and the
+  peak, current and anonymous bytes of each container's cgroup.
+- `storage.json`: the database's bytes, each domain schema's bytes, the
+  composition versions and access-log entries it holds, the bytes per
+  version and per entry, and what the run added.
 - `statements.json`: the 15 statements of `pg_stat_statements` that took the
   most time in the step, planning included: PostgreSQL counts each
   statement's planning beside its execution (`track_planning`), and an AQL

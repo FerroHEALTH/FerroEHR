@@ -384,7 +384,7 @@ impl Planner {
             self.clinical_classes.push(rm_type.to_owned());
         }
         let constraint = predicate
-            .map(resolve_node_predicate)
+            .map(|p| resolve_node_predicate(p, &concrete, self.bindings.profile))
             .transpose()?
             .unwrap_or_default();
         let scope = inherited.cloned().unwrap_or(VersionScope::Latest);
