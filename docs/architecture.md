@@ -740,10 +740,13 @@ which is what makes an optional stage safe to disable:
    `sys_version` of the `EHR_ACCESS` version it was projected from) and the
    EHR's subject reference (namespace and id, `clinical/0046`), whose
    `PERSON`'s care relationships the decision reads. Every
-   read that leaves the store selects `access_revision(ehr_id)` beside its own
-   columns (`head_facts!`, `version_select!`, the EHR summary read; migration
-   `clinical/0044`, with a `party/0040` twin answering `NULL` so a statement
-   both domains run reads it), and `condition::admits` refuses a verdict judged
+   read that leaves the store selects the revision beside its own columns, in
+   a scalar subquery over the view `access_revision_of` that the planner merges
+   into the statement, so the read runs no statement of its own
+   (`access_revision!` in `head_facts!`, `version_select!`, the EHR summary
+   read and the settings reads; migration `clinical/0052`, with a `party/0053`
+   twin holding no rows so a statement both domains run reads `NULL`; #5888),
+   and `condition::admits` refuses a verdict judged
    on another revision and marks the copy stale (`StaleCopies`), which drops
    it before its next read. A commit reads the revision with its restriction
    check and judges the EHR again from its own transaction; a replica's own

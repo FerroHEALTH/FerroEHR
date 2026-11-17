@@ -79,7 +79,7 @@ const BUDGETS: [Budget; 2] = [
         body: single,
         served: 1,
         round_trips: 10,
-        nested: 7,
+        nested: 4,
     },
     Budget {
         name: "population AQL",

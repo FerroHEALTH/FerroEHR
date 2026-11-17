@@ -54,6 +54,17 @@ pub struct Reconciled {
     pub removed: u64,
 }
 
+impl Reconciled {
+    /// Whether a process stopped between a write and its release: records
+    /// were released or discarded. Removing spent reservations is the
+    /// reconciler's routine work, since a committed write's release leaves
+    /// its reservation to it (#5762).
+    #[must_use]
+    pub fn found_a_stop(&self) -> bool {
+        self.released > 0 || self.discarded > 0
+    }
+}
+
 /// The reconciler's loop, until the runtime ends the task.
 #[expect(
     clippy::infinite_loop,
@@ -129,13 +140,15 @@ pub async fn reconcile(
             .reservations_reconciled
             .add(count, &[KeyValue::new("outcome", outcome)]);
     }
-    if done != Reconciled::default() {
+    if done.found_a_stop() {
         tracing::warn!(
             released = done.released,
             discarded = done.discarded,
             removed = done.removed,
             "audit reservations reconciled after a process stopped between a write and its release"
         );
+    } else if done.removed > 0 {
+        tracing::debug!(removed = done.removed, "spent audit reservations removed");
     }
     Ok(done)
 }
@@ -180,4 +193,30 @@ async fn remove_released(
         .await?
         .rows_affected();
     Ok(removed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Reconciled;
+
+    #[test]
+    fn removing_spent_reservations_is_no_stop() {
+        let routine = Reconciled {
+            removed: 107,
+            ..Reconciled::default()
+        };
+        assert!(!routine.found_a_stop());
+        for stopped in [
+            Reconciled {
+                released: 1,
+                ..routine
+            },
+            Reconciled {
+                discarded: 1,
+                ..routine
+            },
+        ] {
+            assert!(stopped.found_a_stop(), "{stopped:?}");
+        }
+    }
 }
