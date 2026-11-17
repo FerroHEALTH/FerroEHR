@@ -67,8 +67,8 @@ pub(super) fn page_size(filter: &AuditSearchFilter) -> usize {
 
 /// The number of records `condition` selects: those of the system chain,
 /// plus the index rows of the access log, each of which names exactly one
-/// entry (`fk_access_log_search_record` onto its primary key), so the count
-/// reads the index alone.
+/// entry (written only beside it by `audit.access_log_chain_move` and removed
+/// when it becomes a tombstone), so the count reads the index alone.
 fn total(condition: &Cond) -> SelectStatement {
     let system = count_of(
         Query::select()

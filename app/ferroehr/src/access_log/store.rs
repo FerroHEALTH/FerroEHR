@@ -152,7 +152,7 @@ pub(crate) use records;
 #[derive(Debug, Clone)]
 pub struct AccessLogStore {
     pool: PgPool,
-    /// The keyring and system that seal each append in a signed checkpoint,
+    /// The keyring and system that seal the chain in signed checkpoints,
     /// whenever the keyring holds an `OpenPGP` key (#5704).
     sealer: Option<Sealer>,
 }
@@ -178,9 +178,9 @@ impl AccessLogStore {
         &self.pool
     }
 
-    /// The store that ends each append with an `ACCESS_LOG_CHECKPOINT` of
-    /// `system_id` over the last link it wrote, signed with `signer`'s key in
-    /// the append's own transaction (#5704).
+    /// The store that seals the chain in `ACCESS_LOG_CHECKPOINT`s of
+    /// `system_id` over the last link a round wrote, signed with `signer`'s
+    /// key in the round's own transaction (#5704, #5770).
     #[must_use]
     pub fn with_sealer(mut self, signer: Arc<Signer>, system_id: String) -> Self {
         self.sealer = Some(Sealer::new(signer, system_id));
@@ -475,7 +475,7 @@ async fn replace(
 }
 
 /// The link the columns of `row` hold, this system's: its links carry no
-/// signature, since a checkpoint signs each append (#5704).
+/// signature, since checkpoints sign the chain (#5704).
 pub(super) fn own_link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
     Ok(AccessLogLink {
         sequence: row.try_get("chain_seq")?,

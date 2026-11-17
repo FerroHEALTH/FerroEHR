@@ -145,6 +145,7 @@ mod service_query;
 mod smart_http;
 mod smart_metadata_file;
 mod spec_profile_http;
+mod statement_budget;
 mod stored_query_definition_http;
 mod subject_query_privacy;
 mod system_grants;
