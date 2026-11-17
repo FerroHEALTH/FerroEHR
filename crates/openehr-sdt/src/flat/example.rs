@@ -403,13 +403,17 @@ fn walk_children<'a>(
 /// Whether an OPTIONAL child is omitted from the example.
 ///
 /// A node whose coded-name constraint is display/rubric-incoherent (see
-/// `CodedName::incoherent`) or whose leaf is unsatisfiable has no instance
-/// form every conforming consumer accepts, and an example exists to be
-/// committable everywhere. A MANDATORY one is still emitted in our
-/// spec-faithful form.
+/// `CodedName::incoherent`), whose name must be a `DV_CODED_TEXT` from a value
+/// set the template names no code of, or whose leaf is unsatisfiable has no
+/// instance form every conforming consumer accepts, and an example exists to
+/// be committable everywhere and never invents a code. A MANDATORY one is
+/// still emitted in our spec-faithful form.
 fn skips_optional(child: &WebTemplateNode) -> bool {
+    let uncoded_name =
+        child.name_rm_type.as_deref() == Some("DV_CODED_TEXT") && child.name_coded.is_none();
     is_optional(child)
         && (child.name_coded.as_ref().is_some_and(|cn| cn.incoherent)
+            || uncoded_name
             || is_unsatisfiable_leaf(child))
 }
 

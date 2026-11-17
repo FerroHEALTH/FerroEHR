@@ -186,6 +186,61 @@ fn sdk_go_corpus_generates_committable_examples() {
     );
 }
 
+// ── a name constrained to DV_CODED_TEXT ─────────────────────────────────────
+
+/// The `ELEMENT` of `openEHR-EHR-CLUSTER.annotations.v1` whose `name` the
+/// template constrains to a `DV_CODED_TEXT` from an external value set.
+fn annotation_element(v: &mut Value) -> Option<&mut Value> {
+    let is_annotation = v.get("archetype_node_id").and_then(Value::as_str)
+        == Some("openEHR-EHR-CLUSTER.annotations.v1");
+    match v {
+        Value::Object(m) if is_annotation => m
+            .get_mut("items")
+            .and_then(Value::as_array_mut)
+            .and_then(|items| items.first_mut()),
+        Value::Object(m) => m.values_mut().find_map(annotation_element),
+        Value::Array(a) => a.iter_mut().find_map(annotation_element),
+        _ => None,
+    }
+}
+
+/// A `DV_TEXT` name where the template constrains the name to a
+/// `DV_CODED_TEXT` does not conform (AOM 1.4 `C_COMPLEX_OBJECT.rm_type_name`),
+/// and the example never writes one, leaving out the optional node whose code
+/// it cannot know (#5912).
+#[test]
+fn a_text_name_where_a_coded_name_is_constrained_is_refused() {
+    let wt = web_template(&sdk_go_dir().join("Referral Request.v1.opt"));
+    let mut comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+    assert!(
+        annotation_element(&mut comp).is_none(),
+        "the medium example leaves the optional annotation out"
+    );
+    let mut cluster = Vec::new();
+    objects_with_id(&comp, "openEHR-EHR-CLUSTER.annotations.v1", &mut cluster);
+    let element = serde_json::json!({
+        "_type": "ELEMENT",
+        "archetype_node_id": "at0001",
+        "name": { "_type": "DV_TEXT", "value": "Annotation" },
+        "value": { "_type": "DV_TEXT", "value": "Annotation" },
+    });
+    let mut with_text_name = example_composition(&wt, DetailLevel::Complete).expect("builds");
+    if let Some(e) = annotation_element(&mut with_text_name) {
+        *e = element;
+    } else {
+        panic!("the complete example carries the annotations cluster: {cluster:?}");
+    }
+    let refused: Vec<String> = validate_composition(&with_text_name, &wt)
+        .into_iter()
+        .filter(|m| m.message.contains("DV_CODED_TEXT but found DV_TEXT"))
+        .map(|m| m.path)
+        .collect();
+    assert!(
+        refused.iter().any(|p| p.ends_with("/items[at0001]/name")),
+        "the DV_TEXT name is refused at its path: {refused:?}"
+    );
+}
+
 // ── an empty container under a mandatory attribute ───────────────────────────
 
 /// The template whose `state` and `protocol` `items` are existence 1..1 and
