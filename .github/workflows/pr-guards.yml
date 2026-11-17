@@ -59,7 +59,7 @@ jobs:
     name: pr-guards
     if: >-
       (github.event_name == 'pull_request'
-        && (contains(fromJSON('["no-changelog", "no-crate-bump", "no-chart-bump", "no-ui-visual-change"]'), github.event.label.name)
+        && (contains(fromJSON('["no-changelog", "no-crate-bump", "no-chart-bump", "no-ui-visual-change", "perf-accepted"]'), github.event.label.name)
           || (github.event.action == 'edited' && github.event.changes.body != null)))
       || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request')
     runs-on: ubuntu-latest
@@ -91,6 +91,8 @@ jobs:
             "crate-version-guard no-crate-bump"
             "chart-version-guard no-chart-bump"
             "ui-screenshot-guard no-ui-visual-change"
+            "perf-verdict perf-accepted"
+            "perf-verdict description"
             "privacy-boundary-guard description"
             "guards description"
           )
