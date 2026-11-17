@@ -489,8 +489,12 @@ pub enum SchemaMismatch {
 /// authentication, unknown database), or the session-setup statements fail on
 /// that first connection.
 pub async fn connect_domain(settings: &DbConfig, domain: Domain) -> Result<PgPool, DbError> {
+    let options = settings
+        .dsn(domain)
+        .parse::<PgConnectOptions>()?
+        .statement_cache_capacity(pool::STATEMENT_CACHE);
     let pool = pool::options(settings, domain)
-        .connect(settings.dsn(domain))
+        .connect_with(options)
         .await?;
     Ok(pool)
 }
