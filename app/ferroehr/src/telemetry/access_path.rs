@@ -30,8 +30,11 @@ pub const ACCESS_COPY_LOOKUPS: &str = "access_copy_lookups";
 pub const ACCESS_COPY_REFILLS: &str = "access_copy_refills";
 /// Entries dropped from the per-EHR access copy or the class copy (`scope`).
 pub const ACCESS_COPY_DROPS: &str = "access_copy_drops";
-/// Entries the per-EHR access copy and the class copy hold (`copy`).
+/// Entries the access copies hold (`copy`).
 pub const ACCESS_COPY_ENTRIES: &str = "access_copy_entries";
+/// Bytes the care copy's censuses take, as its bound weighs them, in the unit `By` (`copy`,
+/// #5760).
+pub const ACCESS_COPY_SIZE: &str = "access_copy_size";
 /// Whether a policy copy's listener is connected, `1` or `0` (`listener`).
 pub const POLICY_LISTENER_UP: &str = "policy_listener_up";
 /// Listener connections lost (`listener`).
@@ -95,11 +98,12 @@ pub const AUDIT_CHAIN_UNVERIFIED_AGE: &str = "audit_chain_unverified_age";
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 32] = [
+pub const NAMES: [&str; 33] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
     ACCESS_COPY_ENTRIES,
+    ACCESS_COPY_SIZE,
     POLICY_LISTENER_UP,
     POLICY_LISTENER_LOSSES,
     POLICY_NOTIFICATIONS,
@@ -423,8 +427,8 @@ pub fn unix_now() -> f64 {
 }
 
 /// Register the instruments read at collection time over `service`: each
-/// policy listener's state, and the size of the per-EHR access copy and the
-/// class copy.
+/// policy listener's state, and the size of the per-EHR access copy, the
+/// class copy, the care copy and the caller facts copy.
 pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
     let listeners = service.policy_listeners();
     observe_listeners(meter, &listeners);
@@ -432,11 +436,38 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
     let held = Arc::clone(service);
     let _entries = meter
         .u64_observable_gauge(ACCESS_COPY_ENTRIES)
-        .with_description("Entries the per-EHR access copy and the class copy hold (copy)")
+        .with_description(
+            "Entries the access copies hold (copy = ehr | classes | care_subjects | care_teams \
+             | care_patients | care_declared | caller_facts)",
+        )
         .with_callback(move |observer| {
             let (ehrs, classes) = held.ehr_access_held();
             observer.observe(ehrs, &[KeyValue::new("copy", "ehr")]);
             observer.observe(classes, &[KeyValue::new("copy", "classes")]);
+            let grants = held.grants();
+            let care = grants.care_held();
+            for (count, copy) in [
+                (care.subjects, "care_subjects"),
+                (care.teams, "care_teams"),
+                (care.patients, "care_patients"),
+                (care.declared, "care_declared"),
+                (
+                    u64::try_from(grants.parties_held()).unwrap_or(u64::MAX),
+                    "caller_facts",
+                ),
+            ] {
+                observer.observe(count, &[KeyValue::new("copy", copy)]);
+            }
+        })
+        .build();
+    let weighed = Arc::clone(service);
+    let _bytes = meter
+        .u64_observable_gauge(ACCESS_COPY_SIZE)
+        .with_description("Bytes the care copy's censuses take, as its bound weighs them (copy)")
+        .with_unit("By")
+        .with_callback(move |observer| {
+            let care = weighed.grants().care_held();
+            observer.observe(care.bytes, &[KeyValue::new("copy", "care_teams")]);
         })
         .build();
 }

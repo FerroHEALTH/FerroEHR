@@ -1479,8 +1479,9 @@ alone: a patient's `under_care_of` relationships grow with the record, so
 `grants::care::CareCopy` holds them in two bounded caches (#5615), a
 subject's relationships (`LiveGrants::under_care_of`, at most
 `care::SUBJECTS` subjects) and a care team's patients
-(`LiveGrants::cared_for_by`, teams holding at most `care::CENSUS` patients
-together, read by `ix_binding_caller_fact_care_team` of migration
+(`LiveGrants::cared_for_by`, teams whose censuses take at most
+`care::CENSUS_BYTES` together, each weighed by its patients and the record
+subjects they declare, #5760, read by `ix_binding_caller_fact_care_team` of migration
 `party/0041`). Each is read on a miss, one indexed statement, and dropped
 when the facts read of a notification stamps a party it holds or a team the
 party is now under the care of; a grant reload and a listener that connects
