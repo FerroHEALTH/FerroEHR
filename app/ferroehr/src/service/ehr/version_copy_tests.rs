@@ -1,14 +1,13 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The version copy's weight, its drops and its bound (#5778).
+//! The version copy's weight, its drop and its bound (#5778).
 
 use serde_json::Value;
 use uuid::Uuid;
 
 use super::{Held, Key, VersionCopy};
 use crate::ids::{EhrId, VoId};
-use crate::policy_register::listen::Subscriber;
 use crate::storage::access_facts::HeadFacts;
 use crate::storage::access_projection::Revision;
 use crate::storage::version_repo::read::StoredVersion;
@@ -62,6 +61,8 @@ fn held(ehr_id: EhrId, vo_id: VoId, body: &str) -> Held {
             attestations_at_committal: Vec::new(),
             attestations_after_committal: Vec::new(),
         },
+        head: 1,
+        digest: vec![0; 32],
     }
 }
 
@@ -79,51 +80,15 @@ fn a_version_weighs_its_body() {
 }
 
 #[tokio::test]
-async fn a_notification_drops_its_object_and_a_star_drops_every_version() {
+async fn a_version_the_store_no_longer_confirms_drops() {
     let copy = VersionCopy::new();
     let ehr = EhrId(Uuid::now_v7());
     let (one, two) = (VoId(Uuid::now_v7()), VoId(Uuid::now_v7()));
-    copy.keep(first(one), held(ehr, one, "{}"), copy.drops())
-        .await;
-    copy.keep(first(two), held(ehr, two, "{}"), copy.drops())
-        .await;
-
-    copy.notified(&one.0.to_string()).await;
-    assert!(
-        copy.get(first(one)).await.is_none(),
-        "the named object drops"
-    );
-    assert!(copy.get(first(two)).await.is_some(), "another object stays");
-
-    copy.notified("*").await;
-    assert!(
-        copy.get(first(two)).await.is_none(),
-        "a star drops every version"
-    );
-}
-
-#[tokio::test]
-async fn an_erased_ehr_drops_its_objects_alone() {
-    let copy = VersionCopy::new();
-    let (erased, kept) = (EhrId(Uuid::now_v7()), EhrId(Uuid::now_v7()));
-    let (one, two) = (VoId(Uuid::now_v7()), VoId(Uuid::now_v7()));
-    copy.keep(first(one), held(erased, one, "{}"), copy.drops())
-        .await;
-    copy.keep(first(two), held(kept, two, "{}"), copy.drops())
-        .await;
-    copy.forget_ehr(erased).await;
-    assert!(copy.get(first(one)).await.is_none());
-    assert!(copy.get(first(two)).await.is_some());
-}
-
-#[tokio::test]
-async fn a_read_a_drop_overtook_keeps_nothing() {
-    let copy = VersionCopy::new();
-    let (ehr, vo) = (EhrId(Uuid::now_v7()), VoId(Uuid::now_v7()));
-    let seen = copy.drops();
-    copy.reset().await;
-    copy.keep(first(vo), held(ehr, vo, "{}"), seen).await;
-    assert!(copy.get(first(vo)).await.is_none());
+    copy.keep(first(one), held(ehr, one, "{}")).await;
+    copy.keep(first(two), held(ehr, two, "{}")).await;
+    copy.forget(first(one)).await;
+    assert!(copy.get(first(one)).await.is_none(), "the version drops");
+    assert!(copy.get(first(two)).await.is_some(), "another stays");
 }
 
 #[tokio::test]
@@ -134,8 +99,7 @@ async fn the_bound_holds_the_bytes_of_the_versions() {
     let copy = VersionCopy::bounded(one * 3);
     for _ in 0..10 {
         let vo = VoId(Uuid::now_v7());
-        copy.keep(first(vo), held(ehr, vo, &body), copy.drops())
-            .await;
+        copy.keep(first(vo), held(ehr, vo, &body)).await;
     }
     copy.inner.run_pending_tasks().await;
     let (versions, bytes) = copy.held();
