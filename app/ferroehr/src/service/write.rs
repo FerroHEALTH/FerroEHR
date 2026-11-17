@@ -142,6 +142,7 @@ impl FerroEhrService {
         Box::pin(async move {
             let signing_ctx = self.signing_ctx();
             let mut conn = acquire(pool).await?;
+            let mut invalidate = None;
             // NOTE: our own design (#5762), a request's write reserves its audit records in its
             // own transaction, so the folded statement runs inside one when they are recorded.
             let mode = match mode {
@@ -163,15 +164,20 @@ impl FerroEhrService {
                     if let Mode::SyncSubject(ehr_id, status) = mode {
                         self.sync_ehr_subject(&mut tx, ehr_id, status).await?;
                         self.commit_recorded(tx, &facts, Vec::new()).await?;
-                        // NOTE: our own design (#5589), the status names the subject whose care
-                        // relationships decide access, so the copy and the request see the commit.
-                        self.invalidate_ehr_access(ehr_id).await;
+                        invalidate = Some(ehr_id);
                     } else {
                         self.commit_recorded(tx, &facts, Vec::new()).await?;
                     }
                     (ehr_id, committed)
                 }
             };
+            drop(conn);
+            // NOTE: our own design (#5589, #5879), the status names the subject whose care
+            // relationships decide access, so the copy and the request see the commit; read with
+            // the write's connection given back, never a second one beside it.
+            if let Some(ehr_id) = invalidate {
+                self.invalidate_ehr_access(ehr_id).await;
+            }
             if committed.skipped {
                 self.record_resend(ehr_id, &committed).await?;
             } else {
