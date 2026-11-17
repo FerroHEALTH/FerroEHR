@@ -77,6 +77,13 @@ pub const AUDIT_CHAIN_INTACT: &str = "audit_chain_intact";
 pub const ACCESS_LOG_CHAIN_HOLD: &str = "access_log_chain_hold_duration";
 /// Records the audit chainer linked into a chain (`chain`).
 pub const AUDIT_CHAINED: &str = "audit_chained";
+/// Reservations whose audit records have been held past the reconciler's
+/// grace, at its last look.
+pub const AUDIT_RESERVATIONS_HELD: &str = "audit_reservations_held";
+/// The age of the oldest such reservation, at the reconciler's last look.
+pub const AUDIT_RESERVATION_AGE: &str = "audit_reservation_age";
+/// Reservations the reconciler resolved (`outcome`).
+pub const AUDIT_RESERVATIONS_RECONCILED: &str = "audit_reservations_reconciled";
 /// Chain positions past a chain's verification cursor, the head minus the
 /// cursor (`chain`, #5779).
 pub const AUDIT_CHAIN_VERIFICATION_LAG: &str = "audit_chain_verification_lag";
@@ -88,7 +95,7 @@ pub const AUDIT_CHAIN_UNVERIFIED_AGE: &str = "audit_chain_unverified_age";
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 29] = [
+pub const NAMES: [&str; 32] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
@@ -115,6 +122,9 @@ pub const NAMES: [&str; 29] = [
     AUDIT_CHAIN_INTACT,
     ACCESS_LOG_CHAIN_HOLD,
     AUDIT_CHAINED,
+    AUDIT_RESERVATIONS_HELD,
+    AUDIT_RESERVATION_AGE,
+    AUDIT_RESERVATIONS_RECONCILED,
     AUDIT_CHAIN_VERIFICATION_LAG,
     AUDIT_CHAIN_UNVERIFIED_AGE,
     INSTANCE_MISMATCHES,
@@ -173,6 +183,12 @@ pub struct AccessPathMetrics {
     pub log_chain_hold: Histogram<f64>,
     /// Records the chainer linked into a chain.
     pub log_chained: Counter<u64>,
+    /// Reservations held past the reconciler's grace.
+    pub reservations_held: Gauge<u64>,
+    /// The age of the oldest reservation held past the grace, seconds.
+    pub reservation_age: Gauge<f64>,
+    /// Reservations the reconciler resolved.
+    pub reservations_reconciled: Counter<u64>,
     /// Scheduled seal runs, seconds.
     pub seal_duration: Histogram<f64>,
     /// The Unix time of each chain's newest successful seal run.
@@ -255,6 +271,18 @@ impl AccessPathMetrics {
             log_chained: make.counter(
                 AUDIT_CHAINED,
                 "Audit records the chainer linked (chain = access_log | system)",
+            ),
+            reservations_held: make.gauge(
+                AUDIT_RESERVATIONS_HELD,
+                "Reservations whose audit records are held past the reconciler's grace",
+            ),
+            reservation_age: make.seconds(
+                AUDIT_RESERVATION_AGE,
+                "Age of the oldest reservation held past the grace",
+            ),
+            reservations_reconciled: make.counter(
+                AUDIT_RESERVATIONS_RECONCILED,
+                "Reservations reconciled (outcome = released | discarded | removed)",
             ),
             log_sign_duration: make.histogram(
                 ACCESS_LOG_SIGN_DURATION,

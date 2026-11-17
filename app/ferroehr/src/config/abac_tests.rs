@@ -79,7 +79,6 @@ const REMOVED: &[(&str, bool, &[&str])] = &[
             "audience",
             "refresh_margin",
             "timeout",
-            "assertion_audience",
             "dpop_key_file",
             "certificate_bound",
             "security_profile",

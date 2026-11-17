@@ -3,11 +3,13 @@
 
 //! The issuer the SMART discovery document describes, chosen by
 //! `ferrohealth-smart`'s `describe`: `[auth] described_issuer`, else the one
-//! issuer that serves a user launch and whose
-//! metadata FerroEHR has, never a `machines` issuer and never by the order of
-//! the `[[auth.issuer]]` tables. SMART App Launch 2.2.0, Conformance,
-//! §Metadata requires the `authorization_endpoint` a user launch starts at;
-//! which of several issuers is described is our own design.
+//! issuer that serves a user launch and whose metadata FerroEHR has, else, with
+//! only `machines` issuers trusted, the one `machines` issuer for SMART Backend
+//! Services alone; never by the order of the `[[auth.issuer]]` tables. SMART
+//! App Launch 2.2.0, Conformance, §Metadata requires the
+//! `authorization_endpoint` a user launch starts at, and Backend Services,
+//! §Retrieve `.well-known/smart-configuration`, the `token_endpoint` a backend
+//! client reads; which of several issuers is described is our own design.
 
 use ferrohealth_smart::config::{AuthSection, IssuerEntry};
 use ferrohealth_smart::kind::IssuerKind;
@@ -114,6 +116,45 @@ async fn a_machines_issuer_is_never_described() {
     };
     assert!(message.contains("can describe no issuer"), "{message}");
     assert!(message.contains("machines"), "{message}");
+}
+
+/// A deployment that trusts only a `machines` issuer describes it for SMART
+/// Backend Services alone: the token endpoint, the client credentials grant and
+/// `private_key_jwt`, with no `authorization_endpoint`, whatever the issuer's
+/// metadata names.
+#[tokio::test]
+async fn a_machines_only_deployment_is_described_for_backend_services() {
+    let machines = issuer_server().await;
+    let authenticator = authenticator(
+        vec![read(&machines.uri(), IssuerKind::Machines)],
+        true,
+        None,
+    )
+    .await
+    .expect("a machines-only deployment boots");
+    let document = authenticator
+        .smart_configuration(&SmartOptions::default())
+        .expect("a document");
+    assert_eq!(
+        document["token_endpoint"],
+        json!(format!("{}/token", machines.uri()))
+    );
+    assert_eq!(
+        document["grant_types_supported"],
+        json!(["client_credentials"])
+    );
+    assert_eq!(
+        document["token_endpoint_auth_methods_supported"],
+        json!(["private_key_jwt"])
+    );
+    assert_eq!(
+        document["capabilities"],
+        json!(["client-confidential-asymmetric"])
+    );
+    assert!(
+        document.get("authorization_endpoint").is_none(),
+        "{document}"
+    );
 }
 
 /// One eligible issuer is described whichever table comes first.

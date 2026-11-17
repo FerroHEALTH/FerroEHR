@@ -13,8 +13,7 @@
 use openehr_its::rest::stored_query::{
     QualifiedQueryName, QueryNamePattern, QueryVersion, VersionPattern,
 };
-use sqlx::Connection as _;
-use sqlx::{PgPool, Row as _};
+use sqlx::{PgConnection, PgPool, Row as _};
 
 use crate::db::acquire::acquire;
 use crate::storage::error::StorageError;
@@ -61,20 +60,19 @@ fn stored_query_row(row: &sqlx::postgres::PgRow) -> Result<StoredQueryRow, Stora
 }
 
 /// Store the AQL `query_text` under `name` at `version`, replacing the text a
-/// case-variant of the name holds at that version, in one transaction.
+/// case-variant of the name holds at that version, on `tx`, the caller's
+/// transaction.
 ///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn replace(
-    pool: &PgPool,
+    tx: &mut PgConnection,
     name: &QualifiedQueryName,
     version: QueryVersion,
     query_text: &str,
 ) -> Result<(), StorageError> {
     let (reverse_domain_name, semantic_id) = key(name);
     let version = version.to_string();
-    let mut conn = acquire(pool).await?;
-    let mut tx = conn.begin().await?;
     sqlx::query(
         "DELETE FROM stored_query \
          WHERE lower(reverse_domain_name) = lower($1) \
@@ -96,7 +94,6 @@ pub async fn replace(
     .bind(query_text)
     .execute(&mut *tx)
     .await?;
-    tx.commit().await?;
     Ok(())
 }
 
@@ -110,7 +107,7 @@ pub async fn replace(
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn insert(
-    pool: &PgPool,
+    tx: &mut PgConnection,
     name: &QualifiedQueryName,
     version: QueryVersion,
     query_text: &str,
@@ -125,7 +122,7 @@ pub async fn insert(
     .bind(reverse_domain_name)
     .bind(semantic_id)
     .bind(&version)
-    .fetch_one(&mut *acquire(pool).await?)
+    .fetch_one(&mut *tx)
     .await?;
     if exists {
         return Ok(false);
@@ -140,7 +137,7 @@ pub async fn insert(
     .bind(semantic_id)
     .bind(&version)
     .bind(query_text)
-    .execute(&mut *acquire(pool).await?)
+    .execute(&mut *tx)
     .await?
     .rows_affected();
     Ok(inserted > 0)
@@ -253,7 +250,7 @@ pub async fn list(
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn delete(
-    pool: &PgPool,
+    conn: &mut PgConnection,
     name: &QualifiedQueryName,
     version: QueryVersion,
 ) -> Result<bool, StorageError> {
@@ -267,7 +264,7 @@ pub async fn delete(
     .bind(reverse_domain_name)
     .bind(semantic_id)
     .bind(&version)
-    .execute(&mut *acquire(pool).await?)
+    .execute(&mut *conn)
     .await?
     .rows_affected();
     Ok(deleted > 0)

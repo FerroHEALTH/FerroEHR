@@ -32,7 +32,7 @@
 DROP FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
     text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
     text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
-    text[], text[], text[], boolean[]);
+    text[], text[], text[], boolean[], uuid);
 
 CREATE FUNCTION audit.access_log_intake_take(
     p_record_types text[], p_uids text[], p_times text[], p_contents text[],
@@ -44,7 +44,8 @@ CREATE FUNCTION audit.access_log_intake_take(
     p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[],
     p_shared_digests text[], p_shared_contents text[],
     p_token_entries integer[], p_token_parameters text[], p_token_systems text[],
-    p_token_codes text[], p_token_shares boolean[], p_token_digests bytea[])
+    p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid,
+    p_token_digests bytea[])
     RETURNS void
     LANGUAGE plpgsql
     SET search_path = pg_catalog
@@ -115,7 +116,8 @@ BEGIN
     INSERT INTO audit.access_log_intake (record_type, uid, time_recorded, content, shared,
         content_digest, ehr_id, party_id, retain_until, action_terminology, action_code,
         result_terminology, result_code, recorded_at, action, outcome, principal, patient_id,
-        resource_id, request_id, client_ip, index_ehr_id, search_tokens, render_policy)
+        resource_id, request_id, client_ip, index_ehr_id, search_tokens, render_policy,
+        reserved_by)
     SELECT u.c1, u.c2::uuid, u.c3::timestamptz, u.c4, decode(u.c5, 'hex'), decode(u.c6, 'hex'),
            u.c7, u.c8, u.c9::date, u.c10, u.c11, u.c12, u.c13, u.c14, u.c15, u.c16, u.c17, u.c18,
            u.c19, u.c20, u.c21, u.c22,
@@ -125,7 +127,8 @@ BEGIN
                WHEN x.id IS NULL THEN coalesce(g.own, '{}')::integer[]
                ELSE ARRAY[-x.id] || coalesce(g.own, '{}')::integer[]
            END,
-           u.c24
+           u.c24,
+           p_reserved_by
       FROM unnest(p_record_types, p_uids, p_times, p_contents, p_shared, p_digests, p_ehr_ids,
                   p_party_ids, p_retain_until, p_action_terminologies, p_action_codes,
                   p_result_terminologies, p_result_codes, p_recorded_at, p_actions, p_outcomes,
@@ -142,13 +145,13 @@ $$;
 COMMENT ON FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
     text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
     text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
-    text[], text[], text[], boolean[], bytea[]) IS
+    text[], text[], text[], boolean[], uuid, bytea[]) IS
     'One batch''s access-log entries into the intake: their search tokens, found by the digests the server computed, grouped by entry in one pass, their shared sets and shared parts stored or found, and their rows (#5770, #5889).';
 
 REVOKE ALL ON FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
     text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
     text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
-    text[], text[], text[], boolean[], bytea[]) FROM PUBLIC;
+    text[], text[], text[], boolean[], uuid, bytea[]) FROM PUBLIC;
 
 DO $grants$
 BEGIN
@@ -156,7 +159,7 @@ BEGIN
         GRANT EXECUTE ON FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
             text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
             text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
-            text[], text[], text[], boolean[], bytea[])
+            text[], text[], text[], boolean[], uuid, bytea[])
             TO ferroehr_clinical;
     ELSE
         RAISE NOTICE 'skipping the audit intake grants (roles absent: see the ext role block NOTICE)';

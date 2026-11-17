@@ -104,7 +104,7 @@ async fn stored_records_are_fed_to_the_fhir_arr_and_stamped() {
 
     for _ in 0..2 {
         sender
-            .record(vec![event()])
+            .record(vec![event()], None)
             .await
             .expect("the record is written");
     }
@@ -148,7 +148,7 @@ async fn an_entry_is_fed_as_its_projection() {
     let cfg = config(&format!("{}/fhir", arr.uri()));
     let (sender, handle) = sender::start(cfg, None, pool.clone()).await.expect("start");
     sender
-        .record(vec![access()])
+        .record(vec![access()], None)
         .await
         .expect("the record is written");
 
@@ -208,7 +208,7 @@ async fn arr_outage_leaves_rows_pending_then_delivers_on_recovery() {
     let cfg = config(&format!("{}/fhir", arr.uri()));
     let (sender, handle) = sender::start(cfg, None, pool.clone()).await.expect("start");
     sender
-        .record(vec![event()])
+        .record(vec![event()], None)
         .await
         .expect("the record is written");
 
@@ -300,7 +300,7 @@ async fn the_feed_authenticates_with_a_client_credentials_token() {
     });
     let (sender, handle) = sender::start(cfg, None, pool.clone()).await.expect("start");
     sender
-        .record(vec![event()])
+        .record(vec![event()], None)
         .await
         .expect("the record is written");
 
@@ -355,7 +355,7 @@ async fn with_no_feed_configured_no_record_is_owed() {
         .expect("start");
     for _ in 0..3 {
         sender
-            .record(vec![event()])
+            .record(vec![event()], None)
             .await
             .expect("the record is written");
     }
@@ -394,7 +394,7 @@ async fn records_stored_before_the_outbox_are_fed_once_a_feed_runs() {
         .expect("start");
     for _ in 0..2 {
         sender
-            .record(vec![event()])
+            .record(vec![event()], None)
             .await
             .expect("the record is written");
     }

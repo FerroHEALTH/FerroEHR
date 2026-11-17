@@ -31,9 +31,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use openehr_base::containers::NonEmptyVec;
-use openehr_rm::v1_2::common::change_control::canonical_form_impl::{
-    canonical_json, canonical_object,
-};
+use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::canonical_object_without;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
 use serde_json::Value;
@@ -134,17 +132,7 @@ pub enum AccessLogError {
 /// [`AccessLogError::Canonical`] when the record does not serialise or holds
 /// a number with no finite double form.
 pub fn canonical_form(record: &impl serde::Serialize) -> Result<String, AccessLogError> {
-    let value = serde_json::to_value(record).map_err(AccessLogError::Canonical)?;
-    let canonical = match &value {
-        Value::Object(members) => canonical_object(
-            members
-                .iter()
-                .filter(|(name, _)| name.as_str() != LINK && name.as_str() != PROOF)
-                .map(|(name, member)| (name.as_str(), member)),
-        ),
-        other => canonical_json(other),
-    };
-    canonical.map_err(AccessLogError::Canonical)
+    canonical_object_without(record, &[LINK, PROOF]).map_err(AccessLogError::Canonical)
 }
 
 /// The records of this system's log joined with their shared parts, in the
@@ -226,7 +214,9 @@ impl AccessLogStore {
             .collect::<Result<Vec<_>, _>>()?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        take_in(&mut tx, &intake, &[]).await?;
+        take_in(&mut tx, &intake, &[], None).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this
+        // transaction's rows.
         tx.commit().await?;
         drop(conn);
         self.settle(Owed::default()).await?;
@@ -347,6 +337,8 @@ impl AccessLogStore {
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let tombstone = Self::tombstone_in(&mut tx, uid, time_removed, grounds).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         Ok(tombstone)
     }
@@ -429,6 +421,8 @@ impl AccessLogStore {
             .map(|(chain_seq, tombstone)| (*chain_seq, tombstone))
             .collect::<Vec<_>>();
         replace(&mut tx, &replacing).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         Ok(tombstones
             .into_iter()

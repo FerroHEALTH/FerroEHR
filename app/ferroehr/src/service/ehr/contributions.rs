@@ -229,7 +229,7 @@ impl FerroEhrService {
     /// version of its object that carries a body, as the single-object delete
     /// is. The commit has landed, so a failed read leaves the deleted objects
     /// unclassified rather than failing the response.
-    async fn written_content(
+    pub(crate) async fn written_content(
         &self,
         versions: &[crate::versioning::change::Committed],
     ) -> Vec<crate::system_log::categories::ContentIds> {

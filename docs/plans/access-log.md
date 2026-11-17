@@ -484,9 +484,11 @@ governs, it is cited; otherwise "our own design".
    writes every record of a request into a durable, append-only intake in
    the audit store before it answers, and refuses the request with `503`
    when that write fails (#5747); the chainer links the intake into the
-   chain moments later (§Integrity). A write's record is written after its
-   clinical commit, in the audit cluster, which production keeps apart, so
-   the reservation that closes the window between the two commits is #5762.
+   chain moments later (§Integrity). A write's records live in the audit
+   cluster, which production keeps apart from the clinical and party ones,
+   so they cannot join the write's transaction; they are written first, held
+   under a reservation id, and the id joins the write's commit (#5762,
+   §Integrity, the durable reservation).
 4. **Reading the log is an access, and it MUST be recorded.** A read of an
    access log writes an entry with an `ACCESSED_ITEM` whose `object` names
    the log, by every route: ITS-REST, ITI-81, AQL, an export, a reviewer's
@@ -647,6 +649,31 @@ NCP. How the log is protected is therefore our own design.
   does not show it; that is the same exposure an in-memory queue had,
   without the loss on a crash. The `audit_sender` indicator reads
   `DEGRADED` when the oldest intake row waits longer than 10 seconds.
+- **The durable reservation.** A request-scoped write commits through one
+  choke point (`FerroEhrService::commit_recorded`; our own design, #5762).
+  It completes the request's operation record with what the write decided
+  (the EHR, the object, its content), writes it and the act's own records
+  into the intake held under a fresh reservation id (`reserved_by`, which
+  the chainer skips), inserts the id into `audit_reservation` of the
+  write's own domain in the write's transaction, and commits. Once the
+  response is built, the protocol adapter hands the reservation to the
+  chainer in memory, and the chainer's next round releases the held
+  records inside its own transaction, so a write costs two commits, the
+  held records and the write. A process that stops before that round
+  leaves the records held: after a grace of two minutes,
+  past the statement timeout, the reconciler of any replica, one at a time
+  under an advisory lease, releases the records of every reservation a
+  domain holds, exactly as written and once, and discards the records of a
+  reservation no domain holds, whose write never committed. It also removes
+  the reservation rows whose records were released. The domain's
+  reservation holds the id alone, no identity of the caller. The
+  `audit_sender` indicator reads `DEGRADED` while a reservation waits past
+  the grace, and `audit_reservations_held`, `audit_reservation_age_seconds`
+  and `audit_reservations_reconciled_total` count them. A write outside a
+  request (a sweep, a boot fill) commits its records the same way and
+  hands them to the chainer at once; `scripts/checks/request-commits.sh` fails a
+  transaction that commits any other way unless it says, naming #5762, why
+  no request makes it.
 - **The chainer's critical section.** A round takes the head without
   waiting (`FOR UPDATE SKIP LOCKED`), so any replica may chain and one does
   at a time. Under the head it reads the intake's content digests, computes

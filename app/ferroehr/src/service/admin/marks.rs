@@ -78,9 +78,8 @@ impl FerroEhrService {
         marks::record_restriction(&mut tx, ehr_id, vo_id, ground, note)
             .await
             .map_err(ServiceError::Storage)?;
-        tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Create, ehr_id, vo_id, "restriction")
-            .await?;
+        let record = self.mark_record(EventActionCode::Create, ehr_id, vo_id, "restriction");
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -103,9 +102,8 @@ impl FerroEhrService {
         marks::lift_restriction(&mut tx, ehr_id, vo_id)
             .await
             .map_err(ServiceError::Storage)?;
-        tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Delete, ehr_id, vo_id, "restriction")
-            .await?;
+        let record = self.mark_record(EventActionCode::Delete, ehr_id, vo_id, "restriction");
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -165,14 +163,13 @@ impl FerroEhrService {
                 .await
                 .map_err(ServiceError::Storage)?;
         }
-        tx.commit().await.map_err(ServiceError::Database)?;
         let action = if objected {
             EventActionCode::Create
         } else {
             EventActionCode::Delete
         };
-        self.emit_mark_access(action, ehr_id, None, "research-objection")
-            .await?;
+        let record = self.mark_record(action, ehr_id, None, "research-objection");
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -243,7 +240,7 @@ impl FerroEhrService {
         .map_err(|e| {
             ServiceError::precondition(format!("the retention register refused the period: {e}"))
         })?;
-        tx.commit().await.map_err(ServiceError::Database)?;
+        self.commit_act_recorded(tx, Vec::new()).await?;
         Ok(())
     }
 
@@ -300,9 +297,8 @@ impl FerroEhrService {
                     "the retention register refused the anchor: {e}"
                 ))
             })?;
-        tx.commit().await.map_err(ServiceError::Database)?;
-        self.emit_mark_access(EventActionCode::Update, ehr_id, None, "retention-anchor")
-            .await?;
+        let record = self.mark_record(EventActionCode::Update, ehr_id, None, "retention-anchor");
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -329,16 +325,16 @@ impl FerroEhrService {
                 format!("no versioned object {vo_id}"),
             ));
         };
-        tx.commit().await.map_err(ServiceError::Database)?;
-        if let Some(ehr_id) = owner {
-            let action = if held {
-                EventActionCode::Create
-            } else {
-                EventActionCode::Delete
-            };
-            self.emit_mark_access(action, ehr_id, Some(vo_id), "retention-hold")
-                .await?;
-        }
+        let action = if held {
+            EventActionCode::Create
+        } else {
+            EventActionCode::Delete
+        };
+        let records = owner
+            .map(|ehr_id| self.mark_record(action, ehr_id, Some(vo_id), "retention-hold"))
+            .into_iter()
+            .collect();
+        self.commit_act_recorded(tx, records).await?;
         Ok(())
     }
 
@@ -410,6 +406,19 @@ impl FerroEhrService {
         if !self.audit_enabled() {
             return Ok(());
         }
+        self.record_access(self.mark_record(action, ehr_id, vo_id, register))
+            .await
+    }
+
+    /// The record of one administrative act on a legal mark, as
+    /// [`Self::emit_mark_access`] writes it.
+    pub(in crate::service) fn mark_record(
+        &self,
+        action: EventActionCode,
+        ehr_id: EhrId,
+        vo_id: Option<VoId>,
+        register: &str,
+    ) -> AuditEvent {
         let mut event = AuditEvent::new(action, ObjectClass::Ehr, EventOutcome::Success);
         event.domain = AccessDomain::Ehr;
         event.object_id = Some(match vo_id {
@@ -418,6 +427,22 @@ impl FerroEhrService {
         });
         event.ehr_id = Some(ehr_id.to_string());
         event.result_count = Some(1);
-        self.record_committer_access(event).await
+        self.stamp_committer(&mut event);
+        event
+    }
+
+    /// Commit `tx`, an act no write facts describe, with `records` reserved
+    /// ([`Self::commit_recorded`]).
+    pub(in crate::service) async fn commit_act_recorded(
+        &self,
+        tx: sqlx::Transaction<'_, sqlx::Postgres>,
+        records: Vec<AuditEvent>,
+    ) -> Result<(), ServiceError> {
+        self.commit_recorded(
+            tx,
+            &crate::system_log::recorder::WriteFacts::default(),
+            records,
+        )
+        .await
     }
 }

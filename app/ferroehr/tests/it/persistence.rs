@@ -78,8 +78,8 @@ async fn migrations_apply_cleanly_and_idempotently() {
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
     assert_eq!(applied("ext").await, 12);
-    assert_eq!(applied("clinical").await, 49);
-    assert_eq!(applied("party").await, 51);
+    assert_eq!(applied("clinical").await, 50);
+    assert_eq!(applied("party").await, 52);
     assert_eq!(applied("audit").await, 44);
 
     let tables = |schema: &'static str| {
@@ -110,6 +110,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
             "access_settings",
             "adl2_artefact",
             "archetype_store",
+            "audit_reservation",
             "blob_ref",
             "category_map",
             "commit_audit",
@@ -140,6 +141,7 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(
         tables("party").await,
         [
+            "audit_reservation",
             "binding_caller_fact",
             "binding_caller_fact_party",
             "binding_capability",

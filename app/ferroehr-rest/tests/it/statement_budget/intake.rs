@@ -81,7 +81,7 @@ async fn take(pool: &PgPool, policy: &[u8], entries: usize) -> Duration {
     sqlx::query(
         "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, \
          $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, \
-         $30, $31, $32)",
+         $30, $31, $32, $33)",
     )
     .bind(vec!["ACCESS_LOG_ENTRY"; entries])
     .bind(&uids)
@@ -114,6 +114,7 @@ async fn take(pool: &PgPool, policy: &[u8], entries: usize) -> Duration {
     .bind(&t.systems)
     .bind(&t.codes)
     .bind(&t.shares)
+    .bind(None::<uuid::Uuid>)
     .bind(&digests)
     .execute(pool)
     .await
