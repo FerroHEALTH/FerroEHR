@@ -258,7 +258,9 @@ fn check_ordinal(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
 /// The instance's ordinal symbol as its terminology id and code string
 /// (`symbol/defining_code`), `None` when the symbol carries no code.
 fn symbol_code(instance: &Value) -> Option<(Option<&str>, &str)> {
-    let defining_code = instance.get("symbol").and_then(|s| s.get("defining_code"))?;
+    let defining_code = instance
+        .get("symbol")
+        .and_then(|s| s.get("defining_code"))?;
     let terminology = defining_code
         .get("terminology_id")
         .and_then(|t| t.get("value"))

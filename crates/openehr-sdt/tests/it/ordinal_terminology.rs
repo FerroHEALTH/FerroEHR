@@ -7,7 +7,7 @@
 //!
 //! The symbol is a `DV_CODED_TEXT` whose `defining_code` is a `CODE_PHRASE`,
 //! whose `code_string` means something only inside its `terminology_id` (RM
-//! `data_types` §CODE_PHRASE), so `external::at0003` is not the `local::at0003`
+//! `data_types` §`CODE_PHRASE`), so `external::at0003` is not the `local::at0003`
 //! the template's `C_DV_ORDINAL` lists (AOM 1.4 §ORDINAL).
 
 use std::path::Path;
@@ -27,7 +27,7 @@ fn minimal_admin() -> WebTemplate {
     build_web_template(&opt).unwrap_or_else(|e| panic!("build: {e}"))
 }
 
-/// The first DV_ORDINAL of `v`, mutably.
+/// The first `DV_ORDINAL` of `v`, mutably.
 fn ordinal(v: &mut Value) -> Option<&mut Value> {
     if v.get("_type").and_then(Value::as_str) == Some("DV_ORDINAL") {
         return Some(v);
@@ -69,7 +69,8 @@ fn an_ordinal_symbol_of_another_terminology_is_refused() {
         assert!(
             findings
                 .iter()
-                .any(|f| f.contains(&format!("'{terminology}::")) && f.contains("not in the constrained value set")),
+                .any(|f| f.contains(&format!("'{terminology}::"))
+                    && f.contains("not in the constrained value set")),
             "{terminology}: refused naming the terminology, got {findings:?}"
         );
     }
