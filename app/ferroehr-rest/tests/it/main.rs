@@ -34,6 +34,7 @@
               approval 2026-11-02, #4767)"
 )]
 
+mod aql_named_statements;
 mod canonical_json_literals;
 mod cold_start_pools;
 mod common;
