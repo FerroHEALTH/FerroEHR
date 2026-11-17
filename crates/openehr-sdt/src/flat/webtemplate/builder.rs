@@ -584,6 +584,7 @@ fn build_children(
         node.proportion_types = ptypes;
         capture_leaf_constraints(co, node);
     }
+    node.string_constraint = inputs::string_constraint(co);
 
     node.cardinalities = cardinalities(co, &node.aql_path);
     node.card_all = all_cardinalities(co, &node.aql_path);

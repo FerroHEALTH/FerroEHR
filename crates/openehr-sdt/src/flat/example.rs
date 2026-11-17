@@ -316,6 +316,16 @@ fn walk(
     if node.has_input() {
         return emit_leaf(node, prefix, out);
     }
+    // NOTE: AOM 1.4 `C_STRING.valid_value`: an RM String attribute the template
+    // constrains, such as `ACTIVITY.action_archetype_id`, gets a value that matches.
+    if let Some(value) = node
+        .string_constraint
+        .as_deref()
+        .and_then(constrained_string_example)
+    {
+        put(out, prefix, "", json!(value));
+        return true;
+    }
 
     let groups = child_groups(node);
     let cx = WalkCtx {
@@ -1006,15 +1016,21 @@ fn example_for_pattern(pattern: &str) -> Option<String> {
         .strip_prefix('/')
         .and_then(|p| p.strip_suffix('/'))
         .unwrap_or(pattern);
-    if body.is_empty() || body.chars().any(|c| META.contains(&c)) {
+    // A metacharacter escaped with a backslash stands for itself: `a\.b` names `a.b`.
+    let mut literal = String::with_capacity(body.len());
+    let mut chars = body.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => literal.push(chars.next().filter(|n| META.contains(n))?),
+            c if META.contains(&c) => return None,
+            c => literal.push(c),
+        }
+    }
+    if literal.is_empty() {
         return None;
     }
     // A literal pattern matches its own text; confirm before committing to it.
-    if pattern_matches(body, body) {
-        Some(body.to_owned())
-    } else {
-        None
-    }
+    pattern_matches(body, &literal).then_some(literal)
 }
 
 /// A deterministic value satisfying a leaf sub-attribute's `C_STRING` constraint

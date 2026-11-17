@@ -1016,7 +1016,7 @@ fn temporal_in_range(value: &str, range: &WebTemplateRange) -> bool {
 }
 
 /// A string datum against an enumerated value list and/or a regex pattern.
-fn check_string_constraints(
+pub(super) fn check_string_constraints(
     v: &mut Validator,
     wt: &WebTemplateNode,
     input: &WebTemplateInput,

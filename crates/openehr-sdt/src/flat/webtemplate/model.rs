@@ -361,6 +361,12 @@ pub struct WebTemplateNode {
     /// `rm_type_name`). Build-time only (`#[serde(skip)]`).
     #[serde(skip)]
     pub name_rm_type: Option<String>,
+    /// The `C_STRING` a template puts on an RM String attribute that is not a
+    /// data value, such as `ACTIVITY.action_archetype_id` (AOM 1.4
+    /// `C_PRIMITIVE_OBJECT`), as the input that carries its pattern or list.
+    /// Build-time only (`#[serde(skip)]`), so the Web Template is unchanged.
+    #[serde(skip)]
+    pub string_constraint: Option<Box<WebTemplateInput>>,
     /// For an archetype root of an OPT2, the complete identifier the template
     /// inlined it by, which data records in its `archetype_node_id` and
     /// `archetype_details.archetype_id` (BASE `artefact_identification`
@@ -436,6 +442,7 @@ impl WebTemplateNode {
             name_code: None,
             name_coded: None,
             name_rm_type: None,
+            string_constraint: None,
             archetype_ref: None,
             rm_release: None,
             facts: super::facts::WebTemplateNodeFacts::default(),
