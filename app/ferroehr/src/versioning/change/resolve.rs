@@ -227,8 +227,7 @@ pub(super) async fn resolve_create(
     at: Placing,
     mut content: Content,
 ) -> Result<ResolvedWrite, ServiceError> {
-    let lifecycle =
-        content_lifecycle(ctx, &content.canonical, content.lifecycle_state.take())?;
+    let lifecycle = content_lifecycle(ctx, &content.canonical, content.lifecycle_state.take())?;
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
     person::refuse_composing_for_others(content.kind, &content.canonical)?;
@@ -283,8 +282,7 @@ pub(super) async fn resolve_modify(
     mut content: Content,
 ) -> Result<ResolvedWrite, ServiceError> {
     let kind = content.kind;
-    let lifecycle =
-        content_lifecycle(ctx, &content.canonical, content.lifecycle_state.take())?;
+    let lifecycle = content_lifecycle(ctx, &content.canonical, content.lifecycle_state.take())?;
     let next = next_version(
         tx,
         at.ehr_id,

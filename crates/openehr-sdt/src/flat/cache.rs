@@ -14,10 +14,55 @@ use moka::future::Cache;
 
 use crate::flat::webtemplate::model::WebTemplate;
 
+/// The templates a cache holds by default.
+pub const TEMPLATES: u64 = 256;
+
+/// What a `moka` cache spends on each entry beyond its key and value,
+/// measured with moka 0.12.16 at about 220 to 250 bytes.
+const CACHE_ENTRY: u64 = 256;
+
+/// A built template with its weight.
+#[derive(Debug, Clone)]
+struct Kept {
+    template: Arc<WebTemplate>,
+    /// The length of the template's JSON text, which stands for its bytes.
+    bytes: u64,
+}
+
+impl Kept {
+    /// `template` weighed by its JSON text.
+    fn of(template: WebTemplate) -> Self {
+        let mut counted = Counted(0);
+        let bytes = match serde_json::to_writer(&mut counted, &template) {
+            // NOTE: our own design, a template that does not serialize weighs what was written of it.
+            Ok(()) | Err(_) => counted.0,
+        };
+        Self {
+            template: Arc::new(template),
+            bytes,
+        }
+    }
+}
+
+/// A writer that counts the bytes written to it.
+struct Counted(u64);
+
+impl std::io::Write for Counted {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let written = u64::try_from(buf.len()).unwrap_or(u64::MAX);
+        self.0 = self.0.saturating_add(written);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 /// A shared, cloneable `WebTemplate` cache.
 #[derive(Debug, Clone)]
 pub struct WebTemplateCache {
-    inner: Cache<String, Arc<WebTemplate>>,
+    inner: Cache<String, Kept>,
 }
 
 impl WebTemplateCache {
@@ -30,7 +75,9 @@ impl WebTemplateCache {
     }
 
     /// Return the cached template for `template_id`, or build it with `build`
-    /// (run at most once per key under contention) and cache the result.
+    /// (run at most once per key under contention) and cache the result. A
+    /// template the cap evicted is built again from its source, so the cap
+    /// changes no answer.
     ///
     /// # Errors
     /// Propagates the `build` error (shared across concurrent callers).
@@ -43,8 +90,9 @@ impl WebTemplateCache {
         F: FnOnce() -> Result<WebTemplate, crate::flat::error::FlatError>,
     {
         self.inner
-            .try_get_with_by_ref(template_id, async { build().map(Arc::new) })
+            .try_get_with_by_ref(template_id, async { build().map(Kept::of) })
             .await
+            .map(|kept| kept.template)
     }
 
     /// The cached template for `template_id` **without** building it — the fast
@@ -54,18 +102,32 @@ impl WebTemplateCache {
     /// on a miss; the caller then loads + [`get_or_build`](Self::get_or_build)s.
     #[must_use]
     pub async fn get(&self, template_id: &str) -> Option<Arc<WebTemplate>> {
-        self.inner.get(template_id).await
+        self.inner.get(template_id).await.map(|kept| kept.template)
     }
 
     /// Drop the cached entry for `template_id` (e.g. on template replacement).
     pub async fn invalidate(&self, template_id: &str) {
         self.inner.invalidate(template_id).await;
     }
+
+    /// How many templates the cache holds, and their bytes: each template's
+    /// JSON text, its id and the cache's bookkeeping per entry. An estimate
+    /// that leaves out the allocator's rounding.
+    #[must_use]
+    pub fn held(&self) -> (u64, u64) {
+        self.inner
+            .iter()
+            .fold((0_u64, 0_u64), |(entries, bytes), (id, kept)| {
+                let id = u64::try_from(id.len()).unwrap_or(u64::MAX);
+                let entry = kept.bytes.saturating_add(id).saturating_add(CACHE_ENTRY);
+                (entries.saturating_add(1), bytes.saturating_add(entry))
+            })
+    }
 }
 
 impl Default for WebTemplateCache {
     fn default() -> Self {
-        Self::new(256)
+        Self::new(TEMPLATES)
     }
 }
 
@@ -144,6 +206,36 @@ mod tests {
         assert!(
             cache.get("t1").await.is_none(),
             "`get` misses after invalidation"
+        );
+    }
+
+    /// The cache holds at most its capacity, and a template the cap evicted
+    /// is built again with the same answer.
+    #[tokio::test]
+    async fn the_cap_holds_and_an_evicted_template_builds_again() {
+        let cap = 4;
+        let cache = super::WebTemplateCache::new(cap);
+        let builds = AtomicUsize::new(0);
+        let ids: Vec<String> = (0..32).map(|n| format!("t{n}")).collect();
+        for round in 0..2 {
+            for id in &ids {
+                let built = cache
+                    .get_or_build(id, || {
+                        builds.fetch_add(1, Ordering::SeqCst);
+                        Ok(stub_template(id))
+                    })
+                    .await
+                    .expect("the build succeeds");
+                assert_eq!(&built.template_id, id, "round {round}");
+            }
+            cache.inner.run_pending_tasks().await;
+            let (entries, bytes) = cache.held();
+            assert!(entries <= cap, "{entries} within {cap}");
+            assert!(bytes > 0, "the held templates weigh their text");
+        }
+        assert!(
+            builds.load(Ordering::SeqCst) > ids.len(),
+            "the evicted templates were built again"
         );
     }
 }

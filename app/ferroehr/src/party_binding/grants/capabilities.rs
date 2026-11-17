@@ -96,6 +96,16 @@ pub struct Client {
     pub provider: Option<Provider>,
 }
 
+impl crate::memory::Weigh for Client {
+    fn heap(&self) -> usize {
+        use crate::memory::Weigh;
+        self.provider
+            .as_ref()
+            .and_then(|provider| provider.identifier.as_ref())
+            .map_or(0, Weigh::heap)
+    }
+}
+
 /// The provider a client acts for: the party its acts-for
 /// `PARTY_RELATIONSHIP` targets (RM demographic
 /// `master02-demographic_package.adoc` §Party Relationships).

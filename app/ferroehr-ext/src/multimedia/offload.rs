@@ -81,16 +81,20 @@ fn decoded_len(data: &str) -> Option<usize> {
     }
     let padding = data.bytes().rev().take(2).filter(|&b| b == b'=').count();
     // Every 4 characters carry 3 bytes, less one per padding character.
-    data.len().div_euclid(4).checked_mul(3)?.checked_sub(padding)
+    data.len()
+        .div_euclid(4)
+        .checked_mul(3)?
+        .checked_sub(padding)
 }
 
 /// The bytes of a base64 text, decoded one window at a time.
-pub(super) fn decoded_chunks(data: &str) -> impl Iterator<Item = Result<Bytes, MultimediaError>> + '_ {
+pub(super) fn decoded_chunks(
+    data: &str,
+) -> impl Iterator<Item = Result<Bytes, MultimediaError>> + '_ {
     data.as_bytes().chunks(DECODE_WINDOW).map(|window| {
-        b64()
-            .decode(window)
-            .map(Bytes::from)
-            .map_err(|e| MultimediaError::Malformed(format!("DV_MULTIMEDIA.data is not base64: {e}")))
+        b64().decode(window).map(Bytes::from).map_err(|e| {
+            MultimediaError::Malformed(format!("DV_MULTIMEDIA.data is not base64: {e}"))
+        })
     })
 }
 
@@ -228,7 +232,9 @@ fn offload_one(
     let digest: [u8; 32] = hasher.finalize().into();
     let key = BlobKey::from_digest(digest);
     let declared = i64::try_from(size).map_err(|e| {
-        MultimediaError::Malformed(format!("DV_MULTIMEDIA.data exceeds the i64 byte range: {e}"))
+        MultimediaError::Malformed(format!(
+            "DV_MULTIMEDIA.data exceeds the i64 byte range: {e}"
+        ))
     })?;
 
     // Drop inline data, become external, carry integrity and size: `Not_empty`
@@ -454,7 +460,10 @@ mod tests {
         assert_eq!(pending[0].key, want);
         assert_eq!(pending[0].size, 1000);
         assert_eq!(pending[0].data, b64().encode(&raw));
-        assert!(!needs_offload(&comp, 256).unwrap(), "nothing left to offload");
+        assert!(
+            !needs_offload(&comp, 256).unwrap(),
+            "nothing left to offload"
+        );
 
         let node = comp.pointer("/content/0/value").unwrap();
         // data removed; uri present (is_external) → Not_empty holds.
@@ -482,7 +491,9 @@ mod tests {
 
     #[test]
     fn a_large_value_decodes_window_by_window_to_the_same_bytes() {
-        let raw: Vec<u8> = (0..200_000u32).map(|i| u8::try_from(i % 251).unwrap()).collect();
+        let raw: Vec<u8> = (0..200_000u32)
+            .map(|i| u8::try_from(i % 251).unwrap())
+            .collect();
         let text = b64().encode(&raw);
         let decoded: Vec<u8> = decoded_chunks(&text)
             .map(Result::unwrap)
@@ -553,7 +564,13 @@ mod tests {
         }
         let data = text.finish();
         assert_eq!(data, b64().encode(&raw));
-        let fetched = BTreeMap::from([(key, Fetched { data: data.clone(), size: 1000 })]);
+        let fetched = BTreeMap::from([(
+            key,
+            Fetched {
+                data: data.clone(),
+                size: 1000,
+            },
+        )]);
         apply_expand(&mut comp, &fetched, &s).unwrap();
 
         let node = comp.pointer("/content/0/value").unwrap();
@@ -579,7 +596,14 @@ mod tests {
         )]);
         let err = apply_expand(&mut comp, &fetched, &s).unwrap_err();
         assert!(
-            matches!(err, MultimediaError::Size { declared: 1000, actual: 999, .. }),
+            matches!(
+                err,
+                MultimediaError::Size {
+                    declared: 1000,
+                    actual: 999,
+                    ..
+                }
+            ),
             "{err:?}"
         );
         assert_eq!(comp, before, "nothing inlined");

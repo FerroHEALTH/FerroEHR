@@ -84,3 +84,43 @@ impl FerroEhrService {
         self.archetype_lineage.invalidate(&()).await;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::archetype_lineage_cache;
+    use crate::aql::lineage::ArchetypeLineage;
+    use crate::memory::held;
+
+    /// The memo holds one index at most, and an index it dropped is read
+    /// again as the store holds it (#5926).
+    #[tokio::test]
+    async fn the_memo_holds_one_index_and_reads_a_dropped_one_again() {
+        let cache = archetype_lineage_cache();
+        let reads = AtomicUsize::new(0);
+        for round in 0..4 {
+            let index = cache
+                .get_with((), async {
+                    reads.fetch_add(1, Ordering::Relaxed);
+                    Arc::new(ArchetypeLineage::from_parent_edges([(
+                        "org.a::openEHR-EHR-OBSERVATION.hdl_result.v1.0.0",
+                        "openEHR-EHR-OBSERVATION.lipid_panel.v1.2.0",
+                    )]))
+                })
+                .await;
+            assert!(!index.is_empty(), "round {round}: the store's index");
+            cache.run_pending_tasks().await;
+            let memo = held(&cache);
+            assert_eq!(memo.entries, 1, "round {round}: {memo:?}");
+            assert!(memo.bytes > 0, "{memo:?}");
+            cache.invalidate(&()).await;
+        }
+        assert_eq!(
+            reads.load(Ordering::Relaxed),
+            4,
+            "each dropped index is read again"
+        );
+    }
+}

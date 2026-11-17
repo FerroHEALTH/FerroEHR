@@ -27,10 +27,7 @@ use serde_json::{Value, json};
 const THRESHOLD: usize = 256;
 
 fn engine() -> MultimediaEngine {
-    MultimediaEngine::from_parts(
-        BlobStore::in_memory("media"),
-        THRESHOLD,
-    )
+    MultimediaEngine::from_parts(BlobStore::in_memory("media"), THRESHOLD)
 }
 
 /// The bytes the store holds under `key`, read through the verified stream.
@@ -160,10 +157,7 @@ async fn the_same_bytes_are_stored_once_and_expand_is_idempotent() {
     let k1 = engine.referenced_keys(&first);
     let k2 = engine.referenced_keys(&second);
     assert_eq!(k1, k2, "content addressing: identical bytes share one key");
-    assert_eq!(
-        stored_bytes(engine.store(), &k1[0]).await,
-        payload
-    );
+    assert_eq!(stored_bytes(engine.store(), &k1[0]).await, payload);
 
     engine.expand(&mut first).await.expect("expand");
     let once = first.clone();

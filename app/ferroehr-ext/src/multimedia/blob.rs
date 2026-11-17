@@ -553,11 +553,9 @@ impl BlobStore {
         let mut stream = reader.into_bytes_stream(..).await.map_err(failed)?;
         let mut hasher = Sha256::new();
         let mut length: u64 = 0;
-        while let Some(chunk) = stream
-            .try_next()
-            .await
-            .map_err(|e| failed(opendal::Error::new(ErrorKind::Unexpected, "read a blob chunk").set_source(e)))?
-        {
+        while let Some(chunk) = stream.try_next().await.map_err(|e| {
+            failed(opendal::Error::new(ErrorKind::Unexpected, "read a blob chunk").set_source(e))
+        })? {
             hasher.update(&chunk);
             length = length.saturating_add(len64(chunk.len()));
             sink(&chunk)?;
@@ -579,7 +577,12 @@ impl BlobStore {
     pub async fn delete(&self, key: &BlobKey) -> Result<(), BlobError> {
         let span = self.span(BlobOp::Delete, Some(key));
         let started = Instant::now();
-        let deleted = match self.op.delete(&key.to_string()).instrument(span.clone()).await {
+        let deleted = match self
+            .op
+            .delete(&key.to_string())
+            .instrument(span.clone())
+            .await
+        {
             Err(source) if source.kind() != ErrorKind::NotFound => Err(BlobError {
                 op: BlobOp::Delete,
                 key: Some(*key),

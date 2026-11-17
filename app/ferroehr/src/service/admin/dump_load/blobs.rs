@@ -24,8 +24,8 @@ use super::{
     file_not_writable, sevenz_fault, zip_fault,
 };
 use crate::error::ServiceError;
-use crate::service::FerroEhrService;
 use crate::ids::VoId;
+use crate::service::FerroEhrService;
 use crate::storage::dump_repo;
 use crate::storage::dump_repo::VersionRecord;
 
@@ -186,7 +186,9 @@ impl FerroEhrService {
             let mut entry = archive.entry(&format!("{BLOB_PREFIX}{key}"))?;
             let streamed = engine
                 .store()
-                .read_verified(key, |chunk| entry.write(chunk).map_err(ExportFault::Archive))
+                .read_verified(key, |chunk| {
+                    entry.write(chunk).map_err(ExportFault::Archive)
+                })
                 .await;
             match streamed {
                 Ok(_) => entry.finish()?,
@@ -252,9 +254,9 @@ impl FerroEhrService {
                 .map_err(|e: NotABlobKey| archive_refusal(dir, &entry, e))?;
             let bytes = Bytes::from(archive.read(&entry)?);
             let size = u64::try_from(bytes.len()).map_err(|e| archive_refusal(dir, &entry, e))?;
-            let chunks = (0..bytes.len())
-                .step_by(IMPORT_CHUNK)
-                .map(|start: usize| Ok(bytes.slice(start..bytes.len().min(start.saturating_add(IMPORT_CHUNK)))));
+            let chunks = (0..bytes.len()).step_by(IMPORT_CHUNK).map(|start: usize| {
+                Ok(bytes.slice(start..bytes.len().min(start.saturating_add(IMPORT_CHUNK))))
+            });
             match engine.store().write_if_absent(&key, size, chunks).await {
                 Ok(()) => {}
                 Err(e @ (MultimediaError::Integrity { .. } | MultimediaError::Size { .. })) => {

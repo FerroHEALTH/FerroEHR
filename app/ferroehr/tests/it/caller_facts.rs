@@ -334,7 +334,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
             .expect("the care relationships read"),
         Vec::new()
     );
-    let parties = two.grants().parties_held();
+    let parties = two.grants().facts_held().entries;
 
     let admitted = update_as(
         &one,
@@ -377,7 +377,7 @@ async fn an_admission_and_a_discharge_decide_the_next_request_on_another_replica
         "the ward's patients are read by the ward, by their subject references"
     );
     // NOTE: #5615, a patient in care is no caller fact, so the replica's copy does not grow with it.
-    assert_eq!(two.grants().parties_held(), parties);
+    assert_eq!(two.grants().facts_held().entries, parties);
 
     update_as(
         &one,

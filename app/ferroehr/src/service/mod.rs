@@ -61,11 +61,9 @@ use crate::service::terminology::fhir::FhirTerminologyProvider;
 use std::sync::Arc;
 use std::time::Duration;
 
-use serde_json::Value;
 use sqlx::PgPool;
 
 use crate::db::domain::DomainPools;
-use crate::ids::EhrId;
 use crate::system_log::sender::AuditSender;
 use crate::versioning::SigningCtx;
 use crate::versioning::signature::signer::Signer;
@@ -209,7 +207,7 @@ pub struct FerroEhrService {
     /// or absent entry falls back to a full read, so it is invalidation-free by
     /// construction (an EHR's identity at creation is immutable). No openEHR
     /// spec governs it — our own performance design.
-    pub(in crate::service) created_ehr_repr: moka::future::Cache<EhrId, Value>,
+    pub(in crate::service) created_ehr_repr: ehr::created::CreatedEhrs,
     /// The national-identifier protection engine
     /// ([`crate::identifier_protection::engine`]), when the
     /// deployment configured one.
@@ -343,10 +341,7 @@ impl FerroEhrService {
             query_result_ceiling: None,
             outbox_gate: crate::extensions::outbox::OutboxGate::Always,
             skip_identical_resend: false,
-            created_ehr_repr: moka::future::Cache::builder()
-                .max_capacity(4096)
-                .time_to_live(Duration::from_secs(30))
-                .build(),
+            created_ehr_repr: ehr::created::created_ehrs(ehr::created::CREATED_EHRS),
             identifiers: None,
             pmir_domains: Arc::default(),
             care_projected: Arc::default(),

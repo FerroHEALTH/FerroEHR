@@ -316,6 +316,53 @@ grant can close, and that is a choice a deployment should make deliberately
 rather than inherit from a quickstart. See
 [Compliance](../compliance/index.md#the-pseudonymisation-boundary).
 
+## Memory budget
+
+Each replica keeps in-memory copies and caches so a request reads less from
+PostgreSQL. Every one has a cap in entries or in bytes, so a replica's memory
+for them has an upper bound you can size the container for. A copy only
+speeds a request up: an entry the cap evicts is read or built again, and the
+answer is the same.
+
+The table gives each cap, what one entry takes, and the bytes the cap allows.
+An entry's bytes are estimates measured on typical entries, with the cache's
+own bookkeeping of about 256 bytes per entry. The live figures are the
+`access_copy_size_bytes` gauge (label `copy`) and the `cache_size_bytes` gauge
+(label `cache`); the [access path page](../operations-access-path.md#the-per-ehr-access-copy-and-the-class-copy)
+describes them.
+
+| Copy or cache | Label | Cap | One entry | The cap allows |
+|---|---|---|---|---|
+| EHR access settings | `copy="ehr"` | 4096 EHRs | about 520 B, plus the settings' JSON text when an EHR has settings | 2 MiB; 18 MiB if every EHR carries 4 KB of settings |
+| Settings classes | `copy="classes"` | 1 set of classes | grows with the classes the store holds | a few KiB per class |
+| Care relationships of a subject | `copy="care_subjects"` | 4096 subjects | about 330 B for one relationship | 1.3 MiB |
+| `PERSON` of a record subject | `copy="care_persons"` | 4096 record subjects | about 360 B | 1.4 MiB |
+| Care team censuses | `copy="care_teams"`, `care_patients`, `care_declared` | 64 MiB | about 50 B a patient, 250 B a patient that declares one subject | 64 MiB |
+| Binding lookups | `copy="binding"` | 65 536 logins | about 820 B for a professional in one group | 51 MiB |
+| `PERSON` names | `copy="party_name"` | 65 536 parties | about 310 B | 20 MiB |
+| COMPOSITION versions | `copy="object_version"` | 64 MiB | the version's body text and its metadata | 64 MiB |
+| Created EHR representations | `cache="created_ehr"` | 4096 EHRs, 30 s each | about 3.3 KB | 13 MiB |
+| WebTemplates | `cache="web_template"` | 256 templates | the template's JSON text: 12 KB median, 127 KB at the 90th percentile, 610 KB at most of the CKM library | 3 MiB at the median; 32 MiB at the 90th percentile |
+| AQL plans | `cache="aql_plan"` | `[record.query] plan_cache_capacity`, 256 by default | about 3.4 KB for a one-observation query | 0.9 MiB at 256 |
+| Archetype lineage | `cache="archetype_lineage"` | 1 index, 1 min | grows with the specialised archetypes stored | a few KiB |
+| Audit subjects | `cache="audit_subjects"` | 100 000 EHRs, 1 h each | about 410 B | 39 MiB |
+
+Their sum is about 260 MiB per replica with typical WebTemplates and EHRs
+without settings, and about 305 MiB at the 90th percentile of WebTemplates
+with every held EHR carrying 4 KB of settings.
+
+Three holdings have no cap of their own:
+
+- **The grants copy** (`copy="grants"`) holds every grant row and client
+  `ACTOR`, and **the caller facts copy** (`copy="caller_facts"`) holds the
+  facts of every caller party. A row left out would decide a request without
+  it, so these grow with the grant and party registers. Their gauges show
+  what they take; a few hundred bytes per row is typical.
+- **The authentication caches** of the SMART library (`[auth]`): the
+  verified Basic credentials for `[auth.basic] cache_ttl`, the introspection
+  responses at most `cache_capacity` (10 000 by default) per issuer, and the
+  DPoP replay records, at most 100 000. They report no bytes of their own.
+
 ## Where each section is documented
 
 | Section | What it covers | Page |

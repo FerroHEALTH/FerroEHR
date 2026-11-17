@@ -47,6 +47,7 @@ use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
+mod held;
 pub mod revisions;
 #[cfg(test)]
 mod sharing;
@@ -511,21 +512,6 @@ impl LiveGrants {
             }
         }
         CallerFacts::new(roles, care_teams).with_party(party)
-    }
-
-    /// What the care copy holds: its subjects and care teams, the patients
-    /// and declared record subjects of those teams, and their bytes; bounded
-    /// by [`crate::party_binding::grants::care::SUBJECTS`] and
-    /// [`crate::party_binding::grants::care::CENSUS_BYTES`].
-    #[must_use]
-    pub fn care_held(&self) -> super::care::CareHeld {
-        self.care.held()
-    }
-
-    /// How many parties the copy of the caller facts holds facts of.
-    #[must_use]
-    pub fn parties_held(&self) -> usize {
-        self.held_facts().by_party.len()
     }
 
     /// Every federation agreement in force at `now`, once per client

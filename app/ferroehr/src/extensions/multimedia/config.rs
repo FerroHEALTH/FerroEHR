@@ -262,10 +262,7 @@ mod tests {
             assert!(!err.to_string().contains("hunter2"), "{err}");
             assert!(!format!("{err:?}").contains("hunter2"), "{err:?}");
         }
-        assert!(matches!(
-            S3Config::default().endpoint_url(),
-            Ok(None)
-        ));
+        assert!(matches!(S3Config::default().endpoint_url(), Ok(None)));
         let url = with("https://user:hunter2@s3.example")
             .endpoint_url()
             .expect("an absolute https endpoint parses")

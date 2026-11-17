@@ -24,11 +24,13 @@ use std::future::Future;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
-use ferrohealth_smart::party::source::Lookup;
+use ferrohealth_smart::party::source::{Lookup, PartyRecord};
+use ferrohealth_smart::party::{Membership, PartyRef, Represented};
 use moka::future::Cache;
 use opentelemetry::KeyValue;
 use uuid::Uuid;
 
+use crate::memory::{self, Held, Weigh};
 use crate::policy_register::listen::{Dropping, Listened, Subscriber};
 
 /// The channel a change of the binding side table or of a `PERSON`'s version
@@ -36,7 +38,7 @@ use crate::policy_register::listen::{Dropping, Listened, Subscriber};
 pub const CHANNEL: &str = "ferroehr_party_binding";
 
 /// How many logins' lookups, and how many names, a replica holds.
-const CAPACITY: u64 = 65_536;
+pub const CAPACITY: u64 = 65_536;
 
 /// The `copy` label of the lookups.
 const LOOKUPS: &str = "binding";
@@ -79,6 +81,65 @@ pub(crate) struct LookupKey {
     pub(crate) value: String,
     pub(crate) group_issuer: Option<String>,
     pub(crate) today: String,
+}
+
+impl Weigh for LookupKey {
+    fn heap(&self) -> usize {
+        self.issuer
+            .heap()
+            .saturating_add(self.identifier_type.heap())
+            .saturating_add(self.value.heap())
+            .saturating_add(self.group_issuer.heap())
+            .saturating_add(self.today.heap())
+    }
+}
+
+impl Weigh for Lookup {
+    fn heap(&self) -> usize {
+        match self {
+            Self::Parties(records) => records.iter().fold(
+                records.capacity() * size_of::<PartyRecord>(),
+                |total, record| total.saturating_add(record_heap(record)),
+            ),
+            // NOTE: our own design, a tombstone and any later outcome own nothing beside the enum.
+            _ => 0,
+        }
+    }
+}
+
+/// The bytes a party record owns on the heap, read through its accessors,
+/// so each text counts its length.
+fn record_heap(record: &PartyRecord) -> usize {
+    let memberships = record
+        .memberships()
+        .iter()
+        .map(|membership: &Membership| {
+            size_of::<Membership>()
+                .saturating_add(reference_heap(membership.group()))
+                .saturating_add(membership.identifier().len())
+        })
+        .fold(0_usize, usize::saturating_add);
+    let represents = record
+        .represents()
+        .iter()
+        .map(|represented: &Represented| {
+            size_of::<Represented>()
+                .saturating_add(reference_heap(represented.subject()))
+                .saturating_add(represented.relationship().map_or(0, str::len))
+        })
+        .fold(0_usize, usize::saturating_add);
+    reference_heap(record.party())
+        .saturating_add(memberships)
+        .saturating_add(represents)
+}
+
+/// The bytes a party reference owns on the heap: its three texts.
+fn reference_heap(reference: &PartyRef) -> usize {
+    reference
+        .namespace()
+        .len()
+        .saturating_add(reference.type_name().len())
+        .saturating_add(reference.id().len())
 }
 
 /// The lookups and names this replica holds, dropped by the notifications of
@@ -177,6 +238,15 @@ impl LiveBindings {
         &self.listened
     }
 
+    /// What the copy holds: the lookups, and the names, with their bytes.
+    #[must_use]
+    pub fn held(&self) -> (Held, Held) {
+        (
+            memory::held(&self.copy.lookups),
+            memory::held(&self.copy.names),
+        )
+    }
+
     /// Drop every lookup and name this replica holds.
     pub fn forget_all(&self) {
         self.copy.forget_all();
@@ -267,3 +337,7 @@ fn dropped(scope: &'static str) {
         .copy_drops
         .add(1, &[KeyValue::new("scope", scope)]);
 }
+
+#[cfg(test)]
+#[path = "live_tests.rs"]
+mod tests;

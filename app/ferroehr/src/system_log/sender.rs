@@ -25,7 +25,6 @@
 //!
 //! No openEHR spec governs the audit trail's delivery: our own design.
 
-use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -58,7 +57,7 @@ use background::Background;
 use categories::Classifiers;
 use chainer::Chainer;
 use live::LiveContext;
-use records::render_records;
+use records::{Subjects, render_records};
 
 /// The patient subject of an EHR: `EHR_STATUS.subject.external_ref`'s id and
 /// namespace.
@@ -68,6 +67,12 @@ pub struct ResolvedSubject {
     pub id: String,
     /// The namespace that issued it (`ehr.subject_namespace`), when stored.
     pub namespace: Option<String>,
+}
+
+impl crate::memory::Weigh for ResolvedSubject {
+    fn heap(&self) -> usize {
+        self.id.heap().saturating_add(self.namespace.heap())
+    }
 }
 
 /// What a [`SubjectResolver`] learned about an EHR's patient subject.
@@ -134,6 +139,12 @@ impl std::fmt::Debug for SenderInner {
 }
 
 impl AuditSender {
+    /// How many EHRs' subjects the memo holds, and their bytes (#5926).
+    #[must_use]
+    pub fn subjects_held(&self) -> crate::memory::Held {
+        crate::memory::held(&self.inner.subjects)
+    }
+
     /// Whether auditing is on (the master switch).
     #[must_use]
     pub fn enabled(&self) -> bool {
@@ -296,12 +307,11 @@ impl AuditSender {
             event.emergency_access = event.names_purpose(|c| self.is_emergency_purpose(Some(c)));
         }
         let ctx = self.inner.context.current();
-        let unavailable = match &self.inner.resolver {
+        let subjects = match &self.inner.resolver {
             Some(resolve) => Some(memoize_subjects(&events, resolve, &self.inner.subjects).await),
             None => None,
         };
-        let records =
-            render_records(events, &ctx, &self.inner.subjects, unavailable.as_ref()).await;
+        let records = render_records(events, &ctx, subjects.as_ref());
         let ends = crate::system_log::retention::record_ends(&records, &ctx);
         let started = std::time::Instant::now();
         let written = match reservation {
@@ -514,6 +524,9 @@ async fn sample(sink: &'static str, status: impl Fn() -> Status + Send + 'static
     }
 }
 
+/// The most EHRs whose subject the audit sender memoizes.
+pub const SUBJECTS: u64 = 100_000;
+
 /// The `ehr_id` → subject memo (an EHR's subject is immutable for audit
 /// purposes, so one lookup serves every later record).
 type SubjectCache = moka::future::Cache<String, Option<ResolvedSubject>>;
@@ -611,7 +624,7 @@ pub async fn start(
             store,
             resolver: resolver.filter(|_| config.resolve_subject),
             subjects: moka::future::Cache::builder()
-                .max_capacity(100_000)
+                .max_capacity(SUBJECTS)
                 .time_to_live(Duration::from_hours(1))
                 .build(),
             chain,
@@ -656,37 +669,46 @@ fn spawn_store_upkeep(
     Some(check)
 }
 
-/// Resolves the subject id of every EHR the records reference that the memo
-/// does not already hold, concurrently, and memoizes each answer.
+/// The subject of every EHR the records reference: from the memo, or
+/// resolved concurrently and memoized.
 ///
-/// A failed lookup is not memoized, so the next request asks again; the EHRs
-/// whose lookup failed are returned for these records.
+/// A failed lookup is not memoized, so the next request asks again, and its
+/// EHR is returned among the failed for these records.
 async fn memoize_subjects(
     events: &[AuditEvent],
     resolve: &SubjectResolver,
     cache: &SubjectCache,
-) -> BTreeSet<String> {
-    let mut pending: Vec<String> = events
+) -> Subjects {
+    let mut referenced: Vec<String> = events
         .iter()
         .filter_map(|event| event.ehr_id.clone())
-        .filter(|ehr_id| !cache.contains_key(ehr_id))
         .collect();
-    pending.sort_unstable();
-    pending.dedup();
-    let mut unavailable: BTreeSet<String> = pending.iter().cloned().collect();
+    referenced.sort_unstable();
+    referenced.dedup();
+    let mut subjects = Subjects::default();
+    let mut pending = Vec::new();
+    for ehr_id in referenced {
+        match cache.get(&ehr_id).await {
+            Some(held) => {
+                subjects.resolved.insert(ehr_id, held);
+            }
+            None => pending.push(ehr_id),
+        }
+    }
     if pending.is_empty() {
-        return unavailable;
+        return subjects;
     }
     // NOTE: our own design (#5947), this task waits for the lookups, so it keeps no connection.
     crate::db::acquire::release_held();
     let mut lookups = tokio::task::JoinSet::new();
     for ehr_id in pending {
+        subjects.unavailable.insert(ehr_id.clone());
         let lookup = resolve(ehr_id.clone());
         lookups.spawn(crate::db::acquire::inheriting(async move {
             (ehr_id, lookup.await)
         }));
     }
-    // A lookup task that panicked never answers, so its EHR stays in `unavailable`.
+    // A lookup task that panicked never answers, so its EHR stays unavailable.
     while let Some(joined) = lookups.join_next().await {
         let Ok((ehr_id, lookup)) = joined else {
             continue;
@@ -696,14 +718,17 @@ async fn memoize_subjects(
             SubjectLookup::NoSubject => None,
             SubjectLookup::Unavailable => continue,
         };
-        unavailable.remove(&ehr_id);
-        cache.insert(ehr_id, subject).await;
+        subjects.unavailable.remove(&ehr_id);
+        cache.insert(ehr_id.clone(), subject.clone()).await;
+        subjects.resolved.insert(ehr_id, subject);
     }
-    unavailable
+    subjects
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
+
     use super::*;
     use crate::system_log::event::{EventActionCode, EventOutcome, ObjectClass};
 
@@ -740,8 +765,8 @@ mod tests {
             })
         });
         let cache: SubjectCache = moka::future::Cache::builder().max_capacity(8).build();
-        let unavailable = memoize_subjects(&batch, &resolve, &cache).await;
-        assert_eq!(unavailable, BTreeSet::from(["failing".to_owned()]));
+        let subjects = memoize_subjects(&batch, &resolve, &cache).await;
+        assert_eq!(subjects.unavailable, BTreeSet::from(["failing".to_owned()]));
         assert!(
             !cache.contains_key("failing"),
             "a failure is never memoized"
@@ -751,5 +776,48 @@ mod tests {
             cache.get("named").await.flatten().map(|subject| subject.id),
             Some("patient-1".to_owned())
         );
+    }
+
+    /// The memo holds at most its capacity, and a record names the subject
+    /// its act read, whatever the cap evicted meanwhile (#5926).
+    #[tokio::test]
+    async fn the_memo_stays_under_its_cap_and_an_eviction_changes_no_record() {
+        let cap = 4;
+        let batch: Vec<AuditEvent> = (0..32)
+            .map(|n| {
+                let mut e = event();
+                e.ehr_id = Some(format!("ehr-{n}"));
+                e
+            })
+            .collect();
+        let resolve: SubjectResolver = Arc::new(|ehr_id: String| {
+            Box::pin(async move {
+                SubjectLookup::Found(ResolvedSubject {
+                    id: format!("patient-of-{ehr_id}"),
+                    namespace: Some("demographic".to_owned()),
+                })
+            })
+        });
+        let cache: SubjectCache = moka::future::Cache::builder().max_capacity(cap).build();
+        for round in 0..2 {
+            let subjects = memoize_subjects(&batch, &resolve, &cache).await;
+            cache.run_pending_tasks().await;
+            let memo = crate::memory::held(&cache);
+            assert!(memo.entries <= cap, "{memo:?} within {cap}");
+            let records = render_records(
+                batch.clone(),
+                &crate::system_log::message::AuditContext::default(),
+                Some(&subjects),
+            );
+            for record in records {
+                let ehr_id = record.event.ehr_id.clone().expect("an EHR");
+                assert_eq!(
+                    record.subject,
+                    Some(format!("patient-of-{ehr_id}")),
+                    "round {round}: the record names its EHR's subject"
+                );
+                assert!(!record.event.subject_lookup_failed);
+            }
+        }
     }
 }

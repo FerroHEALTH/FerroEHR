@@ -378,7 +378,10 @@ fn redacted_json_masks_every_secret_field() {
     // Structural placeholders present where a secret was set.
     assert_eq!(value["auth"]["basic"]["users"][0]["password_hash"], "***");
     assert_eq!(value["record"]["signing"]["key_passphrase"], "***");
-    assert_eq!(value["record"]["multimedia"]["s3"]["secret_access_key"], "***");
+    assert_eq!(
+        value["record"]["multimedia"]["s3"]["secret_access_key"],
+        "***"
+    );
     assert_eq!(
         value["database"]["url"],
         "postgres://***@db.internal:5432/ferroehr"

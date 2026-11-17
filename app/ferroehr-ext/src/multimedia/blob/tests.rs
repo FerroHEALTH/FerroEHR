@@ -41,7 +41,13 @@ fn a_key_round_trips_through_its_hex_form() {
 
 #[test]
 fn only_a_lowercase_digest_is_a_key() {
-    for bad in ["", "abc123", &"A".repeat(64), &"g".repeat(64), &"a".repeat(63)] {
+    for bad in [
+        "",
+        "abc123",
+        &"A".repeat(64),
+        &"g".repeat(64),
+        &"a".repeat(63),
+    ] {
         assert_eq!(bad.parse::<BlobKey>(), Err(NotABlobKey), "{bad:?}");
     }
 }
@@ -61,7 +67,10 @@ fn foreign_uri_is_not_our_key() {
     let key = key_of(b"x");
     assert_eq!(s.key_from_uri(&format!("s3://other-bucket/{key}")), None);
     assert_eq!(s.key_from_uri("https://example.org/img.png"), None);
-    assert_eq!(s.key_from_uri(&format!("s3://test-bucket/nested/{key}")), None);
+    assert_eq!(
+        s.key_from_uri(&format!("s3://test-bucket/nested/{key}")),
+        None
+    );
     assert_eq!(s.key_from_uri("s3://test-bucket/abc"), None);
     assert_eq!(s.key_from_uri(&format!("s3://test-bucketx/{key}")), None);
 }
@@ -92,7 +101,10 @@ async fn a_write_whose_bytes_do_not_hash_to_the_key_stores_nothing() {
         .await
         .unwrap_err();
     assert!(matches!(err, MultimediaError::Integrity { .. }), "{err:?}");
-    assert!(!s.exists(&key).await.unwrap(), "nothing stored under the key");
+    assert!(
+        !s.exists(&key).await.unwrap(),
+        "nothing stored under the key"
+    );
 }
 
 #[tokio::test]
@@ -104,7 +116,14 @@ async fn a_write_of_the_wrong_length_stores_nothing() {
         .await
         .unwrap_err();
     assert!(
-        matches!(err, MultimediaError::Size { declared: 6, actual: 5, .. }),
+        matches!(
+            err,
+            MultimediaError::Size {
+                declared: 6,
+                actual: 5,
+                ..
+            }
+        ),
         "{err:?}"
     );
     assert!(!s.exists(&key).await.unwrap());
@@ -154,7 +173,11 @@ async fn delete_all_content_removes_our_blobs_and_leaves_foreign_objects() {
             .unwrap();
     }
     let upper = "A".repeat(64);
-    for foreign in ["README".to_owned(), format!("nested/{}", "b".repeat(64)), upper.clone()] {
+    for foreign in [
+        "README".to_owned(),
+        format!("nested/{}", "b".repeat(64)),
+        upper.clone(),
+    ] {
         s.op.write(&foreign, b"x".to_vec()).await.unwrap();
     }
 

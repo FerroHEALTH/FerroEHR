@@ -29,6 +29,7 @@ use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt};
 use uuid::Uuid;
 
+use bytes::Bytes;
 use ferroehr::extensions::multimedia::config::{MultimediaConfig, S3Config};
 use ferroehr::ids::VoId;
 use ferroehr::service::FerroEhrService;
@@ -36,7 +37,6 @@ use ferroehr::service::admin::types::ExportSpec;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr_ext::multimedia::MultimediaEngine;
 use ferroehr_ext::multimedia::MultimediaError;
-use bytes::Bytes;
 use ferroehr_ext::multimedia::blob::{
     BackendSettings, BlobKey, BlobStore, BlobStoreParams, Limits, S3Settings,
 };
@@ -237,7 +237,11 @@ fn party_blob_key(person: &Value) -> BlobKey {
         .pointer("/identities/0/details/items/0/value/uri/value")
         .and_then(Value::as_str)
         .expect("the externalized media carries a uri");
-    uri.rsplit('/').next().expect("hex").parse().expect("a blob key")
+    uri.rsplit('/')
+        .next()
+        .expect("hex")
+        .parse()
+        .expect("a blob key")
 }
 
 /// A valid `EHR_STATUS` carrying `media` inside `other_details` (an ELEMENT value).
@@ -294,7 +298,11 @@ fn blob_key(status: &Value) -> BlobKey {
         .pointer("/uri/value")
         .and_then(Value::as_str)
         .expect("uri.value");
-    uri.rsplit('/').next().expect("hex").parse().expect("a blob key")
+    uri.rsplit('/')
+        .next()
+        .expect("hex")
+        .parse()
+        .expect("a blob key")
 }
 
 /// The bytes the store holds under `key`, read through the verified stream.
@@ -351,11 +359,18 @@ async fn a_blob_over_the_part_size_round_trips_as_a_multipart_upload() {
             ..Limits::default()
         },
     );
-    let blob: Vec<u8> = (0..(2 * part + 12_345)).map(|i| u8::try_from(i % 251).unwrap()).collect();
+    let blob: Vec<u8> = (0..(2 * part + 12_345))
+        .map(|i| u8::try_from(i % 251).unwrap())
+        .collect();
     let key = BlobKey::of(&blob);
     let size = u64::try_from(blob.len()).unwrap();
-    let chunks = blob.chunks(64 * 1024).map(|c| Ok(Bytes::copy_from_slice(c)));
-    store.write_if_absent(&key, size, chunks).await.expect("multipart write");
+    let chunks = blob
+        .chunks(64 * 1024)
+        .map(|c| Ok(Bytes::copy_from_slice(c)));
+    store
+        .write_if_absent(&key, size, chunks)
+        .await
+        .expect("multipart write");
     assert_eq!(stored_bytes(&store, &key).await, blob);
 
     let wrong = BlobKey::of(b"not these bytes");
@@ -363,12 +378,19 @@ async fn a_blob_over_the_part_size_round_trips_as_a_multipart_upload() {
         .write_if_absent(
             &wrong,
             size,
-            blob.chunks(64 * 1024).map(|c| Ok(Bytes::copy_from_slice(c))),
+            blob.chunks(64 * 1024)
+                .map(|c| Ok(Bytes::copy_from_slice(c))),
         )
         .await
         .expect_err("bytes that do not hash to the key are refused");
-    assert!(matches!(refused, MultimediaError::Integrity { .. }), "{refused:?}");
-    assert!(!store.exists(&wrong).await.unwrap(), "the aborted upload left no object");
+    assert!(
+        matches!(refused, MultimediaError::Integrity { .. }),
+        "{refused:?}"
+    );
+    assert!(
+        !store.exists(&wrong).await.unwrap(),
+        "the aborted upload left no object"
+    );
 }
 
 /// The S3 store the platform would build for `sw`, with `limits`.
@@ -679,7 +701,9 @@ async fn dump_load_carries_blobs() {
     assert!(reports.is_empty(), "clean export, got {reports:?}");
 
     // The archive carries the blob in a blobs/<hex> file.
-    let blob_path = std::path::Path::new(&dir).join("blobs").join(key.to_string());
+    let blob_path = std::path::Path::new(&dir)
+        .join("blobs")
+        .join(key.to_string());
     assert!(blob_path.exists(), "export writes blobs/<hex>");
 
     // Load into the fresh target: the EHR + its blob re-populate.
