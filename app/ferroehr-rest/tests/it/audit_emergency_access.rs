@@ -69,7 +69,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         Box::pin(async {
             SubjectLookup::Found(ResolvedSubject {
                 id: SUBJECT.to_owned(),
-                namespace: Some("urn:ferroehr:test-subjects".to_owned()),
+                namespace: Some(common::TEST_SUBJECTS.to_owned()),
             })
         })
     });
@@ -115,8 +115,9 @@ async fn app() -> (testkit::TestDb, PgPool, Router, String) {
         &app,
         Request::post(format!("{BASE}/ehr"))
             .header(header::AUTHORIZATION, basic("clinician"))
+            .header(header::CONTENT_TYPE, "application/json")
             .header("Prefer", "return=representation")
-            .body(Body::empty())
+            .body(Body::from(common::subject_status(SUBJECT)))
             .unwrap(),
     )
     .await;

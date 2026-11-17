@@ -25,7 +25,6 @@ use openehr_base::prelude::{
 };
 use openehr_its::rest::generated::common::UpdateItemTag;
 use openehr_rm::prelude::ItemTag;
-use sqlx::Connection as _;
 
 use crate::db::acquire::acquire;
 use crate::error::refusal::Missing;
@@ -152,7 +151,7 @@ impl FerroEhrService {
                 target_path,
             });
         }
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         // The replace RETURNS the stored collection (list order), so the
         // response never re-reads the rows the transaction just wrote.
@@ -252,7 +251,7 @@ impl FerroEhrService {
         // an EHR_STATUS container's tags (adjudicated).
         self.ensure_tag_target(ehr_id, target_vo_id, target_version, target_type)
             .await?;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let deleted = crate::storage::tag_repo::delete_tag(
             &mut tx,
@@ -273,7 +272,7 @@ impl FerroEhrService {
     /// errors of [`Self::commit_recorded`].
     pub(in crate::service) async fn commit_tag_delete(
         &self,
-        tx: sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: crate::system_log::reservation::RecordedTx<'_>,
         deleted: bool,
         key: &str,
     ) -> Result<(), ServiceError> {

@@ -24,10 +24,8 @@ use openehr_base::prelude::{HierObjectId, ObjectId, PartyRef};
 use openehr_rm::prelude::{PartyIdentified, PartyIdentifiedData, PartyProxy};
 use serde::Serialize;
 use serde_json::Value;
-use sqlx::Connection as _;
 use uuid::Uuid;
 
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::{Clash, Refusal};
 use crate::ids::VoId;
@@ -169,7 +167,7 @@ impl FerroEhrService {
         for (_, change) in &mut changes {
             self.externalize_change(change).await?;
         }
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let committed = change::commit_contribution(
             &mut tx,

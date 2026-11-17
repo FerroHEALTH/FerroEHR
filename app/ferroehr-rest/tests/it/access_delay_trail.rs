@@ -49,7 +49,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
         Box::pin(async {
             SubjectLookup::Found(ResolvedSubject {
                 id: PATIENT.to_owned(),
-                namespace: Some("urn:ferroehr:test-subjects".to_owned()),
+                namespace: Some(common::TEST_SUBJECTS.to_owned()),
             })
         })
     });
@@ -124,9 +124,15 @@ async fn send(
     common::send_body(app, req).await
 }
 
-/// Creates an EHR as `dr`; returns its id.
+/// Creates an EHR of [`PATIENT`] as `dr`; returns its id.
 async fn ehr(app: &Router) -> String {
-    let (status, body) = send(app, "POST", &format!("{BASE}/ehr"), None).await;
+    let (status, body) = send(
+        app,
+        "POST",
+        &format!("{BASE}/ehr"),
+        Some(("application/json", common::subject_status(PATIENT))),
+    )
+    .await;
     assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
     serde_json::from_str::<Value>(&body).expect("EHR json")["ehr_id"]["value"]
         .as_str()

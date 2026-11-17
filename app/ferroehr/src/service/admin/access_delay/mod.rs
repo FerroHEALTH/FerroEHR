@@ -21,8 +21,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use sqlx::Connection as _;
-
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
@@ -85,7 +83,7 @@ impl FerroEhrService {
             })
             .transpose()?;
         self.check_mark_target(ehr_id, Some(vo_id)).await?;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let held = access_delay::hold(&mut tx, (ehr_id, vo_id), until, policy.hours(), note)
             .await
@@ -115,7 +113,7 @@ impl FerroEhrService {
         vo_id: VoId,
     ) -> Result<(), ServiceError> {
         self.check_mark_target(ehr_id, Some(vo_id)).await?;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         access_delay::release(&mut tx, vo_id)
             .await
@@ -165,7 +163,7 @@ impl FerroEhrService {
     /// record cannot be written, and then no
     /// expiry is marked recorded.
     pub async fn record_access_delay_expiries(&self) -> Result<usize, ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let expired = access_delay::take_expired(&mut tx)
             .await

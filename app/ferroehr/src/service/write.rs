@@ -18,9 +18,8 @@
 use std::pin::Pin;
 
 use serde_json::Value;
-use sqlx::{Connection as _, PgConnection, PgPool};
+use sqlx::{PgConnection, PgPool};
 
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
@@ -141,7 +140,7 @@ impl FerroEhrService {
         // stack.
         Box::pin(async move {
             let signing_ctx = self.signing_ctx();
-            let mut conn = acquire(pool).await?;
+            let mut conn = self.recorded_conn(pool).await?;
             let mut invalidate = None;
             // NOTE: our own design (#5762), a request's write reserves its audit records in its
             // own transaction, so the folded statement runs inside one when they are recorded.

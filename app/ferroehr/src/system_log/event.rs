@@ -158,6 +158,9 @@ pub struct AuditEvent {
     /// The namespace of the EHR subject's id, as `EHR_STATUS.subject` names
     /// it, filled by the drain beside the subject it resolves.
     pub subject_namespace: Option<String>,
+    /// The subject of [`Self::ehr_id`] as a read of the request found it in
+    /// the store, which the drain names in place of a lookup of its own.
+    pub judged_subject: Option<crate::storage::access_projection::EhrSubject>,
     /// Whether the drain could not learn the EHR's subject: the resolver
     /// could not ask the database, or did not answer.
     pub subject_lookup_failed: bool,
@@ -505,6 +508,7 @@ impl AuditEvent {
             client_ip: None,
             ehr_id: None,
             subject_namespace: None,
+            judged_subject: None,
             subject_lookup_failed: false,
             object_id: None,
             token_id: None,

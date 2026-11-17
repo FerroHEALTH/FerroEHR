@@ -11,9 +11,6 @@
 //! refused whole (`400`) and never reaches the request path. No openEHR spec
 //! governs operational policy: our own design/extension.
 
-use sqlx::Connection as _;
-
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::policy_register::access_delay::AccessDelayRegister;
 use crate::policy_register::{LiveRegisters, Register};
@@ -169,7 +166,7 @@ impl FerroEhrService {
         };
         let committer = crate::versioning::committer::current_committer()
             .map_or_else(|| UNAUTHENTICATED.to_owned(), |identity| identity.subject);
-        let mut conn = acquire(self.registers.pool()).await?;
+        let mut conn = self.recorded_conn(self.registers.pool()).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let written = store::append(&mut tx, register.as_str(), replaces, &canonical, &committer)
             .await

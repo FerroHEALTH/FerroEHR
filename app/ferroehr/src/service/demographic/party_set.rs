@@ -20,9 +20,7 @@
 
 use openehr_rm::prelude::PartyProxy;
 use serde_json::Value;
-use sqlx::Connection as _;
 
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::AllocatedVoId;
 use crate::service::FerroEhrService;
@@ -104,7 +102,7 @@ impl FerroEhrService {
         for (_, change) in &mut changes {
             self.externalize_change(change).await?;
         }
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let committed = change::commit_contribution(
             &mut tx,

@@ -21,7 +21,6 @@
 //! §2:3.93.4.1.3): our own design.
 
 use serde::Serialize;
-use sqlx::Connection as _;
 use uuid::Uuid;
 
 use super::apply::APPLY_LOCK;
@@ -223,7 +222,7 @@ impl FerroEhrService {
     /// and [`ServiceError`] when the store or the audit trail refuses.
     pub async fn pmir_retry(&self, message_id: &str) -> Result<Retried, ServiceError> {
         let operator = operator()?;
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await.map_err(StorageError::from)?;
         // NOTE: our own design, the applier holds this lock while it applies, so no later message
         // applies between the supersession check and the message's return to the queue.
@@ -313,7 +312,7 @@ impl FerroEhrService {
                 "a settlement needs a reason of 1 to {REASON_LIMIT} characters"
             )));
         }
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await.map_err(StorageError::from)?;
         let row: Option<(String, Option<String>)> = sqlx::query_as(
             "SELECT state, decision FROM pmir_message WHERE message_id = $1 FOR UPDATE",

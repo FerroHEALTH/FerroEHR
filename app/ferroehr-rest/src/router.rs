@@ -53,14 +53,13 @@ use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 
 use crate::api::system;
 use crate::extensions::access::authn::{self, Authenticator, Principal};
-use crate::extensions::management::{self, ManagementState};
+use crate::extensions::management::{self, ManagementState, Observability};
 use crate::extensions::openapi;
 use crate::overview::problem::{self, FhirBase};
 use crate::overview::{error, status};
 use crate::smart;
 use crate::state::AppState;
 use ferroehr::config::management::AccessLevel;
-use ferrohealth_telemetry::request_log::RequestLog;
 
 /// Assembles the full application: [`routes`] inside the family stack, the
 /// management surface merged when it shares the main listener, and the
@@ -84,10 +83,7 @@ pub fn router(state: AppState, authenticator: Arc<Authenticator>) -> Router {
         product,
         health,
         &cfg.server,
-        stack_policy(
-            observability.request_log.clone(),
-            FhirBase::of(&cfg.api.rest_root()),
-        ),
+        stack_policy(&observability, FhirBase::of(&cfg.api.rest_root())),
     );
     normalized(app)
 }
@@ -324,14 +320,19 @@ pub(crate) async fn caller_key(
 ///
 /// A panic and each refusal the stack writes (`408`, `413`, `429`, `503`)
 /// answer as problem details, or as an `OperationOutcome` under the FHIR base
-/// ([`problem::stack_answer`]), and the request log is the one the
-/// observability bundle carries.
+/// ([`problem::stack_answer`]). The request log is the one the observability
+/// bundle carries, and the admission records its waits and refusals on the
+/// meter of its telemetry, beside the request log's metrics.
 #[must_use]
-pub fn stack_policy(request_log: RequestLog, fhir: FhirBase) -> StackPolicy {
+pub fn stack_policy(observability: &Observability, fhir: FhirBase) -> StackPolicy {
     StackPolicy {
         panic_body: panic_body(fhir.clone()),
         refusal_body: refusal_body(fhir),
-        request_log,
+        request_log: observability.request_log.clone(),
+        meter: observability
+            .telemetry
+            .as_ref()
+            .map(|telemetry| telemetry.meter(ferroehr::telemetry::metrics::SCOPE)),
     }
 }
 
@@ -475,7 +476,7 @@ pub fn management_router(state: &AppState, authenticator: Arc<Authenticator>) ->
         routes,
         health,
         &state.config().server,
-        stack_policy(observability.request_log.clone(), FhirBase::default()),
+        stack_policy(observability, FhirBase::default()),
     ))
 }
 
@@ -560,5 +561,80 @@ mod tests {
         let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(body["resourceType"], "OperationOutcome");
+    }
+
+    /// The REST stack records the admission's refusals on the telemetry's
+    /// meter, so `/metrics` shows them beside the request log's series.
+    #[tokio::test]
+    async fn the_stack_records_the_admission_on_the_telemetry_meter() {
+        use std::num::NonZeroUsize;
+        use std::sync::Arc;
+
+        use axum::Router;
+        use axum::routing::get;
+        use ferrohealth_health::lifecycle::Lifecycle;
+        use ferrohealth_health::registry::Registry;
+        use ferrohealth_server::health::Health;
+        use ferrohealth_server::section::ServerSection;
+        use ferrohealth_telemetry::section::TelemetrySection;
+        use ferrohealth_telemetry::telemetry::{Service, Telemetry};
+        use tower::ServiceExt as _;
+
+        use super::stack_policy;
+        use crate::extensions::management::Observability;
+
+        let telemetry = Arc::new(
+            Telemetry::new(
+                &TelemetrySection::default(),
+                Service::new(ferroehr::telemetry::SERVICE, "test"),
+            )
+            .expect("the telemetry builds"),
+        );
+        let observability = Observability {
+            telemetry: Some(Arc::clone(&telemetry)),
+            ..Observability::default()
+        };
+        let section = ServerSection {
+            max_concurrent_requests: NonZeroUsize::MIN,
+            max_waiting_requests: 0,
+            ..ServerSection::default()
+        };
+        let entered = Arc::new(tokio::sync::Notify::new());
+        let signal = Arc::clone(&entered);
+        let routes = Router::new().route(
+            "/hold",
+            get(move || {
+                let signal = Arc::clone(&signal);
+                async move {
+                    signal.notify_one();
+                    std::future::pending::<&'static str>().await
+                }
+            }),
+        );
+        let app = ferrohealth_server::stack::app(
+            routes,
+            Health::new(Registry::default(), Lifecycle::default()),
+            &section,
+            stack_policy(&observability, FhirBase::default()),
+        );
+        let get = |path: &str| {
+            http::Request::get(path)
+                .body(axum::body::Body::empty())
+                .unwrap()
+        };
+        let held = tokio::spawn(app.clone().oneshot(get("/hold")));
+        entered.notified().await;
+        let refused = app.oneshot(get("/hold")).await.unwrap();
+        assert_eq!(refused.status(), StatusCode::SERVICE_UNAVAILABLE);
+        held.abort();
+        let exposition = telemetry.render_prometheus().unwrap();
+        assert!(
+            exposition.lines().any(|line| {
+                line.starts_with("ferrohealth_server_admission_refusals_total{")
+                    && line.contains("ferrohealth_server_admission_reason=\"queue_full\"")
+                    && line.ends_with(" 1")
+            }),
+            "{exposition}"
+        );
     }
 }
