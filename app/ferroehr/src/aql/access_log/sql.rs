@@ -157,16 +157,13 @@ pub fn statement(
     match scope.ehrs {
         [] => {}
         [one] => {
-            select.and_where(Expr::cust_with_values(
-                "r.ehr_id = $1::uuid",
-                [one.to_string()],
-            ));
+            select.and_where(Expr::col((Alias::new(RECORD), Alias::new("ehr_id"))).eq(one.0));
         }
         many => {
-            select.and_where(Expr::cust_with_values(
-                "r.ehr_id = ANY ($1::uuid[])",
-                [many.iter().map(ToString::to_string).collect::<Vec<_>>()],
-            ));
+            select.and_where(
+                Expr::col((Alias::new(RECORD), Alias::new("ehr_id")))
+                    .is_in(many.iter().map(|ehr| ehr.0)),
+            );
         }
     }
     if let Some(filter) = &plan.filter {
@@ -352,10 +349,7 @@ impl Builder<'_> {
             && let ParamValue::Str(text) = value
             && let Some(id) = crate::access_log::stored_form::column_uuid(text)
         {
-            return Ok(Expr::cust_with_values(
-                "r.ehr_id = $1::uuid",
-                [id.to_string()],
-            ));
+            return Ok(Expr::col((Alias::new(RECORD), Alias::new("ehr_id"))).eq(id));
         }
         let mismatch = |expected| {
             feature(LogQueryError::TypeMismatch {

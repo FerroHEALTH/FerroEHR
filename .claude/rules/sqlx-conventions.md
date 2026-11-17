@@ -106,8 +106,8 @@ use it). **Not sea-orm.** Target PostgreSQL 18.6+.
 - `sqlx` has **no `jiff` feature** — use the official `jiff-sqlx` wrapper
   types (`jiff_sqlx::Timestamp`, `.to_jiff()`) on plain sqlx queries. On
   sea-query-built queries the binder's `with-jiff` is unimplemented upstream —
-  bind via SQL (`now()`) or a chrono value at the boundary; do not silently
-  switch the crate to `chrono`.
+  bind via SQL (`now()`). `chrono` is unmaintained (RUSTSEC-2026-0543), so
+  the `sqlx` `chrono` feature stays off and no chrono value is bound.
 - `rust_decimal` is the `BigDecimal` replacement for `DV_QUANTITY` and other
   fixed-point RM fields; use the `sqlx` `rust_decimal` feature, not `f64`.
 

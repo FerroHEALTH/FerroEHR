@@ -18,7 +18,6 @@
 
 use std::collections::BTreeMap;
 
-use jiff_sqlx::Timestamp;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::invariants::check_entry;
@@ -39,8 +38,6 @@ const LINK: &str = "link";
 /// render policy its projection is written under.
 #[derive(Debug, Clone)]
 pub struct IndexRow {
-    /// When the access happened.
-    pub recorded_at: jiff::Timestamp,
     /// The DICOM `EventActionCode`.
     pub action: &'static str,
     /// The DICOM `EventOutcomeIndicator`.
@@ -175,7 +172,6 @@ struct Columns<'e> {
     action_codes: Vec<Option<&'e str>>,
     result_terminologies: Vec<Option<&'e str>>,
     result_codes: Vec<Option<&'e str>>,
-    recorded_at: Vec<Option<Timestamp>>,
     actions: Vec<Option<&'static str>>,
     outcomes: Vec<Option<i16>>,
     principals: Vec<Option<&'e str>>,
@@ -209,8 +205,6 @@ impl<'e> Columns<'e> {
             .push(derived.result_terminology.as_deref());
         self.result_codes.push(derived.result_code.as_deref());
         let index = entry.index.as_ref();
-        self.recorded_at
-            .push(index.map(|index| Timestamp::from(index.recorded_at)));
         self.actions.push(index.map(|index| index.action));
         self.outcomes.push(index.map(|index| index.outcome));
         self.principals
@@ -251,7 +245,7 @@ pub struct IntakeToken {
 /// and the rows of a batch (`audit.access_log_intake_take`).
 const INTAKE: &str = "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6, $7, $8, $9, \
      $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, \
-     $28, $29, $30, $31, $32, $33)";
+     $28, $29, $30, $31, $32)";
 
 /// Write `entries` into the intake on `conn`, in their order, in one
 /// statement.
@@ -320,7 +314,6 @@ pub async fn take_in(
         .bind(c.action_codes)
         .bind(c.result_terminologies)
         .bind(c.result_codes)
-        .bind(c.recorded_at)
         .bind(c.actions)
         .bind(c.outcomes)
         .bind(c.principals)

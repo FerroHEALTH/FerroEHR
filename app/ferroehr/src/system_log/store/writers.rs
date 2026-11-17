@@ -110,17 +110,39 @@ impl Writers {
         Arc::clone(&self.current.read().unwrap_or_else(PoisonError::into_inner))
     }
 
+    /// The policies as they stand now: every step of one write resolves
+    /// each record through the same [`Pinned`], so the policy it registers
+    /// before it takes a connection is the one it writes under (#5906).
+    pub(super) fn pin(&self) -> Pinned {
+        Pinned {
+            current: self.current(),
+            by_map: self
+                .by_map
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .clone(),
+        }
+    }
+}
+
+/// The policies of a [`Writers`] at one moment, which a policy change after
+/// it leaves as they were.
+#[derive(Debug)]
+pub(super) struct Pinned {
+    /// The policy of the map in force.
+    current: Arc<WritePolicy>,
+    /// Every policy by the digest of its category map.
+    by_map: BTreeMap<String, Arc<WritePolicy>>,
+}
+
+impl Pinned {
     /// The policy `event` is written under: the one of the map it was
     /// classified through, else the one in force.
     pub(super) fn of(&self, event: &AuditEvent) -> Arc<WritePolicy> {
-        let known = event.category_map_digest.and_then(|digest| {
-            self.by_map
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .get(&digest.to_string())
-                .cloned()
-        });
-        known.unwrap_or_else(|| self.current())
+        event
+            .category_map_digest
+            .and_then(|digest| self.by_map.get(&digest.to_string()))
+            .map_or_else(|| Arc::clone(&self.current), Arc::clone)
     }
 
     /// The batch as runs of consecutive records written under one policy, as

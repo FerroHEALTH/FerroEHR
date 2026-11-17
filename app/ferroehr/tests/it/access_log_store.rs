@@ -842,3 +842,66 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
         .expect("the application role verifies the access log");
     assert_eq!(clean, 0);
 }
+
+/// A tombstone that would remove the last record's shared part waits for an
+/// intake write that names the part and has not committed, and then keeps
+/// the part: the intake row holds it with no foreign key (#5887).
+#[tokio::test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a test holds an intake write open on a raw pool connection, outside any request"
+)]
+async fn a_tombstone_waits_for_an_intake_write_naming_its_shared_part() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+    let written = append(&store, 1..=1).await;
+    let first = written.first().expect("the first entry").clone();
+
+    let mut conn = pool.acquire().await.expect("connection");
+    let mut tx = conn.begin().await.expect("begin");
+    let mut second = entry(2);
+    let intake =
+        ferroehr::access_log::intake::IntakeEntry::of(&mut second, None).expect("the intake form");
+    ferroehr::access_log::intake::take_in(&mut tx, &[intake], &[Vec::new()], None)
+        .await
+        .expect("the intake write");
+
+    let tombstoning = {
+        let store = store.clone();
+        tokio::spawn(async move {
+            store
+                .tombstone(first.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
+                .await
+        })
+    };
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    assert!(
+        !tombstoning.is_finished(),
+        "the tombstone waits for the intake write in flight"
+    );
+    tx.commit().await.expect("the intake write commits");
+    tombstoning
+        .await
+        .expect("the tombstone task")
+        .expect("the tombstone")
+        .expect("the entry");
+
+    let parts: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_shared")
+        .fetch_one(&pool)
+        .await
+        .expect("the shared parts");
+    assert_eq!(parts, 1, "the intake row still names the part");
+    store
+        .settle(ferroehr::access_log::chainer::Owed::default())
+        .await
+        .expect("the intake chains");
+    assert!(
+        matches!(
+            store.read(second.uid.value()).await.expect("read"),
+            Some(AccessLogRecord::AccessLogEntry(_))
+        ),
+        "the entry written beside the tombstone reads back with its shared part"
+    );
+    assert_eq!(findings(&pool).await, Vec::new());
+}

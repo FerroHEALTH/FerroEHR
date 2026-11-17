@@ -302,7 +302,7 @@ impl Checkpoints {
             return Ok(None);
         };
         let sequence: i64 = head.try_get("head_seq")?;
-        if let Some(sealed) = self.at(sequence).await? {
+        if let Some(sealed) = stored_at(&mut conn, sequence).await? {
             return Ok(Some(sealed));
         }
         let digest: String = head.try_get("head_digest")?;
@@ -310,7 +310,7 @@ impl Checkpoints {
             .begin(sequence, &digest)?
             .write(&mut conn)
             .await?;
-        self.at(sequence).await
+        stored_at(&mut conn, sequence).await
     }
 
     /// Mark the checkpoint at `sequence` published outside the database, so
@@ -335,13 +335,8 @@ impl Checkpoints {
     /// # Errors
     /// The store errors when the statement fails.
     pub async fn at(&self, sequence: i64) -> Result<Option<AccessLogCheckpoint>, AccessLogError> {
-        let row = sqlx::query(sqlx::AssertSqlSafe(format!(
-            "SELECT {CHECKPOINT_COLUMNS} FROM audit.access_log_checkpoint WHERE sequence = $1"
-        )))
-        .bind(sequence)
-        .fetch_optional(&mut *acquire(&self.pool).await?)
-        .await?;
-        row.as_ref().map(stored_checkpoint).transpose()
+        let mut conn = acquire(&self.pool).await?;
+        stored_at(&mut conn, sequence).await
     }
 
     /// The newest stored checkpoint, or with `covering` the oldest at or
@@ -435,4 +430,21 @@ pub(super) fn read(sequence: i64, text: &str) -> Result<AccessLogCheckpoint, Acc
         chain_seq: sequence,
         source,
     })
+}
+
+/// The stored checkpoint at `sequence`, read on `conn`.
+///
+/// # Errors
+/// The store errors when the statement fails.
+async fn stored_at(
+    conn: &mut PgConnection,
+    sequence: i64,
+) -> Result<Option<AccessLogCheckpoint>, AccessLogError> {
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "SELECT {CHECKPOINT_COLUMNS} FROM audit.access_log_checkpoint WHERE sequence = $1"
+    )))
+    .bind(sequence)
+    .fetch_optional(conn)
+    .await?;
+    row.as_ref().map(stored_checkpoint).transpose()
 }

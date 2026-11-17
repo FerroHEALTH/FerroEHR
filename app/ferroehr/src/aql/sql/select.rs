@@ -497,8 +497,11 @@ impl Builder<'_> {
             // §MIN, §MAX) — never a forced numeric magnitude.
             AggFunc::Min | AggFunc::Max => ValueMode::Value(order_coercion(target)),
             // SUM/AVG accept Integer/Real only (§SUM, §AVG); the
-            // analyzer rejects a non-numeric leaf, so the
-            // magnitude coercion is always type-safe here.
+            // analyzer rejects a non-numeric leaf, and a mixed-type leaf adds
+            // only numbers and amounts, refusing any other value it meets.
+            AggFunc::Sum | AggFunc::Avg if order_coercion(target) == Coercion::Raw => {
+                ValueMode::RawAmount
+            }
             AggFunc::Sum | AggFunc::Avg => ValueMode::Value(Coercion::Magnitude),
         };
         let count = matches!(func, AggFunc::Count);

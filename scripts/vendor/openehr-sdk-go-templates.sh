@@ -29,6 +29,8 @@ PINS=(
   "licenses/Apache-2.0.txt 016bb40020346551fc8ffa26ba37bc20d33fd102bceef62c54757624ed1d76e5"
   "testkit/corpus/THIRD_PARTY_LICENSES.md 9d751178c0d34d58b40338261418a19ef3902d33785d995b03bba6344968b881"
   "testkit/corpus/templates/blood_pressure_strict_existence.opt a346b96ee34aa423dc37c4459e87d14f59003715dc57efaff36b8b475296f0e7"
+  "testkit/corpus/templates/cluster-slot.ehrbase.org.v0.opt 40024665e6c8d9c50b8b5e59ddc261d2a030f07d86009458d3e7ad3948546b69"
+  "testkit/corpus/templates/clinical_content_validation.opt fc22488a22ca5ebe39a6727b2fb4e6879f547e882d42f9a2006a73f57f789b08"
 )
 
 pinned_require curl shasum
@@ -51,6 +53,10 @@ cat >"$work/tree/PROVENANCE.md" <<EOF
 - \`blood_pressure_strict_existence.opt\` is CODE24's (MIT): the blood
   pressure OBSERVATION of an Ocean Template Designer \`vital_signs\` export,
   with each existence as exported.
+- \`cluster-slot.ehrbase.org.v0.opt\` (from the openEHR_SDK validation tests)
+  and \`clinical_content_validation.opt\` (from the EHRbase integration tests,
+  with the one schema edit THIRD_PARTY_LICENSES.md records) are Apache-2.0,
+  Copyright Vitasystems GmbH and Hannover Medical School.
 - Layout: the upstream paths, unchanged
 - Fetched by: \`scripts/vendor/openehr-sdk-go-templates.sh\`; never hand-edit,
   re-run the script to update (.claude/rules/vendored-corpora.md)

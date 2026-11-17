@@ -43,6 +43,7 @@ pub mod navigate;
 pub mod path;
 pub(crate) mod rmpath;
 pub mod sim;
+mod stubbed;
 mod uid;
 pub mod validation;
 pub mod webtemplate;

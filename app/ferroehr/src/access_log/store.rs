@@ -137,7 +137,7 @@ pub fn canonical_form(record: &impl serde::Serialize) -> Result<String, AccessLo
 
 /// A record of this system's log as its canonical form without its link, a
 /// `jsonb` over the record `r` and its shared part `sh`: the one reader of a
-/// record (`migrations/audit/0045_access_log_entry_one_row.sql`).
+/// record (`migrations/audit/0046_access_log_entry_one_row.sql`).
 macro_rules! document {
     () => {
         "audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
