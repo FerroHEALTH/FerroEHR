@@ -15,7 +15,7 @@
 
 use sea_query::{
     Alias, Asterisk, Cond, Expr, ExprTrait, Order, PostgresQueryBuilder, Query, SelectStatement,
-    UnionType,
+    UnionType, WindowStatement,
 };
 use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
 
@@ -56,7 +56,8 @@ pub(super) fn build_search_statements(
         .saturating_add(1);
     let offset = u64::try_from(Ord::max(filter.offset, 0)).unwrap_or(0);
     let (count_sql, count_values) = total(&condition).build_sqlx(PostgresQueryBuilder);
-    let (sql, values) = page(&condition, count, offset).build_sqlx(PostgresQueryBuilder);
+    let served = u64::try_from(page_size(filter)).unwrap_or(50);
+    let (sql, values) = page(&condition, count, offset, served).build_sqlx(PostgresQueryBuilder);
     (count_sql, count_values, sql, values)
 }
 
@@ -92,17 +93,25 @@ fn count_of(count: SelectStatement) -> Expr {
     Expr::SubQuery(None, Box::new(count.into()))
 }
 
+/// The columns that order the records and name each one: the keys a page
+/// is taken by before any record is read whole.
+const KEYS: [&str; 4] = ["chain", "chain_seq", "recorded_at", "stored_at"];
+
 /// The page: the `count` records after the first `offset` of those
-/// `condition` selects, newest first.
+/// `condition` selects, newest first, the first `served` of them read whole
+/// and the rest by their keys alone.
 ///
 /// The order is total (a position is unique within its chain), so the page
 /// lies within the first `offset + count` records of each chain, and each
-/// chain reads only those.
-fn page(condition: &Cond, count: u64, offset: u64) -> SelectStatement {
+/// chain gives only the keys of those. The page is taken by the keys, and
+/// only then is each record it serves read through `audit_record`, where an
+/// access-log entry's document is rendered (#5965). A record past `served`,
+/// the one that says another page follows, keeps its keys and no record.
+fn page(condition: &Cond, count: u64, offset: u64, served: u64) -> SelectStatement {
     let first = offset.saturating_add(count);
     let mut system = Query::select();
     system
-        .columns(RECORD_COLUMNS.map(Alias::new))
+        .columns(KEYS.map(Alias::new))
         .from((Alias::new(AUDIT), Alias::new(RECORD)))
         .cond_where(on_chain(condition, "system"));
     within_chain(&mut system, None).limit(first);
@@ -111,22 +120,69 @@ fn page(condition: &Cond, count: u64, offset: u64) -> SelectStatement {
         .column(Asterisk)
         .from_subquery(system, Alias::new("system_page"))
         .union(UnionType::All, access_log_page(condition, first));
-    newest_first_of(
+    let page_keys = newest_first_of(
         Query::select()
-            .columns(RECORD_COLUMNS.map(Alias::new))
+            .columns(KEYS.map(Alias::new))
             .from_subquery(chains, Alias::new("chains")),
     )
     .limit(count)
     .offset(offset)
-    .to_owned()
+    .to_owned();
+    let mut in_order = WindowStatement::new();
+    for column in ["recorded_at", "stored_at", "chain", "chain_seq"] {
+        in_order.order_by(Alias::new(column), Order::Desc);
+    }
+    let keys = Query::select()
+        .columns(KEYS.map(Alias::new))
+        .expr_window_as(Expr::cust("row_number()"), in_order, Alias::new("position"))
+        .from_subquery(page_keys, Alias::new("page_keys"))
+        .to_owned();
+    let key = Alias::new("page_key");
+    let record = Alias::new("page_record");
+    // NOTE: our own design (#5965), `OFFSET 0` keeps the read lateral, so each served record
+    // is found by its chain and position rather than by a read of the whole store.
+    let by_key = Query::select()
+        .columns(record_columns().map(Alias::new))
+        .from((Alias::new(AUDIT), Alias::new(RECORD)))
+        .and_where(Expr::col(Alias::new("chain")).eq(Expr::col((key.clone(), Alias::new("chain")))))
+        .and_where(
+            Expr::col(Alias::new("chain_seq"))
+                .eq(Expr::col((key.clone(), Alias::new("chain_seq")))),
+        )
+        .and_where(Expr::col((key.clone(), Alias::new("position"))).lte(served))
+        .offset(0)
+        .to_owned();
+    let mut page = Query::select();
+    page.columns(KEYS.map(|column| (key.clone(), Alias::new(column))))
+        .columns(record_columns().map(|column| (record.clone(), Alias::new(column))))
+        .from_subquery(keys, key.clone())
+        .join_lateral(
+            sea_query::JoinType::LeftJoin,
+            by_key,
+            record,
+            Expr::val(true),
+        );
+    for column in ["recorded_at", "stored_at", "chain", "chain_seq"] {
+        page.order_by((key.clone(), Alias::new(column)), Order::Desc);
+    }
+    page
 }
 
-/// The first `first` access-log records `condition` selects, newest first.
+/// The columns of a record past its keys.
+fn record_columns() -> impl Iterator<Item = &'static str> {
+    RECORD_COLUMNS
+        .into_iter()
+        .filter(|column| !KEYS.contains(column))
+}
+
+/// The keys of the first `first` access-log records `condition` selects,
+/// newest first.
 ///
 /// The candidates are read from `access_log_search` through the entries'
 /// time index: its first `first` rows by `recorded_at`, and every row tied
 /// with the last of them, since the order's next key, `stored_at`, is not in
-/// the view. Each candidate's record is read from the view by its position.
+/// the view. Each candidate's keys are read from the view by its position,
+/// which renders no document.
 fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
     let search = || (Alias::new(AUDIT), Alias::new(ACCESS_LOG_SEARCH));
     let newest = |limit: u64, offset: u64| {
@@ -154,9 +210,9 @@ fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
     let candidate = Alias::new("access_log_candidate");
     let record = Alias::new("access_log_page");
     // NOTE: our own design (#5646), `OFFSET 0` keeps the read lateral, so each candidate's
-    // record is found by its position rather than by a read of the whole log.
+    // keys are found by its position rather than by a read of the whole log.
     let by_position = Query::select()
-        .columns(RECORD_COLUMNS.map(Alias::new))
+        .columns(KEYS.map(Alias::new))
         .from((Alias::new(AUDIT), Alias::new(RECORD)))
         .and_where(Expr::col(Alias::new("chain")).eq("access_log"))
         .and_where(
@@ -166,7 +222,7 @@ fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
         .offset(0)
         .to_owned();
     let mut page = Query::select();
-    page.columns(RECORD_COLUMNS.map(|column| (record.clone(), Alias::new(column))))
+    page.columns(KEYS.map(|column| (record.clone(), Alias::new(column))))
         .from_subquery(candidates, candidate)
         .join_lateral(
             sea_query::JoinType::InnerJoin,
