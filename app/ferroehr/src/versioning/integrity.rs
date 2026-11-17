@@ -167,6 +167,7 @@ pub(crate) fn sign_imported_version(
 /// [`ServiceError::Signing`] when the canonical form cannot be produced or the
 /// `OpenPGP` signer fails.
 fn sign_canonical(ctx: &SigningCtx<'_>, value: &Value) -> Result<Option<String>, ServiceError> {
+    crate::telemetry::conversion::record("value_to_jcs");
     let canonical =
         openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json(value)
             .map_err(ServiceError::SigningCanonical)?;

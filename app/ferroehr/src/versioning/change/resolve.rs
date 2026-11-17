@@ -134,6 +134,7 @@ struct Prepared {
 /// that writes `version.body`, so equal bodies digest equal.
 pub(crate) fn content_digest(canonical: &Value) -> Result<[u8; 32], ServiceError> {
     use sha2::Digest as _;
+    crate::telemetry::conversion::record("value_to_text");
     let text = serde_json::to_string(&WithoutUid(canonical))
         .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
     Ok(sha2::Sha256::digest(text.as_bytes()).into())

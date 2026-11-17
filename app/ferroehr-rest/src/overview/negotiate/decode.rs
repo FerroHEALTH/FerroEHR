@@ -62,6 +62,7 @@ pub(crate) fn typed_json<T: DeserializeOwned>(
     what: &str,
 ) -> Result<T, ApiError> {
     require_json(headers)?;
+    ferroehr::telemetry::conversion::record("text_to_dto");
     let mut de = serde_json::Deserializer::from_slice(body);
     serde_path_to_error::deserialize::<_, T>(&mut de).map_err(|e| {
         let path = e.path().to_string();
@@ -218,6 +219,7 @@ pub(crate) fn require_text_plain(headers: &HeaderMap) -> Result<(), ApiError> {
 }
 
 fn parse_json(body: &Bytes) -> Result<serde_json::Value, ApiError> {
+    ferroehr::telemetry::conversion::record("text_to_value");
     let value: serde_json::Value = serde_json::from_slice(body)
         .map_err(|e| ApiError::BadRequest(format!("invalid JSON body: {e}")))?;
     // The strict reader at the door: a wire key the RM class does not declare

@@ -933,6 +933,7 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
 /// [`ServiceError`] when the value cannot serialize (a non-finite number —
 /// unreachable for a codec-produced canonical value, refused loudly anyway).
 pub(crate) fn canonical_body_text(canonical: &Value) -> Result<String, ServiceError> {
+    crate::telemetry::conversion::record("value_to_text");
     serde_json::to_string(canonical)
         .map_err(|e| ServiceError::internal("serialize the canonical body", e))
 }
