@@ -21,6 +21,7 @@
 //! governs the copy: our own design.
 
 use std::collections::BTreeMap;
+use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -29,24 +30,21 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
+use crate::memory::{self, CACHE_ENTRY, Held, MAP_ENTRY, Weigh};
 use crate::party_binding::grants::caller::store::{self, FactRow};
 use crate::party_binding::grants::caller::{CareTeam, FactKind, FactValue};
 use crate::policy_register::listen::{Dropping, Subscriber};
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 
-/// The most subjects whose care relationships one replica holds.
+/// The most subjects whose care relationships one replica holds, and the
+/// most record subjects whose `PERSON` it holds.
 pub const SUBJECTS: u64 = 4096;
 
 /// The most bytes the held care teams' censuses take together, by
 /// `Census::bytes`: about 270 000 patients that each declare one record
 /// subject (#5760).
 pub const CENSUS_BYTES: u64 = 64 * 1024 * 1024;
-
-/// What a `BTreeMap` spends on each entry beyond its key and value: a leaf
-/// node of the standard library holds up to eleven entries beside its
-/// parent link and lengths, so an entry carries a share of that header.
-const MAP_ENTRY: usize = 8;
 
 /// One patient under a team's care, with the relationship's dates.
 pub type Cared = (Uuid, CareTeam);
@@ -66,28 +64,32 @@ impl Census {
     /// each declared entry with its subjects and their text. An estimate of
     /// our own design that leaves out the allocator's rounding (#5760).
     pub(crate) fn bytes(&self) -> u64 {
+        let parts = self.parts();
+        memory::gauge(
+            parts
+                .header
+                .saturating_add(parts.cared)
+                .saturating_add(parts.declared),
+        )
+    }
+
+    /// The census's bytes by part.
+    fn parts(&self) -> Parts {
         let cared = self.cared.capacity().saturating_mul(size_of::<Cared>());
         let declared = self
             .declared
-            .values()
-            .map(|subjects| {
-                let text: usize = subjects
-                    .iter()
-                    .map(|subject| subject.namespace.capacity() + subject.id.capacity())
-                    .sum();
+            .iter()
+            .map(|(person, subjects)| {
                 MAP_ENTRY
-                    + size_of::<Uuid>()
-                    + size_of::<Vec<EhrSubject>>()
-                    + subjects.capacity() * size_of::<EhrSubject>()
-                    + text
+                    .saturating_add(memory::bytes(person))
+                    .saturating_add(memory::bytes(subjects))
             })
             .fold(0_usize, usize::saturating_add);
-        u64::try_from(
-            size_of::<Self>()
-                .saturating_add(cared)
-                .saturating_add(declared),
-        )
-        .unwrap_or(u64::MAX)
+        Parts {
+            header: size_of::<Self>(),
+            cared,
+            declared,
+        }
     }
 
     /// How many record subjects the census's patients declare.
@@ -96,19 +98,39 @@ impl Census {
     }
 }
 
-/// What the care copy holds, for the copies' gauges (#5760).
+/// The bytes of one census by part: the census itself, its patients, and
+/// the record subjects they declare.
+#[derive(Debug, Clone, Copy)]
+struct Parts {
+    header: usize,
+    cared: usize,
+    declared: usize,
+}
+
+impl Weigh for CareTeam {
+    fn heap(&self) -> usize {
+        0
+    }
+}
+
+/// What the care copy holds, for the copies' gauges (#5760, #5926).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CareHeld {
-    /// The subjects whose care relationships are held.
-    pub subjects: u64,
-    /// The care teams whose censuses are held.
-    pub teams: u64,
-    /// The patients those censuses hold together.
-    pub patients: u64,
-    /// The record subjects those patients declare.
-    pub declared: u64,
-    /// The bytes those censuses take, by `Census::bytes`.
-    pub bytes: u64,
+    /// The subjects whose care relationships are held, and their bytes.
+    pub subjects: Held,
+    /// The record subjects whose `PERSON` is held, and their bytes.
+    pub persons: Held,
+    /// The care teams whose censuses are held; their bytes are the
+    /// censuses' own beside their patients and declared subjects, with
+    /// the cache's bookkeeping.
+    pub teams: Held,
+    /// The patients those censuses hold together, and their bytes.
+    pub patients: Held,
+    /// The record subjects those patients declare, and their bytes.
+    pub declared: Held,
+    /// The bytes the censuses take by `Census::bytes`, which
+    /// [`CENSUS_BYTES`] bounds.
+    pub census_bytes: u64,
 }
 
 /// The care relationships one replica holds.
@@ -119,6 +141,8 @@ pub(crate) struct CareCopy {
     /// The `PERSON` each record subject names; `None` for one no `PERSON`
     /// declares.
     persons: Cache<EhrSubject, Option<Uuid>>,
+    /// The most bytes the held censuses take together.
+    census_bytes: u64,
     /// Moved by every drop, so a read that started before one keeps nothing.
     drops: AtomicU64,
 }
@@ -126,43 +150,93 @@ pub(crate) struct CareCopy {
 impl CareCopy {
     /// An empty copy.
     pub(crate) fn new() -> Self {
-        Self::bounded(CENSUS_BYTES)
+        Self::bounded(SUBJECTS, CENSUS_BYTES)
     }
 
-    /// An empty copy whose censuses take at most `census_bytes` together.
-    fn bounded(census_bytes: u64) -> Self {
+    /// An empty copy of at most `subjects` subjects and as many record
+    /// subjects, whose censuses take at most `census_bytes` together.
+    fn bounded(subjects: u64, census_bytes: u64) -> Self {
         Self {
-            subjects: Cache::builder().max_capacity(SUBJECTS).build(),
+            subjects: Cache::builder().max_capacity(subjects).build(),
             teams: Cache::builder()
                 .weigher(|_, census: &Arc<Census>| {
                     u32::try_from(census.bytes()).unwrap_or(u32::MAX).max(1)
                 })
                 .max_capacity(census_bytes)
                 .build(),
-            persons: Cache::builder().max_capacity(SUBJECTS).build(),
+            persons: Cache::builder().max_capacity(subjects).build(),
+            census_bytes,
             drops: AtomicU64::new(0),
         }
     }
 
-    /// What the copy holds: its subjects and teams, the patients and
-    /// declared subjects of those teams, and their bytes.
+    /// What the copy holds: its subjects, persons and teams, the patients
+    /// and declared subjects of those teams, and their bytes.
     pub(crate) fn held(&self) -> CareHeld {
-        let (patients, declared) =
-            self.teams
-                .iter()
-                .fold((0_usize, 0_usize), |(patients, declared), (_, census)| {
-                    (
-                        patients.saturating_add(census.cared.len()),
-                        declared.saturating_add(census.declared_subjects()),
-                    )
-                });
-        CareHeld {
-            subjects: self.subjects.entry_count(),
-            teams: self.teams.entry_count(),
-            patients: u64::try_from(patients).unwrap_or(u64::MAX),
-            declared: u64::try_from(declared).unwrap_or(u64::MAX),
-            bytes: self.teams.weighted_size(),
+        let mut teams = Parts {
+            header: 0,
+            cared: 0,
+            declared: 0,
+        };
+        let (mut patients, mut declared) = (0_usize, 0_usize);
+        for (team, census) in &self.teams {
+            let parts = census.parts();
+            teams.header = teams
+                .header
+                .saturating_add(memory::bytes(team.as_ref()))
+                .saturating_add(size_of::<Arc<Census>>())
+                .saturating_add(CACHE_ENTRY)
+                .saturating_add(parts.header);
+            teams.cared = teams.cared.saturating_add(parts.cared);
+            teams.declared = teams.declared.saturating_add(parts.declared);
+            patients = patients.saturating_add(census.cared.len());
+            declared = declared.saturating_add(census.declared_subjects());
         }
+        CareHeld {
+            subjects: memory::held(&self.subjects),
+            persons: memory::held(&self.persons),
+            teams: Held {
+                entries: self.teams.entry_count(),
+                bytes: memory::gauge(teams.header),
+            },
+            patients: Held {
+                entries: memory::gauge(patients),
+                bytes: memory::gauge(teams.cared),
+            },
+            declared: Held {
+                entries: memory::gauge(declared),
+                bytes: memory::gauge(teams.declared),
+            },
+            census_bytes: self.teams.weighted_size(),
+        }
+    }
+
+    /// The value `cache` holds for `key`, or `read` it and hold it when it
+    /// `fits`, unless a drop overtook the read. An evicted entry is read
+    /// again, so the cap never changes what a caller is answered (#5926).
+    async fn hold<K, V, E>(
+        &self,
+        cache: &Cache<K, V>,
+        key: K,
+        read: impl Future<Output = Result<V, E>>,
+        fits: impl FnOnce(&V) -> bool,
+    ) -> Result<V, E>
+    where
+        K: Hash + Eq + Clone + Send + Sync + 'static,
+        V: Clone + Send + Sync + 'static,
+    {
+        if let Some(held) = cache.get(&key).await {
+            return Ok(held);
+        }
+        let seen = self.drops.load(Ordering::Acquire);
+        let value = read.await?;
+        if fits(&value) {
+            cache.insert(key.clone(), value.clone()).await;
+            if self.drops.load(Ordering::Acquire) != seen {
+                cache.invalidate(&key).await;
+            }
+        }
+        Ok(value)
     }
 
     /// The care relationships of `subject`, from the copy or read on `pool`.
@@ -174,18 +248,12 @@ impl CareCopy {
         pool: &PgPool,
         subject: Uuid,
     ) -> Result<Arc<[CareTeam]>, StorageError> {
-        if let Some(held) = self.subjects.get(&subject).await {
-            return Ok(held);
-        }
-        let seen = self.drops.load(Ordering::Acquire);
-        let mut conn = acquire(pool).await?;
-        let rows = store::care_of_subject(&mut conn, subject).await?;
-        let teams: Arc<[CareTeam]> = care_teams(&rows).into();
-        self.subjects.insert(subject, Arc::clone(&teams)).await;
-        if self.drops.load(Ordering::Acquire) != seen {
-            self.subjects.invalidate(&subject).await;
-        }
-        Ok(teams)
+        let read = async {
+            let mut conn = acquire(pool).await?;
+            let rows = store::care_of_subject(&mut conn, subject).await?;
+            Ok(care_teams(&rows).into())
+        };
+        self.hold(&self.subjects, subject, read, |_| true).await
     }
 
     /// The `PERSON` that declares the record subject `subject`, from the copy
@@ -198,21 +266,17 @@ impl CareCopy {
         pool: &PgPool,
         subject: &EhrSubject,
     ) -> Result<Option<Uuid>, StorageError> {
-        if let Some(held) = self.persons.get(subject).await {
-            return Ok(held);
-        }
-        let seen = self.drops.load(Ordering::Acquire);
-        let mut conn = acquire(pool).await?;
-        let person = super::caller::subject::declaring(&mut conn, subject).await?;
-        self.persons.insert(subject.clone(), person).await;
-        if self.drops.load(Ordering::Acquire) != seen {
-            self.persons.invalidate(subject).await;
-        }
-        Ok(person)
+        let read = async {
+            let mut conn = acquire(pool).await?;
+            super::caller::subject::declaring(&mut conn, subject).await
+        };
+        self.hold(&self.persons, subject.clone(), read, |_| true)
+            .await
     }
 
     /// The patients under the care of `team`, sorted by subject, with the
-    /// record subjects they declare, from the copy or read on `pool`.
+    /// record subjects they declare, from the copy or read on `pool`. A
+    /// census larger than the bound is read on every use and never held.
     ///
     /// # Errors
     /// [`StorageError`] when the read fails.
@@ -221,38 +285,11 @@ impl CareCopy {
         pool: &PgPool,
         team: Uuid,
     ) -> Result<Arc<Census>, StorageError> {
-        if let Some(held) = self.teams.get(&team).await {
-            return Ok(held);
-        }
-        let seen = self.drops.load(Ordering::Acquire);
-        let mut conn = acquire(pool).await?;
-        let mut census: Vec<Cared> = store::care_of_team(&mut conn, team)
-            .await?
-            .into_iter()
-            .flat_map(|(subject, rows)| {
-                care_teams(&rows)
-                    .into_iter()
-                    .filter(|care| care.team() == team)
-                    .map(move |care| (subject, care))
-            })
-            .collect();
-        census.sort();
-        let persons: Vec<Uuid> = census.iter().map(|(subject, _)| *subject).collect();
-        let mut declared: BTreeMap<Uuid, Vec<EhrSubject>> = BTreeMap::new();
-        for (person, subject) in super::caller::subject::declared_by(&mut conn, &persons).await? {
-            declared.entry(person).or_default().push(subject);
-        }
-        let census = Arc::new(Census {
-            cared: census,
-            declared,
-        });
-        if census.bytes() <= CENSUS_BYTES {
-            self.teams.insert(team, Arc::clone(&census)).await;
-            if self.drops.load(Ordering::Acquire) != seen {
-                self.teams.invalidate(&team).await;
-            }
-        }
-        Ok(census)
+        let bound = self.census_bytes;
+        self.hold(&self.teams, team, read_census(pool, team), |census| {
+            census.bytes() <= bound
+        })
+        .await
     }
 
     /// Drop each of `subjects` (sorted), every team that holds one of them,
@@ -319,6 +356,31 @@ impl Subscriber for CareCopy {
         self.drop_all();
         Box::pin(std::future::ready(()))
     }
+}
+
+/// The census of `team` as the store holds it.
+async fn read_census(pool: &PgPool, team: Uuid) -> Result<Arc<Census>, StorageError> {
+    let mut conn = acquire(pool).await?;
+    let mut census: Vec<Cared> = store::care_of_team(&mut conn, team)
+        .await?
+        .into_iter()
+        .flat_map(|(subject, rows)| {
+            care_teams(&rows)
+                .into_iter()
+                .filter(|care| care.team() == team)
+                .map(move |care| (subject, care))
+        })
+        .collect();
+    census.sort();
+    let persons: Vec<Uuid> = census.iter().map(|(subject, _)| *subject).collect();
+    let mut declared: BTreeMap<Uuid, Vec<EhrSubject>> = BTreeMap::new();
+    for (person, subject) in super::caller::subject::declared_by(&mut conn, &persons).await? {
+        declared.entry(person).or_default().push(subject);
+    }
+    Ok(Arc::new(Census {
+        cared: census,
+        declared,
+    }))
 }
 
 /// The care relationships `rows` hold: each `under_care_of` relationship of a

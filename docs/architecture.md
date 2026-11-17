@@ -1992,6 +1992,28 @@ refused as unknown keys.
   its digest names, so a record emitted under one map and written after a
   change still renders with the categories it was classified into.
 
+### The memory budget (`ferroehr::memory`) — our own design
+
+Every in-memory copy and cache of a replica has a cap in entries or in bytes,
+and reports what it holds as a gauge: the access copies as
+`access_copy_entries` and `access_copy_size` by `copy`, the caches as
+`cache_entries` and `cache_size` by `cache` (#5926). The bytes are estimates:
+`memory::Weigh` weighs a key and its value inline and on the heap, a `moka`
+entry adds `memory::CACHE_ENTRY` (256 bytes, measured with moka 0.12.16 at 220
+to 250), a generated settings object weighs its JSON text, and an AQL plan
+its `Debug` rendering. The gauges walk each cache at collection time, so the
+request path pays nothing for them. The copies follow the exact-reads rule of
+#5891: a copy only speeds a request up, so an entry the cap evicts is read or
+built again with the store's answer, and a test per cap fills it past its
+limit and shows the answer unchanged. The audit sender renders each act's
+records from the subjects that act read, never from its memo a second time,
+so an eviction between the two never leaves a record without its subject.
+Two copies have no cap of their own: the grants copy and the caller facts
+copy hold the whole grant register and the facts of every caller party,
+since a row left out would decide a request without it. The book's
+configuration page carries the budget table with each cap, the bytes it
+allows and the sum per instance.
+
 ### The controller's access policy (`ferroehr::access_policy`) — our own design
 
 `ACCESS_POLICY` is a class of FerroEHR's draft access control package

@@ -229,6 +229,27 @@ pub struct ArchetypeLineage {
     releases: BTreeMap<ArchetypeKey, BTreeSet<Release>>,
 }
 
+impl crate::memory::Weigh for ArchetypeKey {
+    fn heap(&self) -> usize {
+        self.namespace
+            .heap()
+            .saturating_add(self.entity.heap())
+            .saturating_add(self.concept.heap())
+    }
+}
+
+impl crate::memory::Weigh for ReferenceForm {
+    fn heap(&self) -> usize {
+        0
+    }
+}
+
+impl crate::memory::Weigh for ArchetypeLineage {
+    fn heap(&self) -> usize {
+        self.children.heap().saturating_add(self.releases.heap())
+    }
+}
+
 impl ArchetypeLineage {
     /// Builds the index from `(artefact HRID, declared parent HRID)` pairs, one
     /// pair per stored artefact that carries a `specialize` clause.

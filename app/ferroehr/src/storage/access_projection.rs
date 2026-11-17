@@ -180,6 +180,12 @@ pub struct EhrSubject {
     pub id: String,
 }
 
+impl crate::memory::Weigh for EhrSubject {
+    fn heap(&self) -> usize {
+        self.namespace.capacity().saturating_add(self.id.capacity())
+    }
+}
+
 impl EhrSubject {
     /// The reference to `id` under `namespace`.
     #[must_use]

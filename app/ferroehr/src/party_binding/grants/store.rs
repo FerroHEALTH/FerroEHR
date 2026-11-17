@@ -379,6 +379,15 @@ pub(crate) struct CapabilityRow {
     pub(crate) credentials: Option<std::sync::Arc<Value>>,
 }
 
+impl crate::memory::Weigh for CapabilityRow {
+    fn heap(&self) -> usize {
+        self.operation
+            .heap()
+            .saturating_add(self.term.lifecycle_state.heap())
+            .saturating_add(self.credentials.heap())
+    }
+}
+
 /// When a stored grant or caller fact holds: the lifecycle state of the head
 /// that holds it, its dates as `[lower, upper)` bounds and its instants.
 #[derive(Debug, Clone, PartialEq, Eq)]

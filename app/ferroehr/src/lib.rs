@@ -32,6 +32,8 @@
 //!   bodies before they are stored, and expanded for an authorised reader.
 //! - [`db`] — pool, settings, migrators.
 //! - [`telemetry`] — observability infrastructure.
+//! - [`memory`] — the bytes the in-memory copies and caches hold, for the
+//!   memory budget of an instance.
 //! - [`extensions`] — quarantined enterprise extensions (eventing,
 //!   multimedia offload), each off by default behind its own config gate.
 //! - [`manufacturer`] — the manufacturer every surface names, and [`report`]
@@ -68,6 +70,7 @@ pub mod ids;
 pub mod instance;
 pub mod licence;
 pub mod manufacturer;
+pub mod memory;
 pub mod origins;
 pub mod outbound;
 pub mod party_binding;
