@@ -58,7 +58,7 @@ cat >"$work/tree/PROVENANCE.md" <<EOF
   material, but that such attribution does not indicate an endorsement by the
   OIDF." The copy is distributed here to implement the specification, and
   this file is the attribution: the material is the OpenID Foundation's.
-  FerroAUTH's record of the same edition states the same notice.
+  FerroSMART's record of the same edition states the same notice.
   \`LICENSES/LicenseRef-OpenID-Foundation-Specification.txt\` holds the
   same record for REUSE.
 - Fetched by: \`scripts/vendor/openid-connect-core.sh\`; never hand-edit,

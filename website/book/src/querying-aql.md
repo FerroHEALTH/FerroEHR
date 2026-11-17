@@ -159,6 +159,13 @@ ORDER BY systolic DESC
 - **A `uid/value` predicate on a `COMPOSITION`** (`c[uid/value=$uid]`) selects
   the version it names, as `WHERE c/uid/value = $uid` does. Under `OR` or
   `NOT CONTAINS` the predicate is refused with a 400.
+- **A comparison in a predicate answers as the same comparison in `WHERE`**:
+  `CONTAINS ELEMENT el[value/magnitude > 100]` compares numbers, a date/time
+  compares instants and a whole data value compares with a value of its own
+  kind, by the rules above. A predicate on a step below a node
+  (`.../value[value > '2020']/...`) compares a string, a number or a Boolean
+  leaf; any other leaf there is refused with a 400 that asks you to move the
+  comparison to `WHERE`.
 - **Date/time comparisons accept reduced precision** on both sides: openEHR
   admits partial values (`2019`, `1985-06`), and the engine compares them by
   flooring to the first instant they contain (a partial date assumes the first

@@ -247,7 +247,7 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # `aud` and `typ` from the grant's security profile (no `assertion_audience`).
 # Verified on crates.io 2026-11-16.
 ferrohealth-smart = { version = "=0.28.0", default-features = false, features = ["fetch", "idp-entra"] }
-# The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
+# The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party; 0.13 types the provider issuer and the
