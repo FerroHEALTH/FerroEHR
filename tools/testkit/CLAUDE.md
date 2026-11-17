@@ -12,10 +12,12 @@ own container or running its own migrations.
   with `docker rm -f ferroehr-testkit-pg18`). The container runs the
   non-durable settings the PostgreSQL docs describe for throwaway data
   (`fsync=off` etc.) — never copy those flags anywhere near production
-  config — and an **explicit `/dev/shm` size** (`with_shm_size`, 1 GiB;
+  config — with `pg_stat_statements` loaded at `track = all` for the
+  statement budget test of `ferroehr-rest` (#5885; CI's server gets the same
+  from `scripts/lib/test-postgres.sh`), and an **explicit `/dev/shm` size** (`with_shm_size`, 1 GiB;
   the image default is 64 MB, see the failure mode below). The shm size is
   applied at container CREATION: a container that already exists is adopted
-  as-is, so changing the value needs
+  as-is, so changing the value or the settings needs
   `docker rm -f ferroehr-testkit-pg18`.
 - **Clone lifetime:** `TestDb::drop` drops the clone and JOINS the thread
   that does it, so a passing test and a panicking one both leave nothing (a

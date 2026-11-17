@@ -10,6 +10,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use ferroehr::access_log::chainer::Seal;
 use ferroehr::db::domain::DomainPools;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
@@ -229,7 +230,7 @@ async fn a_confirmed_write_is_released_by_the_chainer_round() {
         }
         sender
             .store()
-            .chain_round(512, Chains::default())
+            .chain_round(512, Chains::default(), Seal::Now)
             .await
             .expect("a chainer round");
         tokio::time::sleep(Duration::from_millis(10)).await;

@@ -286,7 +286,7 @@ impl AccessPathMetrics {
             ),
             log_sign_duration: make.histogram(
                 ACCESS_LOG_SIGN_DURATION,
-                "Access-log checkpoint signing latency per append (outcome = ok | failed)",
+                "Access-log checkpoint signing latency per checkpoint (outcome = ok | failed)",
                 PATH_BUCKETS,
             ),
             seal_duration: make.histogram(

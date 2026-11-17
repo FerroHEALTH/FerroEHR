@@ -1241,16 +1241,19 @@ points, which sign with their own certificate.
   verifying what an earlier key signed. With that key the log is sealed; a
   deployment without it seals nothing, and `ferroehr access-log checkpoint`
   answers that the keyring holds no key.
-- **One checkpoint per append.** Every append of the audit writer ends, in
-  its own transaction, with the checkpoint of the last link it wrote, so an
-  entry is covered by a signature from the moment it commits, whichever
-  replica wrote it. A change, removal, insertion or reordering of a record
-  below a checkpoint breaks the chain under that checkpoint's signature. The
-  links carry no signature of their own. A population query that reaches
-  twenty EHRs writes twenty entries and one signature. The checkpoint is
-  signed while the rest of the append's transaction is written, so the head
-  of the chain is held for one signature at most. There is no switch and no
-  interval to set. `ferroehr access-log checkpoint` and
+- **A checkpoint a second, and one at rest.** While requests keep writing,
+  the chainer seals the last link of a round once the last checkpoint is a
+  second old, and when it comes to rest it seals the head of the chain, so
+  every chained entry is covered by a signature within a second under load
+  and at once when the load stops. A write that settles its own entries
+  (an import, an erasure) seals them in the same transaction. A change,
+  removal, insertion or reordering of a record below a checkpoint breaks the
+  chain under that checkpoint's signature. The links carry no signature of
+  their own. Within the second before a checkpoint, someone who can write
+  the database but holds no key could change the newest entries unseen; a
+  checkpoint per round closed that second at the cost of one signature and
+  its wait in every round, about 20 a second at 3000 requests a second.
+  There is no switch and no interval to set. `ferroehr access-log checkpoint` and
   `POST /admin/access-log/checkpoint` answer the checkpoint of the head, and
   seal one only for a head appended while the keyring held no key.
 - **Use an Ed25519 key.** An RSA signature is far slower than an Ed25519

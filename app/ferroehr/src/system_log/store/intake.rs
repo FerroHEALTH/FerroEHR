@@ -18,7 +18,7 @@ use sqlx::PgConnection;
 use uuid::Uuid;
 
 use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd};
-use crate::access_log::chainer::Round;
+use crate::access_log::chainer::{Round, Seal};
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
@@ -201,7 +201,7 @@ impl AuditStore {
 
     /// The access-log store the chainer links entries through: the one the
     /// server installed, which seals, or an unsealing one.
-    pub(super) fn chaining_store(&self) -> AccessLogStore {
+    pub(crate) fn chaining_store(&self) -> AccessLogStore {
         self.access_log().map_or_else(
             || AccessLogStore::new(self.pool.clone()),
             |installed| installed.with_pool(self.pool.clone()),
@@ -216,7 +216,12 @@ impl AuditStore {
     /// [`AuditError::AccessLog`] when the access log's round fails, and
     /// [`AuditError::Store`] when the system chain's move fails; the chains
     /// the round did not finish are looked at again in the next.
-    pub async fn chain_round(&self, limit: u32, look: Chains) -> Result<ChainRound, AuditError> {
+    pub async fn chain_round(
+        &self,
+        limit: u32,
+        look: Chains,
+        seal: Seal,
+    ) -> Result<ChainRound, AuditError> {
         let written = self.pending.take();
         let released = self.releases.take();
         let releasing = !released.is_empty();
@@ -224,7 +229,7 @@ impl AuditStore {
             access_log: look.access_log || written.access_log || releasing,
             system: look.system || written.system || releasing,
         };
-        let round = self.round(limit, look, &released).await;
+        let round = self.round(limit, look, seal, &released).await;
         // NOTE: our own design (#5762), a round that did not take the head released nothing.
         if releasing && !matches!(&round, Ok(round) if round.access_log != Round::Busy) {
             self.releases.restore(released);
@@ -259,11 +264,12 @@ impl AuditStore {
         &self,
         limit: u32,
         look: Chains,
+        seal: Seal,
         release: &[Uuid],
     ) -> Result<ChainRound, AuditError> {
         let access_log = if look.access_log {
             self.chaining_store()
-                .chain_round(limit, self.owed, release)
+                .chain_round(limit, self.owed, seal, release)
                 .await?
         } else {
             Round::Chained {

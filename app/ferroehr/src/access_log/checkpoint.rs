@@ -265,7 +265,7 @@ impl Checkpoints {
         )
     }
 
-    /// The access-log store over the same pool, sealing each append whenever
+    /// The access-log store over the same pool, sealing the chain whenever
     /// the keyring holds a key.
     #[must_use]
     pub fn store(&self) -> &AccessLogStore {

@@ -31,6 +31,16 @@ pub struct Owed {
     pub syslog: bool,
 }
 
+/// Whether a round seals the last link it writes in a signed checkpoint.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Seal {
+    /// The round ends with the checkpoint of its last link.
+    Now,
+    /// The round leaves its links to a later checkpoint
+    /// ([`AccessLogStore::seal_head`] or a later round's).
+    Later,
+}
+
 /// What one round of the chainer did.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Round {
@@ -58,6 +68,7 @@ impl AccessLogStore {
         &self,
         limit: u32,
         owed: Owed,
+        seal: Seal,
         release: &[Uuid],
     ) -> Result<Round, AccessLogError> {
         let mut conn = acquire(self.pool()).await?;
@@ -114,7 +125,10 @@ impl AccessLogStore {
             previous_digests.push(std::mem::replace(&mut previous, digest.clone()));
             digests.push(digest);
         }
-        let seal = self.begin_seal(sequence, &previous)?;
+        let seal = match seal {
+            Seal::Now => self.begin_seal(sequence, &previous)?,
+            Seal::Later => None,
+        };
         sqlx::query("SELECT audit.access_log_chain_move($1, $2, $3, $4, $5, $6)")
             .bind(&ids)
             .bind(&sequences)
@@ -143,12 +157,46 @@ impl AccessLogStore {
     /// As [`Self::chain_round`].
     pub async fn settle(&self, owed: Owed) -> Result<(), AccessLogError> {
         loop {
-            match self.chain_round(SETTLE_BATCH, owed, &[]).await? {
+            match self.chain_round(SETTLE_BATCH, owed, Seal::Now, &[]).await? {
                 Round::Busy => tokio::time::sleep(Duration::from_millis(1)).await,
                 Round::Chained { entries: 0, .. } => return Ok(()),
                 Round::Chained { .. } => {}
             }
         }
+    }
+}
+
+impl AccessLogStore {
+    /// Seal the head of the chain in a signed checkpoint, unless one seals it
+    /// already; `false` when another chainer holds the head, which seals its
+    /// own rounds.
+    ///
+    /// # Errors
+    /// The store errors when a statement fails, and the sealing errors of the
+    /// checkpoint.
+    pub async fn seal_head(&self) -> Result<bool, AccessLogError> {
+        let mut conn = acquire(self.pool()).await?;
+        let mut tx = conn.begin().await?;
+        let head: Option<(i64, String)> =
+            sqlx::query_as("SELECT head_seq, head_digest FROM audit.access_log_chain_take()")
+                .fetch_optional(&mut *tx)
+                .await?;
+        let Some((sequence, digest)) = head else {
+            return Ok(false);
+        };
+        let sealed: bool = sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM audit.access_log_checkpoint WHERE sequence = $1)",
+        )
+        .bind(sequence)
+        .fetch_one(&mut *tx)
+        .await?;
+        if !sealed && let Some(seal) = self.begin_seal(sequence, &digest)? {
+            seal.write(&mut tx).await?;
+        }
+        // NOTE: our own design (#5762), the audit domain's own store, sealing the head no request
+        // moved.
+        tx.commit().await?;
+        Ok(true)
     }
 }
 

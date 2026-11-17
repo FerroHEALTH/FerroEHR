@@ -1724,16 +1724,17 @@ jobs:
       - name: Non-durable test tuning
         # libxml2-utils provides xmllint — the C14N XML parity gate shells out
         # to it (serialization.md); the runner image does not ship it.
-        # The ALTER SYSTEM block applies the non-durable settings the
-        # PostgreSQL docs recommend for throwaway data (all three are
-        # reloadable — no restart); this server only ever holds test databases.
-        # No extension is installed here: the schema needs btree_gist alone and
-        # the server installs it itself, into each template database testkit
-        # builds.
+        # scripts/lib/test-postgres.sh applies the non-durable settings the
+        # PostgreSQL docs recommend for throwaway data (this server only ever
+        # holds test databases) and loads pg_stat_statements, which the
+        # statement budget test reads, restarting the container for it. The
+        # schema needs btree_gist alone, which the server installs itself
+        # into each template database testkit builds.
+        env:
+          PG_SERVICE: ${{ job.services.postgres.id }}
         run: |
           sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
-          PGPASSWORD=openehr psql -h localhost -U openehr -d postgres \
-            -c "ALTER SYSTEM SET fsync = off" -c "ALTER SYSTEM SET synchronous_commit = off" -c "ALTER SYSTEM SET full_page_writes = off" -c "SELECT pg_reload_conf()"
+          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-nextest
