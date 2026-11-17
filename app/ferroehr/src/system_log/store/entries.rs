@@ -37,6 +37,7 @@ use sqlx::{Connection, Row};
 use crate::access_log::intake::{IndexRow, IntakeEntry};
 
 use super::chains::AuditChain;
+use super::writers::Pinned;
 use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd, stored_record};
 use crate::access_log::projection::Projection;
 use crate::access_log::store::AccessLogStore;
@@ -87,10 +88,11 @@ impl AuditStore {
     pub(super) async fn intake_entries(
         &self,
         conn: &mut PgConnection,
+        writing: &Pinned,
         records: Vec<AuditRecord>,
         reserved_by: Option<uuid::Uuid>,
     ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
-        let (uids, intake, tokens) = self.entry_rows(records, Some(&mut *conn)).await?;
+        let (uids, intake, tokens) = self.entry_rows(writing, records).await?;
         crate::access_log::intake::take_in(conn, &intake, &tokens, reserved_by).await?;
         Ok((uids, LearnedSets::default()))
     }
@@ -102,8 +104,8 @@ impl AuditStore {
     /// As [`Self::intake_entries`], less the store's.
     pub(super) async fn entry_rows(
         &self,
+        writing: &Pinned,
         records: Vec<AuditRecord>,
-        mut conn: Option<&mut PgConnection>,
     ) -> Result<EntryRows, AuditError> {
         let mut entered = Vec::with_capacity(records.len());
         let mut tokens = Vec::with_capacity(records.len());
@@ -111,9 +113,9 @@ impl AuditStore {
             let Some(entry) = record.entry else {
                 continue;
             };
-            let writing = self.writing.of(&record.event);
-            let digest = self.writing_digest(&writing, conn.as_deref_mut()).await?;
-            let policy = writing.compiled().await?;
+            let under = writing.of(&record.event);
+            let digest = Self::registered_digest(&under)?;
+            let policy = under.compiled().await?;
             let projection = Projection {
                 context: &policy.context,
                 categories: &policy.categories,
@@ -152,11 +154,12 @@ impl AuditStore {
     /// The [`crate::system_log::render::RenderPolicy::compile`] errors.
     pub(super) async fn with_entries(
         &self,
+        writing: &Pinned,
         mut records: Vec<AuditRecord>,
     ) -> Result<Vec<AuditRecord>, AuditError> {
         for record in &mut records {
             if record.entry.is_none() && crate::access_log::entry::writes_entry(&record.event) {
-                let policy = self.writing.of(&record.event).compiled().await?;
+                let policy = writing.of(&record.event).compiled().await?;
                 record.entry = crate::access_log::entry::for_store(
                     &record.event,
                     record.subject.as_deref(),
@@ -195,14 +198,17 @@ impl AuditStore {
             subject: None,
             entry: None,
         };
-        let recorded = self.with_entries(vec![record]).await?;
+        let writing = self.writing.pin();
+        let recorded = self.with_entries(&writing, vec![record]).await?;
+        self.register_policies(&writing, &recorded).await?;
         let mut conn = crate::db::acquire::acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let tombstone = AccessLogStore::tombstone_in(&mut tx, uid, time_removed, grounds).await?;
         if tombstone.is_none() {
             return Ok(None);
         }
-        let (_uids, learned) = Box::pin(self.intake_entries(&mut tx, recorded, None)).await?;
+        let (_uids, learned) =
+            Box::pin(self.intake_entries(&mut tx, &writing, recorded, None)).await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
         // rows.
         tx.commit().await?;
