@@ -18,7 +18,6 @@ impl FerroEhrService {
     pub fn policy_listeners(&self) -> Vec<(&'static str, Arc<Listened>)> {
         vec![
             ("ehr_access", Arc::clone(self.ehr_access_listened())),
-            ("object_versions", Arc::clone(&self.version_copy_listened)),
             ("grants", Arc::clone(self.grants().listened())),
             ("party_binding", Arc::clone(self.bindings().listened())),
             (
@@ -38,12 +37,5 @@ impl FerroEhrService {
     #[must_use]
     pub fn ehr_access_held(&self) -> (u64, u64) {
         self.ehr_access.held_counts()
-    }
-
-    /// How many COMPOSITION versions this replica's version copy holds, and
-    /// their bytes against its bound (#5778).
-    #[must_use]
-    pub fn version_copy_held(&self) -> (u64, u64) {
-        self.version_copy.held()
     }
 }

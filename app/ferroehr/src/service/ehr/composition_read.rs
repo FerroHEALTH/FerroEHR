@@ -5,11 +5,8 @@
 //!
 //! One statement reads the object's access facts beside the version, and the
 //! access evaluator judges the object before anything of the version leaves
-//! the service (#5773). A read by version id takes the version and its facts
-//! from this replica's copy when it holds them under the settings revision
-//! the access copy holds, and makes no statement (#5778). A refused read has
-//! read the version into memory and returns nothing of it. No openEHR spec
-//! governs this: our own design.
+//! the service (#5773). A refused read has read the version into memory and
+//! returns nothing of it. No openEHR spec governs this: our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -27,11 +24,9 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::ehr::version_copy::Held;
 use crate::service::response::{RawServiceResponse, ReadBody};
-use crate::storage::access_facts::{HeadFacts, visible};
+use crate::storage::access_facts::visible;
 use crate::storage::version_repo::judged::{JudgedAt, read_judged};
-use crate::storage::version_repo::read::StoredVersion;
 use crate::versioning::Kind;
 use crate::versioning::object_version_id::{VersionIdError, components};
 use crate::versioning::read::raw_version_read;
@@ -75,10 +70,10 @@ impl FerroEhrService {
         };
         let missing =
             || ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"));
-        let (facts, stored) = match self.version_judged(at).await {
+        let (facts, stored) = match read_judged(&self.pool, at).await {
             Ok(Some((facts, stored))) => (facts, stored),
             Ok(None) => return JudgedRead::Unheld(missing()),
-            Err(error) => return JudgedRead::Unjudged(error),
+            Err(error) => return JudgedRead::Unjudged(error.into()),
         };
         // A party's object is judged by no EHR: the request is judged on its EHR alone.
         let Some(object_ehr) = facts.ehr_id else {
@@ -113,51 +108,6 @@ impl FerroEhrService {
                 Ok(read)
             });
         JudgedRead::Admitted(served)
-    }
-
-    /// The head facts of the object `at` names and the version it addresses,
-    /// from the version copy for a read by version id, or read in one
-    /// statement and kept in the copy.
-    ///
-    /// A held version serves only while the access copy holds its EHR's
-    /// settings at the revision it was read under, so a settings change
-    /// another replica committed is judged on the store's facts. An object an
-    /// access delay withholds from the person now is never kept: the mark
-    /// lapses with time and no notification. The copy is neither read nor
-    /// filled while its listener is down.
-    ///
-    /// # Errors
-    /// The storage error of the read, and the faults of the EHR's settings.
-    async fn version_judged(
-        &self,
-        at: JudgedAt,
-    ) -> Result<Option<(HeadFacts, Option<StoredVersion>)>, ServiceError> {
-        let JudgedAt::Tree(vo_id, tree) = at else {
-            return Ok(read_judged(&self.pool, at).await?);
-        };
-        if self.version_copy_listened.unlistened() {
-            return Ok(read_judged(&self.pool, at).await?);
-        }
-        let key = (vo_id, tree);
-        if let Some(held) = self.version_copy.get(key).await
-            && let Some(ehr_id) = held.facts.ehr_id
-            && Box::pin(self.ehr_access_entry(ehr_id)).await?.revision == held.facts.revision
-        {
-            return Ok(Some((held.facts.clone(), Some(held.stored.clone()))));
-        }
-        let seen = self.version_copy.drops();
-        let read = read_judged(&self.pool, at).await?;
-        if let Some((facts, Some(stored))) = &read
-            && facts.ehr_id.is_some()
-            && !stored.person_withheld
-        {
-            let held = Held {
-                facts: facts.clone(),
-                stored: stored.clone(),
-            };
-            self.version_copy.keep(key, held, seen).await;
-        }
-        Ok(read)
     }
 
     /// The COMPOSITION response of `raw`, the version of `vo_id` a read found

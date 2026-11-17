@@ -818,14 +818,7 @@ which is what makes an optional stage safe to disable:
    its object that the statement reading the version returns, after the read
    and before anything of the version is served, so the read is one statement
    and a refused read answers and is recorded as before (#5773, our own
-   design). A read by version id takes the version and its facts from the
-   replica's version copy (`service::ehr::version_copy`, 64 MiB) while the
-   access copy holds the EHR's settings at the revision the version was read
-   under, and makes no statement; it is judged and recorded all the same,
-   and an `If-None-Match` naming the version answers `304` (RFC 9110
-   §13.1.2). A change to an object's head or versions notifies
-   `ferroehr_object_version` (`clinical/0051`) and every replica drops it
-   (#5778, our own design). A write is
+   design). A write is
    judged on the template, root archetype, origins and commit instant of the
    content it is about to store, inside the commit transaction and before
    anything is stored (#5626, `versioning::restriction::WriteGate`), by

@@ -29,26 +29,13 @@ An instance reports its own copies and its own listeners; with
 
 ## The policy copies and their listeners
 
-An instance holds six policy copies, each kept fresh by a `LISTEN` on its
+An instance holds five policy copies, each kept fresh by a `LISTEN` on its
 own notification channel. The `listener` label names the copy as the
 `policy_listeners` health indicator does: `ehr_access` (each EHR's
 `EHR_ACCESS` settings and the settings classes), `grants` (the grants and the
 caller facts), `party_binding` (the lookups of the binding side table and the
-bound `PERSON`s' names), `policy_registers` (the operational-policy registers),
-`access_policy` and `object_versions` (the COMPOSITION versions the instance
-read by their version id).
-
-A read of a COMPOSITION by its version id is served from the instance's copy
-of the versions it read, up to 64 MiB, while the `object_versions` listener is
-up and the EHR's settings are at the revision the version was read under. Such
-a read makes no database statement, and it is judged and recorded in the
-access log as any read is. A new version of the object, a restriction or its
-lifting, an access delay and an erasure drop the object's versions on every
-instance. An `If-None-Match` that names the version answers `304 Not
-Modified` with no body, and it is recorded as the read it is. In
-`access_copy_lookups_total` and `access_copy_drops_total` the copy is
-`object_version`, and a version the bound evicted is dropped with the scope
-`object_version_evicted`.
+bound `PERSON`s' names), `policy_registers` (the operational-policy registers)
+and `access_policy`.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
@@ -95,8 +82,8 @@ answers `503`, so no decision is made without it.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
-| `access_copy_entries` | gauge | `copy` | Entries each copy holds: `ehr` (EHRs of the per-EHR copy), `classes` (the class copy), `care_subjects` (subjects whose care relationships are held), `care_teams` (care teams held), `care_patients` and `care_declared` (the patients of those teams and the record subjects they declare), `caller_facts` (the parties the caller facts copy holds), `object_version` (COMPOSITION versions the version copy holds). |
-| `access_copy_size_bytes` | gauge | `copy` | Bytes a bounded copy takes as its bound weighs it: the held care teams (`care_teams`) and the held COMPOSITION versions (`object_version`), each against its 64 MiB bound. |
+| `access_copy_entries` | gauge | `copy` | Entries each copy holds: `ehr` (EHRs of the per-EHR copy), `classes` (the class copy), `care_subjects` (subjects whose care relationships are held), `care_teams` (care teams held), `care_patients` and `care_declared` (the patients of those teams and the record subjects they declare), `caller_facts` (the parties the caller facts copy holds). |
+| `access_copy_size_bytes` | gauge | `copy` | Bytes the held care teams take as their bound weighs them (`care_teams`), against the 64 MiB bound. |
 | `access_copy_lookups_total` | counter | `copy`, `result` | Lookups while the listener is up: `hit` (served from the copy) or `miss` (this request read the database). A request that waited on another request's read counts as a hit. |
 | `access_copy_refills_total` | counter | `copy`, `outcome` | Reads of the settings projection that fill the copy: `ok`, or `failed` (the request answered `503`). |
 | `access_copy_drops_total` | counter | `scope` | Drops: `ehr` (one EHR's settings changed), `classes` (a new class), `every` (a listener connected or was lost, or a refill notification). |

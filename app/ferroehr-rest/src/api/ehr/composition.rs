@@ -170,7 +170,6 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let uid = parse_uid_based_id(&p.uid_based_id)?;
-    let addressed = uid.version.is_some();
     // A bare COMPOSITION carries no `commit_audit`, so `Last-Modified`
     // (Requests_and_responses.md §"ETag and Last-Modified") comes from the
     // version row the service reads alongside the body.
@@ -203,15 +202,6 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
             .await?
     };
     let RawServiceResponse { body, meta } = read;
-    // A read by version id whose `If-None-Match` names the version answers
-    // `304` once judged (RFC 9110 §15.4.5); the version never changes (RM
-    // common master06 §Version Identification).
-    if addressed
-        && let Some(meta) = &meta
-        && let Some(resp) = negotiate::resource::not_modified(h, meta, Tree::Ehr)
-    {
-        return Ok(resp);
-    }
     // A plain JSON accept with no multimedia expansion serves the stored
     // bytes verbatim (the body is uid-stamped at commit); the rest parse.
     let expand = params::query_param(q, "expand_multimedia").as_deref() == Some("true");

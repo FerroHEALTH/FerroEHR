@@ -438,7 +438,7 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
         .u64_observable_gauge(ACCESS_COPY_ENTRIES)
         .with_description(
             "Entries the access copies hold (copy = ehr | classes | care_subjects | care_teams \
-             | care_patients | care_declared | caller_facts | object_version)",
+             | care_patients | care_declared | caller_facts)",
         )
         .with_callback(move |observer| {
             let (ehrs, classes) = held.ehr_access_held();
@@ -455,7 +455,6 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
                     u64::try_from(grants.parties_held()).unwrap_or(u64::MAX),
                     "caller_facts",
                 ),
-                (held.version_copy_held().0, "object_version"),
             ] {
                 observer.observe(count, &[KeyValue::new("copy", copy)]);
             }
@@ -464,16 +463,11 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
     let weighed = Arc::clone(service);
     let _bytes = meter
         .u64_observable_gauge(ACCESS_COPY_SIZE)
-        .with_description(
-            "Bytes the care copy's censuses and the version copy take, as their bounds weigh \
-             them (copy = care_teams | object_version)",
-        )
+        .with_description("Bytes the care copy's censuses take, as its bound weighs them (copy)")
         .with_unit("By")
         .with_callback(move |observer| {
             let care = weighed.grants().care_held();
             observer.observe(care.bytes, &[KeyValue::new("copy", "care_teams")]);
-            let (_, versions) = weighed.version_copy_held();
-            observer.observe(versions, &[KeyValue::new("copy", "object_version")]);
         })
         .build();
 }

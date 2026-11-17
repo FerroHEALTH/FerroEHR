@@ -106,32 +106,6 @@ pub(crate) fn set_versioning_headers(resp: &mut Response, meta: &ResourceMeta, t
         });
 }
 
-/// A `304 Not Modified` for a read of the version `meta` names, with its
-/// versioning headers and access record object, when `If-None-Match` lists
-/// its entity tag or `*` (RFC 9110 §13.1.2, weak comparison: the server's
-/// tags are weak, overview §"`ETag` and Last-Modified"); `None` otherwise.
-/// The read was judged and is recorded as the access it is; whether a `304`
-/// records the same action as a `200` is our own design (#5778).
-pub(crate) fn not_modified(
-    headers: &HeaderMap,
-    meta: &ResourceMeta,
-    tree: Tree,
-) -> Option<Response> {
-    let opaque = format!("\"{}\"", meta.uid);
-    let listed = headers
-        .get_all(header::IF_NONE_MATCH)
-        .iter()
-        .filter_map(|value| value.to_str().ok())
-        .flat_map(|value| value.split(','))
-        .map(str::trim)
-        .any(|tag| tag == "*" || tag.strip_prefix("W/").unwrap_or(tag) == opaque);
-    listed.then(|| {
-        let mut resp = empty(StatusCode::NOT_MODIFIED);
-        set_versioning_headers(&mut resp, meta, tree);
-        resp
-    })
-}
-
 /// Set the full create/update response headers: the versioning headers plus
 /// the `Location` of the version this request created (overview §Location:
 /// "resource creation … or redirect responses"; an openEHR update commits a
