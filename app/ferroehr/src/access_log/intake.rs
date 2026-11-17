@@ -36,6 +36,7 @@ use crate::access_log::store::{AccessLogError, canonical_form};
 use crate::access_log::stored_form;
 use crate::db::acquire::acquire;
 use crate::digest::sha256_hex;
+use crate::system_log::search::digest::token_digest;
 
 /// The member of an entry's ITS-JSON form its canonical form leaves out.
 const LINK: &str = "link";
@@ -281,7 +282,7 @@ pub struct IntakeToken {
 /// and the rows of a batch (`audit.access_log_intake_take`).
 const INTAKE: &str = "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6, $7, $8, $9, \
      $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, \
-     $28, $29, $30, $31)";
+     $28, $29, $30, $31, $32)";
 
 /// Write `entries` into the intake on `conn`, in their order, in one
 /// statement.
@@ -318,6 +319,7 @@ pub async fn take_in(
     let mut systems = Vec::new();
     let mut codes = Vec::new();
     let mut in_sets = Vec::new();
+    let mut token_digests = Vec::new();
     for (position, entry_tokens) in (1_i32..).zip(tokens) {
         for token in entry_tokens {
             token_entries.push(position);
@@ -325,6 +327,11 @@ pub async fn take_in(
             systems.push(token.system.as_deref());
             codes.push(token.code.as_deref());
             in_sets.push(token.shares);
+            token_digests.push(token_digest(
+                token.parameter,
+                token.system.as_deref(),
+                token.code.as_deref(),
+            ));
         }
     }
     let c = columns;
@@ -360,6 +367,12 @@ pub async fn take_in(
         .bind(systems)
         .bind(codes)
         .bind(in_sets)
+        .bind(
+            token_digests
+                .iter()
+                .map(<[u8; 16]>::as_slice)
+                .collect::<Vec<_>>(),
+        )
         .execute(&mut *conn)
         .await?;
     Ok(())
