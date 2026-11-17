@@ -56,13 +56,13 @@ fn party_ref(kind: &str, id: VoId) -> Value {
 }
 
 /// A professional's membership of a care team: HL7 v3 `RoleClass#MBR`.
-const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
+pub(crate) const MEMBER: (&str, &str) = ("v3-RoleClass", "MBR");
 /// A patient under the care of a team or unit.
-const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
+pub(crate) const UNDER_CARE: (&str, &str) = (TERMINOLOGY, "under_care_of");
 
 /// A care relationship of `code` from `source` to `team`, over the dates
 /// `from` to `until`, each included.
-fn care(
+pub(crate) fn care(
     (terminology, code): (&str, &str),
     source: VoId,
     team: VoId,
@@ -90,7 +90,7 @@ fn care(
 }
 
 /// A party of `archetype` named `name` holding `relationships`.
-fn party(rm: &str, archetype: &str, name: &str, relationships: &[Value]) -> Value {
+pub(crate) fn party(rm: &str, archetype: &str, name: &str, relationships: &[Value]) -> Value {
     let mut body = json!({
         "_type": rm, "archetype_node_id": archetype,
         "archetype_details": { "_type": "ARCHETYPED", "rm_version": "1.1.0",
@@ -109,7 +109,7 @@ fn party(rm: &str, archetype: &str, name: &str, relationships: &[Value]) -> Valu
 }
 
 /// A `PERSON` named `name`.
-fn person(name: &str, relationships: &[Value]) -> Value {
+pub(crate) fn person(name: &str, relationships: &[Value]) -> Value {
     party(
         "PERSON",
         "openEHR-DEMOGRAPHIC-PERSON.person.v1",
@@ -138,8 +138,12 @@ async fn as_client<F: Future>(svc: &FerroEhrService, client_id: &str, fut: F) ->
 }
 
 /// Commits `body` as the next version of the `PERSON` `vo` after `uid` as the
-/// ADT client.
-async fn update_as_adt(svc: &FerroEhrService, (vo, uid): (VoId, &str), body: &Value) {
+/// ADT client; the new version's uid.
+pub(crate) async fn update_as_adt(
+    svc: &FerroEhrService,
+    (vo, uid): (VoId, &str),
+    body: &Value,
+) -> String {
     let mut write = WriteRequest::new(crate::typed_body::typed(body));
     write.lifecycle_state = Some("532".to_owned());
     write.preceding = Some(uid.parse().expect("an OBJECT_VERSION_ID"));
@@ -153,7 +157,11 @@ async fn update_as_adt(svc: &FerroEhrService, (vo, uid): (VoId, &str), body: &Va
         .await
     })
     .await;
-    written.expect("the ADT system writes the care relationship");
+    written
+        .expect("the ADT system writes the care relationship")
+        .meta
+        .expect("a version")
+        .uid
 }
 
 /// The answer `access` gives on `ehr_id`, the composition `vo` read, and the
@@ -194,7 +202,7 @@ async fn decided(
 
 /// The request access of the professional bound to `party` holding `facts`,
 /// under `policy`, at `now`.
-fn access(
+pub(crate) fn access(
     svc: &FerroEhrService,
     party: VoId,
     policy: AccessPolicy,
@@ -234,7 +242,7 @@ fn access(
 }
 
 /// An `ACCESS_POLICY` with `members`.
-fn policy(members: &Value) -> AccessPolicy {
+pub(crate) fn policy(members: &Value) -> AccessPolicy {
     let mut p = json!({
         "_type": "ACCESS_POLICY",
         "name": text("Hospital access policy"),

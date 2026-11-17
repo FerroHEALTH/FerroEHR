@@ -123,8 +123,8 @@ The server or its database is overloaded or draining. Retry after the
 
 ## `access-refreshing`
 
-**Status:** `503 Service Unavailable`. **Title:** The access state the query
-is judged by is being refreshed.
+**Status:** `503 Service Unavailable`. **Title:** The access state the
+request is judged by is being refreshed.
 
 An AQL query is judged by this replica's copy of the access settings. When
 the store holds a newer revision than the copy, the server reads it again
@@ -132,6 +132,14 @@ and asks once more, for a short bounded time. If the copy still lags, the
 server withholds the answer instead of serving rows, a count or a page judged
 on the old state. Retry after the `Retry-After` header's delay. The
 `aql_stale_access_total` counter counts these cases.
+
+A read or a query that a care relationship admits is judged by this
+replica's copy of the care relationships. When the store holds a newer
+revision than the copy, the server reads the copy again and judges care
+once more, so a care relationship or a care team membership that ended on
+another instance never admits the request. If the copy does not catch up
+within the same bounded time, the server refuses with this problem. The
+`access_care_stale_total` counter counts these cases.
 
 ## `rate-limited`
 

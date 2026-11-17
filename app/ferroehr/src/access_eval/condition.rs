@@ -27,7 +27,7 @@ use tokio::task_local;
 use uuid::Uuid;
 
 use crate::access_eval::class::{Class, Classes};
-use crate::access_eval::condition::care::Care;
+use crate::access_eval::condition::care::{Care, CareUnsettled};
 use crate::access_eval::procedure::{
     Asked, Caller, Ehr, Emergency, Judged, Outcome, Policy, Verdict, decide, rules_of,
 };
@@ -36,7 +36,7 @@ use crate::access_eval::scope::{CategoryIndex, Item, Scopes};
 use crate::access_eval::stale::StaleCopies;
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
-use crate::party_binding::grants::live::{GrantsUnavailable, LiveGrants};
+use crate::party_binding::grants::live::LiveGrants;
 use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_projection::{EhrSubject, Revision};
 
@@ -65,6 +65,7 @@ pub struct RequestAccess {
     recorded: Recorded,
     stale: Option<Arc<StaleCopies>>,
     pub(super) written: Mutex<BTreeSet<Uuid>>,
+    care: care::CareInForce,
 }
 
 /// One EHR as the access evaluator reads it from this replica's copy: its
@@ -176,6 +177,7 @@ impl RequestAccess {
             recorded: Recorded::default(),
             stale: None,
             written: Mutex::new(BTreeSet::new()),
+            care: care::CareInForce::default(),
         }
     }
 
@@ -319,14 +321,9 @@ impl RequestAccess {
     #[must_use]
     pub fn cared(&self, teams: &[CareTeam]) -> bool {
         let (today, grace) = (self.today(), self.policy().grace);
+        let own = self.care_teams_held();
         teams.iter().any(|team| {
-            team.live_on(today, grace)
-                && self
-                    .caller
-                    .facts
-                    .care_teams()
-                    .iter()
-                    .any(|own| own.team() == team.team())
+            team.live_on(today, grace) && own.iter().any(|own| own.team() == team.team())
         })
     }
 
@@ -418,15 +415,22 @@ impl RequestAccess {
     /// Judges the EHR `ehr_id` as `entry` reads it, and keeps the verdict for
     /// the rest of the request.
     ///
+    /// A verdict care decides is taken only once the caller facts copy is
+    /// found to hold the store's revisions ([`Self::care_in_force`]).
+    ///
     /// # Errors
-    /// [`GrantsUnavailable`] when the subject's care relationships are not
-    /// held and cannot be read.
+    /// [`CareUnsettled`] when the subject's care relationships are not held
+    /// and cannot be read, or the copy stays older than the store.
     pub async fn judge_ehr(
         &self,
         ehr_id: EhrId,
         entry: &EhrEntry,
-    ) -> Result<Arc<Verdict>, GrantsUnavailable> {
-        let judged = self.judgement_of(ehr_id, entry, self.cares_for(entry).await?);
+    ) -> Result<Arc<Verdict>, CareUnsettled> {
+        let mut cared = self.cares_for(entry).await?;
+        if cared && self.care_decides(ehr_id, entry) && !self.care_in_force().await? {
+            cared = self.cares_for(entry).await?;
+        }
+        let judged = self.judgement_of(ehr_id, entry, cared);
         let verdict = Arc::clone(&judged.verdict);
         self.verdicts
             .lock()

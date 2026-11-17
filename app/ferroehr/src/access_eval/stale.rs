@@ -1,13 +1,24 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The copies of the EHR access settings a read found older than the row in
-//! force, which the copy drops before its next read of the EHR (#5589).
+//! The copies a read found older than the store, and how long it waits.
+//!
+//! A copy of the EHR access settings a read found older than the row in force
+//! is dropped before its next read of the EHR (#5589); a request waits a
+//! bounded time for a copy older than the store (#5794, #5806).
 
 use std::collections::BTreeSet;
 use std::sync::{Mutex, PoisonError};
+use std::time::Duration;
 
 use crate::ids::EhrId;
+
+/// How long a request reads a copy again after it first found the copy
+/// older than the store, before it is refused with `503`.
+pub const STALE_WAIT: Duration = Duration::from_millis(100);
+
+/// The pause between two reads that found the copy still older.
+pub const STALE_POLL: Duration = Duration::from_millis(10);
 
 /// The EHRs whose copy on this replica a read found older than the row in
 /// force: the copy drops each before its next read of the EHR.
