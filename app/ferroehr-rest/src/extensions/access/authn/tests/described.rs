@@ -139,7 +139,10 @@ async fn a_machines_only_deployment_is_described_for_backend_services() {
         document["token_endpoint"],
         json!(format!("{}/token", machines.uri()))
     );
-    assert_eq!(document["grant_types_supported"], json!(["client_credentials"]));
+    assert_eq!(
+        document["grant_types_supported"],
+        json!(["client_credentials"])
+    );
     assert_eq!(
         document["token_endpoint_auth_methods_supported"],
         json!(["private_key_jwt"])
@@ -148,7 +151,10 @@ async fn a_machines_only_deployment_is_described_for_backend_services() {
         document["capabilities"],
         json!(["client-confidential-asymmetric"])
     );
-    assert!(document.get("authorization_endpoint").is_none(), "{document}");
+    assert!(
+        document.get("authorization_endpoint").is_none(),
+        "{document}"
+    );
 }
 
 /// One eligible issuer is described whichever table comes first.
