@@ -41,7 +41,7 @@ pub struct PinnedEhr {
 }
 
 impl PinnedEhr {
-    /// The revision as the store's `access_revision(ehr)` writes it: the JSON
+    /// The revision as the store's `access_revision_of` view writes it: the JSON
     /// array `[<ordinal>, <namespace>, <id>]`, each null when absent.
     #[must_use]
     pub fn revision_json(&self) -> String {
