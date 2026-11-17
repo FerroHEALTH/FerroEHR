@@ -413,9 +413,8 @@ pub enum NameConstraint {
     },
 }
 
-/// A resolved standard predicate (`[objectPath op operand]`) on a node — the
-/// path is left as raw steps for the SQL package to compile into a fragment
-/// jsonpath filter.
+/// A resolved standard predicate (`[objectPath op operand]`) on a node, typed
+/// as the same comparison in `WHERE` (QUERY master03 §Standard predicate).
 #[derive(Debug, Clone, PartialEq)]
 pub struct StdPredicate {
     /// The `/`-joined object path (relative to the node), e.g.
@@ -425,6 +424,10 @@ pub struct StdPredicate {
     pub op: CompOp,
     /// The right-hand value.
     pub value: Bind,
+    /// The candidate leaf types the path reaches from the node.
+    pub types: TypeSet,
+    /// The typed comparison strategy of the leaf.
+    pub coercion: Coercion,
 }
 
 /// The typed extraction/comparison strategy for a leaf (design §Coercion table).

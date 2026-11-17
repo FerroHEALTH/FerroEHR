@@ -739,7 +739,7 @@ which is what makes an optional stage safe to disable:
    a scalar subquery over the view `access_revision_of` that the planner merges
    into the statement, so the read runs no statement of its own
    (`access_revision!` in `head_facts!`, `version_select!`, the EHR summary
-   read and the settings reads; migration `clinical/0052`, with a `party/0053`
+   read and the settings reads; migration `clinical/0051`, with a `party/0053`
    twin holding no rows so a statement both domains run reads `NULL`; #5888),
    and `condition::admits` refuses a verdict judged
    on another revision and marks the copy stale (`StaleCopies`), which drops
@@ -821,14 +821,15 @@ which is what makes an optional stage safe to disable:
    its object that the statement reading the version returns, after the read
    and before anything of the version is served, so the read is one statement
    and a refused read answers and is recorded as before (#5773, our own
-   design). A read by version id takes the version and its facts from the
-   replica's version copy (`service::ehr::version_copy`, 64 MiB) while the
-   access copy holds the EHR's settings at the revision the version was read
-   under, and makes no statement; it is judged and recorded all the same,
+   design). A read by version id takes the version's body from the
+   replica's version copy (`service::ehr::version_copy`, 64 MiB) once one
+   indexed read (`version_repo::judged::read_marks`) finds the object's head
+   where it was read and the version's content digest unchanged; the
+   restriction and access delay marks and the settings revision that read
+   finds are the ones judged, so no decision rests on a notification
+   (owner decision on #5891). The read is judged and recorded all the same,
    and an `If-None-Match` naming the version answers `304` (RFC 9110
-   §13.1.2). A change to an object's head or versions notifies
-   `ferroehr_object_version` (`clinical/0051`) and every replica drops it
-   (#5778, our own design). A write is
+   §13.1.2) (#5778, our own design). A write is
    judged on the template, root archetype, origins and commit instant of the
    content it is about to store, inside the commit transaction and before
    anything is stored (#5626, `versioning::restriction::WriteGate`), by

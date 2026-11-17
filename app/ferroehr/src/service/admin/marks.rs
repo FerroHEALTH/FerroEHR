@@ -80,7 +80,6 @@ impl FerroEhrService {
             .map_err(ServiceError::Storage)?;
         let record = self.mark_record(EventActionCode::Create, ehr_id, vo_id, "restriction");
         self.commit_act_recorded(tx, vec![record]).await?;
-        self.forget_marked_versions(ehr_id, vo_id).await;
         Ok(())
     }
 
@@ -105,18 +104,7 @@ impl FerroEhrService {
             .map_err(ServiceError::Storage)?;
         let record = self.mark_record(EventActionCode::Delete, ehr_id, vo_id, "restriction");
         self.commit_act_recorded(tx, vec![record]).await?;
-        self.forget_marked_versions(ehr_id, vo_id).await;
         Ok(())
-    }
-
-    /// Drop from the version copy what this replica's restriction or lift of
-    /// `ehr_id`, or of its object `vo_id`, changed, before its notification
-    /// arrives (#5778).
-    async fn forget_marked_versions(&self, ehr_id: EhrId, vo_id: Option<VoId>) {
-        match vo_id {
-            Some(vo_id) => self.version_copy.forget_object(vo_id).await,
-            None => self.version_copy.forget_ehr(ehr_id).await,
-        }
     }
 
     /// The restriction register of one EHR, newest request first.

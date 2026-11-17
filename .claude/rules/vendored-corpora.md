@@ -29,6 +29,7 @@ commit the result.
 | FerroPULSE report v1 JSON Schemas + examples (the usage report contract) | `scripts/vendor/ferropulse-schemas.sh` | `corpus/ferropulse/` |
 | IHE PIXm 3.1.0 package excerpt (the $ihe-pix OperationDefinition, the Manager CapabilityStatement, the example ITI-83 answers) | `scripts/vendor/ihe-pixm.sh` | `corpus/ihe-pixm/` |
 | Veredictum catalogue ADL 2 content cases (the ADL 2 operational templates and the compositions committed against them) | `scripts/vendor/veredictum-adl2-content.sh` | `corpus/veredictum/adl2-content/` |
+| openehr-sdk-go test corpus templates (the operational templates the example and validation gates read), each pinned by sha256 | `scripts/vendor/openehr-sdk-go-templates.sh` | `corpus/templates/openehr-sdk-go/` |
 | IETF RFCs the party binding and SCIM provisioning cite (SCIM 2.0, OAuth 2.0, URNs, usernames, HTTP status codes), each pinned by sha256 | `scripts/vendor/rfcs.sh` | `docs/specs/rfc/` |
 | OpenID Connect Core 1.0, errata set 2 | `scripts/vendor/openid-connect-core.sh` | `docs/specs/openid-connect-core/` |
 | Microsoft Entra ID provisioning articles (develop a SCIM endpoint, customize attribute mappings) and the identity platform claims references and app manifest reference (access token claims, optional claims, `requestedAccessTokenVersion`), at a pinned `MicrosoftDocs/entra-docs` commit | `scripts/vendor/entra-scim-docs.sh` | `docs/specs/microsoft-entra/` |

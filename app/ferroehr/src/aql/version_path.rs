@@ -13,8 +13,7 @@ use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVer
 use openehr_query::ast::{FunctionCall, IdentifiedPath, ObjectPath, StandardPredicate, Terminal};
 
 use super::analyze::{
-    Bindings, analyze_path, analyze_rm_path, bind_from_operand, resolve_attribute,
-    resolve_node_predicate,
+    Bindings, analyze_path, analyze_rm_path, bind_from_operand, resolve_node_predicate,
 };
 use super::error::{AnalysisError, AqlError, AqlFeatureError};
 use super::ir::{
@@ -52,7 +51,7 @@ pub(super) fn analyze_attestation_path(
     let predicate = head
         .predicate
         .as_ref()
-        .map(resolve_node_predicate)
+        .map(|p| resolve_node_predicate(p, &attestation, profile))
         .transpose()?;
     if let Some(pred) = &predicate {
         let unmodelled = match (&pred.archetype, &pred.name) {
@@ -66,12 +65,6 @@ pub(super) fn analyze_attestation_path(
                 on: "ATTESTATION".to_owned(),
             }
             .into());
-        }
-        for sp in &pred.standard {
-            let mut current = attestation.clone();
-            for name in &sp.path {
-                current = resolve_attribute(&current, name, profile)?.0;
-            }
         }
     }
     let mut rest = op.clone();

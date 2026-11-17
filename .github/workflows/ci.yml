@@ -860,6 +860,9 @@ jobs:
       - name: shellcheck / The performance guard refuses a throughput or a p95 latency outside its budget
         if: ${{ !cancelled() }}
         run: bash scripts/perf/compare.sh --self-test
+      - name: shellcheck / The perf verdict passes a breach only as a cost the owner accepted on a named issue
+        if: ${{ !cancelled() }}
+        run: bash scripts/perf/accepted.sh --self-test
       - name: shellcheck / The storage sizing driver reports bytes per create, update, delete and read in the shape the book's sizing section cites
         if: ${{ !cancelled() }}
         run: bash scripts/perf/storage-sizing.sh --self-test
@@ -1938,6 +1941,9 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+    outputs:
+      # 0 the head passed, 1 a breach for perf-verdict to judge.
+      status: ${{ steps.gate.outputs.status }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -2001,18 +2007,79 @@ jobs:
           set -euo pipefail
           mkdir -p target/perf
           printf '# Perf base\n\n%s\n\n%s\n' "$BASE_REV" "$BASE_REASON" | tee target/perf/base.md >> "$GITHUB_STEP_SUMMARY"
+      # A breach is judged by perf-verdict, which reads the perf-accepted label
+      # and the description; a run that could not be judged fails here.
       - name: The gate, the head against the base
+        id: gate
         env:
           BASE_REV: ${{ needs.perf-base-binary.outputs.rev }}
-        run: >-
-          bash scripts/perf/gate.sh ab ferroehr:perf ferroehr-postgres:perf
-          ferroehr:perf-base ferroehr-postgres:perf-base "$BASE_REV"
+        run: |
+          set -euo pipefail
+          status=0
+          bash scripts/perf/gate.sh ab ferroehr:perf ferroehr-postgres:perf \
+            ferroehr:perf-base ferroehr-postgres:perf-base "$BASE_REV" || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" = 1 ]; then
+            echo "::warning::perf gate: the head breached the base; perf-verdict judges whether the owner accepted it"
+          fi
+          [ "$status" = 0 ] || [ "$status" = 1 ]
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: perf-report
           path: target/perf/
           if-no-files-found: warn
+
+  # ── The perf verdict (#5924) ─────────────────────────────────────────────────
+  # The gate's breach, judged apart from the 30-minute measurement so that
+  # pr-guards.yml can re-run it alone when the perf-accepted label or the
+  # description changes. A breach passes only when the owner accepted every
+  # breached metric on the issue a `Perf-accepted:` line names, and it is
+  # then reported as accepted beside the full report (docs/release.md).
+  perf-verdict:
+    name: perf-verdict
+    needs: [perf]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # CODEOWNERS on the base branch
+      issues: read # the acceptance on the named issue
+      pull-requests: read # the label and the description when the job runs
+    outputs:
+      verdict: ${{ steps.verdict.outputs.verdict }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/lib
+            scripts/perf
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: perf-report
+          path: target/perf
+      - name: A breach passes only as a cost the owner accepted
+        run: bash scripts/perf/accepted.sh --self-test
+      # Context reaches the shell through env, never `${{ }}`-inline.
+      - name: The gate's verdict, with the owner's accepted costs
+        id: verdict
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          STATUS: ${{ needs.perf.outputs.status }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          verdict=0
+          bash scripts/perf/accepted.sh judge "$STATUS" target/perf/summary.md || verdict=$?
+          case "$verdict:$STATUS" in
+            0:1) echo "verdict=accepted" >> "$GITHUB_OUTPUT" ;;
+            0:*) echo "verdict=pass" >> "$GITHUB_OUTPUT" ;;
+            *) echo "verdict=fail" >> "$GITHUB_OUTPUT" ;;
+          esac
+          exit "$verdict"
 
   # ── The deployment harness, on a real composed stack (#2178) ─────────────────
   # The instrument that found ten defects a green 4447-test suite did not: every
@@ -3213,6 +3280,7 @@ jobs:
       - viewer-login-smoke
       - deploy-probe
       - perf
+      - perf-verdict
       - server-image-from-source
       - viewer-image-from-source
       - ui-screenshot-guard

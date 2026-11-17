@@ -81,11 +81,6 @@ const NOT_COMMITTABLE: &[(&str, &str)] = &[
          an example cannot invent a slot filler",
     ),
     (
-        "UK AoMRC Outpatient Letter.opt",
-        "ten mandatory protocol and state trees make items mandatory but admit only \
-         archetype slots, and an example cannot invent a slot filler",
-    ),
-    (
         "pregnancy-ecosystem-testing.opt",
         "the template pins COMPOSITION.category to 435, a code the openEHR \
          terminology's composition category group (431, 433, 451, 815) does not hold",
@@ -163,6 +158,89 @@ fn full_ckm_library_generates_committable_examples() {
         "generated examples refused by the commit-path validation:\n{}",
         findings.join("\n")
     );
+}
+
+/// The openehr-sdk-go corpus templates (`corpus/templates/openehr-sdk-go/`),
+/// each a case an independent tester found our examples or our validation
+/// getting wrong.
+fn sdk_go_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../corpus/templates/openehr-sdk-go/testkit/corpus/templates")
+}
+
+/// The vendored openehr-sdk-go templates generate committable examples too.
+#[test]
+fn sdk_go_corpus_generates_committable_examples() {
+    let files = top_level_opts(&sdk_go_dir());
+    assert!(!files.is_empty(), "expected the openehr-sdk-go templates");
+    let findings: Vec<String> = files.iter().flat_map(|p| committable_findings(p)).collect();
+    assert!(
+        findings.is_empty(),
+        "generated examples refused by the commit-path validation:\n{}",
+        findings.join("\n")
+    );
+}
+
+// ── an empty container under a mandatory attribute ───────────────────────────
+
+/// The template whose `state` and `protocol` `items` are existence 1..1 and
+/// cardinality 0..* (#5909).
+fn strict_existence() -> WebTemplate {
+    web_template(&sdk_go_dir().join("blood_pressure_strict_existence.opt"))
+}
+
+/// Removes `attr` from every object of `v` whose `archetype_node_id` is one of
+/// `ids`, returning how many it removed.
+fn remove_attr(v: &mut Value, ids: &[&str], attr: &str) -> usize {
+    match v {
+        Value::Object(m) => {
+            let own = m
+                .get("archetype_node_id")
+                .and_then(Value::as_str)
+                .is_some_and(|id| ids.contains(&id));
+            let here = usize::from(own && m.remove(attr).is_some());
+            here + m
+                .values_mut()
+                .map(|c| remove_attr(c, ids, attr))
+                .sum::<usize>()
+        }
+        Value::Array(a) => a.iter_mut().map(|e| remove_attr(e, ids, attr)).sum(),
+        _ => 0,
+    }
+}
+
+/// AOM 1.4 `master04-constraint_model_package.adoc`: existence says whether
+/// the container is there, cardinality how many members it holds. An empty
+/// `items` under existence 1..1 and cardinality 0..* is a container that is
+/// there, and RM `ITEM_TREE.items` allows zero members, so it validates.
+#[test]
+fn an_empty_container_under_a_mandatory_attribute_is_present() {
+    let wt = strict_existence();
+    let comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+    let mut state = Vec::new();
+    objects_with_id(&comp, "at0007", &mut state);
+    assert!(
+        state
+            .iter()
+            .any(|s| s.get("items") == Some(&Value::Array(Vec::new()))),
+        "the medium example carries the state tree with an empty items: {state:?}"
+    );
+    let missing = missing_attribute(&comp, &wt, "items");
+    assert!(missing.is_empty(), "{missing:?}");
+}
+
+/// The same container left out entirely is missing, and is still refused.
+#[test]
+fn a_missing_container_under_a_mandatory_attribute_is_refused() {
+    let wt = strict_existence();
+    let mut comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+    let removed = remove_attr(&mut comp, &["at0007", "at0011"], "items");
+    assert_eq!(
+        removed, 2,
+        "the state and protocol trees each lose their items"
+    );
+    let missing = missing_attribute(&comp, &wt, "items");
+    assert_eq!(missing.len(), 2, "both trees are refused: {missing:?}");
 }
 
 // ── mandatory structural attributes without leaf content ─────────────────────
