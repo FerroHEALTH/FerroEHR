@@ -47,6 +47,12 @@ pub const POLICY_NOTIFICATION_AGE: &str = "policy_notification_age";
 pub const POLICY_COPY_READS: &str = "policy_copy_reads";
 /// Refreshes of the grants and caller facts copy (`kind`, `outcome`).
 pub const GRANTS_REFRESH_DURATION: &str = "grants_refresh_duration";
+/// Requests whose care decision found the caller facts copy older than the
+/// store (`outcome`, #5806).
+pub const ACCESS_CARE_STALE: &str = "access_care_stale";
+/// What [`ACCESS_CARE_STALE`] counts.
+const CARE_STALE_HELP: &str = "Care decisions that found the caller facts copy older than the \
+                               store (outcome = judged_again | refused)";
 /// Access decisions, one per EHR a request reached (`outcome`, `code`).
 pub const ACCESS_DECISIONS: &str = "access_decisions";
 /// Directives and steps an emergency lifted (`lifted`).
@@ -98,7 +104,7 @@ pub const AUDIT_CHAIN_UNVERIFIED_AGE: &str = "audit_chain_unverified_age";
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 33] = [
+pub const NAMES: [&str; 34] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
@@ -110,6 +116,7 @@ pub const NAMES: [&str; 33] = [
     POLICY_NOTIFICATION_AGE,
     POLICY_COPY_READS,
     GRANTS_REFRESH_DURATION,
+    ACCESS_CARE_STALE,
     ACCESS_DECISIONS,
     ACCESS_EMERGENCY_OVERRIDES,
     ACCESS_LOG_ENTRIES,
@@ -173,6 +180,8 @@ pub struct AccessPathMetrics {
     pub copy_drops: Counter<u64>,
     /// Refreshes of the grants and caller facts copy, seconds.
     pub grants_refresh_duration: Histogram<f64>,
+    /// Care decisions taken on a copy older than the store, by outcome.
+    pub care_stale: Counter<u64>,
     /// Access decisions by outcome and refusal code.
     pub decisions: Counter<u64>,
     /// Directives and steps an emergency lifted.
@@ -248,6 +257,7 @@ impl AccessPathMetrics {
                  (kind = unchanged | grants | facts, outcome = ok | failed)",
                 PATH_BUCKETS,
             ),
+            care_stale: make.counter(ACCESS_CARE_STALE, CARE_STALE_HELP),
             decisions: make.counter(
                 ACCESS_DECISIONS,
                 "Access decisions, one per EHR a request reached \

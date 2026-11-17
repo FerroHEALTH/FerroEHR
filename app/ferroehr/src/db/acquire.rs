@@ -334,18 +334,42 @@ tokio::task_local! {
     /// The connections a [`request_scope`] keeps between checkouts, at most
     /// one per pool.
     static HELD: RefCell<Vec<Held>>;
+    /// The pool of each connection a [`request_scope`] has checked out now.
+    static OUT: RefCell<Vec<usize>>;
 }
 
 /// Runs `body` as one request: the connection each pool hands it is kept
-/// between its checkouts and returns to the pool at [`release_held`], or when
-/// `body` ends.
+/// between its checkouts and returns to the pool at [`release_held`], when
+/// `body` ends, or when the request waits for another pool ([`acquire`]).
 pub async fn request_scope<F: Future>(body: F) -> F::Output {
-    HELD.scope(RefCell::new(Vec::new()), async {
+    let kept = HELD.scope(RefCell::new(Vec::new()), async {
         let output = body.await;
         release_held();
         output
-    })
-    .await
+    });
+    OUT.scope(RefCell::new(Vec::new()), kept).await
+}
+
+/// Whether the current [`request_scope`] has a connection of the pool `key`
+/// checked out now.
+fn checked_out(key: usize) -> bool {
+    OUT.try_with(|out| out.try_borrow().is_ok_and(|out| out.contains(&key)))
+        .unwrap_or(false)
+}
+
+/// Notes in the current [`request_scope`] that a connection of the pool `key`
+/// is checked out (`out`) or back (`!out`).
+fn note_checkout(key: usize, out: bool) {
+    // NOTE: our own design, outside a request scope there is nothing to note.
+    let _outside_a_scope = OUT.try_with(|checked| {
+        if let Ok(mut checked) = checked.try_borrow_mut() {
+            if out {
+                checked.push(key);
+            } else if let Some(at) = checked.iter().position(|pool| *pool == key) {
+                checked.swap_remove(at);
+            }
+        }
+    });
 }
 
 /// Returns every connection the current [`request_scope`] keeps to its pool,
@@ -405,6 +429,7 @@ impl Checkout {
     /// A checkout of `conn`, a connection of the pool `pool` taken from it
     /// at `since`.
     fn new(conn: PoolConnection<Postgres>, pool: usize, since: Instant) -> Self {
+        note_checkout(pool, true);
         Self {
             conn: Some(conn),
             pool,
@@ -467,6 +492,7 @@ impl DerefMut for Checkout {
 
 impl Drop for Checkout {
     fn drop(&mut self) {
+        note_checkout(self.pool, false);
         let Some(mut conn) = self.conn.take() else {
             return;
         };
@@ -513,14 +539,45 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
         return Ok(Checkout::new(held.conn, key, held.since));
     }
     let started = Instant::now();
+    if checked_out(key) {
+        nested_acquire();
+    }
     // Boxed: the probe and the pool's connect future are large, and every
     // caller's state machine would otherwise carry them inline.
-    let result = Box::pin(acquire_unmetered(pool)).await;
+    let mut waiting = Box::pin(acquire_unmetered(pool));
+    let first = std::future::poll_fn(|cx| std::task::Poll::Ready(waiting.as_mut().poll(cx))).await;
+    let result = match first {
+        std::task::Poll::Ready(result) => result,
+        std::task::Poll::Pending => {
+            // NOTE: our own design (#5879), a request about to wait for one pool gives back what
+            // it keeps of the others: kept across the wait, they make the pools locks taken in no
+            // fixed order, and requests each keeping one and waiting for another stall to timeout.
+            release_held();
+            waiting.await
+        }
+    };
     crate::telemetry::metrics::metrics()
         .db_pool_acquire_duration
         .record(started.elapsed().as_secs_f64(), &[]);
     let conn = result?;
     Ok(Checkout::new(conn, key, Instant::now()))
+}
+
+/// A request asks a pool for a second connection while it has one of that
+/// pool checked out: once every connection is held so, each such request
+/// waits for one only another of them could give back. Debug builds refuse
+/// it, so a test that reaches such a site fails; a release build counts it
+/// on [`DB_POOL_NESTED_ACQUIRES`](crate::telemetry::metrics::DB_POOL_NESTED_ACQUIRES)
+/// and warns. No openEHR spec governs this: our own design (#5879).
+fn nested_acquire() {
+    debug_assert!(
+        false,
+        "a request asked a pool for a second connection while it held one of it (#5879)"
+    );
+    crate::telemetry::metrics::metrics()
+        .db_pool_nested_acquires
+        .add(1, &[]);
+    tracing::warn!("a request asked a pool for a second connection while it held one of it");
 }
 
 /// The error for a pool that failed: a connect the database refused or reset
