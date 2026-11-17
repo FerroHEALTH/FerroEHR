@@ -409,6 +409,9 @@ fn create_node(
     let coded_name = archetyped
         .then(|| coded_name_constraint(co, ctx, scope, name_constraint.as_deref()))
         .flatten();
+    node.name_rm_type = inputs::attr_children(co, "name")
+        .next()
+        .map(|c| object_rm_type(c).to_owned());
     apply_node_naming(
         &mut node,
         ctx,

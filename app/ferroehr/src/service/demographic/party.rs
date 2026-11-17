@@ -161,10 +161,12 @@ impl FerroEhrService {
         } = self.resolve_write(&request, change_type::CREATION, "PARTY creation")?;
         self.mapped_template_gate(kind.rm_type(), &request.data, incomplete)
             .await?;
-        let body = request.data;
+        let mut body = request.data;
         // Keep the served bytes for the in-memory representation, unless the
         // commit rewrites the body (then the fresh read is the stored form).
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
+        // The large media go to the blob store before a connection is held.
+        self.externalize(&mut body).await?;
         let create = Change::create_allocated(allocated, support::kind_of(kind), body, envelope);
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
@@ -259,8 +261,12 @@ impl FerroEhrService {
                 .map(|()| resolved),
             Err(e) => Err(e),
         };
-        let body = request.data;
+        let mut body = request.data;
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
+        // A valid body's large media go to the blob store before a connection is held.
+        if checked.is_ok() {
+            self.externalize(&mut body).await?;
+        }
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
                 let placement = lock_current(tx, None, vo_id, support::kind_of(kind)).await?;

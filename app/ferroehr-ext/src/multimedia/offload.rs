@@ -3,21 +3,25 @@
 
 //! The canonical-JSON transforms: externalizing large inline
 //! `DV_MULTIMEDIA.data` on the commit path and re-inlining externalized blobs
-//! with integrity verification on the read path.
+//! on the read path.
 //!
-//! Pure functions over `serde_json::Value`; the async blob I/O is driven by
+//! Synchronous functions over `serde_json::Value`; the blob I/O is driven by
 //! [`MultimediaEngine`](super::MultimediaEngine). No openEHR spec governs the
-//! blob-storage mechanism — our own design/extension — but the shape being
-//! rewritten is RM data types, so the rewrite honours their invariants.
+//! blob-storage mechanism (our own design), but the shape being rewritten is
+//! RM data types, so the rewrite honours their invariants.
 //!
 //! Per RM 1.2.0 `DV_MULTIMEDIA`
 //! (`RM/docs/UML/classes/org.openehr.rm.data_types.dv_multimedia.adoc`), an
 //! externalized value drops inline `data`, gains a `uri` (`is_external`),
-//! carries the mandatory unencoded `size`, and — setting `integrity_check` —
+//! carries the mandatory unencoded `size`, and, setting `integrity_check`,
 //! must also set `integrity_check_algorithm` from the openEHR `Integrity check
 //! algorithms` code set (`Not_empty`, `Integrity_check_validity`,
 //! `Integrity_check_algorithm_validity`, `Size_valid`). The algorithm code is
 //! `SHA-256`.
+//!
+//! The inline `data` is base64 in the request body. It is decoded in fixed
+//! windows, never into one buffer the size of the blob: once to hash it and
+//! once more as the upload streams.
 
 #![expect(
     clippy::doc_markdown,
@@ -30,16 +34,17 @@
               multimedia offload over stored fragments (families 3/6/8)"
 )]
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use base64::Engine as _;
+use bytes::Bytes;
 use openehr_base::prelude::TerminologyId;
 use openehr_rm::prelude::{CodePhrase, DvUri, DvUriData};
 use serde_json::{Map, Value};
 use sha2::{Digest as _, Sha256};
 
 use super::MultimediaError;
-use super::store::BlobStore;
+use super::blob::{BlobKey, BlobStore};
 
 /// The `_type` of the node we externalize.
 pub(super) const DV_MULTIMEDIA: &str = "DV_MULTIMEDIA";
@@ -47,22 +52,14 @@ pub(super) const DV_MULTIMEDIA: &str = "DV_MULTIMEDIA";
 const INTEGRITY_ALGORITHM_TERMINOLOGY_ID: &str = "openehr_integrity_check_algorithms";
 /// The integrity-check algorithm we compute (openEHR code-set entry).
 pub(super) const SHA256_CODE: &str = "SHA-256";
+/// How many base64 characters one decode window holds: a multiple of 4, so
+/// every window but the last decodes on its own.
+const DECODE_WINDOW: usize = 64 * 1024;
 
 /// The base64 (standard, padded) engine openEHR canonical JSON uses for
 /// `Array<Octet>` fields (`data`, `integrity_check`).
 fn b64() -> &'static base64::engine::general_purpose::GeneralPurpose {
     &base64::engine::general_purpose::STANDARD
-}
-
-/// SHA-256 of `bytes` as `(lowercase-hex, standard-base64)`.
-fn sha256(bytes: &[u8]) -> (String, String) {
-    let digest = Sha256::digest(bytes);
-    let mut hex = String::with_capacity(digest.len() * 2);
-    for b in &digest {
-        use std::fmt::Write as _;
-        let _ = write!(hex, "{b:02x}");
-    }
-    (hex, b64().encode(digest))
 }
 
 /// The `integrity_check_algorithm` CODE_PHRASE for SHA-256, in canonical JSON.
@@ -74,6 +71,40 @@ fn integrity_algorithm_code_phrase() -> Value {
         code_string: SHA256_CODE.to_owned(),
         preferred_term: None,
     })
+}
+
+/// The decoded length of a padded base64 text, read off its length and
+/// padding alone; `None` when the length is not a multiple of 4.
+fn decoded_len(data: &str) -> Option<usize> {
+    if !data.len().is_multiple_of(4) {
+        return None;
+    }
+    let padding = data.bytes().rev().take(2).filter(|&b| b == b'=').count();
+    // Every 4 characters carry 3 bytes, less one per padding character.
+    data.len()
+        .div_euclid(4)
+        .checked_mul(3)?
+        .checked_sub(padding)
+}
+
+/// The bytes of a base64 text, decoded one window at a time.
+pub(super) fn decoded_chunks(
+    data: &str,
+) -> impl Iterator<Item = Result<Bytes, MultimediaError>> + '_ {
+    data.as_bytes().chunks(DECODE_WINDOW).map(|window| {
+        b64().decode(window).map(Bytes::from).map_err(|e| {
+            MultimediaError::Malformed(format!("DV_MULTIMEDIA.data is not base64: {e}"))
+        })
+    })
+}
+
+/// A blob the commit has to upload: its key, its unencoded length, and the
+/// base64 text it was inline as, moved out of the record.
+#[derive(Debug, PartialEq, Eq)]
+pub(super) struct Pending {
+    pub(super) key: BlobKey,
+    pub(super) size: u64,
+    pub(super) data: String,
 }
 
 /// Recursively visit every `DV_MULTIMEDIA` object in the tree, calling `f` on
@@ -98,41 +129,83 @@ fn walk_multimedia<F: FnMut(&mut Map<String, Value>)>(v: &mut Value, f: &mut F) 
     }
 }
 
-/// Read-only walk collecting keys of *our* externalized blobs referenced in the
-/// tree (`s3://<our-bucket>/<hex>` URIs). Used by GC and dump/load.
-#[must_use]
-pub(super) fn referenced_keys(root: &Value, store: &BlobStore) -> Vec<String> {
-    fn recurse(v: &Value, store: &BlobStore, out: &mut Vec<String>) {
-        match v {
-            Value::Object(map) => {
-                if map.get("_type").and_then(Value::as_str) == Some(DV_MULTIMEDIA)
-                    && let Some(uri) = map
-                        .get("uri")
-                        .and_then(|u| u.get("value"))
-                        .and_then(Value::as_str)
-                    && let Some(key) = store.key_from_uri(uri)
-                {
-                    out.push(key.to_owned());
-                }
-                for child in map.values() {
-                    recurse(child, store, out);
-                }
+/// The read-only twin of [`walk_multimedia`].
+fn visit_multimedia<F: FnMut(&Map<String, Value>)>(v: &Value, f: &mut F) {
+    match v {
+        Value::Object(map) => {
+            if map.get("_type").and_then(Value::as_str) == Some(DV_MULTIMEDIA) {
+                f(map);
             }
-            Value::Array(items) => {
-                for item in items {
-                    recurse(item, store, out);
-                }
+            for child in map.values() {
+                visit_multimedia(child, f);
             }
-            _ => {}
         }
+        Value::Array(items) => {
+            for item in items {
+                visit_multimedia(item, f);
+            }
+        }
+        _ => {}
     }
+}
+
+/// The URI a `DV_MULTIMEDIA` map references, if any.
+fn uri_of(map: &Map<String, Value>) -> Option<&str> {
+    map.get("uri")
+        .and_then(|u| u.get("value"))
+        .and_then(Value::as_str)
+}
+
+/// The keys of *our* externalized blobs referenced anywhere in the tree, sorted
+/// and each once. Used by GC and dump/load.
+#[must_use]
+pub(super) fn referenced_keys(root: &Value, store: &BlobStore) -> Vec<BlobKey> {
     let mut out = Vec::new();
-    recurse(root, store, &mut out);
+    visit_multimedia(root, &mut |map| {
+        if let Some(key) = uri_of(map).and_then(|uri| store.key_from_uri(uri)) {
+            out.push(key);
+        }
+    });
+    out.sort_unstable();
+    out.dedup();
     out
 }
 
-/// Rewrite one `DV_MULTIMEDIA` map for externalization, returning the
-/// `(hex, bytes)` to upload, or `None` if it does not qualify.
+/// Whether a `DV_MULTIMEDIA` map holds inline `data` larger than `threshold`
+/// and no `uri`: the values a commit externalizes.
+fn qualifies(map: &Map<String, Value>, threshold: usize) -> Result<bool, MultimediaError> {
+    if map.get("uri").is_some_and(|u| !u.is_null()) {
+        return Ok(false);
+    }
+    let Some(data) = map.get("data").and_then(Value::as_str) else {
+        return Ok(false);
+    };
+    let length = decoded_len(data).ok_or_else(|| {
+        MultimediaError::Malformed(
+            "DV_MULTIMEDIA.data is not base64: its length is not a multiple of 4".to_owned(),
+        )
+    })?;
+    Ok(length > threshold)
+}
+
+/// Whether any `DV_MULTIMEDIA` in the tree still qualifies for
+/// externalization: the guard that refuses a commit whose externalization was
+/// skipped.
+///
+/// # Errors
+/// [`MultimediaError::Malformed`] when an inline `data` is not padded base64.
+pub(super) fn needs_offload(root: &Value, threshold: usize) -> Result<bool, MultimediaError> {
+    let mut found = Ok(false);
+    visit_multimedia(root, &mut |map| {
+        if matches!(found, Ok(false)) {
+            found = qualifies(map, threshold);
+        }
+    });
+    found
+}
+
+/// Rewrite one `DV_MULTIMEDIA` map for externalization, returning the blob to
+/// upload, or `None` if it does not qualify.
 ///
 /// Qualifies only when the value is purely inline (`data` present, `uri`
 /// absent) and its **decoded** length strictly exceeds `threshold`. A value
@@ -142,60 +215,63 @@ fn offload_one(
     map: &mut Map<String, Value>,
     threshold: usize,
     store: &BlobStore,
-) -> Result<Option<(String, Vec<u8>)>, MultimediaError> {
-    // A value that already references external storage is stored verbatim.
-    if map.get("uri").is_some_and(|u| !u.is_null()) {
+) -> Result<Option<Pending>, MultimediaError> {
+    if !qualifies(map, threshold)? {
         return Ok(None);
     }
-    let Some(data) = map.get("data").and_then(Value::as_str) else {
+    let Some(Value::String(data)) = map.get("data") else {
         return Ok(None);
     };
-    let bytes = b64().decode(data).map_err(|e| {
-        MultimediaError::Malformed(format!("DV_MULTIMEDIA.data is not base64: {e}"))
-    })?;
-    if bytes.len() <= threshold {
-        return Ok(None);
+    let mut hasher = Sha256::new();
+    let mut size: u64 = 0;
+    for chunk in decoded_chunks(data) {
+        let chunk = chunk?;
+        hasher.update(&chunk);
+        size = size.saturating_add(super::blob::len64(chunk.len()));
     }
-    let (hex, integrity_b64) = sha256(&bytes);
-    #[expect(
-        clippy::map_err_ignore,
-        reason = "TryFromIntError carries no payload beyond out-of-range, which \
-                  the mapped message already states"
-    )]
-    let size = i64::try_from(bytes.len()).map_err(|_| {
-        MultimediaError::Malformed("DV_MULTIMEDIA.data exceeds i64 byte range".to_owned())
+    let digest: [u8; 32] = hasher.finalize().into();
+    let key = BlobKey::from_digest(digest);
+    let declared = i64::try_from(size).map_err(|e| {
+        MultimediaError::Malformed(format!(
+            "DV_MULTIMEDIA.data exceeds the i64 byte range: {e}"
+        ))
     })?;
 
     // Drop inline data, become external, carry integrity and size: `Not_empty`
     // via `uri`, `Integrity_check_*`, `Size_valid`.
-    map.remove("data");
+    let Some(Value::String(data)) = map.remove("data") else {
+        return Ok(None);
+    };
     map.insert(
         "uri".to_owned(),
         openehr_its::json::to_canonical_value(&DvUri::DvUri(DvUriData {
-            value: store.uri_for(&hex),
+            value: store.uri_for(&key),
         })),
     );
-    map.insert("integrity_check".to_owned(), Value::String(integrity_b64));
+    map.insert(
+        "integrity_check".to_owned(),
+        Value::String(b64().encode(digest)),
+    );
     map.insert(
         "integrity_check_algorithm".to_owned(),
         integrity_algorithm_code_phrase(),
     );
-    map.insert("size".to_owned(), Value::Number(size.into()));
-    Ok(Some((hex, bytes)))
+    map.insert("size".to_owned(), Value::Number(declared.into()));
+    Ok(Some(Pending { key, size, data }))
 }
 
 /// Walk `root`, externalizing every qualifying inline `DV_MULTIMEDIA` in place,
-/// and return the `(hex, bytes)` blobs the caller must upload.
+/// and return the blobs the caller must upload.
 ///
-/// The tree is fully rewritten synchronously; the async uploads are the
-/// caller's second phase (so no upload result is needed to finish the rewrite,
-/// and a failed upload aborts the commit before anything is stored).
+/// The tree is fully rewritten synchronously; the uploads are the caller's
+/// second phase, so a failed upload aborts the commit before anything is
+/// stored.
 pub(super) fn plan_offload(
     root: &mut Value,
     threshold: usize,
     store: &BlobStore,
-) -> Result<Vec<(String, Vec<u8>)>, MultimediaError> {
-    let mut pending: Vec<(String, Vec<u8>)> = Vec::new();
+) -> Result<Vec<Pending>, MultimediaError> {
+    let mut pending: Vec<Pending> = Vec::new();
     let mut error: Option<MultimediaError> = None;
     walk_multimedia(root, &mut |map| {
         if error.is_some() {
@@ -213,75 +289,114 @@ pub(super) fn plan_offload(
     }
 }
 
-/// Collect the blob keys the read-path expansion must fetch: every
-/// `DV_MULTIMEDIA` that references one of *our* blobs and is not already inline.
-pub(super) fn collect_expand_keys(root: &Value, store: &BlobStore) -> Vec<String> {
-    fn recurse(v: &Value, store: &BlobStore, out: &mut Vec<String>) {
-        match v {
-            Value::Object(map) => {
-                if map.get("_type").and_then(Value::as_str) == Some(DV_MULTIMEDIA)
-                    && map.get("data").and_then(Value::as_str).is_none()
-                    && let Some(uri) = map
-                        .get("uri")
-                        .and_then(|u| u.get("value"))
-                        .and_then(Value::as_str)
-                    && let Some(key) = store.key_from_uri(uri)
-                {
-                    out.push(key.to_owned());
-                }
-                for child in map.values() {
-                    recurse(child, store, out);
-                }
-            }
-            Value::Array(items) => {
-                for item in items {
-                    recurse(item, store, out);
-                }
-            }
-            _ => {}
-        }
-    }
+/// The keys the read-path expansion must fetch, sorted and each once: every
+/// `DV_MULTIMEDIA` that references one of *our* blobs and is not already
+/// inline.
+pub(super) fn collect_expand_keys(root: &Value, store: &BlobStore) -> Vec<BlobKey> {
     let mut out = Vec::new();
-    recurse(root, store, &mut out);
+    visit_multimedia(root, &mut |map| {
+        if map.get("data").and_then(Value::as_str).is_none()
+            && let Some(key) = uri_of(map).and_then(|uri| store.key_from_uri(uri))
+        {
+            out.push(key);
+        }
+    });
+    out.sort_unstable();
+    out.dedup();
     out
 }
 
-/// Re-inline externalized `DV_MULTIMEDIA` values in place, using the verified
-/// `key → base64(data)` map the caller fetched. The `uri` + integrity fields are
-/// kept (the value is now *expanded*: `is_inline` and `is_external` both true —
-/// spec-legal), so a subsequent commit of the same body re-offloads cleanly.
-pub(super) fn apply_expand(root: &mut Value, fetched: &HashMap<String, String>, store: &BlobStore) {
+/// A fetched, verified blob: its base64 text and its unencoded length.
+#[derive(Debug)]
+pub(super) struct Fetched {
+    pub(super) data: String,
+    pub(super) size: u64,
+}
+
+/// Re-inline externalized `DV_MULTIMEDIA` values in place from the verified
+/// blobs the caller fetched. The `uri` and integrity fields are kept (the value
+/// is now *expanded*: `is_inline` and `is_external` both true, which the RM
+/// allows), so a later commit of the same body stores it verbatim.
+///
+/// # Errors
+/// [`MultimediaError::Size`] when a value's declared `size` is not the length
+/// of the blob it references (`Size_valid`); nothing is inlined then.
+pub(super) fn apply_expand(
+    root: &mut Value,
+    fetched: &BTreeMap<BlobKey, Fetched>,
+    store: &BlobStore,
+) -> Result<(), MultimediaError> {
+    let mut error: Option<MultimediaError> = None;
+    visit_multimedia(root, &mut |map| {
+        if error.is_some() || map.get("data").and_then(Value::as_str).is_some() {
+            return;
+        }
+        let Some(key) = uri_of(map).and_then(|uri| store.key_from_uri(uri)) else {
+            return;
+        };
+        let Some(blob) = fetched.get(&key) else {
+            return;
+        };
+        if let Some(declared) = map.get("size").and_then(Value::as_u64)
+            && declared != blob.size
+        {
+            error = Some(MultimediaError::Size {
+                key,
+                declared,
+                actual: blob.size,
+            });
+        }
+    });
+    if let Some(e) = error {
+        return Err(e);
+    }
     walk_multimedia(root, &mut |map| {
         if map.get("data").and_then(Value::as_str).is_some() {
             return;
         }
-        let Some(key) = map
-            .get("uri")
-            .and_then(|u| u.get("value"))
-            .and_then(Value::as_str)
+        if let Some(blob) = uri_of(map)
             .and_then(|uri| store.key_from_uri(uri))
-            .map(str::to_owned)
-        else {
-            return;
-        };
-        if let Some(b64_data) = fetched.get(&key) {
-            map.insert("data".to_owned(), Value::String(b64_data.clone()));
+            .and_then(|key| fetched.get(&key))
+        {
+            map.insert("data".to_owned(), Value::String(blob.data.clone()));
         }
     });
+    Ok(())
 }
 
-/// Verify fetched blob `bytes` hash to the expected `hex` key, returning the
-/// canonical base64 encoding **of the blob bytes** for re-inlining as
-/// `DV_MULTIMEDIA.data`. A mismatch is a hard error — never silent corruption.
-pub(super) fn verify_and_encode(hex: &str, bytes: &[u8]) -> Result<String, MultimediaError> {
-    let (actual, _) = sha256(bytes);
-    if actual != hex {
-        return Err(MultimediaError::Integrity {
-            expected: hex.to_owned(),
-            actual,
-        });
+/// A base64 encoder fed in chunks of any length: it encodes every whole
+/// 3-byte group as it arrives and carries the remainder to the next chunk.
+#[derive(Debug, Default)]
+pub(super) struct Base64Text {
+    out: String,
+    carry: Vec<u8>,
+}
+
+impl Base64Text {
+    /// Appends the encoding of `chunk`.
+    pub(super) fn push(&mut self, mut chunk: &[u8]) {
+        if !self.carry.is_empty() {
+            let wanted = 3 - self.carry.len();
+            let (head, rest) = chunk.split_at(wanted.min(chunk.len()));
+            self.carry.extend_from_slice(head);
+            chunk = rest;
+            if self.carry.len() < 3 {
+                return;
+            }
+            b64().encode_string(&self.carry, &mut self.out);
+            self.carry.clear();
+        }
+        let whole = chunk.len() - chunk.len() % 3;
+        let (groups, tail) = chunk.split_at(whole);
+        b64().encode_string(groups, &mut self.out);
+        self.carry.extend_from_slice(tail);
     }
-    Ok(b64().encode(bytes))
+
+    /// The finished, padded text.
+    pub(super) fn finish(mut self) -> String {
+        b64().encode_string(&self.carry, &mut self.out);
+        self.out
+    }
 }
 
 #[cfg(test)]
@@ -293,13 +408,9 @@ pub(super) fn verify_and_encode(hex: &str, bytes: &[u8]) -> Result<String, Multi
 mod tests {
     use super::*;
     use serde_json::json;
-    use std::sync::Arc;
 
     fn store() -> BlobStore {
-        BlobStore::from_parts(
-            Arc::new(object_store::memory::InMemory::new()),
-            "media".to_owned(),
-        )
+        BlobStore::in_memory("media")
     }
 
     /// A canonical DV_MULTIMEDIA node with `n` bytes of inline data.
@@ -330,28 +441,36 @@ mod tests {
         let mut comp = wrap(multimedia(100));
         let before = comp.clone();
         let pending = plan_offload(&mut comp, 256, &s).unwrap();
-        assert_eq!(pending, Vec::<(String, Vec<u8>)>::new());
+        assert_eq!(pending, Vec::<Pending>::new());
         assert_eq!(comp, before, "small inline media must be byte-identical");
+        assert!(!needs_offload(&comp, 256).unwrap());
     }
 
     #[test]
     fn above_threshold_offloads_and_honours_invariants() {
         let s = store();
         let raw = vec![0x42u8; 1000];
-        let (want_hex, want_ic) = sha256(&raw);
+        let want = BlobKey::of(&raw);
+        let want_ic = b64().encode(want.digest());
         let mut comp = wrap(multimedia(1000));
+        assert!(needs_offload(&comp, 256).unwrap());
         let pending = plan_offload(&mut comp, 256, &s).unwrap();
 
         assert_eq!(pending.len(), 1);
-        assert_eq!(pending[0].0, want_hex);
-        assert_eq!(pending[0].1, raw);
+        assert_eq!(pending[0].key, want);
+        assert_eq!(pending[0].size, 1000);
+        assert_eq!(pending[0].data, b64().encode(&raw));
+        assert!(
+            !needs_offload(&comp, 256).unwrap(),
+            "nothing left to offload"
+        );
 
         let node = comp.pointer("/content/0/value").unwrap();
         // data removed; uri present (is_external) → Not_empty holds.
         assert!(node.get("data").is_none());
         assert_eq!(
             node.pointer("/uri/value").unwrap().as_str().unwrap(),
-            format!("s3://media/{want_hex}")
+            format!("s3://media/{want}")
         );
         assert_eq!(node.pointer("/uri/_type").unwrap(), "DV_URI");
         // integrity_check = base64(sha256 octets); algorithm coded SHA-256.
@@ -371,6 +490,31 @@ mod tests {
     }
 
     #[test]
+    fn a_large_value_decodes_window_by_window_to_the_same_bytes() {
+        let raw: Vec<u8> = (0..200_000u32)
+            .map(|i| u8::try_from(i % 251).unwrap())
+            .collect();
+        let text = b64().encode(&raw);
+        let decoded: Vec<u8> = decoded_chunks(&text)
+            .map(Result::unwrap)
+            .flat_map(|chunk| chunk.to_vec())
+            .collect();
+        assert_eq!(decoded, raw);
+        assert_eq!(decoded_len(&text), Some(raw.len()));
+    }
+
+    #[test]
+    fn data_that_is_not_base64_is_malformed() {
+        let s = store();
+        let mut node = multimedia(1000);
+        node.as_object_mut()
+            .unwrap()
+            .insert("data".to_owned(), json!("not base64!"));
+        let err = plan_offload(&mut wrap(node), 4, &s).unwrap_err();
+        assert!(matches!(err, MultimediaError::Malformed(_)), "{err:?}");
+    }
+
+    #[test]
     fn client_supplied_uri_is_passthrough() {
         let s = store();
         let mut node = multimedia(1000);
@@ -383,7 +527,7 @@ mod tests {
         let mut comp = wrap(node);
         let before = comp.clone();
         let pending = plan_offload(&mut comp, 256, &s).unwrap();
-        assert_eq!(pending, Vec::<(String, Vec<u8>)>::new());
+        assert_eq!(pending, Vec::<Pending>::new());
         assert_eq!(
             comp, before,
             "client-managed external media stored verbatim"
@@ -406,32 +550,75 @@ mod tests {
     fn expand_round_trips_offloaded_value() {
         let s = store();
         let raw = vec![0x42u8; 1000];
-        let (hex, _) = sha256(&raw);
+        let key = BlobKey::of(&raw);
         let mut comp = wrap(multimedia(1000));
         plan_offload(&mut comp, 256, &s).unwrap();
 
         let keys = collect_expand_keys(&comp, &s);
-        assert_eq!(keys, vec![hex.clone()]);
+        assert_eq!(keys, vec![key]);
 
-        // Simulate a verified fetch: the re-inlined data must decode back to the
-        // *original* blob bytes (not the digest).
-        let b64_data = verify_and_encode(&hex, &raw).unwrap();
-        assert_eq!(b64().decode(&b64_data).unwrap(), raw);
-        let fetched = HashMap::from([(hex.clone(), b64_data.clone())]);
-        apply_expand(&mut comp, &fetched, &s);
+        // The re-inlined data must decode back to the *original* blob bytes.
+        let mut text = Base64Text::default();
+        for chunk in raw.chunks(7) {
+            text.push(chunk);
+        }
+        let data = text.finish();
+        assert_eq!(data, b64().encode(&raw));
+        let fetched = BTreeMap::from([(
+            key,
+            Fetched {
+                data: data.clone(),
+                size: 1000,
+            },
+        )]);
+        apply_expand(&mut comp, &fetched, &s).unwrap();
 
         let node = comp.pointer("/content/0/value").unwrap();
-        assert_eq!(node.get("data").unwrap(), &json!(b64_data));
+        assert_eq!(node.get("data").unwrap(), &json!(data));
         // uri kept → expanded (both is_inline and is_external), spec-legal.
         assert!(node.get("uri").is_some());
     }
 
     #[test]
-    fn integrity_mismatch_is_error() {
-        let raw = vec![0x42u8; 100];
-        let (hex, _) = sha256(&raw);
-        let err = verify_and_encode(&hex, b"tampered").unwrap_err();
-        assert!(matches!(err, MultimediaError::Integrity { .. }));
+    fn a_declared_size_other_than_the_blob_length_refuses_the_expansion() {
+        let s = store();
+        let raw = vec![0x42u8; 1000];
+        let key = BlobKey::of(&raw);
+        let mut comp = wrap(multimedia(1000));
+        plan_offload(&mut comp, 256, &s).unwrap();
+        let before = comp.clone();
+        let fetched = BTreeMap::from([(
+            key,
+            Fetched {
+                data: b64().encode(&raw[..999]),
+                size: 999,
+            },
+        )]);
+        let err = apply_expand(&mut comp, &fetched, &s).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                MultimediaError::Size {
+                    declared: 1000,
+                    actual: 999,
+                    ..
+                }
+            ),
+            "{err:?}"
+        );
+        assert_eq!(comp, before, "nothing inlined");
+    }
+
+    #[test]
+    fn the_chunked_encoder_matches_the_one_shot_encoding_for_every_split() {
+        let raw: Vec<u8> = (0..50u8).collect();
+        for split in 1..8 {
+            let mut text = Base64Text::default();
+            for chunk in raw.chunks(split) {
+                text.push(chunk);
+            }
+            assert_eq!(text.finish(), b64().encode(&raw), "split {split}");
+        }
     }
 
     #[test]

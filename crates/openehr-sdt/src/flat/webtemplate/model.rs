@@ -356,6 +356,11 @@ pub struct WebTemplateNode {
     /// `DV_TEXT` name. Build-time only (`#[serde(skip)]`); see [`CodedName`].
     #[serde(skip)]
     pub name_coded: Option<CodedName>,
+    /// The RM type the template constrains the node's `name` to, when it
+    /// constrains it (`DV_TEXT` or `DV_CODED_TEXT`; AOM 1.4 `C_COMPLEX_OBJECT`
+    /// `rm_type_name`). Build-time only (`#[serde(skip)]`).
+    #[serde(skip)]
+    pub name_rm_type: Option<String>,
     /// The `C_STRING` a template puts on an RM String attribute that is not a
     /// data value, such as `ACTIVITY.action_archetype_id` (AOM 1.4
     /// `C_PRIMITIVE_OBJECT`), as the input that carries its pattern or list.
@@ -436,6 +441,7 @@ impl WebTemplateNode {
             alt_json_id: None,
             name_code: None,
             name_coded: None,
+            name_rm_type: None,
             string_constraint: None,
             archetype_ref: None,
             rm_release: None,

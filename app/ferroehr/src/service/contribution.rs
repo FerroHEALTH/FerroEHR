@@ -243,8 +243,12 @@ async fn write_contribution(
     cx: &FerroEhrService,
     ehr_id: Option<EhrId>,
     party_only: bool,
-    write: ContributionWrite<'_>,
+    mut write: ContributionWrite<'_>,
 ) -> Result<CommittedContribution, ServiceError> {
+    // The set's large media go to the blob store before a connection is held.
+    for (_, change) in &mut write.changes {
+        cx.externalize_change(change).await?;
+    }
     let mut conn = acquire(domain_pool(cx, party_only)).await?;
     let mut tx = conn.begin().await?;
     // The content-write gate, under a row lock (RM ehr master04 §EHR Active

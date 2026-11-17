@@ -100,6 +100,10 @@ impl FerroEhrService {
                 Change::create_allocated(party.id, kind, party.body, envelope),
             ));
         }
+        // The set's large media go to the blob store before a connection is held.
+        for (_, change) in &mut changes {
+            self.externalize_change(change).await?;
+        }
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let committed = change::commit_contribution(

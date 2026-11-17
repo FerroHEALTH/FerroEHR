@@ -544,7 +544,7 @@ fn production_refuses_a_plaintext_audit_feed_and_object_store_unless_accepted() 
     let store = |enabled: bool, allow_http: bool| {
         let mut config = production(separated());
         config.record.multimedia.enabled = enabled;
-        config.record.multimedia.url = Some(SecretUrl::new(if allow_http {
+        config.record.multimedia.s3.url = Some(SecretUrl::new(if allow_http {
             "http://seaweedfs:8333"
         } else {
             "https://s3.example"

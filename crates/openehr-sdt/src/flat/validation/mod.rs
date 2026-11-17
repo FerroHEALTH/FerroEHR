@@ -44,6 +44,7 @@
 )]
 
 mod leaf;
+mod name_type;
 pub(crate) mod node_ids;
 pub(crate) mod plan;
 mod presence;
@@ -609,6 +610,9 @@ impl Validator {
         if !wt.inputs.is_empty() {
             leaf::check_inputs(self, instance, wt);
         }
+        if !wt.rm_type.starts_with("DV_") {
+            self.check_name_type(instance, wt, &wt.aql_path);
+        }
 
         if self.collect_bindings && !wt.constraint_bindings.is_empty() {
             self.collect_node_bindings(instance, wt);
@@ -945,6 +949,9 @@ impl Validator {
                     for member in &members {
                         self.check_null_constraints(node, &member.null_constraints);
                         self.check_element_existence(node, member);
+                        if let Some(element_path) = member.aql_path.strip_suffix("/value") {
+                            self.check_name_type(node, member, element_path);
+                        }
                     }
                 }
             }

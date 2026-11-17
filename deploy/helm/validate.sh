@@ -284,7 +284,7 @@ secret_leak_gate() {
     "database.url"
     "audit.fhir_feed.endpoint.url"
     "record.signing.key_passphrase"
-    "record.multimedia.secret_access_key"
+    "record.multimedia.s3.secret_access_key"
     "terminology.endpoint.credentials.oauth.client_secret"
     "auth.basic.users[0].password_hash"
   )

@@ -353,14 +353,17 @@ async fn modified_between(
 ) -> Result<Vec<i64>, AuditError> {
     let mut modified = Vec::new();
     loop {
-        let rows = sqlx::query(
-            "SELECT r.chain_seq, r.content, sh.content AS shared, \
-             encode(r.content_digest, 'hex') AS content_digest \
+        let rows = sqlx::query(concat!(
+            "SELECT r.chain_seq, \
+             CASE WHEN pg_input_is_valid(r.content, 'jsonb') \
+                  AND (sh.content IS NULL OR pg_input_is_valid(sh.content, 'jsonb')) THEN ",
+            crate::access_log::store::document!(),
+            "::text END AS document, encode(r.content_digest, 'hex') AS content_digest \
              FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
              WHERE r.chain_seq > $1 AND r.chain_seq <= $2 \
-             AND r.record_type = 'ACCESS_LOG_ENTRY' ORDER BY r.chain_seq LIMIT $3",
-        )
+             AND r.record_type = 'ACCESS_LOG_ENTRY' ORDER BY r.chain_seq LIMIT $3"
+        ))
         .bind(after)
         .bind(upto)
         .bind(CONTENT_PAGE)
@@ -378,18 +381,16 @@ async fn modified_between(
     }
 }
 
-/// Whether the entry `row` stores still digests to its `content_digest`; an
-/// entry whose parts no longer read as JSON does not.
+/// Whether the entry `row` holds still digests to its `content_digest`; an
+/// entry whose canonical form no longer reads does not.
 fn content_intact(row: &PgRow) -> Result<bool, AuditError> {
-    let parse = |text: &str| serde_json::from_str::<serde_json::Value>(text);
-    let content: String = row.try_get("content")?;
-    let shared: Option<String> = row.try_get("shared")?;
+    let document: Option<String> = row.try_get("document")?;
     let recorded: String = row.try_get("content_digest")?;
-    // NOTE: our own design; a part that no longer parses was changed after it was written.
-    let (Ok(own), Ok(shared)) = (parse(&content), shared.as_deref().map(parse).transpose()) else {
+    // NOTE: our own design; a record whose parts no longer parse was changed after it was written.
+    let Some(Ok(joined)) = document.map(|text| serde_json::from_str::<serde_json::Value>(&text))
+    else {
         return Ok(false);
     };
-    let joined = crate::access_log::stored_form::join(own, shared);
     let Ok(form) = canonical_json(&joined) else {
         return Ok(false);
     };
