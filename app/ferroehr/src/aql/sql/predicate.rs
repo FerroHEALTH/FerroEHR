@@ -23,9 +23,9 @@ use openehr_query::ast::{BuiltinFunction, DateTimeFunction, NumericFunction, Str
 use openehr_query::lexer::CompOp;
 
 use super::archetype::archetype_predicate;
-use super::coerce::{RawPartner, coerce_rhs, numeric_value, target_types};
+use super::coerce::{RawPartner, coerce_rhs, coerce_value, numeric_value, raw_key, target_types};
 use super::compact::version_uid_text;
-use super::expr::{aql_like_to_sql, as_text, binoper, cast, col, fragment_source, jsonb_path};
+use super::expr::{aql_like_to_sql, binoper, cast, col, fragment_source, jsonb_path};
 use super::from::is_vo_root_type;
 use super::jsonpath::jsonpath;
 use super::{Builder, ValueMode};
@@ -416,29 +416,33 @@ impl Builder<'_> {
     }
 
     /// A standard predicate on the node `node` (QUERY master03 §Standard
-    /// predicate), reading its path as the same path reads in WHERE: the
+    /// predicate), read and compared as the same comparison in WHERE: the
     /// `uid/value` of a versioned object's root is its bound version's
     /// identifier (RM common master06 §Version Identification), which the
-    /// stored fragment does not carry, and every other path reads the
-    /// fragment.
+    /// stored fragment does not carry, and every other path reads the fragment
+    /// under the leaf's [`Coercion`], a mixed-type leaf by the value opposite
+    /// it ([`RawPartner`]).
     ///
     /// # Errors
-    /// [`SqlError::UnboundParameter`] for an unbound parameter.
+    /// [`SqlError::UnboundParameter`] for an unbound parameter, and the
+    /// [`coerce_rhs`] refusals of a value the leaf's type cannot compare with.
     pub(super) fn std_cond(&self, node: &str, sp: &StdPredicate) -> Result<Expr, AqlError> {
         let root = self.root_version_alias(node);
-        let lhs = match root.as_deref() {
-            Some(voa) if is_version_uid(&sp.path) => version_uid_text(voa),
-            _ => {
-                let jp = jsonpath(&sp.path);
-                as_text(jsonb_path(
-                    fragment_source(node, Some(&jp), root.as_deref()),
-                    &jp,
-                    None,
-                ))
-            }
-        };
-        let rhs = cast(Expr::val(self.bind_value(&sp.value)?), "text");
-        Ok(lhs.binary(binoper(sp.op), rhs))
+        let value = self.bind_value(&sp.value)?;
+        if let Some(voa) = root.as_deref().filter(|_| is_version_uid(&sp.path)) {
+            return Ok(version_uid_text(voa).binary(binoper(sp.op), cast(Expr::val(value), "text")));
+        }
+        let jp = jsonpath(&sp.path);
+        let base = jsonb_path(fragment_source(node, Some(&jp), root.as_deref()), &jp, None);
+        let types = sp.types.names();
+        if sp.coercion == Coercion::Raw {
+            let partner = RawPartner::of(value, types);
+            let (first, second) = partner.modes();
+            let second = second.map(|m| raw_key(base.clone(), m));
+            return Ok(partner.compare(binoper(sp.op), true, raw_key(base, first), second));
+        }
+        let lhs = coerce_value(base, ValueMode::Value(sp.coercion), types);
+        Ok(lhs.binary(binoper(sp.op), coerce_rhs(value, sp.coercion)?))
     }
 
     /// The standard predicates of an RM source's class expression on its node

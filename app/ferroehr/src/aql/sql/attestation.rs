@@ -82,7 +82,7 @@ impl Builder<'_> {
         };
         let walk = ItemWalk {
             sub,
-            item: coerce_value(base, mode, leaf),
+            item: coerce_value(base, mode, leaf.types.names()),
             bindings: Vec::new(),
         };
         Ok((walk, alias))
