@@ -135,15 +135,31 @@ pub fn canonical_form(record: &impl serde::Serialize) -> Result<String, AccessLo
     canonical_object_without(record, &[LINK, PROOF]).map_err(AccessLogError::Canonical)
 }
 
-/// The records of this system's log joined with their shared parts, in the
-/// columns [`stored`] reads.
+/// A record of this system's log as its canonical form without its link, a
+/// `jsonb` over the record `r` and its shared part `sh`: the one reader of a
+/// record (`migrations/audit/0046_access_log_entry_one_row.sql`).
+macro_rules! document {
+    () => {
+        "audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
+         r.time_recorded, r.ehr_id)"
+    };
+}
+pub(crate) use document;
+
+/// The records of this system's log, each as its canonical form `d.doc`, in
+/// the columns [`stored`] reads.
 macro_rules! records {
     () => {
-        "SELECT r.uid, r.chain_seq, r.content, sh.content AS shared, r.algorithm, \
-         encode(r.previous_digest, 'hex') AS previous_digest, \
-         encode(r.content_digest, 'hex') AS content_digest, encode(r.digest, 'hex') AS digest \
-         FROM audit.access_log_record r \
-         LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared"
+        concat!(
+            "SELECT r.uid, r.chain_seq, d.doc::text AS document, r.algorithm, \
+             encode(r.previous_digest, 'hex') AS previous_digest, \
+             encode(r.content_digest, 'hex') AS content_digest, encode(r.digest, 'hex') AS digest \
+             FROM audit.access_log_record r \
+             LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
+             CROSS JOIN LATERAL (SELECT ",
+            crate::access_log::store::document!(),
+            " AS doc) d"
+        )
     };
 }
 pub(crate) use records;
@@ -280,13 +296,28 @@ impl AccessLogStore {
     /// The store errors when the statement fails, and
     /// [`AccessLogError::Unreadable`] when a stored record does not read.
     pub async fn of_ehr(&self, ehr_id: &str) -> Result<Vec<AccessLogRecord>, AccessLogError> {
-        let rows = sqlx::query(concat!(
-            records!(),
-            " WHERE r.ehr_id = $1 ORDER BY r.chain_seq"
-        ))
-        .bind(ehr_id)
-        .fetch_all(&mut *acquire(&self.pool).await?)
-        .await?;
+        let mut conn = acquire(&self.pool).await?;
+        let rows = match stored_form::column_uuid(ehr_id) {
+            Some(column) => {
+                sqlx::query(concat!(
+                    records!(),
+                    " WHERE r.ehr_id = $1 ORDER BY r.chain_seq"
+                ))
+                .bind(column)
+                .fetch_all(&mut *conn)
+                .await?
+            }
+            None => {
+                sqlx::query(concat!(
+                    records!(),
+                    " WHERE r.ehr_id IS NULL AND d.doc #>> '{ehr_id,value}' = $1 \
+                     ORDER BY r.chain_seq"
+                ))
+                .bind(ehr_id)
+                .fetch_all(&mut *conn)
+                .await?
+            }
+        };
         rows.iter().map(stored).collect()
     }
 
@@ -502,9 +533,9 @@ pub(super) fn signed_link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
     })
 }
 
-/// The record `row` of this system's log holds, read as a `T`: its row and
-/// shared parts joined into its canonical form, with its link. The row holds
-/// `chain_seq`, `content`, `shared` and the link's columns.
+/// The record `row` of this system's log holds, read as a `T`: its canonical
+/// form, with its link. The row holds `chain_seq`, `document` and the link's
+/// columns.
 ///
 /// # Errors
 /// [`AccessLogError::Unreadable`] when the record does not read.
@@ -523,22 +554,15 @@ pub(super) fn stored_signed<T: serde::de::DeserializeOwned>(
     joined(row, signed_link(row)?)
 }
 
-/// The record the `content` and `shared` columns of `row` store, with `link`
-/// joined.
+/// The record the `document` column of `row` holds, with `link` joined.
 fn joined<T: serde::de::DeserializeOwned>(
     row: &PgRow,
     link: AccessLogLink,
 ) -> Result<T, AccessLogError> {
     let chain_seq: i64 = row.try_get("chain_seq")?;
     let unreadable = |source| AccessLogError::Unreadable { chain_seq, source };
-    let content: String = row.try_get("content")?;
-    let own: Value = serde_json::from_str(&content).map_err(unreadable)?;
-    let shared = row
-        .try_get::<Option<String>, _>("shared")?
-        .map(|text| serde_json::from_str::<Value>(&text))
-        .transpose()
-        .map_err(unreadable)?;
-    let mut value = stored_form::join(own, shared);
+    let document: String = row.try_get("document")?;
+    let mut value: Value = serde_json::from_str(&document).map_err(unreadable)?;
     let link = serde_json::to_value(link).map_err(unreadable)?;
     if let Value::Object(members) = &mut value {
         members.insert(LINK.to_owned(), link);

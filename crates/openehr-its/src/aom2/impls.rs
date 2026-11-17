@@ -491,7 +491,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::Annotationpathset {
                     "items" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __items.insert(__k, __v);
@@ -2275,7 +2277,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::PAuthoredArchetype {
                     "other_metadata" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_metadata.insert(__k, __v);
@@ -4253,7 +4257,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::ResourceDescription {
                     "original_author" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __original_author.insert(__k, __v);
@@ -4279,7 +4285,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::ResourceDescription {
                     "ip_acknowledgements" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __ip_acknowledgements.insert(__k, __v);
@@ -4291,7 +4299,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::ResourceDescription {
                     "references" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __references.insert(__k, __v);
@@ -4299,7 +4309,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::ResourceDescription {
                     "other_details" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
@@ -4438,7 +4450,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::ResourceDescriptionIte
                     "original_resource_uri" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __original_resource_uri.insert(__k, __v);
@@ -4446,7 +4460,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::ResourceDescriptionIte
                     "other_details" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
@@ -4807,7 +4823,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::TranslationDetails {
                     "author" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __author.insert(__k, __v);
@@ -4819,7 +4837,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::TranslationDetails {
                     "other_details" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __other_details.insert(__k, __v);
@@ -4907,7 +4927,9 @@ impl crate::xml::runtime::FromXml for crate::aom2::types::Termbindingset {
                     "items" => {
                         let __k = __c
                             .attr("id")
-                            .ok_or_else(|| reader.missing_attribute("StringDictionaryItem", "id"))?
+                            .ok_or_else(|| {
+                                reader.missing_start_attribute("StringDictionaryItem", "id")
+                            })?
                             .to_string();
                         let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?;
                         __items.insert(__k, __v);

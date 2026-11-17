@@ -6,12 +6,12 @@
 //! (#5127).
 //!
 //! A record whose access writes an entry is stored as the entry alone, in the
-//! access log's own chain, apart from the `audit_event` records, with one row
-//! of `audit.access_log_search` beside it: the columns the search filters on,
-//! read from the entry's projection, and the render policy that projection is
-//! written under (`migrations/audit/0030_access_log_projections.sql`). A read
-//! renders the document from the entry's content. Both are written into the
-//! intake before the response and chained after
+//! access log's own chain, apart from the `audit_event` records, with the
+//! columns the search filters on, read from the entry's projection, and the
+//! render policy that projection is written under on the entry's own row
+//! (`migrations/audit/0046_access_log_entry_one_row.sql`). A read renders the
+//! document from the entry's content. The entry is written into the intake
+//! before the response and chained after
 //! (`migrations/audit/0042_audit_intake.sql`). A record an act wrote as its
 //! entry in its own transaction ([`EntryScope::Written`]) is written by that
 //! act alone, so it is stored once. No openEHR spec governs
@@ -148,7 +148,9 @@ impl AuditStore {
     /// `records`, each whose access writes an access-log entry carrying it:
     /// the drain's records carry theirs, and the store builds the entry of any
     /// other under the policy it is written under, so no access the log
-    /// covers is stored by its columns.
+    /// covers is stored by its columns. The time of a record it builds the
+    /// entry of is cut to the microsecond the store keeps, as the drain cuts
+    /// its own, so the entry's `time_recorded` is the instant its index holds.
     ///
     /// # Errors
     /// The [`crate::system_log::render::RenderPolicy::compile`] errors.
@@ -159,6 +161,8 @@ impl AuditStore {
     ) -> Result<Vec<AuditRecord>, AuditError> {
         for record in &mut records {
             if record.entry.is_none() && crate::access_log::entry::writes_entry(&record.event) {
+                record.event.timestamp =
+                    crate::system_log::event::stored_instant(record.event.timestamp);
                 let policy = writing.of(&record.event).compiled().await?;
                 record.entry = crate::access_log::entry::for_store(
                     &record.event,
@@ -275,7 +279,7 @@ impl AuditStore {
         &self,
         row: &PgRow,
     ) -> Result<(Arc<CompiledPolicy>, StoredRecord), AuditError> {
-        if row.try_get::<Option<&str>, _>("content")?.is_none() {
+        if row.try_get::<Option<&str>, _>("document")?.is_none() {
             let (digest, stored) = stored_record(row)?;
             let policy = self.policy(stored.chain_seq, &digest).await?;
             return Ok((policy, stored));
@@ -324,7 +328,6 @@ pub(super) fn token_texts(ids: &[Vec<i32>]) -> Vec<String> {
 fn index_row(event: &AuditEvent, subject: Option<String>, digest: Vec<u8>) -> IndexRow {
     let nonempty = |value: &str| (!value.is_empty()).then(|| value.to_owned());
     IndexRow {
-        recorded_at: event.timestamp,
         action: event.action.as_code(),
         outcome: match event.outcome {
             EventOutcome::Success => 0,

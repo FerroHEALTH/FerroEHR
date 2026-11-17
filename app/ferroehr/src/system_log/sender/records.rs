@@ -43,7 +43,7 @@ pub(super) fn render_records(
     let _: &AuditContext = ctx;
     let mut records: Vec<AuditRecord> = Vec::with_capacity(events.len());
     for mut event in events {
-        event.timestamp = stored_instant(event.timestamp);
+        event.timestamp = crate::system_log::event::stored_instant(event.timestamp);
         let resolved = match (subjects, &event.ehr_id) {
             (Some(subjects), Some(ehr_id)) if subjects.unavailable.contains(ehr_id) => {
                 event.subject_lookup_failed = true;
@@ -68,15 +68,4 @@ pub(super) fn render_records(
         });
     }
     records
-}
-
-/// `at` cut to the microsecond `timestamptz` keeps; `at` itself when it is
-/// already that fine.
-fn stored_instant(at: jiff::Timestamp) -> jiff::Timestamp {
-    at.round(
-        jiff::TimestampRound::new()
-            .smallest(jiff::Unit::Microsecond)
-            .mode(jiff::RoundMode::Trunc),
-    )
-    .unwrap_or(at)
 }

@@ -610,11 +610,19 @@
                     "null"
                   ]
                 },
-                "url": {
+                "s3": {
                   "type": [
-                    "string",
+                    "object",
                     "null"
-                  ]
+                  ],
+                  "properties": {
+                    "url": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
                 }
               }
             }

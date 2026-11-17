@@ -68,7 +68,7 @@ impl FerroEhrService {
             envelope,
             incomplete,
         } = self.resolve_write(&request, change_type::CREATION, "DIRECTORY creation")?;
-        let folder = openehr_its::json::to_canonical_value(&request.data);
+        let mut folder = openehr_its::json::to_canonical_value(&request.data);
         drop(request);
         crate::storage::ehr_repo::require_ehr(&mut *acquire(&self.pool).await?, ehr_id).await?;
         self.validate_for_commit(Kind::Folder, &folder, incomplete)
@@ -94,6 +94,8 @@ impl FerroEhrService {
                 "EHR {ehr_id} already has a directory"
             )));
         }
+        // The large media go to the blob store before the commit holds a connection.
+        self.externalize(&mut folder).await?;
         let committed = self
             .commit_one(&self.pool, Mode::Transaction, async move |_| {
                 Ok(Write::new(
@@ -239,7 +241,7 @@ impl FerroEhrService {
         let checked = async {
             let resolved =
                 self.resolve_write(&request, change_type::MODIFICATION, "DIRECTORY update")?;
-            let folder = openehr_its::json::to_canonical_value(&request.data);
+            let mut folder = openehr_its::json::to_canonical_value(&request.data);
             self.validate_for_commit(Kind::Folder, &folder, resolved.incomplete)
                 .await?;
             check_folder_item_refs(
@@ -254,6 +256,8 @@ impl FerroEhrService {
             if !is_modifiable {
                 return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
             }
+            // The large media go to the blob store before the commit holds a connection.
+            self.externalize(&mut folder).await?;
             Ok((resolved, folder))
         }
         .await;

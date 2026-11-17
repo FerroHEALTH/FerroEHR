@@ -392,14 +392,83 @@ async fn a_held_write_under_a_cold_policy_needs_one_audit_connection() {
         entry: None,
     });
 
-    let started = std::time::Instant::now();
+    // NOTE: (#5906) a second acquire is refused in a debug build, or times the write out.
     ferroehr::db::acquire::request_scope(store.write_held(records.into(), &[], reservation))
         .await
         .expect("the held write");
-    assert!(
-        started.elapsed() < Duration::from_secs(3),
-        "the write waited for a second connection"
-    );
     let (entries, records) = held(&db.pool(), reservation).await;
     assert_eq!((entries.len(), records.len()), (1, 1));
+}
+
+/// An audited write with the subject lookup on: the subject its records name
+/// is read on the write's own transaction, so the record of an EHR creation
+/// names the subject the write gave it. A lookup on a connection of its own
+/// waited for a second clinical connection while the write held one, and
+/// could not see the EHR the write had not committed yet (#5947).
+#[tokio::test]
+async fn a_write_reads_the_subject_of_its_records_on_its_own_transaction() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let mut config = ferroehr::db::DbConfig::new(db.url());
+    config.max_connections = Some(2);
+    config.min_connections = Some(0);
+    config.acquire_timeout = ferrohealth_config::units::Duration::from_secs(3);
+    let clinical = ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Clinical)
+        .await
+        .expect("the clinical pool connects");
+    let lookup_pool = clinical.clone();
+    let resolver: sender::SubjectResolver = Arc::new(move |ehr_id: String| {
+        let pool = lookup_pool.clone();
+        Box::pin(async move {
+            let Ok(id) = Uuid::parse_str(&ehr_id) else {
+                return sender::SubjectLookup::NoSubject;
+            };
+            match ferroehr::storage::ehr_repo::ehr_subject_columns(&pool, ferroehr::ids::EhrId(id))
+                .await
+            {
+                Ok(_) => sender::SubjectLookup::NoSubject,
+                Err(_) => sender::SubjectLookup::Unavailable,
+            }
+        })
+    });
+    let audit = AuditConfig {
+        enabled: true,
+        ..AuditConfig::default()
+    };
+    let (sender, handle) = sender::start(audit, Some(resolver), pool.clone())
+        .await
+        .expect("the audit sender");
+    drop(handle);
+    let svc = FerroEhrService::new(&DomainPools {
+        clinical,
+        party: pool.clone(),
+        audit: pool.clone(),
+    })
+    .with_audit(sender);
+    let recorder = primed();
+
+    let subject = ferroehr::service::ehr_index::types::SubjectRef {
+        id: "subject-5947".to_owned(),
+        namespace: "test.ferroehr".to_owned(),
+        r#type: "PERSON".to_owned(),
+    };
+
+    ferroehr::db::acquire::request_scope(with_recorder(
+        recorder.clone(),
+        crate::fixtures::create_ehr_subject(&svc, &subject),
+    ))
+    .await;
+    let reservations = recorder.reserved();
+    assert_eq!(reservations.len(), 1, "the write took one reservation");
+    let named: Vec<Option<String>> =
+        sqlx::query_scalar("SELECT patient_id FROM audit.access_log_intake WHERE reserved_by = $1")
+            .bind(reservations[0].id)
+            .fetch_all(&pool)
+            .await
+            .expect("the held entries");
+    assert_eq!(
+        named,
+        vec![Some(subject.id.clone())],
+        "the entry names the new EHR's subject"
+    );
 }

@@ -20,7 +20,6 @@ use sha2::{Digest, Sha256};
 use sqlx::{AssertSqlSafe, Connection, PgConnection, PgPool, Row};
 
 use ferroehr::access_log::store::{AccessLogStore, canonical_form};
-use ferroehr::access_log::stored_form;
 use ferroehr::system_log::event::{AuditEvent, EventActionCode, EventOutcome, ObjectClass};
 use ferroehr::system_log::store::AuditStore;
 use ferroehr::system_log::store::chains::{AuditChain, VerifyScope};
@@ -162,8 +161,9 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
 
         let read = store.read(entry.uid.value()).await.expect("read");
         assert_eq!(read, Some(AccessLogRecord::AccessLogEntry(entry.clone())));
-        let (own, shared): (String, Option<String>) = sqlx::query_as(
-            "SELECT r.content, sh.content FROM audit.access_log_record r \
+        let (own, document): (String, String) = sqlx::query_as(
+            "SELECT r.content, audit.access_log_document(r.content, sh.content, r.record_type, \
+             r.uid, r.time_recorded, r.ehr_id)::text FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
              WHERE r.chain_seq = $1",
         )
@@ -175,12 +175,21 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
             !own.contains("\"accessor\""),
             "the row keeps no accessor: {own}"
         );
-        let parse = |text: &str| serde_json::from_str::<Value>(text).expect("a stored part");
-        let joined = stored_form::join(parse(&own), shared.as_deref().map(parse));
+        for column in ["\"_type\":\"ACCESS_LOG_ENTRY\"", "\"uid\"", "\"ehr_id\""] {
+            assert!(
+                !own.contains(column),
+                "the row leaves {column} to its column: {own}"
+            );
+        }
+        assert!(
+            own.contains("\"time_recorded\""),
+            "a time its column would not write back as it was written stays on the row: {own}"
+        );
+        let read: Value = serde_json::from_str(&document).expect("the document");
         assert_eq!(
-            canonical_json(&joined).expect("canonical"),
+            canonical_json(&read).expect("canonical"),
             canonical,
-            "the two parts join into the canonical form"
+            "the row part, the shared part and the columns read back as the canonical form"
         );
     }
     let shared: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_shared")
@@ -193,8 +202,8 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
     );
 
     let row = sqlx::query(
-        "SELECT ehr_id, action_terminology, action_code, result_terminology, result_code, \
-                party_id, retain_until::text, \
+        "SELECT ehr_id::text AS ehr_id, action_terminology, action_code, result_terminology, \
+                result_code, party_id, retain_until::text, \
                 time_recorded = '2026-11-07T09:14:03.120Z'::timestamptz AS at \
            FROM audit.access_log_record WHERE chain_seq = 2",
     )
@@ -224,6 +233,46 @@ async fn entries_are_stored_in_two_parts_that_join_into_their_canonical_form() {
         Vec::new(),
         "a fresh log verifies clean"
     );
+}
+
+/// The links of the same entries are the same bytes whatever form the log
+/// stores them in (#5784): the digests below were written by the log that
+/// kept each entry's index in a second table, and the log that keeps it on
+/// the entry's row writes them again, and reads them back from its rows.
+#[tokio::test]
+async fn the_links_of_the_same_entries_are_unchanged_by_the_stored_form() {
+    const LINKS: [(&str, &str); 3] = [
+        (
+            "9b343e891a7013a6bd67fee757f68efb56dea2fb1051f69f1e5da72476c7f111",
+            "cd88160055c4d6ac897274f9dfe41afbe4542124275bdbabbda53fc5cf313c0c",
+        ),
+        (
+            "9959bcaad431d4851812de2fa9706c3c8ec9bc33a091d186cafaa5b322a472b4",
+            "54259816c69edd83a2461961d177d33bc14a244c9a1f20fd3f7037e7d240daf4",
+        ),
+        (
+            "3b2b1125847ca121a5f2b79ffb3d1700ea213eaf44533ff5a6ecbf25dddea108",
+            "760f494dcf6b375c226d9af65df07c99c71c080a4a071d4383e305d87f92a0b1",
+        ),
+    ];
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let store = AccessLogStore::new(pool.clone());
+    let written = append(&store, 1..=3).await;
+    for ((entry, (content_digest, digest)), sequence) in written.iter().zip(LINKS).zip(1_i64..) {
+        assert_eq!(entry.link.content_digest, content_digest);
+        assert_eq!(entry.link.digest, digest);
+        let stored: (String, String) = sqlx::query_as(
+            "SELECT encode(content_digest, 'hex'), encode(digest, 'hex') \
+               FROM audit.access_log_record WHERE chain_seq = $1",
+        )
+        .bind(sequence)
+        .fetch_one(&pool)
+        .await
+        .expect("the stored link");
+        assert_eq!(stored, (content_digest.to_owned(), digest.to_owned()));
+    }
+    assert_eq!(findings(&pool).await, Vec::new(), "the log verifies clean");
 }
 
 /// An entry that breaks an invariant of the draft leaves no record.
@@ -300,7 +349,7 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
     assert!(written[0].is_emergency);
 
     let row = sqlx::query(
-        "SELECT ehr_id, result_terminology, result_code FROM audit.access_log_record \
+        "SELECT ehr_id::text AS ehr_id, result_terminology, result_code FROM audit.access_log_record \
          WHERE chain_seq = 2",
     )
     .fetch_one(&pool)
@@ -321,6 +370,8 @@ const INSERTED: &[&str] = &[
      SELECT (audit.access_log_record_derive(forged)).* FROM ( \
        SELECT jsonb_populate_record(NULL::audit.access_log_record, jsonb_build_object( \
          'chain_seq', 2, 'content', c.content, 'algorithm', 'SHA-256', \
+         'record_type', c.record_type, 'uid', c.uid, 'time_recorded', c.time_recorded, \
+         'ehr_id', c.ehr_id, \
          'previous_digest', '\\x' || encode(p.digest, 'hex'), \
          'content_digest', '\\x' || audit.access_log_content_digest(c.content), \
          'digest', '\\x' || audit.access_log_link_digest(encode(p.digest, 'hex'), 2, \
@@ -328,7 +379,9 @@ const INSERTED: &[&str] = &[
          'shared', '\\x' || encode(c.shared, 'hex'), \
          'stored_at', now())) AS forged \
          FROM audit.access_log_record p, \
-              (SELECT replace(content, '000000000003', '0000000000ff') AS content, shared \
+              (SELECT replace(content, '000000000003', '0000000000ff') AS content, shared, \
+                      record_type, replace(uid::text, '000000000003', '0000000000ff') AS uid, \
+                      time_recorded, replace(ehr_id::text, '000000000003', '0000000000ff') AS ehr_id \
                  FROM audit.access_log_record WHERE chain_seq = 4) c \
         WHERE p.chain_seq = 1) AS f",
 ];
@@ -373,7 +426,7 @@ async fn the_verifier_finds_a_modified_entry_and_a_modified_search_column() {
         "UPDATE audit.access_log_record \
          SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
          WHERE chain_seq = 2",
-        "UPDATE audit.access_log_record SET ehr_id = 'someone-else' WHERE chain_seq = 2",
+        "UPDATE audit.access_log_record SET ehr_id = '00000000-0000-4000-8000-000000000000' WHERE chain_seq = 2",
     ] {
         let testdb = testkit::db().await.expect("testkit database");
         let pool = testdb.pool();
@@ -569,7 +622,7 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
         ),
         "UPDATE audit.access_log_record SET digest = repeat('0', 64) WHERE chain_seq = 1"
             .to_owned(),
-        "UPDATE audit.access_log_record SET ehr_id = 'someone-else' WHERE chain_seq = 1".to_owned(),
+        "UPDATE audit.access_log_record SET ehr_id = '00000000-0000-4000-8000-000000000000' WHERE chain_seq = 1".to_owned(),
         "DELETE FROM audit.access_log_record WHERE chain_seq = 2".to_owned(),
         "TRUNCATE audit.access_log_record".to_owned(),
         format!(
@@ -769,7 +822,7 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
     let mut conn = PgConnection::connect(&url).await.expect("connect");
     for statement in [
         "UPDATE audit.access_log_record SET digest = repeat('0', 64)",
-        "UPDATE audit.access_log_record SET ehr_id = 'someone-else'",
+        "UPDATE audit.access_log_record SET ehr_id = '00000000-0000-4000-8000-000000000000'",
         "INSERT INTO audit.access_log_record (content, chain_seq) VALUES ('{}', 99)",
         "DELETE FROM audit.access_log_record",
         "TRUNCATE audit.access_log_record",

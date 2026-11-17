@@ -666,11 +666,22 @@ mod tests {
 
     #[tokio::test]
     async fn a_refreshing_access_state_maps_to_503_with_its_type() {
-        // A query judged on an access copy that did not catch up is withheld
-        // as a 503 a client retries, typed so it is told apart from an
-        // overload (#5794).
-        let resp =
-            RestError::from(ferroehr::error::ServiceError::access_refreshing()).into_response();
+        // A query judged on an access copy that did not catch up, and a care
+        // decision on a caller facts copy that did not, are withheld as a 503
+        // a client retries, typed so it is told apart from an overload
+        // (#5794, #5806).
+        for refused in [
+            ferroehr::error::ServiceError::access_refreshing(),
+            ferroehr::error::ServiceError::from(
+                ferroehr::access_eval::condition::care::CareUnsettled::Refreshing,
+            ),
+        ] {
+            assert_refreshing(RestError::from(refused).into_response()).await;
+        }
+    }
+
+    /// `resp` is the `503` of a refreshing access state, with `Retry-After`.
+    async fn assert_refreshing(resp: axum::response::Response) {
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(
             resp.headers()

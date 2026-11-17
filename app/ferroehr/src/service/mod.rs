@@ -39,6 +39,7 @@ pub mod ehr;
 pub mod ehr_index;
 pub mod linkage;
 pub mod message;
+mod multimedia;
 pub mod query;
 pub mod terminology;
 

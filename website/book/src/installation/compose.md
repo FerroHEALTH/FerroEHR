@@ -545,8 +545,8 @@ you ask for them:
 
   ```shell
   export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
-  export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333   # dev only; production S3 is HTTPS
-  export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
+  export FERROEHR__RECORD__MULTIMEDIA__S3__URL=http://seaweedfs:8333   # dev only; production S3 is HTTPS
+  export FERROEHR__RECORD__MULTIMEDIA__S3__BUCKET=openehr-multimedia
 
   docker compose --profile s3 up -d --wait ferroehr seaweedfs
   ```

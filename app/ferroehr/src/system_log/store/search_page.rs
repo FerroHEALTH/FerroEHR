@@ -5,10 +5,10 @@
 //! so neither costs more as the log grows than the records it serves.
 //!
 //! `audit.audit_record` is the union of the system chain (`audit_event`) and
-//! the access log (`access_log_search` joined to `access_log_record`). A union
-//! member that is a join is planned on its own, without the order or the
-//! limit of the query over the union, so a page read through the view joined
-//! and sorted the whole access log (#5646). Each chain therefore gives its
+//! the indexed entries of the access log (`access_log_record` joined to its
+//! shared parts). A union member is planned on its own, without the order or
+//! the limit of the query over the union, so a page read through the view
+//! sorted the whole access log (#5646). Each chain therefore gives its
 //! own first records in the search's order, and the page is taken from their
 //! union. No openEHR spec governs the store: our own design; the search
 //! follows IHE `RESTful` ATNA (ITI-81).
@@ -26,8 +26,8 @@ use crate::system_log::search::TokenMatch;
 const AUDIT: &str = "audit";
 /// The relation every record is read from.
 const RECORD: &str = "audit_record";
-/// The ITI-81 index of the access log, which holds every column a search
-/// criterion names.
+/// The ITI-81 index of the access log, the view of the entries' index
+/// columns, which holds every column a search criterion names (#5784).
 const ACCESS_LOG_SEARCH: &str = "access_log_search";
 
 /// Build the ITI-81 retrieval's two statements, the count and the page, from a
@@ -66,9 +66,9 @@ pub(super) fn page_size(filter: &AuditSearchFilter) -> usize {
 }
 
 /// The number of records `condition` selects: those of the system chain,
-/// plus the index rows of the access log, each of which names exactly one
-/// entry (written only beside it by `audit.access_log_chain_move` and removed
-/// when it becomes a tombstone), so the count reads the index alone.
+/// plus the indexed entries of the access log, read from their index columns
+/// alone (written by `audit.access_log_chain_move` and emptied when the entry
+/// becomes a tombstone).
 fn total(condition: &Cond) -> SelectStatement {
     let system = count_of(
         Query::select()
@@ -123,10 +123,10 @@ fn page(condition: &Cond, count: u64, offset: u64) -> SelectStatement {
 
 /// The first `first` access-log records `condition` selects, newest first.
 ///
-/// The candidates are read from `access_log_search` through its `recorded_at`
-/// index: its first `first` rows by `recorded_at`, and every row tied with
-/// the last of them, since the order's next key, `stored_at`, is a column of
-/// the entry. Each candidate's record is read from the view by its position.
+/// The candidates are read from `access_log_search` through the entries'
+/// time index: its first `first` rows by `recorded_at`, and every row tied
+/// with the last of them, since the order's next key, `stored_at`, is not in
+/// the view. Each candidate's record is read from the view by its position.
 fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
     let search = || (Alias::new(AUDIT), Alias::new(ACCESS_LOG_SEARCH));
     let newest = |limit: u64, offset: u64| {
@@ -154,7 +154,7 @@ fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
     let candidate = Alias::new("access_log_candidate");
     let record = Alias::new("access_log_page");
     // NOTE: our own design (#5646), `OFFSET 0` keeps the read lateral, so each candidate's
-    // record is found by its position in both tables rather than by a join of the whole log.
+    // record is found by its position rather than by a read of the whole log.
     let by_position = Query::select()
         .columns(RECORD_COLUMNS.map(Alias::new))
         .from((Alias::new(AUDIT), Alias::new(RECORD)))

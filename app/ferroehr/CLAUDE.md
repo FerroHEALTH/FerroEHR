@@ -160,7 +160,9 @@ module.**
   form without its link; the insert trigger gives it its `ACCESS_LOG_LINK` in
   the access log's own chain, apart from the `audit_event` records (#5573),
   and derives the search columns from it, and
-  an entry changes only by its replacement with its own tombstone. Never
+  an entry changes only by its replacement with its own tombstone, which
+  empties the ITI-81 index columns on the same row (one row per entry,
+  `access_log_search` is their view, #5784). Never
   compute a link outside the trigger, and never write a search column: both
   are read from the content. `checkpoint` seals the head with the
   version-signing keyring and verifies through
