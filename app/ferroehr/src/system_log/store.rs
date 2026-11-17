@@ -75,7 +75,7 @@ use batch::BatchColumns;
 #[cfg(feature = "fhir")]
 use chains::AuditChain;
 use lax::{any_equals, any_is, lax_path};
-use writers::{WritePolicy, Writers};
+use writers::{Pinned, WritePolicy, Writers};
 
 #[cfg(feature = "fhir")]
 use ferrohealth_smart::assurance::AssuranceLevel;
@@ -296,24 +296,49 @@ impl AuditStore {
         self.writing.change(change);
     }
 
-    /// The digest of `writing`, storing the policy the first time.
+    /// Registers the render policy each of `records` is written under, as
+    /// `writing` resolves it, on a connection of its own, before the write
+    /// takes the connection it writes on: a write that holds a connection of
+    /// this pool asks it for no other (#5879), and a policy is registered in
+    /// a transaction of its own, so a write that rolls back leaves it stored
+    /// (#5906). No specification governs this: our own design.
     ///
     /// # Errors
-    /// [`AuditError::Store`] when the policy cannot be stored.
-    async fn writing_digest(&self, writing: &WritePolicy) -> Result<Vec<u8>, AuditError> {
+    /// [`AuditError::Policy`] when a policy cannot be serialized, and
+    /// [`AuditError::Store`] when it cannot be stored.
+    async fn register_policies(
+        &self,
+        writing: &Pinned,
+        records: &[AuditRecord],
+    ) -> Result<(), AuditError> {
+        for (policy, _, _) in writing.runs(records) {
+            policy
+                .digest
+                .get_or_try_init(|| async {
+                    let json = serde_json::to_value(&policy.policy)
+                        .map_err(|e| AuditError::Policy(Box::new(e)))?;
+                    let digest: Vec<u8> =
+                        sqlx::query_scalar("SELECT audit.register_render_policy($1)")
+                            .bind(json)
+                            .fetch_one(&mut *acquire(&self.pool).await?)
+                            .await?;
+                    Ok::<_, AuditError>(digest)
+                })
+                .await?;
+        }
+        Ok(())
+    }
+
+    /// The digest of `writing`, which [`Self::register_policies`] stored.
+    ///
+    /// # Errors
+    /// [`AuditError::PolicyUnregistered`] when it did not.
+    fn registered_digest(writing: &WritePolicy) -> Result<Vec<u8>, AuditError> {
         writing
             .digest
-            .get_or_try_init(|| async {
-                let policy = serde_json::to_value(&writing.policy)
-                    .map_err(|e| AuditError::Policy(Box::new(e)))?;
-                let digest: Vec<u8> = sqlx::query_scalar("SELECT audit.register_render_policy($1)")
-                    .bind(policy)
-                    .fetch_one(&mut *acquire(&self.pool).await?)
-                    .await?;
-                Ok::<_, AuditError>(digest)
-            })
-            .await
+            .get()
             .cloned()
+            .ok_or(AuditError::PolicyUnregistered)
     }
 
     /// The `search_tokens` value of each record: the ITI-81 search tokens of
@@ -472,10 +497,13 @@ impl AuditStore {
         if records.is_empty() {
             return Ok((Vec::new(), intake::Chains::default()));
         }
+        let writing = self.writing.pin();
+        self.register_policies(&writing, &records).await?;
         // NOTE: our own design (#5770), entries alone go into the gathered one-statement write.
         #[cfg(feature = "fhir")]
         if reserved_by.is_none() && Self::only_entries(&records) {
-            let (uids, intake, tokens) = self.entry_rows(self.with_entries(records).await?).await?;
+            let entered = self.with_entries(&writing, records).await?;
+            let (uids, intake, tokens) = self.entry_rows(&writing, entered).await?;
             self.group().write(intake, tokens).await?;
             let wrote = intake::Chains {
                 access_log: !uids.is_empty(),
@@ -486,7 +514,9 @@ impl AuditStore {
         }
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        let (ids, learned, wrote) = self.take_in(&mut tx, records, ends, reserved_by).await?;
+        let (ids, learned, wrote) = self
+            .take_in(&mut tx, &writing, records, ends, reserved_by)
+            .await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this
         // transaction's rows.
         tx.commit().await?;

@@ -1720,6 +1720,7 @@ fn finish_identity(
     fill_time_anchor(obj, rm_type);
     stamp_archetype_details(obj, node, is_root, template_id, rm_version);
     fill_mandatory_entry_attributes(obj, node, rm_type);
+    crate::flat::stubbed::fill_stubbed_descendants(obj, node);
 }
 
 /// Completes a node whose RM class is not `LOCATABLE`, reporting whether it did.

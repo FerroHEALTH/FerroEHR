@@ -194,6 +194,9 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::Database)?;
         self.commit_act_recorded(tx, Vec::new()).await?;
+        // NOTE: our own design (#5879), the connection goes back before the next read, which
+        // would otherwise wait for a second one while every connection is held so.
+        drop(conn);
         self.read_policy_registers().await?;
         Ok(version)
     }

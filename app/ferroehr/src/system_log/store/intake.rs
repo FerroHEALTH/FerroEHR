@@ -17,6 +17,7 @@
 use sqlx::PgConnection;
 use uuid::Uuid;
 
+use super::writers::Pinned;
 use super::{AuditRecord, AuditStore, LearnedSets, RecordEnd};
 use crate::access_log::chainer::{Round, Seal};
 use crate::access_log::store::AccessLogStore;
@@ -149,6 +150,7 @@ impl AuditStore {
     pub(super) async fn take_in(
         &self,
         conn: &mut PgConnection,
+        writing: &Pinned,
         records: Vec<AuditRecord>,
         ends: &[RecordEnd],
         reserved_by: Option<Uuid>,
@@ -160,7 +162,7 @@ impl AuditStore {
             });
         }
         #[cfg(feature = "fhir")]
-        let entered = self.with_entries(records).await?;
+        let entered = self.with_entries(writing, records).await?;
         #[cfg(feature = "fhir")]
         let (records, row_ends, entries) = super::entries::split(entered, ends);
         #[cfg(feature = "fhir")]
@@ -176,23 +178,25 @@ impl AuditStore {
             access_log: false,
             system: !records.is_empty(),
         };
-        let runs = self.writing.runs(records);
-        let mut digests = Vec::with_capacity(runs.len());
-        for (writing, _, _) in &runs {
-            digests.push(self.writing_digest(writing).await?);
-        }
+        let runs = writing.runs(records);
+        let digests = runs
+            .iter()
+            .map(|(policy, _, _)| Self::registered_digest(policy))
+            .collect::<Result<Vec<_>, _>>()?;
         let mut ids = Vec::with_capacity(records.len());
         let mut learned_all = Vec::with_capacity(runs.len());
-        for ((writing, start, end), policy) in runs.iter().zip(digests) {
+        for ((under, start, end), policy) in runs.iter().zip(digests) {
             let run = records.get(*start..*end).unwrap_or_default();
             let run_ends = ends.get(*start..*end).unwrap_or_default();
-            let (tokens, learned) = Self::batch_tokens(self, writing, conn, run).await?;
+            let (tokens, learned) = Self::batch_tokens(self, under, conn, run).await?;
             ids.extend(Self::insert_rows(conn, run, run_ends, policy, tokens, reserved_by).await?);
             learned_all.push(learned);
         }
         #[cfg(feature = "fhir")]
         {
-            let (uids, learned) = self.intake_entries(conn, entries, reserved_by).await?;
+            let (uids, learned) = self
+                .intake_entries(conn, writing, entries, reserved_by)
+                .await?;
             ids.extend(uids);
             learned_all.push(learned);
         }
