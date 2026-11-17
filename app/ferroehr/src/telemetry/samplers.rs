@@ -40,29 +40,36 @@ pub(super) fn pool_gauge(meter: &Meter) -> opentelemetry::metrics::Gauge<u64> {
         .build()
 }
 
-/// Spawn the background sampler.
+/// Spawn the background sampler over every pool of `pools`, each under its
+/// `pool` label ([`crate::db::pool_name::label_of`], #5972).
 ///
 /// Returns the task handle so the telemetry guard can abort it on shutdown.
 /// When `meter` is `Some`, the pool/runtime gauges are mirrored through the
 /// `OTel` meter for OTLP push.
 #[must_use]
-pub fn spawn(pool: PgPool, meter: Meter) -> JoinHandle<()> {
+pub fn spawn(pools: Vec<PgPool>, meter: Meter) -> JoinHandle<()> {
     tokio::spawn(async move {
         let gauges = OtelGauges::new(&meter);
         let mut ticker = tokio::time::interval(SAMPLE_INTERVAL);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             ticker.tick().await;
-            gauges.record(&sample(&pool));
+            gauges.record(&sample(&pools));
         }
     })
+}
+
+/// The connections of one pool at a sample.
+struct PoolSample {
+    label: &'static str,
+    idle: u64,
+    in_use: u64,
 }
 
 /// One sampling snapshot (all counts, so the only casts are `u64` → `f64` when
 /// feeding the gauge facade).
 struct Sample {
-    idle: u64,
-    in_use: u64,
+    pools: Vec<PoolSample>,
     workers: u64,
     global_queue_depth: u64,
     alive_tasks: u64,
@@ -87,17 +94,24 @@ fn resident_bytes() -> Option<u64> {
     reason = "pool and runtime counts widen exactly: usize is at most 64 bits on \
               every supported target"
 )]
-fn sample(pool: &PgPool) -> Sample {
-    let size = u64::from(pool.size());
-    let idle = pool.num_idle() as u64;
-    let in_use = size.saturating_sub(idle);
+fn sample(pools: &[PgPool]) -> Sample {
+    let pools = pools
+        .iter()
+        .map(|pool| {
+            let idle = pool.num_idle() as u64;
+            PoolSample {
+                label: crate::db::pool_name::label_of(pool),
+                idle,
+                in_use: u64::from(pool.size()).saturating_sub(idle),
+            }
+        })
+        .collect();
 
     // `Handle::metrics()` — the stable subset only (unstable-gated counters are
     // omitted, not deferred).
     let rt = tokio::runtime::Handle::current().metrics();
     Sample {
-        idle,
-        in_use,
+        pools,
         workers: rt.num_workers() as u64,
         global_queue_depth: rt.global_queue_depth() as u64,
         alive_tasks: rt.num_alive_tasks() as u64,
@@ -134,9 +148,13 @@ impl OtelGauges {
     }
 
     fn record(&self, s: &Sample) {
-        self.pool.record(s.idle, &[KeyValue::new("state", "idle")]);
-        self.pool
-            .record(s.in_use, &[KeyValue::new("state", "in_use")]);
+        for pool in &s.pools {
+            let name = KeyValue::new("pool", pool.label);
+            self.pool
+                .record(pool.idle, &[KeyValue::new("state", "idle"), name.clone()]);
+            self.pool
+                .record(pool.in_use, &[KeyValue::new("state", "in_use"), name]);
+        }
         self.workers.record(s.workers, &[]);
         self.global_queue_depth.record(s.global_queue_depth, &[]);
         self.alive_tasks.record(s.alive_tasks, &[]);

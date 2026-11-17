@@ -52,6 +52,7 @@ use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
+use opentelemetry::KeyValue;
 use sqlx::Connection;
 use sqlx::PgPool;
 use sqlx::Postgres;
@@ -108,6 +109,10 @@ impl AcquireError {
         matches!(self.0, Cause::Pool(sqlx::Error::PoolTimedOut))
     }
 }
+
+/// The attribute of the pool metrics that names the pool
+/// ([`crate::db::pool_name::label_of`], #5972).
+const POOL: &str = "pool";
 
 /// How long an acquire waits for the pool before it probes the database.
 const PROBE_AFTER: Duration = Duration::from_secs(1);
@@ -328,6 +333,8 @@ struct Held {
     conn: PoolConnection<Postgres>,
     /// When the request took it from the pool.
     since: Instant,
+    /// The pool's `pool` label ([`crate::db::pool_name::label_of`]).
+    label: &'static str,
 }
 
 tokio::task_local! {
@@ -413,16 +420,17 @@ pub fn release_held() {
         .ok()
         .and_then(Result::ok);
     for held in released.into_iter().flatten() {
-        held_for(held.since);
+        held_for(held.since, held.label);
         drop(held.conn);
     }
 }
 
-/// Records that a request held a connection from `since` until now.
-fn held_for(since: Instant) {
+/// Records that a request held a connection of the pool `label` from
+/// `since` until now.
+fn held_for(since: Instant, label: &'static str) {
     crate::telemetry::metrics::metrics()
         .db_pool_hold_duration
-        .record(since.elapsed().as_secs_f64(), &[]);
+        .record(since.elapsed().as_secs_f64(), &[KeyValue::new(POOL, label)]);
 }
 
 /// The identity of the shared pool `pool` is a handle to: the address of the
@@ -451,18 +459,25 @@ pub struct Checkout {
     conn: Option<PoolConnection<Postgres>>,
     pool: usize,
     since: Instant,
+    label: &'static str,
     close: bool,
 }
 
 impl Checkout {
-    /// A checkout of `conn`, a connection of the pool `pool` taken from it
-    /// at `since`.
-    fn new(conn: PoolConnection<Postgres>, pool: usize, since: Instant) -> Self {
+    /// A checkout of `conn`, a connection of the pool `pool` labelled
+    /// `label`, taken from it at `since`.
+    fn new(
+        conn: PoolConnection<Postgres>,
+        pool: usize,
+        since: Instant,
+        label: &'static str,
+    ) -> Self {
         note_checkout(pool, true);
         Self {
             conn: Some(conn),
             pool,
             since,
+            label,
             close: false,
         }
     }
@@ -529,17 +544,22 @@ impl Drop for Checkout {
             conn.close_on_drop();
             return;
         }
-        let (pool, since) = (self.pool, self.since);
+        let (pool, since, label) = (self.pool, self.since, self.label);
         // Outside a scope the closure is dropped unrun, and dropping `conn`
         // returns it to the pool; a scope already keeping a connection of
         // this pool hands it back, and the request's hold of it ends here.
         let returned = HELD.try_with(move |held| match held.try_borrow_mut() {
             Ok(mut held) if !held.iter().any(|kept| kept.pool == pool) => {
-                held.push(Held { pool, conn, since });
+                held.push(Held {
+                    pool,
+                    conn,
+                    since,
+                    label,
+                });
                 None
             }
             _ => {
-                held_for(since);
+                held_for(since, label);
                 Some(conn)
             }
         });
@@ -565,11 +585,12 @@ impl Drop for Checkout {
 pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
     let key = pool_key(pool);
     if let Some(held) = take_held(key) {
-        return Ok(Checkout::new(held.conn, key, held.since));
+        return Ok(Checkout::new(held.conn, key, held.since, held.label));
     }
     let started = Instant::now();
+    let label = crate::db::pool_name::label_of(pool);
     if checked_out(key) {
-        nested_acquire();
+        nested_acquire(label);
     }
     // Boxed: the probe and the pool's connect future are large, and every
     // caller's state machine would otherwise carry them inline.
@@ -587,9 +608,12 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
     };
     crate::telemetry::metrics::metrics()
         .db_pool_acquire_duration
-        .record(started.elapsed().as_secs_f64(), &[]);
+        .record(
+            started.elapsed().as_secs_f64(),
+            &[KeyValue::new(POOL, label)],
+        );
     let conn = result?;
-    Ok(Checkout::new(conn, key, Instant::now()))
+    Ok(Checkout::new(conn, key, Instant::now(), label))
 }
 
 /// A request asks a pool for a second connection while it has one of that
@@ -598,15 +622,18 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
 /// it, so a test that reaches such a site fails; a release build counts it
 /// on [`DB_POOL_NESTED_ACQUIRES`](crate::telemetry::metrics::DB_POOL_NESTED_ACQUIRES)
 /// and warns. No openEHR spec governs this: our own design (#5879).
-fn nested_acquire() {
+fn nested_acquire(label: &'static str) {
     debug_assert!(
         false,
         "a request asked a pool for a second connection while it held one of it (#5879)"
     );
     crate::telemetry::metrics::metrics()
         .db_pool_nested_acquires
-        .add(1, &[]);
-    tracing::warn!("a request asked a pool for a second connection while it held one of it");
+        .add(1, &[KeyValue::new(POOL, label)]);
+    tracing::warn!(
+        pool = label,
+        "a request asked a pool for a second connection while it held one of it"
+    );
 }
 
 /// The error for a pool that failed: a connect the database refused or reset
