@@ -299,17 +299,14 @@ impl AuditSender {
         let Some((records, ends, count)) = self.rendered(events).await else {
             return Ok(());
         };
-        let started = std::time::Instant::now();
-        let written = match reservation {
+        let store = &self.inner.store;
+        match reservation {
             Some(reservation) => {
-                self.inner
-                    .store
-                    .write_held(records, &ends, reservation)
+                self.wrote(count, store.write_held(records, &ends, reservation))
                     .await
             }
-            None => self.inner.store.write(records, &ends).await,
-        };
-        self.wrote(written, count, started)
+            None => self.wrote(count, store.write(records, &ends)).await,
+        }
     }
 
     /// [`Self::record`] held under `reservation`, written on `conn`, a
@@ -326,13 +323,11 @@ impl AuditSender {
         let Some((records, ends, count)) = self.rendered(events).await else {
             return Ok(());
         };
-        let started = std::time::Instant::now();
-        let written = self
+        let write = self
             .inner
             .store
-            .write_held_on(conn, records, &ends, reservation)
-            .await;
-        self.wrote(written, count, started)
+            .write_held_on(conn, records, &ends, reservation);
+        self.wrote(count, write).await
     }
 
     /// `events` stamped and rendered as the store writes them, with their
@@ -364,14 +359,15 @@ impl AuditSender {
         Some((records, ends, count))
     }
 
-    /// Meters the write of `count` records begun at `started`, and wakes the
+    /// Runs `write`, the write of `count` records, metering it, and wakes the
     /// chainer once it succeeded.
-    fn wrote(
+    async fn wrote(
         &self,
-        written: Result<(), AuditError>,
         count: u64,
-        started: std::time::Instant,
+        write: impl Future<Output = Result<(), AuditError>>,
     ) -> Result<(), AuditError> {
+        let started = std::time::Instant::now();
+        let written = write.await;
         let path = crate::telemetry::access_path::metrics();
         let outcome = crate::telemetry::access_path::outcome(&written);
         path.log_append_duration.record(
