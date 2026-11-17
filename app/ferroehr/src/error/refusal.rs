@@ -205,12 +205,12 @@ impl super::ServiceError {
         })
     }
 
-    /// A `503` for a query whose access copy is still older than the store
+    /// A `503` for a request whose access copy is still older than the store
     /// ([`AccessRefreshing`](super::ServiceError::AccessRefreshing)).
     #[must_use]
     pub fn access_refreshing() -> Self {
         Self::AccessRefreshing(Curated {
-            message: "the access state this replica judges queries by is being refreshed; \
+            message: "the access state this replica judges requests by is being refreshed; \
                       ask again shortly",
             source: None,
         })

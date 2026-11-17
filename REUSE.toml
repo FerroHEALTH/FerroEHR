@@ -299,6 +299,16 @@ precedence = "override"
 SPDX-FileCopyrightText = "Sebastian Iancu and the openehr-sdk-go contributors"
 SPDX-License-Identifier = "MIT"
 
+# Two of them come from EHRbase and its openEHR_SDK, under Apache-2.0.
+[[annotations]]
+path = [
+  "corpus/templates/openehr-sdk-go/testkit/corpus/templates/cluster-slot.ehrbase.org.v0.opt",
+  "corpus/templates/openehr-sdk-go/testkit/corpus/templates/clinical_content_validation.opt",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "Vitasystems GmbH and Hannover Medical School"
+SPDX-License-Identifier = "Apache-2.0"
+
 # The Veredictum ADL 2 content cases are the catalogue's own Arazzo documents,
 # under the Apache-2.0 its LICENSE grants, with its NOTICE vendored beside
 # them; the subtree's PROVENANCE.md records the pin.
