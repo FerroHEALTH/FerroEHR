@@ -223,6 +223,8 @@ impl FerroEhrService {
     /// stays as it is. For pinned EHRs the care of each is read from the
     /// evaluator's copies and only the cared ones are bound; otherwise the
     /// subjects of every patient under the caller's care teams are (#5699).
+    /// The store's revisions are read ahead beside the clinical read of the
+    /// pinned EHRs' entries, never beside a read of the party store (#5967).
     /// No openEHR spec governs this: our own design.
     ///
     /// # Errors
@@ -243,8 +245,16 @@ impl FerroEhrService {
         let Some(access) = current() else {
             return Ok(condition.with_care(Care::Census(Vec::new().into())));
         };
-        let (care, ()) = tokio::join!(self.care_of(&access, pinned), access.care_read_ahead());
-        let mut care = care?;
+        let mut care = match pinned {
+            // NOTE: our own design (#5891, #5967), the read ahead runs beside the clinical read of
+            // the entries only, so the request never holds two party connections at once.
+            Some(ehrs) => {
+                let (entries, ()) =
+                    tokio::join!(self.ehr_access_entries(ehrs), access.care_read_ahead());
+                Care::Ehrs(access.cared_ehrs(&entries?).await?.into())
+            }
+            None => self.care_of(&access, None).await?,
+        };
         if binds_any(&care) && !access.care_in_force().await? {
             care = self.care_of(&access, pinned).await?;
         }
