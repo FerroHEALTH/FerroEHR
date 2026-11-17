@@ -14,7 +14,7 @@
 -- and an id may both hold a '/', so the text is JSON rather than a separator.
 -- The function is one SQL function with one key lookup on access_settings
 -- and one on ehr. PostgreSQL does not inline it, since its body holds
--- subqueries, so every call runs as a statement of its own; 0051 replaces it
+-- subqueries, so every call runs as a statement of its own; 0052 replaces it
 -- with the view access_revision_of (#5888).
 --
 -- No openEHR spec governs the projection or its revision: our own design.
