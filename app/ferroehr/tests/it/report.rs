@@ -91,7 +91,7 @@ fn configuration_with_secrets(files: &assert_fs::TempDir) -> FerroEhrConfig {
             ..ferroehr::identifier_protection::config::IdentifierProtectionConfig::default()
         },
     );
-    config.record.multimedia.secret_access_key = Some(Secret::new(S3_SECRET));
+    config.record.multimedia.s3.secret_access_key = Some(Secret::new(S3_SECRET));
     config
 }
 

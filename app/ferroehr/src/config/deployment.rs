@@ -190,7 +190,7 @@ pub enum DeploymentGap {
     /// patient and the professional, so they are relevant data in transit.
     PlaintextAuditFeed,
     /// The enabled multimedia store accepts a plain-HTTP S3 endpoint
-    /// (`[record.multimedia] allow_http = true`), so the externalised blobs cross the
+    /// (an `http://` `[record.multimedia.s3] url`), so the externalised blobs cross the
     /// network unencrypted (`docs/law/eu/cra/text.html Annex I Part I(2)(e)`).
     PlaintextObjectStore,
 }
@@ -280,7 +280,7 @@ impl DeploymentGap {
             }
             Self::PlaintextObjectStore => {
                 "the enabled multimedia store is a plain-HTTP S3 endpoint (an http:// \
-                 record.multimedia.url), so the externalised clinical blobs cross the network \
+                 record.multimedia.s3.url), so the externalised clinical blobs cross the network \
                  unencrypted; use an https:// url, or accept plaintext_object_store by name \
                  where the store is reached on a trusted segment"
             }

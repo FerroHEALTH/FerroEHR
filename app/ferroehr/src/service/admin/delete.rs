@@ -327,11 +327,11 @@ impl FerroEhrService {
             // A URI this store did not mint names someone else's bytes; the
             // index records it (it is in a stored body) and the collector
             // leaves it alone.
-            let Some(hex) = engine.store().key_from_uri(uri) else {
+            let Some(key) = engine.store().key_from_uri(uri) else {
                 continue;
             };
-            if let Err(e) = engine.store().delete(hex).await {
-                tracing::warn!(blob = %hex, error = %e, "multimedia blob GC delete failed");
+            if let Err(e) = engine.store().delete(&key).await {
+                tracing::warn!(blob = %key, error = %e, "multimedia blob GC delete failed");
             }
         }
     }

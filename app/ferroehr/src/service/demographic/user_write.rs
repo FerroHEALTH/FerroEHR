@@ -285,7 +285,7 @@ impl FerroEhrService {
     pub(super) async fn commit_scim(
         &self,
         commit: ScimCommit<'_>,
-        changes: Vec<Change>,
+        mut changes: Vec<Change>,
     ) -> Result<CommittedContribution, UserWriteError> {
         let ScimCommit {
             binding_issuer,
@@ -294,6 +294,10 @@ impl FerroEhrService {
             erase,
             created_group,
         } = commit;
+        // The set's large media go to the blob store before a connection is held.
+        for change in &mut changes {
+            self.externalize_change(change).await?;
+        }
         let audit = self.audit(change, "SCIM provisioning");
         let changes = changes
             .into_iter()

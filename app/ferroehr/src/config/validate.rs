@@ -512,11 +512,11 @@ impl FerroEhrConfig {
     /// Every secret that can be given inline or by file is given exactly one
     /// way.
     fn validate_key_sources(&self, errors: &mut Vec<ConfigError>) {
-        if self.record.multimedia.secret_access_key.is_some()
-            && self.record.multimedia.secret_access_key_file.is_some()
+        if self.record.multimedia.s3.secret_access_key.is_some()
+            && self.record.multimedia.s3.secret_access_key_file.is_some()
         {
             errors.push(ConfigError::semantic(
-                "set only one of record.multimedia.secret_access_key / \
+                "set only one of record.multimedia.s3.secret_access_key / \
                  secret_access_key_file"
                     .to_owned(),
             ));
@@ -530,7 +530,7 @@ const fn is_unreserved(c: char) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '_' | '~')
 }
 
-/// The `record.multimedia.url` semantic checks of an enabled integration.
+/// The `record.multimedia.s3.url` semantic checks of an enabled integration.
 ///
 /// An enabled integration with a blank or scheme-less endpoint would boot clean
 /// and then fail on the first `DV_MULTIMEDIA` commit. A `${VAR:-}` compose
@@ -542,7 +542,10 @@ fn multimedia_endpoint_errors(
     if !config.enabled {
         return Vec::new();
     }
-    match config.endpoint_url() {
+    let endpoint = match config.backend {
+        crate::extensions::multimedia::config::Backend::S3 => config.s3.endpoint_url(),
+    };
+    match endpoint {
         Ok(_) => Vec::new(),
         Err(e) => vec![ConfigError::semantic(e.to_string())],
     }

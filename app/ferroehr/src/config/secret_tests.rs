@@ -269,7 +269,7 @@ fn url_userinfo_reaches_no_rendering() {
         }),
         ..auth_section::machines("https://idp.example").remove(0)
     }];
-    c.record.multimedia.url = Some(leaky(14));
+    c.record.multimedia.s3.url = Some(leaky(14));
     c.audit.syslog = Some(crate::system_log::config::SyslogConfig {
         url: leaky(16),
         ..crate::system_log::config::SyslogConfig::default()
@@ -362,8 +362,8 @@ fn redacted_json_masks_every_secret_field() {
     });
     c.auth.shared.issuer = auth_section::machines("https://idp.example");
     c.record.signing.key_passphrase = Some(Secret::new(PASSPHRASE));
-    c.record.multimedia.secret_access_key = Some(Secret::new(S3_KEY));
-    c.record.multimedia.access_key_id = Some("AKIA_PUBLIC_ID".to_owned());
+    c.record.multimedia.s3.secret_access_key = Some(Secret::new(S3_KEY));
+    c.record.multimedia.s3.access_key_id = Some("AKIA_PUBLIC_ID".to_owned());
 
     let value = c.to_redacted_json().expect("render redacted json");
     let rendered = serde_json::to_string(&value).expect("stringify");
@@ -378,7 +378,7 @@ fn redacted_json_masks_every_secret_field() {
     // Structural placeholders present where a secret was set.
     assert_eq!(value["auth"]["basic"]["users"][0]["password_hash"], "***");
     assert_eq!(value["record"]["signing"]["key_passphrase"], "***");
-    assert_eq!(value["record"]["multimedia"]["secret_access_key"], "***");
+    assert_eq!(value["record"]["multimedia"]["s3"]["secret_access_key"], "***");
     assert_eq!(
         value["database"]["url"],
         "postgres://***@db.internal:5432/ferroehr"
@@ -388,7 +388,7 @@ fn redacted_json_masks_every_secret_field() {
     assert_eq!(value["auth"]["basic"]["users"][0]["user"], "alice");
     assert_eq!(value["auth"]["issuer"][0]["issuer"], "https://idp.example");
     assert_eq!(
-        value["record"]["multimedia"]["access_key_id"],
+        value["record"]["multimedia"]["s3"]["access_key_id"],
         "AKIA_PUBLIC_ID"
     );
 }

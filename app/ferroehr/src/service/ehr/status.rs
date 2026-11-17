@@ -259,7 +259,11 @@ impl FerroEhrService {
             Err(_) => None,
         };
         let preceding = request.preceding;
-        let content = body.clone();
+        let mut content = body.clone();
+        // A valid body's large media go to the blob store before a connection is held.
+        if matches!(validated, Some(Ok(()))) {
+            self.externalize(&mut content).await?;
+        }
         // Keep the promoted subject columns in sync (the subject may have
         // changed); the is_queryable promotion rides this same UPDATE.
         let committed = self

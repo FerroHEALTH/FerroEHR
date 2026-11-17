@@ -7,7 +7,7 @@
 # (the server searches for no file). Secrets never go in the ConfigMap: they come from a Secret (see
 # `secrets:` and `database:`) — mounted as read-only FILES wherever the config key
 # has a `*_file` sibling, which is now everything except `audit.fhir_feed.endpoint.url` and
-# `record.multimedia.access_key_id`; only the mounted PATH is passed as env. `config.files` mounts genuinely file-shaped material
+# `record.multimedia.s3.access_key_id`; only the mounted PATH is passed as env. `config.files` mounts genuinely file-shaped material
 # (ATNA PEMs, the PGP key, JWKS) that in-TOML `*_path`/`*_file`
 # keys point at. `extraEnv` is the escape hatch for anything not surfaced here.
 #
@@ -520,13 +520,13 @@ secrets:
   # config.pixm.endpoint.credentials.oauth; a secret with no such declaration is
   # a render error.
   ehrIndexClientSecret: ""
-  # -- S3 access key id for [multimedia] → FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
+  # -- S3 access key id for [record.multimedia.s3] → FERROEHR__RECORD__MULTIMEDIA__S3__ACCESS_KEY_ID
   # env. Not a secret in the server's own model (it is reported unredacted by
   # /management/env); prefer IRSA/Workload-Identity (leave empty) on cloud.
   multimediaAccessKeyId: ""
-  # -- S3 secret access key for [multimedia]. MOUNTED as
+  # -- S3 secret access key for [record.multimedia.s3]. MOUNTED as
   # /etc/ferroehr-secrets/multimedia.secret_access_key
-  # (multimedia.secret_access_key_file).
+  # (record.multimedia.s3.secret_access_key_file).
   multimediaSecretAccessKey: ""
 
 # ─────────────────────────────────────────────────────────────────────────────

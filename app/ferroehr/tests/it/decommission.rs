@@ -201,11 +201,13 @@ async fn without_an_instance_id_the_database_name_confirms() {
 /// the database is touched.
 #[cfg(feature = "multimedia")]
 mod blobs {
-    use std::sync::Arc;
+    use std::time::Duration;
 
+    use bytes::Bytes;
     use ferroehr::decommission::{DecommissionError, Erasure};
-    use ferroehr_ext::multimedia::store::BlobStore;
-    use object_store::memory::InMemory;
+    use ferroehr_ext::multimedia::blob::{
+        BackendSettings, BlobKey, BlobStore, BlobStoreParams, Limits, S3Settings,
+    };
 
     use super::{decommission, remaining, rows_per_domain, seed_every_domain};
 
@@ -214,10 +216,14 @@ mod blobs {
         let db = testkit::db().await.expect("testkit database");
         let pool = db.pool();
         Box::pin(seed_every_domain(&pool)).await;
-        let store = BlobStore::from_parts(Arc::new(InMemory::new()), "media".to_owned());
-        for key in ["a".repeat(64), "b".repeat(64), "c".repeat(64)] {
+        let store = BlobStore::in_memory("media");
+        for blob in [b"blob a".as_slice(), b"blob b", b"blob c"] {
             store
-                .put_if_absent(&key, b"blob".to_vec())
+                .write_if_absent(
+                    &BlobKey::of(blob),
+                    u64::try_from(blob.len()).expect("a small blob"),
+                    [Ok(Bytes::copy_from_slice(blob))],
+                )
                 .await
                 .expect("store a blob");
         }
@@ -247,7 +253,7 @@ mod blobs {
         let pool = db.pool();
         Box::pin(seed_every_domain(&pool)).await;
         let before = rows_per_domain(&pool).await;
-        let store = BlobStore::from_parts(Arc::new(unreachable::Unreachable), "media".to_owned());
+        let store = unreachable();
 
         let refused = decommission(&db)
             .with_blob_store(store)
@@ -264,69 +270,23 @@ mod blobs {
         );
     }
 
-    /// An object store every call of which fails, as a store behind a closed
-    /// port does once its retries run out.
-    mod unreachable {
-        use futures::StreamExt as _;
-        use futures::stream::BoxStream;
-        use object_store::path::Path;
-        use object_store::{
-            CopyOptions, GetOptions, GetResult, ListResult, MultipartUpload, ObjectMeta,
-            ObjectStore, PutMultipartOptions, PutOptions, PutPayload, PutResult, Result,
-        };
-
-        #[derive(Debug)]
-        pub(super) struct Unreachable;
-
-        impl std::fmt::Display for Unreachable {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.write_str("Unreachable")
-            }
-        }
-
-        fn refused() -> object_store::Error {
-            object_store::Error::Generic {
-                store: "Unreachable",
-                source: "connection refused".into(),
-            }
-        }
-
-        #[async_trait::async_trait]
-        impl ObjectStore for Unreachable {
-            async fn put_opts(&self, _: &Path, _: PutPayload, _: PutOptions) -> Result<PutResult> {
-                Err(refused())
-            }
-
-            async fn put_multipart_opts(
-                &self,
-                _: &Path,
-                _: PutMultipartOptions,
-            ) -> Result<Box<dyn MultipartUpload>> {
-                Err(refused())
-            }
-
-            async fn get_opts(&self, _: &Path, _: GetOptions) -> Result<GetResult> {
-                Err(refused())
-            }
-
-            fn delete_stream(
-                &self,
-                _: BoxStream<'static, Result<Path>>,
-            ) -> BoxStream<'static, Result<Path>> {
-                futures::stream::once(async { Err(refused()) }).boxed()
-            }
-
-            fn list(&self, _: Option<&Path>) -> BoxStream<'static, Result<ObjectMeta>> {
-                futures::stream::once(async { Err(refused()) }).boxed()
-            }
-
-            async fn list_with_delimiter(&self, _: Option<&Path>) -> Result<ListResult> {
-                Err(refused())
-            }
-
-            async fn copy_opts(&self, _: &Path, _: &Path, _: CopyOptions) -> Result<()> {
-                Err(refused())
-            }
-        }
+    /// An S3 store behind a closed port, every call of which fails once its
+    /// retries run out.
+    fn unreachable() -> BlobStore {
+        BlobStore::from_params(BlobStoreParams {
+            backend: BackendSettings::S3(S3Settings {
+                endpoint: Some(url::Url::parse("http://127.0.0.1:9").expect("url")),
+                bucket: "media".to_owned(),
+                region: "us-east-1".to_owned(),
+                access_key_id: None,
+                secret_access_key: None,
+                allow_http: true,
+            }),
+            limits: Limits {
+                request_timeout: Duration::from_secs(2),
+                ..Limits::default()
+            },
+        })
+        .expect("a store over a closed port still builds")
     }
 }
