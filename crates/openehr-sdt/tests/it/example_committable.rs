@@ -81,11 +81,6 @@ const NOT_COMMITTABLE: &[(&str, &str)] = &[
          an example cannot invent a slot filler",
     ),
     (
-        "UK AoMRC Outpatient Letter.opt",
-        "ten mandatory protocol and state trees make items mandatory but admit only \
-         archetype slots, and an example cannot invent a slot filler",
-    ),
-    (
         "pregnancy-ecosystem-testing.opt",
         "the template pins COMPOSITION.category to 435, a code the openEHR \
          terminology's composition category group (431, 433, 451, 815) does not hold",
@@ -204,7 +199,10 @@ fn remove_attr(v: &mut Value, ids: &[&str], attr: &str) -> usize {
                 .and_then(Value::as_str)
                 .is_some_and(|id| ids.contains(&id));
             let here = usize::from(own && m.remove(attr).is_some());
-            here + m.values_mut().map(|c| remove_attr(c, ids, attr)).sum::<usize>()
+            here + m
+                .values_mut()
+                .map(|c| remove_attr(c, ids, attr))
+                .sum::<usize>()
         }
         Value::Array(a) => a.iter_mut().map(|e| remove_attr(e, ids, attr)).sum(),
         _ => 0,
@@ -237,7 +235,10 @@ fn a_missing_container_under_a_mandatory_attribute_is_refused() {
     let wt = strict_existence();
     let mut comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
     let removed = remove_attr(&mut comp, &["at0007", "at0011"], "items");
-    assert_eq!(removed, 2, "the state and protocol trees each lose their items");
+    assert_eq!(
+        removed, 2,
+        "the state and protocol trees each lose their items"
+    );
     let missing = missing_attribute(&comp, &wt, "items");
     assert_eq!(missing.len(), 2, "both trees are refused: {missing:?}");
 }

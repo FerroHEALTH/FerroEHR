@@ -1875,8 +1875,11 @@ mod tests {
         );
     }
 
+    // AOM 1.4 `master04-constraint_model_package.adoc` (`C_MULTIPLE_ATTRIBUTE`):
+    // existence says whether the container is there, cardinality how many
+    // members it holds (#5909).
     #[test]
-    fn existence_empty_array_counts_as_absent() {
+    fn existence_empty_array_counts_as_present() {
         let mut n = node("COMPOSITION", "");
         n.existence = vec![WebTemplateExistence {
             min: 1,
@@ -1886,8 +1889,27 @@ mod tests {
         let inst = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": []});
         let msgs = walk_only(&inst, &n);
         assert!(
-            msgs.iter().any(|m| m.kind == ValidationKind::Required),
-            "an empty mandatory container attribute is absent, got {msgs:?}"
+            !msgs.iter().any(|m| m.kind == ValidationKind::Required),
+            "an empty mandatory container is present, got {msgs:?}"
+        );
+        n.card_all = vec![WebTemplateCardinality {
+            min: Some(1),
+            max: -1,
+            ids: None,
+            path: "/content".to_owned(),
+            unique: false,
+        }];
+        let msgs = walk_only(&inst, &n);
+        assert!(
+            msgs.iter().any(|m| m.kind == ValidationKind::Cardinality),
+            "its cardinality lower bound refuses it, got {msgs:?}"
+        );
+        let missing = json!({"_type": "COMPOSITION", "archetype_node_id": "x"});
+        assert!(
+            walk_only(&missing, &n)
+                .iter()
+                .any(|m| m.kind == ValidationKind::Required),
+            "a missing container stays absent"
         );
     }
 
