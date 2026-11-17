@@ -93,20 +93,28 @@ async fn findings(pool: &PgPool) -> Vec<(Option<i64>, String)> {
 async fn tamper(pool: &PgPool, statements: &[&str]) {
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
-    sqlx::query("ALTER TABLE audit.access_log_record DISABLE TRIGGER USER")
+    for table in ["access_log_entry", "access_log_link"] {
+        sqlx::query(AssertSqlSafe(format!(
+            "ALTER TABLE audit.{table} DISABLE TRIGGER USER"
+        )))
         .execute(&mut *tx)
         .await
         .expect("disable the triggers");
+    }
     for statement in statements {
         sqlx::query(AssertSqlSafe((*statement).to_owned()))
             .execute(&mut *tx)
             .await
             .expect("the tampering statement itself must succeed");
     }
-    sqlx::query("ALTER TABLE audit.access_log_record ENABLE TRIGGER USER")
+    for table in ["access_log_entry", "access_log_link"] {
+        sqlx::query(AssertSqlSafe(format!(
+            "ALTER TABLE audit.{table} ENABLE TRIGGER USER"
+        )))
         .execute(&mut *tx)
         .await
         .expect("enable the triggers");
+    }
     tx.commit().await.expect("commit");
 }
 
@@ -364,26 +372,25 @@ async fn an_entry_keeps_its_decision_grounds_and_a_refusal_needs_no_ehr() {
 /// The statements that insert a forged record at position 2 and move every
 /// later record one on, its link correct for the record before it.
 const INSERTED: &[&str] = &[
-    "UPDATE audit.access_log_record SET chain_seq = -chain_seq WHERE chain_seq >= 2",
-    "UPDATE audit.access_log_record SET chain_seq = -chain_seq + 1 WHERE chain_seq < 0",
-    "INSERT INTO audit.access_log_record \
-     SELECT (audit.access_log_record_derive(forged)).* FROM ( \
-       SELECT jsonb_populate_record(NULL::audit.access_log_record, jsonb_build_object( \
-         'chain_seq', 2, 'content', c.content, 'algorithm', 'SHA-256', \
+    "UPDATE audit.access_log_link SET chain_seq = -chain_seq WHERE chain_seq >= 2",
+    "UPDATE audit.access_log_link SET chain_seq = -chain_seq + 1 WHERE chain_seq < 0",
+    "INSERT INTO audit.access_log_entry OVERRIDING SYSTEM VALUE \
+     SELECT (audit.access_log_entry_derive(forged)).* FROM ( \
+       SELECT jsonb_populate_record(NULL::audit.access_log_entry, jsonb_build_object( \
+         'id', 1000, 'content', c.content, \
          'record_type', c.record_type, 'uid', c.uid, 'time_recorded', c.time_recorded, \
          'ehr_id', c.ehr_id, \
-         'previous_digest', '\\x' || encode(p.digest, 'hex'), \
          'content_digest', '\\x' || audit.access_log_content_digest(c.content), \
-         'digest', '\\x' || audit.access_log_link_digest(encode(p.digest, 'hex'), 2, \
-                       audit.access_log_content_digest(c.content)), \
-         'shared', '\\x' || encode(c.shared, 'hex'), \
-         'stored_at', now())) AS forged \
-         FROM audit.access_log_record p, \
-              (SELECT replace(content, '000000000003', '0000000000ff') AS content, shared, \
+         'shared', '\\x' || encode(c.shared, 'hex'))) AS forged \
+         FROM (SELECT replace(content, '000000000003', '0000000000ff') AS content, shared, \
                       record_type, replace(uid::text, '000000000003', '0000000000ff') AS uid, \
                       time_recorded, replace(ehr_id::text, '000000000003', '0000000000ff') AS ehr_id \
-                 FROM audit.access_log_record WHERE chain_seq = 4) c \
-        WHERE p.chain_seq = 1) AS f",
+                 FROM audit.access_log_record WHERE chain_seq = 4) c) AS f",
+    "INSERT INTO audit.access_log_link (chain_seq, entry_id, algorithm, previous_digest, digest) \
+     SELECT 2, 1000, 'SHA-256', p.digest, decode(audit.access_log_link_digest( \
+              encode(p.digest, 'hex'), 2, audit.access_log_content_digest(e.content)), 'hex') \
+       FROM audit.access_log_record p, audit.access_log_entry e \
+      WHERE p.chain_seq = 1 AND e.id = 1000",
 ];
 
 /// A record removed, inserted or reordered breaks the chain where it happened,
@@ -393,15 +400,15 @@ async fn the_verifier_finds_a_removed_an_inserted_and_a_reordered_record() {
     let cases: [(&str, &[&str], i64); 3] = [
         (
             "removed",
-            &["DELETE FROM audit.access_log_record WHERE chain_seq = 2"],
+            &["DELETE FROM audit.access_log_link WHERE chain_seq = 2"],
             3,
         ),
         ("inserted", INSERTED, 3),
         (
             "reordered",
             &[
-                "UPDATE audit.access_log_record SET chain_seq = -chain_seq WHERE chain_seq IN (2, 3)",
-                "UPDATE audit.access_log_record SET chain_seq = 5 + chain_seq WHERE chain_seq < 0",
+                "UPDATE audit.access_log_link SET chain_seq = -chain_seq WHERE chain_seq IN (2, 3)",
+                "UPDATE audit.access_log_link SET chain_seq = 5 + chain_seq WHERE chain_seq < 0",
             ],
             2,
         ),
@@ -423,10 +430,11 @@ async fn the_verifier_finds_a_removed_an_inserted_and_a_reordered_record() {
 #[tokio::test]
 async fn the_verifier_finds_a_modified_entry_and_a_modified_search_column() {
     for statement in [
-        "UPDATE audit.access_log_record \
+        "UPDATE audit.access_log_entry \
          SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
-         WHERE chain_seq = 2",
-        "UPDATE audit.access_log_record SET ehr_id = '00000000-0000-4000-8000-000000000000' WHERE chain_seq = 2",
+         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 2)",
+        "UPDATE audit.access_log_entry SET ehr_id = '00000000-0000-4000-8000-000000000000' \
+         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 2)",
     ] {
         let testdb = testkit::db().await.expect("testkit database");
         let pool = testdb.pool();
@@ -480,45 +488,6 @@ async fn a_changed_shared_part_is_found_at_every_entry_naming_it() {
             "the entry at {position} names the changed part: {found:?}"
         );
     }
-}
-
-/// A tombstone replaces one row and keeps no shared part; the shared part
-/// leaves with the last row that named it, and the other entries read back
-/// as they were written (#5703).
-#[tokio::test]
-async fn a_tombstone_lets_go_of_the_shared_part_with_its_last_row() {
-    let testdb = testkit::db().await.expect("testkit database");
-    let pool = testdb.pool();
-    let store = AccessLogStore::new(pool.clone());
-    let written = append(&store, 1..=2).await;
-    let count = || {
-        let pool = pool.clone();
-        async move {
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM audit.access_log_shared")
-                .fetch_one(&pool)
-                .await
-                .expect("the shared parts")
-        }
-    };
-    let (first, second) = (&written[0], &written[1]);
-    store
-        .tombstone(first.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
-        .await
-        .expect("the tombstone")
-        .expect("the entry");
-    assert_eq!(count().await, 1, "the other entry still names the part");
-    assert_eq!(
-        store.read(second.uid.value()).await.expect("read"),
-        Some(AccessLogRecord::AccessLogEntry(second.clone())),
-        "the other entry reads back unchanged"
-    );
-    store
-        .tombstone(second.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
-        .await
-        .expect("the tombstone")
-        .expect("the entry");
-    assert_eq!(count().await, 0, "no row names the part any more");
-    assert_eq!(findings(&pool).await, Vec::new());
 }
 
 /// A tombstone replaces an entry in the middle of the log in place: it keeps
@@ -613,24 +582,32 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
 
     for statement in [
         format!(
-            "UPDATE audit.access_log_record SET content = {} WHERE chain_seq = 1",
+            "UPDATE audit.access_log_entry SET content = {} WHERE id = \
+             (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)",
             literal(&changed)
         ),
         format!(
-            "UPDATE audit.access_log_record SET content = {} WHERE chain_seq = 1",
+            "UPDATE audit.access_log_entry SET content = {} WHERE id = \
+             (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)",
             literal(&foreign)
         ),
-        "UPDATE audit.access_log_record SET digest = repeat('0', 64) WHERE chain_seq = 1"
+        "UPDATE audit.access_log_link SET digest = decode(repeat('0', 64), 'hex') WHERE chain_seq = 1"
             .to_owned(),
-        "UPDATE audit.access_log_record SET ehr_id = '00000000-0000-4000-8000-000000000000' WHERE chain_seq = 1".to_owned(),
-        "DELETE FROM audit.access_log_record WHERE chain_seq = 2".to_owned(),
-        "TRUNCATE audit.access_log_record".to_owned(),
+        "UPDATE audit.access_log_entry SET ehr_id = '00000000-0000-4000-8000-000000000000' \
+         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)"
+            .to_owned(),
+        "DELETE FROM audit.access_log_link WHERE chain_seq = 2".to_owned(),
+        "DELETE FROM audit.access_log_entry \
+         WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 2)"
+            .to_owned(),
+        "TRUNCATE audit.access_log_link".to_owned(),
+        "TRUNCATE audit.access_log_entry".to_owned(),
         format!(
-            "INSERT INTO audit.access_log_record (content) VALUES ('{}')",
+            "INSERT INTO audit.access_log_entry (content) VALUES ('{}')",
             with_link.replace('\'', "''")
         ),
         format!(
-            "INSERT INTO audit.access_log_record (content) VALUES ({})",
+            "INSERT INTO audit.access_log_entry (content) VALUES ({})",
             literal(&foreign)
         ),
     ] {
@@ -646,7 +623,8 @@ async fn the_table_admits_the_tombstone_replacement_and_nothing_else() {
         .expect("the tombstone replacement is admitted")
         .expect("the entry is there");
     let again = sqlx::query(AssertSqlSafe(format!(
-        "UPDATE audit.access_log_record SET content = {} WHERE chain_seq = 1",
+        "UPDATE audit.access_log_entry SET content = {} WHERE id = \
+             (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)",
         literal(first)
     )))
     .execute(&pool)
@@ -773,9 +751,9 @@ async fn each_chain_verifies_apart_from_its_own_cursor_on() {
     append(&log, 5..=5).await;
     tamper(
         &pool,
-        &["UPDATE audit.access_log_record \
+        &["UPDATE audit.access_log_entry \
            SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
-           WHERE chain_seq = 5"],
+           WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 5)"],
     )
     .await;
     let found = audit
@@ -821,12 +799,16 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
 
     let mut conn = PgConnection::connect(&url).await.expect("connect");
     for statement in [
-        "UPDATE audit.access_log_record SET digest = repeat('0', 64)",
-        "UPDATE audit.access_log_record SET ehr_id = '00000000-0000-4000-8000-000000000000'",
-        "INSERT INTO audit.access_log_record (content, chain_seq) VALUES ('{}', 99)",
-        "DELETE FROM audit.access_log_record",
-        "TRUNCATE audit.access_log_record",
-        "ALTER TABLE audit.access_log_record DISABLE TRIGGER USER",
+        "UPDATE audit.access_log_link SET digest = decode(repeat('0', 64), 'hex')",
+        "UPDATE audit.access_log_entry SET ehr_id = '00000000-0000-4000-8000-000000000000'",
+        "INSERT INTO audit.access_log_link (chain_seq, entry_id, algorithm, previous_digest, digest) \
+         SELECT 99, id, 'SHA-256', content_digest, content_digest FROM audit.access_log_entry LIMIT 1",
+        "DELETE FROM audit.access_log_link",
+        "DELETE FROM audit.access_log_entry",
+        "TRUNCATE audit.access_log_link",
+        "TRUNCATE audit.access_log_entry",
+        "ALTER TABLE audit.access_log_entry DISABLE TRIGGER USER",
+        "ALTER TABLE audit.access_log_link DISABLE TRIGGER USER",
     ] {
         let outcome = sqlx::query(AssertSqlSafe(statement.to_owned()))
             .execute(&mut conn)
@@ -841,67 +823,4 @@ async fn the_application_role_appends_and_replaces_by_a_tombstone_only() {
         .await
         .expect("the application role verifies the access log");
     assert_eq!(clean, 0);
-}
-
-/// A tombstone that would remove the last record's shared part waits for an
-/// intake write that names the part and has not committed, and then keeps
-/// the part: the intake row holds it with no foreign key (#5887).
-#[tokio::test]
-#[expect(
-    clippy::disallowed_methods,
-    reason = "a test holds an intake write open on a raw pool connection, outside any request"
-)]
-async fn a_tombstone_waits_for_an_intake_write_naming_its_shared_part() {
-    let testdb = testkit::db().await.expect("testkit database");
-    let pool = testdb.pool();
-    let store = AccessLogStore::new(pool.clone());
-    let written = append(&store, 1..=1).await;
-    let first = written.first().expect("the first entry").clone();
-
-    let mut conn = pool.acquire().await.expect("connection");
-    let mut tx = conn.begin().await.expect("begin");
-    let mut second = entry(2);
-    let intake =
-        ferroehr::access_log::intake::IntakeEntry::of(&mut second, None).expect("the intake form");
-    ferroehr::access_log::intake::take_in(&mut tx, &[intake], &[Vec::new()], None)
-        .await
-        .expect("the intake write");
-
-    let tombstoning = {
-        let store = store.clone();
-        tokio::spawn(async move {
-            store
-                .tombstone(first.uid.value(), at("2031-11-08T00:00:00Z"), expiry())
-                .await
-        })
-    };
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-    assert!(
-        !tombstoning.is_finished(),
-        "the tombstone waits for the intake write in flight"
-    );
-    tx.commit().await.expect("the intake write commits");
-    tombstoning
-        .await
-        .expect("the tombstone task")
-        .expect("the tombstone")
-        .expect("the entry");
-
-    let parts: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_shared")
-        .fetch_one(&pool)
-        .await
-        .expect("the shared parts");
-    assert_eq!(parts, 1, "the intake row still names the part");
-    store
-        .settle(ferroehr::access_log::chainer::Owed::default())
-        .await
-        .expect("the intake chains");
-    assert!(
-        matches!(
-            store.read(second.uid.value()).await.expect("read"),
-            Some(AccessLogRecord::AccessLogEntry(_))
-        ),
-        "the entry written beside the tombstone reads back with its shared part"
-    );
-    assert_eq!(findings(&pool).await, Vec::new());
 }

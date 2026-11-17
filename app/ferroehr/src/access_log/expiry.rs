@@ -8,7 +8,9 @@
 //! in place, so the chain still verifies (`docs/plans/access-log.md`
 //! §Retention). A tombstone is kept as long again, and then each run of
 //! tombstones past their end folds into one gap of the chain
-//! ([`crate::access_log::gap`]).
+//! ([`crate::access_log::gap`]). The shared parts past their own
+//! `retain_until` that no entry names any more are collected after the fold
+//! (#5968).
 //!
 //! The entries imported from another system end the same way, at the
 //! `retain_until` they state, and their tombstones fold by the imported rule
@@ -29,6 +31,9 @@ const BATCH: u16 = 500;
 /// The most tombstones one transaction folds.
 // NOTE: our own design (#5619), at about 1.1 kB a tombstone one fold reads near 5 MB.
 const FOLD_BATCH: u16 = 5000;
+
+/// The most shared parts one statement collects.
+const COLLECT_BATCH: u16 = 500;
 
 /// The log a retention run works on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -103,6 +108,24 @@ pub async fn fold(
     }
 }
 
+/// Remove the shared parts past their retention that no entry names, in
+/// batches of [`COLLECT_BATCH`], and return how many (#5968).
+///
+/// # Errors
+/// The errors of [`AccessLogStore::collect_shared`]; the batches removed
+/// before the failing one stay removed.
+pub async fn collect(store: &AccessLogStore, now: jiff::Timestamp) -> Result<u64, AccessLogError> {
+    let today = now.to_zoned(jiff::tz::TimeZone::UTC).date();
+    let mut removed = 0_u64;
+    loop {
+        let batch = store.collect_shared(today, COLLECT_BATCH).await?;
+        removed = removed.saturating_add(batch);
+        if batch < u64::from(COLLECT_BATCH) {
+            return Ok(removed);
+        }
+    }
+}
+
 /// What one retention run did to one chain: the entries replaced by their
 /// tombstones, and the tombstones and gaps of the fold.
 type Ran = (u64, Folded);
@@ -164,6 +187,7 @@ async fn run(store: &AccessLogStore, now: jiff::Timestamp) -> Result<(Ran, Ran),
         expire(store, Log::Local, now).await?,
         fold(store, Log::Local, now).await?,
     );
+    collect(store, now).await?;
     let imported = (
         expire(store, Log::Imported, now).await?,
         fold(store, Log::Imported, now).await?,

@@ -185,10 +185,13 @@ fn record_columns() -> impl Iterator<Item = &'static str> {
 /// which renders no document.
 fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
     let search = || (Alias::new(AUDIT), Alias::new(ACCESS_LOG_SEARCH));
+    // NOTE: our own design (#5968), a page reads only the entries the chainer linked.
+    let linked = || Expr::col(Alias::new("chain_seq")).is_not_null();
     let newest = |limit: u64, offset: u64| {
         Query::select()
             .from(search())
             .cond_where(condition.clone())
+            .and_where(linked())
             .order_by(Alias::new("recorded_at"), Order::Desc)
             .limit(limit)
             .offset(offset)
@@ -202,6 +205,7 @@ fn access_log_page(condition: &Cond, first: u64) -> SelectStatement {
         .column(Alias::new("chain_seq"))
         .from(search())
         .cond_where(condition.clone())
+        .and_where(linked())
         .and_where(Expr::col(Alias::new("recorded_at")).eq(count_of(last_instant)))
         .union(
             UnionType::Distinct,

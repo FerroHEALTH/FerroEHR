@@ -77,11 +77,14 @@ async fn a_refused_entry_refuses_only_its_own_request() {
         last_answer.await.expect("an answer").is_ok(),
         "the last request is written"
     );
-    let ehrs: Vec<String> =
-        sqlx::query_scalar("SELECT ehr_id FROM audit.access_log_intake ORDER BY ehr_id")
-            .fetch_all(&pool)
-            .await
-            .expect("the intake");
+    let ehrs: Vec<String> = sqlx::query_scalar(
+        "SELECT e.ehr_id::text FROM audit.access_log_intake i \
+             CROSS JOIN LATERAL unnest(i.entries) AS n(id) \
+             JOIN audit.access_log_entry e ON e.id = n.id ORDER BY 1",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the intake");
     assert_eq!(
         ehrs,
         [

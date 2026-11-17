@@ -225,10 +225,11 @@ async fn a_tampered_entry_fails_verification() {
 
     tamper(
         pool,
-        "audit.access_log_record",
+        "audit.access_log_entry",
         &[&format!(
-            "UPDATE audit.access_log_record SET content = replace(content, \
-             '\"was_delivered\":true', '\"was_delivered\":false') WHERE chain_seq = {target}"
+            "UPDATE audit.access_log_entry SET content = replace(content, \
+             '\"was_delivered\":true', '\"was_delivered\":false') \
+             WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = {target})"
         )],
     )
     .await;
@@ -585,9 +586,9 @@ async fn a_deleted_record_fails_verification() {
     let target = entries.get(1).expect("a second entry").link.sequence;
     tamper(
         pool,
-        "audit.access_log_record",
+        "audit.access_log_link",
         &[&format!(
-            "DELETE FROM audit.access_log_record WHERE chain_seq = {target}"
+            "DELETE FROM audit.access_log_link WHERE chain_seq = {target}"
         )],
     )
     .await;
@@ -616,9 +617,9 @@ async fn a_deleted_record_fails_verification() {
     let head = kept.last().expect("an entry").link.clone();
     tamper(
         other,
-        "audit.access_log_record",
+        "audit.access_log_link",
         &[&format!(
-            "DELETE FROM audit.access_log_record WHERE chain_seq BETWEEN {from} AND {to}"
+            "DELETE FROM audit.access_log_link WHERE chain_seq BETWEEN {from} AND {to}"
         )],
     )
     .await;

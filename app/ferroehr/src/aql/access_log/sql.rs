@@ -181,7 +181,9 @@ pub fn statement(
             direction(*descending)
         }
     };
-    select.order_by_expr(column("chain_seq"), tie);
+    // NOTE: our own design (#5968), the entry id breaks a tie, which the (ehr_id, time_recorded,
+    // id) index keeps in order, so a person's lookup by time reads the index in order.
+    select.order_by_expr(column("entry_id"), tie);
     if let Some(limit) = scope.limit.and_then(|limit| u64::try_from(limit).ok()) {
         select.limit(limit);
     }
