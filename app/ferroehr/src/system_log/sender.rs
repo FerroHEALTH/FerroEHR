@@ -724,8 +724,21 @@ fn spawn_store_upkeep(
     Some(check)
 }
 
-/// The subject of every EHR the records reference: from the memo, or
-/// resolved concurrently and memoized.
+/// The subject a read of the request found for `ehr_id` in the store, as
+/// the resolver would name it: `ehr.subject_id` under `ehr.subject_namespace`.
+fn judged_subject(events: &[AuditEvent], ehr_id: &str) -> Option<ResolvedSubject> {
+    events
+        .iter()
+        .filter(|event| event.ehr_id.as_deref() == Some(ehr_id))
+        .find_map(|event| event.judged_subject.as_ref())
+        .map(|subject| ResolvedSubject {
+            id: subject.id.clone(),
+            namespace: Some(subject.namespace.clone()),
+        })
+}
+
+/// The subject of every EHR the records reference: the one a read of the
+/// request found, from the memo, or resolved concurrently and memoized.
 ///
 /// A failed lookup is not memoized, so the next request asks again, and its
 /// EHR is returned among the failed for these records.
@@ -743,6 +756,10 @@ async fn memoize_subjects(
     let mut subjects = Subjects::default();
     let mut pending = Vec::new();
     for ehr_id in referenced {
+        if let Some(judged) = judged_subject(events, &ehr_id) {
+            subjects.resolved.insert(ehr_id, Some(judged));
+            continue;
+        }
         match cache.get(&ehr_id).await {
             Some(held) => {
                 subjects.resolved.insert(ehr_id, held);
@@ -759,22 +776,28 @@ async fn memoize_subjects(
     for ehr_id in pending {
         subjects.unavailable.insert(ehr_id.clone());
         let lookup = resolve(ehr_id.clone());
+        let cache = cache.clone();
+        // NOTE: our own design (#5985), concurrent lookups of one EHR share one read, and a
+        // lookup that could not ask the database is never memoized.
         lookups.spawn(crate::db::acquire::inheriting(async move {
-            (ehr_id, lookup.await)
+            let found = cache
+                .optionally_get_with(ehr_id.clone(), async move {
+                    match lookup.await {
+                        SubjectLookup::Found(subject) => Some(Some(subject)),
+                        SubjectLookup::NoSubject => Some(None),
+                        SubjectLookup::Unavailable => None,
+                    }
+                })
+                .await;
+            (ehr_id, found)
         }));
     }
     // A lookup task that panicked never answers, so its EHR stays unavailable.
     while let Some(joined) = lookups.join_next().await {
-        let Ok((ehr_id, lookup)) = joined else {
+        let Ok((ehr_id, Some(subject))) = joined else {
             continue;
         };
-        let subject = match lookup {
-            SubjectLookup::Found(subject) => Some(subject),
-            SubjectLookup::NoSubject => None,
-            SubjectLookup::Unavailable => continue,
-        };
         subjects.unavailable.remove(&ehr_id);
-        cache.insert(ehr_id.clone(), subject.clone()).await;
         subjects.resolved.insert(ehr_id, subject);
     }
     subjects
@@ -874,5 +897,67 @@ mod tests {
                 assert!(!record.event.subject_lookup_failed);
             }
         }
+    }
+
+    /// Concurrent records of one EHR the memo does not hold share one lookup
+    /// of its subject, and each names it.
+    #[tokio::test]
+    async fn concurrent_lookups_of_one_ehr_share_one_read() {
+        let asked = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counted = Arc::clone(&asked);
+        let resolve: SubjectResolver = Arc::new(move |_ehr_id: String| {
+            let counted = Arc::clone(&counted);
+            Box::pin(async move {
+                counted.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                SubjectLookup::Found(ResolvedSubject {
+                    id: "patient-1".to_owned(),
+                    namespace: Some("demographic".to_owned()),
+                })
+            })
+        });
+        let cache: SubjectCache = moka::future::Cache::builder().max_capacity(8).build();
+        let mut e = event();
+        e.ehr_id = Some("one".to_owned());
+        let batch = vec![e];
+        let answers =
+            futures::future::join_all((0..8).map(|_| memoize_subjects(&batch, &resolve, &cache)))
+                .await;
+        assert_eq!(asked.load(std::sync::atomic::Ordering::Relaxed), 1);
+        for subjects in answers {
+            assert_eq!(
+                subjects
+                    .resolved
+                    .get("one")
+                    .cloned()
+                    .flatten()
+                    .map(|s| s.id),
+                Some("patient-1".to_owned())
+            );
+        }
+    }
+
+    /// A record whose request read its EHR's subject in the store names that
+    /// subject, and the resolver is not asked.
+    #[tokio::test]
+    async fn a_subject_the_request_read_is_named_without_a_lookup() {
+        let resolve: SubjectResolver =
+            Arc::new(|_ehr_id: String| Box::pin(async move { SubjectLookup::Unavailable }));
+        let cache: SubjectCache = moka::future::Cache::builder().max_capacity(8).build();
+        let mut e = event();
+        e.ehr_id = Some("one".to_owned());
+        e.judged_subject = Some(crate::storage::access_projection::EhrSubject::new(
+            "demographic",
+            "patient-2",
+        ));
+        let subjects = memoize_subjects(&[e], &resolve, &cache).await;
+        assert!(subjects.unavailable.is_empty());
+        let named = subjects.resolved.get("one").cloned().flatten();
+        assert_eq!(
+            named
+                .as_ref()
+                .map(|s| (s.id.as_str(), s.namespace.as_deref())),
+            Some(("patient-2", Some("demographic")))
+        );
     }
 }

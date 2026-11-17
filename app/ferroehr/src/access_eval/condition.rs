@@ -62,6 +62,9 @@ pub struct RequestAccess {
     now: jiff::Timestamp,
     grants: Option<Arc<LiveGrants>>,
     verdicts: Mutex<BTreeMap<EhrId, Judgement>>,
+    /// The subject each EHR's revision named when a read of this request
+    /// found it in the store.
+    read_subjects: Mutex<BTreeMap<EhrId, Option<EhrSubject>>>,
     recorded: Recorded,
     stale: Option<Arc<StaleCopies>>,
     pub(super) written: Mutex<BTreeSet<Uuid>>,
@@ -174,6 +177,7 @@ impl RequestAccess {
             now: in_force.now,
             grants: in_force.grants,
             verdicts: Mutex::new(BTreeMap::new()),
+            read_subjects: Mutex::new(BTreeMap::new()),
             recorded: Recorded::default(),
             stale: None,
             written: Mutex::new(BTreeSet::new()),
@@ -507,6 +511,7 @@ impl RequestAccess {
     /// copy is marked stale. An EHR the request has not judged is not.
     #[must_use]
     pub fn stale(&self, ehr_id: EhrId, seen: &Revision) -> bool {
+        self.read_in_store(ehr_id, seen);
         let Some(judged) = self.judgement(ehr_id) else {
             return false;
         };
@@ -521,6 +526,27 @@ impl RequestAccess {
             stale.mark(ehr_id);
         }
         true
+    }
+
+    /// Notes `seen`, the revision of `ehr_id` a read of this request found
+    /// in the store, so its access record names the subject `seen` names.
+    pub fn read_in_store(&self, ehr_id: EhrId, seen: &Revision) {
+        self.read_subjects
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(ehr_id, seen.subject.clone());
+    }
+
+    /// The subject of `ehr_id` a read of this request found in the store;
+    /// `None` when no read found the EHR or its status names no subject.
+    #[must_use]
+    pub fn subject_read(&self, ehr_id: EhrId) -> Option<EhrSubject> {
+        self.read_subjects
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&ehr_id)
+            .cloned()
+            .flatten()
     }
 
     /// The condition a query applies, over every EHR of a class among
