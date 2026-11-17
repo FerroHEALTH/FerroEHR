@@ -61,7 +61,7 @@ impl<'w> Cut<'w> {
     /// A [`serde_json::Error`] when `whole` is no canonical object.
     pub fn of(whole: &'w str) -> Result<Self, serde_json::Error> {
         Ok(Self {
-            top: members(whole).ok_or_else(no_object)?,
+            top: members(whole).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?,
         })
     }
 
@@ -94,7 +94,8 @@ impl<'w> Cut<'w> {
             } else if is_name(name, DETAILS)
                 && let Some(tree) = members(value)
             {
-                let (envelope, kept) = details(&tree).ok_or_else(no_object)?;
+                let (envelope, kept) =
+                    details(&tree).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?;
                 shared.push(name, &envelope);
                 row.push(name, &kept);
             } else {
@@ -143,11 +144,9 @@ fn last_named<'t>(members: &[(&'t str, &'t str)], plain: &str) -> Option<&'t str
         .map(|(_, value)| *value)
 }
 
-/// The error of a record that is no object, or whose canonical form does not
-/// read back.
-fn no_object() -> serde_json::Error {
-    serde::ser::Error::custom("a stored record's canonical form is no object")
-}
+/// Why a record has no parts: it is no object, or its canonical form does
+/// not read back.
+const NO_OBJECT: &str = "a stored record's canonical form is no object";
 
 /// The details tree `tree` cut in two: the envelope with the shared elements,
 /// and the row's tree of the other elements, each in its canonical form.
