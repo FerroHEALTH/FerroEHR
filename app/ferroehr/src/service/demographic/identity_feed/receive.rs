@@ -244,7 +244,7 @@ impl FerroEhrService {
                 .execute(&mut *tx)
                 .await?;
         }
-        self.commit_party_recorded(tx, Vec::new()).await?;
+        self.commit_act_recorded(tx, Vec::new()).await?;
         tracing::info!(
             stored = stored.is_some(),
             changes = events.len(),

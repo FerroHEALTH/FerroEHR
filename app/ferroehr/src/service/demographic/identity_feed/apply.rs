@@ -326,7 +326,7 @@ impl FerroEhrService {
             format!("{}:{}", super::operator::OBJECT, message.message_id),
             None,
         );
-        self.commit_party_recorded(tx, vec![record]).await?;
+        self.commit_act_recorded(tx, vec![record]).await?;
         tracing::info!(
             changes = message.events.len(),
             "an ITI-93 message is applied"

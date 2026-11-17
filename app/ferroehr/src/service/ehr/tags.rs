@@ -254,15 +254,30 @@ impl FerroEhrService {
             .await?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        if !crate::storage::tag_repo::delete_tag(
+        let deleted = crate::storage::tag_repo::delete_tag(
             &mut tx,
             Some(ehr_id),
             target_vo_id,
             tag_target_tail(target_version),
             key,
         )
-        .await?
-        {
+        .await?;
+        self.commit_tag_delete(tx, deleted, key).await
+    }
+
+    /// Commit `tx`, the delete of the item tag `key` in either domain, or
+    /// answer `404` when it deleted no tag (`item_tag.adoc`).
+    ///
+    /// # Errors
+    /// [`ServiceError::not_found`] when no tag `key` was deleted, and the
+    /// errors of [`Self::commit_recorded`].
+    pub(in crate::service) async fn commit_tag_delete(
+        &self,
+        tx: sqlx::Transaction<'_, sqlx::Postgres>,
+        deleted: bool,
+        key: &str,
+    ) -> Result<(), ServiceError> {
+        if !deleted {
             return Err(ServiceError::not_found(
                 Missing::VersionedObject,
                 format!("item tag {key:?}"),

@@ -79,7 +79,7 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::Storage)?;
         let record = self.mark_record(EventActionCode::Create, ehr_id, vo_id, "restriction");
-        self.commit_clinical_recorded(tx, vec![record]).await?;
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -103,7 +103,7 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::Storage)?;
         let record = self.mark_record(EventActionCode::Delete, ehr_id, vo_id, "restriction");
-        self.commit_clinical_recorded(tx, vec![record]).await?;
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -169,7 +169,7 @@ impl FerroEhrService {
             EventActionCode::Delete
         };
         let record = self.mark_record(action, ehr_id, None, "research-objection");
-        self.commit_clinical_recorded(tx, vec![record]).await?;
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -240,7 +240,7 @@ impl FerroEhrService {
         .map_err(|e| {
             ServiceError::precondition(format!("the retention register refused the period: {e}"))
         })?;
-        self.commit_clinical_recorded(tx, Vec::new()).await?;
+        self.commit_act_recorded(tx, Vec::new()).await?;
         Ok(())
     }
 
@@ -298,7 +298,7 @@ impl FerroEhrService {
                 ))
             })?;
         let record = self.mark_record(EventActionCode::Update, ehr_id, None, "retention-anchor");
-        self.commit_clinical_recorded(tx, vec![record]).await?;
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -334,7 +334,7 @@ impl FerroEhrService {
             .map(|ehr_id| self.mark_record(action, ehr_id, Some(vo_id), "retention-hold"))
             .into_iter()
             .collect();
-        self.commit_clinical_recorded(tx, records).await?;
+        self.commit_act_recorded(tx, records).await?;
         Ok(())
     }
 
@@ -431,24 +431,9 @@ impl FerroEhrService {
         event
     }
 
-    /// Commit `tx`, a write of the party domain, with `records` reserved
+    /// Commit `tx`, an act no write facts describe, with `records` reserved
     /// ([`Self::commit_recorded`]).
-    pub(in crate::service) async fn commit_party_recorded(
-        &self,
-        tx: sqlx::Transaction<'_, sqlx::Postgres>,
-        records: Vec<AuditEvent>,
-    ) -> Result<(), ServiceError> {
-        self.commit_recorded(
-            tx,
-            &crate::system_log::recorder::WriteFacts::default(),
-            records,
-        )
-        .await
-    }
-
-    /// Commit `tx`, a write of the clinical domain, with `records` reserved
-    /// ([`Self::commit_recorded`]).
-    pub(in crate::service) async fn commit_clinical_recorded(
+    pub(in crate::service) async fn commit_act_recorded(
         &self,
         tx: sqlx::Transaction<'_, sqlx::Postgres>,
         records: Vec<AuditEvent>,

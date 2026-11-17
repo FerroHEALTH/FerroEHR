@@ -282,7 +282,7 @@ impl FerroEhrService {
             format!("{OBJECT}:{message_id}"),
             Some(RETRY),
         );
-        self.commit_party_recorded(tx, vec![record]).await?;
+        self.commit_act_recorded(tx, vec![record]).await?;
         tracing::info!(message_id, operator, "a refused ITI-93 message is retried");
         Ok(Retried {
             message_id: message_id.to_owned(),
@@ -365,7 +365,7 @@ impl FerroEhrService {
             format!("{OBJECT}:{message_id}"),
             Some(SETTLE),
         );
-        self.commit_party_recorded(tx, vec![record]).await?;
+        self.commit_act_recorded(tx, vec![record]).await?;
         tracing::info!(
             message_id,
             operator,

@@ -51,7 +51,7 @@ impl FerroEhrService {
             tier::freeze(&mut tx, &vo_ids, Some("archive_ehrs")).await?;
         }
         let records = self.archive_records(ehr_ids, "archive");
-        self.commit_clinical_recorded(tx, records).await
+        self.commit_act_recorded(tx, records).await
     }
 
     /// Move each party's versioned object to the cold archival tier
@@ -83,7 +83,7 @@ impl FerroEhrService {
             live.push(party_id);
         }
         tier::freeze(&mut tx, &live, Some("archive_parties")).await?;
-        self.commit_party_recorded(tx, Vec::new()).await
+        self.commit_act_recorded(tx, Vec::new()).await
     }
 
     /// Bring every archived versioned object of each EHR back from the cold
@@ -107,7 +107,7 @@ impl FerroEhrService {
             tier::thaw(&mut tx, &vo_ids).await?;
         }
         let records = self.archive_records(ehr_ids, "archive-restore");
-        self.commit_clinical_recorded(tx, records).await
+        self.commit_act_recorded(tx, records).await
     }
 
     /// The move of each EHR between the tiers as an access to it, one record
@@ -145,7 +145,7 @@ impl FerroEhrService {
             ids.push(party_id);
         }
         tier::thaw(&mut tx, &ids).await?;
-        self.commit_party_recorded(tx, Vec::new()).await
+        self.commit_act_recorded(tx, Vec::new()).await
     }
 }
 

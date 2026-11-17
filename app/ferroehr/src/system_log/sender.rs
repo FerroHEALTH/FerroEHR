@@ -215,7 +215,7 @@ impl AuditSender {
     /// Write `events`, the records of one act, into the local store in one
     /// transaction; they are durable when this returns, and the chainer links
     /// them after, unless `reservation` holds them until the write they
-    /// record is released ([`Self::release`], #5762).
+    /// record is released ([`Self::release_committed`], #5762).
     ///
     /// Every record is stamped with the digest of the category map in force,
     /// with the emergency mark when a purpose of use it names is one of

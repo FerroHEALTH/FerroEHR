@@ -98,7 +98,7 @@ impl FerroEhrService {
             )));
         }
         let record = self.mark_record(EventActionCode::Create, ehr_id, Some(vo_id), REGISTER);
-        self.commit_clinical_recorded(tx, vec![record]).await?;
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -121,7 +121,7 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::Storage)?;
         let record = self.mark_record(EventActionCode::Delete, ehr_id, Some(vo_id), REGISTER);
-        self.commit_clinical_recorded(tx, vec![record]).await?;
+        self.commit_act_recorded(tx, vec![record]).await?;
         Ok(())
     }
 
@@ -181,7 +181,7 @@ impl FerroEhrService {
                 )
             })
             .collect();
-        self.commit_clinical_recorded(tx, records).await?;
+        self.commit_act_recorded(tx, records).await?;
         Ok(expired.len())
     }
 

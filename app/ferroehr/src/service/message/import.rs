@@ -177,7 +177,7 @@ impl FerroEhrService {
             crate::service::ehr::access_projection::project_current(&mut tx, ehr_id).await?;
         }
         let records = self.import_record(&mut tx, ehr_id, &landed).await;
-        self.commit_clinical_recorded(tx, records).await?;
+        self.commit_act_recorded(tx, records).await?;
         self.invalidate_ehr_access(ehr_id).await;
         Ok(ehr_id)
     }
@@ -255,7 +255,7 @@ impl FerroEhrService {
             crate::service::ehr::access_projection::project_current(&mut tx, an_ehr_id).await?;
         }
         let records = self.import_record(&mut tx, an_ehr_id, &landed).await;
-        self.commit_clinical_recorded(tx, records).await?;
+        self.commit_act_recorded(tx, records).await?;
         if touches_ehr_access {
             self.invalidate_ehr_access(an_ehr_id).await;
         }
@@ -328,7 +328,7 @@ impl FerroEhrService {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         commit_demographic_import(&mut tx, signing, &self.privacy, audit, parties).await?;
-        self.commit_party_recorded(tx, Vec::new()).await?;
+        self.commit_act_recorded(tx, Vec::new()).await?;
         Ok(())
     }
 }

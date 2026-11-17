@@ -333,7 +333,7 @@ impl FerroEhrService {
             self.stamp_one_access(&mut event);
             records.push(event);
         }
-        self.commit_clinical_recorded(tx, records).await?;
+        self.commit_act_recorded(tx, records).await?;
         self.read_access_policy().await?;
         let written = self.access_policy_current().await?.ok_or_else(|| {
             ServiceError::exception("the access policy version just committed does not read")

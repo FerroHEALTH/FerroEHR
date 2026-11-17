@@ -107,7 +107,7 @@ impl FerroEhrService {
         for party in due {
             let mut tx = conn.begin().await?;
             if let Some(record) = self.erase_contacts_in(&mut tx, party).await? {
-                self.commit_party_recorded(tx, vec![record]).await?;
+                self.commit_act_recorded(tx, vec![record]).await?;
                 erased += 1;
             }
         }

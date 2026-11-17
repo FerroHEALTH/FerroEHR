@@ -244,20 +244,10 @@ impl FerroEhrService {
             .await?;
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
-        if !tag_repo::delete_tag(&mut tx, None, vo_id, tag_target_tail(target_version), key).await?
-        {
-            return Err(ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("item tag {key:?}"),
-            ));
-        }
-        self.commit_recorded(
-            tx,
-            &crate::system_log::recorder::WriteFacts::default(),
-            Vec::new(),
-        )
-        .await?;
-        Ok(())
+        let deleted =
+            tag_repo::delete_tag(&mut tx, None, vo_id, tag_target_tail(target_version), key)
+                .await?;
+        self.commit_tag_delete(tx, deleted, key).await
     }
 }
 
