@@ -8,6 +8,7 @@
 //! settings, kept fresh by `LISTEN`/`NOTIFY` (#5459, #5509). No openEHR spec
 //! governs the copies: our own design.
 
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -16,11 +17,13 @@ use ferroehr::policy_register::listen::Listeners;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use http::StatusCode;
 use serde_json::json;
+use sqlx::postgres::PgConnectOptions;
 
 use crate::hospital::abac::{answered, read};
 use crate::hospital::build::{audit, directive, eva_directives, settle, world};
+use crate::hospital::ledger::{Expect, Ledger};
 use crate::hospital::world::{
-    Answer, Doc, SCIM, World, admit, day, patch_op, replica, router, scim,
+    Answer, Doc, ENCOUNTER, SCIM, World, admit, day, patch_op, replica, router, scim,
 };
 
 /// The second replica over the world's database, auditing to the same
@@ -52,6 +55,44 @@ async fn second(world: &World) -> (Router, AuditHandle) {
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
     (router(&world.config, &svc).await, drain)
+}
+
+/// A second replica whose caller facts copy hears no notification: its
+/// grants listener connects to a database of its own, the longest lag a
+/// notification can have, so its next care-decided request reads the
+/// store's revisions before its decision is taken (#5806); its other copies
+/// listen on the world's database. With its audit drain, and the database
+/// its grants listener connects to.
+async fn lagging(world: &World) -> (Router, AuditHandle, testkit::TestDb) {
+    let (sender, drain) = start(audit(), None, world.pool.clone())
+        .await
+        .expect("the audit sender");
+    let svc = Arc::new(replica(&world.config, &world.pool, Some(sender)).await);
+    let elsewhere = testkit::db().await.expect("a second database");
+    let lagging = PgConnectOptions::from_str(elsewhere.url()).expect("the test DSN parses");
+    Listeners::on(lagging, &[Arc::clone(svc.grants().listened())]).spawn();
+    let connect = (*world.pool.connect_options()).clone();
+    Listeners::on(
+        connect,
+        &[
+            Arc::clone(svc.ehr_access_listened()),
+            Arc::clone(svc.access_policy().listened()),
+        ],
+    )
+    .spawn();
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while !(svc.ehr_access_listened().is_listening()
+        && svc.grants().listened().is_listening()
+        && svc.access_policy().listened().is_listening())
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the listeners connect"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    svc.grants().refresh().await.expect("the copy reads");
+    (router(&world.config, &svc).await, drain, elsewhere)
 }
 
 /// The read of `doc` by `caller` on `app`, polled until it answers `status`
@@ -168,4 +209,100 @@ async fn a_scim_deactivation_on_one_replica_refuses_on_the_other() {
     assert_eq!(answer.status, StatusCode::FORBIDDEN, "{}", answer.body);
     let first = read(&world, "devries", &world.vitals, Some("TREAT")).await;
     assert_eq!(first.status, StatusCode::FORBIDDEN, "{}", first.body);
+}
+
+/// The system log's records of the request `request_id`, as `(operation,
+/// outcome)`, once at least one has been chained, or none after ten seconds.
+async fn audited(world: &World, request_id: &str) -> Vec<(Option<String>, i16)> {
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        let rows: Vec<(Option<String>, i16)> = sqlx::query_as(
+            "SELECT operation, outcome FROM audit.audit_event WHERE request_id = $1 \
+             ORDER BY recorded_at",
+        )
+        .bind(request_id)
+        .fetch_all(&world.pool)
+        .await
+        .expect("read the system log");
+        if !rows.is_empty() || std::time::Instant::now() >= deadline {
+            return rows;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+/// Dr. Jansen's discharge from Cardiology, written through the first
+/// replica, refuses his next read on a replica that has not heard of it. The
+/// composition is read beside the decision's read of the store's revisions
+/// (#5959), and the refusal is still the whole answer: the body carries
+/// nothing of the composition, and the access log and the system log each
+/// hold the one refusal of the request, as a refusal decided before any read
+/// leaves them.
+#[tokio::test]
+async fn a_read_made_beside_a_refusing_decision_leaves_only_the_refusal() {
+    let mut world = Box::pin(world()).await;
+    let mut ledger = Ledger::default();
+    let (other, _drain, _elsewhere) = lagging(&world).await;
+    let uri = format!(
+        "{}/ehr/{}/composition/{}",
+        crate::common::BASE,
+        world.ehr,
+        world.encounter.version
+    );
+    let read_on_other =
+        || crate::hospital::world::call(&other, "jansen", "GET", &uri, Some("TREAT"), None);
+    let answer = read_on_other().await;
+    answered(&answer, StatusCode::OK, None);
+    assert!(
+        answer.body.contains("Cardiology encounter"),
+        "the admitted read serves the composition: {}",
+        answer.body
+    );
+    ledger.note(
+        &world,
+        "before the discharge",
+        &answer,
+        Expect::granted(&["treatment relationship"]),
+    );
+
+    let (ward, old_from, old_until) = (day(-2), day(-40), day(-20));
+    world.eva_version = admit(
+        &world,
+        &world.eva_version,
+        &[
+            ("Cardiology", &old_from, Some(&old_until)),
+            ("Ward 3", &ward, None),
+            ("Psychiatry", &ward, None),
+        ],
+    )
+    .await;
+    let refused = read_on_other().await;
+    answered(
+        &refused,
+        StatusCode::FORBIDDEN,
+        Some("refused-no-care-relationship"),
+    );
+    for content in ["Cardiology encounter", "Dr. Anna Jansen", ENCOUNTER] {
+        assert!(
+            !refused.body.contains(content),
+            "the refusal carries nothing of the composition ({content}): {}",
+            refused.body
+        );
+    }
+    ledger.note(
+        &world,
+        "after the discharge",
+        &refused,
+        Expect::refused("refused-no-care-relationship", 7),
+    );
+    ledger.verify(&world).await;
+
+    let records = audited(&world, &refused.request_id()).await;
+    assert_eq!(
+        records.len(),
+        1,
+        "one system log record of the refused request: {records:?}"
+    );
+    let (_, outcome) = &records[0];
+    assert_ne!(*outcome, 0, "the record is the refusal: {records:?}");
 }

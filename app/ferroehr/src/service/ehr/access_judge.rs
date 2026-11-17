@@ -255,7 +255,7 @@ impl FerroEhrService {
             }
             None => self.care_of(&access, None).await?,
         };
-        if binds_any(&care) && !access.care_in_force().await? {
+        if binds_any(&care) && !access.care_in_force(std::future::ready(())).await? {
             care = self.care_of(&access, pinned).await?;
         }
         Ok(condition.with_care(care))

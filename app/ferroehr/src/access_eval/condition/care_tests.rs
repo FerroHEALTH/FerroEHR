@@ -95,7 +95,7 @@ async fn a_copy_that_never_catches_up_refuses_the_care_decision() {
     grants.refresh().await.expect("the copy reads");
     assert!(
         request(Arc::clone(&grants))
-            .care_in_force()
+            .care_in_force(std::future::ready(()))
             .await
             .expect("the copy holds the store's revisions"),
         "a copy in force decides at once"
@@ -108,7 +108,7 @@ async fn a_copy_that_never_catches_up_refuses_the_care_decision() {
     grants.hold_back();
     let started = std::time::Instant::now();
     let refused = request(grants)
-        .care_in_force()
+        .care_in_force(std::future::ready(()))
         .await
         .expect_err("a copy that never catches up is refused");
     assert!(
