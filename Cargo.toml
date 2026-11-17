@@ -244,16 +244,21 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # 0.26 builds on ferrohealth-server 0.10, with one server in the lock; 0.27
 # describes a machines-only deployment for SMART Backend Services and returns
 # the purpose with the described issuer, and 0.28 takes a client assertion's
-# `aud` and `typ` from the grant's security profile (no `assertion_audience`).
-# Verified on crates.io 2026-11-16.
-ferrohealth-smart = { version = "=0.28.0", default-features = false, features = ["fetch", "idp-entra"] }
+# `aud` and `typ` from the grant's security profile (no `assertion_audience`);
+# 0.29 ships the `ferrosmart` issuer preset FerroEHR reads FerroSMART's tokens
+# under, 0.29.1 refuses an issuer named in two `[[auth.issuer]]` tables, and
+# 0.29.2 names `token_endpoint_auth_signing_alg_values_supported` in the App
+# Launch discovery document beside `private_key_jwt`. Verified on crates.io
+# 2026-11-17.
+ferrohealth-smart = { version = "=0.29.2", default-features = false, features = ["fetch", "idp-entra"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party; 0.13 types the provider issuer and the
 # redirect URIs as `SecretUrl`, and 0.23 is the release on ferrohealth-smart
-# 0.28. Verified on crates.io 2026-11-16.
-ferrohealth-session = { version = "=0.23.0", default-features = false }
+# 0.28, and 0.24 the release on ferrohealth-smart 0.29. Verified on crates.io
+# 2026-11-17.
+ferrohealth-session = { version = "=0.24.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -263,7 +268,9 @@ ferrohealth-secret = "=0.2.1"
 # environment, the fallbacks and `--set`, strict with did-you-mean, and the
 # `config check` rendering, and the built-in defaults under the file
 # (`Loader::defaults`), with the `units` and `removed` types the tree uses.
-ferrohealth-config = "=0.4.4"
+# 0.4.5 makes `Provenance::default()` equal a load that read nothing.
+# Verified on crates.io 2026-11-17.
+ferrohealth-config = "=0.4.5"
 # The family's health document, indicator registry and process lifecycle
 # (FerroSYS): `/health/readiness` and `/management/health` serve its
 # `Readiness`, and the viewer reads the same document. The default build is the
@@ -298,10 +305,10 @@ ferrohealth-usage-report = { version = "=0.5.0", features = ["telemetry"] }
 # Licensor's BUSL-1.1 code (deny.toml). FerroBRIDGE's published crates follow
 # Cargo SemVer (a breaking change moves the minor while 0.x), so it is required
 # by a caret range (The Cargo Book, "Specifying Dependencies"). Verified on
-# crates.io 2026-11-16, on ferrohealth-smart 0.28; `smart` builds its client
+# crates.io 2026-11-17, on ferrohealth-smart 0.29; `smart` builds its client
 # from ferrohealth-smart's outbound client, and `r4b` the one wire release the
 # terminology client speaks.
-ferrobridge-term = { version = "0.12.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.13.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -312,9 +319,10 @@ ferrobridge-term = { version = "0.12.0", default-features = false, features = ["
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
-# crates.io 2026-11-16 (0.22.0), on ferrohealth-smart 0.28.
-ihe-atna = { version = "=0.22.0", default-features = false }
-ehds-logging = { version = "=0.22.0", default-features = false }
+# crates.io 2026-11-17 (0.23.0); 0.23 sends the FHIR Feed through the
+# product's own `FeedClient` and depends on no ferrohealth-smart (#5895).
+ihe-atna = { version = "=0.23.0", default-features = false }
+ehds-logging = { version = "=0.23.0", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the CDR's ITI-81 page holds each typed BALP `AuditEvent`, and the viewer reads
 # the searchset, each `AuditEvent` and a refusal's `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
@@ -335,9 +343,9 @@ fhir-search = { version = "0.1.131", default-features = false }
 # ferrohealth-smart's outbound client; `pmir` is the PMIR Patient Identity
 # Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
 # Patient's `active` and links and rebuilds a subscription from its stored
-# Location. Verified on crates.io 2026-11-16 (0.13.0, on ihe-atna 0.22), on
-# ferrohealth-smart 0.28.
-ihe-iti = { version = "=0.13.0", default-features = false }
+# Location. Verified on crates.io 2026-11-17 (0.14.0, on ihe-atna 0.23), on
+# ferrohealth-smart 0.29.
+ihe-iti = { version = "=0.14.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
@@ -458,8 +466,10 @@ csv = "1.4"                        # RESULT_SET → CSV export (viewer BFF; veri
 # modules and table model (FerroUI), pinned exactly: a console moves its pin
 # after looking at its own screens. 0.6.0 renders every part on the server and
 # depends on no Leptos crate (FerroUI `docs/migration-0.6.md`; verified on
-# crates.io 2026-10-30).
-ferrohealth-ui = "=0.6.9"
+# crates.io 2026-10-30). 0.6.11 takes the locale first in
+# `action_menu::items` and adds the FerroSMART brand, which the viewer does
+# not draw; its screens are unchanged. Verified on crates.io 2026-11-17.
+ferrohealth-ui = "=0.6.11"
 # The viewer's string catalogs (#300): Project Fluent messages embedded at
 # build time from app/ferroehr-viewer/locales/, the crate and version
 # ferrohealth-ui catalogs its own words with, so one locale drives both.

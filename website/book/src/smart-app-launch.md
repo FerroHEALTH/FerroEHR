@@ -170,6 +170,7 @@ A document looks like:
   "authorization_endpoint": "https://as.example/authorize",
   "token_endpoint": "https://as.example/token",
   "token_endpoint_auth_methods_supported": ["client_secret_basic", "private_key_jwt"],
+  "token_endpoint_auth_signing_alg_values_supported": ["RS384", "ES384"],
   "grant_types_supported": ["authorization_code", "client_credentials"],
   "scopes_supported": [
     "openid", "profile", "launch",
@@ -192,6 +193,10 @@ A document looks like:
 }
 ```
 
+- **`token_endpoint_auth_signing_alg_values_supported`** is copied from the
+  authorization server's metadata whenever `private_key_jwt` is listed, as
+  SMART App Launch 2.2.0 (Client Authentication: Asymmetric, Advertising
+  server support) requires of a server that supports it.
 - **`services`** names the openEHR REST service; `org.fhir.rest` is never
   advertised, because FerroEHR serves no FHIR API for clinical data. Each
   `baseUrl` is **absolute**, built from

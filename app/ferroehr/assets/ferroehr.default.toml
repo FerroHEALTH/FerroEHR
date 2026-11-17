@@ -260,9 +260,10 @@ profile = "sandbox"
 # certificate: `none` (the default) or `required` (`crate::sender`). Optional
 # (trust).
 #? sender_constraint = "none"
-# The claims the issuer's roles are read from, each a dotted path; by default
-# `roles`, `groups` and `entitlements` (RFC 9068 §2.2.3.1), and none, never
-# settable, on a `federation` issuer. Optional, unset by default (trust).
+# The claims the issuer's roles are read from, each a dotted path that
+# `crate::roles` reads, a claim name with dots included; by default `roles`,
+# `groups` and `entitlements` (RFC 9068 §2.2.3.1), and none, never settable,
+# on a `federation` issuer. Optional, unset by default (trust).
 #? role_claims = []
 # `ProfileKeys::person_key`. Optional, unset by default (trust).
 #? person_key = ""
