@@ -8,18 +8,13 @@
 //! form, the content digest over the whole form, the columns the log derives
 //! from the content and, when the entry is indexed, its ITI-81 index row, so
 //! the chainer only computes the links
-//! (`migrations/audit/0042_audit_intake.sql`). Each derived column is read
-//! from the entry's ITS-JSON value at the path the database's own derive
-//! reads (`audit.access_log_record_derive`), and the text is cast by the
-//! database as that function casts it, so a chained record compares equal to
-//! its derivation, which the verifier checks. No openEHR spec governs audit
-//! storage: our own design.
-
-#![expect(
-    clippy::disallowed_types,
-    reason = "the stored parts and the derived columns are read from the entry's canonical \
-              ITS-JSON value (#1694 boundary class: canonical form)"
-)]
+//! (`migrations/audit/0042_audit_intake.sql`). The forms are written
+//! straight from the entry, with no JSON value of it built (#5849). Each
+//! derived column is read from the entry's ITS-JSON form at the path the
+//! database's own derive reads (`audit.access_log_record_derive`), and the
+//! text is cast by the database as that function casts it, so a chained
+//! record compares equal to its derivation, which the verifier checks. No
+//! openEHR spec governs audit storage: our own design.
 
 use std::collections::BTreeMap;
 
@@ -27,12 +22,11 @@ use jiff_sqlx::Timestamp;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::invariants::check_entry;
-use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
-use serde_json::Value;
+use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::canonical_object_without;
 use sqlx::PgConnection;
 
 use crate::access_log::chain::ALGORITHM;
-use crate::access_log::store::{AccessLogError, canonical_form};
+use crate::access_log::store::AccessLogError;
 use crate::access_log::stored_form;
 use crate::db::acquire::acquire;
 use crate::digest::sha256_hex;
@@ -81,7 +75,7 @@ pub struct IntakeEntry {
 
 /// The columns the log derives from an entry's content, as text the database
 /// casts.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 struct Derived {
     record_type: Option<String>,
     uid: Option<String>,
@@ -120,43 +114,16 @@ impl IntakeEntry {
         Ok(intake)
     }
 
-    /// The stored parts of `entry`.
+    /// The stored parts of `entry`, written straight from it (#5849).
     fn stored(entry: &AccessLogEntry, index: Option<IndexRow>) -> Result<Self, AccessLogError> {
-        let value = serde_json::to_value(entry).map_err(AccessLogError::Canonical)?;
-        let Value::Object(mut members) = value else {
-            let whole = canonical_form(entry)?;
-            return Ok(Self {
-                content_digest: sha256_hex(&whole),
-                row: whole,
-                shared: None,
-                derived: Derived::default(),
-                index,
-            });
-        };
-        members.remove(LINK);
-        let document = Value::Object(members);
-        let whole = canonical_json(&document).map_err(AccessLogError::Canonical)?;
-        let content_digest = sha256_hex(&whole);
-        let derived = Derived::of(&document);
-        let Value::Object(members) = document else {
-            return Err(AccessLogError::Canonical(serde::de::Error::custom(
-                "an entry serialises as an object",
-            )));
-        };
-        let form = stored_form::split(members);
-        let row = canonical_json(&form.row).map_err(AccessLogError::Canonical)?;
-        let shared = form
-            .shared
-            .map(|shared| {
-                canonical_json(&shared)
-                    .map(|text| (sha256_hex(&text), text))
-                    .map_err(AccessLogError::Canonical)
-            })
-            .transpose()?;
+        let whole = canonical_object_without(entry, &[LINK]).map_err(AccessLogError::Canonical)?;
+        let cut = stored_form::parts::Cut::of(&whole).map_err(AccessLogError::Canonical)?;
+        let (row, shared) = cut.parts().map_err(AccessLogError::Canonical)?;
+        let derived = Derived::of(&cut)?;
         Ok(Self {
+            content_digest: sha256_hex(&whole),
             row,
-            shared,
-            content_digest,
+            shared: shared.map(|text| (sha256_hex(&text), text)),
             derived,
             index,
         })
@@ -164,27 +131,28 @@ impl IntakeEntry {
 }
 
 impl Derived {
-    /// The derived columns of `document`, read at the paths
-    /// `audit.access_log_record_derive` reads.
-    fn of(document: &Value) -> Self {
-        let text = |path: &str| {
-            document
-                .pointer(path)
-                .and_then(Value::as_str)
-                .map(str::to_owned)
-        };
-        Self {
-            record_type: text("/_type"),
-            uid: text("/uid/value"),
-            time_recorded: text("/time_recorded/value"),
-            ehr_id: text("/ehr_id/value"),
-            action_terminology: text("/action/defining_code/terminology_id/value"),
-            action_code: text("/action/defining_code/code_string"),
-            result_terminology: text("/outcome/result/defining_code/terminology_id/value"),
-            result_code: text("/outcome/result/defining_code/code_string"),
-            party_id: text("/accessor/party/external_ref/id/value"),
-            retain_until: text("/retention/retain_until/value"),
-        }
+    /// The derived columns of the entry whose canonical form `cut` read, at
+    /// the paths `audit.access_log_record_derive` reads.
+    fn of(cut: &stored_form::parts::Cut<'_>) -> Result<Self, AccessLogError> {
+        let text = |path: &[&str]| cut.text_at(path).map_err(AccessLogError::Canonical);
+        Ok(Self {
+            record_type: text(&["_type"])?,
+            uid: text(&["uid", "value"])?,
+            time_recorded: text(&["time_recorded", "value"])?,
+            ehr_id: text(&["ehr_id", "value"])?,
+            action_terminology: text(&["action", "defining_code", "terminology_id", "value"])?,
+            action_code: text(&["action", "defining_code", "code_string"])?,
+            result_terminology: text(&[
+                "outcome",
+                "result",
+                "defining_code",
+                "terminology_id",
+                "value",
+            ])?,
+            result_code: text(&["outcome", "result", "defining_code", "code_string"])?,
+            party_id: text(&["accessor", "party", "external_ref", "id", "value"])?,
+            retain_until: text(&["retention", "retain_until", "value"])?,
+        })
     }
 }
 
