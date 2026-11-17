@@ -85,6 +85,7 @@ mod commit_lock_order;
 mod committer_binding;
 mod committer_check;
 mod composition_passthrough;
+mod composition_version_copy;
 mod console_request_lines;
 mod db_lease;
 mod db_outage;

@@ -163,6 +163,12 @@ pub struct FerroEhrService {
     /// The listener whose notifications drop entries of [`Self::ehr_access`];
     /// while it is down every request reads the projection.
     pub(in crate::service) ehr_access_listened: Arc<crate::policy_register::listen::Listened>,
+    /// The COMPOSITION versions this replica read by their version id
+    /// (#5778).
+    pub(in crate::service) version_copy: Arc<ehr::version_copy::VersionCopy>,
+    /// The listener whose notifications drop versions of
+    /// [`Self::version_copy`]; while it is down the copy is bypassed.
+    pub(in crate::service) version_copy_listened: Arc<crate::policy_register::listen::Listened>,
     /// The listener whose notifications wake the ITI-93 applier when a
     /// message is stored; while it is down the applier looks every ten
     /// seconds.
@@ -293,6 +299,9 @@ impl FerroEhrService {
     #[must_use]
     pub fn new(pools: &DomainPools) -> Self {
         let ehr_access = Arc::new(EhrAccessCache::default());
+        let version_copy = Arc::new(ehr::version_copy::VersionCopy::new());
+        let version_subscriber: Arc<dyn crate::policy_register::listen::Subscriber> =
+            Arc::<ehr::version_copy::VersionCopy>::clone(&version_copy);
         let access_policy = Arc::new(crate::access_policy::LivePolicy::new(
             pools.clinical.clone(),
         ));
@@ -327,6 +336,14 @@ impl FerroEhrService {
             multimedia: None,
             ehr_access: Arc::clone(&ehr_access),
             ehr_access_listened: Arc::new(ehr::access_cache::listened(&ehr_access)),
+            version_copy_listened: Arc::new(
+                crate::policy_register::listen::Listened::with_subscriber(
+                    ehr::version_copy::CHANNEL,
+                    crate::db::domain::Domain::Clinical,
+                    version_subscriber,
+                ),
+            ),
+            version_copy,
             pmir_listened: Arc::new(crate::policy_register::listen::Listened::new(
                 demographic::identity_feed::receive::CHANNEL,
                 crate::db::domain::Domain::Party,
