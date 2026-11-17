@@ -36,6 +36,7 @@
               approval 2026-11-02, #4767)"
 )]
 
+mod access_care_stale;
 mod access_classes;
 mod access_delay_sinks;
 mod access_eval_aql;
@@ -152,6 +153,7 @@ mod service_aql;
 mod service_aql_attestation;
 mod service_aql_class_predicate;
 mod service_aql_demographic;
+mod service_aql_sum_amount;
 mod service_aql_temporal_binding;
 mod service_aql_terminology;
 mod service_aql_version_predicate;

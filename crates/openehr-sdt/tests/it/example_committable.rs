@@ -25,6 +25,10 @@ use std::path::{Path, PathBuf};
 
 use openehr_its::opt14;
 use openehr_rm::v1_2::paths::{PathSegment, RmPath};
+use openehr_sdt::flat::convert::{
+    composition_from_flat, composition_from_structured, composition_to_flat,
+    composition_to_structured,
+};
 use openehr_sdt::flat::example::{DetailLevel, example_composition};
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use openehr_sdt::flat::webtemplate::constraint::{WebTemplateExistence, WebTemplateStructuralStub};
@@ -179,6 +183,59 @@ fn sdk_go_corpus_generates_committable_examples() {
         "generated examples refused by the commit-path validation:\n{}",
         findings.join("\n")
     );
+}
+
+// ── an EVENT's data under a folded event ────────────────────────────────────
+
+/// An OBSERVATION whose one event holds only a slot gets its event `data` as
+/// the node the template constrains (`at0003`), never the `at0001`
+/// placeholder, and the example validates in canonical JSON, FLAT and
+/// STRUCTURED (#5911).
+#[test]
+fn a_folded_event_data_carries_its_constrained_node_id() {
+    let wt = web_template(&sdk_go_dir().join("cluster-slot.ehrbase.org.v0.opt"));
+    for level in COMMITTABLE {
+        let comp = example_composition(&wt, level).expect("the example builds");
+        let mut events = Vec::new();
+        objects_with_id(&comp, "at0002", &mut events);
+        let events: Vec<&Value> = events
+            .into_iter()
+            .filter(|e| e.get("_type").and_then(Value::as_str) == Some("POINT_EVENT"))
+            .collect();
+        assert!(
+            level == DetailLevel::Required || !events.is_empty(),
+            "{level:?}: the example carries the event"
+        );
+        for event in &events {
+            assert_eq!(
+                event
+                    .pointer("/data/archetype_node_id")
+                    .and_then(Value::as_str),
+                Some("at0003"),
+                "{level:?}: the event data is the constrained ITEM_TREE: {event}"
+            );
+        }
+        let flat = composition_to_flat(&comp, &wt).expect("the example flattens");
+        let structured = composition_to_structured(&comp, &wt).expect("the example structures");
+        let now = "2022-02-03T04:05:06Z";
+        for (format, built) in [
+            ("canonical", comp.clone()),
+            (
+                "FLAT",
+                composition_from_flat(&flat, &wt, now).expect("FLAT builds"),
+            ),
+            (
+                "STRUCTURED",
+                composition_from_structured(&structured, &wt, now).expect("STRUCTURED builds"),
+            ),
+        ] {
+            let findings: Vec<String> = validate_composition(&built, &wt)
+                .into_iter()
+                .map(|m| format!("{}: {}", m.path, m.message))
+                .collect();
+            assert!(findings.is_empty(), "{level:?} {format}: {findings:?}");
+        }
+    }
 }
 
 // ── a name constrained to DV_CODED_TEXT ─────────────────────────────────────
