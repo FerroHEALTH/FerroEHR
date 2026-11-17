@@ -109,3 +109,73 @@ async fn the_server_opens_every_kept_connection_before_it_serves() {
     }
     pools.close().await;
 }
+
+/// Two pools of one connection each, as the server opens them.
+async fn one_connection_pools(db: &testkit::TestDb) -> ferroehr::db::domain::DomainPools {
+    let mut settings = DbConfig::new(db.url());
+    settings.max_connections = Some(1);
+    settings.min_connections = Some(0);
+    settings.connection_budget = 8;
+    settings.acquire_timeout = ferrohealth_config::units::Duration::from_secs(5);
+    ferroehr::db::connect_domains(&settings)
+        .await
+        .expect("the pools connect")
+}
+
+/// One statement on `pool` inside the running request.
+async fn touch(pool: &PgPool) {
+    sqlx::query("SELECT 1")
+        .execute(&mut *acquire(pool).await.expect("a connection"))
+        .await
+        .expect("the statement runs");
+}
+
+/// Two requests take the clinical and the party pool in opposite orders,
+/// each keeping its first connection when it asks for the second: with one
+/// connection per pool both are answered at once, because a request that
+/// would wait for a pool gives back what it keeps of the others (#5879).
+/// Kept across the wait, the two would wait for each other until the
+/// acquire timed out.
+#[tokio::test]
+async fn requests_taking_two_pools_in_opposite_orders_never_wait_for_each_other() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = one_connection_pools(&db).await;
+    let both = std::sync::Arc::new(tokio::sync::Barrier::new(2));
+    let request = |first: PgPool, second: PgPool, both: std::sync::Arc<tokio::sync::Barrier>| {
+        request_scope(async move {
+            touch(&first).await;
+            both.wait().await;
+            touch(&second).await;
+        })
+    };
+    let started = std::time::Instant::now();
+    let answered = tokio::time::timeout(
+        std::time::Duration::from_secs(4),
+        futures::future::join(
+            request(
+                pools.clinical.clone(),
+                pools.party.clone(),
+                std::sync::Arc::clone(&both),
+            ),
+            request(pools.party.clone(), pools.clinical.clone(), both),
+        ),
+    )
+    .await;
+    assert!(answered.is_ok(), "the requests waited for each other");
+    assert!(started.elapsed() < std::time::Duration::from_secs(2));
+}
+
+/// A request that asks a pool for a second connection while it holds one of
+/// it is refused in a debug build: once every connection is held so, each
+/// such request waits for one only another of them could give back (#5879).
+#[tokio::test]
+#[should_panic(expected = "a second connection while it held one")]
+async fn a_second_connection_of_a_held_pool_is_refused_in_a_debug_build() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    request_scope(async {
+        let _held = acquire(&pool).await.expect("a connection");
+        let _second = acquire(&pool).await;
+    })
+    .await;
+}

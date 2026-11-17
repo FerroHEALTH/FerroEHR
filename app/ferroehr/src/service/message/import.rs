@@ -177,6 +177,9 @@ impl FerroEhrService {
             crate::service::ehr::access_projection::project_current(&mut tx, ehr_id).await?;
         }
         tx.commit().await.map_err(ServiceError::from)?;
+        // NOTE: our own design (#5879), the connection goes back before the next read, which
+        // would otherwise wait for a second one while every connection is held so.
+        drop(conn);
         self.invalidate_ehr_access(ehr_id).await;
         self.emit_import_audit(ehr_id, &landed).await?;
         Ok(ehr_id)

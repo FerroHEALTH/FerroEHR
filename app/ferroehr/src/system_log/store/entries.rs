@@ -89,7 +89,7 @@ impl AuditStore {
         conn: &mut PgConnection,
         records: Vec<AuditRecord>,
     ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
-        let (uids, intake, tokens) = self.entry_rows(records).await?;
+        let (uids, intake, tokens) = self.entry_rows(records, Some(&mut *conn)).await?;
         crate::access_log::intake::take_in(conn, &intake, &tokens).await?;
         Ok((uids, LearnedSets::default()))
     }
@@ -102,6 +102,7 @@ impl AuditStore {
     pub(super) async fn entry_rows(
         &self,
         records: Vec<AuditRecord>,
+        mut conn: Option<&mut PgConnection>,
     ) -> Result<EntryRows, AuditError> {
         let mut entered = Vec::with_capacity(records.len());
         let mut tokens = Vec::with_capacity(records.len());
@@ -110,7 +111,7 @@ impl AuditStore {
                 continue;
             };
             let writing = self.writing.of(&record.event);
-            let digest = self.writing_digest(&writing).await?;
+            let digest = self.writing_digest(&writing, conn.as_deref_mut()).await?;
             let policy = writing.compiled().await?;
             let projection = Projection {
                 context: &policy.context,
@@ -202,6 +203,9 @@ impl AuditStore {
         }
         let (_uids, learned) = Box::pin(self.intake_entries(&mut tx, recorded)).await?;
         tx.commit().await?;
+        // NOTE: our own design (#5879), the connection goes back before the chain settles, which
+        // would otherwise wait for a second one while every connection is held so.
+        drop(conn);
         self.remember(learned);
         self.settle(super::intake::Chains::BOTH).await?;
         Ok(tombstone)

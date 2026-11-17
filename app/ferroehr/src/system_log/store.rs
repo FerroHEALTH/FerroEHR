@@ -292,20 +292,30 @@ impl AuditStore {
         self.writing.change(change);
     }
 
-    /// The digest of `writing`, storing the policy the first time.
+    /// The digest of `writing`, storing the policy the first time on `conn`,
+    /// the connection the caller holds of this store's pool, or on one of
+    /// its own when the caller holds none: a caller that holds one and asks
+    /// the pool for a second waits on itself once every connection is held
+    /// so (#5879).
     ///
     /// # Errors
     /// [`AuditError::Store`] when the policy cannot be stored.
-    async fn writing_digest(&self, writing: &WritePolicy) -> Result<Vec<u8>, AuditError> {
+    async fn writing_digest(
+        &self,
+        writing: &WritePolicy,
+        conn: Option<&mut PgConnection>,
+    ) -> Result<Vec<u8>, AuditError> {
         writing
             .digest
             .get_or_try_init(|| async {
                 let policy = serde_json::to_value(&writing.policy)
                     .map_err(|e| AuditError::Policy(Box::new(e)))?;
-                let digest: Vec<u8> = sqlx::query_scalar("SELECT audit.register_render_policy($1)")
-                    .bind(policy)
-                    .fetch_one(&mut *acquire(&self.pool).await?)
-                    .await?;
+                let register =
+                    sqlx::query_scalar("SELECT audit.register_render_policy($1)").bind(policy);
+                let digest: Vec<u8> = match conn {
+                    Some(conn) => register.fetch_one(conn).await?,
+                    None => register.fetch_one(&mut *acquire(&self.pool).await?).await?,
+                };
                 Ok::<_, AuditError>(digest)
             })
             .await
@@ -454,7 +464,9 @@ impl AuditStore {
         // NOTE: our own design (#5770), entries alone go into the gathered one-statement write.
         #[cfg(feature = "fhir")]
         if Self::only_entries(&records) {
-            let (uids, intake, tokens) = self.entry_rows(self.with_entries(records).await?).await?;
+            let (uids, intake, tokens) = self
+                .entry_rows(self.with_entries(records).await?, None)
+                .await?;
             self.group().write(intake, tokens).await?;
             let wrote = intake::Chains {
                 access_log: !uids.is_empty(),

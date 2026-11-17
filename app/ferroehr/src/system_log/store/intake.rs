@@ -150,7 +150,7 @@ impl AuditStore {
         let runs = self.writing.runs(records);
         let mut digests = Vec::with_capacity(runs.len());
         for (writing, _, _) in &runs {
-            digests.push(self.writing_digest(writing).await?);
+            digests.push(self.writing_digest(writing, Some(&mut *conn)).await?);
         }
         let mut ids = Vec::with_capacity(records.len());
         let mut learned_all = Vec::with_capacity(runs.len());
