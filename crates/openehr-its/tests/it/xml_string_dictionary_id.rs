@@ -72,3 +72,38 @@ fn an_rm_translation_author_without_id_is_refused() {
         "got {err:?}"
     );
 }
+
+/// The `MissingAttribute` location of `xml` as an OPT.
+fn missing_id_location(xml: &str) -> openehr_its::xml::runtime::Location {
+    match openehr_its::opt14::from_xml(xml).expect_err("an item without its id is refused") {
+        XmlError::MissingAttribute { location, .. } => *location,
+        other => panic!("expected MissingAttribute, got {other:?}"),
+    }
+}
+
+/// The refusal names the element that lacks the attribute, never the one
+/// closed before it (#5916): the check runs on a child's start tag, before the
+/// child is read, so it describes the element just opened.
+#[test]
+fn a_missing_id_names_the_element_that_lacks_it() {
+    let first = missing_id_location(&with_first_author_tag("<original_author>"));
+    assert_eq!(first.element, "original_author");
+    assert_eq!(first.line, 11);
+    assert_eq!(first.path, "/template/description[1]/original_author[1]");
+
+    let source = std::fs::read_to_string(FIXTURE).expect("the vendored SDK template");
+    let later = source.replacen(
+        "<original_author id=\"organisation\">",
+        "<original_author>",
+        1,
+    );
+    let second = missing_id_location(&later);
+    assert_eq!(second.element, "original_author");
+    assert_eq!(second.line, 12);
+    assert_eq!(second.path, "/template/description[1]/original_author[2]");
+
+    let details = source.replacen("<other_details id=\"licence\"/>", "<other_details/>", 1);
+    let other = missing_id_location(&details);
+    assert_eq!(other.element, "other_details");
+    assert_eq!(other.line, 16);
+}
