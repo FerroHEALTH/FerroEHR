@@ -193,6 +193,32 @@ The job first runs `gate.sh self-test`. It polls a table with no wait during
 the idle phase, and the self-test passes only when the gate fails that run on
 `idle.transactions_per_second`.
 
+### A cost the owner accepted
+
+Some changes cost something the gate measures and are worth it: an exact
+access decision that reads the store per request costs transactions a
+notification-timed copy did not (#5891). The `perf` job measures and fails
+only a run that could not be judged; the `perf-verdict` job judges a breach
+(`scripts/perf/accepted.sh`, #5924), and `conclusion` needs it. A breach
+passes only when all three hold:
+
+- The pull request carries the `perf-accepted` label.
+- Its description names every breached metric on a line of its own,
+  `Perf-accepted: #<issue> <metric> [<metric>...]`, with the metric as the
+  Breaches table names it (`wal.flushes_per_request` and
+  `wal.bytes_per_request` for the WAL judge).
+- That issue carries a comment by the code owner of the base branch (the `*`
+  line of `.github/CODEOWNERS`, read through the API) that says "accepted".
+
+The breach is then reported as accepted: a warning per metric, and an
+"Accepted breaches" table with the issue and the comment's link after the
+full report in the `perf-verdict` job's summary and log. A run that could not
+be judged is never accepted. `pr-guards.yml` re-runs `perf-verdict` alone
+when the label or the description changes, so the measurement is not
+repeated. On a push to `main` the verdict reads the pull request that merged
+the commit. The release's `performance` job reads no acceptance. No openEHR
+spec governs this: our own design.
+
 ### Reading the report
 
 The job summary and the `perf-report` artifact (`target/perf/summary.md`,
