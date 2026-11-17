@@ -387,7 +387,7 @@ fn walk_children<'a>(
             DetailLevel::Required => child_opt == 0,
             DetailLevel::Medium | DetailLevel::Complete => true,
         };
-        if !include || skips_optional(child) {
+        if !include || skips_optional(child, cx.level) {
             continue;
         }
         let ci = cardinality_index(node, child);
@@ -403,14 +403,18 @@ fn walk_children<'a>(
 /// Whether an OPTIONAL child is omitted from the example.
 ///
 /// A node whose coded-name constraint is display/rubric-incoherent (see
-/// `CodedName::incoherent`), whose name must be a `DV_CODED_TEXT` from a value
-/// set the template names no code of, or whose leaf is unsatisfiable has no
-/// instance form every conforming consumer accepts, and an example exists to
-/// be committable everywhere and never invents a code. A MANDATORY one is
-/// still emitted in our spec-faithful form.
-fn skips_optional(child: &WebTemplateNode) -> bool {
-    let uncoded_name =
-        child.name_rm_type.as_deref() == Some("DV_CODED_TEXT") && child.name_coded.is_none();
+/// `CodedName::incoherent`) or whose leaf is unsatisfiable has no instance
+/// form every conforming consumer accepts, and an example exists to be
+/// committable everywhere. A node whose name must be a `DV_CODED_TEXT` from a
+/// value set the template names no code of is left out of the `required` and
+/// `medium` examples, which ITS-REST says are committable, rather than given
+/// an invented code; the `complete` example, "not expected to be committable",
+/// still shows it. A MANDATORY node is always emitted in our spec-faithful
+/// form.
+fn skips_optional(child: &WebTemplateNode, level: DetailLevel) -> bool {
+    let uncoded_name = level != DetailLevel::Complete
+        && child.name_rm_type.as_deref() == Some("DV_CODED_TEXT")
+        && child.name_coded.is_none();
     is_optional(child)
         && (child.name_coded.as_ref().is_some_and(|cn| cn.incoherent)
             || uncoded_name
@@ -541,7 +545,9 @@ fn satisfy_existence<'a>(
             continue;
         }
         if let Some(child) = groups.iter().find(|c| {
-            under_attribute(&c.aql_path, &ex.path) && rm_declares(&c.aql_path) && !skips_optional(c)
+            under_attribute(&c.aql_path, &ex.path)
+                && rm_declares(&c.aql_path)
+                && !skips_optional(c, cx.level)
         }) {
             let child_prefix = format!("{}/{}", cx.prefix, seg_for(child));
             included.push(child.aql_path.as_str());

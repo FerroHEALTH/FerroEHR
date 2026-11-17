@@ -183,49 +183,56 @@ fn sdk_go_corpus_generates_committable_examples() {
 
 // ── a name constrained to DV_CODED_TEXT ─────────────────────────────────────
 
-/// The `ELEMENT` of `openEHR-EHR-CLUSTER.annotations.v1` whose `name` the
-/// template constrains to a `DV_CODED_TEXT` from an external value set.
-fn annotation_element(v: &mut Value) -> Option<&mut Value> {
-    let is_annotation = v.get("archetype_node_id").and_then(Value::as_str)
-        == Some("openEHR-EHR-CLUSTER.annotations.v1");
+/// The `openEHR-EHR-CLUSTER.annotations.v1` cluster of `v`, mutably.
+fn annotations_cluster(v: &mut Value) -> Option<&mut Value> {
+    if v.get("archetype_node_id").and_then(Value::as_str)
+        == Some("openEHR-EHR-CLUSTER.annotations.v1")
+    {
+        return Some(v);
+    }
     match v {
-        Value::Object(m) if is_annotation => m
-            .get_mut("items")
-            .and_then(Value::as_array_mut)
-            .and_then(|items| items.first_mut()),
-        Value::Object(m) => m.values_mut().find_map(annotation_element),
-        Value::Array(a) => a.iter_mut().find_map(annotation_element),
+        Value::Object(m) => m.values_mut().find_map(annotations_cluster),
+        Value::Array(a) => a.iter_mut().find_map(annotations_cluster),
         _ => None,
     }
 }
 
+/// The `at0001` ELEMENTs of the annotations cluster.
+fn annotation_elements(comp: &mut Value) -> usize {
+    annotations_cluster(comp)
+        .and_then(|c| c.get("items"))
+        .and_then(Value::as_array)
+        .map_or(0, |items| {
+            items
+                .iter()
+                .filter(|i| i.get("archetype_node_id").and_then(Value::as_str) == Some("at0001"))
+                .count()
+        })
+}
+
 /// A `DV_TEXT` name where the template constrains the name to a
-/// `DV_CODED_TEXT` does not conform (AOM 1.4 `C_COMPLEX_OBJECT.rm_type_name`),
-/// and the example never writes one, leaving out the optional node whose code
-/// it cannot know (#5912).
+/// `DV_CODED_TEXT` from an external value set does not conform (AOM 1.4
+/// `C_COMPLEX_OBJECT.rm_type_name`). The committable examples leave the
+/// optional node out rather than invent its code; the `complete` example,
+/// which ITS-REST does not expect to commit, still shows it, and the validator
+/// refuses its name (#5912).
 #[test]
 fn a_text_name_where_a_coded_name_is_constrained_is_refused() {
     let wt = web_template(&sdk_go_dir().join("Referral Request.v1.opt"));
-    let mut comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
-    assert!(
-        annotation_element(&mut comp).is_none(),
-        "the medium example leaves the optional annotation out"
-    );
-    let mut cluster = Vec::new();
-    objects_with_id(&comp, "openEHR-EHR-CLUSTER.annotations.v1", &mut cluster);
-    let element = serde_json::json!({
-        "_type": "ELEMENT",
-        "archetype_node_id": "at0001",
-        "name": { "_type": "DV_TEXT", "value": "Annotation" },
-        "value": { "_type": "DV_TEXT", "value": "Annotation" },
-    });
-    let mut with_text_name = example_composition(&wt, DetailLevel::Complete).expect("builds");
-    if let Some(e) = annotation_element(&mut with_text_name) {
-        *e = element;
-    } else {
-        panic!("the complete example carries the annotations cluster: {cluster:?}");
+    for level in COMMITTABLE {
+        let mut comp = example_composition(&wt, level).expect("the example builds");
+        assert_eq!(
+            annotation_elements(&mut comp),
+            0,
+            "{level:?}: the coded-name ELEMENT is left out"
+        );
     }
-    let refused: Vec<String> = validate_composition(&with_text_name, &wt)
+    let mut complete = example_composition(&wt, DetailLevel::Complete).expect("builds");
+    assert!(
+        annotation_elements(&mut complete) > 0,
+        "the complete example shows the coded-name ELEMENT"
+    );
+    let refused: Vec<String> = validate_composition(&complete, &wt)
         .into_iter()
         .filter(|m| m.message.contains("DV_CODED_TEXT but found DV_TEXT"))
         .map(|m| m.path)
