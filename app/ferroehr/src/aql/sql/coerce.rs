@@ -23,18 +23,18 @@
 use sea_query::{BinOper, Expr, ExprTrait as _};
 
 use crate::aql::error::{AqlError, SqlError};
-use crate::aql::ir::{Coercion, LeafPath, PathTarget};
+use crate::aql::ir::{Coercion, PathTarget};
 
 use super::ValueMode;
 use super::expr::{as_text, call, cast};
 
 /// Apply the value coercion to a jsonb extraction base (QUERY master03
 /// §Comparison operators; `DV_ORDERED` ordered-magnitude via `ext.openehr_magnitude`).
-pub(super) fn coerce_value(base: Expr, mode: ValueMode, leaf: &LeafPath) -> Expr {
+pub(super) fn coerce_value(base: Expr, mode: ValueMode, types: &[String]) -> Expr {
     match mode {
         ValueMode::Projection => base,
         ValueMode::Value(Coercion::Magnitude) => {
-            if leaf.types.names().iter().any(|t| t.starts_with("DV_")) {
+            if types.iter().any(|t| t.starts_with("DV_")) {
                 call("openehr_magnitude", vec![base])
             } else {
                 cast(as_text(base), "numeric")
@@ -47,7 +47,7 @@ pub(super) fn coerce_value(base: Expr, mode: ValueMode, leaf: &LeafPath) -> Expr
         ValueMode::Value(Coercion::Temporal) => {
             // NOTE: QUERY master03 §Dates and Times compares `context/start_time`, the DV
             // object itself, as a date/time quantity, so an object leaf reads its `value`.
-            let text = if leaf.types.names().iter().any(|t| t.starts_with("DV_")) {
+            let text = if types.iter().any(|t| t.starts_with("DV_")) {
                 as_text(base.binary(BinOper::Custom("->"), cast(Expr::val("value"), "text")))
             } else {
                 as_text(base)

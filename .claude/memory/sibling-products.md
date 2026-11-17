@@ -12,7 +12,7 @@ through FHIRconnect and to the OMOP CDM through OMOCL), FerroFED
 patient index and the IHE profiles) and FerroTERM (`../FerroTERM`, the FHIR
 terminology server; the local checkout was `../notio` until 2026-09-03). All
 five are repositories of the `FerroHEALTH` organization. The shared crates
-live in their own repositories beside them: FerroAUTH (`FerroHEALTH/FerroAUTH`,
+live in their own repositories beside them: FerroSMART (`FerroHEALTH/FerroSMART`,
 renamed from FerroSMART on 2026-10-25; local checkout `../FerroSMART`),
 FerroAUDIT (`../FerroAUDIT`) and FerroUI (`../FerroUI`).
 
