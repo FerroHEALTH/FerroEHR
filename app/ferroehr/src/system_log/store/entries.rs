@@ -88,9 +88,10 @@ impl AuditStore {
         &self,
         conn: &mut PgConnection,
         records: Vec<AuditRecord>,
+        reserved_by: Option<uuid::Uuid>,
     ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
         let (uids, intake, tokens) = self.entry_rows(records, Some(&mut *conn)).await?;
-        crate::access_log::intake::take_in(conn, &intake, &tokens).await?;
+        crate::access_log::intake::take_in(conn, &intake, &tokens, reserved_by).await?;
         Ok((uids, LearnedSets::default()))
     }
 
@@ -201,7 +202,9 @@ impl AuditStore {
         if tombstone.is_none() {
             return Ok(None);
         }
-        let (_uids, learned) = Box::pin(self.intake_entries(&mut tx, recorded)).await?;
+        let (_uids, learned) = Box::pin(self.intake_entries(&mut tx, recorded, None)).await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this transaction's
+        // rows.
         tx.commit().await?;
         // NOTE: our own design (#5879), the connection goes back before the chain settles, which
         // would otherwise wait for a second one while every connection is held so.

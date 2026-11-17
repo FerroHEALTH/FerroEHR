@@ -176,12 +176,12 @@ impl FerroEhrService {
         if touches_ehr_access {
             crate::service::ehr::access_projection::project_current(&mut tx, ehr_id).await?;
         }
-        tx.commit().await.map_err(ServiceError::from)?;
+        let records = self.import_record(&mut tx, ehr_id, &landed).await;
+        self.commit_act_recorded(tx, records).await?;
         // NOTE: our own design (#5879), the connection goes back before the next read, which
         // would otherwise wait for a second one while every connection is held so.
         drop(conn);
         self.invalidate_ehr_access(ehr_id).await;
-        self.emit_import_audit(ehr_id, &landed).await?;
         Ok(ehr_id)
     }
 
@@ -257,11 +257,11 @@ impl FerroEhrService {
         if touches_ehr_access {
             crate::service::ehr::access_projection::project_current(&mut tx, an_ehr_id).await?;
         }
-        tx.commit().await.map_err(ServiceError::from)?;
+        let records = self.import_record(&mut tx, an_ehr_id, &landed).await;
+        self.commit_act_recorded(tx, records).await?;
         if touches_ehr_access {
             self.invalidate_ehr_access(an_ehr_id).await;
         }
-        self.emit_import_audit(an_ehr_id, &landed).await?;
         Ok(())
     }
 
@@ -331,7 +331,7 @@ impl FerroEhrService {
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         commit_demographic_import(&mut tx, signing, &self.privacy, audit, parties).await?;
-        tx.commit().await?;
+        self.commit_act_recorded(tx, Vec::new()).await?;
         Ok(())
     }
 }

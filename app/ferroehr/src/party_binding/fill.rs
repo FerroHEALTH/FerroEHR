@@ -200,6 +200,7 @@ impl Lease {
         if !first {
             key_space::reconcile(&mut tx, LEASE_TTL).await?;
         }
+        // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
         tx.commit().await?;
         drop(conn);
         Ok(Self {
@@ -240,6 +241,8 @@ impl Lease {
             let mut tx = conn.begin().await?;
             lock(&mut tx).await?;
             let ready = key_space::reconcile(&mut tx, LEASE_TTL).await?;
+            // NOTE: our own design (#5762), the binding fill, which runs at boot and in the
+            // background.
             tx.commit().await?;
             ready
         };
@@ -260,6 +263,7 @@ impl Lease {
             let mut tx = conn.begin().await?;
             lock(&mut tx).await?;
             key_space::start_fill(&mut tx, &self.mapping, &issuer, LEASE_TTL).await?;
+            // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
             tx.commit().await?;
         }
         let started = Instant::now();
@@ -283,6 +287,7 @@ impl Lease {
         lock(&mut tx).await?;
         match key_space::fill_page(&mut tx, &self.mapping, issuer).await {
             Ok(progress) => {
+                // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
                 tx.commit().await?;
                 Ok(progress)
             }
@@ -291,6 +296,7 @@ impl Lease {
                 let mut tx = conn.begin().await?;
                 lock(&mut tx).await?;
                 key_space::stall(&mut tx, issuer).await?;
+                // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
                 tx.commit().await?;
                 self.stall(issuer);
                 let held = held::held_selectors(&mut conn, &self.mapping).await?;
@@ -377,6 +383,7 @@ pub async fn refill(
     fill(&mut tx, mapping).await?;
     store_digest(&mut tx, &mapping.digest()).await?;
     key_space::reset(&mut tx, mapping).await?;
+    // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
     tx.commit().await?;
     Ok(())
 }
@@ -393,6 +400,7 @@ pub async fn refill_grants(pool: &PgPool) -> Result<(), FillError> {
     let mut tx = conn.begin().await?;
     lock(&mut tx).await?;
     store::refill_grants(&mut tx).await?;
+    // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
     tx.commit().await?;
     Ok(())
 }
@@ -410,6 +418,7 @@ pub async fn fill_grants_once(pool: &PgPool) -> Result<(), FillError> {
     if crate::party_binding::grants::store::revision(&mut tx).await? == 0 {
         store::refill_grants(&mut tx).await?;
     }
+    // NOTE: our own design (#5762), the binding fill, which runs at boot and in the background.
     tx.commit().await?;
     Ok(())
 }

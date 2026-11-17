@@ -10,7 +10,6 @@
 //! every lookup compares `lower(template_id) = lower($1)`. No openEHR spec
 //! governs the SQL: our own design.
 
-use sqlx::Connection as _;
 use sqlx::{PgConnection, PgPool, Row as _};
 
 use crate::db::acquire::acquire;
@@ -54,7 +53,7 @@ fn template_row(row: &sqlx::postgres::PgRow) -> Result<TemplateRow, StorageError
 }
 
 /// Store an operational template and register its wire address in
-/// `template_ref`, in one transaction.
+/// `template_ref`, on `tx`, the caller's transaction.
 ///
 /// The insert is arbitrated on the case-insensitive unique index
 /// (`lower(template_id)`), so an exact or case-variant duplicate inserts
@@ -63,11 +62,9 @@ fn template_row(row: &sqlx::postgres::PgRow) -> Result<TemplateRow, StorageError
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn insert_template(
-    pool: &PgPool,
+    tx: &mut PgConnection,
     template: NewTemplate<'_>,
 ) -> Result<Option<TemplateRow>, StorageError> {
-    let mut conn = acquire(pool).await?;
-    let mut tx = conn.begin().await?;
     let Some(row) = sqlx::query(
         "INSERT INTO template_store (template_id, concept, root_archetype, content) \
          VALUES ($1, $2, $3, $4) \
@@ -83,8 +80,7 @@ pub async fn insert_template(
     else {
         return Ok(None);
     };
-    register_template_ref(&mut tx, template.template_id).await?;
-    tx.commit().await?;
+    register_template_ref(&mut *tx, template.template_id).await?;
     template_row(&row).map(Some)
 }
 

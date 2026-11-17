@@ -72,13 +72,19 @@
 
 /// The select-list item that reads, as `access_revision`, the revision of
 /// the settings row of the EHR the SQL expression `$ehr` names
-/// ([`access_projection::Revision`]). Each domain's schema defines the
-/// function, so a statement both domains run reads it: the clinical one
-/// reads the row, the party one answers `NULL` (migrations `clinical/0044`
-/// and `party/0040`).
+/// ([`access_projection::Revision`]), in a scalar subquery over the view
+/// `access_revision_of`, which the planner merges into the statement, so the
+/// read runs no statement of its own (#5888). Each domain's schema defines
+/// the view, so a statement both domains run reads it: the clinical one reads
+/// the row, the party one has none and reads `NULL` (migrations
+/// `clinical/0052` and `party/0053`).
 macro_rules! access_revision {
     ($ehr:literal) => {
-        concat!("access_revision(", $ehr, ") AS access_revision")
+        concat!(
+            "(SELECT ar.revision FROM access_revision_of ar WHERE ar.ehr_id = ",
+            $ehr,
+            ") AS access_revision"
+        )
     };
 }
 

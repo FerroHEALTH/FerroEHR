@@ -112,7 +112,8 @@ impl FerroEhrService {
             &self.signing_ctx(),
         )
         .await?;
-        tx.commit().await?;
+        let facts = crate::system_log::recorder::WriteFacts::of_parties(&committed);
+        self.commit_recorded(tx, &facts, Vec::new()).await?;
         Ok(committed)
     }
 }

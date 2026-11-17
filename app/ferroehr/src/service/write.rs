@@ -25,9 +25,11 @@ use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::service::version_update::WriteRequest;
+use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, EventType, ObjectClass,
 };
+use crate::system_log::recorder::WriteFacts;
 use crate::versioning::Kind;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::change::{Committed, Write, WriteEnvelope, commit, record_commit};
@@ -141,6 +143,12 @@ impl FerroEhrService {
             let signing_ctx = self.signing_ctx();
             let mut conn = acquire(pool).await?;
             let mut invalidate = None;
+            // NOTE: our own design (#5762), a request's write reserves its audit records in its
+            // own transaction, so the folded statement runs inside one when they are recorded.
+            let mode = match mode {
+                Mode::Statement if self.records_writes() => Mode::Transaction,
+                mode => mode,
+            };
             let (ehr_id, committed) = match mode {
                 Mode::Statement => {
                     let write = prepare(&mut conn).await?;
@@ -152,12 +160,13 @@ impl FerroEhrService {
                     let write = prepare(&mut tx).await?;
                     let ehr_id = write.ehr_id;
                     let committed = commit(&mut tx, write, &signing_ctx).await?;
+                    let facts = self.written_facts(&mut tx, ehr_id, &committed).await;
                     if let Mode::SyncSubject(ehr_id, status) = mode {
                         self.sync_ehr_subject(&mut tx, ehr_id, status).await?;
-                        tx.commit().await?;
+                        self.commit_recorded(tx, &facts, Vec::new()).await?;
                         invalidate = Some(ehr_id);
                     } else {
-                        tx.commit().await?;
+                        self.commit_recorded(tx, &facts, Vec::new()).await?;
                     }
                     (ehr_id, committed)
                 }
@@ -227,6 +236,71 @@ impl FerroEhrService {
         event.object_id = Some(format!("{}#sha256:{digest}", committed.version_uid()));
         self.record_one_access(event).await
     }
+}
+
+impl FerroEhrService {
+    /// What a single-object write decided of its operation's record: the
+    /// EHR, the version it wrote and what that version holds, as its write
+    /// response names them; a logical delete holds what the version it
+    /// deleted held, read on `tx` (EHDS Annex II 3.2(c)).
+    async fn written_facts(
+        &self,
+        tx: &mut PgConnection,
+        ehr_id: Option<EhrId>,
+        committed: &Committed,
+    ) -> WriteFacts {
+        let party = pool_is_party(committed);
+        let content = match committed.content_ids() {
+            Some(ids) => Some(AccessedContent::Objects(vec![ids])),
+            None if committed.kind == Kind::Composition
+                && committed.change_type == crate::versioning::audit::change_type::DELETED =>
+            {
+                let deleted = self.deleted_content(tx, committed.vo_id).await;
+                (!deleted.is_empty()).then_some(AccessedContent::Objects(deleted))
+            }
+            None => None,
+        };
+        WriteFacts {
+            ehr_id: ehr_id.filter(|_| !party).map(|id| id.to_string()),
+            object_id: Some(committed.version_uid()),
+            origins: Vec::new(),
+            content,
+            domain: party.then_some(AccessDomain::Demographic),
+        }
+    }
+
+    /// What the version a logical delete deleted held; a failed read leaves
+    /// the record unclassified, as the delete's response does.
+    async fn deleted_content(
+        &self,
+        tx: &mut PgConnection,
+        vo_id: crate::ids::VoId,
+    ) -> Vec<crate::system_log::categories::ContentIds> {
+        match self.audit_content_of_objects_on(tx, &[vo_id]).await {
+            Ok(deleted) => deleted,
+            Err(e) => {
+                tracing::warn!(
+                    error = %crate::error::ErrorChain::new(&e),
+                    "reading the categories of a deleted object failed; the access record is \
+                     written unclassified"
+                );
+                Vec::new()
+            }
+        }
+    }
+}
+
+/// Whether `committed` is a party's version, written in the party domain.
+fn pool_is_party(committed: &Committed) -> bool {
+    matches!(
+        committed.kind,
+        Kind::Agent
+            | Kind::Group
+            | Kind::Organisation
+            | Kind::Person
+            | Kind::Role
+            | Kind::PartyRelationship
+    )
 }
 
 /// `bytes` as lowercase hexadecimal.

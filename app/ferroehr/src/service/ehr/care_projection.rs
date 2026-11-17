@@ -205,8 +205,10 @@ impl Projector {
             let rows = self.rows_of(&mut snapshot, chunk, &namespace).await?;
             access_care::replace(&mut tx, chunk, &rows).await?;
         }
+        // NOTE: our own design (#5762), the care projector, which runs in the background.
         snapshot.commit().await?;
         access_care::set_state(&mut tx, revision, &key_check).await?;
+        // NOTE: our own design (#5762), the care projector, which runs in the background.
         tx.commit().await?;
         self.digest_ehrs(&namespace).await?;
         Ok(revision)

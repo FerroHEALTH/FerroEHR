@@ -110,7 +110,7 @@ async fn concurrent_statements_with_overlapping_tokens_all_commit() {
             writers.spawn(async move {
                 let (entries, tokens) = batch(round, writer);
                 let mut conn = pool.acquire().await.expect("a connection");
-                take_in(&mut conn, &entries, &tokens).await
+                take_in(&mut conn, &entries, &tokens, None).await
             });
         }
         while let Some(written) = writers.join_next().await {

@@ -76,6 +76,18 @@ impl FerroEhrService {
         if !self.audit_enabled() {
             return Ok(());
         }
+        self.record_access(self.extract_record(ehr_id, action, content))
+            .await
+    }
+
+    /// The EHR-Extract record of `ehr_id`, as [`Self::emit_extract_audit`]
+    /// writes it.
+    pub(super) fn extract_record(
+        &self,
+        ehr_id: EhrId,
+        action: EventActionCode,
+        content: Option<AccessedContent>,
+    ) -> AuditEvent {
         let mut event = AuditEvent::new(action, ObjectClass::Extract, EventOutcome::Success);
         let id = ehr_id.to_string();
         event.ehr_id = Some(id.clone());
@@ -89,7 +101,7 @@ impl FerroEhrService {
         event.purpose = crate::system_log::access_context::current_purpose();
         event.permit = crate::system_log::access_context::current_permit();
         event.category = content.and_then(|content| self.audit_classify(&content, action));
-        self.record_access(event).await
+        event
     }
 
     /// Emit the EHR-Extract audit event of the import of `ehr_id`, whose
@@ -97,10 +109,17 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// As [`Self::emit_extract_audit`].
-    async fn emit_import_audit(&self, ehr_id: EhrId, landed: &[VoId]) -> Result<(), ServiceError> {
-        let content = self.landed_content(landed).await;
-        self.emit_extract_audit(ehr_id, EventActionCode::Create, Some(content))
-            .await
+    async fn import_record(
+        &self,
+        tx: &mut sqlx::PgConnection,
+        ehr_id: EhrId,
+        landed: &[VoId],
+    ) -> Vec<AuditEvent> {
+        if !self.audit_enabled() {
+            return Vec::new();
+        }
+        let content = self.landed_content(tx, landed).await;
+        vec![self.extract_record(ehr_id, EventActionCode::Create, Some(content))]
     }
 
     /// What an import landed, for its access record's EHDS priority category
@@ -109,8 +128,12 @@ impl FerroEhrService {
     ///
     /// The import has committed by then, so a failed read is logged and the
     /// record is written `unclassified` rather than failing a completed import.
-    async fn landed_content(&self, landed: &[VoId]) -> AccessedContent {
-        match self.audit_content_of_objects(landed).await {
+    async fn landed_content(
+        &self,
+        tx: &mut sqlx::PgConnection,
+        landed: &[VoId],
+    ) -> AccessedContent {
+        match self.audit_content_of_objects_on(tx, landed).await {
             Ok(content) => AccessedContent::Objects(content),
             Err(e) => {
                 tracing::warn!(

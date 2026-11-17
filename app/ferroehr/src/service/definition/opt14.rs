@@ -35,6 +35,9 @@
               (families 1/8)"
 )]
 
+use sqlx::Connection as _;
+
+use crate::db::acquire::acquire;
 use std::sync::Arc;
 
 use openehr_its::opt14::types::OperationalTemplate;
@@ -129,8 +132,10 @@ impl FerroEhrService {
                 )),
             })?;
         let root_archetype = &opt.definition.archetype_id.value;
+        let mut conn = acquire(&self.pool).await?;
+        let mut tx = conn.begin().await?;
         let row = template_repo::insert_template(
-            &self.pool,
+            &mut tx,
             NewTemplate {
                 template_id: &template_id,
                 concept: Some(&opt.concept),
@@ -145,6 +150,7 @@ impl FerroEhrService {
                 "an operational template with template_id '{template_id}' already exists"
             ))
         })?;
+        self.commit_definition(tx).await?;
 
         // The create path needs no `WebTemplate`-cache invalidation: the insert
         // never overwrites and `web_template` caches only successful builds,

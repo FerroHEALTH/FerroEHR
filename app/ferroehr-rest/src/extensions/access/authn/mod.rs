@@ -59,7 +59,7 @@ use axum::response::Response;
 use ferrohealth_smart::guard::Gate;
 use ferrohealth_smart::kind::CallerKind;
 use ferrohealth_smart::refusal::Refusal;
-use ferrohealth_smart::resource::configuration::SmartOptions;
+use ferrohealth_smart::resource::configuration::{Purpose, SmartOptions};
 use ferrohealth_smart::resource::{Access, Honoured, Via};
 use http::request::Parts;
 use http::{HeaderValue, StatusCode};
@@ -377,8 +377,9 @@ pub struct Authenticator {
     gate: Gate,
     /// The protection space every challenge names.
     realm: String,
-    /// The issuer whose metadata the SMART discovery document is built from.
-    primary: Option<Primary>,
+    /// The issuer whose metadata the SMART discovery document is built from,
+    /// with what `describe` describes it for.
+    primary: Option<(Primary, Purpose)>,
     /// The issuers whose tokens may grant a privileged role.
     role_issuers: build::RoleIssuers,
     /// The party binding every admitted caller is looked up in, when an
@@ -412,10 +413,21 @@ impl Authenticator {
 
     /// The SMART discovery document of the described issuer under `options`, or
     /// `None` when no issuer's metadata was read.
+    ///
+    /// The document is built for what `describe` describes the issuer for: a
+    /// `machines` issuer of a deployment that trusts no user-token issuer gets
+    /// the Backend Services document, with no app-launch member (SMART App
+    /// Launch 2.2.0, Backend Services, §Retrieve `.well-known/smart-configuration`).
     pub(crate) fn smart_configuration(&self, options: &SmartOptions) -> Option<serde_json::Value> {
-        self.primary.as_ref().map(|primary| match primary {
-            Primary::Jwt(server) => server.smart_configuration(options),
-            Primary::Introspection(introspector) => introspector.smart_configuration(options),
+        self.primary.as_ref().map(|(primary, purpose)| {
+            let options = SmartOptions {
+                purpose: *purpose,
+                ..options.clone()
+            };
+            match primary {
+                Primary::Jwt(server) => server.smart_configuration(&options),
+                Primary::Introspection(introspector) => introspector.smart_configuration(&options),
+            }
         })
     }
 
@@ -611,6 +623,7 @@ pub(crate) async fn middleware(
                 refusal.extensions_mut().insert(actor);
                 return refusal;
             }
+            crate::system_log::written::learn_actor(&actor);
             let patient = gates::patient_person(&layer, &req, &principal).await;
             let principal = Arc::new(principal);
             req.extensions_mut().insert(Arc::clone(&principal));

@@ -339,10 +339,12 @@ impl FerroEhrService {
             ),
         )
         .await?;
+        let mut records = Vec::new();
         if let Some(party) = erase {
-            self.erase_contacts_in(&mut tx, party).await?;
+            records.extend(self.erase_contacts_in(&mut tx, party).await?);
         }
-        tx.commit().await?;
+        let facts = crate::system_log::recorder::WriteFacts::of_parties(&committed);
+        self.commit_recorded(tx, &facts, records).await?;
         Ok(committed)
     }
 }

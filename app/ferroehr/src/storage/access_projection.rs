@@ -262,7 +262,7 @@ pub struct Stored {
 pub async fn settings_of(pool: &PgPool, ehr_id: EhrId) -> Result<Stored, StorageError> {
     let row = sqlx::query(
         "SELECT s.ehr_id IS NOT NULL AS has_settings, s.settings::text AS settings, \
-                access_revision(k.id) AS access_revision, s.vo_id, v.creating_system_id, v.trunk_version, \
+                (SELECT ar.revision FROM access_revision_of ar WHERE ar.ehr_id = k.id) AS access_revision, s.vo_id, v.creating_system_id, v.trunk_version, \
                 v.branch_number, v.branch_version \
          FROM (SELECT $1::uuid AS id) k \
          LEFT JOIN access_settings s ON s.ehr_id = k.id \
@@ -329,7 +329,7 @@ pub async fn settings_of_many(
     let ids: Vec<uuid::Uuid> = ehr_ids.iter().map(|id| id.0).collect();
     let rows = sqlx::query(
         "SELECT k.id AS ehr_id, s.ehr_id IS NOT NULL AS has_settings, \
-                s.settings::text AS settings, access_revision(k.id) AS access_revision, s.vo_id, \
+                s.settings::text AS settings, (SELECT ar.revision FROM access_revision_of ar WHERE ar.ehr_id = k.id) AS access_revision, s.vo_id, \
                 v.creating_system_id, v.trunk_version, \
                 v.branch_number, v.branch_version \
          FROM unnest($1::uuid[]) AS k(id) \

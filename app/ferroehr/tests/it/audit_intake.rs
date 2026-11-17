@@ -32,7 +32,7 @@ async fn write(pool: &PgPool, numbers: impl Iterator<Item = u32>) {
         let mut conn = pool.acquire().await.expect("a connection");
         let mut tx = conn.begin().await.expect("begin");
         let intake = IntakeEntry::of(&mut entry(n, SYSTEM, EHR), None).expect("a stored form");
-        take_in(&mut tx, &[intake], &[])
+        take_in(&mut tx, &[intake], &[], None)
             .await
             .expect("the intake write");
         tx.commit().await.expect("commit");
@@ -59,7 +59,7 @@ async fn chainers_on_several_replicas_keep_one_chain() {
                 let still_writing = writing.load(Ordering::Acquire);
                 match log
                     .store()
-                    .chain_round(16, Owed::default(), Seal::Now)
+                    .chain_round(16, Owed::default(), Seal::Now, &[])
                     .await
                     .expect("a chainer round")
                 {
@@ -207,7 +207,7 @@ async fn unsealed_rounds_are_covered_by_one_checkpoint_of_the_head() {
         write(&pool, (0..5).map(|i| round * 100 + i)).await;
         let chained = log
             .store()
-            .chain_round(64, Owed::default(), Seal::Later)
+            .chain_round(64, Owed::default(), Seal::Later, &[])
             .await
             .expect("a round");
         assert!(

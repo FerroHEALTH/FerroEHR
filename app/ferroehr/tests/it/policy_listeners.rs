@@ -34,7 +34,7 @@ async fn wait_until(holds: impl Fn() -> bool, what: &str) {
 async fn a_killed_listener_degrades_health_until_it_reconnects() {
     let (db, svc) = crate::fixtures::service().await;
     let listeners = svc.policy_listeners();
-    assert_eq!(listeners.len(), 6, "every policy copy is listed");
+    assert_eq!(listeners.len(), 7, "every policy copy is listed");
     let health = PolicyListenersHealth::new(listeners.clone());
     let down = health.check().await;
     assert_eq!(

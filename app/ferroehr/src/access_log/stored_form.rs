@@ -25,7 +25,11 @@
               boundary class: canonical form)"
 )]
 
-use serde_json::{Map, Value};
+#[cfg(test)]
+use serde_json::Map;
+use serde_json::Value;
+
+pub mod parts;
 
 /// The members of an entry the shared part holds.
 const SHARED: [&str; 8] = [
@@ -75,8 +79,12 @@ const ITEMS: &str = "items";
 /// The member of an element naming its detail.
 const NODE: &str = "archetype_node_id";
 
-/// An entry as it is stored: its row part, and its shared part when it has
-/// one.
+/// An entry as it is stored, as JSON values: its row part, and its shared
+/// part when it has one.
+///
+/// The split over the JSON value is the reference [`parts::parts`] is held
+/// to (#5849), which is how the server writes the parts.
+#[cfg(test)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct StoredForm {
     /// The members kept on the row.
@@ -87,6 +95,7 @@ pub struct StoredForm {
 }
 
 /// Whether the element `item` is a shared access detail.
+#[cfg(test)]
 fn shared_detail(item: &Value) -> bool {
     item.get(NODE)
         .and_then(Value::as_str)
@@ -95,6 +104,7 @@ fn shared_detail(item: &Value) -> bool {
 
 /// The stored form of the entry whose canonical form, without its link, is
 /// the object `members`, its members moved into the part that keeps them.
+#[cfg(test)]
 #[must_use]
 pub fn split(members: Map<String, Value>) -> StoredForm {
     let mut row = Map::new();
@@ -138,6 +148,7 @@ pub fn split(members: Map<String, Value>) -> StoredForm {
 
 /// The details tree `tree` split: its envelope with the shared elements, and
 /// the elements of the row.
+#[cfg(test)]
 fn split_details(tree: Map<String, Value>) -> (Map<String, Value>, Vec<Value>) {
     let mut envelope = Map::new();
     let mut own = Vec::new();
