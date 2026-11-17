@@ -8,10 +8,15 @@
 # brings the image up on one PostgreSQL 18 (one instance, or two behind
 # Caddy), seeds the perf gate's access seed and steps an open-loop arrival
 # rate up through each group and the mix until the knee. The generator runs
-# pinned to the runner's first core and the containers to the others, so the
-# load it adds is not read as the server's. A hosted runner shares its host,
-# so its knee is a floor of what dedicated hardware reaches, never a
-# published figure; the book page "Capacity" says how to read the result.
+# in a container on the servers' network, so no port forwarder sits in the
+# latency it measures, pinned to the runner's first core and the containers
+# to the others, so the load it adds is not read as the server's. A hosted
+# runner shares its host, so its knee is a floor of what dedicated hardware
+# reaches, never a published figure; the book page "Capacity" says how to read the result.
+# Its x86 runner reads the clock without trapping, so it is the host the
+# latency targets are judged on (#5777): each step runs `repeat` times and
+# records the runner's clock source, load and other tenants beside its
+# latencies, the server's own and the generator's.
 #
 # DISPATCH ONLY. It never runs on a pull request or a schedule: a sweep takes
 # well over an hour and its result is read by a person. It writes nothing
@@ -35,7 +40,7 @@ on:
       groups:
         description: "Groups to sweep, space-separated, `mix` for the mix (capacity.sh groups)"
         required: false
-        default: "ehr_read composition_read aql_ehr aql_population access_log_read party_read composition_commit mix"
+        default: "health ehr_read composition_read aql_ehr aql_population access_log_read party_read composition_commit mix"
         type: string
       rates:
         description: "Arrival rates of each sweep, rps, lowest first"
@@ -47,6 +52,21 @@ on:
         required: false
         default: "20000"
         type: string
+      repeat:
+        description: "Runs of each step; a p99 judged against a target is the median of at least 3"
+        required: false
+        default: "3"
+        type: string
+      continue:
+        description: "Run every rate past a failed step, recording each outcome"
+        required: false
+        default: false
+        type: boolean
+      fresh:
+        description: "Start every run from the seeded snapshot, so no step reads a store an earlier one grew"
+        required: false
+        default: false
+        type: boolean
 
 permissions: {}
 
@@ -86,6 +106,10 @@ jobs:
         run: docker pull "$IMAGE"
       - name: Build the postgres image (COPY-only, seconds)
         run: docker build -t ferroehr-postgres:capacity docker/postgres
+      - name: Build the generator for the servers' network
+        env:
+          CAPACITY_TOPOLOGY: docker
+        run: bash scripts/perf/capacity.sh generator
       - name: Bring the topology up and seed it
         env:
           CAPACITY_TOPOLOGY: docker
@@ -100,10 +124,15 @@ jobs:
           export CAPACITY_SERVER_CPUS="1-$last" CAPACITY_PG_CPUS="1-$last"
           bash scripts/perf/capacity.sh up "$INSTANCES"
           bash scripts/perf/capacity.sh seed
+          bash scripts/perf/capacity.sh snapshot
       - name: Sweep each group
         env:
           CAPACITY_TOPOLOGY: docker
+          CAPACITY_GENERATOR: network
           CAPACITY_GENERATOR_CPUS: "0"
+          CAPACITY_REPEAT: ${{ inputs.repeat }}
+          CAPACITY_CONTINUE: ${{ inputs.continue && '1' || '0' }}
+          CAPACITY_FRESH: ${{ inputs.fresh && '1' || '0' }}
           SWEEP_GROUPS: ${{ inputs.groups }}
           RATES: ${{ inputs.rates }}
         run: |
@@ -137,5 +166,6 @@ jobs:
           path: |
             target/capacity/steps/
             target/capacity/steps.jsonl
+            target/capacity/sweeps.jsonl
             target/capacity/profiles/
           if-no-files-found: ignore

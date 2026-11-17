@@ -39,14 +39,14 @@ never a local copy.
 
 ## The sign-in and the session are the family's
 
-`ferrohealth-session` (`axum`, FerroAUTH) keeps them: the `[oidc]` and
+`ferrohealth-session` (`axum`, FerroSMART) keeps them: the `[oidc]` and
 `[session]` sections, the `memory` or `sealed` store, the OpenID Connect
 sign-in over `ferrohealth-smart`'s relying party, and the routes `/login`,
 `/auth/callback`, `/logout` and `/session` with the `keep_session`
 middleware that hands every request its `record::Held`. `src/session.rs` is
 the viewer's side of that seam (the cookie names, `Pages`, `require_session`
 and the Basic sign-in's `begin`); the sign-in page is `/sign-in`. A habit the
-crate lacks is a FerroAUTH issue, never a local copy.
+crate lacks is a FerroSMART issue, never a local copy.
 
 ## How a page works (FerroUI's interaction contract)
 
