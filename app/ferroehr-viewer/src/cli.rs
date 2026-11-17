@@ -121,7 +121,7 @@ fn check_clients(config: &ViewerConfig) -> Result<(), Failure> {
 /// Serves the viewer until `SIGTERM` or `SIGINT`, then drains within
 /// `server.shutdown_timeout`, with the request log on `telemetry`.
 async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> Result<(), Failure> {
-    let request_log = crate::telemetry::request_log(&config, telemetry);
+    let policy = crate::telemetry::stack_policy(&config, telemetry);
     let cdr = crate::cdr::CdrClient::new(&config.cdr).map_err(refused)?;
     // NOTE: ferrohealth-session 0.2.1 `config::OidcSettings::relying_party`: the provider's
     // metadata is discovered at the start, so a broken provider refuses it.
@@ -139,7 +139,7 @@ async fn serve(config: ViewerConfig, telemetry: &Telemetry) -> Result<(), Failur
 
     let lifecycle = Lifecycle::default();
     let health = Health::new(Registry::default(), lifecycle.clone());
-    let service = crate::server::app(app_state, health, request_log);
+    let service = crate::server::app(app_state, health, policy);
 
     let section = &config.server;
     let listener = tokio::net::TcpListener::bind(section.listen).await?;
