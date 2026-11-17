@@ -76,6 +76,17 @@ ignore = [
   # release on it, that no longer depends on astral-tokio-tar.
   # https://rustsec.org/advisories/RUSTSEC-2026-0440
   { id = "RUSTSEC-2026-0440", reason = "reached only through testcontainers in the testkit test harness, which no shipped artefact links" },
+  # 2026-11-17 (#5934): chrono is unmaintained in every version, and so is
+  # humantime, which wraps it. object_store, the multimedia blob backend, is
+  # their one carrier: 0.14.2, the newest release, requires both, and so does
+  # its main branch. The path argument is the RUSTSEC-2026-0543 and
+  # RUSTSEC-2026-0542 statements in security/vex/rust-advisories.toml.
+  # DELETING EVENT: the OpenDAL rewrite of blob storage (#5934), which removes
+  # object_store.
+  # https://rustsec.org/advisories/RUSTSEC-2026-0543
+  # https://rustsec.org/advisories/RUSTSEC-2026-0542
+  { id = "RUSTSEC-2026-0543", reason = "reached only through object_store, the multimedia blob backend, whose newest release still requires it" },
+  { id = "RUSTSEC-2026-0542", reason = "reached only through object_store, the multimedia blob backend, whose newest release still requires it" },
 ]
 
 [licenses]
@@ -137,12 +148,12 @@ exceptions = [
   # Licensor's code under the same licence (owner decision 2026-10-18), taken
   # by the viewer alone.
   { allow = ["BUSL-1.1"], crate = "ferrohealth-ui" },
-  # FerroAUTH's ferrohealth-smart, the FerroHEALTH products' shared SMART and
+  # FerroSMART's ferrohealth-smart, the FerroHEALTH products' shared SMART and
   # OAuth 2.0 crate, is the same Licensor's code under the same licence; its
   # client-credentials client authenticates the outbound audit feed and policy
   # service (owner decision 2026-10-20, #3829).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-smart" },
-  # FerroAUTH's ferrohealth-session, the FerroHEALTH consoles' shared sign-in
+  # FerroSMART's ferrohealth-session, the FerroHEALTH consoles' shared sign-in
   # and session, is the same Licensor's code under the same licence, taken by
   # the viewer alone (owner decision 2026-11-03, #4873).
   { allow = ["BUSL-1.1"], crate = "ferrohealth-session" },

@@ -1444,7 +1444,7 @@ impl FerroEhrService {
         let mut tx = conn.begin().await?;
         dump_repo::write::insert_audits(&mut tx, &commons.audits, StoredAudit::Keep).await?;
         dump_repo::write::insert_contributions(&mut tx, None, &commons.contributions).await?;
-        tx.commit().await?;
+        self.commit_act_recorded(tx, Vec::new()).await?;
         Ok(())
     }
 
@@ -1489,7 +1489,7 @@ impl FerroEhrService {
         dump_repo::write::restore_archives(&mut tx, &record.archives).await?;
         // The archive carries no index row: each is rebuilt from the loaded head.
         reindex_loaded(&mut tx, &self.binding, &record.kind, record.vo_id).await?;
-        tx.commit().await?;
+        self.commit_act_recorded(tx, Vec::new()).await?;
         Ok(None)
     }
 
@@ -1647,7 +1647,7 @@ impl FerroEhrService {
         // the cold one, so a loaded EHR carries the tier and marker a locally archived one does.
         dump_repo::write::restore_archives(&mut tx, &record.archives).await?;
         crate::service::ehr::access_projection::project_current(&mut tx, ehr_id).await?;
-        tx.commit().await?;
+        self.commit_act_recorded(tx, Vec::new()).await?;
         self.invalidate_ehr_access(ehr_id).await;
         Ok(())
     }

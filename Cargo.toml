@@ -241,16 +241,19 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # public URL; 0.23 keeps a Basic user's credential alone (`with_granted_scope`,
 # `with_granted_roles`), and 0.24 asks the product for a client's standing
 # (`kind::standing`), whose 0.24.1 names a refused `[auth]` key by its path;
-# 0.26 builds on ferrohealth-server 0.10, with one server in the lock.
+# 0.26 builds on ferrohealth-server 0.10, with one server in the lock; 0.27
+# describes a machines-only deployment for SMART Backend Services and returns
+# the purpose with the described issuer, and 0.28 takes a client assertion's
+# `aud` and `typ` from the grant's security profile (no `assertion_audience`).
 # Verified on crates.io 2026-11-16.
-ferrohealth-smart = { version = "=0.26.0", default-features = false, features = ["fetch", "idp-entra"] }
-# The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
+ferrohealth-smart = { version = "=0.28.0", default-features = false, features = ["fetch", "idp-entra"] }
+# The operator consoles' OpenID Connect sign-in and session (FerroSMART, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party; 0.13 types the provider issuer and the
-# redirect URIs as `SecretUrl`, and 0.21 is the release on ferrohealth-smart
-# 0.26. Verified on crates.io 2026-11-16.
-ferrohealth-session = { version = "=0.21.0", default-features = false }
+# redirect URIs as `SecretUrl`, and 0.23 is the release on ferrohealth-smart
+# 0.28. Verified on crates.io 2026-11-16.
+ferrohealth-session = { version = "=0.23.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -295,10 +298,10 @@ ferrohealth-usage-report = { version = "=0.5.0", features = ["telemetry"] }
 # Licensor's BUSL-1.1 code (deny.toml). FerroBRIDGE's published crates follow
 # Cargo SemVer (a breaking change moves the minor while 0.x), so it is required
 # by a caret range (The Cargo Book, "Specifying Dependencies"). Verified on
-# crates.io 2026-11-16, on ferrohealth-smart 0.26; `smart` builds its client
+# crates.io 2026-11-16, on ferrohealth-smart 0.28; `smart` builds its client
 # from ferrohealth-smart's outbound client, and `r4b` the one wire release the
 # terminology client speaks.
-ferrobridge-term = { version = "0.11.0", default-features = false, features = ["r4b", "smart"] }
+ferrobridge-term = { version = "0.12.0", default-features = false, features = ["r4b", "smart"] }
 
 # ── Audit (FerroAUDIT, the family's shared audit library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly as the family
@@ -309,9 +312,9 @@ ferrobridge-term = { version = "0.11.0", default-features = false, features = ["
 # record, the Art 14(1) categories and their classification map, the Art 9(2)
 # retention floor), and `ihe-atna`'s `retrieve` reads the ITI-81 query and
 # writes its searchset Bundle. Features are chosen per member. Verified on
-# crates.io 2026-11-16 (0.21.0), on ferrohealth-smart 0.26.
-ihe-atna = { version = "=0.21.0", default-features = false }
-ehds-logging = { version = "=0.21.0", default-features = false }
+# crates.io 2026-11-16 (0.22.0), on ferrohealth-smart 0.28.
+ihe-atna = { version = "=0.22.0", default-features = false }
+ehds-logging = { version = "=0.22.0", default-features = false }
 # The generated FHIR R4 model `ihe-atna` builds on, at the version it requires:
 # the CDR's ITI-81 page holds each typed BALP `AuditEvent`, and the viewer reads
 # the searchset, each `AuditEvent` and a refusal's `OperationOutcome` through it. `r4-resources` compiles R4's resources alone;
@@ -332,9 +335,9 @@ fhir-search = { version = "0.1.131", default-features = false }
 # ferrohealth-smart's outbound client; `pmir` is the PMIR Patient Identity
 # Subscriber and Consumer (ITI-94, ITI-93) of `[pix]`, which reads every
 # Patient's `active` and links and rebuilds a subscription from its stored
-# Location. Verified on crates.io 2026-11-16 (0.12.0, on ihe-atna 0.21), on
-# ferrohealth-smart 0.26.
-ihe-iti = { version = "=0.12.0", default-features = false }
+# Location. Verified on crates.io 2026-11-16 (0.13.0, on ihe-atna 0.22), on
+# ferrohealth-smart 0.28.
+ihe-iti = { version = "=0.13.0", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
@@ -373,10 +376,10 @@ utoipa-swagger-ui = { version = "10.0.2", features = ["axum", "vendored"] }   # 
 # ── Database & persistence ───────────────────────────────────────────────────
 sqlx = { version = "0.9", default-features = false, features = [
   "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "macros",
-  "migrate", "uuid", "json", "rust_decimal", "chrono",
+  "migrate", "uuid", "json", "rust_decimal",
 ] }                                  # 0.9.x (MSRV 1.94). NOTE: sqlx has no jiff feature; use jiff-sqlx wrapper types at the query boundary.
 sea-query = { version = "1.0.1", features = ["backend-postgres", "with-uuid", "with-json", "with-rust_decimal", "postgres-array"] }
-sea-query-sqlx = { version = "0.9.1", features = ["sqlx-postgres", "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres-array", "with-uuid", "with-json", "with-rust_decimal"] }   # the sea-query 1.0 <-> sqlx 0.9 binder (successor of sea-query-binder, which is stuck on sea-query 0.32). NOTE: its with-jiff+postgres is unimplemented upstream — bind timestamps via jiff-sqlx on plain sqlx queries, or chrono at the binder boundary.
+sea-query-sqlx = { version = "0.9.1", features = ["sqlx-postgres", "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres-array", "with-uuid", "with-json", "with-rust_decimal"] }   # the sea-query 1.0 <-> sqlx 0.9 binder (successor of sea-query-binder, which is stuck on sea-query 0.32). NOTE: its with-jiff+postgres is unimplemented upstream — bind timestamps via jiff-sqlx on plain sqlx queries.
 jiff-sqlx = { version = "0.2.0", features = ["postgres"] }   # official jiff<->sqlx 0.9 codec for plain sqlx queries
 
 # ── Serialization & data formats ─────────────────────────────────────────────

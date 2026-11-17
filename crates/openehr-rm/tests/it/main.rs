@@ -19,6 +19,7 @@
 mod canonical_fast_path;
 mod canonical_form_rfc8785;
 mod canonical_reference;
+mod canonical_serializer;
 #[cfg(feature = "draft")]
 mod draft;
 mod enforcement_reach;

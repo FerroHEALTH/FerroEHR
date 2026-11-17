@@ -22,6 +22,7 @@ use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::party_binding::grants::caller::CareTeam;
 use crate::party_binding::grants::live::GrantsUnavailable;
+use crate::party_binding::grants::live::revisions::Revisions;
 use crate::storage::access_projection::EhrSubject;
 
 /// Why a care decision could not be taken.
@@ -57,6 +58,9 @@ enum Checked {
     /// Not checked yet.
     #[default]
     Unchecked,
+    /// The store's revisions were read ahead, alongside the request's other
+    /// reads: `None` when the copy held them.
+    Read(Option<Revisions>),
     /// The copy held the store's revisions.
     Held,
     /// The copy was older and was read again: the care teams the caller is
@@ -74,6 +78,14 @@ impl CareInForce {
 
     fn set(&self, checked: Checked) {
         *self.0.lock().unwrap_or_else(PoisonError::into_inner) = checked;
+    }
+
+    /// Sets `checked` unless the request has checked the copy already.
+    fn set_unchecked(&self, checked: Checked) {
+        let mut held = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+        if matches!(*held, Checked::Unchecked) {
+            *held = checked;
+        }
     }
 }
 
@@ -107,14 +119,15 @@ impl RequestAccess {
         let teams = self.caller.facts.care_teams().iter().copied();
         match self.care.get() {
             Checked::ReadAgain(held) => teams.filter(|team| held.contains(&team.team())).collect(),
-            Checked::Unchecked | Checked::Held => teams.collect(),
+            Checked::Unchecked | Checked::Read(_) | Checked::Held => teams.collect(),
         }
     }
 
     /// Whether the caller facts copy holds the store's revisions, so a
     /// decision care admits may be taken on it: `true` when it did, `false`
     /// when it was older and was read again, after which the caller's care
-    /// is read again too. Checked once per request, with one indexed read.
+    /// is read again too. Checked once per request, with one indexed read,
+    /// or with the read [`Self::care_ahead`] made beside the request's own.
     ///
     /// The care teams the caller is a member of in the copy read are those
     /// it keeps; one it joined since the request began waits for the next
@@ -129,10 +142,12 @@ impl RequestAccess {
         let Some(grants) = self.grants.as_ref() else {
             return Ok(true);
         };
-        if !matches!(self.care.get(), Checked::Unchecked) {
-            return Ok(true);
-        }
-        let Some(store) = grants.behind().await? else {
+        let behind = match self.care.get() {
+            Checked::Unchecked => grants.behind().await?,
+            Checked::Read(behind) => behind,
+            Checked::Held | Checked::ReadAgain(_) => return Ok(true),
+        };
+        let Some(store) = behind else {
             self.care.set(Checked::Held);
             return Ok(true);
         };
@@ -159,6 +174,39 @@ impl RequestAccess {
         self.care.set(Checked::ReadAgain(held));
         count("judged_again");
         Ok(false)
+    }
+
+    /// Reads the store's revisions ahead for [`Self::care_in_force`] when the
+    /// verdict of `ehr_id` as `entry` reads it is one the caller's care
+    /// decides, so a service can run the read alongside its own and the
+    /// exact check adds no latency (owner decision on #5891). No openEHR spec
+    /// governs this: our own design.
+    pub async fn care_ahead(&self, ehr_id: EhrId, entry: &EhrEntry) {
+        // NOTE: our own design (#5891), a care read that fails here reads ahead nothing, and the
+        // judgement reads it again and answers that read's error.
+        if matches!(self.care.get(), Checked::Unchecked)
+            && self.care_decides(ehr_id, entry)
+            && matches!(self.cares_for(entry).await, Ok(true))
+        {
+            self.care_read_ahead().await;
+        }
+    }
+
+    /// Reads the store's revisions ahead for [`Self::care_in_force`] when the
+    /// caller is a member of a care team, for a query whose condition reads
+    /// care. No openEHR spec governs this: our own design (#5891).
+    pub async fn care_read_ahead(&self) {
+        let Some(grants) = self.grants.as_ref() else {
+            return;
+        };
+        if self.care_teams_held().is_empty() || !matches!(self.care.get(), Checked::Unchecked) {
+            return;
+        }
+        // NOTE: our own design (#5891), a read ahead that fails leaves the check unchecked, and
+        // care_in_force reads again and answers that read's error.
+        if let Ok(behind) = grants.behind().await {
+            self.care.set_unchecked(Checked::Read(behind));
+        }
     }
 
     /// Whether the verdict of `ehr_id` as `entry` reads it depends on the

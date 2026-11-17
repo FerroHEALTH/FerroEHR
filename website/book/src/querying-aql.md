@@ -138,7 +138,11 @@ ORDER BY systolic DESC
   no rows, so `COUNT(*)` counts the rows the `WHERE` clause keeps whatever
   other aggregates sit beside it. `COUNT(DISTINCT)` compares numbers by value
   (`120` and `120.0` are one value), a stored JSON `null` counts as no value,
-  and `AVG` returns a decimal mean.
+  and `AVG` returns a decimal mean. `SUM` and `AVG` add numbers and amounts:
+  over a whole data value they read the magnitude of a `DV_QUANTITY`,
+  `DV_COUNT`, `DV_PROPORTION` or `DV_DURATION`, and refuse a date, time,
+  date-time, ordinal or any other value with a 400, since the RM defines
+  addition for amounts only.
 - **`ORDER BY`**, **`LIMIT`**, and **`OFFSET`** behave as you expect; quantities
   order by their openEHR magnitude semantics. A `DV_DURATION`'s `value` is a
   string and orders as text (`P40D` after `P30M`); the whole `DV_DURATION`
@@ -159,6 +163,13 @@ ORDER BY systolic DESC
 - **A `uid/value` predicate on a `COMPOSITION`** (`c[uid/value=$uid]`) selects
   the version it names, as `WHERE c/uid/value = $uid` does. Under `OR` or
   `NOT CONTAINS` the predicate is refused with a 400.
+- **A comparison in a predicate answers as the same comparison in `WHERE`**:
+  `CONTAINS ELEMENT el[value/magnitude > 100]` compares numbers, a date/time
+  compares instants and a whole data value compares with a value of its own
+  kind, by the rules above. A predicate on a step below a node
+  (`.../value[value > '2020']/...`) compares a string, a number or a Boolean
+  leaf; any other leaf there is refused with a 400 that asks you to move the
+  comparison to `WHERE`.
 - **Date/time comparisons accept reduced precision** on both sides: openEHR
   admits partial values (`2019`, `1985-06`), and the engine compares them by
   flooring to the first instant they contain (a partial date assumes the first

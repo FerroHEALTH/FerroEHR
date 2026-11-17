@@ -5,8 +5,11 @@
 //!
 //! One statement reads the object's access facts beside the version, and the
 //! access evaluator judges the object before anything of the version leaves
-//! the service (#5773). A refused read has read the version into memory and
-//! returns nothing of it. No openEHR spec governs this: our own design.
+//! the service (#5773). A read by version id takes the version's body from
+//! this replica's copy once one indexed read confirms its object's state
+//! (#5778). A refused read has
+//! read the version into memory and returns nothing of it. No openEHR spec
+//! governs this: our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -24,9 +27,11 @@ use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
+use crate::service::ehr::version_copy::Held;
 use crate::service::response::{RawServiceResponse, ReadBody};
-use crate::storage::access_facts::visible;
-use crate::storage::version_repo::judged::{JudgedAt, read_judged};
+use crate::storage::access_facts::{HeadFacts, visible};
+use crate::storage::version_repo::judged::{JudgedAt, read_judged, read_marks};
+use crate::storage::version_repo::read::StoredVersion;
 use crate::versioning::Kind;
 use crate::versioning::object_version_id::{VersionIdError, components};
 use crate::versioning::read::raw_version_read;
@@ -70,10 +75,11 @@ impl FerroEhrService {
         };
         let missing =
             || ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"));
-        let (facts, stored) = match read_judged(&self.pool, at).await {
+        let (judged, ()) = tokio::join!(self.version_judged(at), self.care_ahead(access, ehr_id));
+        let (facts, stored) = match judged {
             Ok(Some((facts, stored))) => (facts, stored),
             Ok(None) => return JudgedRead::Unheld(missing()),
-            Err(error) => return JudgedRead::Unjudged(error.into()),
+            Err(error) => return JudgedRead::Unjudged(error),
         };
         // A party's object is judged by no EHR: the request is judged on its EHR alone.
         let Some(object_ehr) = facts.ehr_id else {
@@ -108,6 +114,60 @@ impl FerroEhrService {
                 Ok(read)
             });
         JudgedRead::Admitted(served)
+    }
+
+    /// The head facts of the object `at` names and the version it addresses,
+    /// for a read by version id from the version copy once the store
+    /// confirms it, otherwise read in one statement and kept in the copy.
+    ///
+    /// A held version is served only when one indexed read finds its object's
+    /// head where it was read and its content digest unchanged; the
+    /// restriction and access delay marks and the settings revision the read
+    /// finds replace the held ones, so the evaluator judges the store's facts
+    /// of this moment, as the full read would (owner decision on #5891).
+    ///
+    /// # Errors
+    /// The storage error of either read.
+    async fn version_judged(
+        &self,
+        at: JudgedAt,
+    ) -> Result<Option<(HeadFacts, Option<StoredVersion>)>, ServiceError> {
+        let JudgedAt::Tree(vo_id, tree) = at else {
+            return Ok(read_judged(&self.pool, at)
+                .await?
+                .map(|j| (j.facts, j.stored)));
+        };
+        let key = (vo_id, tree);
+        if let Some(held) = self.version_copy.get(key).await {
+            let marks = read_marks(&self.pool, vo_id, held.stored.sys_version).await?;
+            if let Some(marks) = marks
+                && marks.head == held.head
+                && marks.digest.as_deref() == Some(held.digest.as_slice())
+            {
+                let mut facts = held.facts.clone();
+                facts.revision = marks.revision.clone();
+                let mut stored = held.stored.clone();
+                stored.restricted_at = marks.restricted_at;
+                stored.person_withheld = marks.person_withheld;
+                stored.access_revision = marks.revision;
+                return Ok(Some((facts, Some(stored))));
+            }
+            self.version_copy.forget(key).await;
+        }
+        let read = read_judged(&self.pool, at).await?;
+        if let Some(judged) = &read
+            && let (Some(stored), Some(digest)) = (&judged.stored, &judged.digest)
+            && judged.facts.ehr_id.is_some()
+        {
+            let held = Held {
+                facts: judged.facts.clone(),
+                stored: stored.clone(),
+                head: judged.head,
+                digest: digest.clone(),
+            };
+            self.version_copy.keep(key, held).await;
+        }
+        Ok(read.map(|j| (j.facts, j.stored)))
     }
 
     /// The COMPOSITION response of `raw`, the version of `vo_id` a read found

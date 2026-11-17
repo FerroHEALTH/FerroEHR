@@ -30,8 +30,11 @@ pub const ACCESS_COPY_LOOKUPS: &str = "access_copy_lookups";
 pub const ACCESS_COPY_REFILLS: &str = "access_copy_refills";
 /// Entries dropped from the per-EHR access copy or the class copy (`scope`).
 pub const ACCESS_COPY_DROPS: &str = "access_copy_drops";
-/// Entries the per-EHR access copy and the class copy hold (`copy`).
+/// Entries the access copies hold (`copy`).
 pub const ACCESS_COPY_ENTRIES: &str = "access_copy_entries";
+/// Bytes the care copy's censuses take, as its bound weighs them, in the unit `By` (`copy`,
+/// #5760).
+pub const ACCESS_COPY_SIZE: &str = "access_copy_size";
 /// Whether a policy copy's listener is connected, `1` or `0` (`listener`).
 pub const POLICY_LISTENER_UP: &str = "policy_listener_up";
 /// Listener connections lost (`listener`).
@@ -83,6 +86,13 @@ pub const AUDIT_CHAIN_INTACT: &str = "audit_chain_intact";
 pub const ACCESS_LOG_CHAIN_HOLD: &str = "access_log_chain_hold_duration";
 /// Records the audit chainer linked into a chain (`chain`).
 pub const AUDIT_CHAINED: &str = "audit_chained";
+/// Reservations whose audit records have been held past the reconciler's
+/// grace, at its last look.
+pub const AUDIT_RESERVATIONS_HELD: &str = "audit_reservations_held";
+/// The age of the oldest such reservation, at the reconciler's last look.
+pub const AUDIT_RESERVATION_AGE: &str = "audit_reservation_age";
+/// Reservations the reconciler resolved (`outcome`).
+pub const AUDIT_RESERVATIONS_RECONCILED: &str = "audit_reservations_reconciled";
 /// Chain positions past a chain's verification cursor, the head minus the
 /// cursor (`chain`, #5779).
 pub const AUDIT_CHAIN_VERIFICATION_LAG: &str = "audit_chain_verification_lag";
@@ -94,11 +104,12 @@ pub const AUDIT_CHAIN_UNVERIFIED_AGE: &str = "audit_chain_unverified_age";
 pub const INSTANCE_MISMATCHES: &str = "instance_mismatches";
 
 /// Every instrument name of this module, for the naming tests.
-pub const NAMES: [&str; 30] = [
+pub const NAMES: [&str; 34] = [
     ACCESS_COPY_LOOKUPS,
     ACCESS_COPY_REFILLS,
     ACCESS_COPY_DROPS,
     ACCESS_COPY_ENTRIES,
+    ACCESS_COPY_SIZE,
     POLICY_LISTENER_UP,
     POLICY_LISTENER_LOSSES,
     POLICY_NOTIFICATIONS,
@@ -122,6 +133,9 @@ pub const NAMES: [&str; 30] = [
     AUDIT_CHAIN_INTACT,
     ACCESS_LOG_CHAIN_HOLD,
     AUDIT_CHAINED,
+    AUDIT_RESERVATIONS_HELD,
+    AUDIT_RESERVATION_AGE,
+    AUDIT_RESERVATIONS_RECONCILED,
     AUDIT_CHAIN_VERIFICATION_LAG,
     AUDIT_CHAIN_UNVERIFIED_AGE,
     INSTANCE_MISMATCHES,
@@ -182,6 +196,12 @@ pub struct AccessPathMetrics {
     pub log_chain_hold: Histogram<f64>,
     /// Records the chainer linked into a chain.
     pub log_chained: Counter<u64>,
+    /// Reservations held past the reconciler's grace.
+    pub reservations_held: Gauge<u64>,
+    /// The age of the oldest reservation held past the grace, seconds.
+    pub reservation_age: Gauge<f64>,
+    /// Reservations the reconciler resolved.
+    pub reservations_reconciled: Counter<u64>,
     /// Scheduled seal runs, seconds.
     pub seal_duration: Histogram<f64>,
     /// The Unix time of each chain's newest successful seal run.
@@ -266,9 +286,21 @@ impl AccessPathMetrics {
                 AUDIT_CHAINED,
                 "Audit records the chainer linked (chain = access_log | system)",
             ),
+            reservations_held: make.gauge(
+                AUDIT_RESERVATIONS_HELD,
+                "Reservations whose audit records are held past the reconciler's grace",
+            ),
+            reservation_age: make.seconds(
+                AUDIT_RESERVATION_AGE,
+                "Age of the oldest reservation held past the grace",
+            ),
+            reservations_reconciled: make.counter(
+                AUDIT_RESERVATIONS_RECONCILED,
+                "Reservations reconciled (outcome = released | discarded | removed)",
+            ),
             log_sign_duration: make.histogram(
                 ACCESS_LOG_SIGN_DURATION,
-                "Access-log checkpoint signing latency per append (outcome = ok | failed)",
+                "Access-log checkpoint signing latency per checkpoint (outcome = ok | failed)",
                 PATH_BUCKETS,
             ),
             seal_duration: make.histogram(
@@ -405,8 +437,8 @@ pub fn unix_now() -> f64 {
 }
 
 /// Register the instruments read at collection time over `service`: each
-/// policy listener's state, and the size of the per-EHR access copy and the
-/// class copy.
+/// policy listener's state, and the size of the per-EHR access copy, the
+/// class copy, the care copy and the caller facts copy.
 pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
     let listeners = service.policy_listeners();
     observe_listeners(meter, &listeners);
@@ -414,11 +446,44 @@ pub fn observe(meter: &Meter, service: &Arc<FerroEhrService>) {
     let held = Arc::clone(service);
     let _entries = meter
         .u64_observable_gauge(ACCESS_COPY_ENTRIES)
-        .with_description("Entries the per-EHR access copy and the class copy hold (copy)")
+        .with_description(
+            "Entries the access copies hold (copy = ehr | classes | care_subjects | care_teams \
+             | care_patients | care_declared | caller_facts | object_version)",
+        )
         .with_callback(move |observer| {
             let (ehrs, classes) = held.ehr_access_held();
             observer.observe(ehrs, &[KeyValue::new("copy", "ehr")]);
             observer.observe(classes, &[KeyValue::new("copy", "classes")]);
+            let grants = held.grants();
+            let care = grants.care_held();
+            for (count, copy) in [
+                (care.subjects, "care_subjects"),
+                (care.teams, "care_teams"),
+                (care.patients, "care_patients"),
+                (care.declared, "care_declared"),
+                (
+                    u64::try_from(grants.parties_held()).unwrap_or(u64::MAX),
+                    "caller_facts",
+                ),
+                (held.version_copy_held().0, "object_version"),
+            ] {
+                observer.observe(count, &[KeyValue::new("copy", copy)]);
+            }
+        })
+        .build();
+    let weighed = Arc::clone(service);
+    let _bytes = meter
+        .u64_observable_gauge(ACCESS_COPY_SIZE)
+        .with_description(
+            "Bytes the care copy's censuses and the version copy take, as their bounds weigh \
+             them (copy = care_teams | object_version)",
+        )
+        .with_unit("By")
+        .with_callback(move |observer| {
+            let care = weighed.grants().care_held();
+            observer.observe(care.bytes, &[KeyValue::new("copy", "care_teams")]);
+            let (_, versions) = weighed.version_copy_held();
+            observer.observe(versions, &[KeyValue::new("copy", "object_version")]);
         })
         .build();
 }

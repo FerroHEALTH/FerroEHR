@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use ferroehr::access_log::chainer::{Owed, Round};
+use ferroehr::access_log::chainer::{Owed, Round, Seal};
 use ferroehr::access_log::intake::{IntakeEntry, take_in};
 use sqlx::{Connection, PgPool};
 
@@ -32,7 +32,7 @@ async fn write(pool: &PgPool, numbers: impl Iterator<Item = u32>) {
         let mut conn = pool.acquire().await.expect("a connection");
         let mut tx = conn.begin().await.expect("begin");
         let intake = IntakeEntry::of(&mut entry(n, SYSTEM, EHR), None).expect("a stored form");
-        take_in(&mut tx, vec![intake], &[])
+        take_in(&mut tx, &[intake], &[], None)
             .await
             .expect("the intake write");
         tx.commit().await.expect("commit");
@@ -59,7 +59,7 @@ async fn chainers_on_several_replicas_keep_one_chain() {
                 let still_writing = writing.load(Ordering::Acquire);
                 match log
                     .store()
-                    .chain_round(16, Owed::default())
+                    .chain_round(16, Owed::default(), Seal::Now, &[])
                     .await
                     .expect("a chainer round")
                 {
@@ -187,4 +187,43 @@ async fn a_record_inserted_past_the_head_is_refused() {
         refused.to_string().contains("follows position"),
         "{refused}"
     );
+}
+
+/// Rounds that leave their links to a later checkpoint store none; sealing
+/// the head then stores one checkpoint of the last link, which covers every
+/// entry below it, and sealing it again stores no second (#5770).
+#[tokio::test]
+async fn unsealed_rounds_are_covered_by_one_checkpoint_of_the_head() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let log = checkpoints(&pool, SYSTEM, keyring(&generate_key()));
+    let count = || async {
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM audit.access_log_checkpoint")
+            .fetch_one(&pool)
+            .await
+            .expect("the checkpoints")
+    };
+    for round in 0..3_u32 {
+        write(&pool, (0..5).map(|i| round * 100 + i)).await;
+        let chained = log
+            .store()
+            .chain_round(64, Owed::default(), Seal::Later, &[])
+            .await
+            .expect("a round");
+        assert!(
+            matches!(chained, Round::Chained { entries: 5, .. }),
+            "{chained:?}"
+        );
+    }
+    assert_eq!(count().await, 0, "no round sealed its links");
+    assert!(log.store().seal_head().await.expect("the head is sealed"));
+    assert!(log.store().seal_head().await.expect("sealed again"));
+    assert_eq!(count().await, 1, "one checkpoint of the head");
+    let head: i64 = sqlx::query_scalar("SELECT max(sequence) FROM audit.access_log_checkpoint")
+        .fetch_one(&pool)
+        .await
+        .expect("the checkpoint");
+    assert_eq!(head, 15, "the checkpoint seals the last link");
+    let verification = log.verify(None).await.expect("verify the checkpoint");
+    assert!(verification.intact(), "{verification:?}");
 }

@@ -8,18 +8,13 @@
 //! form, the content digest over the whole form, the columns the log derives
 //! from the content and, when the entry is indexed, its ITI-81 index row, so
 //! the chainer only computes the links
-//! (`migrations/audit/0042_audit_intake.sql`). Each derived column is read
-//! from the entry's ITS-JSON value at the path the database's own derive
-//! reads (`audit.access_log_record_derive`), and the text is cast by the
-//! database as that function casts it, so a chained record compares equal to
-//! its derivation, which the verifier checks. No openEHR spec governs audit
-//! storage: our own design.
-
-#![expect(
-    clippy::disallowed_types,
-    reason = "the stored parts and the derived columns are read from the entry's canonical \
-              ITS-JSON value (#1694 boundary class: canonical form)"
-)]
+//! (`migrations/audit/0042_audit_intake.sql`). The forms are written
+//! straight from the entry, with no JSON value of it built (#5849). Each
+//! derived column is read from the entry's ITS-JSON form at the path the
+//! database's own derive reads (`audit.access_log_record_derive`), and the
+//! text is cast by the database as that function casts it, so a chained
+//! record compares equal to its derivation, which the verifier checks. No
+//! openEHR spec governs audit storage: our own design.
 
 use std::collections::BTreeMap;
 
@@ -27,15 +22,15 @@ use jiff_sqlx::Timestamp;
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
 use openehr_rm::draft::access_log::invariants::check_entry;
-use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
-use serde_json::Value;
+use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::canonical_object_without;
 use sqlx::PgConnection;
 
 use crate::access_log::chain::ALGORITHM;
-use crate::access_log::store::{AccessLogError, canonical_form};
+use crate::access_log::store::AccessLogError;
 use crate::access_log::stored_form;
 use crate::db::acquire::acquire;
 use crate::digest::sha256_hex;
+use crate::system_log::token_digest::token_digest;
 
 /// The member of an entry's ITS-JSON form its canonical form leaves out.
 const LINK: &str = "link";
@@ -81,7 +76,7 @@ pub struct IntakeEntry {
 
 /// The columns the log derives from an entry's content, as text the database
 /// casts.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 struct Derived {
     record_type: Option<String>,
     uid: Option<String>,
@@ -120,43 +115,16 @@ impl IntakeEntry {
         Ok(intake)
     }
 
-    /// The stored parts of `entry`.
+    /// The stored parts of `entry`, written straight from it (#5849).
     fn stored(entry: &AccessLogEntry, index: Option<IndexRow>) -> Result<Self, AccessLogError> {
-        let value = serde_json::to_value(entry).map_err(AccessLogError::Canonical)?;
-        let Value::Object(mut members) = value else {
-            let whole = canonical_form(entry)?;
-            return Ok(Self {
-                content_digest: sha256_hex(&whole),
-                row: whole,
-                shared: None,
-                derived: Derived::default(),
-                index,
-            });
-        };
-        members.remove(LINK);
-        let document = Value::Object(members);
-        let whole = canonical_json(&document).map_err(AccessLogError::Canonical)?;
-        let content_digest = sha256_hex(&whole);
-        let derived = Derived::of(&document);
-        let Value::Object(members) = document else {
-            return Err(AccessLogError::Canonical(serde::de::Error::custom(
-                "an entry serialises as an object",
-            )));
-        };
-        let form = stored_form::split(members);
-        let row = canonical_json(&form.row).map_err(AccessLogError::Canonical)?;
-        let shared = form
-            .shared
-            .map(|shared| {
-                canonical_json(&shared)
-                    .map(|text| (sha256_hex(&text), text))
-                    .map_err(AccessLogError::Canonical)
-            })
-            .transpose()?;
+        let whole = canonical_object_without(entry, &[LINK]).map_err(AccessLogError::Canonical)?;
+        let cut = stored_form::parts::Cut::of(&whole).map_err(AccessLogError::Canonical)?;
+        let (row, shared) = cut.parts().map_err(AccessLogError::Canonical)?;
+        let derived = Derived::of(&cut)?;
         Ok(Self {
+            content_digest: sha256_hex(&whole),
             row,
-            shared,
-            content_digest,
+            shared: shared.map(|text| (sha256_hex(&text), text)),
             derived,
             index,
         })
@@ -164,110 +132,102 @@ impl IntakeEntry {
 }
 
 impl Derived {
-    /// The derived columns of `document`, read at the paths
-    /// `audit.access_log_record_derive` reads.
-    fn of(document: &Value) -> Self {
-        let text = |path: &str| {
-            document
-                .pointer(path)
-                .and_then(Value::as_str)
-                .map(str::to_owned)
-        };
-        Self {
-            record_type: text("/_type"),
-            uid: text("/uid/value"),
-            time_recorded: text("/time_recorded/value"),
-            ehr_id: text("/ehr_id/value"),
-            action_terminology: text("/action/defining_code/terminology_id/value"),
-            action_code: text("/action/defining_code/code_string"),
-            result_terminology: text("/outcome/result/defining_code/terminology_id/value"),
-            result_code: text("/outcome/result/defining_code/code_string"),
-            party_id: text("/accessor/party/external_ref/id/value"),
-            retain_until: text("/retention/retain_until/value"),
-        }
+    /// The derived columns of the entry whose canonical form `cut` read, at
+    /// the paths `audit.access_log_record_derive` reads.
+    fn of(cut: &stored_form::parts::Cut<'_>) -> Result<Self, AccessLogError> {
+        let text = |path: &[&str]| cut.text_at(path).map_err(AccessLogError::Canonical);
+        Ok(Self {
+            record_type: text(&["_type"])?,
+            uid: text(&["uid", "value"])?,
+            time_recorded: text(&["time_recorded", "value"])?,
+            ehr_id: text(&["ehr_id", "value"])?,
+            action_terminology: text(&["action", "defining_code", "terminology_id", "value"])?,
+            action_code: text(&["action", "defining_code", "code_string"])?,
+            result_terminology: text(&[
+                "outcome",
+                "result",
+                "defining_code",
+                "terminology_id",
+                "value",
+            ])?,
+            result_code: text(&["outcome", "result", "defining_code", "code_string"])?,
+            party_id: text(&["accessor", "party", "external_ref", "id", "value"])?,
+            retain_until: text(&["retention", "retain_until", "value"])?,
+        })
     }
 }
 
 /// The intake rows of a batch, one element per entry, as the `unnest` of
-/// [`INTAKE`] reads them.
+/// [`INTAKE`] reads them, borrowed from the entries.
 #[derive(Debug, Default)]
-struct Columns {
-    record_types: Vec<Option<String>>,
-    uids: Vec<Option<String>>,
-    times: Vec<Option<String>>,
-    contents: Vec<String>,
-    shared: Vec<Option<String>>,
-    digests: Vec<String>,
-    ehr_ids: Vec<Option<String>>,
-    party_ids: Vec<Option<String>>,
-    retain_until: Vec<Option<String>>,
-    action_terminologies: Vec<Option<String>>,
-    action_codes: Vec<Option<String>>,
-    result_terminologies: Vec<Option<String>>,
-    result_codes: Vec<Option<String>>,
+struct Columns<'e> {
+    record_types: Vec<Option<&'e str>>,
+    uids: Vec<Option<&'e str>>,
+    times: Vec<Option<&'e str>>,
+    contents: Vec<&'e str>,
+    shared: Vec<Option<&'e str>>,
+    digests: Vec<&'e str>,
+    ehr_ids: Vec<Option<&'e str>>,
+    party_ids: Vec<Option<&'e str>>,
+    retain_until: Vec<Option<&'e str>>,
+    action_terminologies: Vec<Option<&'e str>>,
+    action_codes: Vec<Option<&'e str>>,
+    result_terminologies: Vec<Option<&'e str>>,
+    result_codes: Vec<Option<&'e str>>,
     recorded_at: Vec<Option<Timestamp>>,
     actions: Vec<Option<&'static str>>,
     outcomes: Vec<Option<i16>>,
-    principals: Vec<Option<String>>,
-    patient_ids: Vec<Option<String>>,
-    resource_ids: Vec<Option<String>>,
-    request_ids: Vec<Option<String>>,
-    client_ips: Vec<Option<String>>,
-    index_ehr_ids: Vec<Option<String>>,
-    tokens: Vec<Option<String>>,
-    policies: Vec<Option<Vec<u8>>>,
+    principals: Vec<Option<&'e str>>,
+    patient_ids: Vec<Option<&'e str>>,
+    resource_ids: Vec<Option<&'e str>>,
+    request_ids: Vec<Option<&'e str>>,
+    client_ips: Vec<Option<&'e str>>,
+    index_ehr_ids: Vec<Option<&'e str>>,
+    tokens: Vec<Option<&'e str>>,
+    policies: Vec<Option<&'e [u8]>>,
 }
 
-impl Columns {
+impl<'e> Columns<'e> {
     /// Adds `entry`'s row.
-    fn push(&mut self, entry: IntakeEntry) {
-        let IntakeEntry {
-            row,
-            shared,
-            content_digest,
-            derived,
-            index,
-        } = entry;
-        self.record_types.push(derived.record_type);
-        self.uids.push(derived.uid);
-        self.times.push(derived.time_recorded);
-        self.contents.push(row);
-        self.shared.push(shared.map(|(digest, _)| digest));
-        self.digests.push(content_digest);
-        self.ehr_ids.push(derived.ehr_id);
-        self.party_ids.push(derived.party_id);
-        self.retain_until.push(derived.retain_until);
-        self.action_terminologies.push(derived.action_terminology);
-        self.action_codes.push(derived.action_code);
-        self.result_terminologies.push(derived.result_terminology);
-        self.result_codes.push(derived.result_code);
-        let index = index.map(|index| {
-            self.recorded_at
-                .push(Some(Timestamp::from(index.recorded_at)));
-            self.actions.push(Some(index.action));
-            self.outcomes.push(Some(index.outcome));
-            self.principals.push(index.principal);
-            self.patient_ids.push(index.patient_id);
-            self.resource_ids.push(index.resource_id);
-            self.request_ids.push(index.request_id);
-            self.client_ips.push(index.client_ip);
-            self.index_ehr_ids.push(index.ehr_id);
-            self.tokens.push(Some(index.search_tokens));
-            self.policies.push(Some(index.render_policy));
-        });
-        if index.is_none() {
-            self.recorded_at.push(None);
-            self.actions.push(None);
-            self.outcomes.push(None);
-            self.principals.push(None);
-            self.patient_ids.push(None);
-            self.resource_ids.push(None);
-            self.request_ids.push(None);
-            self.client_ips.push(None);
-            self.index_ehr_ids.push(None);
-            self.tokens.push(None);
-            self.policies.push(None);
-        }
+    fn push(&mut self, entry: &'e IntakeEntry) {
+        let derived = &entry.derived;
+        self.record_types.push(derived.record_type.as_deref());
+        self.uids.push(derived.uid.as_deref());
+        self.times.push(derived.time_recorded.as_deref());
+        self.contents.push(&entry.row);
+        self.shared
+            .push(entry.shared.as_ref().map(|(digest, _)| digest.as_str()));
+        self.digests.push(&entry.content_digest);
+        self.ehr_ids.push(derived.ehr_id.as_deref());
+        self.party_ids.push(derived.party_id.as_deref());
+        self.retain_until.push(derived.retain_until.as_deref());
+        self.action_terminologies
+            .push(derived.action_terminology.as_deref());
+        self.action_codes.push(derived.action_code.as_deref());
+        self.result_terminologies
+            .push(derived.result_terminology.as_deref());
+        self.result_codes.push(derived.result_code.as_deref());
+        let index = entry.index.as_ref();
+        self.recorded_at
+            .push(index.map(|index| Timestamp::from(index.recorded_at)));
+        self.actions.push(index.map(|index| index.action));
+        self.outcomes.push(index.map(|index| index.outcome));
+        self.principals
+            .push(index.and_then(|index| index.principal.as_deref()));
+        self.patient_ids
+            .push(index.and_then(|index| index.patient_id.as_deref()));
+        self.resource_ids
+            .push(index.and_then(|index| index.resource_id.as_deref()));
+        self.request_ids
+            .push(index.and_then(|index| index.request_id.as_deref()));
+        self.client_ips
+            .push(index.and_then(|index| index.client_ip.as_deref()));
+        self.index_ehr_ids
+            .push(index.and_then(|index| index.ehr_id.as_deref()));
+        self.tokens
+            .push(index.map(|index| index.search_tokens.as_str()));
+        self.policies
+            .push(index.map(|index| index.render_policy.as_slice()));
     }
 }
 
@@ -290,7 +250,7 @@ pub struct IntakeToken {
 /// and the rows of a batch (`audit.access_log_intake_take`).
 const INTAKE: &str = "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6, $7, $8, $9, \
      $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, \
-     $28, $29, $30, $31)";
+     $28, $29, $30, $31, $32, $33)";
 
 /// Write `entries` into the intake on `conn`, in their order, in one
 /// statement.
@@ -298,33 +258,38 @@ const INTAKE: &str = "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6
 /// The shared parts they name go in with them. `tokens` holds, by the
 /// position of its entry, the search tokens of each entry whose index row
 /// leaves them to the statement (an empty `search_tokens`); the statement
-/// stores or finds them and their shared set. On a connection outside a
-/// transaction the statement commits on its own.
+/// stores or finds them and their shared set. They are held under
+/// `reserved_by` when it names a reservation (#5762). On a connection
+/// outside a transaction the statement commits on its own.
 ///
 /// # Errors
 /// The store errors when the statement fails.
 pub async fn take_in(
     conn: &mut PgConnection,
-    entries: Vec<IntakeEntry>,
+    entries: &[IntakeEntry],
     tokens: &[Vec<IntakeToken>],
+    reserved_by: Option<uuid::Uuid>,
 ) -> Result<(), AccessLogError> {
     if entries.is_empty() {
         return Ok(());
     }
+    // NOTE: our own design (#5881), the shared parts go in ordered by digest, so
+    // concurrent statements that share some take their row locks in one order.
     let mut shared = BTreeMap::new();
     let mut columns = Columns::default();
     for entry in entries {
         if let Some((digest, content)) = &entry.shared {
-            shared.insert(digest.clone(), content.clone());
+            shared.insert(digest.as_str(), content.as_str());
         }
         columns.push(entry);
     }
-    let (keys, texts): (Vec<String>, Vec<String>) = shared.into_iter().unzip();
+    let (keys, texts): (Vec<&str>, Vec<&str>) = shared.into_iter().unzip();
     let mut token_entries = Vec::new();
     let mut parameters = Vec::new();
     let mut systems = Vec::new();
     let mut codes = Vec::new();
     let mut in_sets = Vec::new();
+    let mut token_digests = Vec::new();
     for (position, entry_tokens) in (1_i32..).zip(tokens) {
         for token in entry_tokens {
             token_entries.push(position);
@@ -332,6 +297,11 @@ pub async fn take_in(
             systems.push(token.system.as_deref());
             codes.push(token.code.as_deref());
             in_sets.push(token.shares);
+            token_digests.push(token_digest(
+                token.parameter,
+                token.system.as_deref(),
+                token.code.as_deref(),
+            ));
         }
     }
     let c = columns;
@@ -367,6 +337,13 @@ pub async fn take_in(
         .bind(systems)
         .bind(codes)
         .bind(in_sets)
+        .bind(reserved_by)
+        .bind(
+            token_digests
+                .iter()
+                .map(<[u8; 16]>::as_slice)
+                .collect::<Vec<_>>(),
+        )
         .execute(&mut *conn)
         .await?;
     Ok(())
@@ -473,25 +450,113 @@ async fn gather(
             jobs.push(job);
         }
         drop(waiting);
-        let mut entries = Vec::with_capacity(count);
-        let mut tokens = Vec::with_capacity(count);
-        let mut answers = Vec::with_capacity(jobs.len());
-        for job in jobs {
-            let mut job_tokens = job.tokens;
-            job_tokens.resize(job.entries.len(), Vec::new());
-            entries.extend(job.entries);
-            tokens.extend(job_tokens);
-            answers.push(job.done);
+        write_jobs(&pool, jobs, count).await;
+    }
+}
+
+/// Writes `jobs`, `count` entries in all, in one statement, and answers each
+/// job by its own outcome.
+///
+/// When the database refuses the gathered statement, which then committed
+/// nothing, each job is written again on its own, so an entry that fails
+/// refuses only its own request. Any other failure leaves the outcome of the
+/// statement unknown, or no statement ran, and every job is refused: none is
+/// written twice and none is answered as written when it may not be.
+async fn write_jobs(pool: &sqlx::PgPool, jobs: Vec<Job>, count: usize) {
+    let mut entries = Vec::with_capacity(count);
+    let mut tokens = Vec::with_capacity(count);
+    let mut spans = Vec::with_capacity(jobs.len());
+    let mut answers = Vec::with_capacity(jobs.len());
+    for job in jobs {
+        let start = entries.len();
+        let mut job_tokens = job.tokens;
+        job_tokens.resize(job.entries.len(), Vec::new());
+        entries.extend(job.entries);
+        tokens.extend(job_tokens);
+        spans.push(start..entries.len());
+        answers.push(job.done);
+    }
+    let written = write_retrying(pool, &entries, &tokens).await;
+    match written {
+        Err(refused) if answers.len() > 1 && refused_by_database(&refused) => {
+            tracing::warn!(
+                requests = answers.len(),
+                error = %refused,
+                "the gathered access-log intake write was refused; writing each request on its own"
+            );
+            for (answer, span) in answers.into_iter().zip(spans) {
+                let own = match (entries.get(span.clone()), tokens.get(span)) {
+                    (Some(own), Some(own_tokens)) => write_retrying(pool, own, own_tokens).await,
+                    _ => Err(AccessLogError::Gathered(None)),
+                };
+                // NOTE: our own design (#5770), a request that stopped waiting needs no answer.
+                let _gone = answer.send(own.map_err(std::sync::Arc::new));
+            }
         }
-        let written = async {
-            let mut conn = acquire(&pool).await?;
-            take_in(&mut conn, entries, &tokens).await
-        }
-        .await
-        .map_err(std::sync::Arc::new);
-        for answer in answers {
-            // NOTE: our own design (#5770), a request that stopped waiting needs no answer.
-            let _gone = answer.send(written.clone());
+        written => {
+            let written = written.map_err(std::sync::Arc::new);
+            for answer in answers {
+                // NOTE: our own design (#5770), a request that stopped waiting needs no answer.
+                let _gone = answer.send(written.clone());
+            }
         }
     }
 }
+
+/// How many times a statement the database refused as a deadlock or a
+/// serialization failure is run in all.
+const ATTEMPTS: u32 = 3;
+
+/// Writes `entries` in one statement on a connection of its own, running it
+/// again while the database refuses it as a deadlock or a serialization
+/// failure (SQLSTATE `40P01`, `40001`): the refused statement committed
+/// nothing, so running it again writes each entry once.
+async fn write_retrying(
+    pool: &sqlx::PgPool,
+    entries: &[IntakeEntry],
+    tokens: &[Vec<IntakeToken>],
+) -> Result<(), AccessLogError> {
+    let mut attempt = 1;
+    loop {
+        let written = async {
+            let mut conn = acquire(pool).await?;
+            take_in(&mut conn, entries, tokens, None).await
+        }
+        .await;
+        match written {
+            Err(refused) if attempt < ATTEMPTS && transient(&refused) => {
+                tracing::warn!(attempt, error = %refused, "the access-log intake write runs again");
+                tokio::time::sleep(std::time::Duration::from_millis(u64::from(attempt) * 5)).await;
+                attempt += 1;
+            }
+            written => return written,
+        }
+    }
+}
+
+/// The SQLSTATE of the error the database answered `error` with, `None` when
+/// the database did not answer one.
+fn sqlstate(error: &AccessLogError) -> Option<String> {
+    match error {
+        AccessLogError::Store(sqlx::Error::Database(database)) => {
+            database.code().map(std::borrow::Cow::into_owned)
+        }
+        _ => None,
+    }
+}
+
+/// Whether the database answered `error`, so the statement it refused rolled
+/// back whole (`PostgreSQL` 18 docs, "Transactions": a statement outside a
+/// transaction block runs in one of its own).
+fn refused_by_database(error: &AccessLogError) -> bool {
+    matches!(error, AccessLogError::Store(sqlx::Error::Database(_)))
+}
+
+/// Whether `error` is a deadlock or a serialization failure, which a run of
+/// the same statement may not meet again.
+fn transient(error: &AccessLogError) -> bool {
+    sqlstate(error).is_some_and(|code| code == "40P01" || code == "40001")
+}
+
+#[cfg(test)]
+mod tests;

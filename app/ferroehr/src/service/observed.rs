@@ -38,4 +38,11 @@ impl FerroEhrService {
     pub fn ehr_access_held(&self) -> (u64, u64) {
         self.ehr_access.held_counts()
     }
+
+    /// How many COMPOSITION versions this replica's version copy holds, and
+    /// their bytes against its bound (#5778).
+    #[must_use]
+    pub fn version_copy_held(&self) -> (u64, u64) {
+        self.version_copy.held()
+    }
 }

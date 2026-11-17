@@ -99,10 +99,11 @@ jobs:
       - name: Non-durable test tuning
         # The same tuning and tools as the test job in ci.yml, so a failure here
         # is a failure of the suite that job runs.
+        env:
+          PG_SERVICE: ${{ job.services.postgres.id }}
         run: |
           sudo apt-get update && sudo apt-get install -y postgresql-client libxml2-utils
-          PGPASSWORD=openehr psql -h localhost -U openehr -d postgres \
-            -c "ALTER SYSTEM SET fsync = off" -c "ALTER SYSTEM SET synchronous_commit = off" -c "ALTER SYSTEM SET full_page_writes = off" -c "SELECT pg_reload_conf()"
+          PGPASSWORD=openehr bash scripts/lib/test-postgres.sh "$PG_SERVICE"
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-nextest

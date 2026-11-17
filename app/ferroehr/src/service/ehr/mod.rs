@@ -54,6 +54,7 @@ pub(crate) mod service;
 mod status;
 pub(in crate::service) mod tags;
 pub(crate) mod validation;
+pub(crate) mod version_copy;
 
 pub mod access_judge;
 pub(in crate::service) mod access_parties;

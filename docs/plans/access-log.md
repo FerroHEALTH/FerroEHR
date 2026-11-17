@@ -146,8 +146,9 @@ offered to that work (§Proposal path).
    to sign each event with its NCP signature; FHIR asks only that servers
    refuse update and delete; DICOM and BALP say nothing, and neither the
    EHDS Regulation nor the GDPR names a signature. The design chains every
-   entry and seals each append in one signed checkpoint whenever the system
-   holds a signing key (#5704).
+   entry and seals the chain in a signed checkpoint at least once a second
+   under load and at rest whenever the system holds a signing key (#5704,
+   #5770).
 7. **The patient identifier.** BALP and FHIR R5 name the patient as a
    `Patient` resource; DICOM names a patient id. openEHR keeps the EHR apart
    from identifying data (BASE §Security Policy, "Anonymity") and identifies
@@ -184,7 +185,7 @@ flowchart LR
     E1["ACCESS_LOG_ENTRY seq n-1"]
     E2["ACCESS_LOG_TOMBSTONE seq n<br/>content removed, link kept"]
     E3["ACCESS_LOG_ENTRY seq n+1"]
-    CP["ACCESS_LOG_CHECKPOINT<br/>signed, one per append"]
+    CP["ACCESS_LOG_CHECKPOINT<br/>signed, one a second and at rest"]
     E1 -- "link.digest" --> E2
     E2 -- "link.digest" --> E3
     E3 -. "sealed by" .-> CP
@@ -483,9 +484,11 @@ governs, it is cited; otherwise "our own design".
    writes every record of a request into a durable, append-only intake in
    the audit store before it answers, and refuses the request with `503`
    when that write fails (#5747); the chainer links the intake into the
-   chain moments later (§Integrity). A write's record is written after its
-   clinical commit, in the audit cluster, which production keeps apart, so
-   the reservation that closes the window between the two commits is #5762.
+   chain moments later (§Integrity). A write's records live in the audit
+   cluster, which production keeps apart from the clinical and party ones,
+   so they cannot join the write's transaction; they are written first, held
+   under a reservation id, and the id joins the write's commit (#5762,
+   §Integrity, the durable reservation).
 4. **Reading the log is an access, and it MUST be recorded.** A read of an
    access log writes an entry with an `ACCESSED_ITEM` whose `object` names
    the log, by every route: ITS-REST, ITI-81, AQL, an export, a reviewer's
@@ -556,9 +559,10 @@ sequenceDiagram
 
 ## Integrity
 
-**Decision: a hash chain over every record and one signed checkpoint per
-append, whenever the system holds a signing key; the checkpoints published
-outside the database is the recommended setup (#5704).**
+**Decision: a hash chain over every record and a signed checkpoint at least
+once a second while entries are chained and one when the chainer comes to
+rest, whenever the system holds a signing key; the checkpoints published
+outside the database is the recommended setup (#5704, #5770).**
 
 No text this design reads requires a signature on each entry of an EHR
 system's log. EHDS Art 9 and Annex II 3.2 ask for a complete log each
@@ -585,20 +589,26 @@ NCP. How the log is protected is therefore our own design.
   middle of the log, since periods differ per category and origin (Annex II
   3.4). A tombstone keeps the uid, the time, and the link with its
   `content_digest`, so the chain still verifies after the content is gone.
-- **One signed checkpoint per append.** Every append ends, in its own
-  transaction, with an `ACCESS_LOG_CHECKPOINT` of the last link it wrote,
-  signed in the form `ATTESTATION._proof_` uses. An entry is covered by a
-  signature from the moment it commits, so no unsigned window opens, and
-  any replica writes the checkpoint of its own append. Someone who can write
-  the database but holds no key cannot change, remove, insert or reorder a
+- **A signed checkpoint a second, and one at rest.** A chainer round ends,
+  in its own transaction, with an `ACCESS_LOG_CHECKPOINT` of the last link
+  it wrote, signed in the form `ATTESTATION._proof_` uses, when the last
+  checkpoint it wrote is a second old; a chainer that comes to rest seals
+  the head (`AccessLogStore::seal_head`), and a write that settles its own
+  entries seals them in its transaction. An entry is covered by a signature
+  within a second of being chained under load, and at once at rest; any
+  replica seals what it chained. The second is the unsigned window, our own
+  design (#5770): no text sets how often a log is sealed, and a checkpoint
+  per round cost one signature and its wait in every round, about 20 a
+  second at 3000 requests a second, for a window of one round. Someone who
+  can write the database but holds no key cannot change, remove, insert or reorder a
   record below a checkpoint without breaking the chain under that
   checkpoint's signature, which a signature per entry would detect no
-  better. One signature per append replaces one per entry: with an RSA key
-  a signature costs 1.0 to 5.5 ms, and a population query writes one entry
-  per EHR it reached. The first insert of the append's transaction locks
-  the head of the chain until it commits; the checkpoint is signed on the
-  blocking pool while the rest of the transaction is written, so the head
-  is held for one signature at most. `ACCESS_LOG_LINK.signature` stays
+  better. One signature a second replaces one per entry: with an RSA key a
+  signature costs 1.0 to 5.5 ms, and a population query writes one entry per
+  EHR it reached. A round's transaction holds the head of the chain until it
+  commits; a checkpoint is signed on the blocking pool while the rest of the
+  transaction is written, so a sealing round holds the head for one
+  signature at most. `ACCESS_LOG_LINK.signature` stays
   optional in the draft, and this system writes none.
 - **Publication outside the database.** Someone who can write the database
   can remove the newest entries together with the checkpoints that seal
@@ -609,10 +619,11 @@ NCP. How the log is protected is therefore our own design.
   (`[audit.access_log] publish_directory`); without one the
   `access_log_checkpoints` health indicator reads `DEGRADED`. Publication
   to FerroAUDIT needs a receiving service there and is not built yet.
-- **A person's proof.** Their entry, the links from it to the checkpoint of
-  its append (`AccessLogStore::links`), and that checkpoint's signature.
+- **A person's proof.** Their entry, the links from it to the first
+  checkpoint at or after it (`AccessLogStore::links`), and that checkpoint's
+  signature.
 - **Against the server process.** Someone who controls the server process
-  holds the key, under a checkpoint per append as under a signature per
+  holds the key, under a checkpoint a second as under a signature per
   entry; the published checkpoints bound what that person can rewrite to
   what came after the newest one published.
 - **The intake and its window.** An entry is written into
@@ -638,6 +649,31 @@ NCP. How the log is protected is therefore our own design.
   does not show it; that is the same exposure an in-memory queue had,
   without the loss on a crash. The `audit_sender` indicator reads
   `DEGRADED` when the oldest intake row waits longer than 10 seconds.
+- **The durable reservation.** A request-scoped write commits through one
+  choke point (`FerroEhrService::commit_recorded`; our own design, #5762).
+  It completes the request's operation record with what the write decided
+  (the EHR, the object, its content), writes it and the act's own records
+  into the intake held under a fresh reservation id (`reserved_by`, which
+  the chainer skips), inserts the id into `audit_reservation` of the
+  write's own domain in the write's transaction, and commits. Once the
+  response is built, the protocol adapter hands the reservation to the
+  chainer in memory, and the chainer's next round releases the held
+  records inside its own transaction, so a write costs two commits, the
+  held records and the write. A process that stops before that round
+  leaves the records held: after a grace of two minutes,
+  past the statement timeout, the reconciler of any replica, one at a time
+  under an advisory lease, releases the records of every reservation a
+  domain holds, exactly as written and once, and discards the records of a
+  reservation no domain holds, whose write never committed. It also removes
+  the reservation rows whose records were released. The domain's
+  reservation holds the id alone, no identity of the caller. The
+  `audit_sender` indicator reads `DEGRADED` while a reservation waits past
+  the grace, and `audit_reservations_held`, `audit_reservation_age_seconds`
+  and `audit_reservations_reconciled_total` count them. A write outside a
+  request (a sweep, a boot fill) commits its records the same way and
+  hands them to the chainer at once; `scripts/checks/request-commits.sh` fails a
+  transaction that commits any other way unless it says, naming #5762, why
+  no request makes it.
 - **The chainer's critical section.** A round takes the head without
   waiting (`FOR UPDATE SKIP LOCKED`), so any replica may chain and one does
   at a time. Under the head it reads the intake's content digests, computes
@@ -1178,7 +1214,7 @@ Art 36(1), due 26 March 2027), a note would contain:
 | Fail-closed recording | EHDS Annex II 3.2 ("every access event"); our own design against BALP 1:52.4.1.5 |
 | Hash chain over a content digest, tombstones in place | our own design, for Annex II 3.4 |
 | RFC 8785 canonical JSON as the digest input | our own design |
-| One signed checkpoint per append, published outside the database; no signature per entry | our own design (#5704); the eHDSI Audit Trail Profile §2.2 per-event signature binds National Contact Points only |
+| A signed checkpoint a second under load and one at rest, published outside the database; no signature per entry | our own design (#5704, #5770); the eHDSI Audit Trail Profile §2.2 per-event signature binds National Contact Points only |
 | Retention stated on each entry | EHDS Annex II 3.4, Art 9(2) |
 | Every read of the log and every change to the log recorded | DICOM PS3.15 A.5.3.2; NEN 7513 (by Kamerstuk 27529 nr. 228); GDPR Art 32(2) |
 | A permission for the log alone | GDPR Art 32(1)(b); our own design for the separation from clinical rights |

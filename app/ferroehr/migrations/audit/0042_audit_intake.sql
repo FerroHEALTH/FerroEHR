@@ -23,6 +23,15 @@
 -- the content: it checks the link against the head, and the verifier keeps
 -- deriving every column again and comparing (0039).
 --
+-- The reservation of a write (#5762): a write's records are written held
+-- under a reservation id (reserved_by) before the write's own transaction,
+-- which inserts the id into its domain's audit_reservation and commits. The
+-- chainer's next round releases them in its own transaction
+-- (audit_intake_release); a process that died first leaves them held, and
+-- the reconciler releases them when the reservation committed, or discards
+-- them when it never did (audit_intake_discard). The chainer takes no held
+-- row.
+--
 -- The window before chaining: an intake row is append-only. The runtime role
 -- may insert and read it and nothing else, the tables refuse every UPDATE,
 -- DELETE and TRUNCATE, and only the two SECURITY DEFINER moves delete a row,
@@ -66,6 +75,7 @@ CREATE TABLE access_log_intake (
     index_ehr_id       text,
     search_tokens      integer[],
     render_policy      bytea,
+    reserved_by        uuid,
     CONSTRAINT pk_access_log_intake PRIMARY KEY (id),
     CONSTRAINT uq_access_log_intake_uid UNIQUE (uid),
     CONSTRAINT ck_access_log_intake_type CHECK (record_type = 'ACCESS_LOG_ENTRY'),
@@ -88,6 +98,8 @@ ALTER TABLE access_log_intake
     ALTER COLUMN shared SET STORAGE MAIN;
 
 CREATE INDEX ix_access_log_intake_shared ON access_log_intake (shared) WHERE shared IS NOT NULL;
+CREATE INDEX ix_access_log_intake_reserved ON access_log_intake (reserved_by)
+    WHERE reserved_by IS NOT NULL;
 
 COMMENT ON TABLE access_log_intake IS
     'The access-log entries written before the response that reports their access and not chained yet: append-only, left only by audit.access_log_chain_move(), which writes each into the chain.';
@@ -97,6 +109,8 @@ COMMENT ON COLUMN access_log_intake.content IS
     'The row part of the entry''s canonical form, as access_log_record.content keeps it.';
 COMMENT ON COLUMN access_log_intake.content_digest IS
     'The SHA-256 of the whole canonical form, computed by the writer.';
+COMMENT ON COLUMN access_log_intake.reserved_by IS
+    'The reservation a write''s records are held under until its commit is confirmed (#5762); the chainer takes no held row. NULL for a record that is not held.';
 COMMENT ON COLUMN access_log_intake.render_policy IS
     'The render policy the entry''s projection is written under, with the other index columns NULL when the writer indexes no projection of the entry.';
 
@@ -113,10 +127,14 @@ ALTER TABLE audit_event_intake
     DROP COLUMN digest_version,
     ADD COLUMN intake_id bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
     ADD COLUMN taken_at timestamptz NOT NULL DEFAULT now(),
+    ADD COLUMN reserved_by uuid,
     ADD CONSTRAINT pk_audit_event_intake PRIMARY KEY (intake_id),
     ADD CONSTRAINT uq_audit_event_intake_id UNIQUE (id),
     ADD CONSTRAINT fk_audit_event_intake_policy FOREIGN KEY (render_policy)
         REFERENCES audit_render_policy (digest);
+
+CREATE INDEX ix_audit_event_intake_reserved ON audit_event_intake (reserved_by)
+    WHERE reserved_by IS NOT NULL;
 
 COMMENT ON TABLE audit_event_intake IS
     'The audit records of no access-log entry written before the response that reports them and not chained yet: append-only, left only by audit.audit_event_chain_move(), which writes each into the system chain.';
@@ -132,6 +150,17 @@ BEGIN
        AND coalesce(current_setting('ferroehr.audit_chaining', true), 'off') = 'on'
     THEN
         RETURN OLD;
+    END IF;
+    IF TG_OP = 'DELETE' AND OLD.reserved_by IS NOT NULL
+       AND coalesce(current_setting('ferroehr.audit_discarding', true), 'off') = 'on'
+    THEN
+        RETURN OLD;
+    END IF;
+    IF TG_OP = 'UPDATE' AND OLD.reserved_by IS NOT NULL AND NEW.reserved_by IS NULL
+       AND coalesce(current_setting('ferroehr.audit_releasing', true), 'off') = 'on'
+       AND to_jsonb(NEW) - 'reserved_by' = to_jsonb(OLD) - 'reserved_by'
+    THEN
+        RETURN NEW;
     END IF;
     RAISE EXCEPTION 'audit.% is append-only: a record leaves it only by being chained', TG_TABLE_NAME
         USING ERRCODE = 'restrict_violation';
@@ -220,7 +249,7 @@ BEGIN
            decode(l.previous, 'hex'), i.content_digest, decode(l.digest, 'hex'), i.ehr_id, i.party_id, i.retain_until,
            i.action_terminology, i.action_code, i.result_terminology, i.result_code, i.shared
       FROM unnest(p_ids, p_seqs, p_previous, p_digests) AS l(id, seq, previous, digest)
-      JOIN audit.access_log_intake i ON i.id = l.id
+      JOIN audit.access_log_intake i ON i.id = l.id AND i.reserved_by IS NULL
      ORDER BY l.seq;
     GET DIAGNOSTICS moved = ROW_COUNT;
     IF moved IS DISTINCT FROM cardinality(p_ids)::bigint THEN
@@ -277,6 +306,7 @@ BEGIN
     WITH taken AS (
         DELETE FROM audit.audit_event_intake i
          WHERE i.intake_id IN (SELECT t.intake_id FROM audit.audit_event_intake t
+                                WHERE t.reserved_by IS NULL
                                 ORDER BY t.intake_id LIMIT p_limit FOR UPDATE SKIP LOCKED)
         RETURNING i.*
     ),
@@ -324,6 +354,52 @@ $$;
 
 COMMENT ON FUNCTION audit.audit_event_chain_move(integer, boolean, boolean) IS
     'The one path a record of no access-log entry enters the system chain by: up to p_limit intake rows, oldest first, with their outbox rows; the intake rows leave in the same statement.';
+
+-- Release the records held under the reservations p_ids: their writes
+-- committed, so the chainer takes them (#5762).
+CREATE FUNCTION audit.audit_intake_release(p_ids uuid[]) RETURNS bigint
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path = audit, pg_catalog
+    AS $$
+DECLARE
+    entries bigint;
+    others  bigint;
+BEGIN
+    PERFORM set_config('ferroehr.audit_releasing', 'on', true);
+    UPDATE audit.access_log_intake SET reserved_by = NULL WHERE reserved_by = ANY (p_ids);
+    GET DIAGNOSTICS entries = ROW_COUNT;
+    UPDATE audit.audit_event_intake SET reserved_by = NULL WHERE reserved_by = ANY (p_ids);
+    GET DIAGNOSTICS others = ROW_COUNT;
+    PERFORM set_config('ferroehr.audit_releasing', 'off', true);
+    RETURN entries + others;
+END;
+$$;
+
+COMMENT ON FUNCTION audit.audit_intake_release(uuid[]) IS
+    'Release the records held under the reservations named: their writes committed, so the chainer takes them.';
+
+-- Discard the records held under the reservations p_ids: no write committed
+-- under them, so they record no access (#5762).
+CREATE FUNCTION audit.audit_intake_discard(p_ids uuid[]) RETURNS bigint
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path = audit, pg_catalog
+    AS $$
+DECLARE
+    entries bigint;
+    others  bigint;
+BEGIN
+    PERFORM set_config('ferroehr.audit_discarding', 'on', true);
+    DELETE FROM audit.access_log_intake WHERE reserved_by = ANY (p_ids);
+    GET DIAGNOSTICS entries = ROW_COUNT;
+    DELETE FROM audit.audit_event_intake WHERE reserved_by = ANY (p_ids);
+    GET DIAGNOSTICS others = ROW_COUNT;
+    PERFORM set_config('ferroehr.audit_discarding', 'off', true);
+    RETURN entries + others;
+END;
+$$;
+
+COMMENT ON FUNCTION audit.audit_intake_discard(uuid[]) IS
+    'Discard the records held under the reservations named, whose writes never committed.';
 
 -- The insert trigger checks the link the chainer computed against the head,
 -- and derives nothing: the writer supplied every column, and the verifier
@@ -407,7 +483,10 @@ $$;
 -- shared sets they name are stored or found, the shared parts inserted and the
 -- intake rows written, so a request's intake write is one round trip that
 -- commits on its own. A token or set another writer stores at the same moment
--- is read again, as the server's own statements did. Our own design.
+-- is read again, as the server's own statements did. The tokens, the sets and
+-- the shared parts, the rows concurrent statements share, are each inserted in
+-- the order of their key, so two statements wait for each other's rows in one
+-- order and never deadlock (#5881). Our own design.
 CREATE FUNCTION audit.access_log_intake_take(
     p_record_types text[], p_uids text[], p_times text[], p_contents text[],
     p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[],
@@ -418,7 +497,7 @@ CREATE FUNCTION audit.access_log_intake_take(
     p_index_ehr_ids text[], p_search_tokens text[], p_policies bytea[],
     p_shared_digests text[], p_shared_contents text[],
     p_token_entries integer[], p_token_parameters text[], p_token_systems text[],
-    p_token_codes text[], p_token_shares boolean[])
+    p_token_codes text[], p_token_shares boolean[], p_reserved_by uuid)
     RETURNS void
     LANGUAGE plpgsql
     SET search_path = pg_catalog
@@ -452,6 +531,7 @@ BEGIN
               FROM unnest(p_token_parameters, p_token_systems, p_token_codes, v_digests, v_ids)
                    AS t(p, s, c, digest, id)
              WHERE t.id IS NULL
+             ORDER BY t.digest
             ON CONFLICT (digest) DO NOTHING;
         END LOOP;
         v_set_keys := ARRAY(
@@ -479,20 +559,24 @@ BEGIN
                 RAISE EXCEPTION 'a shared search set of the intake could not be stored or read';
             END IF;
             INSERT INTO audit.audit_search_set (tokens, digest)
-            SELECT DISTINCT k.tokens::integer[], audit.search_set_digest(k.tokens::integer[])
-              FROM unnest(v_set_keys, v_set_ids) AS k(tokens, id)
-             WHERE k.tokens IS NOT NULL AND k.id IS NULL
+            SELECT s.tokens, audit.search_set_digest(s.tokens)
+              FROM (SELECT DISTINCT k.tokens::integer[] AS tokens
+                      FROM unnest(v_set_keys, v_set_ids) AS k(tokens, id)
+                     WHERE k.tokens IS NOT NULL AND k.id IS NULL) AS s
+             ORDER BY s.tokens
             ON CONFLICT (tokens) DO NOTHING;
         END LOOP;
     END IF;
     INSERT INTO audit.access_log_shared (digest, content)
     SELECT decode(t.digest, 'hex'), t.content
       FROM unnest(p_shared_digests, p_shared_contents) AS t(digest, content)
+     ORDER BY decode(t.digest, 'hex')
     ON CONFLICT (digest) DO NOTHING;
     INSERT INTO audit.access_log_intake (record_type, uid, time_recorded, content, shared,
         content_digest, ehr_id, party_id, retain_until, action_terminology, action_code,
         result_terminology, result_code, recorded_at, action, outcome, principal, patient_id,
-        resource_id, request_id, client_ip, index_ehr_id, search_tokens, render_policy)
+        resource_id, request_id, client_ip, index_ehr_id, search_tokens, render_policy,
+        reserved_by)
     SELECT u.c1, u.c2::uuid, u.c3::timestamptz, u.c4, decode(u.c5, 'hex'), decode(u.c6, 'hex'),
            u.c7, u.c8, u.c9::date, u.c10, u.c11, u.c12, u.c13, u.c14, u.c15, u.c16, u.c17, u.c18,
            u.c19, u.c20, u.c21, u.c22,
@@ -502,7 +586,8 @@ BEGIN
                WHEN v_set_ids[u.n] IS NULL THEN coalesce(v_own[u.n], '{}')::integer[]
                ELSE ARRAY[-v_set_ids[u.n]] || coalesce(v_own[u.n], '{}')::integer[]
            END,
-           u.c24
+           u.c24,
+           p_reserved_by
       FROM unnest(p_record_types, p_uids, p_times, p_contents, p_shared, p_digests, p_ehr_ids,
                   p_party_ids, p_retain_until, p_action_terminologies, p_action_codes,
                   p_result_terminologies, p_result_codes, p_recorded_at, p_actions, p_outcomes,
@@ -517,18 +602,20 @@ $$;
 COMMENT ON FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
     text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
     text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
-    text[], text[], text[], boolean[]) IS
+    text[], text[], text[], boolean[], uuid) IS
     'One request''s access-log entries into the intake in one statement: their search tokens and shared sets stored or found, their shared parts, their rows (#5770).';
 
 REVOKE ALL ON FUNCTION audit.audit_intake_reject_change() FROM PUBLIC;
 REVOKE ALL ON FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
     text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
     text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
-    text[], text[], text[], boolean[]) FROM PUBLIC;
+    text[], text[], text[], boolean[], uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION audit.access_log_chain_take() FROM PUBLIC;
 REVOKE ALL ON FUNCTION audit.access_log_chain_move(bigint[], bigint[], text[], text[], boolean, boolean)
     FROM PUBLIC;
 REVOKE ALL ON FUNCTION audit.audit_event_chain_move(integer, boolean, boolean) FROM PUBLIC;
+REVOKE ALL ON FUNCTION audit.audit_intake_release(uuid[]) FROM PUBLIC;
+REVOKE ALL ON FUNCTION audit.audit_intake_discard(uuid[]) FROM PUBLIC;
 
 DO $grants$
 BEGIN
@@ -546,10 +633,12 @@ BEGIN
             TO ferroehr_clinical;
         GRANT EXECUTE ON FUNCTION audit.audit_event_chain_move(integer, boolean, boolean)
             TO ferroehr_clinical;
+        GRANT EXECUTE ON FUNCTION audit.audit_intake_release(uuid[]), audit.audit_intake_discard(uuid[])
+            TO ferroehr_clinical;
         GRANT EXECUTE ON FUNCTION audit.access_log_intake_take(text[], text[], text[], text[], text[], text[],
             text[], text[], text[], text[], text[], text[], text[], timestamptz[], text[], smallint[],
             text[], text[], text[], text[], text[], text[], text[], bytea[], text[], text[], integer[],
-            text[], text[], text[], boolean[])
+            text[], text[], text[], boolean[], uuid)
             TO ferroehr_clinical;
     ELSE
         RAISE NOTICE 'skipping the audit intake grants (roles absent: see the ext role block NOTICE)';

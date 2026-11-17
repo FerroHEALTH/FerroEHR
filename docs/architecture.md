@@ -421,7 +421,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   policy) and every column the log derives from its content, into the
   intake in one short transaction of the audit pool: `access_log_intake`
   for the entries, `audit_event_intake` for the other records
-  (`audit/0042_audit_intake.sql`). A write that fails refuses the request
+  (`audit/0042_audit_intake.sql`). The intake statement finds each entry's
+  search tokens by the digests the server computes
+  (`system_log::token_digest`, the bytes of `audit.search_token_digest`)
+  and groups them by entry in one pass, so its cost grows with the batch's
+  tokens and not with its entries times its tokens
+  (`audit/0044_intake_grouped_tokens.sql`, #5889). A write that fails refuses the request
   with `503`, so back-pressure replaces loss; there is no queue in memory and
   no fail mode. The intake is append-only: the runtime role may insert and
   read, the tables refuse every update, delete and truncate, and only the
@@ -438,8 +443,31 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   outbox rows of the FHIR Feed and syslog, and deletes the intake rows; the
   checkpoint and the commit end the round. The insert trigger derives
   nothing: it checks each link against the head, and the verifier derives
-  every column again and compares (0039). `audit.audit_event_chain_move()`
-  moves the system intake into the system chain the same way. Our own
+  every column again and compares (0039). The statements PostgreSQL runs
+  inside these writes are held to a budget (#5885): the digest functions are
+  inlined into the statements that call them, the records and their index
+  rows carry no foreign keys, since the chain move is their one writer and the
+  verifier derives each record from its shared part again, and the link check
+  moves the head cursor by an assignment
+  (`audit/0043_access_log_nested_statements.sql`). The intake rows carry no
+  foreign keys either (#5887): the intake statement refuses a render policy or
+  shared part the store does not hold in the statement that writes the rows,
+  and locks each distinct stored part its batch names once, so a tombstone
+  that would remove one waits for the write and then sees its rows
+  (`audit/0045_intake_without_foreign_keys.sql`). The ferroehr-rest test
+  `statement_budget` holds an AQL request to its round trips and nested
+  statements, read from `pg_stat_statements`. `audit.audit_event_chain_move()`
+  moves the system intake into the system chain the same way. A
+  request-scoped write commits through one choke point,
+  `FerroEhrService::commit_recorded` (`system_log::reservation`, #5762): its
+  records go into the intake held under a reservation id (`reserved_by`,
+  which the moves skip), the id into the write's own domain
+  (`clinical/0050`, `party/0052` `audit_reservation`) in the write's
+  transaction, and the chainer's next round releases them in its own
+  transaction once the response is built;
+  `system_log::sender::reconciler` releases or discards what a stopped
+  replica left and removes spent reservations, and
+  `scripts/checks/request-commits.sh` guards the choke point. Our own
   design; one chain carries about 15 000 entries per second on the
   reference host (#5745), and partitioned chains (one per EHR hash, a
   draft-model change) are the recorded next step past that. The entry keeps in its `other_details` the facts its
@@ -712,10 +740,13 @@ which is what makes an optional stage safe to disable:
    `sys_version` of the `EHR_ACCESS` version it was projected from) and the
    EHR's subject reference (namespace and id, `clinical/0046`), whose
    `PERSON`'s care relationships the decision reads. Every
-   read that leaves the store selects `access_revision(ehr_id)` beside its own
-   columns (`head_facts!`, `version_select!`, the EHR summary read; migration
-   `clinical/0044`, with a `party/0040` twin answering `NULL` so a statement
-   both domains run reads it), and `condition::admits` refuses a verdict judged
+   read that leaves the store selects the revision beside its own columns, in
+   a scalar subquery over the view `access_revision_of` that the planner merges
+   into the statement, so the read runs no statement of its own
+   (`access_revision!` in `head_facts!`, `version_select!`, the EHR summary
+   read and the settings reads; migration `clinical/0051`, with a `party/0053`
+   twin holding no rows so a statement both domains run reads `NULL`; #5888),
+   and `condition::admits` refuses a verdict judged
    on another revision and marks the copy stale (`StaleCopies`), which drops
    it before its next read. A commit reads the revision with its restriction
    check and judges the EHR again from its own transaction; a replica's own
@@ -795,7 +826,15 @@ which is what makes an optional stage safe to disable:
    its object that the statement reading the version returns, after the read
    and before anything of the version is served, so the read is one statement
    and a refused read answers and is recorded as before (#5773, our own
-   design). A write is
+   design). A read by version id takes the version's body from the
+   replica's version copy (`service::ehr::version_copy`, 64 MiB) once one
+   indexed read (`version_repo::judged::read_marks`) finds the object's head
+   where it was read and the version's content digest unchanged; the
+   restriction and access delay marks and the settings revision that read
+   finds are the ones judged, so no decision rests on a notification
+   (owner decision on #5891). The read is judged and recorded all the same,
+   and an `If-None-Match` naming the version answers `304` (RFC 9110
+   §13.1.2) (#5778, our own design). A write is
    judged on the template, root archetype, origins and commit instant of the
    content it is about to store, inside the commit transaction and before
    anything is stored (#5626, `versioning::restriction::WriteGate`), by
@@ -1461,8 +1500,9 @@ alone: a patient's `under_care_of` relationships grow with the record, so
 `grants::care::CareCopy` holds them in two bounded caches (#5615), a
 subject's relationships (`LiveGrants::under_care_of`, at most
 `care::SUBJECTS` subjects) and a care team's patients
-(`LiveGrants::cared_for_by`, teams holding at most `care::CENSUS` patients
-together, read by `ix_binding_caller_fact_care_team` of migration
+(`LiveGrants::cared_for_by`, teams whose censuses take at most
+`care::CENSUS_BYTES` together, each weighed by its patients and the record
+subjects they declare, #5760, read by `ix_binding_caller_fact_care_team` of migration
 `party/0041`). Each is read on a miss, one indexed statement, and dropped
 when the facts read of a notification stamps a party it holds or a team the
 party is now under the care of; a grant reload and a listener that connects
@@ -1550,7 +1590,10 @@ commit. A verdict that care decides (the same EHR judged with and without
 care differs), and a query whose resolved care binds any EHR, first compare
 the replica's grant and facts revisions with `binding_grant_revision`: one
 indexed read of one row on the party pool, once per request
-(`RequestAccess::care_in_force`). When the copy is older, the request reads
+(`RequestAccess::care_in_force`). A read of a COMPOSITION runs it alongside
+the version read, and a query alongside its care read
+(`RequestAccess::care_ahead`), so it adds a transaction and no latency; the
+owner accepted that cost on #5891. When the copy is older, the request reads
 it again (the care copy drops what changed before the revision moves), keeps
 only the care teams the caller is still a member of in the copy read, and
 judges care again; a copy that stays older for 100 ms refuses with `503`

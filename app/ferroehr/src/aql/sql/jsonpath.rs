@@ -15,7 +15,7 @@ use openehr_query::lexer::CompOp;
 use sea_query::Expr;
 
 use crate::aql::error::{AqlError, SqlError};
-use crate::aql::ir::StdPredicate;
+use crate::aql::ir::{Coercion, StdPredicate};
 
 use super::Builder;
 use super::expr::cast;
@@ -40,7 +40,7 @@ impl Builder<'_> {
     ) -> Result<Vec<String>, AqlError> {
         let mut conds = Vec::with_capacity(preds.len());
         for sp in preds {
-            let value = jsonpath_scalar(self.bind_value(&sp.value)?)?;
+            let value = jsonpath_scalar(jsonpath_operand(sp, self.bind_value(&sp.value)?)?)?;
             let v = jsonpath_var(value, vars);
             let mut lhs = String::from("@");
             for part in &sp.path {
@@ -50,6 +50,68 @@ impl Builder<'_> {
         }
         Ok(conds)
     }
+}
+
+/// The leaf types a jsonpath filter compares as the same comparison in WHERE
+/// does: the primitives, whose JSON form is their value.
+const PRIMITIVES: [&str; 6] = [
+    "String",
+    "Integer",
+    "Integer64",
+    "Real",
+    "Double",
+    "Boolean",
+];
+
+/// The bound value as the JSON scalar a jsonpath filter compares with the
+/// predicate's leaf to the same answer as the comparison in WHERE (QUERY
+/// master03 §Standard predicate, §Comparison operators): a number with a
+/// numeric leaf, the text of any scalar with a String leaf, a Boolean with a
+/// Boolean leaf.
+///
+/// # Errors
+/// [`SqlError::UncoercibleComparison`] for a value the leaf's type does not
+/// compare with, and [`SqlError::Unsupported`] for a date/time, a whole data
+/// value or a mixed-type leaf, which a jsonpath filter would compare by its
+/// serialized JSON.
+fn jsonpath_operand(
+    sp: &StdPredicate,
+    value: sea_query::Value,
+) -> Result<sea_query::Value, AqlError> {
+    use sea_query::Value as V;
+    let primitive = sp
+        .types
+        .names()
+        .iter()
+        .all(|t| PRIMITIVES.contains(&t.as_str()));
+    if !primitive {
+        return Err(unsupported_leaf(sp));
+    }
+    let refuse = |value: &'static str, compared: &'static str| -> Result<V, AqlError> {
+        Err(SqlError::UncoercibleComparison { value, compared }.into())
+    };
+    match (sp.coercion, value) {
+        (Coercion::Text, V::Bool(Some(b))) => Ok(V::from(b.to_string())),
+        (Coercion::Text, V::BigInt(Some(i))) => Ok(V::from(i.to_string())),
+        (Coercion::Text, V::Int(Some(i))) => Ok(V::from(i.to_string())),
+        (Coercion::Text, V::Double(Some(r))) => Ok(V::from(r.to_string())),
+        (Coercion::Text, v)
+        | (Coercion::Magnitude, v @ (V::BigInt(_) | V::Int(_) | V::Double(_)))
+        | (Coercion::Boolean, v @ V::Bool(_)) => Ok(v),
+        (Coercion::Magnitude, _) => refuse("not a number", "a number"),
+        (Coercion::Boolean, _) => refuse("not a Boolean", "a Boolean"),
+        (Coercion::Temporal | Coercion::Raw, _) => Err(unsupported_leaf(sp)),
+    }
+}
+
+/// The refusal of a predicate whose leaf a jsonpath filter cannot compare as
+/// WHERE does.
+fn unsupported_leaf(sp: &StdPredicate) -> AqlError {
+    SqlError::Unsupported(format!(
+        "a comparison of `{}` in a predicate on a path step below a node (move it to WHERE)",
+        sp.path.join("/")
+    ))
+    .into()
 }
 
 /// Adds `value` to `vars` under the next free name (`p0`, `p1`, …) and

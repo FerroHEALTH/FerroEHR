@@ -349,6 +349,7 @@ where
     H: FnOnce(AppState, RequestParts) -> F + Send,
     F: Future<Output = Result<Response, RestError>> + Send,
 {
+    crate::system_log::written::learn_op(op);
     // NOTE: our own design (#5602), an operation without a row has no audit class, so it never
     // runs; the audit middleware refuses its response.
     if operation::operation(op).is_none() {

@@ -60,8 +60,8 @@
 id = "https://ferroehr.eu/vex/rust-dependency-advisories"
 author = "Cadasto B.V."
 role = "vendor"
-timestamp = "2026-11-05T00:00:00Z"
-version = 12
+timestamp = "2026-11-17T00:00:00Z"
+version = 13
 
 # What the statements are about: the released server binary, the container
 # image built from it, and the viewer image. The server artifacts carry the
@@ -222,6 +222,69 @@ harness on `testcontainers` 0.27. Re-evaluate when a `testcontainers` \
 release, with a `testcontainers-modules` release on it, drops the \
 dependency, or if `testkit` ever becomes a normal dependency of a shipped \
 crate.\
+"""
+
+[[accepted]]
+id = "RUSTSEC-2026-0543"
+crate = "chrono"
+carriers = ["object_store"]
+workspace_roots = [
+  "config-reference",
+  "ferroehr",
+  "ferroehr-viewer",
+  "ferroehr-ext",
+  "ferroehr-rest",
+  "ferroehr-server",
+  "openehr-adl",
+  "openehr-its",
+  "openehr-rm",
+  "openehr-sdt",
+  "scaleseed",
+  "testkit",
+]
+status = "not_affected"
+justification = "vulnerable_code_not_present"
+impact = """
+The advisory is informational: it marks `chrono` unmaintained, names no \
+vulnerability, and no version is patched. The crate ships in the server \
+binary and the `ferroehr` image through `ferroehr-server`'s default \
+`multimedia` feature, whose S3 blob backend is `object_store`; 0.14.2, the \
+newest release, requires it, and so does its main branch. No FerroEHR code \
+names the crate, and `sqlx` no longer enables its `chrono` feature. The \
+owner accepted this on 2026-11-17 until the OpenDAL rewrite of blob storage \
+(#5934), which removes `object_store`. Re-evaluate at that rewrite, or if an \
+advisory names a vulnerability in the crate.\
+"""
+
+[[accepted]]
+id = "RUSTSEC-2026-0542"
+crate = "humantime"
+carriers = ["object_store"]
+workspace_roots = [
+  "config-reference",
+  "ferroehr",
+  "ferroehr-viewer",
+  "ferroehr-ext",
+  "ferroehr-rest",
+  "ferroehr-server",
+  "openehr-adl",
+  "openehr-its",
+  "openehr-rm",
+  "openehr-sdt",
+  "scaleseed",
+  "testkit",
+]
+status = "not_affected"
+justification = "vulnerable_code_not_present"
+impact = """
+The advisory is informational: it marks `humantime` unmaintained, names no \
+vulnerability, and no version is patched. The crate ships in the server \
+binary and the `ferroehr` image through `ferroehr-server`'s default \
+`multimedia` feature, whose S3 blob backend is `object_store`; 0.14.2, the \
+newest release, requires it, and so does its main branch. No FerroEHR code \
+names the crate. The owner accepted this on 2026-11-17 until the OpenDAL \
+rewrite of blob storage (#5934), which removes `object_store`. Re-evaluate at \
+that rewrite, or if an advisory names a vulnerability in the crate.\
 """
 
 # ── Reported by lock-file scanners only ─────────────────────────────────────

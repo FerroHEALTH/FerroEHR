@@ -428,6 +428,7 @@ pub async fn replace_category_map(
     let mut conn = acquire(pool).await?;
     let mut tx = conn.begin().await?;
     replace_category_map_on(&mut tx, rows).await?;
+    // NOTE: our own design (#5762), the boot-time mirror of the category register.
     tx.commit().await?;
     Ok(())
 }

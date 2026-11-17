@@ -271,6 +271,7 @@ impl FerroEhrService {
             project_stored(&mut tx, access).await?;
         }
         store::mark_filled(&mut tx).await?;
+        // NOTE: our own design (#5762), the projection fill, which runs at boot and from the command line.
         tx.commit().await?;
         self.ehr_access.forget_every();
         tracing::info!(ehrs = count, "the EHR_ACCESS projection is filled");

@@ -244,7 +244,7 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
     if cared == 0 {
         bail!("the first team holds none of the seeded patients");
     }
-    let (subjects_held, teams_held, census_held) = grants.care_held();
+    let care = grants.care_held();
     let row = Row {
         patients: target.patients,
         teams: target.teams,
@@ -253,9 +253,11 @@ pub(crate) async fn measure(party: PgPool, target: Target) -> anyhow::Result<()>
         copy_bytes: copy.saturating_sub(before),
         reload_ms,
         care_bytes: held.saturating_sub(copy),
-        subjects_held,
-        teams_held,
-        census_held,
+        subjects_held: care.subjects,
+        teams_held: care.teams,
+        census_held: care.patients,
+        census_declared: care.declared,
+        census_bytes: care.bytes,
         care_miss_ns,
         care_hit_ns,
         census_miss_ns,
@@ -279,6 +281,8 @@ struct Row {
     subjects_held: u64,
     teams_held: u64,
     census_held: u64,
+    census_declared: u64,
+    census_bytes: u64,
     care_miss_ns: u64,
     care_hit_ns: u64,
     census_miss_ns: u64,

@@ -37,6 +37,20 @@ caller facts), `party_binding` (the lookups of the binding side table and the
 bound `PERSON`s' names), `policy_registers` (the operational-policy registers)
 and `access_policy`.
 
+A read of a COMPOSITION by its version id takes the version's body from the
+instance's copy of the versions it read, up to 64 MiB. Before it serves one,
+the instance reads the object's current state in one indexed statement: its
+head, its restriction and access delay marks, its EHR's settings revision and
+the version's content digest. A new version, an erasure that rewrote or
+removed the version, or a changed digest sends the read to the store, and the
+marks and revision of this moment are the ones judged. A restriction or an
+erasure therefore takes effect at its commit on every instance. The read is
+judged and recorded in the access log as any read is. An `If-None-Match` that
+names the version answers `304 Not Modified` with no body, and it is recorded
+as the read it is. In `access_copy_lookups_total` and `access_copy_drops_total`
+the copy is `object_version`, and a version the bound evicted is dropped with
+the scope `object_version_evicted`.
+
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
 | `policy_listener_up` | gauge | `listener` | `1` while the copy's `LISTEN` connection is up, `0` while it is lost. |
@@ -72,15 +86,19 @@ settings classes a query is judged over
 
 The care relationships of the EHRs' subjects sit beside the grants, in two
 caches with fixed defaults: the care relationships of at most 4096 subjects,
-and the patients of care teams holding at most 262144 patients together. A
-team with more patients than that is read on each use and never held. A miss
+and the patients of care teams whose censuses take at most 64 MiB together.
+A census is weighed by its patients and the record subjects they declare,
+about 50 bytes for a patient and 250 for a patient that declares one subject,
+so the bound holds about 270 000 such patients. A team whose census alone is
+larger is read on each use and never held. A miss
 reads one indexed statement on the party pool, and the `grants` listener's
 notification drops what it changed. A care relationship that cannot be read
 answers `503`, so no decision is made without it.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
-| `access_copy_entries` | gauge | `copy` | EHRs the per-EHR copy holds, and classes the class copy holds. |
+| `access_copy_entries` | gauge | `copy` | Entries each copy holds: `ehr` (EHRs of the per-EHR copy), `classes` (the class copy), `care_subjects` (subjects whose care relationships are held), `care_teams` (care teams held), `care_patients` and `care_declared` (the patients of those teams and the record subjects they declare), `caller_facts` (the parties the caller facts copy holds), `object_version` (COMPOSITION versions the version copy holds). |
+| `access_copy_size_bytes` | gauge | `copy` | Bytes a bounded copy takes as its bound weighs it: the held care teams (`care_teams`) and the held COMPOSITION versions (`object_version`), each against its 64 MiB bound. |
 | `access_copy_lookups_total` | counter | `copy`, `result` | Lookups while the listener is up: `hit` (served from the copy) or `miss` (this request read the database). A request that waited on another request's read counts as a hit. |
 | `access_copy_refills_total` | counter | `copy`, `outcome` | Reads of the settings projection that fill the copy: `ok`, or `failed` (the request answered `503`). |
 | `access_copy_drops_total` | counter | `scope` | Drops: `ehr` (one EHR's settings changed), `classes` (a new class), `every` (a listener connected or was lost, or a refill notification). |
@@ -121,6 +139,9 @@ controller reviews.
 | `access_log_append_duration_seconds` | histogram | `outcome` | Time of one request's intake write, one transaction: the time a request waits for its records. |
 | `access_log_chain_hold_duration_seconds` | histogram | `outcome` | How long one chainer round held the head of the access log. Its rate of sum is the lock occupancy: the fraction of time the head is held. |
 | `audit_chained_total` | counter | `chain` | Records the chainer linked, `access_log` or `system`. Beside `access_log_entries_total` it shows whether the chainer keeps up. |
+| `audit_reservations_held` | gauge | none | Reservations whose records a write held and nobody released for two minutes: a replica stopped between a write's commit and the chainer round that releases it. The reconciler resolves them within seconds; a value that stays above 0 means no reconciler runs. |
+| `audit_reservation_age_seconds` | gauge | none | Age of the oldest such reservation at the reconciler's last look. |
+| `audit_reservations_reconciled_total` | counter | `outcome` | Reservations the reconciler resolved: `released` (the write committed, its records go to the chain), `discarded` (it never did) or `removed` (a spent reservation row). |
 | `access_log_sign_duration_seconds` | histogram | `outcome` | Time from the start of a chainer round's checkpoint signature to its end, measured when the round stores the checkpoint; it runs beside the insert of the records while the head is held. Present only with an OpenPGP key. |
 | `audit_seal_duration_seconds` | histogram | `chain`, `outcome` | Each scheduled seal run of the system chain (`chain` is `system`); `outcome` is `sealed`, `empty` or `failed`. The access log needs no schedule: every append seals itself. |
 | `audit_seal_last_success_seconds` | gauge | `chain` | Unix time of the newest seal run of the system chain that did not fail. |

@@ -8,7 +8,7 @@ metadata:
 <!-- SPDX-FileCopyrightText: Cadasto B.V. -->
 <!-- SPDX-License-Identifier: BUSL-1.1 -->
 
-The FerroHEALTH family is five products, each its own server, image and
+The FerroHEALTH family is six products, each its own server, image and
 repository, and each reaches the others only over a published protocol.
 No product is a compile-time dependency of another.
 
@@ -19,6 +19,7 @@ No product is a compile-time dependency of another.
 | FerroFED | the federation gateway (Federation Tier with AQL, EHDS cross-border, MyHealth@EU) | it calls each CDR over ITS-REST; clients call its ITS-REST and FHIR faces |
 | FerroPIX | the master patient index (IHE PIX, PIXm, PDQ, PDQm, PMIR) | IHE PIXm, PDQm and PMIR, and the HL7 v2 identity feed and queries (ITI-8, ITI-9, ITI-21) over MLLP |
 | FerroTERM | the FHIR terminology server | FHIR terminology operations |
+| FerroSMART | the SMART App Launch 2.x authorization server (owner 2026-11-16; a product again, owner 2026-11-17) | SMART App Launch 2.x, OAuth 2.x and OpenID Connect; every product checks its tokens through `ferrohealth-smart` |
 
 The rules that follow from it:
 
@@ -28,12 +29,10 @@ The rules that follow from it:
   needs another's function, it calls that server over its protocol, as a
   client.
 - **Shared crates carry the cross-cutting work**, never a product's domain:
-  - FerroAUTH (renamed from FerroSMART on 2026-10-25): `ferrohealth-smart` (authentication, OAuth 2.0 and SMART,
-    the authenticated subject with its scopes and roles). FerroEHR decides
-    access to EHR data itself, with its fixed evaluator over the openEHR
-    access content (`EHR_ACCESS` settings, the demographic capabilities and
-    the controller's `ACCESS_POLICY`), so it depends on no policy-decision
-    crate, embeds no policy engine and calls no remote decision point;
+  - FerroSMART's crates, beside its server: `ferrohealth-smart`
+    (authentication, OAuth 2.0 and SMART, the authenticated subject with its
+    scopes and roles), `ferrohealth-authz` (the policy decision: ABAC, Cedar,
+    a remote PDP) and `ferrohealth-session` (the console sign-in);
   - FerroAUDIT: `ihe-atna` (the whole audit trail: sending, forwarding and
     retrieving) and `ehds-logging` (the EHDS access record);
   - FerroUI: `ferrohealth-ui` (every console);
@@ -53,7 +52,7 @@ The rules that follow from it:
   console carries Leptos or WebAssembly. It supersedes the reactive mode of
   2026-10-25 (FerroUI #410).
 
-FerroSYS is shared crates like FerroAUDIT and FerroAUTH, never a control plane
+FerroSYS is shared crates like FerroAUDIT, never a control plane
 or a central service. Out of scope until the owner says otherwise: FerroFORMS
 (paused) and Veredictum (being rewritten, so its verdicts are not authority).
 The FerroHEALTH umbrella repository is active again (owner, 2026-10-26): its
