@@ -48,6 +48,14 @@ pub const LISTENING: [Domain; 2] = [Domain::Clinical, Domain::Party];
 /// in a server's pool.
 pub const POOL_KEPT_FLOOR: u32 = 2;
 
+/// The named statements one connection keeps prepared.
+///
+/// The crate's own statement texts, which sqlx's default of 100 holds, plus
+/// one AQL statement shape for each plan the default `[record.query]
+/// plan_cache_capacity` keeps (`aql::sql::shape`). Past it sqlx closes the
+/// least recently used. No openEHR spec governs this: our own design (#5884).
+pub const STATEMENT_CACHE: usize = 100 + 256;
+
 /// The cores this process may run on.
 fn cores() -> u32 {
     // NOTE: our own design (#5774); a host that cannot tell its cores is sized as one core.
