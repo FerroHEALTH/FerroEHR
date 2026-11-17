@@ -167,6 +167,53 @@ async fn seed(entries: u32) -> Seeded {
     }
 }
 
+/// Vacuum and analyse every relation of [`RELATIONS`], as autovacuum leaves
+/// them between its runs.
+async fn vacuum(pool: &sqlx::PgPool) {
+    for table in RELATIONS {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "VACUUM (ANALYZE) audit.{table}"
+        )))
+        .execute(pool)
+        .await
+        .expect("the relation is vacuumed");
+    }
+}
+
+/// The plan of `count`, a statement counting the ITI-81 index, as JSON text.
+async fn plan(pool: &sqlx::PgPool, count: &str) -> String {
+    let plan: serde_json::Value = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "EXPLAIN (FORMAT JSON) {count}"
+    )))
+    .fetch_one(pool)
+    .await
+    .expect("the count is planned");
+    plan.to_string()
+}
+
+/// The ITI-81 total of the access log, the whole log and a date window, is
+/// counted from the time index alone, which carries whether an entry is
+/// indexed, so it reads no entry's row (#5784).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_iti81_total_is_counted_from_the_time_index() {
+    let seeded = seed(ENTRIES).await;
+    let pool = seeded.db.pool();
+    vacuum(&pool).await;
+    for count in [
+        "SELECT count(*) FROM audit.access_log_search",
+        "SELECT count(*) FROM audit.access_log_search \
+         WHERE recorded_at >= now() - interval '1 hour' AND recorded_at < now()",
+    ] {
+        let plan = plan(&pool, count).await;
+        assert!(
+            plan.contains("\"Index Only Scan\"")
+                && plan.contains("\"ix_access_log_record_time\"")
+                && !plan.contains("\"Seq Scan\""),
+            "`{count}` is counted from the time index: {plan}"
+        );
+    }
+}
+
 /// The seeded log takes no more than [`CEILING`] bytes per entry, every
 /// relation of the access log counted, after a vacuum, as the log stands
 /// between the autovacuum runs of a deployment.
@@ -175,12 +222,7 @@ async fn an_entry_takes_no_more_than_its_ceiling_on_disk() {
     let seeded = seed(ENTRIES).await;
     let pool = seeded.db.pool();
     let expected = i64::from(ENTRIES);
-    for table in RELATIONS {
-        sqlx::query(sqlx::AssertSqlSafe(format!("VACUUM audit.{table}")))
-            .execute(&pool)
-            .await
-            .expect("the relation is vacuumed");
-    }
+    vacuum(&pool).await;
     let sizes = sizes(&pool).await;
     let total: i64 = sizes.iter().map(|(_, heap, indexes)| heap + indexes).sum();
     let per_entry = total.div_euclid(expected);

@@ -120,6 +120,7 @@ impl IntakeEntry {
         let whole = canonical_object_without(entry, &[LINK]).map_err(AccessLogError::Canonical)?;
         let cut = stored_form::parts::Cut::of(&whole).map_err(AccessLogError::Canonical)?;
         let (row, shared) = cut.parts().map_err(AccessLogError::Canonical)?;
+        let row = stored_form::parts::without_columns(&row).map_err(AccessLogError::Canonical)?;
         let derived = Derived::of(&cut)?;
         Ok(Self {
             content_digest: sha256_hex(&whole),

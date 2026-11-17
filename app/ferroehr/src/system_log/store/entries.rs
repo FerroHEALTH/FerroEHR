@@ -269,7 +269,7 @@ impl AuditStore {
         &self,
         row: &PgRow,
     ) -> Result<(Arc<CompiledPolicy>, StoredRecord), AuditError> {
-        if row.try_get::<Option<&str>, _>("content")?.is_none() {
+        if row.try_get::<Option<&str>, _>("document")?.is_none() {
             let (digest, stored) = stored_record(row)?;
             let policy = self.policy(stored.chain_seq, &digest).await?;
             return Ok((policy, stored));

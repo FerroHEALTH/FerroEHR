@@ -134,17 +134,14 @@ pub fn statement(
     };
     let mut select = Query::select();
     select
-        .columns(
-            ["chain_seq", "content", "algorithm"]
-                .map(|name| (Alias::new(RECORD), Alias::new(name))),
+        .columns(["chain_seq", "algorithm"].map(|name| (Alias::new(RECORD), Alias::new(name))))
+        .expr_as(
+            Expr::cust(concat!(crate::access_log::store::document!(), "::text")),
+            Alias::new("document"),
         )
         .expr_as(column("previous_digest"), Alias::new("previous_digest"))
         .expr_as(column("content_digest"), Alias::new("content_digest"))
         .expr_as(column("digest"), Alias::new("digest"))
-        .expr_as(
-            Expr::col((Alias::new(SHARED), Alias::new("content"))),
-            Alias::new("shared"),
-        )
         .from_as(
             (Alias::new("audit"), Alias::new("access_log_record")),
             Alias::new(RECORD),
@@ -160,10 +157,16 @@ pub fn statement(
     match scope.ehrs {
         [] => {}
         [one] => {
-            select.and_where(column("ehr_id").eq(one.to_string()));
+            select.and_where(Expr::cust_with_values(
+                "r.ehr_id = $1::uuid",
+                [one.to_string()],
+            ));
         }
         many => {
-            select.and_where(column("ehr_id").is_in(many.iter().map(ToString::to_string)));
+            select.and_where(Expr::cust_with_values(
+                "r.ehr_id = ANY ($1::uuid[])",
+                [many.iter().map(ToString::to_string).collect::<Vec<_>>()],
+            ));
         }
     }
     if let Some(filter) = &plan.filter {
@@ -200,6 +203,13 @@ fn column(name: &str) -> Expr {
             Expr::cust(format!("encode({RECORD}.{name}, 'hex')"))
         }
         "uid" => Expr::cust(format!("{RECORD}.uid::text")),
+        // NOTE: our own design (#5784), the uuid column keeps a canonical EHR id and the entry
+        // keeps any other, so the id reads from the one that holds it.
+        "ehr_id" => Expr::cust(concat!(
+            "coalesce(r.ehr_id::text, ",
+            crate::access_log::store::document!(),
+            " #>> '{ehr_id,value}')"
+        )),
         _ => Expr::col((Alias::new(RECORD), Alias::new(name))),
     }
 }
@@ -268,11 +278,19 @@ impl Builder<'_> {
             _ if path.steps == ["link"] => truth(true),
             Reach::Column(name, _) => column(name).is_not_null(),
             Reach::Single(steps) => Expr::cust_with_values(
-                "(audit.access_log_document(r.content, sh.content) #> $1::text[]) IS NOT NULL",
+                concat!(
+                    "(",
+                    crate::access_log::store::document!(),
+                    " #> $1::text[]) IS NOT NULL"
+                ),
                 [steps],
             ),
             Reach::Many(jsonpath) => Expr::cust_with_values(
-                "jsonb_path_exists(audit.access_log_document(r.content, sh.content), $1::jsonpath)",
+                concat!(
+                    "jsonb_path_exists(",
+                    crate::access_log::store::document!(),
+                    ", $1::jsonpath)"
+                ),
                 [jsonpath],
             ),
         }
@@ -293,14 +311,22 @@ impl Builder<'_> {
             Reach::Column(name, column_typed) => on(column(name), column_typed)?,
             Reach::Single(steps) => on(
                 Expr::cust_with_values(
-                    "(audit.access_log_document(r.content, sh.content) #>> $1::text[])",
+                    concat!(
+                        "(",
+                        crate::access_log::store::document!(),
+                        " #>> $1::text[])"
+                    ),
                     [steps],
                 ),
                 typed,
             )?,
             Reach::Many(jsonpath) => Expr::cust_with_exprs(
-                "EXISTS (SELECT 1 FROM jsonb_path_query(audit.access_log_document(r.content, sh.content), $1::jsonpath) AS m(v) \
-                     WHERE $2)",
+                concat!(
+                    "EXISTS (SELECT 1 FROM jsonb_path_query(",
+                    crate::access_log::store::document!(),
+                    ", $1::jsonpath) AS m(v) \
+                     WHERE $2)"
+                ),
                 [
                     Expr::val(jsonpath),
                     on(Expr::cust("(m.v #>> '{}')"), typed)?,
@@ -319,6 +345,18 @@ impl Builder<'_> {
         value: &LogValue,
     ) -> Result<Expr, AqlError> {
         let value = self.value(value)?;
+        // NOTE: our own design (#5784), a canonical EHR id is only ever kept in the uuid column, so
+        // equality with one reads the column and its index.
+        if op == CompOp::Eq
+            && matches!(self.reach(path), Reach::Column("ehr_id", _))
+            && let ParamValue::Str(text) = value
+            && let Some(id) = crate::access_log::stored_form::column_uuid(text)
+        {
+            return Ok(Expr::cust_with_values(
+                "r.ehr_id = $1::uuid",
+                [id.to_string()],
+            ));
+        }
         let mismatch = |expected| {
             feature(LogQueryError::TypeMismatch {
                 path: path.text.clone(),
@@ -373,7 +411,11 @@ impl Builder<'_> {
         // NOTE: QUERY §LIKE, a date-time matches by its string representation.
         let operand = if typed == Typed::Instant {
             Expr::cust_with_values(
-                "(audit.access_log_document(r.content, sh.content) #>> $1::text[])",
+                concat!(
+                    "(",
+                    crate::access_log::store::document!(),
+                    " #>> $1::text[])"
+                ),
                 [format!("{{{}}}", path.steps.join(","))],
             )
         } else {
@@ -403,7 +445,11 @@ impl Builder<'_> {
             Reach::Column(name, _) => column(name),
             Reach::Single(steps) => cast(
                 Expr::cust_with_values(
-                    "(audit.access_log_document(r.content, sh.content) #>> $1::text[])",
+                    concat!(
+                        "(",
+                        crate::access_log::store::document!(),
+                        " #>> $1::text[])"
+                    ),
                     [steps],
                 ),
                 typed,
