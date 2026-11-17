@@ -702,7 +702,7 @@ fn emit_read_loop(
             ReadShape::StringHash { .. } => {
                 let _ = writeln!(
                     b,
-                    "\"{wire}\" => {{ let __k = __c.attr(\"id\").ok_or_else(|| reader.missing_attribute(\"StringDictionaryItem\", \"id\"))?.to_string(); let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?; {var}.insert(__k, __v); }}"
+                    "\"{wire}\" => {{ let __k = __c.attr(\"id\").ok_or_else(|| reader.missing_start_attribute(\"StringDictionaryItem\", \"id\"))?.to_string(); let __v: String = crate::xml::runtime::FromXml::from_xml(reader, &__c)?; {var}.insert(__k, __v); }}"
                 );
             }
             ReadShape::Multiple => {
