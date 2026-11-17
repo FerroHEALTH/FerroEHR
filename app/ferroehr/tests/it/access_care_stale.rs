@@ -157,7 +157,7 @@ impl Ward {
     /// COMPOSITION read (#5959): the read of the composition handed to the
     /// decision on its EHR, inside a request scope, so a second connection
     /// of one pool trips the nested-acquire check.
-    async fn handed_on_two(&self, care: bool) -> Handed {
+    async fn handed_on_two(&self, care: bool, uses: alongside::Use) -> Handed {
         let access = self.request_on_two_under(care).await;
         let svc = Arc::clone(&self.two);
         let (ehr_id, vo) = (self.ehr_id, self.vo);
@@ -165,7 +165,7 @@ impl Ward {
             let current = current().expect("the request access");
             let (found, mut answer) = tokio::sync::oneshot::channel();
             let reader = Arc::clone(&svc);
-            let left = alongside::register(async move {
+            let left = alongside::register(uses, async move {
                 let _sent = found.send(reader.composition_ahead(vo, None).await);
             });
             assert!(left.is_none(), "the request's slot takes the read");
@@ -174,39 +174,41 @@ impl Ward {
             let ran_in_decision = read_by_decision.is_ok();
             let admitted = match verdict {
                 Ok(verdict) => verdict.outcome(&Item::Ehr) == Outcome::Admit,
-                Err(error) => return Handed { admitted: Err(error), ran_in_decision, served: None },
-            };
-            if !admitted {
-                return Handed { admitted: Ok(false), ran_in_decision, served: None };
-            }
-            let ahead = match read_by_decision {
-                Ok(ahead) => ahead,
-                Err(_) => {
-                    alongside::run().await;
-                    answer.await.expect("the read left for the request answers")
+                Err(error) => {
+                    return Handed {
+                        admitted: Err(error),
+                        ran_in_decision,
+                        served: None,
+                    };
                 }
             };
-            let served = svc.composition_judged_on(&current, ehr_id, vo, None, ahead).await;
+            if !admitted {
+                return Handed {
+                    admitted: Ok(false),
+                    ran_in_decision,
+                    served: None,
+                };
+            }
+            let ahead = if let Ok(ahead) = read_by_decision {
+                ahead
+            } else {
+                alongside::run().await;
+                answer.await.expect("the read left for the request answers")
+            };
+            let served = svc
+                .composition_judged_on(&current, ehr_id, vo, None, ahead)
+                .await;
             Handed {
                 admitted: Ok(true),
                 ran_in_decision,
                 served: Some(matches!(served, JudgedRead::Admitted(Ok(_)))),
             }
         };
-        Box::pin(request_scope(alongside::scope(with_request_access(access, run)))).await
+        Box::pin(request_scope(alongside::scope(with_request_access(
+            access, run,
+        ))))
+        .await
     }
-}
-
-/// What a request that handed its read to the decision found.
-#[derive(Debug)]
-struct Handed {
-    /// Whether the decision admitted the EHR, or its error.
-    admitted: Result<bool, ServiceError>,
-    /// Whether the decision ran the read beside its party read.
-    ran_in_decision: bool,
-    /// Whether the admitted request served the composition it read.
-    served: Option<bool>,
-}
 
     /// What Dr D's next request on the lagging replica reads.
     async fn read_on_two(&self) -> Read {
@@ -235,6 +237,17 @@ struct Handed {
             };
         Box::pin(with_request_access(access, run)).await
     }
+}
+
+/// What a request that handed its read to the decision found.
+#[derive(Debug)]
+struct Handed {
+    /// Whether the decision admitted the EHR, or its error.
+    admitted: Result<bool, ServiceError>,
+    /// Whether the decision ran the read beside its party read.
+    ran_in_decision: bool,
+    /// Whether the admitted request served the composition it read.
+    served: Option<bool>,
 }
 
 /// Every composition of every EHR.
@@ -367,15 +380,18 @@ async fn a_lagging_replica_still_admits_a_care_relationship_in_force() {
     }
 }
 
-/// A care-decided read hands its composition read to the decision, which
-/// runs it beside its party read with no second connection of one pool, and
-/// serves it once admitted (#5959).
+/// A care-decided read hands a read it uses whenever admitted to the
+/// decision, which runs it beside its party read with no second connection
+/// of one pool, and serves it once admitted (#5959).
 #[tokio::test]
 async fn the_decision_runs_the_read_beside_its_party_read() {
     let ward = Box::pin(Ward::new()).await;
-    let handed = ward.handed_on_two(true).await;
+    let handed = ward.handed_on_two(true, alongside::Use::Admitted).await;
     assert!(matches!(handed.admitted, Ok(true)), "{handed:?}");
-    assert!(handed.ran_in_decision, "the read ran inside the decision: {handed:?}");
+    assert!(
+        handed.ran_in_decision,
+        "the read ran inside the decision: {handed:?}"
+    );
     assert_eq!(handed.served, Some(true), "{handed:?}");
 }
 
@@ -388,10 +404,16 @@ async fn a_refusal_wins_over_a_read_that_already_ran() {
     let (patient, uid) = &ward.patient;
     let ended = person(
         "Mr E",
-        &[care(UNDER_CARE, *patient, ward.team, &day(-30), Some(&day(-20)))],
+        &[care(
+            UNDER_CARE,
+            *patient,
+            ward.team,
+            &day(-30),
+            Some(&day(-20)),
+        )],
     );
     adt(&ward.one, (*patient, uid), &ended).await;
-    let handed = ward.handed_on_two(true).await;
+    let handed = ward.handed_on_two(true, alongside::Use::Admitted).await;
     let refused = match &handed.admitted {
         Ok(admitted) => !admitted,
         Err(error) => matches!(error, ServiceError::AccessRefreshing(_)),
@@ -406,8 +428,27 @@ async fn a_refusal_wins_over_a_read_that_already_ran() {
 #[tokio::test]
 async fn a_read_no_party_read_runs_beside_is_run_by_the_request() {
     let ward = Box::pin(Ward::new()).await;
-    let handed = ward.handed_on_two(false).await;
+    let handed = ward.handed_on_two(false, alongside::Use::Admitted).await;
     assert!(matches!(handed.admitted, Ok(true)), "{handed:?}");
-    assert!(!handed.ran_in_decision, "no party read to run it beside: {handed:?}");
+    assert!(
+        !handed.ran_in_decision,
+        "no party read to run it beside: {handed:?}"
+    );
+    assert_eq!(handed.served, Some(true), "{handed:?}");
+}
+
+/// A read the request uses only under a verdict that judges items is left
+/// to the request when the care-decided verdict judges the EHR alone, since
+/// such a read is then served by another path; once admitted, the request
+/// runs it itself (#5959).
+#[tokio::test]
+async fn a_read_the_verdict_does_not_judge_is_left_to_the_request() {
+    let ward = Box::pin(Ward::new()).await;
+    let handed = ward.handed_on_two(true, alongside::Use::ItemJudged).await;
+    assert!(matches!(handed.admitted, Ok(true)), "{handed:?}");
+    assert!(
+        !handed.ran_in_decision,
+        "a verdict on the EHR alone uses no row's read: {handed:?}"
+    );
     assert_eq!(handed.served, Some(true), "{handed:?}");
 }

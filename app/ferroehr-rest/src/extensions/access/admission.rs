@@ -115,23 +115,25 @@ where
         decided
     };
     let overlapped = async move {
-        let (handled, decided) = tokio::join!(biased; waiting.scope(handler), decide);
-        decided.map(|()| handled)
+        let (answer, decided) = tokio::join!(biased; waiting.scope(handler), decide);
+        decided.map(|()| answer)
     };
     alongside::scope(overlapped).await
 }
 
-/// `read` handed to the access decision, once the request is admitted: the
-/// decision runs it beside its party read when it makes one, and
-/// [`Ahead::read`] runs it when the decision did not and the request needs it.
+/// `read`, used as `uses` says, handed to the access decision, once the
+/// request is admitted: the decision runs it beside its party read when it
+/// makes one and the request will use it, and [`Ahead::read`] runs it when
+/// the decision did not and the request needs it.
 ///
 /// # Errors
 /// [`admitted`]'s error when the request is not admitted.
 pub(crate) async fn read_once_admitted<T: Send + 'static>(
+    uses: alongside::Use,
     read: impl Future<Output = T> + Send + 'static,
 ) -> Result<Ahead<T>, RestError> {
     let (found, answer) = oneshot::channel();
-    let left = alongside::register(async move {
+    let left = alongside::register(uses, async move {
         // NOTE: our own design (#5959), a request refused meanwhile has dropped its receiver.
         let _refused = found.send(read.await);
     });
@@ -162,7 +164,7 @@ impl<T> Ahead<T> {
             Some(read) => read.await,
             None => alongside::run().await,
         }
-        self.answer.await.map_err(|_| {
+        self.answer.await.map_err(|_unanswered| {
             RestError::from(ApiError::Internal(
                 "the read made beside the access decision ended unanswered".to_owned(),
             ))
@@ -217,7 +219,10 @@ mod tests {
         reads: Arc<AtomicUsize>,
         served: Arc<AtomicBool>,
     ) -> Result<&'static str, RestError> {
-        let data = read_once_admitted(clinical(read, reads)).await?.read().await?;
+        let data = read_once_admitted(alongside::Use::Admitted, clinical(read, reads))
+            .await?
+            .read()
+            .await?;
         served.store(true, Ordering::SeqCst);
         Ok(data)
     }
@@ -230,7 +235,7 @@ mod tests {
         answer: Result<(), &'static str>,
     ) -> Result<(), &'static str> {
         if party {
-            tokio::join!(tokio::time::sleep(wait), alongside::run());
+            tokio::join!(tokio::time::sleep(wait), alongside::beside(false));
         } else {
             tokio::time::sleep(wait).await;
         }
@@ -279,9 +284,16 @@ mod tests {
             let seen = Seen::new();
             let out = overlap(decide(5 * MS, party, Err("403")), seen.handler(5 * MS)).await;
             assert_eq!(out.err(), Some("403"), "the refusal is the answer");
-            assert!(!seen.served.load(Ordering::SeqCst), "the handler stopped at admission");
+            assert!(
+                !seen.served.load(Ordering::SeqCst),
+                "the handler stopped at admission"
+            );
             let reads = usize::from(party);
-            assert_eq!(seen.reads.load(Ordering::SeqCst), reads, "read only beside a party read");
+            assert_eq!(
+                seen.reads.load(Ordering::SeqCst),
+                reads,
+                "read only beside a party read"
+            );
         }
     }
 
@@ -300,7 +312,7 @@ mod tests {
     #[tokio::test]
     async fn a_decision_dropped_unsaid_fails_closed() {
         let (decision, waiting) = pending();
-        let (_, handled) = tokio::join!(async { drop(decision) }, waiting.scope(admitted()));
+        let ((), handled) = tokio::join!(async { drop(decision) }, waiting.scope(admitted()));
         assert!(handled.is_err());
     }
 
@@ -313,8 +325,14 @@ mod tests {
         let out = overlap(decide(each, true, Ok(())), seen.handler(each)).await;
         let took = started.elapsed();
         assert!(out.is_ok_and(|served| served.is_ok()));
-        assert!(took >= each, "the slower of the two bounds the request: {took:?}");
-        assert!(took < each * 2 - each / 4, "the waits overlap, never add up: {took:?}");
+        assert!(
+            took >= each,
+            "the slower of the two bounds the request: {took:?}"
+        );
+        assert!(
+            took < each * 7 / 4,
+            "the waits overlap, never add up: {took:?}"
+        );
     }
 
     #[test]

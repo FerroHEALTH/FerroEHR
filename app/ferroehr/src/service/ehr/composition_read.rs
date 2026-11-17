@@ -57,11 +57,11 @@ pub enum JudgedRead {
     Admitted(Result<RawServiceResponse, ServiceError>),
 }
 
-/// The version a COMPOSITION read by its version or its latest reads before
-/// the verdict of its EHR is final (#5959): the object's head facts and the
-/// version, from the store or from the version copy once one indexed read
-/// confirms it. Nothing of it leaves the service until
-/// [`FerroEhrService::composition_judged_on`] has judged it.
+/// A COMPOSITION version read before its EHR's verdict is final (#5959).
+///
+/// It holds the object's head facts and the version, from the store or from
+/// the version copy once one indexed read confirms it. Nothing of it leaves
+/// the service until [`FerroEhrService::composition_judged_on`] judges it.
 pub struct VersionAhead(Result<Option<(HeadFacts, Option<StoredVersion>)>, Unread>);
 
 /// Why a [`VersionAhead`] holds no version.

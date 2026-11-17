@@ -4,7 +4,7 @@
 //! The EHR read made before the request's access decision is final (#5959).
 //!
 //! The REST layer starts the read while the access middleware decides, and
-//! hands it to [`crate::service::FerroEhrService::ehr_read_on`] only once the
+//! hands it to [`EhrAhead::served`] only once the
 //! decision admits the request. No openEHR spec governs this: our own design.
 
 use crate::error::ServiceError;
@@ -12,7 +12,7 @@ use crate::storage::ehr_repo::EhrSummaryRead;
 
 /// The one statement of a `GET /ehr/{ehr_id}` read, read ahead of its
 /// decision. Nothing of it leaves the service until
-/// [`crate::service::FerroEhrService::ehr_read_on`] serves it.
+/// [`EhrAhead::served`] serves it.
 pub struct EhrAhead(pub(super) Result<Option<EhrSummaryRead>, ServiceError>);
 
 impl std::fmt::Debug for EhrAhead {

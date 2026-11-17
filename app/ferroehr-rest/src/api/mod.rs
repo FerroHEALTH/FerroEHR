@@ -382,20 +382,22 @@ where
         // while the decision is made, and the decision's refusal is the answer whenever it refuses.
         if admission::overlaps(op) {
             let decided_on = parts.clone();
-            let handled = admission::overlap(
-                admit(&state, op, &decided_on, delayed),
-                handler(state.clone(), parts),
+            // Boxed: the handler and the decision are each large, and a debug build's stack
+            // overflows on the copies made while the overlap is built.
+            let overlapped = admission::overlap(
+                Box::pin(admit(&state, op, &decided_on, delayed)),
+                Box::pin(handler(state.clone(), parts)),
             );
-            return match handled.await {
+            return match overlapped.await {
                 Ok(resp) => {
                     let resp = resp.unwrap_or_else(IntoResponse::into_response);
                     pep::post_check(&state, op, resp).await
                 }
-                Err(deny) => deny,
+                Err(deny) => *deny,
             };
         }
         if let Err(deny) = admit(&state, op, &parts, delayed).await {
-            return deny;
+            return *deny;
         }
         let resp = handler(state.clone(), parts)
             .await
@@ -428,16 +430,16 @@ async fn admit(
     op: &'static str,
     parts: &RequestParts,
     delayed: bool,
-) -> Result<(), Response> {
-    ehr_access::enforce(state, op, parts).await.map_err(|deny| *deny)?;
+) -> Result<(), Box<Response>> {
+    ehr_access::enforce(state, op, parts).await?;
     if delayed {
         match delay::refuse_withheld(state, op, parts).await {
-            Ok(Some(absent)) => return Err(absent),
+            Ok(Some(absent)) => return Err(Box::new(absent)),
             Ok(None) => {}
-            Err(fault) => return Err(*fault),
+            Err(fault) => return Err(fault),
         }
     }
-    pep::pre_check(state, op, parts).await
+    pep::pre_check(state, op, parts).await.map_err(Box::new)
 }
 
 /// The operations of the admin group that consult a policy register: the hold

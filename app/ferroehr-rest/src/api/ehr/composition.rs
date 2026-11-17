@@ -23,6 +23,7 @@ use serde_json::Value;
 
 use openehr_base::prelude::UidBasedId;
 
+use openehr_base::prelude::ObjectVersionId;
 use openehr_its::rest::generated::ehr::{
     CompositionCreateParams, CompositionDeleteParams, CompositionGetParams,
     CompositionTagsDeleteParams, CompositionTagsGetParams, CompositionTagsUpdateParams,
@@ -31,11 +32,13 @@ use openehr_its::rest::generated::ehr::{
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::Composition;
 
+use ferroehr::access_eval::alongside::Use;
 use ferroehr::ids::{EhrId, VoId};
+use ferroehr::service::ehr::composition_read::{JudgedRead, VersionAhead};
 use ferroehr::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use ferroehr::versioning::change::Committed;
 
-use ferroehr::versioning::object_version_id::parse_uid_based_id;
+use ferroehr::versioning::object_version_id::{UidAddress, parse_uid_based_id};
 
 use crate::api::RequestParts;
 use crate::api::item_tags;
@@ -153,6 +156,54 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
     Ok(resp)
 }
 
+/// The version `composition_get` reads beside its access decision once the
+/// request is admitted (#5959), `None` for a read at an instant or under the
+/// EHDS Art. 3(3) delay, which no object row judges.
+///
+/// # Errors
+/// [`admission::admitted`]'s error when the request is not admitted.
+async fn version_ahead(
+    state: &AppState,
+    vo_id: VoId,
+    version: Option<&ObjectVersionId>,
+    at_time: bool,
+) -> Result<Option<admission::Ahead<VersionAhead>>, RestError> {
+    if at_time || delay::applies(state, "composition_get") {
+        admission::admitted().await?;
+        return Ok(None);
+    }
+    // NOTE: our own design (#5959), a read the object's own row may judge reads its version
+    // beside the access decision's party read, and uses it only once the decision admits it.
+    let (backend, version) = (state.backend_handle(), version.cloned());
+    let ahead = admission::read_once_admitted(Use::ItemJudged, async move {
+        backend.composition_ahead(vo_id, version.as_ref()).await
+    });
+    Ok(Some(ahead.await?))
+}
+
+/// The read of `composition_get` whose object row judges it under
+/// `deferred`: the version `ahead` read beside the decision, else read now.
+///
+/// # Errors
+/// A `500` when the read made beside the decision ended unanswered.
+async fn judged_on(
+    state: &AppState,
+    deferred: &ehr_access::Deferred,
+    ehr_id: EhrId,
+    uid: &UidAddress,
+    ahead: Option<admission::Ahead<VersionAhead>>,
+) -> Result<JudgedRead, RestError> {
+    let backend = state.backend();
+    let version = uid.version.as_ref();
+    let ahead = match ahead {
+        Some(ahead) => ahead.read().await?,
+        None => backend.composition_ahead(uid.vo_id, version).await,
+    };
+    Ok(backend
+        .composition_judged_on(&deferred.access, ehr_id, uid.vo_id, version, ahead)
+        .await)
+}
+
 /// `composition_get` — serve a COMPOSITION at a version, an instant, or its
 /// latest.
 ///
@@ -174,41 +225,20 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     // A bare COMPOSITION carries no `commit_audit`, so `Last-Modified`
     // (Requests_and_responses.md §"ETag and Last-Modified") comes from the
     // version row the service reads alongside the body.
-    // NOTE: our own design (#5959), a read the object's own row may judge reads its version
-    // beside the access decision's party read, and uses it only once the decision admits it.
-    let ahead = if p.version_at_time.is_none() && !delay::applies(&state, "composition_get") {
-        let (backend, vo_id, version) = (state.backend_handle(), uid.vo_id, uid.version.clone());
-        Some(
-            admission::read_once_admitted(async move {
-                backend.composition_ahead(vo_id, version.as_ref()).await
-            })
-            .await?,
-        )
-    } else {
-        admission::admitted().await?;
-        None
-    };
+    let at_time = p.version_at_time.is_some();
+    let ahead = Box::pin(version_ahead(
+        &state,
+        uid.vo_id,
+        uid.version.as_ref(),
+        at_time,
+    ))
+    .await?;
     let deferred = match ehr_access::deferred(&state, "composition_get", &parts).await {
         Ok(deferred) => deferred,
         Err(refusal) => return Ok(*refusal),
     };
     let read = if let Some(deferred) = deferred {
-        let ahead = match ahead {
-            Some(ahead) => ahead.read().await?,
-            None => {
-                state
-                    .backend()
-                    .composition_ahead(uid.vo_id, uid.version.as_ref())
-                    .await
-            }
-        };
-        let judged = state.backend().composition_judged_on(
-            &deferred.access,
-            ehr_id,
-            uid.vo_id,
-            uid.version.as_ref(),
-            ahead,
-        ).await;
+        let judged = Box::pin(judged_on(&state, &deferred, ehr_id, &uid, ahead)).await?;
         let admitted = ehr_access::admit_read(
             &state,
             "composition_get",

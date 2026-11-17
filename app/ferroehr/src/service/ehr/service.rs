@@ -315,8 +315,7 @@ impl FerroEhrService {
     /// [`ServiceError`] when the EHR or its current `EHR_STATUS` does not exist, or
     /// a read fails.
     pub async fn ehr_read(&self, ehr_id: EhrId) -> Result<ServiceResponse, ServiceError> {
-        let ahead = self.ehr_read_ahead(ehr_id).await;
-        self.ehr_read_on(ehr_id, ahead)
+        self.ehr_read_ahead(ehr_id).await.served(ehr_id)
     }
 
     /// The one statement of [`Self::ehr_read`], made before the request's
@@ -330,20 +329,18 @@ impl FerroEhrService {
                 .map_err(ServiceError::from),
         )
     }
+}
 
-    /// [`Self::ehr_read`]'s answer from `ahead`, judged against the verdict
-    /// the request holds.
+impl EhrAhead {
+    /// [`FerroEhrService::ehr_read`]'s answer from this read of `ehr_id`,
+    /// judged against the verdict the request holds.
     ///
     /// # Errors
-    /// As [`Self::ehr_read`].
-    pub fn ehr_read_on(
-        &self,
-        ehr_id: EhrId,
-        ahead: EhrAhead,
-    ) -> Result<ServiceResponse, ServiceError> {
+    /// As [`FerroEhrService::ehr_read`].
+    pub fn served(self, ehr_id: EhrId) -> Result<ServiceResponse, ServiceError> {
         // NOTE: arch master06 §System Identity, EHR.system_id is immutable after creation, so the
         // stored per-EHR value is served, never the live configuration.
-        let read = ahead
+        let read = self
             .0?
             .ok_or_else(|| ServiceError::not_found(Missing::Ehr, format!("EHR {ehr_id}")))?;
         // NOTE: our own design (#5589), a verdict judged on settings older than the row

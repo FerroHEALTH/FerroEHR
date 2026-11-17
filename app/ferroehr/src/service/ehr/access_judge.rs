@@ -245,7 +245,7 @@ impl FerroEhrService {
         };
         let (care, ()) = tokio::join!(self.care_of(&access, pinned), access.care_read_ahead());
         let mut care = care?;
-        if binds_any(&care) && !access.care_in_force().await? {
+        if binds_any(&care) && !access.care_in_force(std::future::ready(())).await? {
             care = self.care_of(&access, pinned).await?;
         }
         Ok(condition.with_care(care))

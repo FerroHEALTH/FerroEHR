@@ -24,6 +24,7 @@ use openehr_its::rest::generated::ehr::{
 use openehr_its::rest::runtime::ApiError;
 use openehr_rm::prelude::{Ehr, EhrStatus};
 
+use ferroehr::access_eval::alongside::Use;
 use ferroehr::ids::EhrId;
 use ferroehr::service::response::{ResourceMeta, ServiceResponse};
 
@@ -113,12 +114,13 @@ pub(crate) async fn get_by_id(state: AppState, parts: RequestParts) -> Result<Re
     // NOTE: our own design (#5959), the EHR's one statement runs beside the access decision's
     // party read, and nothing of it is served before the decision admits the request.
     let backend = state.backend_handle();
-    let ahead =
-        admission::read_once_admitted(async move { backend.ehr_read_ahead(ehr_id).await })
-            .await?
-            .read()
-            .await?;
-    let read = state.backend().ehr_read_on(ehr_id, ahead)?;
+    let ahead = admission::read_once_admitted(Use::Admitted, async move {
+        backend.ehr_read_ahead(ehr_id).await
+    })
+    .await?
+    .read()
+    .await?;
+    let read = ahead.served(ehr_id)?;
     Ok(ehr_read_response(h, ok, &read))
 }
 

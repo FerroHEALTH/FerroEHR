@@ -17,6 +17,7 @@ use std::time::Instant;
 use uuid::Uuid;
 
 use super::{EhrEntry, RequestAccess};
+use crate::access_eval::procedure::Verdict;
 use crate::access_eval::stale::{STALE_POLL, STALE_WAIT};
 use crate::error::ServiceError;
 use crate::ids::EhrId;
@@ -128,6 +129,8 @@ impl RequestAccess {
     /// when it was older and was read again, after which the caller's care
     /// is read again too. Checked once per request, with one indexed read,
     /// or with the read [`Self::care_ahead`] made beside the request's own.
+    /// `beside` runs during that indexed read, and is dropped unrun when the
+    /// check needs no read.
     ///
     /// The care teams the caller is a member of in the copy read are those
     /// it keeps; one it joined since the request began waits for the next
@@ -138,15 +141,18 @@ impl RequestAccess {
     /// # Errors
     /// [`CareUnsettled::Unavailable`] when the store does not answer, and
     /// [`CareUnsettled::Refreshing`] once the wait has passed.
-    pub async fn care_in_force(&self) -> Result<bool, CareUnsettled> {
+    pub async fn care_in_force(
+        &self,
+        beside: impl Future<Output = ()>,
+    ) -> Result<bool, CareUnsettled> {
         let Some(grants) = self.grants.as_ref() else {
             return Ok(true);
         };
         let behind = match self.care.get() {
             Checked::Unchecked => {
-                // NOTE: our own design (#5959), the request's clinical read runs beside this party
-                // read, the decision's one wait on the store.
-                let (behind, ()) = tokio::join!(grants.behind(), crate::access_eval::alongside::run());
+                // NOTE: our own design (#5959), `beside` runs during this party read, the decision's
+                // one wait on the store, and on no connection of the party pool.
+                let (behind, ()) = tokio::join!(grants.behind(), beside);
                 behind?
             }
             Checked::Read(behind) => behind,
@@ -190,7 +196,7 @@ impl RequestAccess {
         // NOTE: our own design (#5891), a care read that fails here reads ahead nothing, and the
         // judgement reads it again and answers that read's error.
         if matches!(self.care.get(), Checked::Unchecked)
-            && self.care_decides(ehr_id, entry)
+            && self.care_decided(ehr_id, entry).is_some()
             && matches!(self.cares_for(entry).await, Ok(true))
         {
             self.care_read_ahead().await;
@@ -214,16 +220,17 @@ impl RequestAccess {
         }
     }
 
-    /// Whether the verdict of `ehr_id` as `entry` reads it depends on the
-    /// caller's care for its subject.
-    pub(super) fn care_decides(&self, ehr_id: EhrId, entry: &EhrEntry) -> bool {
+    /// The verdict of `ehr_id` as `entry` reads it with the caller's care
+    /// for its subject, when it differs from the verdict without that care.
+    pub(super) fn care_decided(&self, ehr_id: EhrId, entry: &EhrEntry) -> Option<Verdict> {
         let settings = (*entry.settings).as_ref();
         let (with, without) = (
             self.judge(Some(ehr_id), settings, true),
             self.judge(Some(ehr_id), settings, false),
         );
-        (with.rules, with.otherwise, with.lifted)
-            != (without.rules, without.otherwise, without.lifted)
+        let decides = (&with.rules, with.otherwise, &with.lifted)
+            != (&without.rules, without.otherwise, &without.lifted);
+        decides.then_some(with)
     }
 
     /// Of the EHRs `entries` name, those whose subject the caller has a live
