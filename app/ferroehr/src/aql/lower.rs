@@ -384,7 +384,7 @@ impl Planner {
             self.clinical_classes.push(rm_type.to_owned());
         }
         let constraint = predicate
-            .map(resolve_node_predicate)
+            .map(|p| resolve_node_predicate(p, &concrete, self.bindings.profile))
             .transpose()?
             .unwrap_or_default();
         let scope = inherited.cloned().unwrap_or(VersionScope::Latest);
@@ -693,13 +693,19 @@ pub(crate) fn lower_limit(
 /// The human label of a leaf type SUM/AVG cannot aggregate, or `None` when
 /// the target is numerically aggregable.
 fn non_numeric_leaf(target: &PathTarget) -> Option<&'static str> {
-    let coercion = match target {
+    let leaf = match target {
         PathTarget::Data(leaf)
         | PathTarget::EhrStatus(leaf)
-        | PathTarget::Attestations { leaf, .. } => leaf.coercion,
+        | PathTarget::Attestations { leaf, .. } => leaf,
         PathTarget::Version { .. } | PathTarget::Ehr { .. } => return Some("version/EHR metadata"),
     };
-    match coercion {
+    let ordinal = |t: &String| matches!(t.as_str(), "DV_ORDINAL" | "DV_SCALE");
+    match leaf.coercion {
+        // NOTE: RM `data_types` §DV_AMOUNT defines `+` on amounts only, so an ordinal
+        // or scale, ordered by its value, is no SUM or AVG input.
+        Coercion::Magnitude if !leaf.types.is_empty() && leaf.types.names().iter().all(ordinal) => {
+            Some("an ordinal or scale value")
+        }
         Coercion::Magnitude | Coercion::Raw => None,
         Coercion::Text => Some("a textual value"),
         Coercion::Temporal => Some("a temporal value"),

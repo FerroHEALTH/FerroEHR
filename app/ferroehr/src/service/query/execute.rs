@@ -541,6 +541,11 @@ const CAST_REFUSAL: &str = "a value in the query cannot be coerced to the type i
                             compares against (an invalid date/time or text representation); \
                             correct the value";
 
+/// The refusal of a `SUM` or `AVG` over a whole data value that is no amount
+/// (QUERY master03 §SUM, §AVG; RM `data_types` §`DV_AMOUNT`).
+const NOT_AN_AMOUNT: &str = "SUM and AVG add numbers and amounts (DV_QUANTITY, DV_COUNT, \
+                             DV_PROPORTION, DV_DURATION); the path selects another data value";
+
 fn map_exec_error(e: AqlError) -> ServiceError {
     match e {
         // A data-exception the DRIVER raises here is a value of the query (a
@@ -556,6 +561,17 @@ fn map_exec_error(e: AqlError) -> ServiceError {
             ) =>
         {
             ServiceError::bad_request(CAST_REFUSAL, db)
+        }
+        // SQLSTATE `ZA003` (`ext/0013_aql_not_an_amount.sql`): SUM or AVG met
+        // a whole data value that is no amount, which the query asked for.
+        AqlError::Exec(ExecError::Database(db))
+            if db
+                .as_database_error()
+                .and_then(sqlx::error::DatabaseError::code)
+                .as_deref()
+                == Some("ZA003") =>
+        {
+            ServiceError::bad_request(NOT_AN_AMOUNT, db)
         }
         // Class 54 `program_limit_exceeded` (`54001` statement_too_complex,
         // PostgreSQL Appendix A) is the query's own shape outgrowing a database

@@ -25,6 +25,10 @@ use std::path::{Path, PathBuf};
 
 use openehr_its::opt14;
 use openehr_rm::v1_2::paths::{PathSegment, RmPath};
+use openehr_sdt::flat::convert::{
+    composition_from_flat, composition_from_structured, composition_to_flat,
+    composition_to_structured,
+};
 use openehr_sdt::flat::example::{DetailLevel, example_composition};
 use openehr_sdt::flat::webtemplate::builder::build_web_template;
 use openehr_sdt::flat::webtemplate::constraint::{WebTemplateExistence, WebTemplateStructuralStub};
@@ -79,11 +83,6 @@ const NOT_COMMITTABLE: &[(&str, &str)] = &[
         "Generic Laboratory Test Report.v0.opt",
         "its mandatory other_context items admit only a CLUSTER archetype slot, and \
          an example cannot invent a slot filler",
-    ),
-    (
-        "UK AoMRC Outpatient Letter.opt",
-        "ten mandatory protocol and state trees make items mandatory but admit only \
-         archetype slots, and an example cannot invent a slot filler",
     ),
     (
         "pregnancy-ecosystem-testing.opt",
@@ -163,6 +162,142 @@ fn full_ckm_library_generates_committable_examples() {
         "generated examples refused by the commit-path validation:\n{}",
         findings.join("\n")
     );
+}
+
+/// The openehr-sdk-go corpus templates (`corpus/templates/openehr-sdk-go/`),
+/// each a case an independent tester found our examples or our validation
+/// getting wrong.
+fn sdk_go_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../corpus/templates/openehr-sdk-go/testkit/corpus/templates")
+}
+
+/// The vendored openehr-sdk-go templates generate committable examples too.
+#[test]
+fn sdk_go_corpus_generates_committable_examples() {
+    let files = top_level_opts(&sdk_go_dir());
+    assert!(!files.is_empty(), "expected the openehr-sdk-go templates");
+    let findings: Vec<String> = files.iter().flat_map(|p| committable_findings(p)).collect();
+    assert!(
+        findings.is_empty(),
+        "generated examples refused by the commit-path validation:\n{}",
+        findings.join("\n")
+    );
+}
+
+// ── an EVENT's data under a folded event ────────────────────────────────────
+
+/// An OBSERVATION whose one event holds only a slot gets its event `data` as
+/// the node the template constrains (`at0003`), never the `at0001`
+/// placeholder, and the example validates in canonical JSON, FLAT and
+/// STRUCTURED (#5911).
+#[test]
+fn a_folded_event_data_carries_its_constrained_node_id() {
+    let wt = web_template(&sdk_go_dir().join("cluster-slot.ehrbase.org.v0.opt"));
+    for level in COMMITTABLE {
+        let comp = example_composition(&wt, level).expect("the example builds");
+        let mut events = Vec::new();
+        objects_with_id(&comp, "at0002", &mut events);
+        let events: Vec<&Value> = events
+            .into_iter()
+            .filter(|e| e.get("_type").and_then(Value::as_str) == Some("POINT_EVENT"))
+            .collect();
+        assert!(
+            level == DetailLevel::Required || !events.is_empty(),
+            "{level:?}: the example carries the event"
+        );
+        for event in &events {
+            assert_eq!(
+                event
+                    .pointer("/data/archetype_node_id")
+                    .and_then(Value::as_str),
+                Some("at0003"),
+                "{level:?}: the event data is the constrained ITEM_TREE: {event}"
+            );
+        }
+        let flat = composition_to_flat(&comp, &wt).expect("the example flattens");
+        let structured = composition_to_structured(&comp, &wt).expect("the example structures");
+        let now = "2022-02-03T04:05:06Z";
+        for (format, built) in [
+            ("canonical", comp.clone()),
+            (
+                "FLAT",
+                composition_from_flat(&flat, &wt, now).expect("FLAT builds"),
+            ),
+            (
+                "STRUCTURED",
+                composition_from_structured(&structured, &wt, now).expect("STRUCTURED builds"),
+            ),
+        ] {
+            let findings: Vec<String> = validate_composition(&built, &wt)
+                .into_iter()
+                .map(|m| format!("{}: {}", m.path, m.message))
+                .collect();
+            assert!(findings.is_empty(), "{level:?} {format}: {findings:?}");
+        }
+    }
+}
+
+// ── an empty container under a mandatory attribute ───────────────────────────
+
+/// The template whose `state` and `protocol` `items` are existence 1..1 and
+/// cardinality 0..* (#5909).
+fn strict_existence() -> WebTemplate {
+    web_template(&sdk_go_dir().join("blood_pressure_strict_existence.opt"))
+}
+
+/// Removes `attr` from every object of `v` whose `archetype_node_id` is one of
+/// `ids`, returning how many it removed.
+fn remove_attr(v: &mut Value, ids: &[&str], attr: &str) -> usize {
+    match v {
+        Value::Object(m) => {
+            let own = m
+                .get("archetype_node_id")
+                .and_then(Value::as_str)
+                .is_some_and(|id| ids.contains(&id));
+            let here = usize::from(own && m.remove(attr).is_some());
+            here + m
+                .values_mut()
+                .map(|c| remove_attr(c, ids, attr))
+                .sum::<usize>()
+        }
+        Value::Array(a) => a.iter_mut().map(|e| remove_attr(e, ids, attr)).sum(),
+        _ => 0,
+    }
+}
+
+/// AOM 1.4 `master04-constraint_model_package.adoc`: existence says whether
+/// the container is there, cardinality how many members it holds. An empty
+/// `items` under existence 1..1 and cardinality 0..* is a container that is
+/// there, and RM `ITEM_TREE.items` allows zero members, so it validates.
+#[test]
+fn an_empty_container_under_a_mandatory_attribute_is_present() {
+    let wt = strict_existence();
+    let comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+    let mut state = Vec::new();
+    objects_with_id(&comp, "at0007", &mut state);
+    assert!(
+        state
+            .iter()
+            .any(|s| s.get("items") == Some(&Value::Array(Vec::new()))),
+        "the medium example carries the state tree with an empty items: {state:?}"
+    );
+    let missing = missing_attribute(&comp, &wt, "items");
+    assert!(missing.is_empty(), "{missing:?}");
+}
+
+/// The same container left out entirely is missing, and is still refused.
+#[test]
+fn a_missing_container_under_a_mandatory_attribute_is_refused() {
+    let wt = strict_existence();
+    let mut comp = example_composition(&wt, DetailLevel::Medium).expect("the example builds");
+    let removed = remove_attr(&mut comp, &["at0007", "at0011"], "items");
+    assert_eq!(
+        removed, 2,
+        "the state and protocol trees each lose their items"
+    );
+    let missing = missing_attribute(&comp, &wt, "items");
+    assert_eq!(missing.len(), 2, "both trees are refused: {missing:?}");
 }
 
 // ── mandatory structural attributes without leaf content ─────────────────────

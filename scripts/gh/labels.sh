@@ -247,5 +247,6 @@ label no-changelog        bfdadc "Skip the changelog-guard CI job (change is not
 label no-crate-bump       fbca04 "crate-version-guard escape: this PR sets the openehr-* lockstep version by hand"
 label no-chart-bump       bfd4f2 "chart-version-guard: packaged chart diff that cannot change consumer output"
 label no-ui-visual-change bfdadc "Skip the ui-screenshot-guard: viewer source change with no visual effect"
+label perf-accepted       d93f0b "perf-verdict: a perf breach the owner accepted on the issue a Perf-accepted line names"
 
 echo "done."

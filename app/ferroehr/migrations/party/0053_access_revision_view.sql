@@ -5,7 +5,7 @@
 -- party object has (#5888).
 --
 -- The clinical schema reads an EHR's access revision from the view
--- access_revision_of (clinical/0052). A demographic object belongs to no
+-- access_revision_of (clinical/0051). A demographic object belongs to no
 -- EHR, so the party schema keeps a view of the same shape with no rows, and
 -- a statement's scalar subquery over it reads NULL, as access_revision(ehr)
 -- (0040) answered, which this replaces.

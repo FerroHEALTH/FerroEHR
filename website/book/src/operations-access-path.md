@@ -29,26 +29,27 @@ An instance reports its own copies and its own listeners; with
 
 ## The policy copies and their listeners
 
-An instance holds six policy copies, each kept fresh by a `LISTEN` on its
+An instance holds five policy copies, each kept fresh by a `LISTEN` on its
 own notification channel. The `listener` label names the copy as the
 `policy_listeners` health indicator does: `ehr_access` (each EHR's
 `EHR_ACCESS` settings and the settings classes), `grants` (the grants and the
 caller facts), `party_binding` (the lookups of the binding side table and the
-bound `PERSON`s' names), `policy_registers` (the operational-policy registers),
-`access_policy` and `object_versions` (the COMPOSITION versions the instance
-read by their version id).
+bound `PERSON`s' names), `policy_registers` (the operational-policy registers)
+and `access_policy`.
 
-A read of a COMPOSITION by its version id is served from the instance's copy
-of the versions it read, up to 64 MiB, while the `object_versions` listener is
-up and the EHR's settings are at the revision the version was read under. Such
-a read makes no database statement, and it is judged and recorded in the
-access log as any read is. A new version of the object, a restriction or its
-lifting, an access delay and an erasure drop the object's versions on every
-instance. An `If-None-Match` that names the version answers `304 Not
-Modified` with no body, and it is recorded as the read it is. In
-`access_copy_lookups_total` and `access_copy_drops_total` the copy is
-`object_version`, and a version the bound evicted is dropped with the scope
-`object_version_evicted`.
+A read of a COMPOSITION by its version id takes the version's body from the
+instance's copy of the versions it read, up to 64 MiB. Before it serves one,
+the instance reads the object's current state in one indexed statement: its
+head, its restriction and access delay marks, its EHR's settings revision and
+the version's content digest. A new version, an erasure that rewrote or
+removed the version, or a changed digest sends the read to the store, and the
+marks and revision of this moment are the ones judged. A restriction or an
+erasure therefore takes effect at its commit on every instance. The read is
+judged and recorded in the access log as any read is. An `If-None-Match` that
+names the version answers `304 Not Modified` with no body, and it is recorded
+as the read it is. In `access_copy_lookups_total` and `access_copy_drops_total`
+the copy is `object_version`, and a version the bound evicted is dropped with
+the scope `object_version_evicted`.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
@@ -58,6 +59,7 @@ Modified` with no body, and it is recorded as the read it is. In
 | `policy_notification_age_seconds` | gauge | `listener` | Time since the listener's newest notification; absent before the first. |
 | `policy_copy_reads_total` | counter | `listener`, `reason` | Reads of the database a copy made on a request: `notified` after a notification marked it stale, `unlistened` because its listener was down. |
 | `grants_refresh_duration_seconds` | histogram | `kind`, `outcome` | Each refresh of the grants copy: `kind` is `unchanged` (one revision read), `grants` (every grant and fact read again) or `facts` (the caller facts changed since the revision held); `outcome` is `ok` or `failed`. |
+| `access_care_stale_total` | counter | `outcome` | Requests whose care decision found the grants copy older than the database: `judged_again` after the copy was read again, `refused` when it did not catch up and the request answered `503`. |
 
 Alert on `policy_listener_up == 0` held for a few minutes, and on a rate of
 `policy_copy_reads_total{reason="unlistened"}` above zero: both mean the

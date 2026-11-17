@@ -7,7 +7,7 @@ metadata:
 
 Every worker in a session shares one scratchpad directory. A worker writes its scratch files (PR bodies, issue comments, notes, reports) under its own subfolder named for its task (`<scratchpad>/<task>/`), never at the scratchpad root. A git worktree never goes in the scratchpad ([[worktrees-for-parallel-branches]]).
 
-**Why:** on 2026-10-20 a FerroAUTH worker left `pr1.md` at the scratchpad root, and a FerroBRIDGE worker published it as the body of another pull request (#998), which merged without closing its own issue (#1021). A generic file name at a shared root is a collision waiting for the next worker.
+**Why:** on 2026-10-20 a FerroSMART worker left `pr1.md` at the scratchpad root, and a FerroBRIDGE worker published it as the body of another pull request (#998), which merged without closing its own issue (#1021). A generic file name at a shared root is a collision waiting for the next worker.
 
 **How to apply:**
 - Every worker brief names the worker's own scratch subfolder and forbids the root.
