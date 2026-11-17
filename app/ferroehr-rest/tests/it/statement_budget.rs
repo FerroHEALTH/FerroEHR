@@ -32,6 +32,9 @@ use tracing_subscriber::registry::LookupSpan;
 
 use crate::access_evaluator_http::{app, ehr_with_composition, send};
 use crate::common::BASE;
+use ferroehr::db::pool::SESSION_SETUP_SPAN;
+
+mod intake;
 
 /// The EHRs the population query serves, each with one composition.
 const EHRS: u64 = 5;
@@ -80,14 +83,14 @@ const BUDGETS: [Budget; 2] = [
         body: single,
         served: 1,
         round_trips: 10,
-        nested: 12,
+        nested: 6,
     },
     Budget {
         name: "population AQL",
         body: population,
         served: EHRS,
         round_trips: 8,
-        nested: 9,
+        nested: 3,
     },
 ];
 
@@ -105,7 +108,8 @@ fn population(_: &str) -> String {
     json!({ "q": "SELECT e/ehr_id/value FROM EHR e LIMIT 20" }).to_string()
 }
 
-/// Counts the `sqlx::query` events sent inside a [`REQUEST_SPAN`] span.
+/// Counts the `sqlx::query` events sent inside a [`REQUEST_SPAN`] span and
+/// outside a connection's session setup.
 #[derive(Clone, Default)]
 struct RoundTrips(Arc<AtomicU64>);
 
@@ -117,10 +121,12 @@ where
         if event.metadata().target() != "sqlx::query" {
             return;
         }
-        let in_request = ctx
-            .event_scope(event)
-            .is_some_and(|mut scope| scope.any(|span| span.name() == REQUEST_SPAN));
-        if in_request {
+        let Some(scope) = ctx.event_scope(event) else {
+            return;
+        };
+        let names: Vec<&str> = scope.map(|span| span.name()).collect();
+        // A new connection's session setup is the pool's work (#5899).
+        if names.contains(&REQUEST_SPAN) && !names.contains(&SESSION_SETUP_SPAN) {
             self.0.fetch_add(1, Ordering::Relaxed);
         }
     }
@@ -309,4 +315,32 @@ async fn an_aql_request_stays_within_its_statement_budget() {
     }
     assert!(!over, "a request exceeds its statement budget:\n{report}");
     eprintln!("{report}");
+}
+
+/// A request that opens a new connection counts only what it sends: the
+/// connection's session setup is the pool's (#5899).
+#[tokio::test]
+async fn a_new_connections_session_setup_is_not_a_round_trip() {
+    let round_trips = RoundTrips::default();
+    let _guard =
+        tracing::subscriber::set_default(tracing_subscriber::registry().with(round_trips.clone()));
+    let (_db, pool) = crate::common::migrated_pool().await;
+    let fresh = ferroehr::db::domain_pool_from(&pool, ferroehr::db::domain::Domain::Clinical);
+    async {
+        sqlx::query("SELECT 1")
+            .execute(&fresh)
+            .await
+            .expect("a statement on a new connection");
+        sqlx::query("SELECT 1")
+            .execute(&fresh)
+            .await
+            .expect("a statement on the kept connection");
+    }
+    .instrument(tracing::info_span!(REQUEST_SPAN))
+    .await;
+    assert_eq!(
+        round_trips.0.load(Ordering::Relaxed),
+        2,
+        "the two statements, and not the new connection's session setup"
+    );
 }

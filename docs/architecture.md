@@ -421,7 +421,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   policy) and every column the log derives from its content, into the
   intake in one short transaction of the audit pool: `access_log_intake`
   for the entries, `audit_event_intake` for the other records
-  (`audit/0042_audit_intake.sql`). A write that fails refuses the request
+  (`audit/0042_audit_intake.sql`). The intake statement finds each entry's
+  search tokens by the digests the server computes
+  (`system_log::token_digest`, the bytes of `audit.search_token_digest`)
+  and groups them by entry in one pass, so its cost grows with the batch's
+  tokens and not with its entries times its tokens
+  (`audit/0044_intake_grouped_tokens.sql`, #5889). A write that fails refuses the request
   with `503`, so back-pressure replaces loss; there is no queue in memory and
   no fail mode. The intake is append-only: the runtime role may insert and
   read, the tables refuse every update, delete and truncate, and only the

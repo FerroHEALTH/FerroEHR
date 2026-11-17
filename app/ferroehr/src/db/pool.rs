@@ -13,6 +13,7 @@
 use crate::db::acquire::acquire;
 use crate::db::domain::{Domain, DomainPools};
 use sqlx::postgres::PgPoolOptions;
+use tracing::Instrument as _;
 
 use crate::db::{DbConfig, DbError};
 
@@ -169,6 +170,11 @@ impl DbConfig {
     }
 }
 
+/// The span a new connection's session setup runs in, so its statements read
+/// as the pool's and not as the statements of the request that happened to
+/// open the connection (#5899).
+pub const SESSION_SETUP_SPAN: &str = "db_session_setup";
+
 /// The pool options for one domain: sizing + acquire timeout from settings,
 /// the domain's session setup on every physical connection, and no per-checkout
 /// liveness ping. Connection retirement stays on the `sqlx` defaults (an idle
@@ -200,10 +206,17 @@ pub(crate) fn options(settings: &DbConfig, domain: Domain) -> PgPoolOptions {
             // Cloned per call: `after_connect` takes an `Fn`, so the captured
             // value cannot be moved out of it.
             let statement_timeout = statement_timeout.clone();
-            Box::pin(async move {
-                crate::db::session::open_session(conn, search_path, statement_timeout.as_deref())
+            Box::pin(
+                async move {
+                    crate::db::session::open_session(
+                        conn,
+                        search_path,
+                        statement_timeout.as_deref(),
+                    )
                     .await
-            })
+                }
+                .instrument(tracing::debug_span!(SESSION_SETUP_SPAN)),
+            )
         })
 }
 
