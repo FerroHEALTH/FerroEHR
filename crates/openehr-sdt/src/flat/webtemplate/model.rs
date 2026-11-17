@@ -361,7 +361,7 @@ pub struct WebTemplateNode {
     /// `C_PRIMITIVE_OBJECT`), as the input that carries its pattern or list.
     /// Build-time only (`#[serde(skip)]`), so the Web Template is unchanged.
     #[serde(skip)]
-    pub string_constraint: Option<WebTemplateInput>,
+    pub string_constraint: Option<Box<WebTemplateInput>>,
     /// For an archetype root of an OPT2, the complete identifier the template
     /// inlined it by, which data records in its `archetype_node_id` and
     /// `archetype_details.archetype_id` (BASE `artefact_identification`

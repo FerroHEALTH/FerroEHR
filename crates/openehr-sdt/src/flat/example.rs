@@ -320,7 +320,7 @@ fn walk(
     // constrains, such as `ACTIVITY.action_archetype_id`, gets a value that matches.
     if let Some(value) = node
         .string_constraint
-        .as_ref()
+        .as_deref()
         .and_then(constrained_string_example)
     {
         put(out, prefix, "", json!(value));
