@@ -695,6 +695,18 @@ pub(crate) async fn audited_app(
 /// `client_id`), and a token whose claims name no `scope` carries
 /// [`FULL_SCOPES`], so only a test about the scopes needs to name them.
 pub(crate) fn bearer(claims: &Value) -> String {
+    sign(claims, None)
+}
+
+/// The [`bearer`] of `claims` with no `omitted` claim, not even the default
+/// [`bearer`] fills in.
+pub(crate) fn bearer_without(claims: &Value, omitted: &str) -> String {
+    sign(claims, Some(omitted))
+}
+
+/// The `Authorization` value of `claims`, the defaults filled in and
+/// `omitted` removed.
+fn sign(claims: &Value, omitted: Option<&str>) -> String {
     let mut claims = claims.clone();
     let now = jiff::Timestamp::now().as_second();
     if let Some(object) = claims.as_object_mut() {
@@ -708,6 +720,9 @@ pub(crate) fn bearer(claims: &Value) -> String {
         object
             .entry("scope")
             .or_insert(serde_json::json!(FULL_SCOPES));
+        if let Some(omitted) = omitted {
+            object.remove(omitted);
+        }
     }
     let mut header = Header::new(Algorithm::RS256);
     header.typ = Some("at+jwt".to_owned());

@@ -71,6 +71,7 @@ mod audit_route_coverage;
 mod authz_route_matrix;
 mod base_path_http;
 mod basic_binding_http;
+mod behind_ferrosmart;
 mod binding_callers_http;
 mod binding_commits_http;
 mod binding_issuers_http;

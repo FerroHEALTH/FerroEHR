@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The ITI-20 ATX: FHIR Feed (`[audit.fhir_feed]`): `ihe-atna`'s
-//! [`FeedRepository`] over the endpoint's [`OutboundClient`], which carries
+//! [`FeedRepository`] sending through [`Feed`], the endpoint's own
+//! [`OutboundClient`] behind `ihe-atna`'s `FeedClient`, which carries
 //! the feed's IHE IUA bearer token on each request and renews it once on a
 //! `401` (RFC 6750 §3.1), and the [`StoreOutbox`] `ihe-atna`'s forwarders
 //! deliver the feed and the syslog route from.
@@ -24,9 +25,11 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 
-use ferrohealth_smart::client::outbound::OutboundClient;
+use ferrohealth_smart::client::outbound::{OutboundClient, SendError};
 use ferrohealth_smart::config::ServerTls;
-use ihe_atna::atna::feed::FeedRepository;
+use http::header::CONTENT_TYPE;
+use http::{Method, StatusCode};
+use ihe_atna::atna::feed::{FeedClient, FeedRepository, FeedSendError};
 use ihe_atna::atna::forwarder::{Outbox, OutboxError};
 use ihe_atna::atna::spool::{Depth, Stored};
 use secrecy::SecretSlice;
@@ -46,14 +49,53 @@ use crate::system_log::store::outbox::{Delivered, Sink};
 pub(super) fn repository(config: &FhirFeedConfig) -> Result<FeedRepository, AuditError> {
     let client = OutboundClient::build(&config.endpoint, "audit.fhir_feed.endpoint", &ServerTls)
         .map_err(|e| AuditError::Transport(Box::new(e)))?;
+    let base = client.url().clone();
+    let between_rounds = Duration::from(client.retry().max_backoff);
+    let cleartext = base.scheme() == "http";
+    let client: Arc<dyn FeedClient> = Arc::new(Feed(client));
     // NOTE: an `http` feed opens the `plaintext_audit_feed` deployment gap, which
     // production refuses unless it is accepted by name.
-    if client.url().scheme() == "http" {
-        FeedRepository::cleartext(client)
+    if cleartext {
+        FeedRepository::cleartext(&base, client, between_rounds)
     } else {
-        FeedRepository::new(client)
+        FeedRepository::new(&base, client, between_rounds)
     }
     .map_err(|e| AuditError::Transport(Box::new(e)))
+}
+
+/// The FHIR Feed's client: the endpoint's own outbound client, with its TLS,
+/// timeouts, IUA bearer token and its renewal, and the tries of one round (no
+/// specification governs the seam: `ihe-atna`'s design).
+struct Feed(OutboundClient);
+
+#[async_trait::async_trait]
+impl FeedClient for Feed {
+    fn authorizes(&self) -> bool {
+        self.0.authorization().is_some()
+    }
+
+    async fn post(
+        &self,
+        url: &url::Url,
+        content_type: &'static str,
+        body: &[u8],
+    ) -> Result<StatusCode, FeedSendError> {
+        let answer = self
+            .0
+            .send(&Method::POST, url, |request| {
+                request
+                    .header(CONTENT_TYPE, content_type)
+                    .body(body.to_vec())
+            })
+            .await
+            .map_err(|error| match error {
+                SendError::Transport(error) => {
+                    FeedSendError::Transport(Box::new(error.without_url()))
+                }
+                other => FeedSendError::Credentials(Box::new(other)),
+            })?;
+        Ok(answer.status())
+    }
 }
 
 /// The local audit store as one sink's outbox.
