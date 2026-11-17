@@ -6,7 +6,7 @@
 //! wrote it, such as an export or an imported log (#5129).
 //!
 //! The digests are the draft's (`docs/plans/access-log.md` §Integrity), the
-//! same the insert trigger of `audit.access_log_record` computes: the
+//! same the insert trigger of `audit.access_log_link` computes: the
 //! content digest is the SHA-256 of a record's canonical form, the link
 //! digest the SHA-256 of the previous digest, the sequence and the content
 //! digest, one per line, each in lower-case hexadecimal. A tombstone keeps

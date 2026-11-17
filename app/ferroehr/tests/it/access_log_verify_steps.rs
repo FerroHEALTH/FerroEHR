@@ -58,7 +58,7 @@ async fn cursor(pool: &PgPool) -> i64 {
 async fn tamper(pool: &PgPool, statement: &str) {
     let mut conn = pool.acquire().await.expect("connection");
     let mut tx = conn.begin().await.expect("begin");
-    sqlx::query("ALTER TABLE audit.access_log_record DISABLE TRIGGER USER")
+    sqlx::query("ALTER TABLE audit.access_log_entry DISABLE TRIGGER USER")
         .execute(&mut *tx)
         .await
         .expect("disable the triggers");
@@ -66,7 +66,7 @@ async fn tamper(pool: &PgPool, statement: &str) {
         .execute(&mut *tx)
         .await
         .expect("the tampering statement itself must succeed");
-    sqlx::query("ALTER TABLE audit.access_log_record ENABLE TRIGGER USER")
+    sqlx::query("ALTER TABLE audit.access_log_entry ENABLE TRIGGER USER")
         .execute(&mut *tx)
         .await
         .expect("enable the triggers");
@@ -157,9 +157,9 @@ async fn damage_inside_the_backlog_is_reported_and_holds_the_cursor() {
         tamper(
             &pool,
             &format!(
-                "UPDATE audit.access_log_record \
+                "UPDATE audit.access_log_entry \
                  SET content = replace(content, '\"was_delivered\":true', '\"was_delivered\":false') \
-                 WHERE chain_seq = {seq}"
+                 WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = {seq})"
             ),
         )
         .await;

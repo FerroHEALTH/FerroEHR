@@ -78,8 +78,9 @@ fn system_record() -> AuditEvent {
 /// their ids and their content digests.
 async fn held(pool: &PgPool, reservation: Uuid) -> (Vec<(Uuid, Vec<u8>)>, Vec<Uuid>) {
     let entries = sqlx::query_as(
-        "SELECT uid, content_digest FROM audit.access_log_intake WHERE reserved_by = $1 \
-         ORDER BY uid",
+        "SELECT e.uid, e.content_digest FROM audit.access_log_intake i \
+         CROSS JOIN LATERAL unnest(i.entries) AS n(id) JOIN audit.access_log_entry e ON e.id = n.id \
+         WHERE i.reserved_by = $1 ORDER BY e.uid",
     )
     .bind(reservation)
     .fetch_all(pool)
@@ -460,12 +461,15 @@ async fn a_write_reads_the_subject_of_its_records_on_its_own_transaction() {
     .await;
     let reservations = recorder.reserved();
     assert_eq!(reservations.len(), 1, "the write took one reservation");
-    let named: Vec<Option<String>> =
-        sqlx::query_scalar("SELECT patient_id FROM audit.access_log_intake WHERE reserved_by = $1")
-            .bind(reservations[0].id)
-            .fetch_all(&pool)
-            .await
-            .expect("the held entries");
+    let named: Vec<Option<String>> = sqlx::query_scalar(
+        "SELECT e.patient_id FROM audit.access_log_intake i \
+             CROSS JOIN LATERAL unnest(i.entries) AS n(id) \
+             JOIN audit.access_log_entry e ON e.id = n.id WHERE i.reserved_by = $1",
+    )
+    .bind(reservations[0].id)
+    .fetch_all(&pool)
+    .await
+    .expect("the held entries");
     assert_eq!(
         named,
         vec![Some(subject.id.clone())],

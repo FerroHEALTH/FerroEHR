@@ -1,17 +1,20 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The intake of the access log: each entry written before the response that
-//! reports its access, unchained, with every column the chain keeps (#5747).
+//! The intake of the access log: each entry written once, unchained, before
+//! the response that reports its access (#5747, #5968).
+//!
+//! Each entry is written with every column the chain keeps, and one intake
+//! row names the entries of the statement for the chainer.
 //!
 //! The writer supplies the row and shared parts of the entry's canonical
 //! form, the content digest over the whole form, the columns the log derives
 //! from the content and, when the entry is indexed, its ITI-81 index row, so
 //! the chainer only computes the links
-//! (`migrations/audit/0042_audit_intake.sql`). The forms are written
+//! (`migrations/audit/0048_access_log_entry_written_once.sql`). The forms are written
 //! straight from the entry, with no JSON value of it built (#5849). Each
 //! derived column is read from the entry's ITS-JSON form at the path the
-//! database's own derive reads (`audit.access_log_record_derive`), and the
+//! database's own derive reads (`audit.access_log_entry_derive`), and the
 //! text is cast by the database as that function casts it, so a chained
 //! record compares equal to its derivation, which the verifier checks. No
 //! openEHR spec governs audit storage: our own design.
@@ -131,7 +134,7 @@ impl IntakeEntry {
 
 impl Derived {
     /// The derived columns of the entry whose canonical form `cut` read, at
-    /// the paths `audit.access_log_record_derive` reads.
+    /// the paths `audit.access_log_entry_derive` reads.
     fn of(cut: &stored_form::parts::Cut<'_>) -> Result<Self, AccessLogError> {
         let text = |path: &[&str]| cut.text_at(path).map_err(AccessLogError::Canonical);
         Ok(Self {

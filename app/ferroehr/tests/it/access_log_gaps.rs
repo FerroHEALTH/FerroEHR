@@ -232,8 +232,8 @@ async fn a_run_of_expired_tombstones_folds_into_one_gap() {
 
     crate::access_log_checkpoint::tamper(
         &pool,
-        "audit.access_log_record",
-        &["DELETE FROM audit.access_log_record WHERE chain_seq = 5"],
+        "audit.access_log_link",
+        &["DELETE FROM audit.access_log_link WHERE chain_seq = 5"],
     )
     .await;
     let found = findings(&pool).await;
@@ -582,10 +582,13 @@ async fn a_gap_and_a_tombstone_leave_only_through_the_fold() {
         .await
         .expect("expire");
     assert!(
-        sqlx::query("DELETE FROM audit.access_log_record WHERE chain_seq = 1")
-            .execute(&pool)
-            .await
-            .is_err(),
+        sqlx::query(
+            "DELETE FROM audit.access_log_entry \
+             WHERE id = (SELECT entry_id FROM audit.access_log_link WHERE chain_seq = 1)",
+        )
+        .execute(&pool)
+        .await
+        .is_err(),
         "a tombstone is not deleted outside the fold"
     );
     fold(&store, Log::Local, fold_run()).await.expect("fold");

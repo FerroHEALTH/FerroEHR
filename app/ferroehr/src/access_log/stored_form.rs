@@ -9,7 +9,7 @@
 //! retention their access calls for, and the same caller's next request
 //! repeats it again. That shared part is stored once in
 //! `audit.access_log_shared`, keyed by the SHA-256 of its canonical form, and
-//! each row of `audit.access_log_record` keeps the rest: its uid, time, EHR,
+//! each row of `audit.access_log_entry` keeps the rest: its uid, time, EHR,
 //! items, outcome, request and query, and the access details that differ per
 //! EHR. The entry stays one logical record with its own link:
 //! `content_digest` is the SHA-256 of the whole canonical form, computed when

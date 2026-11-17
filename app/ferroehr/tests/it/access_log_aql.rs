@@ -302,8 +302,8 @@ async fn the_persons_lookup_by_time_reads_the_ehr_index() {
     collect_scans(&explained[0]["Plan"], &mut scans);
     assert!(
         scans.iter().any(|(node, index)| node.contains("Index")
-            && index.as_deref() == Some("ix_access_log_record_ehr")),
-        "the lookup reads ix_access_log_record_ehr: {scans:?}\n{explained:#}"
+            && index.as_deref() == Some("ix_access_log_entry_ehr")),
+        "the lookup reads ix_access_log_entry_ehr: {scans:?}\n{explained:#}"
     );
     assert!(
         scans.iter().all(|(node, _)| node != "Seq Scan"),

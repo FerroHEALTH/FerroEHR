@@ -198,7 +198,7 @@ async fn a_tombstone_never_comes_back() {
         "a tombstone is not replaced again"
     );
 
-    let restored = sqlx::query("UPDATE audit.access_log_record SET content = $2 WHERE uid = $1")
+    let restored = sqlx::query("UPDATE audit.access_log_entry SET content = $2 WHERE uid = $1")
         .bind(uid(3))
         .bind(canonical_form(&entries[2]).expect("the entry's canonical form"))
         .execute(&pool)
