@@ -9,9 +9,10 @@
 //! text: RFC 8785 sorts every object's members by name (§3.2.3), so the
 //! members a part keeps, taken in the order of the whole form, are already in
 //! the order the part's own canonical form puts them, and each part is the
-//! whole form's member texts joined anew. The members are routed as
-//! [`super::split`] routes the members of the record's JSON value. How a
-//! record is stored is our own design; no openEHR spec governs it.
+//! whole form's member texts joined anew. The members are routed as the
+//! split of the record's JSON value routes them, the reference the tests hold
+//! the parts to. How a record is stored is our own design; no openEHR spec
+//! governs it.
 
 use std::cmp::Ordering;
 
