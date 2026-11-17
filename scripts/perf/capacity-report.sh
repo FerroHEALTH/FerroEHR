@@ -43,7 +43,8 @@ fold_runs() {
         arm: $arm, runs: ($runs | length), run_verdicts: [$runs[].passed],
         throughput: over(.throughput), answered: ([$runs[].answered] | add),
         failed: ([$runs[].failed] | add), saturated: any($runs[]; .saturated),
-        lag_p99_ms: ([$runs[].lag_p99_ms] | max),
+        lag_p50_ms: over(.lag_p50_ms), lag_p99_ms: ([$runs[].lag_p99_ms] | max),
+        lag_max_ms: ([$runs[].lag_max_ms] | max),
         groups: $groups,
         server_cores: over(.server_cores), pg_cores: over(.pg_cores),
         server_cpu_ms_per_request: over(.server_cpu_ms_per_request),
@@ -84,7 +85,7 @@ summary() {
         "No `health` step ran, so this run names no forwarder floor: `capacity.sh sweep health 500 1000` measures it."
       else
         ($health[] | (.groups[0]) as $g
-          | "- \(.arm // "" | if . == "" then "" else . + ": " end)at \(.rate) rps the client p50 of `/health/liveness` is \($g.p50 | r2) ms and the server'"'"'s \($g.server_p50 | r2) ms: about \(if $g.server_p50 == null then $g.p50 else $g.p50 - $g.server_p50 end | r2) ms of every client latency in this run is the generator'"'"'s own scheduling lag (p99 \(.lag_p99_ms | r2) ms) and the path to the server (generator: \(.generator // "host")).")
+          | "- \(.arm // "" | if . == "" then "" else . + ": " end)at \(.rate) rps the client p50 of `/health/liveness` is \($g.p50 | r2) ms and the server'"'"'s \($g.server_p50 | r2) ms: about \(if $g.server_p50 == null then $g.p50 else $g.p50 - $g.server_p50 end | r2) ms of every client latency in this run is the generator'"'"'s own scheduling lag (p50 \(.lag_p50_ms | r2), p99 \(.lag_p99_ms | r2), max \(.lag_max_ms | r2) ms) and the path to the server (generator: \(.generator // "host")).")
       end),
       "",
       "### The host",
