@@ -507,12 +507,12 @@ services:
       # refusal, not a synonym for "unset". A `${VAR:-}` default would inject
       # exactly that empty string into every quickstart.
       FERROEHR__RECORD__MULTIMEDIA__ENABLED:
-      FERROEHR__RECORD__MULTIMEDIA__URL:
-      FERROEHR__RECORD__MULTIMEDIA__BUCKET:
-      FERROEHR__RECORD__MULTIMEDIA__REGION:
+      FERROEHR__RECORD__MULTIMEDIA__S3__URL:
+      FERROEHR__RECORD__MULTIMEDIA__S3__BUCKET:
+      FERROEHR__RECORD__MULTIMEDIA__S3__REGION:
       FERROEHR__RECORD__MULTIMEDIA__THRESHOLD:
-      FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID:
-      FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY:
+      FERROEHR__RECORD__MULTIMEDIA__S3__ACCESS_KEY_ID:
+      FERROEHR__RECORD__MULTIMEDIA__S3__SECRET_ACCESS_KEY:
     configs:
       # Named by FERROEHR_CONFIG above.
       # The inline quickstart posture — see the `configs:` block at the bottom.
@@ -760,8 +760,8 @@ services:
   #   1. export these THREE variables — the `ferroehr` service passes
   #      the whole FERROEHR__RECORD__MULTIMEDIA__* set through from your shell:
   #        export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
-  #        export FERROEHR__RECORD__MULTIMEDIA__URL=http://seaweedfs:8333   # dev only; prod S3 is HTTPS
-  #        export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
+  #        export FERROEHR__RECORD__MULTIMEDIA__S3__URL=http://seaweedfs:8333   # dev only; prod S3 is HTTPS
+  #        export FERROEHR__RECORD__MULTIMEDIA__S3__BUCKET=openehr-multimedia
   #   2. docker compose --profile s3 up -d --wait ferroehr seaweedfs
   #      `seaweedfs-init` creates the bucket; the gateway ships with none, and an
   #      S3 PUT into a missing bucket answers 403 AccessDenied, which reads as a
@@ -784,7 +784,7 @@ services:
   # the gateway runs unauthenticated here, so every re-`up` is a no-op.
   #
   # It reads the SAME bucket variable the server does, so the two cannot drift:
-  # override `FERROEHR__RECORD__MULTIMEDIA__BUCKET` and this creates the bucket you
+  # override `FERROEHR__RECORD__MULTIMEDIA__S3__BUCKET` and this creates the bucket you
   # actually configured.
   seaweedfs-init:
     profiles: [s3]
@@ -808,7 +808,7 @@ services:
     entrypoint: ["sh", "-c"]
     command:
       - >-
-        bucket="http://seaweedfs:8333/${FERROEHR__RECORD__MULTIMEDIA__BUCKET:-openehr-multimedia}";
+        bucket="http://seaweedfs:8333/${FERROEHR__RECORD__MULTIMEDIA__S3__BUCKET:-openehr-multimedia}";
         i=0; while [ "$$i" -lt 30 ]; do
         curl -sS -X PUT "$$bucket" >/dev/null;
         if curl -sSf -o /dev/null "$$bucket/?max-keys=0"; then exit 0; fi;

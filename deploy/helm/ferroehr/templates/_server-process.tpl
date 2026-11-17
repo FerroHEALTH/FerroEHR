@@ -68,14 +68,14 @@ the same configuration (`ferroehr definitions load`).
       key: FERROEHR__AUDIT__FHIR_FEED__ENDPOINT__URL
 {{- end }}
 {{- if .Values.secrets.multimediaAccessKeyId }}
-- name: FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
+- name: FERROEHR__RECORD__MULTIMEDIA__S3__ACCESS_KEY_ID
   valueFrom:
     secretKeyRef:
       name: {{ include "ferroehr.secretName" . }}
-      key: FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID
+      key: FERROEHR__RECORD__MULTIMEDIA__S3__ACCESS_KEY_ID
 {{- end }}
 {{- if .Values.secrets.multimediaSecretAccessKey }}
-- name: FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY_FILE
+- name: FERROEHR__RECORD__MULTIMEDIA__S3__SECRET_ACCESS_KEY_FILE
   value: {{ printf "%s/multimedia.secret_access_key" (include "ferroehr.secretMountPath" .) | quote }}
 {{- end }}
 {{- with .Values.extraEnv }}

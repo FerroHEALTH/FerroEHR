@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The multimedia engine (`ferroehr_ext::multimedia`) end to end over a real
-//! object store: a `DV_MULTIMEDIA` above the threshold is offloaded, its bytes
+//! blob store: a `DV_MULTIMEDIA` above the threshold is offloaded, its bytes
 //! land in the store once, the canonical value keeps the invariants RM data
 //! types demand of an externalised value, and expanding it restores the inline
-//! bytes. The in-memory `object_store` backend stands in for S3; the S3-backed
+//! bytes. The in-memory blob store stands in for S3; the S3-backed
 //! journey is `app/ferroehr/tests/it/multimedia_s3.rs`. The planner's own
 //! arithmetic (thresholds, thumbnails, integrity) is unit-tested beside it in
 //! `src/multimedia/offload.rs`; this module drives the engine's public seam.
@@ -19,10 +19,8 @@
     reason = "test fixtures and wire assertions are raw JSON by the testing rule (.claude/rules/testing.md §Test-fixture construction): a canonical composition is bytes a client sends, and building it through a typed model would test the model instead of the code under test"
 )]
 
-use std::sync::Arc;
-
 use base64::Engine;
-use ferroehr_ext::multimedia::store::BlobStore;
+use ferroehr_ext::multimedia::blob::{BlobKey, BlobStore};
 use ferroehr_ext::multimedia::{MultimediaEngine, MultimediaError, references_external_blob};
 use serde_json::{Value, json};
 
@@ -30,12 +28,22 @@ const THRESHOLD: usize = 256;
 
 fn engine() -> MultimediaEngine {
     MultimediaEngine::from_parts(
-        BlobStore::from_parts(
-            Arc::new(object_store::memory::InMemory::new()),
-            "media".to_owned(),
-        ),
+        BlobStore::in_memory("media"),
         THRESHOLD,
     )
+}
+
+/// The bytes the store holds under `key`, read through the verified stream.
+async fn stored_bytes(store: &BlobStore, key: &BlobKey) -> Vec<u8> {
+    let mut out = Vec::new();
+    store
+        .read_verified(key, |chunk| {
+            out.extend_from_slice(chunk);
+            Ok::<(), MultimediaError>(())
+        })
+        .await
+        .expect("stored bytes");
+    out
 }
 
 fn b64(bytes: &[u8]) -> String {
@@ -97,9 +105,9 @@ async fn a_large_value_round_trips_through_the_store() {
     // The bytes are in the store under the key the uri names, verbatim.
     let keys = engine.referenced_keys(&composition);
     assert_eq!(keys.len(), 1);
-    let stored = engine.store().get(&keys[0]).await.expect("stored bytes");
-    assert_eq!(stored.as_ref(), payload.as_slice());
-    assert_eq!(engine.store().key_from_uri(&uri), Some(keys[0].as_str()));
+    let stored = stored_bytes(engine.store(), &keys[0]).await;
+    assert_eq!(stored, payload);
+    assert_eq!(engine.store().key_from_uri(&uri), Some(keys[0]));
 
     // Expanding restores the inline document exactly.
     engine.expand(&mut composition).await.expect("expand");
@@ -129,7 +137,7 @@ async fn a_small_value_and_a_disabled_engine_leave_the_document_untouched() {
     let before = small.clone();
     engine.offload(&mut small).await.expect("offload");
     assert_eq!(small, before, "below the threshold nothing moves");
-    assert_eq!(engine.referenced_keys(&small), Vec::<String>::new());
+    assert_eq!(engine.referenced_keys(&small), Vec::<BlobKey>::new());
 
     let disabled = engine.with_offload_enabled(false);
     assert!(!disabled.offload_enabled());
@@ -153,8 +161,8 @@ async fn the_same_bytes_are_stored_once_and_expand_is_idempotent() {
     let k2 = engine.referenced_keys(&second);
     assert_eq!(k1, k2, "content addressing: identical bytes share one key");
     assert_eq!(
-        engine.store().get(&k1[0]).await.expect("bytes").as_ref(),
-        payload.as_slice()
+        stored_bytes(engine.store(), &k1[0]).await,
+        payload
     );
 
     engine.expand(&mut first).await.expect("expand");
@@ -181,7 +189,7 @@ async fn a_reference_whose_bytes_are_missing_is_a_typed_refusal() {
                     "code_string": "application/octet-stream"
                 },
                 "size": 3,
-                "uri": { "_type": "DV_URI", "value": engine.store().uri_for("00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff") }
+                "uri": { "_type": "DV_URI", "value": engine.store().uri_for(&"00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff".parse().expect("a digest")) }
             }
         }]
     });

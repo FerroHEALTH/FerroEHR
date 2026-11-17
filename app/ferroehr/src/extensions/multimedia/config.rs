@@ -1,21 +1,24 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The `[record.multimedia]` section — `DV_MULTIMEDIA` externalization.
+//! The `[record.multimedia]` section: `DV_MULTIMEDIA` externalization.
 //!
-//! **No openEHR spec governs this — our own design/extension.** A field of the
+//! **No openEHR spec governs this: our own design/extension.** A field of the
 //! one config tree ([`crate::config::FerroEhrConfig`]); no loader of its own.
 //!
 //! **Off by default** (`enabled = false`): with externalization disabled and
-//! no `url` the commit/read paths are byte-identical to today's inline
-//! behaviour and no object store is ever contacted. The section keeps
+//! no endpoint the commit/read paths are byte-identical to today's inline
+//! behaviour and no blob store is ever contacted. The section keeps
 //! `enabled` where other optional features use the table's presence, because
-//! `url` applies while it is off: the blobs already offloaded are read back. The secret access key is a shared
-//! [`ferrohealth_secret::secret::Secret`] (never rendered) with a `*_file` sibling.
-
+//! the backend applies while it is off: the blobs already offloaded are read
+//! back. `backend` picks the storage service and its own table carries that
+//! service's settings (`[record.multimedia.s3]`), so a further service is a
+//! further variant and table. The secret access key is a shared
+//! [`ferrohealth_secret::secret::Secret`] (never rendered) with a `*_file`
+//! sibling.
 #![expect(
     clippy::doc_markdown,
-    reason = "product identifiers (SeaweedFS, object_store, …) read as prose in \
+    reason = "product identifiers (SeaweedFS, MinIO, …) read as prose in \
               this module's docs"
 )]
 #![cfg_attr(
@@ -30,7 +33,7 @@
 
 use std::path::PathBuf;
 
-use ferrohealth_config::units::ByteSize;
+use ferrohealth_config::units::{ByteSize, Duration};
 use ferrohealth_secret::secret::Secret;
 use ferrohealth_secret::secret_url::SecretUrl;
 use ferrohealth_smart::config::mask_userinfo;
@@ -44,14 +47,63 @@ use url::Url;
 #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
 pub struct MultimediaConfig {
     /// Master switch. `false` (default) = today's inline behaviour, byte for
-    /// byte; no object store is built or contacted.
+    /// byte; no blob store is built or contacted.
     pub enabled: bool,
     /// A decoded `DV_MULTIMEDIA.data` strictly larger than this is offloaded
-    /// to the object store; at or below it stays inline. Default `"256KiB"`.
+    /// to the blob store; at or below it stays inline. Default `"256KiB"`.
     pub threshold: ByteSize,
+    /// The storage service the blobs live in. Default `"s3"`, the one service
+    /// this build offers.
+    pub backend: Backend,
+    /// The most requests to the blob store in flight at once, across every
+    /// request this server serves. Default `64`.
+    pub max_concurrent_requests: usize,
+    /// How long one request to the blob store, or one chunk of its body, may
+    /// take before it is retried or fails. Default `"30s"`.
+    pub request_timeout: Duration,
+    /// The part size of a multipart upload and of a ranged read: a blob larger
+    /// than this is uploaded in parts. Default `"8MiB"`.
+    pub part_size: ByteSize,
+    /// How many parts of one blob move at once. Default `4`.
+    pub part_concurrency: usize,
+    /// The S3 backend's settings (`[record.multimedia.s3]`).
+    pub s3: S3Config,
+}
+
+impl Default for MultimediaConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            threshold: ByteSize::from_kib(256),
+            backend: Backend::S3,
+            max_concurrent_requests: 64,
+            request_timeout: Duration::from_secs(30),
+            part_size: ByteSize::from_mib(8),
+            part_concurrency: 4,
+            s3: S3Config::default(),
+        }
+    }
+}
+
+/// The storage service `[record.multimedia]` stores blobs in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "lowercase")]
+pub enum Backend {
+    /// An S3-compatible object store (AWS S3, MinIO, SeaweedFS and others),
+    /// configured by `[record.multimedia.s3]`.
+    S3,
+}
+
+/// `[record.multimedia.s3]`: how the S3 backend is reached.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(default, deny_unknown_fields)]
+#[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "infrastructure")))]
+pub struct S3Config {
     /// S3-compatible endpoint URL (e.g. a SeaweedFS S3 gateway in dev/test, or
-    /// an AWS/MinIO endpoint in prod). `None` uses the object_store default AWS
-    /// endpoint resolution. Any `userinfo` in it is masked in every rendering.
+    /// a MinIO endpoint). `None` uses the AWS endpoint of `region`. Any
+    /// `userinfo` in it is masked in every rendering and never sent.
     /// An `http://` URL is plain HTTP, which a dev SeaweedFS speaks; a
     /// `production` deployment names it as a gap.
     pub url: Option<SecretUrl>,
@@ -59,8 +111,8 @@ pub struct MultimediaConfig {
     pub bucket: String,
     /// AWS region (S3 requires one even for non-AWS endpoints).
     pub region: String,
-    /// Access key id. `None` (with `secret_access_key` also `None`) runs the
-    /// client unsigned/anonymous — the mode a keyless dev SeaweedFS accepts.
+    /// Access key id. `None` (with `secret_access_key` also `None`) sends the
+    /// requests unsigned, the mode a keyless dev SeaweedFS accepts.
     pub access_key_id: Option<String>,
     /// Secret access key (paired with `access_key_id`); never rendered.
     pub secret_access_key: Option<Secret>,
@@ -70,11 +122,9 @@ pub struct MultimediaConfig {
     pub secret_access_key_file: Option<PathBuf>,
 }
 
-impl Default for MultimediaConfig {
+impl Default for S3Config {
     fn default() -> Self {
         Self {
-            enabled: false,
-            threshold: ByteSize::from_kib(256),
             url: None,
             bucket: "openehr-multimedia".to_owned(),
             region: "us-east-1".to_owned(),
@@ -85,7 +135,37 @@ impl Default for MultimediaConfig {
     }
 }
 
-/// Why [`MultimediaConfig::endpoint_url`] refused `record.multimedia.url`.
+impl MultimediaConfig {
+    /// Whether the configuration names a store at all: externalization on,
+    /// or an endpoint left in place to read already-offloaded blobs back.
+    #[must_use]
+    pub fn names_a_store(&self) -> bool {
+        self.enabled || self.s3.url.is_some()
+    }
+
+    /// The bucket the configured backend stores blobs in.
+    #[must_use]
+    pub fn bucket(&self) -> &str {
+        match self.backend {
+            Backend::S3 => &self.s3.bucket,
+        }
+    }
+
+    /// Whether the store is reached over plain HTTP: an `http://` S3 `url`,
+    /// which a dev SeaweedFS speaks.
+    #[must_use]
+    pub fn allows_http(&self) -> bool {
+        match self.backend {
+            Backend::S3 => self
+                .s3
+                .url
+                .as_ref()
+                .is_some_and(|url| url.expose().trim_start().starts_with("http://")),
+        }
+    }
+}
+
+/// Why [`S3Config::endpoint_url`] refused `record.multimedia.s3.url`.
 ///
 /// Every message quotes the endpoint only through [`mask_userinfo`], so no
 /// refusal carries a credential.
@@ -93,13 +173,13 @@ impl Default for MultimediaConfig {
 pub enum EndpointError {
     /// The key is set to a blank string.
     #[error(
-        "record.multimedia.url is set but empty — give an absolute URL \
+        "record.multimedia.s3.url is set but empty — give an absolute URL \
          (e.g. http://seaweedfs:8333) or remove the key to use default \
          AWS endpoint resolution"
     )]
     Empty,
     /// The value does not parse as an absolute URL.
-    #[error("record.multimedia.url {shown:?} is not an absolute URL: {reason}")]
+    #[error("record.multimedia.s3.url {shown:?} is not an absolute URL: {reason}")]
     NotAbsolute {
         /// The endpoint, `userinfo` masked.
         shown: String,
@@ -108,7 +188,7 @@ pub enum EndpointError {
     },
     /// The value parses, but its scheme is neither `http` nor `https`.
     #[error(
-        "record.multimedia.url {shown:?} has scheme {scheme:?} — an S3 endpoint \
+        "record.multimedia.s3.url {shown:?} has scheme {scheme:?} — an S3 endpoint \
          must be http or https (did you mean \"http://{shown}\"?)"
     )]
     NotHttp {
@@ -119,17 +199,8 @@ pub enum EndpointError {
     },
 }
 
-impl MultimediaConfig {
-    /// Whether the store is reached over plain HTTP: an `http://` `url`, which
-    /// a dev SeaweedFS speaks.
-    #[must_use]
-    pub fn allows_http(&self) -> bool {
-        self.url
-            .as_ref()
-            .is_some_and(|url| url.expose().trim_start().starts_with("http://"))
-    }
-
-    /// Whether the client should run unsigned/anonymous (no credentials given).
+impl S3Config {
+    /// Whether the client sends unsigned requests (no credentials given).
     #[must_use]
     pub fn is_anonymous(&self) -> bool {
         self.access_key_id.is_none() && self.secret_access_key.is_none()
@@ -175,9 +246,9 @@ mod tests {
     /// password out of its message, and an absent or absolute endpoint passes.
     #[test]
     fn endpoint_refusals_never_quote_userinfo() {
-        let with = |endpoint: &str| MultimediaConfig {
+        let with = |endpoint: &str| S3Config {
             url: Some(SecretUrl::new(endpoint)),
-            ..MultimediaConfig::default()
+            ..S3Config::default()
         };
         for bad in ["", "   ", "seaweedfs:8333", "/bucket"] {
             assert!(with(bad).endpoint_url().is_err(), "{bad:?} must be refused");
@@ -192,7 +263,7 @@ mod tests {
             assert!(!format!("{err:?}").contains("hunter2"), "{err:?}");
         }
         assert!(matches!(
-            MultimediaConfig::default().endpoint_url(),
+            S3Config::default().endpoint_url(),
             Ok(None)
         ));
         let url = with("https://user:hunter2@s3.example")
@@ -207,7 +278,9 @@ mod tests {
         let c = MultimediaConfig::default();
         assert!(!c.enabled);
         assert_eq!(c.threshold, ByteSize::from_kib(256));
-        assert_eq!(c.bucket, "openehr-multimedia");
-        assert!(c.is_anonymous());
+        assert_eq!(c.backend, Backend::S3);
+        assert_eq!(c.s3.bucket, "openehr-multimedia");
+        assert!(c.s3.is_anonymous());
+        assert!(!c.names_a_store());
     }
 }

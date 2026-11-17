@@ -6,7 +6,7 @@
 //! `--all-features` runs everything and a slim build compiles nothing here.
 //!
 //! These are behaviour tests over the crate's public seams: the multimedia
-//! engine over a real (in-memory) object store. The wiremock-backed journeys
+//! engine over a real (in-memory) blob store. The wiremock-backed journeys
 //! stay in `app/ferroehr/tests/it`, where the platform wires the integrations
 //! in; nothing here repeats them.
 

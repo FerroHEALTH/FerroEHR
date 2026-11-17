@@ -175,8 +175,10 @@ config:
     multimedia:
       enabled: true
       threshold: "262144B"
-      url: https://s3.example.com
-      region: eu-west-1
+      backend: s3
+      s3:
+        url: https://s3.example.com
+        region: eu-west-1
   terminology:
     # `endpoint.url` and `on_error` are INJECTED by the chart from the
     # `terminology:` block below, which is why they are not declared here:

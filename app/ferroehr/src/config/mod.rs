@@ -1223,10 +1223,10 @@ mod tests {
         for bad in ["", "   ", "seaweedfs:8333", "/bucket"] {
             let mut c = standalone();
             c.record.multimedia.enabled = true;
-            c.record.multimedia.url = Some(SecretUrl::new(bad));
+            c.record.multimedia.s3.url = Some(SecretUrl::new(bad));
             let errors = c.validate().expect_err("a bad endpoint must be refused");
             assert!(
-                format!("{errors:?}").contains("record.multimedia.url"),
+                format!("{errors:?}").contains("record.multimedia.s3.url"),
                 "the refusal must name the key so an operator can act on it, got: {errors:?}"
             );
         }
@@ -1238,9 +1238,9 @@ mod tests {
     fn an_absent_or_absolute_multimedia_endpoint_is_accepted() {
         let mut c = standalone();
         c.record.multimedia.enabled = true;
-        c.record.multimedia.url = None;
+        c.record.multimedia.s3.url = None;
         assert!(c.validate().is_ok(), "an absent endpoint is legitimate");
-        c.record.multimedia.url = Some(SecretUrl::new("http://seaweedfs:8333"));
+        c.record.multimedia.s3.url = Some(SecretUrl::new("http://seaweedfs:8333"));
         assert!(c.validate().is_ok(), "an absolute endpoint is accepted");
     }
 
