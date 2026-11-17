@@ -27,7 +27,7 @@ kernel_sh() {
 # The shell function every kernel script that reads a container's cgroup
 # defines first: `cg <id>` prints the cgroup directory of that container.
 # shellcheck disable=SC2016 # the script runs in the containers' kernel, which expands it
-readonly KERNEL_CG='cg() { find /sys/fs/cgroup -maxdepth 4 -type d \( -name "libpod-$1.scope" -o -name "docker-$1.scope" -o -name "$1" \) 2>/dev/null | head -1; }'
+readonly KERNEL_CG='cg() { find /sys/fs/cgroup -maxdepth 4 -type d \( -name "libpod-$1.scope" -o -name "docker-$1.scope" -o -name "$1" \) 2>/dev/null | sed -n 1p; }'
 # `mem <role> <n> <id> <pid>`: one line of a container's peak resident set
 # and its cgroup's peak, current and anonymous bytes, `null` where unread.
 # shellcheck disable=SC2016 # the script runs in the containers' kernel, which expands it
