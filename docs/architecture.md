@@ -449,7 +449,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   rows carry no foreign keys, since the chain move is their one writer and the
   verifier derives each record from its shared part again, and the link check
   moves the head cursor by an assignment
-  (`audit/0043_access_log_nested_statements.sql`). The ferroehr-rest test
+  (`audit/0043_access_log_nested_statements.sql`). The intake rows carry no
+  foreign keys either (#5887): the intake statement refuses a render policy or
+  shared part the store does not hold in the statement that writes the rows,
+  and it always takes the shared hold on the search tokens, which the removal
+  of a shared part takes exclusively, so a tombstone waits for every intake
+  write in flight (`audit/0045_intake_without_foreign_keys.sql`). The ferroehr-rest test
   `statement_budget` holds an AQL request to its round trips and nested
   statements, read from `pg_stat_statements`. `audit.audit_event_chain_move()`
   moves the system intake into the system chain the same way. A

@@ -3,8 +3,8 @@
 
 //! The intake statement's own budget (#5889): with every search token and
 //! shared set already stored, `audit.access_log_intake_take()` runs three
-//! nested statements (the token hold, the grouped pass, the write) beside
-//! the foreign-key checks of its rows (#5887), and its
+//! nested statements (the token hold, the grouped pass, the write) and
+//! checks no foreign key per row (#5887), and its
 //! time per entry does not grow with the batch, so a batch of 512 entries
 //! costs about 16 batches of 32. The statement is called directly with
 //! synthetic indexed entries of 20 search tokens each, five of them in a
@@ -59,6 +59,20 @@ fn tokens(entries: usize) -> Tokens {
 /// Writes one batch of `entries` entries into the intake under `policy` and
 /// returns how long the statement took.
 async fn take(pool: &PgPool, policy: &[u8], entries: usize) -> Duration {
+    call(pool, policy, entries, None)
+        .await
+        .expect("the intake statement")
+}
+
+/// Calls the intake statement with one batch of `entries` entries under
+/// `policy`, each naming the shared part `shared`, which the batch does not
+/// carry; how long the statement took, or its error.
+async fn call(
+    pool: &PgPool,
+    policy: &[u8],
+    entries: usize,
+    shared: Option<&str>,
+) -> Result<Duration, sqlx::Error> {
     let t = tokens(entries);
     let digests: Vec<Vec<u8>> = sqlx::query_scalar(
         "SELECT audit.search_token_digest(t.p, t.s, t.c) \
@@ -87,7 +101,7 @@ async fn take(pool: &PgPool, policy: &[u8], entries: usize) -> Duration {
     .bind(&uids)
     .bind(vec![now.to_string(); entries])
     .bind(vec!["{}"; entries])
-    .bind(&none)
+    .bind(vec![shared; entries])
     .bind(&content_digests)
     .bind(&none)
     .bind(&none)
@@ -117,9 +131,8 @@ async fn take(pool: &PgPool, policy: &[u8], entries: usize) -> Duration {
     .bind(None::<uuid::Uuid>)
     .bind(&digests)
     .execute(pool)
-    .await
-    .expect("the intake statement");
-    started.elapsed()
+    .await?;
+    Ok(started.elapsed())
 }
 
 /// The fastest of [`RUNS`] calls of `entries` entries, every token and set
@@ -177,8 +190,8 @@ async fn the_intake_statement_grows_with_its_tokens_alone() {
     );
     assert_eq!(
         sum(&keys),
-        1,
-        "the render-policy key of the one entry, which names no shared part: {statements:#?}"
+        0,
+        "an intake row locks no parent row (#5887): {statements:#?}"
     );
 
     let small = fastest(&pool, &policy, 32).await;
@@ -190,4 +203,40 @@ async fn the_intake_statement_grows_with_its_tokens_alone() {
         "per entry: {per_large:.6} s at 512 entries against {per_small:.6} s at 32 ({large:?} \
          and {small:?} a call)"
     );
+}
+
+/// The SQLSTATE of `error`, when the database answered one.
+fn code(error: &sqlx::Error) -> Option<String> {
+    error
+        .as_database_error()
+        .and_then(sqlx::error::DatabaseError::code)
+        .map(std::borrow::Cow::into_owned)
+}
+
+/// An intake row naming a render policy or a shared part the store does not
+/// hold is refused as the foreign keys refused it, with no key to lock
+/// (#5887).
+#[tokio::test]
+async fn an_unknown_render_policy_or_shared_part_is_refused() {
+    let (_db, pool) = crate::common::migrated_pool().await;
+    let error = call(&pool, &[0_u8; 32], 1, None)
+        .await
+        .expect_err("a policy the store does not hold");
+    assert_eq!(code(&error).as_deref(), Some("23503"), "{error}");
+    let policy: Vec<u8> = sqlx::query_scalar(
+        "SELECT audit.register_render_policy('{\"statement_budget\": true}'::jsonb)",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("the render policy");
+    let unknown = format!("{:064x}", 7);
+    let error = call(&pool, &policy, 1, Some(&unknown))
+        .await
+        .expect_err("a shared part neither stored nor in the batch");
+    assert_eq!(code(&error).as_deref(), Some("23503"), "{error}");
+    let written: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_intake")
+        .fetch_one(&pool)
+        .await
+        .expect("the intake reads");
+    assert_eq!(written, 0, "nothing of a refused statement is written");
 }

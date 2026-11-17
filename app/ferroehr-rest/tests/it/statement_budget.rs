@@ -13,7 +13,7 @@
 //! so the server loads the module (`shared_preload_libraries`), as the testkit
 //! container and CI's server do. The chainer runs on the audit runtime beside
 //! the requests and batches what they wrote, so its nested statements are
-//! budgeted per round, and the requests' per request and per entry written.
+//! budgeted per round, and the requests' per request.
 //! The harness runs no LISTEN refresher, so the caller and policy reads a
 //! server serves from its copies are sent on every request and counted here.
 //! No openEHR spec governs the statements of a request: our own design.
@@ -57,10 +57,6 @@ const CHAINER_TAKE: u64 = 1;
 const CHAINER_ROUND: u64 = 8;
 /// The nested statements of a chainer round of the system chain.
 const SYSTEM_ROUND: u64 = 6;
-/// The nested statements of each access-log entry a request writes: the
-/// foreign-key checks of its intake row.
-const ENTRY: u64 = 2;
-
 /// The budget of one kind of request: its round trips, and the statements
 /// nested in them.
 struct Budget {
@@ -72,8 +68,8 @@ struct Budget {
     served: u64,
     /// The round trips one request sends.
     round_trips: u64,
-    /// The statements nested in one request's round trips, beside the
-    /// [`ENTRY`] statements of each entry it writes.
+    /// The statements nested in one request's round trips, however many
+    /// entries it writes: an entry runs none of its own (#5887).
     nested: u64,
 }
 
@@ -302,16 +298,14 @@ async fn an_aql_request_stays_within_its_statement_budget() {
             report,
             "{}: {sent} round trips over {REQUESTS} requests (budget {} each); {nested} nested \
              statements against a budget of {chainer} for the chainer ({takes} takes, {rounds} \
-             rounds, {system} system rounds), {ENTRY} for each of {written} entries and {} per \
-             request\n{}",
+             rounds, {system} system rounds) and {} per request, {written} entries written\n{}",
             budget.name,
             budget.round_trips,
             budget.nested,
             ledger(&statements),
         )
         .expect("a String takes the report");
-        over |= sent > REQUESTS * budget.round_trips
-            || nested > chainer + written * ENTRY + REQUESTS * budget.nested;
+        over |= sent > REQUESTS * budget.round_trips || nested > chainer + REQUESTS * budget.nested;
     }
     assert!(!over, "a request exceeds its statement budget:\n{report}");
     eprintln!("{report}");
