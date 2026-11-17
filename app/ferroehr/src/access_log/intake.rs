@@ -396,7 +396,8 @@ impl GroupWriter {
     }
 
     /// Write `entries`, with their search `tokens` by position, durably in
-    /// the next gathered statement.
+    /// the next gathered statement. The current request gives back the
+    /// connections it keeps before it waits for the writers.
     ///
     /// # Errors
     /// [`AccessLogError::Gathered`] when the gathered write fails or the
@@ -410,19 +411,24 @@ impl GroupWriter {
             return Ok(());
         }
         let (done, answer) = tokio::sync::oneshot::channel();
-        self.jobs
-            .send(Job {
-                entries,
-                tokens,
-                done,
-            })
-            .await
-            .map_err(|_stopped| AccessLogError::Gathered(None))?;
-        match answer.await {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(failed)) => Err(AccessLogError::Gathered(Some(failed))),
-            Err(_) => Err(AccessLogError::Gathered(None)),
-        }
+        // NOTE: our own design (#6008), the writers take connections of the pool this request may
+        // keep one of, so the request gives back what it keeps before it waits for them.
+        crate::db::acquire::handoff(async {
+            self.jobs
+                .send(Job {
+                    entries,
+                    tokens,
+                    done,
+                })
+                .await
+                .map_err(|_stopped| AccessLogError::Gathered(None))?;
+            match answer.await {
+                Ok(Ok(())) => Ok(()),
+                Ok(Err(failed)) => Err(AccessLogError::Gathered(Some(failed))),
+                Err(_) => Err(AccessLogError::Gathered(None)),
+            }
+        })
+        .await
     }
 }
 

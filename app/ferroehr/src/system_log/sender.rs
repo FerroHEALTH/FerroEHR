@@ -767,7 +767,18 @@ async fn memoize_subjects(
         return subjects;
     }
     // NOTE: our own design (#5947), this task waits for the lookups, so it keeps no connection.
-    crate::db::acquire::release_held();
+    crate::db::acquire::handoff(lookup_all(pending, resolve, cache, &mut subjects)).await;
+    subjects
+}
+
+/// Looks up the subject of each of `pending` on a task of its own and notes
+/// each answer in `subjects`, memoizing it in `cache`.
+async fn lookup_all(
+    pending: Vec<String>,
+    resolve: &SubjectResolver,
+    cache: &SubjectCache,
+    subjects: &mut Subjects,
+) {
     let mut lookups = tokio::task::JoinSet::new();
     for ehr_id in pending {
         subjects.unavailable.insert(ehr_id.clone());
@@ -796,7 +807,6 @@ async fn memoize_subjects(
         subjects.unavailable.remove(&ehr_id);
         subjects.resolved.insert(ehr_id, subject);
     }
-    subjects
 }
 
 #[cfg(test)]
