@@ -90,6 +90,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         seen: &Revision,
     ) -> Result<Arc<Verdict>, ServiceError> {
+        access.read_in_store(ehr_id, seen);
         match access.judgement(ehr_id) {
             Some(judged) if judged.revision == *seen => Ok(judged.verdict),
             Some(_) => {

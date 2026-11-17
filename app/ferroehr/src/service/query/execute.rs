@@ -25,6 +25,7 @@ use serde_json::Value;
 
 use openehr_query::parser::parse_str;
 
+use crate::access_eval::condition::current;
 use crate::aql;
 use crate::aql::error::{AqlError, ExecError};
 use crate::aql::ir::{Params, QueryDomain, QueryIr};
@@ -233,6 +234,7 @@ impl FerroEhrService {
             }
         };
         record_phase("execute", exec_start);
+        read_pinned(&ehr_access, &result);
         Box::pin(self.judge_served_ehrs(&result))
             .await
             .map_err(Failure::analysis)?;
@@ -351,6 +353,21 @@ impl FerroEhrService {
             )));
         }
         Ok(())
+    }
+}
+
+/// Notes the pinned EHR's revision as read in the store when the statement
+/// served rows of it: the statement checked that revision against the
+/// store's ([`crate::aql::sql`], #5589), so its access record names the
+/// subject that revision names.
+fn read_pinned(
+    condition: &crate::access_eval::condition::AccessCondition,
+    result: &aql::exec::QueryResult,
+) {
+    if let (Some(access), Some(pinned)) = (current(), condition.pinned())
+        && result.served_ehrs.iter().any(|(ehr, _)| *ehr == pinned.ehr)
+    {
+        access.read_in_store(EhrId(pinned.ehr), &pinned.revision);
     }
 }
 

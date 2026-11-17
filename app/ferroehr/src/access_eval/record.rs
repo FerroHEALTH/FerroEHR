@@ -40,7 +40,7 @@ use crate::access_eval::scope::{Item, Pred};
 use crate::access_log::entry::authorisation;
 use crate::ids::EhrId;
 use crate::service::ehr::access_settings::EhrAccessSettings;
-use crate::system_log::event::{AccessDecision, AuditEvent, EventOutcome};
+use crate::system_log::event::{AccessDecision, AuditEvent, EventActionCode, EventOutcome};
 
 /// The name a ground defined in an EHR's settings names them by.
 const EHR_ACCESS: &str = "EHR_ACCESS";
@@ -503,6 +503,14 @@ pub fn stamp(event: &mut AuditEvent, access: &RequestAccess) {
         .as_deref()
         .and_then(|id| Uuid::parse_str(id).ok())
         .map(EhrId);
+    // NOTE: our own design (#5589, #5962), a read names the subject its own read found in the
+    // store, while a write keeps the one its transaction reads after the write.
+    if matches!(
+        event.action,
+        EventActionCode::Read | EventActionCode::Execute
+    ) {
+        event.judged_subject = ehr_id.and_then(|ehr_id| access.subject_read(ehr_id));
+    }
     let decision = access.decision(ehr_id);
     if decision.refused.is_some() {
         event.decision = AccessDecision::Refused;
