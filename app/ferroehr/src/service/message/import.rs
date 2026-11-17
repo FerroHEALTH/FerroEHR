@@ -178,6 +178,9 @@ impl FerroEhrService {
         }
         let records = self.import_record(&mut tx, ehr_id, &landed).await;
         self.commit_act_recorded(tx, records).await?;
+        // NOTE: our own design (#5879), the connection goes back before the next read, which
+        // would otherwise wait for a second one while every connection is held so.
+        drop(conn);
         self.invalidate_ehr_access(ehr_id).await;
         Ok(ehr_id)
     }
