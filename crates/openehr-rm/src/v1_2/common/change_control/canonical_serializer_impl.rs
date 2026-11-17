@@ -15,6 +15,7 @@
 //! value, as a JSON object map does. No specification governs how the form is
 //! computed, only its bytes: our own design.
 
+use std::cmp::Ordering;
 use std::ops::Range;
 
 use serde::Serialize;
@@ -72,7 +73,7 @@ impl Default for CanonicalObject {
     fn default() -> Self {
         Self {
             canonical: Canonical {
-                out: String::new(),
+                out: String::from("{"),
                 scratch: String::new(),
                 names: String::new(),
                 members: Vec::new(),
@@ -197,8 +198,10 @@ impl<'s> Canonical<'s> {
     /// Opens an object.
     fn open_object(&mut self) -> Object<'_, 's> {
         self.depth += 1;
+        let start = self.out.len();
+        self.out.push('{');
         Object {
-            start: self.out.len(),
+            start,
             first: self.members.len(),
             names_start: self.names.len(),
             pending: Pending::None,
@@ -283,6 +286,9 @@ impl Object<'_, '_> {
             self.pending = Pending::Skipped;
             return;
         }
+        if canonical.members.len() > self.first {
+            canonical.out.push(',');
+        }
         let at = canonical.out.len();
         write_string(name, &mut canonical.out);
         canonical.out.push(':');
@@ -325,8 +331,9 @@ impl Object<'_, '_> {
         self.value(value)
     }
 
-    /// Closes the object: sorts its members by name, keeps the last of each
-    /// name, and rewrites them in place between braces.
+    /// Closes the object: when its members were written in name order, each
+    /// name once, it is closed in place; otherwise its members are sorted by
+    /// name, the last of each name kept, and rewritten between its braces.
     #[expect(
         clippy::expect_used,
         reason = "`first` is the member count when the object opened and members are only \
@@ -350,6 +357,17 @@ impl Object<'_, '_> {
                 .get(member.name.clone())
                 .expect("a member's name should lie in the names buffer")
         };
+        let ordered = own
+            .iter()
+            .zip(own.iter().skip(1))
+            .all(|(a, b)| utf16_order(name(a), name(b)) == Ordering::Less);
+        if ordered {
+            out.push('}');
+            members.truncate(self.first);
+            names.truncate(self.names_start);
+            *depth -= 1;
+            return Ok(());
+        }
         own.sort_by(|a, b| utf16_order(name(a), name(b)));
         scratch.clear();
         scratch.push('{');
@@ -724,6 +742,7 @@ impl<'c, 's> Variant<'c, 's> {
             outer.canonical.out.push('[');
             Inner::Array(true)
         } else {
+            outer.canonical.out.push('{');
             Inner::Object {
                 first: outer.canonical.members.len(),
                 names_start: outer.canonical.names.len(),

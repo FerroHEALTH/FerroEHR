@@ -557,7 +557,7 @@ async fn a_rolled_back_intake_leaves_no_entry_and_no_checkpoint() {
     let intake =
         ferroehr::access_log::intake::IntakeEntry::of(&mut entry(1, SYSTEM_A, MOVED), None)
             .expect("the entry has a stored form");
-    ferroehr::access_log::intake::take_in(&mut tx, vec![intake], &[])
+    ferroehr::access_log::intake::take_in(&mut tx, &[intake], &[])
         .await
         .expect("the intake write");
     tx.rollback().await.expect("rollback");

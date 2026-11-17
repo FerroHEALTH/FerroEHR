@@ -38,8 +38,10 @@ fn through_value(record: &Value) -> Parts {
     };
     let mut members = members.clone();
     members.remove(LINK);
+    let whole = canonical_json(&Value::Object(members.clone())).expect("the whole canonicalises");
     let form = split(members);
     Parts {
+        whole,
         row: canonical_json(&form.row).expect("the row canonicalises"),
         shared: form
             .shared
@@ -180,7 +182,7 @@ fn record() -> impl Strategy<Value = Value> {
 }
 
 /// An audit event of every kind an entry is written for.
-fn event() -> impl Strategy<Value = AuditEvent> {
+pub(crate) fn event() -> impl Strategy<Value = AuditEvent> {
     let action = proptest::sample::select(vec![
         EventActionCode::Create,
         EventActionCode::Read,
