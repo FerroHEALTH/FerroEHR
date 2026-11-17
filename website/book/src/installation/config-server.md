@@ -378,6 +378,15 @@ pause ends. A request holds a connection about as long as it runs on a core,
 so four connections per core is about what the server keeps in use with every
 core busy, and the burst above it waits in the pool rather than failing.
 
+Every pool metric carries a `pool` label naming the pool it measures:
+`clinical`, `party` and `audit` for the three domain pools, and
+`audit_runtime` for the audit runtime's own pool. `db_pool_connections` has a
+series per pool and `state` (`idle`, `in_use`), and
+`db_pool_acquire_duration_seconds`, `db_pool_hold_duration_seconds` and
+`db_pool_nested_acquires_total` record each wait, hold and nested acquire
+under the pool it was taken from. Read each pool by itself: a wait on the
+audit pool and one on the clinical pool have different causes.
+
 Each instance opens at most `connection_budget` connections: one listener
 connection per database its listeners reach (one when every domain shares a
 DSN), four for the audit runtime (the access-log chainer, the forwarders and

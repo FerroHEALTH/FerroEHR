@@ -154,11 +154,11 @@ impl TelemetryGuard {
         self.boot_filter.clone()
     }
 
-    /// Starts the pool and runtime gauges over `pool`; a second call is a
-    /// no-op.
-    pub fn start_samplers(&mut self, pool: PgPool) {
+    /// Starts the runtime gauges and the gauges of every pool of `pools`; a
+    /// second call is a no-op.
+    pub fn start_samplers(&mut self, pools: Vec<PgPool>) {
         if self.sampler.is_none() {
-            self.sampler = Some(samplers::spawn(pool, self.meter.clone()));
+            self.sampler = Some(samplers::spawn(pools, self.meter.clone()));
         }
     }
 

@@ -427,8 +427,13 @@ impl RequestAccess {
         entry: &EhrEntry,
     ) -> Result<Arc<Verdict>, CareUnsettled> {
         let mut cared = self.cares_for(entry).await?;
-        if cared && self.care_decides(ehr_id, entry) && !self.care_in_force().await? {
-            cared = self.cares_for(entry).await?;
+        if cared && let Some(with_care) = self.care_decided(ehr_id, entry) {
+            // NOTE: our own design (#5959), a read the request handed over runs during the care
+            // check's party read when the verdict that check confirms would use it.
+            let beside = crate::access_eval::alongside::beside(with_care.item_dependent());
+            if !self.care_in_force(beside).await? {
+                cared = self.cares_for(entry).await?;
+            }
         }
         let judged = self.judgement_of(ehr_id, entry, cared);
         let verdict = Arc::clone(&judged.verdict);

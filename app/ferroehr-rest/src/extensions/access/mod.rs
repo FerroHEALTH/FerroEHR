@@ -53,6 +53,7 @@
 //! gate + the RBAC gate + the SMART PEP all consume it, and the single 401/403
 //! decision lives in `authn::middleware`.
 
+pub(crate) mod admission;
 pub mod authn;
 pub mod authz;
 pub(crate) mod caller;

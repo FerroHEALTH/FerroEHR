@@ -247,6 +247,10 @@ pub struct PreparedQuery {
     pub values: SqlxValues,
     /// How the executor reads the rows back.
     pub layout: Arc<Layout>,
+    /// Whether the text is a statement shape's ([`shape`]), one of the
+    /// bounded set a repeated request binds, rather than built for this
+    /// request alone.
+    pub shaped: bool,
 }
 
 /// How the executor reads the rows of a statement back: the `RESULT_SET`
@@ -320,6 +324,7 @@ impl std::fmt::Debug for PreparedQuery {
             .field("sql", &self.sql)
             .field("value_count", &self.values.0.0.len())
             .field("layout", &self.layout)
+            .field("shaped", &self.shaped)
             .finish()
     }
 }
@@ -676,6 +681,7 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     Ok(PreparedQuery {
         sql: sql.into(),
         values,
+        shaped: false,
         layout: Arc::new(Layout {
             columns,
             access_aggregated: !access_ehr_cols.is_empty()

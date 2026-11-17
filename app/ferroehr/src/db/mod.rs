@@ -39,6 +39,7 @@ pub mod domain;
 pub mod iden;
 pub mod parent_statistics;
 pub mod pool;
+pub mod pool_name;
 mod session;
 
 use std::path::PathBuf;
@@ -489,9 +490,14 @@ pub enum SchemaMismatch {
 /// authentication, unknown database), or the session-setup statements fail on
 /// that first connection.
 pub async fn connect_domain(settings: &DbConfig, domain: Domain) -> Result<PgPool, DbError> {
+    let options = settings
+        .dsn(domain)
+        .parse::<PgConnectOptions>()?
+        .statement_cache_capacity(pool::STATEMENT_CACHE);
     let pool = pool::options(settings, domain)
-        .connect(settings.dsn(domain))
+        .connect_with(options)
         .await?;
+    pool_name::name(&pool, pool_name::PoolName::Domain(domain));
     Ok(pool)
 }
 
@@ -531,9 +537,11 @@ pub async fn connect_domains(settings: &DbConfig) -> Result<DomainPools, DbError
 pub fn domain_pool_from(pool: &PgPool, domain: Domain) -> PgPool {
     let defaults = DbConfig::default();
     let options = pool.connect_options();
-    pool::options(&defaults, domain)
+    let pool = pool::options(&defaults, domain)
         .min_connections(0)
-        .connect_lazy_with(PgConnectOptions::clone(&options))
+        .connect_lazy_with(PgConnectOptions::clone(&options));
+    pool_name::name(&pool, pool_name::PoolName::Domain(domain));
+    pool
 }
 
 // ── Migrations ───────────────────────────────────────────────────────────────
