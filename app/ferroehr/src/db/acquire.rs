@@ -350,10 +350,11 @@ pub async fn request_scope<F: Future>(body: F) -> F::Output {
     tracked(kept).await
 }
 
-/// Runs `body` with the connections it checks out counted, as a
-/// [`request_scope`] counts them, so a second acquire of a pool it has a
-/// connection of checked out is refused in a debug build ([`acquire`]); for a
-/// background task, which keeps nothing between checkouts (#5929).
+/// Runs `body`, a background task, with its checkouts counted.
+///
+/// As in a [`request_scope`], a second acquire of a pool it has a connection
+/// of checked out is refused in a debug build ([`acquire`]); nothing is kept
+/// between checkouts (#5929).
 pub async fn tracked<F: Future>(body: F) -> F::Output {
     OUT.scope(RefCell::new(Vec::new()), body).await
 }

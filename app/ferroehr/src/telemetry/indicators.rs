@@ -177,7 +177,7 @@ impl HealthIndicator for AuditHealth {
             };
             let store = sender.store();
             let read = async {
-                let mut conn = crate::db::acquire::acquire(&store.pool).await?;
+                let mut conn = acquire(&store.pool).await?;
                 crate::system_log::store::AuditStore::held_longer_than(
                     &mut conn,
                     crate::system_log::sender::reconciler::GRACE,
