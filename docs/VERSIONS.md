@@ -375,7 +375,7 @@ The SemVer judge of the published `openehr-*` crates (#5353) runs on a pull
 request, in the merge queue, in the release plan and on a developer machine,
 so its pin lives here too: `scripts/checks/semver.sh --pin` reads it, CI
 installs that version through `taiki-e/install-action`, and the judge refuses
-an installed binary that answers another. FerroBRIDGE, FerroSYS, FerroAUTH and
+an installed binary that answers another. FerroBRIDGE, FerroSYS, FerroSMART and
 FerroAUDIT pin the same release.
 
 | Tool | Pin | Read by |
