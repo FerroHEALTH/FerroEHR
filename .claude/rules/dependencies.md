@@ -71,7 +71,7 @@ generate). Any surface change updates our `#[utoipa::path]` declarations in
 the same PR.
 
 Database & persistence: `sqlx` 0.9 (postgres, macros, migrate, uuid, json,
-rust_decimal, chrono; TLS via `tls-rustls-aws-lc-rs`); `sea-query` 1.0 +
+rust_decimal; TLS via `tls-rustls-aws-lc-rs`); `sea-query` 1.0 +
 `sea-query-sqlx` (the sea-query 1.0↔sqlx 0.9 binder — `sea-query-binder` is
 stuck on sea-query 0.32; dynamic SQL for the AQL→SQL engine — **not**
 sea-orm); `jiff-sqlx` for jiff↔Postgres on plain sqlx queries (sqlx has no
