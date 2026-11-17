@@ -240,8 +240,8 @@ recording while you investigate.
   cannot be read refuses rather than admits. A failed grants refresh keeps
   the grants held and marks them stale, so the next request reads again.
 - **What to do:**
-  1. Check `db` on the health document and `db_pool_connections`: a pool at
-     its limit or an unreachable database fails every refill.
+  1. Check `db` on the health document and `db_pool_connections` per
+     `pool`: a pool at its limit or an unreachable database fails every refill.
   2. Check the log for `EHR_ACCESS settings do not parse` or `a settings class
      does not read`. These name a stored row that does not read; the EHR or
      class stays withheld until its settings are committed again.
@@ -260,8 +260,8 @@ recording while you investigate.
 - **What to do:**
   1. Read the log line `the audit records could not be written` for the
      cause: a full disk, a lost audit database, a statement timeout.
-  2. Check the audit pool: `db_pool_acquire_duration_seconds` and the audit
-     database's own load. `access_log_append_duration_seconds` is the time a
+  2. Check the audit pool: `db_pool_acquire_duration_seconds{pool="audit"}`
+     and the audit database's own load. `access_log_append_duration_seconds` is the time a
      request waits for its records.
 
 ### The chainer falls behind

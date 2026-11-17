@@ -274,8 +274,8 @@ describes after them:
   backends active at once. A `Lock:advisory` or `LWLock` wait there is
   contention; `ClientRead` means PostgreSQL waits on FerroEHR.
 - `prometheus-<n>.txt`: each instance's metrics after the step, among them
-  `db_pool_connections`, `db_pool_acquire_duration_seconds`,
-  `db_pool_hold_duration_seconds`, `audit_chained_total`,
+  `db_pool_connections`, `db_pool_acquire_duration_seconds` and
+  `db_pool_hold_duration_seconds` (each by `pool`), `audit_chained_total`,
   `access_log_chain_hold_duration_seconds` and the access log's intake and
   sign timings.
 

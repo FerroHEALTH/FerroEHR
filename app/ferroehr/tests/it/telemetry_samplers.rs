@@ -10,15 +10,21 @@
 //! collector is involved. No openEHR spec governs telemetry — our own
 //! design/extension.
 
+use std::collections::BTreeSet;
 use std::time::Duration;
 
 use opentelemetry::metrics::MeterProvider;
 use opentelemetry_sdk::Resource;
+use opentelemetry_sdk::metrics::data::{
+    AggregatedMetrics, MetricData, ResourceMetrics, ScopeMetrics,
+};
 use opentelemetry_sdk::metrics::{InMemoryMetricExporter, PeriodicReader, SdkMeterProvider};
 
 use ferroehr::db::acquire::acquire;
+use ferroehr::db::domain::DomainPools;
 use ferroehr::telemetry::metrics::{
-    DB_POOL_CONNECTIONS, TOKIO_ALIVE_TASKS, TOKIO_GLOBAL_QUEUE_DEPTH, TOKIO_WORKERS,
+    DB_POOL_ACQUIRE_DURATION, DB_POOL_CONNECTIONS, DB_POOL_HOLD_DURATION, TOKIO_ALIVE_TASKS,
+    TOKIO_GLOBAL_QUEUE_DEPTH, TOKIO_WORKERS,
 };
 use ferroehr::telemetry::samplers;
 
@@ -104,7 +110,7 @@ async fn the_sampler_records_the_pool_and_runtime_gauges_until_aborted() {
         )
         .build();
 
-    let handle = samplers::spawn(pool, provider.meter("ferroehr"));
+    let handle = samplers::spawn(vec![pool], provider.meter("ferroehr"));
 
     // The interval fires its first tick immediately, so one sample is due at
     // once; poll rather than assume a scheduling order.
@@ -149,4 +155,95 @@ async fn the_sampler_records_the_pool_and_runtime_gauges_until_aborted() {
         handle.await.expect_err("aborted").is_cancelled(),
         "aborting the handle stops the sampler"
     );
+}
+
+/// The `pool` label values the exporter has collected for the instrument
+/// `name`, gauge or histogram.
+fn pool_labels(exporter: &InMemoryMetricExporter, name: &str) -> BTreeSet<String> {
+    let finished = exporter.get_finished_metrics().expect("finished metrics");
+    let mut labels = BTreeSet::new();
+    for metric in finished
+        .iter()
+        .flat_map(ResourceMetrics::scope_metrics)
+        .flat_map(ScopeMetrics::metrics)
+        .filter(|m| m.name() == name)
+    {
+        let attributes: Vec<Vec<opentelemetry::KeyValue>> = match metric.data() {
+            AggregatedMetrics::U64(MetricData::Gauge(gauge)) => gauge
+                .data_points()
+                .map(|point| point.attributes().cloned().collect())
+                .collect(),
+            AggregatedMetrics::F64(MetricData::Histogram(histogram)) => histogram
+                .data_points()
+                .map(|point| point.attributes().cloned().collect())
+                .collect(),
+            _ => Vec::new(),
+        };
+        labels.extend(
+            attributes
+                .iter()
+                .flatten()
+                .filter(|kv| kv.key.as_str() == "pool")
+                .map(|kv| kv.value.as_str().into_owned()),
+        );
+    }
+    labels
+}
+
+/// Every pool metric names the pool it measures: the gauge samples each
+/// domain pool, and the acquire wait and the hold of a request are recorded
+/// under the pool they were taken from (#5972).
+#[tokio::test(flavor = "multi_thread")]
+async fn the_pool_metrics_name_each_pool() {
+    let exporter = InMemoryMetricExporter::default();
+    let provider = SdkMeterProvider::builder()
+        .with_reader(PeriodicReader::builder(exporter.clone()).build())
+        .build();
+    let meter = provider.meter("ferroehr");
+    // NOTE: (#5972) installed before the harness's first acquire, which would install the global meter.
+    ferroehr::telemetry::metrics::init(&meter);
+    let db = testkit::db().await.expect("testkit database");
+    let pools = DomainPools::from_shared(&db.pool());
+    ferroehr::db::acquire::request_scope(async {
+        for pool in [&pools.clinical, &pools.party, &pools.audit] {
+            let mut conn = acquire(pool).await.expect("acquire");
+            sqlx::query("SELECT 1")
+                .execute(&mut *conn)
+                .await
+                .expect("a statement on the connection");
+        }
+    })
+    .await;
+    let handle = samplers::spawn(
+        vec![
+            pools.clinical.clone(),
+            pools.party.clone(),
+            pools.audit.clone(),
+        ],
+        meter,
+    );
+    let every: BTreeSet<String> = ["audit", "clinical", "party"]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while std::time::Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        provider.force_flush().expect("flush");
+        if pool_labels(&exporter, DB_POOL_CONNECTIONS) == every {
+            break;
+        }
+    }
+    handle.abort();
+    for name in [
+        DB_POOL_CONNECTIONS,
+        DB_POOL_ACQUIRE_DURATION,
+        DB_POOL_HOLD_DURATION,
+    ] {
+        assert_eq!(
+            pool_labels(&exporter, name),
+            every,
+            "{name} names each pool"
+        );
+    }
 }
