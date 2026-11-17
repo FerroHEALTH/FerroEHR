@@ -162,7 +162,9 @@ module.**
   and derives the search columns from it, and
   an entry changes only by its replacement with its own tombstone, which
   empties the ITI-81 index columns on the same row (one row per entry,
-  `access_log_search` is their view, #5784). Never
+  `access_log_search` is their view, #5784); every reader of an entry goes
+  through `audit.access_log_document` (`store::document!`), never a join of
+  its parts of its own. Never
   compute a link outside the trigger, and never write a search column: both
   are read from the content. `checkpoint` seals the head with the
   version-signing keyring and verifies through

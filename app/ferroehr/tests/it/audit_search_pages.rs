@@ -246,3 +246,75 @@ async fn every_page_and_total_matches_the_read_of_the_union_view() {
         }
     }
 }
+
+/// The calls of `audit.access_log_document` the test's database ran since the
+/// last reset: the function is not inlined, so `pg_stat_statements` counts its
+/// body once per document it renders.
+async fn documents_rendered(pool: &sqlx::PgPool) -> i64 {
+    sqlx::query_scalar(
+        "SELECT coalesce(sum(calls), 0)::bigint FROM pg_stat_statements \
+         WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database()) \
+         AND NOT toplevel AND query LIKE '%AS own, %AS common) AS parts%'",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("pg_stat_statements reads")
+}
+
+/// A page renders the document of each access-log entry it serves and of no
+/// other: the page is taken by the records' keys first (#5965).
+#[tokio::test]
+async fn a_page_renders_only_the_documents_it_serves() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
+        .execute(&pool)
+        .await
+        .expect(
+            "pg_stat_statements: the server loads it (shared_preload_libraries); a testkit \
+             container started before #5885 does not: docker rm -f ferroehr-testkit-pg18",
+        );
+    let store = AuditStore::new(pool.clone());
+    for n in 0..12 {
+        store
+            .insert_batch(&batch(n), &[])
+            .await
+            .expect("the batch is stored");
+    }
+    for case in cases() {
+        for (count, offset) in [(20, 0), (7, 13), (20, 50), (1, 0)] {
+            let (_, want_page) = reference(&pool, case.sql, count, offset).await;
+            let served = want_page
+                .iter()
+                .filter(|(chain, _)| chain == "access_log")
+                .count();
+            sqlx::query(
+                "SELECT pg_stat_statements_reset(0, \
+                 (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
+            )
+            .execute(&pool)
+            .await
+            .expect("the statement counts reset");
+            let page = store
+                .search(&AuditSearchFilter {
+                    count,
+                    offset,
+                    ..case.filter.clone()
+                })
+                .await
+                .expect("the search");
+            assert_eq!(
+                page.documents.len(),
+                want_page.len(),
+                "{}: the page",
+                case.name
+            );
+            assert_eq!(
+                documents_rendered(&pool).await,
+                i64::try_from(served).expect("a count"),
+                "{}, _count={count}, _offset={offset}: one document per served entry",
+                case.name
+            );
+        }
+    }
+}

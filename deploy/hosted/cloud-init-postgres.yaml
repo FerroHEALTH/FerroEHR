@@ -93,6 +93,8 @@ write_files:
             - shared_buffers=2GB
             - -c
             - max_wal_size=4GB
+            - -c
+            - wal_compression=lz4
           # Bound to the PRIVATE IP only: Docker's published ports bypass
           # ufw, so the bind address is the real gate — the public interface
           # never carries 5432.
