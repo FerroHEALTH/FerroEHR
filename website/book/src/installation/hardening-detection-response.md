@@ -64,7 +64,7 @@ them from a secret manager:
   Azure or GCP provider) mounts the value as a file. Point `extraVolumes` and
   `extraVolumeMounts` at it and set the matching `*_file` configuration key;
   `config.record.signing.key_passphrase_file`,
-  `config.record.multimedia.secret_access_key_file`, the terminology grant's
+  `config.record.multimedia.s3.secret_access_key_file`, the terminology grant's
   `client_secret_file`. Nothing reaches a Kubernetes Secret at all.
 - **An operator that syncs into a Secret** (External Secrets Operator, Vault
   Agent Injector) still lands in etcd, so it buys rotation rather than removal:
