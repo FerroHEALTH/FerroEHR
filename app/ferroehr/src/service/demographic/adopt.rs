@@ -165,6 +165,10 @@ impl FerroEhrService {
         if changes.is_empty() {
             return Ok(report);
         }
+        // The set's large media go to the blob store before a connection is held.
+        for (_, change) in &mut changes {
+            self.externalize_change(change).await?;
+        }
         let mut conn = acquire(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let committed = change::commit_contribution(

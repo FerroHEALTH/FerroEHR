@@ -158,31 +158,25 @@ impl serde::Serialize for WithoutUid<'_> {
     }
 }
 
-/// The lifecycle state a content write commits: the large inline
-/// `DV_MULTIMEDIA` externalized first, so the stored, served and signed form is
-/// the offloaded one, and the deleted state refused, because deleting the data
-/// and setting the state are one act (master06 §Logical Deletion).
-#[cfg_attr(
-    not(feature = "multimedia"),
-    expect(
-        clippy::unused_async,
-        reason = "the offload it awaits is the `multimedia` feature's; a slim build has none"
-    )
-)]
-async fn content_lifecycle(
+/// The lifecycle state a content write commits, with the deleted state refused,
+/// because deleting the data and setting the state are one act (master06
+/// §Logical Deletion). The body must arrive with its large inline
+/// `DV_MULTIMEDIA` already externalized (`FerroEhrService::externalize`, run
+/// before the transaction opens), so the stored, served and signed form is the
+/// offloaded one and no upload waits under the transaction.
+fn content_lifecycle(
     ctx: &SigningCtx<'_>,
-    canonical: &mut Value,
+    canonical: &Value,
     lifecycle_state: Option<String>,
 ) -> Result<String, ServiceError> {
     #[cfg(feature = "multimedia")]
     if let Some(engine) = ctx.multimedia {
         engine
-            .offload(canonical)
-            .await
+            .ensure_externalized(canonical)
             .map_err(|e| ServiceError::internal("externalize multimedia", e))?;
     }
     #[cfg(not(feature = "multimedia"))]
-    let _ = (ctx, &canonical);
+    let _ = (ctx, canonical);
     let lifecycle = resolve_lifecycle(lifecycle_state)?;
     reject_deleted_with_data(&lifecycle)?;
     Ok(lifecycle)
@@ -234,7 +228,7 @@ pub(super) async fn resolve_create(
     mut content: Content,
 ) -> Result<ResolvedWrite, ServiceError> {
     let lifecycle =
-        content_lifecycle(ctx, &mut content.canonical, content.lifecycle_state.take()).await?;
+        content_lifecycle(ctx, &content.canonical, content.lifecycle_state.take())?;
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
     person::refuse_composing_for_others(content.kind, &content.canonical)?;
@@ -290,7 +284,7 @@ pub(super) async fn resolve_modify(
 ) -> Result<ResolvedWrite, ServiceError> {
     let kind = content.kind;
     let lifecycle =
-        content_lifecycle(ctx, &mut content.canonical, content.lifecycle_state.take()).await?;
+        content_lifecycle(ctx, &content.canonical, content.lifecycle_state.take())?;
     let next = next_version(
         tx,
         at.ehr_id,

@@ -196,8 +196,10 @@ impl FerroEhrService {
         )?;
         self.mapped_template_gate(Kind::PartyRelationship.as_str(), &request.data, incomplete)
             .await?;
-        let body = request.data;
+        let mut body = request.data;
         let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
+        // The large media go to the blob store before a connection is held.
+        self.externalize(&mut body).await?;
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
                 Ok(Write::new(
@@ -270,8 +272,12 @@ impl FerroEhrService {
                 .map(|()| resolved),
             Err(e) => Err(e),
         };
-        let body = request.data;
+        let mut body = request.data;
         let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
+        // A valid body's large media go to the blob store before a connection is held.
+        if checked.is_ok() {
+            self.externalize(&mut body).await?;
+        }
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
                 let placement = lock_current(tx, None, vo_id, Kind::PartyRelationship).await?;

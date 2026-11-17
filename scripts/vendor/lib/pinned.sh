@@ -58,7 +58,7 @@ pinned_fetch_all() {
   shift 2
   for pin in "$@"; do
     path="${pin% *}"
-    pinned_fetch "$base/$path" "$into/$path" "${pin##* }"
+    pinned_fetch "$base/${path// /%20}" "$into/$path" "${pin##* }"
     say "$path"
   done
 }

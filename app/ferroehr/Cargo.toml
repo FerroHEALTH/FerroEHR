@@ -22,7 +22,7 @@ publish = false
 # workspace.
 default = ["fhir", "multimedia"]
 fhir = ["dep:ferrobridge-term", "dep:fhir-types", "ehds-logging/balp", "ihe-atna/balp", "ihe-atna/feed"]
-multimedia = ["dep:ferroehr-ext", "ferroehr-ext/multimedia"]
+multimedia = ["dep:bytes", "dep:ferroehr-ext", "ferroehr-ext/multimedia"]
 # `schemars::JsonSchema` on the configuration tree and every type it reaches,
 # which tools/config-reference renders into the reference page and the default
 # ferroehr.toml (#5316). No server build turns it on.
@@ -43,6 +43,8 @@ schemars = { workspace = true, optional = true }
 ferrohealth-server = { workspace = true, features = ["otlp", "platform-verifier", "reqwest"] }
 ferrohealth-health = { workspace = true, features = ["registry"] }
 ferroehr-ext = { path = "../ferroehr-ext", optional = true }
+# The `multimedia` load path hands archived blobs to the store as shared slices.
+bytes = { workspace = true, optional = true }
 http.workspace = true
 secrecy.workspace = true
 urlencoding.workspace = true
@@ -104,12 +106,6 @@ sha2.workspace = true
 aes-gcm.workspace = true
 hmac.workspace = true
 base64.workspace = true
-# `multimedia` module (DV_MULTIMEDIA externalization to S3-compatible object
-# storage — no openEHR spec governs blob storage mechanics; our own design):
-# `object_store` is the backend abstraction (SeaweedFS in dev/test via its S3
-# gateway, any S3 endpoint in prod); the blob payload plumbing (`bytes`)
-# lives in `ferroehr-ext`.
-object_store.workspace = true
 # `service::admin::dump_load`: the `zip` compression format of our own dump/load
 # extension, the dump archive packed as one ZIP container instead of loose
 # segment files.

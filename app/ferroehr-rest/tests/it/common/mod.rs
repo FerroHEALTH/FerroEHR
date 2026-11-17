@@ -1303,15 +1303,16 @@ pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
     .fetch_all(pool)
     .await
     .expect("read the stored audit rows");
-    let entries: Vec<String> = sqlx::query_as::<_, (String, Option<String>)>(
-        "SELECT r.content, sh.content FROM audit.access_log_record r \
+    let entries: Vec<String> = sqlx::query_scalar::<_, String>(
+        "SELECT audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
+         r.time_recorded, r.ehr_id)::text FROM audit.access_log_record r \
          LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared ORDER BY r.chain_seq",
     )
     .fetch_all(pool)
     .await
     .expect("read the stored access-log entries")
     .into_iter()
-    .map(|(content, shared)| joined_entry(&content, shared.as_deref()))
+    .map(|document| canonical_entry(&document))
     .collect();
     texts.extend(entries);
     let documents = AuditStore::new(pool.clone())
@@ -1330,11 +1331,10 @@ pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
     texts
 }
 
-/// The canonical form of the access-log entry a row stores as `content`
-/// with its `shared` part, joined as the server reads it (#5703).
-pub(crate) fn joined_entry(content: &str, shared: Option<&str>) -> String {
-    let parse = |text: &str| serde_json::from_str::<Value>(text).expect("a stored part");
-    let joined = ferroehr::access_log::stored_form::join(parse(content), shared.map(parse));
-    openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json(&joined)
+/// The canonical form of the access-log entry `document`, as
+/// `audit.access_log_document` reads it from its row (#5784).
+pub(crate) fn canonical_entry(document: &str) -> String {
+    let read = serde_json::from_str::<Value>(document).expect("an entry");
+    openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json(&read)
         .expect("the canonical form")
 }

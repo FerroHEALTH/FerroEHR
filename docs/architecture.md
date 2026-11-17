@@ -478,15 +478,18 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   IHE BALP `AuditEvent`, the DICOM audit message and the EHDS access record
   are projections of the stored entry (`access_log::projection`): the ITI-81
   search, the person's own trail and the FHIR Feed read it through
-  `audit.audit_record`, the view of the `audit_event` records and the entries
-  with their index rows in `access_log_search` (the search columns, the
-  search tokens of the projection and the render policy, removed with the
-  entry's content when a tombstone replaces it). An ITI-81 page reads each
-  chain's first `offset + count` records through its `recorded_at` index,
-  the access log's candidates from `access_log_search` with the records tied
-  on the last instant, and takes the page from their union. The exact total
-  counts the access log on its index rows alone, one per entry
-  (`system_log::store::search_page`, #5646). syslog and the FHIR Feed are
+  `audit.audit_record`, the view of the `audit_event` records and the
+  indexed entries. An entry is one row of `access_log_record`: its index
+  columns (the search columns, the search tokens of the projection and the
+  render policy) sit on the entry's own row and are emptied with its content
+  when a tombstone replaces it, and `access_log_search` is the view of them
+  the ITI-81 search reads (#5784). An ITI-81 page reads each chain's first
+  `offset + count` records through its time index, the access log's
+  candidates from `access_log_search` with the records tied on the last
+  instant, and takes the page from their union. The exact total counts the
+  access log on its index columns alone (`system_log::store::search_page`,
+  #5646). The entry's content is stored raw: PostgreSQL compresses a value
+  only in a row above about 2 kB, whatever `toast_tuple_target` says. syslog and the FHIR Feed are
   projections of the stored records, delivered by `ihe-atna`'s forwarders
   from `syslog_outbox` and `fhir_feed_outbox` (`system_log::store::outbox`,
   `system_log::feed`), so a record waits for its repository in the store,
@@ -2232,7 +2235,7 @@ adapter (`ferroehr-rest`) calls directly:
 | `ferroehr-rest` | ITS-REST protocol adapter (axum) + auth + ATNA audit middleware; `access` module = RBAC and the access evaluator; calls the concrete `FerroEhrService` | application |
 | `ferroehr` | The platform library: storage, service layer (one module per domain area), AQL engine, `versioning` (change control plus the VERSION `signature` signing under `versioning::signature`), validation, templates, the full config tree, telemetry, `privacy`, `system_log`, `licence` (the boot-verified grant in force and the identifier stamp it keys), `usage_report` (FerroEHR's status, route groups and PostgreSQL state store for the `start` and `daily` installation reports that `ferrohealth-usage-report` sends to FerroPULSE, on by default, envelope v2 in FerroHEALTH/FerroPULSE `docs/report-v2.md`, vendored schema in `corpus/ferropulse/`) | application |
 | `ferroehr-server` | The wiring-only binary (config → pool → migrations → service → serve); bin name `ferroehr` | application |
-| `ferroehr-ext` | Optional integrations behind additive features (`multimedia`): the content-addressed multimedia store | application |
+| `ferroehr-ext` | Optional integrations behind additive features (`multimedia`): the content-addressed multimedia store, one OpenDAL operator over S3 | application |
 | `ferroehr-viewer` | The server-rendered viewer on FerroUI: its own binary and OCI image, consuming the CDR strictly over ITS-REST | application |
 | `testkit` | Shared test-database harness: one PG18 server + template-database cloning (`tools/*`) | tooling |
 

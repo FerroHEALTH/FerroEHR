@@ -630,7 +630,7 @@ async fn no_url_userinfo_reaches_admin_config_or_management_env() {
         endpoint: leaky(6),
         ..ferrohealth_telemetry::section::OtlpSection::default()
     });
-    cfg.record.multimedia.url = Some(leaky(7));
+    cfg.record.multimedia.s3.url = Some(leaky(7));
     cfg.audit.syslog = Some(SyslogConfig {
         url: leaky(8),
         ..SyslogConfig::default()

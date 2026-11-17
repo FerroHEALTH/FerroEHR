@@ -442,21 +442,41 @@ not exist.
 
 ## `[record.multimedia]`
 
-`DV_MULTIMEDIA` externalization to an S3-compatible object store. Off by
-default: blobs stay inline, byte-identical, and no object store is built or
-contacted. The table keeps `enabled` where other optional features use the
-table's presence, because `url` applies while it is off: the blobs already
-offloaded are read back from it.
+`DV_MULTIMEDIA` externalization to a blob store. Off by default: blobs stay
+inline, byte-identical, and no blob store is built or contacted. The table
+keeps `enabled` where other optional features use the table's presence,
+because the backend applies while it is off: the blobs already offloaded are
+read back from it.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `enabled` | bool | `false` | Externalize large multimedia data. |
 | `threshold` | size | `"256KiB"` | Decoded size strictly above which data is offloaded; at or below it stays inline. |
-| `url` | secret URL | unset ⇒ default AWS endpoint resolution | S3-compatible endpoint. Must be an absolute `http`/`https` URL when set; an `http://` URL is plain HTTP, development only, which `production` names as the `plaintext_object_store` gap. Credentials embedded in it are redacted from every rendering. |
+| `backend` | `"s3"` | `"s3"` | The storage service. S3 is the one this release offers; its settings are the `[record.multimedia.s3]` table below. |
+| `max_concurrent_requests` | integer | `64` | The most requests to the blob store in flight at once, across every request the server serves. |
+| `request_timeout` | duration | `"30s"` | How long one request to the blob store, or one chunk of its body, may take. A request that fails with a temporary error is retried twice. |
+| `part_size` | size | `"8MiB"` | A blob larger than this is uploaded as a multipart upload in parts of this size, and read in ranged chunks of it. |
+| `part_concurrency` | integer | `4` | How many parts of one blob move at once. |
+
+### `[record.multimedia.s3]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `url` | secret URL | unset ⇒ the AWS endpoint of `region` | S3-compatible endpoint (MinIO, SeaweedFS, AWS). Must be an absolute `http`/`https` URL when set; an `http://` URL is plain HTTP, development only, which `production` names as the `plaintext_object_store` gap. Credentials embedded in it are redacted from every rendering and never sent. |
 | `bucket` | string | `openehr-multimedia` | Target bucket for content-addressed blobs. |
 | `region` | string | `us-east-1` | AWS region; S3 requires one even for non-AWS endpoints. |
-| `access_key_id` | string | unset | S3 access key id. Unset, with no secret key either, runs the client anonymously. |
+| `access_key_id` | string | unset | S3 access key id. Unset, with no secret key either, sends the requests unsigned. |
 | `secret_access_key` / `secret_access_key_file` | secret / path | unset | S3 secret access key. At most one of the pair. |
+
+The server takes S3 credentials from this table only. It reads no `AWS_*`
+environment variable, no profile file and no instance metadata.
+
+Since 6.0.0 the S3 keys live in their own table. A configuration from an
+earlier release that sets `url`, `bucket`, `region`, `access_key_id` or
+`secret_access_key` directly under `[record.multimedia]` is refused at boot as
+an unknown key; move those keys to `[record.multimedia.s3]`, and their
+environment variables from `FERROEHR__RECORD__MULTIMEDIA__<KEY>` to
+`FERROEHR__RECORD__MULTIMEDIA__S3__<KEY>`.
 
 An enabled integration whose `url` is set but blank, not an absolute URL,
 or carries a scheme other than `http`/`https` is a **boot error**. That case is

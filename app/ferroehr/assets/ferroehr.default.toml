@@ -16,7 +16,7 @@
 #
 # What you must set
 #
-# This file lists 849 keys. A deployment that holds real data sets the 10
+# This file lists 854 keys. A deployment that holds real data sets the 10
 # below, the only live lines; every other key is optional and runs on the
 # built-in default its `#?` line shows, or stays unset where its note says so.
 #
@@ -1897,31 +1897,49 @@ subject_namespaces = []
 # How often the retention prune runs. Optional.
 #? prune_interval = "1h"
 
-# `DV_MULTIMEDIA` externalization to object storage. It keeps `enabled`,
-# because its store applies while it is off: blobs already offloaded are read
-# back from `url`.
+# `DV_MULTIMEDIA` externalization to a blob store. It keeps `enabled`, because
+# its store applies while it is off: blobs already offloaded are read back from
+# the backend `backend` names.
 #? [record.multimedia]
 # Master switch. `false` (default) = today's inline behaviour, byte for byte;
-# no object store is built or contacted. Optional (infrastructure).
+# no blob store is built or contacted. Optional (infrastructure).
 #? enabled = false
 # A decoded `DV_MULTIMEDIA.data` strictly larger than this is offloaded to the
-# object store; at or below it stays inline. Default `"256KiB"`. Optional
+# blob store; at or below it stays inline. Default `"256KiB"`. Optional
 # (infrastructure).
 #? threshold = "256KiB"
-# S3-compatible endpoint URL (e.g. a SeaweedFS S3 gateway in dev/test, or an
-# AWS/MinIO endpoint in prod). `None` uses the object_store default AWS
-# endpoint resolution. Any `userinfo` in it is masked in every rendering. An
-# `http://` URL is plain HTTP, which a dev SeaweedFS speaks; a `production`
-# deployment names it as a gap. Optional, unset by default (infrastructure).
+# The storage service the blobs live in. Default `"s3"`, the one service this
+# build offers. Optional (infrastructure).
+#? backend = "s3"
+# The most requests to the blob store in flight at once, across every request
+# this server serves. Default `64`. Optional (infrastructure).
+#? max_concurrent_requests = 64
+# How long one request to the blob store, or one chunk of its body, may take
+# before it is retried or fails. Default `"30s"`. Optional (infrastructure).
+#? request_timeout = "30s"
+# The part size of a multipart upload and of a ranged read: a blob larger than
+# this is uploaded in parts. Default `"8MiB"`. Optional (infrastructure).
+#? part_size = "8MiB"
+# How many parts of one blob move at once. Default `4`. Optional
+# (infrastructure).
+#? part_concurrency = 4
+
+# The S3 backend's settings (`[record.multimedia.s3]`).
+#? [record.multimedia.s3]
+# S3-compatible endpoint URL (e.g. a SeaweedFS S3 gateway in dev/test, or a
+# MinIO endpoint). `None` uses the AWS endpoint of `region`. Any `userinfo` in
+# it is masked in every rendering and never sent. An `http://` URL is plain
+# HTTP, which a dev SeaweedFS speaks; a `production` deployment names it as a
+# gap. Optional, unset by default (infrastructure).
 #? url = ""
 # Target bucket for content-addressed blobs. Optional (infrastructure).
 #? bucket = "openehr-multimedia"
 # AWS region (S3 requires one even for non-AWS endpoints). Optional
 # (infrastructure).
 #? region = "us-east-1"
-# Access key id. `None` (with `secret_access_key` also `None`) runs the client
-# unsigned/anonymous — the mode a keyless dev SeaweedFS accepts. Optional,
-# unset by default (infrastructure).
+# Access key id. `None` (with `secret_access_key` also `None`) sends the
+# requests unsigned, the mode a keyless dev SeaweedFS accepts. Optional, unset
+# by default (infrastructure).
 #? access_key_id = ""
 # Secret access key (paired with `access_key_id`); never rendered. Optional,
 # unset by default (infrastructure).

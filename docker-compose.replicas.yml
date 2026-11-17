@@ -50,12 +50,12 @@ services:
       # The multimedia keys pass through from your shell, as for `ferroehr`:
       # declared without a value, an unset key reaches the server as absent.
       FERROEHR__RECORD__MULTIMEDIA__ENABLED:
-      FERROEHR__RECORD__MULTIMEDIA__URL:
-      FERROEHR__RECORD__MULTIMEDIA__BUCKET:
-      FERROEHR__RECORD__MULTIMEDIA__REGION:
+      FERROEHR__RECORD__MULTIMEDIA__S3__URL:
+      FERROEHR__RECORD__MULTIMEDIA__S3__BUCKET:
+      FERROEHR__RECORD__MULTIMEDIA__S3__REGION:
       FERROEHR__RECORD__MULTIMEDIA__THRESHOLD:
-      FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID:
-      FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY:
+      FERROEHR__RECORD__MULTIMEDIA__S3__ACCESS_KEY_ID:
+      FERROEHR__RECORD__MULTIMEDIA__S3__SECRET_ACCESS_KEY:
     configs:
       - source: ferroehr-config${FERROEHR_EHR_INDEX:+-${FERROEHR_EHR_INDEX}}
         target: /etc/ferroehr/ferroehr.toml

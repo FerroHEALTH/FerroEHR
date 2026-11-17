@@ -168,8 +168,9 @@ pub(crate) async fn stored(
 ) -> Vec<Value> {
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
-        let rows: Vec<String> = sqlx::query_as::<_, (String, Option<String>)>(
-            "SELECT r.content, sh.content FROM audit.access_log_record r \
+        let rows: Vec<String> = sqlx::query_scalar::<_, String>(
+            "SELECT audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
+         r.time_recorded, r.ehr_id)::text FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
              WHERE r.record_type = 'ACCESS_LOG_ENTRY' ORDER BY r.chain_seq",
         )
@@ -177,7 +178,7 @@ pub(crate) async fn stored(
         .await
         .expect("read the access log")
         .into_iter()
-        .map(|(content, shared)| common::joined_entry(&content, shared.as_deref()))
+        .map(|document| common::canonical_entry(&document))
         .collect();
         let kept: Vec<Value> = rows
             .iter()

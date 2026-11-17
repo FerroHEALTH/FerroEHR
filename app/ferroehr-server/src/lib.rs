@@ -774,13 +774,13 @@ fn attach_multimedia(
         };
         if engine.offload_enabled() {
             tracing::info!(
-                bucket = %config.record.multimedia.bucket,
+                bucket = %config.record.multimedia.bucket(),
                 threshold = %config.record.multimedia.threshold,
                 "DV_MULTIMEDIA externalization enabled"
             );
         } else {
             tracing::info!(
-                bucket = %config.record.multimedia.bucket,
+                bucket = %config.record.multimedia.bucket(),
                 "DV_MULTIMEDIA externalization disabled; the configured store stays \
                  readable so already-externalized content can still be served"
             );
