@@ -43,13 +43,17 @@ pub(super) fn on_ehr_id(pinned: &PinnedEhr, target: &Expr) -> Expr {
 
 /// The revision of the pinned EHR's settings row and subject in force is the
 /// one its verdict was judged on: a scalar subquery with no outer reference,
-/// which PostgreSQL evaluates once per execution, and which fails the
-/// statement with SQLSTATE `ZA001` when the revision moved
-/// (`clinical/0049_access_stale_copy.sql`), so a stale verdict answers no
-/// row, count or page (#5794).
+/// which PostgreSQL evaluates once per execution, reading the revision from
+/// the view `access_revision_of` inside the statement, and which fails the
+/// statement with SQLSTATE `ZA001` through `access_stale_copy()` when the
+/// revision moved (`clinical/0052_access_revision_view.sql`), so a stale
+/// verdict answers no row, count or page (#5794, #5888). A missing EHR reads
+/// as the revision of nulls, as the store writes it.
 pub(super) fn in_force(pinned: &PinnedEhr) -> Expr {
     Expr::cust_with_exprs(
-        "(SELECT access_in_force($1, $2))",
+        "(SELECT CASE WHEN coalesce(CAST((SELECT ar.revision FROM access_revision_of ar \
+         WHERE ar.ehr_id = $1) AS jsonb), '[null, null, null]'::jsonb) \
+         IS NOT DISTINCT FROM CAST($2 AS jsonb) THEN true ELSE access_stale_copy() END)",
         [Expr::val(pinned.ehr), Expr::val(pinned.revision_json())],
     )
 }
