@@ -227,3 +227,29 @@ async fn unsealed_rounds_are_covered_by_one_checkpoint_of_the_head() {
     let verification = log.verify(None).await.expect("verify the checkpoint");
     assert!(verification.intact(), "{verification:?}");
 }
+
+/// Autovacuum never truncates an intake (#5970): the truncate's `ACCESS
+/// EXCLUSIVE` lock would hold every request's intake write.
+#[tokio::test]
+async fn autovacuum_never_truncates_an_intake() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let options: Vec<(String, Option<Vec<String>>)> = sqlx::query_as(
+        "SELECT c.relname::text, c.reloptions::text[] FROM pg_class c \
+         JOIN pg_namespace n ON n.oid = c.relnamespace \
+         WHERE n.nspname = 'audit' AND c.relname IN ('access_log_intake', 'audit_event_intake') \
+         ORDER BY c.relname",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("the intakes' storage parameters");
+    assert_eq!(options.len(), 2, "both intakes: {options:?}");
+    for (table, reloptions) in options {
+        assert!(
+            reloptions
+                .unwrap_or_default()
+                .contains(&"vacuum_truncate=off".to_owned()),
+            "{table} sets vacuum_truncate = off"
+        );
+    }
+}

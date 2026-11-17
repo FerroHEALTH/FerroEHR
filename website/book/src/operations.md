@@ -724,6 +724,13 @@ Budget it as a fixed amount beside the database, not as growth. A commit
 writes about twice its stored size to the WAL (30 KB for a 15.5 KB vital signs
 version), which is what a WAL archive for point-in-time recovery receives.
 
+Set `wal_compression = lz4`. The first change to a page after a checkpoint
+writes the whole page to the WAL, and lz4 compresses those images at a CPU
+cost far below the flush it saves: a composition commit wrote about 52 KB of
+WAL without it and about 24 KB with it (PostgreSQL 18 docs,
+[WAL Configuration](https://www.postgresql.org/docs/18/runtime-config-wal.html#GUC-WAL-COMPRESSION)).
+The quickstart and the capacity harness both run with it.
+
 ### Vacuum and fillfactor
 
 The clinical write path is insert-only: a composition update or delete adds a
