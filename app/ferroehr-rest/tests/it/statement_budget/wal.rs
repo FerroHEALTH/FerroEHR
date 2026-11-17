@@ -276,6 +276,18 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
         .execute(&pool)
         .await
         .expect("the statement counts reset");
+        // The shared server's other tests write WAL fast enough that a checkpoint may recycle
+        // the window's segments before they are read; a temporary slot keeps them.
+        let mut keeper = ferroehr::db::acquire::acquire(&pool)
+            .await
+            .expect("a connection for the slot");
+        sqlx::query(
+            "SELECT /* statement_budget_own */ pg_create_physical_replication_slot( \
+             'statement_budget_wal_' || pg_backend_pid(), true, true)",
+        )
+        .execute(&mut *keeper)
+        .await
+        .expect("a temporary slot keeps the window's WAL");
         let from = insert_lsn(&pool).await;
         for (_, (ehr, vo)) in (0..REQUESTS).zip(made.iter().cycle()) {
             kind.send(&app, ehr, vo).await;
@@ -288,6 +300,14 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
         let passes = passes(&logged(&pool).await);
         assert!(passes > 0, "{}: the chainer ran", kind.name());
         let relations = by_relation(&pool, &from, &to).await;
+        sqlx::query(
+            "SELECT /* statement_budget_own */ pg_drop_replication_slot( \
+             'statement_budget_wal_' || pg_backend_pid())",
+        )
+        .execute(&mut *keeper)
+        .await
+        .expect("the slot drops");
+        drop(keeper);
         let bytes_of = |of: fn(&str) -> bool| -> u64 {
             relations
                 .iter()
