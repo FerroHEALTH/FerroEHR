@@ -28,6 +28,7 @@ use ferroehr::ids::EhrId;
 use ferroehr::service::response::{ResourceMeta, ServiceResponse};
 
 use crate::api::RequestParts;
+use crate::extensions::access::admission;
 use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::overview::version_id::parse_ehr_id;
@@ -109,7 +110,15 @@ pub(crate) async fn get_by_id(state: AppState, parts: RequestParts) -> Result<Re
     crate::formats::dispatch::guard_non_templated(h)?;
     let p = parts.decode(EhrGetByIdParams::from_request, EhrGetByIdParams::PARAMS)?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
-    let read = state.backend().ehr_read(ehr_id).await?;
+    // NOTE: our own design (#5959), the EHR's one statement runs beside the access decision's
+    // party read, and nothing of it is served before the decision admits the request.
+    let backend = state.backend_handle();
+    let ahead =
+        admission::read_once_admitted(async move { backend.ehr_read_ahead(ehr_id).await })
+            .await?
+            .read()
+            .await?;
+    let read = state.backend().ehr_read_on(ehr_id, ahead)?;
     Ok(ehr_read_response(h, ok, &read))
 }
 

@@ -83,7 +83,7 @@ use openehr_its::rest::routes::{Param, ParamLocation, PathParam, RouteMatch};
 use openehr_its::rest::runtime::ApiError;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::extensions::access::{caller, delay, ehr_access, pep};
+use crate::extensions::access::{admission, caller, delay, ehr_access, pep};
 #[cfg(feature = "fhir")]
 use crate::extensions::fhir;
 use crate::extensions::terminology;
@@ -92,6 +92,7 @@ use crate::state::AppState;
 
 /// The raw request sources a handler needs to rebuild a `*Params` struct and
 /// decode a body.
+#[derive(Clone)]
 pub(crate) struct RequestParts {
     pub(crate) path: IndexMap<String, String>,
     pub(crate) query: Option<String>,
@@ -377,25 +378,29 @@ where
     // the access evaluator, which holds the EHDS Art. 8 restriction and Art. 10 opt-out.
     let access = caller::request_access(&state, op);
     let guarded = Box::pin(async move {
-        if let Err(deny) = ehr_access::enforce(&state, op, &parts).await {
-            return *deny;
+        // NOTE: our own design (#5959), the handler of an overlapped read starts its store read
+        // while the decision is made, and the decision's refusal is the answer whenever it refuses.
+        if admission::overlaps(op) {
+            let decided_on = parts.clone();
+            let handled = admission::overlap(
+                admit(&state, op, &decided_on, delayed),
+                handler(state.clone(), parts),
+            );
+            return match handled.await {
+                Ok(resp) => {
+                    let resp = resp.unwrap_or_else(IntoResponse::into_response);
+                    pep::post_check(&state, op, resp).await
+                }
+                Err(deny) => deny,
+            };
         }
-        if delayed {
-            match delay::refuse_withheld(&state, op, &parts).await {
-                Ok(Some(absent)) => return absent,
-                Ok(None) => {}
-                Err(fault) => return *fault,
-            }
+        if let Err(deny) = admit(&state, op, &parts, delayed).await {
+            return deny;
         }
-        match pep::pre_check(&state, op, &parts).await {
-            Ok(()) => {
-                let resp = handler(state.clone(), parts)
-                    .await
-                    .unwrap_or_else(IntoResponse::into_response);
-                pep::post_check(&state, op, resp).await
-            }
-            Err(deny) => deny,
-        }
+        let resp = handler(state.clone(), parts)
+            .await
+            .unwrap_or_else(IntoResponse::into_response);
+        pep::post_check(&state, op, resp).await
     });
     let delayed_guard = ferroehr::system_log::access_context::with_access_delay(delayed, guarded);
     let mut resp = match access {
@@ -413,6 +418,26 @@ where
     resp.extensions_mut()
         .insert(crate::system_log::middleware::AuditOpId(op));
     resp
+}
+
+/// The decision on `op` before its handler answers: the access evaluator,
+/// the EHDS Art. 3(3) delay when `delayed`, and the PEP pre-check, each
+/// answering its refusal.
+async fn admit(
+    state: &AppState,
+    op: &'static str,
+    parts: &RequestParts,
+    delayed: bool,
+) -> Result<(), Response> {
+    ehr_access::enforce(state, op, parts).await.map_err(|deny| *deny)?;
+    if delayed {
+        match delay::refuse_withheld(state, op, parts).await {
+            Ok(Some(absent)) => return Err(absent),
+            Ok(None) => {}
+            Err(fault) => return Err(*fault),
+        }
+    }
+    pep::pre_check(state, op, parts).await
 }
 
 /// The operations of the admin group that consult a policy register: the hold

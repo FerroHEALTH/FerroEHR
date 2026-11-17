@@ -50,6 +50,7 @@ mod contributions;
 mod directory;
 pub(in crate::service) mod meta;
 pub mod object;
+pub mod read_ahead;
 pub(crate) mod service;
 mod status;
 pub(in crate::service) mod tags;

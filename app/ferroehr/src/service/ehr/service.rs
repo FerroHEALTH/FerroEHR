@@ -31,6 +31,7 @@ use sqlx::Connection as _;
 
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
+use crate::service::ehr::read_ahead::EhrAhead;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
 use crate::versioning::change::{Change, commit_contribution};
@@ -311,12 +312,36 @@ impl FerroEhrService {
     /// [`ServiceError`] when the EHR or its current `EHR_STATUS` does not exist, or
     /// a read fails.
     pub async fn ehr_read(&self, ehr_id: EhrId) -> Result<ServiceResponse, ServiceError> {
+        let ahead = self.ehr_read_ahead(ehr_id).await;
+        self.ehr_read_on(ehr_id, ahead)
+    }
+
+    /// The one statement of [`Self::ehr_read`], made before the request's
+    /// access decision is final; it records and returns nothing (#5959).
+    pub async fn ehr_read_ahead(&self, ehr_id: EhrId) -> EhrAhead {
         // ONE statement for the whole representation — header, EHR_STATUS
-        // identity, EHR_ACCESS ref and folder hierarchies. EHR.system_id is
-        // IMMUTABLE after creation (arch master06 §System Identity): the stored
-        // per-EHR value, never the live config.
-        let read = crate::storage::ehr_repo::ehr_summary_read(&self.pool, ehr_id)
-            .await?
+        // identity, EHR_ACCESS ref and folder hierarchies.
+        EhrAhead(
+            crate::storage::ehr_repo::ehr_summary_read(&self.pool, ehr_id)
+                .await
+                .map_err(ServiceError::from),
+        )
+    }
+
+    /// [`Self::ehr_read`]'s answer from `ahead`, judged against the verdict
+    /// the request holds.
+    ///
+    /// # Errors
+    /// As [`Self::ehr_read`].
+    pub fn ehr_read_on(
+        &self,
+        ehr_id: EhrId,
+        ahead: EhrAhead,
+    ) -> Result<ServiceResponse, ServiceError> {
+        // NOTE: arch master06 §System Identity, EHR.system_id is immutable after creation, so the
+        // stored per-EHR value is served, never the live configuration.
+        let read = ahead
+            .0?
             .ok_or_else(|| ServiceError::not_found(Missing::Ehr, format!("EHR {ehr_id}")))?;
         // NOTE: our own design (#5589), a verdict judged on settings older than the row
         // this statement read is refused, as an absent EHR is.

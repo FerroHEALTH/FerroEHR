@@ -143,7 +143,12 @@ impl RequestAccess {
             return Ok(true);
         };
         let behind = match self.care.get() {
-            Checked::Unchecked => grants.behind().await?,
+            Checked::Unchecked => {
+                // NOTE: our own design (#5959), the request's clinical read runs beside this party
+                // read, the decision's one wait on the store.
+                let (behind, ()) = tokio::join!(grants.behind(), crate::access_eval::alongside::run());
+                behind?
+            }
             Checked::Read(behind) => behind,
             Checked::Held | Checked::ReadAgain(_) => return Ok(true),
         };

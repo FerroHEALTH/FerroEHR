@@ -39,7 +39,7 @@ use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 use crate::api::RequestParts;
 use crate::api::item_tags;
-use crate::extensions::access::ehr_access;
+use crate::extensions::access::{admission, delay, ehr_access};
 use crate::negotiate::WireFormat;
 use crate::negotiate::prefer::AppliedPreference;
 use crate::overview::error::RestError;
@@ -174,15 +174,41 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     // A bare COMPOSITION carries no `commit_audit`, so `Last-Modified`
     // (Requests_and_responses.md §"ETag and Last-Modified") comes from the
     // version row the service reads alongside the body.
+    // NOTE: our own design (#5959), a read the object's own row may judge reads its version
+    // beside the access decision's party read, and uses it only once the decision admits it.
+    let ahead = if p.version_at_time.is_none() && !delay::applies(&state, "composition_get") {
+        let (backend, vo_id, version) = (state.backend_handle(), uid.vo_id, uid.version.clone());
+        Some(
+            admission::read_once_admitted(async move {
+                backend.composition_ahead(vo_id, version.as_ref()).await
+            })
+            .await?,
+        )
+    } else {
+        admission::admitted().await?;
+        None
+    };
     let deferred = match ehr_access::deferred(&state, "composition_get", &parts).await {
         Ok(deferred) => deferred,
         Err(refusal) => return Ok(*refusal),
     };
     let read = if let Some(deferred) = deferred {
-        let judged = state
-            .backend()
-            .composition_judged(&deferred.access, ehr_id, uid.vo_id, uid.version.as_ref())
-            .await;
+        let ahead = match ahead {
+            Some(ahead) => ahead.read().await?,
+            None => {
+                state
+                    .backend()
+                    .composition_ahead(uid.vo_id, uid.version.as_ref())
+                    .await
+            }
+        };
+        let judged = state.backend().composition_judged_on(
+            &deferred.access,
+            ehr_id,
+            uid.vo_id,
+            uid.version.as_ref(),
+            ahead,
+        ).await;
         let admitted = ehr_access::admit_read(
             &state,
             "composition_get",
