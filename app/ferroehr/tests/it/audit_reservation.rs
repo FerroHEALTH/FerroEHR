@@ -502,3 +502,89 @@ async fn a_reconciliation_needs_one_audit_connection() {
     assert_eq!(reconciled.discarded, 1, "{reconciled:?}");
     assert_eq!(held(&pool, reservation).await, (Vec::new(), Vec::new()));
 }
+
+/// A write takes its audit connection before it opens its transaction: with
+/// the one audit connection held elsewhere, the write waits holding no
+/// clinical connection, so the one clinical connection still serves a read,
+/// and the write commits with its records held once the audit connection is
+/// back. Taken the other way round, the write sat idle in its transaction
+/// while it waited for the audit pool, and the read waited for it (#5964).
+#[tokio::test]
+async fn a_write_waits_for_its_audit_connection_before_its_transaction() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let mut config = ferroehr::db::DbConfig::new(db.url());
+    config.max_connections = Some(1);
+    config.min_connections = Some(0);
+    config.acquire_timeout = ferrohealth_config::units::Duration::from_secs(3);
+    let clinical = ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Clinical)
+        .await
+        .expect("the clinical pool connects");
+    let audit_pool = ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Audit)
+        .await
+        .expect("the audit pool connects");
+    let audit = AuditConfig {
+        enabled: true,
+        ..AuditConfig::default()
+    };
+    let (sender, handle) = sender::start(audit, None, audit_pool.clone())
+        .await
+        .expect("the audit sender");
+    drop(handle);
+    let svc = FerroEhrService::new(&DomainPools {
+        clinical: clinical.clone(),
+        party: pool.clone(),
+        audit: audit_pool.clone(),
+    })
+    .with_audit(sender);
+    let recorder = primed();
+    let busy = ferroehr::db::acquire::acquire(&audit_pool)
+        .await
+        .expect("the one audit connection");
+
+    let write = tokio::spawn({
+        let recorder = recorder.clone();
+        async move {
+            ferroehr::db::acquire::request_scope(with_recorder(
+                recorder,
+                crate::fixtures::create_ehr_for_party(&svc, ferroehr::ids::VoId(Uuid::now_v7())),
+            ))
+            .await
+        }
+    });
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(!write.is_finished(), "the write waits for the audit pool");
+    let one: i32 = sqlx::query_scalar("SELECT 1")
+        .fetch_one(
+            &mut *ferroehr::db::acquire::acquire(&clinical)
+                .await
+                .expect("the clinical connection is free while the write waits"),
+        )
+        .await
+        .expect("a read on it");
+    assert_eq!(one, 1);
+    drop(busy);
+    write.await.expect("the write task");
+    let reservations = recorder.reserved();
+    assert_eq!(reservations.len(), 1, "the write took one reservation");
+    let (entries, records) = held(&pool, reservations[0].id).await;
+    assert_eq!((entries.len(), records.len()), (1, 1));
+}
+
+/// The pools are taken audit first: a request that asks the audit pool for
+/// a connection while it holds a clinical one is refused in a debug build,
+/// whichever path it takes (#5964).
+#[cfg(debug_assertions)]
+#[tokio::test]
+#[should_panic(expected = "#5964")]
+async fn an_audit_connection_after_a_clinical_one_is_refused() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = DomainPools::from_shared(&db.pool());
+    ferroehr::db::acquire::request_scope(async {
+        let _clinical = ferroehr::db::acquire::acquire(&pools.clinical)
+            .await
+            .expect("a clinical connection");
+        drop(ferroehr::db::acquire::acquire(&pools.audit).await);
+    })
+    .await;
+}

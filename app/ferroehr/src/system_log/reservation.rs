@@ -19,21 +19,119 @@
 //! them; a spent one is removed. This is the durable reservation of
 //! `docs/plans/access-log.md` rule 3; no openEHR spec governs it: our own
 //! design.
+//!
+//! A recorded write takes its connections in one fixed order (#5964): the
+//! audit connection its records are written on first ([`RecordedConn`]), then
+//! the connection of its own domain, so its transaction never waits for the
+//! audit pool and no two requests wait for each other across the pools
+//! (`crate::db::acquire` refuses the other order in a debug build).
 
-use sqlx::{Postgres, Transaction};
+use std::ops::{Deref, DerefMut};
+
+use sqlx::postgres::PgConnection;
+use sqlx::{Connection, PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use super::event::AuditEvent;
 use super::recorder::{Reserved, WriteFacts, WriteRecorder};
+use crate::db::acquire::{AcquireError, Checkout, acquire};
 use crate::error::ServiceError;
 use crate::error::refusal::Refusal;
 use crate::service::FerroEhrService;
+
+/// The connections of a recorded write: the audit connection its records
+/// are written on, taken first while the audit trail is on, and the
+/// connection of the write's own domain. It derefs to the domain's
+/// connection.
+#[derive(Debug)]
+pub(crate) struct RecordedConn {
+    audit: Option<Checkout>,
+    conn: Checkout,
+}
+
+impl RecordedConn {
+    /// Opens the write's transaction on the domain's connection.
+    ///
+    /// # Errors
+    /// The database error of a failed `BEGIN`.
+    pub(crate) async fn begin(&mut self) -> Result<RecordedTx<'_>, sqlx::Error> {
+        let Self { audit, conn } = self;
+        Ok(RecordedTx {
+            tx: conn.begin().await?,
+            audit: audit.as_deref_mut(),
+        })
+    }
+}
+
+impl Deref for RecordedConn {
+    type Target = PgConnection;
+
+    fn deref(&self) -> &PgConnection {
+        &self.conn
+    }
+}
+
+impl DerefMut for RecordedConn {
+    fn deref_mut(&mut self) -> &mut PgConnection {
+        &mut self.conn
+    }
+}
+
+/// The transaction of a recorded write, with the audit connection
+/// [`FerroEhrService::commit_recorded`] writes its records on. It derefs to
+/// the transaction's connection.
+#[derive(Debug)]
+pub(crate) struct RecordedTx<'c> {
+    tx: Transaction<'c, Postgres>,
+    audit: Option<&'c mut PgConnection>,
+}
+
+impl RecordedTx<'_> {
+    /// Rolls the write back; its records were never written.
+    ///
+    /// # Errors
+    /// The database error of a failed `ROLLBACK`.
+    pub(crate) async fn rollback(self) -> Result<(), sqlx::Error> {
+        self.tx.rollback().await
+    }
+}
+
+impl Deref for RecordedTx<'_> {
+    type Target = PgConnection;
+
+    fn deref(&self) -> &PgConnection {
+        &self.tx
+    }
+}
+
+impl DerefMut for RecordedTx<'_> {
+    fn deref_mut(&mut self) -> &mut PgConnection {
+        &mut self.tx
+    }
+}
 
 /// The statement that reserves a write's records in its own transaction;
 /// the pool's search path names the domain's schema.
 const RESERVE: &str = "INSERT INTO audit_reservation (id) VALUES ($1) ON CONFLICT (id) DO NOTHING";
 
 impl FerroEhrService {
+    /// The connections of a write on `pool` whose records
+    /// [`Self::commit_recorded`] reserves: an audit connection first while
+    /// the audit trail is on, then one of `pool`.
+    ///
+    /// # Errors
+    /// [`AcquireError`] when either pool fails.
+    pub(crate) async fn recorded_conn(&self, pool: &PgPool) -> Result<RecordedConn, AcquireError> {
+        let audit = match self.audit.as_ref().filter(|sender| sender.enabled()) {
+            Some(sender) => Some(acquire(&sender.store().pool).await?),
+            None => None,
+        };
+        Ok(RecordedConn {
+            audit,
+            conn: acquire(pool).await?,
+        })
+    }
+
     /// Commit `tx`, the transaction of a request-scoped write in `domain`,
     /// with the write's audit records reserved: the operation record the
     /// request's recorder builds from `facts`, and `records`, the act's own
@@ -50,11 +148,14 @@ impl FerroEhrService {
     /// committed then.
     pub(crate) async fn commit_recorded(
         &self,
-        mut tx: Transaction<'_, Postgres>,
+        tx: RecordedTx<'_>,
         facts: &WriteFacts,
         records: Vec<AuditEvent>,
     ) -> Result<(), ServiceError> {
-        let Some(sender) = self.audit.as_ref().filter(|sender| sender.enabled()) else {
+        let RecordedTx { mut tx, audit } = tx;
+        let (Some(sender), Some(audit)) =
+            (self.audit.as_ref().filter(|sender| sender.enabled()), audit)
+        else {
             tx.commit().await?;
             return Ok(());
         };
@@ -86,7 +187,7 @@ impl FerroEhrService {
             return Err(error.into());
         }
         let reservation = Uuid::now_v7();
-        if let Err(unwritten) = Box::pin(sender.record(events, Some(reservation))).await {
+        if let Err(unwritten) = Box::pin(sender.record_on(audit, events, reservation)).await {
             unbuild();
             return Err(ServiceError::Unrecorded(
                 Refusal::new((), "audit trail unavailable").with_source(unwritten),
@@ -104,11 +205,7 @@ impl FerroEhrService {
             unbuild();
             // NOTE: our own design (#5762), a held record of a write that never committed
             // records no access; the reconciler discards it when this fails.
-            let _discarded = async {
-                let mut conn = crate::db::acquire::acquire(&sender.store().pool).await?;
-                super::store::AuditStore::discard(&mut conn, &[reservation]).await
-            }
-            .await;
+            let _discarded = super::store::AuditStore::discard(audit, &[reservation]).await;
             return Err(error.into());
         }
         let reserved = Reserved { id: reservation };

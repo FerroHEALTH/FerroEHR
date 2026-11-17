@@ -59,6 +59,9 @@ use sqlx::Postgres;
 use sqlx::pool::PoolConnection;
 use sqlx::postgres::PgConnection;
 
+use crate::db::domain::Domain;
+use crate::db::pool_name::{PoolName, label, name_of};
+
 /// A failure to obtain a connection from a pool: no statement of the caller
 /// reached the database, so the request can be repeated once it answers.
 ///
@@ -111,7 +114,7 @@ impl AcquireError {
 }
 
 /// The attribute of the pool metrics that names the pool
-/// ([`crate::db::pool_name::label_of`], #5972).
+/// ([`crate::db::pool_name::label`], #5972).
 const POOL: &str = "pool";
 
 /// How long an acquire waits for the pool before it probes the database.
@@ -333,16 +336,17 @@ struct Held {
     conn: PoolConnection<Postgres>,
     /// When the request took it from the pool.
     since: Instant,
-    /// The pool's `pool` label ([`crate::db::pool_name::label_of`]).
-    label: &'static str,
+    /// The pool's name ([`crate::db::pool_name::name_of`]).
+    name: Option<PoolName>,
 }
 
 tokio::task_local! {
     /// The connections a [`request_scope`] keeps between checkouts, at most
     /// one per pool.
     static HELD: RefCell<Vec<Held>>;
-    /// The pool of each connection a [`request_scope`] has checked out now.
-    static OUT: RefCell<Vec<usize>>;
+    /// The pool of each connection a [`request_scope`] has checked out now,
+    /// with the pool's name.
+    static OUT: RefCell<Vec<(usize, Option<PoolName>)>>;
 }
 
 /// Runs `body` as one request: the connection each pool hands it is kept
@@ -374,13 +378,13 @@ pub async fn tracked<F: Future>(body: F) -> F::Output {
 /// the connection may be waiting for `body` (#5947). Outside a
 /// [`request_scope`] it carries nothing.
 pub fn inheriting<F: Future>(body: F) -> impl Future<Output = F::Output> {
-    let mut held: Vec<usize> = OUT
+    let mut held: Vec<(usize, Option<PoolName>)> = OUT
         .try_with(|out| out.try_borrow().map(|out| out.clone()).unwrap_or_default())
         .unwrap_or_default();
     // NOTE: our own design (#5947), outside a request scope no connection is kept.
     let _outside_a_scope = HELD.try_with(|kept| {
         if let Ok(kept) = kept.try_borrow() {
-            held.extend(kept.iter().map(|kept| kept.pool));
+            held.extend(kept.iter().map(|kept| (kept.pool, kept.name)));
         }
     });
     OUT.scope(RefCell::new(held), body)
@@ -389,19 +393,34 @@ pub fn inheriting<F: Future>(body: F) -> impl Future<Output = F::Output> {
 /// Whether the current [`request_scope`] has a connection of the pool `key`
 /// checked out now.
 fn checked_out(key: usize) -> bool {
-    OUT.try_with(|out| out.try_borrow().is_ok_and(|out| out.contains(&key)))
-        .unwrap_or(false)
+    OUT.try_with(|out| {
+        out.try_borrow()
+            .is_ok_and(|out| out.iter().any(|(pool, _)| *pool == key))
+    })
+    .unwrap_or(false)
+}
+
+/// Whether the current [`request_scope`] has a connection of the clinical or
+/// the party pool checked out now.
+fn holds_a_domain() -> bool {
+    OUT.try_with(|out| {
+        out.try_borrow().is_ok_and(|out| {
+            out.iter()
+                .any(|(_, name)| name.is_some_and(|name| name.domain() != Domain::Audit))
+        })
+    })
+    .unwrap_or(false)
 }
 
 /// Notes in the current [`request_scope`] that a connection of the pool `key`
-/// is checked out (`out`) or back (`!out`).
-fn note_checkout(key: usize, out: bool) {
+/// named `name` is checked out (`out`) or back (`!out`).
+fn note_checkout(key: usize, name: Option<PoolName>, out: bool) {
     // NOTE: our own design, outside a request scope there is nothing to note.
     let _outside_a_scope = OUT.try_with(|checked| {
         if let Ok(mut checked) = checked.try_borrow_mut() {
             if out {
-                checked.push(key);
-            } else if let Some(at) = checked.iter().position(|pool| *pool == key) {
+                checked.push((key, name));
+            } else if let Some(at) = checked.iter().position(|(pool, _)| *pool == key) {
                 checked.swap_remove(at);
             }
         }
@@ -420,17 +439,20 @@ pub fn release_held() {
         .ok()
         .and_then(Result::ok);
     for held in released.into_iter().flatten() {
-        held_for(held.since, held.label);
+        held_for(held.since, held.name);
         drop(held.conn);
     }
 }
 
-/// Records that a request held a connection of the pool `label` from
-/// `since` until now.
-fn held_for(since: Instant, label: &'static str) {
+/// Records that a request held a connection of the pool `name` from `since`
+/// until now.
+fn held_for(since: Instant, name: Option<PoolName>) {
     crate::telemetry::metrics::metrics()
         .db_pool_hold_duration
-        .record(since.elapsed().as_secs_f64(), &[KeyValue::new(POOL, label)]);
+        .record(
+            since.elapsed().as_secs_f64(),
+            &[KeyValue::new(POOL, label(name))],
+        );
 }
 
 /// The identity of the shared pool `pool` is a handle to: the address of the
@@ -459,25 +481,25 @@ pub struct Checkout {
     conn: Option<PoolConnection<Postgres>>,
     pool: usize,
     since: Instant,
-    label: &'static str,
+    name: Option<PoolName>,
     close: bool,
 }
 
 impl Checkout {
-    /// A checkout of `conn`, a connection of the pool `pool` labelled
-    /// `label`, taken from it at `since`.
+    /// A checkout of `conn`, a connection of the pool `pool` named `name`,
+    /// taken from it at `since`.
     fn new(
         conn: PoolConnection<Postgres>,
         pool: usize,
         since: Instant,
-        label: &'static str,
+        name: Option<PoolName>,
     ) -> Self {
-        note_checkout(pool, true);
+        note_checkout(pool, name, true);
         Self {
             conn: Some(conn),
             pool,
             since,
-            label,
+            name,
             close: false,
         }
     }
@@ -536,7 +558,7 @@ impl DerefMut for Checkout {
 
 impl Drop for Checkout {
     fn drop(&mut self) {
-        note_checkout(self.pool, false);
+        note_checkout(self.pool, self.name, false);
         let Some(mut conn) = self.conn.take() else {
             return;
         };
@@ -544,7 +566,7 @@ impl Drop for Checkout {
             conn.close_on_drop();
             return;
         }
-        let (pool, since, label) = (self.pool, self.since, self.label);
+        let (pool, since, name) = (self.pool, self.since, self.name);
         // Outside a scope the closure is dropped unrun, and dropping `conn`
         // returns it to the pool; a scope already keeping a connection of
         // this pool hands it back, and the request's hold of it ends here.
@@ -554,12 +576,12 @@ impl Drop for Checkout {
                     pool,
                     conn,
                     since,
-                    label,
+                    name,
                 });
                 None
             }
             _ => {
-                held_for(since, label);
+                held_for(since, name);
                 Some(conn)
             }
         });
@@ -585,12 +607,15 @@ impl Drop for Checkout {
 pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
     let key = pool_key(pool);
     if let Some(held) = take_held(key) {
-        return Ok(Checkout::new(held.conn, key, held.since, held.label));
+        return Ok(Checkout::new(held.conn, key, held.since, held.name));
     }
     let started = Instant::now();
-    let label = crate::db::pool_name::label_of(pool);
+    let name = name_of(pool);
     if checked_out(key) {
-        nested_acquire(label);
+        nested_acquire(label(name));
+    }
+    if name.is_some_and(|name| name.domain() == Domain::Audit) && holds_a_domain() {
+        out_of_order(label(name));
     }
     // Boxed: the probe and the pool's connect future are large, and every
     // caller's state machine would otherwise carry them inline.
@@ -610,10 +635,10 @@ pub async fn acquire(pool: &PgPool) -> Result<Checkout, AcquireError> {
         .db_pool_acquire_duration
         .record(
             started.elapsed().as_secs_f64(),
-            &[KeyValue::new(POOL, label)],
+            &[KeyValue::new(POOL, label(name))],
         );
     let conn = result?;
-    Ok(Checkout::new(conn, key, Instant::now(), label))
+    Ok(Checkout::new(conn, key, Instant::now(), name))
 }
 
 /// A request asks a pool for a second connection while it has one of that
@@ -633,6 +658,34 @@ fn nested_acquire(label: &'static str) {
     tracing::warn!(
         pool = label,
         "a request asked a pool for a second connection while it held one of it"
+    );
+}
+
+/// A request asks the audit pool for a connection while it has a clinical or
+/// party connection checked out: the pools are taken audit first, then the
+/// domain, so a write never waits for the audit pool inside its transaction
+/// and no two requests wait for each other across pools. Debug builds refuse
+/// it; a release build counts it on
+/// [`DB_POOL_NESTED_ACQUIRES`](crate::telemetry::metrics::DB_POOL_NESTED_ACQUIRES)
+/// with `order="audit_after_domain"` and warns. No openEHR spec governs
+/// this: our own design (#5964).
+fn out_of_order(label: &'static str) {
+    debug_assert!(
+        false,
+        "a request asked the audit pool for a connection while it held a clinical or party one (#5964)"
+    );
+    crate::telemetry::metrics::metrics()
+        .db_pool_nested_acquires
+        .add(
+            1,
+            &[
+                KeyValue::new(POOL, label),
+                KeyValue::new("order", "audit_after_domain"),
+            ],
+        );
+    tracing::warn!(
+        pool = label,
+        "a request asked the audit pool for a connection while it held a clinical or party one"
     );
 }
 

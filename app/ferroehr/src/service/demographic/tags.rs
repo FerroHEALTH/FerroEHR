@@ -20,9 +20,7 @@ use openehr_base::prelude::{
 };
 use openehr_its::rest::generated::common::UpdateItemTag;
 use openehr_rm::prelude::ItemTag;
-use sqlx::Connection as _;
 
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::VoId;
@@ -202,7 +200,7 @@ impl FerroEhrService {
                 target_path: target_path.as_deref(),
             })
             .collect();
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         // The replace RETURNS the stored collection (list order), so the
         // response never re-reads the rows the transaction just wrote.
@@ -242,7 +240,7 @@ impl FerroEhrService {
     ) -> Result<(), ServiceError> {
         self.ensure_party_tag_target(kind, vo_id, target_version)
             .await?;
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let deleted =
             tag_repo::delete_tag(&mut tx, None, vo_id, tag_target_tail(target_version), key)

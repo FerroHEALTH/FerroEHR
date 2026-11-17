@@ -41,7 +41,7 @@ pub(super) fn pool_gauge(meter: &Meter) -> opentelemetry::metrics::Gauge<u64> {
 }
 
 /// Spawn the background sampler over every pool of `pools`, each under its
-/// `pool` label ([`crate::db::pool_name::label_of`], #5972).
+/// `pool` label ([`crate::db::pool_name::label`], #5972).
 ///
 /// Returns the task handle so the telemetry guard can abort it on shutdown.
 /// When `meter` is `Some`, the pool/runtime gauges are mirrored through the
@@ -100,7 +100,7 @@ fn sample(pools: &[PgPool]) -> Sample {
         .map(|pool| {
             let idle = pool.num_idle() as u64;
             PoolSample {
-                label: crate::db::pool_name::label_of(pool),
+                label: crate::db::pool_name::label(crate::db::pool_name::name_of(pool)),
                 idle,
                 in_use: u64::from(pool.size()).saturating_sub(idle),
             }

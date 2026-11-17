@@ -310,6 +310,23 @@ impl AuditStore {
         writing: &Pinned,
         records: &[AuditRecord],
     ) -> Result<(), AuditError> {
+        if writing
+            .runs(records)
+            .iter()
+            .all(|(policy, _, _)| policy.digest.get().is_some())
+        {
+            return Ok(());
+        }
+        Self::register_policies_on(&mut *acquire(&self.pool).await?, writing, records).await
+    }
+
+    /// [`Self::register_policies`] on `conn`, a connection of the store's
+    /// pool.
+    async fn register_policies_on(
+        conn: &mut PgConnection,
+        writing: &Pinned,
+        records: &[AuditRecord],
+    ) -> Result<(), AuditError> {
         for (policy, _, _) in writing.runs(records) {
             policy
                 .digest
@@ -319,7 +336,7 @@ impl AuditStore {
                     let digest: Vec<u8> =
                         sqlx::query_scalar("SELECT audit.register_render_policy($1)")
                             .bind(json)
-                            .fetch_one(&mut *acquire(&self.pool).await?)
+                            .fetch_one(&mut *conn)
                             .await?;
                     Ok::<_, AuditError>(digest)
                 })
@@ -484,6 +501,34 @@ impl AuditStore {
         self.take_in_own(records, ends, Some(reservation))
             .await
             .map(drop)
+    }
+
+    /// [`Self::write_held`] on `conn`, a connection of the store's pool the
+    /// caller took before its own transaction's (#5964).
+    ///
+    /// # Errors
+    /// As [`Self::write`].
+    pub async fn write_held_on(
+        &self,
+        conn: &mut PgConnection,
+        records: Vec<AuditRecord>,
+        ends: &[RecordEnd],
+        reservation: Uuid,
+    ) -> Result<(), AuditError> {
+        if records.is_empty() {
+            return Ok(());
+        }
+        let writing = self.writing.pin();
+        Self::register_policies_on(conn, &writing, &records).await?;
+        let mut tx = conn.begin().await?;
+        let (_, learned, _) = self
+            .take_in(&mut tx, &writing, records, ends, Some(reservation))
+            .await?;
+        // NOTE: our own design (#5762), the audit domain's own store, whose records are this
+        // transaction's rows; a held row waits for its release, which marks it.
+        tx.commit().await?;
+        self.remember(learned);
+        Ok(())
     }
 
     /// [`Self::write`], returning the id of each record written.

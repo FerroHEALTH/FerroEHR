@@ -22,9 +22,6 @@
 //! alone, so archived content leaves the queryable store until it is
 //! restored.
 
-use sqlx::Connection as _;
-
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
@@ -43,7 +40,7 @@ impl FerroEhrService {
     /// - `exception` — a database fault mid-transaction (rolled back).
     /// - `service_overloaded` — an access record could not be written.
     pub async fn archive_ehrs(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         require_ehrs_exist(&mut tx, ehr_ids).await?;
         for &ehr_id in ehr_ids {
@@ -69,7 +66,7 @@ impl FerroEhrService {
     ///   archived.
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn archive_parties(&self, party_ids: &[VoId]) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let mut live: Vec<VoId> = Vec::new();
         for &party_id in party_ids {
@@ -99,7 +96,7 @@ impl FerroEhrService {
     /// - `exception` — a database fault mid-transaction (rolled back).
     /// - `service_overloaded` — an access record could not be written.
     pub async fn restore_archived_ehrs(&self, ehr_ids: &[EhrId]) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         require_ehrs_exist(&mut tx, ehr_ids).await?;
         for &ehr_id in ehr_ids {
@@ -131,7 +128,7 @@ impl FerroEhrService {
     ///   demographic PARTY root.
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn restore_archived_parties(&self, party_ids: &[VoId]) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         let mut ids: Vec<VoId> = Vec::new();
         for &party_id in party_ids {

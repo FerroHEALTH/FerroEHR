@@ -17,7 +17,6 @@ use std::collections::HashMap;
 use openehr_base::prelude::HierObjectId;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
 use serde_json::Value;
-use sqlx::Connection as _;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
@@ -249,7 +248,7 @@ async fn write_contribution(
     for (_, change) in &mut write.changes {
         cx.externalize_change(change).await?;
     }
-    let mut conn = acquire(domain_pool(cx, party_only)).await?;
+    let mut conn = cx.recorded_conn(domain_pool(cx, party_only)).await?;
     let mut tx = conn.begin().await?;
     // The content-write gate, under a row lock (RM ehr master04 §EHR Active
     // Status; the in-transaction evaluation is our own recorded semantics —

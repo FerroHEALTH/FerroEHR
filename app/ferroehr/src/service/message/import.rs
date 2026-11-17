@@ -61,9 +61,7 @@
 use std::collections::BTreeMap;
 
 use serde_json::Value;
-use sqlx::Connection as _;
 
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::{Clash, Missing, Refusal};
 use crate::ids::{EhrId, VoId};
@@ -136,7 +134,7 @@ impl FerroEhrService {
             .await
             .map_err(ServiceError::flattened)?;
 
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::from)?;
         // Into an *empty* target: a duplicate EHR id is
         // `ehr_create_fail_duplicate_id`. The EHR is created locally, so its
@@ -215,7 +213,7 @@ impl FerroEhrService {
             .admitted(&an_extract, Operation::ImportEhrExtract)
             .await?;
 
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::from)?;
         // Exclusive, because the import re-derives the promoted `ehr` columns
         // before it commits; the flag the read returns is not an import gate.
@@ -328,7 +326,7 @@ impl FerroEhrService {
         if parties.is_empty() {
             return Ok(());
         }
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         commit_demographic_import(&mut tx, signing, &self.privacy, audit, parties).await?;
         self.commit_act_recorded(tx, Vec::new()).await?;

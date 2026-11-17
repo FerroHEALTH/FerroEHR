@@ -75,8 +75,8 @@ pub fn name_of(pool: &PgPool) -> Option<PoolName> {
         .map(|(_, name)| *name)
 }
 
-/// The `pool` label value of `pool`.
+/// The `pool` label value of a pool named `name`.
 #[must_use]
-pub fn label_of(pool: &PgPool) -> &'static str {
-    name_of(pool).map_or(UNNAMED, PoolName::as_str)
+pub fn label(name: Option<PoolName>) -> &'static str {
+    name.map_or(UNNAMED, PoolName::as_str)
 }

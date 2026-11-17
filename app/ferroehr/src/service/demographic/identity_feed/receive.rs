@@ -19,13 +19,11 @@
 use ihe_iti::pmir::error::FeedError;
 use ihe_iti::pmir::feed::{Event, Feed, LinkType, PatientIdentity, ResponseId, Unwritable};
 use secrecy::ExposeSecret as _;
-use sqlx::Connection as _;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
 use super::plan::{self, Identity};
 use super::{ChangeKind, FeedEvent, FeedSender, Identifier};
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::storage::error::StorageError;
@@ -206,7 +204,8 @@ impl FerroEhrService {
         message_id: &str,
         events: &[FeedEvent],
     ) -> Result<bool, ReceiveError> {
-        let mut conn = acquire(&self.demographic_pool)
+        let mut conn = self
+            .recorded_conn(&self.demographic_pool)
             .await
             .map_err(ServiceError::from)?;
         let mut tx = conn.begin().await?;

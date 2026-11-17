@@ -19,8 +19,6 @@
 //! account for. GDPR Art. 18(3) (`docs/law/eu/gdpr/text.html`) makes the
 //! sequence itself the obligation.
 
-use sqlx::Connection as _;
-
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
@@ -73,7 +71,7 @@ impl FerroEhrService {
             )));
         }
         self.check_mark_target(ehr_id, vo_id).await?;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::record_restriction(&mut tx, ehr_id, vo_id, ground, note)
             .await
@@ -97,7 +95,7 @@ impl FerroEhrService {
         vo_id: Option<VoId>,
     ) -> Result<(), ServiceError> {
         self.check_mark_target(ehr_id, vo_id).await?;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::lift_restriction(&mut tx, ehr_id, vo_id)
             .await
@@ -152,7 +150,7 @@ impl FerroEhrService {
             ));
         }
         self.check_mark_target(ehr_id, None).await?;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         if objected {
             marks::set_research_objection(&mut tx, ehr_id, ground)
@@ -227,7 +225,7 @@ impl FerroEhrService {
                 })
             })
             .transpose()?;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::put_retention_policy(
             &mut tx,
@@ -288,7 +286,7 @@ impl FerroEhrService {
         hold: Option<(&str, &str)>,
     ) -> Result<(), ServiceError> {
         self.check_mark_target(ehr_id, None).await?;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         marks::put_retention_anchor(&mut tx, ehr_id, jurisdiction, anchored_at, hold)
             .await
@@ -314,7 +312,7 @@ impl FerroEhrService {
     /// - `exception` — a database fault mid-transaction (rolled back).
     /// - `service_overloaded` — the access record could not be written.
     pub async fn set_retention_hold(&self, vo_id: VoId, held: bool) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let Some(owner) = marks::set_retention_hold(&mut tx, vo_id, held)
             .await
@@ -435,7 +433,7 @@ impl FerroEhrService {
     /// ([`Self::commit_recorded`]).
     pub(in crate::service) async fn commit_act_recorded(
         &self,
-        tx: sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: crate::system_log::reservation::RecordedTx<'_>,
         records: Vec<AuditEvent>,
     ) -> Result<(), ServiceError> {
         self.commit_recorded(

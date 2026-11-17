@@ -92,7 +92,7 @@ impl crate::service::FerroEhrService {
     /// As [`Self::commit_recorded`].
     pub(super) async fn commit_definition(
         &self,
-        tx: sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: crate::system_log::reservation::RecordedTx<'_>,
     ) -> Result<(), crate::error::ServiceError> {
         self.commit_recorded(
             tx,
