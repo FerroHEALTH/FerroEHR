@@ -1584,7 +1584,10 @@ commit. A verdict that care decides (the same EHR judged with and without
 care differs), and a query whose resolved care binds any EHR, first compare
 the replica's grant and facts revisions with `binding_grant_revision`: one
 indexed read of one row on the party pool, once per request
-(`RequestAccess::care_in_force`). When the copy is older, the request reads
+(`RequestAccess::care_in_force`). A read of a COMPOSITION runs it alongside
+the version read, and a query alongside its care read
+(`RequestAccess::care_ahead`), so it adds a transaction and no latency; the
+owner accepted that cost on #5891. When the copy is older, the request reads
 it again (the care copy drops what changed before the revision moves), keeps
 only the care teams the caller is still a member of in the copy read, and
 judges care again; a copy that stays older for 100 ms refuses with `503`

@@ -101,6 +101,22 @@ impl FerroEhrService {
         }
     }
 
+    /// Reads ahead for `access` whether the caller facts copy holds the
+    /// store's revisions, when the caller's care decides its verdict on
+    /// `ehr_id` ([`RequestAccess::care_ahead`]), so a read the request makes
+    /// alongside carries the exact check (owner decision on #5891). No openEHR
+    /// spec governs this: our own design.
+    pub(crate) async fn care_ahead(&self, access: &RequestAccess, ehr_id: EhrId) {
+        if access.verdict(ehr_id).is_some() {
+            return;
+        }
+        // NOTE: our own design (#5891), settings that do not read here read ahead nothing, and
+        // the verdict reads them again and answers that read's error.
+        if let Ok(entry) = Box::pin(self.ehr_access_entry(ehr_id)).await {
+            access.care_ahead(ehr_id, &entry).await;
+        }
+    }
+
     /// What the evaluator reads of each of `vo_ids` this store holds.
     ///
     /// # Errors
@@ -227,7 +243,8 @@ impl FerroEhrService {
         let Some(access) = current() else {
             return Ok(condition.with_care(Care::Census(Vec::new().into())));
         };
-        let mut care = self.care_of(&access, pinned).await?;
+        let (care, ()) = tokio::join!(self.care_of(&access, pinned), access.care_read_ahead());
+        let mut care = care?;
         if binds_any(&care) && !access.care_in_force().await? {
             care = self.care_of(&access, pinned).await?;
         }

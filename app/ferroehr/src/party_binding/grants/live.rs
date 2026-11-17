@@ -47,7 +47,7 @@ use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
-mod revisions;
+pub mod revisions;
 #[cfg(test)]
 mod sharing;
 mod subjects;
