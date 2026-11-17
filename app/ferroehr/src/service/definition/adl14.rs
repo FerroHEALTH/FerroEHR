@@ -24,9 +24,6 @@
 //! NOTE: no openEHR spec governs 1.4 to 2 conversion and the vendored ITS-REST
 //! OAS declares no conversion operation, so the conversion is our own design.
 
-use sqlx::Connection as _;
-
-use crate::db::acquire::acquire;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
@@ -90,7 +87,7 @@ impl FerroEhrService {
                      header or a well-formed ARCHETYPE_ID)",
             ),
         })?;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         archetype_repo::replace_archetype(&mut tx, &id.value, &adl).await?;
         self.commit_definition(tx).await?;
@@ -254,7 +251,7 @@ impl FerroEhrService {
     /// - No archetype with that id → [`Missing::Artefact`] (`404`).
     /// - A database failure (`500`).
     pub async fn delete_archetype(&self, an_id: &str) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         if archetype_repo::delete_archetype(&mut tx, an_id).await? {
             self.commit_definition(tx).await

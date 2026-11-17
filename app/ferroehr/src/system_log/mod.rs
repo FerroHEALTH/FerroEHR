@@ -89,7 +89,7 @@ mod fhir_accessor;
 pub mod message;
 pub mod recorder;
 pub mod render;
-mod reservation;
+pub(crate) mod reservation;
 pub mod retention;
 pub mod seal;
 #[cfg(feature = "fhir")]

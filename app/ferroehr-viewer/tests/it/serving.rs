@@ -93,7 +93,10 @@ async fn the_healthcheck_asks_the_readiness_of_the_served_viewer() {
     let app = ferroehr_viewer::server::app(
         app_state(),
         health,
-        ferrohealth_telemetry::request_log::RequestLog::new(&[]),
+        ferrohealth_server::stack::StackPolicy {
+            request_log: ferrohealth_telemetry::request_log::RequestLog::new(&[]),
+            ..ferrohealth_server::stack::StackPolicy::default()
+        },
     );
     let address = serve(app, None, lifecycle.clone()).await;
     let section = ServerSection {
@@ -125,7 +128,10 @@ async fn an_unknown_address_without_a_session_meets_the_sign_in_through_the_stac
     let app = ferroehr_viewer::server::app(
         app_state(),
         Health::new(Registry::default(), Lifecycle::default()),
-        ferrohealth_telemetry::request_log::RequestLog::new(&[]),
+        ferrohealth_server::stack::StackPolicy {
+            request_log: ferrohealth_telemetry::request_log::RequestLog::new(&[]),
+            ..ferrohealth_server::stack::StackPolicy::default()
+        },
     );
     let get = |path: &str| {
         http::Request::get(path)

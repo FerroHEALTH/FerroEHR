@@ -296,11 +296,59 @@ impl AuditSender {
         events: Vec<AuditEvent>,
         reservation: Option<uuid::Uuid>,
     ) -> Result<(), AuditError> {
-        if events.is_empty() {
+        let Some((records, ends, count)) = self.rendered(events).await else {
             return Ok(());
+        };
+        let started = std::time::Instant::now();
+        let written = match reservation {
+            Some(reservation) => {
+                self.inner
+                    .store
+                    .write_held(records, &ends, reservation)
+                    .await
+            }
+            None => self.inner.store.write(records, &ends).await,
+        };
+        self.wrote(written, count, started)
+    }
+
+    /// [`Self::record`] held under `reservation`, written on `conn`, a
+    /// connection of the audit pool the write took before its own (#5964).
+    ///
+    /// # Errors
+    /// As [`Self::record`].
+    pub(crate) async fn record_on(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        events: Vec<AuditEvent>,
+        reservation: uuid::Uuid,
+    ) -> Result<(), AuditError> {
+        let Some((records, ends, count)) = self.rendered(events).await else {
+            return Ok(());
+        };
+        let started = std::time::Instant::now();
+        let written = self
+            .inner
+            .store
+            .write_held_on(conn, records, &ends, reservation)
+            .await;
+        self.wrote(written, count, started)
+    }
+
+    /// `events` stamped and rendered as the store writes them, with their
+    /// retention ends and their count; `None` when there are none.
+    async fn rendered(
+        &self,
+        mut events: Vec<AuditEvent>,
+    ) -> Option<(
+        Vec<crate::system_log::store::AuditRecord>,
+        Vec<crate::system_log::store::RecordEnd>,
+        u64,
+    )> {
+        if events.is_empty() {
+            return None;
         }
         let count = u64::try_from(events.len()).unwrap_or(u64::MAX);
-        let mut events = events;
         let digest = self.categories().digest();
         for event in &mut events {
             event.category_map_digest = Some(digest);
@@ -313,16 +361,17 @@ impl AuditSender {
         };
         let records = render_records(events, &ctx, subjects.as_ref());
         let ends = crate::system_log::retention::record_ends(&records, &ctx);
-        let started = std::time::Instant::now();
-        let written = match reservation {
-            Some(reservation) => {
-                self.inner
-                    .store
-                    .write_held(records, &ends, reservation)
-                    .await
-            }
-            None => self.inner.store.write(records, &ends).await,
-        };
+        Some((records, ends, count))
+    }
+
+    /// Meters the write of `count` records begun at `started`, and wakes the
+    /// chainer once it succeeded.
+    fn wrote(
+        &self,
+        written: Result<(), AuditError>,
+        count: u64,
+        started: std::time::Instant,
+    ) -> Result<(), AuditError> {
         let path = crate::telemetry::access_path::metrics();
         let outcome = crate::telemetry::access_path::outcome(&written);
         path.log_append_duration.record(

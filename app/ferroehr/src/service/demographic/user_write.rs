@@ -18,9 +18,7 @@
 )]
 
 use serde_json::Value;
-use sqlx::Connection as _;
 
-use crate::db::acquire::acquire;
 use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::party_binding::grants::caller::is_care;
@@ -303,7 +301,8 @@ impl FerroEhrService {
             .into_iter()
             .map(|change| (audit.clone(), change))
             .collect();
-        let mut conn = acquire(&self.demographic_pool)
+        let mut conn = self
+            .recorded_conn(&self.demographic_pool)
             .await
             .map_err(ServiceError::from)?;
         let mut tx = conn.begin().await?;

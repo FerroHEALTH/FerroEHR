@@ -32,12 +32,10 @@ use std::sync::Arc;
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
 use serde_json::Value;
-use sqlx::Connection as _;
 use uuid::Uuid;
 
 use crate::access_policy::check::checked;
 use crate::access_policy::{CHANNEL, LivePolicy};
-use crate::db::acquire::acquire;
 use crate::error::{ErrorChain, ServiceError};
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
@@ -255,7 +253,7 @@ impl FerroEhrService {
                 defect,
             )
         })?;
-        let mut conn = acquire(self.access_policy.pool()).await?;
+        let mut conn = self.recorded_conn(self.access_policy.pool()).await?;
         let mut tx = conn.begin().await.map_err(ServiceError::Database)?;
         let newest = store::lock_newest(&mut tx).await?;
         let (vo_id, version, change, previous) = match (precondition, &newest) {

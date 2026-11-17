@@ -26,7 +26,6 @@ use ferrohealth_server::console::{self, ConsoleHeaders};
 use ferrohealth_server::health::Health;
 use ferrohealth_server::same_origin::{self, SameOrigin};
 use ferrohealth_server::stack::{self, StackPolicy};
-use ferrohealth_telemetry::request_log::RequestLog;
 
 use ferrohealth_session::record::Held;
 
@@ -38,19 +37,11 @@ use crate::state::AppState;
 /// family stack (`ferrohealth_server::stack::app`).
 ///
 /// The stack applies the request timeout, the body limit and the overload
-/// bound of `[server]`, and writes `request_log`
-/// ([`crate::telemetry::request_log`]).
-pub fn app(app_state: AppState, health: Health, request_log: RequestLog) -> axum::Router {
+/// bound of `[server]`, and writes the request log and the admission metrics
+/// of `policy` ([`crate::telemetry::stack_policy`]).
+pub fn app(app_state: AppState, health: Health, policy: StackPolicy) -> axum::Router {
     let section = app_state.config.server.clone();
-    stack::app(
-        router(app_state),
-        health,
-        &section,
-        StackPolicy {
-            request_log,
-            ..StackPolicy::default()
-        },
-    )
+    stack::app(router(app_state), health, &section, policy)
 }
 
 /// Assembles the viewer's own routes.

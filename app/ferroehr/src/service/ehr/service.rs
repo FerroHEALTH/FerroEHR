@@ -27,7 +27,6 @@ use crate::system_log::event::{
 use openehr_base::prelude::{ArchetypeId, HierObjectId, ObjectId, ObjectRef, ObjectRefData};
 use openehr_rm::prelude::{Archetyped, DvText, DvTextData, Ehr, EhrStatus, PartySelf};
 use serde_json::Value;
-use sqlx::Connection as _;
 
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
@@ -87,7 +86,7 @@ impl FerroEhrService {
             "EHR creation",
         )?;
 
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
 
         // EHR.system_id is recorded at creation and immutable thereafter (arch

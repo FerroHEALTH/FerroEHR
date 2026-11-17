@@ -125,6 +125,9 @@
 #   CAPACITY_CHART_EHRS  the EHRs aql_chart reads (default 50)
 #   CAPACITY_CHART_ROWS  the lab results in each EHR aql_chart reads
 #                        (default 100)
+#   CAPACITY_PRIME_WIDTH the requests of each route `prime` sends at once to an
+#                        instance (default 32): at least the connections of
+#                        its largest pool, so each one runs every route once
 #   CAPACITY_WARMUP      seconds of warm-up per step (default 15)
 #   CAPACITY_DURATION    measured seconds per step (default 60)
 #   CAPACITY_SLO_MS      the p99 SLO of the single-EHR groups (default 100)
@@ -186,6 +189,7 @@ readonly DURATION="${CAPACITY_DURATION:-60}"
 readonly SLO_MS="${CAPACITY_SLO_MS:-100}"
 readonly SLO_SLOW_MS="${CAPACITY_SLO_SLOW_MS:-500}"
 readonly RATES="${CAPACITY_RATES:-50 100 200 500 1000 1500 2000 3000}"
+readonly PRIME_WIDTH="${CAPACITY_PRIME_WIDTH:-32}"
 readonly REPEAT="${CAPACITY_REPEAT:-1}"
 [[ "$REPEAT" =~ ^[1-9][0-9]*$ ]] || { echo "capacity: CAPACITY_REPEAT must be a positive count" >&2; exit 2; }
 readonly CONTINUE="${CAPACITY_CONTINUE:-0}"
@@ -535,28 +539,56 @@ restore() {
   prime
 }
 
-# prime: each instance read by each caller, 32 at a time for four rounds, so
-# a restarted server meets a step with its credential cache filled and its
-# pools open: a cold instance at a high rate stalls on opening connections,
-# which is no part of what a step measures.
+# prime: each route of the mix sent PRIME_WIDTH times at once to each
+# instance, so every pooled connection runs each route's statements once.
+# It warms the connections only (opened, their backends and statements
+# prepared), never the working set: each route reads one EHR, so the
+# per-EHR copies of a restarted server stay as cold as a restart leaves
+# them, and the step measures that cost. The commit lands in the first EHR
+# the writes take.
 prime() {
-  local inst clinician ehr round k pid
+  local inst clinician ehr uid write aql_ehr round k pid
+  local body="$CAP_OUT_ABS/prime.$BASHPID"
   clinician=$(seed_value CLINICAL_AUTH)
-  read -r ehr _ <"$STATE/spread.tsv"
+  IFS=$'\t' read -r ehr uid <"$STATE/spread.tsv"
+  read -r write <"$STATE/writes.ids"
+  read -r aql_ehr <"$STATE/aql.ids"
+  aql "$aql_ehr" true >"$body.aql"
+  jq -cn --arg q "$POPULATION_AQL" '{q: $q}' >"$body.population"
   for inst in $(state_get instance_urls); do
-    for round in 1 2 3 4; do
-      local -a pids=()
-      for ((k = 0; k < 32; k++)); do
-        curl -fsS -o /dev/null -H "authorization: $clinician" "$inst$BASE/ehr/$ehr" &
-        pids+=("$!")
-        curl -fsS -o /dev/null -H "authorization: $AUTH" "$inst$BASE/ehr/$ehr" &
-        pids+=("$!")
-      done
-      for pid in "${pids[@]}"; do
-        wait "$pid" || cap_die "priming $inst failed in round $round"
-      done
+    local -a pids=()
+    for ((k = 0; k < PRIME_WIDTH; k++)); do
+      prime_get "$inst$BASE/ehr/$ehr" "$clinician" &
+      pids+=("$!")
+      prime_get "$inst$BASE/ehr/$ehr/composition/$uid" "$clinician" &
+      pids+=("$!")
+      prime_post "$inst$BASE/ehr/$write/composition" "$clinician" "$COMPOSITION" &
+      pids+=("$!")
+      prime_post "$inst$BASE/query/aql" "$clinician" "$body.aql" &
+      pids+=("$!")
+      prime_post "$inst$BASE/query/aql" "$clinician" "$body.population" &
+      pids+=("$!")
+      prime_get "$inst/ferroehr/rest/fhir/r4/AuditEvent?date=ge2026-01-01&_count=20" "$AUTH" &
+      pids+=("$!")
+      prime_get "$inst$BASE/demographic/person/$(seed_value READ_PARTY)" "$AUTH" &
+      pids+=("$!")
+    done
+    for pid in "${pids[@]}"; do
+      wait "$pid" || cap_die "priming $inst failed"
     done
   done
+  rm -f "$body.aql" "$body.population"
+}
+
+# prime_get <url> <auth>: one primed read.
+prime_get() {
+  curl -fsS -o /dev/null -H "authorization: $2" -H "accept: application/json" "$1"
+}
+
+# prime_post <url> <auth> <body-file>: one primed POST of a JSON body.
+prime_post() {
+  curl -fsS -o /dev/null -H "authorization: $2" -H "accept: application/json" \
+    -H "content-type: application/json" -H "prefer: return=minimal" --data-binary "@$3" "$1"
 }
 
 # cap_sql <statement>: one statement as the superuser, unaligned.
