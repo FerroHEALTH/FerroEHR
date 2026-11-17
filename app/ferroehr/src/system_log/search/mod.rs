@@ -26,7 +26,6 @@
 //! NOTE: no specification governs how a repository indexes its records: our own design.
 
 pub(crate) mod condition;
-pub(crate) mod digest;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Mutex, PoisonError};

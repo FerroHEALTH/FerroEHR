@@ -96,6 +96,7 @@ pub mod seal;
 pub(crate) mod search;
 pub mod sender;
 pub mod store;
+pub(crate) mod token_digest;
 
 use crate::system_log::sender::AuditSender;
 #[cfg(feature = "fhir")]

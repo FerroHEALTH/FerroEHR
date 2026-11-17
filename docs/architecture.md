@@ -423,7 +423,7 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   for the entries, `audit_event_intake` for the other records
   (`audit/0042_audit_intake.sql`). The intake statement finds each entry's
   search tokens by the digests the server computes
-  (`system_log::search::digest`, the bytes of `audit.search_token_digest`)
+  (`system_log::token_digest`, the bytes of `audit.search_token_digest`)
   and groups them by entry in one pass, so its cost grows with the batch's
   tokens and not with its entries times its tokens
   (`audit/0044_intake_grouped_tokens.sql`, #5889). A write that fails refuses the request

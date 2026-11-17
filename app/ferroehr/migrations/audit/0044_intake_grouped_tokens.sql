@@ -14,7 +14,7 @@
 -- every request of the batch waited for (#5885).
 --
 -- Now the server sends each token's digest (audit.search_token_digest, the
--- same bytes, computed in system_log::search::digest), and one statement
+-- same bytes, computed in system_log::token_digest), and one statement
 -- finds the tokens, groups them by entry with their shared and own ids, and
 -- counts the tokens and the shared sets the store does not hold. The intake
 -- rows are written with the shared parts in one statement that joins the

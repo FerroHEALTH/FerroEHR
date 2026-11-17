@@ -30,7 +30,7 @@ use crate::access_log::store::AccessLogError;
 use crate::access_log::stored_form;
 use crate::db::acquire::acquire;
 use crate::digest::sha256_hex;
-use crate::system_log::search::digest::token_digest;
+use crate::system_log::token_digest::token_digest;
 
 /// The member of an entry's ITS-JSON form its canonical form leaves out.
 const LINK: &str = "link";
