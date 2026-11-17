@@ -344,6 +344,7 @@ impl Shape {
             sql: Arc::clone(&self.sql),
             values: SqlxValues(Values(values)),
             layout: Arc::clone(&self.layout),
+            shaped: true,
         })
     }
 }

@@ -57,6 +57,34 @@ pub enum JudgedRead {
     Admitted(Result<RawServiceResponse, ServiceError>),
 }
 
+/// A COMPOSITION version read before its EHR's verdict is final (#5959).
+///
+/// It holds the object's head facts and the version, from the store or from
+/// the version copy once one indexed read confirms it. Nothing of it leaves
+/// the service until [`FerroEhrService::composition_judged_on`] judges it.
+pub struct VersionAhead(Result<Option<(HeadFacts, Option<StoredVersion>)>, Unread>);
+
+/// Why a [`VersionAhead`] holds no version.
+enum Unread {
+    /// The version id is malformed: the read answers it as an argument error.
+    Argument(ServiceError),
+    /// The store did not answer.
+    Store(ServiceError),
+}
+
+impl std::fmt::Debug for VersionAhead {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // NOTE: our own design (#5959), the read version is clinical content and never formatted.
+        let state = match &self.0 {
+            Ok(Some(_)) => "held",
+            Ok(None) => "unheld",
+            Err(Unread::Argument(_)) => "argument",
+            Err(Unread::Store(_)) => "unread",
+        };
+        f.debug_tuple("VersionAhead").field(&state).finish()
+    }
+}
+
 impl FerroEhrService {
     /// The COMPOSITION `vo_id` of `ehr_id` at `version`, or its latest,
     /// judged by `access` on the object's own facts, read in the one statement
@@ -68,14 +96,50 @@ impl FerroEhrService {
         vo_id: VoId,
         version: Option<&ObjectVersionId>,
     ) -> JudgedRead {
+        let (ahead, ()) = tokio::join!(
+            self.composition_ahead(vo_id, version),
+            self.care_ahead(access, ehr_id)
+        );
+        self.composition_judged_on(access, ehr_id, vo_id, version, ahead)
+            .await
+    }
+
+    /// Reads the COMPOSITION `vo_id` at `version`, or its latest, before its
+    /// EHR's verdict is final, for [`Self::composition_judged_on`]. It notes,
+    /// records and returns nothing of the version (#5959).
+    pub async fn composition_ahead(
+        &self,
+        vo_id: VoId,
+        version: Option<&ObjectVersionId>,
+    ) -> VersionAhead {
         let at = match version.map(components).transpose() {
             Ok(Some((_, tree))) => JudgedAt::Tree(vo_id, tree),
             Ok(None) => JudgedAt::Current(vo_id),
-            Err(error) => return JudgedRead::Admitted(Err(VersionIdError::into_argument(error))),
+            Err(error) => {
+                return VersionAhead(Err(Unread::Argument(VersionIdError::into_argument(error))));
+            }
         };
+        VersionAhead(self.version_judged(at).await.map_err(Unread::Store))
+    }
+
+    /// The COMPOSITION `vo_id` of `ehr_id` at `version`, or its latest, as
+    /// `ahead` read it, judged by `access` on the object's own facts, the
+    /// refusal noted for the access record.
+    pub async fn composition_judged_on(
+        &self,
+        access: &RequestAccess,
+        ehr_id: EhrId,
+        vo_id: VoId,
+        version: Option<&ObjectVersionId>,
+        ahead: VersionAhead,
+    ) -> JudgedRead {
         let missing =
             || ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"));
-        let (judged, ()) = tokio::join!(self.version_judged(at), self.care_ahead(access, ehr_id));
+        let judged = match ahead.0 {
+            Ok(judged) => Ok(judged),
+            Err(Unread::Argument(error)) => return JudgedRead::Admitted(Err(error)),
+            Err(Unread::Store(error)) => Err(error),
+        };
         let (facts, stored) = match judged {
             Ok(Some((facts, stored))) => (facts, stored),
             Ok(None) => return JudgedRead::Unheld(missing()),
