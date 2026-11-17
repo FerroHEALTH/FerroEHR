@@ -82,7 +82,11 @@ six retired ones (`bug`, `enhancement`, `P0`–`P3`) wherever they reappear.
   `cnf-triage.md`).
 - **Workflow:** `on-hold`, `dependencies` (Dependabot).
 - **Pull-request escape hatches** CI reads: `no-changelog`, `no-crate-bump`,
-  `no-chart-bump`, `no-ui-visual-change`.
+  `no-chart-bump`, `no-ui-visual-change`, and `perf-accepted`, which
+  `perf-verdict` honours only with a `Perf-accepted: #<issue> <metric>` line
+  per breached metric and the owner's acceptance on that issue, and which
+  reports the breach as accepted beside the full report (`docs/release.md`
+  §The performance gate).
 
 A new label goes into `labels.sh` in the same change that first uses it.
 
