@@ -164,6 +164,8 @@ testkit = { path = "../../tools/testkit" }
 # The access-record tests read what `ehds-logging` writes by its names.
 ehds-logging = { workspace = true, features = ["balp"] }
 serde_norway.workspace = true
+# The generated corpora of the canonical-form differential tests (#5849).
+proptest.workspace = true
 # Temp config files for the pure-loader (`config` module) tests.
 assert_fs.workspace = true
 # Hermetic FHIR terminology-server mock for the external-terminology provider

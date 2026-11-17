@@ -13,6 +13,7 @@ pub mod versioned_object;
 
 // hand-written modules (spec behaviour), auto-declared:
 pub mod canonical_form_impl;
+pub mod canonical_serializer_impl;
 pub mod imported_version_impl;
 pub mod original_version_impl;
 pub mod version_impl;
