@@ -587,6 +587,10 @@ impl Validator {
     /// Visit an instance node against `wt` alone, ignoring its folded
     /// alternatives.
     fn walk_node(&mut self, instance: &Value, wt: &WebTemplateNode) {
+        if let (Some(input), Some(value)) = (&wt.string_constraint, instance.as_str()) {
+            leaf::check_string_constraints(self, wt, input, value);
+            return;
+        }
         if let Some(inst_type) = instance.get("_type").and_then(Value::as_str)
             && !subtype::conforms(inst_type, &wt.rm_type)
         {
