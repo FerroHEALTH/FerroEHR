@@ -135,10 +135,12 @@ if [[ "${1:-}" == "--self-test" ]]; then
       printf '%s\tbuild & test (pg18) %s/%s\t%s\n' "$id" "$n" "$#" "$shard" >>"$work/stub/jobs"
     done
   }
+  # expect LABEL MAX WANT [START]: the walk from START (default c4, a pull
+  # request's base branch head; c3 is a push of c4, whose start is HEAD^1).
   expect() {
-    local label="$1" max="$2" want="$3" got
+    local label="$1" max="$2" want="$3" start="${4:-$c4}" got
     touch "$work/stub/runs" "$work/stub/jobs"
-    got="$(cd "$work" && CI_RUNS_STUB="$work/stub" bash "$script" "$c4" "$max" 2>/dev/null \
+    got="$(cd "$work" && CI_RUNS_STUB="$work/stub" bash "$script" "$start" "$max" 2>/dev/null \
       | sed -n 's/^rev=//p' || true)"
     if [[ "$got" != "$want" ]]; then
       echo "::error::--self-test: ${label}: wanted '${want}', got '${got}'." >&2
@@ -171,6 +173,11 @@ if [[ "${1:-}" == "--self-test" ]]; then
   ci 2 push "$c3" failure success failure
   ci 3 push "$c2" success success
   expect "a bound of broken commits fails" 2 ""
+  ci 1 push "$c2" success success success
+  expect "a push of c4 measures against its parent c3 while c3's CI is still running" 30 "$c3" "$c3"
+  ci 1 push "$c3" failure success success
+  ci 2 push "$c2" success success success
+  expect "a push of c4 measures against its parent c3 when c3 failed only outside its shards" 30 "$c3" "$c3"
   ci 1 push "$c4" success skipped
   ci 2 merge_group "$tree4" success success success
   ci 3 push "$c3" success success
