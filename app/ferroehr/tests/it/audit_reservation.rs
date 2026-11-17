@@ -472,3 +472,33 @@ async fn a_write_reads_the_subject_of_its_records_on_its_own_transaction() {
         "the entry names the new EHR's subject"
     );
 }
+
+/// A reconciliation on an audit pool of one connection resolves what it
+/// finds: the pass holds one connection at a time, so it never waits for a
+/// second one of a pool while it keeps the first, which waited out the
+/// acquire timeout before (#5929).
+#[tokio::test]
+async fn a_reconciliation_needs_one_audit_connection() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let (sender, _svc) = audited(&pool).await;
+    let reservation = Uuid::now_v7();
+    sender
+        .record(vec![system_record()], Some(reservation))
+        .await
+        .expect("the held write");
+    let mut config = ferroehr::db::DbConfig::new(db.url());
+    config.max_connections = Some(1);
+    config.min_connections = Some(0);
+    config.acquire_timeout = ferrohealth_config::units::Duration::from_secs(3);
+    let audit = ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Audit)
+        .await
+        .expect("the audit pool connects");
+    let store = ferroehr::system_log::store::AuditStore::new(audit);
+
+    let reconciled = reconciler::reconcile(&store, &domains(&pool), Duration::ZERO)
+        .await
+        .expect("a reconciliation");
+    assert_eq!(reconciled.discarded, 1, "{reconciled:?}");
+    assert_eq!(held(&pool, reservation).await, (Vec::new(), Vec::new()));
+}
