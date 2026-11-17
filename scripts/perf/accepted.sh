@@ -125,10 +125,18 @@ decide() {
   return 0
 }
 
+# owner_of <codeowners>: the login on the first `*` line of a CODEOWNERS text.
+# awk reads its whole input, so no writer before it meets a closed pipe.
+owner_of() {
+  awk '$1 == "*" && !found { sub(/^@/, "", $2); print $2; found = 1 }' <<<"$1"
+}
+
 # owner <base-ref>: the login on the `*` line of the base branch's CODEOWNERS.
 owner() {
-  gh_retry gh api "repos/${GH_REPO}/contents/.github/CODEOWNERS?ref=$1" --jq .content \
-    | base64 -d | awk '$1 == "*" { sub(/^@/, "", $2); print $2; exit }'
+  local encoded text
+  encoded=$(gh_retry gh api "repos/${GH_REPO}/contents/.github/CODEOWNERS?ref=$1" --jq .content) || return 2
+  text=$(base64 -d <<<"$encoded") || return 2
+  owner_of "$text"
 }
 
 judge() {
@@ -225,6 +233,18 @@ EOF
   case_ "every breach named passes" 0 "| wal.flushes_per_request | #5891 |" 1 true "$dir/wal.md" "$both" "$dir/owned"
   case_ "a breach the report does not name fails" 1 "names no breach" 1 true "$dir/empty.md" "$claim" "$dir/owned"
   case_ "a label without a claim fails" 1 "not accepted" 1 true "$dir/breach.md" "No claim here." "$dir/owned"
+  local codeowners=$'# Code owners\n\n*                @owner-one\n/docs/ @someone-else\n*  @owner-two\n'
+  if [[ "$(owner_of "$codeowners")" != owner-one ]]; then
+    echo "::error::self-test: the owner of * is $(owner_of "$codeowners"), want owner-one" >&2
+    fail=1
+  fi
+  # The CODEOWNERS text arrives base64-encoded and wrapped, as the contents API sends it.
+  local wrapped
+  wrapped=$(printf '%s' "$codeowners" | base64 | fold -w 60)
+  if [[ "$(owner_of "$(base64 -d <<<"$wrapped")")" != owner-one ]]; then
+    echo "::error::self-test: the owner of a wrapped base64 CODEOWNERS does not read" >&2
+    fail=1
+  fi
   rm -rf "$dir"
   [[ "$fail" == 0 ]] || { echo "accepted: self-test FAILED" >&2; exit 1; }
   echo "accepted: self-test OK (a breach passes only with the label, a Perf-accepted line per metric and the owner's acceptance on its issue)"
