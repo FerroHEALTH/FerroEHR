@@ -58,6 +58,9 @@ pub(super) fn nodes(body: Value, shares: bool) -> Result<Nodes, ServiceError> {
         return Ok((Vec::new(), Vec::new(), Vec::new()));
     }
     let uris = crate::storage::blob_ref::uris_of(&body);
+    crate::telemetry::conversion::record("value_to_nodes");
+    // NOTE: each fragment is bound as a `jsonb` parameter, which serializes it to text.
+    crate::telemetry::conversion::record("fragments_to_text");
     let mut rows = crate::storage::codec::decompose(body)?;
     let fragments = rows
         .iter_mut()

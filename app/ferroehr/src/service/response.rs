@@ -151,7 +151,10 @@ impl ReadBody {
     pub fn into_value(self) -> Result<Value, serde_json::Error> {
         match self {
             ReadBody::Value(v) => Ok(v),
-            ReadBody::RawJson(text) => serde_json::from_str(&text),
+            ReadBody::RawJson(text) => {
+                crate::telemetry::conversion::record("stored_text_to_value");
+                serde_json::from_str(&text)
+            }
         }
     }
 }

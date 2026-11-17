@@ -488,6 +488,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
 tracing-opentelemetry = "0.34"     # pairs with the opentelemetry 0.33 line (tests)
 tracing-flame = "0.2"              # span-timing flamegraph capture (folded stacks; render via inferno)
+# The allocations a request makes on the thread that drives it, counted by the
+# hot-path budget tests (`ferroehr-rest` tests, #6007).
+allocation-counter = "0.8.1"
 opentelemetry = "0.33.0"
 opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio"] }
 # In-process sampling CPU profiler. Its own `criterion` feature is pinned to
