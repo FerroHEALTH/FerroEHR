@@ -24,8 +24,9 @@
 -- statement now stores the batch's parts, and then the statement that writes
 -- the rows locks each distinct part they name once, FOR KEY SHARE, as the key
 -- locked it once per row. The lock is taken in a statement of its own after
--- the parts are stored, so it sees a part another writer stored meanwhile;
--- a removal then waits for the write's commit and sees its rows. A row
+-- the parts are stored, so it sees a part another writer stored meanwhile.
+-- The removal locks the part FOR UPDATE before it checks, so it waits for the
+-- write's commit and its check then sees the write's rows. A row
 -- naming a part the lock did not find is refused: as a serialization failure
 -- when the batch carried the part, which a tombstone removed in between, and
 -- as a foreign_key_violation otherwise. The verifier still derives every
@@ -210,3 +211,32 @@ END
 $$;
 
 
+
+-- As 0042, with the shared part locked before the check that no record and
+-- no intake row names it. The lock waits for an intake write that holds the
+-- part, and the check that follows runs with a snapshot taken after that
+-- write committed, so it sees the write's rows; a DELETE alone would only
+-- check its row again once the lock is free, with its first snapshot
+-- (PostgreSQL 18 docs, "Transaction Isolation", Read Committed).
+CREATE OR REPLACE FUNCTION audit.access_log_record_unindex() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path = audit, pg_catalog
+    AS $$
+BEGIN
+    IF NEW.record_type = 'ACCESS_LOG_TOMBSTONE' THEN
+        DELETE FROM audit.access_log_search s WHERE s.chain_seq = NEW.chain_seq;
+        DELETE FROM audit.fhir_feed_outbox o
+         WHERE o.chain = 'access_log' AND o.chain_seq = NEW.chain_seq;
+        DELETE FROM audit.syslog_outbox o
+         WHERE o.chain = 'access_log' AND o.chain_seq = NEW.chain_seq;
+        IF OLD.shared IS NOT NULL THEN
+            PERFORM FROM audit.access_log_shared s WHERE s.digest = OLD.shared FOR UPDATE;
+            DELETE FROM audit.access_log_shared s
+             WHERE s.digest = OLD.shared
+               AND NOT EXISTS (SELECT 1 FROM audit.access_log_record r WHERE r.shared = OLD.shared)
+               AND NOT EXISTS (SELECT 1 FROM audit.access_log_intake i WHERE i.shared = OLD.shared);
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
