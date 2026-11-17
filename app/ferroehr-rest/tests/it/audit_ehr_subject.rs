@@ -187,3 +187,60 @@ async fn a_restriction_register_read_is_recorded_against_its_ehr() {
     .await;
     assert_eq!(requestor(&answered[0]), Value::from(USER));
 }
+
+/// A record names the subject the store holds for its EHR, also where the
+/// configured resolver would name another: the write that creates the EHR
+/// reads it on its own transaction (#5962) and a read takes it from its own
+/// store read (#5990), so neither asks the resolver.
+#[tokio::test]
+async fn a_record_names_the_stored_subject_over_the_resolvers() {
+    const STORED: &str = "patient-subject-stored";
+    let (_db, pool, app, _ehr) = app().await;
+    let (status, body) = common::send_body(
+        &app,
+        Request::post(common::full("/ehr"))
+            .header(header::AUTHORIZATION, common::basic_credential(USER))
+            .header(header::CONTENT_TYPE, "application/json")
+            .header("Prefer", "return=representation")
+            .body(Body::from(common::subject_status(STORED)))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
+    let ehr = serde_json::from_str::<Value>(&body).expect("EHR json")["ehr_id"]["value"]
+        .as_str()
+        .expect("ehr_id")
+        .to_owned();
+    let (status, body) = common::send_body(&app, get(&format!("/ehr/{ehr}"))).await;
+    assert_eq!(status, StatusCode::OK, "EHR read: {body}");
+
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    let named = loop {
+        let named: Vec<(String, Option<String>)> = sqlx::query_as(
+            "SELECT action, patient_id FROM audit.access_trail \
+             WHERE ehr_id::text = $1 ORDER BY chain_seq",
+        )
+        .bind(&ehr)
+        .fetch_all(&pool)
+        .await
+        .expect("read the trail");
+        if ["C", "R"]
+            .iter()
+            .all(|action| named.iter().any(|(a, _)| a == action))
+        {
+            break named;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the create and the read are recorded: {named:?}"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    };
+    for (action, patient) in &named {
+        assert_eq!(
+            patient.as_deref(),
+            Some(STORED),
+            "the {action} record names the stored subject: {named:?}"
+        );
+    }
+}
