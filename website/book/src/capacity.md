@@ -130,7 +130,7 @@ runner shares its host with other jobs, so read its knee as a floor.
 Run `composition_commit` and the mix last when you sweep several groups on
 one store: their commits grow the store the other groups read, or set
 `CAPACITY_FRESH=1` so every run starts from the seeded store. A variant,
-such as a longer `[auth.basic] cache_ttl_seconds`, goes in
+such as a longer `[auth.basic] cache_ttl`, goes in
 `CAPACITY_SERVER_ENV` and belongs in the label of every figure it produced.
 
 ## Trusting a number
@@ -178,7 +178,7 @@ configurations on one image, interleave them:
 ```sh
 bash scripts/perf/capacity.sh snapshot
 CAPACITY_REPEAT=3 bash scripts/perf/capacity.sh arms ehr_read 3000 \
-  base= cache=FERROEHR__AUTH__BASIC__CACHE_TTL_SECONDS=3600
+  base= cache=FERROEHR__AUTH__BASIC__CACHE_TTL=1h
 bash scripts/perf/capacity.sh compare base cache
 ```
 
