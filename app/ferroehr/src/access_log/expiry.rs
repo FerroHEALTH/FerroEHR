@@ -108,8 +108,8 @@ pub async fn fold(
     }
 }
 
-/// Remove the shared parts past their retention that no entry names, in
-/// batches of [`COLLECT_BATCH`], and return how many (#5968).
+/// Remove the shared parts past their retention that no entry names, a
+/// bounded batch a statement, and return how many (#5968).
 ///
 /// # Errors
 /// The errors of [`AccessLogStore::collect_shared`]; the batches removed

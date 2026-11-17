@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The intake of the access log: each entry written once, before the
-//! response that reports its access, unchained, with every column the chain
-//! keeps, and one intake row naming the entries of the statement (#5747,
-//! #5968).
+//! The intake of the access log: each entry written once, unchained, before
+//! the response that reports its access (#5747, #5968).
+//!
+//! Each entry is written with every column the chain keeps, and one intake
+//! row names the entries of the statement for the chainer.
 //!
 //! The writer supplies the row and shared parts of the entry's canonical
 //! form, the content digest over the whole form, the columns the log derives
