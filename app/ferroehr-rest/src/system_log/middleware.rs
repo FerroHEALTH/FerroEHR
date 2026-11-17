@@ -341,7 +341,7 @@ pub async fn middleware(State(state): State<AppState>, req: Request, next: Next)
 
     // NOTE: our own design (#5762), the records of what the request committed are held until
     // here, and are released whatever this response becomes, since the writes committed.
-    state.backend().confirm_reserved(&recorder.reserved()).await;
+    state.backend().confirm_reserved(&recorder.reserved());
     if let Some((op, None)) = classified {
         return unclassified(op);
     }

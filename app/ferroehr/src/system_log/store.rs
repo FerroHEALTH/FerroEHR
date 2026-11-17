@@ -219,6 +219,8 @@ pub struct AuditStore {
     /// Which chains have intake rows this process wrote and no chainer
     /// round has looked at since.
     pending: Arc<intake::Pending>,
+    /// The committed reservations the chainer's next round releases.
+    releases: Arc<intake::Releases>,
     /// The gathered intake write of the entries, started on first use.
     #[cfg(feature = "fhir")]
     group: Arc<std::sync::OnceLock<crate::access_log::intake::GroupWriter>>,
@@ -241,6 +243,7 @@ impl AuditStore {
             tokens: Arc::new(crate::system_log::search::TokenRegistry::default()),
             access_log: Arc::default(),
             pending: Arc::default(),
+            releases: Arc::default(),
             #[cfg(feature = "fhir")]
             group: Arc::default(),
         }

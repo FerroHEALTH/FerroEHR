@@ -216,7 +216,6 @@ impl FerroEhrService {
         .await?;
         self.commit_recorded(
             tx,
-            crate::db::domain::Domain::Party,
             &crate::system_log::recorder::WriteFacts::default(),
             Vec::new(),
         )
@@ -254,7 +253,6 @@ impl FerroEhrService {
         }
         self.commit_recorded(
             tx,
-            crate::db::domain::Domain::Party,
             &crate::system_log::recorder::WriteFacts::default(),
             Vec::new(),
         )

@@ -1065,9 +1065,10 @@ from the clinical and party ones, so they cannot join the write's own
 transaction. They are written first, into the intake, **held** under a
 reservation id the chainer skips; the id goes into the write's own domain in
 the write's transaction, and the write commits. Once the response is built,
-the held records are released to the chainer and the reservation is removed.
-A replica that stops between the commit and the release leaves the
-reservation behind: two minutes later the reconciler of any running replica
+the reservation goes to the chainer, whose next round releases the held
+records in the same transaction that chains them, so a write costs two
+commits. A replica that stops before that round leaves the records held:
+two minutes later the reconciler of any running replica
 releases those records, exactly as they were written and once, and discards
 the held records of a write that never committed. The reservation holds the
 id alone, no identity of the caller. While a reservation waits past those two

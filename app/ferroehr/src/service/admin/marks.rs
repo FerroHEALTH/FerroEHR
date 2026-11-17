@@ -440,7 +440,6 @@ impl FerroEhrService {
     ) -> Result<(), ServiceError> {
         self.commit_recorded(
             tx,
-            crate::db::domain::Domain::Party,
             &crate::system_log::recorder::WriteFacts::default(),
             records,
         )
@@ -456,7 +455,6 @@ impl FerroEhrService {
     ) -> Result<(), ServiceError> {
         self.commit_recorded(
             tx,
-            crate::db::domain::Domain::Clinical,
             &crate::system_log::recorder::WriteFacts::default(),
             records,
         )

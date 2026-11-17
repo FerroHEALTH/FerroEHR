@@ -26,10 +26,11 @@
 -- The reservation of a write (#5762): a write's records are written held
 -- under a reservation id (reserved_by) before the write's own transaction,
 -- which inserts the id into its domain's audit_reservation and commits. The
--- request then releases them (audit_intake_release); a process that died
--- first leaves them held, and the reconciler releases them when the
--- reservation committed, or discards them when it never did
--- (audit_intake_discard). The chainer takes no held row.
+-- chainer's next round releases them in its own transaction
+-- (audit_intake_release); a process that died first leaves them held, and
+-- the reconciler releases them when the reservation committed, or discards
+-- them when it never did (audit_intake_discard). The chainer takes no held
+-- row.
 --
 -- The window before chaining: an intake row is append-only. The runtime role
 -- may insert and read it and nothing else, the tables refuse every UPDATE,

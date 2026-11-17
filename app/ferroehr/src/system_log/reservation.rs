@@ -9,21 +9,22 @@
 //! write's own transaction. [`FerroEhrService::commit_recorded`] writes them
 //! first, into the audit intake held under a reservation id, then inserts
 //! the id into the write's domain (`audit_reservation`) in the write's own
-//! transaction, and commits. The adapter releases the held records once the
-//! response is built ([`FerroEhrService::confirm_reserved`]); a process that
-//! died between the commit and the release leaves the reservation, which the
-//! reconciler of any replica resolves (`sender::reconciler`): the write
-//! committed, so its records are released, exactly as written, once; a
-//! reservation that never committed discards them. This is the durable
-//! reservation of `docs/plans/access-log.md` rule 3; no openEHR spec governs
-//! it: our own design.
+//! transaction, and commits. Once the response is built the adapter hands the
+//! committed reservations to the chainer ([`FerroEhrService::confirm_reserved`]),
+//! whose next round releases their records inside its own transaction, so a
+//! write costs two commits. A process that died before that round leaves the
+//! reservation, which the reconciler of any replica resolves
+//! (`sender::reconciler`): the write committed, so its records are released,
+//! exactly as written, once; a reservation that never committed discards
+//! them; a spent one is removed. This is the durable reservation of
+//! `docs/plans/access-log.md` rule 3; no openEHR spec governs it: our own
+//! design.
 
 use sqlx::{Postgres, Transaction};
 use uuid::Uuid;
 
 use super::event::AuditEvent;
 use super::recorder::{Reserved, WriteFacts, WriteRecorder};
-use crate::db::domain::Domain;
 use crate::error::ServiceError;
 use crate::error::refusal::Refusal;
 use crate::service::FerroEhrService;
@@ -31,9 +32,6 @@ use crate::service::FerroEhrService;
 /// The statement that reserves a write's records in its own transaction;
 /// the pool's search path names the domain's schema.
 const RESERVE: &str = "INSERT INTO audit_reservation (id) VALUES ($1) ON CONFLICT (id) DO NOTHING";
-
-/// The statement that removes a confirmed reservation.
-const CONFIRMED: &str = "DELETE FROM audit_reservation WHERE id = ANY($1)";
 
 impl FerroEhrService {
     /// Commit `tx`, the transaction of a request-scoped write in `domain`,
@@ -53,7 +51,6 @@ impl FerroEhrService {
     pub(crate) async fn commit_recorded(
         &self,
         mut tx: Transaction<'_, Postgres>,
-        domain: Domain,
         facts: &WriteFacts,
         records: Vec<AuditEvent>,
     ) -> Result<(), ServiceError> {
@@ -106,13 +103,10 @@ impl FerroEhrService {
             let _discarded = sender.store().discard(&[reservation]).await;
             return Err(error.into());
         }
-        let reserved = Reserved {
-            id: reservation,
-            domain,
-        };
+        let reserved = Reserved { id: reservation };
         match &recorder {
             Some(recorder) => recorder.committed(reserved),
-            None => self.confirm_reserved(&[reserved]).await,
+            None => self.confirm_reserved(&[reserved]),
         }
         Ok(())
     }
@@ -127,44 +121,15 @@ impl FerroEhrService {
             && super::recorder::current().is_some()
     }
 
-    /// Release the records held under `reserved`, whose writes committed,
-    /// and remove the reservations; a failure is logged, and the reconciler
-    /// releases them later.
-    pub async fn confirm_reserved(&self, reserved: &[Reserved]) {
+    /// Hand the reservations `reserved`, whose writes committed, to the
+    /// chainer, whose next round releases their records in its own
+    /// transaction; the spent reservations are left to the reconciler, which
+    /// also releases the records of a process that stops first.
+    pub fn confirm_reserved(&self, reserved: &[Reserved]) {
         let Some(sender) = self.audit.as_ref() else {
             return;
         };
-        if reserved.is_empty() {
-            return;
-        }
         let ids: Vec<Uuid> = reserved.iter().map(|reserved| reserved.id).collect();
-        if let Err(error) = sender.release(&ids).await {
-            tracing::warn!(
-                error = %crate::error::ErrorChain::new(&error),
-                "the held audit records of a committed write were not released; the reconciler \
-                 releases them"
-            );
-            return;
-        }
-        for domain in [Domain::Clinical, Domain::Party] {
-            let ids: Vec<Uuid> = reserved
-                .iter()
-                .filter(|reserved| reserved.domain == domain)
-                .map(|reserved| reserved.id)
-                .collect();
-            if ids.is_empty() {
-                continue;
-            }
-            let pool = match domain {
-                Domain::Party => &self.demographic_pool,
-                Domain::Clinical | Domain::Audit => &self.pool,
-            };
-            if let Err(error) = sqlx::query(CONFIRMED).bind(&ids).execute(pool).await {
-                tracing::warn!(
-                    error = %crate::error::ErrorChain::new(&error),
-                    "a confirmed audit reservation was not removed; the reconciler removes it"
-                );
-            }
-        }
+        sender.release_committed(&ids);
     }
 }

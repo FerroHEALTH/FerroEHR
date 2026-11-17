@@ -206,11 +206,12 @@ async fn a_write_whose_process_stopped_before_the_release_is_recorded_once() {
     assert_eq!(stored(&pool, &records).await, 1, "never twice");
 }
 
-/// A write that committed and released: the records leave the intake at the
-/// release, the reservation goes with it, and the reconciler has nothing to
-/// do.
+/// A write that committed and was handed to the chainer: the chainer's next
+/// round releases its records inside its own transaction and chains them,
+/// and the write's spent reservation is the reconciler's to remove, so the
+/// write itself costs no third commit.
 #[tokio::test]
-async fn a_released_write_leaves_the_reconciler_nothing() {
+async fn a_confirmed_write_is_released_by_the_chainer_round() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let (sender, svc) = audited(&pool).await;
@@ -218,18 +219,106 @@ async fn a_released_write_leaves_the_reconciler_nothing() {
 
     with_recorder(recorder.clone(), crate::fixtures::create_ehr(&svc)).await;
     let reservations = recorder.reserved();
-    svc.confirm_reserved(&reservations).await;
     let reservation = reservations[0].id;
-    assert_eq!(held(&pool, reservation).await, (Vec::new(), Vec::new()));
+    let (entries, records) = held(&pool, reservation).await;
+    assert_eq!((entries.len(), records.len()), (1, 1));
+    svc.confirm_reserved(&reservations);
+    for _ in 0..200 {
+        if held(&pool, reservation).await == (Vec::new(), Vec::new()) {
+            break;
+        }
+        sender
+            .store()
+            .chain_round(512, Chains::default())
+            .await
+            .expect("a chainer round");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(
+        held(&pool, reservation).await,
+        (Vec::new(), Vec::new()),
+        "a chainer round released the records"
+    );
+    sender
+        .store()
+        .settle(Chains::BOTH)
+        .await
+        .expect("a settled chain");
+    let uids: Vec<Uuid> = entries.iter().map(|(uid, _)| *uid).collect();
+    assert_eq!(chained(&pool, &uids).await, entries, "chained as written");
+    assert_eq!(stored(&pool, &records).await, 1, "stored once");
     assert!(
-        !reserved(&pool, reservation).await,
-        "the reservation is removed"
+        reserved(&pool, reservation).await,
+        "the write's commit leaves the spent reservation to the reconciler"
     );
 
     let reconciled = reconciler::reconcile(sender.store(), &domains(&pool), Duration::ZERO)
         .await
         .expect("a reconciliation");
-    assert_eq!(reconciled, reconciler::Reconciled::default());
+    assert_eq!(
+        reconciled,
+        reconciler::Reconciled {
+            removed: 1,
+            ..reconciler::Reconciled::default()
+        }
+    );
+    assert!(
+        !reserved(&pool, reservation).await,
+        "the spent reservation is removed"
+    );
+}
+
+/// A write handed to the chainer whose process stopped before the chainer's
+/// round: the queue died with it, the records wait held, and the reconciler
+/// of another replica releases them, exactly as written, once.
+#[tokio::test]
+async fn a_confirmed_write_whose_process_stopped_before_the_round_is_recorded_once() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let config = AuditConfig {
+        enabled: true,
+        ..AuditConfig::default()
+    };
+    let (stopping, handle) = sender::start(config, None, pool.clone())
+        .await
+        .expect("the audit sender of the replica that stops");
+    let svc = FerroEhrService::new(&DomainPools::from_shared(&pool)).with_audit(stopping.clone());
+    let recorder = primed();
+
+    with_recorder(recorder.clone(), crate::fixtures::create_ehr(&svc)).await;
+    handle.shutdown(Duration::from_secs(5)).await;
+    let reservations = recorder.reserved();
+    svc.confirm_reserved(&reservations);
+    let reservation = reservations[0].id;
+    let (entries, records) = held(&pool, reservation).await;
+    assert_eq!(
+        (entries.len(), records.len()),
+        (1, 1),
+        "no round ran, so the records wait held"
+    );
+
+    let (other, _svc) = audited(&pool).await;
+    let first = reconciler::reconcile(other.store(), &domains(&pool), Duration::ZERO)
+        .await
+        .expect("a reconciliation");
+    assert_eq!(first.released, 1, "{first:?}");
+    other
+        .store()
+        .settle(Chains::BOTH)
+        .await
+        .expect("a settled chain");
+    let uids: Vec<Uuid> = entries.iter().map(|(uid, _)| *uid).collect();
+    assert_eq!(chained(&pool, &uids).await, entries, "chained as written");
+    assert_eq!(stored(&pool, &records).await, 1, "stored once");
+
+    let second = reconciler::reconcile(other.store(), &domains(&pool), Duration::ZERO)
+        .await
+        .expect("a second reconciliation");
+    assert_eq!(second.released, 0, "{second:?}");
+    assert!(
+        !reserved(&pool, reservation).await,
+        "the spent reservation is removed"
+    );
 }
 
 /// Records held under a reservation no domain holds belong to a write that

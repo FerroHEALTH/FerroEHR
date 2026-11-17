@@ -646,20 +646,23 @@ NCP. How the log is protected is therefore our own design.
   (the EHR, the object, its content), writes it and the act's own records
   into the intake held under a fresh reservation id (`reserved_by`, which
   the chainer skips), inserts the id into `audit_reservation` of the
-  write's own domain in the write's transaction, and commits. The protocol
-  adapter releases the held records once the response is built, and the
-  domain's reservation row goes with them. A process that stops between
-  the commit and the release leaves both: after a grace of two minutes,
+  write's own domain in the write's transaction, and commits. Once the
+  response is built, the protocol adapter hands the reservation to the
+  chainer in memory, and the chainer's next round releases the held
+  records inside its own transaction, so a write costs two commits, the
+  held records and the write. A process that stops before that round
+  leaves the records held: after a grace of two minutes,
   past the statement timeout, the reconciler of any replica, one at a time
   under an advisory lease, releases the records of every reservation a
   domain holds, exactly as written and once, and discards the records of a
-  reservation no domain holds, whose write never committed. The domain's
+  reservation no domain holds, whose write never committed. It also removes
+  the reservation rows whose records were released. The domain's
   reservation holds the id alone, no identity of the caller. The
   `audit_sender` indicator reads `DEGRADED` while a reservation waits past
   the grace, and `audit_reservations_held`, `audit_reservation_age_seconds`
   and `audit_reservations_reconciled_total` count them. A write outside a
   request (a sweep, a boot fill) commits its records the same way and
-  releases them at once; `scripts/checks/request-commits.sh` fails a
+  hands them to the chainer at once; `scripts/checks/request-commits.sh` fails a
   transaction that commits any other way unless it says, naming #5762, why
   no request makes it.
 - **The chainer's critical section.** A round takes the head without

@@ -59,7 +59,7 @@ async fn chainers_on_several_replicas_keep_one_chain() {
                 let still_writing = writing.load(Ordering::Acquire);
                 match log
                     .store()
-                    .chain_round(16, Owed::default())
+                    .chain_round(16, Owed::default(), &[])
                     .await
                     .expect("a chainer round")
                 {

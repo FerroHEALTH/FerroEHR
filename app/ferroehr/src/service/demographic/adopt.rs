@@ -183,8 +183,7 @@ impl FerroEhrService {
             .map(|adopted| self.adoption_record(admin, adopted))
             .collect();
         let facts = crate::system_log::recorder::WriteFacts::of_parties(&committed);
-        self.commit_recorded(tx, crate::db::domain::Domain::Party, &facts, records)
-            .await?;
+        self.commit_recorded(tx, &facts, records).await?;
         report.contribution = Some(committed.id);
         Ok(report)
     }

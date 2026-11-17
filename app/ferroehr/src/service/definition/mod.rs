@@ -96,7 +96,6 @@ impl crate::service::FerroEhrService {
     ) -> Result<(), crate::error::ServiceError> {
         self.commit_recorded(
             tx,
-            crate::db::domain::Domain::Clinical,
             &crate::system_log::recorder::WriteFacts::default(),
             Vec::new(),
         )

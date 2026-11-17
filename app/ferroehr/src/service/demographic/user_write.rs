@@ -344,8 +344,7 @@ impl FerroEhrService {
             records.extend(self.erase_contacts_in(&mut tx, party).await?);
         }
         let facts = crate::system_log::recorder::WriteFacts::of_parties(&committed);
-        self.commit_recorded(tx, crate::db::domain::Domain::Party, &facts, records)
-            .await?;
+        self.commit_recorded(tx, &facts, records).await?;
         Ok(committed)
     }
 }

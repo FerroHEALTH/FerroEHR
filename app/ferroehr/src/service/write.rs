@@ -21,7 +21,6 @@ use serde_json::Value;
 use sqlx::{Connection as _, PgConnection, PgPool};
 
 use crate::db::acquire::acquire;
-use crate::db::domain::Domain;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
@@ -161,19 +160,14 @@ impl FerroEhrService {
                     let ehr_id = write.ehr_id;
                     let committed = commit(&mut tx, write, &signing_ctx).await?;
                     let facts = self.written_facts(&mut tx, ehr_id, &committed).await;
-                    let domain = if pool_is_party(&committed) {
-                        Domain::Party
-                    } else {
-                        Domain::Clinical
-                    };
                     if let Mode::SyncSubject(ehr_id, status) = mode {
                         self.sync_ehr_subject(&mut tx, ehr_id, status).await?;
-                        self.commit_recorded(tx, domain, &facts, Vec::new()).await?;
+                        self.commit_recorded(tx, &facts, Vec::new()).await?;
                         // NOTE: our own design (#5589), the status names the subject whose care
                         // relationships decide access, so the copy and the request see the commit.
                         self.invalidate_ehr_access(ehr_id).await;
                     } else {
-                        self.commit_recorded(tx, domain, &facts, Vec::new()).await?;
+                        self.commit_recorded(tx, &facts, Vec::new()).await?;
                     }
                     (ehr_id, committed)
                 }

@@ -21,7 +21,6 @@ use sqlx::Connection as _;
 use uuid::Uuid;
 
 use crate::db::acquire::acquire;
-use crate::db::domain::Domain;
 use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
@@ -316,22 +315,16 @@ async fn write_contribution(
             cx.sync_ehr_subject(&mut tx, ehr_id, status).await?;
         }
     }
-    let (domain, facts) = if party_only {
-        (
-            Domain::Party,
-            WriteFacts {
-                domain: Some(AccessDomain::Demographic),
-                ..WriteFacts::default()
-            },
-        )
+    let facts = if party_only {
+        WriteFacts {
+            domain: Some(AccessDomain::Demographic),
+            ..WriteFacts::default()
+        }
     } else {
-        (
-            Domain::Clinical,
-            WriteFacts {
-                ehr_id: ehr_id.map(|id| id.to_string()),
-                ..WriteFacts::default()
-            },
-        )
+        WriteFacts {
+            ehr_id: ehr_id.map(|id| id.to_string()),
+            ..WriteFacts::default()
+        }
     };
     // NOTE: our own design (#3621), the demographic CONTRIBUTION response names no content.
     let content = if party_only {
@@ -344,7 +337,7 @@ async fn write_contribution(
         content: (!content.is_empty()).then_some(AccessedContent::Objects(content)),
         ..facts
     };
-    cx.commit_recorded(tx, domain, &facts, Vec::new()).await?;
+    cx.commit_recorded(tx, &facts, Vec::new()).await?;
     Ok(outcome)
 }
 

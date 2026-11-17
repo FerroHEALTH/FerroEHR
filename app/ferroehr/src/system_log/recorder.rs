@@ -20,7 +20,6 @@ use std::sync::{Arc, Mutex, PoisonError};
 use tokio::task_local;
 use uuid::Uuid;
 
-use crate::db::domain::Domain;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::{AccessDomain, AuditEvent};
 
@@ -67,14 +66,12 @@ impl WriteFacts {
 /// Builds the operation records of a write from what the write decided.
 pub type Builder = Arc<dyn Fn(&WriteFacts) -> Vec<AuditEvent> + Send + Sync>;
 
-/// One reservation a commit of the request took, in the domain whose
-/// transaction holds it.
+/// One reservation a commit of the request took.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Reserved {
-    /// The reservation id the held records name.
+    /// The reservation id the held records name and the write's domain
+    /// holds.
     pub id: Uuid,
-    /// The domain whose `audit_reservation` holds the id.
-    pub domain: Domain,
 }
 
 #[derive(Default)]

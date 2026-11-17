@@ -76,6 +76,34 @@ impl Pending {
     }
 }
 
+/// The reservations whose writes committed, waiting for the chainer's next
+/// round to release their records inside its own transaction (#5762).
+#[derive(Debug, Default)]
+pub(super) struct Releases(std::sync::Mutex<Vec<Uuid>>);
+
+impl Releases {
+    fn lock(&self) -> std::sync::MutexGuard<'_, Vec<Uuid>> {
+        self.0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Queue `ids` for the next round.
+    pub(super) fn queue(&self, ids: &[Uuid]) {
+        self.lock().extend_from_slice(ids);
+    }
+
+    /// The queued ids, cleared.
+    fn take(&self) -> Vec<Uuid> {
+        std::mem::take(&mut *self.lock())
+    }
+
+    /// Put back `ids` a round did not release.
+    fn restore(&self, ids: Vec<Uuid>) {
+        self.lock().extend(ids);
+    }
+}
+
 /// What one round of the chainer did on each chain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ChainRound {
@@ -190,11 +218,18 @@ impl AuditStore {
     /// the round did not finish are looked at again in the next.
     pub async fn chain_round(&self, limit: u32, look: Chains) -> Result<ChainRound, AuditError> {
         let written = self.pending.take();
+        let released = self.releases.take();
+        let releasing = !released.is_empty();
         let look = Chains {
-            access_log: look.access_log || written.access_log,
-            system: look.system || written.system,
+            access_log: look.access_log || written.access_log || releasing,
+            system: look.system || written.system || releasing,
         };
-        let round = self.round(limit, look).await;
+        let round = self.round(limit, look, &released).await;
+        // NOTE: our own design (#5762), a round that did not take the head released nothing.
+        if releasing && !matches!(&round, Ok(round) if round.access_log != Round::Busy) {
+            self.releases.restore(released);
+            self.pending.mark(Chains::BOTH);
+        }
         // NOTE: our own design (#5770), a chain the round did not empty is looked at again.
         let unfinished = match &round {
             Ok(round) => Chains {
@@ -220,9 +255,16 @@ impl AuditStore {
         self.pending.is_marked()
     }
 
-    async fn round(&self, limit: u32, look: Chains) -> Result<ChainRound, AuditError> {
+    async fn round(
+        &self,
+        limit: u32,
+        look: Chains,
+        release: &[Uuid],
+    ) -> Result<ChainRound, AuditError> {
         let access_log = if look.access_log {
-            self.chaining_store().chain_round(limit, self.owed).await?
+            self.chaining_store()
+                .chain_round(limit, self.owed, release)
+                .await?
         } else {
             Round::Chained {
                 entries: 0,
@@ -307,8 +349,17 @@ impl AuditStore {
 }
 
 impl AuditStore {
-    /// Release the records held under the reservations `ids`, whose writes
-    /// committed, so the chainer takes them (#5762); returns how many.
+    /// Queue the reservations `ids`, whose writes committed, for the
+    /// chainer's next round, which releases their records in its own
+    /// transaction (#5762).
+    pub fn queue_release(&self, ids: &[Uuid]) {
+        self.releases.queue(ids);
+        self.pending.mark(Chains::BOTH);
+    }
+
+    /// Release the records held under the reservations `ids` now, in a
+    /// transaction of their own: the reconciler's release of a write whose
+    /// process stopped first (#5762); returns how many.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the statement fails.

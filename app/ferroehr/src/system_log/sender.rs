@@ -201,16 +201,15 @@ impl AuditSender {
         &self.inner.store
     }
 
-    /// Release the records held under `reservations`, whose writes
-    /// committed, to the chainer, and wake it (#5762).
-    ///
-    /// # Errors
-    /// [`AuditError::Store`] when the release fails; the records stay held
-    /// for the reconciler.
-    pub async fn release(&self, reservations: &[uuid::Uuid]) -> Result<u64, AuditError> {
-        let released = self.inner.store.release(reservations).await?;
+    /// Hand `reservations`, whose writes committed, to the chainer and wake
+    /// it: its next round releases their records inside its own transaction
+    /// (#5762).
+    pub fn release_committed(&self, reservations: &[uuid::Uuid]) {
+        if reservations.is_empty() {
+            return;
+        }
+        self.inner.store.queue_release(reservations);
         self.inner.chain.notify_one();
-        Ok(released)
     }
 
     /// Write `events`, the records of one act, into the local store in one
