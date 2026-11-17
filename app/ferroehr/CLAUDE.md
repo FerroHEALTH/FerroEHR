@@ -156,10 +156,12 @@ module.**
   through a `Forwarder` over the store's `Outbox` (`feed.rs`). Never re-implement what those crates hold: a
   missing field or shape is a FerroAUDIT issue, not local code.
 - **Access log** (`src/access_log/`, #5121): `store` keeps each draft
-  `ACCESS_LOG_ENTRY` in `audit.access_log_record` as its RFC 8785 canonical
-  form without its link; the insert trigger gives it its `ACCESS_LOG_LINK` in
-  the access log's own chain, apart from the `audit_event` records (#5573),
-  and derives the search columns from it, and
+  `ACCESS_LOG_ENTRY` once, in `audit.access_log_entry`, as its RFC 8785
+  canonical form without its link; the chainer gives it its `ACCESS_LOG_LINK`
+  as one `audit.access_log_link` row, checked by that table's trigger, in the
+  access log's own chain, apart from the `audit_event` records (#5573,
+  #5968); `audit.access_log_record` is the view of the linked entries, which
+  every reader reads; and
   an entry changes only by its replacement with its own tombstone, which
   empties the ITI-81 index columns on the same row (one row per entry,
   `access_log_search` is their view, #5784); every reader of an entry goes

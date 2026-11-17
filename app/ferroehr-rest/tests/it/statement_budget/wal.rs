@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The write-ahead log the access log writes per entry (#NNNN): the bytes
+//! The write-ahead log the access log writes per entry (#5968): the bytes
 //! the statements that take an entry in, release it and chain it log,
 //! read from `pg_stat_statements` for the test's own database, so the
 //! other tests on the shared server do not count. The server runs without
@@ -22,8 +22,16 @@ use crate::access_evaluator_http::{app, ehr_with_composition, send};
 const REQUESTS: u64 = 20;
 
 /// The most write-ahead log the access log may write per entry, in bytes,
-/// over the statements that take, release and chain it.
-const CEILING: u64 = 0;
+/// over the statements that take, release and chain it, by kind of request:
+/// the bytes measured when each entry was written once (#5968), 2% above.
+/// Before, an entry written into the intake and again into the record cost
+/// 5045, 4048, 3052 and 5328.
+const CEILINGS: [(Kind, u64); 4] = [
+    (Kind::Read, 3327),
+    (Kind::Single, 2643),
+    (Kind::Population, 2047),
+    (Kind::Write, 3512),
+];
 
 /// A kind of request, and how to send one.
 #[derive(Clone, Copy)]
@@ -39,8 +47,6 @@ enum Kind {
 }
 
 impl Kind {
-    const ALL: [Self; 4] = [Self::Read, Self::Single, Self::Population, Self::Write];
-
     fn name(self) -> &'static str {
         match self {
             Self::Read => "composition read",
@@ -142,8 +148,8 @@ fn access_log(query: &str) -> bool {
     .any(|prefix| query.starts_with(prefix))
 }
 
-/// Each kind of request's entries cost the access log at most [`CEILING`]
-/// bytes of write-ahead log each.
+/// Each kind of request's entries cost the access log at most its ceiling
+/// in [`CEILINGS`] of write-ahead log each.
 #[tokio::test]
 async fn an_access_log_entry_stays_within_its_wal_ceiling() {
     let (_db, pool, _svc, app) = Box::pin(app()).await;
@@ -165,7 +171,7 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
     }
     let mut report = String::new();
     let mut over = false;
-    for kind in Kind::ALL {
+    for (kind, ceiling) in CEILINGS {
         for (ehr, vo) in &made {
             kind.send(&app, ehr, vo).await;
         }
@@ -191,22 +197,28 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
             .sum();
         let all: u64 = statements.iter().map(|(bytes, ..)| bytes).sum();
         assert!(written > 0, "{}: the requests write entries", kind.name());
-        let per_entry = ours / written;
+        let per_entry = ours.div_euclid(written);
         writeln!(
             report,
             "{}: {written} entries over {REQUESTS} requests; the access log wrote {ours} bytes, \
-             {per_entry} per entry (ceiling {CEILING}); every statement {all} bytes, {} per request",
+             {per_entry} per entry (ceiling {ceiling}); every statement {all} bytes, {} per request",
             kind.name(),
-            all / REQUESTS,
+            all.div_euclid(REQUESTS),
         )
         .expect("a String takes the report");
         for (bytes, fpi, calls, query) in statements.iter().take(12) {
             let text: String = query.chars().take(120).collect();
-            writeln!(report, "  {bytes:>9} B {fpi:>4} fpi {calls:>5} calls  {text}")
-                .expect("a String takes the line");
+            writeln!(
+                report,
+                "  {bytes:>9} B {fpi:>4} fpi {calls:>5} calls  {text}"
+            )
+            .expect("a String takes the line");
         }
-        over |= per_entry > CEILING;
+        over |= per_entry > ceiling;
     }
     eprintln!("{report}");
-    assert!(!over, "an entry exceeds its write-ahead log ceiling:\n{report}");
+    assert!(
+        !over,
+        "an entry exceeds its write-ahead log ceiling:\n{report}"
+    );
 }
