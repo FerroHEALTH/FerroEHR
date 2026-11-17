@@ -635,9 +635,42 @@ pub(crate) fn basic_credential(user: &str) -> String {
     )
 }
 
+/// The namespace the synthetic patient subjects of the audit tests are issued
+/// in.
+pub(crate) const TEST_SUBJECTS: &str = "urn:ferroehr:test-subjects";
+
+/// An `EHR_STATUS` whose subject is the `PERSON` `subject` of
+/// [`TEST_SUBJECTS`], the body of an EHR create that stores that subject.
+pub(crate) fn subject_status(subject: &str) -> String {
+    serde_json::json!({
+        "_type": "EHR_STATUS",
+        "archetype_node_id": "openEHR-EHR-EHR_STATUS.generic.v1",
+        "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": { "_type": "ARCHETYPE_ID",
+                              "value": "openEHR-EHR-EHR_STATUS.generic.v1" },
+            "rm_version": "1.2.0"
+        },
+        "name": { "_type": "DV_TEXT", "value": "EHR Status" },
+        "subject": {
+            "_type": "PARTY_SELF",
+            "external_ref": {
+                "_type": "PARTY_REF",
+                "namespace": TEST_SUBJECTS,
+                "type": "PERSON",
+                "id": { "_type": "GENERIC_ID", "value": subject, "scheme": "local" }
+            }
+        },
+        "is_queryable": true,
+        "is_modifiable": true
+    })
+    .to_string()
+}
+
 /// An audited app over the local Audit Record Repository, with `user` an
 /// ADMIN, every EHR resolving to the synthetic `subject`, and one EHR that
-/// `user` created; returns the EHR id with the store's pool.
+/// `user` created with that subject stored in its `EHR_STATUS`; returns the
+/// EHR id with the store's pool.
 pub(crate) async fn audited_app(
     subject: &'static str,
     user: &str,
@@ -651,7 +684,7 @@ pub(crate) async fn audited_app(
         Box::pin(async move {
             SubjectLookup::Found(ResolvedSubject {
                 id: subject.to_owned(),
-                namespace: Some("urn:ferroehr:test-subjects".to_owned()),
+                namespace: Some(TEST_SUBJECTS.to_owned()),
             })
         })
     });
@@ -674,8 +707,9 @@ pub(crate) async fn audited_app(
     .await;
     let req = Request::post(format!("{BASE}/ehr"))
         .header(header::AUTHORIZATION, basic_credential(user))
+        .header(header::CONTENT_TYPE, "application/json")
         .header("Prefer", "return=representation")
-        .body(Body::empty())
+        .body(Body::from(subject_status(subject)))
         .expect("the EHR create request");
     let (status, body) = send_body(&app, req).await;
     assert_eq!(status, StatusCode::CREATED, "EHR create: {body}");
