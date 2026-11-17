@@ -157,7 +157,7 @@ impl Listened {
     /// The session listens again: drop everything and mark the copy stale,
     /// so the notifications missed while it was down are made up, then
     /// trust the copy until the next notification.
-    async fn connected(&self) {
+    pub(crate) async fn connected(&self) {
         self.drop_all().await;
         self.mark_stale();
         self.listening.store(true, Ordering::Release);

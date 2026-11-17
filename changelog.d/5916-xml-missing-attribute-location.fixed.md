@@ -1,0 +1,1 @@
+- An OPT or archetype XML document whose `<original_author>`, `<other_details>` or other string dictionary item lacks its `id` is refused naming that element, its line and its path. The `400` named the element closed just before it, such as `<language>` at line 4 for an `<original_author>` on line 11.

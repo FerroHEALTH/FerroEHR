@@ -109,8 +109,9 @@ async fn a_failure_with_no_answer_refuses_every_request() {
 }
 
 /// The intake form as the `Value` path wrote it before #5849: the entry's
-/// JSON value without its link, canonicalised whole, split and read at the
-/// derive's paths.
+/// JSON value without its link, canonicalised whole, split, its row without
+/// the members its columns give back (#5784), and read at the derive's
+/// paths.
 #[expect(
     clippy::disallowed_types,
     reason = "the reference is computed over the entry's ITS-JSON value (#1694 boundary class: \
@@ -144,7 +145,32 @@ fn through_value(entry: &AccessLogEntry) -> (String, String, Option<(String, Str
         party_id: text("/accessor/party/external_ref/id/value"),
         retain_until: text("/retention/retain_until/value"),
     };
-    let form = crate::access_log::stored_form::split(members);
+    let mut form = crate::access_log::stored_form::split(members);
+    if let Value::Object(row) = &mut form.row {
+        row.remove("_type");
+        let value_of = |member: Option<&Value>, kind: &str| {
+            member
+                .and_then(Value::as_object)
+                .filter(|object| {
+                    object.len() == 2 && object.get("_type").and_then(Value::as_str) == Some(kind)
+                })
+                .and_then(|object| object.get("value"))
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+        };
+        for id in ["uid", "ehr_id"] {
+            if value_of(row.get(id), "HIER_OBJECT_ID")
+                .is_some_and(|text| crate::access_log::stored_form::column_uuid(&text).is_some())
+            {
+                row.remove(id);
+            }
+        }
+        if value_of(row.get("time_recorded"), "DV_DATE_TIME")
+            .is_some_and(|text| crate::access_log::stored_form::column_instant(&text))
+        {
+            row.remove("time_recorded");
+        }
+    }
     let row = canonical_json(&form.row).expect("the row");
     let shared = form.shared.map(|shared| {
         let text = canonical_json(&shared).expect("the shared part");

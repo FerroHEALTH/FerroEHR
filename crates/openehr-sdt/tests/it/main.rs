@@ -15,6 +15,7 @@
 
 mod common;
 
+mod action_archetype_id;
 mod adl2_content_constraints;
 mod archetype_id_grammar;
 mod canonical_json_literals;
@@ -36,6 +37,7 @@ mod format_parity;
 mod master05_tables;
 mod model_walkgen;
 mod null_flavour;
+mod ordinal_terminology;
 mod party_build;
 mod prohibited_context;
 mod raw_attributes;

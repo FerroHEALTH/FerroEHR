@@ -81,6 +81,10 @@ impl FerroEhrService {
                 recorder.unbuild();
             }
         };
+        if let Err(error) = sender.learn_subjects(&mut tx, &events).await {
+            unbuild();
+            return Err(error.into());
+        }
         let reservation = Uuid::now_v7();
         if let Err(unwritten) = Box::pin(sender.record(events, Some(reservation))).await {
             unbuild();

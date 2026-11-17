@@ -162,6 +162,15 @@ impl PlanCache {
         }
     }
 
+    /// How many plans the cache holds, and their bytes (#5926).
+    #[must_use]
+    pub fn held(&self) -> crate::memory::Held {
+        self.inner
+            .as_ref()
+            .map(crate::memory::held)
+            .unwrap_or_default()
+    }
+
     /// A snapshot of the cache's activity (observability + tests).
     #[must_use]
     pub fn stats(&self) -> PlanCacheStats {
@@ -171,6 +180,13 @@ impl PlanCache {
             misses: self.misses.load(Ordering::Relaxed),
             entries,
         }
+    }
+}
+
+impl crate::memory::Weigh for Plan {
+    fn heap(&self) -> usize {
+        // NOTE: our own design (#5926), a plan weighs its Debug rendering, since its IR is too deep to walk.
+        crate::memory::debug_bytes(self)
     }
 }
 
@@ -241,6 +257,46 @@ mod tests {
                 inner.entry_count()
             );
         }
+    }
+
+    /// A plan the cap evicted is lowered again from its text into the same
+    /// plan, so the cap changes no answer (#5926).
+    #[tokio::test]
+    async fn an_evicted_plan_lowers_again_into_the_same_plan() {
+        let cap = 4;
+        let cache = PlanCache::new(cap);
+        let queries: Vec<String> = (1..=32)
+            .map(|n| format!("SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c LIMIT {n}"))
+            .collect();
+        for q in &queries {
+            cache.insert(q.clone(), ir(q)).await;
+        }
+        if let Some(inner) = &cache.inner {
+            inner.run_pending_tasks().await;
+        }
+        let mut lowered = 0;
+        for q in &queries {
+            let plan = if let Some(plan) = cache.get(q).await {
+                plan
+            } else {
+                lowered += 1;
+                let plan = ir(q);
+                cache.insert(q.clone(), Arc::clone(&plan)).await;
+                plan
+            };
+            assert_eq!(
+                format!("{:?}", plan.ir),
+                format!("{:?}", ir(q).ir),
+                "{q}: the plan its text lowers to"
+            );
+        }
+        assert!(lowered > 0, "the cap evicted some plans");
+        if let Some(inner) = &cache.inner {
+            inner.run_pending_tasks().await;
+        }
+        let held = cache.held();
+        assert!(held.entries <= cap, "{held:?} within {cap}");
+        assert!(held.bytes > 0, "{held:?} weighs its plans");
     }
 
     #[tokio::test]

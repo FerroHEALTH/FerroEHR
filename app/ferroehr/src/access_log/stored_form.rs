@@ -27,6 +27,7 @@
 
 #[cfg(test)]
 use serde_json::Map;
+#[cfg(test)]
 use serde_json::Value;
 
 pub mod parts;
@@ -173,12 +174,63 @@ fn split_details(tree: Map<String, Value>) -> (Map<String, Value>, Vec<Value>) {
     (envelope, own)
 }
 
+/// The uuid column that keeps the id `text` of an entry: `Some` only for a
+/// UUID in its lower-case hyphenated form, which the column gives back as it
+/// was written (#5784).
+#[must_use]
+pub fn column_uuid(text: &str) -> Option<uuid::Uuid> {
+    uuid::Uuid::parse_str(text)
+        .ok()
+        .filter(|id| id.hyphenated().to_string() == text)
+}
+
+/// Whether the `timestamptz` column keeps the instant `text` of an entry so
+/// that `audit.access_log_instant_text` gives the text back (#5784): UTC,
+/// a four-digit year, the microseconds without trailing zeros.
+#[must_use]
+pub fn column_instant(text: &str) -> bool {
+    text.parse::<jiff::Timestamp>()
+        .ok()
+        .and_then(instant_text)
+        .is_some_and(|written| written == text)
+}
+
+/// The instant `at` as `audit.access_log_instant_text` writes it; `None`
+/// when that text would not give `at` back, finer than a microsecond or past
+/// a four-digit year.
+fn instant_text(at: jiff::Timestamp) -> Option<String> {
+    let civil = at.to_zoned(jiff::tz::TimeZone::UTC).datetime();
+    let nanos = civil.subsec_nanosecond();
+    if nanos.rem_euclid(1000) != 0 || !(1000..=9999).contains(&civil.year()) {
+        return None;
+    }
+    let micros = nanos.div_euclid(1000);
+    let fraction = if micros == 0 {
+        String::new()
+    } else {
+        format!(".{micros:06}").trim_end_matches('0').to_owned()
+    };
+    Some(format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}{fraction}Z",
+        civil.year(),
+        civil.month(),
+        civil.day(),
+        civil.hour(),
+        civil.minute(),
+        civil.second()
+    ))
+}
+
+#[cfg(test)]
 /// The record `row` and `shared` store, joined back into its canonical form's
 /// object.
 ///
 /// The shared members go beside the row's, and the access details of both
 /// merge in the order of their codes, which is the order the entry was
 /// written in ([`crate::access_log::details::DetailsWriter::finish`]).
+/// `audit.access_log_document` is the reader; this is the reference the
+/// split is held to.
+#[cfg(test)]
 #[must_use]
 pub fn join(row: Value, shared: Option<Value>) -> Value {
     let (row, common) = match (row, shared) {
@@ -206,12 +258,14 @@ pub fn join(row: Value, shared: Option<Value>) -> Value {
 }
 
 /// The at-code an element of the details tree names.
+#[cfg(test)]
 fn code(item: &Value) -> Option<&str> {
     item.get(NODE).and_then(Value::as_str)
 }
 
 /// The details tree `common` holds with the elements of `own` merged in, in
 /// the order of their codes; within one code each side keeps its order.
+#[cfg(test)]
 fn joined_details(common: Value, own: Option<Value>) -> Value {
     let Value::Object(mut tree) = common else {
         return common;

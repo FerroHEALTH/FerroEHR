@@ -11,15 +11,20 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use moka::future::Cache;
+use openehr_rm::draft::access_control::terminology::ForeignCode;
 use opentelemetry::KeyValue;
 
-use crate::access_eval::class::Classes;
+use crate::access_eval::class::{
+    Class, Classes, DataLayout, DirectiveLayout, KeeperLayout, Layout,
+};
 use crate::access_eval::condition::EhrEntry;
 use crate::access_eval::stale::StaleCopies;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
+use crate::memory::{self, Held, Weigh};
 use crate::policy_register::listen::{Dropping, Listened, Subscriber};
-use crate::storage::access_projection::{CHANNEL, NEW_CLASS};
+use crate::service::ehr::access_settings::EhrAccessSettings;
+use crate::storage::access_projection::{CHANNEL, NEW_CLASS, Revision};
 
 /// A shared per-EHR copy of the current `EHR_ACCESS` scheme settings.
 ///
@@ -70,16 +75,26 @@ impl EhrAccessCache {
         }
     }
 
-    /// How many EHRs' settings the copy holds, and how many classes.
-    pub(in crate::service) fn held_counts(&self) -> (u64, u64) {
+    /// What the copy holds: the EHRs' settings, and the classes with their
+    /// bytes.
+    pub(in crate::service) fn held(&self) -> (Held, Held) {
+        let classes = self.classes.iter().fold(0_usize, |total, (key, classes)| {
+            total
+                .saturating_add(memory::bytes(key.as_ref()))
+                .saturating_add(memory::bytes(&classes))
+                .saturating_add(memory::CACHE_ENTRY)
+        });
         (
-            self.inner.entry_count(),
-            self.classes_held.load(Ordering::Relaxed),
+            memory::held(&self.inner),
+            Held {
+                entries: self.classes_held.load(Ordering::Relaxed),
+                bytes: memory::gauge(classes),
+            },
         )
     }
 
     /// The copied entry of `ehr_id`, if this replica holds one.
-    pub(in crate::service) async fn held(&self, ehr_id: EhrId) -> Option<EhrEntry> {
+    pub(in crate::service) async fn entry(&self, ehr_id: EhrId) -> Option<EhrEntry> {
         self.inner.get(&ehr_id).await
     }
 
@@ -296,6 +311,77 @@ pub(in crate::service) fn dropped(scope: &'static str) {
         .add(1, &[KeyValue::new("scope", scope)]);
 }
 
+impl Weigh for EhrId {
+    fn heap(&self) -> usize {
+        0
+    }
+}
+
+impl Weigh for EhrEntry {
+    fn heap(&self) -> usize {
+        self.settings
+            .heap()
+            .saturating_add(self.subject.heap())
+            .saturating_add(self.version.heap())
+            .saturating_add(self.revision.heap())
+    }
+}
+
+impl Weigh for Revision {
+    fn heap(&self) -> usize {
+        self.subject.heap()
+    }
+}
+
+impl Weigh for EhrAccessSettings {
+    fn heap(&self) -> usize {
+        match self {
+            // NOTE: our own design, the generated settings weigh their JSON text, as the version copy weighs its members.
+            Self::Directives(settings) => {
+                size_of_val(settings.as_ref()).saturating_add(memory::json_bytes(settings.as_ref()))
+            }
+            Self::HeldClosed => 0,
+        }
+    }
+}
+
+impl Weigh for Classes {
+    fn heap(&self) -> usize {
+        self.classes.heap()
+    }
+}
+
+impl Weigh for Class {
+    fn heap(&self) -> usize {
+        self.settings.heap().saturating_add(self.layout.heap())
+    }
+}
+
+impl Weigh for Layout {
+    fn heap(&self) -> usize {
+        let labels = self.labels.iter().fold(
+            self.labels.capacity() * size_of::<(ForeignCode, usize)>(),
+            |total, (code, _)| {
+                total
+                    .saturating_add(code.terminology.capacity())
+                    .saturating_add(code.code.capacity())
+            },
+        );
+        self.directives
+            .heap()
+            .saturating_add(self.keepers.capacity() * size_of::<KeeperLayout>())
+            .saturating_add(labels)
+    }
+}
+
+impl Weigh for DirectiveLayout {
+    fn heap(&self) -> usize {
+        (self.parties.capacity() * size_of::<Option<usize>>())
+            .saturating_add(self.data.capacity() * size_of::<DataLayout>())
+            .saturating_add(self.exceptions.heap())
+    }
+}
+
 impl Default for EhrAccessCache {
     fn default() -> Self {
         Self::new(4096)
@@ -310,6 +396,92 @@ mod tests {
     /// The refusal a missing EHR's settings load answers.
     fn missing() -> ServiceError {
         ServiceError::not_found(Missing::Ehr, "no EHR with this id")
+    }
+
+    /// The entry the store holds for the `n`th EHR of a test.
+    fn stored(n: u64) -> EhrEntry {
+        let subject = n.is_multiple_of(2).then(|| {
+            crate::storage::access_projection::EhrSubject::new("demographic", n.to_string())
+        });
+        EhrEntry {
+            settings: Arc::new(n.is_multiple_of(5).then_some(EhrAccessSettings::HeldClosed)),
+            subject: subject.clone(),
+            version: n.is_multiple_of(5).then(|| format!("{n}::ferroehr::1")),
+            revision: Revision {
+                settings: i32::try_from(n).ok(),
+                subject,
+            },
+        }
+    }
+
+    /// The copy holds at most its capacity of EHRs, and an EHR the cap
+    /// evicted is loaded again with the store's entry, so the cap changes
+    /// no answer (#5926).
+    #[tokio::test]
+    async fn the_ehrs_stay_under_the_cap_and_an_evicted_one_loads_again() {
+        let cap = 8;
+        let cache = EhrAccessCache::new(cap);
+        let ehrs: Vec<EhrId> = (0..64).map(|_| EhrId(uuid::Uuid::now_v7())).collect();
+        let loads = std::sync::atomic::AtomicUsize::new(0);
+        for round in 0..2 {
+            for (n, ehr_id) in (0_u64..).zip(&ehrs) {
+                let load = async {
+                    loads.fetch_add(1, Ordering::Relaxed);
+                    Ok(stored(n))
+                };
+                let entry = cache
+                    .get_or_load(*ehr_id, load)
+                    .await
+                    .expect("the load succeeds");
+                let expected = stored(n);
+                assert_eq!(entry.subject, expected.subject, "round {round}, EHR {n}");
+                assert_eq!(entry.version, expected.version, "round {round}, EHR {n}");
+                assert_eq!(entry.revision, expected.revision, "round {round}, EHR {n}");
+                assert_eq!(
+                    entry.settings.is_some(),
+                    expected.settings.is_some(),
+                    "round {round}, EHR {n}"
+                );
+            }
+            cache.inner.run_pending_tasks().await;
+            let (held, _) = cache.held();
+            assert!(held.entries <= cap, "{held:?} within {cap}");
+            assert!(held.bytes > 0, "{held:?} weighs its entries");
+        }
+        assert!(
+            loads.load(Ordering::Relaxed) > 64,
+            "the evicted EHRs were loaded again"
+        );
+    }
+
+    /// The class copy holds one set of classes, and classes dropped are
+    /// loaded again as the store holds them.
+    #[tokio::test]
+    async fn the_classes_stay_under_their_cap_and_load_again_when_dropped() {
+        let cache = EhrAccessCache::new(16);
+        for round in 0..4_i64 {
+            let load = async move {
+                Ok(Classes {
+                    classes: vec![(
+                        round,
+                        Class {
+                            settings: Arc::new(None),
+                            layout: Arc::new(Layout::default()),
+                        },
+                    )],
+                })
+            };
+            let classes = cache
+                .classes_or_load(load)
+                .await
+                .expect("the load succeeds");
+            assert_eq!(classes.classes.first().map(|(id, _)| *id), Some(round));
+            cache.classes.run_pending_tasks().await;
+            let (_, held) = cache.held();
+            assert_eq!(held.entries, 1, "round {round}: {held:?}");
+            assert!(held.bytes > 0, "{held:?}");
+            cache.forget_classes();
+        }
     }
 
     /// Two concurrent loads of one EHR's settings that fail answer the same

@@ -225,6 +225,18 @@ FerroBRIDGE's own documentation is at
 > in the configuration reference is reachable as `config.<the.toml.path>`,
 > whether or not it appears below.
 
+## Memory
+
+The in-memory copies and caches of one replica are capped, so their memory
+has an upper bound: about 260 MiB with typical WebTemplates, and about
+305 MiB when the WebTemplates are large and every held EHR carries access
+settings. The default `resources.limits.memory` of `1Gi` leaves room for that
+budget beside the connection pools and the request bodies. The table of every
+copy and cache, its cap and the bytes it allows is the memory budget at
+<https://ferroehr.eu/docs/latest/installation/configuration.html#memory-budget>,
+and the `access_copy_size_bytes` and `cache_size_bytes` gauges report what
+each one holds.
+
 {{ template "chart.valuesSection" . }}
 
 ## More

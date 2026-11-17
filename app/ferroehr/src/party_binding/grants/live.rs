@@ -47,6 +47,7 @@ use crate::policy_register::listen::{Listened, Subscriber};
 use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
+mod held;
 pub mod revisions;
 #[cfg(test)]
 mod sharing;
@@ -153,6 +154,10 @@ pub struct LiveGrants {
     facts: RwLock<Arc<HeldFacts>>,
     /// Serializes the reads that install a new revision.
     installing: tokio::sync::Mutex<()>,
+    /// Holds every read of the copy back, so a test meets a copy that never
+    /// catches up with the store (#5806).
+    #[cfg(test)]
+    held_back: AtomicBool,
     /// The listener on [`CHANNEL`].
     listened: Arc<Listened>,
     /// The subjects' care relationships and the teams' patients held.
@@ -188,6 +193,8 @@ impl LiveGrants {
             held: RwLock::new(Arc::default()),
             facts: RwLock::new(Arc::default()),
             installing: tokio::sync::Mutex::new(()),
+            #[cfg(test)]
+            held_back: AtomicBool::new(false),
         }
     }
 
@@ -258,12 +265,6 @@ impl LiveGrants {
         tokio::spawn(refresher(Arc::clone(self), every));
     }
 
-    /// The revision this replica holds; `None` before its first read.
-    #[must_use]
-    pub fn revision(&self) -> Option<i64> {
-        self.held().revision
-    }
-
     fn held(&self) -> Arc<Held> {
         self.held
             .read()
@@ -276,12 +277,6 @@ impl LiveGrants {
             .read()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
-    }
-
-    /// The facts revision this replica holds; `None` before its first read.
-    #[must_use]
-    pub fn facts_revision(&self) -> Option<i64> {
-        self.held_facts().revision
     }
 
     /// Read the grant rows when a notification marked them stale or the
@@ -305,6 +300,10 @@ impl LiveGrants {
     /// [`GrantsUnavailable`] when the party store does not answer; the copy
     /// held stays, and the next request reads again.
     pub async fn refresh(&self) -> Result<(), GrantsUnavailable> {
+        #[cfg(test)]
+        if self.held_back.load(Ordering::Acquire) {
+            return Ok(());
+        }
         let started = std::time::Instant::now();
         let mut kind = "unchanged";
         let read = async {
@@ -513,21 +512,6 @@ impl LiveGrants {
             }
         }
         CallerFacts::new(roles, care_teams).with_party(party)
-    }
-
-    /// What the care copy holds: its subjects and care teams, the patients
-    /// and declared record subjects of those teams, and their bytes; bounded
-    /// by [`crate::party_binding::grants::care::SUBJECTS`] and
-    /// [`crate::party_binding::grants::care::CENSUS_BYTES`].
-    #[must_use]
-    pub fn care_held(&self) -> super::care::CareHeld {
-        self.care.held()
-    }
-
-    /// How many parties the copy of the caller facts holds facts of.
-    #[must_use]
-    pub fn parties_held(&self) -> usize {
-        self.held_facts().by_party.len()
     }
 
     /// Every federation agreement in force at `now`, once per client

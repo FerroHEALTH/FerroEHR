@@ -30,8 +30,8 @@ pub struct RecordConfig {
     /// are the change-feed grants.
     #[cfg_attr(feature = "schema", schemars(extend("x-ferroehr-class" = "optional")))]
     pub change_feed: crate::extensions::outbox::config::OutboxConfig,
-    /// `[record.multimedia]`: `DV_MULTIMEDIA` externalization to object
-    /// storage. It keeps `enabled`, because its store applies while it is
-    /// off: blobs already offloaded are read back from `url`.
+    /// `[record.multimedia]`: `DV_MULTIMEDIA` externalization to a blob
+    /// store. It keeps `enabled`, because its store applies while it is off:
+    /// blobs already offloaded are read back from the backend `backend` names.
     pub multimedia: crate::extensions::multimedia::config::MultimediaConfig,
 }

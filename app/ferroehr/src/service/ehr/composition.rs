@@ -67,7 +67,7 @@ impl FerroEhrService {
             envelope,
             incomplete,
         } = self.resolve_write(&request, change_type::CREATION, "COMPOSITION creation")?;
-        let composition = openehr_its::json::to_canonical_value(&request.data);
+        let mut composition = openehr_its::json::to_canonical_value(&request.data);
         drop(request);
         // Validation may consult the template store and the routed terminology
         // servers, so it runs before a connection is held; its result surfaces
@@ -76,6 +76,10 @@ impl FerroEhrService {
         let validated = self
             .validate_for_commit(Kind::Composition, &composition, incomplete)
             .await;
+        // A valid body's large media go to the blob store before a connection is held.
+        if validated.is_ok() {
+            self.externalize(&mut composition).await?;
+        }
         // The committed template identity is promoted to `version.template_id`
         // — the SMART template resolver (`template_of_version`) and the
         // template-delete guard both read that column, so the direct route
@@ -393,7 +397,7 @@ impl FerroEhrService {
         // is held across it; both results surface below in pre-check order.
         let resolved =
             self.resolve_write(&request, change_type::MODIFICATION, "COMPOSITION update");
-        let composition = openehr_its::json::to_canonical_value(&request.data);
+        let mut composition = openehr_its::json::to_canonical_value(&request.data);
         drop(request);
         let validated = match &resolved {
             Ok(parts) => Some(
@@ -402,6 +406,10 @@ impl FerroEhrService {
             ),
             Err(_) => None,
         };
+        // A valid body's large media go to the blob store before a connection is held.
+        if matches!(validated, Some(Ok(()))) {
+            self.externalize(&mut composition).await?;
+        }
         let template_id = composition_template_id(&composition).map(str::to_owned);
         self.commit_one(&self.pool, Mode::Transaction, async move |tx| {
             // Serialize concurrent writers of the same object, then read the
@@ -668,63 +676,5 @@ impl FerroEhrService {
             return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
         }
         Ok((read.now, read.restriction))
-    }
-}
-
-// ── ITS-REST MultimediaAdapter (adapter-support extension) ────────────────────
-
-impl FerroEhrService {
-    /// Re-inline externalized multimedia content into a canonical body before
-    /// it is served (the S3/object-store externalization extension — no
-    /// openEHR spec governs storage movement; the served canonical form is
-    /// unchanged). With no engine configured the stored form is served
-    /// unchanged.
-    ///
-    /// # Errors
-    /// [`ServiceError`] when the configured multimedia engine fails to expand a
-    /// reference (e.g. the external object store is unreachable).
-    #[cfg(feature = "multimedia")]
-    pub async fn expand_multimedia(&self, body: Value) -> Result<Value, ServiceError> {
-        let Some(engine) = &self.multimedia else {
-            // With no store reachable, serving the stored form is correct only
-            // when there is nothing to expand: answering 200 with a compact
-            // reference would silently withhold clinical content this server
-            // externalized.
-            if ferroehr_ext::multimedia::references_external_blob(&body) {
-                return Err(ServiceError::exception(
-                    "expand a multimedia reference: this record references externalized \
-                     multimedia but no object store is configured, so the content cannot be \
-                     re-inlined (configure record.multimedia.url, or re-enable multimedia, to \
-                     serve it)",
-                ));
-            }
-            return Ok(body);
-        };
-        let mut body = body;
-        engine
-            .expand(&mut body)
-            .await
-            .map_err(|e| ServiceError::internal("expand a multimedia reference", e))?;
-        Ok(body)
-    }
-
-    /// Serves the stored canonical form unchanged: externalization is compiled
-    /// out of this build, so nothing was ever moved out of a body.
-    ///
-    /// # Errors
-    /// Infallible in this configuration; the `Result` mirrors the multimedia
-    /// twin so callers are configuration-independent.
-    ///
-    /// The `async` is the twin's signature, not this body's need: the one
-    /// caller lives in `ferroehr-rest` and awaits this method however the
-    /// binary was built.
-    #[cfg(not(feature = "multimedia"))]
-    #[expect(
-        clippy::unused_async,
-        clippy::unused_async_trait_impl,
-        reason = "signature parity with the multimedia twin, which awaits"
-    )]
-    pub async fn expand_multimedia(&self, body: Value) -> Result<Value, ServiceError> {
-        Ok(body)
     }
 }

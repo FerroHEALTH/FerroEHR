@@ -85,6 +85,12 @@ const NOT_COMMITTABLE: &[(&str, &str)] = &[
          an example cannot invent a slot filler",
     ),
     (
+        "sdk_crosscheck_structure.v1.opt",
+        "a SECTION holds an inline ADMIN_ENTRY that is not an archetype root, which \
+         the template's own constraint requires and RM `Is_archetype_root` refuses \
+         (#5915; its participations are pinned on their own below)",
+    ),
+    (
         "pregnancy-ecosystem-testing.opt",
         "the template pins COMPOSITION.category to 435, a code the openEHR \
          terminology's composition category group (431, 433, 451, 815) does not hold",
@@ -236,6 +242,100 @@ fn a_folded_event_data_carries_its_constrained_node_id() {
             assert!(findings.is_empty(), "{level:?} {format}: {findings:?}");
         }
     }
+}
+
+// ── a mandatory participations ──────────────────────────────────────────────
+
+/// A template that makes `context/participations` mandatory gets one
+/// PARTICIPATION in every example level (RM `EVENT_CONTEXT`
+/// `Participations_validity` refuses an empty list), so `required` commits
+/// apart from the template's own RM breach (#5915).
+#[test]
+fn a_mandatory_participations_is_written() {
+    let wt = web_template(&sdk_go_dir().join("sdk_crosscheck_structure.v1.opt"));
+    for level in [
+        DetailLevel::Required,
+        DetailLevel::Medium,
+        DetailLevel::Complete,
+    ] {
+        let comp = example_composition(&wt, level).expect("the example builds");
+        let participations = comp
+            .pointer("/context/participations")
+            .and_then(Value::as_array)
+            .map_or(0, Vec::len);
+        assert_eq!(participations, 1, "{level:?}: one participation");
+        let findings: Vec<String> = validate_composition(&comp, &wt)
+            .into_iter()
+            .filter(|m| !m.message.contains("Is_archetype_root"))
+            .map(|m| format!("{}: {}", m.path, m.message))
+            .collect();
+        assert!(
+            level == DetailLevel::Complete || findings.is_empty(),
+            "{level:?}: {findings:?}"
+        );
+    }
+}
+
+// ── a name constrained to DV_CODED_TEXT ─────────────────────────────────────
+
+/// The `openEHR-EHR-CLUSTER.annotations.v1` cluster of `v`, mutably.
+fn annotations_cluster(v: &mut Value) -> Option<&mut Value> {
+    if v.get("archetype_node_id").and_then(Value::as_str)
+        == Some("openEHR-EHR-CLUSTER.annotations.v1")
+    {
+        return Some(v);
+    }
+    match v {
+        Value::Object(m) => m.values_mut().find_map(annotations_cluster),
+        Value::Array(a) => a.iter_mut().find_map(annotations_cluster),
+        _ => None,
+    }
+}
+
+/// The `at0001` ELEMENTs of the annotations cluster.
+fn annotation_elements(comp: &mut Value) -> usize {
+    annotations_cluster(comp)
+        .and_then(|c| c.get("items"))
+        .and_then(Value::as_array)
+        .map_or(0, |items| {
+            items
+                .iter()
+                .filter(|i| i.get("archetype_node_id").and_then(Value::as_str) == Some("at0001"))
+                .count()
+        })
+}
+
+/// A `DV_TEXT` name where the template constrains the name to a
+/// `DV_CODED_TEXT` from an external value set does not conform (AOM 1.4
+/// `C_COMPLEX_OBJECT.rm_type_name`). The committable examples leave the
+/// optional node out rather than invent its code; the `complete` example,
+/// which ITS-REST does not expect to commit, still shows it, and the validator
+/// refuses its name (#5912).
+#[test]
+fn a_text_name_where_a_coded_name_is_constrained_is_refused() {
+    let wt = web_template(&sdk_go_dir().join("Referral Request.v1.opt"));
+    for level in COMMITTABLE {
+        let mut comp = example_composition(&wt, level).expect("the example builds");
+        assert_eq!(
+            annotation_elements(&mut comp),
+            0,
+            "{level:?}: the coded-name ELEMENT is left out"
+        );
+    }
+    let mut complete = example_composition(&wt, DetailLevel::Complete).expect("builds");
+    assert!(
+        annotation_elements(&mut complete) > 0,
+        "the complete example shows the coded-name ELEMENT"
+    );
+    let refused: Vec<String> = validate_composition(&complete, &wt)
+        .into_iter()
+        .filter(|m| m.message.contains("DV_CODED_TEXT but found DV_TEXT"))
+        .map(|m| m.path)
+        .collect();
+    assert!(
+        refused.iter().any(|p| p.ends_with("/items[at0001]/name")),
+        "the DV_TEXT name is refused at its path: {refused:?}"
+    );
 }
 
 // ── an empty container under a mandatory attribute ───────────────────────────

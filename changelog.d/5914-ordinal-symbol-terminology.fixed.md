@@ -1,0 +1,1 @@
+- An ordinal or scale symbol is checked by its terminology as well as its code. Where the template lists `local::at0003`, a symbol `external::at0003` or `SNOMED-CT::at0003` committed `201`; it is now refused `422` naming the code phrase, because a code means something only inside its terminology.

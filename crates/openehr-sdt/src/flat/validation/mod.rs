@@ -43,7 +43,8 @@
               (#1694)"
 )]
 
-mod leaf;
+pub(crate) mod leaf;
+mod name_type;
 pub(crate) mod node_ids;
 pub(crate) mod plan;
 mod presence;
@@ -587,6 +588,10 @@ impl Validator {
     /// Visit an instance node against `wt` alone, ignoring its folded
     /// alternatives.
     fn walk_node(&mut self, instance: &Value, wt: &WebTemplateNode) {
+        if let (Some(input), Some(value)) = (&wt.string_constraint, instance.as_str()) {
+            leaf::check_string_constraints(self, wt, input, value);
+            return;
+        }
         if let Some(inst_type) = instance.get("_type").and_then(Value::as_str)
             && !subtype::conforms(inst_type, &wt.rm_type)
         {
@@ -604,6 +609,9 @@ impl Validator {
 
         if !wt.inputs.is_empty() {
             leaf::check_inputs(self, instance, wt);
+        }
+        if !wt.rm_type.starts_with("DV_") {
+            self.check_name_type(instance, wt, &wt.aql_path);
         }
 
         if self.collect_bindings && !wt.constraint_bindings.is_empty() {
@@ -941,6 +949,9 @@ impl Validator {
                     for member in &members {
                         self.check_null_constraints(node, &member.null_constraints);
                         self.check_element_existence(node, member);
+                        if let Some(element_path) = member.aql_path.strip_suffix("/value") {
+                            self.check_name_type(node, member, element_path);
+                        }
                     }
                 }
             }

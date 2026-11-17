@@ -409,6 +409,9 @@ fn create_node(
     let coded_name = archetyped
         .then(|| coded_name_constraint(co, ctx, scope, name_constraint.as_deref()))
         .flatten();
+    node.name_rm_type = inputs::attr_children(co, "name")
+        .next()
+        .map(|c| object_rm_type(c).to_owned());
     apply_node_naming(
         &mut node,
         ctx,
@@ -581,6 +584,7 @@ fn build_children(
         node.proportion_types = ptypes;
         capture_leaf_constraints(co, node);
     }
+    node.string_constraint = inputs::string_constraint(co);
 
     node.cardinalities = cardinalities(co, &node.aql_path);
     node.card_all = all_cardinalities(co, &node.aql_path);

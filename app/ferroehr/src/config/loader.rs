@@ -232,11 +232,11 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
             errors,
         );
     }
-    let multimedia = &mut config.record.multimedia;
+    let s3 = &mut config.record.multimedia.s3;
     resolve(
-        "record.multimedia.secret_access_key",
-        &mut multimedia.secret_access_key,
-        multimedia.secret_access_key_file.take().as_deref(),
+        "record.multimedia.s3.secret_access_key",
+        &mut s3.secret_access_key,
+        s3.secret_access_key_file.take().as_deref(),
         errors,
     );
     if let Some(basic) = config.auth.shared.basic.as_mut() {

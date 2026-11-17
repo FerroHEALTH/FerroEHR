@@ -596,6 +596,17 @@ impl QueryNaming {
     }
 }
 
+/// `at` cut to the microsecond `timestamptz` keeps; `at` itself when it is
+/// already that fine.
+pub(crate) fn stored_instant(at: Timestamp) -> Timestamp {
+    at.round(
+        jiff::TimestampRound::new()
+            .smallest(jiff::Unit::Microsecond)
+            .mode(jiff::RoundMode::Trunc),
+    )
+    .unwrap_or(at)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{AuditEvent, Coding, EventActionCode, EventOutcome, ObjectClass, TokenAttributes};

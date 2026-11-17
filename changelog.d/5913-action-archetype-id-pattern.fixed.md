@@ -1,0 +1,1 @@
+- A template's pattern on `ACTIVITY.action_archetype_id` is enforced: a value the pattern does not match is refused with `422`, and the example of such a template writes a value that matches (the archetype id the pattern names) instead of `/.*/`. The constraint was dropped from the Web Template, so any value committed.

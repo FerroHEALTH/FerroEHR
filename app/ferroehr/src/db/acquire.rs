@@ -358,6 +358,26 @@ pub async fn tracked<F: Future>(body: F) -> F::Output {
     OUT.scope(RefCell::new(Vec::new()), body).await
 }
 
+/// `body`, carrying the pools this task holds a connection of into a task
+/// spawned to work for it.
+///
+/// Checked out or kept, each counts: an [`acquire`] in `body` of one of them
+/// is a nested acquire, refused in a debug build, since the task that holds
+/// the connection may be waiting for `body` (#5947). Outside a
+/// [`request_scope`] it carries nothing.
+pub fn inheriting<F: Future>(body: F) -> impl Future<Output = F::Output> {
+    let mut held: Vec<usize> = OUT
+        .try_with(|out| out.try_borrow().map(|out| out.clone()).unwrap_or_default())
+        .unwrap_or_default();
+    // NOTE: our own design (#5947), outside a request scope no connection is kept.
+    let _outside_a_scope = HELD.try_with(|kept| {
+        if let Ok(kept) = kept.try_borrow() {
+            held.extend(kept.iter().map(|kept| kept.pool));
+        }
+    });
+    OUT.scope(RefCell::new(held), body)
+}
+
 /// Whether the current [`request_scope`] has a connection of the pool `key`
 /// checked out now.
 fn checked_out(key: usize) -> bool {
