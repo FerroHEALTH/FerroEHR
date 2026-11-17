@@ -66,6 +66,11 @@ pub struct MultimediaConfig {
     pub part_size: ByteSize,
     /// How many parts of one blob move at once. Default `4`.
     pub part_concurrency: usize,
+    /// How old an unreferenced blob must be before `ferroehr db sweep-blobs`
+    /// deletes it. A write of bytes already stored rewrites a blob older than
+    /// half of this, so a blob a commit is about to reference is never that
+    /// old. Keep it well above the longest commit. Default `"1h"`.
+    pub orphan_grace: Duration,
     /// The S3 backend's settings (`[record.multimedia.s3]`).
     pub s3: S3Config,
 }
@@ -80,6 +85,7 @@ impl Default for MultimediaConfig {
             request_timeout: Duration::from_secs(30),
             part_size: ByteSize::from_mib(8),
             part_concurrency: 4,
+            orphan_grace: Duration::from_hours(1),
             s3: S3Config::default(),
         }
     }
