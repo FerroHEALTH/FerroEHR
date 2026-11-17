@@ -191,7 +191,7 @@ async fn the_intake_statement_grows_with_its_tokens_alone() {
     assert_eq!(
         sum(&keys),
         0,
-        "an intake row locks no parent row (#5887): {statements:#?}"
+        "no foreign-key check per intake row (#5887): {statements:#?}"
     );
 
     let small = fastest(&pool, &policy, 32).await;

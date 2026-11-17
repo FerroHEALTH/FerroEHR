@@ -18,15 +18,17 @@
 -- audit.access_log_intake_unknown for one that is not stored, which raises
 -- foreign_key_violation as the key did.
 --
--- The shared part: the key's lock kept a tombstone from removing a part an
+-- The shared part: the key also kept a tombstone from removing a part an
 -- intake statement named before it committed, since the removal in
 -- audit.access_log_record_unindex checks only the rows it can see. The
--- intake statement now always takes the shared hold on the search tokens
--- (audit.hold_search_tokens), and the removal takes it exclusively
--- (audit.lock_search_tokens) before it looks, so a removal waits for every
--- intake statement in flight and then sees its rows. A part the statement
--- names is one it inserts in the same statement or one already stored;
--- any other is refused as the policy is. The verifier still derives every
+-- statement now stores the batch's parts, and then the statement that writes
+-- the rows locks each distinct part they name once, FOR KEY SHARE, as the key
+-- locked it once per row. The lock is taken in a statement of its own after
+-- the parts are stored, so it sees a part another writer stored meanwhile;
+-- a removal then waits for the write's commit and sees its rows. A row
+-- naming a part the lock did not find is refused: as a serialization failure
+-- when the batch carried the part, which a tombstone removed in between, and
+-- as a foreign_key_violation otherwise. The verifier still derives every
 -- record from its shared part (0039).
 --
 -- No openEHR spec governs audit storage mechanics: our own design.
@@ -38,34 +40,46 @@ ALTER TABLE access_log_intake
     DROP CONSTRAINT fk_access_log_intake_policy;
 
 -- Refuses an intake row naming a shared part or a render policy the store
--- does not hold, as the foreign keys did; called only for such a row.
-CREATE FUNCTION audit.access_log_intake_unknown(p_what text, p_digest text) RETURNS bytea
+-- does not hold, as the foreign keys did; called only for such a row. A part
+-- the batch itself carried was removed by a tombstone between the statement
+-- that stored it and the one that locks it: that is a serialization failure,
+-- which the writer runs again (#5890), and the next run stores the part anew.
+CREATE FUNCTION audit.access_log_intake_unknown(p_what text, p_digest text, p_removed boolean)
+    RETURNS bytea
     LANGUAGE plpgsql VOLATILE
     SET search_path = pg_catalog
     AS $$
 BEGIN
+    IF p_removed THEN
+        RAISE EXCEPTION 'the % % of an access-log intake row was removed while it was written', p_what, p_digest
+            USING ERRCODE = 'serialization_failure';
+    END IF;
     RAISE EXCEPTION 'an access-log intake row names the % %, which the store does not hold', p_what, p_digest
         USING ERRCODE = 'foreign_key_violation';
 END;
 $$;
 
-COMMENT ON FUNCTION audit.access_log_intake_unknown(text, text) IS
-    'Raises foreign_key_violation for an intake row naming a shared part or a render policy the store does not hold (#5887).';
+COMMENT ON FUNCTION audit.access_log_intake_unknown(text, text, boolean) IS
+    'Raises foreign_key_violation for an intake row naming a shared part or a render policy the store does not hold, and serialization_failure for a part of the batch removed while it was written (#5887).';
 
-REVOKE ALL ON FUNCTION audit.access_log_intake_unknown(text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION audit.access_log_intake_unknown(text, text, boolean) FROM PUBLIC;
 
 DO $grants$
 BEGIN
     IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_clinical') THEN
-        GRANT EXECUTE ON FUNCTION audit.access_log_intake_unknown(text, text) TO ferroehr_clinical;
+        GRANT EXECUTE ON FUNCTION audit.access_log_intake_unknown(text, text, boolean) TO ferroehr_clinical;
+        -- FOR KEY SHARE asks for UPDATE on a column of the table (PostgreSQL 18,
+        -- SELECT, "The Locking Clause"); access_log_shared_unchanged refuses
+        -- every UPDATE, so the grant changes no row.
+        GRANT UPDATE (digest) ON access_log_shared TO ferroehr_clinical;
     ELSE
         RAISE NOTICE 'skipping the intake refusal grant (roles absent: see the ext role block NOTICE)';
     END IF;
 END
 $grants$;
 
--- As 0044, with the token hold taken by every call and each row's shared part
--- and render policy checked in the statement that writes it.
+-- As 0044, with each row's shared part and render policy checked in the
+-- statement that writes it, and each distinct stored part locked once.
 CREATE OR REPLACE FUNCTION audit.access_log_intake_take(
     p_record_types text[], p_uids text[], p_times text[], p_contents text[],
     p_shared text[], p_digests text[], p_ehr_ids text[], p_party_ids text[],
@@ -89,8 +103,8 @@ DECLARE
     v_shared text[];
     v_own text[];
 BEGIN
-    PERFORM audit.hold_search_tokens();
     IF cardinality(p_token_entries) > 0 THEN
+        PERFORM audit.hold_search_tokens();
         FOR v_attempt IN 1..4 LOOP
             WITH found AS MATERIALIZED (
                 SELECT d.e, h.id, d.shares
@@ -137,13 +151,21 @@ BEGIN
             END IF;
         END LOOP;
     END IF;
-    WITH shared_parts AS (
+    IF cardinality(p_shared_digests) > 0 THEN
         INSERT INTO audit.access_log_shared (digest, content)
         SELECT decode(t.digest, 'hex'), t.content
           FROM unnest(p_shared_digests, p_shared_contents) AS t(digest, content)
          ORDER BY decode(t.digest, 'hex')
-        ON CONFLICT (digest) DO NOTHING
-        RETURNING 1
+        ON CONFLICT (digest) DO NOTHING;
+    END IF;
+    WITH held AS (
+        SELECT s.digest
+          FROM audit.access_log_shared s
+         WHERE s.digest IN (SELECT DISTINCT decode(t.c, 'hex')
+                              FROM unnest(p_shared) AS t(c)
+                             WHERE t.c IS NOT NULL)
+         ORDER BY s.digest
+           FOR KEY SHARE
     )
     INSERT INTO audit.access_log_intake (record_type, uid, time_recorded, content, shared,
         content_digest, ehr_id, party_id, retain_until, action_terminology, action_code,
@@ -152,8 +174,8 @@ BEGIN
         reserved_by)
     SELECT u.c1, u.c2::uuid, u.c3::timestamptz, u.c4,
            CASE
-               WHEN u.c5 IS NOT NULL AND batch.digest IS NULL AND held.digest IS NULL
-               THEN audit.access_log_intake_unknown('shared part', u.c5)
+               WHEN u.c5 IS NOT NULL AND held.digest IS NULL
+               THEN audit.access_log_intake_unknown('shared part', u.c5, batch.digest IS NOT NULL)
                ELSE decode(u.c5, 'hex')
            END,
            decode(u.c6, 'hex'),
@@ -167,7 +189,7 @@ BEGIN
            END,
            CASE
                WHEN u.c24 IS NOT NULL AND policy.digest IS NULL
-               THEN audit.access_log_intake_unknown('render policy', encode(u.c24, 'hex'))
+               THEN audit.access_log_intake_unknown('render policy', encode(u.c24, 'hex'), false)
                ELSE u.c24
            END,
            p_reserved_by
@@ -180,35 +202,11 @@ BEGIN
                 c19, c20, c21, c22, c23, c24, n)
       LEFT JOIN unnest(v_entries, v_shared, v_own) AS g(e, shared, own) ON g.e = u.n
       LEFT JOIN audit.audit_search_set x ON x.tokens = g.shared::integer[]
+      LEFT JOIN held ON held.digest = decode(u.c5, 'hex')
       LEFT JOIN unnest(p_shared_digests) AS batch(digest) ON batch.digest = u.c5
-      LEFT JOIN audit.access_log_shared held ON held.digest = decode(u.c5, 'hex')
       LEFT JOIN audit.audit_render_policy policy ON policy.digest = u.c24
      ORDER BY u.n;
 END
 $$;
 
 
--- As 0042, with the removal of a shared part waiting for every intake
--- statement in flight, which holds the search tokens shared.
-CREATE OR REPLACE FUNCTION audit.access_log_record_unindex() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path = audit, pg_catalog
-    AS $$
-BEGIN
-    IF NEW.record_type = 'ACCESS_LOG_TOMBSTONE' THEN
-        DELETE FROM audit.access_log_search s WHERE s.chain_seq = NEW.chain_seq;
-        DELETE FROM audit.fhir_feed_outbox o
-         WHERE o.chain = 'access_log' AND o.chain_seq = NEW.chain_seq;
-        DELETE FROM audit.syslog_outbox o
-         WHERE o.chain = 'access_log' AND o.chain_seq = NEW.chain_seq;
-        IF OLD.shared IS NOT NULL THEN
-            PERFORM audit.lock_search_tokens();
-            DELETE FROM audit.access_log_shared s
-             WHERE s.digest = OLD.shared
-               AND NOT EXISTS (SELECT 1 FROM audit.access_log_record r WHERE r.shared = OLD.shared)
-               AND NOT EXISTS (SELECT 1 FROM audit.access_log_intake i WHERE i.shared = OLD.shared);
-        END IF;
-    END IF;
-    RETURN NEW;
-END;
-$$;
