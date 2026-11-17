@@ -34,10 +34,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::Value;
-use sqlx::Connection as _;
 use sqlx::PgConnection;
 
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::party_binding::grants::operation::{BINDING_ISSUER, Operation};
@@ -100,7 +98,7 @@ impl FerroEhrService {
         if binding_issuers.is_empty() {
             return Ok(0);
         }
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let due = provisioned::contacts_due(&mut conn, binding_issuers, delay_minutes, SWEEP_BATCH)
             .await?;
         let mut erased = 0;

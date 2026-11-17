@@ -163,3 +163,24 @@ fn a_pool_outside_the_budget_is_refused_naming_it() {
     assert_eq!(settings.budget_errors(), Vec::<String>::new());
     assert_eq!(settings.connections(), 38);
 }
+
+/// A write takes an audit connection before its own (#5964), so the audit
+/// pool is never smaller than the clinical or the party pool: every domain
+/// pool is built at one size, set or derived.
+#[test]
+fn the_audit_pool_is_never_smaller_than_a_domain_pool() {
+    let unset = DbConfig::new("postgres://localhost/ferroehr");
+    let mut set = unset.clone();
+    set.max_connections = Some(7);
+    for settings in [
+        unset.clone(),
+        unset.for_serving(3),
+        unset.for_serving(256),
+        set,
+    ] {
+        let size = |domain| pool::options(&settings, domain).get_max_connections();
+        let audit = size(Domain::Audit);
+        assert!(audit >= size(Domain::Clinical), "{settings:?}");
+        assert!(audit >= size(Domain::Party), "{settings:?}");
+    }
+}

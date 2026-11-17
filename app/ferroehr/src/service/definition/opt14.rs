@@ -35,9 +35,6 @@
               (families 1/8)"
 )]
 
-use sqlx::Connection as _;
-
-use crate::db::acquire::acquire;
 use std::sync::Arc;
 
 use openehr_its::opt14::types::OperationalTemplate;
@@ -132,7 +129,7 @@ impl FerroEhrService {
                 )),
             })?;
         let root_archetype = &opt.definition.archetype_id.value;
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let row = template_repo::insert_template(
             &mut tx,

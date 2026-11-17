@@ -61,7 +61,6 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::Connection as _;
 use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
@@ -1334,7 +1333,7 @@ impl FerroEhrService {
         &self,
         commons: &DemographicCommons,
     ) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         dump_repo::write::insert_audits(&mut tx, &commons.audits, StoredAudit::Keep).await?;
         dump_repo::write::insert_contributions(&mut tx, None, &commons.contributions).await?;
@@ -1361,7 +1360,7 @@ impl FerroEhrService {
         &self,
         record: DemographicRecord,
     ) -> Result<Option<String>, ServiceError> {
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
         dump_repo::write::insert_audits(&mut tx, &record.audits, StoredAudit::Keep).await?;
         if let Err(refusal) = identifier_repo::restore_sealed(&mut tx, &record.identifiers).await {
@@ -1478,7 +1477,7 @@ impl FerroEhrService {
     /// [`ServiceError::Unprocessable`]; a storage failure is
     /// [`ServiceError::Storage`].
     async fn load_one_ehr(&self, record: EhrRecord) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         let ehr_id = record.ehr.id;
 

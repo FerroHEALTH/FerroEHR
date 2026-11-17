@@ -22,10 +22,8 @@
     )
 )]
 
-use sqlx::Connection as _;
 use sqlx::PgConnection;
 
-use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
@@ -49,7 +47,7 @@ impl FerroEhrService {
     ///   a physical delete must never orphan the compositions built on it.
     /// - `exception` — a database fault.
     pub async fn admin_template_delete(&self, template_id: &str) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         // Resolve the stored (case-preserved) id; absent → 404 (§Composite
         // Identifiers and Case: compare case-insensitively).
@@ -135,7 +133,7 @@ impl FerroEhrService {
         #[cfg(not(feature = "multimedia"))]
         let candidate_blobs: Vec<String> = Vec::new();
 
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         if self.erase_ehrs(&mut tx, &[ehr_id]).await?.is_empty() {
             // No such EHR → `ehr_id_does_not_exist`. Rolls back
@@ -193,7 +191,7 @@ impl FerroEhrService {
             // version references a blob and there is nothing to collect.
             #[cfg(not(feature = "multimedia"))]
             let candidate_blobs: Vec<String> = Vec::new();
-            let mut conn = acquire(&self.pool).await?;
+            let mut conn = self.recorded_conn(&self.pool).await?;
             let mut tx = conn.begin().await?;
             let removed = self.erase_ehrs(&mut tx, chunk).await?;
             let records = removed
@@ -369,7 +367,7 @@ impl FerroEhrService {
     ///   `PARTY_RELATIONSHIP` or unknown id is also this failure).
     /// - `exception` — a database fault mid-transaction (rolled back).
     pub async fn physical_party_delete(&self, party_id: VoId) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.demographic_pool).await?;
+        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
         let mut tx = conn.begin().await?;
 
         // The target must be a demographic PARTY (ehr-less; any version exists),

@@ -453,9 +453,8 @@ async fn sync_roles(
         person_state: &user.row.lifecycle_state,
         wanted,
     };
-    users
-        .service
-        .set_user_roles(party, &write)
+    // Boxed: the role write carries its audit and party connections.
+    Box::pin(users.service.set_user_roles(party, &write))
         .await
         .map_err(write_refusal)?;
     find(users, &client.binding_issuer, &party.to_string()).await

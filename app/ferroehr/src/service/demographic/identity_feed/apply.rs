@@ -20,7 +20,6 @@ mod work;
 use std::sync::Arc;
 use std::time::Duration;
 
-use sqlx::Connection as _;
 use uuid::Uuid;
 
 use super::plan::Resolved;
@@ -251,7 +250,8 @@ impl FerroEhrService {
 
     /// Applies `message` in one transaction.
     async fn apply_message(&self, message: &Claimed) -> Result<(), ApplyError> {
-        let mut conn = acquire(&self.demographic_pool)
+        let mut conn = self
+            .recorded_conn(&self.demographic_pool)
             .await
             .map_err(ServiceError::from)?;
         let mut tx = conn.begin().await?;

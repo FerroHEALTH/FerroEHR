@@ -382,6 +382,17 @@ pause ends. A request holds a connection about as long as it runs on a core,
 so four connections per core is about what the server keeps in use with every
 core busy, and the burst above it waits in the pool rather than failing.
 
+A write takes a connection of the audit pool first, for the records it
+writes before it commits, and then a connection of its own domain's pool,
+clinical or party. Its transaction therefore never waits for the audit pool,
+and no two requests wait for each other across the pools. The audit pool
+has the same size as each domain pool (`max_connections`, or the size derived
+from the cores), so it is never the smaller one. It also takes the access
+records of reads and the party domain's writes, so a write that finds it
+busy waits for it before it takes its other connection, holding none. Watch
+`db_pool_acquire_duration_seconds{pool="audit"}`: a rising wait there means
+the pools need to grow together.
+
 Every pool metric carries a `pool` label naming the pool it measures:
 `clinical`, `party` and `audit` for the three domain pools, and
 `audit_runtime` for the audit runtime's own pool. `db_pool_connections` has a

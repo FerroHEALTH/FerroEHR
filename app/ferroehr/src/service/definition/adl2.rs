@@ -41,7 +41,6 @@ use crate::db::acquire::acquire;
 use crate::draft_model::RM_WITH_DRAFTS;
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use serde_json::Value;
-use sqlx::Connection as _;
 use sqlx::PgConnection;
 
 use crate::error::refusal::Missing;
@@ -134,7 +133,7 @@ impl FerroEhrService {
         } else {
             None
         };
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         adl2_repo::write_lock(&mut tx).await?;
         let repo = self.adl2_repository(&mut tx).await?;
@@ -526,7 +525,7 @@ impl FerroEhrService {
         // and delete in ONE transaction, mirroring `opt_delete`; the
         // `version.template_id` → `template_ref` foreign key (NO ACTION)
         // remains the race-free backstop under a concurrent commit.
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         adl2_repo::write_lock(&mut tx).await?;
         let Some(stored) = adl2_repo::find(&mut tx, an_id).await? else {

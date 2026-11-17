@@ -14,9 +14,6 @@
               ADL/OPT wire envelopes"
 )]
 
-use sqlx::Connection as _;
-
-use crate::db::acquire::acquire;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -107,7 +104,7 @@ impl FerroEhrService {
         qualified_name: &QualifiedQueryName,
         version: QueryVersion,
     ) -> Result<(), ServiceError> {
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         if !stored_query_repo::delete(&mut tx, qualified_name, version).await? {
             return Err(ServiceError::not_found(
@@ -163,7 +160,7 @@ impl FerroEhrService {
 
         let Some(pattern) = version else {
             // No-version store: case-insensitive upsert at the default version.
-            let mut conn = acquire(&self.pool).await?;
+            let mut conn = self.recorded_conn(&self.pool).await?;
             let mut tx = conn.begin().await?;
             stored_query_repo::replace(&mut tx, qualified_name, DEFAULT_QUERY_VERSION, &query_text)
                 .await?;
@@ -188,7 +185,7 @@ impl FerroEhrService {
         // Versioned store: insert-only, immutable pair. A case-insensitive match
         // at this version is a 409 (BASE master05 §Composite Identifiers and
         // Case).
-        let mut conn = acquire(&self.pool).await?;
+        let mut conn = self.recorded_conn(&self.pool).await?;
         let mut tx = conn.begin().await?;
         if !stored_query_repo::insert(&mut tx, qualified_name, v, &query_text).await? {
             return Err(ServiceError::conflict(format!(
