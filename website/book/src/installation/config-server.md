@@ -28,7 +28,6 @@ drain_delay = "0s"
 shutdown_timeout = "10s"
 max_concurrent_requests = 256
 max_waiting_requests = 256
-admission_wait = "100ms"
 retry_after = "1s"
 trusted_proxies = []
 forwarded_header = "forwarded"
@@ -49,7 +48,7 @@ compression_min_size = "1KiB"
 | `shutdown_timeout` | duration | `"10s"` | Then the listener closes and the requests in flight get this long to finish; a connection still open after it is dropped. |
 | `max_concurrent_requests` | int | `256` | The requests served at once. Past it a request waits for a slot (`max_waiting_requests`, `admission_wait`) and is answered `503` with `Retry-After` and the openEHR error body when the queue is full or the wait expires, so offered load beyond capacity cannot exhaust memory. The health routes are never refused or queued, so readiness holds while the server sheds. The bound is always on; `0` is refused. See [sizing the bound](#sizing-max_concurrent_requests). |
 | `max_waiting_requests` | int | `256` | The requests past `max_concurrent_requests` that may wait for a slot at once, first come first served. A request that finds the queue full is answered `503` at once. The requests in flight and waiting never exceed the two bounds together. `0` keeps no queue and refuses every request past the bound at once. |
-| `admission_wait` | duration | `"100ms"` | How long a request past `max_concurrent_requests` waits for a slot before it is answered `503`. It rides out a short stall, such as a database WAL flush of 110 to 150 ms at 2000 requests per second, that would otherwise refuse requests the server answers a moment later. The wait counts in the request's latency. `"0s"` keeps no queue. |
+| `admission_wait` | duration | 100 milliseconds | How long a request past `max_concurrent_requests` waits for a slot before it is answered `503`, written with the `ms` or `s` unit. It rides out a short stall, such as a database WAL flush, that would otherwise refuse requests the server answers a moment later. The wait counts in the request's latency. `"0s"` keeps no queue. |
 | `retry_after` | duration | `"1s"` | The `Retry-After` of a `503` or `429` the listener writes, in whole seconds (RFC 9110 §10.2.3). |
 | `trusted_proxies` | list | `[]` | The reverse proxies, as addresses or CIDR blocks, whose forwarded client address is believed. Empty, every request is named by its peer address. |
 | `forwarded_header` | enum{forwarded,x-forwarded-for} | `forwarded` | The header a trusted proxy names the client in (`Forwarded` is RFC 7239). |
