@@ -37,10 +37,11 @@
 -- ── the reader of an entry ──────────────────────────────────────────────────
 
 -- The UUID p_text is in its lower-case hyphenated form; NULL for any other
--- text, which a uuid column could not give back as it was written.
+-- text, which a uuid column could not give back as it was written. It has no
+-- SET clause, so the planner can inline it and the move runs no nested
+-- statement per entry.
 CREATE FUNCTION audit.access_log_canonical_uuid(p_text text) RETURNS uuid
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
-    SET search_path = pg_catalog
     AS $$
     SELECT CASE WHEN p_text ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
                 THEN p_text::uuid END
