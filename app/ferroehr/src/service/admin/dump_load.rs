@@ -1151,8 +1151,7 @@ impl FerroEhrService {
         // Our own extension: re-populate the object store from the archive's
         // `blobs/` entries before loading versions that reference them.
         #[cfg(feature = "multimedia")]
-        self.import_blobs(&mut archive, dir, &manifest.blobs)
-            .await?;
+        self.import_blobs(&mut archive, dir, &manifest.blobs).await?;
         // A blob-carrying archive cannot be loaded into a binary built without
         // the feature: refuse loudly rather than drop the content silently.
         #[cfg(not(feature = "multimedia"))]

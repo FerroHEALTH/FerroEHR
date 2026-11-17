@@ -225,11 +225,12 @@ impl Decommission {
     #[cfg(feature = "multimedia")]
     async fn delete_blobs(&self) -> Result<Option<usize>, DecommissionError> {
         match &self.blobs {
-            Some(store) => {
-                Ok(Some(store.delete_all_content().await.map_err(
-                    ferroehr_ext::multimedia::MultimediaError::from,
-                )?))
-            }
+            Some(store) => Ok(Some(
+                store
+                    .delete_all_content()
+                    .await
+                    .map_err(ferroehr_ext::multimedia::MultimediaError::from)?,
+            )),
             None => Ok(None),
         }
     }

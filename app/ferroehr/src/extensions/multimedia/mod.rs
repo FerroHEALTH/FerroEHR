@@ -13,11 +13,11 @@
 pub mod config;
 
 #[cfg(feature = "multimedia")]
+use ferrohealth_config::units::ByteSize;
+#[cfg(feature = "multimedia")]
 use ferroehr_ext::multimedia::blob::{BackendSettings, BlobStoreParams, Limits, S3Settings};
 #[cfg(feature = "multimedia")]
 use ferroehr_ext::multimedia::{MultimediaEngine, MultimediaError};
-#[cfg(feature = "multimedia")]
-use ferrohealth_config::units::ByteSize;
 
 #[cfg(feature = "multimedia")]
 use crate::extensions::multimedia::config::Backend;
