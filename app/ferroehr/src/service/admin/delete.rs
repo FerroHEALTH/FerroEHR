@@ -146,6 +146,7 @@ impl FerroEhrService {
             ));
         }
         self.commit_act_recorded(tx, Vec::new()).await?;
+        self.version_copy.forget_ehr(ehr_id).await;
 
         // The EHR and its versions are gone; GC any blob this EHR referenced
         // that no *surviving* version still references (content-addressed dedup
@@ -203,6 +204,9 @@ impl FerroEhrService {
                 })
                 .collect();
             self.commit_act_recorded(tx, records).await?;
+            for ehr_id in chunk {
+                self.version_copy.forget_ehr(*ehr_id).await;
+            }
             #[expect(
                 clippy::as_conversions,
                 reason = "the removed-row count widens exactly: usize is at most 64 bits \
