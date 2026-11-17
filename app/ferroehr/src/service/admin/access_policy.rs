@@ -334,6 +334,9 @@ impl FerroEhrService {
             records.push(event);
         }
         self.commit_act_recorded(tx, records).await?;
+        // NOTE: our own design (#5879), the connection goes back before the next read, which
+        // would otherwise wait for a second one while every connection is held so.
+        drop(conn);
         self.read_access_policy().await?;
         let written = self.access_policy_current().await?.ok_or_else(|| {
             ServiceError::exception("the access policy version just committed does not read")

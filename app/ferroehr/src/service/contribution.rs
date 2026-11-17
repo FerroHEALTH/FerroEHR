@@ -334,7 +334,7 @@ async fn write_contribution(
     let content = if party_only {
         Vec::new()
     } else {
-        cx.written_content(&outcome.versions).await
+        cx.written_content(Some(&mut *tx), &outcome.versions).await
     };
     let facts = WriteFacts {
         object_id: Some(outcome.id.to_string()),

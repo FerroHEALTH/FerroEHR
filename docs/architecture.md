@@ -449,7 +449,12 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   rows carry no foreign keys, since the chain move is their one writer and the
   verifier derives each record from its shared part again, and the link check
   moves the head cursor by an assignment
-  (`audit/0043_access_log_nested_statements.sql`). The ferroehr-rest test
+  (`audit/0043_access_log_nested_statements.sql`). The intake rows carry no
+  foreign keys either (#5887): the intake statement refuses a render policy or
+  shared part the store does not hold in the statement that writes the rows,
+  and locks each distinct stored part its batch names once, so a tombstone
+  that would remove one waits for the write and then sees its rows
+  (`audit/0045_intake_without_foreign_keys.sql`). The ferroehr-rest test
   `statement_budget` holds an AQL request to its round trips and nested
   statements, read from `pg_stat_statements`. `audit.audit_event_chain_move()`
   moves the system intake into the system chain the same way. A
@@ -1578,6 +1583,25 @@ every EHR one of its `PERSON`'s references names (`ehr_ids_for_person`), so
 access revision (`clinical/0046`) carries the namespace with the id. **Our own
 design:** the element, the projection, its uniqueness, the resolution order
 and the grant.
+
+**A care decision on a lagging replica** (#5806). The caller facts and the
+care copy reach a replica through its notification, which arrives after the
+commit. A verdict that care decides (the same EHR judged with and without
+care differs), and a query whose resolved care binds any EHR, first compare
+the replica's grant and facts revisions with `binding_grant_revision`: one
+indexed read of one row on the party pool, once per request
+(`RequestAccess::care_in_force`). A read of a COMPOSITION runs it alongside
+the version read, and a query alongside its care read
+(`RequestAccess::care_ahead`), so it adds a transaction and no latency; the
+owner accepted that cost on #5891. When the copy is older, the request reads
+it again (the care copy drops what changed before the revision moves), keeps
+only the care teams the caller is still a member of in the copy read, and
+judges care again; a copy that stays older for 100 ms refuses with `503`
+`access-refreshing`. A care relationship that ended, a membership that ended
+and an erased `PERSON` therefore never admit on another replica; an addition
+may wait for the next request, which fails closed. The counter
+`access_care_stale_total{outcome}` counts each case. **Our own design:** the
+check, its place before the decision, and the wait.
 
 **The patient's EHRs** (#5648, #5649). `FerroEhrService::subject_ehrs`, the
 index lookup a subject cohort makes, answers the EHR the clinical subject

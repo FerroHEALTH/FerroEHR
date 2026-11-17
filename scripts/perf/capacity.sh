@@ -1030,7 +1030,8 @@ step_run() {
     | ([($l.failures // {})[] | to_entries[] | .value] | add // 0) as $failed
     | {what: $what, rate: $rate, instances: $instances, pool: $pool, generator: $generator, variant: $variant,
        throughput: $throughput, answered: $answered, failed: $failed, failures: ($l.failures // {}),
-       saturated: $l.saturated, lag_p99_ms: $l.lag_p99_ms, max_lag_ms: $l.max_lag_ms,
+       saturated: $l.saturated, lag_p50_ms: $l.lag_p50_ms, lag_p99_ms: $l.lag_p99_ms,
+       lag_max_ms: $l.lag_max_ms, max_lag_ms: $l.max_lag_ms,
        groups: $g, server_latency: $s,
        server_cpu_s: $server_cpu, pg_cpu_s: $pg_cpu, lb_cpu_s: $lb_cpu, generator_cpu_s: $gen,
        wall_s: $wall, host_load_1m: $host_load, host_cores: $host_cores,

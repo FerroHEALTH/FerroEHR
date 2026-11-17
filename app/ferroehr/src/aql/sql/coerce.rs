@@ -55,9 +55,10 @@ pub(super) fn coerce_value(base: Expr, mode: ValueMode, types: &[String]) -> Exp
             call("openehr_timestamp", vec![text])
         }
         ValueMode::Value(Coercion::Text | Coercion::Raw) => as_text(base),
-        ValueMode::RawNumeric | ValueMode::RawText | ValueMode::RawTemporal(_) => {
-            raw_key(base, mode)
-        }
+        ValueMode::RawNumeric
+        | ValueMode::RawText
+        | ValueMode::RawTemporal(_)
+        | ValueMode::RawAmount => raw_key(base, mode),
     }
 }
 
@@ -267,6 +268,38 @@ pub(super) fn raw_numeric(base: Expr) -> Expr {
     )
 }
 
+/// The whole data values `SUM` and `AVG` add: the `DV_AMOUNT` subtypes, for
+/// which the RM defines `+` "unlike descendants of `DV_ABSOLUTE_QUANTITY`,
+/// such as the date/time types" (RM `data_types` §`DV_AMOUNT`).
+const AMOUNT_TYPES: [&str; 4] = ["DV_QUANTITY", "DV_COUNT", "DV_PROPORTION", "DV_DURATION"];
+
+/// A mixed-type leaf's amount: a JSON number as itself, a whole `DV_AMOUNT`
+/// ([`AMOUNT_TYPES`]) by its magnitude, a JSON `null` as no value, and any
+/// other value failing the statement with SQLSTATE `ZA003` through
+/// `ext.aql_not_an_amount`, so `SUM` and `AVG` never add a date or an ordinal
+/// (QUERY master03 §SUM, §AVG: "Input values type should be either Integer or
+/// Real").
+pub(super) fn raw_amount(base: Expr) -> Expr {
+    Expr::cust_with_exprs(
+        format!(
+            "CASE WHEN jsonb_typeof($1) = 'number' THEN ($2 #>> '{{}}'::text[])::numeric \
+             WHEN jsonb_typeof($3) = 'null' THEN NULL \
+             WHEN ($4 ->> '_type') IN ({}) THEN openehr_magnitude($5) \
+             ELSE aql_not_an_amount(coalesce($6 ->> '_type', jsonb_typeof($7))) END",
+            type_list(&AMOUNT_TYPES)
+        ),
+        [
+            base.clone(),
+            base.clone(),
+            base.clone(),
+            base.clone(),
+            base.clone(),
+            base.clone(),
+            base,
+        ],
+    )
+}
+
 /// A mixed-type leaf's text when it is a JSON string, number or Boolean, and
 /// NULL for a whole object or a list, whose serialized JSON is no value.
 pub(super) fn raw_text(base: Expr) -> Expr {
@@ -326,6 +359,7 @@ pub(super) fn raw_key(base: Expr, mode: ValueMode) -> Expr {
     match mode {
         ValueMode::RawNumeric => raw_numeric(base),
         ValueMode::RawText => raw_text(base),
+        ValueMode::RawAmount => raw_amount(base),
         ValueMode::RawTemporal(kinds) => raw_temporal(base, kinds),
         ValueMode::Projection | ValueMode::Value(_) => base,
     }

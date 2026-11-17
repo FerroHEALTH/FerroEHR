@@ -43,6 +43,9 @@ pub const DB_POOL_CONNECTIONS: &str = "db_pool_connections";
 pub const DB_POOL_ACQUIRE_DURATION: &str = "db_pool_acquire_duration";
 /// How long a request held each pooled connection it checked out (#5774).
 pub const DB_POOL_HOLD_DURATION: &str = "db_pool_hold_duration";
+/// Requests that asked a pool for a second connection while they held one of
+/// it (#5879).
+pub const DB_POOL_NESTED_ACQUIRES: &str = "db_pool_nested_acquires";
 /// Service transactions (`outcome`).
 pub const DB_TRANSACTIONS: &str = "db_transactions";
 /// AQL queries (`outcome`).
@@ -156,6 +159,8 @@ pub struct Metrics {
     pub db_pool_acquire_duration: Histogram<f64>,
     /// How long a request held each pooled connection, seconds.
     pub db_pool_hold_duration: Histogram<f64>,
+    /// Requests that asked a pool for a second connection while they held one.
+    pub db_pool_nested_acquires: Counter<u64>,
     /// Service transactions by outcome.
     pub db_transactions: Counter<u64>,
     /// AQL queries by outcome.
@@ -229,6 +234,12 @@ impl Metrics {
                  to the handler's answer",
                 DB_HOLD_BUCKETS,
             ),
+            db_pool_nested_acquires: meter
+                .u64_counter(DB_POOL_NESTED_ACQUIRES)
+                .with_description(
+                    "Requests that asked a pool for a second connection while they held one of it",
+                )
+                .build(),
             db_transactions: meter
                 .u64_counter(DB_TRANSACTIONS)
                 .with_description("Service transactions by outcome")
@@ -391,6 +402,7 @@ mod tests {
             DB_POOL_CONNECTIONS,
             DB_POOL_ACQUIRE_DURATION,
             DB_POOL_HOLD_DURATION,
+            DB_POOL_NESTED_ACQUIRES,
             DB_TRANSACTIONS,
             AQL_QUERIES,
             AQL_QUERY_DURATION,
