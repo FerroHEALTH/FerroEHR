@@ -142,6 +142,20 @@ pub(crate) fn build_inputs(
 
 // ── DV_TEXT / string ─────────────────────────────────────────────────────────
 
+/// The input of a `C_STRING` a `C_PRIMITIVE_OBJECT` puts on an RM String
+/// attribute, `None` for any other object or a `C_STRING` with neither a
+/// pattern nor a list.
+pub(crate) fn string_constraint(co: &CObject) -> Option<Box<WebTemplateInput>> {
+    let CObject::CPrimitiveObject(p) = co else {
+        return None;
+    };
+    let item = p.item.as_deref()?;
+    let CPrimitive::CString(cs) = item else {
+        return None;
+    };
+    (cs.pattern.is_some() || !cs.list.is_empty()).then(|| Box::new(text_input(Some(item), None)))
+}
+
 fn text_input(cstring: Option<&CPrimitive>, suffix: Option<&str>) -> WebTemplateInput {
     let mut input = WebTemplateInput::new(WebTemplateInputType::Text, suffix);
     if let Some(CPrimitive::CString(cs)) = cstring {

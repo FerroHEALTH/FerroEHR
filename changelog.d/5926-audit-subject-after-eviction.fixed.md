@@ -1,0 +1,1 @@
+- An audit record now always names the patient subject its act looked up (#5926). The sender read each subject from its memo a second time when it rendered the records, so a subject the memo's cap evicted in between was left out of the record without marking the lookup failed.

@@ -60,7 +60,9 @@ use crate::flat::webtemplate::model::{
     WebTemplate, WebTemplateInput, WebTemplateInputType, WebTemplateNode, WebTemplateRange,
 };
 
+mod interval;
 mod party;
+mod temporal;
 
 /// Fixed example instants used for the RM temporal leaves (deterministic).
 ///
@@ -171,8 +173,24 @@ pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Result<Value
     flat.insert("ctx/language".to_owned(), json!(wt.default_language));
     flat.insert("ctx/territory".to_owned(), json!("US"));
     flat.insert("ctx/composer_name".to_owned(), json!("Example composer"));
-    if wt.tree.children.iter().any(|c| c.aql_path == "/context") {
+    if let Some(context) = wt.tree.children.iter().find(|c| c.aql_path == "/context") {
         flat.insert("ctx/time".to_owned(), json!(EXAMPLE_DATE_TIME));
+        // NOTE: RM `EVENT_CONTEXT` `Participations_validity` refuses an empty list, so a
+        // template that makes `participations` mandatory needs one PARTICIPATION.
+        if context
+            .existence
+            .iter()
+            .any(|ex| ex.min >= 1 && ex.path == "/context/participations")
+        {
+            flat.insert(
+                "ctx/participation_name:0".to_owned(),
+                json!("Example participant"),
+            );
+            flat.insert(
+                "ctx/participation_function:0".to_owned(),
+                json!("Example function"),
+            );
+        }
     }
 
     // Walk the tree from the root (COMPOSITION); the root is never forced empty —
@@ -316,6 +334,16 @@ fn walk(
     if node.has_input() {
         return emit_leaf(node, prefix, out);
     }
+    // NOTE: AOM 1.4 `C_STRING.valid_value`: an RM String attribute the template
+    // constrains, such as `ACTIVITY.action_archetype_id`, gets a value that matches.
+    if let Some(value) = node
+        .string_constraint
+        .as_deref()
+        .and_then(constrained_string_example)
+    {
+        put(out, prefix, "", json!(value));
+        return true;
+    }
 
     let groups = child_groups(node);
     let cx = WalkCtx {
@@ -387,7 +415,7 @@ fn walk_children<'a>(
             DetailLevel::Required => child_opt == 0,
             DetailLevel::Medium | DetailLevel::Complete => true,
         };
-        if !include || skips_optional(child) {
+        if !include || skips_optional(child, cx.level) {
             continue;
         }
         let ci = cardinality_index(node, child);
@@ -405,11 +433,19 @@ fn walk_children<'a>(
 /// A node whose coded-name constraint is display/rubric-incoherent (see
 /// `CodedName::incoherent`) or whose leaf is unsatisfiable has no instance
 /// form every conforming consumer accepts, and an example exists to be
-/// committable everywhere. A MANDATORY one is still emitted in our
-/// spec-faithful form.
-fn skips_optional(child: &WebTemplateNode) -> bool {
+/// committable everywhere. A node whose name must be a `DV_CODED_TEXT` from a
+/// value set the template names no code of is left out of the `required` and
+/// `medium` examples, which ITS-REST says are committable, rather than given
+/// an invented code; the `complete` example, "not expected to be committable",
+/// still shows it. A MANDATORY node is always emitted in our spec-faithful
+/// form.
+fn skips_optional(child: &WebTemplateNode, level: DetailLevel) -> bool {
+    let uncoded_name = level != DetailLevel::Complete
+        && child.name_rm_type.as_deref() == Some("DV_CODED_TEXT")
+        && child.name_coded.is_none();
     is_optional(child)
         && (child.name_coded.as_ref().is_some_and(|cn| cn.incoherent)
+            || uncoded_name
             || is_unsatisfiable_leaf(child))
 }
 
@@ -446,8 +482,9 @@ fn walk_child(
     // A mandatory child must materialise even when all of *its* children are
     // optional (else the mandatory node would go missing).
     let child_force = !is_optional(child);
-    let source = interval_part_source(node, child);
-    let mut emitted = walk(source, &child_prefix, child_opt, cx.level, child_force, out);
+    let source = interval::part_source(node, child);
+    let mut emitted = interval::emit_shared_limit(node, child, &child_prefix, out)
+        || walk(source, &child_prefix, child_opt, cx.level, child_force, out);
     if emitted && let Some(slot) = ci.and_then(|i| card_counts.get_mut(i)) {
         *slot += 1;
     }
@@ -464,22 +501,6 @@ fn walk_child(
         }
     }
     emitted
-}
-
-/// The node whose example fills `child`: a `DV_INTERVAL` part the template
-/// leaves open takes its constrained sibling's example, so the limits agree
-/// (RM `data_types` §DV_INTERVAL `Limits_consistent`).
-fn interval_part_source<'a>(
-    node: &'a WebTemplateNode,
-    child: &'a WebTemplateNode,
-) -> &'a WebTemplateNode {
-    let open = child.implicit && node.rm_type.starts_with("DV_INTERVAL<");
-    let sibling = || {
-        node.children
-            .iter()
-            .find(|s| !s.implicit && s.rm_type == child.rm_type)
-    };
-    open.then(sibling).flatten().unwrap_or(child)
 }
 
 /// Cardinality satisfaction: for every container attribute constrained to
@@ -537,7 +558,9 @@ fn satisfy_existence<'a>(
             continue;
         }
         if let Some(child) = groups.iter().find(|c| {
-            under_attribute(&c.aql_path, &ex.path) && rm_declares(&c.aql_path) && !skips_optional(c)
+            under_attribute(&c.aql_path, &ex.path)
+                && rm_declares(&c.aql_path)
+                && !skips_optional(c, cx.level)
         }) {
             let child_prefix = format!("{}/{}", cx.prefix, seg_for(child));
             included.push(child.aql_path.as_str());
@@ -853,7 +876,7 @@ fn emit_leaf(node: &WebTemplateNode, base: &str, out: &mut Map<String, Value>) -
         "DV_SCALE" => emit_ordinal(node, base, out, true),
         "DV_BOOLEAN" => put(out, base, "", json!(example_boolean(node))),
         "DV_DATE_TIME" | "DV_DATE" | "DV_TIME" => {
-            put(out, base, "", json!(example_temporal(node, rm)));
+            put(out, base, "", json!(temporal::example_temporal(node, rm)));
         }
         "DV_DURATION" => put(out, base, "", json!(example_duration(node))),
         "DV_IDENTIFIER" => {
@@ -996,15 +1019,21 @@ fn example_for_pattern(pattern: &str) -> Option<String> {
         .strip_prefix('/')
         .and_then(|p| p.strip_suffix('/'))
         .unwrap_or(pattern);
-    if body.is_empty() || body.chars().any(|c| META.contains(&c)) {
+    // A metacharacter escaped with a backslash stands for itself: `a\.b` names `a.b`.
+    let mut literal = String::with_capacity(body.len());
+    let mut chars = body.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => literal.push(chars.next().filter(|n| META.contains(n))?),
+            c if META.contains(&c) => return None,
+            c => literal.push(c),
+        }
+    }
+    if literal.is_empty() {
         return None;
     }
     // A literal pattern matches its own text; confirm before committing to it.
-    if pattern_matches(body, body) {
-        Some(body.to_owned())
-    } else {
-        None
-    }
+    pattern_matches(body, &literal).then_some(literal)
 }
 
 /// A deterministic value satisfying a leaf sub-attribute's `C_STRING` constraint
@@ -1273,73 +1302,6 @@ fn emit_ordinal(node: &WebTemplateNode, base: &str, out: &mut Map<String, Value>
         put(out, base, "code", json!("at0000"));
         put(out, base, "value", json!("Example"));
     }
-}
-
-/// A deterministic temporal example honouring the leaf's AOM 1.4 temporal
-/// pattern (`yyyy-??-XX` etc.: literal = mandatory, `??` = optional/kept,
-/// `XX` = prohibited/omitted — mirroring the validator's presence-only
-/// judgement) and the `timezone_validity` constraint (`1003` = the designator
-/// must be absent; the fixed example instants already carry `Z` for the rest).
-fn example_temporal(node: &WebTemplateNode, rm: &str) -> String {
-    let pattern = node
-        .inputs
-        .first()
-        .and_then(|i| i.validation.as_ref())
-        .and_then(|v| v.pattern.as_deref());
-    let (pat_date, pat_time) = match pattern {
-        Some(p) if p.contains('T') => {
-            let (d, t) = p.split_once('T').unwrap_or((p, ""));
-            (d, t)
-        }
-        Some(p) if p.contains(':') => ("", p),
-        Some(p) => (p, ""),
-        None => ("", ""),
-    };
-    let tz = if node.tz_validity == Some(1003) {
-        ""
-    } else {
-        "Z"
-    };
-    let date = temporal_segments(pat_date, DATE_SEGMENTS, '-');
-    match rm {
-        "DV_DATE" => date,
-        "DV_TIME" => format!("{}{tz}", temporal_segments(pat_time, TIME_SEGMENTS, ':')),
-        // DV_DATE_TIME: a time part prohibited outright (pattern `…TXX:…`)
-        // truncates to the date.
-        _ if pat_time.starts_with("XX") => date,
-        _ => format!(
-            "{date}T{}{tz}",
-            temporal_segments(pat_time, TIME_SEGMENTS, ':')
-        ),
-    }
-}
-
-/// The example date's segments, coarsest first.
-const DATE_SEGMENTS: [&str; 3] = ["2022", "02", "03"];
-
-/// The example time's segments, coarsest first.
-const TIME_SEGMENTS: [&str; 3] = ["04", "05", "06"];
-
-/// Renders one temporal half, dropping every segment the pattern prohibits.
-///
-/// The leading segment is always present; the rest are kept until the pattern
-/// marks one `XX`, since ISO 8601 partial precision truncates right-to-left —
-/// an omitted month forces the day off with it.
-fn temporal_segments(pattern: &str, full: [&str; 3], separator: char) -> String {
-    let segments: Vec<&str> = if pattern.is_empty() {
-        Vec::new()
-    } else {
-        pattern.splitn(3, separator).collect()
-    };
-    let mut out = String::from(full[0]);
-    for (i, part) in full.iter().enumerate().skip(1) {
-        if segments.get(i).is_some_and(|s| *s == "XX") {
-            break;
-        }
-        out.push(separator);
-        out.push_str(part);
-    }
-    out
 }
 
 /// A deterministic duration example honouring the `C_DURATION` allowed-fields

@@ -109,10 +109,17 @@ impl AccessLogStore {
     /// The store errors when the statement fails, and
     /// [`AccessLogError::Unreadable`] when a stored record does not read.
     pub async fn search(&self, query: &LogQuery) -> Result<Vec<AccessLogRecord>, AccessLogError> {
+        // NOTE: our own design (#5784), an EHR id the uuid column keeps is matched on the column
+        // and its index, any other as the entry wrote it.
+        let column_ehr = query
+            .ehr_id
+            .as_deref()
+            .and_then(crate::access_log::stored_form::column_uuid);
+        let written_ehr = query.ehr_id.as_deref().filter(|_| column_ehr.is_none());
         let rows = sqlx::query(concat!(
             records!(),
-            ", LATERAL (SELECT audit.access_log_document(r.content, sh.content) AS doc) d \
-             WHERE ($1::text IS NULL OR r.ehr_id = $1) \
+            " WHERE ($1::uuid IS NULL OR r.ehr_id = $1) \
+             AND ($23::text IS NULL OR (r.ehr_id IS NULL AND d.doc #>> '{ehr_id,value}' = $23)) \
              AND ($2::text IS NULL OR r.time_recorded >= $2::text::timestamptz) \
              AND ($3::text IS NULL OR r.time_recorded <= $3::text::timestamptz) \
              AND ($4::text IS NULL OR (r.action_terminology = $4 AND r.action_code = $5)) \
@@ -135,7 +142,7 @@ impl AccessLogStore {
                       jsonb_build_object('rm_type', $20::text)))) \
              ORDER BY r.time_recorded DESC, r.chain_seq DESC OFFSET $21 LIMIT $22"
         ))
-        .bind(query.ehr_id.as_deref())
+        .bind(column_ehr)
         .bind(query.from.map(|from| from.to_string()))
         .bind(query.to.map(|to| to.to_string()))
         .bind(query.action.map(Term::terminology))
@@ -157,6 +164,7 @@ impl AccessLogStore {
         .bind(LOG_RECORD)
         .bind(query.offset)
         .bind(query.fetch)
+        .bind(written_ehr)
         .fetch_all(&mut *acquire(self.pool()).await?)
         .await?;
         rows.iter().map(stored).collect()

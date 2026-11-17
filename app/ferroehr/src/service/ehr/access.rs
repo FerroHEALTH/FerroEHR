@@ -228,7 +228,7 @@ impl FerroEhrService {
         let mut entries = Vec::with_capacity(ehr_ids.len());
         let mut missing = Vec::new();
         for ehr_id in ehr_ids {
-            match self.ehr_access.held(*ehr_id).await.filter(|_| listening) {
+            match self.ehr_access.entry(*ehr_id).await.filter(|_| listening) {
                 Some(entry) => entries.push((*ehr_id, entry)),
                 None => missing.push(*ehr_id),
             }

@@ -179,3 +179,24 @@ async fn a_second_connection_of_a_held_pool_is_refused_in_a_debug_build() {
     })
     .await;
 }
+
+/// A task spawned to work for a request that holds a connection carries that
+/// hold: its ask for a connection of the same pool is refused in a debug
+/// build, since the request may wait for the task while every connection is
+/// held so (#5947).
+#[tokio::test]
+async fn a_task_working_for_a_request_cannot_ask_for_the_pool_the_request_holds() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let spawned = request_scope(async {
+        let _held = acquire(&pool).await.expect("a connection");
+        let pool = pool.clone();
+        tokio::spawn(ferroehr::db::acquire::inheriting(async move {
+            let _second = acquire(&pool).await;
+        }))
+        .await
+    })
+    .await;
+    let refused = spawned.expect_err("the spawned acquire is refused");
+    assert!(refused.is_panic(), "{refused:?}");
+}

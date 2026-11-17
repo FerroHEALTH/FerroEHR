@@ -126,6 +126,19 @@ pub(crate) struct FactRow {
     pub(crate) term: Term,
 }
 
+impl crate::memory::Weigh for FactRow {
+    fn heap(&self) -> usize {
+        let value = match &self.value {
+            FactValue::Code(code) => code
+                .terminology
+                .capacity()
+                .saturating_add(code.code.capacity()),
+            FactValue::Team(_) => 0,
+        };
+        value.saturating_add(self.term.lifecycle_state.capacity())
+    }
+}
+
 /// The facts read since a facts revision: the revision read, every party
 /// stamped since, the caller facts each holds, and the care teams the
 /// stamped subjects are under the care of now.

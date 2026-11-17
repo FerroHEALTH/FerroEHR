@@ -93,7 +93,8 @@ refuse the expansion. Do not read externalized records with a slim binary.
 
 ## Enabling it
 
-Offload is off by default. The keys live under `[record.multimedia]`; the full table with
+Offload is off by default. The keys live under `[record.multimedia]` and the S3 settings under
+`[record.multimedia.s3]`; the full tables with
 every default and its meaning is on
 [Integrations](../installation/config-integrations.md#recordmultimedia). The essentials:
 
@@ -101,11 +102,11 @@ every default and its meaning is on
 |---|---|---|
 | `FERROEHR__RECORD__MULTIMEDIA__ENABLED` | `false` | master switch |
 | `FERROEHR__RECORD__MULTIMEDIA__THRESHOLD` | `262144` (256 KiB) | offload blobs larger than this; smaller stay inline |
-| `FERROEHR__RECORD__MULTIMEDIA__URL` | unset | S3 endpoint URL; unset uses default AWS endpoint resolution |
-| `FERROEHR__RECORD__MULTIMEDIA__BUCKET` | `openehr-multimedia` | target bucket |
-| `FERROEHR__RECORD__MULTIMEDIA__REGION` | `us-east-1` | S3 region, required even for non-AWS endpoints |
-| `FERROEHR__RECORD__MULTIMEDIA__ACCESS_KEY_ID` | unset | access key id |
-| `FERROEHR__RECORD__MULTIMEDIA__SECRET_ACCESS_KEY` | unset | secret key (or `…__SECRET_ACCESS_KEY_FILE` for a mounted secret) |
+| `FERROEHR__RECORD__MULTIMEDIA__S3__URL` | unset | S3 endpoint URL; unset uses the AWS endpoint of the region |
+| `FERROEHR__RECORD__MULTIMEDIA__S3__BUCKET` | `openehr-multimedia` | target bucket |
+| `FERROEHR__RECORD__MULTIMEDIA__S3__REGION` | `us-east-1` | S3 region, required even for non-AWS endpoints |
+| `FERROEHR__RECORD__MULTIMEDIA__S3__ACCESS_KEY_ID` | unset | access key id |
+| `FERROEHR__RECORD__MULTIMEDIA__S3__SECRET_ACCESS_KEY` | unset | secret key (or `…__SECRET_ACCESS_KEY_FILE` for a mounted secret) |
 
 With both the access key and the secret unset, the client runs unsigned
 (anonymous), the mode a local development SeaweedFS gateway accepts with no
@@ -127,8 +128,8 @@ still act on it, rather than at the first multimedia commit.
 
 > [!WARNING]
 > Offloaded blobs are PHI. In production the bucket must be private, encrypted,
-> and reached over HTTPS (an `https://` `url`). Prefer
-> instance or workload identity over static keys where your platform supports it.
+> and reached over HTTPS (an `https://` `url`). The server takes its S3 keys from
+> the configuration only, never from instance metadata or the environment.
 > See [Operations](../operations.md) for the deployment-side security posture.
 
 > [!NOTE]
@@ -187,8 +188,8 @@ run yourself.
 
 ```bash
 export FERROEHR__RECORD__MULTIMEDIA__ENABLED=true
-export FERROEHR__RECORD__MULTIMEDIA__URL=http://127.0.0.1:8333
-export FERROEHR__RECORD__MULTIMEDIA__BUCKET=openehr-multimedia
+export FERROEHR__RECORD__MULTIMEDIA__S3__URL=http://127.0.0.1:8333
+export FERROEHR__RECORD__MULTIMEDIA__S3__BUCKET=openehr-multimedia
 ```
 
 The same exports drive the Compose stack, which passes the whole

@@ -47,6 +47,7 @@ pub mod care_projection;
 mod composition;
 pub mod composition_read;
 mod contributions;
+pub(in crate::service) mod created;
 mod directory;
 pub(in crate::service) mod meta;
 pub mod object;

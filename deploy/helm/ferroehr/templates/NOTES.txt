@@ -198,8 +198,8 @@ SECURITY POSTURE
      request 401s — add config.auth.issuer, an [[auth.basic.users]] entry
      under config.auth.basic.users, or supply material via config.files.
 {{ end -}}
-{{ if and (dig "record" "multimedia" "enabled" false .Values.config) (hasPrefix "http://" (toString (dig "record" "multimedia" "url" "" .Values.config))) }}
-  ⚠  config.record.multimedia.url is http:// — plain-HTTP object store. Dev only; prod S3 is HTTPS.
+{{ if and (dig "record" "multimedia" "enabled" false .Values.config) (hasPrefix "http://" (toString (dig "record" "multimedia" "s3" "url" "" .Values.config))) }}
+  ⚠  config.record.multimedia.s3.url is http:// — plain-HTTP object store. Dev only; prod S3 is HTTPS.
 {{ end }}
 Optional integrations currently ON:
   admin API:        {{ dig "api" "admin" false .Values.config }}

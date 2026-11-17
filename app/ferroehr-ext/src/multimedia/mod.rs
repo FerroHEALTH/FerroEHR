@@ -20,8 +20,8 @@
 //!
 //! This module owns only the engine and its transforms, built from
 //! [`BlobStoreParams`]; the platform attaches it through its `with_multimedia`
-//! seam and calls it on the commit and read paths. `store` is the
-//! content-addressed [`BlobStore`] over `object_store`, `offload` the pure
+//! seam and calls it on the commit and read paths. `blob` is the
+//! content-addressed [`BlobStore`] over one `OpenDAL` operator, `offload` the
 //! canonical-JSON transforms.
 
 #![expect(
@@ -30,51 +30,66 @@
               multimedia offload over stored fragments (families 3/6/8)"
 )]
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde_json::Value;
 
+pub mod blob;
 mod offload;
-pub mod store;
 
-use crate::multimedia::offload::DV_MULTIMEDIA;
-use crate::multimedia::store::{BlobStore, BlobStoreParams};
+use crate::multimedia::blob::{BlobError, BlobKey, BlobStore, BlobStoreParams};
+use crate::multimedia::offload::{Base64Text, DV_MULTIMEDIA, Fetched};
 
 /// A failure in the multimedia externalization path.
 #[derive(Debug, thiserror::Error)]
 pub enum MultimediaError {
-    /// The object store rejected an operation; its own error names the
-    /// operation and the key.
+    /// The blob store failed an operation; the error names the operation and
+    /// the key, with the backend's error as its source.
     #[error(transparent)]
-    Store(#[from] object_store::Error),
-    /// A stored blob's bytes do not hash to their content-addressed key — the
-    /// integrity check failed.
-    #[error("multimedia integrity check failed: expected sha-256 {expected}, got {actual}")]
+    Store(#[from] BlobError),
+    /// A blob's bytes do not hash to the key that names them: the integrity
+    /// check failed, and nothing was stored or inlined.
+    #[error("multimedia integrity check failed: blob {expected} holds bytes that hash to {actual}")]
     Integrity {
-        /// The expected SHA-256 (the blob key).
-        expected: String,
-        /// The SHA-256 actually computed over the fetched bytes.
-        actual: String,
+        /// The key, the SHA-256 the bytes should have.
+        expected: BlobKey,
+        /// The SHA-256 of the bytes actually seen.
+        actual: BlobKey,
+    },
+    /// A blob is not the length its record declares (`DV_MULTIMEDIA.size`,
+    /// RM `Size_valid`), and nothing was stored or inlined.
+    #[error("multimedia blob {key} is {actual} bytes, but its record declares {declared}")]
+    Size {
+        /// The blob.
+        key: BlobKey,
+        /// The length the record or the caller declared.
+        declared: u64,
+        /// The length of the bytes actually seen.
+        actual: u64,
     },
     /// A `DV_MULTIMEDIA` value was structurally malformed (e.g. `data` not
     /// base64, or size out of range).
     #[error("malformed multimedia value: {0}")]
     Malformed(String),
-    /// The object-store client could not be constructed from configuration.
+    /// The blob store could not be built from its configuration.
     #[error("multimedia store configuration: {0}")]
     Config(String),
-    /// The object-store client would not build, with the store's error as the
-    /// source (RFC 0201).
-    ///
-    /// A store that will not build is a credential problem, an endpoint problem
-    /// or a TLS problem, and a caller that cannot tell them apart has to read
-    /// prose.
+    /// The blob store's HTTP client or backend would not build, with the cause
+    /// as the source (RFC 0201).
     #[error("the multimedia store client could not be built from its configuration")]
-    ConfigFailed(#[source] object_store::Error),
+    ConfigFailed(#[source] Box<dyn std::error::Error + Send + Sync>),
     /// The platform's validation refused the configured endpoint; the cause is
     /// the platform's own error type, and its message masks any `userinfo`.
     #[error("the multimedia store endpoint is not valid")]
     Endpoint(#[source] Box<dyn std::error::Error + Send + Sync>),
+    /// A commit reached its transaction with an inline value that should have
+    /// been externalized before it: a write path skipped
+    /// [`MultimediaEngine::offload`].
+    #[error(
+        "a DV_MULTIMEDIA value above the offload threshold reached the commit transaction \
+         inline; externalization must run before the transaction opens"
+    )]
+    NotExternalized,
 }
 
 /// Whether the tree references ANY externalized blob (`s3://…`), regardless of
@@ -120,18 +135,13 @@ pub struct MultimediaEngine {
 }
 
 impl MultimediaEngine {
-    /// Build the engine from runtime connection parameters + the offload
-    /// threshold.
+    /// Build the engine from the store's parameters and the offload threshold.
     ///
     /// # Errors
-    /// Returns [`MultimediaError::Config`] if the object-store client cannot
-    /// be built.
+    /// [`MultimediaError::Config`] or [`MultimediaError::ConfigFailed`] when
+    /// the blob store cannot be built.
     pub fn from_params(params: BlobStoreParams, threshold: usize) -> Result<Self, MultimediaError> {
-        Ok(Self {
-            store: BlobStore::from_params(params)?,
-            threshold,
-            offload_enabled: true,
-        })
+        Ok(Self::from_parts(BlobStore::from_params(params)?, threshold))
     }
 
     /// Sets whether NEW content may be externalized. `false` leaves the expand
@@ -149,9 +159,9 @@ impl MultimediaEngine {
         self.offload_enabled
     }
 
-    /// Construct directly from a store + threshold (test seam).
+    /// The engine over an already-built store, with offload on.
     #[must_use]
-    pub fn from_parts(store: BlobStore, threshold: usize) -> Self {
+    pub const fn from_parts(store: BlobStore, threshold: usize) -> Self {
         Self {
             store,
             threshold,
@@ -161,13 +171,17 @@ impl MultimediaEngine {
 
     /// The underlying content-addressed blob store.
     #[must_use]
-    pub fn store(&self) -> &BlobStore {
+    pub const fn store(&self) -> &BlobStore {
         &self.store
     }
 
     /// Externalize every qualifying inline `DV_MULTIMEDIA` in `canonical`,
     /// uploading the blobs. Rewrites `canonical` in place; a below-threshold or
     /// already-external value is left untouched.
+    ///
+    /// Runs before the commit's transaction opens, so no database connection
+    /// waits on an upload; a commit that fails after it leaves an unreferenced
+    /// blob, which costs storage and never correctness.
     ///
     /// # Errors
     /// [`MultimediaError::Malformed`] when an inline `data` is not base64 or
@@ -179,41 +193,67 @@ impl MultimediaEngine {
             return Ok(());
         }
         let pending = offload::plan_offload(canonical, self.threshold, &self.store)?;
-        for (hex, bytes) in pending {
-            self.store.put_if_absent(&hex, bytes).await?;
+        for blob in pending {
+            self.store
+                .write_if_absent(&blob.key, blob.size, offload::decoded_chunks(&blob.data))
+                .await?;
+        }
+        Ok(())
+    }
+
+    /// Refuses a body that still holds a value [`Self::offload`] would have
+    /// externalized: the commit transaction's check that externalization ran
+    /// before it.
+    ///
+    /// # Errors
+    /// [`MultimediaError::NotExternalized`] for such a body, and
+    /// [`MultimediaError::Malformed`] when an inline `data` is not base64.
+    pub fn ensure_externalized(&self, canonical: &Value) -> Result<(), MultimediaError> {
+        if self.offload_enabled && offload::needs_offload(canonical, self.threshold)? {
+            return Err(MultimediaError::NotExternalized);
         }
         Ok(())
     }
 
     /// Re-inline every externalized `DV_MULTIMEDIA` (of *our* blobs) in
-    /// `canonical`, verifying each blob's SHA-256 before use. A value already
+    /// `canonical`, each blob streamed from the store and proven against its
+    /// key and its declared size before anything is inlined. A value already
     /// inline, or referencing a foreign URI, is left as-is.
     ///
     /// # Errors
-    /// [`MultimediaError::Integrity`] on a hash mismatch, or
-    /// [`MultimediaError::Store`] when a referenced blob is missing or the
-    /// backend fails.
+    /// [`MultimediaError::Integrity`] or [`MultimediaError::Size`] when a blob
+    /// is not what its record says, or [`MultimediaError::Store`] when a
+    /// referenced blob is missing or the backend fails.
     pub async fn expand(&self, canonical: &mut Value) -> Result<(), MultimediaError> {
-        let mut keys = offload::collect_expand_keys(canonical, &self.store);
-        keys.sort_unstable();
-        keys.dedup();
+        let keys = offload::collect_expand_keys(canonical, &self.store);
         if keys.is_empty() {
             return Ok(());
         }
-        let mut fetched: HashMap<String, String> = HashMap::with_capacity(keys.len());
+        let mut fetched = BTreeMap::new();
         for key in keys {
-            let bytes = self.store.get(&key).await?;
-            let b64_data = offload::verify_and_encode(&key, &bytes)?;
-            fetched.insert(key, b64_data);
+            let mut text = Base64Text::default();
+            let size = self
+                .store
+                .read_verified(&key, |chunk| {
+                    text.push(chunk);
+                    Ok::<(), MultimediaError>(())
+                })
+                .await?;
+            fetched.insert(
+                key,
+                Fetched {
+                    data: text.finish(),
+                    size,
+                },
+            );
         }
-        offload::apply_expand(canonical, &fetched, &self.store);
-        Ok(())
+        offload::apply_expand(canonical, &fetched, &self.store)
     }
 
-    /// The blob keys of *our* externalized media referenced anywhere in
-    /// `canonical` (for GC and dump/load).
+    /// The keys of *our* externalized media referenced anywhere in
+    /// `canonical`, sorted and each once (for GC and dump/load).
     #[must_use]
-    pub fn referenced_keys(&self, canonical: &Value) -> Vec<String> {
+    pub fn referenced_keys(&self, canonical: &Value) -> Vec<BlobKey> {
         offload::referenced_keys(canonical, &self.store)
     }
 }

@@ -29,13 +29,17 @@ use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt};
 use uuid::Uuid;
 
-use ferroehr::extensions::multimedia::config::MultimediaConfig;
+use bytes::Bytes;
+use ferroehr::extensions::multimedia::config::{MultimediaConfig, S3Config};
 use ferroehr::ids::VoId;
 use ferroehr::service::FerroEhrService;
 use ferroehr::service::admin::types::ExportSpec;
 use ferroehr::service::demographic::types::PartyKind;
 use ferroehr_ext::multimedia::MultimediaEngine;
-use ferroehr_ext::multimedia::store::BlobStore;
+use ferroehr_ext::multimedia::MultimediaError;
+use ferroehr_ext::multimedia::blob::{
+    BackendSettings, BlobKey, BlobStore, BlobStoreParams, Limits, S3Settings,
+};
 
 const BUCKET: &str = "openehr-multimedia";
 /// S3-gateway port `SeaweedFS` listens on.
@@ -87,14 +91,17 @@ impl Seaweed {
         MultimediaConfig {
             enabled: true,
             threshold: ferrohealth_config::units::ByteSize::from_bytes(256),
-            url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
-                self.endpoint.clone(),
-            )),
-            bucket: BUCKET.to_owned(),
-            region: "us-east-1".to_owned(),
-            access_key_id: None,
-            secret_access_key: None,
-            secret_access_key_file: None,
+            s3: S3Config {
+                url: Some(ferrohealth_secret::secret_url::SecretUrl::new(
+                    self.endpoint.clone(),
+                )),
+                bucket: BUCKET.to_owned(),
+                region: "us-east-1".to_owned(),
+                access_key_id: None,
+                secret_access_key: None,
+                secret_access_key_file: None,
+            },
+            ..MultimediaConfig::default()
         }
     }
 
@@ -225,12 +232,16 @@ async fn make_person_with_media(svc: &FerroEhrService, name: &str, media: &Value
 }
 
 /// The blob key referenced by a stored PERSON's identity ELEMENT.
-fn party_blob_key(person: &Value) -> String {
+fn party_blob_key(person: &Value) -> BlobKey {
     let uri = person
         .pointer("/identities/0/details/items/0/value/uri/value")
         .and_then(Value::as_str)
         .expect("the externalized media carries a uri");
-    uri.rsplit('/').next().expect("hex").to_owned()
+    uri.rsplit('/')
+        .next()
+        .expect("hex")
+        .parse()
+        .expect("a blob key")
 }
 
 /// A valid `EHR_STATUS` carrying `media` inside `other_details` (an ELEMENT value).
@@ -281,13 +292,30 @@ fn media_node(status: &Value) -> &Value {
         .expect("multimedia node in other_details")
 }
 
-/// The blob key (hex) referenced by an externalized `DV_MULTIMEDIA` node.
-fn blob_key(status: &Value) -> String {
+/// The blob key referenced by an externalized `DV_MULTIMEDIA` node.
+fn blob_key(status: &Value) -> BlobKey {
     let uri = media_node(status)
         .pointer("/uri/value")
         .and_then(Value::as_str)
         .expect("uri.value");
-    uri.rsplit('/').next().expect("hex").to_owned()
+    uri.rsplit('/')
+        .next()
+        .expect("hex")
+        .parse()
+        .expect("a blob key")
+}
+
+/// The bytes the store holds under `key`, read through the verified stream.
+async fn stored_bytes(store: &BlobStore, key: &BlobKey) -> Vec<u8> {
+    let mut out = Vec::new();
+    store
+        .read_verified(key, |chunk| {
+            out.extend_from_slice(chunk);
+            Ok::<(), MultimediaError>(())
+        })
+        .await
+        .expect("stored bytes");
+    out
 }
 
 // ── tests ────────────────────────────────────────────────────────────────
@@ -295,26 +323,90 @@ fn blob_key(status: &Value) -> String {
 #[tokio::test]
 async fn blob_store_round_trips_against_seaweedfs() {
     let sw = Seaweed::start().await;
-    let store = BlobStore::from_params(ferroehr_ext::multimedia::store::BlobStoreParams {
-        endpoint: sw.config().endpoint_url().expect("endpoint"),
-        bucket: sw.config().bucket,
-        region: sw.config().region,
-        access_key_id: None,
-        secret_access_key: None,
-        allow_http: true,
-    })
-    .expect("store");
+    let store = s3_store(&sw, Limits::default());
+    let k1 = BlobKey::of(b"hello");
 
-    assert!(!store.exists("k1").await.unwrap());
-    store.put_if_absent("k1", b"hello".to_vec()).await.unwrap();
-    assert!(store.exists("k1").await.unwrap());
-    assert_eq!(&*store.get("k1").await.unwrap(), b"hello");
-    // put_if_absent on an existing key is a no-op (content-addressed dedup).
-    store.put_if_absent("k1", b"hello".to_vec()).await.unwrap();
-    store.delete("k1").await.unwrap();
-    assert!(!store.exists("k1").await.unwrap());
+    assert!(!store.exists(&k1).await.unwrap());
+    store
+        .write_if_absent(&k1, 5, [Ok(Bytes::from_static(b"hello"))])
+        .await
+        .unwrap();
+    assert!(store.exists(&k1).await.unwrap());
+    assert_eq!(stored_bytes(&store, &k1).await, b"hello");
+    // write_if_absent on an existing key is a no-op (content-addressed dedup).
+    store
+        .write_if_absent(&k1, 5, [Ok(Bytes::from_static(b"hello"))])
+        .await
+        .unwrap();
+    store.delete(&k1).await.unwrap();
+    assert!(!store.exists(&k1).await.unwrap());
     // delete of an absent key is idempotent.
-    store.delete("k1").await.unwrap();
+    store.delete(&k1).await.unwrap();
+}
+
+/// A blob over the part size goes up as a multipart upload with its parts sent
+/// concurrently, and comes back through ranged reads byte for byte; one whose
+/// bytes do not hash to its key leaves nothing behind.
+#[tokio::test]
+async fn a_blob_over_the_part_size_round_trips_as_a_multipart_upload() {
+    let sw = Seaweed::start().await;
+    let part = 5 * 1024 * 1024;
+    let store = s3_store(
+        &sw,
+        Limits {
+            part_size: part,
+            part_concurrency: 3,
+            ..Limits::default()
+        },
+    );
+    let blob: Vec<u8> = (0..(2 * part + 12_345))
+        .map(|i| u8::try_from(i % 251).unwrap())
+        .collect();
+    let key = BlobKey::of(&blob);
+    let size = u64::try_from(blob.len()).unwrap();
+    let chunks = blob
+        .chunks(64 * 1024)
+        .map(|c| Ok(Bytes::copy_from_slice(c)));
+    store
+        .write_if_absent(&key, size, chunks)
+        .await
+        .expect("multipart write");
+    assert_eq!(stored_bytes(&store, &key).await, blob);
+
+    let wrong = BlobKey::of(b"not these bytes");
+    let refused = store
+        .write_if_absent(
+            &wrong,
+            size,
+            blob.chunks(64 * 1024)
+                .map(|c| Ok(Bytes::copy_from_slice(c))),
+        )
+        .await
+        .expect_err("bytes that do not hash to the key are refused");
+    assert!(
+        matches!(refused, MultimediaError::Integrity { .. }),
+        "{refused:?}"
+    );
+    assert!(
+        !store.exists(&wrong).await.unwrap(),
+        "the aborted upload left no object"
+    );
+}
+
+/// The S3 store the platform would build for `sw`, with `limits`.
+fn s3_store(sw: &Seaweed, limits: Limits) -> BlobStore {
+    BlobStore::from_params(BlobStoreParams {
+        backend: BackendSettings::S3(S3Settings {
+            endpoint: sw.config().s3.endpoint_url().expect("endpoint"),
+            bucket: BUCKET.to_owned(),
+            region: "us-east-1".to_owned(),
+            access_key_id: None,
+            secret_access_key: None,
+            allow_http: true,
+        }),
+        limits,
+    })
+    .expect("store")
 }
 
 #[tokio::test]
@@ -418,8 +510,6 @@ async fn small_multimedia_stays_inline() {
 
 #[tokio::test]
 async fn corrupted_blob_fails_integrity_on_expand() {
-    use object_store::{ObjectStoreExt, aws::AmazonS3Builder, path::Path};
-
     let db = testkit::db().await.expect("testkit database");
     let sw = Seaweed::start().await;
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
@@ -438,17 +528,14 @@ async fn corrupted_blob_fails_integrity_on_expand() {
     let key = blob_key(&stored);
 
     // Tamper with the stored bytes directly (overwrite the object at its key).
-    let raw = AmazonS3Builder::new()
-        .with_bucket_name(BUCKET)
-        .with_region("us-east-1")
-        .with_endpoint(&sw.endpoint)
-        .with_allow_http(true)
-        .with_skip_signature(true)
-        .build()
-        .expect("raw s3");
-    raw.put(&Path::from(key), b"tampered bytes".to_vec().into())
+    // SeaweedFS with no credentials accepts an anonymous S3 `PutObject`.
+    let overwrite = reqwest::Client::new()
+        .put(format!("{}/{BUCKET}/{key}", sw.endpoint))
+        .body("tampered bytes")
+        .send()
         .await
         .expect("overwrite");
+    assert!(overwrite.status().is_success(), "{}", overwrite.status());
 
     // Expansion recomputes the SHA-256, detects the mismatch, and errors (500),
     // never serving corrupted data.
@@ -614,7 +701,9 @@ async fn dump_load_carries_blobs() {
     assert!(reports.is_empty(), "clean export, got {reports:?}");
 
     // The archive carries the blob in a blobs/<hex> file.
-    let blob_path = std::path::Path::new(&dir).join("blobs").join(&key);
+    let blob_path = std::path::Path::new(&dir)
+        .join("blobs")
+        .join(key.to_string());
     assert!(blob_path.exists(), "export writes blobs/<hex>");
 
     // Load into the fresh target: the EHR + its blob re-populate.

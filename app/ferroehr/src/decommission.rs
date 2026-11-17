@@ -103,7 +103,7 @@ pub enum DecommissionError {
 pub struct Decommission {
     db: DbConfig,
     #[cfg(feature = "multimedia")]
-    blobs: Option<ferroehr_ext::multimedia::store::BlobStore>,
+    blobs: Option<ferroehr_ext::multimedia::blob::BlobStore>,
 }
 
 impl Decommission {
@@ -120,7 +120,7 @@ impl Decommission {
     /// Adds the blob store whose blobs an erasure deletes.
     #[cfg(feature = "multimedia")]
     #[must_use]
-    pub fn with_blob_store(mut self, store: ferroehr_ext::multimedia::store::BlobStore) -> Self {
+    pub fn with_blob_store(mut self, store: ferroehr_ext::multimedia::blob::BlobStore) -> Self {
         self.blobs = Some(store);
         self
     }
@@ -145,7 +145,7 @@ impl Decommission {
         }
         #[cfg(not(feature = "multimedia"))]
         {
-            if config.record.multimedia.enabled || config.record.multimedia.url.is_some() {
+            if config.record.multimedia.names_a_store() {
                 return Err(DecommissionError::BlobStoreUnsupported);
             }
             Ok(decommission)
@@ -201,7 +201,11 @@ impl Decommission {
         };
         Ok(Some(BlobInventory {
             bucket: store.bucket().to_owned(),
-            objects: store.content_keys().await?.len(),
+            objects: store
+                .content_keys()
+                .await
+                .map_err(ferroehr_ext::multimedia::MultimediaError::from)?
+                .len(),
         }))
     }
 
@@ -221,7 +225,11 @@ impl Decommission {
     #[cfg(feature = "multimedia")]
     async fn delete_blobs(&self) -> Result<Option<usize>, DecommissionError> {
         match &self.blobs {
-            Some(store) => Ok(Some(store.delete_all_content().await?)),
+            Some(store) => {
+                Ok(Some(store.delete_all_content().await.map_err(
+                    ferroehr_ext::multimedia::MultimediaError::from,
+                )?))
+            }
             None => Ok(None),
         }
     }

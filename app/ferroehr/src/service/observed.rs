@@ -8,6 +8,7 @@
 
 use std::sync::Arc;
 
+use crate::memory::Held;
 use crate::policy_register::listen::Listened;
 use crate::service::FerroEhrService;
 
@@ -32,17 +33,63 @@ impl FerroEhrService {
         ]
     }
 
-    /// How many EHRs' settings this replica's access copy holds, and how many
-    /// settings classes; both approximate while entries are being dropped.
+    /// What each of this replica's access copies holds, by the `copy`
+    /// label of the metrics: its entries and their bytes, both approximate
+    /// while entries are being dropped (#5926).
     #[must_use]
-    pub fn ehr_access_held(&self) -> (u64, u64) {
-        self.ehr_access.held_counts()
+    pub fn copies_held(&self) -> Vec<(&'static str, Held)> {
+        let (ehrs, classes) = self.ehr_access.held();
+        let grants = self.grants();
+        let care = grants.care_held();
+        let (lookups, names) = self.bindings().held();
+        let (versions, version_bytes) = self.version_copy.held();
+        vec![
+            ("ehr", ehrs),
+            ("classes", classes),
+            ("care_subjects", care.subjects),
+            ("care_persons", care.persons),
+            ("care_teams", care.teams),
+            ("care_patients", care.patients),
+            ("care_declared", care.declared),
+            ("caller_facts", grants.facts_held()),
+            ("grants", grants.grants_held()),
+            ("binding", lookups),
+            ("party_name", names),
+            (
+                "object_version",
+                Held {
+                    entries: versions,
+                    bytes: version_bytes,
+                },
+            ),
+        ]
     }
 
-    /// How many COMPOSITION versions this replica's version copy holds, and
-    /// their bytes against its bound (#5778).
+    /// What each of this replica's caches holds, by the `cache` label of the
+    /// metrics: its entries and their bytes, both approximate while entries
+    /// are being evicted (#5926). The audit sender's memo is absent while
+    /// auditing is off.
     #[must_use]
-    pub fn version_copy_held(&self) -> (u64, u64) {
-        self.version_copy.held()
+    pub fn caches_held(&self) -> Vec<(&'static str, Held)> {
+        let (templates, template_bytes) = self.web_templates.held();
+        let mut held = vec![
+            ("created_ehr", crate::memory::held(&self.created_ehr_repr)),
+            (
+                "web_template",
+                Held {
+                    entries: templates,
+                    bytes: template_bytes,
+                },
+            ),
+            ("aql_plan", self.plan_cache.held()),
+            (
+                "archetype_lineage",
+                crate::memory::held(&self.archetype_lineage),
+            ),
+        ];
+        if let Some(audit) = &self.audit {
+            held.push(("audit_subjects", audit.subjects_held()));
+        }
+        held
     }
 }

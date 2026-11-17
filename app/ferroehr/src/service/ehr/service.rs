@@ -73,6 +73,9 @@ impl FerroEhrService {
         let status = &request.data;
         self.validate_for_commit(Kind::EhrStatus, status, false)
             .await?;
+        // The status's large media go to the blob store before a connection is held.
+        let mut stored_status = status.clone();
+        self.externalize(&mut stored_status).await?;
 
         // The creation commit's AUDIT_DETAILS, built BEFORE the transaction so
         // an illegal client `change_type` refuses without a storage round trip.
@@ -144,7 +147,7 @@ impl FerroEhrService {
                     Change::Create {
                         allocated: None,
                         kind: Kind::EhrStatus,
-                        canonical: status.clone(),
+                        canonical: stored_status,
                         template_id: None,
                         signature: None,
                         // A client-supplied `openehr-version:
