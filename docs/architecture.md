@@ -486,7 +486,10 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
   the ITI-81 search reads (#5784). An ITI-81 page reads each chain's first
   `offset + count` records through its time index, the access log's
   candidates from `access_log_search` with the records tied on the last
-  instant, and takes the page from their union. The exact total counts the
+  instant, and takes the page from their union by the records' keys alone;
+  only the records the page serves are then read whole, so an access-log
+  entry's document is rendered once per served entry (#5965). The exact
+  total counts the
   access log from the time index alone, which carries `render_policy_id`
   (`system_log::store::search_page`, #5646). A row part keeps no member a
   column holds: `_type` goes always, and `uid`, `ehr_id` and `time_recorded`

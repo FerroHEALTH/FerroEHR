@@ -36,15 +36,22 @@
 
 -- ── the reader of an entry ──────────────────────────────────────────────────
 
+-- The three functions below carry no SET clause and name every function,
+-- operator, type and collation they use by its pg_catalog name, so they
+-- resolve the same names whatever the caller's search_path. PostgreSQL runs
+-- a function with a SET clause through a configuration save and restore on
+-- every call and never inlines it (PostgreSQL 18 docs, "CREATE FUNCTION",
+-- the SET clause), and the move and the reads call them once per entry
+-- (#5963, #5965).
+
 -- The UUID p_text is in its lower-case hyphenated form; NULL for any other
--- text, which a uuid column could not give back as it was written. It has no
--- SET clause, so the planner can inline it and the move runs no nested
--- statement per entry.
+-- text, which a uuid column could not give back as it was written.
 CREATE FUNCTION audit.access_log_canonical_uuid(p_text text) RETURNS uuid
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     AS $$
-    SELECT CASE WHEN p_text ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-                THEN p_text::uuid END
+    SELECT CASE WHEN p_text OPERATOR(pg_catalog.~)
+                     '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                THEN p_text::pg_catalog.uuid END
 $$;
 
 COMMENT ON FUNCTION audit.access_log_canonical_uuid(text) IS
@@ -52,16 +59,16 @@ COMMENT ON FUNCTION audit.access_log_canonical_uuid(text) IS
 
 -- The instant p_at as the writer leaves it out of a row part: UTC, a
 -- four-digit year, the seconds and the microseconds without trailing zeros.
+-- One expression that names p_at once, so the planner inlines it.
 CREATE FUNCTION audit.access_log_instant_text(p_at timestamptz) RETURNS text
     LANGUAGE sql STABLE PARALLEL SAFE
-    SET search_path = pg_catalog
     AS $$
-    SELECT to_char(u.at, 'YYYY-MM-DD"T"HH24:MI:SS')
-           || CASE WHEN u.micros = 0 THEN ''
-                   ELSE '.' || rtrim(lpad(u.micros::text, 6, '0'), '0') END
-           || 'Z'
-      FROM (SELECT p_at AT TIME ZONE 'UTC' AS at,
-                   (extract(microseconds FROM p_at AT TIME ZONE 'UTC')::bigint % 1000000) AS micros) AS u
+    SELECT pg_catalog.rtrim(
+               pg_catalog.rtrim(
+                   pg_catalog.to_char(pg_catalog.timezone('UTC', p_at),
+                                      'YYYY-MM-DD"T"HH24:MI:SS.US'),
+                   '0'),
+               '.') OPERATOR(pg_catalog.||) 'Z'
 $$;
 
 COMMENT ON FUNCTION audit.access_log_instant_text(timestamptz) IS
@@ -71,54 +78,79 @@ CREATE FUNCTION audit.access_log_document(
     p_content text, p_shared text, p_type text, p_uid uuid, p_time timestamptz, p_ehr_id uuid)
     RETURNS jsonb
     LANGUAGE sql STABLE PARALLEL SAFE
-    SET search_path = pg_catalog
     AS $$
-    SELECT CASE WHEN own ? '_type' THEN '{}'::jsonb
-                ELSE jsonb_build_object(
+    SELECT CASE WHEN own OPERATOR(pg_catalog.?) '_type' THEN '{}'::pg_catalog.jsonb
+                ELSE pg_catalog.jsonb_build_object(
                          '_type', p_type,
-                         'uid', jsonb_build_object('_type', 'HIER_OBJECT_ID', 'value', p_uid::text),
-                         'time_recorded', jsonb_build_object(
+                         'uid', pg_catalog.jsonb_build_object(
+                             '_type', 'HIER_OBJECT_ID', 'value', p_uid::pg_catalog.text),
+                         'time_recorded', pg_catalog.jsonb_build_object(
                              '_type', 'DV_DATE_TIME',
                              'value', audit.access_log_instant_text(p_time)))
-                     || CASE WHEN p_ehr_id IS NULL THEN '{}'::jsonb
-                             ELSE jsonb_build_object('ehr_id', jsonb_build_object(
-                                      '_type', 'HIER_OBJECT_ID', 'value', p_ehr_id::text))
-                        END
+                     OPERATOR(pg_catalog.||)
+                     CASE WHEN p_ehr_id IS NULL THEN '{}'::pg_catalog.jsonb
+                          ELSE pg_catalog.jsonb_build_object('ehr_id', pg_catalog.jsonb_build_object(
+                                   '_type', 'HIER_OBJECT_ID', 'value', p_ehr_id::pg_catalog.text))
+                     END
            END
-           || CASE
+           OPERATOR(pg_catalog.||) CASE
                 WHEN common IS NULL THEN own
-                ELSE (common - 'other_details' - 'outcome' - 'query')
-                     || (own - 'other_details' - 'outcome' - 'query')
-                     || CASE WHEN common ? 'other_details' OR own ? 'other_details' THEN
-                            jsonb_build_object('other_details',
-                                coalesce(common -> 'other_details', '{}'::jsonb)
-                                || coalesce(own -> 'other_details', '{}'::jsonb)
-                                || jsonb_build_object('items', (
-                                       SELECT coalesce(jsonb_agg(i.item ORDER BY
-                                                  i.item ->> 'archetype_node_id' COLLATE "C" NULLS FIRST,
-                                                  i.side, i.n), '[]'::jsonb)
-                                         FROM (SELECT c.item, 0 AS side, c.n
-                                                 FROM jsonb_array_elements(coalesce(
-                                                          common #> '{other_details,items}', '[]'::jsonb))
-                                                      WITH ORDINALITY AS c(item, n)
-                                               UNION ALL
-                                               SELECT o.item, 1, o.n
-                                                 FROM jsonb_array_elements(coalesce(
-                                                          own #> '{other_details,items}', '[]'::jsonb))
-                                                      WITH ORDINALITY AS o(item, n)) AS i)))
-                        ELSE '{}'::jsonb END
-                     || CASE WHEN common ? 'outcome' OR own ? 'outcome' THEN
-                            jsonb_build_object('outcome',
-                                coalesce(common -> 'outcome', '{}'::jsonb)
-                                || coalesce(own -> 'outcome', '{}'::jsonb))
-                        ELSE '{}'::jsonb END
-                     || CASE WHEN common ? 'query' OR own ? 'query' THEN
-                            jsonb_build_object('query',
-                                coalesce(common -> 'query', '{}'::jsonb)
-                                || coalesce(own -> 'query', '{}'::jsonb))
-                        ELSE '{}'::jsonb END
+                ELSE (common OPERATOR(pg_catalog.-) 'other_details'
+                             OPERATOR(pg_catalog.-) 'outcome' OPERATOR(pg_catalog.-) 'query')
+                     OPERATOR(pg_catalog.||)
+                     (own OPERATOR(pg_catalog.-) 'other_details'
+                          OPERATOR(pg_catalog.-) 'outcome' OPERATOR(pg_catalog.-) 'query')
+                     OPERATOR(pg_catalog.||)
+                     CASE WHEN common OPERATOR(pg_catalog.?) 'other_details'
+                               OR own OPERATOR(pg_catalog.?) 'other_details' THEN
+                            pg_catalog.jsonb_build_object('other_details',
+                                coalesce(common OPERATOR(pg_catalog.->) 'other_details',
+                                         '{}'::pg_catalog.jsonb)
+                                OPERATOR(pg_catalog.||)
+                                coalesce(own OPERATOR(pg_catalog.->) 'other_details',
+                                         '{}'::pg_catalog.jsonb)
+                                OPERATOR(pg_catalog.||)
+                                pg_catalog.jsonb_build_object('items', (
+                                    SELECT coalesce(pg_catalog.jsonb_agg(i.item ORDER BY
+                                               i.item OPERATOR(pg_catalog.->>) 'archetype_node_id'
+                                                   COLLATE pg_catalog."C" NULLS FIRST,
+                                               i.side, i.n), '[]'::pg_catalog.jsonb)
+                                      FROM (SELECT c.item, 0 AS side, c.n
+                                              FROM pg_catalog.jsonb_array_elements(coalesce(
+                                                       common OPERATOR(pg_catalog.#>)
+                                                           '{other_details,items}'::pg_catalog.text[],
+                                                       '[]'::pg_catalog.jsonb))
+                                                   WITH ORDINALITY AS c(item, n)
+                                            UNION ALL
+                                            SELECT o.item, 1, o.n
+                                              FROM pg_catalog.jsonb_array_elements(coalesce(
+                                                       own OPERATOR(pg_catalog.#>)
+                                                           '{other_details,items}'::pg_catalog.text[],
+                                                       '[]'::pg_catalog.jsonb))
+                                                   WITH ORDINALITY AS o(item, n)) AS i)))
+                        ELSE '{}'::pg_catalog.jsonb END
+                     OPERATOR(pg_catalog.||)
+                     CASE WHEN common OPERATOR(pg_catalog.?) 'outcome'
+                               OR own OPERATOR(pg_catalog.?) 'outcome' THEN
+                            pg_catalog.jsonb_build_object('outcome',
+                                coalesce(common OPERATOR(pg_catalog.->) 'outcome',
+                                         '{}'::pg_catalog.jsonb)
+                                OPERATOR(pg_catalog.||)
+                                coalesce(own OPERATOR(pg_catalog.->) 'outcome',
+                                         '{}'::pg_catalog.jsonb))
+                        ELSE '{}'::pg_catalog.jsonb END
+                     OPERATOR(pg_catalog.||)
+                     CASE WHEN common OPERATOR(pg_catalog.?) 'query'
+                               OR own OPERATOR(pg_catalog.?) 'query' THEN
+                            pg_catalog.jsonb_build_object('query',
+                                coalesce(common OPERATOR(pg_catalog.->) 'query',
+                                         '{}'::pg_catalog.jsonb)
+                                OPERATOR(pg_catalog.||)
+                                coalesce(own OPERATOR(pg_catalog.->) 'query',
+                                         '{}'::pg_catalog.jsonb))
+                        ELSE '{}'::pg_catalog.jsonb END
               END
-      FROM (SELECT p_content::jsonb AS own, p_shared::jsonb AS common) AS parts
+      FROM (SELECT p_content::pg_catalog.jsonb AS own, p_shared::pg_catalog.jsonb AS common) AS parts
 $$;
 
 COMMENT ON FUNCTION audit.access_log_document(text, text, text, uuid, timestamptz, uuid) IS
