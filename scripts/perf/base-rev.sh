@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-# The base the performance gate's A/B run measures against (#5741): the
-# newest commit on the first-parent line from <start> (the base branch's head)
-# whose database suite passed in CI, not blindly the base branch's head.
+# The base the performance gate's A/B run measures against (#5741, #5956):
+# the base branch's head, the first parent of the commit under test, unless
+# CI proved that commit's database suite broken.
 #
-# A base that cannot boot fails the gate whatever the change does, and a
-# change that repairs a broken main could never merge past it (#5740). A
-# commit counts as green when a CI run of it passed the required `conclusion`
-# check AND ran every `build & test (pg18)` shard to success: the run on push,
-# or a merge-queue run of the same tree. The second half matters because a
-# push the queue verified skips its test shards (#4546), so its `conclusion`
-# alone says nothing about the tree.
+# The head arm is the pull request's merge commit, so it carries every commit
+# of the base branch. Any commit the walk passes over is in the head and not
+# in the base, and the gate bills its cost to the change (#5956). So the walk
+# passes over a commit only for the one reason it exists for: a base whose
+# database suite fails cannot boot, and would block the change that repairs
+# it (#5740). A commit is broken when a CI run of it on push, or a merge-queue
+# run of its tree, ran a `build & test (pg18)` shard that failed, and no run
+# of it passed every shard. A commit whose CI is still running, whose run did
+# not reach the shards, or whose run failed only in another job (cargo-deny,
+# a lint) is the base: none of that says the server cannot boot.
 #
 # A merge-queue run is matched by its head commit's tree
 # (`scripts/lib/queue-runs.sh`). No openEHR spec governs this: our own design.
@@ -19,8 +22,9 @@
 # Usage:
 #   scripts/perf/base-rev.sh <start-rev> [max-commits]
 #       prints `rev=<sha>` and `reason=<text>` for $GITHUB_OUTPUT, and fails
-#       naming the commits it read when none of the first max-commits (default
-#       30) is green. Needs `gh` with actions: read and REPO=<owner/name>.
+#       naming the commits it read when each of the first max-commits
+#       (default 30) is broken. Needs `gh` with actions: read and
+#       REPO=<owner/name>.
 #   scripts/perf/base-rev.sh --self-test
 #       runs the walk over a stub history and stub CI runs.
 set -euo pipefail
@@ -43,26 +47,31 @@ runs() {
   awk -v tree="$tree" '$1 == tree { print $2 }' "$QUEUE_INDEX"
 }
 
-# verdict SHA: `green` when a CI run of SHA, or a merge-queue run of its tree,
-# passed `conclusion` with every pg18 shard run and succeeding, else a word
-# saying why not.
+# verdict SHA: `broken` when a CI run of SHA, or a merge-queue run of its
+# tree, ran a pg18 shard that failed and no run passed every pg18 shard;
+# `green` when a run passed every one; otherwise a word saying why the suite
+# has no verdict yet (no-run, tests-not-run, unreadable), which never makes
+# the commit broken.
 verdict() {
-  local sha="$1" tree list run found conclusion ran failed seen=no-run
+  local sha="$1" tree list run found ran failed state=no-run
   tree="$(git rev-parse "$sha^{tree}")"
   list="$(runs "$sha" "$tree")" || { echo unreadable; return; }
   while IFS= read -r run; do
     [[ -n "$run" ]] || continue
-    found="$(run_jobs "$run")" || { seen=unreadable; continue; }
-    conclusion="$(awk -F'\t' '$1 == "conclusion" { print $2 }' <<<"$found")"
+    found="$(run_jobs "$run")" || { [[ "$state" == broken ]] || state=unreadable; continue; }
     ran="$(awk -F'\t' '$1 ~ /^build & test \(pg18\)/ && $2 != "skipped"' <<<"$found" | wc -l | tr -d ' ')"
     failed="$(awk -F'\t' '$1 ~ /^build & test \(pg18\)/ && $2 != "skipped" && $2 != "success"' <<<"$found" | wc -l | tr -d ' ')"
-    if [[ "$conclusion" == success && "$ran" -gt 0 && "$failed" -eq 0 ]]; then
+    if [[ "$ran" -gt 0 && "$failed" -eq 0 ]]; then
       echo green
       return
     fi
-    if [[ "$ran" -gt 0 || "$seen" == red ]]; then seen=red; else seen=tests-not-run; fi
+    if [[ "$failed" -gt 0 ]]; then
+      state=broken
+    elif [[ "$state" != broken ]]; then
+      state=tests-not-run
+    fi
   done <<<"$list"
-  echo "$seen"
+  echo "$state"
 }
 
 walk() {
@@ -79,19 +88,19 @@ walk() {
   for sha in "${shas[@]}"; do
     state="$(verdict "$sha")"
     read+=("${sha:0:9}=$state")
-    if [[ "$state" == green ]]; then
+    if [[ "$state" != broken ]]; then
       rm -f "$QUEUE_INDEX"
       echo "rev=$sha"
       if [[ "$sha" == "$(git rev-parse "$start")" ]]; then
-        echo "reason=the base branch's head, whose database suite passed in CI"
+        echo "reason=the base branch's head (database suite: $state)"
       else
-        echo "reason=the newest green commit ${#read[@]} back from the base branch's head; skipped ${read[*]:0:${#read[@]}-1}"
+        echo "reason=the newest commit not broken, ${#read[@]} back from the base branch's head (database suite: $state); the head also carries the broken commits ${read[*]:0:${#read[@]}-1}, which this base lacks, so their cost is in the comparison"
       fi
       return 0
     fi
   done
   rm -f "$QUEUE_INDEX"
-  echo "::error::base-rev: none of the ${max} commits from ${start:0:9} passed its database suite in CI: ${read[*]}" >&2
+  echo "::error::base-rev: each of the ${max} commits from ${start:0:9} failed its database suite in CI: ${read[*]}" >&2
   return 1
 }
 
@@ -126,10 +135,12 @@ if [[ "${1:-}" == "--self-test" ]]; then
       printf '%s\tbuild & test (pg18) %s/%s\t%s\n' "$id" "$n" "$#" "$shard" >>"$work/stub/jobs"
     done
   }
+  # expect LABEL MAX WANT [START]: the walk from START (default c4, a pull
+  # request's base branch head; c3 is a push of c4, whose start is HEAD^1).
   expect() {
-    local label="$1" max="$2" want="$3" got
+    local label="$1" max="$2" want="$3" start="${4:-$c4}" got
     touch "$work/stub/runs" "$work/stub/jobs"
-    got="$(cd "$work" && CI_RUNS_STUB="$work/stub" bash "$script" "$c4" "$max" 2>/dev/null \
+    got="$(cd "$work" && CI_RUNS_STUB="$work/stub" bash "$script" "$start" "$max" 2>/dev/null \
       | sed -n 's/^rev=//p' || true)"
     if [[ "$got" != "$want" ]]; then
       echo "::error::--self-test: ${label}: wanted '${want}', got '${got}'." >&2
@@ -141,31 +152,44 @@ if [[ "${1:-}" == "--self-test" ]]; then
   }
   ci 1 push "$c4" success success success
   expect "a green head is the base" 30 "$c4"
+  expect "a head with no CI run yet is the base" 30 "$c4"
   ci 1 push "$c4" success skipped
+  expect "a head whose run did not reach the shards is the base" 30 "$c4"
+  ci 1 push "$c4" failure success success
+  expect "a head red only outside the database suite is the base" 30 "$c4"
+  ci 1 push "$c4" failure success failure
   ci 2 push "$c3" failure success failure
   ci 3 push "$c2" success success success
   ci 4 push "$c1" success success success
-  expect "a broken head is skipped for the newest green commit" 30 "$c2"
+  expect "a broken head is passed over for the newest commit not broken" 30 "$c2"
+  ci 1 push "$c4" failure success failure
+  ci 2 push "$c3" failure
+  ci 3 push "$c2" failure failure
+  expect "a pending commit under a broken head is the base" 30 "$c3"
+  ci 1 push "$c4" failure success failure
+  ci 2 push "$c4" success success success
+  expect "a shard that passed on another run is not broken" 30 "$c4"
   ci 1 push "$c4" failure failure
-  ci 2 push "$c3" failure success
+  ci 2 push "$c3" failure success failure
   ci 3 push "$c2" success success
-  expect "no green commit within the bound fails" 2 ""
+  expect "a bound of broken commits fails" 2 ""
+  ci 1 push "$c2" success success success
+  expect "a push of c4 measures against its parent c3 while c3's CI is still running" 30 "$c3" "$c3"
+  ci 1 push "$c3" failure success success
+  ci 2 push "$c2" success success success
+  expect "a push of c4 measures against its parent c3 when c3 failed only outside its shards" 30 "$c3" "$c3"
   ci 1 push "$c4" success skipped
   ci 2 merge_group "$tree4" success success success
   ci 3 push "$c3" success success
   expect "a push that skipped its shards counts by the queue run of its tree" 30 "$c4"
-  ci 1 push "$c4" failure success success
-  ci 2 merge_group "$tree4" success success success
-  ci 3 push "$c3" success success
-  expect "a push failed by another job counts by the queue run of its tree" 30 "$c4"
   ci 1 push "$c4" success skipped
   ci 2 merge_group "$tree4" success success failure
   ci 3 push "$c3" success success
-  expect "a queue run of the tree with a failed shard does not count" 30 "$c3"
+  expect "a queue run of the tree with a failed shard makes the commit broken" 30 "$c3"
   ci 1 push "$c4" success skipped
-  ci 2 merge_group "$c4" success success success
+  ci 2 merge_group "$c4" success success failure
   ci 3 push "$c3" success success
-  expect "a queue run is matched by its tree, never by the commit's SHA" 30 "$c3"
+  expect "a queue run is matched by its tree, never by the commit's SHA" 30 "$c4"
   exit "$fail"
 fi
 

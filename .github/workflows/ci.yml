@@ -304,9 +304,10 @@ jobs:
       # still runs each rust-cache lane whose entry it must write, every one
       # when the key's inputs moved (the `cache` lane), and otherwise the ones
       # whose entry main no longer holds (the 10 GB quota evicts them).
-      # The perf gate's base arm (#5741): the newest commit on the base
-      # branch's first-parent line whose database suite passed in CI, so a
-      # broken base branch head cannot block the change that repairs it.
+      # The perf gate's base arm (#5741, #5956): the base branch's head, the
+      # first parent of the merge under test, so the arms differ in the change
+      # alone. It passes over a commit only when CI proved its database suite
+      # broken, so a broken head cannot block the change that repairs it.
       - id: perf_base
         if: steps.filter.outputs.perf == 'true' && github.event_name != 'merge_group'
         shell: bash
@@ -2229,8 +2230,8 @@ jobs:
   # A push the merge queue verified keeps this job and skips its consumers:
   # it is main's writer of the binary cache and the sccache entries (#4546).
   # The base arm of the performance gate (#5326): the server binary of the
-  # change's base commit (the newest commit on the base branch whose database
-  # suite passed in CI, `changes`' perf_base step, #5741), built exactly as ui-e2e-binary builds
+  # change's base commit (the base branch's head unless CI proved its database
+  # suite broken, `changes`' perf_base step, #5741, #5956), built exactly as ui-e2e-binary builds
   # the head: the same container, toolchain and e2e profile, so the A/B run
   # compares the change and not two build profiles. The binary cache keys on
   # the base tree's files the way ui-e2e-binary keys on the head's, so a base

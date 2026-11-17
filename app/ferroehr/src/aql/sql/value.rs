@@ -10,9 +10,10 @@
 //! anchor: the source node for an empty anchor, else the node a SELECT or
 //! WHERE binding holds for that step prefix (`Builder::bind_select_paths`, the
 //! `condition` module). Steps left below the deepest bound node (an ORDER BY
-//! key, a function argument in SELECT) are walked by a **correlated subquery**
-//! (one attribute step per hop, promoted-column filters per step) that takes
-//! the first match in document order; an aggregate walks every item
+//! key) are walked by a **correlated subquery** (one attribute step per hop,
+//! promoted-column filters per step) that takes the first match in document
+//! order; a function argument in SELECT is bound like a column
+//! (`Builder::bind_select_paths`), and an aggregate walks every item
 //! (`Builder::leaf_items`). The extracted fragment is coerced per the resolved [`Coercion`]; a
 //! missing path reads `NULL`, so a test of it is unknown under SQL's
 //! three-valued logic, and a read never multiplies rows.

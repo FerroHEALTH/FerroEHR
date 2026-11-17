@@ -196,17 +196,27 @@ fn check_ordinal(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
     if input.list.is_empty() || input.list_open == Some(true) {
         return;
     }
-    let Some(code) = checkable_symbol_code(instance, input) else {
+    let Some((terminology, code)) = symbol_code(instance) else {
         return;
     };
 
-    // Entries whose symbol matches the instance code.
-    let same_symbol: Vec<&WebTemplateCodedValue> =
-        input.list.iter().filter(|cv| cv.value == code).collect();
+    // Entries whose symbol is the instance's code phrase: the terminology and
+    // the code together (RM `data_types` §CODE_PHRASE), so `external::at0003`
+    // is no member of a list of `local::` codes.
+    let same_symbol: Vec<&WebTemplateCodedValue> = input
+        .list
+        .iter()
+        .filter(|cv| cv.value == code)
+        .filter(|cv| {
+            let listed = cv.terminology.as_deref().or(input.terminology.as_deref());
+            terminology_matches(listed, terminology)
+        })
+        .collect();
     if same_symbol.is_empty() {
+        let shown = terminology.map_or_else(|| code.to_owned(), |t| format!("{t}::{code}"));
         v.push(
             &wt.aql_path,
-            format!("ordinal symbol '{code}' is not in the constrained value set"),
+            format!("ordinal symbol '{shown}' is not in the constrained value set"),
             ValidationKind::CodedValue,
         );
         return;
@@ -245,23 +255,18 @@ fn check_ordinal(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
     }
 }
 
-/// The instance's ordinal symbol code, when the constraint is checkable at all.
-///
-/// DV_ORDINAL/DV_SCALE encode their coded symbol under `symbol/defining_code`;
-/// a code whose terminology differs from the constraint's is not checkable here
-/// and yields [`None`].
-fn checkable_symbol_code<'a>(instance: &'a Value, input: &WebTemplateInput) -> Option<&'a str> {
-    let defining_code = instance.get("symbol").and_then(|s| s.get("defining_code"));
+/// The instance's ordinal symbol as its terminology id and code string
+/// (`symbol/defining_code`), `None` when the symbol carries no code.
+fn symbol_code(instance: &Value) -> Option<(Option<&str>, &str)> {
+    let defining_code = instance
+        .get("symbol")
+        .and_then(|s| s.get("defining_code"))?;
     let terminology = defining_code
-        .and_then(|c| c.get("terminology_id"))
+        .get("terminology_id")
         .and_then(|t| t.get("value"))
         .and_then(Value::as_str);
-    if !terminology_matches(input.terminology.as_deref(), terminology) {
-        return None;
-    }
-    defining_code
-        .and_then(|c| c.get("code_string"))
-        .and_then(Value::as_str)
+    let code = defining_code.get("code_string").and_then(Value::as_str)?;
+    Some((terminology, code))
 }
 
 /// Whether one constrained entry's paired numeric equals the instance value.

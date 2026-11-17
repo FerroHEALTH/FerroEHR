@@ -1151,7 +1151,7 @@ impl FerroEhrService {
         // Our own extension: re-populate the object store from the archive's
         // `blobs/` entries before loading versions that reference them.
         #[cfg(feature = "multimedia")]
-        self.import_blobs(&mut archive, &manifest.blobs).await?;
+        self.import_blobs(&mut archive, dir, &manifest.blobs).await?;
         // A blob-carrying archive cannot be loaded into a binary built without
         // the feature: refuse loudly rather than drop the content silently.
         #[cfg(not(feature = "multimedia"))]
@@ -1323,113 +1323,6 @@ impl FerroEhrService {
                 dump_status: false,
                 error: Some(refusal),
             }))
-    }
-
-    /// Fetch every externalized `DV_MULTIMEDIA` blob referenced by the exported
-    /// records into `blobs/<hex>` archive entries, returning the blob keys
-    /// written (empty when externalization is off). Our own extension — no
-    /// openEHR spec governs multimedia offload.
-    ///
-    /// The keys come from `blob_ref`, the reference index the node write path
-    /// maintains in the same transaction as the nodes it describes, so the
-    /// export reads one index per domain instead of walking every exported
-    /// body in process. An exported version that references no blob contributes
-    /// no row, and an archived version's references moved to the cold tier with
-    /// it, so both tiers answer from the same relation.
-    ///
-    /// # Errors
-    /// [`ServiceError`] when a reference read, a blob fetch or an archive write
-    /// fails.
-    #[cfg(feature = "multimedia")]
-    async fn export_referenced_blobs(
-        &self,
-        archive: &mut ArchiveWriter,
-        records: &[EhrRecord],
-        demographic: &[DemographicRecord],
-    ) -> Result<Vec<String>, ServiceError> {
-        let Some(engine) = &self.multimedia else {
-            return Ok(Vec::new());
-        };
-        let mut uris = self
-            .blob_uris_of_versions(&self.pool, records.iter().flat_map(|r| r.versions.iter()))
-            .await?;
-        uris.extend(
-            self.blob_uris_of_versions(
-                &self.demographic_pool,
-                demographic.iter().flat_map(|r| r.versions.iter()),
-            )
-            .await?,
-        );
-        // NOTE: a URI this store did not mint names someone else's bytes, which
-        // is an absent key rather than a defect — the index records every URI a
-        // stored body carries, foreign ones included.
-        let mut keys: Vec<String> = uris
-            .iter()
-            .filter_map(|uri| engine.store().key_from_uri(uri).map(str::to_owned))
-            .collect();
-        keys.sort_unstable();
-        keys.dedup();
-        for hex in &keys {
-            let bytes = engine
-                .store()
-                .get(hex)
-                .await
-                .map_err(|e| ServiceError::internal("export a multimedia blob", e))?;
-            archive.write(&format!("{BLOB_PREFIX}{hex}"), &bytes)?;
-        }
-        Ok(keys)
-    }
-
-    /// The blob URIs `blob_ref` records for the given versions, in one domain.
-    ///
-    /// Keyed on `(vo_id, sys_version)` without a tier predicate, so a version
-    /// the export read from the cold partition answers from the reference rows
-    /// its foreign key carried there. Our own extension.
-    ///
-    /// # Errors
-    /// [`ServiceError::Database`] when the read fails.
-    #[cfg(feature = "multimedia")]
-    async fn blob_uris_of_versions<'a>(
-        &self,
-        pool: &PgPool,
-        versions: impl Iterator<Item = &'a VersionRecord>,
-    ) -> Result<Vec<String>, ServiceError> {
-        let (vo_ids, sys_versions): (Vec<VoId>, Vec<i32>) =
-            versions.map(|v| (v.vo_id, v.sys_version)).unzip();
-        if vo_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-        Ok(dump_repo::read::version_blob_uris(pool, &vo_ids, &sys_versions).await?)
-    }
-
-    /// Re-put each archived blob (`blobs/<hex>`) into the object store on load
-    /// (idempotent, content-addressed). A no-op when the archive carries no
-    /// blobs. Our own extension.
-    #[cfg(feature = "multimedia")]
-    async fn import_blobs(
-        &self,
-        archive: &mut ArchiveReader,
-        blobs: &[String],
-    ) -> Result<(), ServiceError> {
-        if blobs.is_empty() {
-            return Ok(());
-        }
-        let Some(engine) = &self.multimedia else {
-            // The archive carries blobs but this target has no store configured.
-            return Err(ServiceError::precondition(
-                "archive carries externalized multimedia blobs but multimedia \
-                 externalization is not enabled on this server",
-            ));
-        };
-        for hex in blobs {
-            let bytes = archive.read(&format!("{BLOB_PREFIX}{hex}"))?;
-            engine
-                .store()
-                .put_if_absent(hex, bytes)
-                .await
-                .map_err(|e| ServiceError::internal("import a multimedia blob", e))?;
-        }
-        Ok(())
     }
 
     /// Load the demographic wave's shared rows. Audits and contributions may
@@ -1779,5 +1672,7 @@ async fn load_versions(
 }
 
 mod archived_access;
+#[cfg(feature = "multimedia")]
+mod blobs;
 #[cfg(test)]
 mod tests;

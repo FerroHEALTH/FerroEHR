@@ -30,7 +30,7 @@ slim deployments compile integrations out.
   (`tests/it/main.rs` + `multimedia_engine`), each
   `#[cfg(feature)]`-gated so `--all-features` runs everything and the slim
   build compiles none of it. They drive this crate's PUBLIC seams with no
-  network: the multimedia engine over the in-memory `object_store`. The
+  network: the multimedia engine over the in-memory OpenDAL blob store. The
   store-backed journeys stay in
   `app/ferroehr/tests/it` where the platform wires the integrations in —
   never duplicated here.

@@ -23,6 +23,8 @@ use quick_xml::Reader;
 use quick_xml::Writer;
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 
+mod location;
+
 /// The `xsi` namespace, declared on every serialized root element.
 pub const XSI_NS: &str = "http://www.w3.org/2001/XMLSchema-instance";
 
@@ -873,49 +875,6 @@ impl<'a> XmlReader<'a> {
         }
     }
 
-    /// The element a construction failure describes: the one closed most
-    /// recently, because a `FromXml` impl builds its value right after it has
-    /// consumed its own end tag. Before any element closed, the document.
-    ///
-    /// This is where the closed element's line, column and root path are
-    /// resolved, on the one path that reads them.
-    fn located(&self) -> Location {
-        let Some(closed) = &self.last_closed else {
-            return Location {
-                element: "document".to_owned(),
-                xsi_type: None,
-                line: 1,
-                column: 1,
-                path: "/".to_owned(),
-            };
-        };
-        let mut path = String::new();
-        for (i, frame) in self.frames.iter().take(closed.ancestors).enumerate() {
-            path.push('/');
-            path.push_str(&frame.element);
-            if i > 0 {
-                path.push('[');
-                path.push_str(&frame.ordinal.to_string());
-                path.push(']');
-            }
-        }
-        path.push('/');
-        path.push_str(&closed.element);
-        if closed.ancestors > 0 {
-            path.push('[');
-            path.push_str(&closed.ordinal.to_string());
-            path.push(']');
-        }
-        let (line, column) = line_col(self.src, closed.offset);
-        Location {
-            element: closed.element.clone(),
-            xsi_type: closed.xsi_type.clone(),
-            line,
-            column,
-            path,
-        }
-    }
-
     /// The refusal for a mandatory `child` element absent from the element just
     /// read, which realises `owner`'s attribute of that name.
     #[must_use]
@@ -933,6 +892,17 @@ impl<'a> XmlReader<'a> {
     pub fn missing_attribute(&self, owner: &str, attribute: &str) -> XmlError {
         XmlError::MissingAttribute {
             location: Box::new(self.located()),
+            owner: owner.to_owned(),
+            attribute: attribute.to_owned(),
+        }
+    }
+
+    /// The refusal for a mandatory `attribute` absent from the start tag of
+    /// the element just opened, checked before that element is read.
+    #[must_use]
+    pub fn missing_start_attribute(&self, owner: &str, attribute: &str) -> XmlError {
+        XmlError::MissingAttribute {
+            location: Box::new(self.located_open()),
             owner: owner.to_owned(),
             attribute: attribute.to_owned(),
         }
@@ -1060,15 +1030,6 @@ fn to_start_tag(e: &BytesStart<'_>) -> Result<StartTag, XmlError> {
         attrs.push((k, v));
     }
     Ok(StartTag { name, attrs })
-}
-
-/// The 1-based line and column of byte `offset` in `src`; the column counts
-/// characters.
-fn line_col(src: &str, offset: usize) -> (usize, usize) {
-    let head = src.get(..offset.min(src.len())).unwrap_or(src);
-    let line = head.matches('\n').count() + 1;
-    let column = head.rsplit('\n').next().map_or(0, |l| l.chars().count()) + 1;
-    (line, column)
 }
 
 /// Deserialize a value from an openEHR canonical-XML document.

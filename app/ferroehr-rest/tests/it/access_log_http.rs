@@ -39,15 +39,14 @@ pub(crate) struct Stored {
     pub(crate) content: String,
 }
 
-/// The columns of one stored entry, in [`Stored`]'s order, with its shared
-/// part.
+/// The columns of one stored entry, in [`Stored`]'s order, with its
+/// canonical form.
 type Columns = (
     Option<String>,
     Option<String>,
     Option<String>,
     Option<String>,
     String,
-    Option<String>,
 );
 
 /// The entries stored so far that `keep` selects, polled until there are at
@@ -60,9 +59,10 @@ pub(crate) async fn entries(
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let rows: Vec<Columns> = sqlx::query_as(
-            "SELECT r.ehr_id, r.action_code, r.result_code, \
-             audit.access_log_document(r.content, sh.content) #>> '{channel,request_id}', \
-             r.content, sh.content \
+            "SELECT r.ehr_id::text, r.action_code, r.result_code, \
+             audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
+             r.time_recorded, r.ehr_id) #>> '{channel,request_id}', \
+             audit.access_log_document(r.content, sh.content, r.record_type, r.uid, r.time_recorded, r.ehr_id)::text \
              FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared ORDER BY r.chain_seq",
         )
@@ -72,19 +72,17 @@ pub(crate) async fn entries(
         let all = rows.len();
         let debug_rows: Vec<String> = rows
             .iter()
-            .map(|row| common::joined_entry(&row.4, row.5.as_deref()))
+            .map(|row| common::canonical_entry(&row.4))
             .collect();
         let kept: Vec<Stored> = rows
             .into_iter()
-            .map(
-                |(ehr_id, action, result, request_id, content, shared)| Stored {
-                    ehr_id,
-                    action,
-                    result,
-                    request_id,
-                    content: common::joined_entry(&content, shared.as_deref()),
-                },
-            )
+            .map(|(ehr_id, action, result, request_id, document)| Stored {
+                ehr_id,
+                action,
+                result,
+                request_id,
+                content: common::canonical_entry(&document),
+            })
             .filter(|stored| keep(stored))
             .collect();
         if kept.len() >= expected {

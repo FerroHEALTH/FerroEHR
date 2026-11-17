@@ -40,7 +40,7 @@ use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 /// [`stored_signed`] reads.
 macro_rules! imported_records {
     () => {
-        "SELECT r.system_id, l.sequence AS chain_seq, r.content, NULL::text AS shared, \
+        "SELECT r.system_id, l.sequence AS chain_seq, r.content AS document, \
          l.algorithm, \
          l.previous_digest, l.content_digest, l.digest, l.signature \
          FROM audit.access_log_imported_record r JOIN audit.access_log_imported_link l \

@@ -212,6 +212,61 @@ impl AuditSender {
         self.inner.chain.notify_one();
     }
 
+    /// Reads on `conn`, the open transaction of the write `events` record,
+    /// the subject of each EHR they name that the memo does not hold, and
+    /// memoizes it, so [`Self::record`] looks none up: a lookup of its own
+    /// would ask the clinical pool for a second connection while the write
+    /// holds one, which a burst of writes waits out to the request timeout
+    /// (#5947), and could not see an EHR the write itself creates. Without a
+    /// resolver ([`AuditConfig::resolve_subject`] off) it reads nothing. No
+    /// specification governs this: our own design.
+    ///
+    /// # Errors
+    /// The database error of the read, which leaves `conn`'s transaction
+    /// failed.
+    pub async fn learn_subjects(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        events: &[AuditEvent],
+    ) -> Result<(), sqlx::Error> {
+        if self.inner.resolver.is_none() {
+            return Ok(());
+        }
+        let mut named: Vec<(&str, uuid::Uuid)> = Vec::new();
+        for ehr_id in events.iter().filter_map(|event| event.ehr_id.as_deref()) {
+            // NOTE: an id that is no UUID names no stored EHR, so the parse failure is the answer.
+            let Ok(id) = uuid::Uuid::parse_str(ehr_id) else {
+                continue;
+            };
+            if !self.inner.subjects.contains_key(ehr_id) && !named.iter().any(|(n, _)| *n == ehr_id)
+            {
+                named.push((ehr_id, id));
+            }
+        }
+        if named.is_empty() {
+            return Ok(());
+        }
+        let ids: Vec<uuid::Uuid> = named.iter().map(|(_, id)| *id).collect();
+        let rows: Vec<(uuid::Uuid, Option<String>, Option<String>)> =
+            sqlx::query_as("SELECT id, subject_id, subject_namespace FROM ehr WHERE id = ANY($1)")
+                .bind(&ids)
+                .fetch_all(conn)
+                .await?;
+        for (ehr_id, id) in named {
+            let subject =
+                rows.iter()
+                    .find(|(row, _, _)| *row == id)
+                    .and_then(|(_, subject, namespace)| {
+                        subject.clone().map(|id| ResolvedSubject {
+                            id,
+                            namespace: namespace.clone(),
+                        })
+                    });
+            self.inner.subjects.insert(ehr_id.to_owned(), subject).await;
+        }
+        Ok(())
+    }
+
     /// Write `events`, the records of one act, into the local store in one
     /// transaction; they are durable when this returns, and the chainer links
     /// them after, unless `reservation` holds them until the write they
@@ -619,10 +674,17 @@ async fn memoize_subjects(
     pending.sort_unstable();
     pending.dedup();
     let mut unavailable: BTreeSet<String> = pending.iter().cloned().collect();
+    if pending.is_empty() {
+        return unavailable;
+    }
+    // NOTE: our own design (#5947), this task waits for the lookups, so it keeps no connection.
+    crate::db::acquire::release_held();
     let mut lookups = tokio::task::JoinSet::new();
     for ehr_id in pending {
         let lookup = resolve(ehr_id.clone());
-        lookups.spawn(async move { (ehr_id, lookup.await) });
+        lookups.spawn(crate::db::acquire::inheriting(async move {
+            (ehr_id, lookup.await)
+        }));
     }
     // A lookup task that panicked never answers, so its EHR stays in `unavailable`.
     while let Some(joined) = lookups.join_next().await {
