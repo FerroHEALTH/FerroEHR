@@ -361,3 +361,45 @@ async fn records_of_a_write_that_never_committed_are_discarded() {
     );
     assert_eq!(stored(&pool, &records).await, 0, "no record is stored");
 }
+
+/// A held write under a render policy the store has not registered yet, on an
+/// audit pool of one connection, registers the policy before it takes the
+/// connection it writes on: holding that connection, it asks the pool for no
+/// second one, which waited out the acquire timeout and stalled every write
+/// of a burst behind it (#5906).
+#[tokio::test]
+async fn a_held_write_under_a_cold_policy_needs_one_audit_connection() {
+    let db = testkit::db().await.expect("testkit database");
+    let mut config = ferroehr::db::DbConfig::new(db.url());
+    config.max_connections = Some(1);
+    config.min_connections = Some(0);
+    config.acquire_timeout = ferrohealth_config::units::Duration::from_secs(3);
+    let audit = ferroehr::db::connect_domain(&config, ferroehr::db::domain::Domain::Audit)
+        .await
+        .expect("the audit pool connects");
+    let store = ferroehr::system_log::store::AuditStore::new(audit);
+    let reservation = Uuid::now_v7();
+    let mut event = AuditEvent::new(
+        EventActionCode::Create,
+        ObjectClass::Ehr,
+        EventOutcome::Success,
+    );
+    event.ehr_id = Some(Uuid::now_v7().to_string());
+    "clinician-7".clone_into(&mut event.user_id);
+    let records = [event, system_record()].map(|event| ferroehr::system_log::store::AuditRecord {
+        event,
+        subject: None,
+        entry: None,
+    });
+
+    let started = std::time::Instant::now();
+    ferroehr::db::acquire::request_scope(store.write_held(records.into(), &[], reservation))
+        .await
+        .expect("the held write");
+    assert!(
+        started.elapsed() < Duration::from_secs(3),
+        "the write waited for a second connection"
+    );
+    let (entries, records) = held(&db.pool(), reservation).await;
+    assert_eq!((entries.len(), records.len()), (1, 1));
+}

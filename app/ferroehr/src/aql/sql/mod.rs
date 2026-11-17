@@ -352,6 +352,10 @@ enum ValueMode {
     /// The instant of a mixed-type leaf that is a whole date/time value of the
     /// kinds given; NULL otherwise ([`coerce::raw_temporal`]).
     RawTemporal(coerce::TemporalKinds),
+    /// A mixed-type leaf's amount for `SUM` and `AVG`: a JSON number, or the
+    /// magnitude of a whole `DV_AMOUNT`; any other value fails the statement
+    /// ([`coerce::raw_amount`]).
+    RawAmount,
 }
 
 /// The shared SQL-builder state; its `impl` blocks are fanned across the

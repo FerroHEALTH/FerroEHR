@@ -48,6 +48,7 @@ use crate::storage::error::StorageError;
 use openehr_rm::draft::access_control::terminology::ForeignCode;
 
 mod held;
+pub mod revisions;
 #[cfg(test)]
 mod sharing;
 mod subjects;
@@ -325,12 +326,14 @@ impl LiveGrants {
                 stamped.sort_unstable();
                 let teams = changed.cared_teams.clone();
                 let declared = changed.declared.clone();
+                // NOTE: our own design (#5806), the care copy drops what changed before the
+                // revision moves, so a request that finds the revision in force reads no older care.
+                self.care.drop_changed(&stamped, &teams, &declared).await;
                 let held = self.held_facts();
                 if held.revision.is_none_or(|held| held < changed.revision) {
                     *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
                         Arc::new(held.with(changed));
                 }
-                self.care.drop_changed(&stamped, &teams, &declared).await;
             }
             Ok::<(), StorageError>(())
         };
@@ -389,9 +392,9 @@ impl LiveGrants {
         for row in loaded.capabilities {
             capabilities.entry(row.performer_id).or_default().push(row);
         }
+        self.care.drop_all();
         *self.facts.write().unwrap_or_else(PoisonError::into_inner) =
             Arc::new(HeldFacts::default().with(loaded.facts));
-        self.care.drop_all();
         *self.held.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(Held {
             revision: Some(loaded.revision),
             clients,
@@ -510,7 +513,7 @@ impl LiveGrants {
                 _ => {}
             }
         }
-        CallerFacts::new(roles, care_teams)
+        CallerFacts::new(roles, care_teams).with_party(party)
     }
 
     /// Every federation agreement in force at `now`, once per client

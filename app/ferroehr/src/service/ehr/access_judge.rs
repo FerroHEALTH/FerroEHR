@@ -101,6 +101,22 @@ impl FerroEhrService {
         }
     }
 
+    /// Reads ahead for `access` whether the caller facts copy holds the
+    /// store's revisions, when the caller's care decides its verdict on
+    /// `ehr_id` ([`RequestAccess::care_ahead`]), so a read the request makes
+    /// alongside carries the exact check (owner decision on #5891). No openEHR
+    /// spec governs this: our own design.
+    pub(crate) async fn care_ahead(&self, access: &RequestAccess, ehr_id: EhrId) {
+        if access.verdict(ehr_id).is_some() {
+            return;
+        }
+        // NOTE: our own design (#5891), settings that do not read here read ahead nothing, and
+        // the verdict reads them again and answers that read's error.
+        if let Ok(entry) = Box::pin(self.ehr_access_entry(ehr_id)).await {
+            access.care_ahead(ehr_id, &entry).await;
+        }
+    }
+
     /// What the evaluator reads of each of `vo_ids` this store holds.
     ///
     /// # Errors
@@ -199,6 +215,10 @@ impl FerroEhrService {
     /// `condition` with the caller's care read for a query whose rows all
     /// belong to `pinned` when it names them, or to any EHR otherwise.
     ///
+    /// Care that admits any EHR is read again when the caller facts copy is
+    /// older than the store ([`RequestAccess::care_in_force`]), so a removal
+    /// another replica committed admits nothing (#5806).
+    ///
     /// A condition no verdict of which reads care, or one already resolved,
     /// stays as it is. For pinned EHRs the care of each is read from the
     /// evaluator's copies and only the cared ones are bound; otherwise the
@@ -207,7 +227,8 @@ impl FerroEhrService {
     ///
     /// # Errors
     /// `service_overloaded` (`503`) when the settings copy or the care copy
-    /// cannot be read.
+    /// cannot be read, and `access-refreshing` (`503`) when the caller facts
+    /// copy stays older than the store.
     pub async fn resolve_care(
         &self,
         condition: &AccessCondition,
@@ -222,17 +243,31 @@ impl FerroEhrService {
         let Some(access) = current() else {
             return Ok(condition.with_care(Care::Census(Vec::new().into())));
         };
-        let care = match pinned {
+        let (care, ()) = tokio::join!(self.care_of(&access, pinned), access.care_read_ahead());
+        let mut care = care?;
+        if binds_any(&care) && !access.care_in_force().await? {
+            care = self.care_of(&access, pinned).await?;
+        }
+        Ok(condition.with_care(care))
+    }
+
+    /// The care of the caller of `access` a query reads, for its EHRs
+    /// `pinned` when it names them, as [`Self::resolve_care`] reads it.
+    async fn care_of(
+        &self,
+        access: &RequestAccess,
+        pinned: Option<&[EhrId]>,
+    ) -> Result<Care, ServiceError> {
+        Ok(match pinned {
             Some(ehrs) => {
                 let entries = self.ehr_access_entries(ehrs).await?;
                 Care::Ehrs(access.cared_ehrs(&entries).await?.into())
             }
-            None => match projected_care(&access) {
+            None => match projected_care(access) {
                 Some(care) if self.care_projection_current() => Care::Projected(care),
                 _ => Care::Census(access.cared_subjects().await?.into()),
             },
-        };
-        Ok(condition.with_care(care))
+        })
     }
 
     /// The condition of a query whose rows all belong to `pinned` when it
@@ -388,4 +423,15 @@ fn projected_care(
         day: access.today(),
         grace: grace.to_string(),
     })
+}
+
+/// Whether `care` admits any EHR, so the copy it was read from must hold the
+/// store's revisions before a query binds it.
+fn binds_any(care: &Care) -> bool {
+    match care {
+        Care::Unresolved => false,
+        Care::Census(subjects) => !subjects.is_empty(),
+        Care::Ehrs(ehrs) => !ehrs.is_empty(),
+        Care::Projected(care) => !care.teams.is_empty(),
+    }
 }

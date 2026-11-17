@@ -75,7 +75,8 @@ impl FerroEhrService {
         };
         let missing =
             || ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"));
-        let (facts, stored) = match self.version_judged(at).await {
+        let (judged, ()) = tokio::join!(self.version_judged(at), self.care_ahead(access, ehr_id));
+        let (facts, stored) = match judged {
             Ok(Some((facts, stored))) => (facts, stored),
             Ok(None) => return JudgedRead::Unheld(missing()),
             Err(error) => return JudgedRead::Unjudged(error),
