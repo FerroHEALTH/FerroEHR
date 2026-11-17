@@ -970,7 +970,7 @@ fn trim_timezone(t: &str) -> &str {
 /// the shorter precision — ISO-8601 date/time strings order lexicographically
 /// at equal precision; a prefix-equal, mixed-precision pair is treated as
 /// in-range (confident-violations bias).
-fn temporal_in_range(value: &str, range: &WebTemplateRange) -> bool {
+pub(crate) fn temporal_in_range(value: &str, range: &WebTemplateRange) -> bool {
     let norm = |s: &str| -> String {
         let (d, t) = split_date_time(s);
         if t.is_empty() {

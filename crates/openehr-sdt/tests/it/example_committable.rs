@@ -85,6 +85,12 @@ const NOT_COMMITTABLE: &[(&str, &str)] = &[
          an example cannot invent a slot filler",
     ),
     (
+        "sdk_crosscheck_structure.v1.opt",
+        "a SECTION holds an inline ADMIN_ENTRY that is not an archetype root, which \
+         the template's own constraint requires and RM `Is_archetype_root` refuses \
+         (#5915; its participations are pinned on their own below)",
+    ),
+    (
         "pregnancy-ecosystem-testing.opt",
         "the template pins COMPOSITION.category to 435, a code the openEHR \
          terminology's composition category group (431, 433, 451, 815) does not hold",
@@ -235,6 +241,38 @@ fn a_folded_event_data_carries_its_constrained_node_id() {
                 .collect();
             assert!(findings.is_empty(), "{level:?} {format}: {findings:?}");
         }
+    }
+}
+
+// ── a mandatory participations ──────────────────────────────────────────────
+
+/// A template that makes `context/participations` mandatory gets one
+/// PARTICIPATION in every example level (RM `EVENT_CONTEXT`
+/// `Participations_validity` refuses an empty list), so `required` commits
+/// apart from the template's own RM breach (#5915).
+#[test]
+fn a_mandatory_participations_is_written() {
+    let wt = web_template(&sdk_go_dir().join("sdk_crosscheck_structure.v1.opt"));
+    for level in [
+        DetailLevel::Required,
+        DetailLevel::Medium,
+        DetailLevel::Complete,
+    ] {
+        let comp = example_composition(&wt, level).expect("the example builds");
+        let participations = comp
+            .pointer("/context/participations")
+            .and_then(Value::as_array)
+            .map_or(0, Vec::len);
+        assert_eq!(participations, 1, "{level:?}: one participation");
+        let findings: Vec<String> = validate_composition(&comp, &wt)
+            .into_iter()
+            .filter(|m| !m.message.contains("Is_archetype_root"))
+            .map(|m| format!("{}: {}", m.path, m.message))
+            .collect();
+        assert!(
+            level == DetailLevel::Complete || findings.is_empty(),
+            "{level:?}: {findings:?}"
+        );
     }
 }
 
