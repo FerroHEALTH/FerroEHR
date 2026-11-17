@@ -17,19 +17,14 @@
 //! `aql_stale_access_total{copy, outcome}`. No openEHR spec governs the
 //! copies or the refusal: our own design (#5794).
 
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use crate::access_eval::condition::{AccessCondition, current};
+use crate::access_eval::stale::{STALE_POLL, STALE_WAIT};
 use crate::aql::error::StaleCopy;
 use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
-
-/// How long a query asks again after its first stale statement.
-pub(super) const STALE_WAIT: Duration = Duration::from_millis(100);
-
-/// The pause between two judgements that found the copy unchanged.
-const STALE_POLL: Duration = Duration::from_millis(10);
 
 impl FerroEhrService {
     /// The condition of a query whose statement found `copy` stale, judged

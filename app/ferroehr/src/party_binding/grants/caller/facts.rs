@@ -27,6 +27,7 @@ pub struct CallerFacts {
     care_teams: Vec<CareTeam>,
     provider_groups: Vec<Uuid>,
     organisation_types: Vec<ForeignCode>,
+    party: Option<Uuid>,
 }
 
 impl CallerFacts {
@@ -42,7 +43,22 @@ impl CallerFacts {
             care_teams,
             provider_groups: Vec::new(),
             organisation_types: Vec::new(),
+            party: None,
         }
+    }
+
+    /// These facts as the facts of the party `party`, which a request whose
+    /// copy was older than the store reads again (#5806).
+    #[must_use]
+    pub fn with_party(mut self, party: Uuid) -> Self {
+        self.party = Some(party);
+        self
+    }
+
+    /// The party these facts are of; `None` for facts no copy names.
+    #[must_use]
+    pub fn party(&self) -> Option<Uuid> {
+        self.party
     }
 
     /// These facts with `types`, the coded names of the `ORGANISATION` the

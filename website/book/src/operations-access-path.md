@@ -59,6 +59,7 @@ the scope `object_version_evicted`.
 | `policy_notification_age_seconds` | gauge | `listener` | Time since the listener's newest notification; absent before the first. |
 | `policy_copy_reads_total` | counter | `listener`, `reason` | Reads of the database a copy made on a request: `notified` after a notification marked it stale, `unlistened` because its listener was down. |
 | `grants_refresh_duration_seconds` | histogram | `kind`, `outcome` | Each refresh of the grants copy: `kind` is `unchanged` (one revision read), `grants` (every grant and fact read again) or `facts` (the caller facts changed since the revision held); `outcome` is `ok` or `failed`. |
+| `access_care_stale_total` | counter | `outcome` | Requests whose care decision found the grants copy older than the database: `judged_again` after the copy was read again, `refused` when it did not catch up and the request answered `503`. |
 
 Alert on `policy_listener_up == 0` held for a few minutes, and on a rate of
 `policy_copy_reads_total{reason="unlistened"}` above zero: both mean the
