@@ -176,10 +176,15 @@ impl HealthIndicator for AuditHealth {
                 ));
             };
             let store = sender.store();
-            let orphaned = match store
-                .held_longer_than(crate::system_log::sender::reconciler::GRACE)
+            let read = async {
+                let mut conn = crate::db::acquire::acquire(&store.pool).await?;
+                crate::system_log::store::AuditStore::held_longer_than(
+                    &mut conn,
+                    crate::system_log::sender::reconciler::GRACE,
+                )
                 .await
-            {
+            };
+            let orphaned = match read.await {
                 Ok(orphaned) => orphaned,
                 Err(e) => {
                     tracing::error!(error = %e, "health: the audit reservations could not be read");

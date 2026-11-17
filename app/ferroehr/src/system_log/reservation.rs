@@ -100,7 +100,11 @@ impl FerroEhrService {
             unbuild();
             // NOTE: our own design (#5762), a held record of a write that never committed
             // records no access; the reconciler discards it when this fails.
-            let _discarded = sender.store().discard(&[reservation]).await;
+            let _discarded = async {
+                let mut conn = crate::db::acquire::acquire(&sender.store().pool).await?;
+                super::store::AuditStore::discard(&mut conn, &[reservation]).await
+            }
+            .await;
             return Err(error.into());
         }
         let reserved = Reserved { id: reservation };

@@ -367,30 +367,37 @@ impl AuditStore {
         self.pending.mark(Chains::BOTH);
     }
 
-    /// Release the records held under the reservations `ids` now, in a
-    /// transaction of their own: the reconciler's release of a write whose
-    /// process stopped first (#5762); returns how many.
+    /// Release the records held under the reservations `ids` on `conn`, a
+    /// connection of the store's pool: the reconciler's release of a write
+    /// whose process stopped first (#5762); returns how many. Once the
+    /// release commits, [`Self::mark_released`] wakes the chainer for them.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the statement fails.
-    pub async fn release(&self, ids: &[Uuid]) -> Result<u64, AuditError> {
+    pub async fn release(conn: &mut PgConnection, ids: &[Uuid]) -> Result<u64, AuditError> {
         let released: i64 = sqlx::query_scalar("SELECT audit.audit_intake_release($1)")
             .bind(ids)
-            .fetch_one(&mut *acquire(&self.pool).await?)
+            .fetch_one(conn)
             .await?;
-        self.pending.mark(Chains::BOTH);
         Ok(u64::try_from(released).unwrap_or(0))
     }
 
+    /// Marks both chains owed rows: records released outside the chainer's
+    /// round wait to be chained.
+    pub fn mark_released(&self) {
+        self.pending.mark(Chains::BOTH);
+    }
+
     /// Discard the records held under the reservations `ids`, whose writes
-    /// never committed; returns how many.
+    /// never committed, on `conn`, a connection of the store's pool;
+    /// returns how many.
     ///
     /// # Errors
     /// [`AuditError::Store`] when the statement fails.
-    pub async fn discard(&self, ids: &[Uuid]) -> Result<u64, AuditError> {
+    pub async fn discard(conn: &mut PgConnection, ids: &[Uuid]) -> Result<u64, AuditError> {
         let discarded: i64 = sqlx::query_scalar("SELECT audit.audit_intake_discard($1)")
             .bind(ids)
-            .fetch_one(&mut *acquire(&self.pool).await?)
+            .fetch_one(conn)
             .await?;
         Ok(u64::try_from(discarded).unwrap_or(0))
     }
@@ -401,7 +408,7 @@ impl AuditStore {
     /// # Errors
     /// [`AuditError::Store`] when the read fails.
     pub async fn held_longer_than(
-        &self,
+        conn: &mut PgConnection,
         grace: std::time::Duration,
     ) -> Result<Vec<(Uuid, std::time::Duration)>, AuditError> {
         let rows: Vec<(Uuid, f64)> = sqlx::query_as(
@@ -415,7 +422,7 @@ impl AuditStore {
              ORDER BY 2 DESC",
         )
         .bind(grace.as_secs_f64())
-        .fetch_all(&mut *acquire(&self.pool).await?)
+        .fetch_all(conn)
         .await?;
         Ok(rows
             .into_iter()
@@ -429,7 +436,10 @@ impl AuditStore {
     ///
     /// # Errors
     /// [`AuditError::Store`] when the read fails.
-    pub async fn held_among(&self, ids: &[Uuid]) -> Result<Vec<Uuid>, AuditError> {
+    pub async fn held_among(
+        conn: &mut PgConnection,
+        ids: &[Uuid],
+    ) -> Result<Vec<Uuid>, AuditError> {
         let held: Vec<Uuid> = sqlx::query_scalar(
             "SELECT DISTINCT h.reserved_by FROM ( \
              SELECT reserved_by FROM audit.access_log_intake WHERE reserved_by = ANY($1) \
@@ -437,7 +447,7 @@ impl AuditStore {
              ) AS h",
         )
         .bind(ids)
-        .fetch_all(&mut *acquire(&self.pool).await?)
+        .fetch_all(conn)
         .await?;
         Ok(held)
     }

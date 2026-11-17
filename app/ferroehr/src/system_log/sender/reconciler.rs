@@ -20,7 +20,7 @@ use opentelemetry::KeyValue;
 use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
-use crate::db::acquire::acquire;
+use crate::db::acquire::{acquire, tracked};
 use crate::system_log::AuditError;
 use crate::system_log::store::AuditStore;
 
@@ -85,72 +85,106 @@ pub(super) async fn run(store: AuditStore, domains: Domains) {
 /// Resolve every reservation held longer than `grace`, under the lease; a
 /// replica that does not get the lease does nothing this round.
 ///
+/// The pass holds one connection at a time (#5929): it reads the held
+/// reservations and the domains first, each on a connection it gives back
+/// at once, then takes the lease and runs every audit statement of the
+/// resolution on the lease's connection, and removes the spent domain
+/// reservations once the lease has committed.
+///
 /// # Errors
-/// [`AuditError::Store`] when a statement fails; what was resolved stays.
+/// [`AuditError::Store`] when a statement fails; a failure under the lease
+/// resolves nothing, and the next pass starts over.
 pub async fn reconcile(
     store: &AuditStore,
     domains: &Domains,
     grace: Duration,
 ) -> Result<Reconciled, AuditError> {
-    let mut lease = acquire(&store.pool).await?;
-    let mut tx = lease.begin().await?;
-    let leased: bool = sqlx::query_scalar(LEASE).fetch_one(&mut *tx).await?;
-    if !leased {
-        return Ok(Reconciled::default());
-    }
-    let held = store.held_longer_than(grace).await?;
-    let metrics = crate::telemetry::access_path::metrics();
-    metrics
-        .reservations_held
-        .record(u64::try_from(held.len()).unwrap_or(u64::MAX), &[]);
-    metrics
-        .reservation_age
-        .record(held.first().map_or(0.0, |(_, age)| age.as_secs_f64()), &[]);
-    let mut done = Reconciled::default();
-    let mut committed = Vec::new();
-    let mut never = Vec::new();
-    for (id, _age) in &held {
-        if reserved_in(&domains.clinical, *id).await? || reserved_in(&domains.party, *id).await? {
-            committed.push(*id);
-        } else {
-            never.push(*id);
-        }
-    }
-    if !committed.is_empty() {
-        store.release(&committed).await?;
-        done.released = u64::try_from(committed.len()).unwrap_or(u64::MAX);
-    }
-    if !never.is_empty() {
-        store.discard(&never).await?;
-        done.discarded = u64::try_from(never.len()).unwrap_or(u64::MAX);
-    }
-    for pool in [&domains.clinical, &domains.party] {
-        done.removed = done
-            .removed
-            .saturating_add(remove_released(store, pool, grace).await?);
-    }
-    // NOTE: our own design (#5762), the lease's transaction, which no request makes.
-    tx.commit().await?;
-    for (outcome, count) in [
-        ("released", done.released),
-        ("discarded", done.discarded),
-        ("removed", done.removed),
-    ] {
+    tracked(async {
+        let held = AuditStore::held_longer_than(&mut *acquire(&store.pool).await?, grace).await?;
+        let metrics = crate::telemetry::access_path::metrics();
         metrics
-            .reservations_reconciled
-            .add(count, &[KeyValue::new("outcome", outcome)]);
-    }
-    if done.found_a_stop() {
-        tracing::warn!(
-            released = done.released,
-            discarded = done.discarded,
-            removed = done.removed,
-            "audit reservations reconciled after a process stopped between a write and its release"
-        );
-    } else if done.removed > 0 {
-        tracing::debug!(removed = done.removed, "spent audit reservations removed");
-    }
-    Ok(done)
+            .reservations_held
+            .record(u64::try_from(held.len()).unwrap_or(u64::MAX), &[]);
+        metrics
+            .reservation_age
+            .record(held.first().map_or(0.0, |(_, age)| age.as_secs_f64()), &[]);
+        let mut committed = Vec::new();
+        let mut never = Vec::new();
+        for (id, _age) in &held {
+            if reserved_in(&domains.clinical, *id).await? || reserved_in(&domains.party, *id).await? {
+                committed.push(*id);
+            } else {
+                never.push(*id);
+            }
+        }
+        let old = [
+            older_than(&domains.clinical, grace).await?,
+            older_than(&domains.party, grace).await?,
+        ];
+        let mut lease = acquire(&store.pool).await?;
+        let mut tx = lease.begin().await?;
+        let leased: bool = sqlx::query_scalar(LEASE).fetch_one(&mut *tx).await?;
+        if !leased {
+            return Ok(Reconciled::default());
+        }
+        // NOTE: our own design (#5929), another replica's pass may have resolved some since the read.
+        let ids: Vec<Uuid> = held.iter().map(|(id, _)| *id).collect();
+        let still = AuditStore::held_among(&mut tx, &ids).await?;
+        committed.retain(|id| still.contains(id));
+        never.retain(|id| still.contains(id));
+        let mut done = Reconciled::default();
+        if !committed.is_empty() {
+            AuditStore::release(&mut tx, &committed).await?;
+            done.released = u64::try_from(committed.len()).unwrap_or(u64::MAX);
+        }
+        if !never.is_empty() {
+            AuditStore::discard(&mut tx, &never).await?;
+            done.discarded = u64::try_from(never.len()).unwrap_or(u64::MAX);
+        }
+        let mut spent = Vec::with_capacity(old.len());
+        for old in old {
+            let still_held = if old.is_empty() {
+                Vec::new()
+            } else {
+                AuditStore::held_among(&mut tx, &old).await?
+            };
+            spent.push(
+                old.into_iter()
+                    .filter(|id| !still_held.contains(id))
+                    .collect::<Vec<_>>(),
+            );
+        }
+        // NOTE: our own design (#5762), the lease's transaction, which no request makes.
+        tx.commit().await?;
+        drop(lease);
+        if done.released > 0 {
+            store.mark_released();
+        }
+        for (pool, spent) in [&domains.clinical, &domains.party].into_iter().zip(spent) {
+            done.removed = done.removed.saturating_add(remove(pool, &spent).await?);
+        }
+        for (outcome, count) in [
+            ("released", done.released),
+            ("discarded", done.discarded),
+            ("removed", done.removed),
+        ] {
+            metrics
+                .reservations_reconciled
+                .add(count, &[KeyValue::new("outcome", outcome)]);
+        }
+        if done.found_a_stop() {
+            tracing::warn!(
+                released = done.released,
+                discarded = done.discarded,
+                removed = done.removed,
+                "audit reservations reconciled after a process stopped between a write and its release"
+            );
+        } else if done.removed > 0 {
+            tracing::debug!(removed = done.removed, "spent audit reservations removed");
+        }
+        Ok(done)
+    })
+    .await
 }
 
 /// Whether the domain of `pool` holds the reservation `id`.
@@ -163,32 +197,25 @@ async fn reserved_in(pool: &PgPool, id: Uuid) -> Result<bool, AuditError> {
     Ok(held)
 }
 
-/// Remove the reservations of `pool`'s domain older than `grace` whose
-/// records no longer wait held: released, so the reservation is spent.
-async fn remove_released(
-    store: &AuditStore,
-    pool: &PgPool,
-    grace: Duration,
-) -> Result<u64, AuditError> {
+/// The reservations of `pool`'s domain taken longer than `grace` ago.
+async fn older_than(pool: &PgPool, grace: Duration) -> Result<Vec<Uuid>, AuditError> {
     let old: Vec<Uuid> = sqlx::query_scalar(
         "SELECT id FROM audit_reservation WHERE taken_at < now() - make_interval(secs => $1)",
     )
     .bind(grace.as_secs_f64())
     .fetch_all(&mut *acquire(pool).await?)
     .await?;
-    if old.is_empty() {
-        return Ok(0);
-    }
-    let still_held: Vec<Uuid> = store.held_among(&old).await?;
-    let spent: Vec<Uuid> = old
-        .into_iter()
-        .filter(|id| !still_held.contains(id))
-        .collect();
+    Ok(old)
+}
+
+/// Remove `spent` from `pool`'s domain: reservations whose records no longer
+/// wait held, released or discarded; returns how many.
+async fn remove(pool: &PgPool, spent: &[Uuid]) -> Result<u64, AuditError> {
     if spent.is_empty() {
         return Ok(0);
     }
     let removed = sqlx::query("DELETE FROM audit_reservation WHERE id = ANY($1)")
-        .bind(&spent)
+        .bind(spent)
         .execute(&mut *acquire(pool).await?)
         .await?
         .rows_affected();
