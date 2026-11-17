@@ -1,0 +1,1 @@
+- FerroEHR moves to `ferrohealth-smart` 0.30.0, `ferrohealth-session` 0.25.0, `ferrobridge-term` 0.14.0 and `ihe-iti` 0.15.0, the releases on ferrohealth-server 0.11, so the build links one ferrohealth-smart and one ferrohealth-server where it carried two of each since the move to ferrohealth-server 0.11.
