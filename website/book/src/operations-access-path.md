@@ -95,8 +95,8 @@ answers `503`, so no decision is made without it.
 
 | Metric | Type | Labels | What it tells you |
 |---|---|---|---|
-| `access_copy_entries` | gauge | `copy` | Entries each copy holds: `ehr` (EHRs of the per-EHR copy), `classes` (the class copy), `care_subjects` (subjects whose care relationships are held), `care_teams` (care teams held), `care_patients` and `care_declared` (the patients of those teams and the record subjects they declare), `caller_facts` (the parties the caller facts copy holds). |
-| `access_copy_size_bytes` | gauge | `copy` | Bytes the held care teams take as their bound weighs them (`care_teams`), against the 64 MiB bound. |
+| `access_copy_entries` | gauge | `copy` | Entries each copy holds: `ehr` (EHRs of the per-EHR copy), `classes` (the class copy), `care_subjects` (subjects whose care relationships are held), `care_teams` (care teams held), `care_patients` and `care_declared` (the patients of those teams and the record subjects they declare), `caller_facts` (the parties the caller facts copy holds), `object_version` (COMPOSITION versions the version copy holds). |
+| `access_copy_size_bytes` | gauge | `copy` | Bytes a bounded copy takes as its bound weighs it: the held care teams (`care_teams`) and the held COMPOSITION versions (`object_version`), each against its 64 MiB bound. |
 | `access_copy_lookups_total` | counter | `copy`, `result` | Lookups while the listener is up: `hit` (served from the copy) or `miss` (this request read the database). A request that waited on another request's read counts as a hit. |
 | `access_copy_refills_total` | counter | `copy`, `outcome` | Reads of the settings projection that fill the copy: `ok`, or `failed` (the request answered `503`). |
 | `access_copy_drops_total` | counter | `scope` | Drops: `ehr` (one EHR's settings changed), `classes` (a new class), `every` (a listener connected or was lost, or a refill notification). |
