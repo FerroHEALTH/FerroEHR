@@ -27,6 +27,8 @@ body_limit = "64MiB"
 drain_delay = "0s"
 shutdown_timeout = "10s"
 max_concurrent_requests = 256
+max_waiting_requests = 256
+admission_wait = "100ms"
 retry_after = "1s"
 trusted_proxies = []
 forwarded_header = "forwarded"
@@ -45,7 +47,9 @@ compression_min_size = "1KiB"
 | `body_limit` | size | `"64MiB"` | The largest request body any route reads, refused `413` above it. The bulk routes (operational-template upload, `/message/import`) take up to this; [`api.body_limit`](#api) narrows the rest of the clinical surface below it. The largest operational template in the vendored CKM corpus is several megabytes, well below this ceiling. |
 | `drain_delay` | duration | `"0s"` | On `SIGTERM` or `SIGINT`, readiness answers `503` this long while the listener still accepts, so an orchestrator stops routing first. |
 | `shutdown_timeout` | duration | `"10s"` | Then the listener closes and the requests in flight get this long to finish; a connection still open after it is dropped. |
-| `max_concurrent_requests` | int | `256` | The requests served at once. Past it a request is answered `503` with `Retry-After` and the openEHR error body, never queued, so offered load beyond capacity cannot exhaust memory. The health routes are never refused, so readiness holds while the server sheds. The bound is always on; `0` is refused. See [sizing the bound](#sizing-max_concurrent_requests). |
+| `max_concurrent_requests` | int | `256` | The requests served at once. Past it a request waits for a slot (`max_waiting_requests`, `admission_wait`) and is answered `503` with `Retry-After` and the openEHR error body when the queue is full or the wait expires, so offered load beyond capacity cannot exhaust memory. The health routes are never refused or queued, so readiness holds while the server sheds. The bound is always on; `0` is refused. See [sizing the bound](#sizing-max_concurrent_requests). |
+| `max_waiting_requests` | int | `256` | The requests past `max_concurrent_requests` that may wait for a slot at once, first come first served. A request that finds the queue full is answered `503` at once. The requests in flight and waiting never exceed the two bounds together. `0` keeps no queue and refuses every request past the bound at once. |
+| `admission_wait` | duration | `"100ms"` | How long a request past `max_concurrent_requests` waits for a slot before it is answered `503`. It rides out a short stall, such as a database WAL flush of 110 to 150 ms at 2000 requests per second, that would otherwise refuse requests the server answers a moment later. The wait counts in the request's latency. `"0s"` keeps no queue. |
 | `retry_after` | duration | `"1s"` | The `Retry-After` of a `503` or `429` the listener writes, in whole seconds (RFC 9110 §10.2.3). |
 | `trusted_proxies` | list | `[]` | The reverse proxies, as addresses or CIDR blocks, whose forwarded client address is believed. Empty, every request is named by its peer address. |
 | `forwarded_header` | enum{forwarded,x-forwarded-for} | `forwarded` | The header a trusted proxy names the client in (`Forwarded` is RFC 7239). |
@@ -63,7 +67,7 @@ To size it for your deployment:
 - **A multiple of the pool.** Past a few times `database.max_connections` a request only waits for a connection. 256 is about 9 times the largest default pool of 30; raise the bound with the pool, not past it by much.
 - **Memory per request.** Allow a few megabytes per request in flight for clinical commits and AQL with large results, and keep the bound times that inside the replica's memory limit.
 
-A `503` with `Retry-After` under the bound tells a client to back off; add replicas when it shows at your normal load.
+A `503` with `Retry-After` under the bound tells a client to back off; add replicas when it shows at your normal load. The `/metrics` series `ferrohealth_server_admission_waits_total`, `ferrohealth_server_admission_wait_duration_seconds` (by `outcome`, `admitted` or `expired`) and `ferrohealth_server_admission_refusals_total` (by `reason`, `queue_full` or `wait_expired`) show how often requests wait and why they are refused. Many `wait_expired` refusals mean stalls longer than `admission_wait`; many `queue_full` refusals mean sustained load past capacity.
 
 A refusal the listener writes itself (`408`, `413`, `429`, `503`) and a handler
 that panics (`500`) answer the standard openEHR `{ error, message }` body. `413`

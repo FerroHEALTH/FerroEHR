@@ -20,9 +20,9 @@
 //! (30 s) is far longer than the probe window, and the parked tasks are aborted
 //! at the end of each test, so no permit leaks.
 //!
-//! * beyond the `max_concurrent_requests` bound, an API request is shed
-//!   immediately with `503 Service Unavailable` + `Retry-After: 1` and the
-//!   problem details;
+//! * beyond the `max_concurrent_requests` bound, an API request waits at
+//!   most `admission_wait` (100 ms) for a slot, then is shed with
+//!   `503 Service Unavailable` + `Retry-After: 1` and the problem details;
 //! * with the defaults the bound is on at 256: the request past it is shed,
 //!   so what the server holds stays bounded;
 //! * the health routes are outside the bound and are never shed, even while
@@ -149,8 +149,8 @@ async fn requests_beyond_limit_are_shed_with_503() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_defaults_bound_the_server_at_256() {
-    // A server started from the defaults holds at most 256 requests: the next
-    // one is shed at once, so offered load past capacity cannot grow memory
+    // A server started from the defaults serves at most 256 requests: the next
+    // one waits briefly and is shed, so offered load past capacity cannot grow memory
     // (FerroHEALTH/FerroEHR#5743), and readiness still answers.
     let server = ServerSection::default();
     let bound = server.max_concurrent_requests.get();

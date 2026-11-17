@@ -9,6 +9,7 @@
 
 use std::sync::Arc;
 
+use ferrohealth_server::stack::StackPolicy;
 use ferrohealth_server::telemetry::TelemetryBuildError;
 use ferrohealth_telemetry::request_log::RequestLog;
 use ferrohealth_telemetry::section::TelemetrySection;
@@ -62,14 +63,21 @@ pub fn init_console(section: &TelemetrySection) -> Result<Arc<Telemetry>, Teleme
     })
 }
 
-/// Returns the request log the family stack writes: the query parameters
-/// `[telemetry]` lets through, the HTTP server metrics on `telemetry`'s meter
-/// and the scheme the listener serves.
+/// Returns what the viewer decides inside the family stack.
+///
+/// The request log carries the query parameters `[telemetry]` lets through,
+/// the HTTP server metrics on `telemetry`'s meter and the scheme the listener
+/// serves, and the same meter records the admission's waits and refusals.
 #[must_use]
-pub fn request_log(config: &ViewerConfig, telemetry: &Telemetry) -> RequestLog {
-    RequestLog::new(&config.telemetry.logged_query_parameters)
-        .with_metrics(&telemetry.meter(SCOPE))
-        .serving_tls(config.server.tls.is_some())
+pub fn stack_policy(config: &ViewerConfig, telemetry: &Telemetry) -> StackPolicy {
+    let meter = telemetry.meter(SCOPE);
+    StackPolicy {
+        request_log: RequestLog::new(&config.telemetry.logged_query_parameters)
+            .with_metrics(&meter)
+            .serving_tls(config.server.tls.is_some()),
+        meter: Some(meter),
+        ..StackPolicy::default()
+    }
 }
 
 /// Flushes and stops the exporters of `telemetry`, logging a failure: the job
