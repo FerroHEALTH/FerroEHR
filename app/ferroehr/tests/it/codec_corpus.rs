@@ -6,7 +6,9 @@
 
 use std::path::Path;
 
-use ferroehr::storage::codec::{decompose, reassemble};
+use ferroehr::storage::codec::reassemble;
+
+use crate::fixtures::{read_rows, whole_rows};
 use serde_json::Value;
 
 #[test]
@@ -26,10 +28,10 @@ fn corpus_round_trips_losslessly() {
         if composition.get("_type").and_then(Value::as_str) != Some("COMPOSITION") {
             continue;
         }
-        let rows = decompose(composition.clone())
+        let rows = whole_rows(&composition)
             .unwrap_or_else(|e| panic!("decompose {}: {e}", path.display()));
-        let reassembled =
-            reassemble(&rows).unwrap_or_else(|e| panic!("reassemble {}: {e}", path.display()));
+        let reassembled = reassemble(&read_rows(&rows))
+            .unwrap_or_else(|e| panic!("reassemble {}: {e}", path.display()));
         assert_eq!(
             reassembled,
             composition,

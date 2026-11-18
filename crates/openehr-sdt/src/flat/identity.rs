@@ -6,60 +6,48 @@
 //! `UML/classes/org.openehr.rm.common.locatable.adoc`,
 //! `org.openehr.rm.common.archetyped.adoc`).
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "canonical JSON / Simplified Formats operate on the wire value by definition \
-              (ITS-JSON; ITS-REST Simplified Formats) — serde_json::Value IS the subject matter \
-              (#1694)"
-)]
-
-use serde_json::{Map, Value, json};
+use openehr_rm::v1_2::access;
+use openehr_rm::v1_2::access::RmObject;
 
 use crate::flat::build::is_locatable;
+use crate::flat::error::FlatError;
+use crate::flat::typed::{self, Build, Obj, o, s};
 use crate::flat::webtemplate::model::{CodedName, WebTemplateNode};
 
 /// The `name` value for a locatable node: a DV_CODED_TEXT carrying the
 /// template's constrained `defining_code` when the name is coded (RM common
 /// `master03-archetyped_package.adoc` §"The LOCATABLE class"), else a plain
 /// DV_TEXT.
-pub(crate) fn name_value(display: &str, coded: Option<&CodedName>) -> Value {
+pub(crate) fn name_value(display: &str, coded: Option<&CodedName>) -> Result<Obj, FlatError> {
     match coded {
         Some(CodedName {
             terminology, code, ..
-        }) => json!({
-            "_type": "DV_CODED_TEXT",
-            "value": display,
-            "defining_code": {
-                "_type": "CODE_PHRASE",
-                "terminology_id": {"_type": "TERMINOLOGY_ID", "value": terminology},
-                "code_string": code,
-            },
-        }),
-        None => json!({"_type": "DV_TEXT", "value": display}),
+        }) => typed::dv_coded_text(display, terminology, code),
+        None => typed::dv_text(display),
     }
 }
 
 /// Stamp the two LOCATABLE identity members (`name`, `archetype_node_id`) on a
 /// built node — and ONLY when its class is a LOCATABLE (see [`is_locatable`]).
 pub(crate) fn stamp_locatable_identity(
-    obj: &mut Map<String, Value>,
+    obj: &mut dyn RmObject,
     node: &WebTemplateNode,
     rm_type: &str,
-) {
+) -> Result<(), FlatError> {
     if !is_locatable(rm_type) {
-        return;
+        return Ok(());
     }
-    obj.entry("name".to_owned()).or_insert_with(|| {
+    obj.or_put("name", || {
         let text = node
             .name
             .as_deref()
             .map_or_else(|| default_name(rm_type), str::to_owned);
-        name_value(&text, node.name_coded.as_ref())
-    });
+        Ok(o(name_value(&text, node.name_coded.as_ref())?))
+    })?;
     if let Some(nid) = recorded_archetype_id(node) {
-        obj.entry("archetype_node_id".to_owned())
-            .or_insert_with(|| json!(nid));
+        obj.or_put("archetype_node_id", || Ok(s(nid)))?;
     }
+    Ok(())
 }
 
 /// The `archetype_node_id` data records for `node`: the complete identifier an
@@ -93,41 +81,50 @@ pub(crate) fn default_name(rm_type: &str) -> String {
 /// as the RM release the object was created to (RM common
 /// `master03-archetyped_package.adoc` §ARCHETYPED `rm_version`).
 pub(crate) fn stamp_archetype_details(
-    obj: &mut Map<String, Value>,
+    obj: &mut dyn RmObject,
     node: &WebTemplateNode,
     is_root: bool,
     template_id: &str,
     rm_version: &str,
-) {
+) -> Result<(), FlatError> {
     let is_root_arch = node
         .node_id
         .as_deref()
         .is_some_and(openehr_rm::v1_2::paths::is_archetype_root_node_id);
     if !is_root_arch {
-        return;
+        return Ok(());
     }
-    obj.entry("archetype_details".to_owned())
-        .or_insert_with(|| {
-            let mut a = Map::new();
-            a.insert("_type".into(), json!("ARCHETYPED"));
-            a.insert(
-                "archetype_id".into(),
-                json!({"_type": "ARCHETYPE_ID", "value": recorded_archetype_id(node)}),
-            );
-            if is_root && !template_id.is_empty() {
-                a.insert(
-                    "template_id".into(),
-                    json!({"_type": "TEMPLATE_ID", "value": template_id}),
-                );
-            }
-            a.insert("rm_version".into(), json!(rm_version));
-            Value::Object(a)
-        });
+    obj.or_put("archetype_details", || {
+        let mut a = access::construct("ARCHETYPED")?;
+        if let Some(id) = recorded_archetype_id(node) {
+            a.put(
+                "archetype_id",
+                o(typed::make("ARCHETYPE_ID", [("value", s(id))])?),
+            )?;
+        }
+        if is_root && !template_id.is_empty() {
+            a.put(
+                "template_id",
+                o(typed::make("TEMPLATE_ID", [("value", s(template_id))])?),
+            )?;
+        }
+        a.put("rm_version", s(rm_version))?;
+        Ok(o(a))
+    })
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the test reads a built name through its canonical JSON"
+)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    fn canonical(object: Result<Obj, FlatError>) -> serde_json::Value {
+        typed::canonical_of(&*object.unwrap()).unwrap()
+    }
 
     #[test]
     fn a_node_without_term_text_is_named_for_its_rm_type() {
@@ -155,11 +152,11 @@ mod tests {
             code: "at0007".to_owned(),
             incoherent: false,
         };
-        let v = name_value("Exclusion", Some(&coded));
+        let v = canonical(name_value("Exclusion", Some(&coded)));
         assert_eq!(v["_type"], "DV_CODED_TEXT");
         assert_eq!(v["defining_code"]["code_string"], "at0007");
         assert_eq!(
-            name_value("Systolic", None),
+            canonical(name_value("Systolic", None)),
             json!({"_type": "DV_TEXT", "value": "Systolic"})
         );
     }

@@ -28,6 +28,7 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::user_write::ScimCommit;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::decoded;
 use crate::versioning::change::{Change, WriteEnvelope};
 use crate::versioning::lifecycle::state;
 
@@ -110,6 +111,7 @@ impl FerroEhrService {
                 TemplateFit::Complete => state::COMPLETE,
                 TemplateFit::Incomplete(_) => state::INCOMPLETE,
             };
+            let body = decoded(Kind::Group, body, lifecycle == state::INCOMPLETE)?;
             changes.push(Change::modify(
                 id,
                 Kind::Group,

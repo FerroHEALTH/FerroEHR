@@ -27,8 +27,7 @@
 
 use serde_json::{Map, Value};
 
-use crate::storage::compact::RootIdentity;
-use crate::storage::slim::{has_keys, object, string};
+use crate::storage::slim::object;
 
 /// The `archetype_details`, `language` and `encoding` of a node, as the
 /// row's `rm_version`, `language` and `encoding` columns hold them.
@@ -56,91 +55,6 @@ pub const LANGUAGE_TERMINOLOGY: &str = "ISO_639-1";
 
 /// The terminology of the openEHR `character sets` code set.
 pub const ENCODING_TERMINOLOGY: &str = "IANA_character-sets";
-
-/// Removes the header keys the [`Header`] columns rebuild exactly from a
-/// fragment, and returns what the columns hold of them.
-///
-/// `root` is the version identity of a root row (`num = 0`), whose header may
-/// name the version's template, and `None` below it.
-pub(crate) fn slim_header(map: &mut Map<String, Value>, root: Option<&RootIdentity<'_>>) -> Header {
-    let mut header = Header::default();
-    if let Some(rm_version) = derived_archetype_details(map, root) {
-        map.shift_remove("archetype_details");
-        map.shift_remove("archetype_node_id");
-        header.rm_version = Some(rm_version);
-    }
-    if let Some(code) = map
-        .get("language")
-        .and_then(|phrase| code_phrase(phrase, LANGUAGE_TERMINOLOGY))
-    {
-        map.shift_remove("language");
-        header.language = Some(code);
-    }
-    if let Some(code) = map
-        .get("encoding")
-        .and_then(|phrase| code_phrase(phrase, ENCODING_TERMINOLOGY))
-    {
-        map.shift_remove("encoding");
-        header.encoding = Some(code);
-    }
-    header
-}
-
-/// The `rm_version` of an `archetype_details` that [`archetyped`] rebuilds
-/// from the row's `archetype` column: an `ARCHETYPED` of exactly
-/// `archetype_id` and `rm_version`, naming the fragment's own
-/// `archetype_node_id`, which [`recased`] rebuilds from its lowercase form,
-/// and on a root row a `template_id` that is exactly the version's, or none
-/// when the version has none.
-fn derived_archetype_details(
-    map: &Map<String, Value>,
-    root: Option<&RootIdentity<'_>>,
-) -> Option<String> {
-    let node_id = map.get("archetype_node_id").and_then(Value::as_str)?;
-    if recased(&node_id.to_ascii_lowercase()).as_deref() != Some(node_id) {
-        return None;
-    }
-    let details = map.get("archetype_details").and_then(Value::as_object)?;
-    let template = root.and_then(|root| root.template_id);
-    let keys: &[&str] = if template.is_some() {
-        &["_type", "archetype_id", "rm_version", "template_id"]
-    } else {
-        &["_type", "archetype_id", "rm_version"]
-    };
-    if !has_keys(details, keys)
-        || details.get("_type").and_then(Value::as_str) != Some("ARCHETYPED")
-        || details.get("template_id") != template.map(template_id).as_ref()
-    {
-        return None;
-    }
-    let id = details.get("archetype_id").and_then(Value::as_object)?;
-    if !has_keys(id, &["_type", "value"])
-        || id.get("_type").and_then(Value::as_str) != Some("ARCHETYPE_ID")
-        || id.get("value").and_then(Value::as_str) != Some(node_id)
-    {
-        return None;
-    }
-    string(details, "rm_version")
-}
-
-/// The code of a `CODE_PHRASE` of exactly `terminology_id` and
-/// `code_string`, whose terminology is `terminology`.
-fn code_phrase(phrase: &Value, terminology: &str) -> Option<String> {
-    let fields = phrase.as_object()?;
-    if !has_keys(fields, &["_type", "code_string", "terminology_id"])
-        || fields.get("_type").and_then(Value::as_str) != Some("CODE_PHRASE")
-    {
-        return None;
-    }
-    let id = fields.get("terminology_id").and_then(Value::as_object)?;
-    if !has_keys(id, &["_type", "value"])
-        || id.get("_type").and_then(Value::as_str) != Some("TERMINOLOGY_ID")
-        || id.get("value").and_then(Value::as_str) != Some(terminology)
-    {
-        return None;
-    }
-    string(fields, "code_string")
-}
 
 /// Returns the archetype id a lowercase `openehr-…` archetype HRID was written as.
 ///
@@ -272,8 +186,18 @@ pub(crate) fn code_phrase_of(code: &str, terminology: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::slim::slim;
+    use crate::storage::compact::RootIdentity;
+    use crate::storage::render::nodes::{SlimmedValue, slim_value};
     use serde_json::json;
+
+    /// Slims `fragment` as a row of `rm_type` would.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "the tests hand each fragment over whole, as the row it stands for"
+    )]
+    fn slim(rm_type: &str, root: Option<&RootIdentity<'_>>, fragment: Value) -> SlimmedValue {
+        slim_value(rm_type, root, &fragment)
+    }
 
     #[test]
     fn the_header_of_an_entry_moves_to_its_columns() {

@@ -73,7 +73,6 @@ impl<T> ImportedVersion<T> {
 
 #[cfg(test)]
 mod tests {
-    use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
     use super::*;
     use crate::v1_2::common::change_control::original_version::OriginalVersion;
     use crate::v1_2::common::generic::audit_details::{AuditDetails, AuditDetailsData};
@@ -84,6 +83,7 @@ mod tests {
     use openehr_base::v1_3::prelude::{
         HierObjectId, ObjectId, ObjectRef, ObjectRefData, TerminologyId,
     };
+    use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
 
     fn coded(code: &str, rubric: &str) -> DvCodedText {
         DvCodedText {
@@ -114,9 +114,12 @@ mod tests {
                 accuracy: None,
                 value: "2026-07-07T10:11:12Z".to_owned(),
             },
-            change_type: coded(AuditChangeType::Creation.code(), AuditChangeType::Creation.rubric()),
+            change_type: coded(
+                AuditChangeType::Creation.code(),
+                AuditChangeType::Creation.rubric(),
+            ),
             description: None,
-            committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+            committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
         })
     }
 
@@ -140,13 +143,16 @@ mod tests {
         OriginalVersion {
             contribution: contribution("11111111-1111-4111-8111-111111111111"),
             signature: Some("foreign-signature".to_owned()),
-            commit_audit: audit("remote.example"),
+            commit_audit: Box::new(audit("remote.example")),
             uid: version_id("8849182c-82ad-4088-a07f-48ead4180515::remote.example::2"),
             preceding_version_uid: Some(version_id(
                 "8849182c-82ad-4088-a07f-48ead4180515::remote.example::1",
             )),
             other_input_version_uids: openehr_base::containers::present_nonempty(Vec::new()),
-            lifecycle_state: coded(VersionLifecycleState::Complete.code(), VersionLifecycleState::Complete.rubric()),
+            lifecycle_state: coded(
+                VersionLifecycleState::Complete.code(),
+                VersionLifecycleState::Complete.rubric(),
+            ),
             attestations: openehr_base::containers::present_nonempty(Vec::new()),
             data: Some("content".to_owned()),
         }
@@ -156,8 +162,8 @@ mod tests {
         ImportedVersion {
             contribution: contribution("22222222-2222-4222-8222-222222222222"),
             signature: Some("local-wrapper-signature".to_owned()),
-            commit_audit: audit("local.example"),
-            item,
+            commit_audit: Box::new(audit("local.example")),
+            item: Box::new(item),
         }
     }
 
@@ -210,7 +216,10 @@ mod tests {
         assert_eq!(imported(wrapped()).data(), Some(&"content".to_owned()));
 
         let mut deleted = wrapped();
-        deleted.lifecycle_state = coded(VersionLifecycleState::Deleted.code(), VersionLifecycleState::Deleted.rubric());
+        deleted.lifecycle_state = coded(
+            VersionLifecycleState::Deleted.code(),
+            VersionLifecycleState::Deleted.rubric(),
+        );
         deleted.data = None;
         assert_eq!(imported(deleted).data(), None);
     }

@@ -261,8 +261,9 @@ async fn documents_rendered(pool: &sqlx::PgPool) -> i64 {
     .expect("pg_stat_statements reads")
 }
 
-/// A page renders the document of each access-log entry it serves and of no
-/// other: the page is taken by the records' keys first (#5965).
+/// A page renders the document of no access-log entry in the database: the
+/// page is taken by the records' keys first (#5965), and the server joins
+/// each served entry from its stored parts (#6005).
 #[tokio::test]
 async fn a_page_renders_only_the_documents_it_serves() {
     let db = testkit::db().await.expect("testkit database");
@@ -284,11 +285,7 @@ async fn a_page_renders_only_the_documents_it_serves() {
     for case in cases() {
         for (count, offset) in [(20, 0), (7, 13), (20, 50), (1, 0)] {
             let (_, want_page) = reference(&pool, case.sql, count, offset).await;
-            let served = want_page
-                .iter()
-                .filter(|(chain, _)| chain == "access_log")
-                .count();
-            let evicted = testkit::statement_window(&pool)
+            let evicted = testkit::statements::statement_window(&pool)
                 .await
                 .expect("the statement counts reset");
             let page = store
@@ -305,15 +302,76 @@ async fn a_page_renders_only_the_documents_it_serves() {
                 "{}: the page",
                 case.name
             );
+            // NOTE: #6005, the server joins each served entry from its stored parts.
             assert_eq!(
                 documents_rendered(&pool).await,
-                i64::try_from(served).expect("a count"),
-                "{}, _count={count}, _offset={offset}: one document per served entry",
+                0,
+                "{}, _count={count}, _offset={offset}: no document rendered in the database",
                 case.name
             );
-            testkit::assert_statements_kept(&pool, evicted)
+            testkit::statements::assert_statements_kept(&pool, evicted)
                 .await
                 .expect("no statement evicted while the test counted them");
         }
+    }
+}
+
+/// The ITI-81 total counts exactly the records a full paging of the same
+/// search returns while some entries wait unchained in the intake, held by a
+/// reservation the chainer does not take (#6000, FHIR R4 `Bundle.total`).
+#[tokio::test]
+async fn the_total_counts_only_what_the_pages_return() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let store = AuditStore::new(pool.clone());
+    for n in 0..3 {
+        store
+            .insert_batch(&batch(n), &[])
+            .await
+            .expect("the batch is stored");
+    }
+    let reservation = uuid::Uuid::now_v7();
+    store
+        .write_held(batch(3), &[], reservation)
+        .await
+        .expect("the held batch is written");
+    let unchained: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM audit.access_log_search WHERE chain_seq IS NULL")
+            .fetch_one(&pool)
+            .await
+            .expect("the unchained entries count");
+    assert!(unchained > 0, "the held entries wait unchained");
+    for case in cases() {
+        let counted = store
+            .search(&AuditSearchFilter {
+                count: 1,
+                total: true,
+                ..case.filter.clone()
+            })
+            .await
+            .expect("the counted search");
+        let mut paged = 0_i64;
+        let mut offset = 0;
+        loop {
+            let page = store
+                .search(&AuditSearchFilter {
+                    count: 7,
+                    offset,
+                    ..case.filter.clone()
+                })
+                .await
+                .expect("a page");
+            paged += i64::try_from(page.documents.len()).expect("a page length");
+            if !page.more {
+                break;
+            }
+            offset += 7;
+        }
+        assert_eq!(
+            counted.total,
+            Some(paged),
+            "{}: the total is what the pages return",
+            case.name
+        );
     }
 }

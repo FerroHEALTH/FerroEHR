@@ -19,7 +19,7 @@
 //! record compares equal to its derivation, which the verifier checks. No
 //! openEHR spec governs audit storage: our own design.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry;
 use openehr_rm::draft::access_log::access_log::access_log_link::AccessLogLink;
@@ -30,6 +30,7 @@ use sqlx::PgConnection;
 use crate::access_log::chain::ALGORITHM;
 use crate::access_log::store::AccessLogError;
 use crate::access_log::stored_form;
+use crate::access_log::stored_form::parts::Derived;
 use crate::db::acquire::acquire;
 use crate::digest::sha256_hex;
 use crate::system_log::token_digest::token_digest;
@@ -74,22 +75,6 @@ pub struct IntakeEntry {
     index: Option<IndexRow>,
 }
 
-/// The columns the log derives from an entry's content, as text the database
-/// casts.
-#[derive(Debug, Default, PartialEq, Eq)]
-struct Derived {
-    record_type: Option<String>,
-    uid: Option<String>,
-    time_recorded: Option<String>,
-    ehr_id: Option<String>,
-    action_terminology: Option<String>,
-    action_code: Option<String>,
-    result_terminology: Option<String>,
-    result_code: Option<String>,
-    party_id: Option<String>,
-    retain_until: Option<String>,
-}
-
 impl IntakeEntry {
     /// `entry` as the intake keeps it, with `index` when it is indexed.
     ///
@@ -120,40 +105,21 @@ impl IntakeEntry {
         let whole = canonical_object_without(entry, &[LINK]).map_err(AccessLogError::Canonical)?;
         let cut = stored_form::parts::Cut::of(&whole).map_err(AccessLogError::Canonical)?;
         let (row, shared) = cut.parts().map_err(AccessLogError::Canonical)?;
-        let row = stored_form::parts::without_columns(&row).map_err(AccessLogError::Canonical)?;
-        let derived = Derived::of(&cut)?;
+        let columns = stored_form::parts::index::IndexColumns {
+            request_id: index.as_ref().and_then(|index| index.request_id.as_deref()),
+            resource_id: index
+                .as_ref()
+                .and_then(|index| index.resource_id.as_deref()),
+        };
+        let row = stored_form::parts::index::without_columns(&row, &columns)
+            .map_err(AccessLogError::Canonical)?;
+        let derived = Derived::of(&cut).map_err(AccessLogError::Canonical)?;
         Ok(Self {
             content_digest: sha256_hex(&whole),
             row,
             shared: shared.map(|text| (sha256_hex(&text), text)),
             derived,
             index,
-        })
-    }
-}
-
-impl Derived {
-    /// The derived columns of the entry whose canonical form `cut` read, at
-    /// the paths `audit.access_log_entry_derive` reads.
-    fn of(cut: &stored_form::parts::Cut<'_>) -> Result<Self, AccessLogError> {
-        let text = |path: &[&str]| cut.text_at(path).map_err(AccessLogError::Canonical);
-        Ok(Self {
-            record_type: text(&["_type"])?,
-            uid: text(&["uid", "value"])?,
-            time_recorded: text(&["time_recorded", "value"])?,
-            ehr_id: text(&["ehr_id", "value"])?,
-            action_terminology: text(&["action", "defining_code", "terminology_id", "value"])?,
-            action_code: text(&["action", "defining_code", "code_string"])?,
-            result_terminology: text(&[
-                "outcome",
-                "result",
-                "defining_code",
-                "terminology_id",
-                "value",
-            ])?,
-            result_code: text(&["outcome", "result", "defining_code", "code_string"])?,
-            party_id: text(&["accessor", "party", "external_ref", "id", "value"])?,
-            retain_until: text(&["retention", "retain_until", "value"])?,
         })
     }
 }
@@ -253,7 +219,11 @@ const INTAKE: &str = "SELECT audit.access_log_intake_take($1, $2, $3, $4, $5, $6
 /// Write `entries` into the intake on `conn`, in their order, in one
 /// statement.
 ///
-/// The shared parts they name go in with them. `tokens` holds, by the
+/// The shared parts they name go in with them, but for those whose digest
+/// `stored` names, which the store already keeps for at least as long as the
+/// entries need: the statement still locks every part an entry names, raises
+/// its `retain_until` when an entry outlives it, and refuses an entry whose
+/// part the store does not hold. `tokens` holds, by the
 /// position of its entry, the search tokens of each entry whose index row
 /// leaves them to the statement (an empty `search_tokens`); the statement
 /// stores or finds them and their shared set. They are held under
@@ -267,6 +237,7 @@ pub async fn take_in(
     entries: &[IntakeEntry],
     tokens: &[Vec<IntakeToken>],
     reserved_by: Option<uuid::Uuid>,
+    stored: &BTreeSet<&str>,
 ) -> Result<(), AccessLogError> {
     if entries.is_empty() {
         return Ok(());
@@ -276,7 +247,9 @@ pub async fn take_in(
     let mut shared = BTreeMap::new();
     let mut columns = Columns::default();
     for entry in entries {
-        if let Some((digest, content)) = &entry.shared {
+        if let Some((digest, content)) = &entry.shared
+            && !stored.contains(digest.as_str())
+        {
             shared.insert(digest.as_str(), content.as_str());
         }
         columns.push(entry);
@@ -375,6 +348,133 @@ pub struct GroupWriter {
     jobs: tokio::sync::mpsc::Sender<Job>,
 }
 
+/// The shared parts the gathered writes stored, each with the `retain_until`
+/// the store keeps it until at least (`None` for no end), so a later write
+/// sends only the parts it does not know stored (#6005).
+///
+/// A part is learned only from a statement that committed on its own, and the
+/// store only ever raises a part's `retain_until`, so the store keeps every
+/// part learned until at least its learned date. The retention sweep removes
+/// only parts whose `retain_until` has passed (`audit.access_log_shared_collect`),
+/// so a part is skipped only while its learned date is past tomorrow. The
+/// intake statement still locks every part an entry names and refuses an
+/// entry whose part is gone; such a refusal forgets the skipped parts and
+/// writes the statement again with them. No specification governs it: our
+/// own design.
+#[derive(Debug, Default)]
+pub(crate) struct StoredParts {
+    known: std::sync::Mutex<BTreeMap<String, Option<jiff::civil::Date>>>,
+}
+
+/// The most parts [`StoredParts`] remembers before it starts again.
+const KNOWN_PARTS: usize = 4096;
+
+impl StoredParts {
+    /// The guard of the known parts, recovered from a poisoned lock, which
+    /// leaves the map whole: each change is one insert or removal.
+    fn known(&self) -> std::sync::MutexGuard<'_, BTreeMap<String, Option<jiff::civil::Date>>> {
+        self.known
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// The digests of the parts `entries` name that the store keeps at least
+    /// as long as every entry naming them needs, past `today`'s next day.
+    fn stored<'e>(
+        &self,
+        entries: &'e [IntakeEntry],
+        today: jiff::civil::Date,
+    ) -> BTreeSet<&'e str> {
+        let Ok(tomorrow) = today.tomorrow() else {
+            return BTreeSet::new();
+        };
+        let known = self.known();
+        needed(entries)
+            .into_iter()
+            .filter(|(digest, need)| match (known.get(*digest), need) {
+                (Some(None), Need::Until(_) | Need::Forever) => true,
+                (Some(Some(kept)), Need::Until(until)) => *kept > tomorrow && until <= kept,
+                _ => false,
+            })
+            .map(|(digest, _)| digest)
+            .collect()
+    }
+
+    /// Learns the parts `entries` name, which a committed statement stored
+    /// or kept for at least as long as each entry naming it needs; a part
+    /// whose need does not read is not learned.
+    fn learn(&self, entries: &[IntakeEntry]) {
+        let mut known = self.known();
+        if known.len() > KNOWN_PARTS {
+            known.clear();
+        }
+        for (digest, need) in needed(entries) {
+            let until = match need {
+                Need::Until(until) => Some(until),
+                Need::Forever => None,
+                Need::Unread => continue,
+            };
+            let kept = known.entry(digest.to_owned()).or_insert(until);
+            *kept = match (*kept, until) {
+                (None, _) | (_, None) => None,
+                (Some(kept), Some(until)) => Some(kept.max(until)),
+            };
+        }
+    }
+
+    /// Forgets the parts `digests` names.
+    fn forget(&self, digests: &BTreeSet<&str>) {
+        let mut known = self.known();
+        for digest in digests {
+            known.remove(*digest);
+        }
+    }
+}
+
+/// How long the entries naming a shared part need it kept.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Need {
+    /// Until this date.
+    Until(jiff::civil::Date),
+    /// Without end: an entry states no `retain_until`.
+    Forever,
+    /// An entry's `retain_until` does not read as a date here, so how long
+    /// the store keeps the part is not known.
+    Unread,
+}
+
+impl Need {
+    /// The need of both `self` and `other`.
+    fn and(self, other: Self) -> Self {
+        match (self, other) {
+            (Self::Unread, _) | (_, Self::Unread) => Self::Unread,
+            (Self::Forever, _) | (_, Self::Forever) => Self::Forever,
+            (Self::Until(left), Self::Until(right)) => Self::Until(left.max(right)),
+        }
+    }
+}
+
+/// Each shared part `entries` name, with how long the entries naming it need
+/// it kept.
+fn needed(entries: &[IntakeEntry]) -> BTreeMap<&str, Need> {
+    let mut needed: BTreeMap<&str, Need> = BTreeMap::new();
+    for entry in entries {
+        let Some((digest, _)) = &entry.shared else {
+            continue;
+        };
+        // NOTE: our own design (#6005), an end that does not read here is never assumed.
+        let need = match entry.derived.retain_until.as_deref() {
+            None => Need::Forever,
+            Some(text) => text.parse().map_or(Need::Unread, Need::Until),
+        };
+        needed
+            .entry(digest.as_str())
+            .and_modify(|kept| *kept = kept.and(need))
+            .or_insert(need);
+    }
+    needed
+}
+
 impl std::fmt::Debug for Job {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Job")
@@ -389,8 +489,13 @@ impl GroupWriter {
     pub fn spawn(pool: &sqlx::PgPool) -> Self {
         let (jobs, queue) = tokio::sync::mpsc::channel(QUEUE);
         let queue = std::sync::Arc::new(tokio::sync::Mutex::new(queue));
+        let parts = std::sync::Arc::new(StoredParts::default());
         for _ in 0..WRITERS {
-            tokio::spawn(gather(pool.clone(), std::sync::Arc::clone(&queue)));
+            tokio::spawn(gather(
+                pool.clone(),
+                std::sync::Arc::clone(&queue),
+                std::sync::Arc::clone(&parts),
+            ));
         }
         Self { jobs }
     }
@@ -437,6 +542,7 @@ impl GroupWriter {
 async fn gather(
     pool: sqlx::PgPool,
     queue: std::sync::Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<Job>>>,
+    parts: std::sync::Arc<StoredParts>,
 ) {
     loop {
         let mut waiting = queue.lock().await;
@@ -453,7 +559,7 @@ async fn gather(
             jobs.push(job);
         }
         drop(waiting);
-        write_jobs(&pool, jobs, count).await;
+        write_jobs(&pool, &parts, jobs, count).await;
     }
 }
 
@@ -465,7 +571,7 @@ async fn gather(
 /// refuses only its own request. Any other failure leaves the outcome of the
 /// statement unknown, or no statement ran, and every job is refused: none is
 /// written twice and none is answered as written when it may not be.
-async fn write_jobs(pool: &sqlx::PgPool, jobs: Vec<Job>, count: usize) {
+async fn write_jobs(pool: &sqlx::PgPool, parts: &StoredParts, jobs: Vec<Job>, count: usize) {
     let mut entries = Vec::with_capacity(count);
     let mut tokens = Vec::with_capacity(count);
     let mut spans = Vec::with_capacity(jobs.len());
@@ -479,7 +585,7 @@ async fn write_jobs(pool: &sqlx::PgPool, jobs: Vec<Job>, count: usize) {
         spans.push(start..entries.len());
         answers.push(job.done);
     }
-    let written = write_retrying(pool, &entries, &tokens).await;
+    let written = write_retrying(pool, parts, &entries, &tokens).await;
     match written {
         Err(refused) if answers.len() > 1 && refused_by_database(&refused) => {
             tracing::warn!(
@@ -489,7 +595,9 @@ async fn write_jobs(pool: &sqlx::PgPool, jobs: Vec<Job>, count: usize) {
             );
             for (answer, span) in answers.into_iter().zip(spans) {
                 let own = match (entries.get(span.clone()), tokens.get(span)) {
-                    (Some(own), Some(own_tokens)) => write_retrying(pool, own, own_tokens).await,
+                    (Some(own), Some(own_tokens)) => {
+                        write_retrying(pool, parts, own, own_tokens).await
+                    }
                     _ => Err(AccessLogError::Gathered(None)),
                 };
                 // NOTE: our own design (#5770), a request that stopped waiting needs no answer.
@@ -514,27 +622,52 @@ const ATTEMPTS: u32 = 3;
 /// again while the database refuses it as a deadlock or a serialization
 /// failure (SQLSTATE `40P01`, `40001`): the refused statement committed
 /// nothing, so running it again writes each entry once.
+///
+/// The parts `parts` knows stored are left out of the statement; when the
+/// store no longer holds one (SQLSTATE `23503`), they are forgotten and the
+/// statement runs again with every part. A committed statement teaches
+/// `parts` the parts it stored or kept.
 async fn write_retrying(
     pool: &sqlx::PgPool,
+    parts: &StoredParts,
     entries: &[IntakeEntry],
     tokens: &[Vec<IntakeToken>],
 ) -> Result<(), AccessLogError> {
+    let today = jiff::Timestamp::now()
+        .to_zoned(jiff::tz::TimeZone::UTC)
+        .date();
+    let mut stored = parts.stored(entries, today);
     let mut attempt = 1;
     loop {
         let written = async {
             let mut conn = acquire(pool).await?;
-            take_in(&mut conn, entries, tokens, None).await
+            take_in(&mut conn, entries, tokens, None, &stored).await
         }
         .await;
         match written {
+            Err(refused) if !stored.is_empty() && unknown_part(&refused) => {
+                tracing::warn!(error = %refused, "a shared part the intake knew stored is gone; it is written again");
+                parts.forget(&stored);
+                stored.clear();
+            }
             Err(refused) if attempt < ATTEMPTS && transient(&refused) => {
                 tracing::warn!(attempt, error = %refused, "the access-log intake write runs again");
                 tokio::time::sleep(std::time::Duration::from_millis(u64::from(attempt) * 5)).await;
                 attempt += 1;
             }
+            Ok(()) => {
+                parts.learn(entries);
+                return Ok(());
+            }
             written => return written,
         }
     }
+}
+
+/// Whether the database refused `error` because an entry names a shared part
+/// it does not hold (`audit.access_log_intake_unknown`).
+fn unknown_part(error: &AccessLogError) -> bool {
+    sqlstate(error).is_some_and(|code| code == "23503")
 }
 
 /// The SQLSTATE of the error the database answered `error` with, `None` when

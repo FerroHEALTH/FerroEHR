@@ -25,13 +25,6 @@
 //! projection, the uniqueness of a reference and the order in which a
 //! reference resolves are governed by no openEHR spec: our own design.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 1): the stored canonical party body \
-              the record subjects are derived from"
-)]
-
-use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
@@ -45,6 +38,7 @@ use crate::privacy::PrivacyPolicy;
 use crate::storage::access_projection::EhrSubject;
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
+use crate::versioning::tree::Tree;
 use openehr_rm::draft::access_control::terminology::{RecordSubject, TERMINOLOGY_ID_ACCESS, Term};
 
 /// The unique constraint of `binding_record_subject` (party/0041).
@@ -61,17 +55,17 @@ pub(crate) struct DeclaredSubject {
 }
 
 /// Whether `node` is an element named by the record subject code.
-fn names_record_subject(node: &Value) -> bool {
+fn names_record_subject<'a, T: Tree<'a>>(node: T) -> bool {
     node.get("name")
         .and_then(coded)
-        .is_some_and(|code| RecordSubject::read(TERMINOLOGY_ID_ACCESS, code).is_ok())
+        .is_some_and(|code| RecordSubject::read(TERMINOLOGY_ID_ACCESS, &code).is_ok())
 }
 
 /// Pushes onto `facts` the record subjects `body`, a party of `kind`,
 /// declares in its `details`, and why one cannot be read: an element whose
 /// value is no `DV_IDENTIFIER` with an issuer and an id, and one held by a
 /// party other than a `PERSON` or outside its `details`.
-pub(crate) fn declared(kind: Kind, body: &Value, facts: &mut GrantFacts) {
+pub(crate) fn declared<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut GrantFacts) {
     let code = RecordSubject::RecordSubject.code();
     let mut in_details = 0_usize;
     if kind == Kind::Person
@@ -112,15 +106,10 @@ pub(crate) fn declared(kind: Kind, body: &Value, facts: &mut GrantFacts) {
 
 /// The reference the value `value` of a record subject element names: a
 /// `DV_IDENTIFIER` with a non-empty `issuer` and `id`.
-fn identifier(value: Option<&Value>) -> Option<EhrSubject> {
+fn identifier<'a, T: Tree<'a>>(value: Option<T>) -> Option<EhrSubject> {
     let value = value?;
-    let text = |key: &str| {
-        value
-            .get(key)
-            .and_then(Value::as_str)
-            .filter(|text| !text.trim().is_empty())
-    };
-    (text("_type") == Some("DV_IDENTIFIER"))
+    let text = |key: &str| value.get_text(key).filter(|text| !text.trim().is_empty());
+    (text("_type").as_deref() == Some("DV_IDENTIFIER"))
         .then(|| Some(EhrSubject::new(text("issuer")?, text("id")?)))
         .flatten()
 }
@@ -309,7 +298,7 @@ pub(crate) async fn declared_by(
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use serde_json::{Value, json};
 
     use super::*;
 

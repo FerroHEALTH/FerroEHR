@@ -712,12 +712,17 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
     let resp = state
         .backend()
-        .party_relationship_get(parse_uid_based_id(&p.uid_based_id)?, p.version_at_time)
+        .party_relationship_get_raw(parse_uid_based_id(&p.uid_based_id)?, p.version_at_time)
         .await?;
-    if resp.is_empty() {
+    if resp.body.is_null() {
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
-    Ok(read_relationship(h, &resp))
+    Ok(negotiate::resource::read_raw_rm::<PartyRelationship>(
+        h,
+        resp,
+        LOCATABLE_ROOT,
+        Tree::Demographic,
+    ))
 }
 
 /// The `party_relationship_update` operation.
@@ -850,18 +855,6 @@ fn write_relationship(
             Some(segment),
             meta,
         );
-    }
-    out
-}
-
-/// A `200 OK` read of a relationship, setting the demographic
-/// `ETag`/`Last-Modified`. No `Location` — overview §Location: the header "MUST
-/// NOT be used to indicate an alternate representation of an existing resource
-/// (e.g. via `GET` method)".
-fn read_relationship(h: &http::HeaderMap, resp: &ServiceResponse) -> Response {
-    let mut out = respond_rm::<PartyRelationship>(h, StatusCode::OK, &resp.body, LOCATABLE_ROOT);
-    if let Some(meta) = resp.meta.as_ref() {
-        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
     }
     out
 }

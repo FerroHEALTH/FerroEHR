@@ -34,7 +34,9 @@ use crate::access_evaluator_http::{app, ehr_with_composition, send};
 use crate::common::BASE;
 use ferroehr::db::pool::SESSION_SETUP_SPAN;
 
+mod entry;
 mod intake;
+mod paths;
 mod wal;
 
 /// The EHRs the population query serves, each with one composition.
@@ -58,6 +60,10 @@ const CHAINER_TAKE: u64 = 1;
 const CHAINER_ROUND: u64 = 8;
 /// The nested statements of a chainer round of the system chain.
 const SYSTEM_ROUND: u64 = 6;
+/// The nested statements of a chainer round's release of the records the
+/// committed writes held (#5762): the switch on and off, and the update of
+/// each intake.
+const CHAINER_RELEASE: u64 = 4;
 /// The budget of one kind of request: its round trips, and the statements
 /// nested in them.
 struct Budget {
@@ -240,6 +246,8 @@ async fn an_aql_request_stays_within_its_statement_budget() {
     let round_trips = RoundTrips::default();
     let _guard =
         tracing::subscriber::set_default(tracing_subscriber::registry().with(round_trips.clone()));
+    // The budgets count what a release build does, without the debug reference cells.
+    ferroehr::aql::sql::without_reference_cells();
     let (_db, pool, _svc, app) = Box::pin(app()).await;
     sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
         .execute(&pool)
@@ -263,7 +271,7 @@ async fn an_aql_request_stays_within_its_statement_budget() {
         query(&app, budget, &ehrs, EHRS).await;
         drained(&pool).await;
         let before = entries(&pool).await;
-        let evicted = testkit::statement_window(&pool)
+        let evicted = testkit::statements::statement_window(&pool)
             .await
             .expect("the statement counts reset");
         let sent_before = round_trips.0.load(Ordering::Relaxed);
@@ -271,7 +279,7 @@ async fn an_aql_request_stays_within_its_statement_budget() {
         let sent = round_trips.0.load(Ordering::Relaxed) - sent_before;
         drained(&pool).await;
         let statements = counted(&pool).await;
-        testkit::assert_statements_kept(&pool, evicted)
+        testkit::statements::assert_statements_kept(&pool, evicted)
             .await
             .expect("no statement evicted while the test counted them");
         let written = entries(&pool).await - before;

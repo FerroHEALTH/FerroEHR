@@ -141,6 +141,7 @@ pub fn to_fhir(
 pub(crate) fn value_of(
     resource: &ihe_atna::balp::AuditEventResource,
 ) -> Result<serde_json::Value, AuditError> {
+    crate::telemetry::conversion::record("audit_event_to_value");
     resource
         .to_value()
         .map(ihe_atna::balp::AuditEventValue::into_value)

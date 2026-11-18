@@ -1061,7 +1061,9 @@ async fn an_imported_version_round_trips_through_the_archive() {
         .versioned_ehr_object(ehr, EhrObject::Status)
         .await
         .expect("VERSIONED_EHR_STATUS");
-    let vo_id: ferroehr::ids::VoId = uid(&status_vo.body).parse().expect("container uid");
+    let vo_id: ferroehr::ids::VoId = uid(&openehr_its::json::to_canonical_value(&status_vo.body))
+        .parse()
+        .expect("container uid");
     let version = middle
         .ehr_object_revision_history(ehr, EhrObject::Status)
         .await
@@ -1429,7 +1431,9 @@ async fn demographic_wave_round_trips_standalone_party_and_relationship() {
         )
         .await
         .map(|r| r.body)
-        .expect("source party");
+        .expect("source party")
+        .into_value()
+        .expect("the stored body parses");
     let src_rel = source
         .party_relationship_get(crate::fixtures::at(rel_vo.to_string()), None)
         .await
@@ -1460,7 +1464,9 @@ async fn demographic_wave_round_trips_standalone_party_and_relationship() {
             )
             .await
             .map(|r| r.body)
-            .expect("loaded party"),
+            .expect("loaded party")
+            .into_value()
+            .expect("the stored body parses"),
         src_person,
         "the standalone PARTY must round-trip verbatim"
     );
@@ -1517,7 +1523,9 @@ async fn demographic_wave_round_trips_in_canonical_xml() {
         )
         .await
         .map(|r| r.body)
-        .expect("source party");
+        .expect("source party")
+        .into_value()
+        .expect("the stored body parses");
     let src_rel = source
         .party_relationship_get(crate::fixtures::at(rel_vo.to_string()), None)
         .await
@@ -1548,7 +1556,9 @@ async fn demographic_wave_round_trips_in_canonical_xml() {
             )
             .await
             .map(|r| r.body)
-            .expect("loaded party"),
+            .expect("loaded party")
+            .into_value()
+            .expect("the stored body parses"),
         src_person,
         "the canonical-XML demographic wave must round-trip the PARTY verbatim"
     );
@@ -1597,7 +1607,9 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
         )
         .await
         .map(|r| r.body)
-        .expect("source party");
+        .expect("source party")
+        .into_value()
+        .expect("the stored body parses");
     let src_rel = source
         .party_relationship_get(crate::fixtures::at(rel_vo.to_string()), None)
         .await
@@ -1629,7 +1641,9 @@ async fn demographic_wave_round_trips_inside_a_7z_container() {
             )
             .await
             .map(|r| r.body)
-            .expect("loaded party"),
+            .expect("loaded party")
+            .into_value()
+            .expect("the stored body parses"),
         src_person,
         "the demographic wave must round-trip through the 7z container verbatim"
     );

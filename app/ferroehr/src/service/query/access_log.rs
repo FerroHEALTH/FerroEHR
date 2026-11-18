@@ -13,25 +13,17 @@
 //! recording rule 8). No openEHR spec governs AQL over the access log: our own
 //! design.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 5): AQL result rows are arbitrary \
-              projections by specification (QUERY 1.1)"
-)]
-
 use jiff::Timestamp;
-use openehr_query::ast::Primitive;
-use serde_json::Value;
 
 use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
 use openehr_its::rest::stored_query::QualifiedQueryName;
 use openehr_rm::draft::access_log::access_log::access_log_record::AccessLogRecord;
 
-use crate::access_log::view::{
-    LOG_REFUSED, LogReader, LogStanding, Restrictions, view_of, withheld,
-};
+use crate::access_log::view::{LOG_REFUSED, LogReader, LogStanding, Restrictions, withheld};
+use crate::aql::access_log::project::{Shown, cell, literal};
 use crate::aql::access_log::sql::{LogScope, statement};
 use crate::aql::access_log::{LogCell, LogPlan};
+use crate::aql::cell::Cell;
 use crate::aql::exec::{ColumnMeta, QueryResult};
 use crate::aql::ir::Params;
 use crate::error::ServiceError;
@@ -118,7 +110,7 @@ impl FerroEhrService {
                 .unwrap_or(usize::MAX);
             entries = entries.into_iter().skip(skip).take(take).collect();
         }
-        let rows: Vec<Vec<Value>> = entries
+        let rows: Vec<Vec<Cell>> = entries
             .iter()
             .map(|record| row(plan, record, reader, &restrictions))
             .collect::<Result<Vec<_>, _>>()
@@ -133,10 +125,8 @@ impl FerroEhrService {
             },
         };
         let executed = substitute_params(aql, params);
-        let mut outcome = QueryOutcome::plain(
-            result_set_json(aql, &executed, name, result(plan, rows))
-                .map_err(|error| Failure::analysis(error.into()))?,
-        );
+        let mut outcome =
+            QueryOutcome::plain(result_set_json(aql, &executed, name, result(plan, rows)));
         outcome.served_rows = served_rows;
         outcome.log_read = Some(log_read);
         Ok(outcome)
@@ -166,7 +156,7 @@ fn reader_of(request: &AqlQueryRequest) -> Result<(LogReader, Vec<EhrId>), Failu
 }
 
 /// The result of `plan` that served `rows`.
-fn result(plan: &LogPlan, rows: Vec<Vec<Value>>) -> QueryResult {
+fn result(plan: &LogPlan, rows: Vec<Vec<Cell>>) -> QueryResult {
     let columns = plan
         .columns
         .iter()
@@ -181,29 +171,22 @@ fn result(plan: &LogPlan, rows: Vec<Vec<Value>>) -> QueryResult {
     QueryResult::of_rows(columns, rows)
 }
 
-/// The row `plan` selects of `record`, read out of the view `reader` is
-/// served under `restrictions`.
+/// The row `plan` selects of `record`, read out of what `reader` is shown
+/// of it under `restrictions`, with no JSON value of it built.
 fn row(
     plan: &LogPlan,
     record: &AccessLogRecord,
     reader: LogReader,
     restrictions: &Restrictions,
-) -> Result<Vec<Value>, serde_json::Error> {
-    let view = view_of(record, reader, restrictions)?.unwrap_or(Value::Null);
-    Ok(plan
-        .columns
+) -> Result<Vec<Cell>, serde_json::Error> {
+    let shown = Shown::of(record, reader, restrictions);
+    plan.columns
         .iter()
         .map(|column| match &column.value {
-            LogCell::Path(path) => path.read(&view),
-            LogCell::Literal(primitive) => match primitive {
-                Primitive::String(text) => Value::from(text.as_str()),
-                Primitive::Integer(number) => Value::from(*number),
-                Primitive::Real(number) => Value::from(*number),
-                Primitive::Boolean(flag) => Value::from(*flag),
-                Primitive::Null => Value::Null,
-            },
+            LogCell::Path(path) => cell(record, path, &shown),
+            LogCell::Literal(primitive) => Ok(literal(primitive)),
         })
-        .collect())
+        .collect()
 }
 
 /// The EHR every entry of `entries` is about, when they are all about one.

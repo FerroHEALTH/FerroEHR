@@ -343,7 +343,7 @@ fn build_committer(pairs: &[(String, String)]) -> Result<Option<PartyProxy>, Api
     };
     Ok(Some(PartyProxy::PartyIdentified(
         PartyIdentified::PartyIdentified(PartyIdentifiedData {
-            external_ref,
+            external_ref: external_ref.map(Box::new),
             name,
             identifiers: None,
         }),

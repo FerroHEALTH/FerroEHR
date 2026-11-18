@@ -24,6 +24,7 @@ use serde_json::Value;
 
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
+use crate::versioning::body::Body;
 use crate::versioning::change::Change;
 
 impl FerroEhrService {
@@ -66,11 +67,63 @@ impl FerroEhrService {
     /// The [`Self::externalize`] failure.
     pub(crate) async fn externalize_change(&self, change: &mut Change) -> Result<(), ServiceError> {
         match change {
-            Change::Create { canonical, .. } | Change::Modify { canonical, .. } => {
-                self.externalize(canonical).await
+            Change::Create { body, .. } | Change::Modify { body, .. } => {
+                self.externalize_body(body).await
             }
             Change::Delete { .. } => Ok(()),
         }
+    }
+
+    /// [`Self::externalize`] over a commit body: a typed COMPOSITION is
+    /// offloaded in place, with no canonical value built.
+    ///
+    /// # Errors
+    /// The offload's failure.
+    pub(crate) async fn externalize_body(&self, body: &mut Body) -> Result<(), ServiceError> {
+        match body {
+            Body::Canonical(canonical) => self.externalize(canonical).await,
+            typed => match typed.as_rm_mut() {
+                Some(rm) => self.externalize_typed(rm).await,
+                None => Ok(()),
+            },
+        }
+    }
+
+    /// Externalizes every large inline `DV_MULTIMEDIA` of the typed
+    /// RM value `rm` in place, uploading the blobs, before the write that
+    /// stores it takes a connection.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when an inline value is malformed or an upload fails.
+    #[cfg(feature = "multimedia")]
+    pub(crate) async fn externalize_typed(
+        &self,
+        rm: &mut dyn openehr_rm::v1_2::access::RmObject,
+    ) -> Result<(), ServiceError> {
+        let Some(engine) = &self.multimedia else {
+            return Ok(());
+        };
+        engine
+            .offload_typed(rm)
+            .await
+            .map_err(|e| ServiceError::internal("externalize multimedia", e))
+    }
+
+    /// The slim twin: externalization is compiled out.
+    ///
+    /// # Errors
+    /// Infallible in this configuration.
+    #[cfg(not(feature = "multimedia"))]
+    #[expect(
+        clippy::unused_async,
+        clippy::unused_async_trait_impl,
+        reason = "signature parity with the multimedia twin, which awaits"
+    )]
+    pub(crate) async fn externalize_typed(
+        &self,
+        _rm: &mut dyn openehr_rm::v1_2::access::RmObject,
+    ) -> Result<(), ServiceError> {
+        Ok(())
     }
 }
 

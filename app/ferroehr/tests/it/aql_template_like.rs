@@ -81,7 +81,7 @@ async fn select(
         .execute_aql(aql, None, &request)
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"));
-    outcome.result_set["rows"]
+    outcome.result_set.to_value().unwrap()["rows"]
         .as_array()
         .expect("rows array")
         .iter()

@@ -54,6 +54,7 @@ use crate::flat::build::{BuildOptions, structural_from};
 use crate::flat::convert::composition_from_flat;
 use crate::flat::error::FlatError;
 use crate::flat::identity::{recorded_archetype_id, stamp_archetype_details};
+use crate::flat::typed::{self, Build};
 use crate::flat::uid::deterministic_uuid;
 use crate::flat::webtemplate::constraint::WebTemplateStructuralStub;
 use crate::flat::webtemplate::model::{
@@ -165,6 +166,16 @@ pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Result<Value
             root: wt.tree.rm_type.clone(),
         });
     }
+    let flat = example_composition_flat(wt, level);
+    let mut value = composition_from_flat(&flat, wt, EXAMPLE_DATE_TIME)?;
+    fill_mandatory_structures(&mut value, &wt.tree)?;
+    let rm_version = BuildOptions::for_template(wt).rm_version;
+    fill_content_less_sections(&mut value, &wt.tree, rm_version)?;
+    Ok(value)
+}
+
+/// The FLAT document [`example_composition`] builds its example from.
+pub(crate) fn example_composition_flat(wt: &WebTemplate, level: DetailLevel) -> Map<String, Value> {
     let mut flat: Map<String, Value> = Map::new();
 
     // Composition-level housekeeping the tree does not carry as data leaves:
@@ -197,12 +208,7 @@ pub fn example_composition(wt: &WebTemplate, level: DetailLevel) -> Result<Value
     // an empty-content composition is valid RM, and a real content cardinality is
     // honoured by the per-container cardinality pass in `walk`.
     walk(&wt.tree, &wt.tree.id, 0, level, false, &mut flat);
-
-    let mut value = composition_from_flat(&flat, wt, EXAMPLE_DATE_TIME)?;
-    fill_mandatory_structures(&mut value, &wt.tree);
-    let rm_version = BuildOptions::for_template(wt).rm_version;
-    fill_content_less_sections(&mut value, &wt.tree, rm_version);
-    Ok(value)
+    flat
 }
 
 /// Generates an example instance of a non-COMPOSITION template's root class.
@@ -228,7 +234,7 @@ pub fn example_root_instance(wt: &WebTemplate, level: DetailLevel) -> Result<Val
     walk(&wt.tree, &wt.tree.id, 0, level, false, &mut flat);
     let doc = crate::flat::sim::flat::parse_flat(&flat)?;
     let mut value = crate::flat::build::build_root(&doc, wt, &BuildOptions::for_template(wt))?;
-    fill_mandatory_structures(&mut value, &wt.tree);
+    fill_mandatory_structures(&mut value, &wt.tree)?;
     Ok(value)
 }
 
@@ -269,7 +275,7 @@ pub fn example_party(wt: &WebTemplate, level: DetailLevel) -> Result<Value, Flat
     }
     let doc = crate::flat::sim::flat::parse_flat(&flat)?;
     let mut value = crate::flat::build::build_root(&doc, wt, &BuildOptions::for_template(wt))?;
-    fill_mandatory_structures(&mut value, &wt.tree);
+    fill_mandatory_structures(&mut value, &wt.tree)?;
     crate::flat::build::check_party_decodes(&value, class)?;
     Ok(value)
 }
@@ -619,7 +625,10 @@ fn walk_null_flavour(
 /// archetype node id, rubric), the value the closed-archetype walk admits
 /// (§`Valid_value`); stubs and existence constraints meet on the attribute's
 /// absolute archetype path.
-fn fill_mandatory_structures(composition: &mut Value, tree: &WebTemplateNode) {
+fn fill_mandatory_structures(
+    composition: &mut Value,
+    tree: &WebTemplateNode,
+) -> Result<(), FlatError> {
     let mut mandatory: BTreeSet<&str> = BTreeSet::new();
     let mut stubs: BTreeMap<&str, &WebTemplateStructuralStub> = BTreeMap::new();
     collect_mandatory_structures(tree, &mut mandatory, &mut stubs);
@@ -648,14 +657,16 @@ fn fill_mandatory_structures(composition: &mut Value, tree: &WebTemplateNode) {
         } else {
             "Tree"
         };
+        let filler = typed::render(&*structural_from(stub, default_name)?);
         for_each_at_mut(composition, &segments, &mut |obj| {
             if let Value::Object(m) = obj
                 && !m.contains_key(&stub.attr)
             {
-                m.insert(stub.attr.clone(), structural_from(stub, default_name));
+                m.insert(stub.attr.clone(), filler.clone());
             }
         });
     }
+    Ok(())
 }
 
 /// Adds the occurrences a content-less mandatory SECTION is short of.
@@ -666,32 +677,41 @@ fn fill_mandatory_structures(composition: &mut Value, tree: &WebTemplateNode) {
 /// so the empty node is a conforming instance, inserted up to its occurrences
 /// lower bound (AOM 1.4 `master04-constraint_model_package.adoc`
 /// §occurrences).
-fn fill_content_less_sections(composition: &mut Value, node: &WebTemplateNode, rm_version: &str) {
+fn fill_content_less_sections(
+    composition: &mut Value,
+    node: &WebTemplateNode,
+    rm_version: &str,
+) -> Result<(), FlatError> {
     for child in &node.children {
         if child.rm_type == "SECTION" && child.children.is_empty() {
-            insert_missing_occurrences(composition, child, rm_version);
+            insert_missing_occurrences(composition, child, rm_version)?;
         }
-        fill_content_less_sections(composition, child, rm_version);
+        fill_content_less_sections(composition, child, rm_version)?;
     }
+    Ok(())
 }
 
 /// Inserts empty instances of `node` under every owner its `aql_path` reaches
 /// until each holds the node's occurrences lower bound.
-fn insert_missing_occurrences(composition: &mut Value, node: &WebTemplateNode, rm_version: &str) {
+fn insert_missing_occurrences(
+    composition: &mut Value,
+    node: &WebTemplateNode,
+    rm_version: &str,
+) -> Result<(), FlatError> {
     let Some(min) = node
         .min
         .and_then(|m| usize::try_from(m).ok())
         .filter(|m| *m >= 1)
     else {
-        return;
+        return Ok(());
     };
     // NOTE: no openEHR spec governs example generation — a path that does not
     // parse locates nothing, so nothing is inserted.
     let Ok(path) = node.aql_path.parse::<RmPath>() else {
-        return;
+        return Ok(());
     };
     let Some((last, owner)) = path.segments.split_last() else {
-        return;
+        return Ok(());
     };
     let name = last
         .predicate
@@ -700,14 +720,13 @@ fn insert_missing_occurrences(composition: &mut Value, node: &WebTemplateNode, r
         .or_else(|| node.localized_name.clone())
         .or_else(|| node.name.clone())
         .unwrap_or_else(|| node.id.clone());
-    let mut instance = Map::new();
-    instance.insert("_type".into(), json!(node.rm_type));
-    instance.insert("name".into(), json!({"_type": "DV_TEXT", "value": name}));
+    let mut typed_instance =
+        typed::make(&node.rm_type, [("name", typed::o(typed::dv_text(&name)?))])?;
     if let Some(id) = recorded_archetype_id(node) {
-        instance.insert("archetype_node_id".into(), json!(id));
+        typed_instance.put("archetype_node_id", typed::s(id))?;
     }
-    stamp_archetype_details(&mut instance, node, false, "", rm_version);
-    let instance = Value::Object(instance);
+    stamp_archetype_details(&mut *typed_instance, node, false, "", rm_version)?;
+    let instance = typed::render(&*typed_instance);
     for_each_at_mut(composition, owner, &mut |obj| {
         let Value::Object(m) = obj else {
             return;
@@ -726,6 +745,7 @@ fn insert_missing_occurrences(composition: &mut Value, node: &WebTemplateNode, r
             items.push(instance.clone());
         }
     });
+    Ok(())
 }
 
 /// Collects the mandatory attribute paths and the structural stubs of the

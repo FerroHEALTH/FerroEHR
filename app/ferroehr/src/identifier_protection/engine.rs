@@ -30,6 +30,8 @@ use crate::identifier_protection::crypto::{CryptoError, DomainKeys, KeyDomain, R
 use crate::identifier_protection::store::{IdentifierStore, StoreError};
 use crate::ids::VoId;
 use crate::storage::identifier_repo::{self, IdentifierRepoError};
+use crate::versioning::body::Body;
+use crate::versioning::tree::Tree;
 
 /// The scheme a care subject reference is digested under (#5699).
 const CARE_SUBJECT_SCHEME: &str = "ferroehr:care-subject:v1";
@@ -182,19 +184,28 @@ impl IdentifierProtection {
     /// [`StoreError`] when a value cannot be opened, sealed or stored. The
     /// write fails rather than proceeding: storing the body with the value
     /// still in it is precisely what this exists to prevent.
-    pub async fn externalize(
+    pub(crate) async fn externalize(
         &self,
         conn: &mut PgConnection,
         party: Uuid,
-        body: &mut Value,
+        body: &mut Body,
     ) -> Result<usize, StoreError> {
         let keys = DomainKeys::derive(&self.root, KeyDomain::Demographic);
-        let mut identifiers: Vec<body::FoundIdentifier> = body::find(body, &self.schemes);
-        for (pointer, row) in referenced(body) {
-            let written = body
-                .pointer(&format!("{pointer}/type"))
-                .and_then(Value::as_str)
-                .map(str::to_owned);
+        // NOTE: a typed body is scanned through its rendering, which the
+        // references are then written back into by path (#6003).
+        let rendered = match &*body {
+            Body::Canonical(_) => None,
+            typed => {
+                crate::telemetry::conversion::record("rm_to_index");
+                Some(crate::storage::render::index::render(typed).map_err(StoreError::Render)?)
+            }
+        };
+        let (mut identifiers, held) = match (&*body, &rendered) {
+            (_, Some(rendered)) => self.scan(crate::versioning::tree::Indexed::root(rendered)),
+            (Body::Canonical(canonical), None) => self.scan(canonical),
+            (_, None) => (Vec::new(), Vec::new()),
+        };
+        for (pointer, row, written) in held {
             // NOTE: personal-data rule (an access event per read by a caller): this decrypts
             // only to re-seal inside the commit, so no caller reads and no event is due.
             let Some((scheme, value)) =
@@ -239,8 +250,30 @@ impl IdentifierProtection {
             };
             references.push((identifier.pointer, row));
         }
-        body::substitute(body, &references);
+        match body {
+            Body::Canonical(canonical) => body::substitute(canonical, &references),
+            typed => {
+                if let Some(rm) = typed.as_rm_mut() {
+                    body::substitute_typed(rm, &references).map_err(StoreError::Substitute)?;
+                }
+            }
+        }
         Ok(references.len())
+    }
+
+    /// The plaintext values of the configured schemes `body` carries, and the
+    /// references it holds, each with the `DV_IDENTIFIER.type` written beside it.
+    fn scan<'a, T: Tree<'a>>(&self, body: T) -> (Vec<body::FoundIdentifier>, Vec<Held>) {
+        let held = referenced(body)
+            .into_iter()
+            .map(|(pointer, row)| {
+                let written = body
+                    .pointer_text(&format!("{pointer}/type"))
+                    .map(std::borrow::Cow::into_owned);
+                (pointer, row, written)
+            })
+            .collect();
+        (body::find(body, &self.schemes), held)
     }
 
     /// Refuse a party body that must be stored verbatim but would hold a
@@ -299,7 +332,7 @@ impl IdentifierProtection {
     /// held and is no longer.
     pub async fn expand(&self, body: &mut Value) -> Result<Vec<String>, StoreError> {
         let keys = DomainKeys::derive(&self.root, KeyDomain::Demographic);
-        let references = referenced(body);
+        let references = referenced(&*body);
         let mut values = Vec::with_capacity(references.len());
         let mut schemes = Vec::with_capacity(references.len());
         for (pointer, row) in references {
@@ -320,42 +353,22 @@ impl IdentifierProtection {
     }
 }
 
-/// Every protected-identifier reference in a stored body, with its pointer.
-fn referenced(body: &Value) -> Vec<(String, Uuid)> {
-    let mut found = Vec::new();
-    collect(body, &mut String::new(), &mut found);
-    found
-}
+/// A reference a body holds: its pointer, the row it names and the
+/// `DV_IDENTIFIER.type` written beside it.
+type Held = (String, Uuid, Option<String>);
 
-/// Recursive walk collecting reference-bearing `DV_IDENTIFIER` nodes.
-fn collect(node: &Value, pointer: &mut String, found: &mut Vec<(String, Uuid)>) {
-    match node {
-        Value::Object(map) => {
-            if map.get("_type").and_then(Value::as_str) == Some("DV_IDENTIFIER")
-                && let Some(id) = map.get("id").and_then(Value::as_str)
-                && let Some(row) = body::referenced_row(id)
-            {
-                found.push((pointer.clone(), row));
-            }
-            for (key, child) in map {
-                let mark = pointer.len();
-                pointer.push('/');
-                pointer.push_str(&key.replace('~', "~0").replace('/', "~1"));
-                collect(child, pointer, found);
-                pointer.truncate(mark);
-            }
+/// Every protected-identifier reference in a stored body, with its pointer.
+fn referenced<'a, T: Tree<'a>>(body: T) -> Vec<(String, Uuid)> {
+    let mut found = Vec::new();
+    body::each_object(body, &mut String::new(), &mut |node, pointer| {
+        if node.get_text("_type").as_deref() == Some("DV_IDENTIFIER")
+            && let Some(id) = node.get_text("id")
+            && let Some(row) = body::referenced_row(&id)
+        {
+            found.push((pointer.to_owned(), row));
         }
-        Value::Array(items) => {
-            for (index, child) in items.iter().enumerate() {
-                let mark = pointer.len();
-                pointer.push('/');
-                pointer.push_str(&index.to_string());
-                collect(child, pointer, found);
-                pointer.truncate(mark);
-            }
-        }
-        _ => {}
-    }
+    });
+    found
 }
 
 #[cfg(test)]

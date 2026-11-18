@@ -44,6 +44,9 @@ base64 = { workspace = true, optional = true }
 backon = { workspace = true, optional = true }
 # The credential secret: redacted `Debug`, zeroed on drop.
 secrecy = { workspace = true, optional = true }
+# The codec entry points report each representation change they make as a
+# `trace` event, which a consumer counts per request (the `tracing` feature).
+tracing = { workspace = true, optional = true }
 # The generated XML (de)serializers impl the crate's ToXml/FromXml traits for the
 # RM/BASE spec types, so these are real (non-dev) deps.
 openehr-base = { path = "../openehr-base", version = "0.0.128", optional = true }
@@ -97,6 +100,11 @@ json = [
     "dep:openehr-am",
     "dep:openehr-term",
 ]
+# Each codec entry point reports the representation change it makes as one
+# `trace` event under the `openehr::conversion` target
+# (`conversion::TARGET`), so a server can count them per request and hold a
+# budget. Outside `full`: a consumer that counts asks for it.
+tracing = ["json", "dep:tracing"]
 # Canonical XML plus the AOM2 archetype XML codecs (`xml`, `aom2`, `aom2_model`).
 xml = ["json", "dep:quick-xml"]
 # The OPT 1.4 operational-template reader (`opt14`), an XML codec consumer,

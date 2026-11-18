@@ -22,3 +22,15 @@ pub enum PartyProxy {
     /// The `PARTY_SELF` subtype of `PARTY_PROXY`.
     PartySelf(PartySelf),
 }
+
+impl From<PartyIdentified> for PartyProxy {
+    fn from(value: PartyIdentified) -> Self {
+        Self::PartyIdentified(value)
+    }
+}
+
+impl From<PartySelf> for PartyProxy {
+    fn from(value: PartySelf) -> Self {
+        Self::PartySelf(value)
+    }
+}

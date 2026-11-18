@@ -582,7 +582,9 @@ async fn scim_completes_a_provisional_person_that_a_later_login_leaves_alone() {
         .execute_aql(aql, None, &AqlQueryRequest::default())
         .await
         .expect("the query runs")
-        .result_set["rows"]
+        .result_set
+        .to_value()
+        .unwrap()["rows"]
         .clone();
     assert!(
         rows.to_string().contains(&person.to_string()),

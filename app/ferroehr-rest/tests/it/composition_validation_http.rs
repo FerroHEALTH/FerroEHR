@@ -327,3 +327,110 @@ async fn a_history_with_an_empty_events_array_is_400() {
     let result: Value = serde_json::from_str(&body).expect("a result set");
     assert_eq!(result["rows"], json!([]), "nothing committed: {body}");
 }
+
+/// A SECTION named `name`, holding `items`.
+fn section(name: &str, items: Option<Value>) -> Value {
+    let mut section = json!({
+        "_type": "SECTION",
+        "name": { "_type": "DV_TEXT", "value": name },
+        "archetype_node_id": "openEHR-EHR-SECTION.adhoc.v1",
+    });
+    if let Some(items) = items {
+        section["items"] = json!([items]);
+    }
+    section
+}
+
+/// The IPS composition with `content` its one content item.
+fn with_content(content: Value) -> Value {
+    let mut composition = ips_canonical_composition();
+    composition["content"] = Value::Array(vec![content]);
+    composition
+}
+
+/// Commits `body` as `content_type`; the status and the body of the answer.
+async fn commit(
+    app: &Router,
+    ehr_id: &str,
+    content_type: &str,
+    body: String,
+) -> (StatusCode, String) {
+    let (status, _h, answer) = send(
+        app,
+        common::req("POST", format!("{BASE}/ehr/{ehr_id}/composition"))
+            .header(header::CONTENT_TYPE, content_type)
+            .body(body)
+            .build(),
+    )
+    .await;
+    (status, answer)
+}
+
+/// The readers' one nesting limit, in RM objects.
+fn limit() -> usize {
+    usize::try_from(openehr_base::nesting::MAX_RM_NESTING).unwrap()
+}
+
+/// A COMPOSITION nested deeper than the RM readers' one limit
+/// (`openehr_base::nesting::MAX_RM_NESTING`) cannot be read, so its commit in
+/// canonical JSON is a `400` naming the limit (ITS-REST overview
+/// `Requests_and_responses.md` §HTTP status codes: content that "could not be
+/// parsed"), never a `422`.
+#[tokio::test]
+async fn a_json_composition_nested_past_the_limit_is_400_naming_it() {
+    let (_pg, app, ehr_id) = app_with_template().await;
+    let mut deepest = section("deepest", None);
+    for _ in 0..limit() {
+        deepest = section("level", Some(deepest));
+    }
+    let (status, body) = commit(
+        &app,
+        &ehr_id,
+        "application/json",
+        with_content(deepest).to_string(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(
+        body.contains("RM object nesting exceeds the 48-level limit"),
+        "{body}"
+    );
+}
+
+/// The same limit holds a canonical-XML commit to a `400` naming it. The
+/// document is built from the server's own XML of a three-level SECTION chain,
+/// its middle SECTION repeated past the limit.
+#[tokio::test]
+async fn an_xml_composition_nested_past_the_limit_is_400_naming_it() {
+    let (_pg, app, ehr_id) = app_with_template().await;
+    let chain = with_content(section(
+        "level",
+        Some(section("level", Some(section("deepest", None)))),
+    ));
+    let typed: openehr_rm::prelude::Composition =
+        openehr_its::json::from_canonical_value(&chain).unwrap();
+    let xml = openehr_its::xml::runtime::to_xml(
+        &typed,
+        "composition",
+        openehr_its::xml::runtime::Namespace::V2,
+    )
+    .unwrap();
+    let content = xml.find("<content").unwrap();
+    let middle = content + xml[content..].find("<items").unwrap();
+    let last = middle + 1 + xml[middle + 1..].find("<items").unwrap();
+    let closed = last + xml[last..].find("</items>").unwrap() + "</items>".len();
+    let deep = format!(
+        "{}{}{}{}{}",
+        &xml[..middle],
+        xml[middle..last].repeat(limit()),
+        &xml[last..closed],
+        "</items>".repeat(limit() - 1),
+        &xml[closed..],
+    );
+    let (status, body) = commit(&app, &ehr_id, "application/xml", deep).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(
+        body.contains("RM object nesting exceeds the 48-level limit"),
+        "{body}"
+    );
+}

@@ -14,7 +14,7 @@ use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExtractError {
     /// The `request_id` attribute of openEHR `EXTRACT_ERROR` (the vendored BMM carries no documentation for it).
-    pub request_id: Option<ObjectRef>,
+    pub request_id: Option<Box<ObjectRef>>,
     /// The `reason` attribute of openEHR `EXTRACT_ERROR` (the vendored BMM carries no documentation for it).
     pub reason: DvText,
 }

@@ -59,6 +59,12 @@ pub enum StoreError {
         /// The scheme code.
         scheme: String,
     },
+    /// A typed body could not be rendered to be scanned.
+    #[error("the party body does not render to be scanned for protected identifiers")]
+    Render(#[source] serde_json::Error),
+    /// A reference could not be written into a typed body.
+    #[error("a protected-identifier reference could not be written into the party body")]
+    Substitute(#[source] openehr_rm::v1_2::access::AccessError),
 }
 
 impl StoreError {

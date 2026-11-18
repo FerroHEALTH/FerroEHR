@@ -15,52 +15,11 @@
 
 /// Files whose `_type`-carrying `json!` literals are classified as something
 /// other than a synthesized canonical shape, each with the reason.
-const ALLOWLIST: &[(&str, &str)] = &[
-    (
-        "flat/build.rs",
-        "the FLAT engine's tree builder synthesizes canonical nodes \
-         COMPOSITIONALLY — partial fragments grown leaf-first from flat keys, \
-         which the typed model cannot represent mid-build; wire fidelity is \
-         pinned by the simplified-formats corpus + round-trip gates",
-    ),
-    (
-        "flat/identity.rs",
-        "the identity half of that tree builder: the `name` and \
-         `archetype_details` fragments stamped onto a node still being built",
-    ),
-    (
-        "flat/map/data_values.rs",
-        "leaf DV_* fragments grown attribute-by-attribute from flat suffixes \
-         (a suffix set is an OPEN partial shape until the merge completes)",
-    ),
-    (
-        "flat/ctx.rs",
-        "the ctx/ header family synthesizes partial EVENT_CONTEXT/PARTICIPATION \
-         fragments merged into the tree after the walk",
-    ),
-    (
-        "flat/map/structures.rs",
-        "partial structure nodes (ITEM_TREE members, FEEDER_AUDIT halves) \
-         grown compositionally; the complete-shape LINK builder is typed \
-         construction (#2444); uid_value stays a literal deliberately — the \
-         typed ids validate at construction, an acceptance change the flat \
-         surface has not adjudicated",
-    ),
-    (
-        "flat/map/parties.rs",
-        "partial PARTY_PROXY/PARTY_IDENTIFIED fragments grown from flat \
-         suffix sets",
-    ),
-    (
-        "flat/map/mod.rs",
-        "the shared node-seed helpers for the compositional builders above",
-    ),
-    (
-        "flat/example.rs",
-        "the example generator emits skeleton fragments a client fills in — \
+const ALLOWLIST: &[(&str, &str)] = &[(
+    "flat/example.rs",
+    "the example generator emits skeleton fragments a client fills in — \
          deliberately partial shapes",
-    ),
-];
+)];
 
 /// No production `json!` literal outside the classified allowlist synthesizes a
 /// canonical openEHR shape.

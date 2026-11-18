@@ -112,19 +112,19 @@ mod tests {
             archetype_node_id: "openEHR-EHR-COMPOSITION.encounter.v1".to_owned(),
             uid: None,
             links: openehr_base::containers::present_nonempty(Vec::new()),
-            archetype_details: Some(Archetyped {
+            archetype_details: Some(Box::new(Archetyped {
                 archetype_id: ArchetypeId {
                     value: "openEHR-EHR-COMPOSITION.encounter.v1".to_owned(),
                 },
                 template_id: None,
                 rm_version: "1.1.0".to_owned(),
-            }),
+            })),
             feeder_audit: None,
             language: code("ISO_639-1", "en"),
             territory: code("ISO_3166-1", "GB"),
             category: category(),
             context: None,
-            composer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+            composer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
             content: openehr_base::containers::present_nonempty(Vec::new()),
         }
     }

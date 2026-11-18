@@ -4,12 +4,13 @@
 //! Canonical JSON ⇄ node rows — the pure content transform at the heart of the
 //! decomposed store.
 //!
-//! No openEHR spec governs storage; this is our own design
-//!. [`decompose`] turns a versioned object's
-//! canonical JSON into nested-set-numbered [`NodeRow`]s (structure children
-//! pruned out of their parents' fragments, everything else kept verbatim);
-//! [`reassemble`] is its lossless inverse over the lean [`crate::storage::row::ReadRow`] the
-//! repository fetches back. The codec never re-formats a leaf value — a leaf's
+//! No openEHR spec governs storage; this is our own design. A body becomes
+//! nested-set-numbered node rows through its one rendering
+//! ([`crate::storage::render`]: structure children pruned out of their
+//! parents' fragments, everything else kept verbatim); [`reassemble`] is the
+//! lossless inverse over the lean [`crate::storage::row::ReadRow`] the
+//! repository fetches back, and [`reassembly_order`] the member order it
+//! reassembles to. The codec never re-formats a leaf value — a leaf's
 //! lexical form (ISO-8601 partial precision, decimal-comma, timezone suffix,
 //! duration form; BASE `foundation_types` master06) survives verbatim inside its
 //! `data` fragment.
@@ -23,174 +24,55 @@
 use serde_json::{Map, Value};
 
 use crate::storage::error::StorageError;
-use crate::storage::row::{NodeContent, NodeRow};
-use crate::storage::structure::{archetype_parts, is_structure_type, is_versioned_root_type};
+use crate::storage::row::NodeContent;
+use crate::storage::structure::{is_structure_type, is_versioned_root_type};
 
-/// Decomposes a versioned object's canonical JSON into node rows.
+/// The canonical value `root` in the member order its node rows reassemble to.
+///
+/// In each structure node, the members that stay in its fragment come first,
+/// in written order, then its structure children, in written order.
+///
+/// The commit decomposes a body into rows ([`crate::storage::render`]) and a
+/// read reassembles them ([`reassemble`]), which attaches each structure child
+/// after the members its parent's fragment kept; the EHR Extract import
+/// stores this order as the body it serves.
 ///
 /// # Errors
-///
-/// Fails when the root has no versioned-root `_type`, or an array mixes
-/// structure and non-structure elements (canonical RM JSON never does).
-pub fn decompose(root: Value) -> Result<Vec<NodeRow>, StorageError> {
+/// [`StorageError::NotAStructureRoot`] when the root has no versioned-root
+/// `_type`, and [`StorageError::MixedArray`] for an array that mixes structure
+/// and non-structure members.
+pub fn reassembly_order(root: Value) -> Result<Value, StorageError> {
     let root_type = root.get("_type").and_then(Value::as_str);
     if !root_type.is_some_and(is_versioned_root_type) {
         return Err(StorageError::NotAStructureRoot(
             root_type.map(str::to_owned),
         ));
     }
-
-    let mut rows = Vec::new();
-    walk(root, String::new(), -1, &mut rows)?;
-
-    // num_cap: children always follow their parents — one reverse pass. `walk`
-    // pushes rows in pre-order with `num == index`, so a row's `parent_num` is
-    // always the index of an EARLIER row; every access below is fetched rather
-    // than indexed, and a violation of that invariant is reported as malformed
-    // rows instead of panicking on a write path.
-    let mut caps: Vec<i32> = rows.iter().map(|r| r.num).collect();
-    for i in (1..rows.len()).rev() {
-        let (Some(cap), Some(parent)) = (
-            caps.get(i).copied(),
-            rows.get(i)
-                .and_then(|r| usize::try_from(r.parent_num).ok())
-                .filter(|parent| *parent < i),
-        ) else {
-            return Err(StorageError::InvalidRows(format!(
-                "node row {i} does not reference an earlier parent row"
-            )));
-        };
-        if let Some(parent_cap) = caps.get_mut(parent) {
-            *parent_cap = (*parent_cap).max(cap);
-        }
-        if let Some(row) = rows.get_mut(i) {
-            row.num_cap = cap;
-        }
-    }
-    if let (Some(row), Some(cap)) = (rows.first_mut(), caps.first()) {
-        row.num_cap = *cap;
-    }
-    Ok(rows)
+    ordered(root)
 }
 
-fn walk(
-    mut json: Value,
-    path: String,
-    parent: i32,
-    rows: &mut Vec<NodeRow>,
-) -> Result<(), StorageError> {
-    let index = rows.len();
-    let num = i32::try_from(index).unwrap_or(i32::MAX);
-    let rm_type = json
-        .get("_type")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_owned();
-    // openEHR identifiers are case-insensitive (BASE `base_types` master05
-    // §Composite Identifiers and Case), so the promoted predicate column stores
-    // the lowercase form and AQL archetype equality stays plain indexed equality
-    // with honest statistics. The canonical `data` fragment keeps its casing.
-    let archetype = json
-        .get("archetype_node_id")
-        .and_then(Value::as_str)
-        .map(str::to_ascii_lowercase);
-    // Parse a full archetype HRID into the promoted subsumption columns
-    // (lowercased); at/id-code nodes leave them NULL (BASE `base_types` master05
-    // §Archetype Identifiers; querying per master10 §Design-time Relationships).
-    let (arch_entity, arch_concept, arch_major) = archetype
-        .as_deref()
-        .and_then(archetype_parts)
-        .map_or((None, None, None), |(e, c, m)| (Some(e), Some(c), Some(m)));
-    let name = json
-        .get("name")
-        .and_then(|n| n.get("value"))
-        .and_then(Value::as_str)
-        .map(str::to_owned);
-    // The coded half of a DV_CODED_TEXT name, promoted so the AQL node
-    // predicate matches a coded name without a JSON probe (QUERY
-    // master03-syntax.adoc §Node predicate). Absent on a plain DV_TEXT name.
-    let defining_code = json.get("name").and_then(|n| n.get("defining_code"));
-    let name_code = defining_code
-        .and_then(|c| c.get("code_string"))
-        .and_then(Value::as_str)
-        .map(str::to_owned);
-    let name_terminology = defining_code
-        .and_then(|c| c.get("terminology_id"))
-        .and_then(|t| t.get("value"))
-        .and_then(Value::as_str)
-        .map(str::to_owned);
-    // Promoted-leaf capture (our own storage design — no openEHR spec
-    // governs it): read the hot leaves off the node's *pre-pruning* JSON (the
-    // value may sit inside an about-to-be-split structure child, e.g.
-    // `EVENT_CONTEXT`), aligned to `PROMOTED_LEAVES`. Populated only on a
-    // versioned-object root (`num == 0`); every other row carries all-`None`.
-    let promoted = crate::storage::promoted::extract(num, &rm_type, &json);
-    // `path` and `data` land in the row at the END of this call (the fragment
-    // after pruning, the path by move — never a second allocation).
-    rows.push(NodeRow {
-        num,
-        num_cap: num,
-        parent_num: parent.max(0),
-        rm_type,
-        archetype,
-        arch_entity,
-        arch_concept,
-        arch_major,
-        name,
-        name_code,
-        name_terminology,
-        path: String::new(),
-        data: Value::Null,
-        promoted,
-    });
-
-    if let Value::Object(map) = &mut json {
-        prune_children(map, &path, num, rows)?;
-    }
-    // `index` is the slot this call pushed above, so it exists; fetched rather
-    // than indexed so a future restructuring of `walk` cannot panic here.
-    let Some(row) = rows.get_mut(index) else {
-        return Err(StorageError::InvalidRows(format!(
-            "node row {index} vanished while decomposing {path}"
-        )));
+/// [`reassembly_order`] below the root.
+fn ordered(node: Value) -> Result<Value, StorageError> {
+    let Value::Object(map) = node else {
+        return Ok(node);
     };
-    row.path = path;
-    row.data = json;
-    Ok(())
-}
-
-/// Prunes structure children out of `map`, recursing in document order.
-///
-/// Two read passes: the first only IDENTIFIES the structure-carrying
-/// attributes (so nothing is cloned for the — typical — attributes that stay
-/// in place), the second removes and walks them. Document order among the
-/// pruned attributes is preserved.
-fn prune_children(
-    map: &mut Map<String, Value>,
-    path: &str,
-    num: i32,
-    rows: &mut Vec<NodeRow>,
-) -> Result<(), StorageError> {
-    let mut structure_attributes: Vec<String> = Vec::new();
-    for (attribute, child) in map.iter() {
-        if carries_structure(attribute, child)? {
-            structure_attributes.push(attribute.clone());
-        }
-    }
-    for attribute in structure_attributes {
-        match map.shift_remove(&attribute) {
-            Some(child @ Value::Object(_)) => {
-                walk(child, format!("{path}{attribute}."), num, rows)?;
-            }
-            Some(Value::Array(items)) => {
-                for (i, item) in items.into_iter().enumerate() {
-                    walk(item, format!("{path}{attribute}{i}."), num, rows)?;
+    let mut kept = Map::with_capacity(map.len());
+    let mut moved: Vec<(String, Value)> = Vec::new();
+    for (attribute, child) in map {
+        if carries_structure(&attribute, &child)? {
+            let child = match child {
+                Value::Array(items) => {
+                    Value::Array(items.into_iter().map(ordered).collect::<Result<_, _>>()?)
                 }
-            }
-            _ => {}
+                other => ordered(other)?,
+            };
+            moved.push((attribute, child));
+        } else {
+            kept.insert(attribute, child);
         }
     }
-    Ok(())
+    kept.extend(moved);
+    Ok(Value::Object(kept))
 }
 
 /// Whether one attribute's value carries structure children that become their
@@ -221,12 +103,53 @@ fn is_structure(v: &Value) -> bool {
         .is_some_and(is_structure_type)
 }
 
+/// The node rows of `root` with their whole fragments, cut by the write path's
+/// decomposition ([`crate::storage::render::nodes::decompose`]):
+/// the shape the unit tests state the decomposition in.
+///
+/// # Errors
+/// As the write path's decomposition.
+#[cfg(test)]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "the tests hand each body over whole, as the commit does"
+)]
+pub(crate) fn decompose(root: Value) -> Result<Vec<crate::storage::row::NodeRow>, StorageError> {
+    let rendered =
+        crate::storage::render::index::render(&root).map_err(StorageError::BodyEncode)?;
+    let identity = crate::storage::compact::RootIdentity {
+        version_uid: "",
+        template_id: None,
+    };
+    let (rows, whole) = crate::storage::render::nodes::decompose(&rendered, &identity, true)?;
+    rows.into_iter()
+        .zip(whole)
+        .map(|(row, whole)| {
+            Ok(crate::storage::row::NodeRow {
+                num: row.num,
+                num_cap: row.num_cap,
+                parent_num: row.parent_num,
+                rm_type: row.rm_type,
+                archetype: row.archetype,
+                arch_entity: row.arch_entity,
+                arch_concept: row.arch_concept,
+                arch_major: row.arch_major,
+                name: row.name,
+                name_code: row.name_code,
+                name_terminology: row.name_terminology,
+                path: row.path,
+                data: serde_json::from_str(&whole).map_err(StorageError::BodyDecode)?,
+                promoted: row.promoted,
+            })
+        })
+        .collect()
+}
+
 /// Reassembles the canonical JSON from node rows (sorted or not — rows are
 /// ordered by `num` internally).
 ///
-/// Lossless inverse of [`decompose`]. Generic over [`NodeContent`], so it
-/// accepts either the write [`NodeRow`] (from [`decompose`], e.g. to
-/// reassemble the served form for signing) or the lean
+/// Lossless inverse of the decomposition ([`crate::storage::render`]) over
+/// rows whose fragments are whole again: the lean
 /// [`crate::storage::row::ReadRow`] the repository fetches back.
 ///
 /// # Errors
@@ -321,6 +244,7 @@ fn split_step(step: &str) -> (&str, Option<usize>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::row::NodeRow;
     use serde_json::json;
 
     /// Reassemble a decomposed write-row set directly (`NodeRow: NodeContent`),

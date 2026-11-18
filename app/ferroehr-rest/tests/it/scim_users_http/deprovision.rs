@@ -185,7 +185,9 @@ async fn deprovisioning_a_rostered_professional_needs_no_grant_and_reaches_every
             None,
         )
         .await
-        .expect("the version before the deletion is kept");
+        .expect("the version before the deletion is kept")
+        .into_value_response()
+        .expect("the stored body parses");
     let kept = earlier.body["relationships"]
         .as_array()
         .cloned()

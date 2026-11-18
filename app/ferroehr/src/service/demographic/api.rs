@@ -24,15 +24,15 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
-use crate::error::refusal::Missing;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::tag_target_tail;
-use crate::service::response::{ResourceMeta, ServiceResponse};
+use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
+use crate::versioning::body::Body;
 use crate::versioning::object_version_id::{TreeId, UidAddress};
 use openehr_rm::prelude::{Party, PartyRelationship};
 
@@ -49,9 +49,9 @@ impl FerroEhrService {
     async fn attach_party_item_tags(
         &self,
         vo_id: VoId,
-        resp: &mut ServiceResponse,
+        meta: &mut Option<ResourceMeta>,
     ) -> Result<(), ServiceError> {
-        if resp.meta.is_none() {
+        if meta.is_none() {
             return Ok(());
         }
         // The two response headers carry DISTINCT collections (overview
@@ -60,14 +60,13 @@ impl FerroEhrService {
         // `openehr-version-item-tag`. The version tail comes from the response
         // metadata's own OBJECT_VERSION_ID.
         // NOTE: a meta uid that is no OBJECT_VERSION_ID names no version, so no version set rides.
-        let served = resp
-            .meta
+        let served = meta
             .as_ref()
             .and_then(|m| ObjectVersionId::from_str(&m.uid).ok());
         let (container, version) = self
             .party_tag_sets(vo_id, tag_target_tail(served.as_ref()))
             .await?;
-        if let Some(meta) = resp.meta.as_mut() {
+        if let Some(meta) = meta.as_mut() {
             meta.item_tags = Some(container);
             meta.version_item_tags = version;
         }
@@ -97,12 +96,9 @@ impl FerroEhrService {
         // the response seam needs no tag read here; when the request carried
         // `openehr-item-tag` header tags, the wire adapter persists them after
         // the create and re-populates the seam itself (person_create.yaml).
-        self.commit_new_party(
-            kind,
-            request.map(|data| openehr_its::json::to_canonical_value(&data)),
-        )
-        .await
-        .map_err(ServiceError::flattened)
+        self.commit_new_party(kind, request.map(Body::from))
+            .await
+            .map_err(ServiceError::flattened)
     }
 
     /// Read a party of the routed [`PartyKind`] by uid-based id (bare
@@ -123,12 +119,12 @@ impl FerroEhrService {
         kind: PartyKind,
         address: UidAddress,
         version_at_time: Option<String>,
-    ) -> Result<ServiceResponse, ServiceError> {
+    ) -> Result<RawServiceResponse, ServiceError> {
         let (vo_id, version, at) = self.gated_address(address, version_at_time).await?;
-        let mut resp = self.read_party(kind, vo_id, version, at).await?;
+        let mut resp = self.read_party_raw(kind, vo_id, version, at).await?;
         // Attach the party's stored ITEM_TAGs for the item-tag response headers
         // (person_get.yaml). A deleted read carries no metadata → no-op.
-        self.attach_party_item_tags(vo_id, &mut resp).await?;
+        self.attach_party_item_tags(vo_id, &mut resp.meta).await?;
         Ok(resp)
     }
 
@@ -153,19 +149,10 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest<Party>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("{} {vo_id}", kind.rm_type()),
-            )
-        })?;
-        self.commit_party_update(
-            current,
-            precondition,
-            request.map(|data| openehr_its::json::to_canonical_value(&data)),
-        )
-        .await
-        .map_err(ServiceError::flattened)
+        let current = self.existing_party(kind, vo_id).await?;
+        self.commit_party_update(current, precondition, request.map(Body::from))
+            .await
+            .map_err(ServiceError::flattened)
     }
 
     /// Logically delete a party of the routed [`PartyKind`]
@@ -190,12 +177,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("{} {vo_id}", kind.rm_type()),
-            )
-        })?;
+        let current = self.existing_party(kind, vo_id).await?;
         self.commit_party_delete(current, precondition, request)
             .await
             .map_err(ServiceError::flattened)
@@ -401,7 +383,7 @@ impl FerroEhrService {
         &self,
         request: WriteRequest<PartyRelationship>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.create_relationship(request.map(|data| openehr_its::json::to_canonical_value(&data)))
+        self.create_relationship(request.map(Body::from))
             .await
             .map_err(ServiceError::flattened)
     }
@@ -426,6 +408,20 @@ impl FerroEhrService {
         self.read_relationship(vo_id, version, at).await
     }
 
+    /// [`Self::party_relationship_get`], with the body kept as the stored text
+    /// where nothing needs it parsed.
+    ///
+    /// # Errors
+    /// As [`Self::party_relationship_get`].
+    pub async fn party_relationship_get_raw(
+        &self,
+        address: UidAddress,
+        version_at_time: Option<String>,
+    ) -> Result<RawServiceResponse, ServiceError> {
+        let (vo_id, version, at) = self.gated_address(address, version_at_time).await?;
+        self.read_relationship_raw(vo_id, version, at).await
+    }
+
     /// Update a relationship under a mandatory `If-Match` precondition
     /// (ITS-REST overview §"If-Match and accidental overwrites"). The current
     /// version is resolved ONCE (lean): the same handle serves the `If-Match`
@@ -444,19 +440,10 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest<PartyRelationship>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.relationship_current(vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("PARTY_RELATIONSHIP {vo_id}"),
-            )
-        })?;
-        self.commit_relationship_update(
-            current,
-            precondition,
-            request.map(|data| openehr_its::json::to_canonical_value(&data)),
-        )
-        .await
-        .map_err(ServiceError::flattened)
+        let current = self.existing_relationship(vo_id).await?;
+        self.commit_relationship_update(current, precondition, request.map(Body::from))
+            .await
+            .map_err(ServiceError::flattened)
     }
 
     /// Logically delete a relationship. Mirrors `party_delete`: the path
@@ -476,12 +463,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.relationship_current(vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("PARTY_RELATIONSHIP {vo_id}"),
-            )
-        })?;
+        let current = self.existing_relationship(vo_id).await?;
         self.commit_relationship_delete(current, precondition, request)
             .await
             .map_err(ServiceError::flattened)

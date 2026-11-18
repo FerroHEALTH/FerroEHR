@@ -46,26 +46,7 @@ fn push_json(out: &mut String, value: Option<&str>) {
         out.push_str("null");
         return;
     };
-    out.push('"');
-    for c in value.chars() {
-        match c {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            '\u{8}' => out.push_str("\\b"),
-            '\u{c}' => out.push_str("\\f"),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if u32::from(c) < 0x20 => {
-                use std::fmt::Write as _;
-                // NOTE: `impl fmt::Write for String` never fails
-                // (<https://doc.rust-lang.org/std/fmt/trait.Write.html#impl-Write-for-String>).
-                let _written = write!(out, "\\u{:04x}", u32::from(c));
-            }
-            c => out.push(c),
-        }
-    }
-    out.push('"');
+    crate::aql::fragment::write_string(value, out);
 }
 
 #[cfg(test)]

@@ -35,7 +35,7 @@ async fn rows(svc: &FerroEhrService, aql: &str) -> Result<Vec<Value>, ServiceErr
     let outcome = svc
         .execute_aql(aql, None, &AqlQueryRequest::default())
         .await?;
-    Ok(outcome.result_set["rows"]
+    Ok(outcome.result_set.to_value().unwrap()["rows"]
         .as_array()
         .expect("a rows array")
         .clone())
@@ -656,7 +656,9 @@ async fn a_former_policy_party_stays_hidden_on_both_read_paths() {
         assert_policy_refusal(as_clinician(svc.versioned_party_revision_history(vo)).await);
         as_admin(svc.party_get(*kind, at(uid), None))
             .await
-            .expect("an administrator reads the former policy party");
+            .expect("an administrator reads the former policy party")
+            .into_value_response()
+            .expect("the stored body parses");
     }
 }
 
@@ -990,11 +992,15 @@ async fn a_deployments_own_archetypes_carrying_the_codes_are_policy_parties() {
         assert_policy_refusal(as_clinician(svc.party_get(kind, at(uid), None)).await);
         as_admin(svc.party_get(kind, at(uid), None))
             .await
-            .expect("an administrator reads it");
+            .expect("an administrator reads it")
+            .into_value_response()
+            .expect("the stored body parses");
     }
     as_clinician(svc.party_get(PartyKind::Role, at(&ordinary_uid), None))
         .await
-        .expect("the ordinary ROLE stays anyone's to read");
+        .expect("the ordinary ROLE stays anyone's to read")
+        .into_value_response()
+        .expect("the stored body parses");
     let admin: BTreeSet<String> = as_admin(first_cells(&svc, "SELECT x/uid/value FROM ROLE x"))
         .await
         .into_iter()

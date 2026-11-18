@@ -65,8 +65,10 @@ use crate::versioning::signature::signer::Signer;
 pub(crate) mod access_delay;
 pub(crate) mod attestation;
 pub mod audit;
+pub(crate) mod body;
 pub mod change;
 pub mod committer;
+pub(crate) mod content_facts;
 pub(crate) mod contribution;
 pub(crate) mod external;
 pub(crate) mod import;
@@ -81,6 +83,7 @@ pub(crate) mod read;
 pub(crate) mod restriction;
 pub mod signature;
 pub(crate) mod system;
+pub mod tree;
 pub(crate) mod wire;
 
 // Re-exports: the versioning API the service layer and its adapters consume.

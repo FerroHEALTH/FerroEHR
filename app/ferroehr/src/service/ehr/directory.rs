@@ -29,7 +29,7 @@ use crate::db::acquire::acquire;
 use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::response::ResourceMeta;
-use crate::service::response::ServiceResponse;
+use crate::service::response::{RawServiceResponse, ReadBody, ServiceResponse};
 use openehr_base::prelude::ObjectVersionId;
 use openehr_rm::prelude::Folder;
 use serde_json::Value;
@@ -41,12 +41,13 @@ use crate::service::write::{Mode, Resolved};
 use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::Body;
 use crate::versioning::change::precondition::{ensure_preceding, lock_current, tip_uid};
 use crate::versioning::change::{Change, Write};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components};
 
 use crate::service::datetime::parse_at_time;
-use crate::validation::versioned::check_folder_item_refs;
+use crate::validation::versioned::{check_folder_item_refs, local_item_refs};
 
 impl FerroEhrService {
     /// Create the EHR's directory (its root FOLDER).
@@ -68,16 +69,14 @@ impl FerroEhrService {
             envelope,
             incomplete,
         } = self.resolve_write(&request, change_type::CREATION, "DIRECTORY creation")?;
-        let mut folder = openehr_its::json::to_canonical_value(&request.data);
-        drop(request);
+        let mut folder = Body::from(request.data);
         crate::storage::ehr_repo::require_ehr(&mut *acquire(&self.pool).await?, ehr_id).await?;
-        self.validate_for_commit(Kind::Folder, &folder, incomplete)
+        self.validate_body(Kind::Folder, &folder, incomplete)
             .await?;
         check_folder_item_refs(
             &mut *acquire(&self.pool).await?,
             ehr_id,
-            &self.effective_system_id(),
-            &folder,
+            &local_item_refs(&folder, &self.effective_system_id()),
         )
         .await?;
         // is_modifiable = False forbids content writes; the directory is EHR
@@ -95,7 +94,7 @@ impl FerroEhrService {
             )));
         }
         // The large media go to the blob store before the commit holds a connection.
-        self.externalize(&mut folder).await?;
+        self.externalize_body(&mut folder).await?;
         let committed = self
             .commit_one(&self.pool, Mode::Transaction, async move |_| {
                 Ok(Write::new(
@@ -125,58 +124,51 @@ impl FerroEhrService {
         at: Option<jiff::Timestamp>,
         path: Option<&str>,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.directory_at_time_raw(ehr_id, at, path)
+            .await?
+            .into_value_response()
+            .map_err(|e| ServiceError::internal("read a stored directory body", e))
+    }
+
+    /// [`Self::directory_at_time`], with the body kept as the stored text
+    /// where nothing needs it parsed ([`crate::versioning::read::read_raw`]).
+    ///
+    /// # Errors
+    /// As [`Self::directory_at_time`].
+    pub(in crate::service) async fn directory_at_time_raw(
+        &self,
+        ehr_id: EhrId,
+        at: Option<jiff::Timestamp>,
+        path: Option<&str>,
+    ) -> Result<RawServiceResponse, ServiceError> {
         // The current read folds the `ehr_folder` slot resolution into the
         // version statement; the as-of read keeps the two-step so the slot is
         // still chosen by CURRENT state.
-        let read = match at {
-            Some(at) => {
-                let vo_id = self.directory_vo(ehr_id).await?;
-                crate::versioning::read::read(
-                    &self.pool,
-                    self.spec_profile,
-                    VersionAt::Instant(vo_id, at),
+        let at = match at {
+            Some(at) => VersionAt::Instant(self.directory_vo(ehr_id).await?, at),
+            None => VersionAt::Directory(ehr_id),
+        };
+        let raw = crate::versioning::read::read_raw(&self.pool, self.spec_profile, at)
+            .await?
+            .filter(|r| r.read.ehr_id == Some(ehr_id) && r.read.kind == Kind::Folder)
+            .ok_or_else(|| {
+                ServiceError::not_found(
+                    Missing::VersionedObject,
+                    format!("directory for EHR {ehr_id}"),
                 )
-                .await?
-            }
-            None => {
-                crate::versioning::read::read(
-                    &self.pool,
-                    self.spec_profile,
-                    VersionAt::Directory(ehr_id),
-                )
-                .await?
-            }
+            })?;
+        if raw.read.deleted() {
+            return Ok(deleted_folder());
         }
-        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Folder)
-        .ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("directory for EHR {ehr_id}"),
-            )
-        })?;
-        if read.deleted() {
-            return Ok(ServiceResponse::plain(Value::Null));
-        }
-        let vo_id = read.vo_id;
+        let read = &raw.read;
         let meta = self.version_meta(
             ehr_id,
-            vo_id,
+            read.vo_id,
             &read.creating_system_id,
             read.tree,
             read.time_committed,
         );
-        let folder = self.with_uid(read.canonical, vo_id, &read.creating_system_id, read.tree)?;
-        match path.map(str::trim).filter(|p| !p.is_empty() && *p != "/") {
-            None => Ok(ServiceResponse::new(folder, meta)),
-            Some(path) => select_subfolder(&folder, path)
-                .map(|sub| ServiceResponse::new(sub, meta))
-                .ok_or_else(|| {
-                    ServiceError::not_found(
-                        Missing::VersionedObject,
-                        format!("folder path {path:?}"),
-                    )
-                }),
-        }
+        self.folder_served(raw, meta, path)
     }
 
     /// A specific version of the directory (from a `version_uid`),
@@ -195,27 +187,59 @@ impl FerroEhrService {
         vo_id: VoId,
         version: TreeId,
         path: Option<&str>,
-    ) -> Result<ServiceResponse, ServiceError> {
-        let read = crate::versioning::read::read(
-            &self.pool,
-            self.spec_profile,
-            VersionAt::Tree(vo_id, version),
-        )
-        .await?
-        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Folder)
-        .ok_or_else(|| {
-            ServiceError::not_found(Missing::Version, format!("directory {vo_id} v{version}"))
-        })?;
-        if read.deleted() {
-            return Ok(ServiceResponse::plain(Value::Null));
-        }
-        let mut response = self.version_response(ehr_id, vo_id, read)?;
-        if let Some(path) = path.map(str::trim).filter(|p| !p.is_empty() && *p != "/") {
-            response.body = select_subfolder(&response.body, path).ok_or_else(|| {
-                ServiceError::not_found(Missing::VersionedObject, format!("folder path {path:?}"))
+    ) -> Result<RawServiceResponse, ServiceError> {
+        let raw = self
+            .tree_version_raw(ehr_id, Kind::Folder, vo_id, version)
+            .await?
+            .ok_or_else(|| {
+                ServiceError::not_found(Missing::Version, format!("directory {vo_id} v{version}"))
             })?;
+        if raw.read.deleted() {
+            return Ok(deleted_folder());
         }
-        Ok(response)
+        let read = &raw.read;
+        let meta = self
+            .version_meta(
+                ehr_id,
+                vo_id,
+                &read.creating_system_id,
+                read.tree,
+                read.time_committed,
+            )
+            .with_content(vec![read.content.clone()]);
+        self.folder_served(raw, meta, path)
+    }
+
+    /// The directory read of `raw` with the metadata `meta`, navigated to the
+    /// sub-folder `path` when one is named, which parses the stored text.
+    ///
+    /// # Errors
+    /// [`ServiceError::NotFound`] when the sub-folder path does not resolve,
+    /// and the identifier and body faults of the stored version.
+    fn folder_served(
+        &self,
+        raw: crate::versioning::read::RawVersionRead,
+        meta: ResourceMeta,
+        path: Option<&str>,
+    ) -> Result<RawServiceResponse, ServiceError> {
+        let vo_id = raw.read.vo_id;
+        let body = self.served_body(vo_id, raw.read, raw.raw_json)?;
+        let Some(path) = path.map(str::trim).filter(|p| !p.is_empty() && *p != "/") else {
+            return Ok(RawServiceResponse {
+                body,
+                meta: Some(meta),
+            });
+        };
+        let folder = body
+            .into_value()
+            .map_err(|e| ServiceError::internal("read a stored directory body", e))?;
+        let sub = select_subfolder(&folder, path).ok_or_else(|| {
+            ServiceError::not_found(Missing::VersionedObject, format!("folder path {path:?}"))
+        })?;
+        Ok(RawServiceResponse {
+            body: ReadBody::Value(sub),
+            meta: Some(meta),
+        })
     }
 
     /// Update the EHR's directory. `vo_id` is the directory-slot versioned
@@ -241,14 +265,13 @@ impl FerroEhrService {
         let checked = async {
             let resolved =
                 self.resolve_write(&request, change_type::MODIFICATION, "DIRECTORY update")?;
-            let mut folder = openehr_its::json::to_canonical_value(&request.data);
-            self.validate_for_commit(Kind::Folder, &folder, resolved.incomplete)
+            let mut folder = Body::from(request.data);
+            self.validate_body(Kind::Folder, &folder, resolved.incomplete)
                 .await?;
             check_folder_item_refs(
                 &mut *acquire(&self.pool).await?,
                 ehr_id,
-                &self.effective_system_id(),
-                &folder,
+                &local_item_refs(&folder, &self.effective_system_id()),
             )
             .await?;
             // is_modifiable = False forbids content writes to the directory (RM
@@ -257,11 +280,10 @@ impl FerroEhrService {
                 return Err(crate::versioning::change::precondition::not_modifiable_error(ehr_id));
             }
             // The large media go to the blob store before the commit holds a connection.
-            self.externalize(&mut folder).await?;
+            self.externalize_body(&mut folder).await?;
             Ok((resolved, folder))
         }
         .await;
-        drop(request);
         let committed = self
             .commit_one(&self.pool, Mode::Transaction, async move |tx| {
                 let placement = lock_current(tx, Some(ehr_id), vo_id, Kind::Folder).await?;
@@ -475,6 +497,22 @@ impl FerroEhrService {
             .await
     }
 
+    /// [`Self::get_directory_at_time`], with the body kept as the stored text
+    /// where nothing needs it parsed.
+    ///
+    /// # Errors
+    /// As [`Self::get_directory_at_time`].
+    pub async fn get_directory_at_time_raw(
+        &self,
+        an_ehr_id: EhrId,
+        a_time: Option<String>,
+        a_path: Option<String>,
+    ) -> Result<RawServiceResponse, ServiceError> {
+        let at = a_time.as_deref().map(parse_at_time).transpose()?;
+        self.directory_at_time_raw(an_ehr_id, at, a_path.as_deref())
+            .await
+    }
+
     /// Commit a new directory version,
     /// returning the new version's resource metadata (uid + commit time for
     /// the wire's `ETag`/`Last-Modified`).
@@ -544,7 +582,7 @@ impl FerroEhrService {
         an_ehr_id: EhrId,
         a_version_uid: ObjectVersionId,
         a_path: Option<&str>,
-    ) -> Result<ServiceResponse, ServiceError> {
+    ) -> Result<RawServiceResponse, ServiceError> {
         let (vo_id, version) = components(&a_version_uid).map_err(VersionIdError::into_argument)?;
         let resp = self
             .directory_version(an_ehr_id, vo_id, version, a_path)
@@ -558,5 +596,13 @@ impl FerroEhrService {
             super::ensure_addressed_version(&a_version_uid, &meta.uid)?;
         }
         Ok(resp)
+    }
+}
+
+/// The read of a logically deleted directory: no body (→ `204`).
+fn deleted_folder() -> RawServiceResponse {
+    RawServiceResponse {
+        body: ReadBody::Value(Value::Null),
+        meta: None,
     }
 }

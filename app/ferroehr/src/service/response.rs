@@ -112,16 +112,17 @@ impl ResourceMeta {
     }
 }
 
-/// A service response: the canonical-JSON RM payload plus optional resource
-/// metadata.
+/// A service response: the RM payload plus optional resource metadata.
 ///
-/// A `null` `body` means "no representation" (a logically deleted read, or a
+/// The body is the typed RM value a read or write serves (`ServiceResponse<Ehr>`)
+/// or, for the operations that still answer with one, a canonical value, where
+/// a `null` means "no representation" (a logically deleted read, or a
 /// resource whose value is not returned); `meta` is present whenever the
 /// operation produced/identified a versioned resource.
 #[derive(Debug, Clone)]
-pub struct ServiceResponse {
-    /// The canonical-JSON RM payload, or `Value::Null` when there is none.
-    pub body: Value,
+pub struct ServiceResponse<B = Value> {
+    /// The RM payload.
+    pub body: B,
     /// Resource metadata for header derivation, if any.
     pub meta: Option<ResourceMeta>,
 }
@@ -141,6 +142,12 @@ pub enum ReadBody {
 }
 
 impl ReadBody {
+    /// Whether the body is the `null` of a logically deleted read.
+    #[must_use]
+    pub fn is_null(&self) -> bool {
+        matches!(self, ReadBody::Value(Value::Null))
+    }
+
     /// The typed value: the parsed representation as-is, or the raw text
     /// parsed on demand.
     ///
@@ -151,7 +158,10 @@ impl ReadBody {
     pub fn into_value(self) -> Result<Value, serde_json::Error> {
         match self {
             ReadBody::Value(v) => Ok(v),
-            ReadBody::RawJson(text) => serde_json::from_str(&text),
+            ReadBody::RawJson(text) => {
+                crate::telemetry::conversion::record("stored_text_to_value");
+                serde_json::from_str(&text)
+            }
         }
     }
 }
@@ -166,10 +176,10 @@ pub struct RawServiceResponse {
     pub meta: Option<ResourceMeta>,
 }
 
-impl ServiceResponse {
+impl<B> ServiceResponse<B> {
     /// A response carrying both an RM body and resource metadata.
     #[must_use]
-    pub fn new(body: Value, meta: ResourceMeta) -> Self {
+    pub fn new(body: B, meta: ResourceMeta) -> Self {
         Self {
             body,
             meta: Some(meta),
@@ -178,10 +188,26 @@ impl ServiceResponse {
 
     /// A plain response with a body but no resource metadata.
     #[must_use]
-    pub fn plain(body: Value) -> Self {
+    pub fn plain(body: B) -> Self {
         Self { body, meta: None }
     }
+}
 
+impl RawServiceResponse {
+    /// The response with its body parsed into a canonical value, for a caller
+    /// that edits the body before serving it.
+    ///
+    /// # Errors
+    /// As [`ReadBody::into_value`].
+    pub fn into_value_response(self) -> Result<ServiceResponse, serde_json::Error> {
+        Ok(ServiceResponse {
+            body: self.body.into_value()?,
+            meta: self.meta,
+        })
+    }
+}
+
+impl ServiceResponse {
     /// A bodyless response carrying resource metadata — the delete outcome
     /// that still returns the (now deleted) `version_uid` in
     /// `ETag`/`Location` (`204_COMPOSITION_deleted.yaml`).

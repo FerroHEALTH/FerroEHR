@@ -36,6 +36,7 @@ use crate::load::bmm::BmmSchema;
 use crate::plan::construction;
 use crate::plan::overrides::resolve_default;
 use crate::plan::{JsonEnumDispatch, JsonField, JsonFieldKind, JsonType};
+use crate::render::generics::{deserialize_header, generic_header, phantom};
 use std::fmt::Write as _;
 
 /// One spec GENERATION paired with the crate+generation root its types are
@@ -445,58 +446,6 @@ fn json_type_spec(ty: &JsonType) -> &str {
     }
 }
 
-/// `(impl<…: Bound> , <…>)` — the impl-generics header and the type-args suffix.
-fn generic_header(generics: &[String], bound: &str) -> (String, String) {
-    if generics.is_empty() {
-        (String::new(), String::new())
-    } else {
-        let bounded = generics
-            .iter()
-            .map(|g| format!("{g}: {bound}"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        (format!("<{bounded}>"), format!("<{}>", generics.join(", ")))
-    }
-}
-
-/// The `impl<'de, …>` header + type-args suffix for a `Deserialize` impl.
-///
-/// Generic parameters are bound by `DeserializeOwned`, not `Deserialize<'de>`:
-/// every emitted spec type owns its data (no borrowed fields anywhere — see
-/// <https://serde.rs/lifetimes.html>), and the untagged structural fallback has
-/// to deserialize a parameter from a LOCAL buffered value whose lifetime is
-/// shorter than `'de`, which only the `for<'a>` bound permits.
-fn deserialize_header(generics: &[String]) -> (String, String) {
-    if generics.is_empty() {
-        ("<'de>".to_owned(), String::new())
-    } else {
-        let bounded = generics
-            .iter()
-            .map(|g| format!("{g}: ::serde::de::DeserializeOwned"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        (
-            format!("<'de, {bounded}>"),
-            format!("<{}>", generics.join(", ")),
-        )
-    }
-}
-
-/// `PhantomData<(T, U)>` for a visitor that must carry the impl's generic
-/// parameters (an item declared inside a function body does not inherit them).
-fn phantom(generics: &[String]) -> (String, String, String) {
-    if generics.is_empty() {
-        (String::new(), String::new(), String::new())
-    } else {
-        let params = generics.join(", ");
-        (
-            format!("<{params}>"),
-            format!("(::core::marker::PhantomData<({params},)>)"),
-            "(::core::marker::PhantomData)".to_owned(),
-        )
-    }
-}
-
 // ── Serialize side ───────────────────────────────────────────────────────────
 
 /// Emit `impl serde::Serialize` for one [`JsonType`].
@@ -837,7 +786,10 @@ fn emit_struct_deserialize(
          }}\n}}\n"
     );
 
-    // The visitor.
+    // The visitor. `visit_map` is never inlined, so each class's field slots
+    // live in its own frame and a nested read keeps one node's slots per level
+    // on the stack, never the slots of every subtype a dispatch could reach
+    // (#5997).
     let _ = write!(
         b,
         "struct __Visitor{vis_args}{vis_body};\n\
@@ -845,10 +797,17 @@ fn emit_struct_deserialize(
          type Value = {path}::{rust}{args};\n\
          fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {{\n\
          __f.write_str(\"an openEHR `{spec}` object\")\n}}\n\
+         #[inline(never)]\n\
          fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) \
-         -> ::core::result::Result<Self::Value, __A::Error> {{\n\
-         let mut __seen_type = false;\n"
+         -> ::core::result::Result<Self::Value, __A::Error> {{\n"
     );
+    // An RM object counts against the readers' one nesting limit (#5997).
+    if schema.schema.schema_name == crate::plan::layout::RM_SCHEMA {
+        b.push_str(
+            "let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;\n",
+        );
+    }
+    b.push_str("let mut __seen_type = false;\n");
     let slots: Vec<FieldSlot> = fields.iter().map(|f| field_slot(f, "_")).collect();
     for (i, slot) in slots.iter().enumerate() {
         let _ = writeln!(b, "let mut __s{i}: {} = None;", slot.slot_ty);

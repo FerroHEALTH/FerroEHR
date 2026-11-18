@@ -40,8 +40,8 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::user_write::{ScimCommit, UserWriteError};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::decoded;
 use crate::versioning::change::{Change, WriteEnvelope};
-use crate::versioning::contribution::typed_decode_gate;
 use openehr_rm::draft::access_control::terminology::{TERMINOLOGY_ID_ACCESS, coded_text};
 
 /// A role a User holds: the code of its `ROLE`'s name in its terminology.
@@ -74,8 +74,8 @@ pub struct RoleWrite<'a> {
 }
 
 /// One role `ROLE` of a User in force: its container, its tree and body.
-struct Held {
-    vo_id: VoId,
+pub(super) struct Held {
+    pub(super) vo_id: VoId,
     tree: crate::versioning::object_version_id::TreeId,
     body: Value,
 }
@@ -156,7 +156,7 @@ impl FerroEhrService {
                 object.insert("time_validity".to_owned(), from(&today));
             }
             let state = self.first_state(&body, write.role_template).await?;
-            typed_decode_gate(Kind::Role, &body, false)?;
+            let body = decoded(Kind::Role, body, false)?;
             let reference = party_ref(write.namespace, "ROLE", id.id());
             if let Some(roles) = listed.as_object_mut().map(|object| {
                 object
@@ -183,6 +183,11 @@ impl FerroEhrService {
                 lifecycle_state: Some(write.person_state.to_owned()),
                 ..WriteEnvelope::default()
             };
+            let listed = decoded(
+                Kind::Person,
+                listed,
+                write.person_state == crate::versioning::lifecycle::state::INCOMPLETE,
+            )?;
             changes.push(Change::modify(
                 person,
                 Kind::Person,
@@ -216,6 +221,11 @@ impl FerroEhrService {
             object.insert("time_validity".to_owned(), until(lower.as_deref(), today));
         }
         let state = self.first_state(&body, template).await?;
+        let body = decoded(
+            Kind::Role,
+            body,
+            state == crate::versioning::lifecycle::state::INCOMPLETE,
+        )?;
         let envelope = WriteEnvelope {
             lifecycle_state: Some(state),
             ..WriteEnvelope::default()
@@ -233,6 +243,20 @@ impl FerroEhrService {
     /// The `ROLE`s of the professional role template the `PERSON` `body`
     /// lists in `roles`, in force on `today` and not deleted.
     async fn role_parties(&self, body: &Value, today: &str) -> Result<Vec<Held>, ServiceError> {
+        Ok(self
+            .professional_role_parties(body)
+            .await?
+            .into_iter()
+            .filter(|held| in_force(held.body.get("time_validity"), today))
+            .collect())
+    }
+
+    /// The live `ROLE`s of the professional role template the `PERSON`
+    /// `body` lists in `roles`, whatever their validity.
+    pub(super) async fn professional_role_parties(
+        &self,
+        body: &Value,
+    ) -> Result<Vec<Held>, ServiceError> {
         let listed = body
             .get("roles")
             .and_then(Value::as_array)
@@ -260,7 +284,7 @@ impl FerroEhrService {
                 .pointer("/archetype_details/template_id/value")
                 .and_then(Value::as_str)
                 .is_some_and(|template| self.binding.is_professional_role(template));
-            if professional && in_force(read.body.get("time_validity"), today) {
+            if professional {
                 held.push(Held {
                     vo_id: role,
                     tree: current.tree,

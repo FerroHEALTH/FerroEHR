@@ -192,8 +192,8 @@ fn constructibility_no_non_constructible_type_is_emitted() {
 #[test]
 fn determinism_plan_is_stable_across_runs() {
     for key in testsupport::crate_keys() {
-        let a = testsupport::plan_shapes(key).unwrap();
-        let b = testsupport::plan_shapes(key).unwrap();
+        let a = testsupport::shapes::plan_shapes(key).unwrap();
+        let b = testsupport::shapes::plan_shapes(key).unwrap();
         assert_eq!(a, b, "{key}: plan differs between two runs");
         assert!(!a.is_empty(), "{key}: empty plan");
     }
@@ -1929,4 +1929,32 @@ fn untyped_response_bodies_are_pinned_with_their_reason() {
     let pinned: std::collections::BTreeSet<String> =
         PINNED.iter().map(|s| (*s).to_owned()).collect();
     assert_eq!(untyped, pinned, "untyped response bodies changed");
+}
+
+/// The typed RM-instance passes (`openehr-rm` `validate::tree`) do not run the
+/// mandatory-container presence check, because the canonical-JSON reader
+/// reads an absent mandatory `0..*` container as empty: this holds only while
+/// no such container is reachable from a resource a client commits. (Every
+/// mandatory `1..*` container is a `NonEmptyVec` the reader refuses absent.)
+#[test]
+fn no_mandatory_plain_container_is_reachable_from_a_committed_resource() {
+    let roots = [
+        "COMPOSITION",
+        "EHR_STATUS",
+        "EHR_ACCESS",
+        "FOLDER",
+        "PERSON",
+        "ORGANISATION",
+        "GROUP",
+        "AGENT",
+        "ROLE",
+        "CONTRIBUTION",
+        "ORIGINAL_VERSION",
+    ];
+    let found = testsupport::shapes::reachable_mandatory_containers(&roots)
+        .expect("the RM composition loads");
+    assert!(
+        found.is_empty(),
+        "reachable mandatory plain containers: {found:?}"
+    );
 }

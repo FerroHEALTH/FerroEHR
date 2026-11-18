@@ -100,6 +100,11 @@ pub const VERSION_UID_ORDER: &str =
 /// lookup by an ELEMENT value enters through (#4437).
 pub const VALUE_SEARCH: &str = include_str!("../../migrations/templates/value_search.sql.in");
 
+/// The template that drops the node rows' foreign key into `version` and
+/// narrows the per-EHR class and subsumption indexes to the rows their
+/// readers reach (#5969).
+pub const NODE_LEAN: &str = include_str!("../../migrations/templates/node_lean.sql.in");
+
 /// The marker opening a block rendered only for a domain that owns an `ehr`
 /// relation.
 const EHR_BEGIN: &str = "--@ehr-begin";
@@ -256,6 +261,12 @@ mod tests {
             PARTY,
             HEAD_ROOT_ARCHETYPE,
         ),
+        (
+            "migrations/clinical/0052_node_lean.sql",
+            CLINICAL,
+            NODE_LEAN,
+        ),
+        ("migrations/party/0054_node_lean.sql", PARTY, NODE_LEAN),
     ];
 
     /// Set to `1` to rewrite the committed files from the templates instead of

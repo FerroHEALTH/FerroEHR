@@ -39,6 +39,7 @@ use crate::service::ehr::access_settings::EhrAccessSettings;
 use crate::storage::access_projection::{self as store, Classed, Rows, Source};
 use crate::storage::version_repo::ehr_access::{self as heads, CurrentAccess};
 use crate::versioning::Kind;
+use crate::versioning::body::Body;
 use crate::versioning::change::{Change, Committed};
 
 /// One bound of a [`Validity`].
@@ -156,19 +157,25 @@ impl AccessCommit {
     /// the first version of an `EHR_ACCESS` with no settings, which replaces
     /// no row.
     pub(crate) fn of(change: &Change) -> Option<Self> {
-        let has_settings =
-            |canonical: &Value| canonical.get("settings").is_some_and(|s| !s.is_null());
+        // NOTE: the settings are an open slot the projection reads as JSON, and
+        // an EHR_ACCESS commit is rare, so a typed body is read as its value.
+        let canonical = |body: &Body| match body {
+            Body::EhrAccess(rm) => Some(openehr_its::json::to_canonical_value(rm.as_ref())),
+            other => other.canonical().cloned(),
+        };
         match change {
             Change::Create {
                 kind: Kind::EhrAccess,
-                canonical,
+                body,
                 ..
-            } => has_settings(canonical).then(|| Self::Body(Some(canonical.clone()))),
+            } => canonical(body)
+                .filter(|canonical| canonical.get("settings").is_some_and(|s| !s.is_null()))
+                .map(|canonical| Self::Body(Some(canonical))),
             Change::Modify {
                 kind: Kind::EhrAccess,
-                canonical,
+                body,
                 ..
-            } => Some(Self::Body(Some(canonical.clone()))),
+            } => Some(Self::Body(canonical(body))),
             Change::Delete {
                 kind: Kind::EhrAccess,
                 ..

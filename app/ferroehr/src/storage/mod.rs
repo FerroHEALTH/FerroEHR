@@ -16,9 +16,9 @@
 //!
 //! One file per concern; consumers import each item from its defining submodule
 //! (no re-exports):
-//! - [`codec::decompose`] / [`codec::reassemble`] — the pure content transform.
-//! - [`row::NodeRow`] / [`row::ReadRow`] / [`row::NodeContent`] — the write and
-//!   lean read row shapes.
+//! - [`render::decompose`] / [`codec::reassemble`] — the pure content transform.
+//! - [`render::nodes::StoredNode`] / [`row::ReadRow`] / [`row::NodeContent`] —
+//!   the write and lean read row shapes.
 //! - [`structure::is_structure_type`] / [`structure::is_versioned_root_type`] /
 //!   [`structure::archetype_parts`] — the decomposition granularity, delegated
 //!   to the BMM-generated RM model plus the demographic delta (the party roots
@@ -28,7 +28,7 @@
 //! - [`promoted::PROMOTED_LEAVES`] — the `(rm_type, path)` to node-column
 //!   mapping the write codec and the AQL read lowering both consult, so a hot
 //!   leaf reads an indexed column.
-//! - [`slim::slim`] — what a `node` row stores of its fragment once its
+//! - [`slim`] — what a `node` row stores of its fragment once its
 //!   columns hold the rest, and the typed `ELEMENT` value columns.
 //! - [`header`] — the archetype header, language and encoding a node below
 //!   the root keeps in columns.
@@ -139,6 +139,7 @@ pub mod party_heads;
 pub mod party_reverse;
 pub mod policy_register;
 pub mod promoted;
+pub mod render;
 pub mod row;
 pub mod slim;
 pub mod statistics;

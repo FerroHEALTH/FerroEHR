@@ -14,308 +14,17 @@
 
 #![expect(
     clippy::disallowed_types,
-    reason = "canonical JSON / Simplified Formats operate on the wire value by definition \
-              (ITS-JSON; ITS-REST Simplified Formats) — serde_json::Value IS the subject matter \
-              (#1694)"
+    reason = "a datum of the simplified wire is a JSON scalar (ITS-REST Simplified Formats); \
+              the builders read it into typed RM and the emitters write it (#1694, #6003)"
 )]
 
-use serde_json::{Map, Value, json};
+use serde_json::Value;
 
-use super::{data_values, parties};
+use super::{Attr, data_values, parties};
 use crate::flat::error::FlatError;
 use crate::flat::sim::SimNode;
-
-// ── RM → sim ──────────────────────────────────────────────────────────────────
-
-/// The `_`-prefixed families present on `rm` (the [`super`] module docs, `emit_rm_attrs`).
-pub(crate) fn emit_rm_attrs(rm: &Value, rm_type: &str, out: &mut SimNode) {
-    let ty = rm
-        .get("_type")
-        .and_then(Value::as_str)
-        .unwrap_or_else(|| openehr_rm::v1_2::typing::base_name(rm_type));
-
-    if is_locatable(ty) {
-        emit_locatable_attrs(rm, out);
-    }
-    match ty {
-        "ELEMENT" => emit_element_attrs(rm, out),
-        "OBSERVATION" | "EVALUATION" | "INSTRUCTION" | "ACTION" | "ADMIN_ENTRY" => {
-            emit_entry_attrs(rm, ty, out);
-        }
-        // A PARTY arm here would emit the family a second time onto the same
-        // node: idempotent, invisible on the wire, and a trap for the next
-        // change to either site (pinned by
-        // `parties::tests::party_identifiers_have_exactly_one_emission_site`).
-        // NOTE: no PARTY arm — the party `_identifier:i` family (master05
-        // §§PARTY_IDENTIFIED, PARTY_RELATED) is emitted by
-        // [`parties::emit_party`], which every route to a party node uses.
-        "ISM_TRANSITION" => emit_ism_transition_attrs(rm, out),
-        "EVENT_CONTEXT" => emit_event_context_attrs(rm, out),
-        _ => {}
-    }
-
-    // The value-internal families of a `DV_*` leaf (ranges / accuracy / text
-    // meta / multimedia thumbnail+charset+language).
-    data_values::emit_value_internal(rm, ty, out);
-}
-
-/// The LOCATABLE families: `_uid`, the `_link:i` list and `_feeder_audit`
-/// (master05 §LOCATABLE).
-fn emit_locatable_attrs(rm: &Value, out: &mut SimNode) {
-    if let Some(uid) = rm.pointer("/uid/value") {
-        out.occurrence_mut("_uid", None)
-            .attrs
-            .insert(String::new(), uid.clone());
-    }
-    if let Some(links) = rm.get("links").and_then(Value::as_array) {
-        for (i, link) in links.iter().enumerate() {
-            emit_link(
-                link,
-                out.occurrence_mut("_link", Some(u32::try_from(i).unwrap_or(u32::MAX))),
-            );
-        }
-    }
-    if let Some(fa) = rm.get("feeder_audit").filter(|v| !v.is_null()) {
-        let target = out.occurrence_mut("_feeder_audit", None);
-        if audit_parties_survive(fa) {
-            emit_feeder_audit(fa, target);
-        } else {
-            target.attrs.insert("raw".to_owned(), fa.clone());
-        }
-    }
-}
-
-/// Whether every party of both FEEDER_AUDIT_DETAILS survives the master05
-/// suffixes, whose builder fills `PERSON` in as the reference type
-/// ([`parties::ref_type_survives`]); the feeder audit is written whole as
-/// `|raw` otherwise (master04 §Raw canonical JSON).
-fn audit_parties_survive(fa: &Value) -> bool {
-    ["originating_system_audit", "feeder_system_audit"]
-        .iter()
-        .filter_map(|details| fa.get(*details))
-        .flat_map(|details| {
-            ["location", "subject", "provider"]
-                .iter()
-                .filter_map(move |party| details.get(*party))
-        })
-        .all(|party| parties::ref_type_survives(party, "PERSON"))
-}
-
-/// The ELEMENT families: `_null_flavour` and `_null_reason` (master05
-/// §ELEMENT).
-fn emit_element_attrs(rm: &Value, out: &mut SimNode) {
-    if let Some(nf) = rm.get("null_flavour").filter(|v| !v.is_null()) {
-        data_values::emit_leaf(
-            nf,
-            "DV_CODED_TEXT",
-            None,
-            out.occurrence_mut("_null_flavour", None),
-        );
-    }
-    if let Some(nr) = rm.get("null_reason").filter(|v| !v.is_null()) {
-        data_values::emit_leaf(
-            nr,
-            "DV_TEXT",
-            None,
-            out.occurrence_mut("_null_reason", None),
-        );
-    }
-}
-
-/// The ENTRY families, plus the INSTRUCTION and ACTION additions (master05
-/// §§ENTRY, INSTRUCTION, ACTION).
-fn emit_entry_attrs(rm: &Value, ty: &str, out: &mut SimNode) {
-    if let Some(o) = rm.get("guideline_id").filter(|v| !v.is_null()) {
-        parties::emit_object_ref(o, out.occurrence_mut("_guideline_id", None));
-    }
-    if let Some(o) = rm.get("workflow_id").filter(|v| !v.is_null()) {
-        parties::emit_object_ref(o, out.occurrence_mut("_work_flow_id", None));
-    }
-    if let Some(p) = rm.get("provider").filter(|v| !v.is_null()) {
-        parties::emit_party_as(p, "PERSON", out.occurrence_mut("_provider", None));
-    }
-    if let Some(parts) = rm.get("other_participations").and_then(Value::as_array) {
-        for (i, p) in parts.iter().enumerate() {
-            parties::emit_participation(
-                p,
-                out.occurrence_mut(
-                    "_other_participation",
-                    Some(u32::try_from(i).unwrap_or(u32::MAX)),
-                ),
-            );
-        }
-    }
-    if ty == "INSTRUCTION" {
-        if let Some(et) = rm.get("expiry_time").filter(|v| !v.is_null()) {
-            data_values::emit_leaf(
-                et,
-                "DV_DATE_TIME",
-                None,
-                out.occurrence_mut("_expiry_time", None),
-            );
-        }
-        if let Some(wf) = rm.get("wf_definition").filter(|v| !v.is_null()) {
-            data_values::emit_leaf(
-                wf,
-                "DV_PARSABLE",
-                None,
-                out.occurrence_mut("_wf_definition", None),
-            );
-        }
-    }
-    if ty == "ACTION"
-        && let Some(det) = rm.get("instruction_details").filter(|v| !v.is_null())
-    {
-        emit_instruction_details(det, out.occurrence_mut("_instruction_details", None));
-    }
-}
-
-/// The ISM_TRANSITION family: the `_reason:i` DV_TEXT list (master05
-/// §ISM_TRANSITION).
-fn emit_ism_transition_attrs(rm: &Value, out: &mut SimNode) {
-    let Some(reasons) = rm.get("reason").and_then(Value::as_array) else {
-        return;
-    };
-    for (i, r) in reasons.iter().enumerate() {
-        data_values::emit_leaf(
-            r,
-            "DV_TEXT",
-            None,
-            out.occurrence_mut("_reason", Some(u32::try_from(i).unwrap_or(u32::MAX))),
-        );
-    }
-}
-
-/// The EVENT_CONTEXT families (master05 §EVENT_CONTEXT).
-///
-/// A composition's context is normally surfaced through the `ctx/` vocabulary
-/// (see [`crate::flat::ctx`]); these emit only when a walker renders an
-/// EVENT_CONTEXT node through the tree instead. `end_time`/`location` surface
-/// as the lossless `ctx/` scalars (master06 §§end_time, location) and are not
-/// re-emitted here; their `_end_time`/`_location` path forms stay accepted on
-/// input.
-fn emit_event_context_attrs(rm: &Value, out: &mut SimNode) {
-    if let Some(hcf) = rm.get("health_care_facility").filter(|v| !v.is_null()) {
-        parties::emit_party_as(
-            hcf,
-            "ORGANISATION",
-            out.occurrence_mut("_health_care_facility", None),
-        );
-    }
-    if let Some(parts) = rm.get("participations").and_then(Value::as_array) {
-        for (i, p) in parts.iter().enumerate() {
-            parties::emit_participation(
-                p,
-                out.occurrence_mut("_participation", Some(u32::try_from(i).unwrap_or(u32::MAX))),
-            );
-        }
-    }
-}
-
-fn is_locatable(ty: &str) -> bool {
-    matches!(
-        ty,
-        "COMPOSITION"
-            | "SECTION"
-            | "OBSERVATION"
-            | "EVALUATION"
-            | "INSTRUCTION"
-            | "ACTION"
-            | "ADMIN_ENTRY"
-            | "GENERIC_ENTRY"
-            | "CLUSTER"
-            | "ELEMENT"
-    )
-}
-
-/// LINK → `|type`/`|meaning`/`|target` (master05 §LINK).
-fn emit_link(link: &Value, out: &mut SimNode) {
-    if let Some(v) = link.pointer("/type/value") {
-        out.attrs.insert("type".to_owned(), v.clone());
-    }
-    if let Some(v) = link.pointer("/meaning/value") {
-        out.attrs.insert("meaning".to_owned(), v.clone());
-    }
-    if let Some(v) = link.pointer("/target/value") {
-        out.attrs.insert("target".to_owned(), v.clone());
-    }
-}
-
-/// FEEDER_AUDIT (master05 §FEEDER_AUDIT): the two `*_system_audit`
-/// FEEDER_AUDIT_DETAILS, `original_content`(`_multimedia`), and the
-/// `*_system_item_id:i` DV_IDENTIFIER lists.
-fn emit_feeder_audit(fa: &Value, out: &mut SimNode) {
-    if let Some(d) = fa.get("originating_system_audit").filter(|v| !v.is_null()) {
-        emit_audit_details(d, out.occurrence_mut("originating_system_audit", None));
-    }
-    if let Some(d) = fa.get("feeder_system_audit").filter(|v| !v.is_null()) {
-        emit_audit_details(d, out.occurrence_mut("feeder_system_audit", None));
-    }
-    if let Some(oc) = fa.get("original_content").filter(|v| !v.is_null()) {
-        let ty = oc
-            .get("_type")
-            .and_then(Value::as_str)
-            .unwrap_or("DV_PARSABLE");
-        let name = if ty == "DV_MULTIMEDIA" {
-            "original_content_multimedia"
-        } else {
-            "original_content"
-        };
-        data_values::emit_leaf(oc, ty, None, out.occurrence_mut(name, None));
-    }
-    for (arr_key, seg) in [
-        ("originating_system_item_ids", "originating_system_item_id"),
-        ("feeder_system_item_ids", "feeder_system_item_id"),
-    ] {
-        if let Some(ids) = fa.get(arr_key).and_then(Value::as_array) {
-            for (i, id) in ids.iter().enumerate() {
-                parties::emit_identifier(
-                    id,
-                    out.occurrence_mut(seg, Some(u32::try_from(i).unwrap_or(u32::MAX))),
-                );
-            }
-        }
-    }
-}
-
-/// FEEDER_AUDIT_DETAILS (master05 §FEEDER_AUDIT_DETAILS): `|system_id`,
-/// `|version_id`, `|time`, and the `location`/`subject`/`provider` parties.
-fn emit_audit_details(d: &Value, out: &mut SimNode) {
-    if let Some(v) = d.get("system_id").filter(|v| !v.is_null()) {
-        out.attrs.insert("system_id".to_owned(), v.clone());
-    }
-    if let Some(v) = d.get("version_id").filter(|v| !v.is_null()) {
-        out.attrs.insert("version_id".to_owned(), v.clone());
-    }
-    if let Some(v) = d.pointer("/time/value") {
-        out.attrs.insert("time".to_owned(), v.clone());
-    }
-    for party in ["location", "subject", "provider"] {
-        if let Some(p) = d.get(party).filter(|v| !v.is_null()) {
-            parties::emit_party(p, out.occurrence_mut(party, None));
-        }
-    }
-}
-
-/// INSTRUCTION_DETAILS (master05 §INSTRUCTION_DETAILS): exactly three STRING
-/// suffixes on the `_instruction_details` node itself — `|path` →
-/// `instruction_id.path`, `|composition_uid` → `instruction_id.id`,
-/// `|activity_id` → `activity_id`. The table and the section's example block
-/// agree; `instruction_id` is NOT a nested node on the simplified wire and the
-/// generic OBJECT_REF suffixes (`|id`/`|type`/`|namespace`) are not defined here.
-fn emit_instruction_details(det: &Value, out: &mut SimNode) {
-    if let Some(iid) = det.get("instruction_id").filter(|v| !v.is_null()) {
-        if let Some(v) = iid.get("path").filter(|v| !v.is_null()) {
-            out.attrs.insert("path".to_owned(), v.clone());
-        }
-        if let Some(v) = iid.pointer("/id/value") {
-            out.attrs.insert("composition_uid".to_owned(), v.clone());
-        }
-    }
-    if let Some(aid) = det.get("activity_id").filter(|v| !v.is_null()) {
-        out.attrs.insert("activity_id".to_owned(), aid.clone());
-    }
-}
+use crate::flat::typed::{self, Build, Obj, o, s};
+use openehr_rm::v1_2::access;
 
 // ── sim → RM ──────────────────────────────────────────────────────────────────
 
@@ -329,23 +38,29 @@ pub(super) fn build_rm_attr(
     occurrences: &[SimNode],
     host_base: &str,
     path: &str,
-) -> Result<Option<(String, Value)>, FlatError> {
+) -> Result<Option<(&'static str, Attr)>, FlatError> {
     let name = seg.trim_start_matches('_');
     let first = || occurrences.iter().find(|o| !o.is_empty());
     // A single-valued family takes its value whole from `|raw` (master04 §Raw
     // canonical JSON) or builds it from the master05 suffixes.
-    let single = |types: &[&str], build: fn(&SimNode) -> Value| {
+    let single = |types: &[&str], build: fn(&SimNode) -> Result<Obj, FlatError>| {
         first()
             .map(|o| {
-                super::raw_value(o, &format!("{path}/{seg}"), types).unwrap_or_else(|| Ok(build(o)))
+                super::raw_value(o, &format!("{path}/{seg}"), types).unwrap_or_else(|| build(o))
             })
             .transpose()
     };
+    let leaf = |rm_type: &str| -> Result<Option<Attr>, FlatError> {
+        Ok(match first() {
+            Some(o) => data_values::build_leaf(o, rm_type, None)?.map(Attr::object),
+            None => None,
+        })
+    };
     let out = match name {
-        "uid" => first()
-            .and_then(SimNode::bare)
-            .and_then(Value::as_str)
-            .map(|v| ("uid".to_owned(), uid_value(v))),
+        "uid" => match first().and_then(SimNode::bare).and_then(Value::as_str) {
+            Some(v) => Some(("uid", Attr::object(uid_value(v, &format!("{path}/{seg}"))?))),
+            None => None,
+        },
         "link" => {
             // Indexed by the raw occurrence position (holes included) so a
             // reported key matches the client's own `_link:i` numbering.
@@ -360,103 +75,89 @@ pub(super) fn build_rm_attr(
                     None => build_link(occurrence, path, i)?,
                 });
             }
-            Some(("links".to_owned(), Value::Array(links)))
+            Some(("links", Attr::Many(links)))
         }
-        "feeder_audit" => {
-            single(&["FEEDER_AUDIT"], build_feeder_audit)?.map(|v| ("feeder_audit".to_owned(), v))
+        "feeder_audit" => single(&["FEEDER_AUDIT"], build_feeder_audit)?
+            .map(|v| ("feeder_audit", Attr::object(v))),
+        "null_flavour" => leaf("DV_CODED_TEXT")?.map(|v| ("null_flavour", v)),
+        "null_reason" => leaf("DV_TEXT")?.map(|v| ("null_reason", v)),
+        "guideline_id" | "work_flow_id" => {
+            let attr = if name == "guideline_id" {
+                "guideline_id"
+            } else {
+                "workflow_id"
+            };
+            first()
+                .map(parties::build_object_ref)
+                .transpose()?
+                .flatten()
+                .map(|v| (attr, Attr::object(v)))
         }
-        "null_flavour" => first()
-            .and_then(|o| data_values::build_leaf(o, "DV_CODED_TEXT", None))
-            .map(|v| ("null_flavour".to_owned(), v)),
-        "null_reason" => first()
-            .and_then(|o| data_values::build_leaf(o, "DV_TEXT", None))
-            .map(|v| ("null_reason".to_owned(), v)),
-        "guideline_id" => first()
-            .and_then(parties::build_object_ref)
-            .map(|v| ("guideline_id".to_owned(), v)),
-        "work_flow_id" => first()
-            .and_then(parties::build_object_ref)
-            .map(|v| ("workflow_id".to_owned(), v)),
         "provider" => single(super::PARTY_PROXY_CLASSES, |o| {
             parties::build_party(o, "PERSON")
         })?
-        .map(|v| ("provider".to_owned(), v)),
+        .map(|v| ("provider", Attr::object(v))),
         "other_participation" => Some((
-            "other_participations".to_owned(),
-            Value::Array(participations(occurrences, seg, path)?),
+            "other_participations",
+            Attr::Many(participations(occurrences, seg, path)?),
         )),
         "participation" => Some((
-            "participations".to_owned(),
-            Value::Array(participations(occurrences, seg, path)?),
+            "participations",
+            Attr::Many(participations(occurrences, seg, path)?),
         )),
-        "instruction_details" => first().map(|o| {
-            (
-                "instruction_details".to_owned(),
-                build_instruction_details(o),
-            )
-        }),
-        "expiry_time" => first()
-            .and_then(|o| data_values::build_leaf(o, "DV_DATE_TIME", None))
-            .map(|v| ("expiry_time".to_owned(), v)),
-        "wf_definition" => first()
-            .and_then(|o| data_values::build_leaf(o, "DV_PARSABLE", None))
-            .map(|v| ("wf_definition".to_owned(), v)),
+        "instruction_details" => match first() {
+            Some(o) => Some((
+                "instruction_details",
+                Attr::object(build_instruction_details(o, &format!("{path}/{seg}"))?),
+            )),
+            None => None,
+        },
+        "expiry_time" => leaf("DV_DATE_TIME")?.map(|v| ("expiry_time", v)),
+        "wf_definition" => leaf("DV_PARSABLE")?.map(|v| ("wf_definition", v)),
         "identifier" => Some((
-            "identifiers".to_owned(),
-            Value::Array(build_each(occurrences, parties::build_identifier)),
+            "identifiers",
+            Attr::Many(build_each(occurrences, parties::build_identifier)?),
         )),
         "reason" => Some((
-            "reason".to_owned(),
-            Value::Array(build_each(occurrences, |o| {
-                data_values::build_leaf(o, "DV_TEXT", None)
-                    .unwrap_or_else(|| json!({"_type": "DV_TEXT", "value": ""}))
-            })),
+            "reason",
+            Attr::Many(build_each(occurrences, |o| match data_values::build_leaf(
+                o, "DV_TEXT", None,
+            )? {
+                Some(text) => Ok(text),
+                None => typed::dv_text(""),
+            })?),
         )),
-        "end_time" => first()
-            .and_then(|o| data_values::build_leaf(o, "DV_DATE_TIME", None))
-            .map(|v| ("end_time".to_owned(), v)),
+        "end_time" => leaf("DV_DATE_TIME")?.map(|v| ("end_time", v)),
         // EVENT_CONTEXT.location is a plain String (master05 §EVENT_CONTEXT note).
         "location" => first()
             .and_then(SimNode::bare)
-            .map(|v| ("location".to_owned(), v.clone())),
+            .map(|v| ("location", Attr::Datum(v.clone()))),
         "health_care_facility" => single(&["PARTY_IDENTIFIED"], |o| {
             parties::build_party(o, "ORGANISATION")
         })?
-        .map(|v| ("health_care_facility".to_owned(), v)),
+        .map(|v| ("health_care_facility", Attr::object(v))),
         // value-internal families (`T` = the host leaf type).
-        "normal_range" => first().map(|o| {
-            (
-                "normal_range".to_owned(),
-                data_values::build_interval(o, host_base),
-            )
-        }),
+        "normal_range" => first()
+            .map(|o| data_values::build_interval(o, host_base))
+            .transpose()?
+            .map(|v| ("normal_range", Attr::object(v))),
         "other_reference_ranges" => Some((
-            "other_reference_ranges".to_owned(),
-            Value::Array(build_each(occurrences, |o| {
+            "other_reference_ranges",
+            Attr::Many(build_each(occurrences, |o| {
                 data_values::build_reference_range(o, host_base)
-            })),
+            })?),
         )),
-        "accuracy" => first().and_then(SimNode::bare).map(|v| {
-            (
-                "accuracy".to_owned(),
-                json!({"_type": "DV_DURATION", "value": v.clone()}),
-            )
-        }),
-        "thumbnail" => first()
-            .and_then(|o| data_values::build_leaf(o, "DV_MULTIMEDIA", None))
-            .map(|v| ("thumbnail".to_owned(), v)),
-        "charset" => first()
-            .and_then(data_values::build_code_phrase)
-            .map(|v| ("charset".to_owned(), v)),
-        "language" => first()
-            .and_then(data_values::build_code_phrase)
-            .map(|v| ("language".to_owned(), v)),
-        "encoding" => first()
-            .and_then(data_values::build_code_phrase)
-            .map(|v| ("encoding".to_owned(), v)),
+        "accuracy" => match first().and_then(SimNode::bare) {
+            Some(v) => Some(("accuracy", Attr::object(data_values::duration(v)?))),
+            None => None,
+        },
+        "thumbnail" => leaf("DV_MULTIMEDIA")?.map(|v| ("thumbnail", v)),
+        "charset" => code_phrase_family(first())?.map(|v| ("charset", v)),
+        "language" => code_phrase_family(first())?.map(|v| ("language", v)),
+        "encoding" => code_phrase_family(first())?.map(|v| ("encoding", v)),
         "mapping" => Some((
-            "mappings".to_owned(),
-            Value::Array(build_each(occurrences, data_values::build_term_mapping)),
+            "mappings",
+            Attr::Many(build_each(occurrences, data_values::build_term_mapping)?),
         )),
         _ => {
             return Err(FlatError::UnknownSuffix {
@@ -469,6 +170,17 @@ pub(super) fn build_rm_attr(
     Ok(out)
 }
 
+/// The CODE_PHRASE a single-valued `_`-family occurrence builds.
+///
+/// # Errors
+/// [`FlatError::Rm`] for a datum the CODE_PHRASE refuses.
+fn code_phrase_family(occurrence: Option<&SimNode>) -> Result<Option<Attr>, FlatError> {
+    Ok(match occurrence {
+        Some(o) => data_values::build_code_phrase(o)?.map(Attr::object),
+        None => None,
+    })
+}
+
 /// The `PARTICIPATION` of each non-empty occurrence, in order, each taken
 /// whole from `|raw` (master04 §Raw canonical JSON) or built from the
 /// master05 §PARTICIPATION suffixes.
@@ -476,22 +188,22 @@ pub(super) fn build_rm_attr(
 /// # Errors
 /// [`FlatError::InvalidRaw`] for a `|raw` value that is no lone
 /// `PARTICIPATION`.
-fn participations(occurrences: &[SimNode], seg: &str, path: &str) -> Result<Vec<Value>, FlatError> {
+fn participations(occurrences: &[SimNode], seg: &str, path: &str) -> Result<Vec<Obj>, FlatError> {
     occurrences
         .iter()
         .enumerate()
         .filter(|(_, o)| !o.is_empty())
         .map(|(i, o)| {
             super::raw_value(o, &format!("{path}/{seg}:{i}"), &["PARTICIPATION"])
-                .unwrap_or_else(|| Ok(parties::build_participation(o)))
+                .unwrap_or_else(|| parties::build_participation(o))
         })
         .collect()
 }
 
 /// Apply `f` to each non-empty occurrence, in order.
-fn build_each<F>(occurrences: &[SimNode], f: F) -> Vec<Value>
+fn build_each<F>(occurrences: &[SimNode], f: F) -> Result<Vec<Obj>, FlatError>
 where
-    F: Fn(&SimNode) -> Value,
+    F: Fn(&SimNode) -> Result<Obj, FlatError>,
 {
     occurrences
         .iter()
@@ -502,13 +214,12 @@ where
 
 /// A `::`-bearing id is an OBJECT_VERSION_ID; otherwise a HIER_OBJECT_ID (RM
 /// support identifiers — both are valid `LOCATABLE.uid` UID_BASED_IDs).
-fn uid_value(v: &str) -> Value {
-    let ty = if v.contains("::") {
-        "OBJECT_VERSION_ID"
+fn uid_value(v: &str, path: &str) -> Result<Obj, FlatError> {
+    if v.contains("::") {
+        typed::object_version_id(v, path)
     } else {
-        "HIER_OBJECT_ID"
-    };
-    json!({"_type": ty, "value": v})
+        typed::hier_object_id(v, path)
+    }
 }
 
 /// LINK (master05 §LINK): `type`/`meaning` are DV_TEXT, `target` is DV_EHR_URI.
@@ -523,7 +234,7 @@ fn uid_value(v: &str) -> Value {
 ///
 /// `index` is the `:i` occurrence index of the `_link` family, so the reported
 /// key is the one the client can find in its own document.
-fn build_link(node: &SimNode, path: &str, index: usize) -> Result<Value, FlatError> {
+fn build_link(node: &SimNode, path: &str, index: usize) -> Result<Obj, FlatError> {
     let required = |suffix: &str| -> Result<&str, FlatError> {
         node.attrs
             .get(suffix)
@@ -551,76 +262,68 @@ fn build_link(node: &SimNode, path: &str, index: usize) -> Result<Value, FlatErr
             value: required("target")?.to_owned(),
         },
     };
-    Ok(openehr_its::json::to_canonical_value(&link))
+    Ok(Box::new(link))
 }
 
 /// FEEDER_AUDIT (master05 §FEEDER_AUDIT).
-fn build_feeder_audit(node: &SimNode) -> Value {
-    let mut fa = Map::new();
-    fa.insert("_type".to_owned(), json!("FEEDER_AUDIT"));
+fn build_feeder_audit(node: &SimNode) -> Result<Obj, FlatError> {
+    let mut fa = access::construct("FEEDER_AUDIT")?;
     if let Some(o) = single(node, "originating_system_audit") {
-        fa.insert(
-            "originating_system_audit".to_owned(),
-            build_audit_details(o),
-        );
+        fa.put(
+            "originating_system_audit",
+            typed::o(build_audit_details(o)?),
+        )?;
     }
     if let Some(o) = single(node, "feeder_system_audit") {
-        fa.insert("feeder_system_audit".to_owned(), build_audit_details(o));
+        fa.put("feeder_system_audit", typed::o(build_audit_details(o)?))?;
     }
     // master05: only one of `original_content` / `original_content_multimedia`.
     if let Some(o) = single(node, "original_content")
-        && let Some(dv) = data_values::build_leaf(o, "DV_PARSABLE", None)
+        && let Some(dv) = data_values::build_leaf(o, "DV_PARSABLE", None)?
     {
-        fa.insert("original_content".to_owned(), dv);
+        fa.put("original_content", typed::o(dv))?;
     }
     if let Some(o) = single(node, "original_content_multimedia")
-        && let Some(dv) = data_values::build_leaf(o, "DV_MULTIMEDIA", None)
+        && let Some(dv) = data_values::build_leaf(o, "DV_MULTIMEDIA", None)?
     {
-        fa.insert("original_content".to_owned(), dv);
+        fa.put("original_content", typed::o(dv))?;
     }
     for (seg, key) in [
         ("originating_system_item_id", "originating_system_item_ids"),
         ("feeder_system_item_id", "feeder_system_item_ids"),
     ] {
         if let Some(child) = node.children.get(seg) {
-            let ids = build_each(&child.occurrences, parties::build_identifier);
-            if !ids.is_empty() {
-                fa.insert(key.to_owned(), Value::Array(ids));
+            for id in build_each(&child.occurrences, parties::build_identifier)? {
+                fa.push_obj(key, id)?;
             }
         }
     }
-    Value::Object(fa)
+    Ok(fa)
 }
 
-fn build_audit_details(node: &SimNode) -> Value {
-    let mut d = Map::new();
-    d.insert("_type".to_owned(), json!("FEEDER_AUDIT_DETAILS"));
-    d.insert(
-        "system_id".to_owned(),
-        json!(
-            node.attrs
-                .get("system_id")
-                .and_then(Value::as_str)
-                .unwrap_or("unknown")
-        ),
-    );
+fn build_audit_details(node: &SimNode) -> Result<Obj, FlatError> {
+    let system_id = node
+        .attrs
+        .get("system_id")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    let mut d = typed::make("FEEDER_AUDIT_DETAILS", [("system_id", s(system_id))])?;
     if let Some(v) = node.attrs.get("version_id") {
-        d.insert("version_id".to_owned(), v.clone());
+        d.put_datum("version_id", v)?;
     }
     if let Some(v) = node.attrs.get("time") {
-        d.insert(
-            "time".to_owned(),
-            json!({"_type": "DV_DATE_TIME", "value": v.clone()}),
-        );
+        let mut time = access::construct("DV_DATE_TIME")?;
+        time.put_datum("value", v)?;
+        d.put("time", o(time))?;
     }
     for party in ["location", "subject", "provider"] {
         if let Some(p) = single(node, party) {
             // master05 §FEEDER_AUDIT_DETAILS: `subject` is a PARTY_PROXY (may be
             // PARTY_SELF); `location`/`provider` are PARTY_IDENTIFIED.
-            d.insert(party.to_owned(), parties::build_party(p, "PERSON"));
+            d.put(party, o(parties::build_party(p, "PERSON")?))?;
         }
     }
-    Value::Object(d)
+    Ok(d)
 }
 
 /// INSTRUCTION_DETAILS (master05 §INSTRUCTION_DETAILS): `|composition_uid` +
@@ -640,35 +343,33 @@ fn build_audit_details(node: &SimNode) -> Value {
 ///   `master09-identification`), else a `HIER_OBJECT_ID`;
 /// - `type` follows from that: a version uid names one `COMPOSITION`, a bare
 ///   object uid names the `VERSIONED_COMPOSITION`.
-fn build_instruction_details(node: &SimNode) -> Value {
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!("INSTRUCTION_DETAILS"));
+fn build_instruction_details(node: &SimNode, path: &str) -> Result<Obj, FlatError> {
     let uid = node
         .attrs
         .get("composition_uid")
         .and_then(Value::as_str)
         .unwrap_or("");
-    let (ref_type, id_type) = if uid.contains("::") {
-        ("COMPOSITION", "OBJECT_VERSION_ID")
+    let (ref_type, id) = if uid.contains("::") {
+        ("COMPOSITION", typed::object_version_id(uid, path)?)
     } else {
-        ("VERSIONED_COMPOSITION", "HIER_OBJECT_ID")
+        ("VERSIONED_COMPOSITION", typed::hier_object_id(uid, path)?)
     };
-    let mut lref = json!({
-        "_type": "LOCATABLE_REF",
-        "namespace": "EHR",
-        "type": ref_type,
-        "id": {"_type": id_type, "value": uid},
-    });
-    if let Some(p) = node.attrs.get("path")
-        && let Value::Object(m) = &mut lref
-    {
-        m.insert("path".to_owned(), p.clone());
+    let mut lref = typed::make(
+        "LOCATABLE_REF",
+        [
+            ("namespace", s("EHR")),
+            ("type", s(ref_type)),
+            ("id", o(id)),
+        ],
+    )?;
+    if let Some(p) = node.attrs.get("path") {
+        lref.put_datum("path", p)?;
     }
-    o.insert("instruction_id".to_owned(), lref);
+    let mut details = typed::make("INSTRUCTION_DETAILS", [("instruction_id", o(lref))])?;
     if let Some(aid) = node.attrs.get("activity_id") {
-        o.insert("activity_id".to_owned(), aid.clone());
+        details.put_datum("activity_id", aid)?;
     }
-    Value::Object(o)
+    Ok(details)
 }
 
 fn single<'a>(node: &'a SimNode, name: &str) -> Option<&'a SimNode> {
@@ -678,6 +379,9 @@ fn single<'a>(node: &'a SimNode, name: &str) -> Option<&'a SimNode> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::flat::instance::{Instance, at};
+    use crate::flat::map::emit::emit_rm_attrs;
+    use openehr_rm::v1_2::access::RmValue;
     use serde_json::json;
 
     // master05 §LINK + §COMPOSITION `_uid`: round-trip through the RM-attr layer.
@@ -685,7 +389,7 @@ mod tests {
     fn uid_and_link_roundtrip() {
         let rm = json!({
             "_type": "OBSERVATION",
-            "uid": {"_type": "HIER_OBJECT_ID", "value": "9fcc1c70"},
+            "uid": {"_type": "HIER_OBJECT_ID", "value": "9fcc1c70-9349-444d-b9de-b1f3ddcc3c4e"},
             "links": [{"_type": "LINK",
                 "type": {"_type": "DV_TEXT", "value": "problem"},
                 "meaning": {"_type": "DV_TEXT", "value": "related"},
@@ -695,7 +399,7 @@ mod tests {
         emit_rm_attrs(&rm, "OBSERVATION", &mut out);
         assert_eq!(
             out.child("_uid").and_then(SimNode::bare),
-            Some(&json!("9fcc1c70"))
+            Some(&json!("9fcc1c70-9349-444d-b9de-b1f3ddcc3c4e"))
         );
         let link = out.child("_link").unwrap();
         assert_eq!(link.attrs.get("type"), Some(&json!("problem")));
@@ -705,12 +409,14 @@ mod tests {
         let (attr, v) = build_rm_attr("_uid", &uid_occ, "OBSERVATION", "p")
             .unwrap()
             .unwrap();
+        let v = v.canonical();
         assert_eq!(attr, "uid");
         assert_eq!(v["_type"], json!("HIER_OBJECT_ID"));
         let link_occ = out.children["_link"].occurrences.clone();
         let (attr, v) = build_rm_attr("_link", &link_occ, "OBSERVATION", "p")
             .unwrap()
             .unwrap();
+        let v = v.canonical();
         assert_eq!(attr, "links");
         assert_eq!(v[0]["type"]["value"], json!("problem"));
         assert_eq!(v[0]["_type"], json!("LINK"));
@@ -745,6 +451,7 @@ mod tests {
         )
         .expect("a complete LINK builds")
         .expect("the `_link` family yields a value");
+        let v = v.canonical();
         assert_eq!(attr, "links");
         assert_eq!(v[0]["meaning"]["value"], json!("related"));
         assert_eq!(v[0]["target"]["_type"], json!("DV_EHR_URI"));
@@ -796,6 +503,7 @@ mod tests {
         let (attr, v) = build_rm_attr("_null_flavour", std::slice::from_ref(&nf), "", "p")
             .unwrap()
             .unwrap();
+        let v = v.canonical();
         assert_eq!(attr, "null_flavour");
         assert_eq!(v["defining_code"]["code_string"], json!("253"));
     }
@@ -808,6 +516,7 @@ mod tests {
         let (attr, v) = build_rm_attr("_reason", std::slice::from_ref(&r0), "ISM_TRANSITION", "p")
             .unwrap()
             .unwrap();
+        let v = v.canonical();
         assert_eq!(attr, "reason");
         assert_eq!(v[0]["value"], json!("reason 1"));
         assert_eq!(v[0]["_type"], json!("DV_TEXT"));
@@ -833,6 +542,7 @@ mod tests {
         let (attr, v) = build_rm_attr("_feeder_audit", &occ, "OBSERVATION", "p")
             .unwrap()
             .unwrap();
+        let v = v.canonical();
         assert_eq!(attr, "feeder_audit");
         assert_eq!(v["originating_system_audit"]["system_id"], json!("orig"));
         assert_eq!(v["originating_system_audit"]["version_id"], json!("final"));
@@ -864,7 +574,7 @@ mod tests {
             "instruction_details": {"_type": "INSTRUCTION_DETAILS",
                 "instruction_id": {"_type": "LOCATABLE_REF", "namespace": "EHR",
                     "type": "COMPOSITION",
-                    "id": {"_type": "OBJECT_VERSION_ID", "value": "4cdc::x::1"},
+                    "id": {"_type": "OBJECT_VERSION_ID", "value": "4cdc3017-cf42-4f2f-9c5e-5f39e8e64a7e::example.org::1"},
                     "path": "/content[x]"},
                 "activity_id": "activities[at0001]"}
         });
@@ -872,7 +582,12 @@ mod tests {
         emit_rm_attrs(&rm, "ACTION", &mut out);
         let det = out.child("_instruction_details").unwrap();
         assert_eq!(det.attrs.get("path"), Some(&json!("/content[x]")));
-        assert_eq!(det.attrs.get("composition_uid"), Some(&json!("4cdc::x::1")));
+        assert_eq!(
+            det.attrs.get("composition_uid"),
+            Some(&json!(
+                "4cdc3017-cf42-4f2f-9c5e-5f39e8e64a7e::example.org::1"
+            ))
+        );
         assert_eq!(
             det.attrs.get("activity_id"),
             Some(&json!("activities[at0001]"))
@@ -883,10 +598,14 @@ mod tests {
         let (attr, v) = build_rm_attr("_instruction_details", &occ, "ACTION", "p")
             .unwrap()
             .unwrap();
+        let v = v.canonical();
         assert_eq!(attr, "instruction_details");
         assert_eq!(v["activity_id"], json!("activities[at0001]"));
         assert_eq!(v["instruction_id"]["path"], json!("/content[x]"));
-        assert_eq!(v["instruction_id"]["id"]["value"], json!("4cdc::x::1"));
+        assert_eq!(
+            v["instruction_id"]["id"]["value"],
+            json!("4cdc3017-cf42-4f2f-9c5e-5f39e8e64a7e::example.org::1")
+        );
         assert_eq!(
             v["instruction_id"]["id"]["_type"],
             json!("OBJECT_VERSION_ID")
@@ -895,12 +614,26 @@ mod tests {
 
         // A bare (non-versioned) composition uid names the versioned object.
         let mut bare = SimNode::default();
-        bare.attrs
-            .insert("composition_uid".to_owned(), json!("4cdc3017"));
+        bare.attrs.insert(
+            "composition_uid".to_owned(),
+            json!("4cdc3017-cf42-4f2f-9c5e-5f39e8e64a7e"),
+        );
         let (_, v) = build_rm_attr("_instruction_details", &[bare], "ACTION", "p")
             .unwrap()
             .unwrap();
-        assert_eq!(v["instruction_id"]["id"]["_type"], json!("HIER_OBJECT_ID"));
-        assert_eq!(v["instruction_id"]["type"], json!("VERSIONED_COMPOSITION"));
+        // The bare node carries no `|activity_id`, which INSTRUCTION_DETAILS
+        // makes mandatory, so the partial object is read where it stands.
+        let Attr::One(RmValue::Object(details)) = v else {
+            panic!("an INSTRUCTION_DETAILS object, got {v:?}")
+        };
+        let details = typed::view(&*details);
+        assert_eq!(
+            at(details, &["instruction_id", "id"]).and_then(Instance::rm_type),
+            Some("HIER_OBJECT_ID")
+        );
+        assert_eq!(
+            at(details, &["instruction_id", "type"]).and_then(Instance::as_str),
+            Some("VERSIONED_COMPOSITION")
+        );
     }
 }

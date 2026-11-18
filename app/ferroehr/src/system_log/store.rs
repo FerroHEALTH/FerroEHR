@@ -59,18 +59,15 @@ use crate::access_log::chainer::Owed;
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
-#[cfg(feature = "fhir")]
-use crate::system_log::categories::{ClassifiedContent, MapDigest};
-#[cfg(feature = "fhir")]
-use crate::system_log::event::ActingMode;
-#[cfg(feature = "fhir")]
-use crate::system_log::event::{AccessDomain, EventActionCode};
 use crate::system_log::event::{AuditEvent, EventOutcome, EventType, ObjectClass};
-#[cfg(feature = "fhir")]
-use crate::system_log::fhir::value_of;
 use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
-use crate::system_log::render::{CompiledPolicy, StoredRecord};
+use crate::system_log::{
+    categories::{ClassifiedContent, MapDigest},
+    event::{AccessDomain, ActingMode, EventActionCode},
+    fhir::value_of,
+    render::{CompiledPolicy, StoredRecord},
+};
 use batch::BatchColumns;
 #[cfg(feature = "fhir")]
 use chains::AuditChain;
@@ -116,7 +113,7 @@ const INSERT_BATCH: &str = "INSERT INTO audit.audit_event_intake (id, reserved_b
 /// The columns a stored record is read back from, in the order the ITI-81
 /// search and the FHIR Feed select them.
 #[cfg(feature = "fhir")]
-const RECORD_COLUMNS: [&str; 41] = [
+const RECORD_COLUMNS: [&str; 45] = [
     "chain",
     "chain_seq",
     "recorded_at",
@@ -153,7 +150,11 @@ const RECORD_COLUMNS: [&str; 41] = [
     "category_content",
     "render_policy",
     "token_attributes",
-    "document",
+    "row_part",
+    "shared_part",
+    "entry_type",
+    "entry_uid",
+    "entry_ehr",
     "algorithm",
     "previous_digest",
     "content_digest",
@@ -377,8 +378,9 @@ impl AuditStore {
         let compiled = writing.compiled().await?;
         let tokens: Vec<_> = records
             .map(|(event, subject)| {
-                let document = crate::system_log::fhir::to_fhir(event, &compiled.context, subject);
-                entries::tokens_of(document, event)
+                let resource =
+                    crate::system_log::fhir::to_resource(event, &compiled.context, subject);
+                entries::tokens_of(resource, event)
             })
             .collect();
         self.tokens.record_tokens(conn, &tokens).await
@@ -817,11 +819,12 @@ impl AuditStore {
         };
         let (count_sql, count_values, sql, values) =
             search_page::build_search_statements(filter, &resolved);
-        // NOTE: an unnamed statement is planned with the token ids it binds (PostgreSQL 18,
-        // "PREPARE", plan_cache_mode), so a rare token reaches its index rather than a generic plan.
+        // NOTE: our own design (#6005), a shape's text is a named statement that PostgreSQL may
+        // plan once per connection (plan_cache_mode auto); any other text goes unnamed.
+        let shaped = search_page::shaped(filter);
         let total = if filter.total {
             let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
-                .persistent(false)
+                .persistent(shaped)
                 .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?;
             Some(total)
@@ -829,7 +832,7 @@ impl AuditStore {
             None
         };
         let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
-            .persistent(false)
+            .persistent(shaped)
             .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
         // The page statement reads one record past the page, which says whether a next
@@ -961,7 +964,7 @@ pub enum AuditElement {
 
 /// The code system the role of the patient entity is coded in (FHIR R4
 /// `object-role`, code `1` Patient).
-const OBJECT_ROLE_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/object-role";
+pub(crate) const OBJECT_ROLE_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/object-role";
 
 impl AuditElement {
     /// The nodes of `document` the element names, and whether each is an

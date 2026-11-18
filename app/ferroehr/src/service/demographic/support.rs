@@ -101,16 +101,71 @@ pub(super) async fn load_ehrless(
     at: Option<jiff::Timestamp>,
     kind: Option<Kind>,
 ) -> Result<Option<VersionRead>, ServiceError> {
-    let at = match (version, at) {
-        (Some(v), _) => VersionAt::Tree(vo_id, v),
-        (None, Some(at)) => VersionAt::Instant(vo_id, at),
-        (None, None) => VersionAt::Current(vo_id),
-    };
+    let at = version_at(vo_id, version, at);
     let read = match kind {
         Some(kind) => crate::versioning::read::read_of_kind(pool, profile, at, kind).await?,
         None => crate::versioning::read::read(pool, profile, at).await?,
     };
     Ok(read.filter(|r| r.ehr_id.is_none()))
+}
+
+/// The version of `vo_id` a read addresses: the one `version` names, else the
+/// one in force at `at`, else the current one.
+fn version_at(vo_id: VoId, version: Option<TreeId>, at: Option<jiff::Timestamp>) -> VersionAt {
+    match (version, at) {
+        (Some(v), _) => VersionAt::Tree(vo_id, v),
+        (None, Some(at)) => VersionAt::Instant(vo_id, at),
+        (None, None) => VersionAt::Current(vo_id),
+    }
+}
+
+/// [`load_ehrless`] of one version of the kind `kind`, with the body kept as
+/// the stored text where nothing needs it parsed
+/// ([`crate::versioning::read::read_raw`]).
+///
+/// # Errors
+/// As [`load_ehrless`].
+pub(super) async fn load_ehrless_raw(
+    pool: &sqlx::PgPool,
+    profile: crate::config::profile::SpecProfile,
+    vo_id: VoId,
+    version: Option<TreeId>,
+    at: Option<jiff::Timestamp>,
+    kind: Kind,
+) -> Result<Option<crate::versioning::read::RawVersionRead>, ServiceError> {
+    let at = version_at(vo_id, version, at);
+    let read = crate::versioning::read::read_of_kind_raw(pool, profile, at, kind).await?;
+    Ok(read.filter(|r| r.read.ehr_id.is_none()))
+}
+
+/// A [`crate::service::response::RawServiceResponse`] for a loaded party version: the stored text
+/// verbatim where the commit stamped its `uid` into it, else its canonical
+/// value with the `uid` injected ([`version_response`]).
+///
+/// # Errors
+/// As [`version_response`].
+pub(super) fn raw_version_response(
+    vo_id: VoId,
+    raw: crate::versioning::read::RawVersionRead,
+) -> Result<crate::service::response::RawServiceResponse, VersionIdError> {
+    use crate::service::response::{RawServiceResponse, ReadBody};
+    let Some(text) = raw.raw_json else {
+        let resp = version_response(vo_id, raw.read)?;
+        return Ok(RawServiceResponse {
+            body: ReadBody::Value(resp.body),
+            meta: resp.meta,
+        });
+    };
+    let read = raw.read;
+    let meta = ResourceMeta::new(
+        String::new(),
+        object_version_id(vo_id, &read.creating_system_id, read.tree),
+    )
+    .with_last_modified(read.time_committed);
+    Ok(RawServiceResponse {
+        body: ReadBody::RawJson(text),
+        meta: Some(meta),
+    })
 }
 
 /// A [`ServiceResponse`] for a loaded party / relationship version: its
@@ -427,4 +482,19 @@ impl FerroEhrService {
         event.legal_basis = self.audit_legal_basis().map(str::to_owned);
         event
     }
+}
+
+/// The `404` of a demographic read of `rm_type` `vo_id` that finds nothing:
+/// `object_version_does_not_exist` for a read that `addressed` one version,
+/// by its id or at an instant, the generic `versioned_object_does_not_exist`
+/// for a current read.
+pub(super) fn missing(rm_type: &str, vo_id: VoId, addressed: bool) -> ServiceError {
+    ServiceError::not_found(
+        if addressed {
+            Missing::ObjectVersion
+        } else {
+            Missing::VersionedObject
+        },
+        format!("{rm_type} {vo_id}"),
+    )
 }

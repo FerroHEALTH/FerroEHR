@@ -39,7 +39,8 @@ use std::collections::BTreeMap;
 use base64::Engine as _;
 use bytes::Bytes;
 use openehr_base::prelude::TerminologyId;
-use openehr_rm::prelude::{CodePhrase, DvUri, DvUriData};
+use openehr_rm::prelude::{CodePhrase, DvMultimedia, DvUri, DvUriData};
+use openehr_rm::v1_2::access::RmObject;
 use serde_json::{Map, Value};
 use sha2::{Digest as _, Sha256};
 
@@ -64,13 +65,18 @@ fn b64() -> &'static base64::engine::general_purpose::GeneralPurpose {
 
 /// The `integrity_check_algorithm` CODE_PHRASE for SHA-256, in canonical JSON.
 fn integrity_algorithm_code_phrase() -> Value {
-    openehr_its::json::to_canonical_value(&CodePhrase {
+    openehr_its::json::to_canonical_value(&integrity_algorithm())
+}
+
+/// The `integrity_check_algorithm` CODE_PHRASE for SHA-256.
+fn integrity_algorithm() -> CodePhrase {
+    CodePhrase {
         terminology_id: TerminologyId {
             value: INTEGRITY_ALGORITHM_TERMINOLOGY_ID.to_owned(),
         },
         code_string: SHA256_CODE.to_owned(),
         preferred_term: None,
-    })
+    }
 }
 
 /// The decoded length of a padded base64 text, read off its length and
@@ -107,47 +113,47 @@ pub(super) struct Pending {
     pub(super) data: String,
 }
 
-/// Recursively visit every `DV_MULTIMEDIA` object in the tree, calling `f` on
-/// its map. Recurses through the whole tree, including a node's own `thumbnail`
-/// (a nested `DV_MULTIMEDIA`), so thumbnails are handled too.
-fn walk_multimedia<F: FnMut(&mut Map<String, Value>)>(v: &mut Value, f: &mut F) {
-    match v {
-        Value::Object(map) => {
-            if map.get("_type").and_then(Value::as_str) == Some(DV_MULTIMEDIA) {
-                f(map);
-            }
-            for child in map.values_mut() {
-                walk_multimedia(child, f);
+/// Declares `$name`, which visits every `DV_MULTIMEDIA` object in a tree and
+/// calls `f` on its map, through the whole tree, a node's own `thumbnail` (a
+/// nested `DV_MULTIMEDIA`) included; `$values` reads a map's members.
+macro_rules! multimedia_walk {
+    ($(#[$doc:meta])* $name:ident, $value:ty, $map:ty, $values:ident) => {
+        $(#[$doc])*
+        fn $name<F: FnMut($map)>(v: $value, f: &mut F) {
+            match v {
+                Value::Object(map) => {
+                    if map.get("_type").and_then(Value::as_str) == Some(DV_MULTIMEDIA) {
+                        f(map);
+                    }
+                    for child in map.$values() {
+                        $name(child, f);
+                    }
+                }
+                Value::Array(items) => {
+                    for item in items {
+                        $name(item, f);
+                    }
+                }
+                _ => {}
             }
         }
-        Value::Array(items) => {
-            for item in items {
-                walk_multimedia(item, f);
-            }
-        }
-        _ => {}
-    }
+    };
 }
 
-/// The read-only twin of [`walk_multimedia`].
-fn visit_multimedia<F: FnMut(&Map<String, Value>)>(v: &Value, f: &mut F) {
-    match v {
-        Value::Object(map) => {
-            if map.get("_type").and_then(Value::as_str) == Some(DV_MULTIMEDIA) {
-                f(map);
-            }
-            for child in map.values() {
-                visit_multimedia(child, f);
-            }
-        }
-        Value::Array(items) => {
-            for item in items {
-                visit_multimedia(item, f);
-            }
-        }
-        _ => {}
-    }
-}
+multimedia_walk!(
+    /// Every `DV_MULTIMEDIA` map of the tree, to change in place.
+    walk_multimedia,
+    &mut Value,
+    &mut Map<String, Value>,
+    values_mut
+);
+multimedia_walk!(
+    /// Every `DV_MULTIMEDIA` map of the tree.
+    visit_multimedia,
+    &Value,
+    &Map<String, Value>,
+    values
+);
 
 /// The URI a `DV_MULTIMEDIA` map references, if any.
 fn uri_of(map: &Map<String, Value>) -> Option<&str> {
@@ -204,6 +210,21 @@ pub(super) fn needs_offload(root: &Value, threshold: usize) -> Result<bool, Mult
     found
 }
 
+/// The SHA-256 digest and the decoded byte length of the base64 `data`.
+///
+/// # Errors
+/// [`MultimediaError::Malformed`] when `data` is not base64.
+fn digest_of(data: &str) -> Result<([u8; 32], u64), MultimediaError> {
+    let mut hasher = Sha256::new();
+    let mut size: u64 = 0;
+    for chunk in decoded_chunks(data) {
+        let chunk = chunk?;
+        hasher.update(&chunk);
+        size = size.saturating_add(super::blob::len64(chunk.len()));
+    }
+    Ok((hasher.finalize().into(), size))
+}
+
 /// Rewrite one `DV_MULTIMEDIA` map for externalization, returning the blob to
 /// upload, or `None` if it does not qualify.
 ///
@@ -222,14 +243,7 @@ fn offload_one(
     let Some(Value::String(data)) = map.get("data") else {
         return Ok(None);
     };
-    let mut hasher = Sha256::new();
-    let mut size: u64 = 0;
-    for chunk in decoded_chunks(data) {
-        let chunk = chunk?;
-        hasher.update(&chunk);
-        size = size.saturating_add(super::blob::len64(chunk.len()));
-    }
-    let digest: [u8; 32] = hasher.finalize().into();
+    let (digest, size) = digest_of(data)?;
     let key = BlobKey::from_digest(digest);
     let declared = i64::try_from(size).map_err(|e| {
         MultimediaError::Malformed(format!(
@@ -287,6 +301,106 @@ pub(super) fn plan_offload(
         Some(e) => Err(e),
         None => Ok(pending),
     }
+}
+
+/// Every `DV_MULTIMEDIA` of a typed RM value, its thumbnails included, in
+/// attribute order.
+fn walk_multimedia_typed(
+    node: &mut dyn RmObject,
+    f: &mut dyn FnMut(&mut DvMultimedia) -> Result<(), MultimediaError>,
+) -> Result<(), MultimediaError> {
+    if let Some(multimedia) = node.as_any_mut().downcast_mut::<DvMultimedia>() {
+        f(multimedia)?;
+    }
+    for (_, child) in node.children_mut() {
+        walk_multimedia_typed(child, f)?;
+    }
+    Ok(())
+}
+
+/// The read-only twin of [`walk_multimedia_typed`].
+fn visit_multimedia_typed(
+    node: &dyn RmObject,
+    f: &mut dyn FnMut(&DvMultimedia) -> Result<(), MultimediaError>,
+) -> Result<(), MultimediaError> {
+    if let Some(multimedia) = node.as_any().downcast_ref::<DvMultimedia>() {
+        f(multimedia)?;
+    }
+    for (_, _, child) in node.children() {
+        visit_multimedia_typed(child, f)?;
+    }
+    Ok(())
+}
+
+/// [`qualifies`] over a typed `DV_MULTIMEDIA`.
+fn qualifies_typed(value: &DvMultimedia, threshold: usize) -> Result<bool, MultimediaError> {
+    if value.uri.is_some() {
+        return Ok(false);
+    }
+    let Some(data) = value.data.as_deref() else {
+        return Ok(false);
+    };
+    let length = decoded_len(data).ok_or_else(|| {
+        MultimediaError::Malformed(
+            "DV_MULTIMEDIA.data is not base64: its length is not a multiple of 4".to_owned(),
+        )
+    })?;
+    Ok(length > threshold)
+}
+
+/// [`needs_offload`] over a typed RM value.
+///
+/// # Errors
+/// [`MultimediaError::Malformed`] when an inline `data` is not padded base64.
+pub(super) fn needs_offload_typed(
+    root: &dyn RmObject,
+    threshold: usize,
+) -> Result<bool, MultimediaError> {
+    let mut found = false;
+    visit_multimedia_typed(root, &mut |value| {
+        found = found || qualifies_typed(value, threshold)?;
+        Ok(())
+    })?;
+    Ok(found)
+}
+
+/// [`plan_offload`] over a typed RM value: every qualifying inline
+/// `DV_MULTIMEDIA` becomes external in place, with the same `uri`,
+/// `integrity_check`, `integrity_check_algorithm` and `size` the canonical
+/// rewrite writes.
+///
+/// # Errors
+/// [`MultimediaError::Malformed`] when an inline `data` is not base64, or
+/// decodes past the `Integer` range RM `DV_MULTIMEDIA.size` holds.
+pub(super) fn plan_offload_typed(
+    root: &mut dyn RmObject,
+    threshold: usize,
+    store: &BlobStore,
+) -> Result<Vec<Pending>, MultimediaError> {
+    let mut pending: Vec<Pending> = Vec::new();
+    walk_multimedia_typed(root, &mut |value| {
+        if !qualifies_typed(value, threshold)? {
+            return Ok(());
+        }
+        let Some(data) = value.data.take() else {
+            return Ok(());
+        };
+        let (digest, size) = digest_of(&data)?;
+        let key = BlobKey::from_digest(digest);
+        value.size = i32::try_from(size).map_err(|e| {
+            MultimediaError::Malformed(format!(
+                "DV_MULTIMEDIA.data exceeds the Integer range of DV_MULTIMEDIA.size: {e}"
+            ))
+        })?;
+        value.uri = Some(DvUri::DvUri(DvUriData {
+            value: store.uri_for(&key),
+        }));
+        value.integrity_check = Some(b64().encode(digest));
+        value.integrity_check_algorithm = Some(Box::new(integrity_algorithm()));
+        pending.push(Pending { key, size, data });
+        Ok(())
+    })?;
+    Ok(pending)
 }
 
 /// The keys the read-path expansion must fetch, sorted and each once: every
@@ -628,5 +742,34 @@ mod tests {
         plan_offload(&mut comp, 256, &s).unwrap();
         let keys = referenced_keys(&comp, &s);
         assert_eq!(keys.len(), 1);
+    }
+
+    /// The typed offload rewrites a COMPOSITION to the canonical value the
+    /// canonical rewrite gives, a thumbnail and a below-threshold value
+    /// included, and plans the same uploads.
+    #[test]
+    fn the_typed_offload_writes_what_the_canonical_one_writes() {
+        use openehr_rm::v1_2::access::AsRm as _;
+        let mut large = multimedia(64);
+        large["thumbnail"] = multimedia(40);
+        let element = |value: Value| {
+            json!({ "_type": "ELEMENT", "archetype_node_id": "at0001",
+                "name": { "_type": "DV_TEXT", "value": "image" }, "value": value })
+        };
+        let canonical = json!({
+            "_type": "ITEM_TREE", "archetype_node_id": "at0000",
+            "name": { "_type": "DV_TEXT", "value": "tree" },
+            "items": [element(large), element(multimedia(8))]
+        });
+        let mut typed: openehr_rm::prelude::ItemTree =
+            openehr_its::json::from_canonical_value(&canonical).unwrap();
+        let mut expected = canonical;
+        let store = store();
+        let planned = plan_offload(&mut expected, 16, &store).unwrap();
+        let typed_planned = plan_offload_typed(typed.as_rm_mut(), 16, &store).unwrap();
+        assert_eq!(openehr_its::json::to_canonical_value(&typed), expected);
+        assert_eq!(typed_planned, planned);
+        assert_eq!(planned.len(), 2);
+        assert!(!needs_offload_typed(typed.as_rm(), 16).unwrap());
     }
 }

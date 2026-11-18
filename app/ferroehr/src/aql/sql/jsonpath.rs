@@ -15,6 +15,7 @@ use openehr_query::lexer::CompOp;
 use sea_query::Expr;
 
 use crate::aql::error::{AqlError, SqlError};
+use crate::aql::fragment::Condition;
 use crate::aql::ir::{Coercion, StdPredicate};
 
 use super::Builder;
@@ -38,17 +39,40 @@ impl Builder<'_> {
         preds: &[StdPredicate],
         vars: &mut serde_json::Map<String, serde_json::Value>,
     ) -> Result<Vec<String>, AqlError> {
-        let mut conds = Vec::with_capacity(preds.len());
-        for sp in preds {
-            let value = jsonpath_scalar(jsonpath_operand(sp, self.bind_value(&sp.value)?)?)?;
-            let v = jsonpath_var(value, vars);
-            let mut lhs = String::from("@");
-            for part in &sp.path {
-                let _ = write!(lhs, ".{part}");
-            }
-            conds.push(format!("{lhs} {} ${v}", jsonpath_op(sp.op)));
-        }
-        Ok(conds)
+        Ok(self
+            .standard_conditions(preds)?
+            .into_iter()
+            .map(|cond| {
+                let v = jsonpath_var(cond.value, vars);
+                let mut lhs = String::from("@");
+                for part in &cond.path {
+                    let _ = write!(lhs, ".{part}");
+                }
+                format!("{lhs} {} ${v}", jsonpath_op(cond.op))
+            })
+            .collect())
+    }
+
+    /// The filter conditions of standard predicates relative to the current
+    /// item (QUERY master03 §Standard predicate), each with its compared
+    /// JSON scalar.
+    ///
+    /// # Errors
+    /// [`AqlError`] when a parameter is unbound or a value is no scalar.
+    pub(super) fn standard_conditions(
+        &self,
+        preds: &[StdPredicate],
+    ) -> Result<Vec<Condition>, AqlError> {
+        preds
+            .iter()
+            .map(|sp| {
+                Ok(Condition {
+                    path: sp.path.clone(),
+                    op: sp.op,
+                    value: jsonpath_scalar(jsonpath_operand(sp, self.bind_value(&sp.value)?)?)?,
+                })
+            })
+            .collect()
     }
 }
 
@@ -150,7 +174,7 @@ pub(super) fn jsonpath_vars(vars: serde_json::Map<String, serde_json::Value>) ->
 
 /// The jsonpath filter-expression operator for an AQL comparison operator
 /// (PostgreSQL docs §9.16.2 — the SQL/JSON path comparison operators).
-fn jsonpath_op(op: CompOp) -> &'static str {
+pub(crate) fn jsonpath_op(op: CompOp) -> &'static str {
     match op {
         CompOp::Eq => "==",
         CompOp::Ne => "!=",

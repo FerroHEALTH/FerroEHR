@@ -149,12 +149,9 @@ pub struct FoldedVersion<'a> {
     /// node CTE ordered after the version row (empty on a logical delete and
     /// on a version that shares its predecessor's rows: the unnest yields no
     /// rows and the CTE writes nothing).
-    pub rows: &'a [crate::storage::row::NodeRow],
-    /// The fragment of each of `rows`, index-aligned, taken out of the rows so
-    /// the write stores them uncopied (#5759).
-    pub fragments: Vec<Value>,
+    pub rows: &'a [crate::storage::render::nodes::StoredNode],
     /// The external blob URIs the body references
-    /// ([`crate::storage::blob_ref::uris_of`]).
+    /// ([`crate::storage::render::blob_uris`]).
     pub blob_uris: Vec<String>,
     /// SHA-256 over the canonical body with the root `uid` removed
     /// (`version.content_digest`); `None` on a logical delete.
@@ -394,7 +391,7 @@ fn folded_statement(shape: Shape) -> String {
 /// `VERSION.signature` was computed over, so stored and signed agree by
 /// construction. The externalized multimedia URIs a version's node rows
 /// reference are indexed in the same transaction
-/// ([`crate::storage::blob_ref::record`]), which issues no statement when there
+/// ([`crate::storage::blob_ref::record_uris`]), which issues no statement when there
 /// are none.
 ///
 /// On a CONTRIBUTION uid already in use the `contribution` CTE inserts nothing
@@ -451,26 +448,12 @@ pub async fn commit_folded(
                 .bind(v.content_digest)
                 .bind(v.content_sys_version)
                 .bind(v.root_archetype);
-            let version_uid = crate::storage::compact::version_uid(
-                v.vo_id,
-                v.creating_system_id,
-                v.trunk_version,
-                v.branch_number,
-                v.branch_version,
-            );
-            let root = crate::storage::compact::RootIdentity {
-                version_uid: &version_uid,
-                template_id: v.template_id,
-            };
-            let nodes = v
-                .rows
-                .iter()
-                .zip(v.fragments)
-                .map(|(row, fragment)| (row, &root, fragment))
-                .collect();
-            let row = crate::storage::node_write::bind_node_arrays(query, nodes)
-                .fetch_one(&mut *tx)
-                .await?;
+            let row = crate::storage::node_write::bind_node_arrays(
+                query,
+                &v.rows.iter().collect::<Vec<_>>(),
+            )
+            .fetch_one(&mut *tx)
+            .await?;
             (row, Some((v.vo_id, v.sys_version, v.blob_uris)))
         }
     };

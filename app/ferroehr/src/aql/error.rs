@@ -551,4 +551,15 @@ pub enum ExecError {
         /// The alias position the executor needed.
         index: usize,
     },
+
+    /// A rendered `RESULT_SET` column came back in a SQL type the executor
+    /// has no rendering for (a lowering defect, refused rather than served
+    /// in a guessed form).
+    #[error("result column `{column}` came back as SQL type {sql_type}, which has no rendering")]
+    UnrenderedType {
+        /// The `RESULT_SET` column's name.
+        column: String,
+        /// The SQL type name.
+        sql_type: String,
+    },
 }

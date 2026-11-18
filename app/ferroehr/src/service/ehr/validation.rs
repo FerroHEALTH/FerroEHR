@@ -33,12 +33,14 @@ use crate::error::refusal::{Clash, Refusal};
 use openehr_base::validate::InvariantViolation;
 use serde_json::Value;
 
-use crate::error::{ServiceError, Violation};
+use super::kind_rules::{validate_ehr_status, validate_folder};
+use crate::error::ServiceError;
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::validation::category::code;
-use crate::validation::versioned::composition_template_id;
+use crate::versioning::body::Body;
 use crate::versioning::{Kind, lifecycle};
+use openehr_rm::prelude::Composition;
 
 /// The instance size, in JSON nodes, above which the COMPOSITION validation
 /// passes hand their worker off before running.
@@ -50,6 +52,38 @@ use crate::versioning::{Kind, lifecycle};
 /// (<https://docs.rs/tokio/latest/tokio/task/fn.block_in_place.html>), so 400
 /// nodes is where a pass first reaches the top of that budget.
 const VALIDATION_HANDOFF_NODES: usize = 400;
+
+/// The RM object count past which the typed passes hand their worker off: the
+/// [`VALIDATION_HANDOFF_NODES`] budget of 400 at about three JSON nodes per RM object
+/// (an object, its `_type` and a leaf or two). No spec governs this: our own
+/// estimate.
+const VALIDATION_HANDOFF_OBJECTS: usize = 133;
+
+/// A COMPOSITION handed to the commit validation: typed RM, or the canonical
+/// value a `553|incomplete|` commit and the CONTRIBUTION route still carry.
+#[derive(Clone, Copy)]
+pub(in crate::service) enum Submitted<'a> {
+    /// The typed COMPOSITION.
+    Typed(&'a Composition),
+    /// Its canonical value.
+    Canonical(&'a Value),
+}
+
+/// Returns whether the typed `root` holds more than `limit` RM objects, with
+/// the walk stopping as soon as the answer is known.
+fn exceeds_object_count(root: &Composition, limit: usize) -> bool {
+    use openehr_rm::v1_2::access::{RmObject, as_rm_object};
+    let mut pending: Vec<&dyn RmObject> = vec![as_rm_object(root)];
+    let mut seen: usize = 0;
+    while let Some(node) = pending.pop() {
+        seen += 1;
+        if seen > limit {
+            return true;
+        }
+        pending.extend(node.children().map(|(_, _, child)| child));
+    }
+    false
+}
 
 /// Runs one CPU-bound validation pass, relieving this worker of its other
 /// tasks first when `hand_off` says the instance is large enough to hold it
@@ -121,12 +155,12 @@ impl FerroEhrService {
         &self,
         executor: impl sqlx::PgExecutor<'e>,
         ehr_id: EhrId,
-        composition: &Value,
+        body: &Body,
     ) -> Result<(), ServiceError> {
-        if !is_persistent(composition) {
+        if body.category_code() != Some(code::PERSISTENT) {
             return Ok(());
         }
-        let Some(template_id) = composition_template_id(composition) else {
+        let Some(template_id) = body.template_id() else {
             return Ok(());
         };
         // ONE statement over the promoted `template_id` column and a body
@@ -192,36 +226,48 @@ impl FerroEhrService {
     )]
     pub(super) async fn validate_composition_for_commit(
         &self,
-        composition: &Value,
+        composition: Submitted<'_>,
         incomplete: bool,
     ) -> Result<(), ServiceError> {
-        let hand_off = exceeds_node_count(composition, VALIDATION_HANDOFF_NODES);
-        let mut messages = run_validation_pass(hand_off, || {
-            if incomplete {
-                openehr_sdt::rm_instance::validate_rm_and_terminology_incomplete_as(
-                    composition,
-                    "COMPOSITION",
-                )
-            } else {
-                openehr_sdt::rm_instance::validate_rm_and_terminology(composition, "COMPOSITION")
+        use openehr_sdt::flat::validation as conformance;
+        use openehr_sdt::rm_instance as rm;
+        let hand_off = match composition {
+            Submitted::Typed(typed) => exceeds_object_count(typed, VALIDATION_HANDOFF_OBJECTS),
+            Submitted::Canonical(value) => exceeds_node_count(value, VALIDATION_HANDOFF_NODES),
+        };
+        // NOTE: a `553|incomplete|` commit keeps the canonical-JSON passes by
+        // decision (#6002): its body need not read as strict typed RM.
+        let mut messages = run_validation_pass(hand_off, || match composition {
+            Submitted::Typed(typed) => rm::validate_rm_and_terminology_typed(typed),
+            Submitted::Canonical(value) if incomplete => {
+                rm::validate_rm_and_terminology_incomplete_as(value, "COMPOSITION")
             }
+            Submitted::Canonical(value) => rm::validate_rm_and_terminology(value, "COMPOSITION"),
         });
         let rm_terminology_failures = messages.len();
         let mut template_failures = 0;
         let mut binding_failures = 0;
-        if let Some(template_id) = composition
-            .pointer("/archetype_details/template_id/value")
-            .and_then(Value::as_str)
-        {
+        let template_id = match composition {
+            Submitted::Typed(typed) => typed
+                .archetype_details
+                .as_ref()
+                .and_then(|details| details.template_id.as_ref())
+                .map(|id| id.value.as_str()),
+            Submitted::Canonical(value) => value
+                .pointer("/archetype_details/template_id/value")
+                .and_then(Value::as_str),
+        };
+        if let Some(template_id) = template_id {
             let wt = self.commit_web_template(template_id).await?;
-            messages.extend(run_validation_pass(hand_off, || {
-                if incomplete {
-                    openehr_sdt::flat::validation::validate_archetype_conformance_incomplete(
-                        composition,
-                        &wt,
-                    )
-                } else {
-                    openehr_sdt::flat::validation::validate_archetype_conformance(composition, &wt)
+            messages.extend(run_validation_pass(hand_off, || match composition {
+                Submitted::Typed(typed) => {
+                    conformance::validate_archetype_conformance_typed(typed, &wt)
+                }
+                Submitted::Canonical(value) if incomplete => {
+                    conformance::validate_archetype_conformance_incomplete(value, &wt)
+                }
+                Submitted::Canonical(value) => {
+                    conformance::validate_archetype_conformance(value, &wt)
                 }
             }));
             template_failures = messages.len() - rm_terminology_failures;
@@ -296,7 +342,8 @@ impl FerroEhrService {
         match kind {
             Kind::Composition => {
                 self.privacy.enforce(kind.as_str(), data)?;
-                self.validate_composition_for_commit(data, incomplete).await
+                self.validate_composition_for_commit(Submitted::Canonical(data), incomplete)
+                    .await
             }
             Kind::EhrStatus => {
                 self.privacy.enforce(kind.as_str(), data)?;
@@ -350,11 +397,21 @@ pub(in crate::service) fn validate_rm_invariants_for_commit(
     declared: &str,
     incomplete: bool,
 ) -> Result<(), ServiceError> {
-    let messages = if incomplete {
+    rm_verdict(if incomplete {
         openehr_sdt::rm_instance::validate_rm_and_terminology_incomplete_as(data, declared)
     } else {
         openehr_sdt::rm_instance::validate_rm_and_terminology(data, declared)
-    };
+    })
+}
+
+/// The `422` of the RM class-invariant and terminology `messages` of a
+/// commit body, counted on the validation metrics; none when there are none.
+///
+/// # Errors
+/// [`ServiceError::ValidationFailed`] carrying every message at its path.
+pub(in crate::service) fn rm_verdict(
+    messages: Vec<openehr_sdt::rm_instance::ValidationMessage>,
+) -> Result<(), ServiceError> {
     if messages.is_empty() {
         return Ok(());
     }
@@ -372,239 +429,25 @@ pub(in crate::service) fn validate_rm_invariants_for_commit(
     ))
 }
 
-/// Whether a COMPOSITION is `431|persistent|` (RM composition,
-/// `COMPOSITION.category` / `is_persistent()`), read from
-/// `category.defining_code.code_string`.
-fn is_persistent(composition: &Value) -> bool {
-    composition
-        .pointer("/category/defining_code/code_string")
-        .and_then(Value::as_str)
-        == Some(code::PERSISTENT)
-}
-
-/// The ROOT-ONLY half of `LOCATABLE.Archetyped_valid` for the always-root EHR
-/// kinds (`EHR_STATUS`, `EHR_ACCESS` — RM ehr `ehr_status.adoc` /
-/// `ehr_access.adoc`, each with an unconditional `Is_archetype_root`):
-/// `is_archetype_root xor archetype_details = Void` (RM common
-/// `locatable.adoc` §Invariants) means such a root MUST carry the `ARCHETYPED`
-/// block, with its mandatory `archetype_id`.
-///
-/// A per-node pass cannot express that direction, only this chapter knowing that
-/// an `EHR_STATUS` or `EHR_ACCESS` is a root. The other direction, the
-/// root-identity rule and `LOCATABLE.Links_valid` belong to the whole-instance
-/// pass (`openehr_rm::v1_2::validate::check_archetyped_valid`).
-pub(in crate::service) fn validate_root_locatable(
-    obj: &serde_json::Map<String, Value>,
-    kind: &str,
-) -> Result<(), ServiceError> {
-    let details = obj
-        .get("archetype_details")
-        .filter(|v| v.is_object())
-        .ok_or_else(|| {
-            ServiceError::content_invalid(
-                Violation::new(format!(
-                    "is mandatory: {kind} is an archetype root (Is_archetype_root), \
-                     and a root without ARCHETYPED is invalid; supply \
-                     archetype_details with its archetype_id (for a plain \
-                     status, openEHR-EHR-EHR_STATUS.generic.v1)"
-                ))
-                .with_path(format!("{kind}.archetype_details"))
-                .with_invariant("LOCATABLE.Archetyped_valid"),
-            )
-        })?;
-    details
-        .get("archetype_id")
-        .and_then(|a| a.get("value"))
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| {
-            ServiceError::content_invalid(
-                Violation::new("is mandatory")
-                    .with_path(format!("{kind}.archetype_details.archetype_id.value"))
-                    .with_invariant("ARCHETYPED.archetype_id 1..1"),
-            )
-        })?;
-    Ok(())
-}
-
-/// Validate an `EHR_STATUS` before it is committed (on EHR create,
-/// `EHR_STATUS` update, or a CONTRIBUTION). Rejects every malformed data set
-/// the CNF `master06 §Test Data Sets` (INVALID class 2) enumerates with a
-/// `422`.
-///
-/// Only the two rules that are properties of the SLOT rather than of the
-/// instance live here:
-///
-/// - the container holds an `EHR_STATUS`, so a foreign or absent `_type` is
-///   invalid (nothing inside the instance can know which resource it was
-///   posted to);
-/// - the ROOT half of `LOCATABLE.Archetyped_valid`
-///   ([`validate_root_locatable`]).
-///
-/// Everything else RM ehr `ehr_status.adoc` and the inherited `LOCATABLE` demand
-/// is enforced by the whole-instance pass
-/// ([`validate_rm_invariants_for_commit`]) from the generated model rather than
-/// restated here: `name`, `is_queryable`, `is_modifiable` and `subject`
-/// mandatoriness and typing, the `ITEM_STRUCTURE` typing of `other_details`, the
-/// `OBJECT_REF` rules on a present `subject.external_ref`, and every invariant
-/// below the root.
-///
-/// `incomplete` (a `553|incomplete|` commit) relaxes that pass's existence and
-/// cardinality lower bounds, as for every other committable kind (RM common
-/// master06 §Incomplete Content, which carries no content-type exclusion). The
-/// two slot rules stay unconditional, the incomplete state lifting lower bounds
-/// and never typing ("All other validity requirements must be satisfied").
-///
-/// # Errors
-/// [`ServiceError::Unprocessable`] for the two slot rules above, or
-/// [`ServiceError::ValidationFailed`] carrying the RM-invariant violations
-/// (both → 422).
-pub(in crate::service) fn validate_ehr_status(
-    status: &Value,
-    incomplete: bool,
-) -> Result<(), ServiceError> {
-    let unproc = |m: String| ServiceError::content_invalid(Violation::new(m));
-    let obj = status
-        .as_object()
-        .ok_or_else(|| unproc("EHR_STATUS must be a JSON object".to_owned()))?;
-
-    match obj.get("_type").and_then(Value::as_str) {
-        Some("EHR_STATUS") => {}
-        Some(other) => {
-            return Err(unproc(format!(
-                "EHR_STATUS _type must be \"EHR_STATUS\", got {other:?}"
-            )));
-        }
-        None => {
-            return Err(unproc(
-                "EHR_STATUS is missing its _type discriminator".to_owned(),
-            ));
-        }
-    }
-
-    validate_root_locatable(obj, "EHR_STATUS")?;
-    validate_rm_invariants_for_commit(status, "EHR_STATUS", incomplete)
-}
-
-/// Validate a client-supplied `EHR_ACCESS` before it is committed (via a
-/// CONTRIBUTION — there is no direct ITS-REST `EHR_ACCESS` write). RM ehr
-/// `ehr_access.adoc`:
-///
-/// - a foreign `_type` in this slot is invalid (the container holds
-///   `EHR_ACCESS` only) — a slot rule, not an instance one;
-/// - `settings` (0..1) is a subtype of the ABSTRACT `ACCESS_CONTROL_SETTINGS`
-///   — the RM defines no concrete scheme, so a present `settings` must carry a
-///   non-empty concrete `_type`, which `scheme()` names (`Scheme_valid`).
-///
-/// Followed by the whole-instance RM class-invariant + terminology pass
-/// ([`validate_rm_invariants_for_commit`]), which reaches every node below the
-/// root.
-///
-/// # Errors
-/// [`ServiceError::Unprocessable`] naming the first violated rule, or
-/// [`ServiceError::ValidationFailed`] carrying the RM-invariant violations
-/// found below the root (both → 422), and the `400` of
-/// [`check_written_settings`](crate::service::ehr::access_settings::check_written_settings).
-pub(in crate::service) fn validate_ehr_access(
-    access: &Value,
-    incomplete: bool,
-) -> Result<(), ServiceError> {
-    let unproc = |m: String| ServiceError::content_invalid(Violation::new(m));
-    let obj = access
-        .as_object()
-        .ok_or_else(|| unproc("EHR_ACCESS must be a JSON object".to_owned()))?;
-    match obj.get("_type").and_then(Value::as_str) {
-        None | Some("EHR_ACCESS") => {}
-        Some(other) => {
-            return Err(unproc(format!(
-                "expected an EHR_ACCESS, got _type {other:?}"
-            )));
-        }
-    }
-    // EHR_ACCESS carries the same unconditional Is_archetype_root as
-    // EHR_STATUS (RM ehr `ehr_access.adoc`), so the root-LOCATABLE
-    // invariants apply identically.
-    validate_root_locatable(obj, "EHR_ACCESS")?;
-    if let Some(settings) = obj.get("settings").filter(|v| !v.is_null()) {
-        crate::service::ehr::access_settings::check_written_settings(settings)?;
-    }
-    // `EHR_ACCESS.settings` is the RM's one implementation-defined slot
-    // (`org.openehr.rm.ehr.ehr_access.adoc` §Attributes) and its type is
-    // abstract with no attributes, invariants or RM-defined descendant, so a
-    // pass that walked in would refuse every legal instance; `Scheme_valid`
-    // above is the whole of the RM's demand on it.
-    // NOTE: `settings` is therefore excluded from the whole-instance RM pass,
-    // and only from it — the one RM-mandated OPEN slot.
-    let mut without_settings = access.clone();
-    if let Some(map) = without_settings.as_object_mut() {
-        map.remove("settings");
-    }
-    validate_rm_invariants_for_commit(&without_settings, "EHR_ACCESS", incomplete)
-}
-
-/// Validate a client-supplied FOLDER tree before it is committed (directory
-/// create/update and the CONTRIBUTION FOLDER path): the whole-instance RM
-/// class-invariant + terminology pass ([`validate_rm_invariants_for_commit`]),
-/// which now carries EVERY rule this function once restated by hand:
-///
-/// - the declared-slot-type conformance rule (root and every member) from the
-///   generated RM model: `FOLDER.items` takes `OBJECT_REF` and `FOLDER.folders`
-///   takes `FOLDER`, so a COMPOSITION committed by value into `items` is refused
-///   whatever the lifecycle state ("Folder structures do not contain
-///   Compositions, only references to them", RM ehr master04 §Folders);
-/// - the presence layer (`OBJECT_REF`'s mandatory `id`/`namespace`/`type`,
-///   `LOCATABLE.name`, `Archetype_node_id_valid`, `Links_valid`, the
-///   archetype-root identity rule), which relaxes on a `553|incomplete|` commit,
-///   so no lifecycle special-casing is needed.
-///
-/// The root FOLDER whose `archetype_node_id` is an archetype id is an archetype
-/// root, so it must carry `archetype_details` (RM common master03 §The LOCATABLE
-/// Class), a presence rule a `553|incomplete|` commit relaxes. A nested FOLDER
-/// keeps `archetype_details` optional.
-///
-/// # Errors
-/// [`ServiceError::Unprocessable`] for an archetype root without
-/// `archetype_details`; [`ServiceError::ValidationFailed`] carrying every
-/// violation found in the tree, each at its own path (→ 422).
-pub(in crate::service) fn validate_folder(
-    folder: &Value,
-    incomplete: bool,
-) -> Result<(), ServiceError> {
-    // NOTE: RM master03 §The LOCATABLE Class: `archetype_details` "is non-Void for archetype
-    // root points in data", where `archetype_node_id` "carries the archetype identifier".
-    let archetype_root = folder
-        .get("archetype_node_id")
-        .and_then(Value::as_str)
-        .is_some_and(openehr_adl::hrid::is_archetype_id);
-    if !incomplete
-        && archetype_root
-        && !folder
-            .get("archetype_details")
-            .is_some_and(Value::is_object)
-    {
-        return Err(ServiceError::content_invalid(
-            Violation::new(
-                "is mandatory: the directory root names an archetype in archetype_node_id, \
-                 so it is an archetype root and must carry ARCHETYPED",
-            )
-            .with_path("FOLDER.archetype_details")
-            .with_invariant("LOCATABLE.Archetyped_valid"),
-        ));
-    }
-    validate_rm_invariants_for_commit(folder, "FOLDER", incomplete)
-}
-
 #[cfg(test)]
 mod tests {
     use serde_json::{Value, json};
 
-    use super::{
-        exceeds_node_count, run_validation_pass, validate_ehr_access, validate_ehr_status,
-        validate_folder,
-    };
+    use super::{exceeds_node_count, run_validation_pass};
     use crate::error::ServiceError;
-    use crate::service::ehr::access::initial_ehr_access;
-    use crate::service::ehr::service::initial_ehr_status;
+    use crate::service::ehr::kind_rules::{
+        validate_ehr_access, validate_ehr_status, validate_folder,
+    };
+
+    /// The default `EHR_STATUS`, as the canonical value these validators read.
+    fn initial_ehr_status() -> Value {
+        openehr_its::json::to_canonical_value(&crate::service::ehr::service::initial_ehr_status())
+    }
+
+    /// The default `EHR_ACCESS`, as the canonical value these validators read.
+    fn initial_ehr_access() -> Value {
+        openehr_its::json::to_canonical_value(&crate::service::ehr::access::initial_ehr_access())
+    }
 
     /// `EHR_STATUS.other_details` must be a concrete `ITEM_STRUCTURE`
     /// (RM ehr `ehr_status.adoc`): the four concrete subtypes pass, a foreign

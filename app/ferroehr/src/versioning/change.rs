@@ -29,9 +29,11 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
+use crate::storage::render::index::Rendered;
 use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
+use crate::versioning::body::Body;
 use crate::versioning::lifecycle::{
     reject_deleted_with_data, resolve_lifecycle, validate_transition,
 };
@@ -197,7 +199,7 @@ pub(crate) enum Change {
         /// The id allocated before the commit; `None` mints one at the commit.
         allocated: Option<AllocatedVoId>,
         kind: Kind,
-        canonical: Value,
+        body: Body,
         template_id: Option<String>,
         signature: Option<String>,
         lifecycle_state: Option<String>,
@@ -211,7 +213,7 @@ pub(crate) enum Change {
     Modify {
         vo_id: VoId,
         kind: Kind,
-        canonical: Value,
+        body: Body,
         expected: Option<TreeId>,
         template_id: Option<String>,
         signature: Option<String>,
@@ -509,12 +511,12 @@ struct ResolvedWrite {
     /// §Digital Signature); `None` on the direct endpoints.
     client_signature: Option<String>,
     /// The accepted, uid-stamped body, decomposed into node rows only by the
-    /// write (#5759); `Value::Null` for a logical delete (data Void).
-    body: Value,
-    /// The canonical body BYTES, serialized from the accepted, uid-stamped
-    /// value BEFORE decomposition — the stored `version.body` text a point
-    /// read serves verbatim. `None` for a logical delete.
-    canonical_text: Option<String>,
+    /// write (#5759); `None` for a logical delete (data Void).
+    body: Option<Body>,
+    /// The one rendering of the accepted, uid-stamped body: the stored
+    /// `version.body` text a point read serves verbatim, and the index the
+    /// node rows are read off. `None` for a logical delete.
+    rendered: Option<Rendered>,
     /// Whether the RELEASED generation set can express this body — the
     /// commit-time `version.stable_compatible` stamp
     /// ([`crate::versioning::profile::stable_compatible`]).
@@ -531,6 +533,8 @@ struct ResolvedWrite {
     /// the body was decomposed (#5220); `None` for a logical delete and for
     /// every kind but a party.
     party_facts: Option<Box<crate::party_binding::derive::Facts>>,
+    /// The party references the body carries ([`super::party_refs::of_body`]).
+    party_refs: Vec<super::party_refs::Reference>,
     /// The version whose node rows this one reads when its content equals the
     /// preceding tip's (`version.content_sys_version`, #4415); the body is
     /// then signed and not decomposed.
@@ -569,9 +573,9 @@ struct ResolvedWrite {
 /// commit ([`reject_deleted_with_data`]); [`ServiceError::Internal`] on a
 /// multimedia offload failure; plus the storage/signing errors of
 /// [`commit_resolved`].
-/// Stamps the version's own `OBJECT_VERSION_ID` into the canonical's root `uid`
-/// before decompose and sign, so the stored, signed and served bytes all carry
-/// it (RM common `master03-archetyped_package.adoc` §Unique Node Identification;
+/// The version's own `OBJECT_VERSION_ID`, parsed for the commit to stamp into
+/// the body's root `uid` before decompose and sign, so the stored, signed and
+/// served bytes all carry it (RM common `master03-archetyped_package.adoc` §Unique Node Identification;
 /// ITS-REST `Resources.md` §Identifier types). The full three-part form is BASE
 /// `architecture_overview` master09 §Levels of Identification, "populated with a
 /// copy of the `OBJECT_VERSION_ID` from the containing `VERSION<X>` object".
@@ -588,45 +592,47 @@ struct ResolvedWrite {
 /// `OBJECT_VERSION_ID` — the stamped identity goes through the BASE
 /// construction door, so a malformed one is refused before it is written,
 /// signed and served.
-pub(crate) fn stamp_version_uid(
-    canonical: &mut Value,
-    version_uid: &str,
-) -> Result<(), VersionIdError> {
-    if let Value::Object(map) = canonical {
-        let uid =
-            ObjectVersionId::new(version_uid).map_err(|source| VersionIdError::Malformed {
-                raw: version_uid.to_owned(),
-                source,
-            })?;
-        let value = openehr_its::json::to_canonical_value(&uid);
-        if map.contains_key("uid") {
-            // Replacing keeps the key's existing position.
-            map.insert("uid".to_owned(), value);
-        } else {
-            // The RM BMM declares LOCATABLE as (name, archetype_node_id, uid,
-            // …), and the stored body is served byte-verbatim, so a fresh uid
-            // must land after `archetype_node_id` rather than at the map's end.
-            let anchor = ["archetype_node_id", "name", "_type"]
-                .iter()
-                .find_map(|k| map.keys().position(|key| key == k));
-            let at = anchor.map_or(0, |i| i + 1);
-            let original_len = map.len();
-            let mut rebuilt = serde_json::Map::with_capacity(original_len + 1);
-            for (i, (k, v)) in std::mem::take(map).into_iter().enumerate() {
-                if i == at {
-                    rebuilt.insert("uid".to_owned(), value.clone());
-                }
-                rebuilt.insert(k, v);
-            }
-            if rebuilt.len() == original_len {
-                // `at` sat past the last entry (the anchor was last, or the
-                // map was empty) — the uid closes the map instead.
-                rebuilt.insert("uid".to_owned(), value);
-            }
-            *map = rebuilt;
-        }
+pub(crate) fn version_uid(version_uid: &str) -> Result<ObjectVersionId, VersionIdError> {
+    ObjectVersionId::new(version_uid).map_err(|source| VersionIdError::Malformed {
+        raw: version_uid.to_owned(),
+        source,
+    })
+}
+
+/// Stamps `uid` into the root `uid` of the canonical value `canonical`, at
+/// the position the codec writes it, so the value serializes to the bytes the
+/// typed value with the same `uid` does.
+pub(crate) fn stamp_uid_value(canonical: &mut Value, uid: &ObjectVersionId) {
+    let Value::Object(map) = canonical else {
+        return;
+    };
+    let value = openehr_its::json::to_canonical_value(uid);
+    if map.contains_key("uid") {
+        // Replacing keeps the key's existing position.
+        map.insert("uid".to_owned(), value);
+        return;
     }
-    Ok(())
+    // The RM BMM declares LOCATABLE as (name, archetype_node_id, uid, …), and
+    // the stored body is served byte-verbatim, so a fresh uid must land after
+    // `archetype_node_id` rather than at the map's end.
+    let anchor = ["archetype_node_id", "name", "_type"]
+        .iter()
+        .find_map(|k| map.keys().position(|key| key == k));
+    let at = anchor.map_or(0, |i| i + 1);
+    let original_len = map.len();
+    let mut rebuilt = serde_json::Map::with_capacity(original_len + 1);
+    for (i, (k, v)) in std::mem::take(map).into_iter().enumerate() {
+        if i == at {
+            rebuilt.insert("uid".to_owned(), value.clone());
+        }
+        rebuilt.insert(k, v);
+    }
+    if rebuilt.len() == original_len {
+        // `at` sat past the last entry (the anchor was last, or the map was
+        // empty): the uid closes the map instead.
+        rebuilt.insert("uid".to_owned(), value);
+    }
+    *map = rebuilt;
 }
 
 /// Everything that is fixed for the enclosing commit act, as one value:
@@ -663,7 +669,7 @@ async fn apply_change(
     scope: CommitScope<'_>,
     change: Change,
     skip_identical: bool,
-) -> Result<(Committed, Uuid), ServiceError> {
+) -> Result<(Committed, Uuid, Vec<super::party_refs::Reference>), ServiceError> {
     let CommitScope {
         ehr_id,
         contribution,
@@ -684,7 +690,7 @@ async fn apply_change(
         Change::Create {
             allocated,
             kind,
-            canonical,
+            body,
             template_id,
             signature,
             lifecycle_state,
@@ -694,7 +700,7 @@ async fn apply_change(
             let content = Content {
                 allocated,
                 kind,
-                canonical,
+                body,
                 lifecycle_state,
                 template_id,
                 signature,
@@ -706,7 +712,7 @@ async fn apply_change(
         Change::Modify {
             vo_id,
             kind,
-            canonical,
+            body,
             expected,
             template_id,
             signature,
@@ -717,7 +723,7 @@ async fn apply_change(
             let content = Content {
                 allocated: None,
                 kind,
-                canonical,
+                body,
                 lifecycle_state,
                 template_id,
                 signature,
@@ -747,23 +753,20 @@ async fn apply_change(
         }
     };
     admit_written(gate.as_ref(), &resolved)?;
+    let references = std::mem::take(&mut resolved.party_refs);
     if skip_identical && let Some(existing) = skipped_resend(&resolved, audit) {
-        return Ok((existing, Uuid::nil()));
+        return Ok((existing, Uuid::nil(), references));
     }
     let party_facts = resolved.party_facts.take();
     // Boxed: the resolved write and the folded commit hold the whole version in their state,
     // which would otherwise put every caller's future over the size the lint allows.
-    let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
+    let (committed, id) = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
+    let facts = party_facts.as_deref();
     Box::pin(project::committed(
-        tx,
-        ctx,
-        ehr_id,
-        &committed.0,
-        party_facts.as_deref(),
-        access,
+        tx, ctx, ehr_id, &committed, facts, access,
     ))
     .await?;
-    Ok(committed)
+    Ok((committed, id, references))
 }
 
 /// Commit a [`ResolvedWrite`] — compute the `VERSION.signature`, then write the
@@ -791,7 +794,7 @@ async fn commit_resolved(
     ctx: &SigningCtx<'_>,
     audit: &AuditInput,
     contribution: ContributionCtx,
-    r: ResolvedWrite,
+    mut r: ResolvedWrite,
 ) -> Result<(Committed, Uuid), ServiceError> {
     let audit_row = audit.row();
     let (trunk_version, branch_number, branch_version) = r.tree.columns();
@@ -815,9 +818,25 @@ async fn commit_resolved(
 
     let (signature, signature_client_supplied) =
         body_and_signature(ctx, audit, contribution_id, &r, &at_committal_attestations)?;
-    let archetype = root_archetype(&r.body);
+    let archetype = root_archetype(r.body.as_ref());
+    // The body is signed: what is left to store is read off its rendering.
+    drop(r.body.take());
     // A version that shares its predecessor's rows writes none of its own.
-    let (rows, fragments, blob_uris) = nodes(r.body, r.shared_from.is_some())?;
+    let version_uid = object_version_id(r.vo_id, &ctx.system_id, r.tree);
+    let stored = nodes(
+        r.rendered.as_ref(),
+        &crate::storage::compact::RootIdentity {
+            version_uid: &version_uid,
+            template_id: r.template_id.as_deref(),
+        },
+        r.shared_from.is_some(),
+    )?;
+    let body_text = r
+        .rendered
+        .as_ref()
+        .map(|rendered| std::str::from_utf8(rendered.text()))
+        .transpose()
+        .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
 
     let folded = crate::storage::version_repo::commit::FoldedVersion {
         vo_id: r.vo_id,
@@ -836,11 +855,10 @@ async fn commit_resolved(
         signature_client_supplied,
         stable_compatible: r.stable_compatible,
         origins: &r.origins,
-        body: r.canonical_text.as_deref(),
+        body: body_text,
         time_committed: r.time_committed,
-        rows: &rows,
-        fragments,
-        blob_uris,
+        rows: &stored.rows,
+        blob_uris: stored.blob_uris,
         content_digest: r.content_digest.as_ref().map(<[u8; 32]>::as_slice),
         content_sys_version: r.shared_from,
         root_archetype: archetype.as_deref(),
@@ -917,24 +935,11 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
         kind: r.kind,
         change_type: audit.change_type.clone(),
         template_id: r.template_id.clone(),
-        root_archetype: root_archetype(&r.body),
+        root_archetype: root_archetype(r.body.as_ref()),
         time_committed: preceding.committed_at,
         skipped: true,
         content_digest: r.content_digest,
     })
-}
-
-/// Serializes the accepted, uid-stamped canonical value to the body bytes a
-/// point read serves verbatim (`version.body`, text taken before node
-/// decomposition, so the served wire keeps the codec's `_type`-first,
-/// BMM-declared field order).
-///
-/// # Errors
-/// [`ServiceError`] when the value cannot serialize (a non-finite number —
-/// unreachable for a codec-produced canonical value, refused loudly anyway).
-pub(crate) fn canonical_body_text(canonical: &Value) -> Result<String, ServiceError> {
-    serde_json::to_string(canonical)
-        .map_err(|e| ServiceError::internal("serialize the canonical body", e))
 }
 
 /// Write the one PHI-free event-outbox row a single-object commit announces,
@@ -1033,11 +1038,7 @@ pub(crate) async fn commit(
         known,
         placement,
     } = write;
-    let references: Vec<_> = crate::versioning::party_refs::of_change(&change)
-        .into_iter()
-        .map(|reference| (None, reference))
-        .collect();
-    let (committed, contribution_id) = apply_change(
+    let (committed, contribution_id, references) = apply_change(
         tx,
         CommitScope {
             ehr_id,
@@ -1051,6 +1052,7 @@ pub(crate) async fn commit(
         ctx.skip_identical_resend,
     )
     .await?;
+    let references: Vec<_> = references.into_iter().map(|r| (None, r)).collect();
     crate::versioning::party_refs::check(tx, &references).await?;
     crate::party_binding::grants::caller::subject::settle(tx, [committed.kind]).await?;
     if !committed.skipped {
@@ -1122,21 +1124,13 @@ pub(crate) async fn commit_contribution(
         Folded::Contribution { id: uid, ehr_id },
     )
     .await?;
-    let references: Vec<_> = changes
-        .iter()
-        .enumerate()
-        .flat_map(|(index, (_, change))| {
-            crate::versioning::party_refs::of_change(change)
-                .into_iter()
-                .map(move |reference| (Some(index), reference))
-        })
-        .collect();
+    let mut references = Vec::new();
     let mut committed = Vec::with_capacity(changes.len() + attests.len());
-    for (version_audit, change) in changes {
+    for (index, (version_audit, change)) in changes.into_iter().enumerate() {
         // Each change writes its own `commit_audit` + `version` under the shared
         // contribution through the folded CTE, at the contribution's one `now()`,
         // so the signature is computable up front.
-        let (change_committed, _cid) = apply_change(
+        let (change_committed, _cid, change_references) = apply_change(
             tx,
             CommitScope {
                 ehr_id,
@@ -1150,6 +1144,7 @@ pub(crate) async fn commit_contribution(
             false,
         )
         .await?;
+        references.extend(change_references.into_iter().map(|r| (Some(index), r)));
         committed.push(change_committed);
     }
     crate::versioning::party_refs::check(tx, &references).await?;

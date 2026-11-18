@@ -1,0 +1,940 @@
+// SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-License-Identifier: BUSL-1.1
+
+//! The budget of every hot path (#6007): per request, the representation
+//! changes it makes, the allocations of the thread that drives it, its round
+//! trips, the statements `PostgreSQL` runs nested in them and the write-ahead
+//! log they write, over the assembled router with the access evaluator, the
+//! audit drain and the local access log.
+//!
+//! The paths are the commit of a COMPOSITION in canonical JSON, canonical XML
+//! and FLAT, its read in the same three formats, the EHR read, a single-EHR
+//! and a population AQL query, an ITI-81 page and a party read, all over the
+//! IPS composition (128 KB, 402 node rows), and the commit of that composition
+//! as a CONTRIBUTION, its read at an instant, the `EHR_STATUS` commit and read,
+//! and the commit of a PERSON.
+//!
+//! The conversions are the `trace` events under
+//! [`openehr_its::conversion::TARGET`]: the codec entry points record each
+//! one, and the server records the changes it makes itself
+//! (`ferroehr::telemetry::conversion`). The allocations are counted on the
+//! thread that polls the request, so the audit runtime's threads do not
+//! count; the peak is the most the request held at once. Both are judged on
+//! the median request of the measured ones ([`Measure::median`]).
+//!
+//! Each figure is held to the ceiling [`BUDGETS`] names: the measured end
+//! state of the core rewrite (#6001) plus a small margin. A ceiling only ever
+//! comes down, on an owner decision. No openEHR spec governs the cost of a
+//! request: our own design.
+
+use std::collections::BTreeMap;
+use std::fmt::Write as _;
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::{Arc, Mutex};
+use std::task::{Context as TaskContext, Poll};
+
+use axum::Router;
+use axum::body::Body;
+use http::{HeaderMap, Request, StatusCode, header};
+use http_body_util::BodyExt as _;
+use serde_json::Value;
+use sqlx::PgPool;
+use tower::ServiceExt as _;
+use tracing::Instrument as _;
+use tracing::field::{Field, Visit};
+use tracing_subscriber::layer::{Context, SubscriberExt as _};
+use tracing_subscriber::registry::LookupSpan;
+
+use super::{CHAINER_RELEASE, CHAINER_ROUND, CHAINER_TAKE, SYSTEM_ROUND, calls, counted, drained};
+use crate::access_evaluator_http::{app, credential, ehr_with_composition};
+use crate::common::{self, BASE, FHIR};
+
+/// The measured requests of each path.
+const REQUESTS: u64 = 10;
+
+/// The requests of each path sent before the measured ones.
+const WARM: u64 = 3;
+
+/// The EHRs the paths spread over, each with one IPS composition.
+const EHRS: usize = 5;
+
+/// The span each measured request runs in.
+const PATH_SPAN: &str = "hot_path_budget_request";
+
+/// The prefix of the conversions that render the access record, which the
+/// audit lane owns and the path's own budget leaves out.
+const AUDIT: &str = "audit_";
+
+/// The canonical JSON media type.
+const JSON: &str = "application/json";
+/// The canonical XML media type.
+const XML: &str = "application/xml";
+/// The FLAT media type (ITS-REST `Resources.md` §Simplified Formats).
+const FLAT: &str = "application/openehr.wt.flat+json";
+
+/// A hot path.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Path {
+    CommitJson,
+    CommitXml,
+    CommitFlat,
+    ReadJson,
+    ReadXml,
+    ReadFlat,
+    EhrRead,
+    AqlSingle,
+    AqlPopulation,
+    Iti81,
+    PartyRead,
+    CommitContribution,
+    ReadAtTime,
+    CommitStatus,
+    ReadStatus,
+    CommitParty,
+}
+
+impl Path {
+    const ALL: [Self; 16] = [
+        Self::CommitJson,
+        Self::CommitXml,
+        Self::CommitFlat,
+        Self::ReadJson,
+        Self::ReadXml,
+        Self::ReadFlat,
+        Self::EhrRead,
+        Self::AqlSingle,
+        Self::AqlPopulation,
+        Self::Iti81,
+        Self::PartyRead,
+        Self::CommitContribution,
+        Self::ReadAtTime,
+        Self::CommitStatus,
+        Self::ReadStatus,
+        Self::CommitParty,
+    ];
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::CommitJson => "commit JSON",
+            Self::CommitXml => "commit XML",
+            Self::CommitFlat => "commit FLAT",
+            Self::ReadJson => "read JSON",
+            Self::ReadXml => "read XML",
+            Self::ReadFlat => "read FLAT",
+            Self::EhrRead => "EHR read",
+            Self::AqlSingle => "single-EHR AQL",
+            Self::AqlPopulation => "population AQL",
+            Self::Iti81 => "ITI-81 page",
+            Self::PartyRead => "party read",
+            Self::CommitContribution => "contribution commit",
+            Self::ReadAtTime => "read at time",
+            Self::CommitStatus => "EHR_STATUS commit",
+            Self::ReadStatus => "EHR_STATUS read",
+            Self::CommitParty => "party commit",
+        }
+    }
+}
+
+/// The ceilings of one path, per request.
+struct Budget {
+    path: Path,
+    conversions: u64,
+    allocations: u64,
+    peak_bytes: u64,
+    round_trips: u64,
+    nested: u64,
+    wal: u64,
+}
+
+/// The ceilings by path. Before the core rewrite (feat/core-rewrite at
+/// 13cda4c7f, debug build) the paths measured, per request, conversions /
+/// allocations / round trips / nested statements / WAL bytes: recorded on
+/// #6007. The end state (#6001) is the figure measured over four runs at
+/// feat/core-rewrite dfed03d9d plus a margin: none on conversions and round
+/// trips, 2% on allocations, 10% on the peak, 3% on WAL bytes, and one nested
+/// statement on a commit. The nested statements leave out the chainer's
+/// rounds, the release of the records the commits held among them.
+const BUDGETS: [Budget; 16] = [
+    Budget {
+        path: Path::CommitJson,
+        conversions: 10,
+        allocations: 34_147,
+        peak_bytes: 1_530_778,
+        round_trips: 14,
+        nested: 13,
+        wal: 249_452,
+    },
+    Budget {
+        path: Path::CommitXml,
+        conversions: 10,
+        allocations: 55_576,
+        peak_bytes: 1_533_031,
+        round_trips: 14,
+        nested: 14,
+        wal: 250_543,
+    },
+    Budget {
+        path: Path::CommitFlat,
+        conversions: 10,
+        allocations: 48_728,
+        peak_bytes: 1_528_525,
+        round_trips: 14,
+        nested: 13,
+        wal: 252_220,
+    },
+    Budget {
+        path: Path::ReadJson,
+        conversions: 2,
+        allocations: 1389,
+        peak_bytes: 617_268,
+        round_trips: 7,
+        nested: 2,
+        wal: 2874,
+    },
+    Budget {
+        path: Path::ReadXml,
+        conversions: 4,
+        allocations: 10_865,
+        peak_bytes: 1_017_140,
+        round_trips: 7,
+        nested: 2,
+        wal: 2890,
+    },
+    Budget {
+        path: Path::ReadFlat,
+        conversions: 4,
+        allocations: 15_591,
+        peak_bytes: 1_634_407,
+        round_trips: 7,
+        nested: 2,
+        wal: 2849,
+    },
+    Budget {
+        path: Path::EhrRead,
+        conversions: 1,
+        allocations: 1162,
+        peak_bytes: 100_250,
+        round_trips: 7,
+        nested: 2,
+        wal: 2098,
+    },
+    Budget {
+        path: Path::AqlSingle,
+        conversions: 2,
+        allocations: 2505,
+        peak_bytes: 118_273,
+        round_trips: 10,
+        nested: 2,
+        wal: 4566,
+    },
+    Budget {
+        path: Path::AqlPopulation,
+        conversions: 2,
+        allocations: 3344,
+        peak_bytes: 158_823,
+        round_trips: 8,
+        nested: 2,
+        wal: 11_916,
+    },
+    Budget {
+        path: Path::Iti81,
+        conversions: 0,
+        allocations: 9023,
+        peak_bytes: 624_026,
+        round_trips: 6,
+        nested: 2,
+        wal: 2316,
+    },
+    Budget {
+        path: Path::PartyRead,
+        conversions: 2,
+        allocations: 1120,
+        peak_bytes: 78_848,
+        round_trips: 11,
+        nested: 6,
+        wal: 2097,
+    },
+    Budget {
+        path: Path::CommitContribution,
+        conversions: 14,
+        allocations: 67_846,
+        peak_bytes: 3_678_823,
+        round_trips: 18,
+        nested: 14,
+        wal: 251_382,
+    },
+    Budget {
+        path: Path::ReadAtTime,
+        conversions: 2,
+        allocations: 1401,
+        peak_bytes: 701_748,
+        round_trips: 7,
+        nested: 2,
+        wal: 3255,
+    },
+    Budget {
+        path: Path::CommitStatus,
+        conversions: 10,
+        allocations: 2045,
+        peak_bytes: 144_180,
+        round_trips: 19,
+        nested: 11,
+        wal: 6624,
+    },
+    Budget {
+        path: Path::ReadStatus,
+        conversions: 2,
+        allocations: 1244,
+        peak_bytes: 102_503,
+        round_trips: 7,
+        nested: 2,
+        wal: 2183,
+    },
+    Budget {
+        path: Path::CommitParty,
+        conversions: 12,
+        allocations: 2219,
+        peak_bytes: 117_146,
+        round_trips: 32,
+        nested: 19,
+        wal: 8330,
+    },
+];
+
+/// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
+/// trips) and the conversion events by their `op`.
+#[derive(Clone, Default)]
+struct Counter(Arc<Mutex<Counts>>);
+
+/// What a [`Counter`] saw.
+#[derive(Default)]
+struct Counts {
+    round_trips: u64,
+    conversions: BTreeMap<String, u64>,
+}
+
+/// Reads the `op` field of a conversion event.
+#[derive(Default)]
+struct Op(String);
+
+impl Visit for Op {
+    fn record_str(&mut self, field: &Field, value: &str) {
+        if field.name() == "op" {
+            value.clone_into(&mut self.0);
+        }
+    }
+
+    fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
+        if field.name() == "op" && self.0.is_empty() {
+            self.0 = format!("{value:?}");
+        }
+    }
+}
+
+impl<S> tracing_subscriber::Layer<S> for Counter
+where
+    S: tracing::Subscriber + for<'a> LookupSpan<'a>,
+{
+    fn on_event(&self, event: &tracing::Event<'_>, ctx: Context<'_, S>) {
+        let target = event.metadata().target();
+        let conversion = target == openehr_its::conversion::TARGET;
+        if !conversion && target != "sqlx::query" {
+            return;
+        }
+        let Some(scope) = ctx.event_scope(event) else {
+            return;
+        };
+        let names: Vec<&str> = scope.map(|span| span.name()).collect();
+        if !names.contains(&PATH_SPAN) {
+            return;
+        }
+        let mut counts = self.0.lock().unwrap();
+        if conversion {
+            let mut op = Op::default();
+            event.record(&mut op);
+            *counts.conversions.entry(op.0).or_default() += 1;
+        } else if !names.contains(&ferroehr::db::pool::SESSION_SETUP_SPAN) {
+            counts.round_trips += 1;
+        }
+    }
+}
+
+/// The allocations made while a future was polled on whichever thread
+/// polled it, and the most it held at once.
+#[derive(Default)]
+struct Allocated {
+    count: u64,
+    bytes: u64,
+    held: i64,
+    peak: i64,
+}
+
+/// A future whose every poll is measured into an [`Allocated`].
+struct Measured<'a, F> {
+    inner: Pin<Box<F>>,
+    into: &'a mut Allocated,
+}
+
+impl<F: Future> Future for Measured<'_, F> {
+    type Output = F::Output;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut TaskContext<'_>) -> Poll<F::Output> {
+        let this = &mut *self;
+        let mut out = Poll::Pending;
+        let info = allocation_counter::measure(|| out = this.inner.as_mut().poll(cx));
+        this.into.count += info.count_total;
+        this.into.bytes += info.bytes_total;
+        this.into.peak = this
+            .into
+            .peak
+            .max(this.into.held + i64::try_from(info.bytes_max).unwrap());
+        this.into.held += info.bytes_current;
+        out
+    }
+}
+
+/// One request, owned so it can be built again for each send.
+struct Call {
+    method: &'static str,
+    uri: String,
+    user: &'static str,
+    accept: &'static str,
+    headers: Vec<(&'static str, String)>,
+    body: Option<(&'static str, String)>,
+}
+
+impl Call {
+    fn request(&self) -> Request<Body> {
+        let mut builder = Request::builder()
+            .method(self.method)
+            .uri(&self.uri)
+            .header(header::AUTHORIZATION, credential(self.user))
+            .header(header::ACCEPT, self.accept);
+        for (name, value) in &self.headers {
+            builder = builder.header(*name, value);
+        }
+        match &self.body {
+            Some((content_type, body)) => builder
+                .header(header::CONTENT_TYPE, *content_type)
+                .body(Body::from(body.clone())),
+            None => builder.body(Body::empty()),
+        }
+        .unwrap()
+    }
+}
+
+/// Sends `request` and reads its whole answer.
+async fn exchange(app: &Router, request: Request<Body>) -> (StatusCode, HeaderMap, Vec<u8>) {
+    let response = app.clone().oneshot(request).await.expect("a response");
+    let status = response.status();
+    let headers = response.headers().clone();
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("the body")
+        .to_bytes();
+    (status, headers, body.to_vec())
+}
+
+/// Sends `call` unmeasured; its status, headers and body.
+async fn plain(app: &Router, call: &Call) -> (StatusCode, HeaderMap, String) {
+    let (status, headers, body) = exchange(app, call.request()).await;
+    (status, headers, String::from_utf8(body).unwrap())
+}
+
+/// The fixtures the paths read and write.
+struct World {
+    ehrs: Vec<(String, String)>,
+    xml: String,
+    flat: String,
+    template_id: String,
+    party: String,
+    person: String,
+    /// An instant after every fixture commit.
+    at: String,
+    /// The `EHR_STATUS` a status commit writes, without its `uid`.
+    status: String,
+    /// The current `EHR_STATUS` version uid of each EHR, which the next status
+    /// commit names in `If-Match`.
+    status_uids: Mutex<Vec<String>>,
+}
+
+/// The `ETag` value of a response, unquoted.
+fn etag(headers: &HeaderMap) -> String {
+    headers
+        .get(header::ETAG)
+        .and_then(|v| v.to_str().ok())
+        .expect("an ETag")
+        .trim_start_matches("W/")
+        .trim_matches('"')
+        .to_owned()
+}
+
+/// The versioned-object id an `ETag` names.
+fn object_id(headers: &HeaderMap) -> String {
+    headers
+        .get(header::ETAG)
+        .and_then(|v| v.to_str().ok())
+        .expect("an ETag")
+        .trim_start_matches("W/")
+        .trim_matches('"')
+        .split("::")
+        .next()
+        .expect("an object id")
+        .to_owned()
+}
+
+impl World {
+    async fn build(app: &Router) -> Self {
+        let mut ehrs = Vec::new();
+        for _ in 0..EHRS {
+            ehrs.push(ehr_with_composition(app).await);
+        }
+        let (ehr, vo) = &ehrs[0];
+        let read = |accept| Call {
+            method: "GET",
+            uri: format!("{BASE}/ehr/{ehr}/composition/{vo}"),
+            user: "root",
+            accept,
+            headers: Vec::new(),
+            body: None,
+        };
+        let (status, _, xml) = plain(app, &read(XML)).await;
+        assert_eq!(status, StatusCode::OK, "the XML read: {xml}");
+        let (status, _, flat) = plain(app, &read(FLAT)).await;
+        assert_eq!(status, StatusCode::OK, "the FLAT read: {flat}");
+        let template_id =
+            common::ips_canonical_composition()["archetype_details"]["template_id"]["value"]
+                .as_str()
+                .expect("the IPS template id")
+                .to_owned();
+        let person = std::fs::read_to_string(
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../corpus/fixtures/demographic/person.v1.json"),
+        )
+        .expect("the person fixture");
+        let (status, headers, body) = plain(
+            app,
+            &Call {
+                method: "POST",
+                uri: format!("{BASE}/demographic/person"),
+                user: "root",
+                accept: JSON,
+                headers: Vec::new(),
+                body: Some((JSON, person.clone())),
+            },
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "the person: {body}");
+        let mut status_uids = Vec::new();
+        let mut status_body = String::new();
+        for (ehr, _) in &ehrs {
+            let (code, headers, body) = plain(
+                app,
+                &Call {
+                    method: "GET",
+                    uri: format!("{BASE}/ehr/{ehr}/ehr_status"),
+                    user: "root",
+                    accept: JSON,
+                    headers: Vec::new(),
+                    body: None,
+                },
+            )
+            .await;
+            assert_eq!(code, StatusCode::OK, "the EHR_STATUS: {body}");
+            status_uids.push(etag(&headers));
+            let mut value: Value = serde_json::from_str(&body).expect("the EHR_STATUS");
+            value
+                .as_object_mut()
+                .expect("an object")
+                .shift_remove("uid");
+            status_body = value.to_string();
+        }
+        Self {
+            ehrs,
+            xml,
+            flat,
+            template_id,
+            party: object_id(&headers),
+            person,
+            at: jiff::Timestamp::now().to_string(),
+            status: status_body,
+            status_uids: Mutex::new(status_uids),
+        }
+    }
+
+    /// Records what the answer to the `n`th request of `path` changed.
+    fn observe(&self, path: Path, n: usize, headers: &HeaderMap) {
+        if path == Path::CommitStatus {
+            self.status_uids.lock().unwrap()[n % self.ehrs.len()] = etag(headers);
+        }
+    }
+
+    /// The `n`th status commit, to the EHR `ehr`.
+    fn status_commit(&self, ehr: &str, n: usize) -> Call {
+        let tip = self.status_uids.lock().unwrap()[n % self.ehrs.len()].clone();
+        Call {
+            method: "PUT",
+            uri: format!("{BASE}/ehr/{ehr}/ehr_status"),
+            user: "root",
+            accept: JSON,
+            headers: vec![
+                ("Prefer", "return=minimal".to_owned()),
+                ("If-Match", format!("\"{tip}\"")),
+            ],
+            body: Some((JSON, self.status.clone())),
+        }
+    }
+
+    /// The `n`th request of `path`.
+    fn call(&self, path: Path, n: usize) -> Call {
+        let (ehr, vo) = &self.ehrs[n % self.ehrs.len()];
+        let minimal = vec![("Prefer", "return=minimal".to_owned())];
+        let commit = |content_type, body: String, mut headers: Vec<(&'static str, String)>| {
+            headers.extend(minimal.clone());
+            Call {
+                method: "POST",
+                uri: format!("{BASE}/ehr/{ehr}/composition"),
+                user: "root",
+                accept: JSON,
+                headers,
+                body: Some((content_type, body)),
+            }
+        };
+        let get = |uri: String, user, accept| Call {
+            method: "GET",
+            uri,
+            user,
+            accept,
+            headers: Vec::new(),
+            body: None,
+        };
+        let composition = format!("{BASE}/ehr/{ehr}/composition/{vo}");
+        let aql = |body: Value| Call {
+            method: "POST",
+            uri: format!("{BASE}/query/aql"),
+            user: "nurse",
+            accept: JSON,
+            headers: Vec::new(),
+            body: Some((JSON, body.to_string())),
+        };
+        match path {
+            Path::CommitJson => commit(
+                JSON,
+                common::ips_canonical_composition().to_string(),
+                Vec::new(),
+            ),
+            Path::CommitXml => commit(XML, self.xml.clone(), Vec::new()),
+            Path::CommitFlat => commit(
+                FLAT,
+                self.flat.clone(),
+                vec![("openehr-template-id", self.template_id.clone())],
+            ),
+            Path::ReadJson => get(composition, "nurse", JSON),
+            Path::ReadXml => get(composition, "nurse", XML),
+            Path::ReadFlat => get(composition, "nurse", FLAT),
+            Path::EhrRead => get(format!("{BASE}/ehr/{ehr}"), "nurse", JSON),
+            Path::AqlSingle => aql(serde_json::json!({
+                "q": "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c WHERE e/ehr_id/value = $ehr",
+                "query_parameters": { "ehr": ehr },
+            })),
+            Path::AqlPopulation => {
+                aql(serde_json::json!({ "q": "SELECT e/ehr_id/value FROM EHR e LIMIT 20" }))
+            }
+            Path::Iti81 => get(
+                format!("{FHIR}/AuditEvent?date=ge2026-01-01&_count=20"),
+                "root",
+                "application/fhir+json",
+            ),
+            Path::PartyRead => get(
+                format!("{BASE}/demographic/person/{}", self.party),
+                "root",
+                JSON,
+            ),
+            Path::CommitContribution => Call {
+                method: "POST",
+                uri: format!("{BASE}/ehr/{ehr}/contribution"),
+                user: "root",
+                accept: JSON,
+                headers: minimal.clone(),
+                body: Some((JSON, contribution().to_string())),
+            },
+            Path::ReadAtTime => get(
+                format!("{composition}?version_at_time={}", self.at),
+                "nurse",
+                JSON,
+            ),
+            Path::CommitStatus => self.status_commit(ehr, n),
+            Path::ReadStatus => get(format!("{BASE}/ehr/{ehr}/ehr_status"), "nurse", JSON),
+            Path::CommitParty => Call {
+                method: "POST",
+                uri: format!("{BASE}/demographic/person"),
+                user: "root",
+                accept: JSON,
+                headers: minimal.clone(),
+                body: Some((JSON, self.person.clone())),
+            },
+        }
+    }
+}
+
+/// A CONTRIBUTION that creates the IPS composition.
+fn contribution() -> Value {
+    let coded = |code: &str, value: &str| {
+        serde_json::json!({ "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": code } })
+    };
+    let committer = serde_json::json!({ "_type": "PARTY_IDENTIFIED",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "root" }] });
+    serde_json::json!({
+        "_type": "CONTRIBUTION",
+        "versions": [ {
+            "_type": "ORIGINAL_VERSION",
+            "commit_audit": { "change_type": coded("249", "creation"), "committer": committer },
+            "lifecycle_state": coded("532", "complete"),
+            "data": common::ips_canonical_composition(),
+        } ],
+        "audit": { "change_type": coded("249", "creation"), "committer": committer },
+    })
+}
+
+/// What one path measured over [`REQUESTS`] requests.
+#[derive(Default)]
+struct Measure {
+    conversions: BTreeMap<String, u64>,
+    /// The allocations, the bytes allocated and the peak of each request.
+    each: Vec<Allocated>,
+    round_trips: u64,
+    nested: u64,
+    wal: u64,
+    /// The statements `PostgreSQL` ran nested, and the chainer's rounds the
+    /// count leaves out.
+    statements: String,
+}
+
+impl Measure {
+    /// The median request's `figure`.
+    ///
+    /// One request in a window sometimes opens a pool connection, or is
+    /// handed one whose buffers have not grown yet, when the chainer holds
+    /// the pool's other connection, so the mean and the largest moved with
+    /// the host. A change in what a request itself allocates moves every
+    /// request, and so the median.
+    fn median(&self, figure: impl Fn(&Allocated) -> u64) -> u64 {
+        // NOTE: our own design (#6007), a connection the pool opens inside a request is the
+        // pool's work, as its session setup is for the round trips (#5899).
+        let mut figures: Vec<u64> = self.each.iter().map(figure).collect();
+        figures.sort_unstable();
+        figures
+            .get(figures.len().div_euclid(2))
+            .copied()
+            .unwrap_or(0)
+    }
+
+    /// The allocations and the peak of each request, for the report.
+    fn requests(&self) -> Vec<(u64, i64)> {
+        self.each.iter().map(|a| (a.count, a.peak)).collect()
+    }
+
+    /// The conversions of the request's own body and answer, per request.
+    fn conversions(&self) -> u64 {
+        self.of(|op| !op.starts_with(AUDIT))
+    }
+
+    /// The renders of the request's access record, per request.
+    fn audit(&self) -> u64 {
+        self.of(|op| op.starts_with(AUDIT))
+    }
+
+    fn of(&self, keep: impl Fn(&str) -> bool) -> u64 {
+        self.conversions
+            .iter()
+            .filter(|(op, _)| keep(op))
+            .map(|(_, n)| n)
+            .sum::<u64>()
+            .div_euclid(REQUESTS)
+    }
+}
+
+/// The write-ahead log of the test database's top-level statements since the
+/// last reset, its own reads left out.
+async fn wal_bytes(pool: &PgPool) -> u64 {
+    let bytes: Option<i64> = sqlx::query_scalar(
+        "SELECT /* statement_budget_own */ sum(wal_bytes)::bigint FROM pg_stat_statements \
+         WHERE toplevel AND dbid = (SELECT oid FROM pg_database WHERE datname = current_database()) \
+         AND query NOT LIKE '%pg_stat_statements%' AND query NOT LIKE '%statement_budget_own%'",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("pg_stat_statements reads");
+    bytes.map_or(0, |b| u64::try_from(b).expect("a byte count"))
+}
+
+/// Measures [`REQUESTS`] requests of `path`.
+async fn measure(
+    app: &Router,
+    pool: &PgPool,
+    world: &World,
+    counter: &Counter,
+    path: Path,
+) -> Measure {
+    for n in 0..WARM {
+        let n = usize::try_from(n).unwrap();
+        let (status, headers, body) = plain(app, &world.call(path, n)).await;
+        assert!(status.is_success(), "{}: {status} {body}", path.name());
+        world.observe(path, n, &headers);
+    }
+    drained(pool).await;
+    let evicted = testkit::statements::statement_window(pool)
+        .await
+        .expect("the statement counts reset");
+    *counter.0.lock().unwrap() = Counts::default();
+    let mut out = Measure::default();
+    for n in 0..REQUESTS {
+        let n = usize::try_from(WARM + n).unwrap();
+        let call = world.call(path, n);
+        let mut allocated = Allocated::default();
+        let (status, headers, body) = Measured {
+            inner: Box::pin(
+                exchange(app, call.request()).instrument(tracing::info_span!(PATH_SPAN)),
+            ),
+            into: &mut allocated,
+        }
+        .await;
+        assert!(
+            status.is_success(),
+            "{}: {status} {}",
+            path.name(),
+            String::from_utf8_lossy(&body)
+        );
+        world.observe(path, n, &headers);
+        out.each.push(allocated);
+    }
+    drained(pool).await;
+    let statements = counted(pool).await;
+    let nested: u64 = statements
+        .iter()
+        .filter(|s| !s.toplevel)
+        .map(|s| s.calls)
+        .sum();
+    let chainer = calls(
+        &statements,
+        "SELECT head_seq, head_digest FROM audit.access_log_chain_take",
+    ) * CHAINER_TAKE
+        + calls(&statements, "SELECT audit.access_log_chain_move") * CHAINER_ROUND
+        + calls(&statements, "SELECT audit.audit_event_chain_move") * SYSTEM_ROUND
+        + calls(&statements, "SELECT audit.audit_intake_release") * CHAINER_RELEASE;
+    let counts = std::mem::take(&mut *counter.0.lock().unwrap());
+    out.conversions = counts.conversions;
+    out.round_trips = counts.round_trips.div_euclid(REQUESTS);
+    out.nested = nested.saturating_sub(chainer).div_euclid(REQUESTS);
+    out.statements = nested_ledger(&statements, nested, chainer);
+    out.wal = wal_bytes(pool).await.div_euclid(REQUESTS);
+    testkit::statements::assert_statements_kept(pool, evicted)
+        .await
+        .expect("no statement evicted while the test counted them");
+    out
+}
+
+/// The nested statements of a window, and what the chainer's rounds take
+/// out of their count.
+fn nested_ledger(statements: &[super::Counted], nested: u64, chainer: u64) -> String {
+    let mut out = format!("{nested} nested, {chainer} of them the chainer's\n");
+    for s in statements {
+        let chain = s.toplevel && s.query.contains("_chain_");
+        if !s.toplevel || chain {
+            let level = if s.toplevel { "top" } else { "nested" };
+            let text: String = s.query.chars().take(140).collect();
+            writeln!(out, "  {level:>6} {:>4}  {text}", s.calls).unwrap();
+        }
+    }
+    out
+}
+
+/// Whether `measured` passes `ceiling`, and the cell that reports it.
+fn judged(measured: u64, ceiling: u64) -> (bool, String) {
+    (measured <= ceiling, format!("{measured} (<= {ceiling})"))
+}
+
+/// Every hot path stays within its budget, and the report names what each
+/// one measured.
+#[tokio::test]
+async fn every_hot_path_stays_within_its_budget() {
+    let counter = Counter::default();
+    let _guard =
+        tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
+    // The budgets count what a release build does, without the debug reference cells.
+    ferroehr::aql::sql::without_reference_cells();
+    let (_db, pool, _svc, app) = Box::pin(app()).await;
+    sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
+        .execute(&pool)
+        .await
+        .expect("pg_stat_statements: the server loads it (shared_preload_libraries)");
+    let world = World::build(&app).await;
+    let mut report = String::from(
+        "path | conversions | audit renders | allocations | alloc KiB | peak KiB | round trips | nested | WAL B\n",
+    );
+    let mut ledger = String::new();
+    let mut statements = String::new();
+    let mut over = Vec::new();
+    for budget in &BUDGETS {
+        let path = budget.path;
+        let m = Box::pin(measure(&app, &pool, &world, &counter, path)).await;
+        let allocations = m.median(|a| a.count);
+        let kib = m.median(|a| a.bytes).div_euclid(1024);
+        let peak = m.median(|a| u64::try_from(a.peak.max(0)).unwrap());
+        let cells = [
+            ("conversions", judged(m.conversions(), budget.conversions)),
+            ("allocations", judged(allocations, budget.allocations)),
+            ("peak bytes", judged(peak, budget.peak_bytes)),
+            ("round trips", judged(m.round_trips, budget.round_trips)),
+            ("nested statements", judged(m.nested, budget.nested)),
+            ("WAL bytes", judged(m.wal, budget.wal)),
+        ];
+        for (what, (ok, cell)) in &cells {
+            if !ok {
+                over.push(format!("{}: {what} {cell}", path.name()));
+            }
+        }
+        writeln!(
+            report,
+            "{} | {} | {} | {} | {kib} | {} | {} | {} | {}",
+            path.name(),
+            cells[0].1.1,
+            m.audit(),
+            cells[1].1.1,
+            peak.div_euclid(1024),
+            cells[3].1.1,
+            cells[4].1.1,
+            cells[5].1.1,
+        )
+        .unwrap();
+        let ops: Vec<String> = m
+            .conversions
+            .iter()
+            .map(|(op, n)| format!("{op}={}", n.div_euclid(REQUESTS)))
+            .collect();
+        writeln!(ledger, "{}: {}", path.name(), ops.join(", ")).unwrap();
+        writeln!(
+            statements,
+            "{}: allocations and peak of each request {:?}\n{}",
+            path.name(),
+            m.requests(),
+            m.statements
+        )
+        .unwrap();
+    }
+    eprintln!(
+        "{report}\nconversions per request by op:\n{ledger}\nnested statements over {REQUESTS} \
+         requests:\n{statements}"
+    );
+    assert!(
+        over.is_empty(),
+        "a hot path exceeds its budget: {over:?}\n{report}\n{ledger}\n{statements}"
+    );
+    assert_eq!(BUDGETS.len(), Path::ALL.len(), "every path has its budget");
+}

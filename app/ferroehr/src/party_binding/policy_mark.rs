@@ -28,6 +28,7 @@
               holds, walked for the coded content that makes it a policy party"
 )]
 
+use std::borrow::Cow;
 use std::fmt;
 
 use serde_json::Value;
@@ -35,6 +36,7 @@ use sqlx::PgConnection;
 
 use crate::ids::VoId;
 use crate::storage::error::StorageError;
+use crate::versioning::tree::{Shape, Tree};
 use openehr_rm::draft::access_control::terminology::{TERMINOLOGY_ID_ACCESS, Term};
 
 /// The `TERMINOLOGY_ID` the operation grants, their qualifiers and the
@@ -53,7 +55,7 @@ pub const REPRESENTS: &str = "represents";
 /// The `DV_IDENTIFIER.type` of an OAuth 2.0 `client_id`.
 pub const CLIENT_ID: &str = "client_id";
 
-/// The SQL/JSON path that holds exactly when [`policy_content`] finds content.
+/// The SQL/JSON path that holds exactly when `policy_content` finds content.
 ///
 /// The party migration `0044_access_terminology.sql` and `mark_stored` test
 /// each version's body with it, and a test runs both over one set of bodies.
@@ -91,25 +93,25 @@ impl fmt::Display for PolicyContent {
 }
 
 /// The text member `key` of `value`.
-fn text<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
-    value.get(key).and_then(Value::as_str)
+fn text<'a, T: Tree<'a>>(value: T, key: &str) -> Option<Cow<'a, str>> {
+    value.get_text(key)
 }
 
 /// The terminology id and code of `value` when it is a `DV_CODED_TEXT`.
-fn phrase(value: &Value) -> Option<(&str, &str)> {
+fn phrase<'a, T: Tree<'a>>(value: T) -> Option<(Cow<'a, str>, Cow<'a, str>)> {
     let code = value.get("defining_code")?;
     let terminology = code
         .get("terminology_id")
         .and_then(|id| text(id, "value"))?;
-    (text(value, "_type") == Some("DV_CODED_TEXT"))
+    (text(value, "_type").as_deref() == Some("DV_CODED_TEXT"))
         .then(|| Some((terminology, text(code, "code_string")?)))
         .flatten()
 }
 
 /// The code of `value` when it is a `DV_CODED_TEXT` of [`TERMINOLOGY`].
-pub(crate) fn coded(value: &Value) -> Option<&str> {
+pub(crate) fn coded<'a, T: Tree<'a>>(value: T) -> Option<Cow<'a, str>> {
     phrase(value)
-        .filter(|(terminology, _)| *terminology == TERMINOLOGY)
+        .filter(|(terminology, _)| terminology == TERMINOLOGY)
         .map(|(_, code)| code)
 }
 
@@ -135,22 +137,26 @@ pub(crate) fn coded_term<T: Term>(term: T, rubric: &str) -> Value {
 
 /// The first value of the tree `value`, itself included, depth first, for
 /// which `found` answers.
-fn first<T>(value: &Value, found: &mut impl FnMut(&Value) -> Option<T>) -> Option<T> {
+fn first<'a, T: Tree<'a>, R>(value: T, found: &mut impl FnMut(T) -> Option<R>) -> Option<R> {
     if let Some(hit) = found(value) {
         return Some(hit);
     }
-    match value {
-        Value::Object(members) => members.values().find_map(|child| first(child, found)),
-        Value::Array(items) => items.iter().find_map(|child| first(child, found)),
-        _ => None,
+    match value.shape() {
+        Shape::Object => value.members().find_map(|(_, child)| first(child, found)),
+        Shape::Array => value.items().find_map(|child| first(child, found)),
+        Shape::String | Shape::Other => None,
     }
 }
 
 /// Whether the `PARTY_RELATIONSHIP` `relationship` carries the code `wanted`
 /// of `terminology`, such as [`ACTS_FOR`] or [`REPRESENTS`] of [`TERMINOLOGY`],
 /// in its `name` or anywhere in its `details`.
-pub(crate) fn carries(relationship: &Value, terminology: &str, wanted: &str) -> bool {
-    let code = |item: &Value| (phrase(item) == Some((terminology, wanted))).then_some(());
+pub(crate) fn carries<'a, T: Tree<'a>>(relationship: T, terminology: &str, wanted: &str) -> bool {
+    let code = |item: T| {
+        phrase(item)
+            .filter(|(of, code)| of == terminology && code == wanted)
+            .map(drop)
+    };
     relationship.get("name").and_then(code).is_some()
         || relationship
             .get("details")
@@ -161,7 +167,7 @@ pub(crate) fn carries(relationship: &Value, terminology: &str, wanted: &str) -> 
 /// The openEHR `subject_relationship` code `relationship` names: the first
 /// `DV_CODED_TEXT` of the `openehr` terminology in its `name` or its
 /// `details` whose code is of that group, `None` when it names none.
-pub(crate) fn subject_relationship(relationship: &Value) -> Option<String> {
+pub(crate) fn subject_relationship<'a, T: Tree<'a>>(relationship: T) -> Option<String> {
     relationship
         .get("name")
         .and_then(openehr_relationship)
@@ -170,32 +176,32 @@ pub(crate) fn subject_relationship(relationship: &Value) -> Option<String> {
 
 /// The code of `item` when it is a `DV_CODED_TEXT` of the `openehr`
 /// terminology's `subject_relationship` group.
-fn openehr_relationship(item: &Value) -> Option<String> {
+fn openehr_relationship<'a, T: Tree<'a>>(item: T) -> Option<String> {
     let defining = item.get("defining_code")?;
     let of = defining
         .get("terminology_id")
         .and_then(|id| text(id, "value"));
     let code = text(defining, "code_string")?;
-    (text(item, "_type") == Some("DV_CODED_TEXT")
-        && of == Some("openehr")
-        && openehr_term::bundle::openehr().is_valid_code("subject_relationship", code))
-    .then(|| code.to_owned())
+    (text(item, "_type").as_deref() == Some("DV_CODED_TEXT")
+        && of.as_deref() == Some("openehr")
+        && openehr_term::bundle::openehr().is_valid_code("subject_relationship", &code))
+    .then(|| code.into_owned())
 }
 
 /// What makes the party body `body`, in canonical JSON, a policy party, or
 /// `None` when it holds none of it.
 #[must_use]
-pub fn policy_content(body: &Value) -> Option<PolicyContent> {
-    first(body, &mut |value| match text(value, "_type")? {
+pub(crate) fn policy_content<'a, T: Tree<'a>>(body: T) -> Option<PolicyContent> {
+    first(body, &mut |value| match text(value, "_type")?.as_ref() {
         "CAPABILITY" => first(value.get("credentials")?, &mut |item| {
-            coded(item).map(str::to_owned)
+            coded(item).map(Cow::into_owned)
         })
         .map(PolicyContent::Grant),
         "PARTY_RELATIONSHIP" => {
             carries(value, TERMINOLOGY, ACTS_FOR).then_some(PolicyContent::ActsFor)
         }
         "DV_IDENTIFIER" => {
-            (text(value, "type") == Some(CLIENT_ID)).then_some(PolicyContent::Client)
+            (text(value, "type").as_deref() == Some(CLIENT_ID)).then_some(PolicyContent::Client)
         }
         _ => None,
     })

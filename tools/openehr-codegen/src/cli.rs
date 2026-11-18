@@ -5,7 +5,8 @@
 //! stage-orchestrating `cmd_*` handlers that wire LOAD → ANALYZE → PLAN →
 //! RENDER together and write each emit target's files.
 
-use crate::analyze::{augment_with_reemit, cross_schema_reemit, emittable_specs};
+use crate::analyze::emittable_specs;
+use crate::analyze::reemit::{augment_with_reemit, cross_schema_reemit};
 use crate::generated_tree::{declare_hand_written_modules, remove_generated_files_except};
 use crate::load::bmm::BmmSchema;
 use crate::load::impls::SiblingImpls;
@@ -19,6 +20,9 @@ use crate::render::{
 };
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+
+mod walk;
+
 /// The `openehr-its` crate root (holds the vendored XSDs/OAS and receives the
 /// generated XML/REST code). `../../crates/openehr-its` from this tool's
 /// `tools/openehr-codegen` manifest dir.
@@ -159,60 +163,9 @@ pub(crate) fn cmd_check() -> Result<(), Box<dyn std::error::Error>> {
 /// declaring class in the `declared_on` column — the inheritance dimension a
 /// declared-only view cannot express.
 pub(crate) fn cmd_model_query(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
-    let (query, format) = parse_model_query_args(args)?;
+    let (query, format) = model_query::parse_args(args)?;
     print!("{}", model_query::render(&query, format)?);
     Ok(())
-}
-
-/// Parse `model-query`'s options (`--flag value` and `--flag=value` both work).
-///
-/// # Errors
-/// Returns an error naming the valid options if an option is unknown, and an
-/// error naming the valid values if `--format` is not one of them.
-fn parse_model_query_args(
-    args: &[String],
-) -> Result<(model_query::Query<'_>, model_query::Format), Box<dyn std::error::Error>> {
-    let mut query = model_query::Query::default();
-    let mut format = model_query::Format::Table;
-    let mut i = 0;
-    while let Some(arg) = args.get(i) {
-        let (flag, inline) = match arg.split_once('=') {
-            Some((f, v)) => (f, Some(v)),
-            None => (arg.as_str(), None),
-        };
-        // A valueless switch must not swallow the next argument.
-        if flag == "--flattened" {
-            query.flattened = true;
-            i += 1;
-            continue;
-        }
-        let value = if let Some(v) = inline {
-            i += 1;
-            Some(v)
-        } else {
-            let v = args.get(i + 1).map(String::as_str);
-            i += 2;
-            v
-        };
-        let required = || -> Result<&str, Box<dyn std::error::Error>> {
-            value.ok_or_else(|| format!("option {flag} needs a value").into())
-        };
-        match flag {
-            "--class" => query.class = Some(required()?),
-            "--attribute" => query.attribute = Some(required()?),
-            "--component" => query.component = Some(required()?),
-            "--format" => format = model_query::Format::parse(required()?)?,
-            other => {
-                return Err(format!(
-                    "unknown model-query option {other:?}; valid options: --class NAME, \
-                     --attribute NAME, --component KEY, --flattened, --format {}",
-                    model_query::Format::VALID
-                )
-                .into());
-            }
-        }
-    }
-    Ok((query, format))
 }
 
 /// Emit the ITS-REST contract (DTOs, param structs, server trait, route table)
@@ -849,6 +802,10 @@ pub(crate) fn render_validate_files() -> Result<Vec<EmittedFile>, Box<dyn std::e
             emit_validate::emit_files(&unit.model, &aug),
             g.spec.module,
         )));
+        out.extend(rm_crate_files(prefix_gen_files(
+            walk::walk_files(g, unit, &aug, walk::released_generation(&rm.generations)?),
+            g.spec.module,
+        )));
     }
     Ok(out)
 }
@@ -1136,6 +1093,13 @@ fn render_crate_files(
             inject_validate(
                 &mut files,
                 prefix_gen_files(emit_validate::emit_files(&unit.model, aug), module),
+            );
+            inject_validate(
+                &mut files,
+                prefix_gen_files(
+                    walk::walk_files(g, unit, aug, walk::released_generation(&c.generations)?),
+                    module,
+                ),
             );
         }
     }

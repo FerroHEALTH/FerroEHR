@@ -44,7 +44,7 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
-use crate::storage::codec::{decompose, reassemble};
+use crate::storage::codec::reassemble;
 use crate::storage::integrity::{self, StorageParityScope};
 use crate::storage::node_repo::read_version_rows_all;
 use crate::storage::row::ReadRow;
@@ -123,6 +123,12 @@ pub enum StorageParityDefect {
     /// bound to a part that now earns its own row does not reach this version
     /// until its rows are rebuilt.
     StaleDecomposition,
+    /// Node rows exist that no stored version reads: their version is gone,
+    /// in another tier, or reads another version's rows. The node rows carry
+    /// no foreign key into `version` (#5969), so this is what reports a row
+    /// set the writer or a delete left behind. The mismatch's `kind` is the
+    /// RM type of the set's root row.
+    OrphanNodes,
 }
 
 impl StorageParityDefect {
@@ -135,6 +141,7 @@ impl StorageParityDefect {
             Self::NodesUnreadable => "nodes_unreadable",
             Self::UnexpectedNodes => "unexpected_nodes",
             Self::StaleDecomposition => "stale_decomposition",
+            Self::OrphanNodes => "orphan_nodes",
         }
     }
 }
@@ -249,17 +256,30 @@ struct VersionKey {
 /// naming the body, which is the honest outcome for a version whose two copies
 /// agree on content the codec can no longer index.
 fn rows_are_current(stored: &[ReadRow], body: &Value) -> bool {
-    let Ok(fresh) = decompose(body.clone()) else {
+    // NOTE: the root identity decides only how a row slims, never its whole
+    // fragment or its place in the tree, which is all this compares.
+    let root = crate::storage::compact::RootIdentity {
+        version_uid: "",
+        template_id: None,
+    };
+    let Ok(rendered) = crate::storage::render::index::render(body) else {
+        return false;
+    };
+    let Ok((fresh, whole)) = crate::storage::render::nodes::decompose(&rendered, &root, true)
+    else {
         return false;
     };
     stored.len() == fresh.len()
-        && stored.iter().zip(&fresh).all(|(stored, fresh)| {
-            stored.num == fresh.num
-                && stored.num_cap == fresh.num_cap
-                && stored.parent_num == fresh.parent_num
-                && stored.path == fresh.path
-                && stored.data == fresh.data
-        })
+        && stored
+            .iter()
+            .zip(fresh.iter().zip(&whole))
+            .all(|(stored, (fresh, whole))| {
+                stored.num == fresh.num
+                    && stored.num_cap == fresh.num_cap
+                    && stored.parent_num == fresh.parent_num
+                    && stored.path == fresh.path
+                    && serde_json::from_str::<Value>(whole).is_ok_and(|w| stored.data == w)
+            })
 }
 
 impl FerroEhrService {
@@ -285,6 +305,7 @@ impl FerroEhrService {
             counts: StorageParityCounts::default(),
             started: Instant::now(),
             page_finished: false,
+            orphans_read: false,
             done: false,
         }
     }
@@ -484,6 +505,9 @@ pub struct StorageParitySweep<'a> {
     counts: StorageParityCounts,
     started: Instant,
     page_finished: bool,
+    /// Whether the current domain's unreached node rows were read, which the
+    /// sweep does once its version pages run out.
+    orphans_read: bool,
     done: bool,
 }
 
@@ -536,12 +560,20 @@ impl StorageParitySweep<'_> {
                 .parity_page(self.domain, self.cursor, self.scope)
                 .await?;
             let Some(last) = page.last() else {
+                // Every version of this domain is read; what is left is the
+                // node rows none of them reads.
+                if !self.orphans_read {
+                    self.orphans_read = true;
+                    let domain = self.domain;
+                    return Ok(Some(self.orphan_events(domain).await?));
+                }
                 // This domain is read. Move to the next before finishing: a
                 // sweep that stopped at the first exhausted domain would
                 // report a clean whole-store result having read half of it.
                 if let Some(next) = self.remaining.pop() {
                     self.domain = next;
                     self.cursor = None;
+                    self.orphans_read = false;
                     continue;
                 }
                 self.done = true;
@@ -556,6 +588,36 @@ impl StorageParitySweep<'_> {
             self.page = page.into_iter();
             self.page_finished = true;
         }
+    }
+
+    /// The node row sets of `domain` that no stored version reads, as
+    /// [`StorageParityDefect::OrphanNodes`] mismatches.
+    async fn orphan_events(
+        &mut self,
+        domain: StorageDomain,
+    ) -> Result<Vec<StorageParityEvent>, ServiceError> {
+        let sets =
+            integrity::unreached_node_sets(self.service.domain_pool(domain), self.scope).await?;
+        let mut events = Vec::with_capacity(sets.len());
+        for (vo_id, sys_version, kind) in sets {
+            self.counts.mismatch_count += 1;
+            tracing::warn!(
+                domain = domain.as_str(),
+                vo_id = %vo_id,
+                sys_version,
+                kind = %kind,
+                defect = StorageParityDefect::OrphanNodes.as_str(),
+                "storage parity sweep: node rows exist that no stored version reads"
+            );
+            events.push(StorageParityEvent::Mismatch(StorageParityMismatch {
+                domain,
+                vo_id,
+                sys_version,
+                kind,
+                defect: StorageParityDefect::OrphanNodes,
+            }));
+        }
+        Ok(events)
     }
 
     /// Compare one chunk, count what it read, and turn its defects into events.

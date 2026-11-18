@@ -109,10 +109,12 @@ const COLUMNS: &[(&[&str], &str, Typed)] = &[
 enum Reach {
     /// A search column.
     Column(&'static str, Typed),
-    /// The canonical form, at one value.
-    Single(String),
-    /// The canonical form, at every member of a container.
-    Many(String),
+    /// The canonical form, at one value: the part that holds it, and the
+    /// path in it.
+    Single(&'static str, String),
+    /// The canonical form, at every member of a container: the part that
+    /// holds it, and the SQL/JSON path in it.
+    Many(&'static str, String),
     /// Nowhere the reader may see.
     Withheld,
 }
@@ -135,10 +137,7 @@ pub fn statement(
     let mut select = Query::select();
     select
         .columns(["chain_seq", "algorithm"].map(|name| (Alias::new(RECORD), Alias::new(name))))
-        .expr_as(
-            Expr::cust(concat!(crate::access_log::store::document!(), "::text")),
-            Alias::new("document"),
-        )
+        .expr(Expr::cust(crate::access_log::store::entry_parts!()))
         .expr_as(column("previous_digest"), Alias::new("previous_digest"))
         .expr_as(column("content_digest"), Alias::new("content_digest"))
         .expr_as(column("digest"), Alias::new("digest"))
@@ -204,11 +203,7 @@ fn column(name: &str) -> Expr {
         "uid" => Expr::cust(format!("{RECORD}.uid::text")),
         // NOTE: our own design (#5784), the uuid column keeps a canonical EHR id and the entry
         // keeps any other, so the id reads from the one that holds it.
-        "ehr_id" => Expr::cust(concat!(
-            "coalesce(r.ehr_id::text, ",
-            crate::access_log::store::document!(),
-            " #>> '{ehr_id,value}')"
-        )),
+        "ehr_id" => Expr::cust("coalesce(r.ehr_id::text, r.content::jsonb #>> '{ehr_id,value}')"),
         _ => Expr::col((Alias::new(RECORD), Alias::new(name))),
     }
 }
@@ -238,11 +233,15 @@ impl Builder<'_> {
         if let Some((_, name, typed)) = COLUMNS.iter().find(|(steps, ..)| *steps == names) {
             return Reach::Column(name, *typed);
         }
+        let part = holder(path.steps.first().map(String::as_str));
         if path.multiple {
             let members = path.steps.iter().map(|step| format!(".\"{step}\""));
-            return Reach::Many(std::iter::once("$".to_owned()).chain(members).collect());
+            return Reach::Many(
+                part,
+                std::iter::once("$".to_owned()).chain(members).collect(),
+            );
         }
-        Reach::Single(format!("{{{}}}", path.steps.join(",")))
+        Reach::Single(part, format!("{{{}}}", path.steps.join(",")))
     }
 
     /// The SQL of `condition`.
@@ -276,20 +275,11 @@ impl Builder<'_> {
             // NOTE: our own design, the link is kept in columns, never in the canonical form.
             _ if path.steps == ["link"] => truth(true),
             Reach::Column(name, _) => column(name).is_not_null(),
-            Reach::Single(steps) => Expr::cust_with_values(
-                concat!(
-                    "(",
-                    crate::access_log::store::document!(),
-                    " #> $1::text[]) IS NOT NULL"
-                ),
-                [steps],
-            ),
-            Reach::Many(jsonpath) => Expr::cust_with_values(
-                concat!(
-                    "jsonb_path_exists(",
-                    crate::access_log::store::document!(),
-                    ", $1::jsonpath)"
-                ),
+            Reach::Single(part, steps) => {
+                Expr::cust_with_values(format!("({part} #> $1::text[]) IS NOT NULL"), [steps])
+            }
+            Reach::Many(part, jsonpath) => Expr::cust_with_values(
+                format!("jsonb_path_exists({part}, $1::jsonpath)"),
                 [jsonpath],
             ),
         }
@@ -308,22 +298,13 @@ impl Builder<'_> {
             Reach::Withheld if path.multiple => truth(false),
             Reach::Withheld => on(Expr::cust("NULL::text"), typed)?,
             Reach::Column(name, column_typed) => on(column(name), column_typed)?,
-            Reach::Single(steps) => on(
-                Expr::cust_with_values(
-                    concat!(
-                        "(",
-                        crate::access_log::store::document!(),
-                        " #>> $1::text[])"
-                    ),
-                    [steps],
-                ),
+            Reach::Single(part, steps) => on(
+                Expr::cust_with_values(format!("({part} #>> $1::text[])"), [steps]),
                 typed,
             )?,
-            Reach::Many(jsonpath) => Expr::cust_with_exprs(
-                concat!(
-                    "EXISTS (SELECT 1 FROM jsonb_path_query(",
-                    crate::access_log::store::document!(),
-                    ", $1::jsonpath) AS m(v) \
+            Reach::Many(part, jsonpath) => Expr::cust_with_exprs(
+                format!(
+                    "EXISTS (SELECT 1 FROM jsonb_path_query({part}, $1::jsonpath) AS m(v) \
                      WHERE $2)"
                 ),
                 [
@@ -406,12 +387,9 @@ impl Builder<'_> {
         }
         // NOTE: QUERY §LIKE, a date-time matches by its string representation.
         let operand = if typed == Typed::Instant {
+            let part = holder(path.steps.first().map(String::as_str));
             Expr::cust_with_values(
-                concat!(
-                    "(",
-                    crate::access_log::store::document!(),
-                    " #>> $1::text[])"
-                ),
+                format!("({part} #>> $1::text[])"),
                 [format!("{{{}}}", path.steps.join(","))],
             )
         } else {
@@ -439,20 +417,36 @@ impl Builder<'_> {
         let typed = typed_leaf(path.leaf);
         match self.reach(path) {
             Reach::Column(name, _) => column(name),
-            Reach::Single(steps) => cast(
-                Expr::cust_with_values(
-                    concat!(
-                        "(",
-                        crate::access_log::store::document!(),
-                        " #>> $1::text[])"
-                    ),
-                    [steps],
-                ),
+            Reach::Single(part, steps) => cast(
+                Expr::cust_with_values(format!("({part} #>> $1::text[])"), [steps]),
                 typed,
             ),
             // NOTE: our own design, a key the reader may not see orders as an absent value.
-            Reach::Withheld | Reach::Many(_) => Expr::cust("NULL::text"),
+            Reach::Withheld | Reach::Many(..) => Expr::cust("NULL::text"),
         }
+    }
+}
+
+/// The SQL of the stored part that holds the top-level member `first` of an
+/// entry's canonical form: the shared part for a member only it keeps, the
+/// row part for one only the row keeps, and the record as one document
+/// (`audit.access_log_document`) for a member both parts or the columns
+/// hold, `outcome`, `query`, the access details, `_type`, `uid`,
+/// `time_recorded` and `ehr_id`, and the row part with the members its
+/// index columns give back for `channel` and `items` (#6005).
+fn holder(first: Option<&str>) -> &'static str {
+    const DOCUMENT: &str = "audit.access_log_document(r.content, sh.content, r.record_type, \
+                            r.uid, r.time_recorded, r.ehr_id, r.request_id, r.resource_id)";
+    const ROW_PART: &str =
+        "audit.access_log_row_part(r.content::jsonb, r.request_id, r.resource_id)";
+    match first {
+        Some(name) if crate::access_log::stored_form::SHARED.contains(&name) => "sh.content::jsonb",
+        Some("channel" | "items") => ROW_PART,
+        Some(
+            "outcome" | "query" | "other_details" | "_type" | "uid" | "time_recorded" | "ehr_id",
+        )
+        | None => DOCUMENT,
+        Some(_) => "r.content::jsonb",
     }
 }
 

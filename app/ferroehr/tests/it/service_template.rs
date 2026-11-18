@@ -511,3 +511,87 @@ async fn a_party_template_with_no_identity_has_no_example() {
         other => panic!("expected a 400 refusal, got {other:?}"),
     }
 }
+
+/// `composition` with every `_type` the declared attribute type already names
+/// left out, as a client may send it (ITS-JSON: `_type` is required only where
+/// the declared type is abstract or differs).
+fn without_inferable_types(composition: &mut Value, declared: Option<&str>) {
+    match composition {
+        Value::Object(members) => {
+            let own = members
+                .get("_type")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
+            for (attribute, child) in members.iter_mut() {
+                let child_declared = own.as_deref().and_then(|rm_type| {
+                    openehr_rm::v1_2::access::schema::attribute(rm_type, attribute)
+                        .map(|info| info.declared_type)
+                });
+                without_inferable_types(child, child_declared);
+            }
+            if own.is_some() && own.as_deref() == declared {
+                members.shift_remove("_type");
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                without_inferable_types(item, declared);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// A node whose `_type` the client left out is judged against the template as
+/// the type the RM infers for it (#6003): the commit validates the typed
+/// COMPOSITION, so a constraint the canonical-JSON pass skipped on an untyped
+/// node now refuses the commit. Here the template's `items` existence `1..*`
+/// on the `ITEM_TREE`s of `state` and `protocol` holds the complete example.
+#[tokio::test]
+async fn an_untyped_node_is_judged_as_its_inferred_type() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let path = format!(
+        "{}/../../corpus/templates/openehr-sdk-go/testkit/corpus/templates/\
+         blood_pressure_strict_existence.opt",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
+    let desc = svc.template_adl14_upload(&xml).await.expect("upload");
+    let template_id = desc["template_id"]
+        .as_str()
+        .expect("a template id")
+        .to_owned();
+    let mut composition = svc
+        .template_adl14_example(template_id, Some("complete".to_owned()), None)
+        .await
+        .expect("the complete example");
+    without_inferable_types(&mut composition, None);
+
+    // The canonical-JSON pass skipped the untyped nodes' constraints.
+    let opt = openehr_its::opt14::from_xml(&xml).expect("parse OPT");
+    let wt = openehr_sdt::flat::webtemplate::builder::build_web_template(&opt).expect("wt");
+    let missing_items = |path: &str, message: &str| {
+        path.ends_with("/state[at0007]/items") && message.contains("mandatory attribute 'items'")
+    };
+    assert!(
+        !openehr_sdt::flat::validation::validate_archetype_conformance(&composition, &wt)
+            .iter()
+            .any(|m| missing_items(&m.path, &m.message)),
+        "the canonical-JSON pass reported the untyped node"
+    );
+
+    let ehr_id = crate::fixtures::create_ehr(&svc).await;
+    let refused = svc
+        .create_composition(ehr_id, crate::fixtures::uv(&composition, "249", None))
+        .await
+        .expect_err("the inferred type's constraint refuses the commit");
+    let ServiceError::ValidationFailed(violations) = refused else {
+        panic!("a validation refusal, got {refused:?}");
+    };
+    assert!(
+        violations
+            .iter()
+            .any(|v| missing_items(&v.path, &v.message)),
+        "{violations:?}"
+    );
+}

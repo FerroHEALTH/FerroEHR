@@ -15,7 +15,7 @@ include = ["src/**", "README.md", "LICENSE"]
 # EVERY dependency is optional and belongs to the `flat` layer or above.
 [dependencies]
 serde = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true, features = ["raw_value"] }
 thiserror = { workspace = true, optional = true }
 # Web Template node groups keep document order (the OPT's ordered sequences).
 indexmap = { workspace = true, optional = true }

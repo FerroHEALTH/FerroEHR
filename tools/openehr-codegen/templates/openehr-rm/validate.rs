@@ -93,6 +93,10 @@ pub mod terminology;
 // outer doc attribute here would force rustdoc to resolve the module's
 // intra-doc links in THIS module's scope instead of its own).
 pub mod typed_dispatch;
+// RM-instance validation over typed RM (its own `//!` module docs carry the
+// detail), and the walk it runs, generated (`openehr-codegen -- emit-validate`).
+pub mod tree;
+mod tree_generated;
 
 /// Run the allocation-free fast-path RM class-invariant check for a single
 /// canonical-JSON node, dispatching on its `_type`.
@@ -592,7 +596,9 @@ mod tests {
     /// here but not there is stored with no magnitude and no arithmetic.
     #[test]
     fn time_validity_agrees_with_the_base_reader() {
-        for value in ["10:30:00", "10:30:59", "23:59:59", "10:30:60", "103060", "25:00:00"] {
+        for value in [
+            "10:30:00", "10:30:59", "23:59:59", "10:30:60", "103060", "25:00:00",
+        ] {
             let base = openehr_base::v1_3::foundation_types::time::iso8601_time::Iso8601Time {
                 value: value.to_owned(),
             }
@@ -627,11 +633,12 @@ mod tests {
             "P1X",
             "PT",
         ] {
-            let base = openehr_base::v1_3::foundation_types::time::iso8601_duration::Iso8601Duration {
-                value: value.to_owned(),
-            }
-            .to_seconds()
-            .is_some();
+            let base =
+                openehr_base::v1_3::foundation_types::time::iso8601_duration::Iso8601Duration {
+                    value: value.to_owned(),
+                }
+                .to_seconds()
+                .is_some();
             assert_eq!(
                 valid_iso8601_duration(value),
                 base,

@@ -27,9 +27,9 @@ pub struct AuditDetailsData {
     /// Reason for committal.
     ///
     /// This may be used to qualify the value in the `_change_type_` field. For example, if the change affects only the EHR directory, this field might be used to indicate 'Folder "episode 2018-02-16" added' or similar.
-    pub description: Option<DvText>,
+    pub description: Option<Box<DvText>>,
     /// Identity and optional reference into identity management service, of user who committed the item.
-    pub committer: PartyProxy,
+    pub committer: Box<PartyProxy>,
 }
 
 /// Polymorphic slot of `AUDIT_DETAILS`, dispatched on each payload's `_type`.
@@ -39,7 +39,19 @@ pub struct AuditDetailsData {
 #[derive(Debug, Clone, PartialEq)]
 pub enum AuditDetails {
     /// The `ATTESTATION` subtype of `AUDIT_DETAILS`.
-    Attestation(Attestation),
+    Attestation(Box<Attestation>),
     /// An instance of `AUDIT_DETAILS` itself (its own, least-rich form).
     AuditDetails(AuditDetailsData),
+}
+
+impl From<Attestation> for AuditDetails {
+    fn from(value: Attestation) -> Self {
+        Self::Attestation(Box::new(value))
+    }
+}
+
+impl From<AuditDetailsData> for AuditDetails {
+    fn from(value: AuditDetailsData) -> Self {
+        Self::AuditDetails(value)
+    }
 }

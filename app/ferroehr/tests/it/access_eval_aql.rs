@@ -170,7 +170,9 @@ impl World {
     /// Commits `settings` as the current `EHR_ACCESS` of EHR `index`.
     async fn settings(&self, index: usize, settings: &Value) {
         let ehr_id = self.ehrs[index].0;
-        let ehr = self.svc.ehr_read(ehr_id).await.expect("the EHR").body;
+        let ehr = openehr_its::json::to_canonical_value(
+            &self.svc.ehr_read(ehr_id).await.expect("the EHR").body,
+        );
         let access_vo = ehr["ehr_access"]["id"]["value"]
             .as_str()
             .expect("EHR.ehr_access")
@@ -473,7 +475,7 @@ async fn rows(world: &World, ask: &Ask, aql: &str, page: Option<(i64, i64)>) -> 
             project(world, &cared).await;
         }
         let outcome = run_query_as(world, ask, &request_of(ask), aql, page, form).await;
-        let rows = outcome.result_set["rows"]
+        let rows = outcome.result_set.to_value().unwrap()["rows"]
             .as_array()
             .cloned()
             .unwrap_or_default();
@@ -808,7 +810,7 @@ async fn the_projection_reads_the_dates_of_care_as_the_evaluator() {
                 .expect("the query runs")
         };
         let outcome = Box::pin(with_request_access(Arc::clone(&access), run)).await;
-        let read: Vec<String> = outcome.result_set["rows"]
+        let read: Vec<String> = outcome.result_set.to_value().unwrap()["rows"]
             .as_array()
             .cloned()
             .unwrap_or_default()
@@ -1151,7 +1153,7 @@ async fn an_ehr_of_a_class_the_condition_does_not_hold_is_judged_again() {
     ))
     .await
     .expect("the query runs");
-    let served: Vec<String> = outcome.result_set["rows"]
+    let served: Vec<String> = outcome.result_set.to_value().unwrap()["rows"]
         .as_array()
         .cloned()
         .unwrap_or_default()
@@ -1386,7 +1388,7 @@ async fn a_query_pinned_to_one_ehr_is_decided_before_the_statement() {
     ))
     .await
     .expect("the query runs");
-    let served: Vec<String> = outcome.result_set["rows"]
+    let served: Vec<String> = outcome.result_set.to_value().unwrap()["rows"]
         .as_array()
         .cloned()
         .unwrap_or_default()
@@ -1441,7 +1443,7 @@ async fn a_pinned_verdict_judged_on_an_older_copy_is_judged_again_or_refused() {
     };
     for older in [false, true] {
         let outcome = run(older).await.expect("the query runs");
-        let served: Vec<String> = outcome.result_set["rows"]
+        let served: Vec<String> = outcome.result_set.to_value().unwrap()["rows"]
             .as_array()
             .cloned()
             .unwrap_or_default()
@@ -1552,7 +1554,7 @@ async fn served_under(
     ))
     .await
     .expect("the query runs");
-    outcome.result_set["rows"]
+    outcome.result_set.to_value().unwrap()["rows"]
         .as_array()
         .cloned()
         .unwrap_or_default()

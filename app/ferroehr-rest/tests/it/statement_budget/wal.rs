@@ -24,14 +24,16 @@ const REQUESTS: u64 = 20;
 /// The most write-ahead log the access log may write, by kind of request:
 /// per entry, over the row records of the entry, its link, the intake queue
 /// row that names it, the shared parts and their indexes, and per chainer
-/// pass, over the access log's chain head. Each is the value CI measured with
-/// `pg_walinspect`, 2% above (#6010): per entry 3242, 2580, 1990 and 3132,
-/// the same locally but for the commit's 3135, and 207 per pass that links.
+/// pass, over the access log's chain head. Each is the value measured with
+/// `pg_walinspect`, 2% above: per entry 2746, 2196, 1876 and 2639 once the
+/// row part leaves the request and the version to their columns and the
+/// shared part keeps what the classification read (#6005), and 207 per pass
+/// that links (#6010).
 const CEILINGS: [(Kind, (u64, u64)); 4] = [
-    (Kind::Read, (3306, 211)),
-    (Kind::Single, (2631, 211)),
-    (Kind::Population, (2029, 211)),
-    (Kind::Write, (3194, 211)),
+    (Kind::Read, (2801, 211)),
+    (Kind::Single, (2240, 211)),
+    (Kind::Population, (1914, 211)),
+    (Kind::Write, (2692, 211)),
 ];
 
 /// A kind of request, and how to send one.
@@ -138,7 +140,14 @@ async fn flushed(pool: &PgPool, to: &str) {
 }
 
 /// The row records between `from` and `to` that touch a relation of the
-/// test's database, by relation: name, record bytes and records.
+/// test's database outside the system catalogs, by relation: name, record
+/// bytes and records.
+///
+/// A record counts only when it names a relation the database's own catalog
+/// holds, a table, index or TOAST table of a schema of the server's: the
+/// statistics and catalog rows autovacuum and autoanalyze write when a
+/// parallel run's timing puts them in the window are left out, as are the
+/// records of the shared catalogs and of every other database.
 ///
 /// Only the records a statement writes for each row count: a heap insert,
 /// update, delete or lock, a B-tree leaf insert and a GIN pending-list insert.
@@ -148,7 +157,7 @@ async fn flushed(pool: &PgPool, to: &str) {
 /// move between runs, so it is left out.
 async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u64)> {
     let rows: Vec<(String, i64, i64)> = sqlx::query_as(
-        "SELECT /* statement_budget_own */ coalesce(c.relname, b.relfilenode::text), \
+        "SELECT /* statement_budget_own */ c.relname, \
                 sum(b.record_length)::bigint, count(*) \
            FROM (SELECT DISTINCT ON (start_lsn, relfilenode) start_lsn, relfilenode, record_length \
                    FROM pg_get_wal_block_info($1::pg_lsn, $2::pg_lsn) \
@@ -159,7 +168,10 @@ async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u
                       OR (resource_manager = 'Heap2' AND record_type LIKE 'MULTI_INSERT%') \
                       OR (resource_manager = 'Btree' AND record_type = 'INSERT_LEAF') \
                       OR (resource_manager = 'Gin' AND record_type = 'UPDATE_META_PAGE'))) b \
-           LEFT JOIN pg_class c ON c.relfilenode = b.relfilenode \
+           JOIN pg_class c ON pg_relation_filenode(c.oid) = b.relfilenode \
+           LEFT JOIN pg_class owner ON owner.reltoastrelid = c.oid \
+          WHERE coalesce(owner.relnamespace, c.relnamespace) NOT IN \
+                ('pg_catalog'::regnamespace, 'information_schema'::regnamespace) \
           GROUP BY 1 ORDER BY 2 DESC, 1",
     )
     .bind(from)
@@ -231,6 +243,8 @@ async fn passes(pool: &PgPool, from: &str, to: &str) -> u64 {
 /// ceiling in [`CEILINGS`], and each chainer pass at most its per-pass one.
 #[tokio::test]
 async fn an_access_log_entry_stays_within_its_wal_ceiling() {
+    // The budgets count what a release build does, without the debug reference cells.
+    ferroehr::aql::sql::without_reference_cells();
     let (_db, pool, _svc, app) = Box::pin(app()).await;
     sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_walinspect")
         .execute(&pool)
@@ -319,4 +333,213 @@ async fn an_access_log_entry_stays_within_its_wal_ceiling() {
         !over,
         "the access log exceeds a write-ahead log ceiling:\n{report}"
     );
+}
+
+/// The compositions measured: the IPS of 402 node rows, and the gate's lab
+/// result of a few dozen.
+#[derive(Clone, Copy)]
+enum Fixture {
+    /// The vendored IPS composition the harness's template validates.
+    Ips,
+    /// The CKM generic laboratory test result example.
+    Lab,
+}
+
+impl Fixture {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Ips => "IPS commit",
+            Self::Lab => "lab commit",
+        }
+    }
+
+    fn body(self) -> String {
+        match self {
+            Self::Ips => crate::common::ips_canonical_composition().to_string(),
+            Self::Lab => corpus("generic-lab-test-result.example.json"),
+        }
+    }
+}
+
+/// A file of the shared corpus's CKM templates.
+fn corpus(file: &str) -> String {
+    std::fs::read_to_string(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/templates/ckm")
+            .join(file),
+    )
+    .expect("the CKM corpus file is vendored")
+}
+
+/// The most write-ahead log one composition commit may write, in bytes of
+/// row records over the relations of the commit (everything but the access
+/// log's and the audit intake's), and the most statements `PostgreSQL` may
+/// run nested in it that name a clinical relation (foreign-key checks and
+/// triggers), by fixture: the bytes measured with the lean node storage
+/// (#5969), 2% above, and its nested statements exactly. With
+/// `fk_node_version` and the full node indexes an IPS commit measured
+/// 278,420 bytes and 410 nested statements, and a lab commit 10,667 bytes and
+/// 18; with the lean storage 233,279 and 9,827.
+const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
+    [(Fixture::Ips, 237_945, 8), (Fixture::Lab, 10_024, 8)];
+
+/// Whether `relation` is written by a commit rather than by the access log or
+/// the audit intake beside it.
+fn commit_relation(relation: &str) -> bool {
+    !entry_relation(relation) && !pass_relation(relation) && !relation.contains("audit_")
+}
+
+/// Each composition commit writes at most its ceiling in [`COMMIT_CEILINGS`]
+/// of write-ahead log and runs at most its nested statements (#5969).
+#[tokio::test]
+async fn a_composition_commit_stays_within_its_wal_ceiling() {
+    // The budgets count what a release build does, without the debug reference cells.
+    ferroehr::aql::sql::without_reference_cells();
+    let (_db, pool, _svc, app) = Box::pin(app()).await;
+    let made = commit_fixture(&app, &pool).await;
+    let mut report = String::new();
+    let mut over = false;
+    for (fixture, ceiling, nested_ceiling) in COMMIT_CEILINGS {
+        let body = fixture.body();
+        let commit = |ehr: String| {
+            let body = body.clone();
+            let app = app.clone();
+            async move {
+                let (status, answer) = send(
+                    &app,
+                    "POST",
+                    &format!("{BASE}/ehr/{ehr}/composition"),
+                    "root",
+                    None,
+                    Some(("application/json", body)),
+                )
+                .await;
+                assert_eq!(status, StatusCode::CREATED, "{}: {answer}", fixture.name());
+            }
+        };
+        for (ehr, _) in &made {
+            commit(ehr.clone()).await;
+        }
+        let (relations, evicted) = commit_window(&pool, async {
+            for (_, (ehr, _)) in (0..REQUESTS).zip(made.iter().cycle()) {
+                commit(ehr.clone()).await;
+            }
+        })
+        .await;
+        let commits: u64 = relations
+            .iter()
+            .filter(|(name, ..)| commit_relation(name))
+            .map(|(_, bytes, _)| bytes)
+            .sum();
+        let per_commit = commits.div_euclid(REQUESTS);
+        let nested = nested_calls(&pool).await.div_euclid(REQUESTS);
+        testkit::statements::assert_statements_kept(&pool, evicted)
+            .await
+            .expect("no statement evicted while the test counted them");
+        writeln!(
+            report,
+            "{}: {REQUESTS} commits wrote {commits} bytes of row records, {per_commit} per \
+             commit (ceiling {ceiling}); {nested} nested statements per commit (ceiling \
+             {nested_ceiling})",
+            fixture.name(),
+        )
+        .expect("a String takes the report");
+        for (name, bytes, records) in relations
+            .iter()
+            .filter(|(name, ..)| commit_relation(name))
+            .take(12)
+        {
+            writeln!(report, "  {bytes:>9} B {records:>6} records  {name}")
+                .expect("a String takes the line");
+        }
+        over |= per_commit > ceiling || nested > nested_ceiling;
+    }
+    eprintln!("{report}");
+    assert!(
+        !over,
+        "a commit exceeds its write-ahead log or nested-statement ceiling:\n{report}"
+    );
+}
+
+/// Loads the measuring extensions, uploads the lab template and makes the
+/// [`EHRS`] EHRs the commits go to, each with a composition.
+async fn commit_fixture(app: &Router, pool: &PgPool) -> Vec<(String, String)> {
+    for extension in ["pg_stat_statements", "pg_walinspect"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE EXTENSION IF NOT EXISTS {extension}"
+        )))
+        .execute(pool)
+        .await
+        .expect("the server loads the extension");
+    }
+    let (status, body) = send(
+        app,
+        "POST",
+        &format!("{BASE}/definition/template/adl1.4"),
+        "root",
+        None,
+        Some(("application/xml", corpus("generic-lab-test-result.opt"))),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "lab OPT upload: {body}");
+    let mut made = Vec::new();
+    for _ in 0..EHRS {
+        made.push(ehr_with_composition(app).await);
+    }
+    made
+}
+
+/// The write-ahead log by relation that `commits` writes, with the
+/// statement counts reset before it and a temporary slot keeping the
+/// window's WAL, and the statement table's evictions when the count began.
+async fn commit_window(
+    pool: &PgPool,
+    commits: impl Future<Output = ()>,
+) -> (Vec<(String, u64, u64)>, i64) {
+    drained(pool).await;
+    let evicted = testkit::statements::statement_window(pool)
+        .await
+        .expect("the statement counts reset");
+    let mut keeper = ferroehr::db::acquire::acquire(pool)
+        .await
+        .expect("a connection for the slot");
+    sqlx::query(
+        "SELECT /* statement_budget_own */ pg_create_physical_replication_slot( \
+         'statement_budget_wal_' || pg_backend_pid(), true, true)",
+    )
+    .execute(&mut *keeper)
+    .await
+    .expect("a temporary slot keeps the window's WAL");
+    let from = insert_lsn(pool).await;
+    commits.await;
+    drained(pool).await;
+    let to = insert_lsn(pool).await;
+    flushed(pool, &to).await;
+    let relations = by_relation(pool, &from, &to).await;
+    sqlx::query(
+        "SELECT /* statement_budget_own */ pg_drop_replication_slot( \
+         'statement_budget_wal_' || pg_backend_pid())",
+    )
+    .execute(&mut *keeper)
+    .await
+    .expect("the slot drops");
+    drop(keeper);
+    (relations, evicted)
+}
+
+/// The calls of the statements `PostgreSQL` ran nested in the test's
+/// database's statements since the last reset that name a clinical relation:
+/// the foreign-key checks and triggers of a commit, and none of the audit
+/// schema's intake, release and chainer statements.
+async fn nested_calls(pool: &PgPool) -> u64 {
+    let calls: i64 = sqlx::query_scalar(
+        "SELECT /* statement_budget_own */ coalesce(sum(calls), 0)::bigint \
+         FROM pg_stat_statements \
+         WHERE NOT toplevel AND dbid = (SELECT oid FROM pg_database WHERE datname = current_database()) \
+         AND query LIKE '%\"clinical\".%'",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("pg_stat_statements reads");
+    u64::try_from(calls).expect("a count")
 }

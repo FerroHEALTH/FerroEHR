@@ -84,7 +84,6 @@ use crate::service::FerroEhrService;
 use crate::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
 };
-use crate::storage::codec::decompose;
 use crate::storage::dump_repo::write::StoredAudit;
 use crate::storage::dump_repo::{
     self, ArchiveRow, AttestationRow, AuditRow, ContributionRow, EhrRow, FolderRankRow, ItemTagRow,
@@ -1582,10 +1581,9 @@ fn restore_refusal(refusal: StoreError) -> Result<Option<String>, ServiceError> 
         | StoreError::ForeignReference
         | StoreError::Unsealed { .. }
         | StoreError::Crypto(_) => Ok(Some(refusal.to_string())),
-        other @ StoreError::Repo(_) => Err(ServiceError::internal(
-            "restore the sealed national identifiers",
-            other,
-        )),
+        other @ (StoreError::Repo(_) | StoreError::Render(_) | StoreError::Substitute(_)) => Err(
+            ServiceError::internal("restore the sealed national identifiers", other),
+        ),
     }
 }
 
@@ -1652,19 +1650,22 @@ async fn load_versions(
         if v.body.is_null() {
             continue;
         }
+        let version_uid = crate::storage::compact::version_uid(
+            v.vo_id,
+            &v.creating_system_id,
+            v.trunk_version,
+            v.branch_number,
+            v.branch_version,
+        );
+        let root = crate::storage::compact::RootIdentity {
+            version_uid: &version_uid,
+            template_id: v.template_id.as_deref(),
+        };
         node_batches.push(node_write::VersionNodes {
             vo_id: v.vo_id,
             sys_version: v.sys_version,
             ehr_id,
-            version_uid: crate::storage::compact::version_uid(
-                v.vo_id,
-                &v.creating_system_id,
-                v.trunk_version,
-                v.branch_number,
-                v.branch_version,
-            ),
-            template_id: v.template_id,
-            rows: decompose(v.body)?,
+            version: crate::storage::render::decompose(&v.body, &root)?,
         });
     }
     node_write::write_nodes_batch(tx, &node_batches).await?;

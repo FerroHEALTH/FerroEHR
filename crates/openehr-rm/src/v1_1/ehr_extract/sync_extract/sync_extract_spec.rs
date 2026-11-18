@@ -18,7 +18,7 @@ pub struct SyncExtractSpec {
     /// List of Contributions to include / that are included in the Extract.
     pub contribution_list: Option<Vec<HierObjectId>>,
     /// Specify Contributions included in Extract by threshold date.
-    pub contributions_since: Option<DvDateTime>,
+    pub contributions_since: Option<Box<DvDateTime>>,
     /// True if all Contributions in the record are included.
     pub all_contributions: Option<bool>,
 }

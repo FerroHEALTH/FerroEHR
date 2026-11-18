@@ -1,9 +1,15 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The public conversion entry points: canonical-JSON COMPOSITION ⇄ the
-//! FLAT and STRUCTURED wire forms, and the pure FLAT ⇄ STRUCTURED
-//! transforms.
+//! The public conversion entry points: COMPOSITION ⇄ the FLAT and
+//! STRUCTURED wire forms, and the pure FLAT ⇄ STRUCTURED transforms.
+//!
+//! The `rm_*` entry points build and read the typed `openehr-rm`
+//! COMPOSITION with no canonical-JSON value in between (#6003); the
+//! commit and read seams use them. The canonical-JSON entry points are the
+//! unchecked projections of the same conversions: the built tree rendered
+//! before the RM's mandatory attributes are checked, and a read of a value
+//! (the form a `553|incomplete|` commit keeps).
 //!
 //! Wire semantics: ITS-REST `simplified_formats/master04-basic_concepts.adoc`
 //! (§Format variants, §Conversion Between Formats); media types
@@ -23,13 +29,16 @@
               (#1694)"
 )]
 
+use openehr_rm::prelude::Composition;
+use openehr_rm::v1_2::access;
 use serde_json::{Map, Value};
 
-use crate::flat::build;
+use crate::flat::build::{self, BuildOptions};
 use crate::flat::error::FlatError;
 use crate::flat::flatten;
 use crate::flat::sim::flat;
 use crate::flat::sim::structured;
+use crate::flat::typed;
 use crate::flat::webtemplate::model::WebTemplate;
 
 /// FLAT document → canonical-JSON COMPOSITION.
@@ -42,6 +51,20 @@ pub fn composition_from_flat(
     wt: &WebTemplate,
     now: &str,
 ) -> Result<Value, FlatError> {
+    let tree = flat::parse_flat(doc)?;
+    let built = build::composition_tree(&tree, wt, now, &BuildOptions::for_template(wt))?;
+    Ok(typed::render(&*built))
+}
+
+/// FLAT document → typed COMPOSITION.
+///
+/// # Errors
+/// As [`composition_from_flat`].
+pub fn rm_from_flat(
+    doc: &Map<String, Value>,
+    wt: &WebTemplate,
+    now: &str,
+) -> Result<Composition, FlatError> {
     let tree = flat::parse_flat(doc)?;
     build::build_composition(&tree, wt, now)
 }
@@ -62,9 +85,62 @@ pub fn submitted_composition_from_flat(
     now: &str,
 ) -> Result<Value, FlatError> {
     let tree = flat::parse_flat(doc)?;
-    let built = build::build_composition(&tree, wt, now)?;
-    require_input_valid(doc, &tree, wt)?;
-    Ok(built)
+    Ok(typed::render(&*submitted_tree(&tree, wt, now)?))
+}
+
+/// FLAT document → typed COMPOSITION for a SUBMITTED body, the typed form of
+/// [`submitted_composition_from_flat`] the commit seam takes.
+///
+/// # Errors
+/// As [`submitted_composition_from_flat`].
+pub fn submitted_rm_from_flat(
+    doc: &Map<String, Value>,
+    wt: &WebTemplate,
+    now: &str,
+) -> Result<Composition, FlatError> {
+    submitted_rm_from_tree(&flat::parse_flat(doc)?, wt, now)
+}
+
+/// A parsed FLAT or STRUCTURED document → typed COMPOSITION for a SUBMITTED
+/// body: the build of [`submitted_rm_from_flat`] over a tree the caller read
+/// straight from the wire text ([`flat::parse_flat_text`]).
+///
+/// # Errors
+/// As [`submitted_composition_from_flat`].
+pub fn submitted_rm_from_tree(
+    tree: &crate::flat::sim::SimDocument,
+    wt: &WebTemplate,
+    now: &str,
+) -> Result<Composition, FlatError> {
+    Ok(access::finish(submitted_tree(tree, wt, now)?)?)
+}
+
+/// The tree a SUBMITTED body builds, with the master04 §Validation input
+/// checks run after the build's own syntax-class refusals and before any
+/// refusal of the RM itself (an attribute or value the class refuses, a
+/// `|raw` fragment the canonical reader refuses, a mandatory attribute left
+/// unset), which are the template-mediated refusals a strict read of the
+/// built instance raises last.
+///
+/// # Errors
+/// The build's refusals, [`FlatError::MissingContext`] and
+/// [`FlatError::CodeNotInValueSet`].
+fn submitted_tree(
+    tree: &crate::flat::sim::SimDocument,
+    wt: &WebTemplate,
+    now: &str,
+) -> Result<typed::Obj, FlatError> {
+    match build::composition_tree(tree, wt, now, &BuildOptions::for_template(wt)) {
+        Ok(built) => {
+            require_input_valid(tree, wt)?;
+            Ok(built)
+        }
+        Err(e @ (FlatError::Rm(_) | FlatError::RawDecode { .. })) => {
+            require_input_valid(tree, wt)?;
+            Err(e)
+        }
+        Err(e) => Err(e),
+    }
 }
 
 /// The master04 §Validation input-side checks a SUBMITTED simplified body
@@ -74,7 +150,6 @@ pub fn submitted_composition_from_flat(
 /// build's own syntax-class refusals (`|other` conflicts, malformed datums)
 /// keep precedence over these semantic ones.
 fn require_input_valid(
-    doc: &Map<String, Value>,
     tree: &crate::flat::sim::SimDocument,
     wt: &WebTemplate,
 ) -> Result<(), FlatError> {
@@ -86,7 +161,7 @@ fn require_input_valid(
         };
         return Err(FlatError::MissingContext(field));
     }
-    if let Some((path, code)) = crate::flat::validation::unresolvable_coded_leaves(doc, wt)
+    if let Some((path, code)) = crate::flat::validation::unresolvable_coded_leaves(tree, wt)
         .into_iter()
         .next()
     {
@@ -107,6 +182,22 @@ pub fn composition_to_flat(
     Ok(flat::emit_flat(&tree))
 }
 
+/// Typed COMPOSITION → FLAT JSON text, read with no canonical-JSON value and
+/// written with no intermediate map: the bytes `serde_json::to_string` writes
+/// for [`rm_to_flat`].
+///
+/// # Errors
+/// [`FlatError::Serialize`], which a FLAT datum never raises.
+pub fn rm_to_flat_text(composition: &Composition, wt: &WebTemplate) -> Result<String, FlatError> {
+    Ok(flat::write_flat(&flatten::flatten_typed(composition, wt))?)
+}
+
+/// Typed COMPOSITION → FLAT document, read with no canonical-JSON value.
+#[must_use]
+pub fn rm_to_flat(composition: &Composition, wt: &WebTemplate) -> Map<String, Value> {
+    flat::emit_flat(&flatten::flatten_typed(composition, wt))
+}
+
 /// STRUCTURED document → canonical-JSON COMPOSITION.
 ///
 /// # Errors
@@ -117,6 +208,20 @@ pub fn composition_from_structured(
     wt: &WebTemplate,
     now: &str,
 ) -> Result<Value, FlatError> {
+    let tree = structured::parse_structured(doc)?;
+    let built = build::composition_tree(&tree, wt, now, &BuildOptions::for_template(wt))?;
+    Ok(typed::render(&*built))
+}
+
+/// STRUCTURED document → typed COMPOSITION.
+///
+/// # Errors
+/// As [`composition_from_structured`].
+pub fn rm_from_structured(
+    doc: &Value,
+    wt: &WebTemplate,
+    now: &str,
+) -> Result<Composition, FlatError> {
     let tree = structured::parse_structured(doc)?;
     build::build_composition(&tree, wt, now)
 }
@@ -133,12 +238,20 @@ pub fn submitted_composition_from_structured(
     now: &str,
 ) -> Result<Value, FlatError> {
     let tree = structured::parse_structured(doc)?;
-    let built = build::build_composition(&tree, wt, now)?;
-    // The input checks are defined over the FLAT key form (master04's
-    // canonical spelling); the pure tree→FLAT projection supplies it.
-    let flat_view = flat::emit_flat(&tree);
-    require_input_valid(&flat_view, &tree, wt)?;
-    Ok(built)
+    Ok(typed::render(&*submitted_tree(&tree, wt, now)?))
+}
+
+/// STRUCTURED document → typed COMPOSITION for a SUBMITTED body, the typed
+/// form of [`submitted_composition_from_structured`] the commit seam takes.
+///
+/// # Errors
+/// As [`submitted_composition_from_structured`].
+pub fn submitted_rm_from_structured(
+    doc: &Value,
+    wt: &WebTemplate,
+    now: &str,
+) -> Result<Composition, FlatError> {
+    submitted_rm_from_tree(&structured::parse_structured(doc)?, wt, now)
 }
 
 /// Canonical-JSON COMPOSITION → STRUCTURED document.
@@ -153,6 +266,13 @@ pub fn composition_to_structured(
     Ok(structured::emit_structured(&tree))
 }
 
+/// Typed COMPOSITION → STRUCTURED document, read with no canonical-JSON
+/// value.
+#[must_use]
+pub fn rm_to_structured(composition: &Composition, wt: &WebTemplate) -> Value {
+    structured::emit_structured(&flatten::flatten_typed(composition, wt))
+}
+
 /// FLAT document of a party template → canonical-JSON party (`PERSON`,
 /// `ORGANISATION`, `GROUP`, `AGENT` or `ROLE`), with the caller's
 /// [`build::BuildOptions`].
@@ -162,7 +282,7 @@ pub fn composition_to_structured(
 pub fn party_from_flat(
     doc: &Map<String, Value>,
     wt: &WebTemplate,
-    options: &build::BuildOptions<'_>,
+    options: &BuildOptions<'_>,
 ) -> Result<Value, FlatError> {
     let tree = flat::parse_flat(doc)?;
     build::build_party(&tree, wt, options)
@@ -176,7 +296,7 @@ pub fn party_from_flat(
 pub fn party_from_structured(
     doc: &Value,
     wt: &WebTemplate,
-    options: &build::BuildOptions<'_>,
+    options: &BuildOptions<'_>,
 ) -> Result<Value, FlatError> {
     let tree = structured::parse_structured(doc)?;
     build::build_party(&tree, wt, options)

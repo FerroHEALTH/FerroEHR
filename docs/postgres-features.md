@@ -45,7 +45,7 @@ feature sets below; we run the latest patch (18.6) for the fixes.
 | **Self-join elimination** | planner-side | applies to the emitter's `node` self-joins without code. |
 | **`OR` → `= ANY(array)`** | emitter-side | the emitter writes `= ANY($1)` itself for `MATCHES` lists; the planner transformation is not relied on. |
 | **`jsonb` null → SQL `NULL` cast** | not relied on | no emitter site depends on it. |
-| **Partition planner improvements** | **used** | `version`, `node` and `vo_attestation` are `PARTITION BY LIST (tier)` in both change-control domains. AQL writes `tier = 'hot'` as a literal so the cold partition is pruned at plan time; an `UPDATE` of the partition key is how archival moves rows, and the referencing rows follow through `ON UPDATE CASCADE` (verified first-hand on 18.6 — the documentation neither permits nor forbids it). |
+| **Partition planner improvements** | **used** | `version`, `node` and `vo_attestation` are `PARTITION BY LIST (tier)` in both change-control domains. AQL writes `tier = 'hot'` as a literal so the cold partition is pruned at plan time; an `UPDATE` of the partition key is how archival moves rows; `vo_attestation` follows through `ON UPDATE CASCADE` (verified first-hand on 18.6 — the documentation neither permits nor forbids it), and `node`, which has no foreign key (#5969), is moved by name in the same statement. |
 
 ## Feature → subsystem mapping (what the code actually does)
 

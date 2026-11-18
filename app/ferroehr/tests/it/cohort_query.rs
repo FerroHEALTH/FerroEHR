@@ -306,7 +306,7 @@ async fn a_city_predicate_selects_only_the_linked_ehrs() {
         .collect();
     expected.sort();
     assert_eq!(
-        served_uids(&outcome.query.result_set),
+        served_uids(&outcome.query.result_set.to_value().unwrap()),
         expected,
         "exactly the Groningen compositions are served"
     );
@@ -325,7 +325,7 @@ async fn a_city_predicate_selects_only_the_linked_ehrs() {
         "the served EHRs are exactly the ones the map linked those parties to"
     );
 
-    let cohort = &outcome.query.result_set["meta"]["cohort"];
+    let cohort = &outcome.query.result_set.to_value().unwrap()["meta"]["cohort"];
     assert_eq!(cohort["size"], json!(3));
     assert_eq!(cohort["served_ehrs"], json!(3));
     assert_eq!(cohort["suppressed"], json!(false));
@@ -335,7 +335,13 @@ async fn a_city_predicate_selects_only_the_linked_ehrs() {
         "the cohort is named by a hex SHA-256 digest: {cohort}"
     );
     assert!(
-        !outcome.query.result_set.to_string().contains("Groningen"),
+        !outcome
+            .query
+            .result_set
+            .to_value()
+            .unwrap()
+            .to_string()
+            .contains("Groningen"),
         "no predicate value reaches the served document"
     );
 }
@@ -364,11 +370,11 @@ async fn a_small_cell_is_suppressed() {
     );
     assert_eq!(outcome.served_ehrs, 0, "nothing was disclosed");
     assert!(
-        served_uids(&outcome.query.result_set).is_empty(),
+        served_uids(&outcome.query.result_set.to_value().unwrap()).is_empty(),
         "the rows are withheld"
     );
     assert_eq!(outcome.query.served_rows, 0);
-    let cohort = &outcome.query.result_set["meta"]["cohort"];
+    let cohort = &outcome.query.result_set.to_value().unwrap()["meta"]["cohort"];
     assert_eq!(cohort["suppressed"], json!(true));
     assert_eq!(cohort["served_ehrs"], json!(0));
 
@@ -401,7 +407,10 @@ async fn predicates_intersect() {
         corpus[2].composition_uid.clone(),
     ];
     expected.sort();
-    assert_eq!(served_uids(&intersected.query.result_set), expected);
+    assert_eq!(
+        served_uids(&intersected.query.result_set.to_value().unwrap()),
+        expected
+    );
 
     // The prefix predicate: `9711` covers Ada and Bram, not Cato's `9722`.
     let prefix = svc
@@ -705,7 +714,10 @@ async fn the_crossing_runs_on_separated_credentials() {
         .map(|s| s.composition_uid.clone())
         .collect();
     expected.sort();
-    assert_eq!(served_uids(&outcome.query.result_set), expected);
+    assert_eq!(
+        served_uids(&outcome.query.result_set.to_value().unwrap()),
+        expected
+    );
 
     // Neither credential can read the other's domain, which is the property
     // the separation buys.
@@ -738,7 +750,7 @@ async fn the_result_carries_no_party_identifier() {
         .execute_cohort_query(request(&[("city", "Groningen")]))
         .await
         .expect("the cohort query runs");
-    let rendered = outcome.query.result_set.to_string();
+    let rendered = outcome.query.result_set.to_value().unwrap().to_string();
     for subject in &corpus {
         assert!(
             !rendered.contains(&subject.party.to_string()),
@@ -780,7 +792,7 @@ async fn a_predicate_cohort_leaves_out_a_non_queryable_and_an_objecting_ehr() {
         "one of their EHRs is in the population"
     );
     assert_eq!(
-        served_uids(&outcome.query.result_set),
+        served_uids(&outcome.query.result_set.to_value().unwrap()),
         vec![cato.composition_uid.clone()],
         "only the queryable, unobjecting EHR's composition is served"
     );

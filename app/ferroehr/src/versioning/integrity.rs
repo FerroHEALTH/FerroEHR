@@ -68,7 +68,7 @@ pub(crate) fn sign_version(
     other_input_version_uids: &[String],
     contribution_id: Uuid,
     lifecycle_state: &str,
-    data: &Value,
+    data: Signed<'_>,
     attestations: &[Value],
 ) -> Result<Option<String>, ServiceError> {
     if !ctx.signer.enabled() {
@@ -97,6 +97,19 @@ pub(crate) fn sign_version(
     sign_canonical_with_data(ctx, &ov, data)
 }
 
+/// The `data` a signed version carries: none (a logical delete), a canonical
+/// value, or a typed commit body written into the canonical form straight from
+/// its `Serialize` impl.
+#[derive(Clone, Copy)]
+pub(crate) enum Signed<'a> {
+    /// Void data (RM common master06 §Logical Deletion).
+    Void,
+    /// A canonical value.
+    Value(&'a Value),
+    /// A typed commit body.
+    Typed(&'a crate::versioning::body::Body),
+}
+
 /// JCS-serialize and sign the envelope joined with its `data` through a
 /// shallow reference view — the body is never deep-copied into the envelope.
 ///
@@ -110,18 +123,46 @@ pub(crate) fn sign_version(
 fn sign_canonical_with_data(
     ctx: &SigningCtx<'_>,
     ov: &Value,
-    data: &Value,
+    data: Signed<'_>,
 ) -> Result<Option<String>, ServiceError> {
-    let canonical =
-        openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json_with_data(
-            ov, data,
-        )
-        .map_err(ServiceError::SigningCanonical)?;
+    use openehr_rm::v1_2::common::change_control::version_impl::{
+        CanonicalFormError, canonical_form_of_json_with_data,
+    };
+    let canonical = match data {
+        Signed::Void => canonical_form_of_json_with_data(ov, &Value::Null),
+        Signed::Value(data) => canonical_form_of_json_with_data(ov, data),
+        Signed::Typed(data) => {
+            typed_canonical_form(ov, data).map_err(CanonicalFormError::Canonicalize)
+        }
+    }
+    .map_err(ServiceError::SigningCanonical)?;
     let signature = ctx
         .signer
         .sign(&canonical)
         .map_err(ServiceError::SigningFailed)?;
     Ok(Some(signature))
+}
+
+/// The RFC 8785 form of the envelope `ov` joined with the typed `data`: the
+/// bytes [`canonical_form_of_json_with_data`] writes over the canonical value
+/// of `data`, with no such value built (#6003).
+///
+/// [`canonical_form_of_json_with_data`]: openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json_with_data
+pub(crate) fn typed_canonical_form<T: serde::Serialize + ?Sized>(
+    ov: &Value,
+    data: &T,
+) -> Result<String, serde_json::Error> {
+    let mut object =
+        openehr_rm::v1_2::common::change_control::canonical_serializer_impl::CanonicalObject::default();
+    if let Value::Object(members) = ov {
+        for (name, value) in members {
+            if name != "signature" && name != "data" {
+                object.member(name, value)?;
+            }
+        }
+    }
+    object.member("data", data)?;
+    object.finish()
 }
 
 /// Compute the server-generated `VERSION.signature` of the `IMPORTED_VERSION`
@@ -167,6 +208,7 @@ pub(crate) fn sign_imported_version(
 /// [`ServiceError::Signing`] when the canonical form cannot be produced or the
 /// `OpenPGP` signer fails.
 fn sign_canonical(ctx: &SigningCtx<'_>, value: &Value) -> Result<Option<String>, ServiceError> {
+    crate::telemetry::conversion::record("value_to_jcs");
     let canonical =
         openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json(value)
             .map_err(ServiceError::SigningCanonical)?;

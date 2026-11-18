@@ -50,6 +50,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::access_group_ref::AccessGroupRef
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -128,6 +129,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::archetype_id::ArchetypeId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -209,6 +211,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::resource::authored_resource::AuthoredResource
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -307,6 +310,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::interval::cardinality::Cardinality
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -388,6 +392,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::generic_id::GenericId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -460,6 +465,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::hier_object_id::HierObjectId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -526,6 +532,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::internet_id::InternetId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -591,6 +598,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::iso_oid::IsoOid
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -719,6 +727,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::time::iso8601_date::Iso8601Date
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -786,6 +795,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::time::iso8601_date_time::Iso8601DateTime
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -853,6 +863,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::time::iso8601_duration::Iso8601Duration
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -920,6 +931,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::time::iso8601_time::Iso8601Time
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -987,6 +999,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::time::iso8601_timezone::Iso8601Timezone
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1106,6 +1119,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::locatable_ref::LocatableRef
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1202,6 +1216,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::interval::multiplicity_interval::MultiplicityInterval
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1350,6 +1365,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::object_ref::ObjectRefData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1472,6 +1488,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::object_version_id::ObjectVersionId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1542,6 +1559,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::party_ref::PartyRef
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1633,6 +1651,7 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::interval::point_interval::PointInterval<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1742,6 +1761,7 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::interval::proper_interval::ProperIntervalData<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1878,6 +1898,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::resource::resource_annotations::ResourceAnnotations
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1993,6 +2014,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::resource::resource_description::ResourceDescription
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2215,6 +2237,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::resource::resource_description_item::ResourceDescriptionItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2341,6 +2364,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::template_id::TemplateId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2408,6 +2432,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::terminology_id::TerminologyId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2495,6 +2520,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::resource::translation_details::TranslationDetails
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2622,6 +2648,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::terminology::terminology_code::TerminologyCode
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2710,6 +2737,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::foundation_types::terminology::terminology_term::TerminologyTerm
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2880,6 +2908,7 @@ impl crate::xml::runtime::ToXml for openehr_base::v1_2::base_types::identificati
 }
 
 impl crate::xml::runtime::FromXml for openehr_base::v1_2::base_types::identification::uuid::Uuid {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3002,6 +3031,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_2::base_types::identification::version_tree_id::VersionTreeId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3070,6 +3100,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::access_group_ref::AccessGroupRef
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3148,6 +3179,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::archetype_id::ArchetypeId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3229,6 +3261,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::resource::authored_resource::AuthoredResource
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3329,6 +3362,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::terminology::code_phrase::CodePhrase
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3414,6 +3448,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::interval::cardinality::Cardinality
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3495,6 +3530,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::generic_id::GenericId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3567,6 +3603,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3633,6 +3670,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::internet_id::InternetId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3698,6 +3736,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::iso_oid::IsoOid
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3826,6 +3865,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::time::iso8601_date::Iso8601Date
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3893,6 +3933,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::time::iso8601_date_time::Iso8601DateTime
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3960,6 +4001,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::time::iso8601_duration::Iso8601Duration
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4027,6 +4069,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::time::iso8601_time::Iso8601Time
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4094,6 +4137,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::time::iso8601_timezone::Iso8601Timezone
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4213,6 +4257,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::locatable_ref::LocatableRef
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4309,6 +4354,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::interval::multiplicity_interval::MultiplicityInterval
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4457,6 +4503,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::object_ref::ObjectRefData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4579,6 +4626,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4649,6 +4697,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::party_ref::PartyRef
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4740,6 +4789,7 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::interval::point_interval::PointInterval<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4849,6 +4899,7 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::interval::proper_interval::ProperIntervalData<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4985,6 +5036,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::resource::resource_annotations::ResourceAnnotations
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -5103,6 +5155,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::resource::resource_description::ResourceDescription
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -5330,6 +5383,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::resource::resource_description_item::ResourceDescriptionItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -5456,6 +5510,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::template_id::TemplateId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -5523,6 +5578,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -5610,6 +5666,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::resource::translation_details::TranslationDetails
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -5737,6 +5794,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::terminology::terminology_code::TerminologyCode
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -5825,6 +5883,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::foundation_types::terminology::terminology_term::TerminologyTerm
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -5995,6 +6054,7 @@ impl crate::xml::runtime::ToXml for openehr_base::v1_3::base_types::identificati
 }
 
 impl crate::xml::runtime::FromXml for openehr_base::v1_3::base_types::identification::uuid::Uuid {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -6117,6 +6177,7 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_base::v1_3::base_types::identification::version_tree_id::VersionTreeId
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -6226,10 +6287,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::content::entr
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::content::entry::action::Action
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -6427,10 +6491,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::content::entry::activity::Activity
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -6613,10 +6680,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::address::Addr
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::address::Address {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -6726,10 +6796,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::message::addressed_message::AddressedMessage
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __sender = None;
         let mut __sender_reference = None;
         let mut __addressees = Vec::new();
@@ -6851,10 +6924,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::content::entry::admin_entry::AdminEntry
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -7044,10 +7120,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::agent::Agent 
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::agent::Agent {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -7222,10 +7301,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::archetyped::archet
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::archetyped::archetyped::Archetyped {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __archetype_id = None;
         let mut __template_id = None;
         let mut __rm_version = None;
@@ -7321,10 +7403,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::generic::attestati
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::generic::attestation::Attestation {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __system_id = None;
         let mut __time_committed = None;
         let mut __change_type = None;
@@ -7457,10 +7542,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::generic::audit_details::AuditDetailsData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __system_id = None;
         let mut __time_committed = None;
         let mut __change_type = None;
@@ -7618,10 +7706,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::resource::authored_resource::AuthoredResource
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __original_language = None;
         let mut __is_controlled = None;
         let mut __description = None;
@@ -7723,10 +7814,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::capability::C
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::capability::Capability {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -7940,10 +8034,13 @@ impl<L: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<L: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::view::citation::Citation<L>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -8085,10 +8182,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_structures::representation::cluster::Cluster
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -8195,10 +8295,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::code_phr
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::text::code_phrase::CodePhrase {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __terminology_id = None;
         let mut __code_string = None;
         let mut __preferred_term = None;
@@ -8275,10 +8378,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::support::terminology::code_set_access::CodeSetAccess
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -8361,10 +8467,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::composition::
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::composition::composition::Composition {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -8500,10 +8609,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::resource::consumable_use::
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::resource::consumable_use::ConsumableUse {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __cost_data = None;
         let mut __amount = None;
         loop {
@@ -8587,10 +8699,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::contact::Cont
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::contact::Contact {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -8838,10 +8953,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::change_control::contribution::Contribution
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __versions = Vec::new();
         let mut __audit = None;
@@ -9211,10 +9329,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::basic::dv_bool
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::basic::dv_boolean::DvBoolean {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -9293,10 +9414,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::dv_coded
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::text::dv_coded_text::DvCodedText
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         let mut __hyperlink = None;
         let mut __formatting = None;
@@ -9417,10 +9541,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::quantity::dv_c
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::quantity::dv_count::DvCount {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -9546,10 +9673,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::quantity::date_time::dv_date::DvDate
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -9670,10 +9800,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::quantity::date_time::dv_date_time::DvDateTime
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -9797,10 +9930,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::quantity::date_time::dv_duration::DvDuration
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -9906,10 +10042,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::uri::dv_ehr_ur
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::uri::dv_ehr_uri::DvEhrUri {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -9992,7 +10131,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::time_specification::dv_general_time_specification::DvGeneralTimeSpecification {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 let mut __value = None;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -10050,10 +10191,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::basic::dv_identifier::DvIdentifier
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __issuer = None;
         let mut __assigner = None;
         let mut __id = None;
@@ -10145,10 +10289,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::quantity::dv_interval::DvInterval<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __lower = None;
         let mut __upper = None;
         let mut __lower_unbounded = None;
@@ -10272,10 +10419,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::encapsulated::dv_multimedia::DvMultimedia
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __charset = None;
         let mut __language = None;
         let mut __alternate_text = None;
@@ -10537,10 +10687,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::quantity::dv_o
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::quantity::dv_ordinal::DvOrdinal
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -10638,10 +10791,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::dv_parag
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::text::dv_paragraph::DvParagraph
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __items = Vec::new();
         loop {
             match reader.read()? {
@@ -10714,10 +10870,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::encapsulated::dv_parsable::DvParsable
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __charset = None;
         let mut __language = None;
         let mut __value = None;
@@ -10780,7 +10939,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::time_specification::dv_periodic_time_specification::DvPeriodicTimeSpecification {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 let mut __value = None;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -10854,10 +11015,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::quantity::dv_proportion::DvProportion
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -11127,10 +11291,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::quantity::dv_quantity::DvQuantity
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -11271,10 +11438,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::quantity::dv_s
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::quantity::dv_scale::DvScale {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -11369,10 +11539,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::basic::dv_stat
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::basic::dv_state::DvState {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         let mut __is_terminal = None;
         loop {
@@ -11494,10 +11667,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::dv_text:
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::text::dv_text::DvTextData {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         let mut __hyperlink = None;
         let mut __formatting = None;
@@ -11659,10 +11835,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::quantity::date_time::dv_time::DvTime
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -11800,10 +11979,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::uri::dv_uri::D
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::data_types::uri::dv_uri::DvUriData {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -11933,10 +12115,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr::ehr::Ehr {
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr::ehr::Ehr {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __system_id = None;
         let mut __ehr_id = None;
         let mut __contributions = Vec::new();
@@ -12066,10 +12251,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr::ehr_access::EhrAccess
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr::ehr_access::EhrAccess {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -12189,10 +12377,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr::ehr_status::EhrStatus
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr::ehr_status::EhrStatus {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -12337,10 +12528,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_structures::representation::element::Element
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -12579,10 +12773,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::content::entry::evaluation::Evaluation
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -12815,10 +13012,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::event_context
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::composition::event_context::EventContext {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __start_time = None;
         let mut __end_time = None;
         let mut __location = None;
@@ -12957,10 +13157,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr_extract::common::extra
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr_extract::common::extract::Extract {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -13120,10 +13323,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_action_request::ExtractActionRequest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -13256,10 +13462,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_chapter::ExtractChapterData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -13466,10 +13675,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_entity_chapter::ExtractEntityChapter
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -13604,10 +13816,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_entity_manifest::ExtractEntityManifest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __extract_id_key = None;
         let mut __ehr_id = None;
         let mut __subject_id = None;
@@ -13705,10 +13920,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_error::ExtractError
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __request_id = None;
         let mut __reason = None;
         loop {
@@ -13797,10 +14015,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_folder::ExtractFolder
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -13950,10 +14171,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_manifest::ExtractManifest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __entities = Vec::new();
         loop {
             match reader.read()? {
@@ -14026,10 +14250,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_participation::ExtractParticipation
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __time = None;
         let mut __function = None;
         let mut __mode = None;
@@ -14128,10 +14355,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_request::ExtractRequest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -14262,10 +14492,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_spec::ExtractSpec
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __version_spec = None;
         let mut __manifest = None;
         let mut __extract_type = None;
@@ -14389,10 +14622,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_update_spec::ExtractUpdateSpec
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __persist_in_server = None;
         let mut __repeat_period = None;
         let mut __trigger_events = Vec::new();
@@ -14498,10 +14734,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::common::extract_version_spec::ExtractVersionSpec
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __include_all_versions = None;
         let mut __commit_time_interval = None;
         let mut __include_revision_history = None;
@@ -14611,10 +14850,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::archetyped::feeder_audit::FeederAudit
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __originating_system_item_ids = Vec::new();
         let mut __feeder_system_item_ids = Vec::new();
         let mut __original_content = None;
@@ -14731,10 +14973,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::archetyped::feeder_audit_details::FeederAuditDetails
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __system_id = None;
         let mut __location = None;
         let mut __subject = None;
@@ -14854,10 +15099,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::directory::folder:
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::directory::folder::Folder {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -15037,10 +15285,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::generic_extract::generic_content_item::GenericContentItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -15223,10 +15474,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::integration::generic_entry
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::integration::generic_entry::GenericEntry {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -15369,10 +15623,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::group::Group 
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::group::Group {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -15576,10 +15833,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_structures::history::history::History<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -15713,10 +15973,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::change_control::imported_version::ImportedVersion<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __contribution = None;
         let mut __signature = None;
         let mut __commit_audit = None;
@@ -15848,10 +16111,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::content::entry::instruction::Instruction
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -16043,10 +16309,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::content::entry::instruction_details::InstructionDetails
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __instruction_id = None;
         let mut __activity_id = None;
         let mut __wf_details = None;
@@ -16145,10 +16414,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_structures::history::interval_event::IntervalEvent<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -16291,10 +16563,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::content::entry::ism_transition::IsmTransition
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __current_state = None;
         let mut __transition = None;
         let mut __careflow_step = None;
@@ -16456,10 +16731,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_structures::item_structure::item_list::ItemList
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -16582,10 +16860,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_structures::item_structure::item_single::ItemSingle
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -16752,10 +17033,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_structures::item_structure::item_table::ItemTable
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -16867,10 +17151,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::tags::item_tag::It
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::tags::item_tag::ItemTag {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __target = None;
         let mut __target_path = None;
         let mut __key = None;
@@ -16974,10 +17261,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_structures::item_structure::item_tree::ItemTree
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -17158,10 +17448,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::foundation_types::time::iso8601_date::Iso8601DateData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -17285,10 +17578,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::foundation_types::time::iso8601_date_time::Iso8601DateTimeData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -17390,10 +17686,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::foundation_types::time::iso8601_duration::Iso8601DurationData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -17495,10 +17794,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::foundation_types::time::iso8601_time::Iso8601TimeData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -17671,10 +17973,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::archetyped::link::
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::archetyped::link::Link {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __meaning = None;
         let mut __type = None;
         let mut __target = None;
@@ -18222,10 +18527,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::support::measurement::measurement_service::MeasurementService
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -18283,10 +18591,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::ehr_extract::message::mess
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr_extract::message::message::Message {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __audit = None;
         let mut __author = None;
         let mut __content = None;
@@ -18442,10 +18753,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::content::entry::observation::Observation
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -18591,7 +18905,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiersData {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
 _ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "OPENEHR_CODE_SET_IDENTIFIERS".to_owned(), child: __c.name.clone() }),
@@ -18685,10 +19001,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::openehr_extract::openehr_content_item::OpenehrContentItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -18775,7 +19094,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiersData {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
 _ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS".to_owned(), child: __c.name.clone() }),
@@ -18885,10 +19206,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::organisation:
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::organisation::Organisation {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -19087,10 +19411,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::change_control::original_version::OriginalVersion<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __contribution = None;
         let mut __signature = None;
         let mut __commit_audit = None;
@@ -19232,10 +19559,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::generic::participation::Participation
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __function = None;
         let mut __mode = None;
         let mut __performer = None;
@@ -19385,10 +19715,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::generic::party_identified::PartyIdentifiedData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __external_ref = None;
         let mut __name = None;
         let mut __identifiers = Vec::new();
@@ -19524,10 +19857,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::party_identit
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::party_identity::PartyIdentity {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -19700,10 +20036,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::generic::party_rel
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::generic::party_related::PartyRelated
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __external_ref = None;
         let mut __name = None;
         let mut __identifiers = Vec::new();
@@ -19818,10 +20157,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::demographic::party_relationship::PartyRelationship
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -19942,10 +20284,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::common::generic::party_sel
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::common::generic::party_self::PartySelf {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __external_ref = None;
         loop {
             match reader.read()? {
@@ -20554,10 +20899,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::person::Perso
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::person::Person {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -20751,10 +21099,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_structures::history::point_event::PointEvent<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -20897,10 +21248,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::quantity::reference_range::ReferenceRange<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __meaning = None;
         let mut __range = None;
         loop {
@@ -20988,10 +21342,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::resource::resource_description::ResourceDescription
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __original_author = std::collections::BTreeMap::new();
         let mut __other_contributors = Vec::new();
         let mut __lifecycle_state = None;
@@ -21131,10 +21488,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::resource::resource_description_item::ResourceDescriptionItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __language = None;
         let mut __purpose = None;
         let mut __keywords = Vec::new();
@@ -21250,10 +21610,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::resource::resource_usage::
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::resource::resource_usage::ResourceUsage {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __prospective = None;
         let mut __actual = None;
         let mut __type = None;
@@ -21392,10 +21755,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::generic::revision_history::RevisionHistory
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __items = Vec::new();
         loop {
             match reader.read()? {
@@ -21465,10 +21831,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::generic::revision_history_item::RevisionHistoryItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __version_id = None;
         let mut __audits = Vec::new();
         loop {
@@ -21582,10 +21951,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::role::Role {
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::demographic::role::Role {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -21781,10 +22153,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::content::navigation::section::Section
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -21902,10 +22277,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::resource::service_use::Ser
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::resource::service_use::ServiceUse {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __cost_data = None;
         let mut __identifier = None;
         let mut __start_time = None;
@@ -21988,10 +22366,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract::SyncExtract
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __specification = None;
         let mut __items = Vec::new();
         loop {
@@ -22067,10 +22448,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract_request::SyncExtractRequest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __specification = None;
         loop {
             match reader.read()? {
@@ -22148,10 +22532,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::sync_extract::sync_extract_spec::SyncExtractSpec
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __includes_versions = None;
         let mut __contribution_list = Vec::new();
         let mut __contributions_since = None;
@@ -22239,10 +22626,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::support::terminology::terminology_access::TerminologyAccess
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -22297,10 +22687,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::support::terminology::terminology_service::TerminologyService
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -22358,10 +22751,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::data_types::text::term_map
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::data_types::text::term_mapping::TermMapping
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __match = None;
         let mut __purpose = None;
         let mut __target = None;
@@ -22447,10 +22843,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::resource::translation_details::TranslationDetails
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __language = None;
         let mut __author = std::collections::BTreeMap::new();
         let mut __accreditaton = None;
@@ -22610,10 +23009,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr::versioned_composition::VersionedComposition
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -22693,10 +23095,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr::versioned_ehr_access::VersionedEhrAccess
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -22776,10 +23181,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr::versioned_ehr_status::VersionedEhrStatus
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -22859,10 +23267,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::directory::versioned_folder::VersionedFolder
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -22942,10 +23353,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::common::change_control::versioned_object::VersionedObjectData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -23073,10 +23487,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::demographic::versioned_par
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::demographic::versioned_party::VersionedParty
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -23271,10 +23688,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_1::composition::view::view_se
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::composition::view::view_section::ViewSection
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -23413,10 +23833,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::sync_extract::x_contribution::XContribution
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __audit = None;
         let mut __versions = Vec::new();
@@ -23483,7 +23906,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_composition::XVersionedComposition {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 let mut __uid = None;
 let mut __owner_id = None;
 let mut __time_created = None;
@@ -23565,10 +23990,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_ehr_access::XVersionedEhrAccess
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -23679,10 +24107,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_ehr_status::XVersionedEhrStatus
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -23793,10 +24224,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_folder::XVersionedFolder
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -23919,10 +24353,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_object::XVersionedObjectData<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -24083,10 +24520,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_1::ehr_extract::openehr_extract::x_versioned_party::XVersionedParty
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -24237,10 +24677,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::composition::content::entr
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::composition::content::entry::action::Action
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -24438,10 +24881,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::composition::content::entry::activity::Activity
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -24624,10 +25070,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::address::Addr
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::address::Address {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -24737,10 +25186,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::message::addressed_message::AddressedMessage
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __sender = None;
         let mut __sender_reference = None;
         let mut __addressees = Vec::new();
@@ -24862,10 +25314,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::composition::content::entry::admin_entry::AdminEntry
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -25050,10 +25505,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::agent::Agent 
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::agent::Agent {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -25211,10 +25669,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::common::archetyped::archet
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::archetyped::archetyped::Archetyped {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __archetype_id = None;
         let mut __template_id = None;
         let mut __rm_version = None;
@@ -25310,10 +25771,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::common::generic::attestati
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::generic::attestation::Attestation {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __system_id = None;
         let mut __time_committed = None;
         let mut __change_type = None;
@@ -25446,10 +25910,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::generic::audit_details::AuditDetailsData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __system_id = None;
         let mut __time_committed = None;
         let mut __change_type = None;
@@ -25607,10 +26074,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::resource::authored_resource::AuthoredResource
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __original_language = None;
         let mut __is_controlled = None;
         let mut __description = None;
@@ -25712,10 +26182,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::capability::C
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::capability::Capability {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -25921,10 +26394,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_structures::representation::cluster::Cluster
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -26031,10 +26507,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::text::code_phr
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __terminology_id = None;
         let mut __code_string = None;
         let mut __preferred_term = None;
@@ -26111,10 +26590,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::support::terminology::code_set_access::CodeSetAccess
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -26197,10 +26679,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::composition::composition::
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::composition::composition::Composition {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -26352,10 +26837,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::contact::Cont
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::contact::Contact {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -26581,10 +27069,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::change_control::contribution::Contribution
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __versions = Vec::new();
         let mut __audit = None;
@@ -26954,10 +27445,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::basic::dv_bool
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::basic::dv_boolean::DvBoolean {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -27036,10 +27530,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::text::dv_coded
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         let mut __hyperlink = None;
         let mut __formatting = None;
@@ -27160,10 +27657,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::quantity::dv_c
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::quantity::dv_count::DvCount {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -27289,10 +27789,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::quantity::date_time::dv_date::DvDate
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -27413,10 +27916,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -27540,10 +28046,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::quantity::date_time::dv_duration::DvDuration
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -27649,10 +28158,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::uri::dv_ehr_ur
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::uri::dv_ehr_uri::DvEhrUri {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -27735,7 +28247,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::time_specification::dv_general_time_specification::DvGeneralTimeSpecification {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 let mut __value = None;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -27793,10 +28307,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::basic::dv_identifier::DvIdentifier
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __issuer = None;
         let mut __assigner = None;
         let mut __id = None;
@@ -27888,10 +28405,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::quantity::dv_interval::DvInterval<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __lower = None;
         let mut __upper = None;
         let mut __lower_unbounded = None;
@@ -28015,10 +28535,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::encapsulated::dv_multimedia::DvMultimedia
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __charset = None;
         let mut __language = None;
         let mut __alternate_text = None;
@@ -28280,10 +28803,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::quantity::dv_o
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::quantity::dv_ordinal::DvOrdinal
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -28381,10 +28907,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::text::dv_parag
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::text::dv_paragraph::DvParagraph
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __items = Vec::new();
         loop {
             match reader.read()? {
@@ -28457,10 +28986,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::encapsulated::dv_parsable::DvParsable
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __charset = None;
         let mut __language = None;
         let mut __value = None;
@@ -28523,7 +29055,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::time_specification::dv_periodic_time_specification::DvPeriodicTimeSpecification {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 let mut __value = None;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -28597,10 +29131,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::quantity::dv_proportion::DvProportion
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -28870,10 +29407,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::quantity::dv_quantity::DvQuantity
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -29014,10 +29554,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::quantity::dv_s
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::quantity::dv_scale::DvScale {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -29112,10 +29655,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::basic::dv_stat
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::basic::dv_state::DvState {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         let mut __is_terminal = None;
         loop {
@@ -29237,10 +29783,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::text::dv_text:
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::text::dv_text::DvTextData {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         let mut __hyperlink = None;
         let mut __formatting = None;
@@ -29402,10 +29951,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::quantity::date_time::dv_time::DvTime
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __normal_status = None;
         let mut __normal_range = None;
         let mut __other_reference_ranges = Vec::new();
@@ -29543,10 +30095,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::uri::dv_uri::D
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::data_types::uri::dv_uri::DvUriData {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -29681,10 +30236,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::ehr::ehr::Ehr {
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr::ehr::Ehr {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __system_id = None;
         let mut __ehr_id = None;
         let mut __contributions = Vec::new();
@@ -29823,10 +30381,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::ehr::ehr_access::EhrAccess
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr::ehr_access::EhrAccess {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -29946,10 +30507,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::ehr::ehr_status::EhrStatus
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr::ehr_status::EhrStatus {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -30094,10 +30658,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_structures::representation::element::Element
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -30336,10 +30903,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::composition::content::entry::evaluation::Evaluation
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -30572,10 +31142,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::composition::event_context
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::composition::event_context::EventContext {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __start_time = None;
         let mut __end_time = None;
         let mut __location = None;
@@ -30714,10 +31287,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::ehr_extract::common::extra
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr_extract::common::extract::Extract {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -30877,10 +31453,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_action_request::ExtractActionRequest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -31013,10 +31592,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_chapter::ExtractChapterData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -31223,10 +31805,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_entity_chapter::ExtractEntityChapter
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -31361,10 +31946,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_entity_manifest::ExtractEntityManifest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __extract_id_key = None;
         let mut __ehr_id = None;
         let mut __subject_id = None;
@@ -31462,10 +32050,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_error::ExtractError
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __request_id = None;
         let mut __reason = None;
         loop {
@@ -31554,10 +32145,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_folder::ExtractFolder
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -31707,10 +32301,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_manifest::ExtractManifest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __entities = Vec::new();
         loop {
             match reader.read()? {
@@ -31783,10 +32380,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_participation::ExtractParticipation
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __time = None;
         let mut __function = None;
         let mut __mode = None;
@@ -31885,10 +32485,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_request::ExtractRequest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -32019,10 +32622,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __version_spec = None;
         let mut __manifest = None;
         let mut __extract_type = None;
@@ -32146,10 +32752,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_update_spec::ExtractUpdateSpec
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __persist_in_server = None;
         let mut __repeat_period = None;
         let mut __trigger_events = Vec::new();
@@ -32255,10 +32864,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::common::extract_version_spec::ExtractVersionSpec
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __include_all_versions = None;
         let mut __commit_time_interval = None;
         let mut __include_revision_history = None;
@@ -32368,10 +32980,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::archetyped::feeder_audit::FeederAudit
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __originating_system_item_ids = Vec::new();
         let mut __feeder_system_item_ids = Vec::new();
         let mut __original_content = None;
@@ -32488,10 +33103,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::archetyped::feeder_audit_details::FeederAuditDetails
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __system_id = None;
         let mut __location = None;
         let mut __subject = None;
@@ -32611,10 +33229,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::common::directory::folder:
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::directory::folder::Folder {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -32794,10 +33415,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::generic_extract::generic_content_item::GenericContentItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -32980,10 +33604,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::integration::generic_entry
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::integration::generic_entry::GenericEntry {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -33121,10 +33748,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::group::Group 
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::group::Group {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -33311,10 +33941,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_structures::history::history::History<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -33448,10 +34081,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::change_control::imported_version::ImportedVersion<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __contribution = None;
         let mut __signature = None;
         let mut __commit_audit = None;
@@ -33583,10 +34219,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::composition::content::entry::instruction::Instruction
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -33778,10 +34417,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::composition::content::entry::instruction_details::InstructionDetails
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __instruction_id = None;
         let mut __activity_id = None;
         let mut __wf_details = None;
@@ -33880,10 +34522,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_structures::history::interval_event::IntervalEvent<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -34026,10 +34671,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::composition::content::entry::ism_transition::IsmTransition
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __current_state = None;
         let mut __transition = None;
         let mut __careflow_step = None;
@@ -34191,10 +34839,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_structures::item_structure::item_list::ItemList
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -34317,10 +34968,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_structures::item_structure::item_single::ItemSingle
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -34487,10 +35141,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_structures::item_structure::item_table::ItemTable
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -34602,10 +35259,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::common::tags::item_tag::It
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::tags::item_tag::ItemTag {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __key = None;
         let mut __value = None;
         let mut __target = None;
@@ -34709,10 +35369,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_structures::item_structure::item_tree::ItemTree
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -34893,10 +35556,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::foundation_types::time::iso8601_date::Iso8601DateData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -35020,10 +35686,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::foundation_types::time::iso8601_date_time::Iso8601DateTimeData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -35125,10 +35794,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::foundation_types::time::iso8601_duration::Iso8601DurationData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -35230,10 +35902,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::foundation_types::time::iso8601_time::Iso8601TimeData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __value = None;
         loop {
             match reader.read()? {
@@ -35406,10 +36081,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::common::archetyped::link::
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::archetyped::link::Link {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __meaning = None;
         let mut __type = None;
         let mut __target = None;
@@ -35935,10 +36613,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::support::measurement::measurement_service::MeasurementService
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -35996,10 +36677,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::ehr_extract::message::mess
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr_extract::message::message::Message {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __audit = None;
         let mut __author = None;
         let mut __content = None;
@@ -36155,10 +36839,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::composition::content::entry::observation::Observation
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -36304,7 +36991,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiersData {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
 _ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "OPENEHR_CODE_SET_IDENTIFIERS".to_owned(), child: __c.name.clone() }),
@@ -36398,10 +37087,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::openehr_extract::openehr_content_item::OpenehrContentItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -36488,7 +37180,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiersData {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 loop { match reader.read()? {
 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
 _ => return Err(crate::xml::runtime::XmlError::UndeclaredChild { owner: "OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS".to_owned(), child: __c.name.clone() }),
@@ -36593,10 +37287,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::organisation:
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::organisation::Organisation {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -36778,10 +37475,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::change_control::original_version::OriginalVersion<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __contribution = None;
         let mut __signature = None;
         let mut __commit_audit = None;
@@ -36923,10 +37623,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::generic::participation::Participation
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __function = None;
         let mut __mode = None;
         let mut __performer = None;
@@ -37076,10 +37779,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::generic::party_identified::PartyIdentifiedData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __external_ref = None;
         let mut __name = None;
         let mut __identifiers = Vec::new();
@@ -37215,10 +37921,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::party_identit
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::party_identity::PartyIdentity {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -37391,10 +38100,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::common::generic::party_rel
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::generic::party_related::PartyRelated
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __external_ref = None;
         let mut __name = None;
         let mut __identifiers = Vec::new();
@@ -37509,10 +38221,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::demographic::party_relationship::PartyRelationship
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -37633,10 +38348,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::common::generic::party_sel
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::common::generic::party_self::PartySelf {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __external_ref = None;
         loop {
             match reader.read()? {
@@ -38218,10 +38936,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::person::Perso
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::person::Person {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -38398,10 +39119,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_structures::history::point_event::PointEvent<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -38544,10 +39268,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::quantity::reference_range::ReferenceRange<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __meaning = None;
         let mut __range = None;
         loop {
@@ -38635,10 +39362,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::resource::resource_description::ResourceDescription
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __original_author = std::collections::BTreeMap::new();
         let mut __other_contributors = Vec::new();
         let mut __lifecycle_state = None;
@@ -38778,10 +39508,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::resource::resource_description_item::ResourceDescriptionItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __language = None;
         let mut __purpose = None;
         let mut __keywords = Vec::new();
@@ -38894,10 +39627,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::generic::revision_history::RevisionHistory
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __items = Vec::new();
         loop {
             match reader.read()? {
@@ -38967,10 +39703,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::generic::revision_history_item::RevisionHistoryItem
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __version_id = None;
         let mut __audits = Vec::new();
         loop {
@@ -39079,10 +39818,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::role::Role {
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::demographic::role::Role {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -39261,10 +40003,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::composition::content::navigation::section::Section
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __name = None;
         let mut __uid = None;
         let mut __links = Vec::new();
@@ -39381,10 +40126,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::sync_extract::sync_extract::SyncExtract
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __specification = None;
         let mut __items = Vec::new();
         loop {
@@ -39460,10 +40208,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::sync_extract::sync_extract_request::SyncExtractRequest
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __specification = None;
         loop {
             match reader.read()? {
@@ -39541,10 +40292,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::sync_extract::sync_extract_spec::SyncExtractSpec
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __includes_versions = None;
         let mut __contribution_list = Vec::new();
         let mut __contributions_since = None;
@@ -39632,10 +40386,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::support::terminology::terminology_access::TerminologyAccess
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -39690,10 +40447,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::support::terminology::terminology_service::TerminologyService
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         loop {
             match reader.read()? {
                 crate::xml::runtime::XmlEvent::Start(__c) => match __c.name.as_str() {
@@ -39751,10 +40511,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::data_types::text::term_map
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::data_types::text::term_mapping::TermMapping
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __match = None;
         let mut __purpose = None;
         let mut __target = None;
@@ -39840,10 +40603,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::resource::translation_details::TranslationDetails
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __language = None;
         let mut __author = std::collections::BTreeMap::new();
         let mut __accreditation = None;
@@ -40003,10 +40769,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr::versioned_composition::VersionedComposition
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -40086,10 +40855,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr::versioned_ehr_access::VersionedEhrAccess
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -40169,10 +40941,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr::versioned_ehr_status::VersionedEhrStatus
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -40252,10 +41027,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::directory::versioned_folder::VersionedFolder
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -40335,10 +41113,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::common::change_control::versioned_object::VersionedObjectData
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -40466,10 +41247,13 @@ impl crate::xml::runtime::ToXml for openehr_rm::v1_2::demographic::versioned_par
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::demographic::versioned_party::VersionedParty
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -40552,10 +41336,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::sync_extract::x_contribution::XContribution
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __audit = None;
         let mut __versions = Vec::new();
@@ -40622,7 +41409,9 @@ Ok(())
 }
 
 impl crate::xml::runtime::FromXml for openehr_rm::v1_2::ehr_extract::openehr_extract::x_versioned_composition::XVersionedComposition {
+#[inline(never)]
 fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {
+let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
 let mut __uid = None;
 let mut __owner_id = None;
 let mut __time_created = None;
@@ -40704,10 +41493,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::openehr_extract::x_versioned_ehr_access::XVersionedEhrAccess
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -40818,10 +41610,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::openehr_extract::x_versioned_ehr_status::XVersionedEhrStatus
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -40932,10 +41727,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::openehr_extract::x_versioned_folder::XVersionedFolder
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -41058,10 +41856,13 @@ impl<T: crate::xml::runtime::ToXml> crate::xml::runtime::ToXml
 impl<T: crate::xml::runtime::FromXml> crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::openehr_extract::x_versioned_object::XVersionedObjectData<T>
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;
@@ -41222,10 +42023,13 @@ impl crate::xml::runtime::ToXml
 impl crate::xml::runtime::FromXml
     for openehr_rm::v1_2::ehr_extract::openehr_extract::x_versioned_party::XVersionedParty
 {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
     ) -> Result<Self, crate::xml::runtime::XmlError> {
+        let _nesting =
+            openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;
         let mut __uid = None;
         let mut __owner_id = None;
         let mut __time_created = None;

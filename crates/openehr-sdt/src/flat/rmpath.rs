@@ -21,15 +21,9 @@
     dead_code,
     reason = "consumed by the RM ⇄ sim walkers landing in this same rewrite; drop this allow with their arrival"
 )]
-#![expect(
-    clippy::disallowed_types,
-    reason = "canonical JSON / Simplified Formats operate on the wire value by definition \
-              (ITS-JSON; ITS-REST Simplified Formats) — serde_json::Value IS the subject matter \
-              (#1694)"
-)]
 
-use openehr_rm::v1_2::paths::{PathSegment, RmPath, select_children};
-use serde_json::Value;
+use crate::flat::instance::{Instance, select_children};
+use openehr_rm::v1_2::paths::{PathSegment, RmPath};
 
 /// Parse a relative RM path (`/attr[pred]/attr2/…`) into its segments.
 ///
@@ -56,17 +50,34 @@ pub(crate) fn relative(parent_aql: &str, child_aql: &str) -> Vec<PathSegment> {
     }
 }
 
+/// The segments from `parent` to its child `index` (`child`), as [`relative`]
+/// gives them, read from the parent's prepared walk plan when it has one.
+pub(crate) fn child_segments<'a>(
+    parent: &'a crate::flat::webtemplate::model::WebTemplateNode,
+    index: usize,
+    child: &crate::flat::webtemplate::model::WebTemplateNode,
+) -> std::borrow::Cow<'a, [PathSegment]> {
+    match parent
+        .walk
+        .as_ref()
+        .and_then(|plan| plan.segments_of(parent, index, child))
+    {
+        Some(cached) => std::borrow::Cow::Borrowed(cached),
+        None => std::borrow::Cow::Owned(relative(&parent.aql_path, &child.aql_path)),
+    }
+}
+
 /// Follow `segs` from each of `roots`, returning the reached nodes in document
 /// order. Each step is [`openehr_rm::v1_2::paths::select_children`], so array
 /// attributes branch (filtered by the segment predicate) and single-valued
 /// attributes descend (predicate re-checked, per BASE `master11-paths`).
 ///
-pub(crate) fn navigate<'a>(roots: &[&'a Value], segs: &[PathSegment]) -> Vec<&'a Value> {
-    let mut current: Vec<&Value> = roots.to_vec();
+pub(crate) fn navigate<'a, I: Instance<'a>>(roots: &[I], segs: &[PathSegment]) -> Vec<I> {
+    let mut current: Vec<I> = roots.to_vec();
     for seg in segs {
         current = current
             .iter()
-            .flat_map(|n| select_children(n, seg))
+            .flat_map(|n| select_children(*n, seg))
             .collect();
     }
     current
@@ -81,11 +92,11 @@ pub(crate) fn navigate<'a>(roots: &[&'a Value], segs: &[PathSegment]) -> Vec<&'a
 /// unique among the matched siblings (`allow_name_fallback`, caller-computed)
 /// — and must stay off where a template distinguishes same-id siblings by
 /// name.
-pub(crate) fn select_children_matched<'a>(
-    container: &'a Value,
+pub(crate) fn select_children_matched<'a, I: Instance<'a>>(
+    container: I,
     seg: &PathSegment,
     allow_name_fallback: bool,
-) -> Vec<&'a Value> {
+) -> Vec<I> {
     let strict = select_children(container, seg);
     if strict.is_empty() && allow_name_fallback && seg.predicate.name_value.is_some() {
         let mut id_only = seg.clone();
@@ -111,17 +122,16 @@ pub(crate) fn select_children_matched<'a>(
 /// `LOCATABLE` class" L35); it therefore admits every instance of the shared
 /// `archetype_node_id` **except** those whose `name/value` matches a
 /// name-qualified sibling — those belong to that sibling, never here.
-pub(crate) fn select_children_excluding_names<'a>(
-    container: &'a Value,
+pub(crate) fn select_children_excluding_names<'a, I: Instance<'a>>(
+    container: I,
     seg: &PathSegment,
     excluded_names: &[String],
-) -> Vec<&'a Value> {
+) -> Vec<I> {
     select_children(container, seg)
         .into_iter()
         .filter(|node| {
-            node.get("name")
-                .and_then(|n| n.get("value"))
-                .and_then(Value::as_str)
+            node.attr("name")
+                .and_then(|n| n.str_at("value"))
                 .is_none_or(|name| !excluded_names.iter().any(|e| e == name))
         })
         .collect()
@@ -202,17 +212,17 @@ pub(crate) fn fallback_allowed(table: &NameFallback, seg: &PathSegment) -> bool 
 /// whose template name conjunct the instance does not match locates nothing,
 /// and every constraint and every datum below that step silently disappears —
 /// from the validation walk as much as from the simplified projection.
-pub(crate) fn navigate_matched<'a>(
-    roots: &[&'a Value],
+pub(crate) fn navigate_matched<'a, I: Instance<'a>>(
+    roots: &[I],
     segs: &[PathSegment],
     table: &NameFallback,
-) -> Vec<&'a Value> {
-    let mut current: Vec<&Value> = roots.to_vec();
+) -> Vec<I> {
+    let mut current: Vec<I> = roots.to_vec();
     for seg in segs {
         let allow = fallback_allowed(table, seg);
         current = current
             .iter()
-            .flat_map(|n| select_children_matched(n, seg, allow))
+            .flat_map(|n| select_children_matched(*n, seg, allow))
             .collect();
     }
     current
@@ -220,22 +230,27 @@ pub(crate) fn navigate_matched<'a>(
 
 /// Resolve the RM value(s) a full relative path reaches from `rm` (an empty
 /// segment list resolves to `rm` itself).
-pub(crate) fn resolve<'a>(rm: &'a Value, segs: &[PathSegment]) -> Vec<&'a Value> {
+pub(crate) fn resolve<'a, I: Instance<'a>>(rm: I, segs: &[PathSegment]) -> Vec<I> {
     navigate(&[rm], segs)
 }
 
 /// [`resolve`] with the per-step name fallback of [`navigate_matched`].
-pub(crate) fn resolve_matched<'a>(
-    rm: &'a Value,
+pub(crate) fn resolve_matched<'a, I: Instance<'a>>(
+    rm: I,
     segs: &[PathSegment],
     table: &NameFallback,
-) -> Vec<&'a Value> {
+) -> Vec<I> {
     navigate_matched(&[rm], segs, table)
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the tests read the JSON form of an instance the 553 path keeps (#1694)"
+)]
 mod tests {
     use super::*;
+    use serde_json::Value;
 
     #[test]
     fn parses_segments() {

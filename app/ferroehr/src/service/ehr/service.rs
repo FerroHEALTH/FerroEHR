@@ -10,12 +10,6 @@
 //! §Folders. The EHR-table and folder-membership SQL is a storage seam
 //! (no openEHR spec governs the schema — our own design).
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694): the commit interior carries the canonical \
-              fragment the seam produced once; stored-content serving"
-)]
-
 use crate::db::acquire::acquire;
 use crate::error::refusal::{Clash, Missing, Refusal};
 use crate::ids::EhrId;
@@ -26,13 +20,13 @@ use crate::system_log::event::{
 };
 use openehr_base::prelude::{ArchetypeId, HierObjectId, ObjectId, ObjectRef, ObjectRefData};
 use openehr_rm::prelude::{Archetyped, DvText, DvTextData, Ehr, EhrStatus, PartySelf};
-use serde_json::Value;
 
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::service::ehr::read_ahead::EhrAhead;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::Body;
 use crate::versioning::change::{Change, commit_contribution};
 use crate::versioning::object_version_id::{VersionIdError, hier_object_id};
 
@@ -63,18 +57,17 @@ impl FerroEhrService {
     pub(in crate::service) async fn commit_new_ehr(
         &self,
         ehr_id: EhrId,
-        request: WriteRequest<Value>,
-    ) -> Result<ServiceResponse, ServiceError> {
+        request: WriteRequest<EhrStatus>,
+    ) -> Result<ServiceResponse<Ehr>, ServiceError> {
         // The supplied EHR_STATUS must be a structurally valid RM instance
         // before the EHR is created (CNF master06 §Test Data Sets INVALID
         // class 2). The EHR-create wire carries no lifecycle channel, so the
-        // first status version is complete — full strictness.
-        let status = &request.data;
-        self.validate_for_commit(Kind::EhrStatus, status, false)
-            .await?;
-        // The status's large media go to the blob store before a connection is held.
-        let mut stored_status = status.clone();
-        self.externalize(&mut stored_status).await?;
+        // first status version is complete — full strictness. A valid
+        // status's large media go to the blob store before a connection is held.
+        let promoted = super::status::SubjectColumns::of_typed(&request.data);
+        let mut stored_status = Body::from(request.data);
+        self.accept_body(Kind::EhrStatus, &mut stored_status, false)
+            .await??;
 
         // The creation commit's AUDIT_DETAILS, built BEFORE the transaction so
         // an illegal client `change_type` refuses without a storage round trip.
@@ -94,24 +87,13 @@ impl FerroEhrService {
         // promoted subject / is_queryable columns ride the same INSERT, so no
         // separate `sync_ehr_subject` UPDATE runs. A subject already owned by
         // another EHR is a distinct 409 (RM ehr master04 §EHR Status).
-        let (subject_id, subject_namespace, is_queryable, is_modifiable) =
-            super::status::ehr_promoted_columns(status);
-        let subject = crate::storage::access_projection::EhrSubject::stored(
-            subject_namespace.map(str::to_owned),
-            subject_id.map(str::to_owned),
-        );
+        let subject = promoted.subject();
         let digest = self.care_subject_digest(subject.as_ref());
         let time_created = match crate::storage::ehr_repo::insert_ehr(
             &mut tx,
             ehr_id,
             &self.effective_system_id(),
-            crate::storage::ehr_repo::PromotedColumns {
-                subject_id,
-                subject_namespace,
-                is_queryable,
-                is_modifiable,
-                subject_digest: digest.as_deref(),
-            },
+            promoted.columns(digest.as_deref()),
         )
         .await
         {
@@ -146,7 +128,7 @@ impl FerroEhrService {
                     Change::Create {
                         allocated: None,
                         kind: Kind::EhrStatus,
-                        canonical: stored_status,
+                        body: stored_status,
                         template_id: None,
                         signature: None,
                         // A client-supplied `openehr-version:
@@ -209,7 +191,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         time_created: jiff::Timestamp,
         committed: &[crate::versioning::change::Committed],
-    ) -> Result<Value, ServiceError> {
+    ) -> Result<Ehr, ServiceError> {
         let vo_of = |kind: Kind| {
             committed
                 .iter()
@@ -235,7 +217,7 @@ impl FerroEhrService {
         &self,
         subject_id: &str,
         namespace: &str,
-    ) -> Result<ServiceResponse, ServiceError> {
+    ) -> Result<ServiceResponse<Ehr>, ServiceError> {
         let found = self.ehr_id_for_subject(subject_id, namespace).await?;
         // NOTE: no openEHR spec governs this message, our own design: the subject
         // id is an external patient identifier, so the refusal names only its namespace.
@@ -313,7 +295,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError`] when the EHR or its current `EHR_STATUS` does not exist, or
     /// a read fails.
-    pub async fn ehr_read(&self, ehr_id: EhrId) -> Result<ServiceResponse, ServiceError> {
+    pub async fn ehr_read(&self, ehr_id: EhrId) -> Result<ServiceResponse<Ehr>, ServiceError> {
         self.ehr_read_ahead(ehr_id).await.served(ehr_id)
     }
 
@@ -336,7 +318,7 @@ impl EhrAhead {
     ///
     /// # Errors
     /// As [`FerroEhrService::ehr_read`].
-    pub fn served(self, ehr_id: EhrId) -> Result<ServiceResponse, ServiceError> {
+    pub fn served(self, ehr_id: EhrId) -> Result<ServiceResponse<Ehr>, ServiceError> {
         // NOTE: arch master06 §System Identity, EHR.system_id is immutable after creation, so the
         // stored per-EHR value is served, never the live configuration.
         let read = self
@@ -423,7 +405,7 @@ fn ehr_object(
     access_vo: Option<&str>,
     time_created: jiff::Timestamp,
     folder_vos: &[String],
-) -> Result<Value, ServiceError> {
+) -> Result<Ehr, ServiceError> {
     // NOTE: the `ehr_status` ref names the version CONTAINER, per the normative
     // `Ehr_status_valid: ehr_status.type.is_equal("VERSIONED_EHR_STATUS")` (RM
     // ehr `ehr.adoc`), which wins over the non-normative ITS-REST example.
@@ -454,12 +436,12 @@ fn ehr_object(
         ehr_status,
         ehr_access,
         compositions: openehr_base::containers::present(Vec::new()),
-        directory: folders.first().cloned(),
+        directory: folders.first().cloned().map(Box::new),
         time_created: crate::versioning::audit::dv_date_time(&time_created),
         folders: openehr_base::containers::present(folders),
         tags: openehr_base::containers::present(Vec::new()),
     };
-    Ok(openehr_its::json::to_canonical_value(&ehr))
+    Ok(ehr)
 }
 
 /// Builds the `EHR_STATUS` a new EHR starts with (queryable, modifiable,
@@ -472,8 +454,8 @@ fn ehr_object(
 /// RM-invalid; at a root, `archetype_node_id` "is always the stringified
 /// form of the `archetype_id` found in the `archetype_details` object"
 /// (`locatable.adoc` §`archetype_node_id`).
-pub(in crate::service) fn initial_ehr_status() -> Value {
-    let status = EhrStatus {
+pub(in crate::service) fn initial_ehr_status() -> EhrStatus {
+    EhrStatus {
         name: DvText::DvText(DvTextData {
             value: "EHR Status".to_owned(),
             hyperlink: None,
@@ -485,14 +467,13 @@ pub(in crate::service) fn initial_ehr_status() -> Value {
         archetype_node_id: DEFAULT_EHR_STATUS_ARCHETYPE.to_owned(),
         uid: None,
         links: None,
-        archetype_details: Some(archetyped(DEFAULT_EHR_STATUS_ARCHETYPE)),
+        archetype_details: Some(Box::new(archetyped(DEFAULT_EHR_STATUS_ARCHETYPE))),
         feeder_audit: None,
         subject: PartySelf { external_ref: None },
         is_queryable: true,
         is_modifiable: true,
         other_details: None,
-    };
-    openehr_its::json::to_canonical_value(&status)
+    }
 }
 
 /// The archetype a server-minted default `EHR_STATUS` declares.
@@ -520,7 +501,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError`] when the fallback full read finds no such EHR, or a read
     /// fails.
-    pub async fn ehr_created_object(&self, an_ehr_id: EhrId) -> Result<Value, ServiceError> {
+    pub async fn ehr_created_object(&self, an_ehr_id: EhrId) -> Result<Ehr, ServiceError> {
         // Serve the create-time representation from the stash the commit path
         // populated (built from `Committed`, no re-read); a popped entry cannot
         // be reused. Fall back to a full read when the entry has been evicted
@@ -583,11 +564,7 @@ impl FerroEhrService {
     ) -> Result<ResourceMeta, ServiceError> {
         // NOTE: ITS-REST EHR API `POST /ehr` accepts an optional EHR_STATUS
         // body, so a subject-bearing status is accepted here.
-        let request = request.map(|status| {
-            status.map_or_else(initial_ehr_status, |s| {
-                openehr_its::json::to_canonical_value(&s)
-            })
-        });
+        let request = request.map(|status| status.unwrap_or_else(initial_ehr_status));
         let created = self
             .commit_new_ehr(an_ehr_id, request)
             .await
@@ -607,7 +584,10 @@ mod tests {
     /// `crate::storage::codec::decompose`).
     #[test]
     fn default_status_decomposes() {
-        let rows = crate::storage::codec::decompose(initial_ehr_status()).expect("decompose");
+        let rows = crate::storage::codec::decompose(openehr_its::json::to_canonical_value(
+            &initial_ehr_status(),
+        ))
+        .expect("decompose");
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].rm_type, "EHR_STATUS");
     }

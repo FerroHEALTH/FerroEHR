@@ -73,7 +73,7 @@ impl AqlQueryRequest {
 #[derive(Debug, Clone, Default)]
 pub struct QueryOutcome {
     /// The `RESULT_SET` (canonical JSON) the adapter renders.
-    pub result_set: Value,
+    pub result_set: crate::service::query::result_set::ResultSetDoc,
     /// The EHRs this execution actually SERVED, each with its served-row count.
     ///
     /// This is what the caller was actually shown, after `LIMIT`, and it is
@@ -125,7 +125,7 @@ pub struct LogRead {
 impl QueryOutcome {
     /// An outcome with no collected attributes.
     #[must_use]
-    pub fn plain(result_set: Value) -> Self {
+    pub fn plain(result_set: crate::service::query::result_set::ResultSetDoc) -> Self {
         Self {
             result_set,
             served_ehrs: Vec::new(),

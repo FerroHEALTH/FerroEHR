@@ -16,16 +16,19 @@
 
 #![expect(
     clippy::disallowed_types,
-    reason = "canonical JSON / Simplified Formats operate on the wire value by definition \
-              (ITS-JSON; ITS-REST Simplified Formats) — serde_json::Value IS the subject matter \
-              (#1694)"
+    reason = "a datum of the simplified wire is a JSON scalar (ITS-REST Simplified Formats); \
+              the builders read it into typed RM and the emitters write it (#1694, #6003)"
 )]
 
+use openehr_rm::v1_2::access;
+use openehr_rm::v1_2::access::{RmObject, RmValue};
 use openehr_rm::v1_2::typing::{RmType, base_name};
-use serde_json::{Map, Value, json};
+use serde_json::{Value, json};
 
 use super::{code_phrase_obj, family, parties, wt_coded_value, wt_terminology};
+use crate::flat::error::FlatError;
 use crate::flat::sim::SimNode;
+use crate::flat::typed::{self, Build, Obj, o, s};
 use crate::flat::webtemplate::model::WebTemplateNode;
 
 /// The `DV_ORDERED` concrete leaf types that carry `_normal_range` /
@@ -42,416 +45,119 @@ pub(super) const DV_ORDERED: &[&str] = &[
     "DV_SCALE",
 ];
 
-// ── RM → sim ──────────────────────────────────────────────────────────────────
-
-/// Insert `out.attrs[suffix]` if `v` is present and non-null. `suffix == ""` is
-/// the bare datum.
-fn put(out: &mut SimNode, suffix: &str, v: Option<&Value>) {
-    if let Some(v) = v.filter(|v| !v.is_null()) {
-        out.attrs.insert(suffix.to_owned(), v.clone());
-    }
-}
-
-/// The `code_string` / `terminology_id.value` / `preferred_term` of a CODE_PHRASE.
-fn code_phrase_parts(cp: &Value) -> (Option<&Value>, Option<&Value>, Option<&Value>) {
-    (
-        cp.get("code_string"),
-        cp.pointer("/terminology_id/value"),
-        cp.get("preferred_term").filter(|v| !v.is_null()),
-    )
-}
-
-/// Emit the shared `DV_QUANTIFIED`/`DV_ORDERED` scalar extras (master05
-/// §§DV_QUANTITY, DV_COUNT, DV_PROPORTION, DV_DURATION): `|magnitude_status`,
-/// `|normal_status` (= `normal_status.code_string`; the CODE_PHRASE terminology
-/// is implicitly `openehr`), `|accuracy`, `|accuracy_is_percent`.
-/// `with_accuracy` is false for the temporal family, whose `accuracy` is a
-/// `DV_DURATION` carried as `/_accuracy` (master05 §§DV_DATE, DV_DATE_TIME,
-/// DV_TIME).
-fn emit_quantified_extras(dv: &Value, out: &mut SimNode, with_accuracy: bool) {
-    put(out, "magnitude_status", dv.get("magnitude_status"));
-    put(
-        out,
-        "normal_status",
-        dv.pointer("/normal_status/code_string"),
-    );
-    if with_accuracy {
-        put(out, "accuracy", dv.get("accuracy"));
-        put(out, "accuracy_is_percent", dv.get("accuracy_is_percent"));
-    }
-}
-
-/// RM leaf value → datum attrs on `out` (the [`super`] module docs, `emit_leaf`).
-#[expect(
-    clippy::match_same_arms,
-    reason = "the arms are kept explicit per RM type so each mapping stays readable next to its type name"
-)]
-pub(crate) fn emit_leaf(rm: &Value, rm_type: &str, list_open: Option<bool>, out: &mut SimNode) {
-    let ty = rm
-        .get("_type")
-        .and_then(Value::as_str)
-        .unwrap_or_else(|| base_name(rm_type));
-    match ty {
-        // master05 §DV_TEXT (and DV_PARAGRAPH shares the shape). A DV_TEXT held
-        // in an *open* DV_CODED_TEXT slot is the `|other` free-text branch
-        // (master04 §"Open Value-Sets"); otherwise the bare value, or `|value`
-        // when the node also carries metadata that keeps it from being a bare
-        // leaf (`|formatting` / `_mapping`).
-        "DV_TEXT" | "DV_PARAGRAPH" => {
-            let coded_slot = base_name(rm_type) == "DV_CODED_TEXT";
-            let open_slot = coded_slot && list_open != Some(false);
-            let has_meta = present(rm.get("formatting")) || present(rm.get("mappings"));
-            if open_slot {
-                put(out, "other", rm.get("value"));
-            } else if has_meta {
-                put(out, "value", rm.get("value"));
-            } else {
-                put(out, "", rm.get("value"));
-            }
-            put(out, "formatting", rm.get("formatting"));
-        }
-        // master05 §DV_CODED_TEXT: `|value` (display), `|code`/`|terminology`
-        // (defining_code), `|preferred_term`, `|formatting`.
-        "DV_CODED_TEXT" => {
-            put(out, "value", rm.get("value"));
-            if let Some(dc) = rm.get("defining_code") {
-                let (code, term, pref) = code_phrase_parts(dc);
-                put(out, "code", code);
-                put(out, "terminology", term);
-                put(out, "preferred_term", pref);
-            }
-            put(out, "formatting", rm.get("formatting"));
-        }
-        // master05 has no §DV_STATE table, so the value goes out whole as
-        // master04 §Raw canonical JSON (`|raw`), the one specified carrier.
-        "DV_STATE" => put(out, "raw", Some(rm)),
-        // master05 §CODE_PHRASE.
-        "CODE_PHRASE" => {
-            let (code, term, pref) = code_phrase_parts(rm);
-            put(out, "code", code);
-            put(out, "terminology", term);
-            put(out, "preferred_term", pref);
-        }
-        // master05 §DV_QUANTITY (RM `units` field → the `|unit` suffix).
-        "DV_QUANTITY" => {
-            put(out, "magnitude", rm.get("magnitude"));
-            put(out, "unit", rm.get("units"));
-            put(out, "precision", rm.get("precision"));
-            emit_quantified_extras(rm, out, true);
-        }
-        // master05 §DV_COUNT: the bare value is `magnitude`.
-        "DV_COUNT" => {
-            put(out, "", rm.get("magnitude"));
-            emit_quantified_extras(rm, out, true);
-        }
-        // master05 §DV_PROPORTION: numerator/denominator/type/precision, plus the
-        // bare magnitude "calculated on output".
-        "DV_PROPORTION" => {
-            put(out, "numerator", rm.get("numerator"));
-            put(out, "denominator", rm.get("denominator"));
-            put(out, "type", rm.get("type"));
-            put(out, "precision", rm.get("precision"));
-            if let (Some(n), Some(d)) = (
-                rm.get("numerator").and_then(Value::as_f64),
-                rm.get("denominator").and_then(Value::as_f64),
-            ) && d != 0.0
-            {
-                put(out, "", Some(&json!(n / d)));
-            }
-            emit_quantified_extras(rm, out, true);
-        }
-        // master05 §DV_ORDINAL: `|value`/`|code` (the symbol), `|ordinal` (value).
-        "DV_ORDINAL" => {
-            put(out, "value", rm.pointer("/symbol/value"));
-            emit_symbol_code(rm, out);
-            put(out, "ordinal", rm.get("value"));
-        }
-        // DV_SCALE mirrors DV_ORDINAL with a Real `|scale` in place of `|ordinal`.
-        "DV_SCALE" => {
-            put(out, "value", rm.pointer("/symbol/value"));
-            emit_symbol_code(rm, out);
-            put(out, "scale", rm.get("value"));
-        }
-        // master05 §DV_BOOLEAN: bare boolean.
-        "DV_BOOLEAN" => put(out, "", rm.get("value")),
-        // master05 §DV_DURATION: bare ISO-8601 duration + the amount extras.
-        "DV_DURATION" => {
-            put(out, "", rm.get("value"));
-            emit_quantified_extras(rm, out, true);
-        }
-        // master05 §§DV_DATE, DV_DATE_TIME, DV_TIME: bare ISO-8601 value; the
-        // `accuracy` (a DV_DURATION) is the `/_accuracy` sub-path, emitted by
-        // the `_`-attribute layer.
-        "DV_DATE_TIME" | "DV_DATE" | "DV_TIME" => {
-            put(out, "", rm.get("value"));
-            emit_quantified_extras(rm, out, false);
-        }
-        // master05 §§DV_URI, DV_EHR_URI: bare string.
-        "DV_URI" | "DV_EHR_URI" => put(out, "", rm.get("value")),
-        // master05 §DV_PARSABLE: bare value + `|formalism`.
-        "DV_PARSABLE" => {
-            put(out, "", rm.get("value"));
-            put(out, "formalism", rm.get("formalism"));
-        }
-        // master05 §DV_IDENTIFIER — delegated to the party/identifier module.
-        "DV_IDENTIFIER" => parties::emit_identifier(rm, out),
-        // master05 §PARTY_PROXY → §§PARTY_SELF, PARTY_IDENTIFIED,
-        // PARTY_RELATED: a PARTY_PROXY-typed leaf (`ENTRY.subject` —
-        // master05 §§ADMIN_ENTRY/INSTRUCTION/ACTION/EVALUATION/OBSERVATION
-        // `/subject` row) decomposes into the inlined
-        // `|name`/`|id`/`|id_scheme`/`|id_namespace` suffixes plus the
-        // `/_identifier:i` and `/relationship` sub-paths.
-        "PARTY_PROXY" | "PARTY_SELF" | "PARTY_IDENTIFIED" | "PARTY_RELATED" => {
-            parties::emit_party_as(rm, "PERSON", out);
-        }
-        // master05 §DV_MULTIMEDIA: bare = `uri.value`, plus the attribute set;
-        // `/_thumbnail`, `/_charset`, `/_language` are `_`-attribute sub-paths.
-        "DV_MULTIMEDIA" => emit_multimedia(rm, out),
-        // master05 §DV_INTERVAL: a leaf interval whose `/lower`/`/upper`
-        // endpoints are sub-paths (children). NOTE: this is the one leaf
-        // type whose datum is not attrs-only — `emit_leaf` emits its endpoint
-        // children here, since master05 §DV_INTERVAL models them as sub-paths.
-        "DV_INTERVAL" => {
-            emit_interval(rm, &interval_limit(rm_type), out);
-        }
-        // Any remaining `DV_*` leaf falls back to its scalar `value`.
-        _ => put(out, "", rm.get("value")),
-    }
-}
-
-fn emit_symbol_code(rm: &Value, out: &mut SimNode) {
-    if let Some(dc) = rm.pointer("/symbol/defining_code") {
-        let (code, term, _) = code_phrase_parts(dc);
-        put(out, "code", code);
-        put(out, "terminology", term);
-    }
-}
-
-fn emit_multimedia(rm: &Value, out: &mut SimNode) {
-    if let Some(uri) = rm.get("uri").filter(|u| !u.is_null()) {
-        put(out, "", uri.get("value"));
-    }
-    if let Some(mt) = rm.get("media_type") {
-        put(out, "mediatype", mt.get("code_string"));
-    }
-    put(out, "alternatetext", rm.get("alternate_text"));
-    if let Some(size) = rm.get("size").filter(|s| s.as_i64().is_some_and(|n| n > 0)) {
-        put(out, "size", Some(size));
-    }
-    if let Some(ca) = rm.get("compression_algorithm") {
-        put(out, "compression_algorithm", ca.get("code_string"));
-    }
-    put(out, "integrity_check", rm.get("integrity_check"));
-    if let Some(ica) = rm.get("integrity_check_algorithm") {
-        put(out, "integrity_check_algorithm", ica.get("code_string"));
-    }
-    put(out, "data", rm.get("data"));
-}
-
-/// Emit the value-internal `_`-families of a leaf value (master05: the
-/// `_normal_range`/`_other_reference_ranges` of the `DV_ORDERED` family, the
-/// `_accuracy` of the temporal family, the `_language`/`_encoding`/`_mapping`
-/// of the text family, and the `_thumbnail`/`_charset`/`_language` of
-/// DV_MULTIMEDIA / DV_PARSABLE). Called from [`super::structures::emit_rm_attrs`].
-pub(super) fn emit_value_internal(rm: &Value, ty: &str, out: &mut SimNode) {
-    match ty {
-        "DV_TEXT" | "DV_PARAGRAPH" | "DV_CODED_TEXT" => emit_text_meta(rm, out),
-        "DV_PARSABLE" => {
-            emit_code_phrase_sub(rm.get("charset"), "_charset", out);
-            emit_code_phrase_sub(rm.get("language"), "_language", out);
-        }
-        "DV_MULTIMEDIA" => {
-            if let Some(t) = rm.get("thumbnail").filter(|v| !v.is_null()) {
-                emit_leaf(
-                    t,
-                    "DV_MULTIMEDIA",
-                    None,
-                    out.occurrence_mut("_thumbnail", None),
-                );
-            }
-            emit_code_phrase_sub(rm.get("charset"), "_charset", out);
-            emit_code_phrase_sub(rm.get("language"), "_language", out);
-        }
-        _ => {}
-    }
-    if DV_ORDERED.contains(&ty) {
-        emit_reference_ranges(rm, ty, out);
-        if matches!(ty, "DV_DATE" | "DV_DATE_TIME" | "DV_TIME")
-            && let Some(acc) = rm.pointer("/accuracy/value")
-        {
-            out.occurrence_mut("_accuracy", None)
-                .attrs
-                .insert(String::new(), acc.clone());
-        }
-    }
-}
-
-/// `_language`/`_encoding` (CODE_PHRASE) + `_mapping:i` (TERM_MAPPING) on a
-/// DV_TEXT-family value (master05 §§DV_TEXT, DV_CODED_TEXT, TERM_MAPPING).
-fn emit_text_meta(rm: &Value, out: &mut SimNode) {
-    emit_code_phrase_sub(rm.get("language"), "_language", out);
-    emit_code_phrase_sub(rm.get("encoding"), "_encoding", out);
-    if let Some(maps) = rm.get("mappings").and_then(Value::as_array) {
-        for (i, m) in maps.iter().enumerate() {
-            let child = out.occurrence_mut("_mapping", Some(u32::try_from(i).unwrap_or(u32::MAX)));
-            put(child, "match", m.get("match"));
-            emit_code_phrase_sub(m.get("target"), "target", child);
-            if let Some(purpose) = m.get("purpose").filter(|v| !v.is_null()) {
-                emit_leaf(
-                    purpose,
-                    "DV_CODED_TEXT",
-                    None,
-                    child.occurrence_mut("purpose", None),
-                );
-            }
-        }
-    }
-}
-
-fn emit_code_phrase_sub(cp: Option<&Value>, name: &str, out: &mut SimNode) {
-    let Some(cp) = cp.filter(|v| !v.is_null()) else {
-        return;
-    };
-    emit_leaf(cp, "CODE_PHRASE", None, out.occurrence_mut(name, None));
-}
-
-/// `_normal_range` (DV_INTERVAL`<T>`) + `_other_reference_ranges:i`
-/// (REFERENCE_RANGE`<T>`), endpoints emitted via [`emit_leaf`] for `T`
-/// (master05 §§DV_INTERVAL, REFERENCE_RANGE).
-fn emit_reference_ranges(rm: &Value, t: &str, out: &mut SimNode) {
-    if let Some(nr) = rm.get("normal_range").filter(|v| !v.is_null()) {
-        emit_interval(nr, t, out.occurrence_mut("_normal_range", None));
-    }
-    if let Some(ranges) = rm.get("other_reference_ranges").and_then(Value::as_array) {
-        for (i, r) in ranges.iter().enumerate() {
-            let child = out.occurrence_mut(
-                "_other_reference_ranges",
-                Some(u32::try_from(i).unwrap_or(u32::MAX)),
-            );
-            if let Some(range) = r.get("range") {
-                emit_interval(range, t, child);
-            }
-            if let Some(meaning) = r.get("meaning").filter(|v| !v.is_null()) {
-                let mty = meaning
-                    .get("_type")
-                    .and_then(Value::as_str)
-                    .unwrap_or("DV_TEXT");
-                emit_leaf(meaning, mty, None, child.occurrence_mut("meaning", None));
-            }
-        }
-    }
-}
-
-/// A DV_INTERVAL: `/lower`, `/upper` endpoints of type `t` + the boundary flags,
-/// each flag emitted only when it differs from its default (master05
-/// §DV_INTERVAL: `|lower_unbounded`/`|upper_unbounded` only if true;
-/// `|lower_included`/`|upper_included` only if false).
-fn emit_interval(iv: &Value, t: &str, out: &mut SimNode) {
-    if let Some(lower) = iv.get("lower").filter(|v| !v.is_null()) {
-        emit_leaf(lower, t, None, out.occurrence_mut("lower", None));
-    }
-    if let Some(upper) = iv.get("upper").filter(|v| !v.is_null()) {
-        emit_leaf(upper, t, None, out.occurrence_mut("upper", None));
-    }
-    for (field, default) in [
-        ("lower_unbounded", false),
-        ("upper_unbounded", false),
-        ("lower_included", true),
-        ("upper_included", true),
-    ] {
-        if let Some(b) = iv.get(field).and_then(Value::as_bool)
-            && b != default
-        {
-            out.attrs.insert(field.to_owned(), json!(b));
-        }
-    }
-}
-
-fn present(v: Option<&Value>) -> bool {
-    v.is_some_and(|v| !v.is_null())
-}
-
 // ── sim → RM ────────────────────────────────────────────────────────────────
 
-/// Build the RM leaf for `node` (see [`super::build_leaf`]). Returns `None` when
+/// Build the RM leaf for `node` (see [`super::build_leaf`]). `Ok(None)` when
 /// the present datum parts do not form a value of `rm_type`.
+///
+/// # Errors
+/// [`FlatError::Rm`] for a datum the RM attribute refuses.
 pub(super) fn build_leaf(
     node: &SimNode,
     rm_type: &str,
     wt_node: Option<&WebTemplateNode>,
-) -> Option<Value> {
+) -> Result<Option<Obj>, FlatError> {
     let base = base_name(rm_type);
-    let mut value = build_core(base, rm_type, node, wt_node).or_else(|| {
-        infer_type(node)
-            .filter(|t| *t != base)
-            .and_then(|t| build_core(t, t, node, wt_node))
-    })?;
-    if let Value::Object(map) = &mut value {
-        attach_value_internal(map, base, node);
-    }
-    Some(value)
+    let built = match build_core(base, rm_type, node, wt_node)? {
+        Some(v) => Some(v),
+        None => match infer_type(node).filter(|t| *t != base) {
+            Some(t) => build_core(t, t, node, wt_node)?,
+            None => None,
+        },
+    };
+    let Some(mut value) = built else {
+        return Ok(None);
+    };
+    attach_value_internal(&mut *value, base, node)?;
+    Ok(Some(value))
 }
 
 /// Build the value-internal families onto an already-built core value. Used by
 /// [`build_leaf`]; [`super::structures::build_rm_attr`] builds the same families
 /// on demand when a walker routes a `_`-child to it instead.
-fn attach_value_internal(map: &mut Map<String, Value>, base: &str, node: &SimNode) {
+fn attach_value_internal(
+    map: &mut dyn RmObject,
+    base: &str,
+    node: &SimNode,
+) -> Result<(), FlatError> {
     if is_text_family(base) {
-        attach_text_internal(map, node);
+        attach_text_internal(map, node)?;
     }
     if base == "DV_PARSABLE" || base == "DV_MULTIMEDIA" {
-        if let Some(child) = single(node, "_charset").and_then(build_code_phrase) {
-            map.insert("charset".to_owned(), child);
-        }
-        if let Some(child) = single(node, "_language").and_then(build_code_phrase) {
-            map.insert("language".to_owned(), child);
-        }
+        put_code_phrase(map, node, "_charset", "charset")?;
+        put_code_phrase(map, node, "_language", "language")?;
     }
     if base == "DV_MULTIMEDIA"
         && let Some(t) = single(node, "_thumbnail")
-        && let Some(dv) = build_leaf(t, "DV_MULTIMEDIA", None)
+        && let Some(dv) = build_leaf(t, "DV_MULTIMEDIA", None)?
     {
-        map.insert("thumbnail".to_owned(), dv);
+        map.put("thumbnail", o(dv))?;
     }
     if DV_ORDERED.contains(&base) {
-        attach_ordered_internal(map, base, node);
+        attach_ordered_internal(map, base, node)?;
     }
+    Ok(())
 }
 
 /// The text-family value-internal families: `language`, `encoding` and the
 /// `_mapping:i` list.
-fn attach_text_internal(map: &mut Map<String, Value>, node: &SimNode) {
-    if let Some(cp) = single(node, "_language").and_then(build_code_phrase) {
-        map.insert("language".to_owned(), cp);
+fn attach_text_internal(map: &mut dyn RmObject, node: &SimNode) -> Result<(), FlatError> {
+    put_code_phrase(map, node, "_language", "language")?;
+    put_code_phrase(map, node, "_encoding", "encoding")?;
+    for mapping in build_indexed(node, "_mapping", build_term_mapping)? {
+        map.push_obj("mappings", mapping)?;
     }
-    if let Some(cp) = single(node, "_encoding").and_then(build_code_phrase) {
-        map.insert("encoding".to_owned(), cp);
-    }
-    let mappings = build_indexed(node, "_mapping", build_term_mapping);
-    if !mappings.is_empty() {
-        map.insert("mappings".to_owned(), Value::Array(mappings));
-    }
+    Ok(())
 }
 
 /// The DV_ORDERED value-internal families: the normal range, the other
 /// reference ranges, and (temporal types only) the accuracy duration.
-fn attach_ordered_internal(map: &mut Map<String, Value>, base: &str, node: &SimNode) {
+fn attach_ordered_internal(
+    map: &mut dyn RmObject,
+    base: &str,
+    node: &SimNode,
+) -> Result<(), FlatError> {
     if let Some(child) = single(node, "_normal_range") {
-        map.insert("normal_range".to_owned(), build_interval(child, base));
+        map.put("normal_range", o(build_interval(child, base)?))?;
     }
-    let ranges = build_indexed(node, "_other_reference_ranges", |n| {
+    for range in build_indexed(node, "_other_reference_ranges", |n| {
         build_reference_range(n, base)
-    });
-    if !ranges.is_empty() {
-        map.insert("other_reference_ranges".to_owned(), Value::Array(ranges));
+    })? {
+        map.push_obj("other_reference_ranges", range)?;
     }
     if matches!(base, "DV_DATE" | "DV_DATE_TIME" | "DV_TIME")
         && let Some(acc) = single(node, "_accuracy").and_then(SimNode::bare)
     {
-        map.insert(
-            "accuracy".to_owned(),
-            json!({"_type": "DV_DURATION", "value": acc.clone()}),
-        );
+        map.put("accuracy", o(duration(acc)?))?;
+    }
+    Ok(())
+}
+
+/// A `DV_DURATION` whose value is the client's datum.
+///
+/// # Errors
+/// [`FlatError::Rm`] for a datum that is no string.
+pub(super) fn duration(value: &Value) -> Result<Obj, FlatError> {
+    let mut d = access::construct("DV_DURATION")?;
+    d.put_datum("value", value)?;
+    Ok(d)
+}
+
+/// The CODE_PHRASE the single `_`-family child `family` of `node` builds,
+/// written into `attr`.
+fn put_code_phrase(
+    map: &mut dyn RmObject,
+    node: &SimNode,
+    family: &str,
+    attr: &str,
+) -> Result<(), FlatError> {
+    match single(node, family)
+        .map(build_code_phrase)
+        .transpose()?
+        .flatten()
+    {
+        Some(cp) => map.put(attr, o(cp)),
+        None => Ok(()),
     }
 }
 
@@ -466,12 +172,12 @@ fn single<'a>(node: &'a SimNode, name: &str) -> Option<&'a SimNode> {
 
 /// Build a `Vec` from every occurrence of the indexed `_`-family child `name`,
 /// in occurrence order (skipping interior placeholder holes).
-fn build_indexed<F>(node: &SimNode, name: &str, f: F) -> Vec<Value>
+fn build_indexed<F>(node: &SimNode, name: &str, f: F) -> Result<Vec<Obj>, FlatError>
 where
-    F: Fn(&SimNode) -> Value,
+    F: Fn(&SimNode) -> Result<Obj, FlatError>,
 {
     let Some(child) = family(node, name) else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
     child
         .occurrences
@@ -516,7 +222,7 @@ fn build_core(
     rm_type: &str,
     node: &SimNode,
     wt: Option<&WebTemplateNode>,
-) -> Option<Value> {
+) -> Result<Option<Obj>, FlatError> {
     match base {
         "DV_TEXT" | "DV_PARAGRAPH" => build_text(node, base),
         "DV_CODED_TEXT" => build_coded_text(node, base, wt),
@@ -526,29 +232,29 @@ fn build_core(
         "DV_PROPORTION" => build_proportion(node),
         "DV_ORDINAL" => build_ordinal(node, "DV_ORDINAL", "ordinal", wt),
         "DV_SCALE" => build_ordinal(node, "DV_SCALE", "scale", wt),
-        "DV_BOOLEAN" => bare_typed(node, "DV_BOOLEAN"),
+        "DV_BOOLEAN" => from_bare(node, "DV_BOOLEAN", "value"),
         "DV_DURATION" => build_amount_temporal(node, base, true),
         "DV_DATE_TIME" | "DV_DATE" | "DV_TIME" => build_amount_temporal(node, base, false),
-        "DV_URI" | "DV_EHR_URI" => bare_typed(node, base),
-        "DV_IDENTIFIER" => Some(parties::build_identifier(node)),
+        "DV_URI" | "DV_EHR_URI" => from_bare(node, base, "value"),
+        "DV_IDENTIFIER" => parties::build_identifier(node).map(Some),
         // master05 §PARTY_PROXY → the three subtype tables. `PERSON` is the
         // `PARTY_REF.type` used when the datum carries an `|id` but no
         // explicit reference type: the carriers of a PARTY_PROXY leaf
         // (`ENTRY.subject`, `COMPOSITION.composer`) reference a person, and
         // the master05 tables define no flat row for `external_ref.type`.
         "PARTY_PROXY" | "PARTY_SELF" | "PARTY_IDENTIFIED" | "PARTY_RELATED" => {
-            Some(parties::build_party(node, "PERSON"))
+            parties::build_party(node, "PERSON").map(Some)
         }
         "DV_MULTIMEDIA" => build_multimedia(node),
         "DV_PARSABLE" => build_parsable(node),
-        "DV_INTERVAL" => Some(build_interval(node, &interval_limit(rm_type))),
-        _ => bare_typed(node, base),
+        "DV_INTERVAL" => build_interval(node, &interval_limit(rm_type)).map(Some),
+        _ => from_bare(node, base, "value"),
     }
 }
 
 /// The class of the `T` of a generic slot type (`DV_INTERVAL<DV_QUANTITY>` →
 /// `DV_QUANTITY`), `DV_QUANTITY` for a slot type that names none.
-fn interval_limit(rm_type: &str) -> String {
+pub(super) fn interval_limit(rm_type: &str) -> String {
     // NOTE: a slot type that is no generic RM type name (RM class tables) has no argument.
     let parsed = rm_type.parse::<RmType>().ok();
     let limit = parsed.as_ref().and_then(|t| t.params().first());
@@ -559,128 +265,156 @@ fn attr<'a>(node: &'a SimNode, key: &str) -> Option<&'a Value> {
     node.attrs.get(key)
 }
 
+/// The `|code` datum of `node` and its text, empty for a code that is no
+/// string (the value-set check refuses it).
+fn code_attr(node: &SimNode) -> Option<(&Value, &str)> {
+    let code = node.attrs.get("code")?;
+    Some((code, code.as_str().unwrap_or_default()))
+}
+
 fn attr_str<'a>(node: &'a SimNode, key: &str) -> Option<&'a str> {
     node.attrs.get(key).and_then(Value::as_str)
 }
 
-fn build_text(node: &SimNode, ty: &str) -> Option<Value> {
-    let value = node.bare().or_else(|| attr(node, "value"))?.clone();
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!(ty));
-    o.insert("value".to_owned(), value);
-    if let Some(f) = attr(node, "formatting") {
-        o.insert("formatting".to_owned(), f.clone());
+/// Write each present suffix of `node` into its attribute of `o`.
+fn put_suffixes(
+    o: &mut dyn RmObject,
+    node: &SimNode,
+    pairs: &[(&str, &str)],
+) -> Result<(), FlatError> {
+    for (suffix, field) in pairs {
+        if let Some(v) = attr(node, suffix) {
+            o.put_datum(field, v)?;
+        }
     }
-    Some(Value::Object(o))
+    Ok(())
+}
+
+fn build_text(node: &SimNode, ty: &str) -> Result<Option<Obj>, FlatError> {
+    let Some(value) = node.bare().or_else(|| attr(node, "value")) else {
+        return Ok(None);
+    };
+    let mut o = access::construct(ty)?;
+    o.put_datum("value", value)?;
+    put_suffixes(&mut *o, node, &[("formatting", "formatting")])?;
+    Ok(Some(o))
 }
 
 /// master05 §DV_CODED_TEXT. `|value`/`|terminology` are only required for
 /// external terminologies; a local/openehr code resolves its rubric and the
 /// implicit terminology from the web-template input list when the suffixes are
 /// omitted.
-fn build_coded_text(node: &SimNode, ty: &str, wt: Option<&WebTemplateNode>) -> Option<Value> {
-    let code = attr(node, "code")?.clone();
-    let code_str = code.as_str().unwrap_or_default();
+fn build_coded_text(
+    node: &SimNode,
+    ty: &str,
+    wt: Option<&WebTemplateNode>,
+) -> Result<Option<Obj>, FlatError> {
+    let Some((code, code_str)) = code_attr(node) else {
+        return Ok(None);
+    };
     let terminology = attr_str(node, "terminology")
         .or_else(|| wt_terminology(wt))
-        .unwrap_or("local")
-        .to_owned();
-    let value = attr(node, "value").cloned().or_else(|| {
-        wt_coded_value(wt, code_str)
-            .and_then(|cv| cv.label.clone())
-            .map(Value::String)
-    });
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!(ty));
-    if let Some(v) = value {
-        o.insert("value".to_owned(), v);
+        .unwrap_or("local");
+    let mut o = access::construct(ty)?;
+    match attr(node, "value") {
+        Some(value) => o.put_datum("value", value)?,
+        None => {
+            if let Some(label) = wt_coded_value(wt, code_str).and_then(|cv| cv.label.as_deref()) {
+                o.put("value", s(label))?;
+            }
+        }
     }
-    o.insert(
-        "defining_code".to_owned(),
-        code_phrase_obj(code, &terminology, attr(node, "preferred_term").cloned()),
-    );
-    if let Some(f) = attr(node, "formatting") {
-        o.insert("formatting".to_owned(), f.clone());
-    }
-    Some(Value::Object(o))
+    o.put(
+        "defining_code",
+        typed::o(code_phrase_obj(
+            code,
+            terminology,
+            attr(node, "preferred_term"),
+        )?),
+    )?;
+    put_suffixes(&mut *o, node, &[("formatting", "formatting")])?;
+    Ok(Some(o))
 }
 
 /// master05 §CODE_PHRASE. `pub(super)` — reused for `_language`/`_encoding`/
 /// `_charset`/`target` sub-code-phrases.
-pub(super) fn build_code_phrase(node: &SimNode) -> Option<Value> {
-    let code = attr(node, "code")?.clone();
+pub(super) fn build_code_phrase(node: &SimNode) -> Result<Option<Obj>, FlatError> {
+    let Some(code) = attr(node, "code") else {
+        return Ok(None);
+    };
     let terminology = attr_str(node, "terminology").unwrap_or("local");
-    Some(code_phrase_obj(
-        code,
-        terminology,
-        attr(node, "preferred_term").cloned(),
-    ))
+    code_phrase_obj(code, terminology, attr(node, "preferred_term")).map(Some)
 }
 
 /// Apply the shared amount/ordered reverse extras (master05 note): rebuild
 /// `normal_status` as a CODE_PHRASE in the implicit `openehr` terminology.
-fn apply_amount_extras(o: &mut Map<String, Value>, node: &SimNode, with_accuracy: bool) {
-    if let Some(v) = attr(node, "magnitude_status") {
-        o.insert("magnitude_status".to_owned(), v.clone());
-    }
+fn apply_amount_extras(
+    o: &mut dyn RmObject,
+    node: &SimNode,
+    with_accuracy: bool,
+) -> Result<(), FlatError> {
+    put_suffixes(o, node, &[("magnitude_status", "magnitude_status")])?;
     if with_accuracy {
-        if let Some(v) = attr(node, "accuracy") {
-            o.insert("accuracy".to_owned(), v.clone());
-        }
-        if let Some(v) = attr(node, "accuracy_is_percent") {
-            o.insert("accuracy_is_percent".to_owned(), v.clone());
-        }
+        put_suffixes(
+            o,
+            node,
+            &[
+                ("accuracy", "accuracy"),
+                ("accuracy_is_percent", "accuracy_is_percent"),
+            ],
+        )?;
     }
     if let Some(code) = attr_str(node, "normal_status") {
-        o.insert(
-            "normal_status".to_owned(),
-            code_phrase_obj(json!(code), "openehr", None),
-        );
+        o.put(
+            "normal_status",
+            typed::o(typed::code_phrase("openehr", code)?),
+        )?;
     }
+    Ok(())
 }
 
-fn build_quantity(node: &SimNode) -> Option<Value> {
-    let magnitude = attr(node, "magnitude")?.clone();
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!("DV_QUANTITY"));
-    o.insert("magnitude".to_owned(), magnitude);
-    if let Some(u) = attr(node, "unit") {
-        o.insert("units".to_owned(), u.clone());
-    }
-    if let Some(p) = attr(node, "precision") {
-        o.insert("precision".to_owned(), p.clone());
-    }
-    apply_amount_extras(&mut o, node, true);
-    Some(Value::Object(o))
+fn build_quantity(node: &SimNode) -> Result<Option<Obj>, FlatError> {
+    let Some(magnitude) = attr(node, "magnitude") else {
+        return Ok(None);
+    };
+    let mut o = access::construct("DV_QUANTITY")?;
+    o.put_datum("magnitude", magnitude)?;
+    put_suffixes(
+        &mut *o,
+        node,
+        &[("unit", "units"), ("precision", "precision")],
+    )?;
+    apply_amount_extras(&mut *o, node, true)?;
+    Ok(Some(o))
 }
 
-fn build_count(node: &SimNode) -> Option<Value> {
-    let magnitude = node.bare()?.clone();
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!("DV_COUNT"));
-    o.insert("magnitude".to_owned(), magnitude);
-    apply_amount_extras(&mut o, node, true);
-    Some(Value::Object(o))
+fn build_count(node: &SimNode) -> Result<Option<Obj>, FlatError> {
+    let Some(mut o) = from_bare(node, "DV_COUNT", "magnitude")? else {
+        return Ok(None);
+    };
+    apply_amount_extras(&mut *o, node, true)?;
+    Ok(Some(o))
 }
 
-fn build_proportion(node: &SimNode) -> Option<Value> {
-    let numerator = attr(node, "numerator")?.clone();
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!("DV_PROPORTION"));
-    o.insert("numerator".to_owned(), numerator);
-    for (suffix, field) in [
-        ("denominator", "denominator"),
-        ("type", "type"),
-        ("precision", "precision"),
-    ] {
-        if let Some(v) = attr(node, suffix) {
-            o.insert(field.to_owned(), v.clone());
-        }
-    }
+fn build_proportion(node: &SimNode) -> Result<Option<Obj>, FlatError> {
+    let Some(numerator) = attr(node, "numerator") else {
+        return Ok(None);
+    };
+    let mut o = access::construct("DV_PROPORTION")?;
+    o.put_datum("numerator", numerator)?;
+    put_suffixes(
+        &mut *o,
+        node,
+        &[
+            ("denominator", "denominator"),
+            ("type", "type"),
+            ("precision", "precision"),
+        ],
+    )?;
     // The bare value is the computed magnitude ("calculated on output"); it is
     // derived from numerator/denominator, so it is not stored back.
-    apply_amount_extras(&mut o, node, true);
-    Some(Value::Object(o))
+    apply_amount_extras(&mut *o, node, true)?;
+    Ok(Some(o))
 }
 
 /// master05 §§DV_ORDINAL, DV_SCALE. `|value`/`|ordinal`(`|scale`) may be omitted
@@ -691,184 +425,200 @@ fn build_ordinal(
     ty: &str,
     numeric_suffix: &str,
     wt: Option<&WebTemplateNode>,
-) -> Option<Value> {
-    let code = attr(node, "code")?.clone();
-    let code_str = code.as_str().unwrap_or_default();
+) -> Result<Option<Obj>, FlatError> {
+    let Some((code, code_str)) = code_attr(node) else {
+        return Ok(None);
+    };
     let template = wt_coded_value(wt, code_str);
-    let numeric = attr(node, numeric_suffix).cloned().or_else(|| {
+    let Some(numeric) = attr(node, numeric_suffix).cloned().or_else(|| {
         template.and_then(|cv| match ty {
             "DV_SCALE" => cv.scale.map(|s| json!(s)),
             _ => cv.ordinal.map(|o| json!(o)),
         })
-    })?;
-    let terminology = attr_str(node, "terminology").unwrap_or("local").to_owned();
-    let value = attr(node, "value")
-        .cloned()
-        .or_else(|| template.and_then(|cv| cv.label.clone()).map(Value::String));
-    let mut symbol = Map::new();
-    symbol.insert("_type".to_owned(), json!("DV_CODED_TEXT"));
-    if let Some(v) = value {
-        symbol.insert("value".to_owned(), v);
+    }) else {
+        return Ok(None);
+    };
+    let terminology = attr_str(node, "terminology").unwrap_or("local");
+    let mut symbol = access::construct("DV_CODED_TEXT")?;
+    match attr(node, "value") {
+        Some(value) => symbol.put_datum("value", value)?,
+        None => {
+            if let Some(label) = template.and_then(|cv| cv.label.as_deref()) {
+                symbol.put("value", s(label))?;
+            }
+        }
     }
-    symbol.insert(
-        "defining_code".to_owned(),
-        code_phrase_obj(code, &terminology, None),
-    );
-    Some(json!({"_type": ty, "value": numeric, "symbol": Value::Object(symbol)}))
+    symbol.put(
+        "defining_code",
+        o(code_phrase_obj(code, terminology, None)?),
+    )?;
+    let mut o = access::construct(ty)?;
+    o.put_datum("value", &numeric)?;
+    o.put("symbol", typed::o(symbol))?;
+    Ok(Some(o))
 }
 
 /// A temporal leaf (`DV_DATE`/`DV_DATE_TIME`/`DV_TIME`) or `DV_DURATION`: bare
 /// value + the amount/ordered extras (master05 §§DV_DATE/DATE_TIME/TIME/DURATION).
-fn build_amount_temporal(node: &SimNode, ty: &str, with_accuracy: bool) -> Option<Value> {
-    let value = node.bare()?.clone();
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!(ty));
-    o.insert("value".to_owned(), value);
-    apply_amount_extras(&mut o, node, with_accuracy);
-    Some(Value::Object(o))
+fn build_amount_temporal(
+    node: &SimNode,
+    ty: &str,
+    with_accuracy: bool,
+) -> Result<Option<Obj>, FlatError> {
+    let Some(mut o) = from_bare(node, ty, "value")? else {
+        return Ok(None);
+    };
+    apply_amount_extras(&mut *o, node, with_accuracy)?;
+    Ok(Some(o))
 }
 
 /// master05 §DV_MULTIMEDIA: bare = `uri`; `media_type` + `size` are RM-mandatory
 /// (`size` defaults to 0 when the FLAT lacks `|size`).
-fn build_multimedia(node: &SimNode) -> Option<Value> {
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!("DV_MULTIMEDIA"));
+fn build_multimedia(node: &SimNode) -> Result<Option<Obj>, FlatError> {
+    let mut o = access::construct("DV_MULTIMEDIA")?;
+    let mut carries_content = false;
     if let Some(uri) = node.bare() {
-        o.insert(
-            "uri".to_owned(),
-            json!({"_type": "DV_URI", "value": uri.clone()}),
-        );
+        let mut dv_uri = access::construct("DV_URI")?;
+        dv_uri.put_datum("value", uri)?;
+        o.put("uri", typed::o(dv_uri))?;
+        carries_content = true;
     }
     if let Some(mt) = attr(node, "mediatype") {
-        o.insert(
-            "media_type".to_owned(),
-            code_phrase_obj(mt.clone(), "IANA_media-types", None),
-        );
+        o.put(
+            "media_type",
+            typed::o(code_phrase_obj(mt, "IANA_media-types", None)?),
+        )?;
+        carries_content = true;
     }
-    if let Some(a) = attr(node, "alternatetext") {
-        o.insert("alternate_text".to_owned(), a.clone());
-    }
+    put_suffixes(&mut *o, node, &[("alternatetext", "alternate_text")])?;
     if let Some(ca) = attr_str(node, "compression_algorithm") {
-        o.insert(
-            "compression_algorithm".to_owned(),
-            code_phrase_obj(json!(ca), "openehr_compression_algorithms", None),
-        );
+        o.put(
+            "compression_algorithm",
+            typed::o(typed::code_phrase("openehr_compression_algorithms", ca)?),
+        )?;
     }
-    if let Some(ic) = attr(node, "integrity_check") {
-        o.insert("integrity_check".to_owned(), ic.clone());
-    }
+    put_suffixes(&mut *o, node, &[("integrity_check", "integrity_check")])?;
     if let Some(ica) = attr_str(node, "integrity_check_algorithm") {
-        o.insert(
-            "integrity_check_algorithm".to_owned(),
-            code_phrase_obj(json!(ica), "openehr_integrity_check_algorithms", None),
-        );
+        o.put(
+            "integrity_check_algorithm",
+            typed::o(typed::code_phrase(
+                "openehr_integrity_check_algorithms",
+                ica,
+            )?),
+        )?;
     }
     if let Some(d) = attr(node, "data") {
-        o.insert("data".to_owned(), d.clone());
+        o.put_datum("data", d)?;
+        carries_content = true;
     }
     let size = attr(node, "size")
         .and_then(Value::as_i64)
         .or_else(|| attr_str(node, "size").and_then(|s| s.parse().ok()))
         .unwrap_or(0);
-    o.insert("size".to_owned(), json!(size));
-    if o.contains_key("media_type") || o.contains_key("uri") || o.contains_key("data") {
-        Some(Value::Object(o))
-    } else {
-        None
+    o.put("size", RmValue::Integer(size))?;
+    Ok(carries_content.then_some(o))
+}
+
+fn build_parsable(node: &SimNode) -> Result<Option<Obj>, FlatError> {
+    let Some(value) = node.bare().or_else(|| attr(node, "value")) else {
+        return Ok(None);
+    };
+    let mut o = access::construct("DV_PARSABLE")?;
+    o.put_datum("value", value)?;
+    match attr(node, "formalism") {
+        Some(formalism) => o.put_datum("formalism", formalism)?,
+        None => o.put("formalism", s(""))?,
     }
+    Ok(Some(o))
 }
 
-fn build_parsable(node: &SimNode) -> Option<Value> {
-    let value = node.bare().or_else(|| attr(node, "value"))?.clone();
-    let formalism = attr(node, "formalism")
-        .cloned()
-        .unwrap_or_else(|| json!(""));
-    Some(json!({"_type": "DV_PARSABLE", "value": value, "formalism": formalism}))
-}
-
-fn bare_typed(node: &SimNode, ty: &str) -> Option<Value> {
-    Some(json!({"_type": ty, "value": node.bare()?.clone()}))
+/// A `ty` whose `attr` is the bare datum of `node`; `None` without one.
+fn from_bare(node: &SimNode, ty: &str, attr: &str) -> Result<Option<Obj>, FlatError> {
+    let Some(value) = node.bare() else {
+        return Ok(None);
+    };
+    let mut o = access::construct(ty)?;
+    o.put_datum(attr, value)?;
+    Ok(Some(o))
 }
 
 /// master05 §TERM_MAPPING. `pub(super)` — reused by [`super::structures`] for the
 /// `_mapping:i` family via [`build_indexed`].
-pub(super) fn build_term_mapping(node: &SimNode) -> Value {
-    let mut o = Map::new();
-    o.insert("_type".to_owned(), json!("TERM_MAPPING"));
-    o.insert(
-        "match".to_owned(),
-        json!(attr_str(node, "match").unwrap_or("=")),
-    );
-    if let Some(target) = single(node, "target").and_then(build_code_phrase) {
-        o.insert("target".to_owned(), target);
+pub(super) fn build_term_mapping(node: &SimNode) -> Result<Obj, FlatError> {
+    let mut o = access::construct("TERM_MAPPING")?;
+    match attr(node, "match") {
+        Some(m) if m.is_string() => o.put_datum("match", m)?,
+        _ => o.put("match", RmValue::Character('='))?,
     }
-    if let Some(purpose) =
-        single(node, "purpose").and_then(|p| build_leaf(p, "DV_CODED_TEXT", None))
+    put_code_phrase(&mut *o, node, "target", "target")?;
+    if let Some(p) = single(node, "purpose")
+        && let Some(purpose) = build_leaf(p, "DV_CODED_TEXT", None)?
     {
-        o.insert("purpose".to_owned(), purpose);
+        o.put("purpose", typed::o(purpose))?;
     }
-    Value::Object(o)
+    Ok(o)
 }
 
 /// master05 §DV_INTERVAL: `/lower`, `/upper` (of type `t`) + the boundary flags
 /// (defaults: unbounded=false, included=true). `pub(super)` — reused by the
 /// `_normal_range` family in [`super::structures`].
-pub(super) fn build_interval(node: &SimNode, t: &str) -> Value {
-    let mut iv = Map::new();
-    iv.insert("_type".to_owned(), json!("DV_INTERVAL"));
-    if let Some(dv) = single(node, "lower").and_then(|n| build_leaf(n, t, None)) {
-        iv.insert("lower".to_owned(), dv);
-    }
-    if let Some(dv) = single(node, "upper").and_then(|n| build_leaf(n, t, None)) {
-        iv.insert("upper".to_owned(), dv);
+pub(super) fn build_interval(node: &SimNode, t: &str) -> Result<Obj, FlatError> {
+    let mut iv = access::construct("DV_INTERVAL")?;
+    for bound in ["lower", "upper"] {
+        if let Some(n) = single(node, bound)
+            && let Some(dv) = build_leaf(n, t, None)?
+        {
+            iv.put(bound, o(dv))?;
+        }
     }
     let flag = |s: &str, default: bool| attr(node, s).and_then(Value::as_bool).unwrap_or(default);
-    iv.insert(
-        "lower_unbounded".to_owned(),
-        json!(flag("lower_unbounded", false)),
-    );
-    iv.insert(
-        "upper_unbounded".to_owned(),
-        json!(flag("upper_unbounded", false)),
-    );
-    iv.insert(
-        "lower_included".to_owned(),
-        json!(flag("lower_included", true)),
-    );
-    iv.insert(
-        "upper_included".to_owned(),
-        json!(flag("upper_included", true)),
-    );
-    Value::Object(iv)
+    for (name, default) in [
+        ("lower_unbounded", false),
+        ("upper_unbounded", false),
+        ("lower_included", true),
+        ("upper_included", true),
+    ] {
+        iv.put(name, RmValue::Boolean(flag(name, default)))?;
+    }
+    Ok(iv)
 }
 
 /// master05 §REFERENCE_RANGE: a `range` (DV_INTERVAL`<T>`) + a `meaning` (DV_TEXT,
 /// or DV_CODED_TEXT when coded). `pub(super)` — reused for the
 /// `_other_reference_ranges:i` family in [`super::structures`].
-pub(super) fn build_reference_range(node: &SimNode, t: &str) -> Value {
-    let meaning = single(node, "meaning");
-    let meaning_val = match meaning {
-        None => json!({"_type": "DV_TEXT", "value": ""}),
+pub(super) fn build_reference_range(node: &SimNode, t: &str) -> Result<Obj, FlatError> {
+    let meaning = match single(node, "meaning") {
+        None => typed::dv_text("")?,
         Some(m) => {
             let mty = if m.attrs.contains_key("code") {
                 "DV_CODED_TEXT"
             } else {
                 "DV_TEXT"
             };
-            build_leaf(m, mty, None).unwrap_or_else(|| json!({"_type": "DV_TEXT", "value": ""}))
+            match build_leaf(m, mty, None)? {
+                Some(built) => built,
+                None => typed::dv_text("")?,
+            }
         }
     };
-    json!({
-        "_type": "REFERENCE_RANGE",
-        "meaning": meaning_val,
-        "range": build_interval(node, t),
-    })
+    typed::make(
+        "REFERENCE_RANGE",
+        [
+            ("meaning", o(meaning)),
+            ("range", o(build_interval(node, t)?)),
+        ],
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::flat::map::emit::{emit_interval, emit_leaf};
     use serde_json::json;
+
+    fn canon(object: &Obj) -> Value {
+        typed::canonical_of(&**object).unwrap()
+    }
 
     fn leaf(pairs: &[(&str, Value)]) -> SimNode {
         let mut n = SimNode::default();
@@ -901,7 +651,7 @@ mod tests {
             ("accuracy", json!(50.5)),
             ("normal_status", json!("N")),
         ]);
-        let rm = build_leaf(&node, "DV_QUANTITY", None).unwrap();
+        let rm = canon(&build_leaf(&node, "DV_QUANTITY", None).unwrap().unwrap());
         assert_eq!(rm["units"], json!("unit"));
         assert_eq!(rm["normal_status"]["code_string"], json!("N"));
         assert_eq!(
@@ -922,7 +672,7 @@ mod tests {
         );
         assert_eq!(out.bare(), Some(&json!(7)));
         let node = leaf(&[("", json!(7))]);
-        let rm = build_leaf(&node, "DV_COUNT", None).unwrap();
+        let rm = canon(&build_leaf(&node, "DV_COUNT", None).unwrap().unwrap());
         assert_eq!(rm["magnitude"], json!(7));
         assert!(rm["magnitude"].is_i64());
     }
@@ -955,7 +705,11 @@ mod tests {
         let mut wt = WebTemplateNode::new("DV_CODED_TEXT".to_owned(), String::new());
         wt.inputs.push(input);
         let node = leaf(&[("code", json!("at0006"))]);
-        let rm = build_leaf(&node, "DV_CODED_TEXT", Some(&wt)).unwrap();
+        let rm = canon(
+            &build_leaf(&node, "DV_CODED_TEXT", Some(&wt))
+                .unwrap()
+                .unwrap(),
+        );
         assert_eq!(rm["value"], json!("Term One"));
         assert_eq!(rm["defining_code"]["code_string"], json!("at0006"));
         assert_eq!(
@@ -978,7 +732,7 @@ mod tests {
         let mut wt = WebTemplateNode::new("DV_ORDINAL".to_owned(), String::new());
         wt.inputs.push(input);
         let node = leaf(&[("code", json!("at0015"))]);
-        let rm = build_leaf(&node, "DV_ORDINAL", Some(&wt)).unwrap();
+        let rm = canon(&build_leaf(&node, "DV_ORDINAL", Some(&wt)).unwrap().unwrap());
         assert_eq!(rm["value"], json!(1));
         assert_eq!(rm["symbol"]["value"], json!("value1"));
         assert_eq!(
@@ -1025,7 +779,7 @@ mod tests {
             ("mediatype", json!("video/H261")),
             ("size", json!(504)),
         ]);
-        let rm = build_leaf(&node, "DV_MULTIMEDIA", None).unwrap();
+        let rm = canon(&build_leaf(&node, "DV_MULTIMEDIA", None).unwrap().unwrap());
         assert_eq!(rm["uri"]["value"], json!("http://x/s"));
         assert_eq!(rm["media_type"]["code_string"], json!("video/H261"));
         assert_eq!(rm["size"], json!(504));
@@ -1042,7 +796,7 @@ mod tests {
         nr.occurrence_mut("lower", None)
             .attrs
             .insert("unit".to_owned(), json!("unit"));
-        let rm = build_leaf(&node, "DV_QUANTITY", None).unwrap();
+        let rm = canon(&build_leaf(&node, "DV_QUANTITY", None).unwrap().unwrap());
         assert_eq!(rm["normal_range"]["lower"]["magnitude"], json!(20.5));
         assert_eq!(rm["normal_range"]["lower"]["units"], json!("unit"));
     }

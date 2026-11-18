@@ -28,3 +28,27 @@ pub enum DvAmount {
     /// The `DV_QUANTITY` subtype of `DV_AMOUNT`.
     DvQuantity(DvQuantity),
 }
+
+impl From<DvCount> for DvAmount {
+    fn from(value: DvCount) -> Self {
+        Self::DvCount(value)
+    }
+}
+
+impl From<DvDuration> for DvAmount {
+    fn from(value: DvDuration) -> Self {
+        Self::DvDuration(value)
+    }
+}
+
+impl From<DvProportion> for DvAmount {
+    fn from(value: DvProportion) -> Self {
+        Self::DvProportion(value)
+    }
+}
+
+impl From<DvQuantity> for DvAmount {
+    fn from(value: DvQuantity) -> Self {
+        Self::DvQuantity(value)
+    }
+}

@@ -163,6 +163,7 @@ impl IdentifierColumn {
 /// `agent.network.address`. An `entity.identifier` whose value is the
 /// event's request id or resource id is the [`IdentifierColumn`] token of its
 /// system instead.
+#[cfg(test)]
 #[must_use]
 pub(crate) fn document_tokens(
     document: &serde_json::Value,
@@ -200,6 +201,113 @@ pub(crate) fn document_tokens(
                 other => other.to_string(),
             }),
         });
+    }
+    tokens
+}
+
+/// The search tokens of `resource`, the rendering of `event`: the tokens
+/// `document_tokens` reads from the resource's JSON document, read from the
+/// typed resource with no document written (#6005).
+///
+/// Each element's nodes are the ones [`AuditElement::nodes`] reaches in the
+/// document: `agent.who.identifier`, the `what.identifier` of an entity whose
+/// role is the patient's (object-role `1`), `entity.what.identifier`,
+/// `source.observer.identifier`, `entity.type`, `entity.role`, `type` and
+/// `subtype`, and each `agent.network.address`.
+#[must_use]
+pub(crate) fn resource_tokens(
+    resource: &fhir_types::r4::audit_event::AuditEvent,
+    event: &AuditEvent,
+) -> BTreeSet<SearchToken> {
+    use fhir_types::r4::coding::Coding;
+    use fhir_types::r4::identifier::Identifier;
+    use fhir_types::r4::reference::Reference;
+    fn identifier_of(reference: Option<&Reference>) -> Option<&Identifier> {
+        reference.and_then(|reference| reference.identifier.as_deref())
+    }
+    let mut tokens = BTreeSet::new();
+    let mut identified = |element: AuditElement, identifier: &Identifier| {
+        let code = identifier
+            .value
+            .as_ref()
+            .and_then(|value| value.value.clone());
+        let column = IdentifierColumn::ALL.into_iter().find(|column| {
+            element == AuditElement::EntityIdentifier
+                && code.is_some()
+                && column.value(event) == code.as_deref()
+        });
+        tokens.insert(SearchToken {
+            parameter: column.map_or(element.parameter(), IdentifierColumn::parameter),
+            system: identifier
+                .system
+                .as_ref()
+                .and_then(|system| system.value.clone()),
+            code: if column.is_some() { None } else { code },
+        });
+    };
+    for agent in &resource.agent {
+        if let Some(identifier) = identifier_of(agent.who.as_ref()) {
+            identified(AuditElement::AgentIdentifier, identifier);
+        }
+    }
+    for entity in &resource.entity {
+        let patient = entity.role.as_ref().is_some_and(|role| {
+            role.code.as_ref().and_then(|code| code.value.as_deref()) == Some("1")
+                && role
+                    .system
+                    .as_ref()
+                    .and_then(|system| system.value.as_deref())
+                    == Some(crate::system_log::store::OBJECT_ROLE_SYSTEM)
+        });
+        if patient && let Some(identifier) = identifier_of(entity.what.as_ref()) {
+            identified(AuditElement::PatientIdentifier, identifier);
+        }
+    }
+    for entity in &resource.entity {
+        if let Some(identifier) = identifier_of(entity.what.as_ref()) {
+            identified(AuditElement::EntityIdentifier, identifier);
+        }
+    }
+    if let Some(identifier) = identifier_of(Some(&resource.source.observer)) {
+        identified(AuditElement::SourceIdentifier, identifier);
+    }
+    let mut coded = |element: AuditElement, coding: &Coding| {
+        tokens.insert(SearchToken {
+            parameter: element.parameter(),
+            system: coding
+                .system
+                .as_ref()
+                .and_then(|system| system.value.clone()),
+            code: coding.code.as_ref().and_then(|code| code.value.clone()),
+        });
+    };
+    for entity in &resource.entity {
+        if let Some(coding) = &entity.r#type {
+            coded(AuditElement::EntityType, coding);
+        }
+    }
+    for entity in &resource.entity {
+        if let Some(coding) = &entity.role {
+            coded(AuditElement::EntityRole, coding);
+        }
+    }
+    coded(AuditElement::Type, &resource.r#type);
+    for coding in &resource.subtype {
+        coded(AuditElement::Subtype, coding);
+    }
+    for agent in &resource.agent {
+        if let Some(address) = agent
+            .network
+            .as_ref()
+            .and_then(|network| network.address.as_ref())
+            .and_then(|address| address.value.clone())
+        {
+            tokens.insert(SearchToken {
+                parameter: ADDRESS,
+                system: None,
+                code: Some(address),
+            });
+        }
     }
     tokens
 }
@@ -620,123 +728,4 @@ fn token_lookup(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Every element names a distinct parameter, and the shared ones are the
-    /// code-system parameters and the audit source.
-    #[test]
-    fn every_element_names_its_own_parameter() {
-        let parameters: BTreeSet<&str> = ELEMENTS.iter().map(|e| e.parameter()).collect();
-        assert_eq!(parameters.len(), ELEMENTS.len());
-        assert!(!parameters.contains(ADDRESS));
-        let shared: Vec<&str> = ELEMENTS
-            .iter()
-            .filter(|e| e.shared())
-            .map(|e| e.parameter())
-            .collect();
-        assert_eq!(
-            shared,
-            [
-                "source.identifier",
-                "entity-type",
-                "entity-role",
-                "type",
-                "subtype"
-            ]
-        );
-    }
-
-    /// The tokens of a document are its nodes under each parameter, with the
-    /// system kept apart from its absence.
-    #[test]
-    fn a_document_yields_a_token_per_node() {
-        let document = serde_json::json!({
-            "type": {"system": "http://terminology.hl7.org/CodeSystem/audit-event-type", "code": "rest"},
-            "subtype": [{"system": "urn:openehr:its-rest:operation", "code": "composition_get"}],
-            "agent": [
-                {"who": {"identifier": {"value": "alice"}}, "network": {"address": "10.0.0.9"}}
-            ],
-            "entity": [{
-                "role": {"system": "http://terminology.hl7.org/CodeSystem/object-role", "code": "1"},
-                "what": {"identifier": {"value": "patient-42"}}
-            }]
-        });
-        let event = AuditEvent::new(
-            crate::system_log::event::EventActionCode::Read,
-            crate::system_log::event::ObjectClass::Composition,
-            crate::system_log::event::EventOutcome::Success,
-        );
-        let tokens = document_tokens(&document, &event);
-        let token = |parameter, system: Option<&str>, code: &str| SearchToken {
-            parameter,
-            system: system.map(str::to_owned),
-            code: Some(code.to_owned()),
-        };
-        for expected in [
-            token(
-                "type",
-                Some("http://terminology.hl7.org/CodeSystem/audit-event-type"),
-                "rest",
-            ),
-            token(
-                "subtype",
-                Some("urn:openehr:its-rest:operation"),
-                "composition_get",
-            ),
-            token("agent.identifier", None, "alice"),
-            token("address", None, "10.0.0.9"),
-            token("patient.identifier", None, "patient-42"),
-            token("entity.identifier", None, "patient-42"),
-            token(
-                "entity-role",
-                Some("http://terminology.hl7.org/CodeSystem/object-role"),
-                "1",
-            ),
-        ] {
-            assert!(tokens.contains(&expected), "{expected:?} in {tokens:?}");
-        }
-        assert_eq!(tokens.len(), 7, "{tokens:?}");
-    }
-
-    /// An `entity.identifier` carrying the event's request id or resource id
-    /// becomes the column token of its system, with no code; any other stays.
-    #[test]
-    fn a_request_id_and_a_resource_id_become_column_tokens() {
-        use crate::system_log::event::{EventActionCode, EventOutcome, ObjectClass};
-
-        let document = serde_json::json!({"entity": [
-            {"what": {"identifier": {"value": "req-7"}}},
-            {"what": {"identifier": {"system": "urn:openehr:object-id", "value": "8fa1::ferroehr::2"}}},
-            {"what": {"identifier": {"value": "patient-42"}}}
-        ]});
-        let mut event = AuditEvent::new(
-            EventActionCode::Create,
-            ObjectClass::Composition,
-            EventOutcome::Success,
-        );
-        event.request_id = Some("req-7".to_owned());
-        event.object_id = Some("8fa1::ferroehr::2".to_owned());
-        let tokens: Vec<SearchToken> = document_tokens(&document, &event).into_iter().collect();
-        let token = |parameter, system: Option<&str>, code: Option<&str>| SearchToken {
-            parameter,
-            system: system.map(str::to_owned),
-            code: code.map(str::to_owned),
-        };
-        assert_eq!(
-            tokens,
-            [
-                token("entity.identifier", None, Some("patient-42")),
-                token("entity.identifier=request_id", None, None),
-                token(
-                    "entity.identifier=resource_id",
-                    Some("urn:openehr:object-id"),
-                    None
-                ),
-            ]
-        );
-        assert!(AuditElement::shares("entity.identifier=request_id"));
-        assert!(AuditElement::shares("entity.identifier=resource_id"));
-        assert!(!AuditElement::shares("entity.identifier"));
-    }
-}
+mod tests;

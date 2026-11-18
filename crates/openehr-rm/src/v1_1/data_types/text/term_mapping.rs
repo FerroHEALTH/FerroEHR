@@ -27,7 +27,7 @@ pub struct TermMapping {
     /// The first three values are taken from the ISO standards 2788 ( Guide to Establishment and development of monolingual thesauri) and 5964 (Guide to Establishment and development of multilingual thesauri).
     pub r#match: char,
     /// Purpose of the mapping e.g. 'automated data mining', 'billing', 'interoperability'.
-    pub purpose: Option<DvCodedText>,
+    pub purpose: Option<Box<DvCodedText>>,
     /// The target term of the mapping.
     pub target: CodePhrase,
 }

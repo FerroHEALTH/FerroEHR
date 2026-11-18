@@ -26,19 +26,24 @@ use openehr_base::v1_3::base_types::definitions::definitions_impl::LOCAL_TERMINO
 use serde_json::Value;
 
 use super::{ValidationKind, Validator};
+use crate::flat::instance::Instance;
 use crate::flat::webtemplate::constraint::pattern_matches;
 use crate::flat::webtemplate::model::{
     WebTemplateCodedValue, WebTemplateInput, WebTemplateInputType, WebTemplateNode,
     WebTemplateRange,
 };
 
-pub(super) fn check_inputs(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+pub(super) fn check_inputs<'i, I: Instance<'i>>(
+    v: &mut Validator,
+    instance: I,
+    wt: &WebTemplateNode,
+) {
     let rm = wt.rm_type.split('<').next().unwrap_or(&wt.rm_type);
     match rm {
         "DV_CODED_TEXT" => check_coded_text(v, instance, wt),
         // RM `data_types` §DV_STATE: the state's code sits on its `value`.
         "DV_STATE" => {
-            if let Some(value) = instance.get("value") {
+            if let Some(value) = instance.attr("value") {
                 check_coded_text(v, value, wt);
             }
         }
@@ -49,8 +54,11 @@ pub(super) fn check_inputs(v: &mut Validator, instance: &Value, wt: &WebTemplate
         "DV_PROPORTION" => check_proportion(v, instance, wt),
         "DV_TEXT" | "DV_URI" | "DV_EHR_URI" => check_text(v, instance, wt),
         "DV_BOOLEAN" => check_boolean(v, instance, wt),
-        "DV_IDENTIFIER" => check_identifier(v, instance, wt),
-        "DV_PARSABLE" => check_parsable(v, instance, wt),
+        "DV_IDENTIFIER" => {
+            check_string_parts(v, instance, wt, &["id", "type", "issuer", "assigner"]);
+        }
+        // NOTE: AOM 1.4 §`C_STRING`; master17.6 `CONT-DV_PARSABLE-validate_value_formalism`.
+        "DV_PARSABLE" => check_string_parts(v, instance, wt, &["value", "formalism"]),
         "DV_DATE" | "DV_TIME" | "DV_DATE_TIME" => check_temporal(v, instance, wt),
         "DV_DURATION" => check_duration(v, instance, wt),
         _ => {}
@@ -67,10 +75,10 @@ pub(super) fn check_inputs(v: &mut Validator, instance: &Value, wt: &WebTemplate
 /// carry (`DV_MULTIMEDIA.size`, RM `data_types` §`DV_MULTIMEDIA`; an ADL 2 union
 /// of ranges, AOM2 `master04.5-constraint_model-class_definitions.adoc`
 /// §C_ORDERED): the datum must lie within one of the ranges given for it.
-fn check_numeric_ranges(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+fn check_numeric_ranges<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     let attrs: BTreeSet<&str> = wt.numeric_ranges.iter().map(|(a, _)| a.as_str()).collect();
     for attr in attrs {
-        let Some(value) = instance.get(attr).and_then(as_f64) else {
+        let Some(value) = instance.attr(attr).and_then(Instance::as_f64) else {
             continue;
         };
         let mut ranges = wt.numeric_ranges.iter().filter(|(a, _)| a == attr);
@@ -87,9 +95,9 @@ fn check_numeric_ranges(v: &mut Validator, instance: &Value, wt: &WebTemplateNod
 /// `C_INTEGER.list` / `C_REAL.list` membership on the leaf's numeric data
 /// (AOM 1.4 `master04-constraint_model_package.adoc` §`C_INTEGER/§C_REAL)`: the
 /// instance datum must be one of the enumerated values.
-fn check_numeric_lists(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+fn check_numeric_lists<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     for (attr, list) in &wt.numeric_lists {
-        let Some(value) = instance.get(attr).and_then(as_f64) else {
+        let Some(value) = instance.attr(attr).and_then(Instance::as_f64) else {
             continue;
         };
         if !list.iter().any(|allowed| (allowed - value).abs() < 1e-9) {
@@ -106,16 +114,16 @@ fn check_numeric_lists(v: &mut Validator, instance: &Value, wt: &WebTemplateNode
 /// mapping does not model (e.g. `DV_MULTIMEDIA.media_type` — AOM 1.4
 /// §`C_CODE_PHRASE`). Enforced only when the instance's terminology matches the
 /// constraint's (or both are `local`), biasing toward confident violations.
-fn check_code_lists(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+fn check_code_lists<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     for cl in &wt.code_lists {
-        let Some(cp) = instance.get(&cl.attr) else {
+        let Some(cp) = instance.attr(&cl.attr) else {
             continue;
         };
-        let code = cp.get("code_string").and_then(Value::as_str);
+        let code = cp.str_at("code_string");
         let term = cp
-            .get("terminology_id")
-            .and_then(|t| t.get("value"))
-            .and_then(Value::as_str);
+            .attr("terminology_id")
+            .and_then(|t| t.attr("value"))
+            .and_then(Instance::as_str);
         let Some(code) = code else { continue };
         if !terminology_matches(cl.terminology.as_deref(), term) {
             continue;
@@ -146,31 +154,31 @@ pub(super) fn terminology_matches(constraint: Option<&str>, instance: Option<&st
 
 // ── coded text / code phrase / ordinal ─────────────────────────────────────────
 
-fn check_coded_text(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+fn check_coded_text<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     let Some(code_input) = input_with_suffix(wt, "code") else {
         return;
     };
     let code = instance
-        .get("defining_code")
-        .and_then(|c| c.get("code_string"))
-        .and_then(Value::as_str);
+        .attr("defining_code")
+        .and_then(|c| c.attr("code_string"))
+        .and_then(Instance::as_str);
     let terminology = instance
-        .get("defining_code")
-        .and_then(|c| c.get("terminology_id"))
-        .and_then(|t| t.get("value"))
-        .and_then(Value::as_str);
+        .attr("defining_code")
+        .and_then(|c| c.attr("terminology_id"))
+        .and_then(|t| t.attr("value"))
+        .and_then(Instance::as_str);
     check_code_membership(v, wt, code_input, code, terminology);
 }
 
-fn check_code_phrase(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+fn check_code_phrase<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     let Some(code_input) = input_with_suffix(wt, "code").or_else(|| wt.inputs.first()) else {
         return;
     };
-    let code = instance.get("code_string").and_then(Value::as_str);
+    let code = instance.str_at("code_string");
     let terminology = instance
-        .get("terminology_id")
-        .and_then(|t| t.get("value"))
-        .and_then(Value::as_str);
+        .attr("terminology_id")
+        .and_then(|t| t.attr("value"))
+        .and_then(Instance::as_str);
     check_code_membership(v, wt, code_input, code, terminology);
 }
 
@@ -189,7 +197,7 @@ fn check_code_phrase(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) 
 /// a wrong symbol, both reject). The `WebTemplate` `ordinal_input` carries each
 /// entry as a coded value whose `value` is the symbol code and whose `ordinal`
 /// (or `scale`) is the paired numeric value.
-fn check_ordinal(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+fn check_ordinal<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     let Some(input) = wt.inputs.first() else {
         return;
     };
@@ -237,7 +245,7 @@ fn check_ordinal(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
     }
     // The symbol is known; require the (symbol, value) pair to match one entry.
     let is_scale = wt.rm_type.starts_with("DV_SCALE");
-    let Some(inst_value) = instance.get("value") else {
+    let Some(inst_value) = instance.attr("value") else {
         return; // value absent — the RM-invariant pass owns structural presence.
     };
     let pair_ok = same_symbol
@@ -247,8 +255,9 @@ fn check_ordinal(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
         v.push(
             &wt.aql_path,
             format!(
-                "ordinal (symbol '{code}', value {inst_value}) does not match a \
-                 constrained (symbol, value) pair"
+                "ordinal (symbol '{code}', value {}) does not match a \
+                 constrained (symbol, value) pair",
+                inst_value.render()
             ),
             ValidationKind::CodedValue,
         );
@@ -257,20 +266,24 @@ fn check_ordinal(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
 
 /// The instance's ordinal symbol as its terminology id and code string
 /// (`symbol/defining_code`), `None` when the symbol carries no code.
-fn symbol_code(instance: &Value) -> Option<(Option<&str>, &str)> {
+fn symbol_code<'i, I: Instance<'i>>(instance: I) -> Option<(Option<&'i str>, &'i str)> {
     let defining_code = instance
-        .get("symbol")
-        .and_then(|s| s.get("defining_code"))?;
+        .attr("symbol")
+        .and_then(|s| s.attr("defining_code"))?;
     let terminology = defining_code
-        .get("terminology_id")
-        .and_then(|t| t.get("value"))
-        .and_then(Value::as_str);
-    let code = defining_code.get("code_string").and_then(Value::as_str)?;
+        .attr("terminology_id")
+        .and_then(|t| t.attr("value"))
+        .and_then(Instance::as_str);
+    let code = defining_code.str_at("code_string")?;
     Some((terminology, code))
 }
 
 /// Whether one constrained entry's paired numeric equals the instance value.
-fn paired_value_matches(entry: &WebTemplateCodedValue, is_scale: bool, inst_value: &Value) -> bool {
+fn paired_value_matches<'i, I: Instance<'i>>(
+    entry: &WebTemplateCodedValue,
+    is_scale: bool,
+    inst_value: I,
+) -> bool {
     if is_scale {
         return matches!(
             (entry.scale, inst_value.as_f64()),
@@ -341,8 +354,8 @@ fn check_code_membership(
 
 // ── quantity / count / proportion ──────────────────────────────────────────────
 
-fn check_quantity(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
-    let unit = instance.get("units").and_then(Value::as_str);
+fn check_quantity<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
+    let unit = instance.str_at("units");
     let unit_input = input_with_suffix(wt, "unit");
 
     // Unit membership against an enumerated C_QUANTITY_ITEM unit list.
@@ -393,7 +406,7 @@ fn check_quantity(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
 
     // Magnitude range: prefer the magnitude input's own range, else the range on
     // the coded value for the instance's unit.
-    if let Some(mag) = instance.get("magnitude").and_then(as_f64) {
+    if let Some(mag) = instance.attr("magnitude").and_then(Instance::as_f64) {
         let range = input_with_suffix(wt, "magnitude")
             .and_then(|i| i.validation.as_ref())
             .and_then(|val| val.range.as_ref())
@@ -414,7 +427,7 @@ fn check_quantity(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
     // the Web Template surfaces it as `inputs[].validation.precision` — the
     // ITS-REST `simplified_formats` `master04` model). The RM attribute is
     // 0..1, so an instance that omits it violates nothing (#3027).
-    if let Some(prec) = instance.get("precision").and_then(as_f64) {
+    if let Some(prec) = instance.attr("precision").and_then(Instance::as_f64) {
         let range = input_with_suffix(wt, "magnitude")
             .and_then(|i| i.validation.as_ref())
             .and_then(|val| val.precision.as_ref())
@@ -458,8 +471,8 @@ fn unit_scoped_precision<'a>(
         .and_then(|val| val.precision.as_ref())
 }
 
-fn check_count(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
-    let Some(mag) = instance.get("magnitude").and_then(as_f64) else {
+fn check_count<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
+    let Some(mag) = instance.attr("magnitude").and_then(Instance::as_f64) else {
         return;
     };
     if let Some(range) = wt
@@ -477,13 +490,13 @@ fn check_count(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
     }
 }
 
-fn check_proportion(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+fn check_proportion<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     // `type` kind membership (C_INTEGER.list on DV_PROPORTION.type, surfaced as
     // the node's `proportionTypes` — AOM 1.4 §C_INTEGER; master17.3
     // CONT-DV_PROPORTION-validate_* truth tables). An empty set means the
     // template did not constrain the kind.
     if !wt.proportion_types.is_empty()
-        && let Some(kind) = instance.get("type").and_then(Value::as_i64)
+        && let Some(kind) = instance.attr("type").and_then(Instance::as_i64)
     {
         let name = usize::try_from(kind)
             .ok()
@@ -502,7 +515,7 @@ fn check_proportion(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
     // DV_PROPORTION.precision against the constrained interval, the same
     // contract as DV_QUANTITY (the `|precision` suffix in `master05`'s
     // DV_PROPORTION table; RM attribute 0..1, absent violates nothing).
-    if let Some(prec) = instance.get("precision").and_then(as_f64)
+    if let Some(prec) = instance.attr("precision").and_then(Instance::as_f64)
         && let Some(range) = wt
             .inputs
             .iter()
@@ -516,7 +529,7 @@ fn check_proportion(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
         );
     }
     for part in ["numerator", "denominator"] {
-        let Some(value) = instance.get(part).and_then(as_f64) else {
+        let Some(value) = instance.attr(part).and_then(Instance::as_f64) else {
             continue;
         };
         if let Some(range) = input_with_suffix(wt, part)
@@ -535,21 +548,21 @@ fn check_proportion(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
 
 // ── text / boolean / identifier ────────────────────────────────────────────────
 
-fn check_text(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+fn check_text<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     let Some(input) = wt.inputs.first() else {
         return;
     };
-    let Some(value) = instance.get("value").and_then(Value::as_str) else {
+    let Some(value) = instance.str_at("value") else {
         return;
     };
     check_string_constraints(v, wt, input, value);
 }
 
-fn check_boolean(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
+fn check_boolean<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
     let Some(input) = wt.inputs.first() else {
         return;
     };
-    let Some(value) = instance.get("value").and_then(Value::as_bool) else {
+    let Some(value) = instance.attr("value").and_then(Instance::as_bool) else {
         return;
     };
     // A list restricts booleans to a single literal ("true" / "false").
@@ -562,26 +575,19 @@ fn check_boolean(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
     }
 }
 
-fn check_identifier(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
-    for part in ["id", "type", "issuer", "assigner"] {
+/// The `C_STRING` constraints of the suffixes `parts` on their string values
+/// (`DV_IDENTIFIER` and `DV_PARSABLE`, AOM 1.4 §`C_STRING`).
+fn check_string_parts<'i, I: Instance<'i>>(
+    v: &mut Validator,
+    instance: I,
+    wt: &WebTemplateNode,
+    parts: &[&str],
+) {
+    for part in parts {
         let Some(input) = input_with_suffix(wt, part) else {
             continue;
         };
-        let Some(value) = instance.get(part).and_then(Value::as_str) else {
-            continue;
-        };
-        check_string_constraints(v, wt, input, value);
-    }
-}
-
-/// `DV_PARSABLE`: `C_STRING` list/pattern on `value` and `formalism`
-/// (AOM 1.4 §`C_STRING`; master17.6 `CONT-DV_PARSABLE-validate_value_formalism`).
-fn check_parsable(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
-    for part in ["value", "formalism"] {
-        let Some(input) = input_with_suffix(wt, part) else {
-            continue;
-        };
-        let Some(value) = instance.get(part).and_then(Value::as_str) else {
+        let Some(value) = instance.str_at(part) else {
             continue;
         };
         check_string_constraints(v, wt, input, value);
@@ -594,8 +600,8 @@ fn check_parsable(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
 /// prohibited field parts, AOM 1.4 `master04-constraint_model_package.adoc`
 /// §"Constraints on dates and times") and the ISO range, both surfaced in the
 /// leaf input's `validation` by the `WebTemplate` builder.
-fn check_temporal(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
-    let Some(value) = instance.get("value").and_then(Value::as_str) else {
+fn check_temporal<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
+    let Some(value) = instance.str_at("value") else {
         return;
     };
     if let Some(validation) = wt.inputs.first().and_then(|i| i.validation.as_ref()) {
@@ -664,8 +670,8 @@ fn has_timezone(value: &str) -> bool {
 /// `DV_DURATION`: the `C_DURATION` pattern (allowed fields — encoded by the
 /// builder as which per-field inputs exist) and the ISO-8601 duration range
 /// (`WebTemplateNode::duration_range`), compared on total seconds.
-fn check_duration(v: &mut Validator, instance: &Value, wt: &WebTemplateNode) {
-    let Some(value) = instance.get("value").and_then(Value::as_str) else {
+fn check_duration<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
+    let Some(value) = instance.str_at("value") else {
         return;
     };
     let Some(fields) = duration_fields(value) else {

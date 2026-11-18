@@ -39,8 +39,8 @@ use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
 use crate::versioning::audit::{AuditInput, change_type, dv_text};
-use crate::versioning::change::{self, Change, WriteEnvelope};
-use crate::versioning::contribution::typed_decode_gate;
+use crate::versioning::body::decoded;
+use crate::versioning::change::{Change, WriteEnvelope};
 use crate::versioning::lifecycle::state;
 
 /// The audit description of an adoption.
@@ -163,29 +163,14 @@ impl FerroEhrService {
         if changes.is_empty() {
             return Ok(report);
         }
-        // The set's large media go to the blob store before a connection is held.
-        for (_, change) in &mut changes {
-            self.externalize_change(change).await?;
-        }
-        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
-        let mut tx = conn.begin().await?;
-        let committed = change::commit_contribution(
-            &mut tx,
-            None,
-            None,
-            &modification,
-            changes,
-            Vec::new(),
-            &self.signing_ctx(),
-        )
-        .await?;
         let records = report
             .adopted
             .iter()
             .map(|adopted| self.adoption_record(admin, adopted))
             .collect();
-        let facts = crate::system_log::recorder::WriteFacts::of_parties(&committed);
-        self.commit_recorded(tx, &facts, records).await?;
+        let committed = self
+            .commit_party_set(&modification, changes, records)
+            .await?;
         report.contribution = Some(committed.id);
         Ok(report)
     }
@@ -229,6 +214,16 @@ impl FerroEhrService {
                 }
             }
         }
+        let role = decoded(
+            support::kind_of(PartyKind::Role),
+            role,
+            role_state == state::INCOMPLETE,
+        )?;
+        let body = decoded(
+            support::kind_of(PartyKind::Person),
+            body,
+            lifecycle == state::INCOMPLETE,
+        )?;
         for (kind, data, incomplete, container) in [
             (
                 PartyKind::Role,
@@ -244,8 +239,7 @@ impl FerroEhrService {
             ),
         ] {
             let kind = support::kind_of(kind);
-            typed_decode_gate(kind, data, incomplete)?;
-            self.demographic_commit_check(kind, data, incomplete, Some(container))
+            self.demographic_body_check(kind, data, incomplete, Some(container))
                 .await?;
         }
         let role_change = Change::create_allocated(
@@ -281,11 +275,11 @@ impl FerroEhrService {
             description: Some(dv_text(DESCRIPTION)),
             committer: PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(
                 PartyIdentifiedData {
-                    external_ref: Some(PartyRef {
+                    external_ref: Some(Box::new(PartyRef {
                         namespace: namespace.to_owned(),
                         r#type: "PERSON".to_owned(),
                         id: ObjectId::HierObjectId(HierObjectId::from(admin)),
-                    }),
+                    })),
                     name: None,
                     identifiers: None,
                 },

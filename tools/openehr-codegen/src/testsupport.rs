@@ -17,7 +17,8 @@
               application (#1694)"
 )]
 use crate::analyze::invariants::{self, Bucket};
-use crate::analyze::{Model, augment_with_reemit, class_paths, cross_schema_reemit};
+use crate::analyze::reemit::{augment_with_reemit, cross_schema_reemit};
+use crate::analyze::{Model, class_paths};
 use crate::cli;
 use crate::load::bmm::{BmmPropKind, BmmSchema, BmmType};
 use crate::load::impls::SiblingImpls;
@@ -30,6 +31,7 @@ use crate::render::{emit_rest, model_query, naming};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub mod decision_checks;
+pub mod shapes;
 
 type Error = Box<dyn std::error::Error>;
 
@@ -503,44 +505,6 @@ pub fn constructibility_offenders(key: &str) -> Result<Vec<String>, Error> {
 }
 
 // ── determinism ─────────────────────────────────────────────────────────────
-
-/// The stage-3 plan for a crate, as comparable data.
-///
-/// The decided Rust shape (`Struct` / `Enum` / `PolyEnum` / `EnumLiterals` /
-/// `Newtype` / `Skip`) of every class of every BMM generation composing the
-/// crate, keyed `"<bmm file>::<CLASS>"`.
-/// The key carries the generation because a class name may be declared by more
-/// than one, with a different decided shape in each.
-///
-/// # Errors
-/// Returns an error if the crate's BMM files cannot be loaded.
-pub fn plan_shapes(key: &str) -> Result<BTreeMap<String, String>, Error> {
-    let c = compose(key)?;
-    let mut out = BTreeMap::new();
-    for g in &c.generations {
-        for u in &g.units {
-            let used = u.model.used_as_type();
-            for (name, class) in &u.schema.classes {
-                out.insert(
-                    format!("{}::{name}", u.spec.file),
-                    shape_name(&decide(&u.model, class, &used)).to_string(),
-                );
-            }
-        }
-    }
-    Ok(out)
-}
-
-fn shape_name(e: &Emission) -> &'static str {
-    match e {
-        Emission::Struct => "Struct",
-        Emission::Enum(_) => "Enum",
-        Emission::PolyEnum(_) => "PolyEnum",
-        Emission::EnumLiterals(_) => "EnumLiterals",
-        Emission::Newtype(_) => "Newtype",
-        Emission::Skip => "Skip",
-    }
-}
 
 /// Render every generated spec crate's `src/` tree (`emit`) to an in-memory
 /// map, keyed by each file's path relative to the workspace `crates/`

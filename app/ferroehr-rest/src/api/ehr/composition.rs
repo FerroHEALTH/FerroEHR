@@ -72,45 +72,28 @@ const COMPOSITION_FORMATS: &[WireFormat] = &[
 /// `415` (Resources.md §Simplified Formats MUST).
 async fn decode_composition_body(
     state: &AppState,
-    h: &http::HeaderMap,
-    body: &bytes::Bytes,
+    parts: &RequestParts,
 ) -> Result<Composition, RestError> {
+    let (h, body) = (&parts.headers, &parts.body);
     match negotiate::content_type_format(h) {
         Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml) => {
-            Ok(negotiate::decode::rm_value::<Composition>(h, body)?)
+            match parts.composition.take() {
+                Some(kept) => Ok(kept),
+                None => Ok(negotiate::decode::rm_value::<Composition>(h, body)?),
+            }
         }
-        // The converted fragment re-enters through the same strict reader as a
-        // canonical body: one decode, one refusal class.
-        Some(WireFormat::Flat) => typed_composition(
-            &crate::formats::dispatch::composition_from_flat(state, h, body).await?,
-        ),
-        Some(WireFormat::Structured) => typed_composition(
-            &crate::formats::dispatch::composition_from_structured(state, h, body).await?,
-        ),
+        // The simplified body builds the typed COMPOSITION directly; a refusal
+        // of the built RM is the template-mediated 422 (master04 §Validation).
+        Some(format @ (WireFormat::Flat | WireFormat::Structured)) => {
+            let structured = format == WireFormat::Structured;
+            crate::formats::dispatch::composition_from_simplified(state, h, body, structured).await
+        }
         _ => Err(RestError::from(ApiError::UnsupportedMediaType(
             "a COMPOSITION is committed as application/json, application/xml, \
              application/openehr.wt.flat+json, or application/openehr.wt.structured+json"
                 .to_owned(),
         ))),
     }
-}
-
-/// Re-types a converted Simplified-Formats body as the RM `COMPOSITION` the
-/// commit seam takes.
-fn typed_composition(value: &Value) -> Result<Composition, RestError> {
-    // NOTE: a post-conversion strict-reader refusal is the template-mediated
-    // 422 class (master04 §Validation; `responses/422.yaml`).
-    openehr_its::json::from_canonical_value(value).map_err(|e| {
-        let detail = e.to_string();
-        let hint = if detail.contains("invalid type") {
-            " (value does not match the expected data type for the field)"
-        } else {
-            ""
-        };
-        RestError::from(ApiError::Unprocessable(format!(
-            "the simplified-format body did not convert to a valid COMPOSITION: {detail}{hint}"
-        )))
-    })
 }
 
 /// `composition_create` — commit a new COMPOSITION into an EHR.
@@ -127,7 +110,7 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
         CompositionCreateParams::PARAMS,
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
-    let body = decode_composition_body(&state, h, &parts.body).await?;
+    let body = decode_composition_body(&state, &parts).await?;
     let uv = crate::overview::committal::write_request(
         h,
         ferroehr::versioning::committer::request_committer(),
@@ -212,9 +195,6 @@ async fn judged_on(
 /// an unfulfillable `Accept`.
 pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
-    let ok = StatusCode::OK;
-    let no_content = StatusCode::NO_CONTENT;
     let p = parts.decode(
         CompositionGetParams::from_request,
         CompositionGetParams::PARAMS,
@@ -268,46 +248,69 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     {
         return Ok(resp);
     }
+    render_read(&state, &parts, body, meta).await
+}
+
+/// Renders the COMPOSITION a `composition_get` read in the representation
+/// `Accept` names, with the version-identity headers of `meta`.
+///
+/// # Errors
+/// A `500` for a stored body that does not read back, and the simplified
+/// renderers' refusals.
+async fn render_read(
+    state: &AppState,
+    parts: &RequestParts,
+    body: ReadBody,
+    meta: Option<ResourceMeta>,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let q = parts.query.as_deref();
+    let ok = StatusCode::OK;
     // A plain JSON accept with no multimedia expansion serves the stored
     // bytes verbatim (the body is uid-stamped at commit); the rest parse.
     let expand = params::query_param(q, "expand_multimedia").as_deref() == Some("true");
     let accept = negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson);
+    // A simplified accept with no multimedia expansion reads the stored text
+    // straight into typed RM and flattens it (#6003).
+    if let Some(fmt @ (WireFormat::Flat | WireFormat::Structured)) = accept
+        && !expand
+        && !body.is_null()
+    {
+        let out =
+            crate::formats::dispatch::composition_simplified_read(state, ok, body, fmt).await?;
+        return Ok(versioned(out, meta.as_ref()));
+    }
     let mut body = match body {
-        ReadBody::RawJson(text) if !expand && accept == Some(WireFormat::CanonicalJson) => {
-            let mut out = negotiate::body::body(ok, negotiate::APPLICATION_JSON, text);
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
+        raw @ ReadBody::RawJson(_)
+            if !expand
+                && matches!(
+                    accept,
+                    Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml)
+                ) =>
+        {
+            let out = negotiate::body::respond_read::<Composition>(h, ok, raw, "composition");
+            return Ok(versioned(out, meta.as_ref()));
         }
         other => stored_body(other)?,
     };
     // A deleted version resolves to a null body → 204 No Content
     // (composition_get.yaml `204_because_deleted*`).
     if body.is_null() {
-        return Ok(negotiate::body::empty(no_content));
+        return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
-    body = super::expand_multimedia_if_requested(&state, q, body).await?;
+    body = super::expand_multimedia_if_requested(state, q, body).await?;
     // "The `ETag` value is independent of its resource serialization format
     // (JSON/XML)" (§"ETag and Last-Modified"), so the simplified
     // representations carry the version-identity headers too.
     match accept {
         Some(WireFormat::Flat) => {
-            let mut out =
-                crate::formats::dispatch::composition_flat_response(&state, ok, &body).await?;
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
+            let out = crate::formats::dispatch::composition_flat_response(state, ok, &body).await?;
+            return Ok(versioned(out, meta.as_ref()));
         }
         Some(WireFormat::Structured) => {
-            let mut out =
-                crate::formats::dispatch::composition_structured_response(&state, ok, &body)
-                    .await?;
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
+            let out =
+                crate::formats::dispatch::composition_structured_response(state, ok, &body).await?;
+            return Ok(versioned(out, meta.as_ref()));
         }
         _ => {}
     }
@@ -319,6 +322,14 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
         &resp,
         "composition",
     ))
+}
+
+/// `out` with the version-identity headers of `meta`, when the read has one.
+fn versioned(mut out: Response, meta: Option<&ResourceMeta>) -> Response {
+    if let Some(meta) = meta {
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
+    }
+    out
 }
 
 /// `composition_update` — commit a new version of a COMPOSITION.
@@ -337,7 +348,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let uid = parse_uid_based_id(&p.uid_based_id)?;
-    let body = decode_composition_body(&state, h, &parts.body).await?;
+    let body = decode_composition_body(&state, &parts).await?;
     // A body `uid` must name the same versioned object as the path.
     // NOTE: OAS-grounded (docs text silent) with no assigned status; the
     // fitting released row is 422 (Requests_and_responses.md §HTTP status codes).
@@ -611,18 +622,13 @@ async fn composition_write_response(
         negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson)
     {
         let ovid = parse_version_uid(&meta.uid)?;
-        let body = stored_body(
-            state
-                .backend()
-                .composition_at_version(ehr_id, ovid)
-                .await?
-                .body,
-        )?;
-        let mut out = if fmt == WireFormat::Structured {
-            crate::formats::dispatch::composition_structured_response(state, repr, &body).await?
-        } else {
-            crate::formats::dispatch::composition_flat_response(state, repr, &body).await?
-        };
+        let body = state
+            .backend()
+            .composition_at_version(ehr_id, ovid)
+            .await?
+            .body;
+        let mut out =
+            crate::formats::dispatch::composition_simplified_read(state, repr, body, fmt).await?;
         // `Location` is required on a `201` regardless of body form
         // (RFC 7231 §6.3.2), so the simplified representations get the same
         // version-identity headers.
@@ -639,26 +645,23 @@ async fn composition_write_response(
         negotiate::prefer::set_preference_applied(&mut out, AppliedPreference::Representation);
         return Ok(out);
     }
-    let body = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
+    let read = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
         let ovid = parse_version_uid(&meta.uid)?;
-        stored_body(
-            state
-                .backend()
-                .composition_at_version(ehr_id, ovid)
-                .await?
-                .body,
-        )?
+        state
+            .backend()
+            .composition_at_version(ehr_id, ovid)
+            .await?
+            .body
     } else {
-        Value::Null
+        ReadBody::Value(Value::Null)
     };
-    let resp = ServiceResponse::new(body, meta);
-    Ok(negotiate::resource::write_rm::<Composition>(
+    Ok(negotiate::resource::write_read_rm::<Composition>(
         h,
         base,
-        minimal,
-        repr,
+        (minimal, repr),
         Some("composition"),
-        &resp,
+        &meta,
+        read,
         "composition",
     ))
 }

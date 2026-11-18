@@ -35,11 +35,11 @@ pub struct Capability {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
     /// The qualifications of the performer of the role for this capability. This might include professional qualifications and official identifications such as provider numbers etc.
     pub credentials: ItemStructure,
     /// Valid time interval for the credentials of this capability.
-    pub time_validity: Option<DvInterval<DvDate>>,
+    pub time_validity: Option<Box<DvInterval<DvDate>>>,
 }

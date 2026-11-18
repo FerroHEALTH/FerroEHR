@@ -68,3 +68,31 @@ async fn a_malformed_ehr_id_is_400_in_every_carrier() {
         assert!(body.contains("invalid ehr_id `not-a-uuid`"), "{body}");
     }
 }
+
+/// A `_type`-tagged value in a QUERY body carrying a key its RM class does not
+/// declare is a `400`, wherever in the body it sits, as the canonical door
+/// refuses it (ITS-REST overview `Requests_and_responses.md` §HTTP status
+/// codes: content that "could not be parsed or is invalid").
+#[tokio::test]
+async fn a_tagged_value_with_an_undeclared_key_is_400() {
+    let (_db, app) = common::app(common::api_config(false)).await;
+    let q = "SELECT e/ehr_id/value FROM EHR e";
+    let tagged = r#"{"_type":"DV_TEXT","value":"a","bogus":1}"#;
+    let bodies = [
+        format!(r#"{{"q":"{q}","query_parameters":{{"x":{tagged}}}}}"#),
+        format!(r#"{{"q":"{q}","query_parameters":{{"x":[{tagged}]}}}}"#),
+        format!(r#"{{"q":"{q}","extra":{{"inner":{tagged}}}}}"#),
+        format!(r#"{{"_type":"DV_TEXT","q":"{q}"}}"#),
+    ];
+    for body in bodies {
+        let request = common::req("POST", format!("{BASE}/query/aql"))
+            .json(body.clone())
+            .build();
+        let (status, answer) = common::send_body(&app, request).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}: {answer}");
+        assert!(
+            answer.contains("invalid canonical JSON body"),
+            "{body}: {answer}"
+        );
+    }
+}

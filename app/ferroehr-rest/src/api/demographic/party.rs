@@ -33,7 +33,7 @@ use crate::state::AppState;
 use ferroehr::error::ServiceError;
 use ferroehr::ids::VoId;
 use ferroehr::service::demographic::types::PartyKind;
-use ferroehr::service::response::ServiceResponse;
+use ferroehr::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 
 /// The `create` operation.
 pub(crate) async fn create(
@@ -159,17 +159,29 @@ pub(crate) async fn get(
     let Some(Addressed {
         vo_id,
         pinned,
-        mut resp,
+        resp,
     }) = read_addressed(&state, Some(kind), &parts).await?
     else {
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     };
     let profile = state.config().spec_profile;
-    let mut served = Vec::new();
-    if serves_reverse_relationships(profile, h) {
-        let at = pinned_instant(pinned, &resp);
-        served = add_reverse_relationships(&state, vo_id, at, &mut resp.body).await?;
+    if !serves_reverse_relationships(profile, h) {
+        // NOTE: a read without `reverse_relationships` serves the stored text
+        // verbatim for JSON, and reads it straight into the RM type for XML.
+        return Ok(read_party_raw(kind, h, resp, profile));
     }
+    let at = pinned_instant(pinned, resp.meta.as_ref());
+    let RawServiceResponse { body, meta } = resp;
+    let mut resp = ServiceResponse {
+        body: body.into_value().map_err(|e| {
+            RestError::from(crate::overview::error::internal_fault(
+                "re-parse the stored party body",
+                &e,
+            ))
+        })?,
+        meta,
+    };
+    let served = add_reverse_relationships(&state, vo_id, at, &mut resp.body).await?;
     let mut out = read_party(kind, h, &resp, profile);
     audit_served(&mut out, served);
     Ok(out)
@@ -182,7 +194,7 @@ pub(super) struct Addressed {
     /// Whether the read named one version, by its id or at a time.
     pub(super) pinned: bool,
     /// The version read.
-    pub(super) resp: ServiceResponse,
+    pub(super) resp: RawServiceResponse,
 }
 
 /// Reads the party version the `uid_based_id` and `version_at_time` of
@@ -208,7 +220,7 @@ pub(super) async fn read_addressed(
         .backend()
         .party_get(kind, address, p.version_at_time)
         .await?;
-    Ok((!resp.is_empty()).then_some(Addressed {
+    Ok((!resp.body.is_null()).then_some(Addressed {
         vo_id,
         pinned,
         resp,
@@ -224,11 +236,11 @@ pub(super) async fn read_addressed(
 /// Pinning a version-addressed read to its version's commit gives every
 /// representation of one version, whose `ETag` names that version, one list:
 /// our own design (#5473).
-pub(super) fn pinned_instant(pinned: bool, resp: &ServiceResponse) -> Option<jiff::Timestamp> {
+pub(super) fn pinned_instant(pinned: bool, meta: Option<&ResourceMeta>) -> Option<jiff::Timestamp> {
     if !pinned {
         return None;
     }
-    resp.meta.as_ref().and_then(|meta| meta.last_modified)
+    meta.and_then(|meta| meta.last_modified)
 }
 
 /// Adds the `reverse_relationships` of the party `vo_id`, as they stood at
@@ -295,7 +307,7 @@ async fn written_reverse_relationships(
         return Ok(Vec::new());
     };
     let vo_id = parse_uid_based_id(&meta.uid)?.vo_id;
-    let at = pinned_instant(true, resp);
+    let at = pinned_instant(true, Some(meta));
     add_reverse_relationships(state, vo_id, at, &mut resp.body).await
 }
 
@@ -421,24 +433,24 @@ fn decode_party_body(
     match kind {
         PartyKind::Agent => {
             rm_party::<openehr_rm::v1_1::demographic::agent::Agent, Agent>(h, body, profile)
-                .map(Party::Agent)
+                .map(Party::from)
         }
         PartyKind::Group => {
             rm_party::<openehr_rm::v1_1::demographic::group::Group, Group>(h, body, profile)
-                .map(Party::Group)
+                .map(Party::from)
         }
         PartyKind::Organisation => rm_party::<
             openehr_rm::v1_1::demographic::organisation::Organisation,
             Organisation,
         >(h, body, profile)
-        .map(Party::Organisation),
+        .map(Party::from),
         PartyKind::Person => {
             rm_party::<openehr_rm::v1_1::demographic::person::Person, Person>(h, body, profile)
-                .map(Party::Person)
+                .map(Party::from)
         }
         PartyKind::Role => {
             rm_party::<openehr_rm::v1_1::demographic::role::Role, Role>(h, body, profile)
-                .map(Party::Role)
+                .map(Party::from)
         }
     }
 }
@@ -596,6 +608,54 @@ fn write_party(
 ///
 /// No `Location`: it "MUST NOT be used to indicate an alternate representation
 /// of an existing resource" (overview §Location).
+/// [`read_party`] over a read body that may still be the stored text
+/// ([`negotiate::body::respond_read`]).
+fn read_party_raw(
+    kind: PartyKind,
+    h: &HeaderMap,
+    resp: RawServiceResponse,
+    profile: ferroehr::config::profile::SpecProfile,
+) -> Response {
+    use openehr_rm::v1_1::demographic::{agent, group, organisation, person, role};
+    let root = openehr_its::xml::LOCATABLE_ROOT;
+    let ok = StatusCode::OK;
+    let RawServiceResponse { body, meta } = resp;
+    let mut out = match (
+        profile == ferroehr::config::profile::SpecProfile::Stable,
+        kind,
+    ) {
+        (true, PartyKind::Agent) => {
+            negotiate::body::respond_read::<agent::Agent>(h, ok, body, root)
+        }
+        (true, PartyKind::Group) => {
+            negotiate::body::respond_read::<group::Group>(h, ok, body, root)
+        }
+        (true, PartyKind::Organisation) => {
+            negotiate::body::respond_read::<organisation::Organisation>(h, ok, body, root)
+        }
+        (true, PartyKind::Person) => {
+            negotiate::body::respond_read::<person::Person>(h, ok, body, root)
+        }
+        (true, PartyKind::Role) => negotiate::body::respond_read::<role::Role>(h, ok, body, root),
+        (false, PartyKind::Agent) => negotiate::body::respond_read::<Agent>(h, ok, body, root),
+        (false, PartyKind::Group) => negotiate::body::respond_read::<Group>(h, ok, body, root),
+        (false, PartyKind::Organisation) => {
+            negotiate::body::respond_read::<Organisation>(h, ok, body, root)
+        }
+        (false, PartyKind::Person) => negotiate::body::respond_read::<Person>(h, ok, body, root),
+        (false, PartyKind::Role) => negotiate::body::respond_read::<Role>(h, ok, body, root),
+    };
+    if let Some(meta) = meta.as_ref() {
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
+        item_tags::echo(
+            &mut out,
+            meta.item_tags.as_deref(),
+            meta.version_item_tags.as_deref(),
+        );
+    }
+    out
+}
+
 fn read_party(
     kind: PartyKind,
     h: &HeaderMap,

@@ -1755,7 +1755,12 @@ fn bench_aql(
                 .execute_aql(&path.aql, None, &request)
                 .await
                 .expect("the hot path executes before it is timed");
-            result_rows(&outcome.result_set)
+            result_rows(
+                &outcome
+                    .result_set
+                    .to_value()
+                    .expect("the RESULT_SET writes"),
+            )
         });
         assert!(
             rows > 0,

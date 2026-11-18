@@ -61,8 +61,8 @@ pub(crate) async fn entries(
         let rows: Vec<Columns> = sqlx::query_as(
             "SELECT r.ehr_id::text, r.action_code, r.result_code, \
              audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
-             r.time_recorded, r.ehr_id) #>> '{channel,request_id}', \
-             audit.access_log_document(r.content, sh.content, r.record_type, r.uid, r.time_recorded, r.ehr_id)::text \
+             r.time_recorded, r.ehr_id, r.request_id, r.resource_id) #>> '{channel,request_id}', \
+             audit.access_log_document(r.content, sh.content, r.record_type, r.uid, r.time_recorded, r.ehr_id, r.request_id, r.resource_id)::text \
              FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared ORDER BY r.chain_seq",
         )

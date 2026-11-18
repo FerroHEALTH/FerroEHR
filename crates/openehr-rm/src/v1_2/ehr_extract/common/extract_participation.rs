@@ -20,13 +20,13 @@ use crate::v1_2::data_types::text::dv_text::DvText;
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExtractParticipation {
     /// The time interval during which the participation took place, if it is used in an observational context (i.e. recording facts about the past); or the intended time interval of the participation when used in future contexts, such as EHR Instructions.
-    pub time: Option<DvInterval<DvDateTime>>,
+    pub time: Option<Box<DvInterval<DvDateTime>>>,
     /// The function of the Party in this participation (note that a given party might participate in more than one way in a particular activity).
     ///
     /// This attribute should be coded, but cannot be limited to the HL7v3:ParticipationFunction vocabulary, since it is too limited and hospital-oriented.
     pub function: DvText,
     /// The mode of the performer / activity interaction, e.g. present, by telephone, by email etc.
-    pub mode: Option<DvCodedText>,
+    pub mode: Option<Box<DvCodedText>>,
     /// Uid of demographic entity within Extract who performed this participation.
     pub performer: String,
 }

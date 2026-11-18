@@ -103,7 +103,9 @@ impl AccessLogStore {
     /// each with its link.
     ///
     /// A tombstone keeps no `ehr_id` and no accessor, so a filter on either
-    /// leaves it out.
+    /// leaves it out. Each filter reads the stored part that keeps its member:
+    /// the accessor and the emergency mark the shared part, the channel, the
+    /// items and an EHR id no uuid column keeps the row part (#6005).
     ///
     /// # Errors
     /// The store errors when the statement fails, and
@@ -119,26 +121,27 @@ impl AccessLogStore {
         let rows = sqlx::query(concat!(
             records!(),
             " WHERE ($1::uuid IS NULL OR r.ehr_id = $1) \
-             AND ($23::text IS NULL OR (r.ehr_id IS NULL AND d.doc #>> '{ehr_id,value}' = $23)) \
+             AND ($23::text IS NULL OR (r.ehr_id IS NULL AND r.content::jsonb #>> '{ehr_id,value}' = $23)) \
              AND ($2::text IS NULL OR r.time_recorded >= $2::text::timestamptz) \
              AND ($3::text IS NULL OR r.time_recorded <= $3::text::timestamptz) \
              AND ($4::text IS NULL OR (r.action_terminology = $4 AND r.action_code = $5)) \
              AND ($6::text IS NULL OR (r.result_terminology = $6 AND r.result_code = $7)) \
              AND ($8::text IS NULL \
-                  OR (d.doc #>> '{accessor,kind,defining_code,terminology_id,value}' = $8 \
-                      AND d.doc #>> '{accessor,kind,defining_code,code_string}' = $9)) \
-             AND ($10::boolean IS NULL OR (d.doc ->> 'is_emergency')::boolean = $10) \
-             AND ($11::text IS NULL OR d.doc #>> '{accessor,party,external_ref,namespace}' = $11) \
-             AND ($12::text IS NULL OR d.doc #>> '{accessor,party,external_ref,type}' = $12) \
+                  OR (sh.content::jsonb #>> '{accessor,kind,defining_code,terminology_id,value}' = $8 \
+                      AND sh.content::jsonb #>> '{accessor,kind,defining_code,code_string}' = $9)) \
+             AND ($10::boolean IS NULL OR (sh.content::jsonb ->> 'is_emergency')::boolean = $10) \
+             AND ($11::text IS NULL OR sh.content::jsonb #>> '{accessor,party,external_ref,namespace}' = $11) \
+             AND ($12::text IS NULL OR sh.content::jsonb #>> '{accessor,party,external_ref,type}' = $12) \
              AND ($13::text IS NULL OR r.party_id = $13) \
-             AND ($14::text IS NULL OR d.doc #>> '{accessor,credential,issuer}' = $14) \
-             AND ($15::text IS NULL OR d.doc #>> '{accessor,credential,subject}' = $15) \
-             AND ($16::text IS NULL OR d.doc #>> '{channel,request_id}' = $16) \
+             AND ($14::text IS NULL OR sh.content::jsonb #>> '{accessor,credential,issuer}' = $14) \
+             AND ($15::text IS NULL OR sh.content::jsonb #>> '{accessor,credential,subject}' = $15) \
+             AND ($16::text IS NULL OR audit.access_log_row_part(r.content::jsonb, r.request_id, \
+                  r.resource_id) #>> '{channel,request_id}' = $16) \
              AND NOT ($17::boolean \
-                  AND d.doc #>> '{accessor,kind,defining_code,terminology_id,value}' \
+                  AND sh.content::jsonb #>> '{accessor,kind,defining_code,terminology_id,value}' \
                       IS NOT DISTINCT FROM $18 \
-                  AND d.doc #>> '{accessor,kind,defining_code,code_string}' IS NOT DISTINCT FROM $19 \
-                  AND d.doc @> jsonb_build_object('items', jsonb_build_array( \
+                  AND sh.content::jsonb #>> '{accessor,kind,defining_code,code_string}' IS NOT DISTINCT FROM $19 \
+                  AND r.content::jsonb @> jsonb_build_object('items', jsonb_build_array( \
                       jsonb_build_object('rm_type', $20::text)))) \
              ORDER BY r.time_recorded DESC, r.chain_seq DESC OFFSET $21 LIMIT $22"
         ))

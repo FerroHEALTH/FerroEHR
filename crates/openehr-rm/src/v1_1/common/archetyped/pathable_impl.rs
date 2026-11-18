@@ -144,7 +144,7 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             null_flavour: None,
-            value: Some(DataValue::DvText(text(name))),
+            value: Some(Box::new(DataValue::DvText(text(name)))),
             null_reason: None,
         }
     }
@@ -152,7 +152,7 @@ mod tests {
     /// A tree of two elements, one node id repeated under two names — the
     /// shape that separates a unique path from a merely existing one.
     fn tree() -> Pathable {
-        Pathable::ItemTree(ItemTree {
+        Pathable::ItemTree(Box::new(ItemTree {
             name: text("tree"),
             archetype_node_id: "openEHR-EHR-ITEM_TREE.tree.v1".to_owned(),
             uid: None,
@@ -160,10 +160,10 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             items: Some(vec![
-                Item::Element(element("at0001", "systolic")),
-                Item::Element(element("at0001", "diastolic")),
+                Item::from(element("at0001", "systolic")),
+                Item::from(element("at0001", "diastolic")),
             ]),
-        })
+        }))
     }
 
     /// A path that resolves exists; one that does not, does not — and a

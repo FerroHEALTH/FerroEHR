@@ -91,7 +91,9 @@ async fn sum_and_avg_add_amounts() {
         .execute_aql(&sum_avg("'q', 'n'"), None, &request(&ehr))
         .await
         .unwrap_or_else(|e| panic!("the query failed: {e:?}"))
-        .result_set["rows"]
+        .result_set
+        .to_value()
+        .unwrap()["rows"]
         .clone();
     let row = &rows[0];
     assert_eq!(row[0].as_f64(), Some(100.0), "SUM of 80 and 20: {rows}");

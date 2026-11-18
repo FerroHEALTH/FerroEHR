@@ -142,7 +142,7 @@ ihe-iti = { workspace = true, features = ["pixm", "pmir"] }
 openehr-base = { path = "../../crates/openehr-base" }
 openehr-term = { path = "../../crates/openehr-term" }
 openehr-rm = { path = "../../crates/openehr-rm", features = ["draft"] }
-openehr-its = { path = "../../crates/openehr-its" }
+openehr-its = { path = "../../crates/openehr-its", features = ["tracing"] }
 openehr-sdt = { path = "../../crates/openehr-sdt" }
 openehr-am = { path = "../../crates/openehr-am" }
 openehr-adl = { path = "../../crates/openehr-adl" }

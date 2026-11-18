@@ -21,12 +21,6 @@
 //! Verification is the access log's own: `audit.verify_access_log_chain()`
 //! and [`crate::system_log::store::AuditStore::verify_chain_advancing`].
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "the canonical form and the stored record are computed over the record's ITS-JSON \
-              value, with its link left out or joined (#1694 boundary class: canonical form)"
-)]
-
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -34,7 +28,6 @@ use openehr_base::containers::NonEmptyVec;
 use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::canonical_object_without;
 use openehr_rm::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime;
 use openehr_rm::v1_2::data_types::text::dv_coded_text::DvCodedText;
-use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{Connection, PgConnection, PgPool, Row};
 
@@ -135,30 +128,32 @@ pub fn canonical_form(record: &impl serde::Serialize) -> Result<String, AccessLo
     canonical_object_without(record, &[LINK, PROOF]).map_err(AccessLogError::Canonical)
 }
 
-/// A record of this system's log as its canonical form without its link, a
-/// `jsonb` over the record `r` and its shared part `sh`: the one reader of a
-/// record (`migrations/audit/0046_access_log_entry_one_row.sql`).
-macro_rules! document {
+/// The columns a stored access-log record is read back from, over the record
+/// `r` and its shared part `sh`: the row and shared parts and the columns
+/// that hold the members the row part leaves out, which
+/// [`document_of`] joins into the record's canonical form
+/// (`migrations/audit/0049_access_log_rendered_in_rust.sql`).
+macro_rules! entry_parts {
     () => {
-        "audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
-         r.time_recorded, r.ehr_id)"
+        "r.content AS row_part, sh.content AS shared_part, r.record_type AS entry_type, \
+         r.uid AS entry_uid, r.time_recorded AS recorded_at, r.ehr_id AS entry_ehr, \
+         r.request_id, r.resource_id"
     };
 }
-pub(crate) use document;
+pub(crate) use entry_parts;
 
-/// The records of this system's log, each as its canonical form `d.doc`, in
-/// the columns [`stored`] reads.
+/// The records of this system's log, each as its stored parts, in the
+/// columns [`stored`] reads.
 macro_rules! records {
     () => {
         concat!(
-            "SELECT r.uid, r.chain_seq, d.doc::text AS document, r.algorithm, \
+            "SELECT r.uid, r.chain_seq, ",
+            crate::access_log::store::entry_parts!(),
+            ", r.algorithm, \
              encode(r.previous_digest, 'hex') AS previous_digest, \
              encode(r.content_digest, 'hex') AS content_digest, encode(r.digest, 'hex') AS digest \
              FROM audit.access_log_record r \
-             LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
-             CROSS JOIN LATERAL (SELECT ",
-            crate::access_log::store::document!(),
-            " AS doc) d"
+             LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared"
         )
     };
 }
@@ -230,7 +225,14 @@ impl AccessLogStore {
             .collect::<Result<Vec<_>, _>>()?;
         let mut conn = acquire(&self.pool).await?;
         let mut tx = conn.begin().await?;
-        take_in(&mut tx, &intake, &[], None).await?;
+        take_in(
+            &mut tx,
+            &intake,
+            &[],
+            None,
+            &std::collections::BTreeSet::new(),
+        )
+        .await?;
         // NOTE: our own design (#5762), the audit domain's own store, whose records are this
         // transaction's rows.
         tx.commit().await?;
@@ -310,7 +312,7 @@ impl AccessLogStore {
             None => {
                 sqlx::query(concat!(
                     records!(),
-                    " WHERE r.ehr_id IS NULL AND d.doc #>> '{ehr_id,value}' = $1 \
+                    " WHERE r.ehr_id IS NULL AND r.content::jsonb #>> '{ehr_id,value}' = $1 \
                      ORDER BY r.chain_seq"
                 ))
                 .bind(ehr_id)
@@ -486,7 +488,7 @@ impl AccessLogStore {
 
 /// The tombstone of `entry`, removed at `time_removed` on `grounds`: its uid,
 /// `system_id`, `time_recorded` and link, and nothing else of it.
-pub(super) fn tombstone_of(
+pub(crate) fn tombstone_of(
     entry: AccessLogEntry,
     time_removed: DvDateTime,
     grounds: NonEmptyVec<DvCodedText>,
@@ -558,38 +560,80 @@ pub(super) fn signed_link(row: &PgRow) -> Result<AccessLogLink, sqlx::Error> {
 }
 
 /// The record `row` of this system's log holds, read as a `T`: its canonical
-/// form, with its link. The row holds `chain_seq`, `document` and the link's
+/// form, joined from its stored parts ([`document_of`]), with its link. The
+/// row holds `chain_seq`, the columns of [`entry_parts`] and the link's
 /// columns.
 ///
 /// # Errors
 /// [`AccessLogError::Unreadable`] when the record does not read.
 pub(crate) fn stored<T: serde::de::DeserializeOwned>(row: &PgRow) -> Result<T, AccessLogError> {
-    joined(row, own_link(row)?)
+    let document = document_of(row)?;
+    with_link(row, &document, &own_link(row)?)
 }
 
 /// The record `row` of an imported log holds, read as a `T`, as [`stored`]
-/// with the link's `signature` column.
+/// from its whole canonical form in `document`, with the link's `signature`
+/// column.
 ///
 /// # Errors
 /// As [`stored`].
 pub(super) fn stored_signed<T: serde::de::DeserializeOwned>(
     row: &PgRow,
 ) -> Result<T, AccessLogError> {
-    joined(row, signed_link(row)?)
+    let document: String = row.try_get("document")?;
+    with_link(row, &document, &signed_link(row)?)
 }
 
-/// The record the `document` column of `row` holds, with `link` joined.
-fn joined<T: serde::de::DeserializeOwned>(
+/// The canonical form of the record `row` holds, without its link, joined
+/// from the columns of [`entry_parts`]: the exact text its content digest
+/// covers.
+///
+/// # Errors
+/// [`AccessLogError::Unreadable`] when the parts do not join, and the store
+/// errors when a column does not read.
+pub(crate) fn document_of(row: &PgRow) -> Result<String, AccessLogError> {
+    let chain_seq: i64 = row.try_get("chain_seq")?;
+    let record_type: &str = row.try_get("entry_type")?;
+    let columns = stored_form::parts::RowColumns {
+        record_type,
+        uid: row.try_get("entry_uid")?,
+        time_recorded: row
+            .try_get::<jiff_sqlx::Timestamp, _>("recorded_at")?
+            .to_jiff(),
+        ehr_id: row.try_get("entry_ehr")?,
+        index: stored_form::parts::index::IndexColumns {
+            request_id: row.try_get("request_id")?,
+            resource_id: row.try_get("resource_id")?,
+        },
+    };
+    stored_form::parts::whole(
+        row.try_get("row_part")?,
+        row.try_get("shared_part")?,
+        &columns,
+    )
+    .map_err(|source| AccessLogError::Unreadable { chain_seq, source })
+}
+
+/// The record whose canonical form is `document`, with `link` joined, read
+/// as a `T` with no JSON value of it built.
+fn with_link<T: serde::de::DeserializeOwned>(
     row: &PgRow,
-    link: AccessLogLink,
+    document: &str,
+    link: &AccessLogLink,
 ) -> Result<T, AccessLogError> {
     let chain_seq: i64 = row.try_get("chain_seq")?;
     let unreadable = |source| AccessLogError::Unreadable { chain_seq, source };
-    let document: String = row.try_get("document")?;
-    let mut value: Value = serde_json::from_str(&document).map_err(unreadable)?;
-    let link = serde_json::to_value(link).map_err(unreadable)?;
-    if let Value::Object(members) = &mut value {
-        members.insert(LINK.to_owned(), link);
+    let link = serde_json::to_string(link).map_err(unreadable)?;
+    let open = document
+        .strip_suffix('}')
+        .ok_or_else(|| unreadable(serde::de::Error::custom("a record is no object")))?;
+    let mut joined = String::with_capacity(document.len() + link.len() + 9);
+    joined.push_str(open);
+    if open != "{" {
+        joined.push(',');
     }
-    serde_json::from_value(value).map_err(unreadable)
+    joined.push_str("\"link\":");
+    joined.push_str(&link);
+    joined.push('}');
+    serde_json::from_str(&joined).map_err(unreadable)
 }

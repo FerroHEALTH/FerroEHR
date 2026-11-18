@@ -183,7 +183,7 @@ async fn a_named_subject_is_translated_forward_under_an_identity_source() {
 
     assert_eq!(outcome.cohort_size, 1);
     assert_eq!(served(&outcome), vec![ehr.to_string()]);
-    let document = outcome.query.result_set.to_string();
+    let document = outcome.query.result_set.to_value().unwrap().to_string();
     assert!(
         !document.contains(RED_ID) && !document.contains(&pseudonym),
         "neither identifier reaches the served document"
@@ -336,7 +336,7 @@ async fn a_cohort_leaves_out_every_ehr_the_population_gate_leaves_out() {
     // a bare `EHR` source is read back from its projected `ehr_id` cells.
     let answered = |query: &ferroehr::service::query::request::QueryOutcome, by_rows: bool| {
         let mut ehrs: Vec<String> = if by_rows {
-            query.result_set["rows"]
+            query.result_set.to_value().unwrap()["rows"]
                 .as_array()
                 .expect("rows")
                 .iter()
@@ -394,7 +394,9 @@ async fn a_cohort_leaves_out_every_ehr_the_population_gate_leaves_out() {
         .await
         .expect("the ehr_id-scoped query runs");
     assert_eq!(
-        named.result_set["rows"].as_array().map(Vec::len),
+        named.result_set.to_value().unwrap()["rows"]
+            .as_array()
+            .map(Vec::len),
         Some(1),
         "a query aimed at the non-queryable EHR by its ehr_id still answers it"
     );

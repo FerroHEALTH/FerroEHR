@@ -79,7 +79,7 @@ impl ItemList {
             .items
             .as_deref()?
             .iter()
-            .map(|element| Item::Element(element.clone()))
+            .map(|element| Item::from(element.clone()))
             .collect();
         Some(Cluster {
             name: self.name.clone(),
@@ -129,7 +129,7 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             null_flavour: None,
-            value: Some(DataValue::DvText(text(name))),
+            value: Some(Box::new(DataValue::DvText(text(name)))),
             null_reason: None,
         }
     }

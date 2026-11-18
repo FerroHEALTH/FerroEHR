@@ -33,8 +33,8 @@ use crate::service::demographic::user_lifecycle::{Transition, transition};
 use crate::service::demographic::validate::Container;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::decoded;
 use crate::versioning::change::{self, Change, CommittedContribution, WriteEnvelope};
-use crate::versioning::contribution::typed_decode_gate;
 use crate::versioning::lifecycle::state;
 
 /// What a write changes in a User.
@@ -161,10 +161,10 @@ impl FerroEhrService {
             // NOTE: RM common master06 §Abandoned and Inactive States, an abandoned
             // item is one that lost relevance while incomplete, so its content is.
             let incomplete = matches!(*lifecycle, state::INCOMPLETE | state::ABANDONED);
-            typed_decode_gate(Kind::Person, &body, incomplete)?;
-            self.demographic_commit_check(
+            let typed = decoded(Kind::Person, body.clone(), incomplete)?;
+            self.demographic_body_check(
                 Kind::Person,
-                &body,
+                &typed,
                 incomplete,
                 Some(Container::Existing(id)),
             )
@@ -174,7 +174,7 @@ impl FerroEhrService {
                 lifecycle_state: Some((*lifecycle).to_owned()),
                 ..WriteEnvelope::default()
             };
-            let change = Change::modify(id, Kind::Person, body.clone(), Some(tree), None, envelope);
+            let change = Change::modify(id, Kind::Person, typed, Some(tree), None, envelope);
             let deactivates = matches!(*lifecycle, state::INACTIVE | state::ABANDONED);
             let commit = ScimCommit {
                 limit: deactivates.then_some(limit),
@@ -229,37 +229,12 @@ impl FerroEhrService {
 
     /// The live professional `ROLE`s the `PERSON` `body` lists in `roles`.
     async fn professional_roles(&self, body: &Value) -> Result<Vec<VoId>, ServiceError> {
-        let mut roles = Vec::new();
-        let listed = body
-            .get("roles")
-            .and_then(Value::as_array)
-            .map(Vec::as_slice)
-            .unwrap_or_default();
-        for reference in listed {
-            // NOTE: a reference whose root is no UUID names no container of this store.
-            let Some(role) = reference
-                .pointer("/id/value")
-                .and_then(Value::as_str)
-                .and_then(|value| VoId::from_uid_head(value).ok())
-            else {
-                continue;
-            };
-            let Some(current) = self.party_current(PartyKind::Role, role).await? else {
-                continue;
-            };
-            if current.deleted {
-                continue;
-            }
-            let read = self.read_party(PartyKind::Role, role, None, None).await?;
-            let template = read
-                .body
-                .pointer("/archetype_details/template_id/value")
-                .and_then(Value::as_str);
-            if template.is_some_and(|template| self.binding.is_professional_role(template)) {
-                roles.push(role);
-            }
-        }
-        Ok(roles)
+        Ok(self
+            .professional_role_parties(body)
+            .await?
+            .into_iter()
+            .map(|held| held.vo_id)
+            .collect())
     }
 
     /// The tree id of the head of the `PERSON` `id`.

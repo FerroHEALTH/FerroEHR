@@ -12,9 +12,9 @@
 //! activity timing, instruction narrative, links).
 //!
 //! [`resolve`] parses the `ctx` child of a parsed simplified document into a
-//! typed [`CtxDefaults`] carrying **ready canonical-JSON pieces** the
-//! composition builder drops into place; [`emit`] is the reverse (a canonical
-//! COMPOSITION → the `ctx/` keys).
+//! typed [`CtxDefaults`] carrying **ready typed RM pieces** the composition
+//! builder drops into place; [`crate::flat::ctx_emit::emit`] is the reverse
+//! (a COMPOSITION, typed or canonical JSON, → the `ctx/` keys).
 //!
 //! Terminology-coded shortcuts (`setting`, `action_ism_transition_current_state`)
 //! accept either a code or a display value (master06 §§setting,
@@ -30,11 +30,14 @@
 
 use std::collections::BTreeMap;
 
-use serde_json::{Map, Value, json};
+use serde_json::Value;
 
 use crate::flat::error::FlatError;
+use openehr_rm::v1_2::access;
+
 use crate::flat::map::coded_from_group;
 use crate::flat::sim::SimNode;
+use crate::flat::typed::{self, Build, Obj, o, s};
 
 /// The `ctx/` child names of master06 (+ the `master04 §Context` overview). A
 /// `ctx/` key outside this vocabulary is a [`FlatError::UnknownContext`].
@@ -68,9 +71,9 @@ const KNOWN_CTX: &[&str] = &[
 ];
 
 /// The typed, resolved context of one simplified data instance
-/// (master06-context_information.adoc). Fields hold ready canonical-JSON pieces
+/// (master06-context_information.adoc). Fields hold ready typed RM pieces
 /// (or the raw strings a piece is built from on demand).
-#[derive(Debug, Clone)]
+#[derive(Debug, Default)]
 pub(crate) struct CtxDefaults {
     /// `ENTRY.language` / `COMPOSITION.language` code (master06 §"Language and
     /// Territory"). Not defaulted here — the mandatory check is the caller's.
@@ -78,7 +81,7 @@ pub(crate) struct CtxDefaults {
     /// `COMPOSITION.territory` code (master06 §"Language and Territory").
     pub(crate) territory: Option<String>,
     /// `COMPOSITION.composer` (`PARTY_PROXY`), built per master06 §Composer.
-    pub(crate) composer: Option<Value>,
+    pub(crate) composer: Option<Obj>,
     /// `EVENT_CONTEXT.start_time` / `ACTION.time` / `OBSERVATION.history.origin`
     /// default (master06 §time; defaults to `now`).
     pub(crate) time: String,
@@ -90,26 +93,27 @@ pub(crate) struct CtxDefaults {
     pub(crate) action_time: Option<String>,
     /// `ACTIVITY.timing` default (master06 §activity_timing).
     pub(crate) activity_timing: Option<String>,
-    /// `EVENT_CONTEXT.setting` (`DV_CODED_TEXT`), default "other care" (238).
-    pub(crate) setting: Value,
+    /// `EVENT_CONTEXT.setting` (`DV_CODED_TEXT`) the client named; see
+    /// [`CtxDefaults::setting`] for the default.
+    pub(crate) setting: Option<Obj>,
     /// `EVENT_CONTEXT.location` free-text label (master06 §location).
     pub(crate) location: Option<String>,
     /// `EVENT_CONTEXT.health_care_facility` (`PARTY_IDENTIFIED`).
-    pub(crate) health_care_facility: Option<Value>,
+    pub(crate) health_care_facility: Option<Obj>,
     /// `EVENT_CONTEXT.participations` / `ENTRY.other_participations`
     /// (built `PARTICIPATION`s, master06 §Participation).
-    pub(crate) participations: Vec<Value>,
+    pub(crate) participations: Vec<Obj>,
     /// `ENTRY.workflow_id` (`OBJECT_REF`, master06 §"Workflow ID").
-    pub(crate) work_flow_id: Option<Value>,
+    pub(crate) work_flow_id: Option<Obj>,
     /// `ENTRY.provider` (`PARTY_IDENTIFIED`, master06 §provider).
-    pub(crate) provider: Option<Value>,
+    pub(crate) provider: Option<Obj>,
     /// `ACTION.ism_transition.current_state` (`DV_CODED_TEXT`, master06
     /// §action_ism_transition_current_state).
-    pub(crate) action_ism_current_state: Option<Value>,
+    pub(crate) action_ism_current_state: Option<Obj>,
     /// `INSTRUCTION.narrative` text (master06 §instruction_narrative).
     pub(crate) instruction_narrative: Option<String>,
     /// `LOCATABLE.links` (built `LINK`s, master06 §link).
-    pub(crate) links: Vec<Value>,
+    pub(crate) links: Vec<Obj>,
     /// Default external-reference namespace (master06 §"ID Namespace and Scheme").
     pub(crate) id_namespace: Option<String>,
     /// Default external-reference scheme (master06 §"ID Namespace and Scheme").
@@ -117,62 +121,64 @@ pub(crate) struct CtxDefaults {
     /// The `COMPOSITION.language` CODE_PHRASE a `<root>/language|raw` value
     /// carries, used when no `ctx/language` names one (master04 §Raw
     /// canonical JSON).
-    pub(crate) language_phrase: Option<Value>,
+    pub(crate) language_phrase: Option<Obj>,
     /// The `COMPOSITION.territory` CODE_PHRASE a `<root>/territory|raw` value
     /// carries, used when no `ctx/territory` names one.
-    pub(crate) territory_phrase: Option<Value>,
-}
-
-impl Default for CtxDefaults {
-    /// `setting` is the one context field the spec gives a value to when it is
-    /// absent: openEHR `setting` group code `238` "other care" (master06
-    /// §setting — "will be set to 'other care' if not set"). Every other field
-    /// defaults to absent, and `time` is filled by [`resolve`] from `now`.
-    fn default() -> Self {
-        Self {
-            language: None,
-            territory: None,
-            composer: None,
-            time: String::new(),
-            end_time: None,
-            history_origin: None,
-            action_time: None,
-            activity_timing: None,
-            setting: coded_from_group("setting", "other care"),
-            location: None,
-            health_care_facility: None,
-            participations: Vec::new(),
-            work_flow_id: None,
-            provider: None,
-            action_ism_current_state: None,
-            instruction_narrative: None,
-            links: Vec::new(),
-            id_namespace: None,
-            id_scheme: None,
-            language_phrase: None,
-            territory_phrase: None,
-        }
-    }
+    pub(crate) territory_phrase: Option<Obj>,
 }
 
 impl CtxDefaults {
+    /// The `EVENT_CONTEXT.setting`: the client's, else the one context field
+    /// the spec gives a value to when it is absent, openEHR `setting` group
+    /// code `238` "other care" (master06 §setting — "will be set to 'other
+    /// care' if not set").
+    ///
+    /// # Errors
+    /// [`FlatError::Rm`], never for these classes.
+    pub(crate) fn setting(&self) -> Result<Obj, FlatError> {
+        match &self.setting {
+            Some(setting) => Ok(setting.clone_box()),
+            None => coded_from_group("setting", "other care"),
+        }
+    }
+
     /// The `COMPOSITION`/`ENTRY` `language` as a CODE_PHRASE in `ISO_639-1`
     /// (master06 §"Language and Territory"), when `ctx/language` was set,
     /// else the `<root>/language|raw` CODE_PHRASE.
-    pub(crate) fn language_code_phrase(&self) -> Option<Value> {
-        self.language
-            .as_deref()
-            .map(|c| code_phrase("ISO_639-1", c))
-            .or_else(|| self.language_phrase.clone())
+    ///
+    /// # Errors
+    /// [`FlatError::Rm`], never for these classes.
+    pub(crate) fn language_code_phrase(&self) -> Result<Option<Obj>, FlatError> {
+        phrase(
+            "ISO_639-1",
+            self.language.as_deref(),
+            self.language_phrase.as_ref(),
+        )
     }
 
     /// The `COMPOSITION.territory` as a CODE_PHRASE in `ISO_3166-1`, when
     /// `ctx/territory` was set, else the `<root>/territory|raw` CODE_PHRASE.
-    pub(crate) fn territory_code_phrase(&self) -> Option<Value> {
-        self.territory
-            .as_deref()
-            .map(|c| code_phrase("ISO_3166-1", c))
-            .or_else(|| self.territory_phrase.clone())
+    ///
+    /// # Errors
+    /// [`FlatError::Rm`], never for these classes.
+    pub(crate) fn territory_code_phrase(&self) -> Result<Option<Obj>, FlatError> {
+        phrase(
+            "ISO_3166-1",
+            self.territory.as_deref(),
+            self.territory_phrase.as_ref(),
+        )
+    }
+}
+
+/// The CODE_PHRASE of `code` in `terminology`, else a copy of `raw`.
+fn phrase(
+    terminology: &str,
+    code: Option<&str>,
+    raw: Option<&Obj>,
+) -> Result<Option<Obj>, FlatError> {
+    match code {
+        Some(c) => typed::code_phrase(terminology, c).map(Some),
+        None => Ok(raw.map(|p| p.clone_box())),
     }
 }
 
@@ -220,20 +226,20 @@ pub(crate) fn resolve(ctx: Option<&SimNode>, now: &str) -> Result<CtxDefaults, F
     out.instruction_narrative = bare_str("instruction_narrative").map(str::to_owned);
 
     if let Some(s) = bare_str("setting") {
-        out.setting = coded_from_group("setting", s);
+        out.setting = Some(coded_from_group("setting", s)?);
     }
     if let Some(s) = bare_str("action_ism_transition_current_state") {
-        out.action_ism_current_state = Some(coded_from_group("instruction_states", s));
+        out.action_ism_current_state = Some(coded_from_group("instruction_states", s)?);
     }
 
     // Compute into locals first — these read the `id_namespace`/`id_scheme`
     // defaults set above, so `out` must not be mutably reborrowed mid-read.
-    let composer = resolve_composer(ctx, &out);
-    let facility = resolve_facility(ctx, &out);
-    let provider = resolve_provider(ctx, &out);
-    let work_flow_id = resolve_workflow(ctx, &out);
+    let composer = resolve_composer(ctx, &out)?;
+    let facility = resolve_facility(ctx, &out)?;
+    let provider = resolve_provider(ctx, &out)?;
+    let work_flow_id = resolve_workflow(ctx, &out)?;
     let participations = resolve_participations(ctx, &out)?;
-    let links = resolve_links(ctx);
+    let links = resolve_links(ctx)?;
     out.composer = composer;
     out.health_care_facility = facility;
     out.provider = provider;
@@ -245,7 +251,7 @@ pub(crate) fn resolve(ctx: Option<&SimNode>, now: &str) -> Result<CtxDefaults, F
 
 /// master06 §Composer: `composer_self` → PARTY_SELF; `composer_name` →
 /// PARTY_IDENTIFIED name; `composer_id` → `external_ref.id.value`.
-fn resolve_composer(ctx: &SimNode, d: &CtxDefaults) -> Option<Value> {
+fn resolve_composer(ctx: &SimNode, d: &CtxDefaults) -> Result<Option<Obj>, FlatError> {
     let self_flag = ctx
         .child("composer_self")
         .and_then(SimNode::bare)
@@ -257,48 +263,53 @@ fn resolve_composer(ctx: &SimNode, d: &CtxDefaults) -> Option<Value> {
         .and_then(SimNode::bare)
         .and_then(Value::as_str);
     if self_flag {
-        let mut p = Map::new();
-        p.insert("_type".to_owned(), json!("PARTY_SELF"));
+        let mut p = access::construct("PARTY_SELF")?;
         if let Some(id) = id {
-            p.insert("external_ref".to_owned(), party_ref(id, d, "PERSON"));
+            p.put("external_ref", o(party_ref(id, d, "PERSON")?))?;
         }
-        return Some(Value::Object(p));
+        return Ok(Some(p));
     }
     if name.is_none() && id.is_none() {
-        return None;
+        return Ok(None);
     }
-    Some(party_identified(name, id, d, "PERSON"))
+    party_identified(name, id, d, "PERSON").map(Some)
 }
 
 /// master06 §health_care_facility: a PARTY_IDENTIFIED (`|name`/`|id`).
-fn resolve_facility(ctx: &SimNode, d: &CtxDefaults) -> Option<Value> {
-    let hcf = ctx.child("health_care_facility")?;
+fn resolve_facility(ctx: &SimNode, d: &CtxDefaults) -> Result<Option<Obj>, FlatError> {
+    let Some(hcf) = ctx.child("health_care_facility") else {
+        return Ok(None);
+    };
     let name = hcf.attrs.get("name");
     let id = hcf.attrs.get("id").and_then(Value::as_str);
     if name.is_none() && id.is_none() {
-        return None;
+        return Ok(None);
     }
-    Some(party_identified(name, id, d, "ORGANISATION"))
+    party_identified(name, id, d, "ORGANISATION").map(Some)
 }
 
 /// master06 §provider: a PARTY_IDENTIFIED from `provider_name`/`provider_id`.
-fn resolve_provider(ctx: &SimNode, d: &CtxDefaults) -> Option<Value> {
+fn resolve_provider(ctx: &SimNode, d: &CtxDefaults) -> Result<Option<Obj>, FlatError> {
     let name = ctx.child("provider_name").and_then(SimNode::bare);
     let id = ctx
         .child("provider_id")
         .and_then(SimNode::bare)
         .and_then(Value::as_str);
     if name.is_none() && id.is_none() {
-        return None;
+        return Ok(None);
     }
-    Some(party_identified(name, id, d, "PERSON"))
+    party_identified(name, id, d, "PERSON").map(Some)
 }
 
 /// master06 §"Workflow ID": an OBJECT_REF; `|id_scheme`/`|namespace` fall back to
 /// `ctx/id_scheme` / `ctx/id_namespace`.
-fn resolve_workflow(ctx: &SimNode, d: &CtxDefaults) -> Option<Value> {
-    let wf = ctx.child("work_flow_id")?;
-    let id = wf.attrs.get("id").and_then(Value::as_str)?;
+fn resolve_workflow(ctx: &SimNode, d: &CtxDefaults) -> Result<Option<Obj>, FlatError> {
+    let Some(wf) = ctx.child("work_flow_id") else {
+        return Ok(None);
+    };
+    let Some(id) = wf.attrs.get("id").and_then(Value::as_str) else {
+        return Ok(None);
+    };
     let ty = wf
         .attrs
         .get("type")
@@ -316,38 +327,38 @@ fn resolve_workflow(ctx: &SimNode, d: &CtxDefaults) -> Option<Value> {
         .and_then(Value::as_str)
         .or(d.id_namespace.as_deref())
         .unwrap_or("EHR");
-    Some(json!({
-        "_type": "OBJECT_REF",
-        "namespace": ns,
-        "type": ty,
-        "id": {"_type": "GENERIC_ID", "value": id, "scheme": scheme},
-    }))
+    typed::generic_object_ref(ns, ty, id, scheme).map(Some)
 }
 
 /// master06 §link: `LOCATABLE.links` from `ctx/link:i|type`/`|meaning`/`|target`.
-fn resolve_links(ctx: &SimNode) -> Vec<Value> {
+fn resolve_links(ctx: &SimNode) -> Result<Vec<Obj>, FlatError> {
     let Some(child) = ctx.children.get("link") else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
     child
         .occurrences
         .iter()
-        .filter(|o| !o.is_empty())
-        .map(|o| {
-            let text = |s: &str| o.attrs.get(s).and_then(Value::as_str).unwrap_or("");
-            json!({
-                "_type": "LINK",
-                "type": {"_type": "DV_TEXT", "value": text("type")},
-                "meaning": {"_type": "DV_TEXT", "value": text("meaning")},
-                "target": {"_type": "DV_EHR_URI", "value": text("target")},
-            })
+        .filter(|occ| !occ.is_empty())
+        .map(|occ| {
+            let text = |key: &str| occ.attrs.get(key).and_then(Value::as_str).unwrap_or("");
+            typed::make(
+                "LINK",
+                [
+                    ("type", o(typed::dv_text(text("type"))?)),
+                    ("meaning", o(typed::dv_text(text("meaning"))?)),
+                    (
+                        "target",
+                        o(typed::make("DV_EHR_URI", [("value", s(text("target")))])?),
+                    ),
+                ],
+            )
         })
         .collect()
 }
 
 /// master06 §Participation: build a `PARTICIPATION` per index from the parallel
 /// `participation_name`/`_function`/`_mode`/`_id`/`_identifiers` families.
-fn resolve_participations(ctx: &SimNode, d: &CtxDefaults) -> Result<Vec<Value>, FlatError> {
+fn resolve_participations(ctx: &SimNode, d: &CtxDefaults) -> Result<Vec<Obj>, FlatError> {
     let occ = |name: &str, i: usize| {
         ctx.children
             .get(name)
@@ -405,26 +416,32 @@ fn resolve_participations(ctx: &SimNode, d: &CtxDefaults) -> Result<Vec<Value>, 
                 key: format!("ctx/participation_function:{i}"),
             });
         };
-        let mut p = Map::new();
-        p.insert("_type".to_owned(), json!("PARTICIPATION"));
-        p.insert(
-            "function".to_owned(),
-            json!({"_type": "DV_TEXT", "value": function}),
-        );
+        let mut p = typed::make(
+            "PARTICIPATION",
+            [("function", o(typed::dv_text(function)?))],
+        )?;
         // The performer is a PARTY_IDENTIFIED (master06 §Participation); its
         // identifiers make it identified even without a name.
-        let mut performer = party_identified(name, id, d, "PERSON");
-        if let Value::Object(pm) = &mut performer
-            && !identifiers.is_empty()
-        {
-            pm.insert("_type".to_owned(), json!("PARTY_IDENTIFIED"));
-            pm.insert("identifiers".to_owned(), Value::Array(identifiers));
-        }
-        p.insert("performer".to_owned(), performer);
+        let performer = if identifiers.is_empty() {
+            party_identified(name, id, d, "PERSON")?
+        } else {
+            let mut performer = access::construct("PARTY_IDENTIFIED")?;
+            if let Some(n) = name {
+                performer.put_datum("name", n)?;
+            }
+            if let Some(id) = id {
+                performer.put("external_ref", o(party_ref(id, d, "PERSON")?))?;
+            }
+            for identifier in identifiers {
+                performer.push_obj("identifiers", identifier)?;
+            }
+            performer
+        };
+        p.put("performer", o(performer))?;
         if let Some(m) = mode {
-            p.insert("mode".to_owned(), coded_from_group("participation_mode", m));
+            p.put("mode", o(coded_from_group("participation_mode", m)?))?;
         }
-        out.push(Value::Object(p));
+        out.push(p);
     }
     Ok(out)
 }
@@ -432,13 +449,13 @@ fn resolve_participations(ctx: &SimNode, d: &CtxDefaults) -> Result<Vec<Value>, 
 /// The performer identifiers for one participation, in both master06 forms:
 /// the *compact* `"issuer::assigner::id::TYPE;…"` bare string, or the
 /// *non-compact* `|issuer:j`/`|assigner:j`/`|id:j`/`|type:j` attrs.
-fn participation_identifiers(node: &SimNode, index: usize) -> Result<Vec<Value>, FlatError> {
+fn participation_identifiers(node: &SimNode, index: usize) -> Result<Vec<Obj>, FlatError> {
     // Compact bare form (master06 §Participation example, index 0).
     if let Some(compact) = node.bare().and_then(Value::as_str) {
         return parse_compact_identifiers(compact, index);
     }
     // Non-compact form: `|<field>:j` attrs grouped by `j`.
-    let mut by_index: BTreeMap<u32, Map<String, Value>> = BTreeMap::new();
+    let mut by_index: BTreeMap<u32, Vec<(&str, &Value)>> = BTreeMap::new();
     for (key, value) in &node.attrs {
         let Some((field, j)) = key.split_once(':') else {
             continue;
@@ -447,25 +464,18 @@ fn participation_identifiers(node: &SimNode, index: usize) -> Result<Vec<Value>,
         if !matches!(field, "id" | "issuer" | "assigner" | "type") {
             continue;
         }
-        by_index
-            .entry(j)
-            .or_default()
-            .insert(field.to_owned(), value.clone());
+        by_index.entry(j).or_default().push((field, value));
     }
-    Ok(by_index
+    by_index
         .into_values()
-        .map(|mut fields| {
-            fields.insert("_type".to_owned(), json!("DV_IDENTIFIER"));
-            fields.entry("id".to_owned()).or_insert_with(|| json!(""));
-            Value::Object(fields)
-        })
-        .collect())
+        .map(|fields| crate::flat::map::parties::identifier_from_fields(&fields))
+        .collect()
 }
 
 /// Parse the compact `"issuer::assigner::id::TYPE;issuer2::…"` participation
 /// identifier list (master06 §Participation). Each `;`-separated entry must have
 /// exactly four `::`-separated parts.
-fn parse_compact_identifiers(compact: &str, index: usize) -> Result<Vec<Value>, FlatError> {
+fn parse_compact_identifiers(compact: &str, index: usize) -> Result<Vec<Obj>, FlatError> {
     let mut out = Vec::new();
     for entry in compact.split(';').filter(|s| !s.is_empty()) {
         let parts: Vec<&str> = entry.split("::").collect();
@@ -475,13 +485,15 @@ fn parse_compact_identifiers(compact: &str, index: usize) -> Result<Vec<Value>, 
                 reason: format!("compact identifier {entry:?} must be issuer::assigner::id::type"),
             });
         };
-        out.push(json!({
-            "_type": "DV_IDENTIFIER",
-            "issuer": issuer,
-            "assigner": assigner,
-            "id": id,
-            "type": id_type,
-        }));
+        out.push(typed::make(
+            "DV_IDENTIFIER",
+            [
+                ("issuer", s(*issuer)),
+                ("assigner", s(*assigner)),
+                ("id", s(*id)),
+                ("type", s(*id_type)),
+            ],
+        )?);
     }
     Ok(out)
 }
@@ -494,147 +506,52 @@ fn party_identified(
     id: Option<&str>,
     d: &CtxDefaults,
     party_type: &str,
-) -> Value {
-    let mut p = Map::new();
+) -> Result<Obj, FlatError> {
     match (name, id) {
         (_, Some(id)) => {
-            p.insert("_type".to_owned(), json!("PARTY_IDENTIFIED"));
+            let mut p = access::construct("PARTY_IDENTIFIED")?;
             if let Some(n) = name {
-                p.insert("name".to_owned(), n.clone());
+                p.put_datum("name", n)?;
             }
-            p.insert("external_ref".to_owned(), party_ref(id, d, party_type));
+            p.put("external_ref", o(party_ref(id, d, party_type)?))?;
+            Ok(p)
         }
         (Some(n), None) => {
-            p.insert("_type".to_owned(), json!("PARTY_IDENTIFIED"));
-            p.insert("name".to_owned(), n.clone());
+            let mut p = access::construct("PARTY_IDENTIFIED")?;
+            p.put_datum("name", n)?;
+            Ok(p)
         }
-        (None, None) => {
-            p.insert("_type".to_owned(), json!("PARTY_SELF"));
-        }
+        (None, None) => Ok(access::construct("PARTY_SELF")?),
     }
-    Value::Object(p)
 }
 
 /// A PARTY_REF for `id` honouring the ctx scheme/namespace defaults. A scheme
 /// makes the id a `GENERIC_ID`; without one it is a `HIER_OBJECT_ID` (never a
 /// fabricated scheme).
-fn party_ref(id: &str, d: &CtxDefaults, party_type: &str) -> Value {
+fn party_ref(id: &str, d: &CtxDefaults, party_type: &str) -> Result<Obj, FlatError> {
     let id_obj = match d.id_scheme.as_deref() {
-        Some(scheme) => json!({"_type": "GENERIC_ID", "value": id, "scheme": scheme}),
-        None => json!({"_type": "HIER_OBJECT_ID", "value": id}),
+        Some(scheme) => typed::make("GENERIC_ID", [("value", s(id)), ("scheme", s(scheme))])?,
+        None => typed::hier_object_id(id, "ctx/composer_id")?,
     };
-    json!({
-        "_type": "PARTY_REF",
-        "id": id_obj,
-        "namespace": d.id_namespace.as_deref().unwrap_or("EHR"),
-        "type": party_type,
-    })
-}
-
-fn code_phrase(terminology: &str, code: &str) -> Value {
-    json!({
-        "_type": "CODE_PHRASE",
-        "terminology_id": {"_type": "TERMINOLOGY_ID", "value": terminology},
-        "code_string": code,
-    })
-}
-
-// ── COMPOSITION → ctx sim ─────────────────────────────────────────────────────
-
-/// Derive the `ctx/` keys from a canonical COMPOSITION onto `out` (the `ctx`
-/// SimNode). The bidirectional shortcuts (master06 §§"Language and Territory",
-/// Composer, time, setting, location, health_care_facility, Participation) are
-/// symmetric with [`resolve`]; the per-ENTRY input-only defaults (provider,
-/// workflow id, ISM state, timing, narrative, links) keep their structural home
-/// on output and are not emitted here (master06 frames them as input shortcuts).
-pub(crate) fn emit(composition: &Value, out: &mut SimNode) {
-    if let Some(code) = composition.pointer("/language/code_string") {
-        set_bare(out, "language", code.clone());
-    }
-    if let Some(code) = composition.pointer("/territory/code_string") {
-        set_bare(out, "territory", code.clone());
-    }
-    match composition.get("composer") {
-        // NOTE: master06 §Composer has no reference-type shortcut, so such a composer is
-        // written as `composer|raw` by the flattener (master04 §Raw canonical JSON).
-        Some(c) if !crate::flat::map::parties::ref_type_survives(c, "PERSON") => {}
-        Some(c) if c.get("_type").and_then(Value::as_str) == Some("PARTY_SELF") => {
-            set_bare(out, "composer_self", json!(true));
-            emit_external_ref(c, out);
-        }
-        Some(c) => {
-            if let Some(name) = c.get("name").filter(|v| !v.is_null()) {
-                set_bare(out, "composer_name", name.clone());
-            }
-            emit_external_ref(c, out);
-        }
-        None => {}
-    }
-
-    let context = composition.get("context");
-    if let Some(t) = context.and_then(|c| c.pointer("/start_time/value")) {
-        set_bare(out, "time", t.clone());
-    }
-    if let Some(t) = context.and_then(|c| c.pointer("/end_time/value")) {
-        set_bare(out, "end_time", t.clone());
-    }
-    // master06 §setting: emit the code (round-trips through `resolve`, which
-    // accepts either a code or a value).
-    if let Some(code) = context.and_then(|c| c.pointer("/setting/defining_code/code_string")) {
-        set_bare(out, "setting", code.clone());
-    }
-    if let Some(loc) = context
-        .and_then(|c| c.get("location"))
-        .filter(|v| !v.is_null())
-    {
-        set_bare(out, "location", loc.clone());
-    }
-    // NOTE: health_care_facility and participations are NOT emitted as ctx/
-    // shortcuts — the master06 shortcut vocabulary is lossy for them, so the
-    // lossless master05 §EVENT_CONTEXT path rows own the output.
-}
-
-/// Emit a party's `external_ref` id/namespace/scheme as `ctx/composer_id` +
-/// `ctx/id_namespace`/`ctx/id_scheme` (master06 §Composer). Namespace and
-/// scheme emit only when an id value exists — a ref without an id cannot be
-/// rebuilt from the shortcuts (master06 §Composer: `composer_id` sets
-/// `external_ref.id.value`), so emitting its satellites alone would break
-/// the round-trip.
-fn emit_external_ref(party: &Value, out: &mut SimNode) {
-    let Some(id) = party
-        .pointer("/external_ref/id/value")
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-    else {
-        return;
-    };
-    set_bare(out, "composer_id", json!(id));
-    if let Some(ns) = party
-        .pointer("/external_ref/namespace")
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-    {
-        set_bare(out, "id_namespace", json!(ns));
-    }
-    if let Some(scheme) = party
-        .pointer("/external_ref/id/scheme")
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-    {
-        set_bare(out, "id_scheme", json!(scheme));
-    }
-}
-
-fn set_bare(out: &mut SimNode, name: &str, value: Value) {
-    out.occurrence_mut(name, None)
-        .attrs
-        .insert(String::new(), value);
+    typed::make(
+        "PARTY_REF",
+        [
+            ("id", o(id_obj)),
+            ("namespace", s(d.id_namespace.as_deref().unwrap_or("EHR"))),
+            ("type", s(party_type)),
+        ],
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    /// The canonical JSON of a built piece.
+    fn v(object: &Obj) -> Value {
+        typed::canonical_of(&**object).unwrap()
+    }
 
     /// Build a `ctx` SimNode from FLAT-style `ctx/...`-relative pairs.
     /// `(child, index, suffix, value)` — suffix `""` is the bare value.
@@ -653,8 +570,11 @@ mod tests {
         let d = resolve(None, "2026-01-01T00:00:00Z").unwrap();
         assert_eq!(d.time, "2026-01-01T00:00:00Z");
         // master06 §setting: default "other care" resolves to openEHR 238.
-        assert_eq!(d.setting["defining_code"]["code_string"], json!("238"));
-        assert_eq!(d.setting["value"], json!("other care"));
+        assert_eq!(
+            v(&d.setting().unwrap())["defining_code"]["code_string"],
+            json!("238")
+        );
+        assert_eq!(v(&d.setting().unwrap())["value"], json!("other care"));
     }
 
     // master06 §"unknown key" — a key outside the vocabulary is rejected.
@@ -677,7 +597,7 @@ mod tests {
             ("id_scheme", None, "", json!("HOSPITAL-NS")),
         ]);
         let d = resolve(Some(&ctx), "now").unwrap();
-        let composer = d.composer.unwrap();
+        let composer = v(&d.composer.unwrap());
         assert_eq!(composer["_type"], json!("PARTY_SELF"));
         assert_eq!(composer["external_ref"]["id"]["value"], json!("123"));
         assert_eq!(
@@ -690,7 +610,7 @@ mod tests {
     #[test]
     fn composer_name_identified() {
         let ctx = ctx_node(&[("composer_name", None, "", json!("Silvia Blake"))]);
-        let composer = resolve(Some(&ctx), "now").unwrap().composer.unwrap();
+        let composer = v(&resolve(Some(&ctx), "now").unwrap().composer.unwrap());
         assert_eq!(composer["_type"], json!("PARTY_IDENTIFIED"));
         assert_eq!(composer["name"], json!("Silvia Blake"));
     }
@@ -700,8 +620,11 @@ mod tests {
     fn setting_code_or_value() {
         let ctx = ctx_node(&[("setting", None, "", json!("238"))]);
         let d = resolve(Some(&ctx), "now").unwrap();
-        assert_eq!(d.setting["defining_code"]["code_string"], json!("238"));
-        assert_eq!(d.setting["value"], json!("other care"));
+        assert_eq!(
+            v(&d.setting().unwrap())["defining_code"]["code_string"],
+            json!("238")
+        );
+        assert_eq!(v(&d.setting().unwrap())["value"], json!("other care"));
     }
 
     // master06 §action_ism_transition_current_state: value accepted.
@@ -714,7 +637,7 @@ mod tests {
             json!("completed"),
         )]);
         let d = resolve(Some(&ctx), "now").unwrap();
-        let ism = d.action_ism_current_state.unwrap();
+        let ism = v(&d.action_ism_current_state.unwrap());
         assert_eq!(ism["value"], json!("completed"));
         assert_eq!(ism["defining_code"]["code_string"], json!("532"));
     }
@@ -740,7 +663,7 @@ mod tests {
         ]);
         let d = resolve(Some(&ctx), "now").unwrap();
         assert_eq!(d.participations.len(), 1);
-        let p = &d.participations[0];
+        let p = &v(&d.participations[0]);
         assert_eq!(p["function"]["value"], json!("requester"));
         assert_eq!(p["performer"]["identifiers"][0]["id"], json!("id1"));
         assert_eq!(p["performer"]["identifiers"][0]["issuer"], json!("issuer1"));
@@ -768,9 +691,10 @@ mod tests {
             .insert(String::new(), json!("performer"));
         let d = resolve(Some(&ctx), "now").unwrap();
         // index 0 is an empty placeholder → one real participation at index 1.
-        let with_ids: Vec<_> = d
+        let with_ids: Vec<Value> = d
             .participations
             .iter()
+            .map(v)
             .filter(|p| {
                 p.get("performer")
                     .and_then(|pf| pf.get("identifiers"))
@@ -836,9 +760,12 @@ mod tests {
         ]);
         let d = resolve(Some(&ctx), "now").unwrap();
         assert_eq!(d.participations.len(), 1);
-        assert_eq!(d.participations[0]["function"]["value"], json!("performer"));
         assert_eq!(
-            d.participations[0]["performer"]["name"],
+            v(&d.participations[0])["function"]["value"],
+            json!("performer")
+        );
+        assert_eq!(
+            v(&d.participations[0])["performer"]["name"],
             json!("Lara Markham")
         );
     }
@@ -857,7 +784,7 @@ mod tests {
         wf.attrs.insert("id".to_owned(), json!("567"));
         wf.attrs.insert("type".to_owned(), json!("ORGANISATION"));
         let d = resolve(Some(&ctx), "now").unwrap();
-        let w = d.work_flow_id.unwrap();
+        let w = v(&d.work_flow_id.unwrap());
         assert_eq!(w["id"]["scheme"], json!("HOSPITAL-NS"));
         assert_eq!(w["namespace"], json!("HOSPITAL-NS"));
         assert_eq!(w["type"], json!("ORGANISATION"));
@@ -880,16 +807,19 @@ mod tests {
                         "terminology_id": {"_type": "TERMINOLOGY_ID", "value": "openehr"}}}}
         });
         let mut ctx = SimNode::default();
-        emit(&comp, &mut ctx);
+        crate::flat::ctx_emit::emit(&comp, &mut ctx);
         let d = resolve(Some(&ctx), "now").unwrap();
         assert_eq!(d.language.as_deref(), Some("en"));
         assert_eq!(d.territory.as_deref(), Some("US"));
         assert_eq!(d.time, "2021-12-21T14:19:31+01:00");
-        assert_eq!(d.setting["defining_code"]["code_string"], json!("238"));
         assert_eq!(
-            d.language_code_phrase().unwrap()["code_string"],
+            v(&d.setting().unwrap())["defining_code"]["code_string"],
+            json!("238")
+        );
+        assert_eq!(
+            v(&d.language_code_phrase().unwrap().unwrap())["code_string"],
             json!("en")
         );
-        assert_eq!(d.composer.unwrap()["name"], json!("Silvia Blake"));
+        assert_eq!(v(&d.composer.unwrap())["name"], json!("Silvia Blake"));
     }
 }

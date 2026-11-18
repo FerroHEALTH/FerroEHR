@@ -249,7 +249,7 @@ async fn a_burst_of_first_requests_reads_each_ehr_once() {
     }
 
     let app = replica(&db, 2).await;
-    let evicted = testkit::statement_window(&pool)
+    let evicted = testkit::statements::statement_window(&pool)
         .await
         .expect("the statement counts reset");
     let mut burst = tokio::task::JoinSet::new();
@@ -279,7 +279,7 @@ async fn a_burst_of_first_requests_reads_each_ehr_once() {
     );
     let settings = calls(&pool, SETTINGS_READ).await;
     let subjects = calls(&pool, SUBJECT_READ).await;
-    testkit::assert_statements_kept(&pool, evicted)
+    testkit::statements::assert_statements_kept(&pool, evicted)
         .await
         .expect("no statement evicted while the test counted them");
     eprintln!(

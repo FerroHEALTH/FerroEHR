@@ -91,6 +91,7 @@ mod support;
 mod tags;
 pub(crate) mod validate;
 mod versioned;
+mod written;
 
 // The commit-path validators the CONTRIBUTION engine (`validate_for_commit`,
 // `service/ehr/composition_validate.rs`) dispatches to once the

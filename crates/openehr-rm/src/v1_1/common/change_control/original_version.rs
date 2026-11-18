@@ -22,7 +22,7 @@ pub struct OriginalVersion<T> {
     /// OpenPGP digital signature or digest of content committed in this Version.
     pub signature: Option<String>,
     /// Audit trail corresponding to the committal of this version to the `VERSIONED_OBJECT`.
-    pub commit_audit: AuditDetails,
+    pub commit_audit: Box<AuditDetails>,
     /// Stored version of inheritance precursor.
     pub uid: ObjectVersionId,
     /// Stored version of inheritance precursor.

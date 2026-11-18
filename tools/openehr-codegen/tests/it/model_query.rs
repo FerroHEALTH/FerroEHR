@@ -104,7 +104,7 @@ const LOCATABLE: [[&str; 14]; 6] = [
         "0..1",
         "-",
         "-",
-        "Option<Archetyped>",
+        "Option<Box<Archetyped>>",
     ],
     [
         "rm",
@@ -136,7 +136,7 @@ const LOCATABLE: [[&str; 14]; 6] = [
         "0..1",
         "-",
         "-",
-        "Option<FeederAudit>",
+        "Option<Box<FeederAudit>>",
     ],
     [
         "rm",

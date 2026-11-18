@@ -18,8 +18,6 @@
 //! missing path reads `NULL`, so a test of it is unknown under SQL's
 //! three-valued logic, and a read never multiplies rows.
 
-use std::fmt::Write as _;
-
 use sea_query::{Alias, Expr, ExprTrait as _, Order, Query};
 
 use crate::aql::error::{AnalysisError, AqlError, SqlError};
@@ -36,8 +34,10 @@ use super::expr::{
     version_field_expr,
 };
 use super::from::{attribute_child, is_vo_root_type};
-use super::jsonpath::{jsonpath_var, jsonpath_vars};
+use super::jsonpath::jsonpath_vars;
 use super::{Builder, ValueMode};
+use crate::aql::fragment::{Condition, FragmentPath, PathStep};
+use openehr_query::lexer::CompOp;
 
 impl Builder<'_> {
     // ── value expressions (the path split) ──────────────────────────────────
@@ -212,7 +212,7 @@ impl Builder<'_> {
             super::expr::hot(alias, Node::Tier),
             attribute_child(alias, parent, &step.attribute),
         ];
-        conds.extend(super::expr::type_cond(alias, &step.node_types));
+        conds.extend(super::expr::type_cond(alias, &step.node_types)?);
         if let Some(pred) = &step.predicate {
             conds.extend(self.node_constraint_conds(alias, pred)?);
         }
@@ -403,7 +403,31 @@ impl Builder<'_> {
     /// Identification): `vo_id::creating_system_id::version_tree_id`. `None`
     /// (fall through to the stored fragment) for a contained object's own `uid`,
     /// any predicate on the path, or a source with no versioned-object root.
-    fn version_uid_expr(&mut self, leaf: &LeafPath, mode: ValueMode) -> Option<Expr> {
+    pub(super) fn version_uid_expr(&mut self, leaf: &LeafPath, mode: ValueMode) -> Option<Expr> {
+        let (uid, whole) = self.version_uid_text(leaf)?;
+        if !whole {
+            // `uid/value` → the OBJECT_VERSION_ID string (compared/ordered as text).
+            return Some(uid);
+        }
+        // `uid` → the whole OBJECT_VERSION_ID object, only as a projected
+        // cell; a non-projection use falls through (not a normative shape).
+        matches!(mode, ValueMode::Projection).then(|| {
+            call(
+                "jsonb_build_object",
+                vec![
+                    Expr::val("_type"),
+                    Expr::val("OBJECT_VERSION_ID"),
+                    Expr::val("value"),
+                    uid,
+                ],
+            )
+        })
+    }
+
+    /// The synthesized uid text of a direct `uid[/value]` path on a
+    /// versioned-object root ([`Self::version_uid_expr`]), with whether the
+    /// path names the whole `uid` object.
+    pub(super) fn version_uid_text(&mut self, leaf: &LeafPath) -> Option<(Expr, bool)> {
         // Only a direct `uid[/value]` — no structure hop, no path predicate.
         if !leaf.anchor.is_empty()
             || leaf.root_predicate.is_some()
@@ -411,6 +435,12 @@ impl Builder<'_> {
         {
             return None;
         }
+        let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
+        let whole = match names.as_slice() {
+            ["uid", "value"] => false,
+            ["uid"] => true,
+            _ => return None,
+        };
         // The source must be a versioned-object root: only there does the server
         // assign the OBJECT_VERSION_ID (a contained OBSERVATION's `uid` is its
         // own stored value, if any).
@@ -421,25 +451,8 @@ impl Builder<'_> {
             return None;
         }
         let voa = self.vo_alias.get(&leaf.source.0).cloned()?;
-        let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
         let uid = version_field_expr(&voa, || self.ensure_audit(&voa), VersionField::Uid);
-        match names.as_slice() {
-            // `uid/value` → the OBJECT_VERSION_ID string (projected → JSON string
-            // via the caller's `to_jsonb`; compared/ordered as text).
-            ["uid", "value"] => Some(uid),
-            // `uid` → the whole OBJECT_VERSION_ID object, only as a projected
-            // cell; a non-projection use falls through (not a normative shape).
-            ["uid"] if matches!(mode, ValueMode::Projection) => Some(call(
-                "jsonb_build_object",
-                vec![
-                    Expr::val("_type"),
-                    Expr::val("OBJECT_VERSION_ID"),
-                    Expr::val("value"),
-                    uid,
-                ],
-            )),
-            _ => None,
-        }
+        Some((uid, whole))
     }
 
     /// The committed template id of a `COMPOSITION` root, compared as text:
@@ -554,82 +567,88 @@ impl Builder<'_> {
 
     /// The leaf's fragment jsonpath plus the bound filter variables of any
     /// predicated fragment step, or `None` when the leaf addresses the whole
-    /// anchor node.
-    ///
-    /// A multi-valued step is followed by `[*]`, so a path that ends on a list
-    /// attribute matches each element, as a path that continues below one
-    /// does.
-    ///
-    /// A step predicate lowers to a jsonpath filter expression on the step's
-    /// member accessor (`$.links[*] ? (@.archetype_node_id == $p0).target.value`
-    /// — QUERY master03 §Node predicate / §Standard predicate); every
-    /// compared value travels in the `vars` jsonb PARAMETER (`$p0`, `$p1`, …),
-    /// never spliced into the path text, and member names are lexer-restricted
-    /// identifiers. An archetype constraint on a fragment step is plain
-    /// equality on `archetype_node_id` — fragment objects are not `node` rows,
-    /// so the subsumption columns do not exist there; an HRID compares as the
-    /// written string.
-    #[expect(
-        clippy::disallowed_types,
-        reason = "the jsonpath vars object is SQL/JSON wire material (the bound \
-                  third argument of jsonb_path_query*), not an RM value — no \
-                  generated type models it"
-    )]
+    /// anchor node ([`Self::fragment_program`] written as SQL/JSON path text).
     pub(super) fn fragment_path(
         &self,
         leaf: &LeafPath,
     ) -> Result<Option<(String, Option<Expr>)>, AqlError> {
+        Ok(self.fragment_program(leaf)?.map(|program| {
+            let (jp, vars) = program.sql_text();
+            (jp, jsonpath_vars(vars))
+        }))
+    }
+
+    /// The leaf's fragment path, or `None` when the leaf addresses the whole
+    /// anchor node.
+    ///
+    /// A multi-valued step names its elements (`[*]`), so a path that ends
+    /// on a list attribute matches each element, as a path that continues
+    /// below one does.
+    ///
+    /// A step predicate becomes a filter on the step's member
+    /// (`$.links[*] ? (@.archetype_node_id == $p0).target.value` — QUERY
+    /// master03 §Node predicate / §Standard predicate); every compared value
+    /// is a variable, never path text, and member names are lexer-restricted
+    /// identifiers. An archetype constraint on a fragment step is plain
+    /// equality on `archetype_node_id` — fragment objects are not `node` rows,
+    /// so the subsumption columns do not exist there; an HRID compares as the
+    /// written string.
+    pub(super) fn fragment_program(
+        &self,
+        leaf: &LeafPath,
+    ) -> Result<Option<FragmentPath>, AqlError> {
         if leaf.fragment.is_empty() {
             return Ok(None);
         }
-        let mut jp = String::from("$");
-        let mut vars = serde_json::Map::new();
-        let var = jsonpath_var;
+        let text = |path: &[&str], op: CompOp, value: String| Condition {
+            path: path.iter().map(|p| (*p).to_owned()).collect(),
+            op,
+            value: value.into(),
+        };
+        let mut steps = Vec::with_capacity(leaf.fragment.len());
         for step in &leaf.fragment {
-            let _ = write!(jp, ".{}", step.name);
-            // NOTE: PostgreSQL 18 docs "Strict and Lax Modes": lax mode matches a path
-            // ending on an array once, so a list step names its elements explicitly.
-            if step.multi_valued {
-                jp.push_str("[*]");
-            }
-            let Some(pred) = &step.predicate else {
-                continue;
-            };
-            let mut conds: Vec<String> = Vec::new();
-            if let Some(a) = &pred.archetype {
-                let value = match a {
-                    crate::aql::ir::ArchetypeConstraint::NodeCode(c)
-                    | crate::aql::ir::ArchetypeConstraint::Archetype(c) => c.clone(),
-                    crate::aql::ir::ArchetypeConstraint::Param(p) => self.param_str(p)?,
-                };
-                let v = var(serde_json::Value::String(value), &mut vars);
-                conds.push(format!("@.archetype_node_id == ${v}"));
-            }
-            if let Some(n) = &pred.name {
-                match n {
-                    crate::aql::ir::NameConstraint::Value(s) => {
-                        let v = var(serde_json::Value::String(s.clone()), &mut vars);
-                        conds.push(format!("@.name.value == ${v}"));
-                    }
-                    crate::aql::ir::NameConstraint::Param(p) => {
-                        let v = var(serde_json::Value::String(self.param_str(p)?), &mut vars);
-                        conds.push(format!("@.name.value == ${v}"));
-                    }
-                    crate::aql::ir::NameConstraint::TermCode { terminology, code } => {
-                        let c = var(serde_json::Value::String(code.clone()), &mut vars);
-                        conds.push(format!("@.name.defining_code.code_string == ${c}"));
-                        let t = var(serde_json::Value::String(terminology.clone()), &mut vars);
-                        conds.push(format!("@.name.defining_code.terminology_id.value == ${t}"));
-                    }
+            let mut filter = Vec::new();
+            if let Some(pred) = &step.predicate {
+                if let Some(a) = &pred.archetype {
+                    let value = match a {
+                        crate::aql::ir::ArchetypeConstraint::NodeCode(c)
+                        | crate::aql::ir::ArchetypeConstraint::Archetype(c) => c.clone(),
+                        crate::aql::ir::ArchetypeConstraint::Param(p) => self.param_str(p)?,
+                    };
+                    filter.push(text(&["archetype_node_id"], CompOp::Eq, value));
                 }
+                match &pred.name {
+                    Some(crate::aql::ir::NameConstraint::Value(s)) => {
+                        filter.push(text(&["name", "value"], CompOp::Eq, s.clone()));
+                    }
+                    Some(crate::aql::ir::NameConstraint::Param(p)) => {
+                        filter.push(text(&["name", "value"], CompOp::Eq, self.param_str(p)?));
+                    }
+                    Some(crate::aql::ir::NameConstraint::TermCode { terminology, code }) => {
+                        filter.push(text(
+                            &["name", "defining_code", "code_string"],
+                            CompOp::Eq,
+                            code.clone(),
+                        ));
+                        filter.push(text(
+                            &["name", "defining_code", "terminology_id", "value"],
+                            CompOp::Eq,
+                            terminology.clone(),
+                        ));
+                    }
+                    None => {}
+                }
+                filter.extend(self.standard_conditions(&pred.standard)?);
             }
-            conds.extend(self.standard_conds(&pred.standard, &mut vars)?);
-            if !conds.is_empty() {
-                let _ = write!(jp, " ? ({})", conds.join(" && "));
-            }
+            steps.push(PathStep {
+                member: step.name.clone(),
+                // NOTE: PostgreSQL 18 docs "Strict and Lax Modes": lax mode matches a path
+                // ending on an array once, so a list step names its elements explicitly.
+                multi: step.multi_valued,
+                filter,
+            });
         }
-        let vars_expr = jsonpath_vars(vars);
-        Ok(Some((jp, vars_expr)))
+        Ok(Some(FragmentPath { steps }))
     }
 
     /// Resolve a leaf's source to a node alias present in the FROM.

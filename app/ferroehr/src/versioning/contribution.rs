@@ -718,14 +718,23 @@ pub(crate) fn needs_content_write_permission(changes: &[(AuditInput, Change)]) -
     let reactivates = changes.iter().any(|(_, c)| match c {
         Change::Create {
             kind: Kind::EhrStatus,
-            canonical,
+            body,
             ..
         }
         | Change::Modify {
             kind: Kind::EhrStatus,
-            canonical,
+            body,
             ..
-        } => canonical.pointer("/is_modifiable").and_then(Value::as_bool) == Some(true),
+        } => match body {
+            crate::versioning::body::Body::EhrStatus(status) => status.is_modifiable,
+            other => {
+                other
+                    .canonical()
+                    .and_then(|canonical| canonical.pointer("/is_modifiable"))
+                    .and_then(Value::as_bool)
+                    == Some(true)
+            }
+        },
         _ => false,
     });
     carries_content && !reactivates
@@ -817,63 +826,6 @@ pub(crate) fn data_kind(data: &Value) -> Result<Kind, ServiceError> {
             .with_path("data._type"),
         )
     })
-}
-
-/// The strict canonical-JSON door over a raw commit member's `data`.
-///
-/// The generated envelope leaves a CONTRIBUTION member's `data` raw (the
-/// `NewContribution<Value>` instantiation keeps the bytes the signature
-/// covers), so the payload runs the same typed door every direct commit route
-/// passes through: content that cannot be converted to
-/// its RM resource is the 400 row (ITS-REST overview `Requests_and_responses.md`
-/// §HTTP status codes). The demographic kinds keep their typed door in
-/// `service::demographic::validate`; this gate covers the EHR kinds. A
-/// `553|incomplete|` commit skips it, the generated types making mandatory
-/// attributes structural where RM common master06 §Incomplete Content lifts
-/// those bounds.
-///
-/// # Errors
-/// [`ServiceError::BadRequest`] when the strict reader refuses the payload.
-pub(crate) fn typed_decode_gate(
-    kind: Kind,
-    data: &Value,
-    incomplete: bool,
-) -> Result<(), ServiceError> {
-    if incomplete {
-        return Ok(());
-    }
-    let refused = match kind {
-        Kind::Composition => {
-            openehr_its::json::from_canonical_value::<openehr_rm::prelude::Composition>(data)
-                .map(drop)
-                .err()
-        }
-        Kind::EhrStatus => {
-            openehr_its::json::from_canonical_value::<openehr_rm::prelude::EhrStatus>(data)
-                .map(drop)
-                .err()
-        }
-        Kind::EhrAccess => {
-            openehr_its::json::from_canonical_value::<openehr_rm::prelude::EhrAccess>(data)
-                .map(drop)
-                .err()
-        }
-        Kind::Folder => {
-            openehr_its::json::from_canonical_value::<openehr_rm::prelude::Folder>(data)
-                .map(drop)
-                .err()
-        }
-        Kind::Agent
-        | Kind::Group
-        | Kind::Organisation
-        | Kind::Person
-        | Kind::Role
-        | Kind::PartyRelationship => None,
-    };
-    match refused {
-        Some(e) => Err(ServiceError::canonical_decode(data, e)),
-        None => Ok(()),
-    }
 }
 
 /// Parse a VERSION's `preceding_version_uid` into the object id and the

@@ -192,7 +192,9 @@ async fn decided(
         ))
         .await
         .expect("the query runs")
-        .result_set["rows"]
+        .result_set
+        .to_value()
+        .unwrap()["rows"]
             .as_array()
             .map_or(0, Vec::len);
         (verdict.outcome(&Item::Ehr), read, rows)

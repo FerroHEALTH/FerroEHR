@@ -148,7 +148,7 @@ fn stored_body_request(
     // offset defaults 0, fetch is implementation-default — the released OAS
     // required-list loses this real conflict to the docs text): `{}` executes a parameterless
     // stored query.
-    let parsed: StoredQueryBody = response::decode_body(h, body)?;
+    let parsed: StoredQueryBody = response::query_body(h, body)?;
     // The docs-text SHOULD-list draws no GET/POST distinction ("All query
     // execution requests SHOULD support at least the following parameters"),
     // so the URL forms are accepted on the POSTs too; a value carried in BOTH

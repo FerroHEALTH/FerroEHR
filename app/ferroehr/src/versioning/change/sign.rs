@@ -17,12 +17,14 @@ use uuid::Uuid;
 use super::ResolvedWrite;
 use crate::error::ServiceError;
 use crate::versioning::audit::AuditInput;
+use crate::versioning::body::Body;
+use crate::versioning::integrity::Signed;
 use crate::versioning::{SigningCtx, integrity};
 
 /// Derive the signature over the version body.
 ///
 /// The signature input is the accepted body before decomposition, the value
-/// the stored `version.body` text ([`super::canonical_body_text`]) serializes
+/// the stored `version.body` text serializes
 /// and the node rows reassemble to, and the signature canonicalization is RFC
 /// 8785 (key-order-insensitive), so it proves the stored and served bytes. A Null body is a logical delete
 /// (Void body is signed, master06 §Logical Deletion).
@@ -37,7 +39,11 @@ pub(super) fn body_and_signature(
     at_committal_attestations: &[Value],
 ) -> Result<(Option<String>, bool), ServiceError> {
     let signs = r.client_signature.is_none() && ctx.signer.enabled();
-    let body = (signs && !r.body.is_null()).then_some(&r.body);
+    let body = match r.body.as_ref().filter(|_| signs) {
+        None => Signed::Void,
+        Some(Body::Canonical(value)) => Signed::Value(value),
+        Some(typed) => Signed::Typed(typed),
+    };
     version_signature(
         ctx,
         audit,
@@ -66,7 +72,7 @@ fn version_signature(
     audit: &AuditInput,
     contribution_id: Uuid,
     r: &ResolvedWrite,
-    body: Option<&Value>,
+    body: Signed<'_>,
     at_committal_attestations: &[Value],
 ) -> Result<(Option<String>, bool), ServiceError> {
     if let Some(client) = &r.client_signature {
@@ -87,7 +93,7 @@ fn version_signature(
         &r.other_input_version_uids,
         contribution_id,
         &r.lifecycle,
-        body.unwrap_or(&Value::Null),
+        body,
         at_committal_attestations,
     )?;
     Ok((signature, false))

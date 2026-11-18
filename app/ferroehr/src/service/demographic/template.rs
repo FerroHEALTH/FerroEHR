@@ -46,9 +46,14 @@ use serde_json::Value;
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
-use crate::service::demographic::validate::{Container, party_check, relationship_check};
+use crate::service::demographic::validate::{
+    Container, party_check, party_invariants, party_rules, relationship_check, relationship_ends,
+};
+use crate::storage::render::index::Rendered;
 use crate::templates::identity::canonical_key;
 use crate::versioning::Kind;
+use crate::versioning::body::Body;
+use crate::versioning::tree::{Indexed, Tree};
 
 /// The RM class of a membership.
 const RELATIONSHIP: &str = "PARTY_RELATIONSHIP";
@@ -242,6 +247,73 @@ impl FerroEhrService {
             .await
     }
 
+    /// [`Self::demographic_commit_check`] over a typed body, which the strict
+    /// reader has already constructed: [`demographic_rules`], then the
+    /// template gate over the same rendering.
+    ///
+    /// # Errors
+    /// As [`Self::demographic_commit_check`].
+    pub(crate) async fn demographic_typed_check(
+        &self,
+        kind: Kind,
+        body: &Body,
+        container: Option<Container>,
+    ) -> Result<(), ServiceError> {
+        let rendered = demographic_rules(kind, body, container)?;
+        self.demographic_template_gate(kind, body, rendered.as_ref(), false)
+            .await
+    }
+
+    /// The commit check of a demographic `body` a server-built write commits:
+    /// [`Self::demographic_typed_check`] of a typed body, and
+    /// [`Self::demographic_commit_check`] of a `553|incomplete|` one, which
+    /// keeps its canonical value.
+    ///
+    /// # Errors
+    /// As [`Self::demographic_commit_check`].
+    pub(crate) async fn demographic_body_check(
+        &self,
+        kind: Kind,
+        body: &Body,
+        incomplete: bool,
+        container: Option<Container>,
+    ) -> Result<(), ServiceError> {
+        match body {
+            Body::Canonical(data) => {
+                self.demographic_commit_check(kind, data, incomplete, container)
+                    .await
+            }
+            typed => self.demographic_typed_check(kind, typed, container).await,
+        }
+    }
+
+    /// [`Self::mapped_template_gate`] over `body`, read through `rendered`,
+    /// its rendering, when it has one, else as its canonical value.
+    ///
+    /// # Errors
+    /// As [`Self::mapped_template_gate`].
+    pub(crate) async fn demographic_template_gate(
+        &self,
+        kind: Kind,
+        body: &Body,
+        rendered: Option<&Rendered>,
+        incomplete: bool,
+    ) -> Result<(), ServiceError> {
+        let rm_type = kind.as_str();
+        match (rendered, body) {
+            (Some(rendered), _) => {
+                self.mapped_template_gate(rm_type, Indexed::root(rendered), incomplete)
+                    .await
+            }
+            (None, Body::Canonical(data)) => {
+                self.mapped_template_gate(rm_type, data, incomplete).await
+            }
+            (None, _) => Err(ServiceError::exception(format!(
+                "a typed {rm_type} version reached the template gate without its rendering"
+            ))),
+        }
+    }
+
     /// The template gate of a demographic commit of `rm_type`: a mapped node is
     /// refused unless it fits its template under the commit's lifecycle state,
     /// and every other node passes untouched.
@@ -250,16 +322,18 @@ impl FerroEhrService {
     /// [`ServiceError::ValidationFailed`] (`422`) when a mapped node is wrong,
     /// or is missing data under a `complete` commit; the
     /// [`Self::web_template`] refusals when its definition does not resolve.
-    pub(crate) async fn mapped_template_gate(
+    pub(crate) async fn mapped_template_gate<'a, T: Tree<'a>>(
         &self,
         rm_type: &str,
-        body: &Value,
+        body: T,
         incomplete: bool,
     ) -> Result<(), ServiceError> {
         let Some(wt) = self.mapped_definition(rm_type, body).await? else {
             return Ok(());
         };
-        match fit(Some(rm_type), body, &wt)? {
+        // NOTE: the template passes read a canonical value, so a mapped node is
+        // read as one; a node no mapping names needs none (#6003).
+        match fit(Some(rm_type), &body.to_value(), &wt)? {
             TemplateFit::Complete => Ok(()),
             TemplateFit::Incomplete(_) if incomplete => Ok(()),
             TemplateFit::Incomplete(missing) => Err(refusal(missing)),
@@ -268,17 +342,14 @@ impl FerroEhrService {
 
     /// The definition a mapped node is validated against, `None` for a node
     /// the mapping does not name.
-    async fn mapped_definition(
+    async fn mapped_definition<'a, T: Tree<'a>>(
         &self,
         rm_type: &str,
-        body: &Value,
+        body: T,
     ) -> Result<Option<Arc<WebTemplate>>, ServiceError> {
-        let archetype_id = body
-            .pointer("/archetype_details/archetype_id/value")
-            .and_then(Value::as_str);
-        let template_id = body
-            .pointer("/archetype_details/template_id/value")
-            .and_then(Value::as_str);
+        let archetype_id = body.pointer_text("/archetype_details/archetype_id/value");
+        let template_id = body.pointer_text("/archetype_details/template_id/value");
+        let (archetype_id, template_id) = (archetype_id.as_deref(), template_id.as_deref());
         if self.party_templates.policy
             && let Some(archetype) = archetype_id
             && crate::party_binding::policy::PolicyKind::of(archetype).is_some()
@@ -361,4 +432,61 @@ fn refusal(violations: Vec<InvariantViolation>) -> ServiceError {
             &[opentelemetry::KeyValue::new("pass", "template")],
         );
     ServiceError::ValidationFailed(violations)
+}
+
+/// The rules of a direct or CONTRIBUTION demographic write of `body`, of
+/// `kind`, as part of `container`, at full strictness: a canonical value runs
+/// [`party_invariants`] or [`relationship_check`], and a typed body, which the
+/// strict reader has already constructed, the root-scoped PARTY rules or the
+/// relationship's ends over its one indexed rendering and the RM pass over
+/// typed RM. The rendering is returned for the template gate.
+///
+/// # Errors
+/// The refusal of the first rule `body` breaks; [`ServiceError::Internal`]
+/// for a party judged without its container.
+pub(crate) fn demographic_rules(
+    kind: Kind,
+    body: &Body,
+    container: Option<Container>,
+) -> Result<Option<Rendered>, ServiceError> {
+    let missing = || {
+        ServiceError::exception(format!(
+            "a {} version reached the commit check without its version container",
+            kind.as_str()
+        ))
+    };
+    let typed_rm = match body {
+        Body::Canonical(data) => {
+            match kind {
+                Kind::PartyRelationship => relationship_check(data, false)?,
+                _ => party_invariants(kind.as_str(), data, false, container.ok_or_else(missing)?)?,
+            }
+            return Ok(None);
+        }
+        Body::PartyRelationship(typed) => {
+            relationship_ends(typed)?;
+            openehr_sdt::rm_instance::validate_rm_and_terminology_typed(typed.as_ref())
+        }
+        Body::Party(typed) => {
+            openehr_sdt::rm_instance::validate_rm_and_terminology_typed(typed.as_ref())
+        }
+        _ => {
+            return Err(ServiceError::exception(format!(
+                "a {} version reached the demographic commit check",
+                kind.as_str()
+            )));
+        }
+    };
+    crate::telemetry::conversion::record("rm_to_index");
+    let rendered = crate::storage::render::index::render(body)
+        .map_err(|e| ServiceError::internal("serialize the party body", e))?;
+    if let Body::Party(_) = body {
+        party_rules(
+            kind.as_str(),
+            Indexed::root(&rendered),
+            container.ok_or_else(missing)?,
+        )?;
+    }
+    crate::service::ehr::validation::rm_verdict(typed_rm)?;
+    Ok(Some(rendered))
 }

@@ -101,6 +101,15 @@ impl JsonParseError {
         self
     }
 
+    /// Whether the document is nested deeper than the RM readers' one limit
+    /// ([`openehr_base::nesting::MAX_RM_NESTING`]): a document no reader can
+    /// read, whatever else it carries.
+    #[must_use]
+    pub fn is_too_deep(&self) -> bool {
+        self.message
+            .starts_with(&openehr_base::nesting::NestingTooDeep.to_string())
+    }
+
     /// The failure message, without the path or location decoration.
     #[must_use]
     pub fn message(&self) -> &str {
@@ -180,7 +189,38 @@ impl std::error::Error for JsonParseError {}
     reason = "`serde_json::to_string` can only fail on an I/O error (the writer is an in-memory String), a non-string map key, or a `Serialize` impl that returns Err; the emitted spec-type impls key every map with `String` and never return Err, so the Err variant is unreachable here — the Book ch9 sanctioned escape for a logically-impossible Err"
 )]
 pub fn to_canonical_json<T: Serialize + ?Sized>(value: &T) -> String {
+    crate::conversion::record::<T>("to_canonical_json");
     serde_json::to_string(value).expect("an openEHR spec value should always serialize")
+}
+
+/// Serialize an RM value as canonical JSON (compact), appended to `buffer`.
+///
+/// The one-pass form of [`to_canonical_json`], for a caller that renders
+/// straight into a response body or a stored form; the bytes are the ones
+/// [`to_canonical_json`] returns.
+///
+/// # Panics
+/// Never for a spec type, for the reason [`to_canonical_json`] gives: the
+/// writer is an in-memory buffer.
+#[expect(
+    clippy::expect_used,
+    reason = "`serde_json::to_writer` into a `Vec<u8>` can only fail on a non-string map key or a `Serialize` impl that returns Err; the emitted spec-type impls do neither, and writing to a Vec cannot fail, so the Err variant is unreachable here — the Book ch9 sanctioned escape for a logically-impossible Err"
+)]
+pub fn write_canonical_json<T: Serialize + ?Sized>(value: &T, buffer: &mut Vec<u8>) {
+    crate::conversion::record::<T>("to_canonical_json");
+    serde_json::to_writer(buffer, value).expect("an openEHR spec value should always serialize");
+}
+
+/// Serialize an RM value as canonical JSON (compact) into any writer.
+///
+/// # Errors
+/// The writer's I/O error, as `serde_json` reports it.
+pub fn write_canonical_json_to<W: std::io::Write, T: Serialize + ?Sized>(
+    writer: W,
+    value: &T,
+) -> Result<(), serde_json::Error> {
+    crate::conversion::record::<T>("to_canonical_json");
+    serde_json::to_writer(writer, value)
 }
 
 /// Serialize an RM value to a canonical-JSON `serde_json::Value` (for the
@@ -200,6 +240,7 @@ pub fn to_canonical_json<T: Serialize + ?Sized>(value: &T) -> String {
     reason = "`serde_json::to_value` fails only on a non-string map key or a `Serialize` impl that returns Err; the emitted spec-type impls do neither, so the Err variant is unreachable here — the Book ch9 sanctioned escape for a logically-impossible Err"
 )]
 pub fn to_canonical_value<T: Serialize + ?Sized>(value: &T) -> serde_json::Value {
+    crate::conversion::record::<T>("to_canonical_value");
     serde_json::to_value(value).expect("an openEHR spec value should always serialize")
 }
 
@@ -214,6 +255,7 @@ pub fn to_canonical_value<T: Serialize + ?Sized>(value: &T) -> serde_json::Value
 /// # Errors
 /// Returns a [`JsonParseError`] carrying the JSON path to the offending node.
 pub fn from_canonical_json<T: DeserializeOwned>(json: &str) -> Result<T, JsonParseError> {
+    crate::conversion::record::<T>("from_canonical_json");
     // The happy path reads WITHOUT the path tracker: `serde_path_to_error`
     // wraps every key and value seed, and on this corpus that costs ~60% of
     // total read time. A failed read re-runs the same deterministic decode WITH
@@ -246,6 +288,7 @@ fn located_in_str<T: DeserializeOwned>(json: &str, plain: &serde_json::Error) ->
 pub fn from_canonical_value<T: DeserializeOwned>(
     value: &serde_json::Value,
 ) -> Result<T, JsonParseError> {
+    crate::conversion::record::<T>("from_canonical_value");
     // Same two-phase shape as [`from_canonical_json`]: the untracked read on
     // the happy path, the tracked re-read only to describe a failure.
     match T::deserialize(value) {

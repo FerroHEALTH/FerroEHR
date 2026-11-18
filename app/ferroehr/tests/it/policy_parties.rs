@@ -665,7 +665,9 @@ async fn only_an_administrator_reads_a_policy_party() {
         assert_policy_refusal(as_clinician(svc.party_tags_get(kind, at(vo.to_string()))).await);
         as_admin(svc.party_get(kind, at(vo.to_string()), None))
             .await
-            .expect("an administrator reads the policy party");
+            .expect("an administrator reads the policy party")
+            .into_value_response()
+            .expect("the stored body parses");
         as_admin(svc.versioned_party_revision_history(vo))
             .await
             .expect("an administrator reads the grant history");
@@ -674,7 +676,9 @@ async fn only_an_administrator_reads_a_policy_party() {
     // A party of no policy definition stays anyone's to read.
     as_clinician(svc.party_get(PartyKind::Organisation, at(&provider_uid), None))
         .await
-        .expect("the provider is no policy party");
+        .expect("the provider is no policy party")
+        .into_value_response()
+        .expect("the stored body parses");
     as_clinician(svc.versioned_party_get(provider))
         .await
         .expect("the provider is no policy party");
@@ -748,7 +752,9 @@ async fn a_professional_credentials_capability_is_never_read_as_a_grant() {
         .expect("an administrator grants the professional ROLE");
     as_clinician(svc.party_get(PartyKind::Role, at(role.to_string()), None))
         .await
-        .expect("a professional ROLE is no policy party");
+        .expect("a professional ROLE is no policy party")
+        .into_value_response()
+        .expect("the stored body parses");
 }
 
 /// The system client `ROLE` example under another template: `template_id`

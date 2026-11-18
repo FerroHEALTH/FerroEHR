@@ -78,7 +78,7 @@ static READ_ROWS_SQL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| 
 /// # Errors
 /// [`StorageError::Database`] when a column cannot be read, and
 /// [`StorageError::InvalidRows`] when a typed number is no JSON number.
-fn row_fragment(row: &sqlx::postgres::PgRow, at: usize) -> Result<Value, StorageError> {
+pub(crate) fn row_fragment(row: &sqlx::postgres::PgRow, at: usize) -> Result<Value, StorageError> {
     let rm_type: String = row.try_get(at + 1)?;
     let archetype: Option<String> = row.try_get(at + 2)?;
     let name: Option<String> = row.try_get(at + 3)?;

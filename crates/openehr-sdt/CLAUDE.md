@@ -55,9 +55,13 @@ FLAT + STRUCTURED data instances and the Web Template model. This is the ITS-RES
   changes; every accepted/emitted form needs a spec citation and a round-trip
   test. Spec-example JSON blocks are the primary test vectors; the OPT corpus
   is regression.
-- Consumes `openehr-rm`/`openehr-am` types and the `openehr_its::json` entry
-  points directly (canonical JSON with `_type` tagging); never re-models the
-  RM. `openehr_sdt::SPEC_VERSION` is the ITS-REST release (1.1.0) the
+- Consumes `openehr-rm`/`openehr-am` types directly; never re-models the RM.
+  The build fills typed RM by attribute name through
+  `openehr_rm::v1_2::access` (`flat::typed`) and the flatten reads any
+  `flat::instance::Instance` (typed RM, or the canonical-JSON value a
+  `553|incomplete|` commit keeps), so a commit and a read take no
+  canonical-JSON hop; the canonical-JSON entry points of `flat::convert` are
+  the unchecked projections of the same conversions (#6003). `openehr_sdt::SPEC_VERSION` is the ITS-REST release (1.1.0) the
   Simplified Formats specification belongs to; no
   separate pin.
 

@@ -232,7 +232,7 @@ impl Validate for DvProportion {
         push_normal_range_consistency(
             out,
             "DV_PROPORTION",
-            self.normal_status.as_ref(),
+            self.normal_status.as_deref(),
             self.normal_range.as_deref(),
             self,
         );

@@ -53,6 +53,7 @@ pub(crate) async fn into_parts(
         headers,
         body,
         route,
+        composition: super::Decoded::default(),
     })
 }
 

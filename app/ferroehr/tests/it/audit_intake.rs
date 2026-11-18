@@ -32,7 +32,7 @@ async fn write(pool: &PgPool, numbers: impl Iterator<Item = u32>) {
         let mut conn = pool.acquire().await.expect("a connection");
         let mut tx = conn.begin().await.expect("begin");
         let intake = IntakeEntry::of(&mut entry(n, SYSTEM, EHR), None).expect("a stored form");
-        take_in(&mut tx, &[intake], &[], None)
+        take_in(&mut tx, &[intake], &[], None, &BTreeSet::new())
             .await
             .expect("the intake write");
         tx.commit().await.expect("commit");

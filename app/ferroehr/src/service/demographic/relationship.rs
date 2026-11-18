@@ -35,13 +35,13 @@ use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::support;
-use crate::service::demographic::validate::relationship_check;
-use crate::service::response::{ResourceMeta, ServiceResponse};
+use crate::service::demographic::written::{demographic_answer, locked_tip};
+use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
-use crate::versioning::change::precondition::lock_current;
+use crate::versioning::body::Body;
 use crate::versioning::change::{Change, Write};
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::read::{VersionRead, demographic_current, object_kind};
@@ -87,13 +87,10 @@ impl FerroEhrService {
         // `object_version_does_not_exist`, a current read the generic
         // `versioned_object_does_not_exist`, as for a party.
         let miss = || {
-            ServiceError::not_found(
-                if version.is_some() || at.is_some() {
-                    Missing::ObjectVersion
-                } else {
-                    Missing::VersionedObject
-                },
-                format!("PARTY_RELATIONSHIP {vo_id}"),
+            support::missing(
+                "PARTY_RELATIONSHIP",
+                vo_id,
+                version.is_some() || at.is_some(),
             )
         };
         support::load_ehrless(
@@ -176,9 +173,8 @@ impl FerroEhrService {
     /// so the response is always the stored form.
     pub(super) async fn create_relationship(
         &self,
-        request: WriteRequest<Value>,
+        request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
-        relationship_check(&request.data, false)?;
         // Both halves of the committal merge, the `UPDATE_AUDIT` attributes and
         // the VERSION `lifecycle_state` (ITS-REST overview
         // `Requests_and_responses.md` §"openehr-version and
@@ -186,20 +182,17 @@ impl FerroEhrService {
         // the default VERSION and `VERSION.audit_details` attributes on commit
         // runtime").
         let Resolved {
-            audit,
-            envelope,
-            incomplete,
-        } = self.resolve_write(
-            &request,
-            change_type::CREATION,
-            "PARTY_RELATIONSHIP creation",
-        )?;
-        self.mapped_template_gate(Kind::PartyRelationship.as_str(), &request.data, incomplete)
+            audit, envelope, ..
+        } = self
+            .demographic_write_checks(
+                Kind::PartyRelationship,
+                &request,
+                None,
+                (change_type::CREATION, "PARTY_RELATIONSHIP creation"),
+            )
             .await?;
-        let mut body = request.data;
-        let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
         // The large media go to the blob store before a connection is held.
-        self.externalize(&mut body).await?;
+        let (body, served) = self.demographic_stored(request.data, true).await?;
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
                 Ok(Write::new(
@@ -209,13 +202,8 @@ impl FerroEhrService {
                 ))
             })
             .await?;
-        match canonical {
-            Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
-            None => {
-                self.read_relationship(committed.vo_id, Some(committed.tree), None)
-                    .await
-            }
-        }
+        let read_back = self.read_relationship(committed.vo_id, Some(committed.tree), None);
+        demographic_answer(served, &committed, read_back).await
     }
 
     /// Retrieve a relationship by its versioned-object id, optionally at a specific version or instant (else
@@ -234,6 +222,21 @@ impl FerroEhrService {
         Ok(support::version_response(vo_id, read)?)
     }
 
+    /// [`Self::read_relationship`], with the body kept as the stored text where
+    /// nothing needs it parsed ([`crate::versioning::read::read_raw`]).
+    ///
+    /// # Errors
+    /// As [`Self::read_relationship`].
+    pub(super) async fn read_relationship_raw(
+        &self,
+        vo_id: VoId,
+        version: Option<TreeId>,
+        at: Option<jiff::Timestamp>,
+    ) -> Result<RawServiceResponse, ServiceError> {
+        self.demographic_read_raw(Kind::PartyRelationship, vo_id, version, at)
+            .await
+    }
+
     /// Commit a new version of an already-resolved relationship.
     ///
     /// `precondition` is judged against the tip the write locks, before a
@@ -244,67 +247,39 @@ impl FerroEhrService {
         &self,
         current: CurrentRelationship,
         precondition: Precondition,
-        request: WriteRequest<Value>,
+        request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
         let vo_id = current.vo_id;
-        let checked = (|| {
-            if current.deleted {
-                return Err(ServiceError::not_found(
-                    Missing::VersionedObject,
-                    format!("PARTY_RELATIONSHIP {vo_id} is deleted"),
-                ));
-            }
-            relationship_check(&request.data, false)?;
-            self.resolve_write(
+        let checked = if current.deleted {
+            Err(ServiceError::not_found(
+                Missing::VersionedObject,
+                format!("PARTY_RELATIONSHIP {vo_id} is deleted"),
+            ))
+        } else {
+            self.demographic_write_checks(
+                Kind::PartyRelationship,
                 &request,
-                change_type::MODIFICATION,
-                "PARTY_RELATIONSHIP update",
+                None,
+                (change_type::MODIFICATION, "PARTY_RELATIONSHIP update"),
             )
-        })();
-        let checked = match checked {
-            Ok(resolved) => self
-                .mapped_template_gate(
-                    Kind::PartyRelationship.as_str(),
-                    &request.data,
-                    resolved.incomplete,
-                )
-                .await
-                .map(|()| resolved),
-            Err(e) => Err(e),
+            .await
         };
-        let mut body = request.data;
-        let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
         // A valid body's large media go to the blob store before a connection is held.
-        if checked.is_ok() {
-            self.externalize(&mut body).await?;
-        }
+        let (body, served) = self
+            .demographic_stored(request.data, checked.is_ok())
+            .await?;
         let committed = self
-            .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
-                let placement = lock_current(tx, None, vo_id, Kind::PartyRelationship).await?;
-                if let Some(tip) = placement.tip.as_ref() {
-                    precondition.check_full(vo_id, tip)?;
-                    precondition.check_tree(tip)?;
-                }
-                let Resolved {
-                    audit, envelope, ..
-                } = checked?;
-                Ok(Write::new(
-                    None,
-                    Change::modify(vo_id, Kind::PartyRelationship, body, None, None, envelope),
-                    audit,
-                )
-                .placed(placement))
-            })
+            .commit_demographic_update(
+                (Kind::PartyRelationship, vo_id),
+                precondition,
+                checked,
+                body,
+            )
             .await?;
         // Metadata + in-hand body, unless the commit rewrote it: then the
         // stored form is read back.
-        match canonical {
-            Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
-            None => {
-                self.read_relationship(committed.vo_id, Some(committed.tree), None)
-                    .await
-            }
-        }
+        let read_back = self.read_relationship(committed.vo_id, Some(committed.tree), None);
+        demographic_answer(served, &committed, read_back).await
     }
 
     /// Commit the logical delete of an already-resolved relationship as a new
@@ -321,9 +296,9 @@ impl FerroEhrService {
         let vo_id = current.vo_id;
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
-                let placement = lock_current(tx, None, vo_id, Kind::PartyRelationship).await?;
+                let placement =
+                    locked_tip(tx, Kind::PartyRelationship, vo_id, &precondition).await?;
                 if let Some(tip) = placement.tip.as_ref() {
-                    precondition.check_full(vo_id, tip)?;
                     if tip.lifecycle_state == crate::versioning::lifecycle::state::DELETED {
                         return Err(ServiceError::precondition(format!(
                             "PARTY_RELATIONSHIP {vo_id} is already deleted"

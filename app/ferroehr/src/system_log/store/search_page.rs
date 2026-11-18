@@ -19,7 +19,7 @@ use sea_query::{
 };
 use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
 
-use super::{AuditSearchFilter, RECORD_COLUMNS};
+use super::{AuditCriterion, AuditElement, AuditSearchFilter, RECORD_COLUMNS};
 use crate::system_log::search::TokenMatch;
 
 /// The schema of the audit store.
@@ -61,15 +61,65 @@ pub(super) fn build_search_statements(
     (count_sql, count_values, sql, values)
 }
 
+/// Whether the statements of `filter` are of a bounded shape set, which runs
+/// as named statements: each criterion of its own kind, with one value.
+///
+/// Every value binds, so the text of such a filter is decided by its date
+/// bounds and the kinds of its criteria in their order, a set finite in
+/// size, and the connection's statement cache bounds what it keeps of it. A
+/// criterion with several values, or a kind named twice, writes text of its
+/// own, which goes unnamed. No openEHR spec governs this: our own design.
+pub(super) fn shaped(filter: &AuditSearchFilter) -> bool {
+    let mut kinds = Vec::with_capacity(filter.criteria.len());
+    filter.criteria.iter().all(|criterion| {
+        let (kind, values) = criterion_kind(criterion);
+        let fresh = !kinds.contains(&kind);
+        kinds.push(kind);
+        fresh && values == 1
+    })
+}
+
+/// The kind of `criterion`, the token parameter's element among them, and
+/// the number of its values.
+fn criterion_kind(criterion: &AuditCriterion) -> (CriterionKind, usize) {
+    match criterion {
+        AuditCriterion::Patient(values) => (CriterionKind::Patient, values.len()),
+        AuditCriterion::Agent(values) => (CriterionKind::Agent, values.len()),
+        AuditCriterion::Entity(values) => (CriterionKind::Entity, values.len()),
+        AuditCriterion::Outcome(values) => (CriterionKind::Outcome, values.len()),
+        AuditCriterion::Action(values) => (CriterionKind::Action, values.len()),
+        AuditCriterion::Address(values) => (CriterionKind::Address, values.len()),
+        AuditCriterion::Element(element, tokens) => {
+            (CriterionKind::Element(*element), tokens.len())
+        }
+    }
+}
+
+/// What a criterion filters on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CriterionKind {
+    Patient,
+    Agent,
+    Entity,
+    Outcome,
+    Action,
+    Address,
+    Element(AuditElement),
+}
+
 /// The records a page serves: `_count`, between 1 and 1000.
 pub(super) fn page_size(filter: &AuditSearchFilter) -> usize {
     usize::try_from(filter.count.clamp(1, 1000)).unwrap_or(50)
 }
 
 /// The number of records `condition` selects: those of the system chain,
-/// plus the indexed entries of the access log, read from their index columns
-/// alone (written by `audit.access_log_chain_move` and emptied when the entry
-/// becomes a tombstone).
+/// plus the indexed entries of the access log a page can return, the linked
+/// ones (#6000).
+///
+/// The access log's are counted from the entries' index columns alone, less
+/// those of the entries an intake row still names, which no link chains yet:
+/// an entry is linked or named by an intake row, never both, so neither
+/// count reads a link, and the first is read from the time index.
 fn total(condition: &Cond) -> SelectStatement {
     let system = count_of(
         Query::select()
@@ -78,14 +128,25 @@ fn total(condition: &Cond) -> SelectStatement {
             .cond_where(on_chain(condition, "system"))
             .to_owned(),
     );
-    let access_log = count_of(
+    let indexed = || {
         Query::select()
             .expr(Expr::col(Asterisk).count())
             .from((Alias::new(AUDIT), Alias::new(ACCESS_LOG_SEARCH)))
             .cond_where(condition.clone())
+            .to_owned()
+    };
+    let access_log = count_of(indexed());
+    // NOTE: our own design (#6000), the intake names the entries no link chains yet.
+    let unchained = count_of(
+        indexed()
+            .and_where(Expr::cust(
+                "entry_id = ANY (ARRAY(SELECT unnest(i.entries) FROM audit.access_log_intake i))",
+            ))
             .to_owned(),
     );
-    Query::select().expr(system.add(access_log)).to_owned()
+    Query::select()
+        .expr(system.add(access_log).sub(unchained))
+        .to_owned()
 }
 
 /// A scalar subquery of `count`.

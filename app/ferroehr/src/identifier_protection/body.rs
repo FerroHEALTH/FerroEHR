@@ -23,7 +23,10 @@
               fragments and dynamic shapes"
 )]
 
+use openehr_rm::v1_2::access::{AccessError, RmObject, RmValue};
 use serde_json::Value;
+
+use crate::versioning::tree::{Shape, Tree};
 
 /// The `urn` prefix a substituted identifier carries in the stored body.
 ///
@@ -51,7 +54,7 @@ pub struct FoundIdentifier {
 /// that reached an unexpected slot is exactly the one a protection rule must
 /// not miss.
 #[must_use]
-pub fn find(body: &Value, schemes: &[String]) -> Vec<FoundIdentifier> {
+pub(crate) fn find<'a, T: Tree<'a>>(body: T, schemes: &[String]) -> Vec<FoundIdentifier> {
     let mut found = Vec::new();
     walk(body, &mut String::new(), schemes, &mut found);
     found
@@ -63,7 +66,7 @@ pub fn find(body: &Value, schemes: &[String]) -> Vec<FoundIdentifier> {
 /// now holds the sealed value. A pointer with no pairing is left untouched,
 /// which cannot happen on the write path and would be a silent value drop if
 /// it did.
-pub fn substitute(body: &mut Value, references: &[(String, uuid::Uuid)]) {
+pub(crate) fn substitute(body: &mut Value, references: &[(String, uuid::Uuid)]) {
     for (pointer, row) in references {
         if let Some(Value::String(id)) = body.pointer_mut(&format!("{pointer}/id")) {
             *id = format!("{REFERENCE_PREFIX}{row}");
@@ -71,9 +74,48 @@ pub fn substitute(body: &mut Value, references: &[(String, uuid::Uuid)]) {
     }
 }
 
+/// [`substitute`] over a typed RM body: each `DV_IDENTIFIER` a pointer names
+/// gets the reference as its `id`.
+///
+/// # Errors
+/// [`AccessError`] when a pointer names no `DV_IDENTIFIER` of the body,
+/// unreachable for a pointer [`find`] read off the body's own rendering.
+pub(crate) fn substitute_typed(
+    body: &mut dyn RmObject,
+    references: &[(String, uuid::Uuid)],
+) -> Result<(), AccessError> {
+    for (pointer, row) in references {
+        let target = at_pointer(body, pointer).ok_or_else(|| AccessError::UndeclaredAttribute {
+            rm_type: "DV_IDENTIFIER",
+            attribute: pointer.clone(),
+        })?;
+        target.set("id", RmValue::String(format!("{REFERENCE_PREFIX}{row}")))?;
+    }
+    Ok(())
+}
+
+/// The RM object an RFC 6901 pointer of attribute names and container
+/// indices names in `root`.
+fn at_pointer<'b>(root: &'b mut dyn RmObject, pointer: &str) -> Option<&'b mut dyn RmObject> {
+    let mut steps = pointer.split('/').skip(1).peekable();
+    let mut at = root;
+    while let Some(step) = steps.next() {
+        let attribute = step.replace("~1", "/").replace("~0", "~");
+        let index = steps.peek().and_then(|next| next.parse::<usize>().ok());
+        at = match index {
+            Some(index) if at.items(&attribute).is_some() => {
+                steps.next();
+                at.items_mut(&attribute)?.nth(index)?
+            }
+            _ => at.object_mut(&attribute)?,
+        };
+    }
+    Some(at)
+}
+
 /// Put the plaintext values back, addressed by the same pointers.
 ///
-/// The inverse of [`substitute`], for the audited expansion path: the served
+/// The inverse of `substitute`, for the audited expansion path: the served
 /// default is the stored reference form, and a caller entitled to the values
 /// asks for them explicitly.
 pub fn expand(body: &mut Value, values: &[(String, String)]) {
@@ -92,42 +134,59 @@ pub fn referenced_row(id: &str) -> Option<uuid::Uuid> {
 }
 
 /// Recursive walk collecting `DV_IDENTIFIER` nodes of a configured scheme.
-fn walk(node: &Value, pointer: &mut String, schemes: &[String], found: &mut Vec<FoundIdentifier>) {
-    match node {
-        Value::Object(map) => {
-            if map.get("_type").and_then(Value::as_str) == Some("DV_IDENTIFIER")
-                && let Some(scheme) = map.get("type").and_then(Value::as_str)
-                && schemes.iter().any(|configured| configured == scheme)
-                && let Some(value) = map.get("id").and_then(Value::as_str)
-                // A body being re-committed unchanged already carries the
-                // reference; substituting a reference for a reference would
-                // orphan the first row.
-                && referenced_row(value).is_none()
-            {
-                found.push(FoundIdentifier {
-                    scheme: scheme.to_owned(),
-                    value: value.to_owned(),
-                    pointer: pointer.clone(),
-                });
-            }
-            for (key, child) in map {
+fn walk<'a, T: Tree<'a>>(
+    node: T,
+    pointer: &mut String,
+    schemes: &[String],
+    found: &mut Vec<FoundIdentifier>,
+) {
+    each_object(node, pointer, &mut |node, pointer| {
+        if node.get_text("_type").as_deref() == Some("DV_IDENTIFIER")
+            && let Some(scheme) = node.get_text("type")
+            && schemes.iter().any(|configured| *configured == scheme)
+            && let Some(value) = node.get_text("id")
+            // A body being re-committed unchanged already carries the
+            // reference; substituting a reference for a reference would
+            // orphan the first row.
+            && referenced_row(&value).is_none()
+        {
+            found.push(FoundIdentifier {
+                scheme: scheme.into_owned(),
+                value: value.into_owned(),
+                pointer: pointer.to_owned(),
+            });
+        }
+    });
+}
+
+/// Visits every object of `node`, itself first, in document order, with the
+/// RFC 6901 pointer that names it below the one `pointer` holds.
+pub(crate) fn each_object<'a, T: Tree<'a>>(
+    node: T,
+    pointer: &mut String,
+    visit: &mut impl FnMut(T, &str),
+) {
+    match node.shape() {
+        Shape::Object => {
+            visit(node, pointer);
+            for (key, child) in node.members() {
                 let mark = pointer.len();
                 pointer.push('/');
                 pointer.push_str(&escape(key));
-                walk(child, pointer, schemes, found);
+                each_object(child, pointer, visit);
                 pointer.truncate(mark);
             }
         }
-        Value::Array(items) => {
-            for (index, child) in items.iter().enumerate() {
+        Shape::Array => {
+            for (index, child) in node.items().enumerate() {
                 let mark = pointer.len();
                 pointer.push('/');
                 pointer.push_str(&index.to_string());
-                walk(child, pointer, schemes, found);
+                each_object(child, pointer, visit);
                 pointer.truncate(mark);
             }
         }
-        _ => {}
+        Shape::String | Shape::Other => {}
     }
 }
 

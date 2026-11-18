@@ -416,13 +416,14 @@ impl FerroEhrService {
                         e.message()
                     ))
                 })?;
-            let empty = Vec::new();
-            let rows = outcome
+            let cells: Vec<Value> = outcome
                 .result_set
-                .get("rows")
-                .and_then(Value::as_array)
-                .unwrap_or(&empty);
-            for cell in rows.iter().filter_map(Value::as_array).flatten() {
+                .rows()
+                .iter()
+                .flatten()
+                .map(crate::aql::cell::Cell::to_value)
+                .collect();
+            for cell in &cells {
                 let candidate = match cell {
                     Value::String(s) => Some(s.as_str()),
                     Value::Object(_) => cell.pointer("/uid/value").and_then(Value::as_str),
@@ -538,7 +539,7 @@ impl FerroEhrService {
 
         // uid / owner_id / time_created are the VERSIONED_OBJECT's own — reuse
         // the shared read builder so they match the /versioned_* surface.
-        let (vo, _) = versioned_object(&self.pool, vo_id, ehr_id, versioned_rm_type(kind))
+        let (container, _) = versioned_object(&self.pool, vo_id, ehr_id, versioned_rm_type(kind))
             .await?
             .ok_or_else(|| {
                 ServiceError::not_found(
@@ -546,6 +547,7 @@ impl FerroEhrService {
                     format!("versioned object {vo_id}"),
                 )
             })?;
+        let vo = openehr_its::json::to_canonical_value(&container);
         let field = |name: &str| vo.get(name).cloned().unwrap_or(Value::Null);
         // TODO(#1695): build the EXTRACT tree from the generated
         // `openehr_rm::v1_2::ehr_extract` types (`Extract`, `ExtractChapter`,

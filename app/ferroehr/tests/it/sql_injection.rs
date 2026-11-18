@@ -559,6 +559,16 @@ const IDENTIFIERS: &[&str] = &[
     "ehr",
     "commit_audit",
     // node
+    // The stored columns a rendered cell reads its fragment from
+    // (`storage::node_repo`, named by `ferroehr::db::iden::Node`).
+    "value_type",
+    "value_num",
+    "value_text",
+    "value_code",
+    "value_terminology",
+    "rm_version",
+    "language",
+    "encoding",
     "tier",
     "vo_id",
     "sys_version",
@@ -647,7 +657,11 @@ const ALIAS_PATTERNS: &[&str] = &[
     r"^v[0-9]+_mark$",
     r"^esv[0-9]+_mark$",
     r"^xv[0-9]+_mark$",
-    r"^col[0-9]+(_(vo|sv|num|cap))?$",
+    r"^col[0-9]+(_(vo|sv|num|cap|tz))?$",
+    // A rendered cell's node group: `g{group}_{column}`, both integers
+    // (`aql::sql::project`), and a debug build's reference cell `ref{index}`.
+    r"^g[0-9]+_[0-9]+$",
+    r"^ref[0-9]+$",
     r"^access_(ehr|vo|sv)_[0-9]+$",
     r"^hit$",
 ];
@@ -704,6 +718,60 @@ fn every_quoted_identifier_comes_from_the_closed_set() {
                  the closed set pinned in this module's docs:\n{sql}"
             );
         }
+    }
+}
+
+/// A SELECT alias the query names never reaches the statement: the generated
+/// aliases a rendered cell selects (`col{i}`, `col{i}_tz`, `g{group}_{column}`)
+/// are built from integers alone, so an AQL alias spelled like one, or
+/// carrying hostile text, names a `RESULT_SET` column and no SQL identifier.
+#[test]
+fn a_query_alias_never_reaches_a_generated_alias() {
+    let generated = regex::Regex::new(r"^(g[0-9]+_[0-9]+|col[0-9]+(_tz)?)$").expect("regex");
+    let quoted = regex::Regex::new(r#""([^"]*)""#).expect("identifier regex");
+    for alias in ["g0_0", "col0_tz", "ref0", "zz_alias_marker"] {
+        let query = format!(
+            "SELECT c/name/value AS {alias}, c/context/start_time/value AS {alias}_zzb, \
+             e/time_created AS {alias}_zzc FROM EHR e CONTAINS COMPOSITION c"
+        );
+        let prepared = build(&query, &Params::default());
+        let names: Vec<&str> = prepared
+            .layout
+            .columns
+            .iter()
+            .map(|column| column.name.as_str())
+            .collect();
+        assert_eq!(
+            names,
+            [
+                alias.to_owned(),
+                format!("{alias}_zzb"),
+                format!("{alias}_zzc")
+            ],
+            "the aliases name the RESULT_SET columns"
+        );
+        let mut seen = 0;
+        for capture in quoted.captures_iter(&prepared.sql) {
+            let ident = capture.get(1).map_or("", |m| m.as_str());
+            assert!(
+                !ident.contains("zz"),
+                "the query's alias reached the statement as {ident:?}:\n{}",
+                prepared.sql
+            );
+            seen += usize::from(generated.is_match(ident));
+        }
+        // Each projected column selects its own integer-built aliases, the same
+        // whatever the query calls the column.
+        let plain = build(
+            "SELECT c/name/value, c/context/start_time/value, e/time_created \
+             FROM EHR e CONTAINS COMPOSITION c",
+            &Params::default(),
+        );
+        assert_eq!(
+            prepared.sql, plain.sql,
+            "the alias {alias} changed the statement"
+        );
+        assert!(seen > 0, "the statement selects generated aliases");
     }
 }
 

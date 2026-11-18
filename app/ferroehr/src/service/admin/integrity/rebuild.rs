@@ -9,8 +9,9 @@
 //! decomposed `node` rows, and the sweep ([`super`]) reports where the two
 //! disagree — in content, or in the shape the rows were decomposed into.
 //!
-//! Every defect the sweep reports is repaired the same way, because there is
-//! only one repair: the rows are written again from the body. That covers a
+//! Every defect the sweep reports but one is repaired the same way: the rows
+//! are written again from the body. A [`StorageParityDefect::OrphanNodes`]
+//! set has no body, so its repair deletes it. That covers a
 //! [`StorageParityDefect::StaleDecomposition`] exactly as it covers damage,
 //! since writing the rows again is what re-decomposing an old shape into the
 //! current one takes. A release that changes the decomposition is therefore an
@@ -45,8 +46,9 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
-use crate::service::admin::integrity::{StorageDomain, StorageParityDefect, StorageParityEvent};
-use crate::storage::codec::decompose;
+use crate::service::admin::integrity::{
+    StorageDomain, StorageParityDefect, StorageParityEvent, StorageParityMismatch,
+};
 use crate::storage::integrity::{self, StorageParityScope};
 use crate::storage::node_repo::{delete_version_nodes, read_version_canonical};
 use crate::storage::node_write::write_nodes;
@@ -206,13 +208,7 @@ impl FerroEhrService {
             for event in events {
                 match event {
                     StorageParityEvent::Mismatch(mismatch) => {
-                        let outcome = self
-                            .rebuild_one_version(
-                                mismatch.domain,
-                                VoId(mismatch.vo_id),
-                                mismatch.sys_version,
-                            )
-                            .await?;
+                        let outcome = self.repair(&mismatch).await?;
                         report.versions_damaged += 1;
                         match outcome {
                             NodeRebuildOutcome::Rebuilt { .. } => report.versions_rebuilt += 1,
@@ -254,6 +250,33 @@ impl FerroEhrService {
         Ok(report)
     }
 
+    /// Repair what one mismatch reports: a row set no version reads is
+    /// deleted, since it has no body to be derived from; every other defect
+    /// is rebuilt from its version's body.
+    async fn repair(
+        &self,
+        mismatch: &StorageParityMismatch,
+    ) -> Result<NodeRebuildOutcome, ServiceError> {
+        let vo_id = VoId(mismatch.vo_id);
+        if mismatch.defect != StorageParityDefect::OrphanNodes {
+            return self
+                .rebuild_one_version(mismatch.domain, vo_id, mismatch.sys_version)
+                .await;
+        }
+        let mut conn = self
+            .recorded_conn(self.domain_pool(mismatch.domain))
+            .await?;
+        let mut tx = conn.begin().await?;
+        integrity::delete_unreached_nodes(&mut tx, vo_id, mismatch.sys_version).await?;
+        self.commit_recorded(
+            tx,
+            &crate::system_log::recorder::WriteFacts::default(),
+            Vec::new(),
+        )
+        .await?;
+        Ok(NodeRebuildOutcome::Rebuilt { node_rows: 0 })
+    }
+
     /// Repair one version in one transaction, or leave it untouched.
     async fn rebuild_one_version(
         &self,
@@ -264,11 +287,7 @@ impl FerroEhrService {
         // The repair runs in the domain that holds the damage: both schemas
         // carry relations of the same names, and the pool's search path is
         // what decides which one this transaction reaches.
-        let pool = match domain {
-            StorageDomain::Clinical => &self.pool,
-            StorageDomain::Demographic => &self.demographic_pool,
-        };
-        let mut conn = self.recorded_conn(pool).await?;
+        let mut conn = self.recorded_conn(self.domain_pool(domain)).await?;
         let mut tx = conn.begin().await?;
 
         // The tier's own rule: a write always thaws first, so a versioned
@@ -333,24 +352,24 @@ pub(in crate::service) async fn rebuild_in_tx(
             });
         }
     };
-    let rows = match decompose(body.clone()) {
-        Ok(rows) => rows,
+    let root = crate::storage::compact::RootIdentity {
+        version_uid: &version.version_uid,
+        template_id: version.template_id.as_deref(),
+    };
+    let stored = match crate::storage::render::decompose(&body, &root) {
+        Ok(stored) => stored,
         Err(e) => {
             return Ok(NodeRebuildOutcome::Refused {
                 reason: format!("the stored body does not decompose: {e}"),
             });
         }
     };
-    let node_rows = u32::try_from(rows.len()).unwrap_or(u32::MAX);
+    let node_rows = u32::try_from(stored.rows.len()).unwrap_or(u32::MAX);
 
     // The row set is replaced wholesale: a nested-set numbering is only
     // meaningful as a whole (`crate::storage::codec`).
     delete_version_nodes(tx, vo_id, sys_version).await?;
-    let root = crate::storage::compact::RootIdentity {
-        version_uid: &version.version_uid,
-        template_id: version.template_id.as_deref(),
-    };
-    write_nodes(tx, vo_id, sys_version, version.ehr_id, &root, &rows).await?;
+    write_nodes(tx, vo_id, sys_version, version.ehr_id, &stored).await?;
     // The version reads its own rows again, whatever it shared before.
     crate::storage::node_repo::unshare_content(tx, vo_id, sys_version).await?;
 

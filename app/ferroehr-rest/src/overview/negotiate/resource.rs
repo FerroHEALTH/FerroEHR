@@ -12,9 +12,9 @@ use openehr_its::rest::runtime::ApiError;
 use openehr_its::xml::runtime::ToXml;
 use serde::de::DeserializeOwned;
 
-use ferroehr::service::response::{ResourceMeta, ServiceResponse};
+use ferroehr::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 
-use super::body::{empty, respond, respond_rm};
+use super::body::{empty, respond, respond_read, respond_rm, respond_typed};
 use super::prefer::write_negotiated;
 
 /// Format an HTTP-date (RFC 7231 IMF-fixdate, always GMT) for `Last-Modified`.
@@ -177,6 +177,61 @@ where
     out
 }
 
+/// As [`write_rm`], over the typed RM value `body` a representation renders;
+/// `None` when the caller asked for no representation, which then never
+/// renders one.
+pub(crate) fn write_typed<T>(
+    headers: &HeaderMap,
+    base_path: &str,
+    (minimal_status, repr_status): (StatusCode, StatusCode),
+    segment: Option<&str>,
+    meta: &ResourceMeta,
+    body: Option<&T>,
+    root_tag: &str,
+) -> Response
+where
+    T: serde::Serialize + ToXml,
+{
+    let mut out = write_negotiated(
+        headers,
+        minimal_status,
+        repr_status,
+        Some(meta.uid.as_str()),
+        |status| match body {
+            Some(body) => respond_typed(headers, status, body, root_tag),
+            None => empty(status),
+        },
+    );
+    set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
+    out
+}
+
+/// As [`write_rm`], over a read body that may still be the stored canonical
+/// text ([`respond_read`]).
+pub(crate) fn write_read_rm<T>(
+    headers: &HeaderMap,
+    base_path: &str,
+    statuses: (StatusCode, StatusCode),
+    segment: Option<&str>,
+    meta: &ResourceMeta,
+    read: ReadBody,
+    root_tag: &str,
+) -> Response
+where
+    T: DeserializeOwned + ToXml,
+{
+    let (minimal_status, repr_status) = statuses;
+    let mut out = write_negotiated(
+        headers,
+        minimal_status,
+        repr_status,
+        Some(meta.uid.as_str()),
+        |status| respond_read::<T>(headers, status, read, root_tag),
+    );
+    set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
+    out
+}
+
 /// As [`write_rm`] but for a JSON-only payload (no canonical-XML shape, e.g. a
 /// CONTRIBUTION wrapper).
 pub(crate) fn write_json(
@@ -209,6 +264,42 @@ where
     let mut out = respond_rm::<T>(headers, StatusCode::OK, &resp.body, root_tag);
     if let Some(meta) = &resp.meta {
         set_versioning_headers(&mut out, meta, Tree::Ehr);
+    }
+    out
+}
+
+/// [`read_rm`] over the typed RM value `resp` carries, written straight to
+/// canonical JSON or XML ([`respond_typed`]).
+pub(crate) fn read_typed<T>(
+    headers: &HeaderMap,
+    resp: &ServiceResponse<T>,
+    root_tag: &str,
+) -> Response
+where
+    T: serde::Serialize + ToXml,
+{
+    let mut out = respond_typed(headers, StatusCode::OK, &resp.body, root_tag);
+    if let Some(meta) = &resp.meta {
+        set_versioning_headers(&mut out, meta, Tree::Ehr);
+    }
+    out
+}
+
+/// [`read_rm`] over a read body that may still be the stored canonical text
+/// ([`respond_read`]).
+pub(crate) fn read_raw_rm<T>(
+    headers: &HeaderMap,
+    resp: RawServiceResponse,
+    root_tag: &str,
+    tree: Tree,
+) -> Response
+where
+    T: DeserializeOwned + ToXml,
+{
+    let RawServiceResponse { body, meta } = resp;
+    let mut out = respond_read::<T>(headers, StatusCode::OK, body, root_tag);
+    if let Some(meta) = &meta {
+        set_versioning_headers(&mut out, meta, tree);
     }
     out
 }

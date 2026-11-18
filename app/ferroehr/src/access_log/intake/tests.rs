@@ -64,7 +64,13 @@ async fn a_refused_entry_refuses_only_its_own_request() {
         intake("7d44b88c-4199-4bad-97dc-0000000000f3"),
         intake("7d44b88c-4199-4bad-97dc-0000000000f4"),
     ]);
-    write_jobs(&pool, vec![first, bad, last], 4).await;
+    write_jobs(
+        &pool,
+        &super::StoredParts::default(),
+        vec![first, bad, last],
+        4,
+    )
+    .await;
     assert!(
         first_answer.await.expect("an answer").is_ok(),
         "the first request is written"
@@ -106,7 +112,13 @@ async fn a_failure_with_no_answer_refuses_every_request() {
     pool.close().await;
     let (first, first_answer) = job(vec![intake("7d44b88c-4199-4bad-97dc-0000000000f5")]);
     let (second, second_answer) = job(vec![intake("7d44b88c-4199-4bad-97dc-0000000000f6")]);
-    write_jobs(&pool, vec![first, second], 2).await;
+    write_jobs(
+        &pool,
+        &super::StoredParts::default(),
+        vec![first, second],
+        2,
+    )
+    .await;
     assert!(first_answer.await.expect("an answer").is_err());
     assert!(second_answer.await.expect("an answer").is_err());
 }
@@ -147,6 +159,7 @@ fn through_value(entry: &AccessLogEntry) -> (String, String, Option<(String, Str
         result_code: text("/outcome/result/defining_code/code_string"),
         party_id: text("/accessor/party/external_ref/id/value"),
         retain_until: text("/retention/retain_until/value"),
+        time_removed: text("/time_removed/value"),
     };
     let mut form = crate::access_log::stored_form::split(members);
     if let Value::Object(row) = &mut form.row {
