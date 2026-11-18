@@ -60,7 +60,7 @@ mod fold;
 mod from;
 mod gates;
 mod head;
-mod jsonpath;
+pub(crate) mod jsonpath;
 mod pinned;
 mod predicate;
 mod project;

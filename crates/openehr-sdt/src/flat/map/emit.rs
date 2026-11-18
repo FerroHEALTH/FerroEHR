@@ -17,7 +17,7 @@ use crate::flat::sim::SimNode;
 
 /// Insert `out.attrs[suffix]` if `v` is present and non-null. `suffix == ""` is
 /// the bare datum.
-fn put<'a, I: Instance<'a>>(out: &mut SimNode, suffix: &str, v: Option<I>) {
+pub(super) fn put<'a, I: Instance<'a>>(out: &mut SimNode, suffix: &str, v: Option<I>) {
     if let Some(v) = v.and_then(Instance::to_value) {
         out.attrs.insert(suffix.to_owned(), v);
     }

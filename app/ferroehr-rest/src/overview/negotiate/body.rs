@@ -85,11 +85,7 @@ where
     T: DeserializeOwned + ToXml,
 {
     match resolve_accept(headers, CANONICAL, WireFormat::CanonicalJson) {
-        Some(WireFormat::CanonicalJson) => body(
-            status,
-            APPLICATION_JSON,
-            openehr_its::json::to_canonical_json(value),
-        ),
+        Some(WireFormat::CanonicalJson) => canonical_json(status, value),
         Some(WireFormat::CanonicalXml) => {
             if value.is_null() {
                 return empty(status);
@@ -108,10 +104,7 @@ where
         }
         // Any other allowed format is impossible for `CANONICAL`; an
         // unsatisfiable `Accept` is a `406` (Resources.md §Simplified Formats).
-        _ => ApiError::NotAcceptable(
-            "this resource is available as application/json or application/xml".to_owned(),
-        )
-        .into_response_body(),
+        _ => not_canonical(),
     }
 }
 
@@ -127,16 +120,9 @@ where
     T: Serialize + ToXml,
 {
     match resolve_accept(headers, CANONICAL, WireFormat::CanonicalJson) {
-        Some(WireFormat::CanonicalJson) => body(
-            status,
-            APPLICATION_JSON,
-            openehr_its::json::to_canonical_json(value),
-        ),
+        Some(WireFormat::CanonicalJson) => canonical_json(status, value),
         Some(WireFormat::CanonicalXml) => respond_xml(headers, status, value, root_tag),
-        _ => ApiError::NotAcceptable(
-            "this resource is available as application/json or application/xml".to_owned(),
-        )
-        .into_response_body(),
+        _ => not_canonical(),
     }
 }
 
@@ -172,10 +158,7 @@ where
                 .into_response_body(),
             }
         }
-        _ => ApiError::NotAcceptable(
-            "this resource is available as application/json or application/xml".to_owned(),
-        )
-        .into_response_body(),
+        _ => not_canonical(),
     }
 }
 
@@ -256,6 +239,24 @@ impl IntoErrorResponse for ApiError {
     fn into_response_body(self) -> Response {
         crate::overview::error::RestError::from(self).into_response()
     }
+}
+
+/// A canonical-JSON response of `value`.
+fn canonical_json<T: Serialize + ?Sized>(status: StatusCode, value: &T) -> Response {
+    body(
+        status,
+        APPLICATION_JSON,
+        openehr_its::json::to_canonical_json(value),
+    )
+}
+
+/// The `406` of a resource served as canonical JSON or XML only
+/// (Resources.md §Simplified Formats).
+fn not_canonical() -> Response {
+    ApiError::NotAcceptable(
+        "this resource is available as application/json or application/xml".to_owned(),
+    )
+    .into_response_body()
 }
 
 #[cfg(test)]

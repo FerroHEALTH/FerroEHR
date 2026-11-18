@@ -113,47 +113,47 @@ pub(super) struct Pending {
     pub(super) data: String,
 }
 
-/// Recursively visit every `DV_MULTIMEDIA` object in the tree, calling `f` on
-/// its map. Recurses through the whole tree, including a node's own `thumbnail`
-/// (a nested `DV_MULTIMEDIA`), so thumbnails are handled too.
-fn walk_multimedia<F: FnMut(&mut Map<String, Value>)>(v: &mut Value, f: &mut F) {
-    match v {
-        Value::Object(map) => {
-            if map.get("_type").and_then(Value::as_str) == Some(DV_MULTIMEDIA) {
-                f(map);
-            }
-            for child in map.values_mut() {
-                walk_multimedia(child, f);
+/// Declares `$name`, which visits every `DV_MULTIMEDIA` object in a tree and
+/// calls `f` on its map, through the whole tree, a node's own `thumbnail` (a
+/// nested `DV_MULTIMEDIA`) included; `$values` reads a map's members.
+macro_rules! multimedia_walk {
+    ($(#[$doc:meta])* $name:ident, $value:ty, $map:ty, $values:ident) => {
+        $(#[$doc])*
+        fn $name<F: FnMut($map)>(v: $value, f: &mut F) {
+            match v {
+                Value::Object(map) => {
+                    if map.get("_type").and_then(Value::as_str) == Some(DV_MULTIMEDIA) {
+                        f(map);
+                    }
+                    for child in map.$values() {
+                        $name(child, f);
+                    }
+                }
+                Value::Array(items) => {
+                    for item in items {
+                        $name(item, f);
+                    }
+                }
+                _ => {}
             }
         }
-        Value::Array(items) => {
-            for item in items {
-                walk_multimedia(item, f);
-            }
-        }
-        _ => {}
-    }
+    };
 }
 
-/// The read-only twin of [`walk_multimedia`].
-fn visit_multimedia<F: FnMut(&Map<String, Value>)>(v: &Value, f: &mut F) {
-    match v {
-        Value::Object(map) => {
-            if map.get("_type").and_then(Value::as_str) == Some(DV_MULTIMEDIA) {
-                f(map);
-            }
-            for child in map.values() {
-                visit_multimedia(child, f);
-            }
-        }
-        Value::Array(items) => {
-            for item in items {
-                visit_multimedia(item, f);
-            }
-        }
-        _ => {}
-    }
-}
+multimedia_walk!(
+    /// Every `DV_MULTIMEDIA` map of the tree, to change in place.
+    walk_multimedia,
+    &mut Value,
+    &mut Map<String, Value>,
+    values_mut
+);
+multimedia_walk!(
+    /// Every `DV_MULTIMEDIA` map of the tree.
+    visit_multimedia,
+    &Value,
+    &Map<String, Value>,
+    values
+);
 
 /// The URI a `DV_MULTIMEDIA` map references, if any.
 fn uri_of(map: &Map<String, Value>) -> Option<&str> {
@@ -210,6 +210,21 @@ pub(super) fn needs_offload(root: &Value, threshold: usize) -> Result<bool, Mult
     found
 }
 
+/// The SHA-256 digest and the decoded byte length of the base64 `data`.
+///
+/// # Errors
+/// [`MultimediaError::Malformed`] when `data` is not base64.
+fn digest_of(data: &str) -> Result<([u8; 32], u64), MultimediaError> {
+    let mut hasher = Sha256::new();
+    let mut size: u64 = 0;
+    for chunk in decoded_chunks(data) {
+        let chunk = chunk?;
+        hasher.update(&chunk);
+        size = size.saturating_add(super::blob::len64(chunk.len()));
+    }
+    Ok((hasher.finalize().into(), size))
+}
+
 /// Rewrite one `DV_MULTIMEDIA` map for externalization, returning the blob to
 /// upload, or `None` if it does not qualify.
 ///
@@ -228,14 +243,7 @@ fn offload_one(
     let Some(Value::String(data)) = map.get("data") else {
         return Ok(None);
     };
-    let mut hasher = Sha256::new();
-    let mut size: u64 = 0;
-    for chunk in decoded_chunks(data) {
-        let chunk = chunk?;
-        hasher.update(&chunk);
-        size = size.saturating_add(super::blob::len64(chunk.len()));
-    }
-    let digest: [u8; 32] = hasher.finalize().into();
+    let (digest, size) = digest_of(data)?;
     let key = BlobKey::from_digest(digest);
     let declared = i64::try_from(size).map_err(|e| {
         MultimediaError::Malformed(format!(
@@ -377,14 +385,7 @@ pub(super) fn plan_offload_typed(
         let Some(data) = value.data.take() else {
             return Ok(());
         };
-        let mut hasher = Sha256::new();
-        let mut size: u64 = 0;
-        for chunk in decoded_chunks(&data) {
-            let chunk = chunk?;
-            hasher.update(&chunk);
-            size = size.saturating_add(super::blob::len64(chunk.len()));
-        }
-        let digest: [u8; 32] = hasher.finalize().into();
+        let (digest, size) = digest_of(&data)?;
         let key = BlobKey::from_digest(digest);
         value.size = i32::try_from(size).map_err(|e| {
             MultimediaError::Malformed(format!(

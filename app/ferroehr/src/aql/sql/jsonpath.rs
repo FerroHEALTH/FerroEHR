@@ -174,7 +174,7 @@ pub(super) fn jsonpath_vars(vars: serde_json::Map<String, serde_json::Value>) ->
 
 /// The jsonpath filter-expression operator for an AQL comparison operator
 /// (PostgreSQL docs §9.16.2 — the SQL/JSON path comparison operators).
-fn jsonpath_op(op: CompOp) -> &'static str {
+pub(crate) fn jsonpath_op(op: CompOp) -> &'static str {
     match op {
         CompOp::Eq => "==",
         CompOp::Ne => "!=",

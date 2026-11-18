@@ -125,51 +125,45 @@ fn flat_output_err(e: &openehr_sdt::flat::error::FlatError) -> RestError {
     internal(ferroehr::error::ErrorChain::new(e))
 }
 
+/// The Web Template of the template `template_id`, resolved by the service.
+async fn web_template(
+    state: &AppState,
+    template_id: &str,
+) -> Result<std::sync::Arc<openehr_sdt::flat::webtemplate::model::WebTemplate>, RestError> {
+    Ok(state.backend().web_template(template_id).await?)
+}
+
 // ── COMPOSITION: request side ──────────────────────────────────────────────
 
-/// Parse a FLAT request body into the typed COMPOSITION the commit seam takes,
-/// driven by the template named in the `openehr-template-id` header: the FLAT
-/// text read once into the simplified tree, which builds typed RM, with no
-/// JSON value of the document between them (#6003).
-pub(crate) async fn composition_from_flat(
+/// Parse a FLAT or STRUCTURED request body into the typed COMPOSITION the
+/// commit seam takes, driven by the template named in the
+/// `openehr-template-id` header (#6003). FLAT text is read once into the
+/// simplified tree, which builds typed RM, with no JSON value of the document
+/// between them.
+pub(crate) async fn composition_from_simplified(
     state: &AppState,
     headers: &HeaderMap,
     body: &Bytes,
+    structured: bool,
 ) -> Result<Composition, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
+    if structured {
+        ferroehr::telemetry::conversion::record("text_to_structured");
+        let structured: Value = serde_json::from_slice(body).map_err(|e| {
+            RestError::from(ApiError::BadRequest(format!(
+                "invalid STRUCTURED JSON: {e}"
+            )))
+        })?;
+        let wt = web_template(state, &template_id).await?;
+        ferroehr::telemetry::conversion::record("structured_to_rm");
+        return openehr_sdt::flat::convert::submitted_rm_from_structured(&structured, &wt, &now())
+            .map_err(|e| flat_input_err(&e));
+    }
     ferroehr::telemetry::conversion::record("flat_to_rm");
     let tree = openehr_sdt::flat::sim::flat::parse_flat_text(body)
         .map_err(|e| RestError::from(ApiError::BadRequest(format!("invalid FLAT JSON: {e}"))))?;
-    let wt = state
-        .backend()
-        .web_template(&template_id)
-        .await
-        .map_err(RestError::from)?;
+    let wt = web_template(state, &template_id).await?;
     tree.and_then(|tree| openehr_sdt::flat::convert::submitted_rm_from_tree(&tree, &wt, &now()))
-        .map_err(|e| flat_input_err(&e))
-}
-
-/// Parse a STRUCTURED request body into the typed COMPOSITION the commit seam
-/// takes.
-pub(crate) async fn composition_from_structured(
-    state: &AppState,
-    headers: &HeaderMap,
-    body: &Bytes,
-) -> Result<Composition, RestError> {
-    let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
-    ferroehr::telemetry::conversion::record("text_to_structured");
-    let structured: Value = serde_json::from_slice(body).map_err(|e| {
-        RestError::from(ApiError::BadRequest(format!(
-            "invalid STRUCTURED JSON: {e}"
-        )))
-    })?;
-    let wt = state
-        .backend()
-        .web_template(&template_id)
-        .await
-        .map_err(RestError::from)?;
-    ferroehr::telemetry::conversion::record("structured_to_rm");
-    openehr_sdt::flat::convert::submitted_rm_from_structured(&structured, &wt, &now())
         .map_err(|e| flat_input_err(&e))
 }
 
@@ -191,11 +185,7 @@ pub(crate) async fn composition_flat_response(
     status: StatusCode,
     comp: &Value,
 ) -> Result<Response, RestError> {
-    let wt = state
-        .backend()
-        .web_template(&composition_template_id(comp)?)
-        .await
-        .map_err(RestError::from)?;
+    let wt = web_template(state, &composition_template_id(comp)?).await?;
     composition_flat_response_with(status, comp, &wt)
 }
 
@@ -263,11 +253,7 @@ pub(crate) async fn composition_simplified_typed(
         .and_then(|ad| ad.template_id.as_ref())
         .map(|t| t.value.clone())
         .ok_or_else(|| internal("composition has no archetype_details/template_id"))?;
-    let wt = state
-        .backend()
-        .web_template(&template_id)
-        .await
-        .map_err(RestError::from)?;
+    let wt = web_template(state, &template_id).await?;
     let (json, media) = if format == WireFormat::Structured {
         ferroehr::telemetry::conversion::record("rm_to_structured");
         let structured = openehr_sdt::flat::convert::rm_to_structured(comp, &wt);
@@ -290,11 +276,7 @@ pub(crate) async fn composition_structured_response(
     status: StatusCode,
     comp: &Value,
 ) -> Result<Response, RestError> {
-    let wt = state
-        .backend()
-        .web_template(&composition_template_id(comp)?)
-        .await
-        .map_err(RestError::from)?;
+    let wt = web_template(state, &composition_template_id(comp)?).await?;
     composition_structured_response_with(status, comp, &wt)
 }
 
@@ -343,11 +325,7 @@ pub(crate) async fn contribution_from_simplified(
             "invalid CONTRIBUTION envelope: {e}"
         )))
     })?;
-    let wt = state
-        .backend()
-        .web_template(&template_id)
-        .await
-        .map_err(RestError::from)?;
+    let wt = web_template(state, &template_id).await?;
     let now = now();
     for version in &mut envelope.versions {
         let Some(data) = version.data.as_mut() else {
@@ -410,11 +388,7 @@ pub(crate) async fn contribution_to_simplified(
                         .to_owned(),
                 )));
             }
-            let wt = state
-                .backend()
-                .web_template(&composition_template_id(&data)?)
-                .await
-                .map_err(RestError::from)?;
+            let wt = web_template(state, &composition_template_id(&data)?).await?;
             let simplified = match format {
                 WireFormat::Flat => {
                     openehr_sdt::flat::convert::composition_to_flat(&data, &wt).map(Value::Object)

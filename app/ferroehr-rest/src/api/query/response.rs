@@ -101,36 +101,33 @@ fn member_names<'a>(
         .collect()
 }
 
-impl OpenMembers for openehr_its::rest::generated::query::AdhocQueryExecute {
-    fn names(&self) -> Vec<&str> {
-        let present = [
-            ("q", true),
-            ("offset", self.offset.is_some()),
-            ("fetch", self.fetch.is_some()),
-            ("query_parameters", self.query_parameters.is_some()),
-        ];
-        member_names(&present, &self.additional_properties)
-    }
+/// Implements [`OpenMembers`] for a QUERY body DTO whose members are the
+/// `$fixed` ones, the paging members and `query_parameters`.
+macro_rules! paged_query_members {
+    ($ty:ty, [$($fixed:literal),*]) => {
+        impl OpenMembers for $ty {
+            fn names(&self) -> Vec<&str> {
+                let present = [
+                    $(($fixed, true),)*
+                    ("offset", self.offset.is_some()),
+                    ("fetch", self.fetch.is_some()),
+                    ("query_parameters", self.query_parameters.is_some()),
+                ];
+                member_names(&present, &self.additional_properties)
+            }
 
-    fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)> {
-        open_members(self.query_parameters.as_ref(), &self.additional_properties)
-    }
+            fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)> {
+                open_members(self.query_parameters.as_ref(), &self.additional_properties)
+            }
+        }
+    };
 }
 
-impl OpenMembers for openehr_its::rest::generated::query::Query {
-    fn names(&self) -> Vec<&str> {
-        let present = [
-            ("offset", self.offset.is_some()),
-            ("fetch", self.fetch.is_some()),
-            ("query_parameters", self.query_parameters.is_some()),
-        ];
-        member_names(&present, &self.additional_properties)
-    }
-
-    fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)> {
-        open_members(self.query_parameters.as_ref(), &self.additional_properties)
-    }
-}
+paged_query_members!(
+    openehr_its::rest::generated::query::AdhocQueryExecute,
+    ["q"]
+);
+paged_query_members!(openehr_its::rest::generated::query::Query, []);
 
 /// Decodes a QUERY request body once, straight into its DTO `T`
 /// ([`negotiate::decode::typed_json`]), and refuses a `_type`-tagged node in it

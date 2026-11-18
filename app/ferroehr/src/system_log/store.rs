@@ -59,18 +59,15 @@ use crate::access_log::chainer::Owed;
 use crate::access_log::store::AccessLogStore;
 use crate::db::acquire::acquire;
 use crate::system_log::AuditError;
-#[cfg(feature = "fhir")]
-use crate::system_log::categories::{ClassifiedContent, MapDigest};
-#[cfg(feature = "fhir")]
-use crate::system_log::event::ActingMode;
-#[cfg(feature = "fhir")]
-use crate::system_log::event::{AccessDomain, EventActionCode};
 use crate::system_log::event::{AuditEvent, EventOutcome, EventType, ObjectClass};
-#[cfg(feature = "fhir")]
-use crate::system_log::fhir::value_of;
 use crate::system_log::render::RenderPolicy;
 #[cfg(feature = "fhir")]
-use crate::system_log::render::{CompiledPolicy, StoredRecord};
+use crate::system_log::{
+    categories::{ClassifiedContent, MapDigest},
+    event::{AccessDomain, ActingMode, EventActionCode},
+    fhir::value_of,
+    render::{CompiledPolicy, StoredRecord},
+};
 use batch::BatchColumns;
 #[cfg(feature = "fhir")]
 use chains::AuditChain;

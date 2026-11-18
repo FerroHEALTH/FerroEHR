@@ -53,13 +53,6 @@
 //! trace, and echoing a national identifier into all three to complain about it
 //! would be the leak the rule exists to prevent.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694): the commit interior — this pass reads the \
-              canonical JSON body the write path already holds, the same seam \
-              service/ehr/validation.rs carries"
-)]
-
 pub mod config;
 pub mod detect;
 mod identifier_kind;

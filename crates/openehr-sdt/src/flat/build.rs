@@ -1337,13 +1337,14 @@ fn place_rec(
     child_value: Option<Obj>,
     p: &Placement<'_>,
 ) -> Result<(), FlatError> {
+    let seg = &p.rel[i];
     if Some(i) == p.id_idx {
-        return place_own_level(cur, i, child_value, p);
+        return place_own_level(cur, i, seg, child_value, p);
     }
-    if is_multiple(&p.rel[i].attribute) {
-        return place_structural_level(cur, i, child_value, p);
+    if is_multiple(&seg.attribute) {
+        return place_structural_level(cur, i, seg, child_value, p);
     }
-    place_single_attribute(cur, i, child_value, p)
+    place_single_attribute(cur, i, seg, child_value, p)
 }
 
 /// The child's own (repeating) array level: the value is either the array
@@ -1359,10 +1360,10 @@ fn place_rec(
 fn place_own_level(
     cur: &mut dyn RmObject,
     i: usize,
+    seg: &PathSegment,
     child_value: Option<Obj>,
     p: &Placement<'_>,
 ) -> Result<(), FlatError> {
-    let seg = &p.rel[i];
     if i + 1 == p.rel.len() {
         let Some(mut el) = child_value else {
             return Ok(());
@@ -1398,17 +1399,13 @@ fn place_own_level(
 ///
 /// # Errors
 /// [`FlatError`] from the nested placement.
-#[expect(
-    clippy::indexing_slicing,
-    reason = "`i` indexes `rel` under the same cursor invariant as `place_rec`"
-)]
 fn place_structural_level(
     cur: &mut dyn RmObject,
     i: usize,
+    seg: &PathSegment,
     child_value: Option<Obj>,
     p: &Placement<'_>,
 ) -> Result<(), FlatError> {
-    let seg = &p.rel[i];
     let node_id = seg.predicate.archetype_node_id.as_deref();
     // Same-archetype siblings told apart by name (`events[at0002,'Baseline']`
     // beside `events[at0002,'Follow up']`) are distinct nodes, so a name
@@ -1451,17 +1448,13 @@ fn place_structural_level(
 ///
 /// # Errors
 /// [`FlatError`] from the nested placement or the ELEMENT attribute family.
-#[expect(
-    clippy::indexing_slicing,
-    reason = "`i` indexes `rel` under the same cursor invariant as `place_rec`"
-)]
 fn place_single_attribute(
     cur: &mut dyn RmObject,
     i: usize,
+    seg: &PathSegment,
     child_value: Option<Obj>,
     p: &Placement<'_>,
 ) -> Result<(), FlatError> {
-    let seg = &p.rel[i];
     if i + 1 == p.rel.len() {
         let wraps_element = seg.attribute == "value";
         if let Some(child_value) = child_value {

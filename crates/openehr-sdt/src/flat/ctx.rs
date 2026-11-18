@@ -327,21 +327,7 @@ fn resolve_workflow(ctx: &SimNode, d: &CtxDefaults) -> Result<Option<Obj>, FlatE
         .and_then(Value::as_str)
         .or(d.id_namespace.as_deref())
         .unwrap_or("EHR");
-    typed::make(
-        "OBJECT_REF",
-        [
-            ("namespace", s(ns)),
-            ("type", s(ty)),
-            (
-                "id",
-                o(typed::make(
-                    "GENERIC_ID",
-                    [("value", s(id)), ("scheme", s(scheme))],
-                )?),
-            ),
-        ],
-    )
-    .map(Some)
+    typed::generic_object_ref(ns, ty, id, scheme).map(Some)
 }
 
 /// master06 §link: `LOCATABLE.links` from `ctx/link:i|type`/`|meaning`/`|target`.

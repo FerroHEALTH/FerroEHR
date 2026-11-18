@@ -588,6 +588,33 @@ pub(crate) fn dv_coded_text(value: &str, terminology: &str, code: &str) -> Resul
     )
 }
 
+/// An `OBJECT_REF` in `namespace` to an object of `rm_type` whose id is the
+/// `GENERIC_ID` `id` under `scheme` (BASE identification §OBJECT_REF).
+///
+/// # Errors
+/// [`FlatError::Rm`], never for these classes.
+pub(crate) fn generic_object_ref(
+    namespace: &str,
+    rm_type: &str,
+    id: &str,
+    scheme: &str,
+) -> Result<Obj, FlatError> {
+    make(
+        "OBJECT_REF",
+        [
+            ("namespace", s(namespace)),
+            ("type", s(rm_type)),
+            (
+                "id",
+                o(make(
+                    "GENERIC_ID",
+                    [("value", s(id)), ("scheme", s(scheme))],
+                )?),
+            ),
+        ],
+    )
+}
+
 /// A `DV_DATE_TIME`.
 ///
 /// # Errors
@@ -604,8 +631,16 @@ pub(crate) fn dv_date_time(value: &str) -> Result<Obj, FlatError> {
 /// refuses (BASE `master09-identification`).
 pub(crate) fn hier_object_id(value: &str, path: &str) -> Result<Obj, FlatError> {
     use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
-    HierObjectId::new(value)
-        .map(|id| -> Obj { Box::new(id) })
+    identifier(HierObjectId::new(value), path)
+}
+
+/// The identifier a validating constructor `made`, or its refusal as the
+/// invalid value at `path`.
+fn identifier<T: RmObject, E: std::fmt::Display>(
+    made: Result<T, E>,
+    path: &str,
+) -> Result<Obj, FlatError> {
+    made.map(|id| -> Obj { Box::new(id) })
         .map_err(|e| FlatError::InvalidValue {
             path: path.to_owned(),
             reason: e.to_string(),
@@ -619,12 +654,7 @@ pub(crate) fn hier_object_id(value: &str, path: &str) -> Result<Obj, FlatError> 
 /// refuses (BASE `master09-identification`).
 pub(crate) fn object_version_id(value: &str, path: &str) -> Result<Obj, FlatError> {
     use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
-    ObjectVersionId::new(value)
-        .map(|id| -> Obj { Box::new(id) })
-        .map_err(|e| FlatError::InvalidValue {
-            path: path.to_owned(),
-            reason: e.to_string(),
-        })
+    identifier(ObjectVersionId::new(value), path)
 }
 
 /// The string at the single-valued path `steps` below `object`.

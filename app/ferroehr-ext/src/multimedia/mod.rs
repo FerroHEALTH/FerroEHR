@@ -194,6 +194,11 @@ impl MultimediaEngine {
             return Ok(());
         }
         let pending = offload::plan_offload(canonical, self.threshold, &self.store)?;
+        self.write_pending(pending).await
+    }
+
+    /// Writes each planned blob the store does not hold yet.
+    async fn write_pending(&self, pending: Vec<offload::Pending>) -> Result<(), MultimediaError> {
         for blob in pending {
             self.store
                 .write_if_absent(&blob.key, blob.size, offload::decoded_chunks(&blob.data))
@@ -211,12 +216,7 @@ impl MultimediaEngine {
             return Ok(());
         }
         let pending = offload::plan_offload_typed(value, self.threshold, &self.store)?;
-        for blob in pending {
-            self.store
-                .write_if_absent(&blob.key, blob.size, offload::decoded_chunks(&blob.data))
-                .await?;
-        }
-        Ok(())
+        self.write_pending(pending).await
     }
 
     /// [`Self::ensure_externalized`] over a typed RM value.

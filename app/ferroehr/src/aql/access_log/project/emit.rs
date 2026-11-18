@@ -69,6 +69,8 @@ impl<'r, 'p, 'o> Serializer for Emit<'r, 'p, 'o> {
     type SerializeStruct = EmitMap<'r, 'p, 'o>;
     type SerializeStructVariant = Impossible<Crossed, Error>;
 
+    passthrough_and_no_variants!(Crossed);
+
     emit_scalar!(
         serialize_bool(bool),
         serialize_i8(i8),
@@ -113,28 +115,6 @@ impl<'r, 'p, 'o> Serializer for Emit<'r, 'p, 'o> {
         self.scalar(variant)
     }
 
-    fn serialize_some<T: Serialize + ?Sized>(self, value: &T) -> Result<Crossed, Error> {
-        value.serialize(self)
-    }
-
-    fn serialize_newtype_struct<T: Serialize + ?Sized>(
-        self,
-        _: &'static str,
-        value: &T,
-    ) -> Result<Crossed, Error> {
-        value.serialize(self)
-    }
-
-    fn serialize_newtype_variant<T: Serialize + ?Sized>(
-        self,
-        _: &'static str,
-        _: u32,
-        _: &'static str,
-        _: &T,
-    ) -> Result<Crossed, Error> {
-        no_variant()
-    }
-
     fn serialize_seq(self, _: Option<usize>) -> Result<EmitSeq<'r, 'p, 'o>, Error> {
         if !self.crosses {
             self.out.push(b'[');
@@ -159,32 +139,12 @@ impl<'r, 'p, 'o> Serializer for Emit<'r, 'p, 'o> {
         self.serialize_seq(Some(len))
     }
 
-    fn serialize_tuple_variant(
-        self,
-        _: &'static str,
-        _: u32,
-        _: &'static str,
-        _: usize,
-    ) -> Result<Impossible<Crossed, Error>, Error> {
-        no_variant()
-    }
-
     fn serialize_map(self, _: Option<usize>) -> Result<EmitMap<'r, 'p, 'o>, Error> {
         Ok(EmitMap::open(self.reach, self.out))
     }
 
     fn serialize_struct(self, _: &'static str, _: usize) -> Result<EmitMap<'r, 'p, 'o>, Error> {
         Ok(EmitMap::open(self.reach, self.out))
-    }
-
-    fn serialize_struct_variant(
-        self,
-        _: &'static str,
-        _: u32,
-        _: &'static str,
-        _: usize,
-    ) -> Result<Impossible<Crossed, Error>, Error> {
-        no_variant()
     }
 }
 
@@ -230,28 +190,7 @@ impl EmitSeq<'_, '_, '_> {
     }
 }
 
-macro_rules! emit_seq {
-    ($($trait:ident :: $method:ident),* $(,)?) => {
-        $(impl $trait for EmitSeq<'_, '_, '_> {
-            type Ok = Crossed;
-            type Error = Error;
-
-            fn $method<T: Serialize + ?Sized>(&mut self, value: &T) -> Result<(), Error> {
-                self.element(value)
-            }
-
-            fn end(self) -> Result<Crossed, Error> {
-                Ok(self.close())
-            }
-        })*
-    };
-}
-
-emit_seq!(
-    SerializeSeq::serialize_element,
-    SerializeTuple::serialize_element,
-    SerializeTupleStruct::serialize_field,
-);
+element_seq!(EmitSeq<'_, '_, '_>, Crossed, |self| Ok(self.close()));
 
 /// An object being written, its members in their own order; where the
 /// subject view leaves members out, in the order its removal leaves.
@@ -358,24 +297,12 @@ impl<'r, 'p, 'o> EmitMap<'r, 'p, 'o> {
     }
 }
 
-impl SerializeMap for EmitMap<'_, '_, '_> {
-    type Ok = Crossed;
-    type Error = Error;
-
-    fn serialize_key<T: Serialize + ?Sized>(&mut self, key: &T) -> Result<(), Error> {
-        self.key = Some(key_text(key)?);
-        Ok(())
-    }
-
-    fn serialize_value<T: Serialize + ?Sized>(&mut self, value: &T) -> Result<(), Error> {
-        let key = self.key.take().unwrap_or_default();
-        self.member(Cow::Owned(key), value)
-    }
-
-    fn end(self) -> Result<Crossed, Error> {
-        self.close()
-    }
-}
+keyed_map!(
+    EmitMap<'_, '_, '_>,
+    Crossed,
+    |self, key, value| self.member(key, value),
+    |self| self.close(),
+);
 
 impl SerializeStruct for EmitMap<'_, '_, '_> {
     type Ok = Crossed;
