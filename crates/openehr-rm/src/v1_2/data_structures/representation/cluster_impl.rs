@@ -45,7 +45,7 @@ mod tests {
 
     /// A minimal ELEMENT, the simplest legal `CLUSTER.items` member.
     fn element() -> Item {
-        Item::Element(
+        Item::from(
             crate::v1_2::data_structures::representation::element::Element {
                 name: text("element"),
                 archetype_node_id: "at0002".to_owned(),

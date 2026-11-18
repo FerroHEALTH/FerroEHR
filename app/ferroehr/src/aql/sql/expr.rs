@@ -20,6 +20,7 @@ use sea_query::{Alias, BinOper, Expr, ExprTrait as _, Func, IntoIden, Value};
 
 use openehr_query::lexer::CompOp;
 
+use crate::aql::error::{AqlError, SqlError};
 use crate::aql::ir::{Coercion, EhrField, LeafPath, PathTarget, TypeSet, TypedLit, VersionField};
 use crate::db::iden::{CommitAudit, Node, VersionRow};
 
@@ -334,12 +335,32 @@ pub(super) fn literal_value(lit: &TypedLit) -> Value {
 /// A typed `rm_type IN (...)` condition, or `None` for an unresolved type set.
 /// The concrete RM types a source/step may bind (QUERY master03 §Class
 /// expressions; the abstract→concrete expansion is done in analysis).
-pub(super) fn type_cond(node: &str, types: &TypeSet) -> Option<Expr> {
+///
+/// The names are SQL literals, never bound parameters: `idx_node_hot_ehr_type`
+/// is partial on `rm_type <> 'ELEMENT'`, and only a literal proves that in a
+/// generic plan (PostgreSQL 18, "Partial Indexes"). A name is written only
+/// when it is a class of the RM model and spelled in `[A-Z0-9_]`, so nothing
+/// a query supplies reaches the statement text.
+///
+/// # Errors
+/// [`SqlError::Unsupported`] for a name outside the RM model, which analysis
+/// already refuses.
+pub(super) fn type_cond(node: &str, types: &TypeSet) -> Result<Option<Expr>, AqlError> {
     if types.is_empty() {
-        return None;
+        return Ok(None);
     }
-    let members: Vec<Expr> = types.names().iter().map(|t| Expr::val(t.clone())).collect();
-    Some(col(node, Node::RmType).is_in(members))
+    let mut members = Vec::with_capacity(types.names().len());
+    for name in types.names() {
+        let spelled = !name.is_empty()
+            && name
+                .bytes()
+                .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_');
+        if !spelled || openehr_rm::v1_2::model::class(name).is_none() {
+            return Err(SqlError::Unsupported(format!("a class condition on `{name}`")).into());
+        }
+        members.push(Expr::cust(format!("'{name}'")));
+    }
+    Ok(Some(col(node, Node::RmType).is_in(members)))
 }
 
 /// The coercion an ORDER BY key uses (QUERY master03 §ORDER BY — Ordered types

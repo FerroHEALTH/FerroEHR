@@ -11,11 +11,10 @@
 //! `cold` partition. Archiving is therefore one `UPDATE` of the partition key,
 //! which PostgreSQL performs as a move between partitions (PostgreSQL 18,
 //! "Partitioning", <https://www.postgresql.org/docs/18/ddl-partitioning.html>),
-//! and the `node` and `vo_attestation` foreign keys carry their rows across
-//! with `ON UPDATE CASCADE`. Two consequences the mirror-table design could not
-//! have: every foreign key holds across the tier, and every read reaches an
-//! archived object by naming the parent relation, with no union view and no
-//! second statement.
+//! and the `vo_attestation` foreign key carries its rows across with `ON
+//! UPDATE CASCADE`. The `node` rows have no foreign key (#5969), so the same
+//! statement moves them by name. Every read reaches an archived object by
+//! naming the parent relation, with no union view and no second statement.
 //!
 //! A write still thaws first (the admin restore path calls [`thaw`]; the commit
 //! path's thaw rides the merged placement read,
@@ -34,8 +33,8 @@ use crate::storage::error::StorageError;
 /// together. Objects already cold match nothing and are silently skipped, so
 /// re-archiving is idempotent.
 ///
-/// The node and attestation rows are NOT named: their foreign keys into
-/// `version` carry them across with the version row.
+/// The attestation rows follow through their foreign key's `ON UPDATE
+/// CASCADE`; the node rows, which have none, move in the same statement.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on any driver/statement failure.
@@ -47,10 +46,13 @@ pub async fn freeze(
     if vo_ids.is_empty() {
         return Ok(());
     }
-    sqlx::query("UPDATE version SET tier = 'cold' WHERE vo_id = ANY($1) AND tier = 'hot'")
-        .bind(vo_ids)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(
+        "WITH n AS (UPDATE node SET tier = 'cold' WHERE tier = 'hot' AND vo_id = ANY($1)) \
+         UPDATE version SET tier = 'cold' WHERE vo_id = ANY($1) AND tier = 'hot'",
+    )
+    .bind(vo_ids)
+    .execute(&mut *tx)
+    .await?;
     sqlx::query(
         "UPDATE vo_head SET tier = 'cold', archived_at = now(), archive_reason = $2 \
          WHERE vo_id = ANY($1) AND tier = 'hot'",
@@ -71,10 +73,13 @@ pub async fn thaw(tx: &mut PgConnection, vo_ids: &[VoId]) -> Result<(), StorageE
     if vo_ids.is_empty() {
         return Ok(());
     }
-    sqlx::query("UPDATE version SET tier = 'hot' WHERE vo_id = ANY($1) AND tier = 'cold'")
-        .bind(vo_ids)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(
+        "WITH n AS (UPDATE node SET tier = 'hot' WHERE tier = 'cold' AND vo_id = ANY($1)) \
+         UPDATE version SET tier = 'hot' WHERE vo_id = ANY($1) AND tier = 'cold'",
+    )
+    .bind(vo_ids)
+    .execute(&mut *tx)
+    .await?;
     sqlx::query(
         "UPDATE vo_head SET tier = 'hot', archived_at = NULL, archive_reason = NULL \
          WHERE vo_id = ANY($1) AND tier = 'cold'",

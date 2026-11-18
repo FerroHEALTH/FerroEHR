@@ -18,9 +18,9 @@ pub struct DvParsable {
     /// Name of character encoding scheme in which this value is encoded.
     ///
     /// Coded from openEHR Code Set  character sets . Unicode is the default assumption in openEHR, with UTF-8 being the assumed encoding. This attribute allows for variations from these assumptions.
-    pub charset: Option<CodePhrase>,
+    pub charset: Option<Box<CodePhrase>>,
     /// Optional indicator of the localised language in which the data is written, if relevant. Coded from openEHR Code Set `languages`.
-    pub language: Option<CodePhrase>,
+    pub language: Option<Box<CodePhrase>>,
     /// The string, which may validly be empty in some syntaxes.
     pub value: String,
     /// Name of the formalism, e.g.  GLIF 1.0 ,  Proforma  etc.

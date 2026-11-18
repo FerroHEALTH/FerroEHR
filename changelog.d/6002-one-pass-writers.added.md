@@ -1,0 +1,1 @@
+- `openehr_its::json::write_canonical_json`, `write_canonical_json_to` and `openehr_its::xml::runtime::write_xml_into` render canonical JSON and XML straight into a caller's buffer or writer, byte-identical to the string writers.

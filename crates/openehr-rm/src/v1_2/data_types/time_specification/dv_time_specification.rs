@@ -20,3 +20,15 @@ pub enum DvTimeSpecification {
     /// The `DV_PERIODIC_TIME_SPECIFICATION` subtype of `DV_TIME_SPECIFICATION`.
     DvPeriodicTimeSpecification(DvPeriodicTimeSpecification),
 }
+
+impl From<DvGeneralTimeSpecification> for DvTimeSpecification {
+    fn from(value: DvGeneralTimeSpecification) -> Self {
+        Self::DvGeneralTimeSpecification(value)
+    }
+}
+
+impl From<DvPeriodicTimeSpecification> for DvTimeSpecification {
+    fn from(value: DvPeriodicTimeSpecification) -> Self {
+        Self::DvPeriodicTimeSpecification(value)
+    }
+}

@@ -135,7 +135,7 @@ impl Validate for DvCount {
         push_normal_range_consistency(
             out,
             "DV_COUNT",
-            self.normal_status.as_ref(),
+            self.normal_status.as_deref(),
             self.normal_range.as_deref(),
             self,
         );

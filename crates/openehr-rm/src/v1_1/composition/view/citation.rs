@@ -34,13 +34,13 @@ pub struct Citation<L> {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
 
     // inherited: VIEW_ITEM
     /// The `meta_data` attribute of openEHR `VIEW_ITEM` (the vendored BMM carries no documentation for it).
-    pub meta_data: Option<Cluster>,
+    pub meta_data: Option<Box<Cluster>>,
     /// The `source_type` attribute of openEHR `CITATION` (the vendored BMM carries no documentation for it).
     pub source_type: Option<String>,
     /// Reference to original object.

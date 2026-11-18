@@ -143,7 +143,7 @@ async fn seed_with_history(svc: &FerroEhrService, pool: &PgPool, supersessions: 
 // ── the instrument ───────────────────────────────────────────────────────────
 
 /// The `EXPLAIN` prefix every statement below is run under.
-const EXPLAIN: &str = "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ";
+pub(crate) const EXPLAIN: &str = "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ";
 
 /// Open the transaction an explain runs in: sequential scans discouraged, and
 /// rolled back by the caller so `ANALYZE` leaves nothing behind (`PostgreSQL`
@@ -152,7 +152,7 @@ const EXPLAIN: &str = "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ";
     clippy::disallowed_methods,
     reason = "a test reads the database on a raw pool connection, outside any request"
 )]
-async fn explain_tx(pool: &PgPool) -> Transaction<'static, Postgres> {
+pub(crate) async fn explain_tx(pool: &PgPool) -> Transaction<'static, Postgres> {
     let mut tx = pool.begin().await.expect("begin the explain transaction");
     tx.execute("SET LOCAL enable_seqscan = off")
         .await
@@ -162,14 +162,14 @@ async fn explain_tx(pool: &PgPool) -> Transaction<'static, Postgres> {
 
 /// One scan node of a plan tree: what it read, how, and how many rows came out.
 #[derive(Debug)]
-struct Scan {
+pub(crate) struct Scan {
     /// The plan node type verbatim (`Index Scan`, `Bitmap Heap Scan`, …).
-    node_type: String,
+    pub(crate) node_type: String,
     /// The relation the node read — a partition name where the relation is
     /// partitioned.
-    relation: String,
+    pub(crate) relation: String,
     /// The index the node used, where it used one.
-    index: Option<String>,
+    pub(crate) index: Option<String>,
     /// The condition the node bound that index with, where it used one.
     index_cond: Option<String>,
     /// Rows the node returned, averaged over its loops — `PostgreSQL` 18
@@ -194,7 +194,7 @@ impl Scan {
 }
 
 /// Every relation-reading node of a plan tree, outermost first.
-fn scans(plan: &Value) -> Vec<Scan> {
+pub(crate) fn scans(plan: &Value) -> Vec<Scan> {
     fn walk(node: &Value, out: &mut Vec<Scan>) {
         if let Some(relation) = node.get("Relation Name").and_then(Value::as_str) {
             out.push(Scan {
@@ -264,7 +264,7 @@ fn scans(plan: &Value) -> Vec<Scan> {
 
 /// A one-line-per-scan rendering, so a failed assertion says what the planner
 /// did instead of only what it should have done.
-fn render(scans: &[Scan]) -> String {
+pub(crate) fn render(scans: &[Scan]) -> String {
     scans
         .iter()
         .map(|scan| {
@@ -292,7 +292,7 @@ fn render(scans: &[Scan]) -> String {
 
 /// The scans of `relation`, which for a partitioned relation is the set of
 /// partitions the plan did not prune.
-fn on<'a>(scans: &'a [Scan], relation: &str) -> Vec<&'a Scan> {
+pub(crate) fn on<'a>(scans: &'a [Scan], relation: &str) -> Vec<&'a Scan> {
     scans
         .iter()
         .filter(|scan| scan.relation == relation)
@@ -865,7 +865,7 @@ async fn the_head_row_update_is_heap_only() {
 
 /// Lower an AQL statement to the SQL the engine runs, scoped to `ehr_ids`
 /// (empty = the population).
-fn aql_sql(aql: &str, ehr_ids: Vec<EhrId>) -> ferroehr::aql::sql::PreparedQuery {
+pub(crate) fn aql_sql(aql: &str, ehr_ids: Vec<EhrId>) -> ferroehr::aql::sql::PreparedQuery {
     aql_sql_limited(aql, ehr_ids, None)
 }
 
@@ -917,7 +917,10 @@ fn aql_sql_for(
 }
 
 /// `EXPLAIN` a lowered AQL statement inside a rolled-back transaction.
-async fn explain_aql(pool: &PgPool, prepared: ferroehr::aql::sql::PreparedQuery) -> Value {
+pub(crate) async fn explain_aql(
+    pool: &PgPool,
+    prepared: ferroehr::aql::sql::PreparedQuery,
+) -> Value {
     let mut tx = explain_tx(pool).await;
     let plan: Value = sqlx::query_scalar_with(
         sqlx::AssertSqlSafe(format!("{EXPLAIN}{}", prepared.sql)),
@@ -2220,7 +2223,7 @@ async fn an_ehr_lookup_by_subject_enters_through_the_subject_index() {
 /// Analyze every partition and plain table of both stores and no partitioned
 /// parent: the statistics autovacuum leaves, since "partitioned tables are not
 /// processed by autovacuum" (`PostgreSQL` 18 docs § 24.1.3).
-async fn analyze_as_autovacuum(pool: &PgPool) {
+pub(crate) async fn analyze_as_autovacuum(pool: &PgPool) {
     let leaves: Vec<String> = sqlx::query_scalar(
         "SELECT format('%I.%I', n.nspname, c.relname) \
          FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace \

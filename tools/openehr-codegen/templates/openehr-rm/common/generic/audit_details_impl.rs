@@ -29,7 +29,6 @@ impl Validate for AuditDetailsData {
 
 #[cfg(test)]
 mod tests {
-    use openehr_term::codes::AuditChangeType;
     use super::*;
     use crate::v1_2::common::generic::party_proxy::PartyProxy;
     use crate::v1_2::common::generic::party_self::PartySelf;
@@ -37,6 +36,7 @@ mod tests {
     use crate::v1_2::data_types::text::code_phrase::CodePhrase;
     use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
     use openehr_base::v1_3::prelude::TerminologyId;
+    use openehr_term::codes::AuditChangeType;
 
     fn change_type() -> DvCodedText {
         DvCodedText {
@@ -69,7 +69,7 @@ mod tests {
             },
             change_type: change_type(),
             description: None,
-            committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+            committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
         }
     }
 

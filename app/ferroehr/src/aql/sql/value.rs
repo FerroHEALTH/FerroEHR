@@ -212,7 +212,7 @@ impl Builder<'_> {
             super::expr::hot(alias, Node::Tier),
             attribute_child(alias, parent, &step.attribute),
         ];
-        conds.extend(super::expr::type_cond(alias, &step.node_types));
+        conds.extend(super::expr::type_cond(alias, &step.node_types)?);
         if let Some(pred) = &step.predicate {
             conds.extend(self.node_constraint_conds(alias, pred)?);
         }

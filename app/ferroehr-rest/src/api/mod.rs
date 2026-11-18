@@ -102,6 +102,46 @@ pub(crate) struct RequestParts {
     /// (`openehr_its::rest::routes::lookup`), `None` on an extension route the
     /// ITS-REST route tables do not name.
     pub(crate) route: Option<RouteMatch>,
+    /// The canonical COMPOSITION the body decodes to, kept by the first
+    /// reader that decoded it (the SMART gate), so the commit decodes it once.
+    pub(crate) composition: Decoded<openehr_rm::prelude::Composition>,
+}
+
+/// A request body decoded once: the first reader that decodes it keeps the
+/// value here, and the reader that consumes it takes it out.
+///
+/// The clones of one [`RequestParts`] share it. No openEHR spec governs this:
+/// our own design.
+pub(crate) struct Decoded<T>(Arc<std::sync::Mutex<Option<T>>>);
+
+impl<T> Clone for Decoded<T> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
+
+impl<T> Default for Decoded<T> {
+    fn default() -> Self {
+        Self(Arc::new(std::sync::Mutex::new(None)))
+    }
+}
+
+impl<T> Decoded<T> {
+    /// Keeps `value` for the reader that consumes it.
+    pub(crate) fn keep(&self, value: T) {
+        *self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(value);
+    }
+
+    /// Takes the kept value out, if a reader kept one.
+    pub(crate) fn take(&self) -> Option<T> {
+        self.0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take()
+    }
 }
 
 impl RequestParts {

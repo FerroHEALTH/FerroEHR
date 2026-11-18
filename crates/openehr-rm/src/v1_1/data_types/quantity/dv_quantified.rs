@@ -35,3 +35,45 @@ pub enum DvQuantified {
     /// The `DV_TIME` subtype of `DV_QUANTIFIED`.
     DvTime(DvTime),
 }
+
+impl From<DvCount> for DvQuantified {
+    fn from(value: DvCount) -> Self {
+        Self::DvCount(value)
+    }
+}
+
+impl From<DvDate> for DvQuantified {
+    fn from(value: DvDate) -> Self {
+        Self::DvDate(value)
+    }
+}
+
+impl From<DvDateTime> for DvQuantified {
+    fn from(value: DvDateTime) -> Self {
+        Self::DvDateTime(value)
+    }
+}
+
+impl From<DvDuration> for DvQuantified {
+    fn from(value: DvDuration) -> Self {
+        Self::DvDuration(value)
+    }
+}
+
+impl From<DvProportion> for DvQuantified {
+    fn from(value: DvProportion) -> Self {
+        Self::DvProportion(value)
+    }
+}
+
+impl From<DvQuantity> for DvQuantified {
+    fn from(value: DvQuantity) -> Self {
+        Self::DvQuantity(value)
+    }
+}
+
+impl From<DvTime> for DvQuantified {
+    fn from(value: DvTime) -> Self {
+        Self::DvTime(value)
+    }
+}

@@ -85,7 +85,7 @@ mod tests {
     }
 
     fn event(time: &str) -> Event<i32> {
-        Event::PointEvent(PointEvent {
+        Event::PointEvent(Box::new(PointEvent {
             name: text("event"),
             archetype_node_id: "at0002".to_owned(),
             uid: None,
@@ -95,7 +95,7 @@ mod tests {
             time: date_time(time),
             state: None,
             data: 1,
-        })
+        }))
     }
 
     #[test]

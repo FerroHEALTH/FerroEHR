@@ -17,9 +17,27 @@ use crate::v1_2::ehr_extract::openehr_extract::openehr_content_item::OpenehrCont
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExtractItem {
     /// The `EXTRACT_FOLDER` subtype of `EXTRACT_ITEM`.
-    ExtractFolder(ExtractFolder),
+    ExtractFolder(Box<ExtractFolder>),
     /// The `GENERIC_CONTENT_ITEM` subtype of `EXTRACT_ITEM`.
-    GenericContentItem(GenericContentItem),
+    GenericContentItem(Box<GenericContentItem>),
     /// The `OPENEHR_CONTENT_ITEM` subtype of `EXTRACT_ITEM`.
-    OpenehrContentItem(OpenehrContentItem),
+    OpenehrContentItem(Box<OpenehrContentItem>),
+}
+
+impl From<ExtractFolder> for ExtractItem {
+    fn from(value: ExtractFolder) -> Self {
+        Self::ExtractFolder(Box::new(value))
+    }
+}
+
+impl From<GenericContentItem> for ExtractItem {
+    fn from(value: GenericContentItem) -> Self {
+        Self::GenericContentItem(Box::new(value))
+    }
+}
+
+impl From<OpenehrContentItem> for ExtractItem {
+    fn from(value: OpenehrContentItem) -> Self {
+        Self::OpenehrContentItem(Box::new(value))
+    }
 }

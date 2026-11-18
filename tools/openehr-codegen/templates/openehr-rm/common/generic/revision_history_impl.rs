@@ -56,7 +56,6 @@ impl RevisionHistory {
 
 #[cfg(test)]
 mod tests {
-    use openehr_term::codes::AuditChangeType;
     use super::*;
     use crate::v1_2::common::generic::attestation::Attestation;
     use crate::v1_2::common::generic::audit_details::AuditDetailsData;
@@ -68,6 +67,7 @@ mod tests {
     use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
     use crate::v1_2::data_types::text::dv_text::{DvText, DvTextData};
     use openehr_base::v1_3::prelude::{ObjectVersionId, TerminologyId};
+    use openehr_term::codes::AuditChangeType;
 
     fn dv_date_time(value: &str) -> DvDateTime {
         DvDateTime {
@@ -102,9 +102,12 @@ mod tests {
         AuditDetails::AuditDetails(AuditDetailsData {
             system_id: "ferroehr.local".to_owned(),
             time_committed: dv_date_time(time),
-            change_type: change_type(AuditChangeType::Creation.code(), AuditChangeType::Creation.rubric()),
+            change_type: change_type(
+                AuditChangeType::Creation.code(),
+                AuditChangeType::Creation.rubric(),
+            ),
             description: None,
-            committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+            committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
         })
     }
 
@@ -113,12 +116,15 @@ mod tests {
     /// further attestations"), whose later `time_committed` must NOT be the
     /// value the function reports.
     fn attestation(time: &str) -> AuditDetails {
-        AuditDetails::Attestation(Attestation {
+        AuditDetails::Attestation(Box::new(Attestation {
             system_id: "ferroehr.local".to_owned(),
             time_committed: dv_date_time(time),
-            change_type: change_type(AuditChangeType::Attestation.code(), AuditChangeType::Attestation.rubric()),
+            change_type: change_type(
+                AuditChangeType::Attestation.code(),
+                AuditChangeType::Attestation.rubric(),
+            ),
             description: None,
-            committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+            committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
             attested_view: None,
             proof: None,
             items: openehr_base::containers::present_nonempty(Vec::new()),
@@ -131,7 +137,7 @@ mod tests {
                 encoding: None,
             }),
             is_pending: false,
-        })
+        }))
     }
 
     fn item(version_id: &str, audits: Vec<AuditDetails>) -> RevisionHistoryItem {

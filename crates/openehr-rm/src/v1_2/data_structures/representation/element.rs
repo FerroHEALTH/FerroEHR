@@ -34,13 +34,13 @@ pub struct Element {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
     pub feeder_audit: Option<Box<FeederAudit>>,
     /// Flavour of null value, e.g. `253|unknown|`, `271|no information|`, `272|masked|`, and `273|not applicable|`.
-    pub null_flavour: Option<DvCodedText>,
+    pub null_flavour: Option<Box<DvCodedText>>,
     /// Property representing leaf value object of `ELEMENT`. In real data, any concrete subtype of `DATA_VALUE` can be used.
-    pub value: Option<DataValue>,
+    pub value: Option<Box<DataValue>>,
     /// Optional specific reason for null value; if set, `_null_flavour_` must be set. Null reason may apply only to a minority of clinical data, commonly needed in reporting contexts.
-    pub null_reason: Option<DvText>,
+    pub null_reason: Option<Box<DvText>>,
 }

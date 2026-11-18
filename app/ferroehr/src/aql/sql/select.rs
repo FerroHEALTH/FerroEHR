@@ -311,7 +311,7 @@ impl Builder<'_> {
                     BoundEdge::Attribute(&step.attribute),
                     |b, inner| {
                         let mut conds: Vec<Expr> =
-                            type_cond(inner, &step.node_types).into_iter().collect();
+                            type_cond(inner, &step.node_types)?.into_iter().collect();
                         if let Some(pred) = &step.predicate {
                             conds.extend(b.node_constraint_conds(inner, pred)?);
                         }

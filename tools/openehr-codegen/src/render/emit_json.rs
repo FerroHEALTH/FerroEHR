@@ -837,7 +837,10 @@ fn emit_struct_deserialize(
          }}\n}}\n"
     );
 
-    // The visitor.
+    // The visitor. `visit_map` is never inlined, so each class's field slots
+    // live in its own frame and a nested read keeps one node's slots per level
+    // on the stack, never the slots of every subtype a dispatch could reach
+    // (#5997).
     let _ = write!(
         b,
         "struct __Visitor{vis_args}{vis_body};\n\
@@ -845,10 +848,17 @@ fn emit_struct_deserialize(
          type Value = {path}::{rust}{args};\n\
          fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {{\n\
          __f.write_str(\"an openEHR `{spec}` object\")\n}}\n\
+         #[inline(never)]\n\
          fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) \
-         -> ::core::result::Result<Self::Value, __A::Error> {{\n\
-         let mut __seen_type = false;\n"
+         -> ::core::result::Result<Self::Value, __A::Error> {{\n"
     );
+    // An RM object counts against the readers' one nesting limit (#5997).
+    if schema.schema.schema_name == crate::plan::layout::RM_SCHEMA {
+        b.push_str(
+            "let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;\n",
+        );
+    }
+    b.push_str("let mut __seen_type = false;\n");
     let slots: Vec<FieldSlot> = fields.iter().map(|f| field_slot(f, "_")).collect();
     for (i, slot) in slots.iter().enumerate() {
         let _ = writeln!(b, "let mut __s{i}: {} = None;", slot.slot_ty);

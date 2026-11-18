@@ -24,21 +24,75 @@ use crate::v1_1::integration::generic_entry::GenericEntry;
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContentItem {
     /// The `ACTION` subtype of `CONTENT_ITEM`.
-    Action(Action),
+    Action(Box<Action>),
     /// The `ADMIN_ENTRY` subtype of `CONTENT_ITEM`.
-    AdminEntry(AdminEntry),
+    AdminEntry(Box<AdminEntry>),
     /// The `CITATION` subtype of `CONTENT_ITEM`.
-    Citation(Citation<Locatable>),
+    Citation(Box<Citation<Locatable>>),
     /// The `EVALUATION` subtype of `CONTENT_ITEM`.
-    Evaluation(Evaluation),
+    Evaluation(Box<Evaluation>),
     /// The `GENERIC_ENTRY` subtype of `CONTENT_ITEM`.
-    GenericEntry(GenericEntry),
+    GenericEntry(Box<GenericEntry>),
     /// The `INSTRUCTION` subtype of `CONTENT_ITEM`.
-    Instruction(Instruction),
+    Instruction(Box<Instruction>),
     /// The `OBSERVATION` subtype of `CONTENT_ITEM`.
-    Observation(Observation),
+    Observation(Box<Observation>),
     /// The `SECTION` subtype of `CONTENT_ITEM`.
-    Section(Section),
+    Section(Box<Section>),
     /// The `VIEW_SECTION` subtype of `CONTENT_ITEM`.
-    ViewSection(ViewSection),
+    ViewSection(Box<ViewSection>),
+}
+
+impl From<Action> for ContentItem {
+    fn from(value: Action) -> Self {
+        Self::Action(Box::new(value))
+    }
+}
+
+impl From<AdminEntry> for ContentItem {
+    fn from(value: AdminEntry) -> Self {
+        Self::AdminEntry(Box::new(value))
+    }
+}
+
+impl From<Citation<Locatable>> for ContentItem {
+    fn from(value: Citation<Locatable>) -> Self {
+        Self::Citation(Box::new(value))
+    }
+}
+
+impl From<Evaluation> for ContentItem {
+    fn from(value: Evaluation) -> Self {
+        Self::Evaluation(Box::new(value))
+    }
+}
+
+impl From<GenericEntry> for ContentItem {
+    fn from(value: GenericEntry) -> Self {
+        Self::GenericEntry(Box::new(value))
+    }
+}
+
+impl From<Instruction> for ContentItem {
+    fn from(value: Instruction) -> Self {
+        Self::Instruction(Box::new(value))
+    }
+}
+
+impl From<Observation> for ContentItem {
+    fn from(value: Observation) -> Self {
+        Self::Observation(Box::new(value))
+    }
+}
+
+impl From<Section> for ContentItem {
+    fn from(value: Section) -> Self {
+        Self::Section(Box::new(value))
+    }
+}
+
+impl From<ViewSection> for ContentItem {
+    fn from(value: ViewSection) -> Self {
+        Self::ViewSection(Box::new(value))
+    }
 }

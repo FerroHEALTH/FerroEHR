@@ -98,15 +98,16 @@ pub struct Placement {
 /// The leading data-modifying CTEs that bring an archived object back to the
 /// hot tier before a write lands on it.
 ///
-/// One `UPDATE` of the partition key per relation set: the node and attestation
-/// rows follow their version rows through the foreign keys' `ON UPDATE
-/// CASCADE`, so neither is named here. Both statements match nothing in the
-/// common unarchived case.
+/// One `UPDATE` of the partition key per relation set: the attestation rows
+/// follow their version rows through the foreign key's `ON UPDATE CASCADE`,
+/// and the node rows, which have no foreign key (#5969), are moved by name.
+/// Every statement matches nothing in the common unarchived case.
 macro_rules! thaw_cte {
     () => {
         concat!(
             "WITH tv AS (UPDATE version SET tier = 'hot' ",
             "            WHERE vo_id = $1 AND tier = 'cold'), ",
+            "tn AS (UPDATE node SET tier = 'hot' WHERE tier = 'cold' AND vo_id = $1), ",
             "th AS (UPDATE vo_head SET tier = 'hot', archived_at = NULL, archive_reason = NULL ",
             "       WHERE vo_id = $1 AND tier = 'cold'), "
         )

@@ -604,11 +604,20 @@ fn emit_struct_from_xml(
     let (hdr, args) = generic_header(generics, "crate::xml::runtime::FromXml");
     let attrs = attr_names(target.spec, xsd);
     let (path, rust) = (target.path, target.rust);
+    // Never inlined, so a nested read keeps one node's accumulators per level
+    // on the stack, and an RM object counts against the readers' one nesting
+    // limit (#5997).
     let _ = write!(
         b,
         "impl{hdr} crate::xml::runtime::FromXml for {path}::{rust}{args} {{\n\
+         #[inline(never)]\n\
          fn from_xml(reader: &mut crate::xml::runtime::XmlReader, start: &crate::xml::runtime::StartTag) -> Result<Self, crate::xml::runtime::XmlError> {{\n"
     );
+    if door_env.is_some_and(|s| s.schema.schema_name == crate::plan::layout::RM_SCHEMA) {
+        b.push_str(
+            "let _nesting = openehr_base::nesting::enter().map_err(crate::xml::runtime::XmlError::too_deep)?;\n",
+        );
+    }
     emit_read_accumulators(b, fields, &attrs);
     let unmodeled = xsd_unmodeled_elements(target.spec, fields, xsd);
     emit_read_loop(b, target.spec, fields, &attrs, &unmodeled);

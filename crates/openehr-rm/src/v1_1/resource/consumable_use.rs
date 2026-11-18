@@ -17,5 +17,5 @@ pub struct ConsumableUse {
     /// The `cost_data` attribute of openEHR `RESOURCE_USE` (the vendored BMM carries no documentation for it).
     pub cost_data: Option<ItemStructure>,
     /// The `amount` attribute of openEHR `CONSUMABLE_USE` (the vendored BMM carries no documentation for it).
-    pub amount: Option<DataValue>,
+    pub amount: Option<Box<DataValue>>,
 }

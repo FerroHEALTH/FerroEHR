@@ -1197,9 +1197,15 @@ fn single_field_type(
         })
     };
     if cyclic {
+        return format!("Box<{inner}>");
+    }
+    let inner = crate::plan::ordered_hashes::retype(model, class, &p.name, inner);
+    if overridden.is_none()
+        && crate::plan::layout::boxes_field(model, class, p.is_mandatory, &inner, generics)
+    {
         format!("Box<{inner}>")
     } else {
-        crate::plan::ordered_hashes::retype(model, class, &p.name, inner)
+        inner
     }
 }
 
@@ -1404,6 +1410,45 @@ fn emit_enum(
         b.push_str(&format!("    {variant}({payload}),\n"));
     }
     b.push_str("}\n");
+    if model.in_schema(&class.name, crate::plan::layout::RM_SCHEMA) {
+        b.push_str(&render_variant_froms(&ty, &gen_decl, &payloads));
+    }
+    b
+}
+
+/// One `From<payload> for Enum` per variant of an RM enum, so a caller builds
+/// a variant the same way whether the layout boxes it or not
+/// ([`crate::plan::layout`]). A payload type two variants share gets none,
+/// since the conversion would be ambiguous.
+fn render_variant_froms(ty: &str, gen_decl: &str, payloads: &[(String, String, String)]) -> String {
+    let inner = |payload: &str| -> String {
+        payload
+            .strip_prefix("Box<")
+            .and_then(|p| p.strip_suffix('>'))
+            .unwrap_or(payload)
+            .to_string()
+    };
+    let mut b = String::new();
+    for (variant, payload, _) in payloads {
+        let source = inner(payload);
+        if payloads
+            .iter()
+            .filter(|(_, p, _)| inner(p) == source)
+            .count()
+            > 1
+        {
+            continue;
+        }
+        let value = if payload.starts_with("Box<") {
+            "Box::new(value)"
+        } else {
+            "value"
+        };
+        b.push_str(&format!(
+            "\nimpl{gen_decl} From<{source}> for {ty}{gen_decl} {{\n    \
+             fn from(value: {source}) -> Self {{\n        Self::{variant}({value})\n    }}\n}}\n"
+        ));
+    }
     b
 }
 
@@ -1485,7 +1530,7 @@ fn enum_literals(enumeration: &BmmEnumeration) -> Vec<EnumLit> {
 /// (`EL_TERMINAL` ⊇ `EL_CASE_TABLE<EL_TERMINAL>`), or the variant's own fields
 /// reach back to the enum (`BMM_TYPE` ⊇ `BMM_CONTAINER_TYPE` whose `base_type`
 /// is a `BMM_TYPE`). A `Vec`/map payload already breaks the cycle.
-fn enum_variant_payload(
+pub(crate) fn enum_variant_payload(
     model: &Model,
     class: &BmmClass,
     subtype: &str,
@@ -1512,11 +1557,12 @@ fn enum_variant_payload(
         model.effective_roots(&BmmType::Simple(subtype.to_owned()), &mut roots);
         roots.contains(&class.name) || model.reaches(subtype, &class.name, &mut BTreeSet::new())
     };
-    let payload = if cyclic {
-        format!("Box<{payload}>")
-    } else {
-        payload
-    };
+    let payload =
+        if cyclic || crate::plan::layout::boxes_variant(model, class, &payload, enum_generics) {
+            format!("Box<{payload}>")
+        } else {
+            payload
+        };
     let doc = format!("The `{subtype}` subtype of `{}`.", class.name);
     (variant, payload, doc)
 }

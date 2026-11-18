@@ -213,7 +213,7 @@ pub struct DetailsWriter {
 impl DetailsWriter {
     /// Adds `value` as the element of `detail`.
     pub fn value(&mut self, detail: Detail, value: DataValue) {
-        self.items.push(Item::Element(Element {
+        self.items.push(Item::Element(Box::new(Element {
             name: text(detail.name()),
             archetype_node_id: detail.code().to_owned(),
             uid: None,
@@ -221,9 +221,9 @@ impl DetailsWriter {
             archetype_details: None,
             feeder_audit: None,
             null_flavour: None,
-            value: Some(value),
+            value: Some(Box::new(value)),
             null_reason: None,
-        }));
+        })));
     }
 
     /// Adds `value` as a `DV_TEXT` element of `detail`, when there is one and
@@ -300,13 +300,13 @@ impl DetailsWriter {
             archetype_node_id: ARCHETYPE.to_owned(),
             uid: None,
             links: None,
-            archetype_details: Some(Archetyped {
+            archetype_details: Some(Box::new(Archetyped {
                 archetype_id: ArchetypeId {
                     value: ARCHETYPE.to_owned(),
                 },
                 template_id: None,
                 rm_version: "1.2.0".to_owned(),
-            }),
+            })),
             feeder_audit: None,
             items: Some(self.items),
         })))
@@ -380,7 +380,7 @@ impl<'a> Details<'a> {
             .iter()
             .flatten()
             .map(|item| match item {
-                Item::Element(element) => Ok(element),
+                Item::Element(element) => Ok(&**element),
                 Item::Cluster(_) => Err(DetailsError::Foreign),
             })
             .collect::<Result<_, _>>()?;
@@ -392,7 +392,7 @@ impl<'a> Details<'a> {
         self.elements
             .iter()
             .filter(move |element| element.archetype_node_id == detail.code())
-            .filter_map(|element| element.value.as_ref())
+            .filter_map(|element| element.value.as_deref())
     }
 
     /// The texts of `detail`.

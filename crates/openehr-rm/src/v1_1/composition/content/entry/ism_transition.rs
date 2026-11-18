@@ -16,11 +16,11 @@ pub struct IsmTransition {
     /// The ISM current state. Coded by openEHR terminology group Instruction states.
     pub current_state: DvCodedText,
     /// The ISM transition which occurred to arrive in the current_state. Coded by openEHR terminology group  Instruction transitions.
-    pub transition: Option<DvCodedText>,
+    pub transition: Option<Box<DvCodedText>>,
     /// The step in the careflow process which occurred as part of generating this action, e.g.  dispense ,  start_administration.
     ///
     /// This attribute represents the clinical  label for the activity, as  opposed to current_state which represents  the state machine (ISM)  computable form. Defined in archetype.
-    pub careflow_step: Option<DvCodedText>,
+    pub careflow_step: Option<Box<DvCodedText>>,
     /// Optional possibility of adding one or more reasons for this careflow step having been taken. Multiple reasons may occur in medication management for example.
     pub reason: Option<Vec<DvText>>,
 }
