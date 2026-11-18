@@ -49,6 +49,7 @@ mod rest_client_runtime;
 mod rest_contract;
 mod rest_routes;
 mod rest_server;
+mod rm_access;
 mod rm_validation;
 mod xml_abstract_root;
 mod xml_c14n;
