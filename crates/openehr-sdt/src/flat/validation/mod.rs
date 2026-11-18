@@ -279,32 +279,29 @@ pub fn unresolvable_coded_leaves(
     doc: &Map<String, Value>,
     wt: &WebTemplate,
 ) -> Vec<(String, String)> {
-    struct CodedLeaf {
-        segments: Vec<path::Segment>,
-        code: Option<String>,
+    #[derive(Default)]
+    struct CodedLeaf<'d> {
+        code: Option<&'d str>,
         has_value: bool,
-        terminology: Option<String>,
+        terminology: Option<&'d str>,
     }
-    let mut per_leaf: IndexMap<String, CodedLeaf> = IndexMap::new();
+    let mut per_leaf: IndexMap<&str, CodedLeaf<'_>> = IndexMap::new();
     for (key, value) in doc {
-        let Ok(fk) = path::FlatKey::parse(key) else {
-            continue; // a malformed key is the conversion path's rejection, not this one's
-        };
-        if fk.is_ctx() {
+        // A malformed key is the conversion path's rejection, not this one's.
+        if !path::well_formed(key) {
             continue;
         }
-        let path_str = key.split('|').next().unwrap_or(key).to_owned();
-        let suffix = fk.suffixes.first().map(|s| s.name.clone());
-        let entry = per_leaf.entry(path_str).or_insert_with(|| CodedLeaf {
-            segments: fk.segments,
-            code: None,
-            has_value: false,
-            terminology: None,
-        });
-        match suffix.as_deref() {
-            Some("code") => entry.code = value.as_str().map(str::to_owned),
+        let mut pipe_parts = key.split('|');
+        let path_str = pipe_parts.next().unwrap_or(key);
+        let first_segment = path_str.split('/').next().and_then(path::name_of);
+        if first_segment == Some("ctx") {
+            continue;
+        }
+        let entry = per_leaf.entry(path_str).or_default();
+        match pipe_parts.next().and_then(path::name_of) {
+            Some("code") => entry.code = value.as_str(),
             Some("value") => entry.has_value = true,
-            Some("terminology") => entry.terminology = value.as_str().map(str::to_owned),
+            Some("terminology") => entry.terminology = value.as_str(),
             _ => {}
         }
     }
@@ -314,20 +311,20 @@ pub fn unresolvable_coded_leaves(
         if leaf.has_value {
             continue;
         }
-        let Some(node) = find_node_by_segments(wt, &leaf.segments) else {
+        let Ok(fk) = path::FlatKey::parse(path_str) else {
+            continue;
+        };
+        let Some(node) = find_node_by_segments(wt, &fk.segments) else {
             continue;
         };
         let miss = node.inputs.iter().any(|input| {
             !input.list.is_empty()
                 && input.list_open != Some(true)
-                && leaf::terminology_matches(
-                    input.terminology.as_deref(),
-                    leaf.terminology.as_deref(),
-                )
+                && leaf::terminology_matches(input.terminology.as_deref(), leaf.terminology)
                 && !input.list.iter().any(|cv| cv.value == code)
         });
         if miss {
-            out.push((path_str, code));
+            out.push((path_str.to_owned(), code.to_owned()));
         }
     }
     out

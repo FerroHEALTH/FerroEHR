@@ -479,6 +479,13 @@ impl FromPrimitive for f64 {
     fn from_value(value: RmValue, at: Site) -> Result<Self, AccessError> {
         match value {
             RmValue::Real(r) => Ok(r),
+            // NOTE: ITS-JSON reads an integer-written number into a `Real` (the canonical reader's `f64`).
+            #[expect(
+                clippy::as_conversions,
+                clippy::cast_precision_loss,
+                reason = "the canonical reader reads a JSON integer into f64 the same way (serde_json)"
+            )]
+            RmValue::Integer(i) => Ok(i as f64),
             other => Err(at.refuse(&other.kind())),
         }
     }

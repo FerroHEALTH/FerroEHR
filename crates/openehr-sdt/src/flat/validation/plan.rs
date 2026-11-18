@@ -45,6 +45,80 @@ pub(crate) struct NodeWalk {
     /// ([`rmpath::NameFallback`]), so a step whose name conjunct a renamed
     /// instance does not match still reaches it when the name is redundant.
     pub(crate) name_fallback: rmpath::NameFallback,
+    /// Each child's path relative to this node ([`rmpath::relative`]),
+    /// index-aligned with [`WebTemplateNode::children`], for the FLAT build
+    /// and flatten.
+    pub(crate) child_segments: Vec<Vec<PathSegment>>,
+    /// Per child, the template's record of each structural wrapper its
+    /// relative path passes ([`crate::flat::build::wrapper_types`]); empty
+    /// when the plan was built without the template's slots.
+    pub(crate) child_wrappers: Vec<Vec<crate::flat::build::WrapperFacts>>,
+    /// Per child, the [`path_fingerprint`] its cached path and wrappers were
+    /// computed from, so a tree changed after preparation is read afresh.
+    pub(crate) child_fingerprints: Vec<u64>,
+    /// The [`slots_fingerprint`] of the template the wrappers were computed
+    /// from.
+    pub(crate) slots_fingerprint: u64,
+}
+
+impl NodeWalk {
+    /// The cached path from `parent` (this plan's node) to its child `index`,
+    /// when it was computed from the paths the two nodes carry now.
+    pub(crate) fn segments_of(
+        &self,
+        parent: &WebTemplateNode,
+        index: usize,
+        child: &WebTemplateNode,
+    ) -> Option<&[PathSegment]> {
+        let fresh = self.child_fingerprints.get(index).copied()
+            == Some(path_fingerprint(&parent.aql_path, &child.aql_path));
+        fresh
+            .then(|| self.child_segments.get(index).map(Vec::as_slice))
+            .flatten()
+    }
+
+    /// The cached wrapper facts of child `index`, when computed from the
+    /// paths the nodes carry now and from slots of `slots_fingerprint`.
+    pub(crate) fn wrappers_of(
+        &self,
+        parent: &WebTemplateNode,
+        index: usize,
+        child: &WebTemplateNode,
+        slots_fingerprint: u64,
+    ) -> Option<&[crate::flat::build::WrapperFacts]> {
+        (self.slots_fingerprint == slots_fingerprint
+            && self.segments_of(parent, index, child).is_some())
+        .then(|| self.child_wrappers.get(index).map(Vec::as_slice))
+        .flatten()
+    }
+}
+
+/// A fingerprint of a parent and child `aqlPath` pair.
+pub(crate) fn path_fingerprint(parent: &str, child: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::hash::DefaultHasher::new();
+    parent.hash(&mut hasher);
+    child.hash(&mut hasher);
+    hasher.finish()
+}
+
+/// A fingerprint of every hoisted-wrapper slot of the tree under `node`, in
+/// tree order.
+pub(crate) fn slots_fingerprint(node: &WebTemplateNode) -> u64 {
+    use std::hash::{Hash, Hasher};
+    fn feed(node: &WebTemplateNode, hasher: &mut std::hash::DefaultHasher) {
+        for slot in &node.slots {
+            slot.path.hash(hasher);
+            slot.rm_type.hash(hasher);
+            slot.name.hash(hasher);
+        }
+        for child in &node.children {
+            feed(child, hasher);
+        }
+    }
+    let mut hasher = std::hash::DefaultHasher::new();
+    feed(node, &mut hasher);
+    hasher.finish()
 }
 
 /// A sibling group of `WebTemplate` children sharing one `aqlPath` (a single
@@ -142,6 +216,18 @@ impl NodeWalk {
             slot_groups,
             slot_names,
             name_fallback,
+            child_segments: node
+                .children
+                .iter()
+                .map(|c| rmpath::relative(aql, &c.aql_path))
+                .collect(),
+            child_wrappers: Vec::new(),
+            child_fingerprints: node
+                .children
+                .iter()
+                .map(|c| path_fingerprint(aql, &c.aql_path))
+                .collect(),
+            slots_fingerprint: 0,
         }
     }
 }
@@ -186,7 +272,23 @@ fn sibling_index_from_segments<'a>(
 /// finalized tree so the validation walk never re-parses a template-static
 /// constraint path.
 pub(crate) fn prepare_walk(node: &mut WebTemplateNode) {
-    let plan = NodeWalk::build(node);
+    let mut slots = Vec::new();
+    crate::flat::build::collect_slot_types(node, &mut slots);
+    let fingerprint = slots_fingerprint(node);
+    prepare(node, &slots, fingerprint);
+}
+
+/// [`prepare_walk`] under the template's hoisted wrappers `slots`, whose
+/// [`slots_fingerprint`] is `fingerprint`.
+fn prepare(node: &mut WebTemplateNode, slots: &[crate::flat::build::SlotType], fingerprint: u64) {
+    let mut plan = NodeWalk::build(node);
+    plan.slots_fingerprint = fingerprint;
+    plan.child_wrappers = node
+        .children
+        .iter()
+        .zip(&plan.child_segments)
+        .map(|(child, rel)| crate::flat::build::wrapper_types(&child.aql_path, rel.len(), slots))
+        .collect();
     node.walk = Some(Box::new(plan));
     for child in node
         .children
@@ -194,6 +296,6 @@ pub(crate) fn prepare_walk(node: &mut WebTemplateNode) {
         .chain(node.alternatives.iter_mut())
         .chain(node.null_constraints.iter_mut())
     {
-        prepare_walk(child);
+        prepare(child, slots, fingerprint);
     }
 }

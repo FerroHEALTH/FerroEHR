@@ -49,6 +49,23 @@ pub struct SimChild {
     pub occurrences: Vec<SimNode>,
 }
 
+impl SimChild {
+    /// The occurrence at position `i`, created (with any intermediate
+    /// placeholder occurrences) if absent.
+    #[expect(
+        clippy::as_conversions,
+        clippy::indexing_slicing,
+        reason = "the loop immediately below grows `occurrences` until `len() > i`, so the index is in bounds by construction (the u32 → usize widening is lossless on every supported target); the fn returns `&mut SimNode`, not an Option"
+    )]
+    fn place(&mut self, i: u32) -> &mut SimNode {
+        let i = i as usize;
+        while self.occurrences.len() <= i {
+            self.occurrences.push(SimNode::default());
+        }
+        &mut self.occurrences[i]
+    }
+}
+
 /// One node of a simplified data instance.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SimNode {
@@ -85,27 +102,36 @@ impl SimNode {
     /// marks the child as indexed on the FLAT wire; use [`Self::place_mut`]
     /// for pure positional placement without that marking.
     pub fn occurrence_mut(&mut self, name: &str, index: Option<u32>) -> &mut SimNode {
+        let child = self.child_mut(name);
         if index.is_some() {
-            self.children.entry(name.to_owned()).or_default().indexed = true;
+            child.indexed = true;
         }
-        self.place_mut(name, index.unwrap_or(0))
+        child.place(index.unwrap_or(0))
+    }
+
+    /// The child `name`, created empty if absent; the name is copied only on
+    /// creation.
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "`i` is the index `get_index_of` or `insert_full` just returned for this map"
+    )]
+    fn child_mut(&mut self, name: &str) -> &mut SimChild {
+        let i = match self.children.get_index_of(name) {
+            Some(i) => i,
+            None => {
+                self.children
+                    .insert_full(name.to_owned(), SimChild::default())
+                    .0
+            }
+        };
+        &mut self.children[i]
     }
 
     /// The child occurrence at position `i`, created (with any intermediate
     /// placeholder occurrences) if absent, without touching the child's
     /// `indexed` marking.
-    #[expect(
-        clippy::as_conversions,
-        clippy::indexing_slicing,
-        reason = "the loop immediately below grows `occurrences` until `len() > i`, so the index is in bounds by construction (the u32 → usize widening is lossless on every supported target); the fn returns `&mut SimNode`, not an Option"
-    )]
     pub fn place_mut(&mut self, name: &str, i: u32) -> &mut SimNode {
-        let child = self.children.entry(name.to_owned()).or_default();
-        let i = i as usize;
-        while child.occurrences.len() <= i {
-            child.occurrences.push(SimNode::default());
-        }
-        &mut child.occurrences[i]
+        self.child_mut(name).place(i)
     }
 
     /// The single occurrence of child `name`, if present.
