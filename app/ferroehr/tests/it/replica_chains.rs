@@ -28,8 +28,14 @@ use ferroehr::versioning::signature::trust::TrustedCertificates;
 /// The system both replicas record as.
 const SYSTEM: &str = "cdr.example.org";
 
-/// The rounds each replica runs.
-const ROUNDS: usize = 24;
+/// The rounds each replica runs in one phase.
+const ROUNDS: usize = 12;
+
+/// The phases of concurrent work. Each ends with every record sealed, so the
+/// log holds at least one checkpoint a phase however fast the host is: one
+/// append seals every entry that waits, and on a slow host a single append
+/// took all 48 of a single phase (#6020).
+const PHASES: usize = 2;
 
 /// One replica: its service, its audit drain, its checkpoints and its store.
 struct Replica {
@@ -119,20 +125,14 @@ async fn work(replica: &Replica) {
     }
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn two_replicas_writing_at_once_leave_every_chain_verifying() {
-    let db = testkit::db().await.expect("testkit database");
-    let pool = db.pool();
-    let signer =
-        crate::access_log_checkpoint::keyring(&crate::access_log_checkpoint::generate_key());
-    let a = replica(&pool, &signer).await;
-    let b = replica(&pool, &signer).await;
-    tokio::join!(work(&a), work(&b));
-    let expected = i64::try_from(2 * ROUNDS).expect("a count");
+/// Waits until the access log holds `expected` records and a checkpoint
+/// seals each of them.
+async fn sealed(pool: &sqlx::PgPool, expected: usize) {
+    let expected = i64::try_from(expected).expect("a count");
     let deadline = std::time::Instant::now() + Duration::from_secs(30);
     loop {
         let entries: i64 = sqlx::query_scalar("SELECT count(*) FROM audit.access_log_record")
-            .fetch_one(&pool)
+            .fetch_one(pool)
             .await
             .expect("the access log is counted");
         if entries == expected {
@@ -148,16 +148,33 @@ async fn two_replicas_writing_at_once_leave_every_chain_verifying() {
         "SELECT count(*) FROM audit.access_log_record r WHERE NOT EXISTS \
          (SELECT 1 FROM audit.access_log_checkpoint c WHERE c.sequence >= r.chain_seq)",
     )
-    .fetch_one(&pool)
+    .fetch_one(pool)
     .await
     .expect("the unsealed records are counted");
     assert_eq!(unsealed, 0, "every record is sealed by its own append");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn two_replicas_writing_at_once_leave_every_chain_verifying() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let signer =
+        crate::access_log_checkpoint::keyring(&crate::access_log_checkpoint::generate_key());
+    let a = replica(&pool, &signer).await;
+    let b = replica(&pool, &signer).await;
+    for phase in 1..=PHASES {
+        tokio::join!(work(&a), work(&b));
+        sealed(&pool, 2 * ROUNDS * phase).await;
+    }
     let written: Vec<i64> =
         sqlx::query_scalar("SELECT sequence FROM audit.access_log_checkpoint ORDER BY sequence")
             .fetch_all(&pool)
             .await
             .expect("the checkpoints are read");
-    assert!(written.len() >= 2, "both drains seal: {written:?}");
+    assert!(
+        written.len() >= PHASES,
+        "each phase is sealed by an append of its own: {written:?}"
+    );
     for sequence in written {
         let checkpoint = a
             .checkpoints

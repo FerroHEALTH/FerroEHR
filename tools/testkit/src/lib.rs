@@ -30,6 +30,7 @@
 // Doctests are copy-paste templates: they must use `?`, never unwrap
 // (C-QUESTION-MARK, https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark).
 #![doc(test(attr(deny(warnings))))]
+mod admission;
 pub mod https;
 pub mod json_literals;
 pub mod roles;
@@ -255,6 +256,7 @@ async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, Testk
     let name = fresh_name();
     // The lease is taken before the clone exists, so no sweep ever sees the
     // clone without its owner.
+    admission::admit(async || connect_ready(server).await).await?;
     let mut lease = connect_ready(server).await?;
     if let Some(key) = lease_key(&name) {
         sqlx::query("SELECT pg_advisory_lock($1, $2)")
@@ -275,9 +277,10 @@ async fn provision(server: &str, template: Option<&str>) -> Result<TestDb, Testk
     drop(admin.close().await);
 
     let url = clone_url(server, &name);
-    // Every clone pool shares one server started with `max_connections=200`.
+    // Every clone pool shares one server, which admits the clones it has
+    // room for (`admission`).
     let mut config = DbConfig::new(url.clone());
-    config.max_connections = Some(10);
+    config.max_connections = Some(admission::POOL);
     config.min_connections = Some(0);
     // Retry ESTABLISHMENT only: under a full-parallel nextest run the shared
     // server's accept path is briefly saturable, which is load, not a defect.
