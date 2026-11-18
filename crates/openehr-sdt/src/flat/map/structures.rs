@@ -24,6 +24,7 @@ use super::{Attr, data_values, parties};
 use crate::flat::error::FlatError;
 use crate::flat::sim::SimNode;
 use crate::flat::typed::{self, Build, Obj, o, s};
+use openehr_rm::v1_2::access;
 
 // ── sim → RM ──────────────────────────────────────────────────────────────────
 
@@ -266,7 +267,7 @@ fn build_link(node: &SimNode, path: &str, index: usize) -> Result<Obj, FlatError
 
 /// FEEDER_AUDIT (master05 §FEEDER_AUDIT).
 fn build_feeder_audit(node: &SimNode) -> Result<Obj, FlatError> {
-    let mut fa = typed::new("FEEDER_AUDIT")?;
+    let mut fa = access::construct("FEEDER_AUDIT")?;
     if let Some(o) = single(node, "originating_system_audit") {
         fa.put(
             "originating_system_audit",
@@ -311,7 +312,7 @@ fn build_audit_details(node: &SimNode) -> Result<Obj, FlatError> {
         d.put_datum("version_id", v)?;
     }
     if let Some(v) = node.attrs.get("time") {
-        let mut time = typed::new("DV_DATE_TIME")?;
+        let mut time = access::construct("DV_DATE_TIME")?;
         time.put_datum("value", v)?;
         d.put("time", o(time))?;
     }

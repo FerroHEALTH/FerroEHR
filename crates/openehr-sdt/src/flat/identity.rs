@@ -6,6 +6,7 @@
 //! `UML/classes/org.openehr.rm.common.locatable.adoc`,
 //! `org.openehr.rm.common.archetyped.adoc`).
 
+use openehr_rm::v1_2::access;
 use openehr_rm::v1_2::access::RmObject;
 
 use crate::flat::build::is_locatable;
@@ -94,7 +95,7 @@ pub(crate) fn stamp_archetype_details(
         return Ok(());
     }
     obj.or_put("archetype_details", || {
-        let mut a = typed::new("ARCHETYPED")?;
+        let mut a = access::construct("ARCHETYPED")?;
         if let Some(id) = recorded_archetype_id(node) {
             a.put(
                 "archetype_id",

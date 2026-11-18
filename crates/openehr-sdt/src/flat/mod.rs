@@ -41,10 +41,10 @@ pub mod flatten;
 pub(crate) mod identity;
 pub(crate) mod instance;
 mod instant;
-#[cfg(test)]
-mod parity;
 pub(crate) mod map;
 pub mod navigate;
+#[cfg(test)]
+mod parity;
 pub mod path;
 pub(crate) mod rmpath;
 pub mod sim;

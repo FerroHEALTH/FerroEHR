@@ -267,7 +267,7 @@ async fn an_aql_request_stays_within_its_statement_budget() {
         query(&app, budget, &ehrs, EHRS).await;
         drained(&pool).await;
         let before = entries(&pool).await;
-        let evicted = testkit::statement_window(&pool)
+        let evicted = testkit::statements::statement_window(&pool)
             .await
             .expect("the statement counts reset");
         let sent_before = round_trips.0.load(Ordering::Relaxed);
@@ -275,7 +275,7 @@ async fn an_aql_request_stays_within_its_statement_budget() {
         let sent = round_trips.0.load(Ordering::Relaxed) - sent_before;
         drained(&pool).await;
         let statements = counted(&pool).await;
-        testkit::assert_statements_kept(&pool, evicted)
+        testkit::statements::assert_statements_kept(&pool, evicted)
             .await
             .expect("no statement evicted while the test counted them");
         let written = entries(&pool).await - before;

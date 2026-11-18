@@ -15,13 +15,11 @@
 
 /// Files whose `_type`-carrying `json!` literals are classified as something
 /// other than a synthesized canonical shape, each with the reason.
-const ALLOWLIST: &[(&str, &str)] = &[
-    (
-        "flat/example.rs",
-        "the example generator emits skeleton fragments a client fills in — \
+const ALLOWLIST: &[(&str, &str)] = &[(
+    "flat/example.rs",
+    "the example generator emits skeleton fragments a client fills in — \
          deliberately partial shapes",
-    ),
-];
+)];
 
 /// No production `json!` literal outside the classified allowlist synthesizes a
 /// canonical openEHR shape.

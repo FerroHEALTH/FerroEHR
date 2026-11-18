@@ -55,6 +55,11 @@ pub(crate) trait Instance<'a>: Copy {
     /// null.
     fn to_value(self) -> Option<Value>;
 
+    /// This value as the `|raw` datum that carries it whole (master04 §Raw
+    /// canonical JSON); `None` for a null, or an object outside the classes
+    /// a `|raw` output carries.
+    fn to_raw(self) -> Option<crate::flat::sim::RawDatum>;
+
     /// The string at attribute `name`.
     fn str_at(self, name: &str) -> Option<&'a str> {
         self.attr(name).and_then(Instance::as_str)
@@ -109,6 +114,9 @@ impl<'a> Instance<'a> for &'a Value {
     }
     fn to_value(self) -> Option<Value> {
         (!self.is_null()).then(|| self.clone())
+    }
+    fn to_raw(self) -> Option<crate::flat::sim::RawDatum> {
+        self.to_value().map(crate::flat::sim::RawDatum::Json)
     }
     fn keys(self) -> Vec<&'a str> {
         self.as_object().map_or_else(Vec::new, |o| {
@@ -200,6 +208,12 @@ impl<'a> Instance<'a> for RmRef<'a> {
             // NOTE: a typed object outside the |raw carriers renders as nothing, never as a stand-in.
             RmRef::Object(o) => return crate::flat::typed::canonical_of(o).ok(),
         })
+    }
+    fn to_raw(self) -> Option<crate::flat::sim::RawDatum> {
+        match self {
+            RmRef::Object(o) => crate::flat::typed::raw_of(o),
+            scalar => scalar.to_value().map(crate::flat::sim::RawDatum::Json),
+        }
     }
     fn keys(self) -> Vec<&'a str> {
         match self {

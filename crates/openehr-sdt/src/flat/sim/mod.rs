@@ -23,6 +23,10 @@
 //!   occurrence list plus whether occurrences are `:i`-indexed on the FLAT
 //!   wire (`master04 §Instance Indexing`: indices appear when a node
 //!   repeats; single-valued nodes carry none).
+//! - **Raw** (`raw`): the `|raw` datum (`master04 §Raw canonical JSON`), the
+//!   RM object a node carries whole, kept as the object, its text or its
+//!   value so neither wire form reads or writes it through a second
+//!   representation (#6003). It writes before the node's other parts.
 
 #![expect(
     clippy::disallowed_types,
@@ -35,7 +39,9 @@ pub mod flat;
 pub mod structured;
 
 use indexmap::IndexMap;
+use openehr_rm::v1_2::access::RmObject;
 use serde_json::Value;
+use serde_json::value::RawValue;
 
 /// The occurrences of one child segment.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -66,11 +72,64 @@ impl SimChild {
     }
 }
 
+/// The `|raw` datum of a node (`master04 §Raw canonical JSON`): an RM object
+/// carried whole, in the form the side that made it holds.
+#[derive(Debug)]
+pub enum RawDatum {
+    /// A typed object, flattened from a typed COMPOSITION.
+    Rm(Box<dyn RmObject>),
+    /// The canonical JSON text a FLAT document carries, read where the build
+    /// meets it.
+    Text(Box<RawValue>),
+    /// The canonical-JSON value a STRUCTURED document, a parsed FLAT map or a
+    /// canonical-JSON flatten carries.
+    Json(Value),
+}
+
+impl RawDatum {
+    /// The canonical-JSON value of the datum, for a wire form that is a
+    /// value; `None` for an object no `|raw` output carries, or text that
+    /// does not parse.
+    #[must_use]
+    pub fn to_value(&self) -> Option<Value> {
+        match self {
+            Self::Rm(object) => crate::flat::typed::canonical_of(&**object).ok(),
+            // NOTE: the text came from a parsed document, so it is JSON; a failure reads as absent.
+            Self::Text(text) => serde_json::from_str(text.get()).ok(),
+            Self::Json(value) => Some(value.clone()),
+        }
+    }
+}
+
+impl Clone for RawDatum {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Rm(object) => Self::Rm(object.clone_box()),
+            Self::Text(text) => Self::Text(text.clone()),
+            Self::Json(value) => Self::Json(value.clone()),
+        }
+    }
+}
+
+impl PartialEq for RawDatum {
+    /// Two datums are equal when they carry the same canonical JSON, in
+    /// whatever form each holds it.
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Text(a), Self::Text(b)) => a.get() == b.get(),
+            (Self::Json(a), Self::Json(b)) => a == b,
+            _ => self.to_value() == other.to_value(),
+        }
+    }
+}
+
 /// One node of a simplified data instance.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct SimNode {
     /// Datum parts keyed by printed suffix chain; `""` is the bare value.
     pub attrs: IndexMap<String, Value>,
+    /// The `|raw` datum, the RM object the node carries whole.
+    pub raw: Option<RawDatum>,
     /// Child segments in first-seen (or template) order.
     pub children: IndexMap<String, SimChild>,
 }
@@ -79,7 +138,7 @@ impl SimNode {
     /// Whether this node carries nothing at all.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.attrs.is_empty() && self.children.is_empty()
+        self.attrs.is_empty() && self.raw.is_none() && self.children.is_empty()
     }
 
     /// Whether this node is a bare-only leaf (a single `""` datum, no
@@ -88,7 +147,20 @@ impl SimNode {
     /// ["2024-01-15T10:30:00Z"]`).
     #[must_use]
     pub fn is_bare_leaf(&self) -> bool {
-        self.children.is_empty() && self.attrs.len() == 1 && self.attrs.contains_key("")
+        self.children.is_empty()
+            && self.raw.is_none()
+            && self.attrs.len() == 1
+            && self.attrs.contains_key("")
+    }
+
+    /// Sets the datum part `chain` to `value`: the `|raw` datum when the
+    /// chain is `raw`, a part of [`Self::attrs`] otherwise.
+    pub fn put_datum(&mut self, chain: String, value: Value) {
+        if chain == "raw" {
+            self.raw = Some(RawDatum::Json(value));
+        } else {
+            self.attrs.insert(chain, value);
+        }
     }
 
     /// The bare (suffix-less) datum, if any.

@@ -20,6 +20,7 @@
 //! application modules `plan::drafts` names.
 
 pub(crate) mod bound_presence;
+pub(crate) mod doc_prose;
 pub(crate) mod emit;
 pub(crate) mod emit_access;
 pub(crate) mod emit_drafts;
@@ -35,6 +36,7 @@ pub(crate) mod emit_validate;
 pub(crate) mod emit_walk;
 pub(crate) mod emit_xml;
 pub(crate) mod emit_xml_guards;
+pub(crate) mod generics;
 pub(crate) mod json_bounds;
 pub(crate) mod model_query;
 pub(crate) mod model_types;

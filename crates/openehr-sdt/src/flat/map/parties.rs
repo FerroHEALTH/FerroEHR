@@ -24,6 +24,7 @@ use crate::flat::error::FlatError;
 use crate::flat::instance::{Instance, at};
 use crate::flat::sim::SimNode;
 use crate::flat::typed::{self, Build, Obj, o, s};
+use openehr_rm::v1_2::access;
 
 // ── DV_IDENTIFIER (master05 §DV_IDENTIFIER) ───────────────────────────────────
 
@@ -45,7 +46,7 @@ pub(super) fn emit_identifier<'a, I: Instance<'a>>(rm: I, out: &mut SimNode) {
 /// |id might be left out", the bare value) plus the optional `|issuer` /
 /// `|assigner` / `|type`.
 pub(super) fn build_identifier(node: &SimNode) -> Result<Obj, FlatError> {
-    let mut o = typed::new("DV_IDENTIFIER")?;
+    let mut o = access::construct("DV_IDENTIFIER")?;
     match node.attrs.get("id").or_else(|| node.bare()) {
         Some(id) => o.put_datum("id", id)?,
         None => o.put("id", s(""))?,
@@ -67,7 +68,7 @@ pub(super) fn build_identifier(node: &SimNode) -> Result<Obj, FlatError> {
 /// # Errors
 /// [`FlatError::Rm`] for a datum that is no string.
 pub(crate) fn identifier_from_fields(fields: &[(&str, &Value)]) -> Result<Obj, FlatError> {
-    let mut o = typed::new("DV_IDENTIFIER")?;
+    let mut o = access::construct("DV_IDENTIFIER")?;
     for (field, value) in fields {
         o.put_datum(field, value)?;
     }
@@ -146,8 +147,8 @@ pub(super) fn emit_party_as<'a, I: Instance<'a>>(
 ) {
     if ref_type_survives(p, default_party_type) {
         emit_party(p, out);
-    } else if let Some(raw) = p.to_value() {
-        out.attrs.insert("raw".to_owned(), raw);
+    } else if let Some(raw) = p.to_raw() {
+        out.raw = Some(raw);
     }
 }
 
@@ -237,7 +238,7 @@ pub(super) fn build_party(node: &SimNode, default_party_type: &str) -> Result<Ob
     let identifiers = build_party_identifiers(node)?;
 
     if explicit_self {
-        let mut p = typed::new("PARTY_SELF")?;
+        let mut p = access::construct("PARTY_SELF")?;
         if let Some(ext) = external_ref(node, default_party_type)? {
             p.put("external_ref", o(ext))?;
         }
@@ -249,7 +250,7 @@ pub(super) fn build_party(node: &SimNode, default_party_type: &str) -> Result<Ob
     } else {
         "PARTY_IDENTIFIED"
     };
-    let mut p = typed::new(ty)?;
+    let mut p = access::construct(ty)?;
     if let Some(name) = node.attrs.get("name") {
         p.put_datum("name", name)?;
     }
@@ -344,9 +345,7 @@ fn build_party_identifiers(node: &SimNode) -> Result<Vec<Obj>, FlatError> {
 /// PARTY_RELATED `/relationship` child.
 pub(super) fn emit_participation<'a, I: Instance<'a>>(p: I, out: &mut SimNode) {
     if !performer_survives(p) {
-        if let Some(raw) = p.to_value() {
-            out.attrs.insert("raw".to_owned(), raw);
-        }
+        out.raw = p.to_raw();
         return;
     }
     if let Some(f) = at(p, &["function", "value"]).and_then(Instance::to_value) {
@@ -442,7 +441,7 @@ fn build_performer(node: &SimNode) -> Result<Obj, FlatError> {
     } else {
         "PARTY_IDENTIFIED"
     };
-    let mut p = typed::new(ty)?;
+    let mut p = access::construct(ty)?;
     if let Some(name) = node.attrs.get("name") {
         p.put_datum("name", name)?;
     }

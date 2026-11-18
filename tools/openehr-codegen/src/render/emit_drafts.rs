@@ -12,7 +12,8 @@
 //!
 //! The text half only; the draft CLI writes the files.
 
-use crate::analyze::{Model, augment_with_reemit, cross_schema_reemit};
+use crate::analyze::Model;
+use crate::analyze::reemit::{augment_with_reemit, cross_schema_reemit};
 use crate::cli::EmittedFile;
 use crate::load::bmm::BmmSchema;
 use crate::load::impls::SiblingImpls;

@@ -184,7 +184,7 @@ impl FragmentPath {
                 return self.walk(candidate, at + 1, found);
             }
             elements(candidate).any(|next| {
-                step.filter.iter().all(|cond| cond.holds(next)) && self.walk(next, at + 1, found)
+                step.filter.iter().all(|cond| cond.holds(next, 0)) && self.walk(next, at + 1, found)
             })
         };
         if step.multi {
@@ -196,17 +196,12 @@ impl FragmentPath {
 }
 
 impl Condition {
-    /// Whether some item of the operand compares true with the value.
-    fn holds(&self, item: &Value) -> bool {
-        self.operand(item, 0)
-    }
-
     /// Whether some item the operand path selects from `item`, from part
-    /// `at` on, compares true.
-    fn operand(&self, item: &Value, at: usize) -> bool {
+    /// `at` on, compares true with the value.
+    fn holds(&self, item: &Value, at: usize) -> bool {
         match self.path.get(at) {
             None => elements(item).any(|left| compare(left, &self.value, self.op)),
-            Some(part) => member(item, part).any(|next| self.operand(next, at + 1)),
+            Some(part) => member(item, part).any(|next| self.holds(next, at + 1)),
         }
     }
 }

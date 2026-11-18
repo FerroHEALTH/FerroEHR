@@ -30,6 +30,7 @@
 )]
 
 use openehr_rm::prelude::Composition;
+use openehr_rm::v1_2::access;
 use serde_json::{Map, Value};
 
 use crate::flat::build::{self, BuildOptions};
@@ -84,7 +85,7 @@ pub fn submitted_composition_from_flat(
     now: &str,
 ) -> Result<Value, FlatError> {
     let tree = flat::parse_flat(doc)?;
-    Ok(typed::render(&*submitted_tree(doc, &tree, wt, now)?))
+    Ok(typed::render(&*submitted_tree(&tree, wt, now)?))
 }
 
 /// FLAT document → typed COMPOSITION for a SUBMITTED body, the typed form of
@@ -97,8 +98,21 @@ pub fn submitted_rm_from_flat(
     wt: &WebTemplate,
     now: &str,
 ) -> Result<Composition, FlatError> {
-    let tree = flat::parse_flat(doc)?;
-    typed::finish(submitted_tree(doc, &tree, wt, now)?)
+    submitted_rm_from_tree(&flat::parse_flat(doc)?, wt, now)
+}
+
+/// A parsed FLAT or STRUCTURED document → typed COMPOSITION for a SUBMITTED
+/// body: the build of [`submitted_rm_from_flat`] over a tree the caller read
+/// straight from the wire text ([`flat::parse_flat_text`]).
+///
+/// # Errors
+/// As [`submitted_composition_from_flat`].
+pub fn submitted_rm_from_tree(
+    tree: &crate::flat::sim::SimDocument,
+    wt: &WebTemplate,
+    now: &str,
+) -> Result<Composition, FlatError> {
+    Ok(access::finish(submitted_tree(tree, wt, now)?)?)
 }
 
 /// The tree a SUBMITTED body builds, with the master04 §Validation input
@@ -112,18 +126,17 @@ pub fn submitted_rm_from_flat(
 /// The build's refusals, [`FlatError::MissingContext`] and
 /// [`FlatError::CodeNotInValueSet`].
 fn submitted_tree(
-    flat_view: &Map<String, Value>,
     tree: &crate::flat::sim::SimDocument,
     wt: &WebTemplate,
     now: &str,
 ) -> Result<typed::Obj, FlatError> {
     match build::composition_tree(tree, wt, now, &BuildOptions::for_template(wt)) {
         Ok(built) => {
-            require_input_valid(flat_view, tree, wt)?;
+            require_input_valid(tree, wt)?;
             Ok(built)
         }
         Err(e @ (FlatError::Rm(_) | FlatError::RawDecode { .. })) => {
-            require_input_valid(flat_view, tree, wt)?;
+            require_input_valid(tree, wt)?;
             Err(e)
         }
         Err(e) => Err(e),
@@ -137,7 +150,6 @@ fn submitted_tree(
 /// build's own syntax-class refusals (`|other` conflicts, malformed datums)
 /// keep precedence over these semantic ones.
 fn require_input_valid(
-    doc: &Map<String, Value>,
     tree: &crate::flat::sim::SimDocument,
     wt: &WebTemplate,
 ) -> Result<(), FlatError> {
@@ -149,7 +161,7 @@ fn require_input_valid(
         };
         return Err(FlatError::MissingContext(field));
     }
-    if let Some((path, code)) = crate::flat::validation::unresolvable_coded_leaves(doc, wt)
+    if let Some((path, code)) = crate::flat::validation::unresolvable_coded_leaves(tree, wt)
         .into_iter()
         .next()
     {
@@ -226,10 +238,7 @@ pub fn submitted_composition_from_structured(
     now: &str,
 ) -> Result<Value, FlatError> {
     let tree = structured::parse_structured(doc)?;
-    // The input checks are defined over the FLAT key form (master04's
-    // canonical spelling); the pure tree→FLAT projection supplies it.
-    let flat_view = flat::emit_flat(&tree);
-    Ok(typed::render(&*submitted_tree(&flat_view, &tree, wt, now)?))
+    Ok(typed::render(&*submitted_tree(&tree, wt, now)?))
 }
 
 /// STRUCTURED document → typed COMPOSITION for a SUBMITTED body, the typed
@@ -242,11 +251,7 @@ pub fn submitted_rm_from_structured(
     wt: &WebTemplate,
     now: &str,
 ) -> Result<Composition, FlatError> {
-    let tree = structured::parse_structured(doc)?;
-    // The input checks are defined over the FLAT key form (master04's
-    // canonical spelling); the pure tree→FLAT projection supplies it.
-    let flat_view = flat::emit_flat(&tree);
-    typed::finish(submitted_tree(&flat_view, &tree, wt, now)?)
+    submitted_rm_from_tree(&structured::parse_structured(doc)?, wt, now)
 }
 
 /// Canonical-JSON COMPOSITION → STRUCTURED document.

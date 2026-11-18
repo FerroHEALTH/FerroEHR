@@ -854,8 +854,7 @@ pub(crate) fn whole_rows(
         version_uid: "",
         template_id: None,
     };
-    let (rows, whole) =
-        ferroehr::storage::render::nodes::stored_nodes_with_fragments(&rendered, &root)?;
+    let (rows, whole) = ferroehr::storage::render::nodes::decompose(&rendered, &root, true)?;
     Ok(rows
         .into_iter()
         .zip(whole)

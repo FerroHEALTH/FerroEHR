@@ -275,59 +275,86 @@ struct LeafGroup {
 /// `check_code_membership` (confident violations only — an explicit
 /// differently-scoped `|terminology` is left to the terminology pass).
 #[must_use]
-pub fn unresolvable_coded_leaves(
-    doc: &Map<String, Value>,
-    wt: &WebTemplate,
-) -> Vec<(String, String)> {
-    #[derive(Default)]
-    struct CodedLeaf<'d> {
-        code: Option<&'d str>,
-        has_value: bool,
-        terminology: Option<&'d str>,
+pub fn unresolvable_coded_leaves(doc: &SimDocument, wt: &WebTemplate) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for (name, child) in &doc.children {
+        if name.as_str() == "ctx" {
+            continue;
+        }
+        let root = (name == &wt.tree.id).then_some(&wt.tree);
+        for_each_occurrence(name, child, "", |path, occ| {
+            coded_leaves_under(occ, root, path, &mut out);
+        });
     }
-    let mut per_leaf: IndexMap<&str, CodedLeaf<'_>> = IndexMap::new();
-    for (key, value) in doc {
-        // A malformed key is the conversion path's rejection, not this one's.
-        if !path::well_formed(key) {
+    out
+}
+
+/// Calls `f` with the FLAT path and the node of every non-empty occurrence of
+/// the child `name` under `parent`, the index printed as the FLAT form
+/// prints it (`master04 §Instance Indexing`).
+fn for_each_occurrence(
+    name: &str,
+    child: &crate::flat::sim::SimChild,
+    parent: &str,
+    mut f: impl FnMut(&str, &SimNode),
+) {
+    let indexed = child.indexed || child.occurrences.len() > 1;
+    for (i, occ) in child.occurrences.iter().enumerate() {
+        if occ.is_empty() {
             continue;
         }
-        let mut pipe_parts = key.split('|');
-        let path_str = pipe_parts.next().unwrap_or(key);
-        let first_segment = path_str.split('/').next().and_then(path::name_of);
-        if first_segment == Some("ctx") {
-            continue;
+        let mut path = String::with_capacity(parent.len() + name.len() + 4);
+        if !parent.is_empty() {
+            path.push_str(parent);
+            path.push('/');
         }
-        let entry = per_leaf.entry(path_str).or_default();
-        match pipe_parts.next().and_then(path::name_of) {
-            Some("code") => entry.code = value.as_str(),
-            Some("value") => entry.has_value = true,
-            Some("terminology") => entry.terminology = value.as_str(),
+        path.push_str(name);
+        if indexed {
+            path.push(':');
+            path.push_str(&i.to_string());
+        }
+        f(&path, occ);
+    }
+}
+
+/// [`unresolvable_coded_leaves`] over the node `node` at `path`, whose
+/// web-template node is `wt_node` when the path resolves to one.
+fn coded_leaves_under(
+    node: &SimNode,
+    wt_node: Option<&WebTemplateNode>,
+    path: &str,
+    out: &mut Vec<(String, String)>,
+) {
+    let (mut code, mut has_value, mut terminology) = (None, false, None);
+    for (chain, value) in &node.attrs {
+        match chain.split('|').next().and_then(path::name_of) {
+            Some("code") => code = value.as_str(),
+            Some("value") => has_value = true,
+            Some("terminology") => terminology = value.as_str(),
             _ => {}
         }
     }
-    let mut out = Vec::new();
-    for (path_str, leaf) in per_leaf {
-        let Some(code) = leaf.code else { continue };
-        if leaf.has_value {
-            continue;
-        }
-        let Ok(fk) = path::FlatKey::parse(path_str) else {
-            continue;
-        };
-        let Some(node) = find_node_by_segments(wt, &fk.segments) else {
-            continue;
-        };
-        let miss = node.inputs.iter().any(|input| {
+    if let (Some(code), false, Some(wt_node)) = (code, has_value, wt_node) {
+        let miss = wt_node.inputs.iter().any(|input| {
             !input.list.is_empty()
                 && input.list_open != Some(true)
-                && leaf::terminology_matches(input.terminology.as_deref(), leaf.terminology)
+                && leaf::terminology_matches(input.terminology.as_deref(), terminology)
                 && !input.list.iter().any(|cv| cv.value == code)
         });
         if miss {
-            out.push((path_str.to_owned(), code.to_owned()));
+            out.push((path.to_owned(), code.to_owned()));
         }
     }
-    out
+    for (name, child) in &node.children {
+        let child_wt = wt_node.filter(|_| !name.starts_with('_')).and_then(|n| {
+            n.children
+                .iter()
+                .find(|c| c.id == *name || c.alt_json_id.as_deref() == Some(name.as_str()))
+        });
+        for_each_occurrence(name, child, path, |child_path, occ| {
+            coded_leaves_under(occ, child_wt, child_path, out);
+        });
+    }
 }
 
 /// Validates that the **mandatory context fields** are present.

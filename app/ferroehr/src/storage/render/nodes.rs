@@ -76,19 +76,6 @@ pub fn stored_nodes(
     Ok(decompose(body, root, false)?.0)
 }
 
-/// The node rows of `body` with each row's whole fragment beside it: its
-/// members but its structure children, before the row slims it. The storage
-/// sweep compares stored rows, read back whole, with these.
-///
-/// # Errors
-/// As [`stored_nodes`].
-pub fn stored_nodes_with_fragments(
-    body: &Rendered,
-    root: &RootIdentity<'_>,
-) -> Result<(Vec<StoredNode>, Vec<String>), StorageError> {
-    decompose(body, root, true)
-}
-
 /// One decomposition: what it reads and what it has written so far.
 struct Walk<'a, 'r> {
     body: &'a Rendered,
@@ -98,8 +85,15 @@ struct Walk<'a, 'r> {
     whole: Option<Vec<String>>,
 }
 
-/// [`stored_nodes`], with each row's whole fragment when `whole` is set.
-fn decompose(
+/// The node rows of `body`, and each row's whole fragment when `whole` is set.
+///
+/// A whole fragment is the row's members but its structure children, before
+/// the row slims it. The storage sweep compares stored rows, read back whole,
+/// with these.
+///
+/// # Errors
+/// As [`stored_nodes`].
+pub fn decompose(
     body: &Rendered,
     root: &RootIdentity<'_>,
     whole: bool,
@@ -667,7 +661,7 @@ pub(crate) fn slim_value(
 mod tests {
     use serde_json::Value;
 
-    use super::stored_nodes_with_fragments;
+    use super::decompose;
     use crate::storage::compact::RootIdentity;
     use crate::storage::render::index::render;
     use crate::storage::row::ReadRow;
@@ -745,7 +739,7 @@ mod tests {
                     template_id: None,
                 },
             ] {
-                let Ok((rows, whole)) = stored_nodes_with_fragments(&rendered, &root) else {
+                let Ok((rows, whole)) = decompose(&rendered, &root, true) else {
                     continue;
                 };
                 let mut read = Vec::new();

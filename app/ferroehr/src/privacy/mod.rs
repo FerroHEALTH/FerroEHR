@@ -63,12 +63,11 @@
 pub mod config;
 pub mod detect;
 mod identifier_kind;
-pub(crate) mod tree;
+pub mod tree;
 
 use std::fmt::Write as _;
 
 use openehr_base::validate::InvariantViolation;
-use serde_json::Value;
 
 use crate::error::ServiceError;
 use crate::privacy::config::{PrivacyConfig, ScanMode};
@@ -282,14 +281,9 @@ impl PrivacyPolicy {
     /// `root` names the RM type the body is (`COMPOSITION`, `EHR_STATUS`, …)
     /// and heads every reported path. The subject rule applies to an
     /// `EHR_STATUS` body only; the other two apply to every clinical kind.
+    /// The body is read through either shape ([`crate::privacy::tree`]).
     #[must_use]
-    pub fn findings(&self, root: &str, body: &Value) -> Vec<Finding> {
-        self.findings_in(root, body)
-    }
-
-    /// [`Self::findings`] over a body read through either shape
-    /// ([`crate::privacy::tree`]).
-    pub(crate) fn findings_in<'a, T: Tree<'a>>(&self, root: &str, body: T) -> Vec<Finding> {
+    pub fn findings<'a, T: Tree<'a>>(&self, root: &str, body: T) -> Vec<Finding> {
         let mut findings = Vec::new();
         if root == "EHR_STATUS" && self.subject_rule_in_force() {
             self.check_subject(root, body, &mut findings);
@@ -324,21 +318,13 @@ impl PrivacyPolicy {
     /// [`ServiceError::ValidationFailed`] carrying one entry per refused finding,
     /// each keyed by its own RM path (→ 422). Under `identifier_scan.mode =
     /// "warn"` an identifier-shaped finding is logged and metered instead.
-    pub(crate) fn enforce(&self, rm_type: &str, data: &Value) -> Result<(), ServiceError> {
-        self.enforce_in(rm_type, data)
-    }
-
-    /// [`Self::enforce`] over a body read through either shape
-    /// ([`crate::privacy::tree`]).
-    ///
-    /// # Errors
-    /// As [`Self::enforce`].
-    pub(crate) fn enforce_in<'a, T: Tree<'a>>(
+    /// The body is read through either shape ([`crate::privacy::tree`]).
+    pub(crate) fn enforce<'a, T: Tree<'a>>(
         &self,
         rm_type: &str,
         data: T,
     ) -> Result<(), ServiceError> {
-        let findings = self.findings_in(rm_type, data);
+        let findings = self.findings(rm_type, data);
         if findings.is_empty() {
             return Ok(());
         }

@@ -93,11 +93,9 @@ fn fill<'a, I: Instance<'a>>(composition: I, wt: &WebTemplate, doc: &mut SimNode
     if let Some(composer) = composition
         .attr("composer")
         .filter(|c| !map::parties::ref_type_survives(*c, "PERSON"))
-        .and_then(Instance::to_value)
+        .and_then(Instance::to_raw)
     {
-        root.occurrence_mut("composer", None)
-            .attrs
-            .insert("raw".to_owned(), composer);
+        root.occurrence_mut("composer", None).raw = Some(composer);
     }
 }
 
@@ -169,9 +167,7 @@ fn walk<'a, I: Instance<'a>>(node: &WebTemplateNode, rm: I, out: &mut SimNode) {
         // (master04 §Raw canonical JSON: pre-existing canonical data /
         // shapes the simplified form cannot express). Lossless both ways.
         if !leaf_type_conforms(rm, &node.rm_type) {
-            if let Some(raw) = rm.to_value() {
-                out.attrs.insert("raw".to_owned(), raw);
-            }
+            out.raw = rm.to_raw();
             return;
         }
         let list_open = node.inputs.iter().find_map(|i| i.list_open);
