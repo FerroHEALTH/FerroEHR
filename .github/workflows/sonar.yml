@@ -187,7 +187,7 @@ jobs:
           components: llvm-tools-preview
           cache-shared-key: sonar
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-llvm-cov,cargo-nextest
       # The shard index reaches the command through `env:`, never interpolated
@@ -223,7 +223,7 @@ jobs:
           components: llvm-tools-preview
           cache-shared-key: sonar-viewer
           cache-save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-llvm-cov,cargo-nextest
       - run: cargo llvm-cov --no-report nextest --locked -p ferroehr-viewer --no-tests=pass --profile ci
@@ -314,7 +314,7 @@ jobs:
         run: |
           v="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
           echo "sonar.projectVersion=$v" >> sonar-project.properties
-      - uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+      - uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
