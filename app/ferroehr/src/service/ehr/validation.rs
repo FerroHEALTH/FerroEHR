@@ -52,6 +52,38 @@ use openehr_rm::prelude::Composition;
 /// nodes is where a pass first reaches the top of that budget.
 const VALIDATION_HANDOFF_NODES: usize = 400;
 
+/// The RM object count past which the typed passes hand their worker off: the
+/// [`VALIDATION_HANDOFF_NODES`] budget of 400 at about three JSON nodes per RM object
+/// (an object, its `_type` and a leaf or two). No spec governs this: our own
+/// estimate.
+const VALIDATION_HANDOFF_OBJECTS: usize = 133;
+
+/// A COMPOSITION handed to the commit validation: typed RM, or the canonical
+/// value a `553|incomplete|` commit and the CONTRIBUTION route still carry.
+#[derive(Clone, Copy)]
+pub(in crate::service) enum Submitted<'a> {
+    /// The typed COMPOSITION.
+    Typed(&'a Composition),
+    /// Its canonical value.
+    Canonical(&'a Value),
+}
+
+/// Returns whether the typed `root` holds more than `limit` RM objects, with
+/// the walk stopping as soon as the answer is known.
+fn exceeds_object_count(root: &Composition, limit: usize) -> bool {
+    use openehr_rm::v1_2::access::{RmObject, as_rm_object};
+    let mut pending: Vec<&dyn RmObject> = vec![as_rm_object(root)];
+    let mut seen: usize = 0;
+    while let Some(node) = pending.pop() {
+        seen += 1;
+        if seen > limit {
+            return true;
+        }
+        pending.extend(node.children().map(|(_, _, child)| child));
+    }
+    false
+}
+
 /// Runs one CPU-bound validation pass, relieving this worker of its other
 /// tasks first when `hand_off` says the instance is large enough to hold it
 /// past tokio's budget.
@@ -193,39 +225,48 @@ impl FerroEhrService {
     )]
     pub(super) async fn validate_composition_for_commit(
         &self,
-        typed: Option<&Composition>,
-        composition: &Value,
+        composition: Submitted<'_>,
         incomplete: bool,
     ) -> Result<(), ServiceError> {
-        let hand_off = exceeds_node_count(composition, VALIDATION_HANDOFF_NODES);
+        use openehr_sdt::flat::validation as conformance;
+        use openehr_sdt::rm_instance as rm;
+        let hand_off = match composition {
+            Submitted::Typed(typed) => exceeds_object_count(typed, VALIDATION_HANDOFF_OBJECTS),
+            Submitted::Canonical(value) => exceeds_node_count(value, VALIDATION_HANDOFF_NODES),
+        };
         // NOTE: a `553|incomplete|` commit keeps the canonical-JSON passes by
         // decision (#6002): its body need not read as strict typed RM.
-        let mut messages = run_validation_pass(hand_off, || match typed {
-            Some(typed) if !incomplete => {
-                openehr_sdt::rm_instance::validate_rm_and_terminology_typed(typed)
+        let mut messages = run_validation_pass(hand_off, || match composition {
+            Submitted::Typed(typed) => rm::validate_rm_and_terminology_typed(typed),
+            Submitted::Canonical(value) if incomplete => {
+                rm::validate_rm_and_terminology_incomplete_as(value, "COMPOSITION")
             }
-            _ if incomplete => openehr_sdt::rm_instance::validate_rm_and_terminology_incomplete_as(
-                composition,
-                "COMPOSITION",
-            ),
-            _ => openehr_sdt::rm_instance::validate_rm_and_terminology(composition, "COMPOSITION"),
+            Submitted::Canonical(value) => rm::validate_rm_and_terminology(value, "COMPOSITION"),
         });
         let rm_terminology_failures = messages.len();
         let mut template_failures = 0;
         let mut binding_failures = 0;
-        if let Some(template_id) = composition
-            .pointer("/archetype_details/template_id/value")
-            .and_then(Value::as_str)
-        {
+        let template_id = match composition {
+            Submitted::Typed(typed) => typed
+                .archetype_details
+                .as_ref()
+                .and_then(|details| details.template_id.as_ref())
+                .map(|id| id.value.as_str()),
+            Submitted::Canonical(value) => value
+                .pointer("/archetype_details/template_id/value")
+                .and_then(Value::as_str),
+        };
+        if let Some(template_id) = template_id {
             let wt = self.commit_web_template(template_id).await?;
-            messages.extend(run_validation_pass(hand_off, || {
-                if incomplete {
-                    openehr_sdt::flat::validation::validate_archetype_conformance_incomplete(
-                        composition,
-                        &wt,
-                    )
-                } else {
-                    openehr_sdt::flat::validation::validate_archetype_conformance(composition, &wt)
+            messages.extend(run_validation_pass(hand_off, || match composition {
+                Submitted::Typed(typed) => {
+                    conformance::validate_archetype_conformance_typed(typed, &wt)
+                }
+                Submitted::Canonical(value) if incomplete => {
+                    conformance::validate_archetype_conformance_incomplete(value, &wt)
+                }
+                Submitted::Canonical(value) => {
+                    conformance::validate_archetype_conformance(value, &wt)
                 }
             }));
             template_failures = messages.len() - rm_terminology_failures;
@@ -300,7 +341,7 @@ impl FerroEhrService {
         match kind {
             Kind::Composition => {
                 self.privacy.enforce(kind.as_str(), data)?;
-                self.validate_composition_for_commit(None, data, incomplete)
+                self.validate_composition_for_commit(Submitted::Canonical(data), incomplete)
                     .await
             }
             Kind::EhrStatus => {
@@ -345,17 +386,44 @@ impl FerroEhrService {
         incomplete: bool,
     ) -> Result<Result<(), ServiceError>, ServiceError> {
         match body {
-            Body::Composition(rm) => {
-                let mut view = openehr_its::json::to_canonical_value(rm.as_ref());
+            // NOTE: a `553|incomplete|` commit keeps the canonical-JSON passes by
+            // decision (#6002), so it alone takes a canonical view to validate.
+            Body::Composition(rm) if incomplete => {
+                let view = openehr_its::json::to_canonical_value(rm.as_ref());
                 let validated = match self.privacy.enforce(kind.as_str(), &view) {
                     Ok(()) => {
-                        self.validate_composition_for_commit(Some(rm), &view, incomplete)
+                        self.validate_composition_for_commit(Submitted::Canonical(&view), true)
+                            .await
+                    }
+                    Err(refused) => Err(refused),
+                };
+                drop(view);
+                if validated.is_ok() {
+                    self.externalize_typed(rm).await?;
+                }
+                Ok(validated)
+            }
+            Body::Composition(rm) => {
+                let privacy = if self.privacy.reads_content() {
+                    crate::telemetry::conversion::record("rm_to_index");
+                    let rendered = crate::storage::render::index::render(rm.as_ref())
+                        .map_err(|e| ServiceError::internal("serialize the COMPOSITION", e))?;
+                    self.privacy.enforce_in(
+                        kind.as_str(),
+                        crate::privacy::tree::Indexed::root(&rendered),
+                    )
+                } else {
+                    Ok(())
+                };
+                let validated = match privacy {
+                    Ok(()) => {
+                        self.validate_composition_for_commit(Submitted::Typed(rm), false)
                             .await
                     }
                     Err(refused) => Err(refused),
                 };
                 if validated.is_ok() {
-                    self.externalize_view(rm, &mut view).await?;
+                    self.externalize_typed(rm).await?;
                 }
                 Ok(validated)
             }

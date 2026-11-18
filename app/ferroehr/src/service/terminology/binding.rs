@@ -37,16 +37,9 @@
 //! deployment aligns the two in its terminology-server configuration — our own
 //! design/extension.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 6): the walked value is the composition's \
-              canonical openEHR JSON, dynamic by construction"
-)]
-
 use openehr_sdt::flat::validation::ConstraintBindingCheck;
 use openehr_sdt::flat::webtemplate::model::WebTemplate;
 use openehr_sdt::rm_instance::{ValidationKind, ValidationMessage};
-use serde_json::Value;
 
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
@@ -60,14 +53,20 @@ impl FerroEhrService {
     /// configured or the template carries no constraint binding.
     pub(in crate::service) async fn constraint_binding_violations(
         &self,
-        composition: &Value,
+        composition: crate::service::ehr::validation::Submitted<'_>,
         wt: &WebTemplate,
     ) -> Vec<ValidationMessage> {
+        use crate::service::ehr::validation::Submitted;
+        use openehr_sdt::flat::validation::{
+            collect_constraint_binding_checks, collect_constraint_binding_checks_typed,
+        };
         let Some(server) = self.terminology_server() else {
             return Vec::new();
         };
-        let checks =
-            openehr_sdt::flat::validation::collect_constraint_binding_checks(composition, wt);
+        let checks = match composition {
+            Submitted::Typed(typed) => collect_constraint_binding_checks_typed(typed, wt),
+            Submitted::Canonical(value) => collect_constraint_binding_checks(value, wt),
+        };
         if checks.is_empty() {
             return Vec::new();
         }
@@ -135,12 +134,18 @@ async fn resolve_binding(
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the tests state the bindings over canonical COMPOSITION fragments"
+)]
 mod tests {
     use std::sync::Arc;
 
     use openehr_sdt::flat::webtemplate::constraint::WebTemplateConstraintBinding;
     use openehr_sdt::flat::webtemplate::model::{WebTemplate, WebTemplateNode};
-    use serde_json::json;
+    use serde_json::{Value, json};
+
+    use crate::service::ehr::validation::Submitted;
     use wiremock::matchers::{body_string_contains, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -247,7 +252,10 @@ mod tests {
         let ts = validate_code_server("278149003").await;
         let service = service(&ts.uri(), false).await;
         let violations = service
-            .constraint_binding_violations(&coded_instance("278149003"), &bound_template())
+            .constraint_binding_violations(
+                Submitted::Canonical(&coded_instance("278149003")),
+                &bound_template(),
+            )
             .await;
         assert!(
             violations.is_empty(),
@@ -269,7 +277,10 @@ mod tests {
             let ts = validate_code_server("278149003").await;
             let service = service(&ts.uri(), fail_on_error).await;
             let violations = service
-                .constraint_binding_violations(&coded_instance("999999"), &bound_template())
+                .constraint_binding_violations(
+                    Submitted::Canonical(&coded_instance("999999")),
+                    &bound_template(),
+                )
                 .await;
             assert_eq!(
                 violations.len(),
@@ -299,7 +310,10 @@ mod tests {
 
         let open = service(&dead_uri, false).await;
         let violations = open
-            .constraint_binding_violations(&coded_instance("278149003"), &bound_template())
+            .constraint_binding_violations(
+                Submitted::Canonical(&coded_instance("278149003")),
+                &bound_template(),
+            )
             .await;
         assert!(
             violations.is_empty(),
@@ -308,7 +322,10 @@ mod tests {
 
         let closed = service(&dead_uri, true).await;
         let violations = closed
-            .constraint_binding_violations(&coded_instance("278149003"), &bound_template())
+            .constraint_binding_violations(
+                Submitted::Canonical(&coded_instance("278149003")),
+                &bound_template(),
+            )
             .await;
         assert_eq!(
             violations.len(),
@@ -334,7 +351,10 @@ mod tests {
             FerroEhrService::new(&crate::db::domain::DomainPools::from_shared(&db.pool()));
         let violations = service
             // A code that WOULD be refused if the binding were resolved.
-            .constraint_binding_violations(&coded_instance("999999"), &bound_template())
+            .constraint_binding_violations(
+                Submitted::Canonical(&coded_instance("999999")),
+                &bound_template(),
+            )
             .await;
         assert!(
             violations.is_empty(),
@@ -357,7 +377,7 @@ mod tests {
         let mut wt = bound_template();
         wt.tree.constraint_bindings.clear();
         let violations = service
-            .constraint_binding_violations(&coded_instance("999999"), &wt)
+            .constraint_binding_violations(Submitted::Canonical(&coded_instance("999999")), &wt)
             .await;
         assert_eq!(violations, Vec::<ValidationMessage>::new());
         assert_eq!(ts.received_requests().await.unwrap().len(), 0);

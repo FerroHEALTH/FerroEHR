@@ -14,7 +14,6 @@
 //! refusals. No openEHR spec governs who may change what: our own design.
 
 use crate::versioning::body::Body;
-use serde_json::Value;
 use sqlx::PgConnection;
 
 use crate::error::ServiceError;
@@ -40,11 +39,7 @@ pub(crate) fn refuse_composing_for_others(kind: Kind, body: &Body) -> Result<(),
     if kind != Kind::Composition || !crate::versioning::committer::inserts_for_the_person() {
         return Ok(());
     }
-    let canonical = body.view();
-    let composer = canonical
-        .get("composer")
-        .and_then(|composer| composer.get("_type"))
-        .and_then(Value::as_str);
+    let composer = body.content_facts().composer_type;
     match composer {
         Some("PARTY_SELF" | "PARTY_RELATED") => Ok(()),
         _ => Err(ServiceError::not_permitted(

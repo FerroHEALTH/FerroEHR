@@ -156,10 +156,15 @@ fn content_lifecycle(
     lifecycle_state: Option<String>,
 ) -> Result<String, ServiceError> {
     #[cfg(feature = "multimedia")]
-    if let Some(engine) = ctx.multimedia.filter(|engine| engine.offload_enabled()) {
-        engine
-            .ensure_externalized(&body.view())
-            .map_err(|e| ServiceError::internal("externalize multimedia", e))?;
+    if let Some(engine) = ctx.multimedia {
+        match body {
+            Body::Composition(rm) => {
+                use openehr_rm::v1_2::access::AsRm as _;
+                engine.ensure_externalized_typed(rm.as_rm())
+            }
+            Body::Canonical(canonical) => engine.ensure_externalized(canonical),
+        }
+        .map_err(|e| ServiceError::internal("externalize multimedia", e))?;
     }
     #[cfg(not(feature = "multimedia"))]
     let _ = (ctx, body);

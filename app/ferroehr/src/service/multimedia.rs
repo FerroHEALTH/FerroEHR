@@ -75,79 +75,50 @@ impl FerroEhrService {
         }
     }
 
-    /// [`Self::externalize`] over a commit body. A typed COMPOSITION is
-    /// offloaded through its view and re-read only when the view held a value
-    /// to externalize.
+    /// [`Self::externalize`] over a commit body: a typed COMPOSITION is
+    /// offloaded in place, with no canonical value built.
     ///
     /// # Errors
-    /// The [`Self::externalize`] failure, or the re-read's.
+    /// The offload's failure.
     pub(crate) async fn externalize_body(&self, body: &mut Body) -> Result<(), ServiceError> {
         match body {
             Body::Canonical(canonical) => self.externalize(canonical).await,
-            Body::Composition(rm) => {
-                if !self.offloads() {
-                    return Ok(());
-                }
-                let mut view = openehr_its::json::to_canonical_value(rm.as_ref());
-                self.externalize_view(rm, &mut view).await
-            }
+            Body::Composition(rm) => self.externalize_typed(rm).await,
         }
     }
 
-    /// Externalizes the media of the typed COMPOSITION `rm` through its
-    /// canonical `view`, re-reading `rm` only when the view held a value to
-    /// externalize.
+    /// Externalizes every large inline `DV_MULTIMEDIA` of the typed
+    /// COMPOSITION `rm` in place, uploading the blobs, before the write that
+    /// stores it takes a connection.
     ///
     /// # Errors
-    /// The [`Self::externalize`] failure, or the re-read's.
-    pub(crate) async fn externalize_view(
-        &self,
-        rm: &mut Composition,
-        view: &mut Value,
-    ) -> Result<(), ServiceError> {
-        if !self.holds_inline_media(view) {
+    /// [`ServiceError`] when an inline value is malformed or an upload fails.
+    #[cfg(feature = "multimedia")]
+    pub(crate) async fn externalize_typed(&self, rm: &mut Composition) -> Result<(), ServiceError> {
+        use openehr_rm::v1_2::access::AsRm as _;
+        let Some(engine) = &self.multimedia else {
             return Ok(());
-        }
-        self.externalize(view).await?;
-        *rm = openehr_its::json::from_canonical_value(view)
-            .map_err(|e| ServiceError::internal("re-read the COMPOSITION after its offload", e))?;
+        };
+        engine
+            .offload_typed(rm.as_rm_mut())
+            .await
+            .map_err(|e| ServiceError::internal("externalize multimedia", e))
+    }
+
+    /// The slim twin: externalization is compiled out.
+    ///
+    /// # Errors
+    /// Infallible in this configuration.
+    #[cfg(not(feature = "multimedia"))]
+    #[expect(
+        clippy::unused_async,
+        reason = "signature parity with the multimedia twin, which awaits"
+    )]
+    pub(crate) async fn externalize_typed(
+        &self,
+        _rm: &mut Composition,
+    ) -> Result<(), ServiceError> {
         Ok(())
-    }
-
-    /// Whether this deployment externalizes media at all.
-    #[cfg(feature = "multimedia")]
-    pub(crate) fn offloads(&self) -> bool {
-        self.multimedia
-            .as_ref()
-            .is_some_and(|engine| engine.offload_enabled())
-    }
-
-    /// The slim twin: nothing is ever externalized.
-    #[cfg(not(feature = "multimedia"))]
-    #[expect(
-        clippy::unused_self,
-        reason = "signature parity with the multimedia twin, which reads the engine"
-    )]
-    pub(crate) fn offloads(&self) -> bool {
-        false
-    }
-
-    /// Whether `body` holds a value the offload would externalize.
-    #[cfg(feature = "multimedia")]
-    fn holds_inline_media(&self, body: &Value) -> bool {
-        self.multimedia
-            .as_ref()
-            .is_some_and(|engine| engine.ensure_externalized(body).is_err())
-    }
-
-    /// The slim twin: nothing is ever externalized.
-    #[cfg(not(feature = "multimedia"))]
-    #[expect(
-        clippy::unused_self,
-        reason = "signature parity with the multimedia twin, which reads the engine"
-    )]
-    fn holds_inline_media(&self, _body: &Value) -> bool {
-        false
     }
 }
 

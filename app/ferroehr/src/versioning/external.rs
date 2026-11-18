@@ -31,7 +31,7 @@ use crate::versioning::committer::ExternalCaller;
 use crate::versioning::committer::external::{
     ExternalProfessional, ORGANIZATION_ID_ISSUER, committer, may_dispense, point_of_care, provider,
 };
-use crate::versioning::system::{facility_of, identifiers};
+use crate::versioning::content_facts::{ContentFacts, facility_of, identifiers};
 
 /// Why a commit by an external organisation is refused.
 const ORGANISATION: &str =
@@ -71,7 +71,7 @@ pub(crate) fn admit_content(
                 committer(&identity, &professional)?;
             }
             admit_dispensing(&professional)?;
-            admit_facility(&professional, &body.view())
+            admit_facility(&professional, &body.content_facts())
         }
         ExternalCaller::Person { .. } => Err(ServiceError::not_permitted(
             "a verified external person commits only a COMPOSITION of a template its \
@@ -176,11 +176,11 @@ fn discard_refused(why: &str) -> ServiceError {
 /// care from the version alone.
 fn admit_facility(
     professional: &ExternalProfessional,
-    canonical: &Value,
+    facts: &ContentFacts<'_>,
 ) -> Result<(), ServiceError> {
     let (issuer, id) = provider(professional)?;
-    let (facility, path) = facility_of(canonical);
-    let named: Vec<(&str, &str)> = identifiers(facility).collect();
+    let path = facts.facility_path;
+    let named = &facts.facility;
     if !named.contains(&(issuer.as_str(), id.as_str())) {
         return Err(ServiceError::content_invalid(
             Violation::new(

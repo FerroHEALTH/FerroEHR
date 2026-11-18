@@ -4,20 +4,17 @@
 //! The content a commit carries: a typed COMPOSITION, or the canonical value
 //! of a kind whose commit has not moved onto typed RM yet (#6003).
 //!
-//! The typed COMPOSITION is what the commit stamps, renders once as
-//! `version.body` and its node rows, and signs. A pass that still reads JSON
-//! (archetype conformance, constraint bindings, privacy, the multimedia
-//! offload, and the policy checks of a system client or a verified external
-//! caller) takes a canonical view rendered for it and dropped after it. No
-//! openEHR spec governs the commit's internal representation: our own design.
+//! The typed COMPOSITION is what the commit validates, offloads, stamps,
+//! renders once as `version.body` and its node rows, and signs, with no
+//! canonical value built; only a `553|incomplete|` commit validates over one.
+//! No openEHR spec governs the commit's internal representation: our own
+//! design.
 
 #![expect(
     clippy::disallowed_types,
     reason = "owner-approved 2026-08-03 (#1694): the canonical value of the kinds whose commit \
               is not typed yet, and the view the JSON-reading passes take (#6003)"
 )]
-
-use std::borrow::Cow;
 
 use openehr_base::prelude::{ObjectVersionId, UidBasedId};
 use openehr_rm::prelude::Composition;
@@ -46,15 +43,6 @@ impl Body {
     /// A typed COMPOSITION body.
     pub(crate) fn composition(rm: Composition) -> Self {
         Body::Composition(Box::new(rm))
-    }
-
-    /// The canonical value of the body: borrowed for a canonical body,
-    /// rendered for a typed one, for the passes that still read JSON.
-    pub(crate) fn view(&self) -> Cow<'_, Value> {
-        match self {
-            Body::Composition(rm) => Cow::Owned(openehr_its::json::to_canonical_value(rm.as_ref())),
-            Body::Canonical(view) => Cow::Borrowed(view),
-        }
     }
 
     /// The canonical value of a body of a kind that has no typed form.
@@ -94,6 +82,15 @@ impl Body {
             Body::Canonical(view) => view
                 .pointer("/category/defining_code/code_string")
                 .and_then(Value::as_str),
+        }
+    }
+
+    /// What the write rules of a caller read of a COMPOSITION body
+    /// ([`super::content_facts`]).
+    pub(crate) fn content_facts(&self) -> super::content_facts::ContentFacts<'_> {
+        match self {
+            Body::Composition(rm) => super::content_facts::ContentFacts::of_typed(rm),
+            Body::Canonical(view) => super::content_facts::ContentFacts::of_canonical(view),
         }
     }
 
