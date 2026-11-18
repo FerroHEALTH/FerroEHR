@@ -706,8 +706,19 @@ pub(crate) fn build_executed(
     ctx: &SqlCtx,
 ) -> Result<PreparedQuery, AqlError> {
     let mut builder = Builder::new(ir, params, ctx);
-    builder.references = cfg!(debug_assertions);
+    builder.references =
+        cfg!(debug_assertions) && REFERENCE_CELLS.load(std::sync::atomic::Ordering::Relaxed);
     Builder::lower(builder)
+}
+
+/// Whether a debug build selects the jsonb reference cells ([`build_executed`]).
+static REFERENCE_CELLS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Stops a debug build of this process from selecting the jsonb reference
+/// cells beside the rendered ones, so a measurement harness counts the
+/// statements and allocations a release build makes.
+pub fn without_reference_cells() {
+    REFERENCE_CELLS.store(false, std::sync::atomic::Ordering::Relaxed);
 }
 
 impl Builder<'_> {
