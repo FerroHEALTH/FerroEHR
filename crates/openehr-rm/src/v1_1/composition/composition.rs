@@ -42,9 +42,9 @@ pub struct Composition {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
     /// Mandatory indicator of the localised language in which this Composition is written.
     ///
     /// Coded from openEHR Code Set  `languages`. The language of an Entry if different from the Composition is indicated in `ENTRY._language_`.
@@ -60,11 +60,11 @@ pub struct Composition {
     /// or any other code defined in the openEHR terminology group 'category'.
     pub category: DvCodedText,
     /// The clinical session context of this Composition, i.e. the contextual attributes of the clinical session.
-    pub context: Option<EventContext>,
+    pub context: Option<Box<EventContext>>,
     /// The person primarily responsible for the content of the Composition (but not necessarily its committal into the EHR system).
     ///
     /// This is the identifier which should appear on the screen. It may or may not be the person who entered the data. When it is the patient, the special self  instance of `PARTY_PROXY` will be used.
-    pub composer: PartyProxy,
+    pub composer: Box<PartyProxy>,
     /// The content of this Composition.
     pub content: Option<openehr_base::containers::NonEmptyVec<ContentItem>>,
 }

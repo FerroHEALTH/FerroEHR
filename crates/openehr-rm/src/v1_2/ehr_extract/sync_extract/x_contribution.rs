@@ -17,7 +17,7 @@ pub struct XContribution {
     /// Uid of Contribution in source system.
     pub uid: HierObjectId,
     /// Audit of Contribution in source system.
-    pub audit: AuditDetails,
+    pub audit: Box<AuditDetails>,
     /// Serialised Versions from Contribution in source system.
     pub versions: Option<Vec<Version<XContribution>>>,
 }

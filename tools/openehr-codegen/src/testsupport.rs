@@ -531,6 +531,52 @@ pub fn plan_shapes(key: &str) -> Result<BTreeMap<String, String>, Error> {
     Ok(out)
 }
 
+/// The estimated size in bytes of every type the CURRENT generation of crate
+/// `key` emits, keyed by Rust type name (the estimate behind the by-size
+/// boxing decision of `plan::layout`).
+///
+/// # Errors
+/// Returns an error if the composition's BMM files cannot be loaded.
+pub fn estimated_sizes(key: &str) -> Result<BTreeMap<String, usize>, Error> {
+    let c = compose(key)?;
+    let g = c.current();
+    let mut out = BTreeMap::new();
+    for u in &g.units {
+        let used = u.model.used_as_type();
+        for (name, class) in &u.schema.classes {
+            let e = decide(&u.model, class, &used);
+            if matches!(e, Emission::Skip) {
+                continue;
+            }
+            let ty = naming::type_name(name);
+            let generics = crate::render::emit::struct_generics(&u.model, class);
+            let rendered = if generics.is_empty() {
+                ty.clone()
+            } else {
+                let args: Vec<String> = generics
+                    .iter()
+                    .map(|p| {
+                        u.model.resolved_param_bound(name, p).map_or_else(
+                            || "serde_json::Value".to_string(),
+                            |b| naming::type_name(&b),
+                        )
+                    })
+                    .collect();
+                format!("{ty}<{}>", args.join(", "))
+            };
+            out.insert(ty, crate::plan::layout::estimated_size(&u.model, &rendered));
+            if matches!(e, Emission::PolyEnum(_)) {
+                let data = format!("{}Data", naming::type_name(name));
+                out.insert(
+                    data.clone(),
+                    crate::plan::layout::estimated_size(&u.model, &data),
+                );
+            }
+        }
+    }
+    Ok(out)
+}
+
 fn shape_name(e: &Emission) -> &'static str {
     match e {
         Emission::Struct => "Struct",

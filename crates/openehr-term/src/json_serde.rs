@@ -94,6 +94,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v3_1::terminology::code::Code {
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CODE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -253,6 +254,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v3_1::terminology::code_set::Code
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CODE_SET` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -459,6 +461,7 @@ impl<'de> ::serde::Deserialize<'de> for crate::v3_1::terminology::terminology::T
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TERMINOLOGY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -632,6 +635,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TERMINOLOGY_CONCEPT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -787,6 +791,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TERMINOLOGY_GROUP` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,

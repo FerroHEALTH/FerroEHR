@@ -49,7 +49,7 @@ impl DvDateTime {
     pub fn diff(&self, other: &Self) -> Option<DvDuration> {
         let difference = self.iso().diff(&other.iso())?;
         let (accuracy, accuracy_is_percent) =
-            match difference_accuracy(self.accuracy.as_ref(), other.accuracy.as_ref()) {
+            match difference_accuracy(self.accuracy.as_deref(), other.accuracy.as_deref()) {
                 CombinedAccuracy::Unrepresentable => return None,
                 CombinedAccuracy::Unknown => (None, None),
                 CombinedAccuracy::Known {
@@ -81,7 +81,7 @@ impl DvDateTime {
         Self {
             value: value.value,
             magnitude_status: None,
-            accuracy: displaced_accuracy(self.accuracy.as_ref(), a_diff),
+            accuracy: displaced_accuracy(self.accuracy.as_deref(), a_diff).map(Box::new),
             normal_range: None,
             normal_status: None,
             other_reference_ranges: openehr_base::containers::present_nonempty(Vec::new()),
@@ -112,7 +112,7 @@ impl Validate for DvDateTime {
         push_normal_range_consistency(
             out,
             "DV_DATE_TIME",
-            self.normal_status.as_ref(),
+            self.normal_status.as_deref(),
             self.normal_range.as_deref(),
             &DvOrdered::DvDateTime(self.clone()),
         );
@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn accuracy_follows_the_absolute_quantity_rule() {
         let mut precise = date_time("2024-01-01T00:00:00");
-        precise.accuracy = Some(duration("PT5S"));
+        precise.accuracy = Some(Box::new(duration("PT5S")));
         let mut offset = duration("PT100S");
         offset.accuracy = Some(10.0);
         offset.accuracy_is_percent = Some(true);

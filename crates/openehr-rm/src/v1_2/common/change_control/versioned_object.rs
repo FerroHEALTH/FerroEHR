@@ -48,3 +48,39 @@ pub enum VersionedObject {
     /// An instance of `VERSIONED_OBJECT` itself (its own, least-rich form).
     VersionedObject(VersionedObjectData),
 }
+
+impl From<VersionedComposition> for VersionedObject {
+    fn from(value: VersionedComposition) -> Self {
+        Self::VersionedComposition(value)
+    }
+}
+
+impl From<VersionedEhrAccess> for VersionedObject {
+    fn from(value: VersionedEhrAccess) -> Self {
+        Self::VersionedEhrAccess(value)
+    }
+}
+
+impl From<VersionedEhrStatus> for VersionedObject {
+    fn from(value: VersionedEhrStatus) -> Self {
+        Self::VersionedEhrStatus(value)
+    }
+}
+
+impl From<VersionedFolder> for VersionedObject {
+    fn from(value: VersionedFolder) -> Self {
+        Self::VersionedFolder(value)
+    }
+}
+
+impl From<VersionedParty> for VersionedObject {
+    fn from(value: VersionedParty) -> Self {
+        Self::VersionedParty(value)
+    }
+}
+
+impl From<VersionedObjectData> for VersionedObject {
+    fn from(value: VersionedObjectData) -> Self {
+        Self::VersionedObject(value)
+    }
+}

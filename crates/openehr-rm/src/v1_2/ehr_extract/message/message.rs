@@ -17,9 +17,9 @@ use crate::v1_2::ehr_extract::message::message_content::MessageContent;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Message {
     /// Details of who actually created the message and when. This is the person who entered the data or otherwise caused the message to be created, or might be a piece of software.
-    pub audit: AuditDetails,
+    pub audit: Box<AuditDetails>,
     /// Party responsible for the message content, who may or may not be technically responsible for its creation (e.g. by data entry etc).
-    pub author: PartyProxy,
+    pub author: Box<PartyProxy>,
     /// Content of the message.
     pub content: MessageContent,
     /// Optional signature by the author of message content in openPGP format.

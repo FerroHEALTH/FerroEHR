@@ -55,79 +55,307 @@ use crate::v1_2::integration::generic_entry::GenericEntry;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Locatable {
     /// The `ACTION` subtype of `LOCATABLE`.
-    Action(Action),
+    Action(Box<Action>),
     /// The `ACTIVITY` subtype of `LOCATABLE`.
-    Activity(Activity),
+    Activity(Box<Activity>),
     /// The `ADDRESS` subtype of `LOCATABLE`.
-    Address(Address),
+    Address(Box<Address>),
     /// The `ADMIN_ENTRY` subtype of `LOCATABLE`.
-    AdminEntry(AdminEntry),
+    AdminEntry(Box<AdminEntry>),
     /// The `AGENT` subtype of `LOCATABLE`.
-    Agent(Agent),
+    Agent(Box<Agent>),
     /// The `CAPABILITY` subtype of `LOCATABLE`.
-    Capability(Capability),
+    Capability(Box<Capability>),
     /// The `CLUSTER` subtype of `LOCATABLE`.
-    Cluster(Cluster),
+    Cluster(Box<Cluster>),
     /// The `COMPOSITION` subtype of `LOCATABLE`.
-    Composition(Composition),
+    Composition(Box<Composition>),
     /// The `CONTACT` subtype of `LOCATABLE`.
-    Contact(Contact),
+    Contact(Box<Contact>),
     /// The `EHR_ACCESS` subtype of `LOCATABLE`.
-    EhrAccess(EhrAccess),
+    EhrAccess(Box<EhrAccess>),
     /// The `EHR_STATUS` subtype of `LOCATABLE`.
-    EhrStatus(EhrStatus),
+    EhrStatus(Box<EhrStatus>),
     /// The `ELEMENT` subtype of `LOCATABLE`.
-    Element(Element),
+    Element(Box<Element>),
     /// The `EVALUATION` subtype of `LOCATABLE`.
-    Evaluation(Evaluation),
+    Evaluation(Box<Evaluation>),
     /// The `EXTRACT` subtype of `LOCATABLE`.
-    Extract(Extract),
+    Extract(Box<Extract>),
     /// The `EXTRACT_ACTION_REQUEST` subtype of `LOCATABLE`.
-    ExtractActionRequest(ExtractActionRequest),
+    ExtractActionRequest(Box<ExtractActionRequest>),
     /// The `EXTRACT_CHAPTER` subtype of `LOCATABLE`.
-    ExtractChapter(ExtractChapter),
+    ExtractChapter(Box<ExtractChapter>),
     /// The `EXTRACT_FOLDER` subtype of `LOCATABLE`.
-    ExtractFolder(ExtractFolder),
+    ExtractFolder(Box<ExtractFolder>),
     /// The `EXTRACT_REQUEST` subtype of `LOCATABLE`.
-    ExtractRequest(ExtractRequest),
+    ExtractRequest(Box<ExtractRequest>),
     /// The `FOLDER` subtype of `LOCATABLE`.
-    Folder(Folder),
+    Folder(Box<Folder>),
     /// The `GENERIC_CONTENT_ITEM` subtype of `LOCATABLE`.
     GenericContentItem(Box<GenericContentItem>),
     /// The `GENERIC_ENTRY` subtype of `LOCATABLE`.
-    GenericEntry(GenericEntry),
+    GenericEntry(Box<GenericEntry>),
     /// The `GROUP` subtype of `LOCATABLE`.
-    Group(Group),
+    Group(Box<Group>),
     /// The `HISTORY` subtype of `LOCATABLE`.
-    History(History<ItemStructure>),
+    History(Box<History<ItemStructure>>),
     /// The `INSTRUCTION` subtype of `LOCATABLE`.
-    Instruction(Instruction),
+    Instruction(Box<Instruction>),
     /// The `INTERVAL_EVENT` subtype of `LOCATABLE`.
-    IntervalEvent(IntervalEvent<ItemStructure>),
+    IntervalEvent(Box<IntervalEvent<ItemStructure>>),
     /// The `ITEM_LIST` subtype of `LOCATABLE`.
-    ItemList(ItemList),
+    ItemList(Box<ItemList>),
     /// The `ITEM_SINGLE` subtype of `LOCATABLE`.
-    ItemSingle(ItemSingle),
+    ItemSingle(Box<ItemSingle>),
     /// The `ITEM_TABLE` subtype of `LOCATABLE`.
-    ItemTable(ItemTable),
+    ItemTable(Box<ItemTable>),
     /// The `ITEM_TREE` subtype of `LOCATABLE`.
-    ItemTree(ItemTree),
+    ItemTree(Box<ItemTree>),
     /// The `OBSERVATION` subtype of `LOCATABLE`.
-    Observation(Observation),
+    Observation(Box<Observation>),
     /// The `OPENEHR_CONTENT_ITEM` subtype of `LOCATABLE`.
-    OpenehrContentItem(OpenehrContentItem),
+    OpenehrContentItem(Box<OpenehrContentItem>),
     /// The `ORGANISATION` subtype of `LOCATABLE`.
-    Organisation(Organisation),
+    Organisation(Box<Organisation>),
     /// The `PARTY_IDENTITY` subtype of `LOCATABLE`.
-    PartyIdentity(PartyIdentity),
+    PartyIdentity(Box<PartyIdentity>),
     /// The `PARTY_RELATIONSHIP` subtype of `LOCATABLE`.
-    PartyRelationship(PartyRelationship),
+    PartyRelationship(Box<PartyRelationship>),
     /// The `PERSON` subtype of `LOCATABLE`.
-    Person(Person),
+    Person(Box<Person>),
     /// The `POINT_EVENT` subtype of `LOCATABLE`.
-    PointEvent(PointEvent<ItemStructure>),
+    PointEvent(Box<PointEvent<ItemStructure>>),
     /// The `ROLE` subtype of `LOCATABLE`.
-    Role(Role),
+    Role(Box<Role>),
     /// The `SECTION` subtype of `LOCATABLE`.
-    Section(Section),
+    Section(Box<Section>),
+}
+
+impl From<Action> for Locatable {
+    fn from(value: Action) -> Self {
+        Self::Action(Box::new(value))
+    }
+}
+
+impl From<Activity> for Locatable {
+    fn from(value: Activity) -> Self {
+        Self::Activity(Box::new(value))
+    }
+}
+
+impl From<Address> for Locatable {
+    fn from(value: Address) -> Self {
+        Self::Address(Box::new(value))
+    }
+}
+
+impl From<AdminEntry> for Locatable {
+    fn from(value: AdminEntry) -> Self {
+        Self::AdminEntry(Box::new(value))
+    }
+}
+
+impl From<Agent> for Locatable {
+    fn from(value: Agent) -> Self {
+        Self::Agent(Box::new(value))
+    }
+}
+
+impl From<Capability> for Locatable {
+    fn from(value: Capability) -> Self {
+        Self::Capability(Box::new(value))
+    }
+}
+
+impl From<Cluster> for Locatable {
+    fn from(value: Cluster) -> Self {
+        Self::Cluster(Box::new(value))
+    }
+}
+
+impl From<Composition> for Locatable {
+    fn from(value: Composition) -> Self {
+        Self::Composition(Box::new(value))
+    }
+}
+
+impl From<Contact> for Locatable {
+    fn from(value: Contact) -> Self {
+        Self::Contact(Box::new(value))
+    }
+}
+
+impl From<EhrAccess> for Locatable {
+    fn from(value: EhrAccess) -> Self {
+        Self::EhrAccess(Box::new(value))
+    }
+}
+
+impl From<EhrStatus> for Locatable {
+    fn from(value: EhrStatus) -> Self {
+        Self::EhrStatus(Box::new(value))
+    }
+}
+
+impl From<Element> for Locatable {
+    fn from(value: Element) -> Self {
+        Self::Element(Box::new(value))
+    }
+}
+
+impl From<Evaluation> for Locatable {
+    fn from(value: Evaluation) -> Self {
+        Self::Evaluation(Box::new(value))
+    }
+}
+
+impl From<Extract> for Locatable {
+    fn from(value: Extract) -> Self {
+        Self::Extract(Box::new(value))
+    }
+}
+
+impl From<ExtractActionRequest> for Locatable {
+    fn from(value: ExtractActionRequest) -> Self {
+        Self::ExtractActionRequest(Box::new(value))
+    }
+}
+
+impl From<ExtractChapter> for Locatable {
+    fn from(value: ExtractChapter) -> Self {
+        Self::ExtractChapter(Box::new(value))
+    }
+}
+
+impl From<ExtractFolder> for Locatable {
+    fn from(value: ExtractFolder) -> Self {
+        Self::ExtractFolder(Box::new(value))
+    }
+}
+
+impl From<ExtractRequest> for Locatable {
+    fn from(value: ExtractRequest) -> Self {
+        Self::ExtractRequest(Box::new(value))
+    }
+}
+
+impl From<Folder> for Locatable {
+    fn from(value: Folder) -> Self {
+        Self::Folder(Box::new(value))
+    }
+}
+
+impl From<GenericContentItem> for Locatable {
+    fn from(value: GenericContentItem) -> Self {
+        Self::GenericContentItem(Box::new(value))
+    }
+}
+
+impl From<GenericEntry> for Locatable {
+    fn from(value: GenericEntry) -> Self {
+        Self::GenericEntry(Box::new(value))
+    }
+}
+
+impl From<Group> for Locatable {
+    fn from(value: Group) -> Self {
+        Self::Group(Box::new(value))
+    }
+}
+
+impl From<History<ItemStructure>> for Locatable {
+    fn from(value: History<ItemStructure>) -> Self {
+        Self::History(Box::new(value))
+    }
+}
+
+impl From<Instruction> for Locatable {
+    fn from(value: Instruction) -> Self {
+        Self::Instruction(Box::new(value))
+    }
+}
+
+impl From<IntervalEvent<ItemStructure>> for Locatable {
+    fn from(value: IntervalEvent<ItemStructure>) -> Self {
+        Self::IntervalEvent(Box::new(value))
+    }
+}
+
+impl From<ItemList> for Locatable {
+    fn from(value: ItemList) -> Self {
+        Self::ItemList(Box::new(value))
+    }
+}
+
+impl From<ItemSingle> for Locatable {
+    fn from(value: ItemSingle) -> Self {
+        Self::ItemSingle(Box::new(value))
+    }
+}
+
+impl From<ItemTable> for Locatable {
+    fn from(value: ItemTable) -> Self {
+        Self::ItemTable(Box::new(value))
+    }
+}
+
+impl From<ItemTree> for Locatable {
+    fn from(value: ItemTree) -> Self {
+        Self::ItemTree(Box::new(value))
+    }
+}
+
+impl From<Observation> for Locatable {
+    fn from(value: Observation) -> Self {
+        Self::Observation(Box::new(value))
+    }
+}
+
+impl From<OpenehrContentItem> for Locatable {
+    fn from(value: OpenehrContentItem) -> Self {
+        Self::OpenehrContentItem(Box::new(value))
+    }
+}
+
+impl From<Organisation> for Locatable {
+    fn from(value: Organisation) -> Self {
+        Self::Organisation(Box::new(value))
+    }
+}
+
+impl From<PartyIdentity> for Locatable {
+    fn from(value: PartyIdentity) -> Self {
+        Self::PartyIdentity(Box::new(value))
+    }
+}
+
+impl From<PartyRelationship> for Locatable {
+    fn from(value: PartyRelationship) -> Self {
+        Self::PartyRelationship(Box::new(value))
+    }
+}
+
+impl From<Person> for Locatable {
+    fn from(value: Person) -> Self {
+        Self::Person(Box::new(value))
+    }
+}
+
+impl From<PointEvent<ItemStructure>> for Locatable {
+    fn from(value: PointEvent<ItemStructure>) -> Self {
+        Self::PointEvent(Box::new(value))
+    }
+}
+
+impl From<Role> for Locatable {
+    fn from(value: Role) -> Self {
+        Self::Role(Box::new(value))
+    }
+}
+
+impl From<Section> for Locatable {
+    fn from(value: Section) -> Self {
+        Self::Section(Box::new(value))
+    }
 }

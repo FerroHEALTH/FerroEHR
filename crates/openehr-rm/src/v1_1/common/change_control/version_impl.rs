@@ -239,7 +239,7 @@ mod tests {
                 ),
             }),
             signature: None,
-            commit_audit: AuditDetails::AuditDetails(AuditDetailsData {
+            commit_audit: Box::new(AuditDetails::AuditDetails(AuditDetailsData {
                 system_id: "ferroehr.local".to_owned(),
                 time_committed: DvDateTime {
                     normal_status: None,
@@ -254,8 +254,8 @@ mod tests {
                     AuditChangeType::Creation.rubric(),
                 ),
                 description: None,
-                committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
-            }),
+                committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
+            })),
             uid: ObjectVersionId::new(value.to_owned()).expect("a well-formed identifier"),
             preceding_version_uid: None,
             other_input_version_uids: openehr_base::containers::present_nonempty(Vec::new()),
@@ -270,7 +270,7 @@ mod tests {
 
     /// That same `ORIGINAL_VERSION` in the `VERSION` slot.
     fn typed_version(value: &str) -> Version<String> {
-        Version::OriginalVersion(typed_original(value))
+        Version::OriginalVersion(Box::new(typed_original(value)))
     }
 
     fn coded(code: &str, rubric: &str) -> DvCodedText {
@@ -337,7 +337,7 @@ mod tests {
                 ),
             }),
             signature: Some("local-wrapper-signature".to_owned()),
-            commit_audit: AuditDetails::AuditDetails(AuditDetailsData {
+            commit_audit: Box::new(AuditDetails::AuditDetails(AuditDetailsData {
                 system_id: "local.example".to_owned(),
                 time_committed: DvDateTime {
                     normal_status: None,
@@ -352,9 +352,9 @@ mod tests {
                     AuditChangeType::Creation.rubric(),
                 ),
                 description: None,
-                committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
-            }),
-            item,
+                committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
+            })),
+            item: Box::new(item),
         });
         assert_eq!(
             wrapper.uid().value(),
@@ -379,7 +379,7 @@ mod tests {
             )
             .expect("a well-formed identifier"),
         );
-        let version = Version::OriginalVersion(original);
+        let version = Version::OriginalVersion(Box::new(original));
 
         assert_eq!(
             version.preceding_version_uid().map(ObjectVersionId::value),
@@ -400,7 +400,7 @@ mod tests {
         let mut original =
             typed_original("8849182c-82ad-4088-a07f-48ead4180515::ferroehr.local::1");
         original.data = None;
-        let version = Version::OriginalVersion(original);
+        let version = Version::OriginalVersion(Box::new(original));
 
         assert!(version.preceding_version_uid().is_none());
         assert!(version.data().is_none());
@@ -428,7 +428,7 @@ mod tests {
                 ),
             }),
             signature: None,
-            commit_audit: AuditDetails::AuditDetails(AuditDetailsData {
+            commit_audit: Box::new(AuditDetails::AuditDetails(AuditDetailsData {
                 system_id: "local.example".to_owned(),
                 time_committed: DvDateTime {
                     normal_status: None,
@@ -443,9 +443,9 @@ mod tests {
                     AuditChangeType::Creation.rubric(),
                 ),
                 description: None,
-                committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
-            }),
-            item,
+                committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
+            })),
+            item: Box::new(item),
         });
 
         assert_eq!(

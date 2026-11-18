@@ -185,7 +185,7 @@ pub(crate) fn write_read_rm<T>(
     statuses: (StatusCode, StatusCode),
     segment: Option<&str>,
     meta: &ResourceMeta,
-    read: &ReadBody,
+    read: ReadBody,
     root_tag: &str,
 ) -> Response
 where

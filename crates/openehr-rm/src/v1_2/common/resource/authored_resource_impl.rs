@@ -194,7 +194,9 @@ mod tests {
                             },
                         },
                         description: None,
-                        committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+                        committer: Box::new(PartyProxy::PartySelf(PartySelf {
+                            external_ref: None,
+                        })),
                     },
                 )),
             }),

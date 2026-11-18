@@ -47,3 +47,15 @@ pub enum OpenehrCodeSetIdentifiers {
     /// An instance of `OPENEHR_CODE_SET_IDENTIFIERS` itself (its own, least-rich form).
     OpenehrCodeSetIdentifiers(OpenehrCodeSetIdentifiersData),
 }
+
+impl From<TerminologyService> for OpenehrCodeSetIdentifiers {
+    fn from(value: TerminologyService) -> Self {
+        Self::TerminologyService(value)
+    }
+}
+
+impl From<OpenehrCodeSetIdentifiersData> for OpenehrCodeSetIdentifiers {
+    fn from(value: OpenehrCodeSetIdentifiersData) -> Self {
+        Self::OpenehrCodeSetIdentifiers(value)
+    }
+}

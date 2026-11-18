@@ -731,11 +731,7 @@ enum Inner {
 
 impl<'c, 's> Variant<'c, 's> {
     /// Opens `{variant:` and then `[` or the inner object.
-    fn open(
-        canonical: &'c mut Canonical<'s>,
-        variant: &'static str,
-        array: bool,
-    ) -> Self {
+    fn open(canonical: &'c mut Canonical<'s>, variant: &'static str, array: bool) -> Self {
         let mut outer = canonical.open_object();
         let from = outer.canonical.names.len();
         outer.canonical.names.push_str(variant);
@@ -827,7 +823,9 @@ impl ser::SerializeTupleVariant for Variant<'_, '_> {
         value: &T,
     ) -> Result<(), serde_json::Error> {
         let Inner::Array(first) = &mut self.inner else {
-            return Err(ser::Error::custom("an element was given to a struct variant"));
+            return Err(ser::Error::custom(
+                "an element was given to a struct variant",
+            ));
         };
         if !*first {
             self.outer.canonical.out.push(',');
@@ -879,7 +877,9 @@ impl MapKey<'_> {
     /// Appends the finite `float` as `serde_json` writes it.
     fn float<F: Serialize + Into<f64> + Copy>(self, float: F) -> Result<(), serde_json::Error> {
         if !float.into().is_finite() {
-            return Err(ser::Error::custom("float key must be finite (got NaN or +/-inf)"));
+            return Err(ser::Error::custom(
+                "float key must be finite (got NaN or +/-inf)",
+            ));
         }
         let text = serde_json::to_string(&float)?;
         self.text(&text);

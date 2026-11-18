@@ -101,14 +101,14 @@ mod tests {
     fn range_with(lower: DvQuantity, upper: DvQuantity) -> ReferenceRange<DvOrdered> {
         ReferenceRange {
             meaning: meaning(),
-            range: DvInterval {
+            range: Box::new(DvInterval {
                 lower: Some(DvOrdered::DvQuantity(lower)),
                 upper: Some(DvOrdered::DvQuantity(upper)),
                 lower_unbounded: false,
                 upper_unbounded: false,
                 lower_included: true,
                 upper_included: true,
-            },
+            }),
         }
     }
 
@@ -160,14 +160,14 @@ mod tests {
     fn quantity_range(lower: DvQuantity, upper: DvQuantity) -> ReferenceRange<DvQuantity> {
         ReferenceRange {
             meaning: meaning(),
-            range: DvInterval {
+            range: Box::new(DvInterval {
                 lower: Some(lower),
                 upper: Some(upper),
                 lower_unbounded: false,
                 upper_unbounded: false,
                 lower_included: true,
                 upper_included: false,
-            },
+            }),
         }
     }
 

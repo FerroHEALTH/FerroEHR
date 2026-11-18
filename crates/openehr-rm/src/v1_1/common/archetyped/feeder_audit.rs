@@ -21,7 +21,7 @@ pub struct FeederAudit {
     /// Optional inline inclusion of or reference to original content corresponding to the openEHR content at this node.
     ///
     /// Typically a URI reference to a document or message in a persistent store associated with the EHR.
-    pub original_content: Option<DvEncapsulated>,
+    pub original_content: Option<Box<DvEncapsulated>>,
     /// Any audit information for the information item from the originating system.
     pub originating_system_audit: Box<FeederAuditDetails>,
     /// Any audit information for the information item from the feeder system, if different from the originating system.

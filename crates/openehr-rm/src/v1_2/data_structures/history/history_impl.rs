@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn history_with_event_valid() {
-        let event = Event::PointEvent(PointEvent {
+        let event = Event::PointEvent(Box::new(PointEvent {
             name: text("event"),
             archetype_node_id: "at0002".to_owned(),
             uid: None,
@@ -129,7 +129,7 @@ mod tests {
             time: origin(),
             state: None,
             data: 1,
-        });
+        }));
         assert_eq!(
             history(vec![event]).invariants(),
             Vec::<InvariantViolation>::new()
@@ -146,7 +146,7 @@ mod tests {
     }
 
     fn event_at(time: &str) -> Event<i32> {
-        Event::PointEvent(PointEvent {
+        Event::PointEvent(Box::new(PointEvent {
             name: text("event"),
             archetype_node_id: "at0002".to_owned(),
             uid: None,
@@ -163,13 +163,13 @@ mod tests {
             },
             state: None,
             data: 1,
-        })
+        }))
     }
 
     fn periodic_history(period: &str, events: Vec<Event<i32>>) -> History<i32> {
         use crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration;
         let mut h = history(events);
-        h.period = Some(DvDuration {
+        h.period = Some(Box::new(DvDuration {
             normal_status: None,
             normal_range: None,
             other_reference_ranges: openehr_base::containers::present_nonempty(Vec::new()),
@@ -177,7 +177,7 @@ mod tests {
             accuracy: None,
             accuracy_is_percent: None,
             value: period.to_owned(),
-        });
+        }));
         h
     }
 

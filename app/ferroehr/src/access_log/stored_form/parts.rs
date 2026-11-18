@@ -14,6 +14,7 @@
 //! the parts to. How a record is stored is our own design; no openEHR spec
 //! governs it.
 
+use std::borrow::Cow;
 use std::cmp::Ordering;
 
 use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::canonical_object_without;
@@ -104,6 +105,12 @@ impl<'w> Cut<'w> {
         }
         let shared = (!shared.is_empty()).then(|| shared.finish());
         Ok((row.finish(), shared))
+    }
+
+    /// Whether the record has the top-level member `name`.
+    #[must_use]
+    pub fn has(&self, name: &str) -> bool {
+        last_named(&self.top, name).is_some()
     }
 
     /// Returns the string at the member path `path`, as a JSON pointer of
@@ -415,6 +422,265 @@ fn value_end(bytes: &[u8], at: usize) -> Option<usize> {
             }
             Some(index)
         }
+    }
+}
+
+/// The columns the log derives from a record's content, as the text at the
+/// paths the record's ITS-JSON form holds them, which the database casts.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Derived {
+    /// `_type`.
+    pub record_type: Option<String>,
+    /// `uid/value`.
+    pub uid: Option<String>,
+    /// `time_recorded/value`.
+    pub time_recorded: Option<String>,
+    /// `ehr_id/value`.
+    pub ehr_id: Option<String>,
+    /// `action/defining_code/terminology_id/value`.
+    pub action_terminology: Option<String>,
+    /// `action/defining_code/code_string`.
+    pub action_code: Option<String>,
+    /// `outcome/result/defining_code/terminology_id/value`.
+    pub result_terminology: Option<String>,
+    /// `outcome/result/defining_code/code_string`.
+    pub result_code: Option<String>,
+    /// `accessor/party/external_ref/id/value`.
+    pub party_id: Option<String>,
+    /// `retention/retain_until/value`.
+    pub retain_until: Option<String>,
+    /// `time_removed/value`, a tombstone's.
+    pub time_removed: Option<String>,
+}
+
+impl Derived {
+    /// The derived columns of the record whose canonical form `cut` read.
+    ///
+    /// # Errors
+    /// A [`serde_json::Error`] when a string there does not read back.
+    pub fn of(cut: &Cut<'_>) -> Result<Self, serde_json::Error> {
+        Ok(Self {
+            record_type: cut.text_at(&["_type"])?,
+            uid: cut.text_at(&["uid", "value"])?,
+            time_recorded: cut.text_at(&["time_recorded", "value"])?,
+            ehr_id: cut.text_at(&["ehr_id", "value"])?,
+            action_terminology: cut.text_at(&[
+                "action",
+                "defining_code",
+                "terminology_id",
+                "value",
+            ])?,
+            action_code: cut.text_at(&["action", "defining_code", "code_string"])?,
+            result_terminology: cut.text_at(&[
+                "outcome",
+                "result",
+                "defining_code",
+                "terminology_id",
+                "value",
+            ])?,
+            result_code: cut.text_at(&["outcome", "result", "defining_code", "code_string"])?,
+            party_id: cut.text_at(&["accessor", "party", "external_ref", "id", "value"])?,
+            retain_until: cut.text_at(&["retention", "retain_until", "value"])?,
+            time_removed: cut.text_at(&["time_removed", "value"])?,
+        })
+    }
+}
+
+/// The columns of a stored row that give back the members its row part
+/// leaves out ([`without_columns`]).
+#[derive(Debug, Clone, Copy)]
+pub struct RowColumns<'c> {
+    /// The record's `_type`.
+    pub record_type: &'c str,
+    /// The record's uid.
+    pub uid: uuid::Uuid,
+    /// The record's `time_recorded`.
+    pub time_recorded: jiff::Timestamp,
+    /// The record's `ehr_id`, when the column keeps it.
+    pub ehr_id: Option<uuid::Uuid>,
+}
+
+/// A member being assembled: its canonical name, quotes included, and its
+/// canonical value.
+type Member<'t> = (Cow<'t, str>, Cow<'t, str>);
+
+/// The canonical form of the record whose stored row part is `row`, whose
+/// shared part is `shared` and whose columns are `columns`: the exact text
+/// the writer cut the parts from, the input of its content digest.
+///
+/// The members the columns hold go first, unless the row part keeps a
+/// `_type`, and a member the row part keeps itself replaces one of theirs.
+/// The shared part's members join the row's, `outcome` and `query` merge
+/// their members, and the access details merge their envelope and their
+/// elements in the order of their at-codes (byte order, an element without
+/// one first), the shared elements before the row's under one code.
+///
+/// # Errors
+/// A [`serde_json::Error`] when a part is no canonical object, which a part
+/// changed after it was written may no longer be.
+pub fn whole(
+    row: &str,
+    shared: Option<&str>,
+    columns: &RowColumns<'_>,
+) -> Result<String, serde_json::Error> {
+    let own = members(row).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?;
+    let mut top: Vec<Member<'_>> = Vec::with_capacity(own.len() + 16);
+    if !own.iter().any(|(name, _)| is_name(name, "_type")) {
+        top.push((
+            "\"_type\"".into(),
+            serde_json::to_string(columns.record_type)?.into(),
+        ));
+        top.push((
+            "\"uid\"".into(),
+            typed_text(HIER_OBJECT_ID, columns.uid).into(),
+        ));
+        if let Some(at) = super::instant_text(columns.time_recorded) {
+            top.push((
+                "\"time_recorded\"".into(),
+                typed_text("DV_DATE_TIME", at).into(),
+            ));
+        }
+        if let Some(ehr_id) = columns.ehr_id {
+            top.push((
+                "\"ehr_id\"".into(),
+                typed_text(HIER_OBJECT_ID, ehr_id).into(),
+            ));
+        }
+    }
+    let Some(shared) = shared else {
+        for &(name, value) in &own {
+            put(&mut top, name.into(), value.into());
+        }
+        return Ok(object_text(top));
+    };
+    let common = members(shared).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?;
+    let merged =
+        |name: &str| is_name(name, DETAILS) || SPLIT.iter().any(|(split, _)| is_name(name, split));
+    for &(name, value) in common.iter().chain(own.iter()) {
+        if !merged(name) {
+            put(&mut top, name.into(), value.into());
+        }
+    }
+    if let Some(details) = merged_details(last_named(&common, DETAILS), last_named(&own, DETAILS))?
+    {
+        put(&mut top, format!("\"{DETAILS}\"").into(), details.into());
+    }
+    for (split, _) in SPLIT {
+        let sides = [last_named(&common, split), last_named(&own, split)];
+        if sides.iter().all(Option::is_none) {
+            continue;
+        }
+        let mut inner = Vec::new();
+        for side in sides.into_iter().flatten() {
+            for (name, value) in
+                members(side).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?
+            {
+                put(&mut inner, name.into(), value.into());
+            }
+        }
+        put(
+            &mut top,
+            format!("\"{split}\"").into(),
+            object_text(inner).into(),
+        );
+    }
+    Ok(object_text(top))
+}
+
+/// The `_type` of an id the columns keep.
+const HIER_OBJECT_ID: &str = "HIER_OBJECT_ID";
+
+/// The canonical text of a `{"_type": kind, "value": value}` object, whose
+/// value needs no escape.
+fn typed_text(kind: &str, value: impl std::fmt::Display) -> String {
+    format!("{{\"_type\":\"{kind}\",\"value\":\"{value}\"}}")
+}
+
+/// Sets the member `name` of `members` to `value`, replacing one of that
+/// name, as `jsonb` concatenation does.
+fn put<'t>(members: &mut Vec<Member<'t>>, name: Cow<'t, str>, value: Cow<'t, str>) {
+    match members.iter_mut().find(|(have, _)| *have == name) {
+        Some(member) => member.1 = value,
+        None => members.push((name, value)),
+    }
+}
+
+/// The canonical object of `members`, sorted by name (RFC 8785 §3.2.3).
+fn object_text(mut members: Vec<Member<'_>>) -> String {
+    members.sort_by(|(left, _), (right, _)| canonical_order(left, right));
+    let mut out = Object::default();
+    for (name, value) in &members {
+        out.push(name, value);
+    }
+    out.finish()
+}
+
+/// The order of two canonical names by the UTF-16 code units of the names
+/// they write (RFC 8785 §3.2.3); for names in ASCII without an escape that is
+/// the order of their bytes.
+fn canonical_order(left: &str, right: &str) -> Ordering {
+    let plain = |name: &str| name.is_ascii() && !name.contains('\\');
+    if plain(left) && plain(right) {
+        return left.cmp(right);
+    }
+    // NOTE: RFC 8785 §3.2.3, a canonical name always decodes; one that does not sorts as empty.
+    let decode = |name: &str| serde_json::from_str::<String>(name).unwrap_or_default();
+    decode(left)
+        .encode_utf16()
+        .cmp(decode(right).encode_utf16())
+}
+
+/// The access details of the shared part, `common`, and of the row, `own`,
+/// merged: the envelope's members, the row's replacing the shared ones, and
+/// the elements of both in the order of their at-codes; `None` when neither
+/// part has them.
+fn merged_details(
+    common: Option<&str>,
+    own: Option<&str>,
+) -> Result<Option<String>, serde_json::Error> {
+    if common.is_none() && own.is_none() {
+        return Ok(None);
+    }
+    let mut envelope = Vec::new();
+    let mut items: Vec<(Option<Cow<'_, str>>, usize, usize, &str)> = Vec::new();
+    for (side, tree) in [common, own].into_iter().enumerate() {
+        let Some(tree) = tree else {
+            continue;
+        };
+        for (name, value) in members(tree).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))? {
+            if is_name(name, ITEMS) {
+                let listed = elements(value).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?;
+                for (position, element) in listed.into_iter().enumerate() {
+                    items.push((element_code(element), side, position, element));
+                }
+            } else {
+                put(&mut envelope, name.into(), value.into());
+            }
+        }
+    }
+    items.sort_by(|(left, ls, lp, _), (right, rs, rp, _)| {
+        left.cmp(right).then(ls.cmp(rs)).then(lp.cmp(rp))
+    });
+    let listed: Vec<&str> = items.iter().map(|(_, _, _, element)| *element).collect();
+    put(
+        &mut envelope,
+        format!("\"{ITEMS}\"").into(),
+        array(&listed).into(),
+    );
+    Ok(Some(object_text(envelope)))
+}
+
+/// The at-code an element names as `->> 'archetype_node_id'` reads it: a
+/// string decoded, any other value but `null` as its text; `None` for no
+/// code, which sorts first.
+fn element_code(element: &str) -> Option<Cow<'_, str>> {
+    let members = members(element)?;
+    let code = last_named(&members, NODE)?;
+    match code.as_bytes().first() {
+        Some(b'"') if !code.contains('\\') => code.get(1..code.len() - 1).map(Cow::Borrowed),
+        Some(b'"') => serde_json::from_str::<String>(code).ok().map(Cow::Owned),
+        _ if code == "null" => None,
+        _ => Some(Cow::Borrowed(code)),
     }
 }
 

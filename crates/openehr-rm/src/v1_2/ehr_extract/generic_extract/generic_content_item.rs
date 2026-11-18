@@ -35,9 +35,9 @@ pub struct GenericContentItem {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
 
     // inherited: EXTRACT_CONTENT_ITEM
     /// True if the content item carried in this container was part of the primary set for the Extract, i.e. not added due to link-following.
@@ -49,7 +49,7 @@ pub struct GenericContentItem {
     /// Content object.
     pub item: Option<Box<Locatable>>,
     /// Identifier of model or schema used to create the content.
-    pub item_type: Option<DvCodedText>,
+    pub item_type: Option<Box<DvCodedText>>,
     /// Version of model or schema used to create the content item.
     pub item_type_version: Option<String>,
     /// Reference to a demographic entity elsewhere in this Extract representing the author of the item version.
@@ -57,15 +57,15 @@ pub struct GenericContentItem {
     /// The reference should be a UID corresponding to the UID of a `GENERIC_CONTENT_ITEM` containing the demographic information.
     pub author: Option<String>,
     /// Time of creation of this item version on the original system. This may be an earlier commit time, or it may be the time at which the item was created during the Extract generation process.
-    pub creation_time: Option<Iso8601DateTime>,
+    pub creation_time: Option<Box<Iso8601DateTime>>,
     /// Reference to a demographic entity elsewhere in this Extract representing an authoriser of the item version, if relevant.
     ///
     /// The reference should be a UID corresponding to the UID of a `GENERIC_CONTENT_ITEM` containing the demographic information.
     pub authoriser: Option<String>,
     /// Time of authorisation of this item version on the original system where relevant.
-    pub authorisation_time: Option<Iso8601DateTime>,
+    pub authorisation_time: Option<Box<Iso8601DateTime>>,
     /// Coded lifecycle status of the item.
-    pub item_status: Option<DvCodedText>,
+    pub item_status: Option<Box<DvCodedText>>,
     /// Version id of this item in original system.
     pub version_id: Option<String>,
     /// Version set id of this item in original system, where applicable.
