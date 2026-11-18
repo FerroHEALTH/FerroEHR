@@ -361,7 +361,7 @@ impl Builder<'_> {
                 let inner = format!("{alias}_n");
                 let mut on =
                     hot(&inner, Node::Tier).and(attribute_child(&inner, &parent, &step.attribute));
-                if let Some(cond) = super::expr::type_cond(&inner, &step.node_types) {
+                if let Some(cond) = super::expr::type_cond(&inner, &step.node_types)? {
                     on = on.and(cond);
                 }
                 if let Some(pred) = &step.predicate {

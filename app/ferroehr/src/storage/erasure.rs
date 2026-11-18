@@ -49,18 +49,24 @@ pub async fn ehr_commit_audit_ids(
 /// Delete `ehr_ids`, cascading through the foreign-key graph across both tier
 /// partitions, and return the ids that existed.
 ///
+/// The node rows have no foreign key into `version` (#5969), so the same
+/// statement deletes them through the versions the cascade removes.
+///
 /// # Errors
 /// [`StorageError::Database`] on a driver failure.
 pub async fn delete_ehrs(
     tx: &mut PgConnection,
     ehr_ids: &[EhrId],
 ) -> Result<Vec<EhrId>, StorageError> {
-    Ok(
-        sqlx::query_scalar("DELETE FROM ehr WHERE id = ANY($1) RETURNING id")
-            .bind(ehr_ids)
-            .fetch_all(tx)
-            .await?,
+    Ok(sqlx::query_scalar(
+        "WITH n AS (DELETE FROM node n USING version v \
+                 WHERE v.ehr_id = ANY($1) AND n.tier = v.tier AND n.vo_id = v.vo_id \
+                 AND n.sys_version = v.sys_version) \
+             DELETE FROM ehr WHERE id = ANY($1) RETURNING id",
     )
+    .bind(ehr_ids)
+    .fetch_all(tx)
+    .await?)
 }
 
 /// Delete the commit-audit rows `ids`, which nothing references any more.
@@ -190,7 +196,7 @@ pub async fn object_commit_audit_ids(
     .await?)
 }
 
-/// Delete every version of `vo_ids`, cascading their `node` and
+/// Delete every version of `vo_ids` and their `node` rows, cascading their
 /// `vo_attestation` rows, over both tier partitions.
 ///
 /// # Errors
@@ -199,10 +205,15 @@ pub async fn delete_object_versions(
     tx: &mut PgConnection,
     vo_ids: &[VoId],
 ) -> Result<(), StorageError> {
-    sqlx::query("DELETE FROM version WHERE vo_id = ANY($1)")
-        .bind(vo_ids)
-        .execute(tx)
-        .await?;
+    sqlx::query(
+        "WITH n AS (DELETE FROM node n USING version v \
+             WHERE v.vo_id = ANY($1) AND n.tier = v.tier AND n.vo_id = v.vo_id \
+             AND n.sys_version = v.sys_version) \
+         DELETE FROM version WHERE vo_id = ANY($1)",
+    )
+    .bind(vo_ids)
+    .execute(tx)
+    .await?;
     Ok(())
 }
 
