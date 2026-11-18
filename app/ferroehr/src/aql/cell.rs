@@ -21,7 +21,7 @@ use std::fmt::Write as _;
 
 use serde_json::Value;
 
-use super::fragment::write_jsonb;
+use super::fragment::{write_jsonb, write_string};
 use super::ir::TypedLit;
 
 /// One rendered `RESULT_SET` cell: valid JSON text.
@@ -62,7 +62,9 @@ impl Cell {
     /// The JSON string cell of `text`.
     #[must_use]
     pub fn of_str(text: &str) -> Self {
-        Self::of_value(&Value::from(text))
+        let mut out = String::with_capacity(text.len() + 2);
+        write_string(text, &mut out);
+        Self(out.into())
     }
 
     /// The cell's JSON text.
@@ -122,6 +124,88 @@ pub fn numeric(text: &str) -> Cell {
         Ok(number @ Value::Number(_)) => Cell::of_value(&number),
         _ => Cell::of_str(text),
     }
+}
+
+/// Writes the typed value of an `ELEMENT` row as the jsonb text of the
+/// object `crate::storage::slim::rebuild_value` builds from the same
+/// columns, its keys in jsonb order; `None` when the number is no JSON
+/// number.
+#[must_use]
+pub fn write_typed_value(
+    out: &mut String,
+    value_type: &str,
+    num: Option<&str>,
+    text: Option<&str>,
+    code: Option<&str>,
+    terminology: Option<&str>,
+) -> Option<()> {
+    let number = || -> Option<serde_json::Number> {
+        match serde_json::from_str::<Value>(num?).ok()? {
+            Value::Number(number) => Some(number),
+            _ => None,
+        }
+    };
+    let string_or_null = |out: &mut String, value: Option<&str>| match value {
+        Some(value) => write_string(value, out),
+        None => out.push_str("null"),
+    };
+    let coded = |out: &mut String| {
+        out.push_str(r#"{"_type":"DV_CODED_TEXT","value":"#);
+        write_string(text.unwrap_or_default(), out);
+        out.push_str(r#","defining_code":{"_type":"CODE_PHRASE","code_string":"#);
+        write_string(code.unwrap_or_default(), out);
+        out.push_str(r#","terminology_id":{"_type":"TERMINOLOGY_ID","value":"#);
+        write_string(terminology.unwrap_or_default(), out);
+        out.push_str("}}}");
+    };
+    let kind = |out: &mut String| {
+        out.push_str(r#"{"_type":"#);
+        write_string(value_type, out);
+    };
+    match value_type {
+        "DV_QUANTITY" => {
+            let magnitude = number()?;
+            kind(out);
+            out.push_str(r#","units":"#);
+            string_or_null(out, text);
+            let _ = write!(out, r#","magnitude":{magnitude}}}"#);
+        }
+        "DV_COUNT" => {
+            let magnitude = number()?;
+            kind(out);
+            let _ = write!(out, r#","magnitude":{magnitude}}}"#);
+        }
+        "DV_CODED_TEXT" => coded(out),
+        "DV_ORDINAL" => {
+            let value = number()?;
+            kind(out);
+            let _ = write!(out, r#","value":{value},"symbol":"#);
+            coded(out);
+            out.push('}');
+        }
+        "DV_IDENTIFIER" => {
+            out.push_str(r#"{"id":"#);
+            string_or_null(out, text);
+            out.push_str(r#","_type":"#);
+            write_string(value_type, out);
+            out.push('}');
+        }
+        "DV_BOOLEAN" => {
+            kind(out);
+            out.push_str(if text == Some("true") {
+                r#","value":true}"#
+            } else {
+                r#","value":false}"#
+            });
+        }
+        _ => {
+            kind(out);
+            out.push_str(r#","value":"#);
+            string_or_null(out, text);
+            out.push('}');
+        }
+    }
+    Some(())
 }
 
 /// The text `numeric_out` writes for a `numeric` in its binary wire form
@@ -230,6 +314,47 @@ mod tests {
         assert_eq!(float(1e20).json(), "1e+20");
         assert_eq!(numeric("120.50").json(), "120.5");
         assert_eq!(numeric("NaN").json(), "\"NaN\"");
+    }
+
+    #[test]
+    fn a_typed_value_is_written_as_its_rebuilt_object() {
+        let cases: [(&str, Option<&str>, Option<&str>, Option<&str>, Option<&str>); 8] = [
+            ("DV_QUANTITY", Some("120.50"), Some("mm[Hg]"), None, None),
+            ("DV_QUANTITY", Some("7"), None, None, None),
+            ("DV_COUNT", Some("3"), None, None, None),
+            (
+                "DV_CODED_TEXT",
+                None,
+                Some("Fasting \"x\""),
+                Some("at0001"),
+                Some("local"),
+            ),
+            (
+                "DV_ORDINAL",
+                Some("2"),
+                Some("Moderate"),
+                Some("at0012"),
+                Some("local"),
+            ),
+            ("DV_IDENTIFIER", None, Some("1234"), None, None),
+            ("DV_BOOLEAN", None, Some("true"), None, None),
+            ("DV_TEXT", None, Some("free\ntext"), None, None),
+        ];
+        for (value_type, num, text, code, terminology) in cases {
+            let mut out = String::new();
+            write_typed_value(&mut out, value_type, num, text, code, terminology).unwrap();
+            let rebuilt = crate::storage::slim::rebuild_value(&crate::storage::slim::TypedValue {
+                value_type: value_type.to_owned(),
+                num: num.map(str::to_owned),
+                text: text.map(str::to_owned),
+                code: code.map(str::to_owned),
+                terminology: terminology.map(str::to_owned),
+            })
+            .unwrap();
+            assert_eq!(out, Cell::of_jsonb(&rebuilt).json(), "{value_type}");
+        }
+        let mut out = String::new();
+        assert!(write_typed_value(&mut out, "DV_COUNT", Some("x"), None, None, None).is_none());
     }
 
     #[test]
