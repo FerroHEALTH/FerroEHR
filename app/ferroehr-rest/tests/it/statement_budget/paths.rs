@@ -570,6 +570,8 @@ async fn every_hot_path_stays_within_its_budget() {
     let counter = Counter::default();
     let _guard =
         tracing::subscriber::set_default(tracing_subscriber::registry().with(counter.clone()));
+    // The budgets count what a release build does, without the debug reference cells.
+    ferroehr::aql::sql::without_reference_cells();
     let (_db, pool, _svc, app) = Box::pin(app()).await;
     sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
         .execute(&pool)
