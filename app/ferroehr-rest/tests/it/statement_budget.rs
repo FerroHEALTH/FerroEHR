@@ -242,6 +242,8 @@ async fn an_aql_request_stays_within_its_statement_budget() {
     let round_trips = RoundTrips::default();
     let _guard =
         tracing::subscriber::set_default(tracing_subscriber::registry().with(round_trips.clone()));
+    // The budgets count what a release build does, without the debug reference cells.
+    ferroehr::aql::sql::without_reference_cells();
     let (_db, pool, _svc, app) = Box::pin(app()).await;
     sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_stat_statements")
         .execute(&pool)

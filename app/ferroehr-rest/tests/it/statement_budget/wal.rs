@@ -231,6 +231,8 @@ async fn passes(pool: &PgPool, from: &str, to: &str) -> u64 {
 /// ceiling in [`CEILINGS`], and each chainer pass at most its per-pass one.
 #[tokio::test]
 async fn an_access_log_entry_stays_within_its_wal_ceiling() {
+    // The budgets count what a release build does, without the debug reference cells.
+    ferroehr::aql::sql::without_reference_cells();
     let (_db, pool, _svc, app) = Box::pin(app()).await;
     sqlx::query("CREATE EXTENSION IF NOT EXISTS pg_walinspect")
         .execute(&pool)
@@ -379,29 +381,10 @@ fn commit_relation(relation: &str) -> bool {
 /// of write-ahead log and runs at most its nested statements (#5969).
 #[tokio::test]
 async fn a_composition_commit_stays_within_its_wal_ceiling() {
+    // The budgets count what a release build does, without the debug reference cells.
+    ferroehr::aql::sql::without_reference_cells();
     let (_db, pool, _svc, app) = Box::pin(app()).await;
-    for extension in ["pg_stat_statements", "pg_walinspect"] {
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "CREATE EXTENSION IF NOT EXISTS {extension}"
-        )))
-        .execute(&pool)
-        .await
-        .expect("the server loads the extension");
-    }
-    let (status, body) = send(
-        &app,
-        "POST",
-        &format!("{BASE}/definition/template/adl1.4"),
-        "root",
-        None,
-        Some(("application/xml", corpus("generic-lab-test-result.opt"))),
-    )
-    .await;
-    assert_eq!(status, StatusCode::CREATED, "lab OPT upload: {body}");
-    let mut made = Vec::new();
-    for _ in 0..EHRS {
-        made.push(ehr_with_composition(&app).await);
-    }
+    let made = commit_fixture(&app, &pool).await;
     let mut report = String::new();
     let mut over = false;
     for (fixture, ceiling, nested_ceiling) in COMMIT_CEILINGS {
@@ -425,40 +408,12 @@ async fn a_composition_commit_stays_within_its_wal_ceiling() {
         for (ehr, _) in &made {
             commit(ehr.clone()).await;
         }
-        drained(&pool).await;
-        sqlx::query(
-            "SELECT pg_stat_statements_reset(0, \
-             (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
-        )
-        .execute(&pool)
-        .await
-        .expect("the statement counts reset");
-        let mut keeper = ferroehr::db::acquire::acquire(&pool)
-            .await
-            .expect("a connection for the slot");
-        sqlx::query(
-            "SELECT /* statement_budget_own */ pg_create_physical_replication_slot( \
-             'statement_budget_wal_' || pg_backend_pid(), true, true)",
-        )
-        .execute(&mut *keeper)
-        .await
-        .expect("a temporary slot keeps the window's WAL");
-        let from = insert_lsn(&pool).await;
-        for (_, (ehr, _)) in (0..REQUESTS).zip(made.iter().cycle()) {
-            commit(ehr.clone()).await;
-        }
-        drained(&pool).await;
-        let to = insert_lsn(&pool).await;
-        flushed(&pool, &to).await;
-        let relations = by_relation(&pool, &from, &to).await;
-        sqlx::query(
-            "SELECT /* statement_budget_own */ pg_drop_replication_slot( \
-             'statement_budget_wal_' || pg_backend_pid())",
-        )
-        .execute(&mut *keeper)
-        .await
-        .expect("the slot drops");
-        drop(keeper);
+        let relations = commit_window(&pool, async {
+            for (_, (ehr, _)) in (0..REQUESTS).zip(made.iter().cycle()) {
+                commit(ehr.clone()).await;
+            }
+        })
+        .await;
         let commits: u64 = relations
             .iter()
             .filter(|(name, ..)| commit_relation(name))
@@ -489,6 +444,76 @@ async fn a_composition_commit_stays_within_its_wal_ceiling() {
         !over,
         "a commit exceeds its write-ahead log or nested-statement ceiling:\n{report}"
     );
+}
+
+/// Loads the measuring extensions, uploads the lab template and makes the
+/// [`EHRS`] EHRs the commits go to, each with a composition.
+async fn commit_fixture(app: &Router, pool: &PgPool) -> Vec<(String, String)> {
+    for extension in ["pg_stat_statements", "pg_walinspect"] {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE EXTENSION IF NOT EXISTS {extension}"
+        )))
+        .execute(pool)
+        .await
+        .expect("the server loads the extension");
+    }
+    let (status, body) = send(
+        app,
+        "POST",
+        &format!("{BASE}/definition/template/adl1.4"),
+        "root",
+        None,
+        Some(("application/xml", corpus("generic-lab-test-result.opt"))),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "lab OPT upload: {body}");
+    let mut made = Vec::new();
+    for _ in 0..EHRS {
+        made.push(ehr_with_composition(app).await);
+    }
+    made
+}
+
+/// The write-ahead log by relation that `commits` writes, with the
+/// statement counts reset before it and a temporary slot keeping the
+/// window's WAL.
+async fn commit_window(
+    pool: &PgPool,
+    commits: impl Future<Output = ()>,
+) -> Vec<(String, u64, u64)> {
+    drained(pool).await;
+    sqlx::query(
+        "SELECT pg_stat_statements_reset(0, \
+         (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
+    )
+    .execute(pool)
+    .await
+    .expect("the statement counts reset");
+    let mut keeper = ferroehr::db::acquire::acquire(pool)
+        .await
+        .expect("a connection for the slot");
+    sqlx::query(
+        "SELECT /* statement_budget_own */ pg_create_physical_replication_slot( \
+         'statement_budget_wal_' || pg_backend_pid(), true, true)",
+    )
+    .execute(&mut *keeper)
+    .await
+    .expect("a temporary slot keeps the window's WAL");
+    let from = insert_lsn(pool).await;
+    commits.await;
+    drained(pool).await;
+    let to = insert_lsn(pool).await;
+    flushed(pool, &to).await;
+    let relations = by_relation(pool, &from, &to).await;
+    sqlx::query(
+        "SELECT /* statement_budget_own */ pg_drop_replication_slot( \
+         'statement_budget_wal_' || pg_backend_pid())",
+    )
+    .execute(&mut *keeper)
+    .await
+    .expect("the slot drops");
+    drop(keeper);
+    relations
 }
 
 /// The calls of the statements `PostgreSQL` ran nested in the test's
