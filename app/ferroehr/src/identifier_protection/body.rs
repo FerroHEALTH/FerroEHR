@@ -115,7 +115,7 @@ fn at_pointer<'b>(root: &'b mut dyn RmObject, pointer: &str) -> Option<&'b mut d
 
 /// Put the plaintext values back, addressed by the same pointers.
 ///
-/// The inverse of [`substitute`], for the audited expansion path: the served
+/// The inverse of `substitute`, for the audited expansion path: the served
 /// default is the stored reference form, and a caller entitled to the values
 /// asks for them explicitly.
 pub fn expand(body: &mut Value, values: &[(String, String)]) {

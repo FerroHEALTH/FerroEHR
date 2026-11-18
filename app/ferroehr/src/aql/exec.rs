@@ -7,7 +7,7 @@
 //! the `sqlx` pool, and assembles a [`QueryResult`] (column metadata + rendered
 //! cells) the service writes as an ITS-REST 1.1.0 `RESULT_SET`. Every cell is
 //! rendered once from the stored and typed values the statement returns
-//! ([`super::read`]); whole-object cells reassemble their node subtree through
+//! (`crate::aql::read`); whole-object cells reassemble their node subtree through
 //! the codec ([`crate::storage::codec::reassemble`]).
 
 #![expect(

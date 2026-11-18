@@ -391,7 +391,7 @@ fn folded_statement(shape: Shape) -> String {
 /// `VERSION.signature` was computed over, so stored and signed agree by
 /// construction. The externalized multimedia URIs a version's node rows
 /// reference are indexed in the same transaction
-/// ([`crate::storage::blob_ref::record`]), which issues no statement when there
+/// ([`crate::storage::blob_ref::record_uris`]), which issues no statement when there
 /// are none.
 ///
 /// On a CONTRIBUTION uid already in use the `contribution` CTE inserts nothing

@@ -24,7 +24,7 @@ use crate::versioning::{SigningCtx, integrity};
 /// Derive the signature over the version body.
 ///
 /// The signature input is the accepted body before decomposition, the value
-/// the stored `version.body` text ([`super::canonical_body_text`]) serializes
+/// the stored `version.body` text serializes
 /// and the node rows reassemble to, and the signature canonicalization is RFC
 /// 8785 (key-order-insensitive), so it proves the stored and served bytes. A Null body is a logical delete
 /// (Void body is signed, master06 §Logical Deletion).

@@ -91,7 +91,8 @@ pub struct ReadRow {
     pub num_cap: i32,
     /// `num` of the parent structure node.
     pub parent_num: i32,
-    /// Materialized path from the root (see [`NodeRow::path`]).
+    /// Materialized path from the root: full attribute names, array index
+    /// appended, `.`-terminated steps (`content0.data.events1.`).
     pub path: String,
     /// The node's canonical JSON fragment.
     pub data: Value,
@@ -101,9 +102,9 @@ pub struct ReadRow {
 /// needs from a node row — its pre-order number, its materialized path, and
 /// its JSON fragment.
 ///
-/// Implemented by both the write [`NodeRow`] and the lean [`ReadRow`], so
-/// reassembly works from either shape without forcing the read path to fetch
-/// the promoted query columns.
+/// Implemented by the lean [`ReadRow`] and by the `NodeRow` the unit tests
+/// state a decomposition in, so reassembly works from either shape without
+/// forcing the read path to fetch the promoted query columns.
 pub trait NodeContent {
     /// Pre-order number within the versioned object (root = 0).
     fn num(&self) -> i32;

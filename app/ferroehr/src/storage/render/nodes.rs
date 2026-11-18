@@ -249,7 +249,8 @@ fn is_structure(body: &Rendered, node: NodeId) -> bool {
     body.rm_type(node).as_deref().is_some_and(is_structure_type)
 }
 
-/// The promoted leaves of a root row ([`crate::storage::promoted::extract`]).
+/// The promoted leaves of a root row
+/// ([`crate::storage::promoted::PROMOTED_LEAVES`]).
 fn promoted(body: &Rendered, num: i32, rm_type: &str, node: NodeId) -> Vec<Option<String>> {
     if num != 0 {
         return Vec::new();
@@ -290,7 +291,7 @@ struct Kept<'a> {
     replaced: Option<&'a [u8]>,
 }
 
-/// Slims the members `kept` of one fragment ([`crate::storage::slim::slim`]).
+/// Slims the members `kept` of one fragment ([`crate::storage::slim`]).
 fn slim<'a>(
     body: &'a Rendered,
     rm_type: &str,

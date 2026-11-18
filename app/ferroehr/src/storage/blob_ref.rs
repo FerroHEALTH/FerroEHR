@@ -35,8 +35,8 @@ use crate::storage::error::StorageError;
 /// deployment minted, and an extra row can only keep a blob, never delete one.
 pub(crate) const EXTERNAL_BLOB_SCHEME: &str = "s3://";
 
-/// Record `uris` ([`uris_of`]), the external blob URIs version `sys_version`
-/// of `vo_id` references, as [`record`] records those of node rows.
+/// Record `uris` ([`crate::storage::render::blob_uris`]), the external blob
+/// URIs version `sys_version` of `vo_id` references.
 ///
 /// # Errors
 /// Returns [`StorageError::Database`] on a driver/insert failure.

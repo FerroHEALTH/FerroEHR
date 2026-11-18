@@ -121,7 +121,7 @@ struct Prepared {
     stable_compatible: bool,
     origins: Vec<String>,
     /// SHA-256 over the canonical body with the root `uid` removed
-    /// ([`content_digest`]).
+    /// ([`crate::storage::render::content_digest`]).
     content_digest: [u8; 32],
     /// What a party body holds that the binding hooks read, derived before
     /// the body is decomposed (#5220); `None` for every other kind.

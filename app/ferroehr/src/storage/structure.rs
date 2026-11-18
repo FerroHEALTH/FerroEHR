@@ -55,7 +55,7 @@ pub fn is_structure_type(rm_type: &str) -> bool {
 }
 
 /// Whether an RM `_type` may be the **root** of a versioned object handed to
-/// [`crate::storage::codec::decompose`].
+/// [`crate::storage::render::decompose`].
 ///
 /// This is [`is_structure_type`] minus the demographic containers, plus
 /// `PARTY_RELATIONSHIP`. A container is decomposed into rows but is never a

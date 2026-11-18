@@ -100,8 +100,7 @@ pub fn fed_origins(body: &Rendered) -> BTreeSet<String> {
         .collect()
 }
 
-/// The external blob URIs `body` references, each once and sorted
-/// ([`crate::storage::blob_ref::uris_of`]).
+/// The external blob URIs `body` references, each once and sorted.
 #[must_use]
 pub fn blob_uris(body: &Rendered) -> Vec<String> {
     let found: BTreeSet<String> = body
@@ -118,9 +117,10 @@ pub fn blob_uris(body: &Rendered) -> Vec<String> {
     found.into_iter().collect()
 }
 
-/// The two slices of `text` around the member at `span` ([`root_member`]),
-/// with the comma that joined it to a neighbour taken out as well, so their
-/// concatenation is the object without that member.
+/// The two slices of `text` around the member at `span`
+/// ([`index::Rendered::member_span`]), with the comma that joined it to a
+/// neighbour taken out as well, so their concatenation is the object without
+/// that member.
 #[must_use]
 pub fn without_member(text: &[u8], span: Range<usize>) -> (&[u8], &[u8]) {
     let (start, end) = if span.start > 1 && text.get(span.start - 1) == Some(&b',') {

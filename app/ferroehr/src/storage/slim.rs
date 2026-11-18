@@ -14,8 +14,9 @@
 //! template coming back from its version row. A plain `DV_DATE_TIME` `origin`
 //! or `time`, a bare `PARTY_SELF` `subject` and the root's `uid`, which is
 //! the version's `OBJECT_VERSION_ID`, leave under the [`Compact`] markers.
-//! [`slim`] removes exactly those keys, only when the columns rebuild them
-//! byte for byte, and keeps everything else verbatim; [`rebuild`] and its
+//! The write path ([`crate::storage::render::nodes`]) removes exactly those
+//! keys, only when the columns rebuild them byte for byte, and keeps
+//! everything else verbatim; [`rebuild`] and its
 //! SQL twins `ext.node_name`, `ext.node_value` and `ext.node_fragment` put
 //! the removed keys back on read. A fragment with nothing left is stored as
 //! SQL `NULL`.
@@ -104,7 +105,7 @@ pub struct Columns<'a> {
 /// The whole canonical fragment of a stored row: what it stores, with every
 /// key its columns hold put back.
 ///
-/// The inverse of [`slim`], and the Rust twin of `ext.node_fragment`, which an
+/// The inverse of the write path's slimming, and the Rust twin of `ext.node_fragment`, which an
 /// integration test pins to the same fragments. `None` when a typed number is
 /// not a JSON number, which only a damaged row can hold.
 #[must_use]

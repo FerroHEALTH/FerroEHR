@@ -138,7 +138,7 @@ pub(super) async fn load_ehrless_raw(
     Ok(read.filter(|r| r.read.ehr_id.is_none()))
 }
 
-/// A [`RawServiceResponse`] for a loaded party version: the stored text
+/// A [`crate::service::response::RawServiceResponse`] for a loaded party version: the stored text
 /// verbatim where the commit stamped its `uid` into it, else its canonical
 /// value with the `uid` injected ([`version_response`]).
 ///

@@ -206,7 +206,7 @@ pub(crate) fn document_tokens(
 }
 
 /// The search tokens of `resource`, the rendering of `event`: the tokens
-/// [`document_tokens`] reads from the resource's JSON document, read from the
+/// `document_tokens` reads from the resource's JSON document, read from the
 /// typed resource with no document written (#6005).
 ///
 /// Each element's nodes are the ones [`AuditElement::nodes`] reaches in the

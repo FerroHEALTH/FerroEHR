@@ -55,7 +55,7 @@ pub const REPRESENTS: &str = "represents";
 /// The `DV_IDENTIFIER.type` of an OAuth 2.0 `client_id`.
 pub const CLIENT_ID: &str = "client_id";
 
-/// The SQL/JSON path that holds exactly when [`policy_content`] finds content.
+/// The SQL/JSON path that holds exactly when `policy_content` finds content.
 ///
 /// The party migration `0044_access_terminology.sql` and `mark_stored` test
 /// each version's body with it, and a test runs both over one set of bodies.

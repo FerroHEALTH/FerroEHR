@@ -13,7 +13,7 @@
 //!
 //! One registry drives both directions, so the write side and the read side can
 //! never disagree on the mapping:
-//! - **Write** ([`crate::storage::codec`] → [`extract`]): at decomposition time,
+//! - **Write** ([`crate::storage::render::nodes`]): at decomposition time,
 //!   for a versioned-object root, the raw leaf text is captured onto the row and
 //!   written into the column ([`crate::storage::node_write::write_nodes`]).
 //! - **Read** (`crate::aql::sql::value`): a lowered `LeafPath` whose flattened

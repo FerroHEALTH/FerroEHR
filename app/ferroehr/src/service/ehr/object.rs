@@ -88,7 +88,7 @@ impl FerroEhrService {
     }
 
     /// [`Self::ehr_object`], with the body kept as the stored text where
-    /// nothing needs it parsed ([`crate::versioning::read::read_raw`]).
+    /// nothing needs it parsed (`crate::versioning::read::read_raw`).
     ///
     /// # Errors
     /// As [`Self::ehr_object`].

@@ -31,8 +31,10 @@ pub struct IndexColumns<'c> {
 /// The row part `row` of an entry without the members its columns give back.
 ///
 /// `_type` always goes, and `uid`, `ehr_id` and `time_recorded` when the
-/// column gives back their exact text ([`super::column_uuid`],
-/// [`super::column_instant`]); `audit.access_log_document` puts them back for
+/// column gives back their exact text
+/// ([`crate::access_log::stored_form::column_uuid`],
+/// [`crate::access_log::stored_form::column_instant`]);
+/// `audit.access_log_document` puts them back for
 /// a row part without `_type` (#5784). Of the members the index columns
 /// `index` give back, `channel.request_id` and the `version_id` of an only
 /// item without an `object` go when the column writes their exact text; where
