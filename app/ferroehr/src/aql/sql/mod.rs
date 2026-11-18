@@ -282,6 +282,10 @@ pub struct ColumnSpec {
     /// The generated SQL column alias(es): one for [`CellKind::Scalar`], four
     /// (`vo`, `sv`, `num`, `cap`) for [`CellKind::WholeObject`].
     pub sql_cols: Vec<String>,
+    /// In a debug build, the SQL alias of the jsonb cell PostgreSQL builds
+    /// for a rendered column, which the rendered cell must equal byte for
+    /// byte (`crate::aql::read`); `None` otherwise.
+    pub reference: Option<String>,
 }
 
 /// A built, bindable query: the SQL text, its bound values, and the per-column
@@ -476,10 +480,9 @@ struct Builder<'a> {
     /// The node aliases whose stored columns the projection returns, in
     /// group order ([`NodeGroup`]).
     node_groups: Vec<(String, NodeGroup)>,
-    /// Whether every projected cell keeps its `jsonb` in SQL, as the
-    /// differential check of the Rust rendering builds it
-    /// ([`build_sql_projected`]).
-    sql_projection: bool,
+    /// Whether each rendered cell also selects the jsonb cell PostgreSQL
+    /// builds for it ([`build_executed`]).
+    references: bool,
 }
 
 /// One bound structure-step prefix: the steps from `source` down, and the
@@ -521,7 +524,7 @@ impl<'a> Builder<'a> {
             ),
             step_bindings: Vec::new(),
             node_groups: Vec::new(),
-            sql_projection: false,
+            references: false,
         }
     }
 
@@ -690,20 +693,20 @@ pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuer
     Builder::lower(builder)
 }
 
-/// Lowers `ir` with every projected cell built as `jsonb` in SQL, the form
-/// the Rust rendering replaced, which a debug build executes beside every
-/// statement to hold the two to byte-identical cells
-/// (`crate::aql::exec`).
+/// The statement the executor runs for `ir`: [`build`], and in a debug
+/// build each rendered cell beside the jsonb cell PostgreSQL builds for it,
+/// which the executor holds the rendered cell to byte for byte
+/// (`crate::aql::read`), so every AQL test checks the rendering.
 ///
 /// # Errors
 /// As [`build`].
-pub(crate) fn build_sql_projected(
+pub(crate) fn build_executed(
     ir: &QueryIr,
     params: &Params,
     ctx: &SqlCtx,
 ) -> Result<PreparedQuery, AqlError> {
     let mut builder = Builder::new(ir, params, ctx);
-    builder.sql_projection = true;
+    builder.references = cfg!(debug_assertions);
     Builder::lower(builder)
 }
 

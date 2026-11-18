@@ -599,9 +599,9 @@ once into its cells (`aql::cell`) and the `RESULT_SET` once into the body,
 its weak `ETag` the SHA-256 of the bytes as written without the
 `meta._created` stamp (`service::query::result_set`). `SELECT DISTINCT`
 and a projected list of attestations keep their cells as jsonb in SQL,
-where PostgreSQL compares or aggregates them. A debug build runs every
-statement a second time with its projection built in SQL and requires
-byte-identical cells. No openEHR spec governs the rendering: our own
+where PostgreSQL compares or aggregates them. A debug build selects, in
+the same statement, the jsonb cell PostgreSQL builds beside each rendered
+cell and requires the two to be the same bytes. No openEHR spec governs the rendering: our own
 design. A path whose candidate
 types are mixed (an `ELEMENT`'s whole `DATA_VALUE`) compares and orders by
 keys read off each value's own `_type` (`aql::sql::coerce`): a number against

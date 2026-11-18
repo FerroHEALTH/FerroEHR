@@ -238,6 +238,7 @@ impl ResultSetDoc {
     /// serialise.
     pub fn write(&self) -> Result<WrittenResultSet, ResultSetError> {
         use sha2::Digest as _;
+        crate::telemetry::conversion::record("result_set_to_text");
         let meta = serde_json::to_string(&self.meta).map_err(ResultSetError::Serialise)?;
         let executed =
             serde_json::to_string(&self.meta._executed_aql).map_err(ResultSetError::Serialise)?;

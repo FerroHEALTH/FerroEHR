@@ -4,9 +4,9 @@
 //! The AQL cells the server renders in Rust are byte-identical to the cells
 //! PostgreSQL's jsonb projection served before them (#6004).
 //!
-//! A debug build executes every AQL statement a second time with its
-//! projection built as jsonb in SQL and asserts that each row's cells are the
-//! same bytes (`ferroehr::aql::exec`). This suite drives that check over the
+//! A debug build selects, in the same statement, the jsonb cell PostgreSQL
+//! builds beside each rendered cell and asserts that the two are the same
+//! bytes (`ferroehr::aql::read`). This suite drives that check over the
 //! capacity fixtures, the lab result and the International Patient Summary,
 //! through every kind of projected path the emitter writes: object and scalar
 //! leaves, the members a node row keeps in its columns, compact markers,

@@ -19,6 +19,8 @@ use serde_json::Value;
 use sqlx::postgres::PgRow;
 use sqlx::{Column as _, Row as _, TypeInfo as _, ValueRef as _};
 
+use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
+
 use super::cell::{self, Cell};
 use super::error::{AqlError, ExecError};
 use super::fragment::write_jsonb;
@@ -29,6 +31,8 @@ use super::sql::{CellKind, ColumnRender, ColumnSpec, FragmentCell, Layout};
 pub(super) struct Plan {
     columns: Vec<(Vec<usize>, Option<Typed>)>,
     groups: Vec<usize>,
+    /// Per column, the position of its debug-build reference cell.
+    references: Vec<Option<usize>>,
 }
 
 /// A node group's fragment in one row, rebuilt on first use.
@@ -91,7 +95,16 @@ impl Plan {
                 Ok((at, typed))
             })
             .collect::<Result<Vec<_>, AqlError>>()?;
-        Ok(Self { columns, groups })
+        let references = layout
+            .columns
+            .iter()
+            .map(|spec| spec.reference.as_deref().map(position).transpose())
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self {
+            columns,
+            groups,
+            references,
+        })
     }
 
     /// The cells of `row`; a whole-object cell is `null` until the executor
@@ -119,17 +132,27 @@ impl Plan {
                 CellKind::Column(ColumnRender::VersionUid) => {
                     let uid: Option<String> =
                         row.try_get(first_col(spec, at)?).map_err(ExecError::from)?;
-                    uid.map_or_else(Cell::null, |uid| {
-                        Cell::of_jsonb(&serde_json::json!({
-                            "_type": "OBJECT_VERSION_ID",
-                            "value": uid,
-                        }))
-                    })
+                    match uid {
+                        Some(uid) => version_uid_cell(uid)?,
+                        None => Cell::null(),
+                    }
                 }
                 CellKind::Fragment(cell) => {
                     self.fragment_cell(row, spec, at, cell, &mut fragments)?
                 }
             };
+            if let Some(Some(at)) = self.references.get(cells.len()) {
+                let reference: Option<Value> = row.try_get(*at).map_err(ExecError::from)?;
+                debug_assert_eq!(
+                    cell.json(),
+                    reference
+                        .as_ref()
+                        .map_or_else(Cell::null, Cell::of_value)
+                        .json(),
+                    "column `{}`: the Rust-rendered cell is the jsonb cell PostgreSQL builds",
+                    spec.name
+                );
+            }
             cells.push(cell);
         }
         Ok(cells)
@@ -195,6 +218,22 @@ fn fragment(row: &PgRow, start: usize) -> Result<Option<Value>, AqlError> {
     Ok(Some(
         crate::storage::node_repo::row_fragment(row, start).map_err(ExecError::from)?,
     ))
+}
+
+/// The cell of a version's `OBJECT_VERSION_ID` from its uid text.
+///
+/// # Errors
+/// [`ExecError::Assembly`] when the stored identity columns compose no
+/// `OBJECT_VERSION_ID`.
+fn version_uid_cell(uid: String) -> Result<Cell, AqlError> {
+    let id = ObjectVersionId::new(uid).map_err(|e| {
+        ExecError::from(crate::storage::error::StorageError::InvalidRows(format!(
+            "a version row composes no OBJECT_VERSION_ID: {e}"
+        )))
+    })?;
+    let value =
+        serde_json::to_value(&id).map_err(|e| ExecError::from(sqlx::Error::Decode(e.into())))?;
+    Ok(Cell::of_jsonb(&value))
 }
 
 /// The rendering of the SQL type `name` of `spec`'s column.

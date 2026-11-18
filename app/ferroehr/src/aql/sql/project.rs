@@ -41,7 +41,7 @@ impl Builder<'_> {
         i: usize,
         column: &SelectColumn,
     ) -> Result<Option<ColumnSpec>, AqlError> {
-        if self.ir.distinct || self.sql_projection {
+        if self.ir.distinct {
             return Ok(None);
         }
         let name = column.alias.clone().unwrap_or_else(|| format!("#{i}"));
@@ -50,6 +50,7 @@ impl Builder<'_> {
             path,
             kind,
             sql_cols,
+            reference: None,
         };
         Ok(match &column.value {
             SelectValue::Literal(lit) => {

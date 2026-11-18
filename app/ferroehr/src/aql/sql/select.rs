@@ -115,14 +115,6 @@ impl Builder<'_> {
 
     fn emit_select_column(&mut self, i: usize, col: &SelectColumn) -> Result<ColumnSpec, AqlError> {
         let name = col.alias.clone().unwrap_or_else(|| format!("#{i}"));
-        let whole = matches!(
-            &col.value,
-            SelectValue::Path(PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf))
-                if leaf.is_whole_object()
-        );
-        if !whole && let Some(spec) = self.rendered_column(i, col)? {
-            return Ok(spec);
-        }
         match &col.value {
             SelectValue::Path(PathTarget::Data(leaf)) if leaf.is_whole_object() => {
                 let mut spec = self.emit_whole_object(i, name, leaf)?;
@@ -131,7 +123,7 @@ impl Builder<'_> {
                 if col.path.is_some() {
                     spec.path.clone_from(&col.path);
                 }
-                Ok(spec)
+                return Ok(spec);
             }
             // `e/ehr_status` (whole) / `e/ehr_status/<structure child>` (whole):
             // join the EHR_STATUS root, then reassemble the addressed subtree.
@@ -141,59 +133,55 @@ impl Builder<'_> {
                 if col.path.is_some() {
                     spec.path.clone_from(&col.path);
                 }
-                Ok(spec)
+                return Ok(spec);
             }
-            SelectValue::Path(target) => {
-                let expr = self.value_expr(target, ValueMode::Projection)?;
-                let sql_col = format!("col{i}");
-                self.q.expr_as(to_jsonb(expr), Alias::new(sql_col.as_str()));
-                Ok(ColumnSpec {
-                    name,
-                    path: col.path.clone().or_else(|| target_path_string(target)),
-                    kind: CellKind::Scalar,
-                    sql_cols: vec![sql_col],
-                })
+            _ => {}
+        }
+        if let Some(mut spec) = self.rendered_column(i, col)? {
+            // NOTE: our own design (#6004), a debug build selects the jsonb cell beside the
+            // rendered one, so every AQL test holds the two to the same bytes (`aql::read`).
+            if self.references {
+                let reference = format!("ref{i}");
+                self.emit_sql_cell(col, &reference)?;
+                spec.reference = Some(reference);
             }
-            SelectValue::Literal(lit) => {
-                let sql_col = format!("col{i}");
-                self.q.expr_as(
-                    to_jsonb(Expr::val(literal_value(lit))),
-                    Alias::new(sql_col.as_str()),
-                );
-                Ok(ColumnSpec {
-                    name,
-                    path: None,
-                    kind: CellKind::Scalar,
-                    sql_cols: vec![sql_col],
-                })
-            }
+            return Ok(spec);
+        }
+        let sql_col = format!("col{i}");
+        self.emit_sql_cell(col, &sql_col)?;
+        Ok(ColumnSpec {
+            name,
+            path: match &col.value {
+                SelectValue::Path(target) => {
+                    col.path.clone().or_else(|| target_path_string(target))
+                }
+                _ => None,
+            },
+            kind: CellKind::Scalar,
+            sql_cols: vec![sql_col],
+            reference: None,
+        })
+    }
+
+    /// Selects SELECT column `col` as the jsonb cell PostgreSQL builds,
+    /// under `alias`: the form of a `SELECT DISTINCT`, an attestation list
+    /// and a debug build's reference cell.
+    ///
+    /// # Errors
+    /// [`AqlError`] from lowering the column's value.
+    fn emit_sql_cell(&mut self, col: &SelectColumn, alias: &str) -> Result<(), AqlError> {
+        let expr = match &col.value {
+            SelectValue::Path(target) => self.value_expr(target, ValueMode::Projection)?,
+            SelectValue::Literal(lit) => Expr::val(literal_value(lit)),
             SelectValue::Aggregate {
                 func,
                 arg,
                 distinct,
-            } => {
-                let agg = self.aggregate_value(*func, arg.as_ref(), *distinct)?;
-                let sql_col = format!("col{i}");
-                self.q.expr_as(to_jsonb(agg), Alias::new(sql_col.as_str()));
-                Ok(ColumnSpec {
-                    name,
-                    path: None,
-                    kind: CellKind::Scalar,
-                    sql_cols: vec![sql_col],
-                })
-            }
-            SelectValue::Function { func, args } => {
-                let expr = self.scalar_fn_expr(*func, args)?;
-                let sql_col = format!("col{i}");
-                self.q.expr_as(to_jsonb(expr), Alias::new(sql_col.as_str()));
-                Ok(ColumnSpec {
-                    name,
-                    path: None,
-                    kind: CellKind::Scalar,
-                    sql_cols: vec![sql_col],
-                })
-            }
-        }
+            } => self.aggregate_value(*func, arg.as_ref(), *distinct)?,
+            SelectValue::Function { func, args } => self.scalar_fn_expr(*func, args)?,
+        };
+        self.q.expr_as(to_jsonb(expr), Alias::new(alias));
+        Ok(())
     }
 
     fn emit_whole_object(
@@ -246,6 +234,7 @@ impl Builder<'_> {
             path: Some(leaf_path_string(leaf)),
             kind: CellKind::WholeObject,
             sql_cols,
+            reference: None,
         })
     }
 
