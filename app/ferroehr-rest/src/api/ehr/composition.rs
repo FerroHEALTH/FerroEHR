@@ -84,11 +84,9 @@ async fn decode_composition_body(
         }
         // The simplified body builds the typed COMPOSITION directly; a refusal
         // of the built RM is the template-mediated 422 (master04 §Validation).
-        Some(WireFormat::Flat) => {
-            crate::formats::dispatch::composition_from_flat(state, h, body).await
-        }
-        Some(WireFormat::Structured) => {
-            crate::formats::dispatch::composition_from_structured(state, h, body).await
+        Some(format @ (WireFormat::Flat | WireFormat::Structured)) => {
+            let structured = format == WireFormat::Structured;
+            crate::formats::dispatch::composition_from_simplified(state, h, body, structured).await
         }
         _ => Err(RestError::from(ApiError::UnsupportedMediaType(
             "a COMPOSITION is committed as application/json, application/xml, \

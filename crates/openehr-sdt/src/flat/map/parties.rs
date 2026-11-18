@@ -19,6 +19,7 @@ use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
 
+use super::emit::put;
 use super::{data_values, emit};
 use crate::flat::error::FlatError;
 use crate::flat::instance::{Instance, at};
@@ -85,15 +86,10 @@ pub(crate) fn identifier_from_fields(fields: &[(&str, &Value)]) -> Result<Obj, F
 /// master05 §INSTRUCTION). The example blocks are the wire authority, so this
 /// emits `|id_scheme`; [`build_object_ref`] accepts either.
 pub(super) fn emit_object_ref<'a, I: Instance<'a>>(oref: I, out: &mut SimNode) {
-    let mut put = |suffix: &str, v: Option<I>| {
-        if let Some(v) = v.and_then(Instance::to_value) {
-            out.attrs.insert(suffix.to_owned(), v);
-        }
-    };
-    put("type", oref.attr("type"));
-    put("id", at(oref, &["id", "value"]));
-    put("id_scheme", at(oref, &["id", "scheme"]));
-    put("namespace", oref.attr("namespace"));
+    put(out, "type", oref.attr("type"));
+    put(out, "id", at(oref, &["id", "value"]));
+    put(out, "id_scheme", at(oref, &["id", "scheme"]));
+    put(out, "namespace", oref.attr("namespace"));
 }
 
 /// An OBJECT_REF from `|id` (+ `|type`/`|id_scheme`(or `|scheme`)/`|namespace`).
@@ -119,21 +115,7 @@ pub(super) fn build_object_ref(node: &SimNode) -> Result<Option<Obj>, FlatError>
         .get("namespace")
         .and_then(Value::as_str)
         .unwrap_or("EHR");
-    typed::make(
-        "OBJECT_REF",
-        [
-            ("namespace", s(ns)),
-            ("type", s(ty)),
-            (
-                "id",
-                o(typed::make(
-                    "GENERIC_ID",
-                    [("value", s(id)), ("scheme", s(scheme))],
-                )?),
-            ),
-        ],
-    )
-    .map(Some)
+    typed::generic_object_ref(ns, ty, id, scheme).map(Some)
 }
 
 // ── PARTY_PROXY family (master05 §§PARTY_SELF, PARTY_IDENTIFIED, PARTY_RELATED) ─
@@ -184,15 +166,10 @@ pub(super) fn emit_party<'a, I: Instance<'a>>(p: I, out: &mut SimNode) {
     if p.rm_type() == Some("PARTY_SELF") {
         out.attrs.insert("_type".to_owned(), json!("PARTY_SELF"));
     }
-    let mut put = |suffix: &str, v: Option<I>| {
-        if let Some(v) = v.and_then(Instance::to_value) {
-            out.attrs.insert(suffix.to_owned(), v);
-        }
-    };
-    put("name", p.attr("name"));
-    put("id", at(p, &["external_ref", "id", "value"]));
-    put("id_scheme", at(p, &["external_ref", "id", "scheme"]));
-    put("id_namespace", at(p, &["external_ref", "namespace"]));
+    put(out, "name", p.attr("name"));
+    put(out, "id", at(p, &["external_ref", "id", "value"]));
+    put(out, "id_scheme", at(p, &["external_ref", "id", "scheme"]));
+    put(out, "id_namespace", at(p, &["external_ref", "namespace"]));
     if let Some(ids) = p.members("identifiers") {
         for (i, id) in ids.into_iter().enumerate() {
             emit_identifier(
@@ -245,6 +222,19 @@ pub(super) fn build_party(node: &SimNode, default_party_type: &str) -> Result<Ob
         return Ok(p);
     }
 
+    identified_party(node, default_party_type, relationship, identifiers)
+}
+
+/// A `PARTY_IDENTIFIED`, or the `PARTY_RELATED` a `/relationship` child
+/// makes it, from the `|name` and external-reference suffixes of `node`
+/// (`ref_type` its reference type when none is written), `identifiers` and
+/// `relationship` (master05 §§PARTY_IDENTIFIED, PARTY_RELATED).
+fn identified_party(
+    node: &SimNode,
+    ref_type: &str,
+    relationship: Option<&SimNode>,
+    identifiers: Vec<Obj>,
+) -> Result<Obj, FlatError> {
     let ty = if relationship.is_some() {
         "PARTY_RELATED"
     } else {
@@ -254,7 +244,7 @@ pub(super) fn build_party(node: &SimNode, default_party_type: &str) -> Result<Ob
     if let Some(name) = node.attrs.get("name") {
         p.put_datum("name", name)?;
     }
-    if let Some(ext) = external_ref(node, default_party_type)? {
+    if let Some(ext) = external_ref(node, ref_type)? {
         p.put("external_ref", o(ext))?;
     }
     for identifier in identifiers {
@@ -436,27 +426,7 @@ pub(super) fn build_participation(node: &SimNode) -> Result<Obj, FlatError> {
 fn build_performer(node: &SimNode) -> Result<Obj, FlatError> {
     let relationship = single(node, "relationship");
     let identifiers = build_inline_identifiers(node)?;
-    let ty = if relationship.is_some() {
-        "PARTY_RELATED"
-    } else {
-        "PARTY_IDENTIFIED"
-    };
-    let mut p = access::construct(ty)?;
-    if let Some(name) = node.attrs.get("name") {
-        p.put_datum("name", name)?;
-    }
-    if let Some(ext) = external_ref(node, PERFORMER_REF_TYPE)? {
-        p.put("external_ref", o(ext))?;
-    }
-    for identifier in identifiers {
-        p.push_obj("identifiers", identifier)?;
-    }
-    if let Some(r) = relationship
-        && let Some(rel) = data_values::build_leaf(r, "DV_CODED_TEXT", None)?
-    {
-        p.put("relationship", o(rel))?;
-    }
-    Ok(p)
+    identified_party(node, PERFORMER_REF_TYPE, relationship, identifiers)
 }
 
 /// Rebuild the performer `identifiers` from the inlined `|identifiers_<field>:i`

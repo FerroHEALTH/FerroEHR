@@ -203,29 +203,41 @@ fn node_value(alias: &str) -> Expr {
 fn whole_fragment(alias: &str, version_uid: Expr, template_id: Expr) -> Expr {
     call(
         "node_fragment",
-        vec![
-            col(alias, Node::Data),
-            col(alias, Node::RmType),
-            col(alias, Node::Archetype),
-            col(alias, Node::Name),
-            col(alias, Node::NameCode),
-            col(alias, Node::NameTerminology),
-            col(alias, Node::ValueType),
-            col(alias, Node::ValueNum),
-            col(alias, Node::ValueText),
-            col(alias, Node::ValueCode),
-            col(alias, Node::ValueTerminology),
-            col(alias, Node::RmVersion),
-            col(alias, Node::Language),
-            col(alias, Node::Encoding),
-            col(alias, Node::OriginCompact),
-            col(alias, Node::TimeCompact),
-            col(alias, Node::PartySelf),
-            col(alias, Node::UidDerived),
-            version_uid,
-            template_id,
-        ],
+        node_columns(alias, col(alias, Node::ValueNum), version_uid, template_id),
     )
+}
+
+/// The `node` columns of `alias` a rebuilt fragment reads, in the order
+/// `ext.node_fragment` takes them, with `value_num` read as given and the
+/// version's uid and template of a root row last.
+pub(super) fn node_columns(
+    alias: &str,
+    value_num: Expr,
+    version_uid: Expr,
+    template_id: Expr,
+) -> Vec<Expr> {
+    vec![
+        col(alias, Node::Data),
+        col(alias, Node::RmType),
+        col(alias, Node::Archetype),
+        col(alias, Node::Name),
+        col(alias, Node::NameCode),
+        col(alias, Node::NameTerminology),
+        col(alias, Node::ValueType),
+        value_num,
+        col(alias, Node::ValueText),
+        col(alias, Node::ValueCode),
+        col(alias, Node::ValueTerminology),
+        col(alias, Node::RmVersion),
+        col(alias, Node::Language),
+        col(alias, Node::Encoding),
+        col(alias, Node::OriginCompact),
+        col(alias, Node::TimeCompact),
+        col(alias, Node::PartySelf),
+        col(alias, Node::UidDerived),
+        version_uid,
+        template_id,
+    ]
 }
 
 /// The member and the read of the `node` columns that hold the scalar a

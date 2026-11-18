@@ -82,7 +82,10 @@ impl FragmentPath {
                 for part in &cond.path {
                     let _ = write!(lhs, ".{part}");
                 }
-                conds.push(format!("{lhs} {} ${name}", op_text(cond.op)));
+                conds.push(format!(
+                    "{lhs} {} ${name}",
+                    crate::aql::sql::jsonpath::jsonpath_op(cond.op)
+                ));
             }
             let _ = write!(jp, " ? ({})", conds.join(" && "));
         }
@@ -260,19 +263,6 @@ fn number_order(a: &serde_json::Number, b: &serde_json::Number) -> Option<Orderi
         return Some(a.cmp(&b));
     }
     a.as_f64()?.partial_cmp(&b.as_f64()?)
-}
-
-/// The SQL/JSON path comparison operator of an AQL comparison operator
-/// (PostgreSQL docs §9.16.2).
-fn op_text(op: CompOp) -> &'static str {
-    match op {
-        CompOp::Eq => "==",
-        CompOp::Ne => "!=",
-        CompOp::Lt => "<",
-        CompOp::Le => "<=",
-        CompOp::Gt => ">",
-        CompOp::Ge => ">=",
-    }
 }
 
 /// Writes `value` as the JSON text a jsonb column of it was served as.

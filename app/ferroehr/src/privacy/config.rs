@@ -17,6 +17,12 @@
 //! A field of the one config tree ([`crate::config::FerroEhrConfig`]); no
 //! loader of its own.
 
+#![allow(
+    clippy::disallowed_types,
+    reason = "owner-approved 2026-08-03 (#1694): the `schema` feature's schemars derive expands to \
+              serde_json maps; without the feature nothing here names one"
+)]
+
 use serde::{Deserialize, Serialize};
 
 use crate::privacy::detect::built_in_rules;

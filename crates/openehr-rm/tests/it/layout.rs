@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
 //! The in-memory size of the RM types a request reads, held under the budget

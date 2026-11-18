@@ -211,28 +211,12 @@ impl Builder<'_> {
         let at = self.node_groups.len();
         let root = self.root_version_alias(alias);
         let (version_uid, template_id) = root_columns(alias, root.as_deref());
-        let columns = [
-            col(alias, Node::Data),
-            col(alias, Node::RmType),
-            col(alias, Node::Archetype),
-            col(alias, Node::Name),
-            col(alias, Node::NameCode),
-            col(alias, Node::NameTerminology),
-            col(alias, Node::ValueType),
+        let columns = super::expr::node_columns(
+            alias,
             cast(col(alias, Node::ValueNum), "text"),
-            col(alias, Node::ValueText),
-            col(alias, Node::ValueCode),
-            col(alias, Node::ValueTerminology),
-            col(alias, Node::RmVersion),
-            col(alias, Node::Language),
-            col(alias, Node::Encoding),
-            col(alias, Node::OriginCompact),
-            col(alias, Node::TimeCompact),
-            col(alias, Node::PartySelf),
-            col(alias, Node::UidDerived),
             version_uid,
             template_id,
-        ];
+        );
         for (n, expr) in columns.into_iter().enumerate() {
             self.q
                 .expr_as(expr, Alias::new(format!("g{at}_{n}").as_str()));

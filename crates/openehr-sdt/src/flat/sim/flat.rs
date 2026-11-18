@@ -118,7 +118,7 @@ impl<'de> serde::de::Visitor<'de> for FlatVisitor {
                 }
                 match well_formed(&key) {
                     Ok(()) => {
-                        node_at(&mut root, segment_part).raw = Some(RawDatum::Text(raw.to_owned()))
+                        node_at(&mut root, segment_part).raw = Some(RawDatum::Text(raw.to_owned()));
                     }
                     Err(e) => refusal = Some(e),
                 }

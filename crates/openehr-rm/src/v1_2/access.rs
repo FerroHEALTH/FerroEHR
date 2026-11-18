@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
 //! Reflective access to typed RM by attribute name (#6002).

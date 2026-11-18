@@ -17,13 +17,14 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
-use crate::analyze::{External, Model, emittable_specs};
+use crate::analyze::{External, Model};
 use crate::load::bmm::BmmClass;
 use crate::plan::layout::{Ty, parse};
 use crate::plan::overrides::{back_reference, class_binding, type_override};
 use crate::plan::{Emission, JsonFieldKind, construction, decide};
 use crate::render::emit::{GenFile, field_type, struct_generics};
-use crate::render::emit_walk::WalkSchema;
+use crate::render::emit_walk::{WalkClass, WalkSchema, for_each_class};
+use crate::render::generics::generic_header;
 use crate::render::naming;
 
 /// What a field holds.
@@ -68,6 +69,7 @@ fn prim(head: &str) -> Option<Prim> {
     }
 }
 
+/// The heads of the rendered types that hold an RM or BASE object.
 pub(crate) fn walkable(model: &Model) -> BTreeSet<String> {
     let used = model.used_as_type();
     let mut out = BTreeSet::new();
@@ -173,83 +175,70 @@ fn strip(ty: &Ty) -> (String, bool, bool, bool) {
     (t.head.clone(), optional, list, boxed)
 }
 
-fn header(generics: &[String]) -> (String, String) {
-    if generics.is_empty() {
-        (String::new(), String::new())
-    } else {
-        let b: Vec<String> = generics
-            .iter()
-            .map(|g| {
-                format!("{g}: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static")
-            })
-            .collect();
-        (
-            format!("<{}>", b.join(", ")),
-            format!("<{}>", generics.join(", ")),
-        )
-    }
+/// The generic parameters the enum `name` uses and the idents of its
+/// `variants`, with `own` (the enum's own data struct) last when it has one.
+pub(crate) fn enum_parts(
+    model: &Model,
+    name: &str,
+    variants: &[String],
+    own: Option<&str>,
+) -> (Vec<String>, Vec<String>) {
+    let generics = model
+        .used_generic_params(name)
+        .into_iter()
+        .map(|(n, _)| n)
+        .collect();
+    let mut idents: Vec<String> = variants.iter().map(|v| naming::type_name(v)).collect();
+    idents.extend(own.map(str::to_owned));
+    (generics, idents)
 }
 
 /// Emit the accessor file for the current RM generation.
 #[must_use]
 pub(crate) fn emit_files(model: &Model, schemas: &[WalkSchema<'_>]) -> Vec<GenFile> {
     let walk = walkable(model);
-    let used = model.used_as_type();
-    let mut seen = BTreeSet::new();
     let mut impls = String::new();
     let mut table = String::new();
-    for s in schemas {
-        let local = emittable_specs(model, s.schema);
-        for (name, class) in &s.schema.classes {
-            if !seen.insert(name.clone()) {
-                continue;
+    for_each_class(model, schemas, |c| {
+        let WalkClass {
+            name,
+            class,
+            path,
+            rust,
+            emission,
+            local,
+            external,
+        } = c;
+        match emission {
+            Emission::Struct => {
+                let g = struct_generics(model, class);
+                let f = fields(model, class, &g, &walk, local, external);
+                emit_struct(&mut impls, &mut table, class, &path, &rust, &g, &f);
             }
-            let Some(path) = (s.path)(name) else { continue };
-            let rust = naming::type_name(name);
-            match decide(model, class, &used) {
-                Emission::Struct => {
-                    let g = struct_generics(model, class);
-                    let f = fields(model, class, &g, &walk, &local, s.external);
-                    emit_struct(&mut impls, &mut table, class, &path, &rust, &g, &f);
-                }
-                Emission::PolyEnum(variants) => {
-                    let g = struct_generics(model, class);
-                    let f = fields(model, class, &g, &walk, &local, s.external);
-                    emit_struct(
-                        &mut impls,
-                        &mut table,
-                        class,
-                        &path,
-                        &format!("{rust}Data"),
-                        &g,
-                        &f,
-                    );
-                    let eg: Vec<String> = model
-                        .used_generic_params(name)
-                        .into_iter()
-                        .map(|(n, _)| n)
-                        .collect();
-                    let arms = model.xsi_dispatch(name, &variants);
-                    let mut idents: Vec<String> =
-                        variants.iter().map(|v| naming::type_name(v)).collect();
-                    idents.push(rust.clone());
-                    emit_enum(&mut impls, &path, &rust, &eg, &idents, &arms);
-                }
-                Emission::Enum(variants) => {
-                    let eg: Vec<String> = model
-                        .used_generic_params(name)
-                        .into_iter()
-                        .map(|(n, _)| n)
-                        .collect();
-                    let arms = model.xsi_dispatch(name, &variants);
-                    let idents: Vec<String> =
-                        variants.iter().map(|v| naming::type_name(v)).collect();
-                    emit_enum(&mut impls, &path, &rust, &eg, &idents, &arms);
-                }
-                _ => {}
+            Emission::PolyEnum(variants) => {
+                let g = struct_generics(model, class);
+                let f = fields(model, class, &g, &walk, local, external);
+                emit_struct(
+                    &mut impls,
+                    &mut table,
+                    class,
+                    &path,
+                    &format!("{rust}Data"),
+                    &g,
+                    &f,
+                );
+                let (eg, idents) = enum_parts(model, name, &variants, Some(&rust));
+                let arms = model.xsi_dispatch(name, &variants);
+                emit_enum(&mut impls, &path, &rust, &eg, &idents, &arms);
             }
+            Emission::Enum(variants) => {
+                let (eg, idents) = enum_parts(model, name, &variants, None);
+                let arms = model.xsi_dispatch(name, &variants);
+                emit_enum(&mut impls, &path, &rust, &eg, &idents, &arms);
+            }
+            _ => {}
         }
-    }
+    });
     let mut body = String::from(
         "// @generated by openehr-codegen (emit-validate) — DO NOT EDIT.\n\
          //! The generated half of [`super`]: the reflective view of every RM and BASE\n\
@@ -293,7 +282,10 @@ fn emit_enum(
     idents: &[String],
     arms: &[(String, String)],
 ) {
-    let (hdr, args) = header(generics);
+    let (hdr, args) = generic_header(
+        generics,
+        "AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static",
+    );
     let _ = write!(
         b,
         "impl{hdr} AsRm for {path}::{rust}{args} {{\n\
@@ -336,7 +328,10 @@ fn emit_struct(
     fields: &[Field],
 ) {
     let spec = &class.name;
-    let (hdr, args) = header(generics);
+    let (hdr, args) = generic_header(
+        generics,
+        "AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static",
+    );
     let validated = construction::is_validated(spec);
     // A validated class keeps its fields `pub(crate)` in its own crate, so it
     // reads through its generated accessors and is never built by name.

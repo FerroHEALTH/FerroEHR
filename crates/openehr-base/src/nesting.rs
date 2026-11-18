@@ -1,4 +1,5 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
+// SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
 
 //! The one nesting limit of every RM reader, and the smallest thread stack

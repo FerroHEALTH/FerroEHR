@@ -54,8 +54,11 @@ pub(super) fn check_inputs<'i, I: Instance<'i>>(
         "DV_PROPORTION" => check_proportion(v, instance, wt),
         "DV_TEXT" | "DV_URI" | "DV_EHR_URI" => check_text(v, instance, wt),
         "DV_BOOLEAN" => check_boolean(v, instance, wt),
-        "DV_IDENTIFIER" => check_identifier(v, instance, wt),
-        "DV_PARSABLE" => check_parsable(v, instance, wt),
+        "DV_IDENTIFIER" => {
+            check_string_parts(v, instance, wt, &["id", "type", "issuer", "assigner"]);
+        }
+        // NOTE: AOM 1.4 §`C_STRING`; master17.6 `CONT-DV_PARSABLE-validate_value_formalism`.
+        "DV_PARSABLE" => check_string_parts(v, instance, wt, &["value", "formalism"]),
         "DV_DATE" | "DV_TIME" | "DV_DATE_TIME" => check_temporal(v, instance, wt),
         "DV_DURATION" => check_duration(v, instance, wt),
         _ => {}
@@ -572,22 +575,15 @@ fn check_boolean<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTe
     }
 }
 
-fn check_identifier<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
-    for part in ["id", "type", "issuer", "assigner"] {
-        let Some(input) = input_with_suffix(wt, part) else {
-            continue;
-        };
-        let Some(value) = instance.str_at(part) else {
-            continue;
-        };
-        check_string_constraints(v, wt, input, value);
-    }
-}
-
-/// `DV_PARSABLE`: `C_STRING` list/pattern on `value` and `formalism`
-/// (AOM 1.4 §`C_STRING`; master17.6 `CONT-DV_PARSABLE-validate_value_formalism`).
-fn check_parsable<'i, I: Instance<'i>>(v: &mut Validator, instance: I, wt: &WebTemplateNode) {
-    for part in ["value", "formalism"] {
+/// The `C_STRING` constraints of the suffixes `parts` on their string values
+/// (`DV_IDENTIFIER` and `DV_PARSABLE`, AOM 1.4 §`C_STRING`).
+fn check_string_parts<'i, I: Instance<'i>>(
+    v: &mut Validator,
+    instance: I,
+    wt: &WebTemplateNode,
+    parts: &[&str],
+) {
+    for part in parts {
         let Some(input) = input_with_suffix(wt, part) else {
             continue;
         };

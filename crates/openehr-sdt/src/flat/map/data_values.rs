@@ -265,6 +265,13 @@ fn attr<'a>(node: &'a SimNode, key: &str) -> Option<&'a Value> {
     node.attrs.get(key)
 }
 
+/// The `|code` datum of `node` and its text, empty for a code that is no
+/// string (the value-set check refuses it).
+fn code_attr(node: &SimNode) -> Option<(&Value, &str)> {
+    let code = node.attrs.get("code")?;
+    Some((code, code.as_str().unwrap_or_default()))
+}
+
 fn attr_str<'a>(node: &'a SimNode, key: &str) -> Option<&'a str> {
     node.attrs.get(key).and_then(Value::as_str)
 }
@@ -302,10 +309,9 @@ fn build_coded_text(
     ty: &str,
     wt: Option<&WebTemplateNode>,
 ) -> Result<Option<Obj>, FlatError> {
-    let Some(code) = attr(node, "code") else {
+    let Some((code, code_str)) = code_attr(node) else {
         return Ok(None);
     };
-    let code_str = code.as_str().unwrap_or_default();
     let terminology = attr_str(node, "terminology")
         .or_else(|| wt_terminology(wt))
         .unwrap_or("local");
@@ -420,10 +426,9 @@ fn build_ordinal(
     numeric_suffix: &str,
     wt: Option<&WebTemplateNode>,
 ) -> Result<Option<Obj>, FlatError> {
-    let Some(code) = attr(node, "code") else {
+    let Some((code, code_str)) = code_attr(node) else {
         return Ok(None);
     };
-    let code_str = code.as_str().unwrap_or_default();
     let template = wt_coded_value(wt, code_str);
     let Some(numeric) = attr(node, numeric_suffix).cloned().or_else(|| {
         template.and_then(|cv| match ty {

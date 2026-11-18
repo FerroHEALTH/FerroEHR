@@ -233,6 +233,55 @@ fn key_text<T: Serialize + ?Sized>(key: &T) -> Result<String, Error> {
     key.serialize(KeyText)
 }
 
+/// The [`Serializer`] methods a cell serializer with output `$ok` shares: an
+/// option's value and a newtype's inner value serialize through it, and an
+/// externally tagged variant is refused ([`no_variant`]).
+macro_rules! passthrough_and_no_variants {
+    ($ok:ty) => {
+        fn serialize_some<T: Serialize + ?Sized>(self, value: &T) -> Result<$ok, Error> {
+            value.serialize(self)
+        }
+
+        fn serialize_newtype_struct<T: Serialize + ?Sized>(
+            self,
+            _: &'static str,
+            value: &T,
+        ) -> Result<$ok, Error> {
+            value.serialize(self)
+        }
+
+        fn serialize_newtype_variant<T: Serialize + ?Sized>(
+            self,
+            _: &'static str,
+            _: u32,
+            _: &'static str,
+            _: &T,
+        ) -> Result<$ok, Error> {
+            no_variant()
+        }
+
+        fn serialize_tuple_variant(
+            self,
+            _: &'static str,
+            _: u32,
+            _: &'static str,
+            _: usize,
+        ) -> Result<Impossible<$ok, Error>, Error> {
+            no_variant()
+        }
+
+        fn serialize_struct_variant(
+            self,
+            _: &'static str,
+            _: u32,
+            _: &'static str,
+            _: usize,
+        ) -> Result<Impossible<$ok, Error>, Error> {
+            no_variant()
+        }
+    };
+}
+
 macro_rules! seek_nothing {
     ($($method:ident($($arg:ty),*)),* $(,)?) => {
         // NOTE: a value that is no object or list holds no member a step names.
@@ -250,6 +299,8 @@ impl<'r, 'p> Serializer for Seek<'r, 'p> {
     type SerializeMap = SeekMap<'r, 'p>;
     type SerializeStruct = Self;
     type SerializeStructVariant = Impossible<(), Error>;
+
+    passthrough_and_no_variants!(());
 
     seek_nothing!(
         serialize_bool(bool),
@@ -274,28 +325,6 @@ impl<'r, 'p> Serializer for Seek<'r, 'p> {
         serialize_unit_variant(&'static str, u32, &'static str),
     );
 
-    fn serialize_some<T: Serialize + ?Sized>(self, value: &T) -> Result<(), Error> {
-        value.serialize(self)
-    }
-
-    fn serialize_newtype_struct<T: Serialize + ?Sized>(
-        self,
-        _: &'static str,
-        value: &T,
-    ) -> Result<(), Error> {
-        value.serialize(self)
-    }
-
-    fn serialize_newtype_variant<T: Serialize + ?Sized>(
-        self,
-        _: &'static str,
-        _: u32,
-        _: &'static str,
-        _: &T,
-    ) -> Result<(), Error> {
-        no_variant()
-    }
-
     fn serialize_seq(self, _: Option<usize>) -> Result<SeekSeq<'r, 'p>, Error> {
         Ok(SeekSeq(self.crosses.then_some(self)))
     }
@@ -308,16 +337,6 @@ impl<'r, 'p> Serializer for Seek<'r, 'p> {
         self.serialize_seq(Some(len))
     }
 
-    fn serialize_tuple_variant(
-        self,
-        _: &'static str,
-        _: u32,
-        _: &'static str,
-        _: usize,
-    ) -> Result<Impossible<(), Error>, Error> {
-        no_variant()
-    }
-
     fn serialize_map(self, _: Option<usize>) -> Result<SeekMap<'r, 'p>, Error> {
         Ok(SeekMap {
             seek: self,
@@ -327,16 +346,6 @@ impl<'r, 'p> Serializer for Seek<'r, 'p> {
 
     fn serialize_struct(self, _: &'static str, _: usize) -> Result<Self, Error> {
         Ok(self)
-    }
-
-    fn serialize_struct_variant(
-        self,
-        _: &'static str,
-        _: u32,
-        _: &'static str,
-        _: usize,
-    ) -> Result<Impossible<(), Error>, Error> {
-        no_variant()
     }
 }
 
@@ -375,28 +384,31 @@ impl SeekSeq<'_, '_> {
     }
 }
 
-macro_rules! seek_seq {
-    ($($trait:ident :: $method:ident),* $(,)?) => {
-        $(impl $trait for SeekSeq<'_, '_> {
-            type Ok = ();
+/// Implements the three element-sequence [`Serializer`] traits for `$seq`
+/// with output `$ok`: each element goes to `element`, and `end` yields `$end`.
+macro_rules! element_seq {
+    ($seq:ty, $ok:ty, |$this:ident| $end:expr) => {
+        element_seq!(@one SerializeSeq, serialize_element, $seq, $ok, $this, $end);
+        element_seq!(@one SerializeTuple, serialize_element, $seq, $ok, $this, $end);
+        element_seq!(@one SerializeTupleStruct, serialize_field, $seq, $ok, $this, $end);
+    };
+    (@one $trait:ident, $method:ident, $seq:ty, $ok:ty, $this:ident, $end:expr) => {
+        impl $trait for $seq {
+            type Ok = $ok;
             type Error = Error;
 
             fn $method<T: Serialize + ?Sized>(&mut self, value: &T) -> Result<(), Error> {
                 self.element(value)
             }
 
-            fn end(self) -> Result<(), Error> {
-                Ok(())
+            fn end($this) -> Result<$ok, Error> {
+                $end
             }
-        })*
+        }
     };
 }
 
-seek_seq!(
-    SerializeSeq::serialize_element,
-    SerializeTuple::serialize_element,
-    SerializeTupleStruct::serialize_field,
-);
+element_seq!(SeekSeq<'_, '_>, (), |self| Ok(()));
 
 /// A map the path enters.
 struct SeekMap<'r, 'p> {
@@ -406,24 +418,43 @@ struct SeekMap<'r, 'p> {
     key: Option<String>,
 }
 
-impl SerializeMap for SeekMap<'_, '_> {
-    type Ok = ();
-    type Error = Error;
+/// Implements [`SerializeMap`] for `$map` with output `$ok`: each entry's key
+/// is read as a member name ([`key_text`]) and the entry goes to `$member`
+/// with it, and `end` yields `$end`.
+macro_rules! keyed_map {
+    (
+        $map:ty,
+        $ok:ty,
+        |$this:ident, $key:ident, $value:ident| $member:expr,
+        |$done:ident| $end:expr $(,)?
+    ) => {
+        impl SerializeMap for $map {
+            type Ok = $ok;
+            type Error = Error;
 
-    fn serialize_key<T: Serialize + ?Sized>(&mut self, key: &T) -> Result<(), Error> {
-        self.key = Some(key_text(key)?);
-        Ok(())
-    }
+            fn serialize_key<T: Serialize + ?Sized>(&mut self, key: &T) -> Result<(), Error> {
+                self.key = Some(key_text(key)?);
+                Ok(())
+            }
 
-    fn serialize_value<T: Serialize + ?Sized>(&mut self, value: &T) -> Result<(), Error> {
-        let key = self.key.take().unwrap_or_default();
-        self.seek.step(Cow::Owned(key), value)
-    }
+            fn serialize_value<T: Serialize + ?Sized>(&mut $this, $value: &T) -> Result<(), Error> {
+                let $key = Cow::Owned($this.key.take().unwrap_or_default());
+                $member
+            }
 
-    fn end(self) -> Result<(), Error> {
-        Ok(())
-    }
+            fn end($done) -> Result<$ok, Error> {
+                $end
+            }
+        }
+    };
 }
+
+keyed_map!(
+    SeekMap<'_, '_>,
+    (),
+    |self, key, value| self.seek.step(key, value),
+    |self| Ok(()),
+);
 
 /// Reads a map key as the member name a JSON value gives it: a string as it
 /// is, a number or a boolean as its text.
