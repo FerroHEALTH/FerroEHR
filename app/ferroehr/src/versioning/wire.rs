@@ -28,6 +28,7 @@ use openehr_rm::prelude::{
     VersionedComposition, VersionedEhrAccess, VersionedEhrStatus, VersionedFolder, VersionedObject,
     VersionedObjectData,
 };
+use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::CanonicalObject;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -274,8 +275,8 @@ pub(crate) fn version_envelope(read: &VersionRead, signer: &Signer) -> Result<Va
     };
     let item = build_wrapped_original(read, wrapped)?;
     let mut iv = build_imported_version(
-        &contribution_ref(read.contribution_id),
-        &read.audit.canonical(&read.time_committed),
+        &openehr_its::json::to_canonical_value(&contribution_ref(read.contribution_id)),
+        &read.audit.decode()?.canonical(&read.time_committed),
         &item,
         read.signature.as_deref(),
     );
@@ -325,7 +326,7 @@ pub(crate) fn original_version(read: &VersionRead, signer: &Signer) -> Result<Va
         preceding_version_uid: read.preceding_version_uid.as_deref(),
         other_input_version_uids: &read.other_input_version_uids,
         contribution: contribution_ref(read.contribution_id),
-        commit_audit: read.audit.canonical(&read.time_committed),
+        commit_audit: read.audit.decode()?.canonical(&read.time_committed),
         lifecycle_state: &read.lifecycle_state,
         data: &read.canonical,
         attestations: &read.attestations_at_committal,
@@ -446,7 +447,7 @@ pub(crate) fn build_imported_version(
     iv
 }
 
-/// One `OBJECT_VERSION_ID` reference as canonical JSON — the `uid`,
+/// One `OBJECT_VERSION_ID` reference — the `uid`,
 /// `preceding_version_uid` and `other_input_version_uids` slots of a
 /// `VERSION` (RM common master06 §Version and its Subtypes).
 ///
@@ -454,25 +455,113 @@ pub(crate) fn build_imported_version(
 /// [`VersionIdError`] when `value` is not a well-formed `OBJECT_VERSION_ID` —
 /// the reference goes through the BASE construction door, so a malformed one
 /// never reaches the wire.
-fn object_version_ref(value: &str) -> Result<Value, VersionIdError> {
-    let uid = ObjectVersionId::new(value).map_err(|source| VersionIdError::Malformed {
+fn object_version_ref(value: &str) -> Result<ObjectVersionId, VersionIdError> {
+    ObjectVersionId::new(value).map_err(|source| VersionIdError::Malformed {
         raw: value.to_owned(),
         source,
-    })?;
-    Ok(openehr_its::json::to_canonical_value(&uid))
+    })
 }
 
 /// The `VERSION.contribution` `OBJECT_REF` naming a CONTRIBUTION held by THIS
 /// repository (BASE `base_types` `master05-identification_package.adoc`
 /// §References). A foreign contribution reference is never rebuilt this way —
 /// it is stored and served verbatim.
-pub(crate) fn contribution_ref(contribution_id: Uuid) -> Value {
-    openehr_its::json::to_canonical_value(&ObjectRef::ObjectRef(ObjectRefData {
+pub(crate) fn contribution_ref(contribution_id: Uuid) -> ObjectRef {
+    ObjectRef::ObjectRef(ObjectRefData {
         namespace: "local".to_owned(),
         r#type: "CONTRIBUTION".to_owned(),
         // A contribution id is a UUID by type, so the conversion is total.
         id: ObjectId::HierObjectId(HierObjectId::from(contribution_id)),
-    }))
+    })
+}
+
+/// Where the members of a `VERSION` are written, in the order its builder
+/// names them: the JSON object a read serves, or the RFC 8785 form a commit
+/// signs (RM common master06 §Digital Signature).
+pub(crate) trait VersionSink {
+    /// What a write can fail with.
+    type Error;
+
+    /// Writes the member `name` from its RM value.
+    ///
+    /// # Errors
+    /// The sink's own.
+    fn rm<T: serde::Serialize + ?Sized>(
+        &mut self,
+        name: &str,
+        value: &T,
+    ) -> Result<(), Self::Error>;
+
+    /// Writes the member `name`, which is canonical JSON already.
+    ///
+    /// # Errors
+    /// The sink's own.
+    fn canonical(&mut self, name: &str, value: Value) -> Result<(), Self::Error>;
+}
+
+impl VersionSink for serde_json::Map<String, Value> {
+    type Error = std::convert::Infallible;
+
+    fn rm<T: serde::Serialize + ?Sized>(
+        &mut self,
+        name: &str,
+        value: &T,
+    ) -> Result<(), Self::Error> {
+        self.insert(
+            name.to_owned(),
+            openehr_its::json::to_canonical_value(value),
+        );
+        Ok(())
+    }
+
+    fn canonical(&mut self, name: &str, value: Value) -> Result<(), Self::Error> {
+        self.insert(name.to_owned(), value);
+        Ok(())
+    }
+}
+
+impl VersionSink for CanonicalObject {
+    type Error = serde_json::Error;
+
+    fn rm<T: serde::Serialize + ?Sized>(
+        &mut self,
+        name: &str,
+        value: &T,
+    ) -> Result<(), Self::Error> {
+        self.member(name, value)
+    }
+
+    fn canonical(&mut self, name: &str, value: Value) -> Result<(), Self::Error> {
+        self.member(name, &value)
+    }
+}
+
+/// A member of a `VERSION` a caller holds as its RM value or as the canonical
+/// JSON it was stored as.
+pub(crate) trait VersionMember {
+    /// Writes the member as `name` into `sink`.
+    ///
+    /// # Errors
+    /// The sink's own.
+    fn write<S: VersionSink>(self, name: &str, sink: &mut S) -> Result<(), S::Error>;
+}
+
+impl VersionMember for Value {
+    fn write<S: VersionSink>(self, name: &str, sink: &mut S) -> Result<(), S::Error> {
+        sink.canonical(name, self)
+    }
+}
+
+impl VersionMember for ObjectRef {
+    fn write<S: VersionSink>(self, name: &str, sink: &mut S) -> Result<(), S::Error> {
+        sink.rm(name, &self)
+    }
+}
+
+impl VersionMember for AuditDetails {
+    fn write<S: VersionSink>(self, name: &str, sink: &mut S) -> Result<(), S::Error> {
+        sink.rm(name, &self)
+    }
 }
 
 /// The attributes of one `ORIGINAL_VERSION` to render, with `commit_audit`
@@ -483,7 +572,7 @@ pub(crate) fn contribution_ref(contribution_id: Uuid) -> Value {
 /// `ORIGINAL_VERSION.lifecycle_state` coded from `version_lifecycle_state`
 /// (RM common master06 §Version and its Subtypes).
 #[derive(Debug)]
-pub(crate) struct OriginalVersionParts<'a> {
+pub(crate) struct OriginalVersionParts<'a, C = Value, A = Value> {
     /// The `OBJECT_VERSION_ID` middle segment (master06 §Distributed Versioning).
     pub(crate) creating_system_id: &'a str,
     /// The owning version container's id — the `OBJECT_VERSION_ID` object id.
@@ -496,9 +585,9 @@ pub(crate) struct OriginalVersionParts<'a> {
     pub(crate) other_input_version_uids: &'a [String],
     /// The `VERSION.contribution` `OBJECT_REF` — local for a locally created
     /// version, the source system's for a wrapped imported original.
-    pub(crate) contribution: Value,
-    /// The canonical `AUDIT_DETAILS` (or `ATTESTATION`) of `commit_audit`.
-    pub(crate) commit_audit: Value,
+    pub(crate) contribution: C,
+    /// The `AUDIT_DETAILS` (or `ATTESTATION`) of `commit_audit`.
+    pub(crate) commit_audit: A,
     /// The numeric `version_lifecycle_state` code.
     pub(crate) lifecycle_state: &'a str,
     /// The canonical content, or [`Value::Null`] for a deleted version.
@@ -524,23 +613,73 @@ pub(crate) struct OriginalVersionParts<'a> {
 /// well-formed `OBJECT_VERSION_ID`: they go through the BASE construction door
 /// rather than a struct literal, so a malformed identifier is refused before it
 /// is signed and served.
-pub(crate) fn build_original_version(
-    parts: OriginalVersionParts<'_>,
+pub(crate) fn build_original_version<C: VersionMember, A: VersionMember>(
+    parts: OriginalVersionParts<'_, C, A>,
 ) -> Result<Value, VersionIdError> {
     // NOTE: master06 §Digital Signature signs this serialization, so the envelope
     // is built as JSON, its already-canonical fragments moved in unchanged, in order.
     let mut map = serde_json::Map::new();
-    map.insert("_type".to_owned(), Value::from("ORIGINAL_VERSION"));
+    let Ok(()) = write_original_version(parts, &mut map)?;
+    Ok(Value::Object(map))
+}
+
+/// Writes the members of an `ORIGINAL_VERSION` into `sink` in model order:
+/// the one expression of the envelope a read serves and a commit signs. A
+/// `null` data, an empty attestation list and an absent signature write no
+/// member.
+///
+/// # Errors
+/// The outer error is [`build_original_version`]'s; the inner one is the
+/// sink's.
+pub(crate) fn write_original_version<C: VersionMember, A: VersionMember, S: VersionSink>(
+    parts: OriginalVersionParts<'_, C, A>,
+    sink: &mut S,
+) -> Result<Result<(), S::Error>, VersionIdError> {
     let uid = version_id(parts.vo_id, parts.creating_system_id, parts.tree)?;
-    map.insert(
-        "uid".to_owned(),
-        openehr_its::json::to_canonical_value(&uid),
-    );
-    map.insert("contribution".to_owned(), parts.contribution);
-    map.insert("commit_audit".to_owned(), parts.commit_audit);
-    map.insert(
-        "lifecycle_state".to_owned(),
-        openehr_its::json::to_canonical_value(&DvText::DvCodedText(DvCodedText {
+    // preceding_version_uid: the STORED prior OBJECT_VERSION_ID, never
+    // synthesized, because under branching and import it may carry a
+    // different creating_system_id (RM common master06 §Distributed
+    // Versioning).
+    //
+    // NOTE: `VERSION.Preceding_version_uid_validity` is enforced in its
+    // TRUNK-ONLY sense — BASE's `is_first` is "trunk_version is 1" alone,
+    // making the literal invariant unsatisfiable for branches off trunk 1.
+    let preceding = parts
+        .preceding_version_uid
+        .map(object_version_ref)
+        .transpose()?;
+    // other_input_version_uids: merge provenance (master06 §Version
+    // Merging); `is_merged` is its derived boolean
+    // (`VERSION.Is_merged_validity`: is_merged = not …is_empty).
+    let others = parts
+        .other_input_version_uids
+        .iter()
+        .map(|uid| object_version_ref(uid))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(write_members(
+        parts,
+        &uid,
+        preceding.as_ref(),
+        &others,
+        sink,
+    ))
+}
+
+/// The members of [`write_original_version`], its identifiers built.
+fn write_members<C: VersionMember, A: VersionMember, S: VersionSink>(
+    parts: OriginalVersionParts<'_, C, A>,
+    uid: &ObjectVersionId,
+    preceding: Option<&ObjectVersionId>,
+    others: &[ObjectVersionId],
+    sink: &mut S,
+) -> Result<(), S::Error> {
+    sink.canonical("_type", Value::from("ORIGINAL_VERSION"))?;
+    sink.rm("uid", uid)?;
+    parts.contribution.write("contribution", sink)?;
+    parts.commit_audit.write("commit_audit", sink)?;
+    sink.rm(
+        "lifecycle_state",
+        &DvText::DvCodedText(DvCodedText {
             value: lifecycle_rubric(parts.lifecycle_state),
             hyperlink: None,
             formatting: None,
@@ -554,53 +693,27 @@ pub(crate) fn build_original_version(
                 code_string: parts.lifecycle_state.to_owned(),
                 preferred_term: None,
             },
-        })),
-    );
-    // preceding_version_uid: the STORED prior OBJECT_VERSION_ID, never
-    // synthesized, because under branching and import it may carry a
-    // different creating_system_id (RM common master06 §Distributed
-    // Versioning).
-    //
-    // NOTE: `VERSION.Preceding_version_uid_validity` is enforced in its
-    // TRUNK-ONLY sense — BASE's `is_first` is "trunk_version is 1" alone,
-    // making the literal invariant unsatisfiable for branches off trunk 1.
-    if let Some(preceding) = parts.preceding_version_uid {
-        map.insert(
-            "preceding_version_uid".to_owned(),
-            object_version_ref(preceding)?,
-        );
+        }),
+    )?;
+    if let Some(preceding) = preceding {
+        sink.rm("preceding_version_uid", preceding)?;
     }
-    // other_input_version_uids: merge provenance (master06 §Version
-    // Merging); `is_merged` is its derived boolean
-    // (`VERSION.Is_merged_validity`: is_merged = not …is_empty).
-    if !parts.other_input_version_uids.is_empty() {
-        map.insert(
-            "other_input_version_uids".to_owned(),
-            Value::Array(
-                parts
-                    .other_input_version_uids
-                    .iter()
-                    .map(|uid| object_version_ref(uid))
-                    .collect::<Result<Vec<_>, _>>()?,
-            ),
-        );
+    if !others.is_empty() {
+        sink.rm("other_input_version_uids", others)?;
     }
     // A deleted version carries no data (canonical is Null).
     if !parts.data.is_null() {
-        map.insert("data".to_owned(), parts.data.clone());
+        sink.canonical("data", parts.data.clone())?;
     }
     // attestations: the ones present AT committal, which master06 §Digital
     // Signature includes in the signed serialisation of "the entire Version
     // object". Omitted when empty — `Attestations_valid` forbids a
     // present-but-empty list.
     if !parts.attestations.is_empty() {
-        map.insert(
-            "attestations".to_owned(),
-            Value::Array(parts.attestations.to_vec()),
-        );
+        sink.canonical("attestations", Value::Array(parts.attestations.to_vec()))?;
     }
     if let Some(sig) = parts.signature {
-        map.insert("signature".to_owned(), Value::String(sig.to_owned()));
+        sink.canonical("signature", Value::String(sig.to_owned()))?;
     }
-    Ok(Value::Object(map))
+    Ok(())
 }

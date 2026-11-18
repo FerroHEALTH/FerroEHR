@@ -25,7 +25,7 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::storage::version_repo::read::{Body, VersionAt, read_one};
 use crate::versioning::Kind;
-use crate::versioning::audit::AuditInput;
+use crate::versioning::audit::StoredAudit;
 use crate::versioning::lifecycle;
 use crate::versioning::object_version_id::TreeId;
 
@@ -101,7 +101,7 @@ pub(crate) struct VersionRead {
     pub(crate) contribution_id: Uuid,
     /// The mandatory `VERSION.commit_audit` (1..1) — on an imported version the
     /// LOCAL act of committal.
-    pub(crate) audit: AuditInput,
+    pub(crate) audit: StoredAudit,
     /// The commit instant of [`Self::audit`] — on an imported version the local
     /// import instant, never the source's (master06 §Copying: "the commit times
     /// always reflect the local (more recent) act of committal").
@@ -249,21 +249,12 @@ fn version_read(
         lifecycle_state: stored.lifecycle_state,
         creating_system_id: stored.creating_system_id,
         contribution_id: stored.contribution_id,
-        audit: AuditInput {
+        audit: StoredAudit {
             system_id: stored.audit_system_id,
             change_type: stored.audit_change_type,
-            description: stored
-                .audit_description
-                .as_ref()
-                .map(crate::versioning::audit::decode_description)
-                .transpose()?,
-            committer: crate::versioning::audit::party_proxy(&stored.audit_committer)?,
-            attestation: stored
-                .audit_attestation
-                .as_ref()
-                .map(crate::versioning::attestation::AttestationParts::decode)
-                .transpose()?
-                .map(Box::new),
+            description: stored.audit_description,
+            committer: stored.audit_committer,
+            attestation: stored.audit_attestation,
         },
         time_committed: stored.time_committed,
         signature: stored.signature,

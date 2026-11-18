@@ -18,6 +18,8 @@
               verification"
 )]
 
+use openehr_rm::v1_2::common::change_control::canonical_serializer_impl::CanonicalObject;
+use openehr_rm::v1_2::common::change_control::version_impl::CanonicalFormError;
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -26,10 +28,12 @@ use crate::ids::VoId;
 use crate::versioning::SigningCtx;
 use crate::versioning::audit::AuditInput;
 use crate::versioning::object_version_id::TreeId;
+use crate::versioning::object_version_id::VersionIdError;
 use crate::versioning::signature::config::VerifyOnRead;
 use crate::versioning::signature::signer::Signer;
 use crate::versioning::wire::{
-    OriginalVersionParts, build_imported_version, build_original_version, contribution_ref,
+    OriginalVersionParts, VersionMember, build_imported_version, contribution_ref,
+    write_original_version,
 };
 
 /// Compute the server-generated `VERSION.signature` for a version about to be
@@ -37,11 +41,11 @@ use crate::versioning::wire::{
 /// ([`crate::versioning::change`]) decides client-vs-server first: a
 /// client-supplied signature is stored verbatim and never reaches here.
 ///
-/// When signing is enabled the fully-assembled `ORIGINAL_VERSION`, the exact
-/// value that will later be served (built by the shared
-/// [`build_original_version`] so commit-time and read-time bytes match,
-/// including `other_input_version_uids` merge provenance), is signed over its
-/// `canonical_form()` with the signature attribute Void.
+/// When signing is enabled the `ORIGINAL_VERSION` that will later be served
+/// is signed over its `canonical_form()` with the signature attribute Void.
+/// Its members are written by the shared [`write_original_version`], so the
+/// commit-time and the read-time bytes match, `other_input_version_uids`
+/// merge provenance included.
 ///
 /// The `attestations` committed with this version
 /// (`UPDATE_VERSION.attestations`) are signed too: master06 §Digital Signature
@@ -74,27 +78,57 @@ pub(crate) fn sign_version(
     if !ctx.signer.enabled() {
         return Ok(None);
     }
-    // The envelope is built WITHOUT `data` (Null is skipped by the builder)
-    // and the body joins the signed form through a shallow reference view in
-    // `sign_canonical_with_data` — the commit path never deep-copies the body
-    // into the envelope. RFC 8785 orders keys, so the join point is
-    // byte-identical to a fully-assembled ORIGINAL_VERSION's canonical form.
-    let ov = build_original_version(OriginalVersionParts {
-        creating_system_id: &ctx.system_id,
-        vo_id,
-        tree,
-        preceding_version_uid: preceding_uid,
-        // NOTE: RM common master06 §Version Merging commits a merge as a local
-        // `ORIGINAL_VERSION`, so its merge provenance is signed with it.
-        other_input_version_uids,
-        contribution: contribution_ref(contribution_id),
-        commit_audit: audit.canonical(&time_committed),
-        lifecycle_state,
-        data: &Value::Null,
-        attestations,
-        signature: None,
-    })?;
-    sign_canonical_with_data(ctx, &ov, data)
+    let canonical = signed_form(
+        OriginalVersionParts {
+            creating_system_id: &ctx.system_id,
+            vo_id,
+            tree,
+            preceding_version_uid: preceding_uid,
+            // NOTE: RM common master06 §Version Merging commits a merge as a local
+            // `ORIGINAL_VERSION`, so its merge provenance is signed with it.
+            other_input_version_uids,
+            contribution: contribution_ref(contribution_id),
+            commit_audit: audit.typed(&time_committed),
+            lifecycle_state,
+            data: &Value::Null,
+            attestations,
+            signature: None,
+        },
+        data,
+    )?
+    .map_err(CanonicalFormError::Canonicalize)
+    .map_err(ServiceError::SigningCanonical)?;
+    let signature = ctx
+        .signer
+        .sign(&canonical)
+        .map_err(ServiceError::SigningFailed)?;
+    Ok(Some(signature))
+}
+
+/// The RFC 8785 form a commit signs: the envelope `parts` name, without a
+/// `signature`, joined with `data` (RM common master06 §Digital Signature).
+///
+/// RFC 8785 §3.2.3 orders the members, so the envelope's and the body are
+/// written one after the other, each from its RM value, and no canonical
+/// value is built of either.
+///
+/// # Errors
+/// The outer error is [`write_original_version`]'s; the inner one is the
+/// canonical writer's.
+pub(crate) fn signed_form<C: VersionMember, A: VersionMember>(
+    parts: OriginalVersionParts<'_, C, A>,
+    data: Signed<'_>,
+) -> Result<Result<String, serde_json::Error>, VersionIdError> {
+    let mut envelope = CanonicalObject::default();
+    if let Err(error) = write_original_version(parts, &mut envelope)? {
+        return Ok(Err(error));
+    }
+    let joined = match data {
+        Signed::Value(data) if !data.is_null() => envelope.member("data", data),
+        Signed::Typed(data) => envelope.member("data", data),
+        Signed::Void | Signed::Value(_) => Ok(()),
+    };
+    Ok(joined.and_then(|()| envelope.finish()))
 }
 
 /// The `data` a signed version carries: none (a logical delete), a canonical
@@ -108,61 +142,6 @@ pub(crate) enum Signed<'a> {
     Value(&'a Value),
     /// A typed commit body.
     Typed(&'a crate::versioning::body::Body),
-}
-
-/// JCS-serialize and sign the envelope joined with its `data` through a
-/// shallow reference view — the body is never deep-copied into the envelope.
-///
-/// `ov` carries neither `data` nor `signature` (the sign path builds it that
-/// way), so the view is exactly the `canonical_form()` input; a Null `data`
-/// (logical delete) stays absent, matching the builder's own skip.
-///
-/// # Errors
-/// [`ServiceError::SigningCanonical`] / [`ServiceError::SigningFailed`] as
-/// [`sign_canonical`].
-fn sign_canonical_with_data(
-    ctx: &SigningCtx<'_>,
-    ov: &Value,
-    data: Signed<'_>,
-) -> Result<Option<String>, ServiceError> {
-    use openehr_rm::v1_2::common::change_control::version_impl::{
-        CanonicalFormError, canonical_form_of_json_with_data,
-    };
-    let canonical = match data {
-        Signed::Void => canonical_form_of_json_with_data(ov, &Value::Null),
-        Signed::Value(data) => canonical_form_of_json_with_data(ov, data),
-        Signed::Typed(data) => {
-            typed_canonical_form(ov, data).map_err(CanonicalFormError::Canonicalize)
-        }
-    }
-    .map_err(ServiceError::SigningCanonical)?;
-    let signature = ctx
-        .signer
-        .sign(&canonical)
-        .map_err(ServiceError::SigningFailed)?;
-    Ok(Some(signature))
-}
-
-/// The RFC 8785 form of the envelope `ov` joined with the typed `data`: the
-/// bytes [`canonical_form_of_json_with_data`] writes over the canonical value
-/// of `data`, with no such value built (#6003).
-///
-/// [`canonical_form_of_json_with_data`]: openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json_with_data
-pub(crate) fn typed_canonical_form<T: serde::Serialize + ?Sized>(
-    ov: &Value,
-    data: &T,
-) -> Result<String, serde_json::Error> {
-    let mut object =
-        openehr_rm::v1_2::common::change_control::canonical_serializer_impl::CanonicalObject::default();
-    if let Value::Object(members) = ov {
-        for (name, value) in members {
-            if name != "signature" && name != "data" {
-                object.member(name, value)?;
-            }
-        }
-    }
-    object.member("data", data)?;
-    object.finish()
 }
 
 /// Compute the server-generated `VERSION.signature` of the `IMPORTED_VERSION`
@@ -196,7 +175,12 @@ pub(crate) fn sign_imported_version(
     if !ctx.signer.enabled() {
         return Ok(None);
     }
-    let iv = build_imported_version(&contribution_ref(contribution_id), commit_audit, item, None);
+    let iv = build_imported_version(
+        &openehr_its::json::to_canonical_value(&contribution_ref(contribution_id)),
+        commit_audit,
+        item,
+        None,
+    );
     sign_canonical(ctx, &iv)
 }
 
