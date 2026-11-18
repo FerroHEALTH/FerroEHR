@@ -67,14 +67,17 @@ fn composition_template(parts: &RequestParts) -> Option<String> {
     if crate::formats::dispatch::is_simplified_body(h) {
         return crate::formats::dispatch::header_template_id(h);
     }
-    // The same typed decode the commit seam performs: the template id comes off
-    // `ARCHETYPED.template_id`, never a JSON pointer a shape change could
-    // silently stop matching.
+    // The same typed decode the commit seam performs, kept for it so the body
+    // is decoded once: the template id comes off `ARCHETYPED.template_id`,
+    // never a JSON pointer a shape change could silently stop matching.
     let composition = negotiate::decode::rm_value::<Composition>(h, &parts.body).ok()?;
-    composition
+    let template = composition
         .archetype_details
-        .and_then(|a| a.template_id)
-        .map(|id| id.value)
+        .as_ref()
+        .and_then(|a| a.template_id.as_ref())
+        .map(|id| id.value.clone());
+    parts.composition.keep(composition);
+    template
 }
 
 /// A 403 carrying the principal (audited by the ATNA layer).
