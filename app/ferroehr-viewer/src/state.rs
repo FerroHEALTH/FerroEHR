@@ -6,6 +6,7 @@
 
 use std::sync::Arc;
 
+use ferrohealth_session::cookies::CookieNames;
 use ferrohealth_session::routes::SignIn;
 use ferrohealth_session::sessions::Sessions;
 use ferrohealth_smart::oidc::RelyingParty;
@@ -38,7 +39,10 @@ impl AppState {
     ) -> Result<Self, crate::config::ConfigError> {
         let offline_access = config.auth.oidc_enabled && config.oidc.offline_access;
         let settings = config.session.check_with(offline_access)?;
-        let sessions = Sessions::new(settings, crate::session::cookie_names());
+        let sessions = Sessions::new(
+            settings,
+            CookieNames::for_console(crate::session::COOKIE_BASE),
+        );
         Ok(Self {
             config: Arc::new(config),
             cdr,

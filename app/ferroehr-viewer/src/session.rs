@@ -14,7 +14,6 @@
 //! design.
 
 use axum::response::{IntoResponse as _, Response};
-use ferrohealth_session::cookies::CookieNames;
 use ferrohealth_session::record::{Held, Session, SignedIn};
 use ferrohealth_session::routes::{Pages, Stopped};
 use http::request::Parts;
@@ -32,12 +31,6 @@ pub const SIGN_IN_PAGE: &str = "/sign-in";
 /// Where a sign-out lands: at once when it ends no session at the provider,
 /// and through the provider as `oidc.post_logout_redirect_uri` when it does.
 pub const SIGNED_OUT_PAGE: &str = "/sign-in?signed-out=1";
-
-/// The viewer's cookie names.
-#[must_use]
-pub fn cookie_names() -> CookieNames {
-    CookieNames::for_console(COOKIE_BASE)
-}
 
 /// The pages the crate's sign-in routes land on.
 #[derive(Debug, Clone, Copy, Default)]

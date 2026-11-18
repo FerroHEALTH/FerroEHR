@@ -38,9 +38,7 @@ use crate::aql::ir::{
 use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow};
 
 use super::expr::{cast, col, hot, type_cond};
-use super::head::{
-    HeadPlacement, bind_head, content_key, is_root_only, node_key, trunk_head_version,
-};
+use super::head::{HeadPlacement, bind_head, is_root_only, node_key, trunk_head_version};
 use super::{Builder, VoGroup};
 
 /// The correlation anchor for an `OR` / `NOT CONTAINS` `EXISTS` subquery.
@@ -580,7 +578,9 @@ impl Builder<'_> {
         // its one version row, and every version sharing its tree otherwise.
         let vo = self.left_bind_rows(BoundTable::Version, |_, inner| {
             let version = trunk_head_version(&r.scope, inner, col(&node, Node::VoId))
-                .unwrap_or_else(|| content_key(inner).eq(col(&node, Node::SysVersion)));
+                .unwrap_or_else(|| {
+                    col(inner, VersionRow::ContentKey).eq(col(&node, Node::SysVersion))
+                });
             Ok(vec![
                 hot(inner, VersionRow::Tier),
                 col(inner, VersionRow::VoId).eq(col(&node, Node::VoId)),

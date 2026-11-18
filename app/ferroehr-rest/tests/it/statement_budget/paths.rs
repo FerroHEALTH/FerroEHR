@@ -21,11 +21,10 @@
 //! thread that polls the request, so the audit runtime's threads do not
 //! count; the peak is the most the request held at once.
 //!
-//! Each figure is held to the ceiling [`BUDGETS`] names. A figure with no
-//! ceiling yet is reported and not judged: the core rewrite (#6001) sets each
-//! one to its measured end state plus a small margin, and from then on a
-//! ceiling only ever comes down, on an owner decision. No openEHR spec
-//! governs the cost of a request: our own design.
+//! Each figure is held to the ceiling [`BUDGETS`] names: the measured end
+//! state of the core rewrite (#6001) plus a small margin. A ceiling only ever
+//! comes down, on an owner decision. No openEHR spec governs the cost of a
+//! request: our own design.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -136,51 +135,169 @@ impl Path {
     }
 }
 
-/// The ceilings of one path, per request; `None` is reported and not judged.
+/// The ceilings of one path, per request.
 struct Budget {
     path: Path,
-    conversions: Option<u64>,
-    allocations: Option<u64>,
-    peak_bytes: Option<u64>,
-    round_trips: Option<u64>,
-    nested: Option<u64>,
-    wal: Option<u64>,
-}
-
-/// A path whose every figure is reported and none judged yet.
-const fn reported(path: Path) -> Budget {
-    Budget {
-        path,
-        conversions: None,
-        allocations: None,
-        peak_bytes: None,
-        round_trips: None,
-        nested: None,
-        wal: None,
-    }
+    conversions: u64,
+    allocations: u64,
+    peak_bytes: u64,
+    round_trips: u64,
+    nested: u64,
+    wal: u64,
 }
 
 /// The ceilings by path. Before the core rewrite (feat/core-rewrite at
 /// 13cda4c7f, debug build) the paths measured, per request, conversions /
 /// allocations / round trips / nested statements / WAL bytes: recorded on
-/// #6007.
+/// #6007. The end state (#6001) is the figure measured over four runs at
+/// feat/core-rewrite dfed03d9d plus a margin: none on conversions and round
+/// trips, 2% on allocations, 10% on the peak, 3% on WAL bytes, and one nested
+/// statement on a commit, whose chain round lands in the window or not.
 const BUDGETS: [Budget; 16] = [
-    reported(Path::CommitJson),
-    reported(Path::CommitXml),
-    reported(Path::CommitFlat),
-    reported(Path::ReadJson),
-    reported(Path::ReadXml),
-    reported(Path::ReadFlat),
-    reported(Path::EhrRead),
-    reported(Path::AqlSingle),
-    reported(Path::AqlPopulation),
-    reported(Path::Iti81),
-    reported(Path::PartyRead),
-    reported(Path::CommitContribution),
-    reported(Path::ReadAtTime),
-    reported(Path::CommitStatus),
-    reported(Path::ReadStatus),
-    reported(Path::CommitParty),
+    Budget {
+        path: Path::CommitJson,
+        conversions: 10,
+        allocations: 34_147,
+        peak_bytes: 1_530_778,
+        round_trips: 14,
+        nested: 13,
+        wal: 249_452,
+    },
+    Budget {
+        path: Path::CommitXml,
+        conversions: 10,
+        allocations: 55_576,
+        peak_bytes: 1_533_031,
+        round_trips: 14,
+        nested: 14,
+        wal: 250_543,
+    },
+    Budget {
+        path: Path::CommitFlat,
+        conversions: 10,
+        allocations: 48_728,
+        peak_bytes: 1_528_525,
+        round_trips: 14,
+        nested: 13,
+        wal: 252_220,
+    },
+    Budget {
+        path: Path::ReadJson,
+        conversions: 2,
+        allocations: 1389,
+        peak_bytes: 617_268,
+        round_trips: 7,
+        nested: 2,
+        wal: 2874,
+    },
+    Budget {
+        path: Path::ReadXml,
+        conversions: 4,
+        allocations: 10_865,
+        peak_bytes: 1_017_140,
+        round_trips: 7,
+        nested: 2,
+        wal: 2890,
+    },
+    Budget {
+        path: Path::ReadFlat,
+        conversions: 4,
+        allocations: 15_591,
+        peak_bytes: 1_634_407,
+        round_trips: 7,
+        nested: 2,
+        wal: 2849,
+    },
+    Budget {
+        path: Path::EhrRead,
+        conversions: 1,
+        allocations: 1162,
+        peak_bytes: 100_250,
+        round_trips: 7,
+        nested: 2,
+        wal: 2098,
+    },
+    Budget {
+        path: Path::AqlSingle,
+        conversions: 2,
+        allocations: 2505,
+        peak_bytes: 118_273,
+        round_trips: 10,
+        nested: 2,
+        wal: 4566,
+    },
+    Budget {
+        path: Path::AqlPopulation,
+        conversions: 2,
+        allocations: 3344,
+        peak_bytes: 158_823,
+        round_trips: 8,
+        nested: 2,
+        wal: 11_916,
+    },
+    Budget {
+        path: Path::Iti81,
+        conversions: 0,
+        allocations: 9023,
+        peak_bytes: 624_026,
+        round_trips: 6,
+        nested: 2,
+        wal: 2316,
+    },
+    Budget {
+        path: Path::PartyRead,
+        conversions: 2,
+        allocations: 1120,
+        peak_bytes: 78_848,
+        round_trips: 11,
+        nested: 6,
+        wal: 2097,
+    },
+    Budget {
+        path: Path::CommitContribution,
+        conversions: 14,
+        allocations: 67_846,
+        peak_bytes: 3_678_823,
+        round_trips: 18,
+        nested: 14,
+        wal: 251_382,
+    },
+    Budget {
+        path: Path::ReadAtTime,
+        conversions: 2,
+        allocations: 1401,
+        peak_bytes: 701_748,
+        round_trips: 7,
+        nested: 2,
+        wal: 3255,
+    },
+    Budget {
+        path: Path::CommitStatus,
+        conversions: 10,
+        allocations: 2045,
+        peak_bytes: 144_180,
+        round_trips: 19,
+        nested: 11,
+        wal: 6624,
+    },
+    Budget {
+        path: Path::ReadStatus,
+        conversions: 2,
+        allocations: 1244,
+        peak_bytes: 102_503,
+        round_trips: 7,
+        nested: 2,
+        wal: 2183,
+    },
+    Budget {
+        path: Path::CommitParty,
+        conversions: 12,
+        allocations: 2219,
+        peak_bytes: 117_146,
+        round_trips: 32,
+        nested: 19,
+        wal: 8330,
+    },
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
@@ -696,11 +813,8 @@ async fn measure(
 }
 
 /// Whether `measured` passes `ceiling`, and the cell that reports it.
-fn judged(measured: u64, ceiling: Option<u64>) -> (bool, String) {
-    match ceiling {
-        Some(c) => (measured <= c, format!("{measured} (<= {c})")),
-        None => (true, format!("{measured}")),
-    }
+fn judged(measured: u64, ceiling: u64) -> (bool, String) {
+    (measured <= ceiling, format!("{measured} (<= {ceiling})"))
 }
 
 /// Every hot path stays within its budget, and the report names what each
