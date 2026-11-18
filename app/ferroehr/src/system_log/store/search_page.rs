@@ -19,7 +19,7 @@ use sea_query::{
 };
 use sea_query_sqlx::{SqlxBinder as _, SqlxValues};
 
-use super::{AuditSearchFilter, RECORD_COLUMNS};
+use super::{AuditCriterion, AuditElement, AuditSearchFilter, RECORD_COLUMNS};
 use crate::system_log::search::TokenMatch;
 
 /// The schema of the audit store.
@@ -59,6 +59,52 @@ pub(super) fn build_search_statements(
     let served = u64::try_from(page_size(filter)).unwrap_or(50);
     let (sql, values) = page(&condition, count, offset, served).build_sqlx(PostgresQueryBuilder);
     (count_sql, count_values, sql, values)
+}
+
+/// Whether the statements of `filter` are of a bounded shape set, which runs
+/// as named statements: each criterion of its own kind, with one value.
+///
+/// Every value binds, so the text of such a filter is decided by its date
+/// bounds and the kinds of its criteria in their order, a set finite in
+/// size, and the connection's statement cache bounds what it keeps of it. A
+/// criterion with several values, or a kind named twice, writes text of its
+/// own, which goes unnamed. No openEHR spec governs this: our own design.
+pub(super) fn shaped(filter: &AuditSearchFilter) -> bool {
+    let mut kinds = Vec::with_capacity(filter.criteria.len());
+    filter.criteria.iter().all(|criterion| {
+        let (kind, values) = criterion_kind(criterion);
+        let fresh = !kinds.contains(&kind);
+        kinds.push(kind);
+        fresh && values == 1
+    })
+}
+
+/// The kind of `criterion`, the token parameter's element among them, and
+/// the number of its values.
+fn criterion_kind(criterion: &AuditCriterion) -> (CriterionKind, usize) {
+    match criterion {
+        AuditCriterion::Patient(values) => (CriterionKind::Patient, values.len()),
+        AuditCriterion::Agent(values) => (CriterionKind::Agent, values.len()),
+        AuditCriterion::Entity(values) => (CriterionKind::Entity, values.len()),
+        AuditCriterion::Outcome(values) => (CriterionKind::Outcome, values.len()),
+        AuditCriterion::Action(values) => (CriterionKind::Action, values.len()),
+        AuditCriterion::Address(values) => (CriterionKind::Address, values.len()),
+        AuditCriterion::Element(element, tokens) => {
+            (CriterionKind::Element(*element), tokens.len())
+        }
+    }
+}
+
+/// What a criterion filters on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CriterionKind {
+    Patient,
+    Agent,
+    Entity,
+    Outcome,
+    Action,
+    Address,
+    Element(AuditElement),
 }
 
 /// The records a page serves: `_count`, between 1 and 1000.
