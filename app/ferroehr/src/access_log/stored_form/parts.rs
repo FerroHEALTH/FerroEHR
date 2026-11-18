@@ -175,9 +175,13 @@ pub fn without_columns(row: &str, index: &IndexColumns<'_>) -> Result<String, se
         }
         if is_name(name, CHANNEL) && Members::of(value).is_some() {
             kept.open(name);
-            elided(&mut kept.out, value, REQUEST_ID, index.request_id, |text, id| {
-                string_is(text, id)
-            });
+            elided(
+                &mut kept.out,
+                value,
+                REQUEST_ID,
+                index.request_id,
+                string_is,
+            );
         } else if is_name(name, ITEMS)
             && let Some(item) = only_item(value)
         {
@@ -271,7 +275,7 @@ fn name_after(name: &str, plain: &str) -> bool {
 fn string_is(text: &str, id: &str) -> bool {
     match text.strip_prefix('"').and_then(|t| t.strip_suffix('"')) {
         Some(inner) if !needs_escape(id) => inner == id,
-        _ => json_text(id).is_ok_and(|written| written == text),
+        _ => serde_json::to_string(id).is_ok_and(|written| written == text),
     }
 }
 
@@ -285,7 +289,8 @@ fn version_is(text: &str, id: &str) -> bool {
 
 /// Whether the string `text` writes an escape in its canonical form.
 fn needs_escape(text: &str) -> bool {
-    text.bytes().any(|byte| byte < 0x20 || byte == b'"' || byte == b'\\')
+    text.bytes()
+        .any(|byte| byte < 0x20 || byte == b'"' || byte == b'\\')
 }
 
 /// The one element of the canonical array `items` when that element is an
@@ -302,22 +307,14 @@ fn only_item(items: &str) -> Option<&str> {
         .filter(|item| Members::of(item).is_some())
 }
 
-/// The canonical text of the string `text`.
-///
-/// # Errors
-/// A [`serde_json::Error`], which a string never raises.
-fn json_text(text: &str) -> Result<String, serde_json::Error> {
-    serde_json::to_string(text)
-}
-
 /// The canonical text of the `OBJECT_VERSION_ID` whose value is `id`.
 ///
 /// # Errors
-/// As [`json_text`].
+/// A [`serde_json::Error`], which a string never raises.
 fn version_text(id: &str) -> Result<String, serde_json::Error> {
     Ok(format!(
         "{{\"_type\":\"OBJECT_VERSION_ID\",\"value\":{}}}",
-        json_text(id)?
+        serde_json::to_string(id)?
     ))
 }
 
@@ -325,7 +322,7 @@ fn version_text(id: &str) -> Result<String, serde_json::Error> {
 /// index columns give back restored ([`without_columns`]).
 ///
 /// # Errors
-/// As [`json_text`].
+/// A [`serde_json::Error`], which a string never raises.
 fn restored<'t>(
     name: &str,
     value: &'t str,
@@ -334,7 +331,7 @@ fn restored<'t>(
     if is_name(name, CHANNEL)
         && let Some(channel) = members(value)
     {
-        let given = index.request_id.map(json_text).transpose()?;
+        let given = index.request_id.map(serde_json::to_string).transpose()?;
         return Ok(given_back(channel, REQUEST_ID, given).into());
     }
     if is_name(name, ITEMS)

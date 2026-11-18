@@ -410,9 +410,16 @@ fn the_row_part_leaves_the_request_and_version_to_their_columns() {
         resource_id: Some("another::system::1"),
     };
     let kept = super::without_columns(&written.row, &other).expect("the row part reads");
-    assert!(kept.contains("d44e8723") && kept.contains("48ead4180515"), "{kept}");
+    assert!(
+        kept.contains("d44e8723") && kept.contains("48ead4180515"),
+        "{kept}"
+    );
     let mut unversioned = read_entry();
-    if let Some(item) = unversioned.items.as_mut().and_then(|items| items.first_mut()) {
+    if let Some(item) = unversioned
+        .items
+        .as_mut()
+        .and_then(|items| items.first_mut())
+    {
         item.version_id = None;
     }
     let written = parts(&unversioned, &[LINK]).expect("the parts write");

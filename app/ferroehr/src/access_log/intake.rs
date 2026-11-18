@@ -107,7 +107,9 @@ impl IntakeEntry {
         let (row, shared) = cut.parts().map_err(AccessLogError::Canonical)?;
         let columns = stored_form::parts::IndexColumns {
             request_id: index.as_ref().and_then(|index| index.request_id.as_deref()),
-            resource_id: index.as_ref().and_then(|index| index.resource_id.as_deref()),
+            resource_id: index
+                .as_ref()
+                .and_then(|index| index.resource_id.as_deref()),
         };
         let row = stored_form::parts::without_columns(&row, &columns)
             .map_err(AccessLogError::Canonical)?;
