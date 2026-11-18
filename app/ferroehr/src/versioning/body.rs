@@ -195,7 +195,7 @@ mod tests {
                 "{path}"
             );
             let Body::Composition { rm, .. } = &body else {
-                unreachable!("built as a COMPOSITION");
+                panic!("{path} was built as a COMPOSITION");
             };
             assert_eq!(
                 crate::versioning::integrity::typed_canonical_form(&envelope, rm).unwrap(),
