@@ -418,7 +418,7 @@ async fn a_composition_commit_stays_within_its_wal_ceiling() {
         for (ehr, _) in &made {
             commit(ehr.clone()).await;
         }
-        let relations = commit_window(&pool, async {
+        let (relations, evicted) = commit_window(&pool, async {
             for (_, (ehr, _)) in (0..REQUESTS).zip(made.iter().cycle()) {
                 commit(ehr.clone()).await;
             }
@@ -431,6 +431,9 @@ async fn a_composition_commit_stays_within_its_wal_ceiling() {
             .sum();
         let per_commit = commits.div_euclid(REQUESTS);
         let nested = nested_calls(&pool).await.div_euclid(REQUESTS);
+        testkit::assert_statements_kept(&pool, evicted)
+            .await
+            .expect("no statement evicted while the test counted them");
         writeln!(
             report,
             "{}: {REQUESTS} commits wrote {commits} bytes of row records, {per_commit} per \
@@ -486,19 +489,15 @@ async fn commit_fixture(app: &Router, pool: &PgPool) -> Vec<(String, String)> {
 
 /// The write-ahead log by relation that `commits` writes, with the
 /// statement counts reset before it and a temporary slot keeping the
-/// window's WAL.
+/// window's WAL, and the statement table's evictions when the count began.
 async fn commit_window(
     pool: &PgPool,
     commits: impl Future<Output = ()>,
-) -> Vec<(String, u64, u64)> {
+) -> (Vec<(String, u64, u64)>, i64) {
     drained(pool).await;
-    sqlx::query(
-        "SELECT pg_stat_statements_reset(0, \
-         (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
-    )
-    .execute(pool)
-    .await
-    .expect("the statement counts reset");
+    let evicted = testkit::statement_window(pool)
+        .await
+        .expect("the statement counts reset");
     let mut keeper = ferroehr::db::acquire::acquire(pool)
         .await
         .expect("a connection for the slot");
@@ -523,7 +522,7 @@ async fn commit_window(
     .await
     .expect("the slot drops");
     drop(keeper);
-    relations
+    (relations, evicted)
 }
 
 /// The calls of the statements `PostgreSQL` ran nested in the test's

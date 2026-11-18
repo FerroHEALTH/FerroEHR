@@ -267,18 +267,17 @@ async fn an_aql_request_stays_within_its_statement_budget() {
         query(&app, budget, &ehrs, EHRS).await;
         drained(&pool).await;
         let before = entries(&pool).await;
-        sqlx::query(
-            "SELECT pg_stat_statements_reset(0, \
-             (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
-        )
-        .execute(&pool)
-        .await
-        .expect("the statement counts reset");
+        let evicted = testkit::statement_window(&pool)
+            .await
+            .expect("the statement counts reset");
         let sent_before = round_trips.0.load(Ordering::Relaxed);
         query(&app, budget, &ehrs, REQUESTS).await;
         let sent = round_trips.0.load(Ordering::Relaxed) - sent_before;
         drained(&pool).await;
         let statements = counted(&pool).await;
+        testkit::assert_statements_kept(&pool, evicted)
+            .await
+            .expect("no statement evicted while the test counted them");
         let written = entries(&pool).await - before;
         let nested: u64 = statements
             .iter()

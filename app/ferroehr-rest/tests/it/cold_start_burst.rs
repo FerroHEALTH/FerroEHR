@@ -249,13 +249,9 @@ async fn a_burst_of_first_requests_reads_each_ehr_once() {
     }
 
     let app = replica(&db, 2).await;
-    sqlx::query(
-        "SELECT pg_stat_statements_reset(0, \
-         (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
-    )
-    .execute(&pool)
-    .await
-    .expect("the statement counts reset");
+    let evicted = testkit::statement_window(&pool)
+        .await
+        .expect("the statement counts reset");
     let mut burst = tokio::task::JoinSet::new();
     for _ in 0..READS {
         for (ehr, uid) in &ehrs {
@@ -283,6 +279,9 @@ async fn a_burst_of_first_requests_reads_each_ehr_once() {
     );
     let settings = calls(&pool, SETTINGS_READ).await;
     let subjects = calls(&pool, SUBJECT_READ).await;
+    testkit::assert_statements_kept(&pool, evicted)
+        .await
+        .expect("no statement evicted while the test counted them");
     eprintln!(
         "{} first requests on {EHRS} EHRs: {settings} settings reads, {subjects} subject reads",
         answered.len()

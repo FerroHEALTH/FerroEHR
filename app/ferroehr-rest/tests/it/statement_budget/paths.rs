@@ -505,13 +505,9 @@ async fn measure(
         assert!(status.is_success(), "{}: {status} {body}", path.name());
     }
     drained(pool).await;
-    sqlx::query(
-        "SELECT pg_stat_statements_reset(0, \
-         (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
-    )
-    .execute(pool)
-    .await
-    .expect("the statement counts reset");
+    let evicted = testkit::statement_window(pool)
+        .await
+        .expect("the statement counts reset");
     *counter.0.lock().unwrap() = Counts::default();
     let mut out = Measure::default();
     for n in 0..REQUESTS {
@@ -552,6 +548,9 @@ async fn measure(
     out.round_trips = counts.round_trips.div_euclid(REQUESTS);
     out.nested = nested.saturating_sub(chainer).div_euclid(REQUESTS);
     out.wal = wal_bytes(pool).await.div_euclid(REQUESTS);
+    testkit::assert_statements_kept(pool, evicted)
+        .await
+        .expect("no statement evicted while the test counted them");
     out
 }
 
