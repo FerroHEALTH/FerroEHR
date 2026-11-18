@@ -74,8 +74,8 @@ pub struct RoleWrite<'a> {
 }
 
 /// One role `ROLE` of a User in force: its container, its tree and body.
-struct Held {
-    vo_id: VoId,
+pub(super) struct Held {
+    pub(super) vo_id: VoId,
     tree: crate::versioning::object_version_id::TreeId,
     body: Value,
 }
@@ -243,6 +243,20 @@ impl FerroEhrService {
     /// The `ROLE`s of the professional role template the `PERSON` `body`
     /// lists in `roles`, in force on `today` and not deleted.
     async fn role_parties(&self, body: &Value, today: &str) -> Result<Vec<Held>, ServiceError> {
+        Ok(self
+            .professional_role_parties(body)
+            .await?
+            .into_iter()
+            .filter(|held| in_force(held.body.get("time_validity"), today))
+            .collect())
+    }
+
+    /// The live `ROLE`s of the professional role template the `PERSON`
+    /// `body` lists in `roles`, whatever their validity.
+    pub(super) async fn professional_role_parties(
+        &self,
+        body: &Value,
+    ) -> Result<Vec<Held>, ServiceError> {
         let listed = body
             .get("roles")
             .and_then(Value::as_array)
@@ -270,7 +284,7 @@ impl FerroEhrService {
                 .pointer("/archetype_details/template_id/value")
                 .and_then(Value::as_str)
                 .is_some_and(|template| self.binding.is_professional_role(template));
-            if professional && in_force(read.body.get("time_validity"), today) {
+            if professional {
                 held.push(Held {
                     vo_id: role,
                     tree: current.tree,

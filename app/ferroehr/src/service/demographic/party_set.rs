@@ -29,7 +29,7 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::validate::Container;
 use crate::versioning::audit::change_type;
 use crate::versioning::body::decoded;
-use crate::versioning::change::{self, Change, CommittedContribution, WriteEnvelope};
+use crate::versioning::change::{Change, CommittedContribution, WriteEnvelope};
 use crate::versioning::lifecycle;
 
 /// One party a [`FerroEhrService::create_parties`] commits.
@@ -98,24 +98,6 @@ impl FerroEhrService {
                 Change::create_allocated(party.id, kind, body, envelope),
             ));
         }
-        // The set's large media go to the blob store before a connection is held.
-        for (_, change) in &mut changes {
-            self.externalize_change(change).await?;
-        }
-        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
-        let mut tx = conn.begin().await?;
-        let committed = change::commit_contribution(
-            &mut tx,
-            None,
-            None,
-            &audit,
-            changes,
-            Vec::new(),
-            &self.signing_ctx(),
-        )
-        .await?;
-        let facts = crate::system_log::recorder::WriteFacts::of_parties(&committed);
-        self.commit_recorded(tx, &facts, Vec::new()).await?;
-        Ok(committed)
+        self.commit_party_set(&audit, changes, Vec::new()).await
     }
 }

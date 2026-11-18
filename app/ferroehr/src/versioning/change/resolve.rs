@@ -131,6 +131,61 @@ struct Prepared {
     party_refs: Vec<crate::versioning::party_refs::Reference>,
 }
 
+/// Where a create or a modify places its prepared body, and the envelope it
+/// commits it under: the merge inputs, the template id, the client signature
+/// and the attestations.
+struct Placed {
+    kind: Kind,
+    vo_id: VoId,
+    ehr_id: Option<EhrId>,
+    ordinal: i32,
+    tree: TreeId,
+    lifecycle: String,
+    preceding_uid: Option<String>,
+    shared_from: Option<i32>,
+    preceding: Option<Box<super::Preceding>>,
+    is_first_folder: bool,
+    time_committed: jiff::Timestamp,
+    envelope: (
+        Vec<String>,
+        Option<String>,
+        Option<String>,
+        Vec<attestation::AttestationInput>,
+    ),
+}
+
+impl Prepared {
+    /// The write that stores this body where `placed` puts it.
+    fn written(self, placed: Placed) -> ResolvedWrite {
+        let (other_input_version_uids, template_id, client_signature, attestations) =
+            placed.envelope;
+        ResolvedWrite {
+            kind: placed.kind,
+            vo_id: placed.vo_id,
+            ehr_id: placed.ehr_id,
+            ordinal: placed.ordinal,
+            tree: placed.tree,
+            lifecycle: placed.lifecycle,
+            preceding_uid: placed.preceding_uid,
+            other_input_version_uids,
+            template_id,
+            client_signature,
+            body: Some(self.body),
+            rendered: Some(self.rendered),
+            content_digest: Some(self.content_digest),
+            party_facts: self.party_facts,
+            party_refs: self.party_refs,
+            shared_from: placed.shared_from,
+            preceding: placed.preceding,
+            stable_compatible: self.stable_compatible,
+            origins: self.origins,
+            attestations,
+            is_first_folder: placed.is_first_folder,
+            time_committed: placed.time_committed,
+        }
+    }
+}
+
 /// The body bytes a point read serves verbatim (`version.body`) and their
 /// content digest ([`crate::storage::render::content_digest`]), from one
 /// rendering of the canonical value `canonical`.
@@ -252,7 +307,7 @@ pub(super) async fn resolve_create(
         Some(ts) => ts,
         None => crate::storage::version_repo::placement::tx_now(tx).await?,
     };
-    Ok(ResolvedWrite {
+    Ok(body.written(Placed {
         kind: content.kind,
         vo_id,
         ehr_id: at.ehr_id,
@@ -260,22 +315,17 @@ pub(super) async fn resolve_create(
         tree,
         lifecycle,
         preceding_uid: None,
-        other_input_version_uids: content.other_input_version_uids,
-        template_id: content.template_id,
-        client_signature: content.signature,
-        body: Some(body.body),
-        rendered: Some(body.rendered),
-        content_digest: Some(body.content_digest),
-        party_facts: body.party_facts,
-        party_refs: body.party_refs,
         shared_from: None,
         preceding: None,
-        stable_compatible: body.stable_compatible,
-        origins: body.origins,
-        attestations: content.attestations,
         is_first_folder: content.kind == Kind::Folder && at.ehr_id.is_some(),
         time_committed,
-    })
+        envelope: (
+            content.other_input_version_uids,
+            content.template_id,
+            content.signature,
+            content.attestations,
+        ),
+    }))
 }
 
 /// A new version of `vo_id` after the open tip `expected` names.
@@ -312,7 +362,7 @@ pub(super) async fn resolve_modify(
     // the commit's own record is skipped (#4415).
     let shared_from = (next.preceding.content_digest.as_deref() == Some(&body.content_digest[..]))
         .then_some(next.preceding.content_key);
-    Ok(ResolvedWrite {
+    Ok(body.written(Placed {
         kind,
         vo_id,
         ehr_id: at.ehr_id,
@@ -320,22 +370,17 @@ pub(super) async fn resolve_modify(
         tree: next.tree,
         lifecycle,
         preceding_uid: Some(next.preceding_uid),
-        other_input_version_uids: content.other_input_version_uids,
-        template_id: content.template_id,
-        client_signature: content.signature,
-        body: Some(body.body),
-        rendered: Some(body.rendered),
-        content_digest: Some(body.content_digest),
-        party_facts: body.party_facts,
-        party_refs: body.party_refs,
         shared_from,
         preceding: Some(next.preceding),
-        stable_compatible: body.stable_compatible,
-        origins: body.origins,
-        attestations: content.attestations,
         is_first_folder: false,
         time_committed: at.known_now.unwrap_or(next.now),
-    })
+        envelope: (
+            content.other_input_version_uids,
+            content.template_id,
+            content.signature,
+            content.attestations,
+        ),
+    }))
 }
 
 /// Seal every protected national identifier of a demographic body into rows

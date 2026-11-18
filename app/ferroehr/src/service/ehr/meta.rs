@@ -173,6 +173,28 @@ impl FerroEhrService {
         })
     }
 
+    /// The version `version` of `vo_id`, of `kind`, in `ehr_id`, with its body
+    /// kept as the stored text where nothing needs it parsed; `None` for a
+    /// version of another EHR or kind, or none at all.
+    ///
+    /// # Errors
+    /// The storage error of the read and the profile gate's refusal.
+    pub(in crate::service) async fn tree_version_raw(
+        &self,
+        ehr_id: EhrId,
+        kind: Kind,
+        vo_id: VoId,
+        version: TreeId,
+    ) -> Result<Option<crate::versioning::read::RawVersionRead>, ServiceError> {
+        Ok(crate::versioning::read::read_raw(
+            &self.pool,
+            self.spec_profile,
+            crate::storage::version_repo::read::VersionAt::Tree(vo_id, version),
+        )
+        .await?
+        .filter(|r| r.read.ehr_id == Some(ehr_id) && r.read.kind == kind))
+    }
+
     /// The body a read serves of `read`, the version of `vo_id`: `raw_json`,
     /// its stored text, verbatim where it carries the version's own `uid`,
     /// else the canonical value with the `uid` injected.

@@ -188,16 +188,12 @@ impl FerroEhrService {
         version: TreeId,
         path: Option<&str>,
     ) -> Result<RawServiceResponse, ServiceError> {
-        let raw = crate::versioning::read::read_raw(
-            &self.pool,
-            self.spec_profile,
-            VersionAt::Tree(vo_id, version),
-        )
-        .await?
-        .filter(|r| r.read.ehr_id == Some(ehr_id) && r.read.kind == Kind::Folder)
-        .ok_or_else(|| {
-            ServiceError::not_found(Missing::Version, format!("directory {vo_id} v{version}"))
-        })?;
+        let raw = self
+            .tree_version_raw(ehr_id, Kind::Folder, vo_id, version)
+            .await?
+            .ok_or_else(|| {
+                ServiceError::not_found(Missing::Version, format!("directory {vo_id} v{version}"))
+            })?;
         if raw.read.deleted() {
             return Ok(deleted_folder());
         }

@@ -253,7 +253,7 @@ pub(crate) fn party_rules<'a, T: Tree<'a>>(
     // express. Root identity and `Links_valid` belong to the whole-instance
     // pass.
     if data.shape() == Shape::Object {
-        crate::service::ehr::validation::validate_root_locatable(data, rm_type)?;
+        crate::service::ehr::kind_rules::validate_root_locatable(data, rm_type)?;
     }
 
     // NOTE: Identities_valid (1..* → NonEmptyVec) and the present-implies-

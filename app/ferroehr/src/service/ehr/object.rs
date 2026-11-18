@@ -150,19 +150,15 @@ impl FerroEhrService {
     ) -> Result<RawServiceResponse, ServiceError> {
         self.ensure_object_readable(ehr_id, object).await?;
         let version = parse_tree_id(a_version).map_err(VersionIdError::into_argument)?;
-        let raw = crate::versioning::read::read_raw(
-            &self.pool,
-            self.spec_profile,
-            VersionAt::Tree(vo_id, version),
-        )
-        .await?
-        .filter(|r| r.read.ehr_id == Some(ehr_id) && r.read.kind == object.kind())
-        .ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::ObjectVersion,
-                format!("{} {vo_id} v{version}", object.rm_type()),
-            )
-        })?;
+        let raw = self
+            .tree_version_raw(ehr_id, object.kind(), vo_id, version)
+            .await?
+            .ok_or_else(|| {
+                ServiceError::not_found(
+                    Missing::ObjectVersion,
+                    format!("{} {vo_id} v{version}", object.rm_type()),
+                )
+            })?;
         self.raw_version_response(ehr_id, vo_id, raw)
     }
 

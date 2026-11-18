@@ -126,7 +126,7 @@ impl FerroEhrService {
     }
 }
 
-/// The typed twin of [`super::validation::validate_ehr_status`]: the root
+/// The typed twin of [`super::kind_rules::validate_ehr_status`]: the root
 /// rule and the RM pass (the typed value is an `EHR_STATUS` by construction).
 ///
 /// # Errors
@@ -138,7 +138,7 @@ fn validate_ehr_status(rm: &EhrStatus) -> Result<(), ServiceError> {
     ))
 }
 
-/// The typed twin of [`super::validation::validate_folder`].
+/// The typed twin of [`super::kind_rules::validate_folder`].
 ///
 /// # Errors
 /// As the canonical twin.
@@ -160,29 +160,14 @@ fn validate_folder(rm: &Folder) -> Result<(), ServiceError> {
     ))
 }
 
-/// The typed twin of [`super::validation::validate_root_locatable`].
+/// The typed twin of [`super::kind_rules::validate_root_locatable`].
 ///
 /// # Errors
 /// As the canonical twin.
 fn root_locatable(details: Option<&Archetyped>, kind: &str) -> Result<(), ServiceError> {
-    let details = details.ok_or_else(|| {
-        ServiceError::content_invalid(
-            Violation::new(format!(
-                "is mandatory: {kind} is an archetype root (Is_archetype_root), \
-                 and a root without ARCHETYPED is invalid; supply \
-                 archetype_details with its archetype_id (for a plain \
-                 status, openEHR-EHR-EHR_STATUS.generic.v1)"
-            ))
-            .with_path(format!("{kind}.archetype_details"))
-            .with_invariant("LOCATABLE.Archetyped_valid"),
-        )
-    })?;
-    if details.archetype_id.value.is_empty() {
-        return Err(ServiceError::content_invalid(
-            Violation::new("is mandatory")
-                .with_path(format!("{kind}.archetype_details.archetype_id.value"))
-                .with_invariant("ARCHETYPED.archetype_id 1..1"),
-        ));
-    }
-    Ok(())
+    super::kind_rules::root_archetyped(
+        kind,
+        details.is_some(),
+        details.is_some_and(|details| !details.archetype_id.value.is_empty()),
+    )
 }

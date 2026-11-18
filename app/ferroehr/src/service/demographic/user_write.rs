@@ -229,37 +229,12 @@ impl FerroEhrService {
 
     /// The live professional `ROLE`s the `PERSON` `body` lists in `roles`.
     async fn professional_roles(&self, body: &Value) -> Result<Vec<VoId>, ServiceError> {
-        let mut roles = Vec::new();
-        let listed = body
-            .get("roles")
-            .and_then(Value::as_array)
-            .map(Vec::as_slice)
-            .unwrap_or_default();
-        for reference in listed {
-            // NOTE: a reference whose root is no UUID names no container of this store.
-            let Some(role) = reference
-                .pointer("/id/value")
-                .and_then(Value::as_str)
-                .and_then(|value| VoId::from_uid_head(value).ok())
-            else {
-                continue;
-            };
-            let Some(current) = self.party_current(PartyKind::Role, role).await? else {
-                continue;
-            };
-            if current.deleted {
-                continue;
-            }
-            let read = self.read_party(PartyKind::Role, role, None, None).await?;
-            let template = read
-                .body
-                .pointer("/archetype_details/template_id/value")
-                .and_then(Value::as_str);
-            if template.is_some_and(|template| self.binding.is_professional_role(template)) {
-                roles.push(role);
-            }
-        }
-        Ok(roles)
+        Ok(self
+            .professional_role_parties(body)
+            .await?
+            .into_iter()
+            .map(|held| held.vo_id)
+            .collect())
     }
 
     /// The tree id of the head of the `PERSON` `id`.

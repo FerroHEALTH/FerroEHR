@@ -31,7 +31,7 @@ use crate::identifier_protection::store::{IdentifierStore, StoreError};
 use crate::ids::VoId;
 use crate::storage::identifier_repo::{self, IdentifierRepoError};
 use crate::versioning::body::Body;
-use crate::versioning::tree::{Shape, Tree};
+use crate::versioning::tree::Tree;
 
 /// The scheme a care subject reference is digested under (#5699).
 const CARE_SUBJECT_SCHEME: &str = "ferroehr:care-subject:v1";
@@ -360,39 +360,15 @@ type Held = (String, Uuid, Option<String>);
 /// Every protected-identifier reference in a stored body, with its pointer.
 fn referenced<'a, T: Tree<'a>>(body: T) -> Vec<(String, Uuid)> {
     let mut found = Vec::new();
-    collect(body, &mut String::new(), &mut found);
+    body::each_object(body, &mut String::new(), &mut |node, pointer| {
+        if node.get_text("_type").as_deref() == Some("DV_IDENTIFIER")
+            && let Some(id) = node.get_text("id")
+            && let Some(row) = body::referenced_row(&id)
+        {
+            found.push((pointer.to_owned(), row));
+        }
+    });
     found
-}
-
-/// Recursive walk collecting reference-bearing `DV_IDENTIFIER` nodes.
-fn collect<'a, T: Tree<'a>>(node: T, pointer: &mut String, found: &mut Vec<(String, Uuid)>) {
-    match node.shape() {
-        Shape::Object => {
-            if node.get_text("_type").as_deref() == Some("DV_IDENTIFIER")
-                && let Some(id) = node.get_text("id")
-                && let Some(row) = body::referenced_row(&id)
-            {
-                found.push((pointer.clone(), row));
-            }
-            for (key, child) in node.members() {
-                let mark = pointer.len();
-                pointer.push('/');
-                pointer.push_str(&key.replace('~', "~0").replace('/', "~1"));
-                collect(child, pointer, found);
-                pointer.truncate(mark);
-            }
-        }
-        Shape::Array => {
-            for (index, child) in node.items().enumerate() {
-                let mark = pointer.len();
-                pointer.push('/');
-                pointer.push_str(&index.to_string());
-                collect(child, pointer, found);
-                pointer.truncate(mark);
-            }
-        }
-        Shape::String | Shape::Other => {}
-    }
 }
 
 #[cfg(test)]

@@ -24,7 +24,6 @@ use uuid::Uuid;
 
 use crate::db::acquire::acquire;
 use crate::error::ServiceError;
-use crate::error::refusal::Missing;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
@@ -150,12 +149,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest<Party>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("{} {vo_id}", kind.rm_type()),
-            )
-        })?;
+        let current = self.existing_party(kind, vo_id).await?;
         self.commit_party_update(current, precondition, request.map(Body::from))
             .await
             .map_err(ServiceError::flattened)
@@ -183,12 +177,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.party_current(kind, vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("{} {vo_id}", kind.rm_type()),
-            )
-        })?;
+        let current = self.existing_party(kind, vo_id).await?;
         self.commit_party_delete(current, precondition, request)
             .await
             .map_err(ServiceError::flattened)
@@ -451,12 +440,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest<PartyRelationship>,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.relationship_current(vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("PARTY_RELATIONSHIP {vo_id}"),
-            )
-        })?;
+        let current = self.existing_relationship(vo_id).await?;
         self.commit_relationship_update(current, precondition, request.map(Body::from))
             .await
             .map_err(ServiceError::flattened)
@@ -479,12 +463,7 @@ impl FerroEhrService {
         precondition: Precondition,
         request: WriteRequest,
     ) -> Result<ServiceResponse, ServiceError> {
-        let current = self.relationship_current(vo_id).await?.ok_or_else(|| {
-            ServiceError::not_found(
-                Missing::VersionedObject,
-                format!("PARTY_RELATIONSHIP {vo_id}"),
-            )
-        })?;
+        let current = self.existing_relationship(vo_id).await?;
         self.commit_relationship_delete(current, precondition, request)
             .await
             .map_err(ServiceError::flattened)

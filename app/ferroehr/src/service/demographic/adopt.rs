@@ -40,7 +40,7 @@ use crate::system_log::event::{
 };
 use crate::versioning::audit::{AuditInput, change_type, dv_text};
 use crate::versioning::body::decoded;
-use crate::versioning::change::{self, Change, WriteEnvelope};
+use crate::versioning::change::{Change, WriteEnvelope};
 use crate::versioning::lifecycle::state;
 
 /// The audit description of an adoption.
@@ -163,29 +163,14 @@ impl FerroEhrService {
         if changes.is_empty() {
             return Ok(report);
         }
-        // The set's large media go to the blob store before a connection is held.
-        for (_, change) in &mut changes {
-            self.externalize_change(change).await?;
-        }
-        let mut conn = self.recorded_conn(&self.demographic_pool).await?;
-        let mut tx = conn.begin().await?;
-        let committed = change::commit_contribution(
-            &mut tx,
-            None,
-            None,
-            &modification,
-            changes,
-            Vec::new(),
-            &self.signing_ctx(),
-        )
-        .await?;
         let records = report
             .adopted
             .iter()
             .map(|adopted| self.adoption_record(admin, adopted))
             .collect();
-        let facts = crate::system_log::recorder::WriteFacts::of_parties(&committed);
-        self.commit_recorded(tx, &facts, records).await?;
+        let committed = self
+            .commit_party_set(&modification, changes, records)
+            .await?;
         report.contribution = Some(committed.id);
         Ok(report)
     }

@@ -43,7 +43,7 @@ use crate::negotiate::body::respond_rm;
 use crate::overview::error::RestError;
 use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
-use ferroehr::service::response::{RawServiceResponse, ServiceResponse};
+use ferroehr::service::response::ServiceResponse;
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 /// The `PARTY_RELATIONSHIP` extension routes as a native `utoipa-axum` router,
@@ -858,4 +858,3 @@ fn write_relationship(
     }
     out
 }
-

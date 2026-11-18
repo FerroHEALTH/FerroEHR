@@ -140,28 +140,40 @@ fn walk<'a, T: Tree<'a>>(
     schemes: &[String],
     found: &mut Vec<FoundIdentifier>,
 ) {
+    each_object(node, pointer, &mut |node, pointer| {
+        if node.get_text("_type").as_deref() == Some("DV_IDENTIFIER")
+            && let Some(scheme) = node.get_text("type")
+            && schemes.iter().any(|configured| *configured == scheme)
+            && let Some(value) = node.get_text("id")
+            // A body being re-committed unchanged already carries the
+            // reference; substituting a reference for a reference would
+            // orphan the first row.
+            && referenced_row(&value).is_none()
+        {
+            found.push(FoundIdentifier {
+                scheme: scheme.into_owned(),
+                value: value.into_owned(),
+                pointer: pointer.to_owned(),
+            });
+        }
+    });
+}
+
+/// Visits every object of `node`, itself first, in document order, with the
+/// RFC 6901 pointer that names it below the one `pointer` holds.
+pub(crate) fn each_object<'a, T: Tree<'a>>(
+    node: T,
+    pointer: &mut String,
+    visit: &mut impl FnMut(T, &str),
+) {
     match node.shape() {
         Shape::Object => {
-            if node.get_text("_type").as_deref() == Some("DV_IDENTIFIER")
-                && let Some(scheme) = node.get_text("type")
-                && schemes.iter().any(|configured| *configured == scheme)
-                && let Some(value) = node.get_text("id")
-                // A body being re-committed unchanged already carries the
-                // reference; substituting a reference for a reference would
-                // orphan the first row.
-                && referenced_row(&value).is_none()
-            {
-                found.push(FoundIdentifier {
-                    scheme: scheme.into_owned(),
-                    value: value.into_owned(),
-                    pointer: pointer.clone(),
-                });
-            }
+            visit(node, pointer);
             for (key, child) in node.members() {
                 let mark = pointer.len();
                 pointer.push('/');
                 pointer.push_str(&escape(key));
-                walk(child, pointer, schemes, found);
+                each_object(child, pointer, visit);
                 pointer.truncate(mark);
             }
         }
@@ -170,7 +182,7 @@ fn walk<'a, T: Tree<'a>>(
                 let mark = pointer.len();
                 pointer.push('/');
                 pointer.push_str(&index.to_string());
-                walk(child, pointer, schemes, found);
+                each_object(child, pointer, visit);
                 pointer.truncate(mark);
             }
         }

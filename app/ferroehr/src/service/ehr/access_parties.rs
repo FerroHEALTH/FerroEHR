@@ -42,7 +42,7 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::ehr::access_rule::party_key;
-use crate::service::ehr::validation::validate_ehr_access;
+use crate::service::ehr::kind_rules::validate_ehr_access;
 use crate::versioning::audit::text_value;
 
 /// The parties a write lands beside the directives that may name them, by
