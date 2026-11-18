@@ -7,7 +7,9 @@
 /// server (`PostgreSQL` docs § "Non-Durable Settings"), room for the clones'
 /// connections, and `pg_stat_statements` counting nested statements for the
 /// statement budget test of `ferroehr-rest` (#5885), as CI's server does
-/// (`scripts/lib/test-postgres.sh`).
+/// (`scripts/lib/test-postgres.sh`), with room for the statements of every
+/// clone a parallel run holds at once, so none is evicted while a test counts
+/// it (a dropped clone's statements leave with it, [`crate::TestDb`]).
 pub(crate) const COMMAND: [&str; 15] = [
     "postgres",
     "-c",
@@ -23,5 +25,5 @@ pub(crate) const COMMAND: [&str; 15] = [
     "-c",
     "pg_stat_statements.track=all",
     "-c",
-    "pg_stat_statements.max=20000",
+    "pg_stat_statements.max=100000",
 ];
