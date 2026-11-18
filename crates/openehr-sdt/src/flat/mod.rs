@@ -37,6 +37,7 @@ pub mod error;
 pub mod example;
 pub mod flatten;
 pub(crate) mod identity;
+pub(crate) mod instance;
 mod instant;
 pub(crate) mod map;
 pub mod navigate;
