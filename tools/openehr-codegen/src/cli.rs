@@ -849,8 +849,36 @@ pub(crate) fn render_validate_files() -> Result<Vec<EmittedFile>, Box<dyn std::e
             emit_validate::emit_files(&unit.model, &aug),
             g.spec.module,
         )));
+        out.extend(rm_crate_files(prefix_gen_files(
+            walk_files(g, unit, &aug),
+            g.spec.module,
+        )));
     }
     Ok(out)
+}
+
+/// The typed RM-instance walk of one RM generation
+/// ([`crate::render::emit_walk`]): its own classes named under the generation
+/// module, and the BASE classes its types reach named through the paired BASE
+/// generation.
+fn walk_files(g: &ComposedGeneration, unit: &ComposedUnit, aug: &BmmSchema) -> Vec<GenFile> {
+    let module = g.spec.module;
+    let base_external = crate::analyze::External::default();
+    let mut schemas = vec![crate::render::emit_walk::WalkSchema {
+        schema: aug,
+        path: Box::new(move |class: &str| {
+            Some(crate::render::emit_walk::local_path(module, aug, class))
+        }),
+        external: &g.external,
+    }];
+    for dep in &g.dep_schemas {
+        schemas.push(crate::render::emit_walk::WalkSchema {
+            schema: dep,
+            path: Box::new(|class: &str| g.external.module_of(class).map(str::to_owned)),
+            external: &base_external,
+        });
+    }
+    crate::render::emit_walk::emit_files(&unit.model, &schemas)
 }
 
 /// Prefix every generated file path with the generation module directory
@@ -1136,6 +1164,10 @@ fn render_crate_files(
             inject_validate(
                 &mut files,
                 prefix_gen_files(emit_validate::emit_files(&unit.model, aug), module),
+            );
+            inject_validate(
+                &mut files,
+                prefix_gen_files(walk_files(g, unit, aug), module),
             );
         }
     }
