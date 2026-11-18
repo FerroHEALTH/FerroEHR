@@ -274,6 +274,18 @@ fn any_delimited_run(text: &str, len: usize, accept: impl Fn(&str) -> bool) -> b
     false
 }
 
+/// Whether `text` holds at least `count` ASCII digits anywhere.
+///
+/// The token patterns each demand a fixed number of `[0-9]`, so a text with
+/// fewer cannot match one, and most strings of a record (names, codes, node
+/// ids) are told apart by this one pass with no pattern run over them.
+fn holds_digits(text: &str, count: usize) -> bool {
+    text.bytes()
+        .filter(u8::is_ascii_digit)
+        .nth(count.saturating_sub(1))
+        .is_some()
+}
+
 /// Whether a byte continues a word. `None` (past the end) is a delimiter.
 fn is_word_byte(byte: Option<&u8>) -> bool {
     byte.is_some_and(|b| b.is_ascii_alphanumeric() || *b == b'_')
@@ -402,33 +414,39 @@ static FI_HETU_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
 /// Valtioneuvoston asetus väestötietojärjestelmästä 128/2010, 2 §.
 const FI_HETU_CONTROL: &[u8; 31] = b"0123456789ABCDEFHJKLMNPRSTUVWXY";
 
+/// The digits every match of [`FI_HETU_TOKEN`] holds: the date's six and the
+/// individual number's three.
+const FI_HETU_DIGITS: usize = 9;
+
 /// FI — the control character is the nine digits of the date and individual
 /// number, read as one number, divided by 31, with the remainder indexed into
 /// [`FI_HETU_CONTROL`].
 fn fi_hetu(text: &str) -> bool {
-    FI_HETU_TOKEN.captures_iter(text).any(|captured| {
-        let Some((date, individual, control)) = captured
-            .get(2)
-            .zip(captured.get(4))
-            .zip(captured.get(5))
-            .map(|((date, individual), control)| (date, individual, control))
-        else {
-            return false;
-        };
-        let Ok(value) = format!("{}{}", date.as_str(), individual.as_str()).parse::<u32>() else {
-            return false;
-        };
-        let expected = FI_HETU_CONTROL
-            .get(usize::try_from(value % 31).unwrap_or(usize::MAX))
-            .copied();
-        expected.is_some_and(|expected| {
-            control
-                .as_str()
-                .bytes()
-                .next()
-                .is_some_and(|found| found.eq_ignore_ascii_case(&expected))
+    holds_digits(text, FI_HETU_DIGITS)
+        && FI_HETU_TOKEN.captures_iter(text).any(|captured| {
+            let Some((date, individual, control)) = captured
+                .get(2)
+                .zip(captured.get(4))
+                .zip(captured.get(5))
+                .map(|((date, individual), control)| (date, individual, control))
+            else {
+                return false;
+            };
+            let Ok(value) = format!("{}{}", date.as_str(), individual.as_str()).parse::<u32>()
+            else {
+                return false;
+            };
+            let expected = FI_HETU_CONTROL
+                .get(usize::try_from(value % 31).unwrap_or(usize::MAX))
+                .copied();
+            expected.is_some_and(|expected| {
+                control
+                    .as_str()
+                    .bytes()
+                    .next()
+                    .is_some_and(|found| found.eq_ignore_ascii_case(&expected))
+            })
         })
-    })
 }
 
 /// The GS1 modulo-10 check the Swiss registers use for both the AHVN13 and the
@@ -466,22 +484,26 @@ static CH_AHVN13_DOTTED: LazyLock<Regex> = LazyLock::new(|| {
         .expect("the AHV-number display pattern should compile")
 });
 
+/// The digits every match of [`CH_AHVN13_DOTTED`] holds.
+const CH_AHVN13_DIGITS: usize = 13;
+
 /// CH — the AHVN13: the country code 756, nine digits and a GS1 modulo-10
 /// check digit (AHVV Art. 133; WL VA/IK Anhang 7 B), matched as a plain
 /// thirteen-digit run and in the dotted display form.
 fn ch_ahvn13(text: &str) -> bool {
     any_delimited_run(text, 13, |run| {
         run.starts_with("756") && gs1_check_digit_holds(run)
-    }) || CH_AHVN13_DOTTED.captures_iter(text).any(|captured| {
-        captured.get(2).is_some_and(|dotted| {
-            let run: String = dotted
-                .as_str()
-                .chars()
-                .filter(char::is_ascii_digit)
-                .collect();
-            gs1_check_digit_holds(&run)
+    }) || holds_digits(text, CH_AHVN13_DIGITS)
+        && CH_AHVN13_DOTTED.captures_iter(text).any(|captured| {
+            captured.get(2).is_some_and(|dotted| {
+                let run: String = dotted
+                    .as_str()
+                    .chars()
+                    .filter(char::is_ascii_digit)
+                    .collect();
+                gs1_check_digit_holds(&run)
+            })
         })
-    })
 }
 
 /// The first eight digits of every EPD patient identification number, fixed
@@ -510,44 +532,48 @@ static DE_KVNR_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
         .expect("the Krankenversichertennummer pattern should compile")
 });
 
+/// The digits every match of [`DE_KVNR_TOKEN`] holds: eight and the check digit.
+const DE_KVNR_DIGITS: usize = 9;
+
 /// DE — the check digit of the unchangeable part: the letter becomes its
 /// two-digit alphabet position, the ten digits are weighted from the left
 /// alternately 1 and 2, each product is reduced to its cross-sum, and the check
 /// digit is the units digit of the total (Richtlinie 3.4.1 Rz 185-188, the
 /// worked tables of Anlage 1).
 fn de_kvnr(text: &str) -> bool {
-    DE_KVNR_TOKEN.captures_iter(text).any(|captured| {
-        let Some(((letter, digits), check)) =
-            captured.get(2).zip(captured.get(3)).zip(captured.get(4))
-        else {
-            return false;
-        };
-        let Some(position) = letter
-            .as_str()
-            .bytes()
-            .next()
-            .map(|b| u32::from(b - b'A') + 1)
-        else {
-            return false;
-        };
-        let ten: Vec<u32> = [position.div_euclid(10), position % 10]
-            .into_iter()
-            .chain(digits.as_str().bytes().map(|b| u32::from(b - b'0')))
-            .collect();
-        let total: u32 = ten
-            .iter()
-            .enumerate()
-            .map(|(i, d)| {
-                let product = d * if i % 2 == 0 { 1 } else { 2 };
-                if product >= 10 { product - 9 } else { product }
-            })
-            .sum();
-        check
-            .as_str()
-            .bytes()
-            .next()
-            .is_some_and(|b| u32::from(b - b'0') == total % 10)
-    })
+    holds_digits(text, DE_KVNR_DIGITS)
+        && DE_KVNR_TOKEN.captures_iter(text).any(|captured| {
+            let Some(((letter, digits), check)) =
+                captured.get(2).zip(captured.get(3)).zip(captured.get(4))
+            else {
+                return false;
+            };
+            let Some(position) = letter
+                .as_str()
+                .bytes()
+                .next()
+                .map(|b| u32::from(b - b'A') + 1)
+            else {
+                return false;
+            };
+            let ten: Vec<u32> = [position.div_euclid(10), position % 10]
+                .into_iter()
+                .chain(digits.as_str().bytes().map(|b| u32::from(b - b'0')))
+                .collect();
+            let total: u32 = ten
+                .iter()
+                .enumerate()
+                .map(|(i, d)| {
+                    let product = d * if i % 2 == 0 { 1 } else { 2 };
+                    if product >= 10 { product - 9 } else { product }
+                })
+                .sum();
+            check
+                .as_str()
+                .bytes()
+                .next()
+                .is_some_and(|b| u32::from(b - b'0') == total % 10)
+        })
 }
 
 #[cfg(test)]

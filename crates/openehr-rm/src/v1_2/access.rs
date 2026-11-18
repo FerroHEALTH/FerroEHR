@@ -166,6 +166,9 @@ pub type ItemsMut<'a> = Box<dyn Iterator<Item = &'a mut dyn RmObject> + 'a>;
 pub trait RmObject: std::fmt::Debug + Send + Sync + 'static {
     /// The concrete class.
     fn rm_type(&self) -> &'static str;
+    /// Every attribute the class declares by its wire name, in declaration
+    /// order, set or not.
+    fn attributes(&self) -> &'static [&'static str];
     /// The value, to downcast.
     fn as_any(&self) -> &dyn Any;
     /// The value, to downcast mutably.
@@ -520,6 +523,9 @@ impl FromPrimitive for char {
 impl RmObject for Partial {
     fn rm_type(&self) -> &'static str {
         self.rm_type
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        self.attributes
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         let slots = self

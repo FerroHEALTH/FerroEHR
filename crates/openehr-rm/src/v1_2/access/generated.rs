@@ -1173,6 +1173,28 @@ impl RmObject for crate::v1_2::composition::content::entry::action::Action {
     fn rm_type(&self) -> &'static str {
         "ACTION"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "language",
+            "encoding",
+            "other_participations",
+            "workflow_id",
+            "subject",
+            "provider",
+            "protocol",
+            "guideline_id",
+            "time",
+            "ism_transition",
+            "instruction_details",
+            "description",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -1643,6 +1665,19 @@ impl RmObject for crate::v1_2::composition::content::entry::activity::Activity {
     fn rm_type(&self) -> &'static str {
         "ACTIVITY"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "timing",
+            "action_archetype_id",
+            "description",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -1943,6 +1978,17 @@ impl RmObject for crate::v1_2::demographic::address::Address {
     fn rm_type(&self) -> &'static str {
         "ADDRESS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "details",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -2175,6 +2221,15 @@ impl RmObject for crate::v1_2::ehr_extract::message::addressed_message::Addresse
     fn rm_type(&self) -> &'static str {
         "ADDRESSED_MESSAGE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "sender",
+            "sender_reference",
+            "addressees",
+            "urgency",
+            "message",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -2338,6 +2393,23 @@ impl FromRm for crate::v1_2::ehr_extract::message::addressed_message::AddressedM
 impl RmObject for crate::v1_2::composition::content::entry::admin_entry::AdminEntry {
     fn rm_type(&self) -> &'static str {
         "ADMIN_ENTRY"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "language",
+            "encoding",
+            "other_participations",
+            "workflow_id",
+            "subject",
+            "provider",
+            "data",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -2705,6 +2777,22 @@ impl RmObject for crate::v1_2::demographic::agent::Agent {
     fn rm_type(&self) -> &'static str {
         "AGENT"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "identities",
+            "contacts",
+            "details",
+            "relationships",
+            "languages",
+            "roles",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -3057,6 +3145,9 @@ impl RmObject for crate::v1_2::common::archetyped::archetyped::Archetyped {
     fn rm_type(&self) -> &'static str {
         "ARCHETYPED"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["archetype_id", "template_id", "rm_version"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -3199,6 +3290,20 @@ impl FromRm for crate::v1_2::common::archetyped::archetyped::Archetyped {
 impl RmObject for crate::v1_2::common::generic::attestation::Attestation {
     fn rm_type(&self) -> &'static str {
         "ATTESTATION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "system_id",
+            "time_committed",
+            "change_type",
+            "description",
+            "committer",
+            "attested_view",
+            "proof",
+            "items",
+            "reason",
+            "is_pending",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -3474,6 +3579,15 @@ impl RmObject for crate::v1_2::common::generic::audit_details::AuditDetailsData 
     fn rm_type(&self) -> &'static str {
         "AUDIT_DETAILS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "system_id",
+            "time_committed",
+            "change_type",
+            "description",
+            "committer",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -3678,6 +3792,15 @@ impl RmObject for crate::v1_2::common::resource::authored_resource::AuthoredReso
     fn rm_type(&self) -> &'static str {
         "AUTHORED_RESOURCE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "original_language",
+            "is_controlled",
+            "translations",
+            "description",
+            "revision_history",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -3861,6 +3984,18 @@ impl FromRm for crate::v1_2::common::resource::authored_resource::AuthoredResour
 impl RmObject for crate::v1_2::demographic::capability::Capability {
     fn rm_type(&self) -> &'static str {
         "CAPABILITY"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "credentials",
+            "time_validity",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -4150,6 +4285,17 @@ impl RmObject for crate::v1_2::data_structures::representation::cluster::Cluster
     fn rm_type(&self) -> &'static str {
         "CLUSTER"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "items",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -4383,6 +4529,9 @@ impl RmObject for crate::v1_2::data_types::text::code_phrase::CodePhrase {
     fn rm_type(&self) -> &'static str {
         "CODE_PHRASE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["terminology_id", "code_string", "preferred_term"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -4519,6 +4668,9 @@ impl RmObject for crate::v1_2::support::terminology::code_set_access::CodeSetAcc
     fn rm_type(&self) -> &'static str {
         "CODE_SET_ACCESS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -4605,6 +4757,22 @@ impl FromRm for crate::v1_2::support::terminology::code_set_access::CodeSetAcces
 impl RmObject for crate::v1_2::composition::composition::Composition {
     fn rm_type(&self) -> &'static str {
         "COMPOSITION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "language",
+            "territory",
+            "category",
+            "context",
+            "composer",
+            "content",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -4938,6 +5106,18 @@ impl RmObject for crate::v1_2::demographic::contact::Contact {
     fn rm_type(&self) -> &'static str {
         "CONTACT"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "addresses",
+            "time_validity",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -5235,6 +5415,9 @@ impl FromRm for crate::v1_2::composition::content::content_item::ContentItem {
 impl RmObject for crate::v1_2::common::change_control::contribution::Contribution {
     fn rm_type(&self) -> &'static str {
         "CONTRIBUTION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["uid", "versions", "audit"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -5557,6 +5740,9 @@ impl RmObject for crate::v1_2::data_types::basic::dv_boolean::DvBoolean {
     fn rm_type(&self) -> &'static str {
         "DV_BOOLEAN"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -5657,6 +5843,17 @@ impl FromRm for crate::v1_2::data_types::basic::dv_boolean::DvBoolean {
 impl RmObject for crate::v1_2::data_types::text::dv_coded_text::DvCodedText {
     fn rm_type(&self) -> &'static str {
         "DV_CODED_TEXT"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "value",
+            "hyperlink",
+            "formatting",
+            "mappings",
+            "language",
+            "encoding",
+            "defining_code",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -5881,6 +6078,17 @@ impl FromRm for crate::v1_2::data_types::text::dv_coded_text::DvCodedText {
 impl RmObject for crate::v1_2::data_types::quantity::dv_count::DvCount {
     fn rm_type(&self) -> &'static str {
         "DV_COUNT"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "normal_status",
+            "normal_range",
+            "other_reference_ranges",
+            "magnitude_status",
+            "accuracy",
+            "accuracy_is_percent",
+            "magnitude",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -6115,6 +6323,16 @@ impl RmObject for crate::v1_2::data_types::quantity::date_time::dv_date::DvDate 
     fn rm_type(&self) -> &'static str {
         "DV_DATE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "normal_status",
+            "normal_range",
+            "other_reference_ranges",
+            "magnitude_status",
+            "accuracy",
+            "value",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -6337,6 +6555,16 @@ impl FromRm for crate::v1_2::data_types::quantity::date_time::dv_date::DvDate {
 impl RmObject for crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDateTime {
     fn rm_type(&self) -> &'static str {
         "DV_DATE_TIME"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "normal_status",
+            "normal_range",
+            "other_reference_ranges",
+            "magnitude_status",
+            "accuracy",
+            "value",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -6561,6 +6789,17 @@ impl FromRm for crate::v1_2::data_types::quantity::date_time::dv_date_time::DvDa
 impl RmObject for crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration {
     fn rm_type(&self) -> &'static str {
         "DV_DURATION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "normal_status",
+            "normal_range",
+            "other_reference_ranges",
+            "magnitude_status",
+            "accuracy",
+            "accuracy_is_percent",
+            "value",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -6797,6 +7036,9 @@ impl RmObject for crate::v1_2::data_types::uri::dv_ehr_uri::DvEhrUri {
     fn rm_type(&self) -> &'static str {
         "DV_EHR_URI"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -6921,6 +7163,7 @@ impl FromRm for crate::v1_2::data_types::encapsulated::dv_encapsulated::DvEncaps
 
 impl RmObject for crate::v1_2::data_types::time_specification::dv_general_time_specification::DvGeneralTimeSpecification {
 fn rm_type(&self) -> &'static str { "DV_GENERAL_TIME_SPECIFICATION" }
+fn attributes(&self) -> &'static [&'static str] { &["value"] }
 fn clone_box(&self) -> Box<dyn RmObject> { Box::new(self.clone()) }
 fn as_any(&self) -> &dyn Any { self }
 fn as_any_mut(&mut self) -> &mut dyn Any { self }
@@ -7004,6 +7247,9 @@ _ => Err(at.refuse(given)),
 impl RmObject for crate::v1_2::data_types::basic::dv_identifier::DvIdentifier {
     fn rm_type(&self) -> &'static str {
         "DV_IDENTIFIER"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["issuer", "assigner", "id", "type"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -7150,6 +7396,16 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
 {
     fn rm_type(&self) -> &'static str {
         "DV_INTERVAL"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "lower",
+            "upper",
+            "lower_unbounded",
+            "upper_unbounded",
+            "lower_included",
+            "upper_included",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -7356,6 +7612,21 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> FromRm
 impl RmObject for crate::v1_2::data_types::encapsulated::dv_multimedia::DvMultimedia {
     fn rm_type(&self) -> &'static str {
         "DV_MULTIMEDIA"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "charset",
+            "language",
+            "alternate_text",
+            "uri",
+            "data",
+            "media_type",
+            "compression_algorithm",
+            "integrity_check",
+            "integrity_check_algorithm",
+            "thumbnail",
+            "size",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -7714,6 +7985,15 @@ impl RmObject for crate::v1_2::data_types::quantity::dv_ordinal::DvOrdinal {
     fn rm_type(&self) -> &'static str {
         "DV_ORDINAL"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "normal_status",
+            "normal_range",
+            "other_reference_ranges",
+            "symbol",
+            "value",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -7919,6 +8199,9 @@ impl RmObject for crate::v1_2::data_types::text::dv_paragraph::DvParagraph {
     fn rm_type(&self) -> &'static str {
         "DV_PARAGRAPH"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["items"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -8025,6 +8308,9 @@ impl FromRm for crate::v1_2::data_types::text::dv_paragraph::DvParagraph {
 impl RmObject for crate::v1_2::data_types::encapsulated::dv_parsable::DvParsable {
     fn rm_type(&self) -> &'static str {
         "DV_PARSABLE"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["charset", "language", "value", "formalism"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -8184,6 +8470,7 @@ impl FromRm for crate::v1_2::data_types::encapsulated::dv_parsable::DvParsable {
 
 impl RmObject for crate::v1_2::data_types::time_specification::dv_periodic_time_specification::DvPeriodicTimeSpecification {
 fn rm_type(&self) -> &'static str { "DV_PERIODIC_TIME_SPECIFICATION" }
+fn attributes(&self) -> &'static [&'static str] { &["value"] }
 fn clone_box(&self) -> Box<dyn RmObject> { Box::new(self.clone()) }
 fn as_any(&self) -> &dyn Any { self }
 fn as_any_mut(&mut self) -> &mut dyn Any { self }
@@ -8267,6 +8554,20 @@ _ => Err(at.refuse(given)),
 impl RmObject for crate::v1_2::data_types::quantity::dv_proportion::DvProportion {
     fn rm_type(&self) -> &'static str {
         "DV_PROPORTION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "normal_status",
+            "normal_range",
+            "other_reference_ranges",
+            "magnitude_status",
+            "accuracy",
+            "accuracy_is_percent",
+            "numerator",
+            "denominator",
+            "type",
+            "precision",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -8593,6 +8894,21 @@ impl RmObject for crate::v1_2::data_types::quantity::dv_quantity::DvQuantity {
     fn rm_type(&self) -> &'static str {
         "DV_QUANTITY"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "normal_status",
+            "normal_range",
+            "other_reference_ranges",
+            "magnitude_status",
+            "accuracy",
+            "accuracy_is_percent",
+            "magnitude",
+            "precision",
+            "units",
+            "units_system",
+            "units_display_name",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -8891,6 +9207,15 @@ impl RmObject for crate::v1_2::data_types::quantity::dv_scale::DvScale {
     fn rm_type(&self) -> &'static str {
         "DV_SCALE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "normal_status",
+            "normal_range",
+            "other_reference_ranges",
+            "symbol",
+            "value",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -9095,6 +9420,9 @@ impl RmObject for crate::v1_2::data_types::basic::dv_state::DvState {
     fn rm_type(&self) -> &'static str {
         "DV_STATE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value", "is_terminal"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -9243,6 +9571,16 @@ impl FromRm for crate::v1_2::data_types::quantity::date_time::dv_temporal::DvTem
 impl RmObject for crate::v1_2::data_types::text::dv_text::DvTextData {
     fn rm_type(&self) -> &'static str {
         "DV_TEXT"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "value",
+            "hyperlink",
+            "formatting",
+            "mappings",
+            "language",
+            "encoding",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -9471,6 +9809,16 @@ impl FromRm for crate::v1_2::data_types::text::dv_text::DvText {
 impl RmObject for crate::v1_2::data_types::quantity::date_time::dv_time::DvTime {
     fn rm_type(&self) -> &'static str {
         "DV_TIME"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "normal_status",
+            "normal_range",
+            "other_reference_ranges",
+            "magnitude_status",
+            "accuracy",
+            "value",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -9728,6 +10076,9 @@ impl RmObject for crate::v1_2::data_types::uri::dv_uri::DvUriData {
     fn rm_type(&self) -> &'static str {
         "DV_URI"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -9852,6 +10203,20 @@ impl FromRm for crate::v1_2::data_types::uri::dv_uri::DvUri {
 impl RmObject for crate::v1_2::ehr::ehr::Ehr {
     fn rm_type(&self) -> &'static str {
         "EHR"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "system_id",
+            "ehr_id",
+            "contributions",
+            "ehr_status",
+            "ehr_access",
+            "compositions",
+            "directory",
+            "time_created",
+            "folders",
+            "tags",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -10141,6 +10506,17 @@ impl RmObject for crate::v1_2::ehr::ehr_access::EhrAccess {
     fn rm_type(&self) -> &'static str {
         "EHR_ACCESS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "settings",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -10364,6 +10740,20 @@ impl FromRm for crate::v1_2::ehr::ehr_access::EhrAccess {
 impl RmObject for crate::v1_2::ehr::ehr_status::EhrStatus {
     fn rm_type(&self) -> &'static str {
         "EHR_STATUS"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "subject",
+            "is_queryable",
+            "is_modifiable",
+            "other_details",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -10651,6 +11041,19 @@ impl FromRm for crate::v1_2::ehr::ehr_status::EhrStatus {
 impl RmObject for crate::v1_2::data_structures::representation::element::Element {
     fn rm_type(&self) -> &'static str {
         "ELEMENT"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "null_flavour",
+            "value",
+            "null_reason",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -10965,6 +11368,25 @@ impl FromRm for crate::v1_2::composition::content::entry::entry::Entry {
 impl RmObject for crate::v1_2::composition::content::entry::evaluation::Evaluation {
     fn rm_type(&self) -> &'static str {
         "EVALUATION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "language",
+            "encoding",
+            "other_participations",
+            "workflow_id",
+            "subject",
+            "provider",
+            "protocol",
+            "guideline_id",
+            "data",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -11405,6 +11827,17 @@ impl RmObject for crate::v1_2::composition::event_context::EventContext {
     fn rm_type(&self) -> &'static str {
         "EVENT_CONTEXT"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "start_time",
+            "end_time",
+            "location",
+            "setting",
+            "other_context",
+            "health_care_facility",
+            "participations",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -11651,6 +12084,23 @@ impl FromRm for crate::v1_2::composition::event_context::EventContext {
 impl RmObject for crate::v1_2::ehr_extract::common::extract::Extract {
     fn rm_type(&self) -> &'static str {
         "EXTRACT"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "chapters",
+            "specification",
+            "request_id",
+            "time_created",
+            "system_id",
+            "sequence_nr",
+            "participations",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -12011,6 +12461,18 @@ impl RmObject for crate::v1_2::ehr_extract::common::extract_action_request::Extr
     fn rm_type(&self) -> &'static str {
         "EXTRACT_ACTION_REQUEST"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "request_id",
+            "action",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -12267,6 +12729,17 @@ impl FromRm for crate::v1_2::ehr_extract::common::extract_action_request::Extrac
 impl RmObject for crate::v1_2::ehr_extract::common::extract_chapter::ExtractChapterData {
     fn rm_type(&self) -> &'static str {
         "EXTRACT_CHAPTER"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "items",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -12558,6 +13031,18 @@ impl RmObject for crate::v1_2::ehr_extract::common::extract_entity_chapter::Extr
     fn rm_type(&self) -> &'static str {
         "EXTRACT_ENTITY_CHAPTER"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "items",
+            "extract_id_key",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -12817,6 +13302,15 @@ impl RmObject for crate::v1_2::ehr_extract::common::extract_entity_manifest::Ext
     fn rm_type(&self) -> &'static str {
         "EXTRACT_ENTITY_MANIFEST"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "extract_id_key",
+            "ehr_id",
+            "subject_id",
+            "other_ids",
+            "item_list",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -12982,6 +13476,9 @@ impl RmObject for crate::v1_2::ehr_extract::common::extract_error::ExtractError 
     fn rm_type(&self) -> &'static str {
         "EXTRACT_ERROR"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["request_id", "reason"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -13109,6 +13606,17 @@ impl FromRm for crate::v1_2::ehr_extract::common::extract_error::ExtractError {
 impl RmObject for crate::v1_2::ehr_extract::common::extract_folder::ExtractFolder {
     fn rm_type(&self) -> &'static str {
         "EXTRACT_FOLDER"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "items",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -13375,6 +13883,9 @@ impl RmObject for crate::v1_2::ehr_extract::common::extract_manifest::ExtractMan
     fn rm_type(&self) -> &'static str {
         "EXTRACT_MANIFEST"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["entities"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -13481,6 +13992,9 @@ impl FromRm for crate::v1_2::ehr_extract::common::extract_manifest::ExtractManif
 impl RmObject for crate::v1_2::ehr_extract::common::extract_participation::ExtractParticipation {
     fn rm_type(&self) -> &'static str {
         "EXTRACT_PARTICIPATION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["time", "function", "mode", "performer"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -13648,6 +14162,18 @@ impl FromRm for crate::v1_2::ehr_extract::common::extract_participation::Extract
 impl RmObject for crate::v1_2::ehr_extract::common::extract_request::ExtractRequest {
     fn rm_type(&self) -> &'static str {
         "EXTRACT_REQUEST"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "extract_spec",
+            "update_spec",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -13902,6 +14428,18 @@ impl RmObject for crate::v1_2::ehr_extract::common::extract_spec::ExtractSpec {
     fn rm_type(&self) -> &'static str {
         "EXTRACT_SPEC"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "version_spec",
+            "manifest",
+            "extract_type",
+            "include_multimedia",
+            "priority",
+            "link_depth",
+            "criteria",
+            "other_details",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -14139,6 +14677,14 @@ impl RmObject for crate::v1_2::ehr_extract::common::extract_update_spec::Extract
     fn rm_type(&self) -> &'static str {
         "EXTRACT_UPDATE_SPEC"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "persist_in_server",
+            "repeat_period",
+            "trigger_events",
+            "update_method",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -14324,6 +14870,14 @@ impl RmObject for crate::v1_2::ehr_extract::common::extract_version_spec::Extrac
     fn rm_type(&self) -> &'static str {
         "EXTRACT_VERSION_SPEC"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "include_all_versions",
+            "commit_time_interval",
+            "include_revision_history",
+            "include_data",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -14485,6 +15039,15 @@ impl FromRm for crate::v1_2::ehr_extract::common::extract_version_spec::ExtractV
 impl RmObject for crate::v1_2::common::archetyped::feeder_audit::FeederAudit {
     fn rm_type(&self) -> &'static str {
         "FEEDER_AUDIT"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "originating_system_item_ids",
+            "feeder_system_item_ids",
+            "original_content",
+            "originating_system_audit",
+            "feeder_system_audit",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -14736,6 +15299,17 @@ impl RmObject for crate::v1_2::common::archetyped::feeder_audit_details::FeederA
     fn rm_type(&self) -> &'static str {
         "FEEDER_AUDIT_DETAILS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "system_id",
+            "location",
+            "subject",
+            "provider",
+            "time",
+            "version_id",
+            "other_details",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -14969,6 +15543,19 @@ impl FromRm for crate::v1_2::common::archetyped::feeder_audit_details::FeederAud
 impl RmObject for crate::v1_2::common::directory::folder::Folder {
     fn rm_type(&self) -> &'static str {
         "FOLDER"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "items",
+            "folders",
+            "details",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -15249,6 +15836,31 @@ impl RmObject
 {
     fn rm_type(&self) -> &'static str {
         "GENERIC_CONTENT_ITEM"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "is_primary",
+            "is_changed",
+            "is_masked",
+            "item",
+            "item_type",
+            "item_type_version",
+            "author",
+            "creation_time",
+            "authoriser",
+            "authorisation_time",
+            "item_status",
+            "version_id",
+            "version_set_id",
+            "system_id",
+            "other_details",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -15749,6 +16361,17 @@ impl RmObject for crate::v1_2::integration::generic_entry::GenericEntry {
     fn rm_type(&self) -> &'static str {
         "GENERIC_ENTRY"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "data",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -15982,6 +16605,22 @@ impl FromRm for crate::v1_2::integration::generic_entry::GenericEntry {
 impl RmObject for crate::v1_2::demographic::group::Group {
     fn rm_type(&self) -> &'static str {
         "GROUP"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "identities",
+            "contacts",
+            "details",
+            "relationships",
+            "languages",
+            "roles",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -16337,6 +16976,21 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
     fn rm_type(&self) -> &'static str {
         "HISTORY"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "origin",
+            "period",
+            "duration",
+            "summary",
+            "events",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -16662,6 +17316,9 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
     fn rm_type(&self) -> &'static str {
         "IMPORTED_VERSION"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["contribution", "signature", "commit_audit", "item"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -16822,6 +17479,28 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> FromRm
 impl RmObject for crate::v1_2::composition::content::entry::instruction::Instruction {
     fn rm_type(&self) -> &'static str {
         "INSTRUCTION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "language",
+            "encoding",
+            "other_participations",
+            "workflow_id",
+            "subject",
+            "provider",
+            "protocol",
+            "guideline_id",
+            "narrative",
+            "expiry_time",
+            "wf_definition",
+            "activities",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -17308,6 +17987,9 @@ impl RmObject
     fn rm_type(&self) -> &'static str {
         "INSTRUCTION_DETAILS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["instruction_id", "activity_id", "wf_details"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -17457,6 +18139,22 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
 {
     fn rm_type(&self) -> &'static str {
         "INTERVAL_EVENT"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "time",
+            "state",
+            "data",
+            "width",
+            "sample_count",
+            "math_function",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -17790,6 +18488,9 @@ impl RmObject for crate::v1_2::composition::content::entry::ism_transition::IsmT
     fn rm_type(&self) -> &'static str {
         "ISM_TRANSITION"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["current_state", "transition", "careflow_step", "reason"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -17988,6 +18689,17 @@ impl FromRm for crate::v1_2::data_structures::representation::item::Item {
 impl RmObject for crate::v1_2::data_structures::item_structure::item_list::ItemList {
     fn rm_type(&self) -> &'static str {
         "ITEM_LIST"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "items",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -18223,6 +18935,17 @@ impl FromRm for crate::v1_2::data_structures::item_structure::item_list::ItemLis
 impl RmObject for crate::v1_2::data_structures::item_structure::item_single::ItemSingle {
     fn rm_type(&self) -> &'static str {
         "ITEM_SINGLE"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "item",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -18487,6 +19210,17 @@ impl RmObject for crate::v1_2::data_structures::item_structure::item_table::Item
     fn rm_type(&self) -> &'static str {
         "ITEM_TABLE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "rows",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -18722,6 +19456,9 @@ impl RmObject for crate::v1_2::common::tags::item_tag::ItemTag {
     fn rm_type(&self) -> &'static str {
         "ITEM_TAG"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["key", "value", "target", "target_path", "owner_id"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -18820,6 +19557,17 @@ impl FromRm for crate::v1_2::common::tags::item_tag::ItemTag {
 impl RmObject for crate::v1_2::data_structures::item_structure::item_tree::ItemTree {
     fn rm_type(&self) -> &'static str {
         "ITEM_TREE"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "items",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -19089,6 +19837,9 @@ impl RmObject for crate::v1_2::foundation_types::time::iso8601_date::Iso8601Date
     fn rm_type(&self) -> &'static str {
         "Iso8601_date"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -19214,6 +19965,9 @@ impl FromRm for crate::v1_2::foundation_types::time::iso8601_date::Iso8601Date {
 impl RmObject for crate::v1_2::foundation_types::time::iso8601_date_time::Iso8601DateTimeData {
     fn rm_type(&self) -> &'static str {
         "Iso8601_date_time"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -19343,6 +20097,9 @@ impl RmObject for crate::v1_2::foundation_types::time::iso8601_duration::Iso8601
     fn rm_type(&self) -> &'static str {
         "Iso8601_duration"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -19470,6 +20227,9 @@ impl FromRm for crate::v1_2::foundation_types::time::iso8601_duration::Iso8601Du
 impl RmObject for crate::v1_2::foundation_types::time::iso8601_time::Iso8601TimeData {
     fn rm_type(&self) -> &'static str {
         "Iso8601_time"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -19634,6 +20394,9 @@ impl FromRm for crate::v1_2::foundation_types::time::iso8601_type::Iso8601Type {
 impl RmObject for crate::v1_2::common::archetyped::link::Link {
     fn rm_type(&self) -> &'static str {
         "LINK"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["meaning", "type", "target"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -19913,6 +20676,9 @@ impl RmObject for crate::v1_2::support::measurement::measurement_service::Measur
     fn rm_type(&self) -> &'static str {
         "MEASUREMENT_SERVICE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -19999,6 +20765,9 @@ impl FromRm for crate::v1_2::support::measurement::measurement_service::Measurem
 impl RmObject for crate::v1_2::ehr_extract::message::message::Message {
     fn rm_type(&self) -> &'static str {
         "MESSAGE"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["audit", "author", "content", "signature"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -20179,6 +20948,26 @@ impl FromRm for crate::v1_2::ehr_extract::message::message_content::MessageConte
 impl RmObject for crate::v1_2::composition::content::entry::observation::Observation {
     fn rm_type(&self) -> &'static str {
         "OBSERVATION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "language",
+            "encoding",
+            "other_participations",
+            "workflow_id",
+            "subject",
+            "provider",
+            "protocol",
+            "guideline_id",
+            "data",
+            "state",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -20610,6 +21399,7 @@ impl FromRm for crate::v1_2::composition::content::entry::observation::Observati
 
 impl RmObject for crate::v1_2::support::terminology::openehr_code_set_identifiers::OpenehrCodeSetIdentifiersData {
 fn rm_type(&self) -> &'static str { "OPENEHR_CODE_SET_IDENTIFIERS" }
+fn attributes(&self) -> &'static [&'static str] { &[] }
 fn clone_box(&self) -> Box<dyn RmObject> { Box::new(self.clone()) }
 fn as_any(&self) -> &dyn Any { self }
 fn as_any_mut(&mut self) -> &mut dyn Any { self }
@@ -20718,6 +21508,20 @@ impl RmObject
 {
     fn rm_type(&self) -> &'static str {
         "OPENEHR_CONTENT_ITEM"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "is_primary",
+            "is_changed",
+            "is_masked",
+            "item",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -20997,6 +21801,7 @@ impl FromRm
 
 impl RmObject for crate::v1_2::support::terminology::openehr_terminology_group_identifiers::OpenehrTerminologyGroupIdentifiersData {
 fn rm_type(&self) -> &'static str { "OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS" }
+fn attributes(&self) -> &'static [&'static str] { &[] }
 fn clone_box(&self) -> Box<dyn RmObject> { Box::new(self.clone()) }
 fn as_any(&self) -> &dyn Any { self }
 fn as_any_mut(&mut self) -> &mut dyn Any { self }
@@ -21097,6 +21902,22 @@ other => Err(at.refuse(other)),
 impl RmObject for crate::v1_2::demographic::organisation::Organisation {
     fn rm_type(&self) -> &'static str {
         "ORGANISATION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "identities",
+            "contacts",
+            "details",
+            "relationships",
+            "languages",
+            "roles",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -21454,6 +22275,19 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
     fn rm_type(&self) -> &'static str {
         "ORIGINAL_VERSION"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "contribution",
+            "signature",
+            "commit_audit",
+            "uid",
+            "preceding_version_uid",
+            "other_input_version_uids",
+            "lifecycle_state",
+            "attestations",
+            "data",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -21758,6 +22592,9 @@ impl RmObject for crate::v1_2::common::generic::participation::Participation {
     fn rm_type(&self) -> &'static str {
         "PARTICIPATION"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["function", "mode", "performer", "time"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -21960,6 +22797,9 @@ impl RmObject for crate::v1_2::common::generic::party_identified::PartyIdentifie
     fn rm_type(&self) -> &'static str {
         "PARTY_IDENTIFIED"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["external_ref", "name", "identifiers"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -22136,6 +22976,17 @@ impl FromRm for crate::v1_2::common::generic::party_identified::PartyIdentified 
 impl RmObject for crate::v1_2::demographic::party_identity::PartyIdentity {
     fn rm_type(&self) -> &'static str {
         "PARTY_IDENTITY"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "details",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -22397,6 +23248,9 @@ impl RmObject for crate::v1_2::common::generic::party_related::PartyRelated {
     fn rm_type(&self) -> &'static str {
         "PARTY_RELATED"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["external_ref", "name", "identifiers", "relationship"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -22563,6 +23417,20 @@ impl FromRm for crate::v1_2::common::generic::party_related::PartyRelated {
 impl RmObject for crate::v1_2::demographic::party_relationship::PartyRelationship {
     fn rm_type(&self) -> &'static str {
         "PARTY_RELATIONSHIP"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "details",
+            "target",
+            "time_validity",
+            "source",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -22869,6 +23737,9 @@ impl RmObject for crate::v1_2::common::generic::party_self::PartySelf {
     fn rm_type(&self) -> &'static str {
         "PARTY_SELF"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["external_ref"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -23123,6 +23994,22 @@ impl FromRm for crate::v1_2::common::archetyped::pathable::Pathable {
 impl RmObject for crate::v1_2::demographic::person::Person {
     fn rm_type(&self) -> &'static str {
         "PERSON"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "identities",
+            "contacts",
+            "details",
+            "relationships",
+            "languages",
+            "roles",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -23478,6 +24365,19 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
     fn rm_type(&self) -> &'static str {
         "POINT_EVENT"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "time",
+            "state",
+            "data",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -23756,6 +24656,9 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
     fn rm_type(&self) -> &'static str {
         "REFERENCE_RANGE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["meaning", "range"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -23883,6 +24786,16 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> FromRm
 impl RmObject for crate::v1_2::common::resource::resource_description::ResourceDescription {
     fn rm_type(&self) -> &'static str {
         "RESOURCE_DESCRIPTION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "original_author",
+            "other_contributors",
+            "lifecycle_state",
+            "resource_package_uri",
+            "other_details",
+            "details",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -24046,6 +24959,18 @@ impl RmObject
 {
     fn rm_type(&self) -> &'static str {
         "RESOURCE_DESCRIPTION_ITEM"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "language",
+            "purpose",
+            "keywords",
+            "use",
+            "misuse",
+            "copyright",
+            "original_resource_uri",
+            "other_details",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -24246,6 +25171,9 @@ impl RmObject for crate::v1_2::common::generic::revision_history::RevisionHistor
     fn rm_type(&self) -> &'static str {
         "REVISION_HISTORY"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["items"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -24352,6 +25280,9 @@ impl FromRm for crate::v1_2::common::generic::revision_history::RevisionHistory 
 impl RmObject for crate::v1_2::common::generic::revision_history_item::RevisionHistoryItem {
     fn rm_type(&self) -> &'static str {
         "REVISION_HISTORY_ITEM"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["version_id", "audits"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -24480,6 +25411,23 @@ impl FromRm for crate::v1_2::common::generic::revision_history_item::RevisionHis
 impl RmObject for crate::v1_2::demographic::role::Role {
     fn rm_type(&self) -> &'static str {
         "ROLE"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "identities",
+            "contacts",
+            "details",
+            "relationships",
+            "time_validity",
+            "performer",
+            "capabilities",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -24859,6 +25807,17 @@ impl RmObject for crate::v1_2::composition::content::navigation::section::Sectio
     fn rm_type(&self) -> &'static str {
         "SECTION"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "name",
+            "archetype_node_id",
+            "uid",
+            "links",
+            "archetype_details",
+            "feeder_audit",
+            "items",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -25097,6 +26056,9 @@ impl RmObject for crate::v1_2::ehr_extract::sync_extract::sync_extract::SyncExtr
     fn rm_type(&self) -> &'static str {
         "SYNC_EXTRACT"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["specification", "items"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -25224,6 +26186,9 @@ impl RmObject for crate::v1_2::ehr_extract::sync_extract::sync_extract_request::
     fn rm_type(&self) -> &'static str {
         "SYNC_EXTRACT_REQUEST"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["specification"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -25332,6 +26297,14 @@ impl FromRm for crate::v1_2::ehr_extract::sync_extract::sync_extract_request::Sy
 impl RmObject for crate::v1_2::ehr_extract::sync_extract::sync_extract_spec::SyncExtractSpec {
     fn rm_type(&self) -> &'static str {
         "SYNC_EXTRACT_SPEC"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "includes_versions",
+            "contribution_list",
+            "contributions_since",
+            "all_contributions",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -25514,6 +26487,9 @@ impl RmObject for crate::v1_2::support::terminology::terminology_access::Termino
     fn rm_type(&self) -> &'static str {
         "TERMINOLOGY_ACCESS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -25601,6 +26577,9 @@ impl RmObject for crate::v1_2::support::terminology::terminology_service::Termin
     fn rm_type(&self) -> &'static str {
         "TERMINOLOGY_SERVICE"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -25687,6 +26666,9 @@ impl FromRm for crate::v1_2::support::terminology::terminology_service::Terminol
 impl RmObject for crate::v1_2::data_types::text::term_mapping::TermMapping {
     fn rm_type(&self) -> &'static str {
         "TERM_MAPPING"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["match", "purpose", "target"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -25828,6 +26810,9 @@ impl FromRm for crate::v1_2::data_types::text::term_mapping::TermMapping {
 impl RmObject for crate::v1_2::common::resource::translation_details::TranslationDetails {
     fn rm_type(&self) -> &'static str {
         "TRANSLATION_DETAILS"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["language", "author", "accreditation", "other_details"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -25999,6 +26984,9 @@ impl RmObject for crate::v1_2::ehr::versioned_composition::VersionedComposition 
     fn rm_type(&self) -> &'static str {
         "VERSIONED_COMPOSITION"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["uid", "owner_id", "time_created"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -26146,6 +27134,9 @@ impl RmObject for crate::v1_2::ehr::versioned_ehr_access::VersionedEhrAccess {
     fn rm_type(&self) -> &'static str {
         "VERSIONED_EHR_ACCESS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["uid", "owner_id", "time_created"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -26290,6 +27281,9 @@ impl FromRm for crate::v1_2::ehr::versioned_ehr_access::VersionedEhrAccess {
 impl RmObject for crate::v1_2::ehr::versioned_ehr_status::VersionedEhrStatus {
     fn rm_type(&self) -> &'static str {
         "VERSIONED_EHR_STATUS"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["uid", "owner_id", "time_created"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -26436,6 +27430,9 @@ impl RmObject for crate::v1_2::common::directory::versioned_folder::VersionedFol
     fn rm_type(&self) -> &'static str {
         "VERSIONED_FOLDER"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["uid", "owner_id", "time_created"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -26577,6 +27574,9 @@ impl FromRm for crate::v1_2::common::directory::versioned_folder::VersionedFolde
 impl RmObject for crate::v1_2::common::change_control::versioned_object::VersionedObjectData {
     fn rm_type(&self) -> &'static str {
         "VERSIONED_OBJECT"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["uid", "owner_id", "time_created"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -26757,6 +27757,9 @@ impl RmObject for crate::v1_2::demographic::versioned_party::VersionedParty {
     fn rm_type(&self) -> &'static str {
         "VERSIONED_PARTY"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["uid", "owner_id", "time_created"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -26898,6 +27901,9 @@ impl FromRm for crate::v1_2::demographic::versioned_party::VersionedParty {
 impl RmObject for crate::v1_2::ehr_extract::sync_extract::x_contribution::XContribution {
     fn rm_type(&self) -> &'static str {
         "X_CONTRIBUTION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["uid", "audit", "versions"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -27045,6 +28051,17 @@ impl RmObject
 {
     fn rm_type(&self) -> &'static str {
         "X_VERSIONED_COMPOSITION"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "uid",
+            "owner_id",
+            "time_created",
+            "total_version_count",
+            "extract_version_count",
+            "revision_history",
+            "versions",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -27280,6 +28297,17 @@ impl RmObject
 {
     fn rm_type(&self) -> &'static str {
         "X_VERSIONED_EHR_ACCESS"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "uid",
+            "owner_id",
+            "time_created",
+            "total_version_count",
+            "extract_version_count",
+            "revision_history",
+            "versions",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -27517,6 +28545,17 @@ impl RmObject
     fn rm_type(&self) -> &'static str {
         "X_VERSIONED_EHR_STATUS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "uid",
+            "owner_id",
+            "time_created",
+            "total_version_count",
+            "extract_version_count",
+            "revision_history",
+            "versions",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -27751,6 +28790,17 @@ impl RmObject for crate::v1_2::ehr_extract::openehr_extract::x_versioned_folder:
     fn rm_type(&self) -> &'static str {
         "X_VERSIONED_FOLDER"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "uid",
+            "owner_id",
+            "time_created",
+            "total_version_count",
+            "extract_version_count",
+            "revision_history",
+            "versions",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -27975,6 +29025,17 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
 {
     fn rm_type(&self) -> &'static str {
         "X_VERSIONED_OBJECT"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "uid",
+            "owner_id",
+            "time_created",
+            "total_version_count",
+            "extract_version_count",
+            "revision_history",
+            "versions",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -28246,6 +29307,17 @@ impl RmObject for crate::v1_2::ehr_extract::openehr_extract::x_versioned_party::
     fn rm_type(&self) -> &'static str {
         "X_VERSIONED_PARTY"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "uid",
+            "owner_id",
+            "time_created",
+            "total_version_count",
+            "extract_version_count",
+            "revision_history",
+            "versions",
+        ]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -28469,6 +29541,9 @@ impl RmObject for openehr_base::v1_3::base_types::identification::access_group_r
     fn rm_type(&self) -> &'static str {
         "ACCESS_GROUP_REF"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["namespace", "type", "id"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -28605,6 +29680,9 @@ impl RmObject for openehr_base::v1_3::base_types::identification::archetype_id::
     fn rm_type(&self) -> &'static str {
         "ARCHETYPE_ID"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -28705,6 +29783,9 @@ impl FromRm for openehr_base::v1_3::base_types::identification::archetype_id::Ar
 impl RmObject for openehr_base::v1_3::foundation_types::interval::cardinality::Cardinality {
     fn rm_type(&self) -> &'static str {
         "Cardinality"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["interval", "is_ordered", "is_unique"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -28842,6 +29923,9 @@ impl RmObject for openehr_base::v1_3::base_types::identification::generic_id::Ge
     fn rm_type(&self) -> &'static str {
         "GENERIC_ID"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value", "scheme"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -28956,6 +30040,9 @@ impl RmObject for openehr_base::v1_3::base_types::identification::hier_object_id
     fn rm_type(&self) -> &'static str {
         "HIER_OBJECT_ID"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -29040,6 +30127,9 @@ impl FromRm for openehr_base::v1_3::base_types::identification::hier_object_id::
 impl RmObject for openehr_base::v1_3::base_types::identification::internet_id::InternetId {
     fn rm_type(&self) -> &'static str {
         "INTERNET_ID"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -29126,6 +30216,9 @@ impl RmObject for openehr_base::v1_3::base_types::identification::iso_oid::IsoOi
     fn rm_type(&self) -> &'static str {
         "ISO_OID"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -29210,6 +30303,9 @@ impl FromRm for openehr_base::v1_3::base_types::identification::iso_oid::IsoOid 
 impl RmObject for openehr_base::v1_3::foundation_types::time::iso8601_timezone::Iso8601Timezone {
     fn rm_type(&self) -> &'static str {
         "Iso8601_timezone"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -29313,6 +30409,9 @@ impl FromRm for openehr_base::v1_3::foundation_types::time::iso8601_timezone::Is
 impl RmObject for openehr_base::v1_3::base_types::identification::locatable_ref::LocatableRef {
     fn rm_type(&self) -> &'static str {
         "LOCATABLE_REF"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["namespace", "type", "id", "path"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -29462,6 +30561,16 @@ impl RmObject
 {
     fn rm_type(&self) -> &'static str {
         "Multiplicity_interval"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "lower",
+            "upper",
+            "lower_unbounded",
+            "upper_unbounded",
+            "lower_included",
+            "upper_included",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -29692,6 +30801,9 @@ impl RmObject for openehr_base::v1_3::base_types::identification::object_ref::Ob
     fn rm_type(&self) -> &'static str {
         "OBJECT_REF"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["namespace", "type", "id"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -29858,6 +30970,9 @@ impl RmObject
     fn rm_type(&self) -> &'static str {
         "OBJECT_VERSION_ID"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -29942,6 +31057,9 @@ impl FromRm for openehr_base::v1_3::base_types::identification::object_version_i
 impl RmObject for openehr_base::v1_3::base_types::identification::party_ref::PartyRef {
     fn rm_type(&self) -> &'static str {
         "PARTY_REF"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["namespace", "type", "id"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -30075,6 +31193,16 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
 {
     fn rm_type(&self) -> &'static str {
         "Point_interval"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "lower",
+            "upper",
+            "lower_unbounded",
+            "upper_unbounded",
+            "lower_included",
+            "upper_included",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -30273,6 +31401,16 @@ impl<T: AsRm + FromRm + Clone + std::fmt::Debug + Send + Sync + 'static> RmObjec
 {
     fn rm_type(&self) -> &'static str {
         "Proper_interval"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "lower",
+            "upper",
+            "lower_unbounded",
+            "upper_unbounded",
+            "lower_included",
+            "upper_included",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -30509,6 +31647,9 @@ impl RmObject for openehr_base::v1_3::resource::resource_annotations::ResourceAn
     fn rm_type(&self) -> &'static str {
         "RESOURCE_ANNOTATIONS"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["documentation"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -30606,6 +31747,9 @@ impl FromRm for openehr_base::v1_3::resource::resource_annotations::ResourceAnno
 impl RmObject for openehr_base::v1_3::base_types::identification::template_id::TemplateId {
     fn rm_type(&self) -> &'static str {
         "TEMPLATE_ID"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -30707,6 +31851,9 @@ impl FromRm for openehr_base::v1_3::base_types::identification::template_id::Tem
 impl RmObject for openehr_base::v1_3::base_types::identification::terminology_id::TerminologyId {
     fn rm_type(&self) -> &'static str {
         "TERMINOLOGY_ID"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -30812,6 +31959,14 @@ impl RmObject
 {
     fn rm_type(&self) -> &'static str {
         "Terminology_code"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &[
+            "terminology_id",
+            "terminology_version",
+            "code_string",
+            "uri",
+        ]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -30964,6 +32119,9 @@ impl RmObject
 {
     fn rm_type(&self) -> &'static str {
         "Terminology_term"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["concept", "text"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
@@ -31141,6 +32299,9 @@ impl RmObject for openehr_base::v1_3::base_types::identification::uuid::Uuid {
     fn rm_type(&self) -> &'static str {
         "UUID"
     }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
+    }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
     }
@@ -31224,6 +32385,9 @@ impl FromRm for openehr_base::v1_3::base_types::identification::uuid::Uuid {
 impl RmObject for openehr_base::v1_3::base_types::identification::version_tree_id::VersionTreeId {
     fn rm_type(&self) -> &'static str {
         "VERSION_TREE_ID"
+    }
+    fn attributes(&self) -> &'static [&'static str] {
+        &["value"]
     }
     fn clone_box(&self) -> Box<dyn RmObject> {
         Box::new(self.clone())
