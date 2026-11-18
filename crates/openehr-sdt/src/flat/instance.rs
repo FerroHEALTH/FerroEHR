@@ -23,10 +23,6 @@ use openehr_rm::v1_2::paths::{PathSegment, Predicate};
 use serde_json::Value;
 
 /// A read-only view of one RM instance node or attribute value.
-#[expect(
-    dead_code,
-    reason = "the archetype-conformance pass reads the rest of the view as it moves onto it (#6002)"
-)]
 pub(crate) trait Instance<'a>: Copy {
     /// The node's RM class: the wire `_type` of a JSON value, the concrete
     /// class of a typed one.
@@ -49,6 +45,11 @@ pub(crate) trait Instance<'a>: Copy {
     fn as_i64(self) -> Option<i64>;
     /// This value as a boolean.
     fn as_bool(self) -> Option<bool>;
+    /// This scalar as its canonical-JSON text (a diagnostic quotes it).
+    fn render(self) -> String;
+    /// The names of the attributes this object holds a value for, `_type`
+    /// excluded.
+    fn keys(self) -> Vec<&'a str>;
 
     /// The string at attribute `name`.
     fn str_at(self, name: &str) -> Option<&'a str> {
@@ -98,6 +99,17 @@ impl<'a> Instance<'a> for &'a Value {
     }
     fn as_bool(self) -> Option<bool> {
         Value::as_bool(self)
+    }
+    fn render(self) -> String {
+        self.to_string()
+    }
+    fn keys(self) -> Vec<&'a str> {
+        self.as_object().map_or_else(Vec::new, |o| {
+            o.iter()
+                .filter(|(k, v)| k.as_str() != "_type" && !v.is_null())
+                .map(|(k, _)| k.as_str())
+                .collect()
+        })
     }
 }
 
@@ -159,6 +171,25 @@ impl<'a> Instance<'a> for RmRef<'a> {
         match self {
             RmRef::Boolean(b) => Some(b),
             _ => None,
+        }
+    }
+    fn render(self) -> String {
+        match self {
+            RmRef::String(s) => Value::from(s).to_string(),
+            RmRef::Integer(i) => i.to_string(),
+            RmRef::Real(r) => Value::from(r).to_string(),
+            RmRef::Boolean(b) => b.to_string(),
+            RmRef::Character(c) => Value::from(c.to_string()).to_string(),
+            RmRef::Object(o) => o.rm_type().to_owned(),
+        }
+    }
+    fn keys(self) -> Vec<&'a str> {
+        match self {
+            RmRef::Object(o) => openehr_rm::v1_2::access::schema::attribute_names(o.rm_type())
+                .map_or_else(Vec::new, |names| {
+                    names.iter().copied().filter(|n| o.is_set(n)).collect()
+                }),
+            _ => Vec::new(),
         }
     }
 }

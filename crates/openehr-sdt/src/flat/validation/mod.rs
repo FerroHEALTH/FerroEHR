@@ -55,6 +55,7 @@ use indexmap::IndexMap;
 use openehr_rm::v1_2::paths::{PathSegment, is_archetype_root_node_id};
 use serde_json::{Map, Value};
 
+use crate::flat::instance::Instance;
 use crate::rm_instance::{ValidationKind, ValidationMessage};
 
 use crate::flat::path;
@@ -76,6 +77,19 @@ pub fn validate_archetype_conformance(
     wt: &WebTemplate,
 ) -> Vec<ValidationMessage> {
     node_ids::run(Validator::default(), composition, wt).out
+}
+
+/// [`validate_archetype_conformance`] over a typed RM resource: the same
+/// walk and the same messages, read through the reflective accessor with no
+/// canonical-JSON value (#6002).
+#[must_use]
+pub fn validate_archetype_conformance_typed<T: openehr_rm::v1_2::access::AsRm + ?Sized>(
+    root: &T,
+    wt: &WebTemplate,
+) -> Vec<ValidationMessage> {
+    let root =
+        openehr_rm::v1_2::access::RmRef::Object(openehr_rm::v1_2::access::as_rm_object(root));
+    node_ids::run(Validator::default(), root, wt).out
 }
 
 /// Archetype-conformance pass for a `553|incomplete|` commit.
@@ -148,6 +162,21 @@ pub fn collect_constraint_binding_checks(
         ..Validator::default()
     };
     node_ids::run(v, composition, wt).bindings
+}
+
+/// [`collect_constraint_binding_checks`] over a typed RM resource.
+#[must_use]
+pub fn collect_constraint_binding_checks_typed<T: openehr_rm::v1_2::access::AsRm + ?Sized>(
+    root: &T,
+    wt: &WebTemplate,
+) -> Vec<ConstraintBindingCheck> {
+    let v = Validator {
+        collect_bindings: true,
+        ..Validator::default()
+    };
+    let root =
+        openehr_rm::v1_2::access::RmRef::Object(openehr_rm::v1_2::access::as_rm_object(root));
+    node_ids::run(v, root, wt).bindings
 }
 
 /// Validate the `|other` open-value-set rules on a **FLAT input** map, before
@@ -545,24 +574,23 @@ impl Validator {
     /// an empty `attr` means the node itself IS the `CODE_PHRASE`. A node the
     /// instance leaves uncoded raises no question — the binding constrains a
     /// value that is not there.
-    fn collect_node_bindings(&mut self, instance: &Value, wt: &WebTemplateNode) {
+    fn collect_node_bindings<'i, I: Instance<'i>>(&mut self, instance: I, wt: &WebTemplateNode) {
         for binding in &wt.constraint_bindings {
             let code_phrase = if binding.attr.is_empty() {
                 Some(instance)
             } else {
-                instance.get(&binding.attr)
+                instance.attr(&binding.attr)
             };
             let Some(cp) = code_phrase else { continue };
-            let Some(code) = cp.get("code_string").and_then(Value::as_str) else {
+            let Some(code) = cp.str_at("code_string") else {
                 continue;
             };
             if code.is_empty() {
                 continue;
             }
             let instance_terminology = cp
-                .get("terminology_id")
-                .and_then(|t| t.get("value"))
-                .and_then(Value::as_str)
+                .attr("terminology_id")
+                .and_then(|t| t.str_at("value"))
                 .unwrap_or_default();
             self.bindings.push(ConstraintBindingCheck {
                 path: wt.aql_path.clone(),
@@ -577,7 +605,7 @@ impl Validator {
 
     /// Visit an instance node matched to `wt`, or to any of the alternatives
     /// the builder folded into it.
-    fn walk(&mut self, instance: &Value, wt: &WebTemplateNode) {
+    fn walk<'i, I: Instance<'i>>(&mut self, instance: I, wt: &WebTemplateNode) {
         if wt.alternatives.is_empty() {
             self.walk_node(instance, wt);
         } else {
@@ -587,12 +615,12 @@ impl Validator {
 
     /// Visit an instance node against `wt` alone, ignoring its folded
     /// alternatives.
-    fn walk_node(&mut self, instance: &Value, wt: &WebTemplateNode) {
+    fn walk_node<'i, I: Instance<'i>>(&mut self, instance: I, wt: &WebTemplateNode) {
         if let (Some(input), Some(value)) = (&wt.string_constraint, instance.as_str()) {
             leaf::check_string_constraints(self, wt, input, value);
             return;
         }
-        if let Some(inst_type) = instance.get("_type").and_then(Value::as_str)
+        if let Some(inst_type) = instance.rm_type()
             && !subtype::conforms(inst_type, &wt.rm_type)
         {
             self.push(
@@ -664,7 +692,12 @@ impl Validator {
     /// L60-62) is a positive-only cascade, silent on unmatched instance nodes;
     /// closed-world rejection follows the AOM2 direction + de-facto CDR behaviour
     /// and lands only behind the ECC zero-drift gate.
-    fn check_closure(&mut self, instance: &Value, wt: &WebTemplateNode, plan: &NodeWalk) {
+    fn check_closure<'i, I: Instance<'i>>(
+        &mut self,
+        instance: I,
+        wt: &WebTemplateNode,
+        plan: &NodeWalk,
+    ) {
         for (ca, segs) in wt.closed_attributes.iter().zip(&plan.closed) {
             let Some(segments) = segs else {
                 continue;
@@ -675,7 +708,7 @@ impl Validator {
             for container in
                 &rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback)
             {
-                let slot_counts = self.match_closed_children(container, ca, &last.attribute);
+                let slot_counts = self.match_closed_children(*container, ca, &last.attribute);
                 self.check_slot_occurrences(ca, &last.attribute, &slot_counts);
             }
         }
@@ -695,22 +728,18 @@ impl Validator {
         clippy::indexing_slicing,
         reason = "`counts` is sized `ca.slots.len()` and the index is a `position` over those same slots, so it is in bounds by construction"
     )]
-    fn match_closed_children(
+    fn match_closed_children<'i, I: Instance<'i>>(
         &mut self,
-        container: &Value,
+        container: I,
         ca: &crate::flat::webtemplate::constraint::WebTemplateClosedAttribute,
         attribute: &str,
     ) -> Vec<usize> {
         let mut counts = vec![0usize; ca.slots.len()];
-        for child in children_under_attr(container, attribute) {
-            let Some(nid) = child
-                .get("archetype_node_id")
-                .and_then(Value::as_str)
-                .filter(|s| !s.is_empty())
-            else {
+        for child in container.objects(attribute) {
+            let Some(nid) = child.str_at("archetype_node_id").filter(|s| !s.is_empty()) else {
                 continue;
             };
-            let ct = child.get("_type").and_then(Value::as_str).unwrap_or("");
+            let ct = child.rm_type().unwrap_or("");
             let id_types: Vec<&str> = ca
                 .allowed_ids
                 .iter()
@@ -798,7 +827,7 @@ impl Validator {
     /// same-path slot alternatives allow. An abstract recorded type
     /// (`ITEM_STRUCTURE`, `EVENT`) admits every concrete subtype via
     /// [`subtype::conforms`].
-    fn check_slots(&mut self, instance: &Value, plan: &NodeWalk) {
+    fn check_slots<'i, I: Instance<'i>>(&mut self, instance: I, plan: &NodeWalk) {
         for sg in &plan.slot_groups {
             let Some((last, intermediate)) = sg.segments.split_last() else {
                 continue;
@@ -806,8 +835,8 @@ impl Validator {
             let containers =
                 rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback);
             for container in &containers {
-                for node in select_group_children(container, last, &plan.slot_names) {
-                    let Some(it) = node.get("_type").and_then(Value::as_str) else {
+                for node in select_group_children(*container, last, &plan.slot_names) {
+                    let Some(it) = node.rm_type() else {
                         continue;
                     };
                     if !sg.allowed.iter().any(|a| subtype::conforms(it, a)) {
@@ -833,7 +862,12 @@ impl Validator {
     /// this fills the gap for plain structural attributes the occurrence check
     /// deliberately skips. Only the lower bound (mandatory presence) is enforced;
     /// the upper bound is governed by RM single-valuedness / cardinality.
-    fn check_existence(&mut self, instance: &Value, wt: &WebTemplateNode, plan: &NodeWalk) {
+    fn check_existence<'i, I: Instance<'i>>(
+        &mut self,
+        instance: I,
+        wt: &WebTemplateNode,
+        plan: &NodeWalk,
+    ) {
         // Existence is a lower-bound (mandatory-presence) constraint — relaxed
         // away for a `553|incomplete|` commit (master06 §"Incomplete Content").
         if self.relax_lower_bounds {
@@ -862,7 +896,7 @@ impl Validator {
             let containers =
                 rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback);
             for container in &containers {
-                if presence::attr_absent(container, &last.attribute) {
+                if presence::attr_absent(*container, &last.attribute) {
                     self.push(
                         ex.path.clone(),
                         format!(
@@ -884,9 +918,9 @@ impl Validator {
         clippy::indexing_slicing,
         reason = "`group.members` holds indices into `wt_parent.children` recorded by `NodeWalk::build` over that same child vector, `members` is non-empty for any recorded group (so `members[0]` exists), and `identity_idx` is an `rposition`/`len() - 1` over `segments` (returned early when empty), so every index and range here is in bounds by construction"
     )]
-    fn check_group(
+    fn check_group<'i, I: Instance<'i>>(
         &mut self,
-        parent: &Value,
+        parent: I,
         wt_parent: &WebTemplateNode,
         group: &ChildGroup,
         names: &SiblingNameIndex,
@@ -933,7 +967,7 @@ impl Validator {
         let (group_min, group_max) = group_occurrences(&members);
 
         for container in &containers {
-            let matched = select_group_children(container, id_seg, names);
+            let matched = select_group_children(*container, id_seg, names);
             if occ_applies {
                 self.emit_occurrences(&first.aql_path, group_min, group_max, matched.len());
             }
@@ -962,10 +996,14 @@ impl Validator {
     /// against the template's constraints on them (RM `data_structures`
     /// §ELEMENT; AOM 1.4 `C_ATTRIBUTE`: the constraint applies to the
     /// attribute's value).
-    fn check_null_constraints(&mut self, element: &Value, constraints: &[WebTemplateNode]) {
+    fn check_null_constraints<'i, I: Instance<'i>>(
+        &mut self,
+        element: I,
+        constraints: &[WebTemplateNode],
+    ) {
         for constraint in constraints {
             let attribute = constraint.id.trim_start_matches('_');
-            if let Some(value) = element.get(attribute).filter(|v| !v.is_null()) {
+            if let Some(value) = element.attr(attribute) {
                 self.walk(value, constraint);
             }
         }
@@ -975,7 +1013,11 @@ impl Validator {
     /// its value (AOM 1.4 `master04-constraint_model_package.adoc` §existence),
     /// which the value node's own walk cannot reach: `value` and `null_flavour`
     /// are attributes of the ELEMENT, the parent of the promoted node.
-    fn check_element_existence(&mut self, element: &Value, promoted: &WebTemplateNode) {
+    fn check_element_existence<'i, I: Instance<'i>>(
+        &mut self,
+        element: I,
+        promoted: &WebTemplateNode,
+    ) {
         if self.relax_lower_bounds {
             return;
         }
@@ -1008,9 +1050,9 @@ impl Validator {
     ///
     /// A single-member group walks its one template node; a choice group is
     /// dispatched to [`Self::visit_choice`].
-    fn walk_group_targets(
+    fn walk_group_targets<'i, I: Instance<'i>>(
         &mut self,
-        node: &Value,
+        node: I,
         trailing: &[PathSegment],
         members: &[&WebTemplateNode],
         name_fallback: &rmpath::NameFallback,
@@ -1033,7 +1075,7 @@ impl Validator {
     // NOTE: ADL 1.4 `master05-cadl.adoc` §"Single-valued Attributes": alternative
     // constraints, "only one of which needs to be matched by the data" (AOM 1.4
     // `C_SINGLE_ATTRIBUTE.children`).
-    fn visit_choice(&mut self, target: &Value, group: &[&WebTemplateNode]) {
+    fn visit_choice<'i, I: Instance<'i>>(&mut self, target: I, group: &[&WebTemplateNode]) {
         let mut candidates: Vec<&WebTemplateNode> = Vec::new();
         for member in group {
             collect_alternatives(member, &mut candidates);
@@ -1043,7 +1085,7 @@ impl Validator {
         };
         // No `_type`: recurse against the first alternative; the RM-invariant
         // pass covers structural issues.
-        let Some(it) = target.get("_type").and_then(Value::as_str) else {
+        let Some(it) = target.rm_type() else {
             self.walk_node(target, first);
             return;
         };
@@ -1142,7 +1184,12 @@ impl Validator {
     /// to `min`/`max`, and refuse two value-equal members under `unique`. Iterates [`WebTemplateNode::card_all`] — the full AOM 1.4
     /// §cardinality set (`0..1`/`1..1`/`1..*` included), a superset of the
     /// serialized `cardinalities` (which the metadata document filters).
-    fn check_cardinalities(&mut self, instance: &Value, wt: &WebTemplateNode, plan: &NodeWalk) {
+    fn check_cardinalities<'i, I: Instance<'i>>(
+        &mut self,
+        instance: I,
+        wt: &WebTemplateNode,
+        plan: &NodeWalk,
+    ) {
         for (card, segs) in wt.card_all.iter().zip(&plan.cardinalities) {
             let Some(segments) = segs else {
                 continue;
@@ -1161,10 +1208,10 @@ impl Validator {
             let containers =
                 rmpath::navigate_matched(&[instance], intermediate, &plan.name_fallback);
             for container in &containers {
-                if matches!(container.get(&last.attribute), None | Some(Value::Null)) {
+                if !container.is_present(&last.attribute) {
                     continue;
                 }
-                let members = openehr_rm::v1_2::paths::select_children(container, last);
+                let members = crate::flat::instance::select_children(*container, last);
                 if card.unique
                     && let Some((first, second)) = unique::first_duplicate(&members)
                 {
@@ -1236,11 +1283,11 @@ impl Validator {
 ///   with the id-only fallback ON, tolerating a runtime-renamed instance when
 ///   the archetype does not constrain the name (master03 §"The `LOCATABLE`
 ///   class" L35).
-fn select_group_children<'a>(
-    container: &'a Value,
+fn select_group_children<'i, I: Instance<'i>>(
+    container: I,
     id_seg: &PathSegment,
     names: &SiblingNameIndex,
-) -> Vec<&'a Value> {
+) -> Vec<I> {
     let claimed = id_seg
         .predicate
         .archetype_node_id
@@ -1314,16 +1361,6 @@ fn is_locatable(rm_type: &str) -> bool {
     let base = rm_type.split('<').next().unwrap_or(rm_type).trim();
     openehr_rm::v1_2::model::class(base).is_none()
         || openehr_rm::v1_2::model::is_a(base, "LOCATABLE")
-}
-
-/// The instance child objects directly under `attr` (array elements or a single
-/// object), skipping non-object values — the sibling set for closed-world.
-fn children_under_attr<'a>(node: &'a Value, attr: &str) -> Vec<&'a Value> {
-    match node.get(attr) {
-        Some(Value::Array(a)) => a.iter().filter(|v| v.is_object()).collect(),
-        Some(v @ Value::Object(_)) => vec![v],
-        _ => Vec::new(),
-    }
 }
 
 #[cfg(test)]
