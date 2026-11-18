@@ -671,7 +671,8 @@ async fn ehr_read_with_its_counts() {
         .expect("composition_create"); // contribution #3
 
     // The EHR as the wire reads it: mandatory fields + the counts.
-    let ehr = svc.ehr_read(ehr_id).await.expect("ehr_read").body;
+    let ehr =
+        openehr_its::json::to_canonical_value(&svc.ehr_read(ehr_id).await.expect("ehr_read").body);
     assert_eq!(ehr["ehr_id"]["value"], ehr_id.to_string());
     assert!(
         ehr["system_id"]["value"]

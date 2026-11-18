@@ -258,7 +258,10 @@ mod tests {
 
     /// The rules over a canonical COMPOSITION, as a CONTRIBUTION member
     /// carries one.
-    fn admit_facility(admitting: &[Credentials<'_>], canonical: &Value) -> Result<(), ServiceError> {
+    fn admit_facility(
+        admitting: &[Credentials<'_>],
+        canonical: &Value,
+    ) -> Result<(), ServiceError> {
         super::admit_facility(admitting, &ContentFacts::of_canonical(canonical))
     }
 

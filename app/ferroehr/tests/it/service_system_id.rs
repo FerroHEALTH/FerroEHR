@@ -32,7 +32,8 @@ use crate::fixtures::{composition, uv};
 /// `(EHR.system_id, OBJECT_VERSION_ID, AUDIT_DETAILS.system_id)`.
 async fn stamped_identities(svc: &FerroEhrService) -> (String, String, String) {
     let ehr_id: EhrId = crate::fixtures::create_ehr(svc).await;
-    let ehr = svc.ehr_read(ehr_id).await.expect("ehr_read").body;
+    let ehr =
+        openehr_its::json::to_canonical_value(&svc.ehr_read(ehr_id).await.expect("ehr_read").body);
     let ehr_system_id = ehr["system_id"]["value"]
         .as_str()
         .expect("EHR.system_id")

@@ -14,7 +14,7 @@ use serde::de::DeserializeOwned;
 
 use ferroehr::service::response::{ReadBody, ResourceMeta, ServiceResponse};
 
-use super::body::{empty, respond, respond_read, respond_rm};
+use super::body::{empty, respond, respond_read, respond_rm, respond_typed};
 use super::prefer::write_negotiated;
 
 /// Format an HTTP-date (RFC 7231 IMF-fixdate, always GMT) for `Last-Modified`.
@@ -174,6 +174,35 @@ where
     if let Some(meta) = &resp.meta {
         set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
     }
+    out
+}
+
+/// As [`write_rm`], over the typed RM value `body` a representation renders;
+/// `None` when the caller asked for no representation, which then never
+/// renders one.
+pub(crate) fn write_typed<T>(
+    headers: &HeaderMap,
+    base_path: &str,
+    (minimal_status, repr_status): (StatusCode, StatusCode),
+    segment: Option<&str>,
+    meta: &ResourceMeta,
+    body: Option<&T>,
+    root_tag: &str,
+) -> Response
+where
+    T: serde::Serialize + ToXml,
+{
+    let mut out = write_negotiated(
+        headers,
+        minimal_status,
+        repr_status,
+        Some(meta.uid.as_str()),
+        |status| match body {
+            Some(body) => respond_typed(headers, status, body, root_tag),
+            None => empty(status),
+        },
+    );
+    set_resource_headers(&mut out, base_path, Tree::Ehr, segment, meta);
     out
 }
 

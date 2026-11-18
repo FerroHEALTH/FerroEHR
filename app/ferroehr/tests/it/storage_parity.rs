@@ -1342,7 +1342,9 @@ async fn a_stale_decomposition_is_reported_and_rebuilt() {
         )
         .await
         .map(|r| r.body)
-        .expect("read the fresh party");
+        .expect("read the fresh party")
+        .into_value()
+        .expect("the stored body parses");
 
     write_the_old_party_shape(&pool, vo_id, sys_version).await;
 
@@ -1414,7 +1416,9 @@ async fn a_stale_decomposition_is_reported_and_rebuilt() {
         )
         .await
         .map(|r| r.body)
-        .expect("read the repaired party"),
+        .expect("read the repaired party")
+        .into_value()
+        .expect("the stored body parses"),
         served,
         "and the served body never moved: only the index over it did"
     );

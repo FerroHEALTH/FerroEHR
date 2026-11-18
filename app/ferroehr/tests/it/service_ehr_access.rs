@@ -198,7 +198,9 @@ async fn write(
     preceding: u32,
     settings: &Value,
 ) -> Result<String, ServiceError> {
-    let ehr = svc.ehr_read(ehr_id).await.expect("ehr object").body;
+    let ehr = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_id).await.expect("ehr object").body,
+    );
     let access_vo = ehr["ehr_access"]["id"]["value"]
         .as_str()
         .expect("EHR.ehr_access.id.value")
@@ -465,7 +467,9 @@ async fn a_missing_ehr_access_is_restored_at_boot() {
         0
     );
     for ehr in [ehr_id, other] {
-        let read = svc.ehr_read(ehr).await.expect("the EHR reads").body;
+        let read = openehr_its::json::to_canonical_value(
+            &svc.ehr_read(ehr).await.expect("the EHR reads").body,
+        );
         assert!(
             read["ehr_access"]["id"]["value"].is_string(),
             "{ehr} holds an EHR_ACCESS"

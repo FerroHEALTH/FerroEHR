@@ -34,7 +34,13 @@ async fn the_cap_holds_and_an_evicted_create_answers_the_stored_body() {
             .ehr_created_object(ehr_id)
             .await
             .expect("the create's answer");
-        let stored = svc.ehr_read(ehr_id).await.expect("the stored EHR").body;
-        assert_eq!(answered, stored, "EHR {ehr_id}: the cap changes no answer");
+        let stored = openehr_its::json::to_canonical_value(
+            &svc.ehr_read(ehr_id).await.expect("the stored EHR").body,
+        );
+        assert_eq!(
+            openehr_its::json::to_canonical_value(&answered),
+            stored,
+            "EHR {ehr_id}: the cap changes no answer"
+        );
     }
 }

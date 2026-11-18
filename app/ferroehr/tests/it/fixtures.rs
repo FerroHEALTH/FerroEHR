@@ -488,12 +488,7 @@ pub(crate) async fn subject_ehr_ids(
     namespace: &str,
 ) -> Vec<String> {
     match svc.ehr_read_for_subject(id, namespace).await {
-        Ok(read) => vec![
-            read.body["ehr_id"]["value"]
-                .as_str()
-                .expect("the EHR carries its ehr_id")
-                .to_owned(),
-        ],
+        Ok(read) => vec![read.body.ehr_id.value().to_owned()],
         Err(e) => {
             assert!(
                 matches!(

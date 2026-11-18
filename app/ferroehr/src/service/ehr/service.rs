@@ -64,7 +64,7 @@ impl FerroEhrService {
         &self,
         ehr_id: EhrId,
         request: WriteRequest<Value>,
-    ) -> Result<ServiceResponse, ServiceError> {
+    ) -> Result<ServiceResponse<Ehr>, ServiceError> {
         // The supplied EHR_STATUS must be a structurally valid RM instance
         // before the EHR is created (CNF master06 §Test Data Sets INVALID
         // class 2). The EHR-create wire carries no lifecycle channel, so the
@@ -209,7 +209,7 @@ impl FerroEhrService {
         ehr_id: EhrId,
         time_created: jiff::Timestamp,
         committed: &[crate::versioning::change::Committed],
-    ) -> Result<Value, ServiceError> {
+    ) -> Result<Ehr, ServiceError> {
         let vo_of = |kind: Kind| {
             committed
                 .iter()
@@ -235,7 +235,7 @@ impl FerroEhrService {
         &self,
         subject_id: &str,
         namespace: &str,
-    ) -> Result<ServiceResponse, ServiceError> {
+    ) -> Result<ServiceResponse<Ehr>, ServiceError> {
         let found = self.ehr_id_for_subject(subject_id, namespace).await?;
         // NOTE: no openEHR spec governs this message, our own design: the subject
         // id is an external patient identifier, so the refusal names only its namespace.
@@ -313,7 +313,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError`] when the EHR or its current `EHR_STATUS` does not exist, or
     /// a read fails.
-    pub async fn ehr_read(&self, ehr_id: EhrId) -> Result<ServiceResponse, ServiceError> {
+    pub async fn ehr_read(&self, ehr_id: EhrId) -> Result<ServiceResponse<Ehr>, ServiceError> {
         self.ehr_read_ahead(ehr_id).await.served(ehr_id)
     }
 
@@ -336,7 +336,7 @@ impl EhrAhead {
     ///
     /// # Errors
     /// As [`FerroEhrService::ehr_read`].
-    pub fn served(self, ehr_id: EhrId) -> Result<ServiceResponse, ServiceError> {
+    pub fn served(self, ehr_id: EhrId) -> Result<ServiceResponse<Ehr>, ServiceError> {
         // NOTE: arch master06 §System Identity, EHR.system_id is immutable after creation, so the
         // stored per-EHR value is served, never the live configuration.
         let read = self
@@ -423,7 +423,7 @@ fn ehr_object(
     access_vo: Option<&str>,
     time_created: jiff::Timestamp,
     folder_vos: &[String],
-) -> Result<Value, ServiceError> {
+) -> Result<Ehr, ServiceError> {
     // NOTE: the `ehr_status` ref names the version CONTAINER, per the normative
     // `Ehr_status_valid: ehr_status.type.is_equal("VERSIONED_EHR_STATUS")` (RM
     // ehr `ehr.adoc`), which wins over the non-normative ITS-REST example.
@@ -459,7 +459,7 @@ fn ehr_object(
         folders: openehr_base::containers::present(folders),
         tags: openehr_base::containers::present(Vec::new()),
     };
-    Ok(openehr_its::json::to_canonical_value(&ehr))
+    Ok(ehr)
 }
 
 /// Builds the `EHR_STATUS` a new EHR starts with (queryable, modifiable,
@@ -520,7 +520,7 @@ impl FerroEhrService {
     /// # Errors
     /// [`ServiceError`] when the fallback full read finds no such EHR, or a read
     /// fails.
-    pub async fn ehr_created_object(&self, an_ehr_id: EhrId) -> Result<Value, ServiceError> {
+    pub async fn ehr_created_object(&self, an_ehr_id: EhrId) -> Result<Ehr, ServiceError> {
         // Serve the create-time representation from the stash the commit path
         // populated (built from `Committed`, no re-read); a popped entry cannot
         // be reused. Fall back to a full read when the entry has been evicted

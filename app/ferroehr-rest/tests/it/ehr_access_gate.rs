@@ -109,7 +109,9 @@ fn coded(code: &str, value: &str) -> Value {
 /// Commit a new `EHR_ACCESS` version carrying `scheme` as its settings, updating
 /// the EHR's default (settings-less, default-open) `EHR_ACCESS`.
 async fn seed_scheme(svc: &FerroEhrService, ehr_id: ferroehr::ids::EhrId, scheme: &Value) {
-    let ehr = svc.ehr_read(ehr_id).await.expect("ehr object").body;
+    let ehr = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_id).await.expect("ehr object").body,
+    );
     svc.create_ehr_contribution(ehr_id, access_contribution(&ehr, scheme))
         .await
         .expect("EHR_ACCESS scheme contribution must commit");
