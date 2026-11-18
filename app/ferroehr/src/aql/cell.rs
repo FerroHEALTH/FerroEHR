@@ -126,10 +126,11 @@ pub fn numeric(text: &str) -> Cell {
     }
 }
 
-/// Writes the typed value of an `ELEMENT` row as the jsonb text of the
-/// object `crate::storage::slim::rebuild_value` builds from the same
-/// columns, its keys in jsonb order; `None` when the number is no JSON
-/// number.
+/// Writes the typed value of an `ELEMENT` row from its columns.
+///
+/// The text is the object `crate::storage::slim::rebuild_value` builds from
+/// the same columns, its keys in jsonb order; `None` when the number is no
+/// JSON number.
 #[must_use]
 pub fn write_typed_value(
     out: &mut String,
@@ -318,7 +319,14 @@ mod tests {
 
     #[test]
     fn a_typed_value_is_written_as_its_rebuilt_object() {
-        let cases: [(&str, Option<&str>, Option<&str>, Option<&str>, Option<&str>); 8] = [
+        type Case<'a> = (
+            &'a str,
+            Option<&'a str>,
+            Option<&'a str>,
+            Option<&'a str>,
+            Option<&'a str>,
+        );
+        let cases: [Case<'_>; 8] = [
             ("DV_QUANTITY", Some("120.50"), Some("mm[Hg]"), None, None),
             ("DV_QUANTITY", Some("7"), None, None, None),
             ("DV_COUNT", Some("3"), None, None, None),
