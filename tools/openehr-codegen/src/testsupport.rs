@@ -577,6 +577,51 @@ pub fn estimated_sizes(key: &str) -> Result<BTreeMap<String, usize>, Error> {
     Ok(out)
 }
 
+/// Every mandatory `0..*` container reachable from `roots`, as `CLASS.attribute`.
+///
+/// A mandatory `0..*` container is a plain `Vec` or map the canonical-JSON
+/// reader reads as empty when absent; reachable means through attributes and
+/// subtypes, in the CURRENT RM generation.
+///
+/// # Errors
+/// Returns an error if the RM composition's BMM files cannot be loaded.
+pub fn reachable_mandatory_containers(roots: &[&str]) -> Result<Vec<String>, Error> {
+    let c = compose("rm")?;
+    let g = c.current();
+    let mut out = Vec::new();
+    for u in &g.units {
+        let model = &u.model;
+        let mut seen: BTreeSet<String> = BTreeSet::new();
+        let mut stack: Vec<String> = roots.iter().map(|r| (*r).to_string()).collect();
+        while let Some(name) = stack.pop() {
+            if !seen.insert(name.clone()) {
+                continue;
+            }
+            let Some(class) = model.get(&name) else {
+                continue;
+            };
+            stack.extend(model.enum_variants(&name));
+            for f in model.json_fields(&name) {
+                if matches!(f.kind, crate::plan::JsonFieldKind::Container) {
+                    out.push(format!("{name}.{}", f.wire_name));
+                }
+            }
+            for rp in model.flattened_props(class) {
+                let mut roots = BTreeSet::new();
+                match &rp.prop.kind {
+                    BmmPropKind::Single(t) | BmmPropKind::Container { item: t, .. } => {
+                        model.effective_roots(t, &mut roots);
+                    }
+                }
+                stack.extend(roots);
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    Ok(out)
+}
+
 fn shape_name(e: &Emission) -> &'static str {
     match e {
         Emission::Struct => "Struct",
