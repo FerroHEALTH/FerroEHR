@@ -709,6 +709,9 @@ struct Measure {
     round_trips: u64,
     nested: u64,
     wal: u64,
+    /// The statements `PostgreSQL` ran nested, and the chainer's rounds the
+    /// count leaves out.
+    statements: String,
 }
 
 impl Measure {
@@ -805,10 +808,26 @@ async fn measure(
     out.conversions = counts.conversions;
     out.round_trips = counts.round_trips.div_euclid(REQUESTS);
     out.nested = nested.saturating_sub(chainer).div_euclid(REQUESTS);
+    out.statements = nested_ledger(&statements, nested, chainer);
     out.wal = wal_bytes(pool).await.div_euclid(REQUESTS);
     testkit::statements::assert_statements_kept(pool, evicted)
         .await
         .expect("no statement evicted while the test counted them");
+    out
+}
+
+/// The nested statements of a window, and what the chainer's rounds take
+/// out of their count.
+fn nested_ledger(statements: &[super::Counted], nested: u64, chainer: u64) -> String {
+    let mut out = format!("{nested} nested, {chainer} of them the chainer's\n");
+    for s in statements {
+        let chain = s.toplevel && s.query.contains("_chain_");
+        if !s.toplevel || chain {
+            let level = if s.toplevel { "top" } else { "nested" };
+            let text: String = s.query.chars().take(140).collect();
+            writeln!(out, "  {level:>6} {:>4}  {text}", s.calls).unwrap();
+        }
+    }
     out
 }
 
@@ -836,6 +855,7 @@ async fn every_hot_path_stays_within_its_budget() {
         "path | conversions | audit renders | allocations | alloc KiB | peak KiB | round trips | nested | WAL B\n",
     );
     let mut ledger = String::new();
+    let mut statements = String::new();
     let mut over = Vec::new();
     for budget in &BUDGETS {
         let path = budget.path;
@@ -875,11 +895,15 @@ async fn every_hot_path_stays_within_its_budget() {
             .map(|(op, n)| format!("{op}={}", n.div_euclid(REQUESTS)))
             .collect();
         writeln!(ledger, "{}: {}", path.name(), ops.join(", ")).unwrap();
+        writeln!(statements, "{}: {}", path.name(), m.statements).unwrap();
     }
-    eprintln!("{report}\nconversions per request by op:\n{ledger}");
+    eprintln!(
+        "{report}\nconversions per request by op:\n{ledger}\nnested statements over {REQUESTS} \
+         requests:\n{statements}"
+    );
     assert!(
         over.is_empty(),
-        "a hot path exceeds its budget: {over:?}\n{report}\n{ledger}"
+        "a hot path exceeds its budget: {over:?}\n{report}\n{ledger}\n{statements}"
     );
     assert_eq!(BUDGETS.len(), Path::ALL.len(), "every path has its budget");
 }
