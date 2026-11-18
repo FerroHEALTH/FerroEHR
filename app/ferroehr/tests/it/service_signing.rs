@@ -839,3 +839,67 @@ async fn after_committal_attestation_is_outside_the_signed_form() {
         .await
         .expect("an after-committal attestation is not covered by the signature");
 }
+
+/// A version stored in an earlier member order (the order the offload of an
+/// earlier release left a `DV_MULTIMEDIA` in) keeps its bytes and its digest:
+/// no read, verification or sweep re-serialises it. The signature verifies
+/// over the RFC 8785 form, which no member order changes, the parity sweep
+/// compares values, and a JSON read serves the stored bytes (#6003).
+#[tokio::test]
+async fn a_body_stored_in_an_older_member_order_keeps_its_bytes_and_verifies() {
+    use ferroehr::service::response::ReadBody;
+    use ferroehr::storage::integrity::StorageParityScope;
+
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
+    let ovid = svc
+        .create_composition(ehr_uuid, uv(&composition("member-order"), "249", None))
+        .await
+        .expect("create_composition")
+        .version_uid();
+    let (body, digest): (String, Vec<u8>) =
+        sqlx::query_as("SELECT body, content_digest FROM version WHERE kind = 'COMPOSITION'")
+            .fetch_one(&pool)
+            .await
+            .expect("the stored version");
+
+    // The same value with the root's `language` moved to the end: the bytes
+    // an earlier member order would have stored.
+    let mut reordered: Value = serde_json::from_str(&body).expect("the stored body parses");
+    let map = reordered.as_object_mut().expect("an object");
+    let language = map.shift_remove("language").expect("a language");
+    map.insert("language".to_owned(), language);
+    let older = serde_json::to_string(&reordered).expect("serializable");
+    assert_ne!(older, body, "the reordering changes the bytes");
+    sqlx::query("UPDATE version SET body = $1 WHERE kind = 'COMPOSITION'")
+        .bind(&older)
+        .execute(&pool)
+        .await
+        .expect("store the older member order");
+
+    svc.composition_version_envelope(ehr_uuid, ovid.parse().expect("ovid"))
+        .await
+        .expect("the signature verifies under the strict default");
+    let report = svc
+        .verify_storage_parity(StorageParityScope::default())
+        .await
+        .expect("the sweep runs");
+    assert!(report.is_clean(), "{report:?}");
+    let (vo_id, _) = version_components(&ovid);
+    let read = svc
+        .read_composition_raw(ehr_uuid, vo_id, None)
+        .await
+        .expect("the composition reads");
+    match read.body {
+        ReadBody::RawJson(served) => assert_eq!(served, older, "the stored bytes are served"),
+        ReadBody::Value(_) => panic!("a JSON read serves the stored text"),
+    }
+    let (after_body, after_digest): (String, Vec<u8>) =
+        sqlx::query_as("SELECT body, content_digest FROM version WHERE kind = 'COMPOSITION'")
+            .fetch_one(&pool)
+            .await
+            .expect("the stored version");
+    assert_eq!((after_body, after_digest), (older, digest));
+}
