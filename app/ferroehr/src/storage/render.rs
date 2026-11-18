@@ -1,14 +1,79 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! Reading the compact canonical text a commit writes as `version.body`,
-//! without parsing it into a value (#6003).
+//! The one rendering of a commit body and what is read off it (#6003).
+//!
+//! The `version.body` text, its content digest, the node rows, the feeder
+//! origins and the external blob references, with no canonical value built.
 //!
 //! The text is `serde_json`'s compact output, so it carries no insignificant
 //! whitespace, and a scan that knows strings and nesting finds a member's
 //! bytes exactly. No openEHR spec governs storage: our own design.
 
+pub mod index;
+pub mod nodes;
+
+use std::collections::BTreeSet;
 use std::ops::Range;
+
+use self::index::{Kind, Rendered};
+
+/// SHA-256 over the rendered `body` with its root `uid` member left out: the
+/// digest a version's content is compared with its predecessor's on (#4415).
+#[must_use]
+pub fn content_digest(body: &Rendered) -> [u8; 32] {
+    use sha2::Digest as _;
+    let text = body.text();
+    let mut digest = sha2::Sha256::new();
+    let uid = body
+        .members(body.root())
+        .iter()
+        .rev()
+        .find(|m| body.key(m) == "uid");
+    match uid {
+        Some(member) => {
+            let (head, tail) = without_member(text, Rendered::member_span(member));
+            digest.update(head);
+            digest.update(tail);
+        }
+        None => digest.update(text),
+    }
+    digest.finalize().into()
+}
+
+/// Every `FEEDER_AUDIT.originating_system_audit.system_id` in `body`, trimmed,
+/// leaving out a blank one ([`crate::versioning::origins::fed`]).
+#[must_use]
+pub fn fed_origins(body: &Rendered) -> BTreeSet<String> {
+    body.all()
+        .filter(|n| body.kind(*n) == Some(Kind::Object))
+        .filter(|n| body.rm_type(*n).as_deref() == Some("FEEDER_AUDIT"))
+        .filter_map(|n| {
+            let details = body.get(n, "originating_system_audit")?;
+            let id = body.get_str(details, "system_id")?;
+            let id = id.trim();
+            (!id.is_empty()).then(|| id.to_owned())
+        })
+        .collect()
+}
+
+/// The external blob URIs `body` references, each once and sorted
+/// ([`crate::storage::blob_ref::uris_of`]).
+#[must_use]
+pub fn blob_uris(body: &Rendered) -> Vec<String> {
+    let found: BTreeSet<String> = body
+        .all()
+        .filter(|n| body.kind(*n) == Some(Kind::Object))
+        .filter_map(|n| {
+            let uri = body.get(n, "uri")?;
+            let value = body.get_str(uri, "value")?;
+            value
+                .starts_with(crate::storage::blob_ref::EXTERNAL_BLOB_SCHEME)
+                .then(|| value.into_owned())
+        })
+        .collect();
+    found.into_iter().collect()
+}
 
 /// The byte range of the member `name` of the root object of the compact JSON
 /// `text`.

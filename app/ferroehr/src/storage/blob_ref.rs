@@ -41,7 +41,7 @@ use crate::storage::row::NodeRow;
 /// build compiled without the extension. Recording a foreign `s3://` URI a
 /// client supplied costs nothing: the collector only ever asks about URIs this
 /// deployment minted, and an extra row can only keep a blob, never delete one.
-const EXTERNAL_BLOB_SCHEME: &str = "s3://";
+pub(crate) const EXTERNAL_BLOB_SCHEME: &str = "s3://";
 
 /// Record the external blob URIs the given versions' node rows reference.
 ///
