@@ -505,9 +505,9 @@ pub(in crate::service) fn initial_ehr_access_change() -> Change {
 
 /// The server-created first `EHR_ACCESS` body of an EHR (see
 /// [`initial_ehr_access_change`]).
-pub(in crate::service) fn initial_ehr_access() -> Value {
+pub(in crate::service) fn initial_ehr_access() -> EhrAccess {
     const ARCHETYPE: &str = "openEHR-EHR-EHR_ACCESS.generic.v1";
-    let access = EhrAccess {
+    EhrAccess {
         name: DvText::DvText(DvTextData {
             value: "EHR Access".to_owned(),
             hyperlink: None,
@@ -526,6 +526,5 @@ pub(in crate::service) fn initial_ehr_access() -> Value {
         // `EHR_ACCESS.settings` (0..1) — see the doc comment above: with no
         // access-control scheme in force the default carries none.
         settings: None,
-    };
-    openehr_its::json::to_canonical_value(&access)
+    }
 }

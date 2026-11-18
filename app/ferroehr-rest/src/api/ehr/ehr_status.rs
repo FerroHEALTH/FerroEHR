@@ -62,19 +62,18 @@ pub(crate) async fn get_by_version_id<T: EhrObjectType>(
     // the version metadata rather than the served body.
     let resp = state
         .backend()
-        .ehr_object_at_version(ehr_id, T::OBJECT, ferroehr::ids::VoId(vo_id), &version)
+        .ehr_object_at_version_raw(ehr_id, T::OBJECT, ferroehr::ids::VoId(vo_id), &version)
         .await?;
     // A DV_MULTIMEDIA committed in the object is externalized by the
     // generic versioning path, so this is where it comes back.
-    let mut resp = resp;
-    resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
+    let resp = super::expand_read_if_requested(&state, q, resp).await?;
     // The addressed version_uid must equal the served version's full
     // three-part identity, case-insensitively (overview `Resources.md`
     // §Identifier types; BASE master05 §Composite Identifiers and Case).
-    super::ensure_served_version(&p.version_uid, &resp.body)?;
-    Ok(negotiate::resource::read_rm::<T>(
+    super::ensure_served_read_version(&p.version_uid, &resp)?;
+    Ok(negotiate::resource::read_raw_rm::<T>(
         h,
-        &resp,
+        resp,
         openehr_its::xml::LOCATABLE_ROOT,
     ))
 }
@@ -99,13 +98,12 @@ pub(crate) async fn get_at_time<T: EhrObjectType>(
     // carries the `Last-Modified` instant.
     let resp = state
         .backend()
-        .ehr_object(ehr_id, T::OBJECT, p.version_at_time)
+        .ehr_object_raw(ehr_id, T::OBJECT, p.version_at_time)
         .await?;
-    let mut resp = resp;
-    resp.body = super::expand_multimedia_if_requested(&state, q, resp.body).await?;
-    Ok(negotiate::resource::read_rm::<T>(
+    let resp = super::expand_read_if_requested(&state, q, resp).await?;
+    Ok(negotiate::resource::read_raw_rm::<T>(
         h,
-        &resp,
+        resp,
         openehr_its::xml::LOCATABLE_ROOT,
     ))
 }

@@ -57,6 +57,7 @@ use openehr_its::xml::runtime::ToXml;
 use openehr_rm::prelude::{EhrAccess, EhrStatus, VersionedEhrAccess, VersionedEhrStatus};
 
 use ferroehr::service::ehr::object::EhrObject;
+use ferroehr::service::response::{RawServiceResponse, ReadBody};
 
 use crate::overview::error::RestError;
 use crate::overview::negotiate::{CANONICAL, WireFormat, resolve_accept};
@@ -185,6 +186,44 @@ pub(super) fn ensure_served_version(addressed: &str, body: &Value) -> Result<(),
         Some(served) if !served.eq_ignore_ascii_case(addressed) => Err(RestError::from(
             ApiError::NotFound(format!("version {addressed}")),
         )),
+        _ => Ok(()),
+    }
+}
+
+/// [`expand_multimedia_if_requested`] over a read whose body may still be the
+/// stored text: parsed only when the caller asked for the expansion.
+pub(super) async fn expand_read_if_requested(
+    state: &AppState,
+    query: Option<&str>,
+    resp: RawServiceResponse,
+) -> Result<RawServiceResponse, RestError> {
+    if query_param(query, "expand_multimedia").as_deref() != Some("true") {
+        return Ok(resp);
+    }
+    let RawServiceResponse { body, meta } = resp;
+    let value = body.into_value().map_err(|e| {
+        RestError::from(crate::overview::error::internal_fault(
+            "re-parse the stored body",
+            &e,
+        ))
+    })?;
+    Ok(RawServiceResponse {
+        body: ReadBody::Value(state.backend().expand_multimedia(value).await?),
+        meta,
+    })
+}
+
+/// [`ensure_served_version`] over a read whose body may still be the stored
+/// text, which carries the version's own `uid`, the one its metadata names.
+pub(super) fn ensure_served_read_version(
+    addressed: &str,
+    resp: &RawServiceResponse,
+) -> Result<(), RestError> {
+    match (&resp.body, &resp.meta) {
+        (ReadBody::Value(body), _) => ensure_served_version(addressed, body),
+        (ReadBody::RawJson(_), Some(meta)) if !meta.uid.eq_ignore_ascii_case(addressed) => Err(
+            RestError::from(ApiError::NotFound(format!("version {addressed}"))),
+        ),
         _ => Ok(()),
     }
 }

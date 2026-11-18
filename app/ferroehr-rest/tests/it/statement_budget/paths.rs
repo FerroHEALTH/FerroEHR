@@ -427,7 +427,10 @@ impl World {
             assert_eq!(code, StatusCode::OK, "the EHR_STATUS: {body}");
             status_uids.push(etag(&headers));
             let mut value: Value = serde_json::from_str(&body).expect("the EHR_STATUS");
-            value.as_object_mut().expect("an object").shift_remove("uid");
+            value
+                .as_object_mut()
+                .expect("an object")
+                .shift_remove("uid");
             status_body = value.to_string();
         }
         Self {
@@ -447,6 +450,22 @@ impl World {
     fn observe(&self, path: Path, n: usize, headers: &HeaderMap) {
         if path == Path::CommitStatus {
             self.status_uids.lock().unwrap()[n % self.ehrs.len()] = etag(headers);
+        }
+    }
+
+    /// The `n`th status commit, to the EHR `ehr`.
+    fn status_commit(&self, ehr: &str, n: usize) -> Call {
+        let tip = self.status_uids.lock().unwrap()[n % self.ehrs.len()].clone();
+        Call {
+            method: "PUT",
+            uri: format!("{BASE}/ehr/{ehr}/ehr_status"),
+            user: "root",
+            accept: JSON,
+            headers: vec![
+                ("Prefer", "return=minimal".to_owned()),
+                ("If-Match", format!("\"{tip}\"")),
+            ],
+            body: Some((JSON, self.status.clone())),
         }
     }
 
@@ -515,54 +534,20 @@ impl World {
                 "root",
                 JSON,
             ),
-            Path::CommitContribution => {
-                let coded = |code: &str, value: &str| {
-                    serde_json::json!({ "_type": "DV_CODED_TEXT", "value": value,
-                        "defining_code": { "_type": "CODE_PHRASE",
-                            "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
-                            "code_string": code } })
-                };
-                let committer = serde_json::json!({ "_type": "PARTY_IDENTIFIED",
-                    "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "root" }] });
-                let body = serde_json::json!({
-                    "_type": "CONTRIBUTION",
-                    "versions": [ {
-                        "_type": "ORIGINAL_VERSION",
-                        "commit_audit": { "change_type": coded("249", "creation"), "committer": committer },
-                        "lifecycle_state": coded("532", "complete"),
-                        "data": common::ips_canonical_composition(),
-                    } ],
-                    "audit": { "change_type": coded("249", "creation"), "committer": committer },
-                });
-                Call {
-                    method: "POST",
-                    uri: format!("{BASE}/ehr/{ehr}/contribution"),
-                    user: "root",
-                    accept: JSON,
-                    headers: minimal.clone(),
-                    body: Some((JSON, body.to_string())),
-                }
-            }
+            Path::CommitContribution => Call {
+                method: "POST",
+                uri: format!("{BASE}/ehr/{ehr}/contribution"),
+                user: "root",
+                accept: JSON,
+                headers: minimal.clone(),
+                body: Some((JSON, contribution().to_string())),
+            },
             Path::ReadAtTime => get(
                 format!("{composition}?version_at_time={}", self.at),
                 "nurse",
                 JSON,
             ),
-            Path::CommitStatus => {
-                let mut headers = minimal.clone();
-                headers.push((
-                    "If-Match",
-                    format!("\"{}\"", self.status_uids.lock().unwrap()[n % self.ehrs.len()]),
-                ));
-                Call {
-                    method: "PUT",
-                    uri: format!("{BASE}/ehr/{ehr}/ehr_status"),
-                    user: "root",
-                    accept: JSON,
-                    headers,
-                    body: Some((JSON, self.status.clone())),
-                }
-            }
+            Path::CommitStatus => self.status_commit(ehr, n),
             Path::ReadStatus => get(format!("{BASE}/ehr/{ehr}/ehr_status"), "nurse", JSON),
             Path::CommitParty => Call {
                 method: "POST",
@@ -574,6 +559,28 @@ impl World {
             },
         }
     }
+}
+
+/// A CONTRIBUTION that creates the IPS composition.
+fn contribution() -> Value {
+    let coded = |code: &str, value: &str| {
+        serde_json::json!({ "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": code } })
+    };
+    let committer = serde_json::json!({ "_type": "PARTY_IDENTIFIED",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "root" }] });
+    serde_json::json!({
+        "_type": "CONTRIBUTION",
+        "versions": [ {
+            "_type": "ORIGINAL_VERSION",
+            "commit_audit": { "change_type": coded("249", "creation"), "committer": committer },
+            "lifecycle_state": coded("532", "complete"),
+            "data": common::ips_canonical_composition(),
+        } ],
+        "audit": { "change_type": coded("249", "creation"), "committer": committer },
+    })
 }
 
 /// What one path measured over [`REQUESTS`] requests.

@@ -794,11 +794,12 @@ async fn an_imported_container_reports_the_local_chronology() {
         .versioned_ehr_object(ehr, EhrObject::Status)
         .await
         .expect("VERSIONED_EHR_STATUS");
-    let time_created = container.body["time_created"]["value"]
-        .as_str()
-        .expect("VERSIONED_OBJECT.time_created")
-        .parse::<jiff::Timestamp>()
-        .expect("ISO 8601 instant");
+    let time_created =
+        openehr_its::json::to_canonical_value(&container.body)["time_created"]["value"]
+            .as_str()
+            .expect("VERSIONED_OBJECT.time_created")
+            .parse::<jiff::Timestamp>()
+            .expect("ISO 8601 instant");
     assert!(
         time_created >= before_import,
         "time_created must be the local import instant ({before_import}), got {time_created}"

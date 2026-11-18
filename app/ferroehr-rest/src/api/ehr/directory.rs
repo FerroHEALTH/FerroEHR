@@ -29,7 +29,7 @@ use openehr_its::rest::generated::ehr::{
 use openehr_rm::prelude::Folder;
 
 use ferroehr::error::ServiceError;
-use ferroehr::service::response::ServiceResponse;
+use ferroehr::service::response::{RawServiceResponse, ServiceResponse};
 
 use crate::api::RequestParts;
 use crate::api::item_tags;
@@ -56,7 +56,7 @@ pub(crate) async fn get_at_time(
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let resp = state
         .backend()
-        .get_directory_at_time(ehr_id, p.version_at_time, p.path)
+        .get_directory_at_time_raw(ehr_id, p.version_at_time, p.path)
         .await?;
     serve_folder(&state, &parts, resp).await
 }
@@ -71,23 +71,17 @@ pub(crate) async fn get_at_time(
 async fn serve_folder(
     state: &AppState,
     parts: &RequestParts,
-    mut resp: ServiceResponse,
+    resp: RawServiceResponse,
 ) -> Result<Response, RestError> {
     if resp.body.is_null() {
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
-    resp.body =
-        super::expand_multimedia_if_requested(state, parts.query.as_deref(), resp.body).await?;
-    let mut out = negotiate::body::respond_rm::<Folder>(
+    let resp = super::expand_read_if_requested(state, parts.query.as_deref(), resp).await?;
+    Ok(negotiate::resource::read_raw_rm::<Folder>(
         &parts.headers,
-        StatusCode::OK,
-        &resp.body,
+        resp,
         openehr_its::xml::LOCATABLE_ROOT,
-    );
-    if let Some(meta) = &resp.meta {
-        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-    }
-    Ok(out)
+    ))
 }
 
 /// `directory_update` — commit a new version of the EHR's directory.

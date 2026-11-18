@@ -27,7 +27,7 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
-use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
+use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::storage::version_repo::read::VersionAt;
@@ -39,7 +39,7 @@ use crate::versioning::change::{Change, Committed, Write};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components, parse_tree_id};
 use crate::versioning::read::VersionRead;
 use crate::versioning::wire::{revision_history, versioned_object};
-use openehr_rm::prelude::Composition;
+use openehr_rm::prelude::{Composition, VersionedObject};
 
 impl FerroEhrService {
     /// `create_composition`: commit the first version of a COMPOSITION in
@@ -164,27 +164,13 @@ impl FerroEhrService {
         let Some(at) = a_time.as_deref().map(parse_at_time).transpose()? else {
             return self.read_composition_raw(ehr_id, vo_id, None).await;
         };
-        let read = crate::versioning::read::read(
+        let raw = crate::versioning::read::read_raw(
             &self.pool,
             self.spec_profile,
             VersionAt::Instant(vo_id, at),
         )
-        .await?
-        .filter(|r| r.ehr_id == Some(ehr_id) && r.kind == Kind::Composition)
-        .ok_or_else(|| {
-            ServiceError::not_found(Missing::Composition, format!("COMPOSITION {vo_id}"))
-        })?;
-        if read.deleted() {
-            return Ok(RawServiceResponse {
-                body: ReadBody::Value(Value::Null),
-                meta: None,
-            });
-        }
-        let resp = self.version_response(ehr_id, vo_id, read)?;
-        Ok(RawServiceResponse {
-            body: ReadBody::Value(resp.body),
-            meta: resp.meta,
-        })
+        .await?;
+        self.composition_served(ehr_id, vo_id, raw)
     }
 
     /// The bare COMPOSITION at the named version, with the version metadata
@@ -222,7 +208,7 @@ impl FerroEhrService {
         &self,
         ehr_id: EhrId,
         vo_id: VoId,
-    ) -> Result<ServiceResponse, ServiceError> {
+    ) -> Result<ServiceResponse<VersionedObject>, ServiceError> {
         // Ownership rides the container statement itself (the ehr_id filter
         // inside `versioned_object`) — no separate ownership probe.
         let (body, last_modified) =

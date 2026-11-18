@@ -1061,7 +1061,9 @@ async fn an_imported_version_round_trips_through_the_archive() {
         .versioned_ehr_object(ehr, EhrObject::Status)
         .await
         .expect("VERSIONED_EHR_STATUS");
-    let vo_id: ferroehr::ids::VoId = uid(&status_vo.body).parse().expect("container uid");
+    let vo_id: ferroehr::ids::VoId = uid(&openehr_its::json::to_canonical_value(&status_vo.body))
+        .parse()
+        .expect("container uid");
     let version = middle
         .ehr_object_revision_history(ehr, EhrObject::Status)
         .await

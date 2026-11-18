@@ -196,7 +196,7 @@ pub(crate) async fn versioned_object(
     vo_id: VoId,
     ehr_id: EhrId,
     rm_type: &str,
-) -> Result<Option<(Value, jiff::Timestamp)>, ServiceError> {
+) -> Result<Option<(VersionedObject, jiff::Timestamp)>, ServiceError> {
     let Some((_, time_created, last_modified)) =
         crate::storage::version_repo::meta::commit_bounds(pool, vo_id)
             .await?
@@ -247,10 +247,7 @@ pub(crate) async fn versioned_object(
             time_created,
         }),
     };
-    Ok(Some((
-        openehr_its::json::to_canonical_value(&container),
-        last_modified,
-    )))
+    Ok(Some((container, last_modified)))
 }
 
 /// The VERSION resource's wire form for a loaded version: an `ORIGINAL_VERSION`

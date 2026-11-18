@@ -17,9 +17,14 @@
 )]
 
 use openehr_base::prelude::{ObjectVersionId, UidBasedId};
-use openehr_rm::prelude::Composition;
+use openehr_rm::prelude::{Composition, EhrAccess, EhrStatus, Folder};
+use openehr_rm::v1_2::common::archetyped::archetyped::Archetyped;
+use openehr_rm::v1_2::demographic::party::Party;
+use openehr_rm::v1_2::demographic::party_relationship::PartyRelationship;
+use serde::{Serialize, Serializer};
 use serde_json::Value;
 
+use super::Kind;
 use crate::error::ServiceError;
 use crate::storage::render::index::Rendered;
 
@@ -27,15 +32,98 @@ use crate::storage::render::index::Rendered;
 /// content (`reliability.md`).
 #[derive(Clone)]
 pub(crate) enum Body {
-    /// A COMPOSITION as typed RM.
+    /// A COMPOSITION.
     Composition(Box<Composition>),
-    /// The canonical value of any other kind.
+    /// An `EHR_STATUS`.
+    EhrStatus(Box<EhrStatus>),
+    /// An `EHR_ACCESS`.
+    EhrAccess(Box<EhrAccess>),
+    /// A FOLDER tree.
+    Folder(Box<Folder>),
+    /// A PARTY of any of its five concrete kinds.
+    Party(Box<Party>),
+    /// A `PARTY_RELATIONSHIP`.
+    PartyRelationship(Box<PartyRelationship>),
+    /// The canonical value of a body with no typed form.
     Canonical(Value),
+}
+
+/// Runs `$typed` over the typed RM value of a body, bound to `$rm`, or
+/// `$canonical` over its canonical value, bound to `$view`.
+macro_rules! each_typed {
+    ($body:expr, $rm:ident => $typed:expr, $view:ident => $canonical:expr) => {
+        match $body {
+            Body::Composition($rm) => $typed,
+            Body::EhrStatus($rm) => $typed,
+            Body::EhrAccess($rm) => $typed,
+            Body::Folder($rm) => $typed,
+            Body::Party($rm) => $typed,
+            Body::PartyRelationship($rm) => $typed,
+            Body::Canonical($view) => $canonical,
+        }
+    };
+}
+
+/// Runs `$e` over the concrete RM value of a PARTY, bound to `$p`.
+macro_rules! each_party {
+    ($party:expr, $p:ident => $e:expr) => {
+        match $party {
+            Party::Agent($p) => $e,
+            Party::Group($p) => $e,
+            Party::Organisation($p) => $e,
+            Party::Person($p) => $e,
+            Party::Role($p) => $e,
+        }
+    };
 }
 
 impl From<Value> for Body {
     fn from(canonical: Value) -> Self {
         Body::Canonical(canonical)
+    }
+}
+
+impl From<Composition> for Body {
+    fn from(rm: Composition) -> Self {
+        Body::Composition(Box::new(rm))
+    }
+}
+
+impl From<EhrStatus> for Body {
+    fn from(rm: EhrStatus) -> Self {
+        Body::EhrStatus(Box::new(rm))
+    }
+}
+
+impl From<EhrAccess> for Body {
+    fn from(rm: EhrAccess) -> Self {
+        Body::EhrAccess(Box::new(rm))
+    }
+}
+
+impl From<Folder> for Body {
+    fn from(rm: Folder) -> Self {
+        Body::Folder(Box::new(rm))
+    }
+}
+
+impl From<Party> for Body {
+    fn from(rm: Party) -> Self {
+        Body::Party(Box::new(rm))
+    }
+}
+
+impl From<PartyRelationship> for Body {
+    fn from(rm: PartyRelationship) -> Self {
+        Body::PartyRelationship(Box::new(rm))
+    }
+}
+
+/// The body serializes as its canonical JSON, written straight from the typed
+/// value.
+impl Serialize for Body {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        each_typed!(self, rm => rm.serialize(serializer), view => view.serialize(serializer))
     }
 }
 
@@ -48,30 +136,49 @@ impl Body {
     /// The canonical value of a body of a kind that has no typed form.
     pub(crate) fn canonical(&self) -> Option<&Value> {
         match self {
-            Body::Composition(_) => None,
             Body::Canonical(view) => Some(view),
+            _ => None,
         }
     }
 
     /// The root's `archetype_node_id`.
     pub(crate) fn archetype_node_id(&self) -> Option<&str> {
         match self {
-            Body::Composition(rm) => Some(rm.archetype_node_id.as_str()),
+            Body::Party(party) => {
+                Some(each_party!(party.as_ref(), p => p.archetype_node_id.as_str()))
+            }
             Body::Canonical(view) => view.get("archetype_node_id").and_then(Value::as_str),
+            Body::Composition(rm) => Some(rm.archetype_node_id.as_str()),
+            Body::EhrStatus(rm) => Some(rm.archetype_node_id.as_str()),
+            Body::EhrAccess(rm) => Some(rm.archetype_node_id.as_str()),
+            Body::Folder(rm) => Some(rm.archetype_node_id.as_str()),
+            Body::PartyRelationship(rm) => Some(rm.archetype_node_id.as_str()),
+        }
+    }
+
+    /// The root's `archetype_details`, typed; `None` for a canonical body.
+    fn archetype_details(&self) -> Option<&Archetyped> {
+        match self {
+            Body::Party(party) => each_party!(party.as_ref(), p => p.archetype_details.as_deref()),
+            Body::Canonical(_) => None,
+            Body::Composition(rm) => rm.archetype_details.as_deref(),
+            Body::EhrStatus(rm) => rm.archetype_details.as_deref(),
+            Body::EhrAccess(rm) => rm.archetype_details.as_deref(),
+            Body::Folder(rm) => rm.archetype_details.as_deref(),
+            Body::PartyRelationship(rm) => rm.archetype_details.as_deref(),
         }
     }
 
     /// The template id the root's `archetype_details` names.
     pub(crate) fn template_id(&self) -> Option<&str> {
         match self {
-            Body::Composition(rm) => rm
-                .archetype_details
-                .as_ref()
-                .and_then(|details| details.template_id.as_ref())
-                .map(|id| id.value.as_str()),
             Body::Canonical(view) => view
                 .pointer("/archetype_details/template_id/value")
                 .and_then(Value::as_str),
+            typed => typed
+                .archetype_details()
+                .and_then(|details| details.template_id.as_ref())
+                .map(|id| id.value.as_str()),
         }
     }
 
@@ -82,24 +189,53 @@ impl Body {
             Body::Canonical(view) => view
                 .pointer("/category/defining_code/code_string")
                 .and_then(Value::as_str),
+            _ => None,
         }
     }
 
     /// What the write rules of a caller read of a COMPOSITION body
-    /// ([`super::content_facts`]).
+    /// ([`super::content_facts`]); none of another kind.
     pub(crate) fn content_facts(&self) -> super::content_facts::ContentFacts<'_> {
         match self {
             Body::Composition(rm) => super::content_facts::ContentFacts::of_typed(rm),
             Body::Canonical(view) => super::content_facts::ContentFacts::of_canonical(view),
+            _ => super::content_facts::ContentFacts::default(),
         }
     }
 
     /// Stamps the version's own `OBJECT_VERSION_ID` into the root `uid`.
     pub(crate) fn stamp_uid(&mut self, uid: &ObjectVersionId) {
+        let stamped = Some(UidBasedId::ObjectVersionId(uid.clone()));
         match self {
-            Body::Composition(rm) => rm.uid = Some(UidBasedId::ObjectVersionId(uid.clone())),
+            Body::Party(party) => each_party!(party.as_mut(), p => p.uid = stamped),
             Body::Canonical(view) => super::change::stamp_uid_value(view, uid),
+            Body::Composition(rm) => rm.uid = stamped,
+            Body::EhrStatus(rm) => rm.uid = stamped,
+            Body::EhrAccess(rm) => rm.uid = stamped,
+            Body::Folder(rm) => rm.uid = stamped,
+            Body::PartyRelationship(rm) => rm.uid = stamped,
         }
+    }
+
+    /// Whether the body is expressible in the released generation set
+    /// ([`openehr_rm::v1_2::released::expressible_in_released`]); `None` for a
+    /// canonical body, which the caller judges by reading it.
+    pub(crate) fn expressible_in_released(&self) -> Option<bool> {
+        use openehr_rm::v1_2::released::expressible_in_released as judge;
+        each_typed!(self, rm => Some(judge(rm.as_ref())), _view => None)
+    }
+
+    /// The typed RM view of the body, for the passes that walk any RM value;
+    /// `None` for a canonical body.
+    pub(crate) fn as_rm(&self) -> Option<&dyn openehr_rm::v1_2::access::RmObject> {
+        use openehr_rm::v1_2::access::AsRm as _;
+        each_typed!(self, rm => Some(rm.as_rm()), _view => None)
+    }
+
+    /// [`Self::as_rm`], mutably.
+    pub(crate) fn as_rm_mut(&mut self) -> Option<&mut dyn openehr_rm::v1_2::access::RmObject> {
+        use openehr_rm::v1_2::access::AsRm as _;
+        each_typed!(self, rm => Some(rm.as_rm_mut()), _view => None)
     }
 
     /// The one rendering of the body to compact canonical JSON, indexed
@@ -109,13 +245,13 @@ impl Body {
     /// [`ServiceError`] when the body does not serialize (a non-finite
     /// number, unreachable for a codec-produced value, refused loudly anyway).
     pub(crate) fn render(&self) -> Result<Rendered, ServiceError> {
-        let fault = |e| ServiceError::internal("serialize the canonical body", e);
         match self {
-            Body::Composition(rm) => {
-                crate::telemetry::conversion::record("rm_to_text");
-                crate::storage::render::index::render(rm.as_ref()).map_err(fault)
-            }
             Body::Canonical(view) => Self::render_canonical(view),
+            typed => {
+                crate::telemetry::conversion::record("rm_to_text");
+                crate::storage::render::index::render(typed)
+                    .map_err(|e| ServiceError::internal("serialize the canonical body", e))
+            }
         }
     }
 
@@ -130,117 +266,53 @@ impl Body {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use openehr_base::prelude::ObjectVersionId;
-    use openehr_rm::prelude::Composition;
-    use serde_json::{Value, json};
-
-    use super::Body;
-    use crate::versioning::change::stamp_uid_value;
-
-    /// Every COMPOSITION in the repository's corpora that reads as strict typed RM.
-    fn corpus() -> Vec<(String, Composition)> {
-        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let mut out = Vec::new();
-        let mut stack: Vec<std::path::PathBuf> = ["corpus", "crates", "docs/specs/openehr/CNF"]
-            .iter()
-            .map(|d| root.join(d))
-            .collect();
-        while let Some(dir) = stack.pop() {
-            let Ok(entries) = std::fs::read_dir(&dir) else {
-                continue;
-            };
-            for path in entries.flatten().map(|e| e.path()) {
-                if path.is_dir() {
-                    if path.file_name().is_some_and(|n| n != "target") {
-                        stack.push(path);
-                    }
-                    continue;
-                }
-                if path.extension().is_none_or(|e| e != "json") {
-                    continue;
-                }
-                let Ok(text) = std::fs::read_to_string(&path) else {
-                    continue;
-                };
-                if !text.contains("\"COMPOSITION\"") {
-                    continue;
-                }
-                let Ok(value) = serde_json::from_str::<Value>(&text) else {
-                    continue;
-                };
-                if value.get("_type").and_then(Value::as_str) != Some("COMPOSITION") {
-                    continue;
-                }
-                // NOTE: a document the strict reader refuses never reaches a
-                // commit, so it has no typed path to compare.
-                if let Ok(typed) = openehr_its::json::from_canonical_value::<Composition>(&value) {
-                    out.push((path.display().to_string(), typed));
-                }
-            }
-        }
-        out.sort_by(|a, b| a.0.cmp(&b.0));
-        out
+/// The strict canonical-JSON door over a raw commit member's `data`: its
+/// typed RM, which the member is validated over.
+///
+/// The generated envelope leaves a CONTRIBUTION member's `data` raw (the
+/// `NewContribution<Value>` instantiation keeps the bytes the signature
+/// covers), so the payload runs the same typed door every direct commit route
+/// passes through: content that cannot be converted to
+/// its RM resource is the 400 row (ITS-REST overview `Requests_and_responses.md`
+/// §HTTP status codes). The demographic kinds keep their typed door in
+/// `service::demographic::validate`; this door covers the EHR kinds, and is
+/// `None` for the others. A `553|incomplete|` commit skips it, the generated
+/// types making mandatory attributes structural where RM common master06
+/// §Incomplete Content lifts those bounds.
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] when the strict reader refuses the payload.
+pub(crate) fn decode_member(
+    kind: Kind,
+    data: &Value,
+    incomplete: bool,
+) -> Result<Option<Body>, ServiceError> {
+    fn typed<T>(data: &Value) -> Result<Option<Body>, ServiceError>
+    where
+        T: serde::de::DeserializeOwned,
+        Body: From<T>,
+    {
+        openehr_its::json::from_canonical_value::<T>(data)
+            .map(|rm| Some(Body::from(rm)))
+            .map_err(|e| ServiceError::canonical_decode(data, e))
     }
-
-    /// The text and digest the commit wrote from the canonical value, before
-    /// the typed path: the compact text, and SHA-256 of it without the root `uid`.
-    fn canonical_path(view: &Value) -> (String, [u8; 32]) {
-        use sha2::Digest as _;
-        let mut without = view.clone();
-        without.as_object_mut().unwrap().shift_remove("uid");
-        (
-            serde_json::to_string(view).unwrap(),
-            sha2::Sha256::digest(serde_json::to_vec(&without).unwrap()).into(),
-        )
+    if incomplete {
+        return Ok(None);
     }
-
-    /// The typed commit writes the `version.body` bytes, the content digest and
-    /// the RFC 8785 signed form the canonical-value commit wrote, on every
-    /// COMPOSITION of the corpora (#6003).
-    #[test]
-    fn the_typed_commit_writes_and_signs_the_bytes_the_canonical_one_did() {
-        let compositions = corpus();
-        assert!(
-            compositions.len() >= 180,
-            "{} compositions",
-            compositions.len()
-        );
-        let uid =
-            ObjectVersionId::new("8849182c-82ad-4088-a07f-48ead4180515::cdr.example::1").unwrap();
-        let envelope = json!({
-            "_type": "ORIGINAL_VERSION",
-            "uid": { "_type": "OBJECT_VERSION_ID", "value": uid.value() },
-            "contribution": { "id": { "_type": "HIER_OBJECT_ID", "value": "c" }, "namespace": "local", "type": "CONTRIBUTION" },
-            "lifecycle_state": { "value": "complete", "defining_code": { "terminology_id": { "value": "openehr" }, "code_string": "532" } },
-            "signature": "left out",
-        });
-        for (path, typed) in compositions {
-            let mut view = openehr_its::json::to_canonical_value(&typed);
-            stamp_uid_value(&mut view, &uid);
-            let mut body = Body::composition(typed);
-            body.stamp_uid(&uid);
-            let rendered = body.render().unwrap();
-            assert_eq!(
-                (
-                    String::from_utf8(rendered.text().to_vec()).unwrap(),
-                    crate::storage::render::content_digest(&rendered)
-                ),
-                canonical_path(&view),
-                "{path}"
-            );
-            let Body::Composition(rm) = &body else {
-                panic!("{path} was built as a COMPOSITION");
-            };
-            assert_eq!(
-                crate::versioning::integrity::typed_canonical_form(&envelope, rm).unwrap(),
-                openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json_with_data(
-                    &envelope, &view
-                )
-                .unwrap(),
-                "{path}"
-            );
-        }
+    match kind {
+        Kind::Composition => typed::<Composition>(data),
+        Kind::EhrStatus => typed::<EhrStatus>(data),
+        Kind::EhrAccess => typed::<EhrAccess>(data),
+        Kind::Folder => typed::<Folder>(data),
+        Kind::Agent
+        | Kind::Group
+        | Kind::Organisation
+        | Kind::Person
+        | Kind::Role
+        | Kind::PartyRelationship => Ok(None),
     }
 }
+
+#[cfg(test)]
+#[path = "body_tests.rs"]
+mod tests;
