@@ -101,6 +101,15 @@ impl JsonParseError {
         self
     }
 
+    /// Whether the document is nested deeper than the RM readers' one limit
+    /// ([`openehr_base::nesting::MAX_RM_NESTING`]): a document no reader can
+    /// read, whatever else it carries.
+    #[must_use]
+    pub fn is_too_deep(&self) -> bool {
+        self.message
+            .starts_with(&openehr_base::nesting::NestingTooDeep.to_string())
+    }
+
     /// The failure message, without the path or location decoration.
     #[must_use]
     pub fn message(&self) -> &str {
@@ -198,6 +207,7 @@ pub fn to_canonical_json<T: Serialize + ?Sized>(value: &T) -> String {
     reason = "`serde_json::to_writer` into a `Vec<u8>` can only fail on a non-string map key or a `Serialize` impl that returns Err; the emitted spec-type impls do neither, and writing to a Vec cannot fail, so the Err variant is unreachable here — the Book ch9 sanctioned escape for a logically-impossible Err"
 )]
 pub fn write_canonical_json<T: Serialize + ?Sized>(value: &T, buffer: &mut Vec<u8>) {
+    crate::conversion::record::<T>("to_canonical_json");
     serde_json::to_writer(buffer, value).expect("an openEHR spec value should always serialize");
 }
 
@@ -209,6 +219,7 @@ pub fn write_canonical_json_to<W: std::io::Write, T: Serialize + ?Sized>(
     writer: W,
     value: &T,
 ) -> Result<(), serde_json::Error> {
+    crate::conversion::record::<T>("to_canonical_json");
     serde_json::to_writer(writer, value)
 }
 

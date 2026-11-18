@@ -349,6 +349,7 @@ pub fn write_xml_into<T: ToXml + ?Sized>(
     ns: Namespace,
     buffer: Vec<u8>,
 ) -> Result<Vec<u8>, XmlError> {
+    crate::conversion::record::<T>("to_xml");
     let mut w = XmlWriter::with_buffer(buffer);
     w.set_root_namespace(ns);
     value.write_xml(&mut w, root_tag, None)?;
