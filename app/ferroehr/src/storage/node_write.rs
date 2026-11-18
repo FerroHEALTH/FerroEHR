@@ -41,6 +41,20 @@ fn promoted_insert_parts(first_param: usize) -> (String, String, String, String)
     (columns, selects, arrays, names)
 }
 
+/// The `event_time` of an inserted row `t`: the time of an event row or the
+/// origin of a history row, read by the function an AQL comparison reads it
+/// with, so the column and the comparison cannot differ; `NULL` on every
+/// other row. The node migration `node_event_time` fills stored rows from
+/// the same expression. No openEHR spec governs storage: our own design
+/// (#6022).
+const EVENT_TIME: &str = "CASE \
+     WHEN t.rm_type IN ('POINT_EVENT', 'INTERVAL_EVENT') THEN ext.openehr_timestamp(\
+     CASE WHEN t.time_compact THEN t.data::jsonb ->> 'time' \
+     ELSE t.data::jsonb #>> '{time,value}' END) \
+     WHEN t.rm_type = 'HISTORY' THEN ext.openehr_timestamp(\
+     CASE WHEN t.origin_compact THEN t.data::jsonb ->> 'origin' \
+     ELSE t.data::jsonb #>> '{origin,value}' END) END";
+
 /// Build the FIXED-text node insert: one array bind per column over `unnest`,
 /// so the statement carries the same parameter count at ANY row count — no
 /// per-row placeholders (PostgreSQL caps a statement at 65,535 parameters,
@@ -68,12 +82,12 @@ fn write_nodes_sql(per_row_context: bool) -> String {
          rm_type, archetype, arch_entity, arch_concept, arch_major, name, name_code, \
          name_terminology, path, data, value_type, value_num, value_text, value_code, \
          value_terminology, rm_version, language, encoding, origin_compact, time_compact, \
-         party_self, uid_derived{columns}) \
+         party_self, uid_derived, event_time{columns}) \
          SELECT {context_select}, t.num, t.num_cap, t.parent_num, t.rm_type, \
          t.archetype, t.arch_entity, t.arch_concept, t.arch_major, t.name, t.name_code, \
          t.name_terminology, t.path, t.data::jsonb, t.value_type, t.value_num::numeric, t.value_text, \
          t.value_code, t.value_terminology, t.rm_version, t.language, t.encoding, \
-         t.origin_compact, t.time_compact, t.party_self, t.uid_derived{selects} \
+         t.origin_compact, t.time_compact, t.party_self, t.uid_derived, {EVENT_TIME}{selects} \
          FROM unnest({context_arrays}{separator}$4::int[], $5::int[], $6::int[], $7::text[], $8::text[], \
          $9::text[], $10::text[], $11::int[], $12::text[], $13::text[], $14::text[], \
          $15::text[], $16::text[], $17::text[], $18::text[], $19::text[], $20::text[], \
@@ -106,12 +120,12 @@ pub(crate) fn node_insert_cte(vo: &str, sys: &str, ehr: &str, first_array_param:
          rm_type, archetype, arch_entity, arch_concept, arch_major, name, name_code, \
          name_terminology, path, data, value_type, value_num, value_text, value_code, \
          value_terminology, rm_version, language, encoding, origin_compact, time_compact, \
-         party_self, uid_derived{columns}) \
+         party_self, uid_derived, event_time{columns}) \
          SELECT {vo}, {sys}, {ehr}, t.num, t.num_cap, t.parent_num, t.rm_type, \
          t.archetype, t.arch_entity, t.arch_concept, t.arch_major, t.name, t.name_code, \
          t.name_terminology, t.path, t.data::jsonb, t.value_type, t.value_num::numeric, t.value_text, \
          t.value_code, t.value_terminology, t.rm_version, t.language, t.encoding, \
-         t.origin_compact, t.time_compact, t.party_self, t.uid_derived{selects} \
+         t.origin_compact, t.time_compact, t.party_self, t.uid_derived, {EVENT_TIME}{selects} \
          FROM unnest(${}::int[], ${}::int[], ${}::int[], ${}::text[], ${}::text[], \
          ${}::text[], ${}::text[], ${}::int[], ${}::text[], ${}::text[], ${}::text[], \
          ${}::text[], ${}::text[], ${}::text[], ${}::text[], ${}::text[], ${}::text[], \

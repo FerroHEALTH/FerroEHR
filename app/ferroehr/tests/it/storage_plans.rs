@@ -175,7 +175,7 @@ pub(crate) struct Scan {
     /// Rows the node returned, averaged over its loops — `PostgreSQL` 18
     /// reports this as a fraction rather than an integer
     /// (<https://www.postgresql.org/docs/18/sql-explain.html>).
-    rows: f64,
+    pub(crate) rows: f64,
     /// Whether the executor ever ran the node. A pruned partition does not
     /// appear in the plan at all; a node that appears but never ran was left
     /// unexecuted at run time, which is a different fact.
@@ -183,7 +183,7 @@ pub(crate) struct Scan {
     /// Shared buffers hit by the node over all its loops, and the loops: the
     /// quotient is the cost of one probe, which no machine load can move.
     shared_hit_blocks: f64,
-    loops: f64,
+    pub(crate) loops: f64,
 }
 
 impl Scan {
@@ -879,7 +879,7 @@ fn aql_sql_limited(
 }
 
 /// [`aql_sql_limited`] with the query parameters bound.
-fn aql_sql_with(
+pub(crate) fn aql_sql_with(
     aql: &str,
     params: &Params,
     ehr_ids: Vec<EhrId>,
@@ -1463,7 +1463,7 @@ async fn a_commit_time_range_serves_from_the_brin_index() {
 // ── the row estimate of a chain of path bindings ─────────────────────────────
 
 /// The archetype of the OBSERVATION the binding-chain tests commit.
-const WIDE_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.plan_shapes.v1";
+pub(crate) const WIDE_ARCHETYPE: &str = "openEHR-EHR-OBSERVATION.plan_shapes.v1";
 
 /// The at-codes of the ELEMENTs under that OBSERVATION's one event.
 const WIDE_ITEMS: [&str; 8] = [
@@ -1471,14 +1471,14 @@ const WIDE_ITEMS: [&str; 8] = [
 ];
 
 /// The path from the OBSERVATION to the magnitude of the ELEMENT `item`.
-fn wide_leaf(item: &str) -> String {
+pub(crate) fn wide_leaf(item: &str) -> String {
     format!("o/data[at0001]/events[at0002]/data[at0003]/items[{item}]/value/magnitude")
 }
 
 /// A COMPOSITION carrying one OBSERVATION whose one event holds a
 /// `DV_QUANTITY` ELEMENT per [`WIDE_ITEMS`] entry, the shape of the storage
 /// bench's wide projection.
-fn wide_observation_composition(name: &str, magnitude: f64) -> Value {
+pub(crate) fn wide_observation_composition(name: &str, magnitude: f64) -> Value {
     let items: Vec<Value> = WIDE_ITEMS
         .iter()
         .zip(0_u8..)

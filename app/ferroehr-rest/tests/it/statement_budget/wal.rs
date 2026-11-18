@@ -379,9 +379,13 @@ fn corpus(file: &str) -> String {
 /// (#5969), 2% above, and its nested statements exactly. With
 /// `fk_node_version` and the full node indexes an IPS commit measured
 /// 278,420 bytes and 410 nested statements, and a lab commit 10,667 bytes and
-/// 18; with the lean storage 233,279 and 9,827.
+/// 18; with the lean storage 233,279 and 9,827. The `event_time` column with
+/// its index and the magnitude index (#6022) brought them to 237,374 and
+/// 10,092: the IPS ceiling holds, and the lab ceiling is that measurement, 2%
+/// above, since two of a lab commit's ten node rows are an event and a
+/// history (the decision of 2026-11-18 on #6022).
 const COMMIT_CEILINGS: [(Fixture, u64, u64); 2] =
-    [(Fixture::Ips, 237_945, 8), (Fixture::Lab, 10_024, 8)];
+    [(Fixture::Ips, 237_945, 8), (Fixture::Lab, 10_293, 8)];
 
 /// Whether `relation` is written by a commit rather than by the access log or
 /// the audit intake beside it.
