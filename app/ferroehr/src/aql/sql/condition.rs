@@ -54,7 +54,7 @@ use crate::aql::ir::{
 };
 use crate::db::iden::{Node, VersionRow};
 
-use super::coerce::{RawPartner, raw_key, target_types};
+use super::coerce::{RawPartner, coerce_rhs, raw_key, target_types};
 use super::expr::{binoper, call, col, hot};
 use super::from::{BoundTable, attribute_child, binding_rows};
 use super::select::bindable_leaf;
@@ -67,6 +67,28 @@ use super::{Builder, StepBinding, ValueMode};
 /// bound parameter in a generic plan cannot (PostgreSQL 18, "Partial
 /// Indexes").
 const ELEMENT_LITERAL: &str = "'ELEMENT'";
+
+/// The RM types whose node rows carry their `time` in `event_time`
+/// (`crate::storage::node_write`), and the same as SQL literals, which the
+/// planner estimates and a generic plan keeps.
+const EVENT_TYPES: [&str; 2] = ["INTERVAL_EVENT", "POINT_EVENT"];
+/// [`EVENT_TYPES`] as SQL literals.
+const EVENT_LITERALS: &str = "'INTERVAL_EVENT', 'POINT_EVENT'";
+/// The RM type whose node rows carry their `origin` in `event_time`.
+const HISTORY_TYPES: [&str; 1] = ["HISTORY"];
+/// [`HISTORY_TYPES`] as a SQL literal.
+const HISTORY_LITERALS: &str = "'HISTORY'";
+
+/// `op` with its operands exchanged: `a op b` is `b mirrored(op) a`.
+const fn mirrored(op: CompOp) -> CompOp {
+    match op {
+        CompOp::Gt => CompOp::Lt,
+        CompOp::Ge => CompOp::Le,
+        CompOp::Lt => CompOp::Gt,
+        CompOp::Le => CompOp::Ge,
+        CompOp::Eq | CompOp::Ne => op,
+    }
+}
 
 impl Builder<'_> {
     /// The WHERE clause of the statement, or `None` without one.
@@ -147,6 +169,33 @@ impl Builder<'_> {
                         _ => continue,
                     };
                     if let Some(anchor) = self.value_anchor(leaf, text)? {
+                        anchors.push(anchor);
+                    }
+                }
+                ir::Expr::Compare {
+                    lhs,
+                    op,
+                    rhs,
+                    coercion: Coercion::Temporal,
+                } if *op != CompOp::Ne => {
+                    let (leaf, bound, op) = match (lhs, rhs) {
+                        (Operand::Path(PathTarget::Data(leaf)), bound) => (leaf, bound, *op),
+                        (bound, Operand::Path(PathTarget::Data(leaf))) => {
+                            (leaf, bound, mirrored(*op))
+                        }
+                        _ => continue,
+                    };
+                    let text = match bound {
+                        Operand::Literal(TypedLit::String(text) | TypedLit::Temporal(text)) => {
+                            text.clone()
+                        }
+                        Operand::Param(name) => match self.params.get(name) {
+                            Some(ParamValue::Str(text)) => text.clone(),
+                            _ => continue,
+                        },
+                        _ => continue,
+                    };
+                    if let Some(anchor) = self.time_anchor(leaf, op, text)? {
                         anchors.push(anchor);
                     }
                 }
@@ -242,6 +291,80 @@ impl Builder<'_> {
             )
             .eq(Expr::val(text)),
         );
+        Ok(Some(ValueAnchor {
+            alias,
+            version,
+            key,
+            select,
+        }))
+    }
+
+    /// The anchor of one comparison of `leaf`, the `time` of an event or the
+    /// `origin` of a history, with the date/time `text`, or `None` for any
+    /// other leaf.
+    ///
+    /// The item is the versions some event or history row of which, under
+    /// the leaf step's own predicate, carries an `event_time` the comparison
+    /// keeps, which `idx_node_hot_event_time` serves (#6022). The node insert
+    /// stores in that column the value the comparison itself reads
+    /// (`crate::storage::node_write`), so the conjunct implies the item and
+    /// the rows answered are the same.
+    ///
+    /// # Errors
+    /// [`AqlError`] from the leaf step's predicate lowering, and
+    /// [`SqlError::UncoercibleTemporal`] for a bound that is no ISO 8601
+    /// date/time, as the comparison itself refuses it.
+    fn time_anchor(
+        &mut self,
+        leaf: &LeafPath,
+        op: CompOp,
+        text: String,
+    ) -> Result<Option<ValueAnchor>, AqlError> {
+        if leaf.fragment.iter().any(|step| step.predicate.is_some()) {
+            return Ok(None);
+        }
+        let names: Vec<&str> = leaf.fragment.iter().map(|s| s.name.as_str()).collect();
+        let (timed, literal) = match names.as_slice() {
+            ["time", "value"] => (EVENT_TYPES.as_slice(), EVENT_LITERALS),
+            ["origin", "value"] => (HISTORY_TYPES.as_slice(), HISTORY_LITERALS),
+            _ => return Ok(None),
+        };
+        let (types, predicate) = match leaf.anchor.last() {
+            Some(step) => (&step.node_types, step.predicate.as_ref()),
+            None => match self.ir.sources.get(leaf.source.0) {
+                Some(ir::Source::Rm(source)) => (&source.rm_type, None),
+                _ => return Ok(None),
+            },
+        };
+        // The column holds a time only on these rows, so a step that can
+        // bind any other type gets no anchor.
+        if types.is_empty() || !types.names().iter().all(|t| timed.contains(&t.as_str())) {
+            return Ok(None);
+        }
+        let Some(version) = self.version_alias_of(leaf.source.0) else {
+            return Ok(None);
+        };
+        let key = self.node_key_of(&version);
+        let alias = format!("va{}", self.next_ctr());
+        let node = format!("{alias}_n");
+        let mut select = Query::select();
+        select
+            .distinct()
+            .column((Alias::new(node.as_str()), Node::VoId))
+            .column((Alias::new(node.as_str()), Node::SysVersion))
+            .from_as(Node::Table, Alias::new(node.as_str()));
+        select.and_where(hot(&node, Node::Tier));
+        select.and_where(Expr::cust_with_exprs(
+            format!("$1 IN ({literal})"),
+            [col(&node, Node::RmType)],
+        ));
+        if let Some(predicate) = predicate {
+            for cond in self.node_constraint_conds(&node, predicate)? {
+                select.and_where(cond);
+            }
+        }
+        let bound = coerce_rhs(sea_query::Value::from(text), Coercion::Temporal)?;
+        select.and_where(col(&node, Node::EventTime).binary(binoper(op), bound));
         Ok(Some(ValueAnchor {
             alias,
             version,

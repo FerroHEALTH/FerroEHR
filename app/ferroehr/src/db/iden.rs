@@ -338,6 +338,9 @@ pub enum Node {
     /// `uid_derived` — `TRUE` when the root row's `data` leaves out the `uid`
     /// of its version.
     UidDerived,
+    /// `event_time` — the time of an event row or the origin of a history
+    /// row, as `ext.openehr_timestamp` reads it (#6022).
+    EventTime,
 }
 
 #[cfg(test)]

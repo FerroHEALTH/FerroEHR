@@ -105,6 +105,10 @@ pub const VALUE_SEARCH: &str = include_str!("../../migrations/templates/value_se
 /// readers reach (#5969).
 pub const NODE_LEAN: &str = include_str!("../../migrations/templates/node_lean.sql.in");
 
+/// The template that adds the time of an event row and the origin of a
+/// history row as an indexed column an AQL filter enters through (#6022).
+pub const NODE_EVENT_TIME: &str = include_str!("../../migrations/templates/node_event_time.sql.in");
+
 /// The marker opening a block rendered only for a domain that owns an `ehr`
 /// relation.
 const EHR_BEGIN: &str = "--@ehr-begin";
@@ -267,6 +271,16 @@ mod tests {
             NODE_LEAN,
         ),
         ("migrations/party/0054_node_lean.sql", PARTY, NODE_LEAN),
+        (
+            "migrations/clinical/0053_node_event_time.sql",
+            CLINICAL,
+            NODE_EVENT_TIME,
+        ),
+        (
+            "migrations/party/0055_node_event_time.sql",
+            PARTY,
+            NODE_EVENT_TIME,
+        ),
     ];
 
     /// Set to `1` to rewrite the committed files from the templates instead of
