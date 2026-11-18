@@ -139,6 +139,7 @@ pub mod party_heads;
 pub mod party_reverse;
 pub mod policy_register;
 pub mod promoted;
+pub mod render;
 pub mod row;
 pub mod slim;
 pub mod statistics;

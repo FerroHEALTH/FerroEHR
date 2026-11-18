@@ -215,11 +215,19 @@ impl Comparison {
             },
             other => other,
         };
+        self.satisfied_by_scalar(leaf.as_str(), leaf.as_f64())
+    }
+
+    /// Whether a resolved scalar leaf, read as a string and as a number,
+    /// satisfies the comparison (a string literal compares the string, a
+    /// numeric literal the number).
+    #[must_use]
+    pub fn satisfied_by_scalar(&self, as_str: Option<&str>, as_f64: Option<f64>) -> bool {
         match &self.value {
-            CmpLiteral::Str(want) => leaf
-                .as_str()
-                .is_some_and(|have| self.op.holds(have.cmp(want.as_str()))),
-            CmpLiteral::Num(raw) => match (leaf.as_f64(), raw.parse::<f64>()) {
+            CmpLiteral::Str(want) => {
+                as_str.is_some_and(|have| self.op.holds(have.cmp(want.as_str())))
+            }
+            CmpLiteral::Num(raw) => match (as_f64, raw.parse::<f64>()) {
                 (Some(have), Ok(want)) => have
                     .partial_cmp(&want)
                     .is_some_and(|ord| self.op.holds(ord)),

@@ -24,6 +24,7 @@ use serde_json::Value;
 
 use crate::error::ServiceError;
 use crate::service::FerroEhrService;
+use crate::versioning::body::Body;
 use crate::versioning::change::Change;
 
 impl FerroEhrService {
@@ -66,11 +67,48 @@ impl FerroEhrService {
     /// The [`Self::externalize`] failure.
     pub(crate) async fn externalize_change(&self, change: &mut Change) -> Result<(), ServiceError> {
         match change {
-            Change::Create { canonical, .. } | Change::Modify { canonical, .. } => {
-                self.externalize(canonical).await
+            Change::Create { body, .. } | Change::Modify { body, .. } => {
+                self.externalize_body(body).await
             }
             Change::Delete { .. } => Ok(()),
         }
+    }
+
+    /// [`Self::externalize`] over a commit body. A typed COMPOSITION is
+    /// offloaded through its view and re-read only when the view held a value
+    /// to externalize.
+    ///
+    /// # Errors
+    /// The [`Self::externalize`] failure, or the re-read's.
+    pub(crate) async fn externalize_body(&self, body: &mut Body) -> Result<(), ServiceError> {
+        match body {
+            Body::Canonical(canonical) => self.externalize(canonical).await,
+            Body::Composition { view, .. } => {
+                if !self.holds_inline_media(view) {
+                    return Ok(());
+                }
+                self.externalize(view).await?;
+                body.retype_from_view()
+            }
+        }
+    }
+
+    /// Whether `body` holds a value the offload would externalize.
+    #[cfg(feature = "multimedia")]
+    fn holds_inline_media(&self, body: &Value) -> bool {
+        self.multimedia
+            .as_ref()
+            .is_some_and(|engine| engine.ensure_externalized(body).is_err())
+    }
+
+    /// The slim twin: nothing is ever externalized.
+    #[cfg(not(feature = "multimedia"))]
+    #[expect(
+        clippy::unused_self,
+        reason = "signature parity with the multimedia twin, which reads the engine"
+    )]
+    fn holds_inline_media(&self, _body: &Value) -> bool {
+        false
     }
 }
 

@@ -32,6 +32,7 @@ use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
+use crate::versioning::body::Body;
 use crate::versioning::lifecycle::{
     reject_deleted_with_data, resolve_lifecycle, validate_transition,
 };
@@ -197,7 +198,7 @@ pub(crate) enum Change {
         /// The id allocated before the commit; `None` mints one at the commit.
         allocated: Option<AllocatedVoId>,
         kind: Kind,
-        canonical: Value,
+        body: Body,
         template_id: Option<String>,
         signature: Option<String>,
         lifecycle_state: Option<String>,
@@ -211,7 +212,7 @@ pub(crate) enum Change {
     Modify {
         vo_id: VoId,
         kind: Kind,
-        canonical: Value,
+        body: Body,
         expected: Option<TreeId>,
         template_id: Option<String>,
         signature: Option<String>,
@@ -509,8 +510,8 @@ struct ResolvedWrite {
     /// §Digital Signature); `None` on the direct endpoints.
     client_signature: Option<String>,
     /// The accepted, uid-stamped body, decomposed into node rows only by the
-    /// write (#5759); `Value::Null` for a logical delete (data Void).
-    body: Value,
+    /// write (#5759); `None` for a logical delete (data Void).
+    body: Option<Body>,
     /// The canonical body BYTES, serialized from the accepted, uid-stamped
     /// value BEFORE decomposition — the stored `version.body` text a point
     /// read serves verbatim. `None` for a logical delete.
@@ -569,9 +570,9 @@ struct ResolvedWrite {
 /// commit ([`reject_deleted_with_data`]); [`ServiceError::Internal`] on a
 /// multimedia offload failure; plus the storage/signing errors of
 /// [`commit_resolved`].
-/// Stamps the version's own `OBJECT_VERSION_ID` into the canonical's root `uid`
-/// before decompose and sign, so the stored, signed and served bytes all carry
-/// it (RM common `master03-archetyped_package.adoc` §Unique Node Identification;
+/// The version's own `OBJECT_VERSION_ID`, parsed for the commit to stamp into
+/// the body's root `uid` before decompose and sign, so the stored, signed and
+/// served bytes all carry it (RM common `master03-archetyped_package.adoc` §Unique Node Identification;
 /// ITS-REST `Resources.md` §Identifier types). The full three-part form is BASE
 /// `architecture_overview` master09 §Levels of Identification, "populated with a
 /// copy of the `OBJECT_VERSION_ID` from the containing `VERSION<X>` object".
@@ -588,45 +589,47 @@ struct ResolvedWrite {
 /// `OBJECT_VERSION_ID` — the stamped identity goes through the BASE
 /// construction door, so a malformed one is refused before it is written,
 /// signed and served.
-pub(crate) fn stamp_version_uid(
-    canonical: &mut Value,
-    version_uid: &str,
-) -> Result<(), VersionIdError> {
-    if let Value::Object(map) = canonical {
-        let uid =
-            ObjectVersionId::new(version_uid).map_err(|source| VersionIdError::Malformed {
-                raw: version_uid.to_owned(),
-                source,
-            })?;
-        let value = openehr_its::json::to_canonical_value(&uid);
-        if map.contains_key("uid") {
-            // Replacing keeps the key's existing position.
-            map.insert("uid".to_owned(), value);
-        } else {
-            // The RM BMM declares LOCATABLE as (name, archetype_node_id, uid,
-            // …), and the stored body is served byte-verbatim, so a fresh uid
-            // must land after `archetype_node_id` rather than at the map's end.
-            let anchor = ["archetype_node_id", "name", "_type"]
-                .iter()
-                .find_map(|k| map.keys().position(|key| key == k));
-            let at = anchor.map_or(0, |i| i + 1);
-            let original_len = map.len();
-            let mut rebuilt = serde_json::Map::with_capacity(original_len + 1);
-            for (i, (k, v)) in std::mem::take(map).into_iter().enumerate() {
-                if i == at {
-                    rebuilt.insert("uid".to_owned(), value.clone());
-                }
-                rebuilt.insert(k, v);
-            }
-            if rebuilt.len() == original_len {
-                // `at` sat past the last entry (the anchor was last, or the
-                // map was empty) — the uid closes the map instead.
-                rebuilt.insert("uid".to_owned(), value);
-            }
-            *map = rebuilt;
-        }
+pub(crate) fn version_uid(version_uid: &str) -> Result<ObjectVersionId, VersionIdError> {
+    ObjectVersionId::new(version_uid).map_err(|source| VersionIdError::Malformed {
+        raw: version_uid.to_owned(),
+        source,
+    })
+}
+
+/// Stamps `uid` into the root `uid` of the canonical value `canonical`, at
+/// the position the codec writes it, so the value serializes to the bytes the
+/// typed value with the same `uid` does.
+pub(crate) fn stamp_uid_value(canonical: &mut Value, uid: &ObjectVersionId) {
+    let Value::Object(map) = canonical else {
+        return;
+    };
+    let value = openehr_its::json::to_canonical_value(uid);
+    if map.contains_key("uid") {
+        // Replacing keeps the key's existing position.
+        map.insert("uid".to_owned(), value);
+        return;
     }
-    Ok(())
+    // The RM BMM declares LOCATABLE as (name, archetype_node_id, uid, …), and
+    // the stored body is served byte-verbatim, so a fresh uid must land after
+    // `archetype_node_id` rather than at the map's end.
+    let anchor = ["archetype_node_id", "name", "_type"]
+        .iter()
+        .find_map(|k| map.keys().position(|key| key == k));
+    let at = anchor.map_or(0, |i| i + 1);
+    let original_len = map.len();
+    let mut rebuilt = serde_json::Map::with_capacity(original_len + 1);
+    for (i, (k, v)) in std::mem::take(map).into_iter().enumerate() {
+        if i == at {
+            rebuilt.insert("uid".to_owned(), value.clone());
+        }
+        rebuilt.insert(k, v);
+    }
+    if rebuilt.len() == original_len {
+        // `at` sat past the last entry (the anchor was last, or the map was
+        // empty): the uid closes the map instead.
+        rebuilt.insert("uid".to_owned(), value);
+    }
+    *map = rebuilt;
 }
 
 /// Everything that is fixed for the enclosing commit act, as one value:
@@ -684,7 +687,7 @@ async fn apply_change(
         Change::Create {
             allocated,
             kind,
-            canonical,
+            body,
             template_id,
             signature,
             lifecycle_state,
@@ -694,7 +697,7 @@ async fn apply_change(
             let content = Content {
                 allocated,
                 kind,
-                canonical,
+                body,
                 lifecycle_state,
                 template_id,
                 signature,
@@ -706,7 +709,7 @@ async fn apply_change(
         Change::Modify {
             vo_id,
             kind,
-            canonical,
+            body,
             expected,
             template_id,
             signature,
@@ -717,7 +720,7 @@ async fn apply_change(
             let content = Content {
                 allocated: None,
                 kind,
-                canonical,
+                body,
                 lifecycle_state,
                 template_id,
                 signature,
@@ -815,7 +818,7 @@ async fn commit_resolved(
 
     let (signature, signature_client_supplied) =
         body_and_signature(ctx, audit, contribution_id, &r, &at_committal_attestations)?;
-    let archetype = root_archetype(&r.body);
+    let archetype = root_archetype(r.body.as_ref());
     // A version that shares its predecessor's rows writes none of its own.
     let (rows, fragments, blob_uris) = nodes(r.body, r.shared_from.is_some())?;
 
@@ -917,7 +920,7 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
         kind: r.kind,
         change_type: audit.change_type.clone(),
         template_id: r.template_id.clone(),
-        root_archetype: root_archetype(&r.body),
+        root_archetype: root_archetype(r.body.as_ref()),
         time_committed: preceding.committed_at,
         skipped: true,
         content_digest: r.content_digest,

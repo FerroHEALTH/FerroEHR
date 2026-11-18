@@ -9,6 +9,7 @@ use serde_json::Value;
 use crate::access_eval::scope::{Item, Object};
 use crate::error::ServiceError;
 use crate::storage::row::NodeRow;
+use crate::versioning::body::Body;
 use crate::versioning::restriction;
 
 /// Refuse, before anything is stored, the content `resolved` would store
@@ -24,7 +25,7 @@ pub(super) fn admit_written(
     let Some(gate) = gate.filter(|_| resolved.canonical_text.is_some()) else {
         return Ok(());
     };
-    let archetype = root_archetype(&resolved.body);
+    let archetype = root_archetype(resolved.body.as_ref());
     gate.admit_written(&Item::Object(Object {
         vo_id: resolved.vo_id.0,
         template: resolved.template_id.as_deref(),
@@ -36,8 +37,10 @@ pub(super) fn admit_written(
 
 /// The root's `archetype_node_id` off the body, for the outbox envelope, the
 /// audit record and the access evaluator; `None` for a logical delete.
-pub(super) fn root_archetype(body: &Value) -> Option<String> {
-    body.get("archetype_node_id")
+pub(super) fn root_archetype(body: Option<&Body>) -> Option<String> {
+    body?
+        .view()
+        .get("archetype_node_id")
         .and_then(Value::as_str)
         .map(str::to_owned)
 }
@@ -53,10 +56,10 @@ pub(super) type Nodes = (Vec<NodeRow>, Vec<Value>, Vec<String>);
 ///
 /// # Errors
 /// The decomposition's refusal of a body that is no single tree.
-pub(super) fn nodes(body: Value, shares: bool) -> Result<Nodes, ServiceError> {
-    if shares || body.is_null() {
+pub(super) fn nodes(body: Option<Body>, shares: bool) -> Result<Nodes, ServiceError> {
+    let Some(body) = body.filter(|_| !shares).map(Body::into_view) else {
         return Ok((Vec::new(), Vec::new(), Vec::new()));
-    }
+    };
     let uris = crate::storage::blob_ref::uris_of(&body);
     crate::telemetry::conversion::record("value_to_nodes");
     // NOTE: each fragment is bound as a `jsonb` parameter, which serializes it to text.
