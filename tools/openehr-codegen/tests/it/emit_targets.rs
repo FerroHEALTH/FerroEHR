@@ -91,6 +91,7 @@ const VALIDATE_FILES: &[&str] = &[
     "openehr-rm/src/v1_1/validate/generated.rs",
     "openehr-rm/src/v1_1/validate/tree_generated.rs",
     "openehr-rm/src/v1_2/access/generated.rs",
+    "openehr-rm/src/v1_2/released/generated.rs",
     "openehr-rm/src/v1_2/validate/generated.rs",
     "openehr-rm/src/v1_2/validate/tree_generated.rs",
 ];
@@ -136,6 +137,7 @@ fn emit_emits_every_composed_crate_including_the_template_stamps() {
     for path in [
         "openehr-rm/src/v1_2/model/mod.rs",
         "openehr-rm/src/v1_2/access/generated.rs",
+        "openehr-rm/src/v1_2/released/generated.rs",
         "openehr-rm/src/v1_2/validate/generated.rs",
     ] {
         assert!(
