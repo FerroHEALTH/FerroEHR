@@ -117,10 +117,11 @@ pub fn blob_uris(body: &Rendered) -> Vec<String> {
     found.into_iter().collect()
 }
 
-/// The two slices of `text` around the member at `span`
-/// ([`index::Rendered::member_span`]), with the comma that joined it to a
-/// neighbour taken out as well, so their concatenation is the object without
-/// that member.
+/// The two slices of `text` around the member at `span`, with the comma that
+/// joined it to a neighbour taken out as well, so their concatenation is the
+/// object without that member.
+///
+/// The span is the member's own ([`index::Rendered::member_span`]).
 #[must_use]
 pub fn without_member(text: &[u8], span: Range<usize>) -> (&[u8], &[u8]) {
     let (start, end) = if span.start > 1 && text.get(span.start - 1) == Some(&b',') {
