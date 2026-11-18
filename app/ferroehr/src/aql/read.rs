@@ -23,6 +23,7 @@ use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVer
 
 use super::cell::{self, Cell};
 use super::error::{AqlError, ExecError};
+use super::fragment::FragmentPath;
 use super::fragment::write_jsonb;
 use super::sql::{CellKind, ColumnRender, ColumnSpec, FragmentCell, Layout};
 
@@ -33,17 +34,6 @@ pub(super) struct Plan {
     groups: Vec<usize>,
     /// Per column, the position of its debug-build reference cell.
     references: Vec<Option<usize>>,
-}
-
-/// A node group's fragment in one row, rebuilt on first use.
-#[derive(Clone)]
-enum Rebuilt {
-    /// Not read yet.
-    Pending,
-    /// The row binds no node.
-    Absent,
-    /// The rebuilt fragment.
-    Fragment(Value),
 }
 
 /// The SQL type of a [`ColumnRender::Typed`] column.
@@ -113,7 +103,7 @@ impl Plan {
     /// # Errors
     /// [`ExecError`] when a value cannot be read back.
     pub(super) fn cells(&self, row: &PgRow, layout: &Layout) -> Result<Vec<Cell>, AqlError> {
-        let mut fragments: Vec<Rebuilt> = vec![Rebuilt::Pending; self.groups.len()];
+        let mut fragments: Vec<GroupRow> = vec![GroupRow::default(); self.groups.len()];
         let mut cells = Vec::with_capacity(layout.columns.len());
         for (spec, (at, typed)) in layout.columns.iter().zip(&self.columns) {
             let cell = match &spec.kind {
@@ -165,7 +155,7 @@ impl Plan {
         spec: &ColumnSpec,
         at: &[usize],
         fc: &FragmentCell,
-        fragments: &mut [Rebuilt],
+        fragments: &mut [GroupRow],
     ) -> Result<Cell, AqlError> {
         if fc.guarded {
             let held: Option<bool> = row.try_get(first_col(spec, at)?).map_err(ExecError::from)?;
@@ -173,51 +163,227 @@ impl Plan {
                 return Ok(Cell::null());
             }
         }
+        let start = *self.groups.get(fc.group).ok_or_else(|| missing(spec, 0))?;
+        let rm_type: Option<&str> = row.try_get(start + 1).map_err(ExecError::from)?;
+        let Some(rm_type) = rm_type else {
+            // The row binds no node (an outer-joined absent step).
+            return Ok(Cell::null());
+        };
         let slot = fragments
             .get_mut(fc.group)
             .ok_or_else(|| missing(spec, 0))?;
-        if matches!(slot, Rebuilt::Pending) {
-            let start = *self.groups.get(fc.group).ok_or_else(|| missing(spec, 0))?;
-            *slot = fragment(row, start)?.map_or(Rebuilt::Absent, Rebuilt::Fragment);
-        }
-        let Rebuilt::Fragment(fragment) = &*slot else {
-            return Ok(Cell::null());
-        };
         let Some(path) = &fc.path else {
-            return Ok(Cell::of_jsonb(fragment));
+            return Ok(Cell::of_jsonb(slot.full(row, start)?));
         };
-        if !fc.list {
-            return Ok(path.first(fragment).map_or_else(Cell::null, Cell::of_jsonb));
-        }
-        let items = path.all(fragment);
-        if items.is_empty() {
-            return Ok(Cell::null());
-        }
-        let mut out = String::from("[");
-        for (i, item) in items.into_iter().enumerate() {
-            if i > 0 {
-                out.push(',');
+        let reached = match path.first_member() {
+            Some(first) => slot.member(row, start, rm_type, first, path)?,
+            None => Member::Unread,
+        };
+        let items = match reached {
+            Member::Absent => Vec::new(),
+            Member::Written(cell) => return Ok(cell),
+            Member::Borrowed(value) if !fc.list => {
+                return Ok(path
+                    .first_below(value)
+                    .map_or_else(Cell::null, Cell::of_jsonb));
             }
-            write_jsonb(item, &mut out);
-        }
-        out.push(']');
-        Ok(Cell::of_text(out))
+            Member::Owned(value) if !fc.list => {
+                return Ok(path
+                    .first_below(&value)
+                    .map_or_else(Cell::null, Cell::of_jsonb));
+            }
+            Member::Borrowed(value) => return Ok(list_cell(&path.all_below(value))),
+            Member::Owned(value) => return Ok(list_cell(&path.all_below(&value))),
+            Member::Unread => {
+                let fragment = slot.full(row, start)?;
+                if !fc.list {
+                    return Ok(path.first(fragment).map_or_else(Cell::null, Cell::of_jsonb));
+                }
+                path.all(fragment)
+            }
+        };
+        Ok(list_cell(&items))
     }
 }
 
-/// The rebuilt fragment of the node group from column `start`, `None` when
-/// the row binds no node (an outer-joined absent step).
+/// The array cell of every match, `null` for none.
+fn list_cell(items: &[&Value]) -> Cell {
+    if items.is_empty() {
+        return Cell::null();
+    }
+    let mut out = String::from("[");
+    for (i, item) in items.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        write_jsonb(item, &mut out);
+    }
+    out.push(']');
+    Cell::of_text(out)
+}
+
+/// The members a node row's columns or markers put back into its fragment
+/// (`crate::storage::slim::rebuild`), other than `_type`, `value`, `origin`
+/// and `time`, which [`GroupRow::member`] reads directly.
+const RESTORED: [&str; 7] = [
+    "name",
+    "archetype_node_id",
+    "archetype_details",
+    "language",
+    "encoding",
+    "subject",
+    "uid",
+];
+
+/// One member of a node row's fragment, read without rebuilding the rest.
+enum Member<'s> {
+    /// The fragment has no such member.
+    Absent,
+    /// The member's value as stored in `data`.
+    Borrowed(&'s Value),
+    /// The member's value as the columns put it back.
+    Owned(Value),
+    /// The cell itself, written from the columns.
+    Written(Cell),
+    /// Only the whole rebuilt fragment answers.
+    Unread,
+}
+
+/// A node group's stored values in one row, each read on first use.
+#[derive(Clone, Default)]
+pub(super) struct GroupRow {
+    /// The stored `data`, once read.
+    data: Option<Value>,
+    data_read: bool,
+    /// The whole rebuilt fragment, once rebuilt.
+    full: Option<Value>,
+}
+
+impl GroupRow {
+    /// The member `name` of the row's fragment as the rebuild puts it back,
+    /// read off the columns and `data` alone where they hold it whole, the
+    /// reads the SQL projection specialised (`aql::sql::expr::fragment_source`):
+    /// `_type` from `rm_type`, `value` from the typed value columns, a
+    /// compact `origin` or `time` from its marker, and a member no column
+    /// restores from `data`.
+    ///
+    /// # Errors
+    /// [`ExecError`] when a stored column cannot be read back.
+    fn member(
+        &mut self,
+        row: &PgRow,
+        start: usize,
+        rm_type: &str,
+        name: &str,
+        path: &FragmentPath,
+    ) -> Result<Member<'_>, AqlError> {
+        match name {
+            "_type" => return Ok(Member::Owned(Value::from(rm_type))),
+            "value" => {
+                let value_type: Option<&str> = row.try_get(start + 6).map_err(ExecError::from)?;
+                if let Some(value_type) = value_type {
+                    return typed_member(row, start, value_type, path);
+                }
+            }
+            "origin" | "time" => {
+                let column = if name == "origin" { 14 } else { 15 };
+                let marked: Option<bool> = row.try_get(start + column).map_err(ExecError::from)?;
+                if marked == Some(true) {
+                    let stored = self.data(row, start)?.and_then(|data| data.get(name));
+                    // NOTE: aql::sql::compact, a marked member's `value` is the stored string.
+                    if path.is_exactly(&[name, "value"]) {
+                        return Ok(Member::Written(
+                            stored.map_or_else(Cell::null, Cell::of_jsonb),
+                        ));
+                    }
+                    return Ok(Member::Owned(crate::storage::slim::object([
+                        ("_type", Value::from("DV_DATE_TIME")),
+                        ("value", stored.cloned().unwrap_or(Value::Null)),
+                    ])));
+                }
+            }
+            _ if RESTORED.contains(&name) => return Ok(Member::Unread),
+            _ => {}
+        }
+        Ok(
+            match self.data(row, start)?.and_then(|data| data.get(name)) {
+                Some(value) => Member::Borrowed(value),
+                None => Member::Absent,
+            },
+        )
+    }
+
+    /// The stored `data`, read once.
+    ///
+    /// # Errors
+    /// [`ExecError`] when the column cannot be read back.
+    fn data(&mut self, row: &PgRow, start: usize) -> Result<Option<&Value>, AqlError> {
+        if !self.data_read {
+            self.data = row.try_get(start).map_err(ExecError::from)?;
+            self.data_read = true;
+        }
+        Ok(self.data.as_ref())
+    }
+
+    /// The whole rebuilt fragment, rebuilt once.
+    ///
+    /// # Errors
+    /// [`ExecError`] when a stored column cannot be read back.
+    fn full(&mut self, row: &PgRow, start: usize) -> Result<&Value, AqlError> {
+        if self.full.is_none() {
+            self.full =
+                Some(crate::storage::node_repo::row_fragment(row, start).map_err(ExecError::from)?);
+        }
+        self.full.as_ref().ok_or_else(|| {
+            ExecError::from(crate::storage::error::StorageError::InvalidRows(
+                "a node row's fragment did not rebuild".into(),
+            ))
+            .into()
+        })
+    }
+}
+
+/// The `value` member of an `ELEMENT` row from its typed value columns: the
+/// cell itself, written straight from the columns, when the path is exactly
+/// `value`, and the rebuilt value (`crate::storage::slim::rebuild_value`)
+/// for a path below it.
 ///
 /// # Errors
-/// [`ExecError`] when a stored column cannot be read back.
-fn fragment(row: &PgRow, start: usize) -> Result<Option<Value>, AqlError> {
-    let rm_type: Option<String> = row.try_get(start + 1).map_err(ExecError::from)?;
-    if rm_type.is_none() {
-        return Ok(None);
+/// [`ExecError`] when a column cannot be read back or a typed number is no
+/// JSON number.
+fn typed_member<'s>(
+    row: &PgRow,
+    start: usize,
+    value_type: &str,
+    path: &FragmentPath,
+) -> Result<Member<'s>, AqlError> {
+    let get = |i: usize| -> Result<Option<&str>, AqlError> {
+        Ok(row.try_get(start + i).map_err(ExecError::from)?)
+    };
+    let (num, text, code, terminology) = (get(7)?, get(8)?, get(9)?, get(10)?);
+    let no_number = || {
+        AqlError::from(ExecError::from(
+            crate::storage::error::StorageError::InvalidRows(
+                "a node row holds a typed number that is no JSON number".into(),
+            ),
+        ))
+    };
+    if path.is_exactly(&["value"]) {
+        let mut out = String::with_capacity(96);
+        cell::write_typed_value(&mut out, value_type, num, text, code, terminology)
+            .ok_or_else(no_number)?;
+        return Ok(Member::Written(Cell::of_text(out)));
     }
-    Ok(Some(
-        crate::storage::node_repo::row_fragment(row, start).map_err(ExecError::from)?,
-    ))
+    let typed = crate::storage::slim::TypedValue {
+        value_type: value_type.to_owned(),
+        num: num.map(str::to_owned),
+        text: text.map(str::to_owned),
+        code: code.map(str::to_owned),
+        terminology: terminology.map(str::to_owned),
+    };
+    crate::storage::slim::rebuild_value(&typed)
+        .map(Member::Owned)
+        .ok_or_else(no_number)
 }
 
 /// The cell of a version's `OBJECT_VERSION_ID` from its uid text.

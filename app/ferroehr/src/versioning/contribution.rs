@@ -718,14 +718,19 @@ pub(crate) fn needs_content_write_permission(changes: &[(AuditInput, Change)]) -
     let reactivates = changes.iter().any(|(_, c)| match c {
         Change::Create {
             kind: Kind::EhrStatus,
-            canonical,
+            body,
             ..
         }
         | Change::Modify {
             kind: Kind::EhrStatus,
-            canonical,
+            body,
             ..
-        } => canonical.pointer("/is_modifiable").and_then(Value::as_bool) == Some(true),
+        } => {
+            body.view()
+                .pointer("/is_modifiable")
+                .and_then(Value::as_bool)
+                == Some(true)
+        }
         _ => false,
     });
     carries_content && !reactivates

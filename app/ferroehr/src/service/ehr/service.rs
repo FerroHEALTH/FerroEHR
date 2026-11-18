@@ -146,7 +146,7 @@ impl FerroEhrService {
                     Change::Create {
                         allocated: None,
                         kind: Kind::EhrStatus,
-                        canonical: stored_status,
+                        body: stored_status.into(),
                         template_id: None,
                         signature: None,
                         // A client-supplied `openehr-version:

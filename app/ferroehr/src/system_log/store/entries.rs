@@ -87,7 +87,8 @@ impl AuditStore {
         reserved_by: Option<uuid::Uuid>,
     ) -> Result<(Vec<uuid::Uuid>, LearnedSets), AuditError> {
         let (uids, intake, tokens) = self.entry_rows(writing, records).await?;
-        crate::access_log::intake::take_in(conn, &intake, &tokens, reserved_by).await?;
+        crate::access_log::intake::take_in(conn, &intake, &tokens, reserved_by, &BTreeSet::new())
+            .await?;
         Ok((uids, LearnedSets::default()))
     }
 

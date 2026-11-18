@@ -33,6 +33,7 @@ use crate::service::write::{Mode, Resolved};
 use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::Body;
 use crate::versioning::change::precondition::{ensure_preceding, lock_current, tip_uid};
 use crate::versioning::change::{Change, Committed, Write};
 use crate::versioning::object_version_id::{TreeId, VersionIdError, components, parse_tree_id};
@@ -67,24 +68,23 @@ impl FerroEhrService {
             envelope,
             incomplete,
         } = self.resolve_write(&request, change_type::CREATION, "COMPOSITION creation")?;
-        let mut composition = openehr_its::json::to_canonical_value(&request.data);
-        drop(request);
+        let mut composition = Body::composition(request.data);
         // Validation may consult the template store and the routed terminology
         // servers, so it runs before a connection is held; its result surfaces
         // after the EHR gates, in pre-check order. 553|incomplete| relaxes its
         // strictness (master06 §Version Lifecycle).
         let validated = self
-            .validate_for_commit(Kind::Composition, &composition, incomplete)
+            .validate_body_for_commit(Kind::Composition, &composition, incomplete)
             .await;
         // A valid body's large media go to the blob store before a connection is held.
         if validated.is_ok() {
-            self.externalize(&mut composition).await?;
+            self.externalize_body(&mut composition).await?;
         }
         // The committed template identity is promoted to `version.template_id`
         // — the SMART template resolver (`template_of_version`) and the
         // template-delete guard both read that column, so the direct route
         // stamps it exactly like the CONTRIBUTION route.
-        let template_id = composition_template_id(&composition).map(str::to_owned);
+        let template_id = composition_template_id(composition.view()).map(str::to_owned);
         // With no attestations and no event outbox the commit is ONE folded,
         // self-atomic statement, so no BEGIN/COMMIT is needed.
         let mode = if envelope.attestations.is_empty() && !self.signing_ctx().outbox_enabled {
@@ -101,7 +101,7 @@ impl FerroEhrService {
             let (commit_now, restriction) =
                 self.ensure_ehr_content_writable(&mut *conn, ehr_id).await?;
             validated?;
-            self.reject_duplicate_persistent(&mut *conn, ehr_id, &composition)
+            self.reject_duplicate_persistent(&mut *conn, ehr_id, composition.view())
                 .await?;
             Ok(Write::new(
                 Some(ehr_id),
@@ -397,20 +397,19 @@ impl FerroEhrService {
         // is held across it; both results surface below in pre-check order.
         let resolved =
             self.resolve_write(&request, change_type::MODIFICATION, "COMPOSITION update");
-        let mut composition = openehr_its::json::to_canonical_value(&request.data);
-        drop(request);
+        let mut composition = Body::composition(request.data);
         let validated = match &resolved {
             Ok(parts) => Some(
-                self.validate_for_commit(Kind::Composition, &composition, parts.incomplete)
+                self.validate_body_for_commit(Kind::Composition, &composition, parts.incomplete)
                     .await,
             ),
             Err(_) => None,
         };
         // A valid body's large media go to the blob store before a connection is held.
         if matches!(validated, Some(Ok(()))) {
-            self.externalize(&mut composition).await?;
+            self.externalize_body(&mut composition).await?;
         }
-        let template_id = composition_template_id(&composition).map(str::to_owned);
+        let template_id = composition_template_id(composition.view()).map(str::to_owned);
         self.commit_one(&self.pool, Mode::Transaction, async move |tx| {
             // Serialize concurrent writers of the same object, then read the
             // placement + every pre-check column in ONE statement (thaw riding).
@@ -469,7 +468,7 @@ impl FerroEhrService {
             // `versioned_composition.adoc`), checked off the same merged read.
             crate::validation::versioned::check_versioned_composition_first_root(
                 pre.first_root,
-                &composition,
+                composition.view(),
             )?;
             Ok(Write::new(
                 Some(ehr_id),

@@ -138,7 +138,14 @@ async fn flushed(pool: &PgPool, to: &str) {
 }
 
 /// The row records between `from` and `to` that touch a relation of the
-/// test's database, by relation: name, record bytes and records.
+/// test's database outside the system catalogs, by relation: name, record
+/// bytes and records.
+///
+/// A record counts only when it names a relation the database's own catalog
+/// holds, a table, index or TOAST table of a schema of the server's: the
+/// statistics and catalog rows autovacuum and autoanalyze write when a
+/// parallel run's timing puts them in the window are left out, as are the
+/// records of the shared catalogs and of every other database.
 ///
 /// Only the records a statement writes for each row count: a heap insert,
 /// update, delete or lock, a B-tree leaf insert and a GIN pending-list insert.
@@ -148,7 +155,7 @@ async fn flushed(pool: &PgPool, to: &str) {
 /// move between runs, so it is left out.
 async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u64)> {
     let rows: Vec<(String, i64, i64)> = sqlx::query_as(
-        "SELECT /* statement_budget_own */ coalesce(c.relname, b.relfilenode::text), \
+        "SELECT /* statement_budget_own */ c.relname, \
                 sum(b.record_length)::bigint, count(*) \
            FROM (SELECT DISTINCT ON (start_lsn, relfilenode) start_lsn, relfilenode, record_length \
                    FROM pg_get_wal_block_info($1::pg_lsn, $2::pg_lsn) \
@@ -159,7 +166,10 @@ async fn by_relation(pool: &PgPool, from: &str, to: &str) -> Vec<(String, u64, u
                       OR (resource_manager = 'Heap2' AND record_type LIKE 'MULTI_INSERT%') \
                       OR (resource_manager = 'Btree' AND record_type = 'INSERT_LEAF') \
                       OR (resource_manager = 'Gin' AND record_type = 'UPDATE_META_PAGE'))) b \
-           LEFT JOIN pg_class c ON c.relfilenode = b.relfilenode \
+           JOIN pg_class c ON pg_relation_filenode(c.oid) = b.relfilenode \
+           LEFT JOIN pg_class owner ON owner.reltoastrelid = c.oid \
+          WHERE coalesce(owner.relnamespace, c.relnamespace) NOT IN \
+                ('pg_catalog'::regnamespace, 'information_schema'::regnamespace) \
           GROUP BY 1 ORDER BY 2 DESC, 1",
     )
     .bind(from)

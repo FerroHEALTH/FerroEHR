@@ -225,9 +225,15 @@ async fn the_sweep_skips_a_shared_part_an_intake_write_names() {
     let mut second = entry(2, "2025-01-01");
     let intake =
         ferroehr::access_log::intake::IntakeEntry::of(&mut second, None).expect("the intake form");
-    ferroehr::access_log::intake::take_in(&mut tx, &[intake], &[Vec::new()], None)
-        .await
-        .expect("the intake write");
+    ferroehr::access_log::intake::take_in(
+        &mut tx,
+        &[intake],
+        &[Vec::new()],
+        None,
+        &std::collections::BTreeSet::new(),
+    )
+    .await
+    .expect("the intake write");
     assert_eq!(
         store.collect_shared(today(), 10).await.expect("a pass"),
         0,
@@ -249,5 +255,127 @@ async fn the_sweep_skips_a_shared_part_an_intake_write_names() {
             Some(AccessLogRecord::AccessLogEntry(_))
         ),
         "the entry written beside the sweep reads back with its shared part"
+    );
+}
+
+/// The entries whose shared part the store does not hold.
+async fn dangling(pool: &PgPool) -> i64 {
+    sqlx::query_scalar(
+        "SELECT count(*) FROM audit.access_log_entry e WHERE e.shared IS NOT NULL \
+         AND NOT EXISTS (SELECT 1 FROM audit.access_log_shared s WHERE s.digest = e.shared)",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("the dangling entries")
+}
+
+/// A gathered writer that has learned the example entries' shared part kept
+/// until 2099, the part then made an orphan past its end (its one entry
+/// replaced by a tombstone, its end moved back), which the gathered writer
+/// still knows stored: the worst state a write can meet a part it skips in.
+async fn known_orphan(
+    pool: &PgPool,
+) -> (AccessLogStore, ferroehr::access_log::intake::GroupWriter) {
+    let store = AccessLogStore::new(pool.clone());
+    let writer = ferroehr::access_log::intake::GroupWriter::spawn(pool);
+    let mut first = entry(1, "2099-01-01");
+    let intake = ferroehr::access_log::intake::IntakeEntry::of(&mut first, None).expect("intake");
+    writer
+        .write(vec![intake], vec![Vec::new()])
+        .await
+        .expect("the first entry is written");
+    store
+        .settle(ferroehr::access_log::chainer::Owed::default())
+        .await
+        .expect("the intake chains");
+    store
+        .tombstone(first.uid.value(), at("2026-01-01T00:00:00Z"), expiry())
+        .await
+        .expect("the tombstone")
+        .expect("the entry");
+    age_parts(pool, "2025-01-02").await;
+    (store, writer)
+}
+
+/// Writes the example entry `n`, kept until 2099, through `writer`.
+async fn write_known(writer: &ferroehr::access_log::intake::GroupWriter, n: u32) {
+    let mut next = entry(n, "2099-01-01");
+    let intake = ferroehr::access_log::intake::IntakeEntry::of(&mut next, None).expect("intake");
+    writer
+        .write(vec![intake], vec![Vec::new()])
+        .await
+        .expect("an entry naming a part the writer knows is written");
+}
+
+/// A shared part the gathered writer knows stored but the sweep removed is
+/// written again with the next entry naming it, which never names a part the
+/// store does not hold (#6005).
+#[tokio::test]
+async fn a_known_part_the_sweep_removed_is_written_again() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let (store, writer) = known_orphan(&pool).await;
+    assert_eq!(store.collect_shared(today(), 10).await.expect("a pass"), 1);
+    assert_eq!(parts(&pool).await, 0, "the sweep removed the orphan");
+    write_known(&writer, 2).await;
+    assert_eq!(parts(&pool).await, 1, "the part is stored again");
+    assert_eq!(dangling(&pool).await, 0);
+    store
+        .settle(ferroehr::access_log::chainer::Owed::default())
+        .await
+        .expect("the intake chains");
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty(),
+        "the chain verifies"
+    );
+}
+
+/// The sweep racing gathered writes that skip the part it removes leaves no
+/// entry naming a part the store does not hold, and every write succeeds
+/// (#6005).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_sweep_racing_writes_of_a_known_part_leaves_no_entry_without_its_part() {
+    let testdb = testkit::db().await.expect("testkit database");
+    let pool = testdb.pool();
+    let (store, writer) = known_orphan(&pool).await;
+    let sweep = {
+        let store = store.clone();
+        tokio::spawn(async move {
+            let mut removed = 0;
+            for _ in 0..200 {
+                removed += store.collect_shared(today(), 10).await.expect("a pass");
+                tokio::task::yield_now().await;
+            }
+            removed
+        })
+    };
+    let tasks = (2..42).map(|n| {
+        let writer = writer.clone();
+        tokio::spawn(async move { write_known(&writer, n).await })
+    });
+    for task in tasks.collect::<Vec<_>>() {
+        task.await.expect("the write task");
+    }
+    let removed = sweep.await.expect("the sweep task");
+    assert!(removed <= 1, "the sweep removes the orphan at most once");
+    assert_eq!(
+        dangling(&pool).await,
+        0,
+        "every entry's shared part is held"
+    );
+    assert_eq!(parts(&pool).await, 1);
+    store
+        .settle(ferroehr::access_log::chainer::Owed::default())
+        .await
+        .expect("the intake chains");
+    assert!(
+        crate::fixtures::verify_chain(&pool)
+            .await
+            .expect("verify")
+            .is_empty(),
+        "the chain verifies"
     );
 }

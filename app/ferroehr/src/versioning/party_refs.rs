@@ -198,12 +198,9 @@ pub(crate) struct Reference {
 /// does not (our own design).
 pub(crate) fn of_change(change: &Change) -> Vec<Reference> {
     let (kind, body) = match change {
-        Change::Create {
-            kind, canonical, ..
+        Change::Create { kind, body, .. } | Change::Modify { kind, body, .. } => {
+            (*kind, body.view())
         }
-        | Change::Modify {
-            kind, canonical, ..
-        } => (*kind, canonical),
         Change::Delete { .. } => return Vec::new(),
     };
     let mut out = Vec::new();

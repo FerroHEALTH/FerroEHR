@@ -140,14 +140,14 @@ pub(crate) async fn commit_version_set(
         .filter_map(|(_, c)| match c {
             Change::Create {
                 kind: Kind::EhrStatus,
-                canonical,
+                body,
                 ..
             }
             | Change::Modify {
                 kind: Kind::EhrStatus,
-                canonical,
+                body,
                 ..
-            } => Some(canonical.clone()),
+            } => Some(body.view().clone()),
             _ => None,
         })
         .collect();
@@ -159,14 +159,14 @@ pub(crate) async fn commit_version_set(
         .filter_map(|(_, c)| match c {
             Change::Create {
                 kind: Kind::Folder,
-                canonical,
+                body,
                 ..
             }
             | Change::Modify {
                 kind: Kind::Folder,
-                canonical,
+                body,
                 ..
-            } => Some(canonical.clone()),
+            } => Some(body.view().clone()),
             _ => None,
         })
         .collect();
@@ -279,12 +279,14 @@ async fn write_contribution(
         if let Change::Modify {
             vo_id,
             kind: Kind::Composition,
-            canonical,
+            body,
             ..
         } = change
         {
             crate::validation::versioned::check_versioned_composition_invariants(
-                &mut tx, *vo_id, canonical,
+                &mut tx,
+                *vo_id,
+                body.view(),
             )
             .await
             .map_err(body_target_not_found_is_bad_request)?;
@@ -481,7 +483,7 @@ async fn create_change(
     Ok(Change::Create {
         allocated,
         kind,
-        canonical: data,
+        body: data.into(),
         template_id,
         signature: v.signature.clone(),
         lifecycle_state: Some(v.lifecycle_state.clone()),
@@ -525,7 +527,7 @@ async fn modify_change(
     Ok(Change::Modify {
         vo_id,
         kind,
-        canonical: data,
+        body: data.into(),
         expected: Some(expected),
         template_id,
         signature: v.signature.clone(),
