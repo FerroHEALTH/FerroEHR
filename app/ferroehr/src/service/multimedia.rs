@@ -26,6 +26,7 @@ use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::versioning::body::Body;
 use crate::versioning::change::Change;
+use openehr_rm::prelude::Composition;
 
 impl FerroEhrService {
     /// Externalizes every large inline `DV_MULTIMEDIA` in `body`, uploading the
@@ -74,41 +75,50 @@ impl FerroEhrService {
         }
     }
 
-    /// [`Self::externalize`] over a commit body. A typed COMPOSITION is
-    /// offloaded through its view and re-read only when the view held a value
-    /// to externalize.
+    /// [`Self::externalize`] over a commit body: a typed COMPOSITION is
+    /// offloaded in place, with no canonical value built.
     ///
     /// # Errors
-    /// The [`Self::externalize`] failure, or the re-read's.
+    /// The offload's failure.
     pub(crate) async fn externalize_body(&self, body: &mut Body) -> Result<(), ServiceError> {
         match body {
             Body::Canonical(canonical) => self.externalize(canonical).await,
-            Body::Composition { view, .. } => {
-                if !self.holds_inline_media(view) {
-                    return Ok(());
-                }
-                self.externalize(view).await?;
-                body.retype_from_view()
-            }
+            Body::Composition(rm) => self.externalize_typed(rm).await,
         }
     }
 
-    /// Whether `body` holds a value the offload would externalize.
+    /// Externalizes every large inline `DV_MULTIMEDIA` of the typed
+    /// COMPOSITION `rm` in place, uploading the blobs, before the write that
+    /// stores it takes a connection.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when an inline value is malformed or an upload fails.
     #[cfg(feature = "multimedia")]
-    fn holds_inline_media(&self, body: &Value) -> bool {
-        self.multimedia
-            .as_ref()
-            .is_some_and(|engine| engine.ensure_externalized(body).is_err())
+    pub(crate) async fn externalize_typed(&self, rm: &mut Composition) -> Result<(), ServiceError> {
+        use openehr_rm::v1_2::access::AsRm as _;
+        let Some(engine) = &self.multimedia else {
+            return Ok(());
+        };
+        engine
+            .offload_typed(rm.as_rm_mut())
+            .await
+            .map_err(|e| ServiceError::internal("externalize multimedia", e))
     }
 
-    /// The slim twin: nothing is ever externalized.
+    /// The slim twin: externalization is compiled out.
+    ///
+    /// # Errors
+    /// Infallible in this configuration.
     #[cfg(not(feature = "multimedia"))]
     #[expect(
-        clippy::unused_self,
-        reason = "signature parity with the multimedia twin, which reads the engine"
+        clippy::unused_async,
+        reason = "signature parity with the multimedia twin, which awaits"
     )]
-    fn holds_inline_media(&self, _body: &Value) -> bool {
-        false
+    pub(crate) async fn externalize_typed(
+        &self,
+        _rm: &mut Composition,
+    ) -> Result<(), ServiceError> {
+        Ok(())
     }
 }
 

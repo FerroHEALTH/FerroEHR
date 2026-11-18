@@ -185,7 +185,7 @@ async fn node_fragment_rebuilds_every_row_the_decomposer_cut() {
     let mut compared = 0usize;
     for (vo_id, sys_version, body) in versions {
         let body: Value = serde_json::from_str(&body).expect("a stored body is JSON");
-        let expected = ferroehr::storage::codec::decompose(body).expect("a stored body decomposes");
+        let expected = crate::fixtures::whole_rows(&body).expect("a stored body decomposes");
         let stored: Vec<(i32, Value)> = sqlx::query_as(
             "SELECT n.num, ext.node_fragment(n.data, n.rm_type, n.archetype, n.name, \
                     n.name_code, n.name_terminology, n.value_type, n.value_num, n.value_text, \
@@ -207,10 +207,10 @@ async fn node_fragment_rebuilds_every_row_the_decomposer_cut() {
             expected.len(),
             "{vo_id} {sys_version}: row count"
         );
-        for ((num, fragment), row) in stored.iter().zip(&expected) {
+        for ((num, fragment), (row, data)) in stored.iter().zip(&expected) {
             assert_eq!(*num, row.num);
             assert_eq!(
-                fragment, &row.data,
+                fragment, data,
                 "{vo_id} {sys_version} row {num} at {:?}",
                 row.path
             );
@@ -1342,7 +1342,9 @@ async fn a_stale_decomposition_is_reported_and_rebuilt() {
         )
         .await
         .map(|r| r.body)
-        .expect("read the fresh party");
+        .expect("read the fresh party")
+        .into_value()
+        .expect("the stored body parses");
 
     write_the_old_party_shape(&pool, vo_id, sys_version).await;
 
@@ -1414,7 +1416,9 @@ async fn a_stale_decomposition_is_reported_and_rebuilt() {
         )
         .await
         .map(|r| r.body)
-        .expect("read the repaired party"),
+        .expect("read the repaired party")
+        .into_value()
+        .expect("the stored body parses"),
         served,
         "and the served body never moved: only the index over it did"
     );

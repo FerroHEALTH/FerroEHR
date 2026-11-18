@@ -186,7 +186,8 @@ async fn import_ehr_without_ehr_access_bootstraps_the_mandatory_default() {
         .expect("import an extract with no EHR_ACCESS");
 
     // The served EHR body carries the mandatory ehr_access reference.
-    let body = target.ehr_read(ehr).await.expect("EHR body").body;
+    let body =
+        openehr_its::json::to_canonical_value(&target.ehr_read(ehr).await.expect("EHR body").body);
     assert_eq!(body["ehr_access"]["_type"], json!("OBJECT_REF"));
     assert_eq!(body["ehr_access"]["type"], json!("VERSIONED_EHR_ACCESS"));
     assert!(
@@ -977,7 +978,9 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
     .with_system_id(TARGET_SYSTEM);
 
     let ehr = seed_extract_ehr(&source).await.0;
-    let source_summary = source.ehr_read(ehr).await.expect("source summary").body;
+    let source_summary = openehr_its::json::to_canonical_value(
+        &source.ehr_read(ehr).await.expect("source summary").body,
+    );
     assert_eq!(
         source_summary["system_id"]["value"], SOURCE_SYSTEM,
         "fixture: the source EHR really was created by the other system"
@@ -988,7 +991,9 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
         .import_ehr(None, export_one(&source, ehr).await)
         .await
         .expect("import_ehr");
-    let clone = target.ehr_read(ehr).await.expect("clone summary").body;
+    let clone = openehr_its::json::to_canonical_value(
+        &target.ehr_read(ehr).await.expect("clone summary").body,
+    );
     assert_eq!(
         clone["ehr_id"], source_summary["ehr_id"],
         "the clone re-uses the source EHR identifier"
@@ -1009,7 +1014,8 @@ async fn a_cloned_ehr_keeps_the_source_ehr_id_but_takes_the_local_system_id() {
         .create_ehr_with_id_meta(ehr, WriteRequest::new(None))
         .await
         .expect("create with a client-supplied id");
-    let by_id = third.ehr_read(ehr).await.expect("summary").body;
+    let by_id =
+        openehr_its::json::to_canonical_value(&third.ehr_read(ehr).await.expect("summary").body);
     assert_eq!(by_id["ehr_id"], source_summary["ehr_id"]);
     assert_eq!(
         by_id["system_id"]["value"], TARGET_SYSTEM,
@@ -1571,6 +1577,8 @@ async fn an_extract_carries_its_parties_into_the_receivers_demographic_domain() 
             )
             .await
             .expect("the received party reads back")
+            .into_value_response()
+            .expect("the stored body parses")
             .body["_type"],
         json!("PERSON"),
         "and it serves through the demographic surface"

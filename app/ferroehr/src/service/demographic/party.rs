@@ -200,6 +200,45 @@ impl FerroEhrService {
         Ok(support::version_response(vo_id, read)?)
     }
 
+    /// [`Self::read_party`] with the body kept as the stored text where nothing
+    /// needs it parsed: the read the wire serves.
+    pub(super) async fn read_party_raw(
+        &self,
+        kind: PartyKind,
+        vo_id: VoId,
+        version: Option<TreeId>,
+        at: Option<jiff::Timestamp>,
+    ) -> Result<crate::service::response::RawServiceResponse, ServiceError> {
+        use crate::service::response::{RawServiceResponse, ReadBody};
+        let miss = || {
+            ServiceError::not_found(
+                if version.is_some() || at.is_some() {
+                    Missing::ObjectVersion
+                } else {
+                    Missing::VersionedObject
+                },
+                format!("{} {vo_id}", kind.rm_type()),
+            )
+        };
+        let raw = support::load_ehrless_raw(
+            &self.demographic_pool,
+            self.spec_profile,
+            vo_id,
+            version,
+            at,
+            support::kind_of(kind),
+        )
+        .await?
+        .ok_or_else(miss)?;
+        if raw.read.deleted() {
+            return Ok(RawServiceResponse {
+                body: ReadBody::Value(Value::Null),
+                meta: None,
+            });
+        }
+        Ok(support::raw_version_response(vo_id, raw)?)
+    }
+
     /// Resolve the current version of a party of the routed [`PartyKind`] in ONE
     /// lean read ([`demographic_current`]) — kind-checked and ehr-less. `None`
     /// when there is no current version, the stored kind differs (a PERSON under

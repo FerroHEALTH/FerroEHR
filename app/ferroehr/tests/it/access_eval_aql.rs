@@ -170,7 +170,9 @@ impl World {
     /// Commits `settings` as the current `EHR_ACCESS` of EHR `index`.
     async fn settings(&self, index: usize, settings: &Value) {
         let ehr_id = self.ehrs[index].0;
-        let ehr = self.svc.ehr_read(ehr_id).await.expect("the EHR").body;
+        let ehr = openehr_its::json::to_canonical_value(
+            &self.svc.ehr_read(ehr_id).await.expect("the EHR").body,
+        );
         let access_vo = ehr["ehr_access"]["id"]["value"]
             .as_str()
             .expect("EHR.ehr_access")

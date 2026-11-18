@@ -63,6 +63,7 @@
 pub mod config;
 pub mod detect;
 mod identifier_kind;
+pub(crate) mod tree;
 
 use std::fmt::Write as _;
 
@@ -73,6 +74,7 @@ use crate::error::ServiceError;
 use crate::privacy::config::{PrivacyConfig, ScanMode};
 use crate::privacy::detect::{CustomPattern, IdentifierRule};
 use crate::privacy::identifier_kind::{DeclaredKind, declared_kind};
+use crate::privacy::tree::{Shape, Tree};
 
 /// The JSON key whose value is a terminology code by construction, and which
 /// the identifier scanner therefore skips.
@@ -268,6 +270,13 @@ impl PrivacyPolicy {
         self.scan_mode
     }
 
+    /// Whether the pass reads anything of a body other than an `EHR_STATUS`:
+    /// the identified-party rule or the identifier scanner is in force.
+    #[must_use]
+    pub fn reads_content(&self) -> bool {
+        !self.allow_identified_parties || self.scan_mode.is_some()
+    }
+
     /// Every finding in a clinical commit body, in document order.
     ///
     /// `root` names the RM type the body is (`COMPOSITION`, `EHR_STATUS`, …)
@@ -275,6 +284,12 @@ impl PrivacyPolicy {
     /// `EHR_STATUS` body only; the other two apply to every clinical kind.
     #[must_use]
     pub fn findings(&self, root: &str, body: &Value) -> Vec<Finding> {
+        self.findings_in(root, body)
+    }
+
+    /// [`Self::findings`] over a body read through either shape
+    /// ([`crate::privacy::tree`]).
+    pub(crate) fn findings_in<'a, T: Tree<'a>>(&self, root: &str, body: T) -> Vec<Finding> {
         let mut findings = Vec::new();
         if root == "EHR_STATUS" && self.subject_rule_in_force() {
             self.check_subject(root, body, &mut findings);
@@ -310,7 +325,20 @@ impl PrivacyPolicy {
     /// each keyed by its own RM path (→ 422). Under `identifier_scan.mode =
     /// "warn"` an identifier-shaped finding is logged and metered instead.
     pub(crate) fn enforce(&self, rm_type: &str, data: &Value) -> Result<(), ServiceError> {
-        let findings = self.findings(rm_type, data);
+        self.enforce_in(rm_type, data)
+    }
+
+    /// [`Self::enforce`] over a body read through either shape
+    /// ([`crate::privacy::tree`]).
+    ///
+    /// # Errors
+    /// As [`Self::enforce`].
+    pub(crate) fn enforce_in<'a, T: Tree<'a>>(
+        &self,
+        rm_type: &str,
+        data: T,
+    ) -> Result<(), ServiceError> {
+        let findings = self.findings_in(rm_type, data);
         if findings.is_empty() {
             return Ok(());
         }
@@ -359,12 +387,12 @@ impl PrivacyPolicy {
     /// `PARTY_SELF` (`specifications/operations/ehr_create.yaml`), so an EHR
     /// with no subject reference is the spec's own baseline and carries nothing
     /// to minimise.
-    fn check_subject(&self, root: &str, body: &Value, findings: &mut Vec<Finding>) {
-        let Some(external_ref) = body.pointer("/subject/external_ref") else {
+    fn check_subject<'a, T: Tree<'a>>(&self, root: &str, body: T, findings: &mut Vec<Finding>) {
+        let Some(external_ref) = body.get("subject").and_then(|s| s.get("external_ref")) else {
             return;
         };
         let at = format!("{root}/subject/external_ref");
-        match external_ref.pointer("/namespace").and_then(Value::as_str) {
+        match external_ref.get_text("namespace").as_deref() {
             Some(namespace) if self.subject_namespaces.iter().any(|n| n == namespace) => {}
             Some(_) => findings.push(Finding {
                 path: format!("{at}/namespace"),
@@ -382,8 +410,8 @@ impl PrivacyPolicy {
                 class: FindingClass::Refusal,
             }),
         }
-        let id_value = external_ref.pointer("/id/value").and_then(Value::as_str);
-        if !id_value.is_some_and(is_uuid) {
+        let id_value = external_ref.get("id").and_then(|id| id.get_text("value"));
+        if !id_value.as_deref().is_some_and(is_uuid) {
             findings.push(Finding {
                 path: format!("{at}/id/value"),
                 message: "must be a UUID: the clinical side holds an opaque subject \
@@ -398,19 +426,26 @@ impl PrivacyPolicy {
     /// The identified-party rule and the identifier scanner, over every node of
     /// the body. `at` is the path of `node`, one buffer the walk extends and
     /// restores around each child, so a path is copied only into a finding.
-    fn walk(&self, at: &mut String, node: &Value, position: Position, findings: &mut Vec<Finding>) {
-        match node {
-            Value::Object(map) => {
+    fn walk<'a, T: Tree<'a>>(
+        &self,
+        at: &mut String,
+        node: T,
+        position: Position,
+        findings: &mut Vec<Finding>,
+    ) {
+        match node.shape() {
+            Shape::Object => {
+                let map = node;
                 if !self.allow_identified_parties {
                     check_party(at, map, findings);
                 }
                 let unscanned_id = names_no_person(map, position);
                 let element_name = element_name_kind(map);
-                for (key, child) in map {
+                for (key, child) in map.members() {
                     if key == TERMINOLOGY_CODE_KEY || (unscanned_id && key == "id") {
                         continue;
                     }
-                    let slot = if ITEM_ID_KEYS.contains(&key.as_str()) {
+                    let slot = if ITEM_ID_KEYS.contains(&key) {
                         Slot::ItemIds
                     } else {
                         Slot::Content
@@ -427,16 +462,20 @@ impl PrivacyPolicy {
                     at.truncate(len);
                 }
             }
-            Value::Array(items) => {
-                for (index, child) in items.iter().enumerate() {
+            Shape::Array => {
+                for (index, child) in node.items().enumerate() {
                     let len = at.len();
                     let _ = write!(at, "[{index}]");
                     self.walk(at, child, position, findings);
                     at.truncate(len);
                 }
             }
-            Value::String(text) => self.scan_text(at, text, findings),
-            Value::Null | Value::Bool(_) | Value::Number(_) => {}
+            Shape::String => {
+                if let Some(text) = node.text() {
+                    self.scan_text(at, &text, findings);
+                }
+            }
+            Shape::Other => {}
         }
     }
 
@@ -488,15 +527,15 @@ impl PrivacyPolicy {
 /// `DV_IDENTIFIER` is the only RM 1.2.0 class with a `String` attribute named
 /// `id` (`PARTY_REF.id` and `OBJECT_REF.id` are objects), so an untyped object
 /// with a string `id` is one too.
-fn names_no_person(map: &serde_json::Map<String, Value>, position: Position) -> bool {
-    let is_identifier = match map.get("_type").and_then(Value::as_str) {
+fn names_no_person<'a, T: Tree<'a>>(map: T, position: Position) -> bool {
+    let is_identifier = match map.get_text("_type") {
         Some(rm_type) => rm_type == "DV_IDENTIFIER",
-        None => map.get("id").is_some_and(Value::is_string),
+        None => map.get("id").is_some_and(|id| id.shape() == Shape::String),
     };
     if !is_identifier {
         return false;
     }
-    let kind = match declared_kind(map.get("type").and_then(Value::as_str)) {
+    let kind = match declared_kind(map.get_text("type").as_deref()) {
         DeclaredKind::Undeclared => position.element_name,
         declared => declared,
     };
@@ -509,16 +548,16 @@ fn names_no_person(map: &serde_json::Map<String, Value>, position: Position) -> 
 
 /// The kind an `ELEMENT`'s `name` declares for its `value`, or `None` when
 /// `map` is not an `ELEMENT`.
-fn element_name_kind(map: &serde_json::Map<String, Value>) -> Option<DeclaredKind> {
+fn element_name_kind<'a, T: Tree<'a>>(map: T) -> Option<DeclaredKind> {
     // NOTE: RM common `org.openehr.rm.common.locatable.adoc` §Attributes: an ELEMENT's `name`
     // is "the original label by which this entry was known to end users", so it names its value.
-    if map.get("_type").and_then(Value::as_str) != Some("ELEMENT") {
+    if map.get_text("_type").as_deref() != Some("ELEMENT") {
         return None;
     }
     Some(declared_kind(
         map.get("name")
-            .and_then(|name| name.get("value"))
-            .and_then(Value::as_str),
+            .and_then(|name| name.get_text("value"))
+            .as_deref(),
     ))
 }
 
@@ -556,8 +595,8 @@ fn element_name_kind(map: &serde_json::Map<String, Value>) -> Option<DeclaredKin
 ///
 /// A free function rather than a method: the caller has already decided the
 /// rule is in force, so this reads no policy state.
-fn check_party(at: &str, map: &serde_json::Map<String, Value>, findings: &mut Vec<Finding>) {
-    let related = match map.get("_type").and_then(Value::as_str) {
+fn check_party<'a, T: Tree<'a>>(at: &str, map: T, findings: &mut Vec<Finding>) {
+    let related = match map.get_text("_type").as_deref() {
         Some("PARTY_RELATED") => true,
         Some("PARTY_IDENTIFIED") => false,
         _ => return,
@@ -599,22 +638,20 @@ fn check_party(at: &str, map: &serde_json::Map<String, Value>, findings: &mut Ve
 /// settle. An absent or unreadable relationship counts as `self`: the rule
 /// refuses what it cannot prove harmless, and the RM validator reports the
 /// missing 1..1 attribute on its own.
-fn relationship_is_self(relationship: Option<&Value>) -> bool {
+fn relationship_is_self<'a, T: Tree<'a>>(relationship: Option<T>) -> bool {
     let Some(relationship) = relationship else {
         return true;
     };
-    let code = relationship
-        .pointer("/defining_code/code_string")
-        .and_then(Value::as_str);
-    let terminology = relationship
-        .pointer("/defining_code/terminology_id/value")
-        .and_then(Value::as_str);
-    match (code, terminology) {
+    let defining_code = relationship.get("defining_code");
+    let code = defining_code.and_then(|c| c.get_text("code_string"));
+    let terminology = defining_code
+        .and_then(|c| c.get("terminology_id"))
+        .and_then(|t| t.get_text("value"));
+    match (code.as_deref(), terminology.as_deref()) {
         (Some(code), Some(terminology)) => terminology == "openehr" && code == "0",
         (Some(code), None) => code == "0",
         (None, _) => relationship
-            .get("value")
-            .and_then(Value::as_str)
+            .get_text("value")
             .is_none_or(|text| text.trim().eq_ignore_ascii_case("self")),
     }
 }

@@ -165,7 +165,7 @@ async fn person_is_live(svc: &FerroEhrService, vo_id: ferroehr::ids::VoId) -> bo
         )
         .await
     {
-        Ok(read) => !read.is_empty(),
+        Ok(read) => !read.body.is_null(),
         Err(e) => {
             let shown = format!("{e:?}");
             assert!(
@@ -199,6 +199,8 @@ async fn party_typed_calls_round_trip() {
         )
         .await
         .expect("party_get")
+        .into_value_response()
+        .expect("the stored body parses")
         .body;
     assert_eq!(got["_type"], "PERSON");
     assert_eq!(got["name"]["value"], "Jane");
@@ -255,6 +257,8 @@ async fn party_typed_calls_round_trip() {
         )
         .await
         .expect("get after update")
+        .into_value_response()
+        .expect("the stored body parses")
         .body;
     assert_eq!(got2["name"]["value"], "Jane Roe");
 
@@ -284,7 +288,9 @@ async fn party_typed_calls_round_trip() {
             None,
         )
         .await
-        .expect("a deleted party reads");
+        .expect("a deleted party reads")
+        .into_value_response()
+        .expect("the stored body parses");
     assert!(
         after.is_empty(),
         "the read after delete serves no body, got {after:?}"
@@ -330,7 +336,9 @@ async fn person_lifecycle_end_to_end() {
     let got = svc
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
-        .expect("get person");
+        .expect("get person")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(got.body["name"]["value"], "Jane");
 
     // get by OBJECT_VERSION_ID (that specific version)
@@ -341,7 +349,9 @@ async fn person_lifecycle_end_to_end() {
             None,
         )
         .await
-        .expect("get by ovid");
+        .expect("get by ovid")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(ovid(&by_ovid.body), ovid_v1);
 
     // time-travel: capture a time inside v1 FROM THE DB CLOCK, then update to
@@ -375,7 +385,9 @@ async fn person_lifecycle_end_to_end() {
             Some(t_v1.to_string()),
         )
         .await
-        .expect("at-time");
+        .expect("at-time")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(at_v1.body["name"]["value"], "Jane");
 
     // stale If-Match → precondition failed (412)
@@ -442,7 +454,9 @@ async fn person_lifecycle_end_to_end() {
     let after = svc
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
-        .expect("get after delete");
+        .expect("get after delete")
+        .into_value_response()
+        .expect("the stored body parses");
     assert!(after.is_empty(), "deleted current read is 204 (Null body)");
 }
 
@@ -468,7 +482,9 @@ async fn party_write_responses_match_a_fresh_read() {
     let fresh = svc
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
-        .expect("get person");
+        .expect("get person")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(
         created.body, fresh.body,
         "create body built from the commit must equal a fresh read"
@@ -492,7 +508,9 @@ async fn party_write_responses_match_a_fresh_read() {
     let fresh_v2 = svc
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
-        .expect("get person v2");
+        .expect("get person v2")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(
         updated.body, fresh_v2.body,
         "update body built from the commit must equal a fresh read"
@@ -514,7 +532,9 @@ async fn party_write_responses_match_a_fresh_read() {
     let fresh_org = svc
         .party_get(PartyKind::Organisation, crate::fixtures::at(vo_org), None)
         .await
-        .expect("get organisation");
+        .expect("get organisation")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(
         created_org.body, fresh_org.body,
         "organisation create body built from the commit must equal a fresh read"
@@ -580,7 +600,9 @@ async fn update_without_uid_refuses_a_foreign_relationship_source() {
     let after = svc
         .party_get(PartyKind::Person, crate::fixtures::at(vo), None)
         .await
-        .expect("read after the refused update");
+        .expect("read after the refused update")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(ovid(&after.body), v1, "the latest version is unchanged");
 }
 
@@ -741,7 +763,9 @@ async fn update_refuses_a_body_uid_of_another_container() {
     let after = svc
         .party_get(PartyKind::Person, crate::fixtures::at(vo), None)
         .await
-        .expect("read after the refused update");
+        .expect("read after the refused update")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(ovid(&after.body), v1, "the latest version is unchanged");
 }
 
@@ -840,7 +864,9 @@ async fn role_create_and_get() {
     let got = svc
         .party_get(PartyKind::Role, crate::fixtures::at(vo), None)
         .await
-        .expect("get role");
+        .expect("get role")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(got.body["name"]["value"], "Clinician");
     assert_eq!(got.body["performer"]["type"], "PERSON");
 }
@@ -1151,7 +1177,9 @@ async fn inline_relationships_are_stored_and_served_verbatim() {
     let got = svc
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
-        .expect("read the party back");
+        .expect("read the party back")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(
         got.body["relationships"],
         json!([relationship]),
@@ -1209,7 +1237,9 @@ async fn inline_relationship_source_matches_the_version_container_not_the_versio
     let served = svc
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
-        .expect("read the party back");
+        .expect("read the party back")
+        .into_value_response()
+        .expect("the stored body parses");
     let ovid_v1 = ovid(&served.body).to_owned();
     assert!(
         ovid_v1.split("::").count() == 3,
@@ -1251,6 +1281,8 @@ async fn inline_relationship_source_matches_the_version_container_not_the_versio
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
         .expect("read v2 back")
+        .into_value_response()
+        .expect("the stored body parses")
         .body;
     foreign["relationships"] = json!([relationship("33333333-3333-4333-8333-333333333333")]);
     let refused = svc

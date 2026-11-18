@@ -1050,7 +1050,8 @@ async fn restrict(svc: &FerroEhrService, ehr: ferroehr::ids::EhrId) {
         );
         value
     };
-    let body = svc.ehr_read(ehr).await.expect("the EHR").body;
+    let body =
+        openehr_its::json::to_canonical_value(&svc.ehr_read(ehr).await.expect("the EHR").body);
     let access_vo = body["ehr_access"]["id"]["value"]
         .as_str()
         .expect("EHR.ehr_access")

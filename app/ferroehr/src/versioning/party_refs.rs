@@ -198,8 +198,13 @@ pub(crate) struct Reference {
 /// does not (our own design).
 pub(crate) fn of_change(change: &Change) -> Vec<Reference> {
     let (kind, body) = match change {
+        // NOTE: only a party carries party references, and a party is
+        // committed as its canonical value.
         Change::Create { kind, body, .. } | Change::Modify { kind, body, .. } => {
-            (*kind, body.view())
+            match body.canonical() {
+                Some(canonical) => (*kind, canonical),
+                None => return Vec::new(),
+            }
         }
         Change::Delete { .. } => return Vec::new(),
     };

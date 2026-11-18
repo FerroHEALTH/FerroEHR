@@ -115,6 +115,31 @@ where
     }
 }
 
+/// Render the typed RM value `value`, honouring `Accept` for canonical JSON or
+/// XML, each written straight from the value with no canonical value between.
+pub(crate) fn respond_typed<T>(
+    headers: &HeaderMap,
+    status: StatusCode,
+    value: &T,
+    root_tag: &str,
+) -> Response
+where
+    T: Serialize + ToXml,
+{
+    match resolve_accept(headers, CANONICAL, WireFormat::CanonicalJson) {
+        Some(WireFormat::CanonicalJson) => body(
+            status,
+            APPLICATION_JSON,
+            openehr_its::json::to_canonical_json(value),
+        ),
+        Some(WireFormat::CanonicalXml) => respond_xml(headers, status, value, root_tag),
+        _ => ApiError::NotAcceptable(
+            "this resource is available as application/json or application/xml".to_owned(),
+        )
+        .into_response_body(),
+    }
+}
+
 /// Render a read body of the spec-typed RM object `T`, honouring `Accept` as
 /// [`respond_rm`] does, without a parse the format does not need.
 ///

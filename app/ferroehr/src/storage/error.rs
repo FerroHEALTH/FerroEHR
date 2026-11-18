@@ -103,6 +103,11 @@ pub enum StorageError {
     /// the commit serialized); the parser's error is the source.
     #[error("stored canonical body does not parse")]
     BodyDecode(#[source] serde_json::Error),
+
+    /// A body about to be stored did not serialize to canonical JSON, which a
+    /// codec-produced value never does; the serializer's error is the source.
+    #[error("the body to store does not serialize")]
+    BodyEncode(#[source] serde_json::Error),
 }
 
 /// Classify a storage failure into the [`ServiceError`] it surfaces as.
@@ -140,7 +145,8 @@ pub(crate) fn classify_storage(e: StorageError) -> ServiceError {
         | StorageError::MixedArray { .. }
         | StorageError::InvalidRows(_)
         | StorageError::TrunklessContainer { .. }
-        | StorageError::BodyDecode(_) => {
+        | StorageError::BodyDecode(_)
+        | StorageError::BodyEncode(_) => {
             // A `dyn Error` field records the source chain beside the message.
             let error: &(dyn std::error::Error + 'static) = &e;
             tracing::error!(error, "storage bridge: node-codec invariant violated → 500");

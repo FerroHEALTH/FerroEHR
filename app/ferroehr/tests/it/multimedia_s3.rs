@@ -622,12 +622,16 @@ async fn physical_party_delete_collects_its_blobs_but_keeps_shared_ones() {
         &svc.party_get(PartyKind::Person, crate::fixtures::at(solo.clone()), None)
             .await
             .expect("read solo")
+            .into_value_response()
+            .expect("the stored body parses")
             .body,
     );
     let shared_key = party_blob_key(
         &svc.party_get(PartyKind::Person, crate::fixtures::at(sharer.clone()), None)
             .await
             .expect("read sharer")
+            .into_value_response()
+            .expect("the stored body parses")
             .body,
     );
     assert_eq!(

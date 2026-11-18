@@ -16,6 +16,7 @@
               fragments and dynamic shapes"
 )]
 
+use crate::versioning::body::Body;
 use openehr_base::validate::InvariantViolation;
 use serde_json::Value;
 use sqlx::PgConnection;
@@ -45,13 +46,13 @@ use crate::validation::category::code;
 pub(crate) async fn check_versioned_composition_invariants(
     tx: &mut PgConnection,
     vo_id: VoId,
-    canonical: &Value,
+    body: &Body,
 ) -> Result<(), ServiceError> {
     // NOTE: no openEHR spec governs the `spec_profile` gate — our own
     // design/extension: this write-path read compares two root fields and
     // serves nothing, so it stays ungated.
     let first_root = crate::storage::node_repo::first_version_root(tx, vo_id).await?;
-    check_versioned_composition_first_root(first_root, canonical)
+    check_versioned_composition_first_root(first_root, body)
 }
 
 /// The pure half of [`check_versioned_composition_invariants`]: compare the
@@ -63,14 +64,14 @@ pub(crate) async fn check_versioned_composition_invariants(
 /// [`ServiceError::Unprocessable`] naming the violated invariant (→ 422).
 pub(crate) fn check_versioned_composition_first_root(
     first_root: Option<(Option<String>, Option<String>)>,
-    canonical: &Value,
+    body: &Body,
 ) -> Result<(), ServiceError> {
     let Some((first_ani, first_category)) = first_root else {
         // No stored content version (e.g. every prior version deleted) — no
         // first-version root to compare against.
         return Ok(());
     };
-    let incoming_ani = canonical.get("archetype_node_id").and_then(Value::as_str);
+    let incoming_ani = body.archetype_node_id();
     if let (Some(stored), Some(incoming)) = (first_ani.as_deref(), incoming_ani)
         && stored != incoming
     {
@@ -82,9 +83,7 @@ pub(crate) fn check_versioned_composition_first_root(
             .with_invariant("VERSIONED_COMPOSITION.Archetype_node_id_valid"),
         ));
     }
-    let incoming_category = canonical
-        .pointer("/category/defining_code/code_string")
-        .and_then(Value::as_str);
+    let incoming_category = body.category_code();
     if let (Some(stored), Some(incoming)) = (first_category.as_deref(), incoming_category)
         && (stored == code::PERSISTENT) != (incoming == code::PERSISTENT)
     {

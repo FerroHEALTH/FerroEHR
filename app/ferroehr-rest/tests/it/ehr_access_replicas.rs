@@ -92,7 +92,8 @@ async fn restricted_to_bob(svc: &FerroEhrService, app: &Router, pool: &PgPool) -
     Box::pin(svc.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
         .await
         .expect("create the EHR");
-    let ehr = svc.ehr_read(ehr_id).await.expect("the EHR").body;
+    let ehr =
+        openehr_its::json::to_canonical_value(&svc.ehr_read(ehr_id).await.expect("the EHR").body);
     let bob = common::basic_person(pool, "bob").await;
     commit(app, &ehr, &common::access_settings("restricted", &[bob]), 1).await;
     ehr
@@ -314,7 +315,8 @@ async fn a_change_before_its_notification_is_never_admitted_on_another_replica()
         Box::pin(a.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
             .await
             .expect("create the EHR");
-        let ehr = a.ehr_read(ehr_id).await.expect("the EHR").body;
+        let ehr =
+            openehr_its::json::to_canonical_value(&a.ehr_read(ehr_id).await.expect("the EHR").body);
         commit(&writer, &ehr, &before, 1).await;
         wait_until(
             || b.ehr_access_listened().notifications() > 0,
@@ -392,7 +394,8 @@ async fn a_changed_subject_before_its_notification_is_never_admitted_on_another_
     Box::pin(a.create_ehr_with_id_meta(ehr_id, WriteRequest::new(None)))
         .await
         .expect("create the EHR");
-    let ehr = a.ehr_read(ehr_id).await.expect("the EHR").body;
+    let ehr =
+        openehr_its::json::to_canonical_value(&a.ehr_read(ehr_id).await.expect("the EHR").body);
     commit(&writer, &ehr, &settings_with("open", Vec::new()), 1).await;
     wait_until(
         || b.ehr_access_listened().notifications() > 0,

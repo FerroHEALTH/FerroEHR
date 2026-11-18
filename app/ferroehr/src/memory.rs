@@ -230,6 +230,35 @@ impl Weigh for serde_json::Value {
     }
 }
 
+/// The heap bytes a typed RM value owns, estimated by walking it: each object
+/// it holds and the text of each string attribute. No spec governs memory
+/// accounting: our own estimate.
+fn rm_heap(node: &dyn openehr_rm::v1_2::access::RmObject) -> usize {
+    use openehr_rm::v1_2::access::{RmRef, schema};
+    let mut total = 0_usize;
+    for name in schema::attribute_names(node.rm_type()).unwrap_or_default() {
+        if let Some(RmRef::String(text)) = node.attribute(name) {
+            total = total.saturating_add(text.len());
+        }
+    }
+    for (_, _, child) in node.children() {
+        total = total
+            .saturating_add(RM_OBJECT)
+            .saturating_add(rm_heap(child));
+    }
+    total
+}
+
+/// The bytes one boxed or listed RM object takes beside its strings: no spec
+/// governs memory accounting, our own estimate of a small RM struct.
+const RM_OBJECT: usize = 64;
+
+impl Weigh for openehr_rm::prelude::Ehr {
+    fn heap(&self) -> usize {
+        rm_heap(openehr_rm::v1_2::access::as_rm_object(self))
+    }
+}
+
 /// The bytes of the items of `items`, inline and on the heap.
 fn slice<T: Weigh>(items: &[T]) -> usize {
     items

@@ -29,6 +29,7 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::error::refusal::Missing;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
+use crate::storage::render::index::Rendered;
 use crate::storage::version_repo::commit::{Folded, FoldedRows, commit_folded};
 use crate::versioning::attestation::{self, PendingAttest};
 use crate::versioning::audit::AuditInput;
@@ -512,10 +513,10 @@ struct ResolvedWrite {
     /// The accepted, uid-stamped body, decomposed into node rows only by the
     /// write (#5759); `None` for a logical delete (data Void).
     body: Option<Body>,
-    /// The canonical body BYTES, serialized from the accepted, uid-stamped
-    /// value BEFORE decomposition — the stored `version.body` text a point
-    /// read serves verbatim. `None` for a logical delete.
-    canonical_text: Option<String>,
+    /// The one rendering of the accepted, uid-stamped body: the stored
+    /// `version.body` text a point read serves verbatim, and the index the
+    /// node rows are read off. `None` for a logical delete.
+    rendered: Option<Rendered>,
     /// Whether the RELEASED generation set can express this body — the
     /// commit-time `version.stable_compatible` stamp
     /// ([`crate::versioning::profile::stable_compatible`]).
@@ -794,7 +795,7 @@ async fn commit_resolved(
     ctx: &SigningCtx<'_>,
     audit: &AuditInput,
     contribution: ContributionCtx,
-    r: ResolvedWrite,
+    mut r: ResolvedWrite,
 ) -> Result<(Committed, Uuid), ServiceError> {
     let audit_row = audit.row();
     let (trunk_version, branch_number, branch_version) = r.tree.columns();
@@ -819,8 +820,24 @@ async fn commit_resolved(
     let (signature, signature_client_supplied) =
         body_and_signature(ctx, audit, contribution_id, &r, &at_committal_attestations)?;
     let archetype = root_archetype(r.body.as_ref());
+    // The body is signed: what is left to store is read off its rendering.
+    drop(r.body.take());
     // A version that shares its predecessor's rows writes none of its own.
-    let (rows, fragments, blob_uris) = nodes(r.body, r.shared_from.is_some())?;
+    let version_uid = object_version_id(r.vo_id, &ctx.system_id, r.tree);
+    let stored = nodes(
+        r.rendered.as_ref(),
+        &crate::storage::compact::RootIdentity {
+            version_uid: &version_uid,
+            template_id: r.template_id.as_deref(),
+        },
+        r.shared_from.is_some(),
+    )?;
+    let body_text = r
+        .rendered
+        .as_ref()
+        .map(|rendered| std::str::from_utf8(rendered.text()))
+        .transpose()
+        .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
 
     let folded = crate::storage::version_repo::commit::FoldedVersion {
         vo_id: r.vo_id,
@@ -839,11 +856,10 @@ async fn commit_resolved(
         signature_client_supplied,
         stable_compatible: r.stable_compatible,
         origins: &r.origins,
-        body: r.canonical_text.as_deref(),
+        body: body_text,
         time_committed: r.time_committed,
-        rows: &rows,
-        fragments,
-        blob_uris,
+        rows: &stored.rows,
+        blob_uris: stored.blob_uris,
         content_digest: r.content_digest.as_ref().map(<[u8; 32]>::as_slice),
         content_sys_version: r.shared_from,
         root_archetype: archetype.as_deref(),

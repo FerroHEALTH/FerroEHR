@@ -17,14 +17,12 @@
 
 use serde_json::Value;
 
-/// One decomposed `node` row to write (content columns only — the storage
-/// context `vo_id`/`sys_version`/`ehr_id` is added by
-/// [`crate::storage::node_write::write_nodes`]).
+/// One decomposed `node` row with its whole fragment.
 ///
-/// Carries the full set of promoted query columns (`rm_type`, `archetype`,
-/// `arch_*`, `name`, `name_code`, `name_terminology`) alongside the nested-set
-/// index and the pruned JSON fragment — everything the `node` table stores per
-/// row.
+/// The shape the unit tests state the decomposition in
+/// ([`crate::storage::codec::decompose`]); the write path stores
+/// [`crate::storage::render::nodes::StoredNode`].
+#[cfg(test)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct NodeRow {
     /// Pre-order number within the versioned object (root = 0).
@@ -115,6 +113,7 @@ pub trait NodeContent {
     fn data(&self) -> &Value;
 }
 
+#[cfg(test)]
 impl NodeContent for NodeRow {
     fn num(&self) -> i32 {
         self.num

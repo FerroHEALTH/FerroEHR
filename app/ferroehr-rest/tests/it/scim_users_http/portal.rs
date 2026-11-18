@@ -130,7 +130,9 @@ async fn head(service: &FerroEhrService, id: &str) -> (String, Value) {
     let read = service
         .party_get(PartyKind::Person, address, None)
         .await
-        .expect("the PERSON reads");
+        .expect("the PERSON reads")
+        .into_value_response()
+        .expect("the stored body parses");
     (read.meta.expect("a version").uid, read.body)
 }
 

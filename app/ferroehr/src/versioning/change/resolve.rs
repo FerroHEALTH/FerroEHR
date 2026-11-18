@@ -20,6 +20,7 @@ use super::{
 use crate::error::ServiceError;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::identifier_repo;
+use crate::storage::render::index::Rendered;
 use crate::versioning::body::Body;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::{
@@ -72,7 +73,7 @@ pub(super) async fn resolve_delete(
         template_id: None,
         client_signature: signature,
         body: None,
-        canonical_text: None,
+        rendered: None,
         content_digest: None,
         party_facts: None,
         shared_from: None,
@@ -111,9 +112,11 @@ pub(super) struct Content {
 /// A body ready to store: the body itself, its canonical text, its
 /// `stable_compatible` stamp and its origins.
 struct Prepared {
-    /// The sealed, uid-stamped body, decomposed only by the write (#5759).
+    /// The sealed, uid-stamped body.
     body: Body,
-    canonical_text: Option<String>,
+    /// Its one rendering: the `version.body` text and the index the node rows
+    /// are read off.
+    rendered: Rendered,
     stable_compatible: bool,
     origins: Vec<String>,
     /// SHA-256 over the canonical body with the root `uid` removed
@@ -125,62 +128,20 @@ struct Prepared {
 }
 
 /// The body bytes a point read serves verbatim (`version.body`) and their
-/// content digest, from one serialization of the accepted, uid-stamped body:
-/// the typed COMPOSITION itself, or the canonical value of another kind.
-///
-/// The text keeps the codec's `_type`-first, BMM-declared member order, and is
-/// taken before node decomposition. The digest is SHA-256 over the same
-/// compact bytes with the root `uid` member left out, the digest a version's
-/// content is compared with its predecessor's on (#4415).
-///
-/// NOTE: RM ehr `master05-composition_package.adoc` §Event Context makes
-/// `context` content (a changed `start_time` or `setting` is a clinical
-/// change), and `feeder_audit` is content the version carries, so only the
-/// server-assigned `uid` leaves the digested bytes.
+/// content digest ([`crate::storage::render::content_digest`]), from one
+/// rendering of the canonical value `canonical`.
 ///
 /// # Errors
 /// [`ServiceError`] when the value cannot serialize (a non-finite number,
 /// unreachable for a codec-produced canonical value, refused loudly anyway).
-pub(crate) fn body_text_and_digest(body: &Body) -> Result<(String, [u8; 32]), ServiceError> {
-    match body {
-        Body::Composition { rm, .. } => {
-            let mut text = Vec::with_capacity(16 * 1024);
-            openehr_its::json::write_canonical_json(rm.as_ref(), &mut text);
-            text_and_digest(text)
-        }
-        Body::Canonical(value) => canonical_text_and_digest(value),
-    }
-}
-
-/// [`body_text_and_digest`] of a canonical value.
-///
-/// # Errors
-/// As [`body_text_and_digest`].
 pub(crate) fn canonical_text_and_digest(
     canonical: &Value,
 ) -> Result<(String, [u8; 32]), ServiceError> {
-    crate::telemetry::conversion::record("value_to_text");
-    let text = serde_json::to_vec(canonical)
+    let rendered = Body::render_canonical(canonical)?;
+    let digest = crate::storage::render::content_digest(&rendered);
+    let text = String::from_utf8(rendered.into_text())
         .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
-    text_and_digest(text)
-}
-
-/// The compact canonical `text` and the SHA-256 of it with its root `uid`
-/// member left out.
-fn text_and_digest(text: Vec<u8>) -> Result<(String, [u8; 32]), ServiceError> {
-    use sha2::Digest as _;
-    let mut digest = sha2::Sha256::new();
-    match crate::storage::render::root_member(&text, "uid") {
-        Some(span) => {
-            let (head, tail) = crate::storage::render::without_member(&text, span);
-            digest.update(head);
-            digest.update(tail);
-        }
-        None => digest.update(&text),
-    }
-    let text = String::from_utf8(text)
-        .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
-    Ok((text, digest.finalize().into()))
+    Ok((text, digest))
 }
 
 /// The lifecycle state a content write commits, with the deleted state refused,
@@ -191,17 +152,22 @@ fn text_and_digest(text: Vec<u8>) -> Result<(String, [u8; 32]), ServiceError> {
 /// offloaded one and no upload waits under the transaction.
 fn content_lifecycle(
     ctx: &SigningCtx<'_>,
-    canonical: &Value,
+    body: &Body,
     lifecycle_state: Option<String>,
 ) -> Result<String, ServiceError> {
     #[cfg(feature = "multimedia")]
     if let Some(engine) = ctx.multimedia {
-        engine
-            .ensure_externalized(canonical)
-            .map_err(|e| ServiceError::internal("externalize multimedia", e))?;
+        match body {
+            Body::Composition(rm) => {
+                use openehr_rm::v1_2::access::AsRm as _;
+                engine.ensure_externalized_typed(rm.as_rm())
+            }
+            Body::Canonical(canonical) => engine.ensure_externalized(canonical),
+        }
+        .map_err(|e| ServiceError::internal("externalize multimedia", e))?;
     }
     #[cfg(not(feature = "multimedia"))]
-    let _ = (ctx, canonical);
+    let _ = (ctx, body);
     let lifecycle = resolve_lifecycle(lifecycle_state)?;
     reject_deleted_with_data(&lifecycle)?;
     Ok(lifecycle)
@@ -229,20 +195,31 @@ async fn prepare_body(
         &ctx.system_id,
         tree,
     ))?);
-    let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, body.view());
-    let origins = ctx.direct_origin.stamp(body.view())?;
-    let (canonical_text, content_digest) = body_text_and_digest(&body)?;
-    let canonical_text = Some(canonical_text);
-    let party_facts = kind.is_demographic().then(|| {
-        Box::new(crate::party_binding::derive::Facts::of(
-            kind,
-            body.view(),
-            ctx.binding,
-        ))
-    });
+    let stable_compatible = match &body {
+        Body::Composition(rm) => {
+            ctx.spec_profile == crate::config::profile::SpecProfile::Stable
+                || openehr_rm::v1_2::released::expressible_in_released(rm.as_ref())
+        }
+        Body::Canonical(canonical) => profile::stable_compatible(ctx.spec_profile, kind, canonical),
+    };
+    let rendered = body.render()?;
+    let origins = ctx
+        .direct_origin
+        .stamp_fed(crate::storage::render::fed_origins(&rendered))?;
+    let content_digest = crate::storage::render::content_digest(&rendered);
+    let party_facts = body
+        .canonical()
+        .filter(|_| kind.is_demographic())
+        .map(|canonical| {
+            Box::new(crate::party_binding::derive::Facts::of(
+                kind,
+                canonical,
+                ctx.binding,
+            ))
+        });
     Ok(Prepared {
         body,
-        canonical_text,
+        rendered,
         stable_compatible,
         origins,
         content_digest,
@@ -257,16 +234,12 @@ pub(super) async fn resolve_create(
     at: Placing,
     mut content: Content,
 ) -> Result<ResolvedWrite, ServiceError> {
-    let lifecycle = content_lifecycle(ctx, content.body.view(), content.lifecycle_state.take())?;
+    let lifecycle = content_lifecycle(ctx, &content.body, content.lifecycle_state.take())?;
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
-    person::refuse_composing_for_others(content.kind, content.body.view())?;
-    system::admit_content(content.kind, content.body.view())?;
-    external::admit_content(
-        content.kind,
-        content.body.view(),
-        content.template_id.as_deref(),
-    )?;
+    person::refuse_composing_for_others(content.kind, &content.body)?;
+    system::admit_content(content.kind, &content.body)?;
+    external::admit_content(content.kind, &content.body, content.template_id.as_deref())?;
     let vo_id = content
         .allocated
         .take()
@@ -289,7 +262,7 @@ pub(super) async fn resolve_create(
         template_id: content.template_id,
         client_signature: content.signature,
         body: Some(body.body),
-        canonical_text: body.canonical_text,
+        rendered: Some(body.rendered),
         content_digest: Some(body.content_digest),
         party_facts: body.party_facts,
         shared_from: None,
@@ -312,7 +285,7 @@ pub(super) async fn resolve_modify(
     mut content: Content,
 ) -> Result<ResolvedWrite, ServiceError> {
     let kind = content.kind;
-    let lifecycle = content_lifecycle(ctx, content.body.view(), content.lifecycle_state.take())?;
+    let lifecycle = content_lifecycle(ctx, &content.body, content.lifecycle_state.take())?;
     let next = next_version(
         tx,
         at.ehr_id,
@@ -323,9 +296,9 @@ pub(super) async fn resolve_modify(
         at.preplaced,
     )
     .await?;
-    person::refuse_composing_for_others(kind, content.body.view())?;
-    system::admit_content(kind, content.body.view())?;
-    external::admit_content(kind, content.body.view(), content.template_id.as_deref())?;
+    person::refuse_composing_for_others(kind, &content.body)?;
+    system::admit_content(kind, &content.body)?;
+    external::admit_content(kind, &content.body, content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
     // the transition from the preceding version's state must be legal
     // (master06 §Version Lifecycle state machine).
@@ -348,7 +321,7 @@ pub(super) async fn resolve_modify(
         template_id: content.template_id,
         client_signature: content.signature,
         body: Some(body.body),
-        canonical_text: body.canonical_text,
+        rendered: Some(body.rendered),
         content_digest: Some(body.content_digest),
         party_facts: body.party_facts,
         shared_from,

@@ -1238,7 +1238,9 @@ async fn a_carried_reference_is_sealed_again_for_the_new_version() {
     let served = service
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
-        .expect("read the person back");
+        .expect("read the person back")
+        .into_value_response()
+        .expect("the stored body parses");
     let carried = identifier_id(&served.body).to_owned();
     assert!(
         carried.starts_with("urn:ferroehr:protected-identifier:"),
@@ -1299,7 +1301,9 @@ async fn a_reference_to_another_partys_identifier_is_refused() {
     let stored = service
         .party_get(PartyKind::Person, crate::fixtures::at(vo), None)
         .await
-        .expect("read the person back");
+        .expect("read the person back")
+        .into_value_response()
+        .expect("the stored body parses");
     let foreign = identifier_id(&stored.body).to_owned();
     assert!(
         foreign.starts_with("urn:ferroehr:protected-identifier:"),
@@ -1446,7 +1450,9 @@ async fn a_party_write_response_serves_the_stored_form() {
     let read = service
         .party_get(PartyKind::Person, crate::fixtures::at(vo.clone()), None)
         .await
-        .expect("read the person back");
+        .expect("read the person back")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(
         created.body, read.body,
         "the create response is the stored form a later read serves"
@@ -1471,7 +1477,9 @@ async fn a_party_write_response_serves_the_stored_form() {
     let reread = service
         .party_get(PartyKind::Person, crate::fixtures::at(vo), None)
         .await
-        .expect("read the update back");
+        .expect("read the update back")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(
         updated.body, reread.body,
         "the update response is the stored form a later read serves"

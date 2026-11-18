@@ -32,7 +32,7 @@
 use serde_json::{Map, Value};
 
 use crate::ids::VoId;
-use crate::storage::slim::{has_keys, object};
+use crate::storage::slim::object;
 
 /// The two keys a row stores as a `DV_DATE_TIME`'s value string.
 const DATE_TIME_KEYS: [&str; 2] = ["origin", "time"];
@@ -86,36 +86,6 @@ pub fn version_uid(
     }
 }
 
-/// Removes the keys the markers stand for from `map`, and returns the markers.
-///
-/// `root` is the version identity of a root row (`num = 0`) and `None` below
-/// it; only a root row ever leaves its `uid` out.
-pub(crate) fn compact(map: &mut Map<String, Value>, root: Option<&RootIdentity<'_>>) -> Compact {
-    let mut markers = Compact::default();
-    for (key, flag) in DATE_TIME_KEYS
-        .into_iter()
-        .zip([&mut markers.origin, &mut markers.time])
-    {
-        if let Some(text) = map.get(key).and_then(date_time_value) {
-            map.insert(key.to_owned(), Value::from(text));
-            *flag = true;
-        }
-    }
-    if map.get("subject").is_some_and(is_bare_party_self) {
-        map.shift_remove("subject");
-        markers.party_self = true;
-    }
-    if let Some(root) = root
-        && map
-            .get("uid")
-            .is_some_and(|uid| *uid == object_version_id(root.version_uid))
-    {
-        map.shift_remove("uid");
-        markers.uid_derived = true;
-    }
-    markers
-}
-
 /// Puts the `DV_DATE_TIME` objects back in place of their value strings, and
 /// returns the keys the markers left out, for the caller to place in jsonb
 /// order (`crate::storage::header::restore`).
@@ -146,32 +116,12 @@ pub(crate) fn restore(
     restored
 }
 
-/// The `value` of a `DV_DATE_TIME` that carries exactly `_type` and a string
-/// `value`.
-fn date_time_value(value: &Value) -> Option<String> {
-    let fields = value.as_object()?;
-    if !has_keys(fields, &["_type", "value"])
-        || fields.get("_type").and_then(Value::as_str) != Some("DV_DATE_TIME")
-    {
-        return None;
-    }
-    fields
-        .get("value")
-        .and_then(Value::as_str)
-        .map(str::to_owned)
-}
-
 /// The `DV_DATE_TIME` of `value`, as `ext.node_date_time` builds it.
 fn date_time(value: &str) -> Value {
     object([
         ("_type", Value::from("DV_DATE_TIME")),
         ("value", Value::from(value)),
     ])
-}
-
-/// Whether `subject` is exactly `{"_type": "PARTY_SELF"}`.
-fn is_bare_party_self(subject: &Value) -> bool {
-    *subject == party_self()
 }
 
 /// The bare `PARTY_SELF`.
@@ -198,6 +148,20 @@ mod tests {
             panic!("an object");
         };
         map
+    }
+
+    /// Compacts `fields` as a row below no type of its own would, and returns
+    /// the markers.
+    fn compact(fields: &mut Map<String, Value>, root: Option<&RootIdentity<'_>>) -> Compact {
+        let slimmed = crate::storage::render::nodes::slim_value(
+            "",
+            root,
+            &Value::Object(std::mem::take(fields)),
+        );
+        if let Some(Value::Object(data)) = slimmed.data {
+            *fields = data;
+        }
+        slimmed.compact
     }
 
     #[test]

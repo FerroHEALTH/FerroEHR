@@ -7,15 +7,8 @@
 //! `specifications/operations/{ehr_get_by_subject,ehr_create,
 //! ehr_create_with_id,ehr_get_by_id,ehr_tags_get}.yaml`.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694): the handler carries the canonical fragment the \
-              negotiate seam produced once (stored-content serving / commit interior)"
-)]
-
 use axum::response::Response;
 use http::StatusCode;
-use serde_json::Value;
 
 use openehr_its::rest::generated::ehr::{
     EhrCreateParams, EhrCreateWithIdParams, EhrGetByIdParams, EhrGetBySubjectParams,
@@ -189,16 +182,13 @@ fn create_request(
 /// `VERSIONED_OBJECT`, or other resources that have versioning or unique state
 /// identifiers". The EHR's creating commit dates it until a folder hierarchy
 /// joins or leaves `EHR.folders`.
-fn ehr_read_response(h: &http::HeaderMap, status: StatusCode, read: &ServiceResponse) -> Response {
-    let mut out = negotiate::body::respond_rm::<Ehr>(h, status, &read.body, super::EHR_ROOT_TAG);
-    if let Some(id) = read
-        .body
-        .get("ehr_id")
-        .and_then(|i| i.get("value"))
-        .and_then(Value::as_str)
-    {
-        negotiate::resource::set_etag(&mut out, id);
-    }
+fn ehr_read_response(
+    h: &http::HeaderMap,
+    status: StatusCode,
+    read: &ServiceResponse<Ehr>,
+) -> Response {
+    let mut out = negotiate::body::respond_typed(h, status, &read.body, super::EHR_ROOT_TAG);
+    negotiate::resource::set_etag(&mut out, read.body.ehr_id.value());
     if let Some(at) = read.meta.as_ref().and_then(|meta| meta.last_modified) {
         negotiate::resource::set_last_modified(&mut out, at);
     }
@@ -224,18 +214,17 @@ async fn ehr_write_response(
         // `ehr_created_object` serves the just-committed EHR body from the
         // create-time stash (built from the commit results), avoiding the
         // `ehr_summary` re-read; it falls back to a full read on a stash miss.
-        state.backend().ehr_created_object(ehr_id).await?
+        Some(state.backend().ehr_created_object(ehr_id).await?)
     } else {
-        Value::Null
+        None
     };
-    let resp = ServiceResponse::new(body, meta);
-    Ok(negotiate::resource::write_rm::<Ehr>(
+    Ok(negotiate::resource::write_typed(
         h,
         base,
-        StatusCode::CREATED,
-        StatusCode::CREATED,
+        (StatusCode::CREATED, StatusCode::CREATED),
         None,
-        &resp,
+        &meta,
+        body.as_ref(),
         super::EHR_ROOT_TAG,
     ))
 }

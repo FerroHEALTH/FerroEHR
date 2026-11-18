@@ -316,6 +316,24 @@ pub(crate) async fn read_of_kind(
         .transpose()
 }
 
+/// [`read_raw`] of a version of the versioned object kind `kind`, `None` for
+/// another kind.
+///
+/// # Errors
+/// As [`read_raw`].
+pub(crate) async fn read_of_kind_raw(
+    pool: &sqlx::PgPool,
+    profile: crate::config::profile::SpecProfile,
+    at: VersionAt,
+    kind: Kind,
+) -> Result<Option<RawVersionRead>, ServiceError> {
+    read_one(pool, at, Body::Text)
+        .await?
+        .filter(|stored| Kind::from_type(&stored.kind) == Some(kind))
+        .map(|stored| raw_version_read(profile, stored))
+        .transpose()
+}
+
 /// A version read whose body may still be the stored jsonb text — the
 /// JSON-accept passthrough shape.
 ///
