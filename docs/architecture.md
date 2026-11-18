@@ -185,10 +185,21 @@ fresh** (the diagrammed deep-dive is the book's Storage architecture page,
 - **Tiers are partitions.** `version`, `node` and `vo_attestation` are each
   `PARTITION BY LIST (tier)` with a `hot` and a `cold` partition and no default
   partition. Archiving an EHR is `UPDATE version SET tier = 'cold' WHERE
-  ehr_id = $1`; PostgreSQL moves the rows between partitions and the `node` and
-  `vo_attestation` foreign keys carry their rows across with `ON UPDATE
+  ehr_id = $1`; PostgreSQL moves the rows between partitions and the
+  `vo_attestation` foreign key carries its rows across with `ON UPDATE
   CASCADE` — verified first-hand on PostgreSQL 18.6, since the documentation
-  neither permits nor forbids it. What that buys over the former mirror tables:
+  neither permits nor forbids it. `node` has no foreign key into `version`
+  (#5969): its referential trigger ran once per row, 402 nested statements on
+  an IPS commit. Every node row is written in its version's transaction, the
+  tier moves and the deletes name the node rows in the version's statement,
+  the storage-parity sweep reports a row set no version reads
+  (`orphan_nodes`), and `node_version_integrity` holds the invariant across
+  commit, delete, archive, erasure and decommissioning. The per-EHR class index
+  `idx_node_hot_ehr_type` leaves out the ELEMENT rows, which are reached
+  through the nested-set range of the primary key, and the subsumption index
+  `idx_node_hot_arch_subsume` keeps only the rows with a parsed archetype id;
+  the AQL emitter writes RM types as literals so a generic plan proves the
+  partial predicates. What partitions buy over the former mirror tables:
   one relation, so foreign keys hold across the tier and every read path and
   every future column reaches cold without a view rebuild; and AQL excludes
   cold by writing `tier = 'hot'` as a literal, which the planner prunes at plan
@@ -580,10 +591,29 @@ Parsed AST (`openehr-query`, done) → **path analysis + typing against a
 BMM-generated RM attribute model** (attribute→types, multiplicity,
 abstract→concrete descendants — generated, not reflected, not hand-written)
 → **our typed query IR** → SQL via `sea-query` (nested-set interval joins for
-CONTAINS chains; `jsonb_path_query_first` for leaf extraction and
-`jsonb_path_query` as a lateral set-returning function for array unnesting;
-`ext.openehr_magnitude` and `ext.openehr_timestamp` for typed comparison and
-ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0). A path whose candidate
+CONTAINS chains; `jsonb_path_query_first` for a leaf a WHERE or ORDER BY
+reads and `jsonb_path_query` as a lateral set-returning function for array
+unnesting; `ext.openehr_magnitude` and `ext.openehr_timestamp` for typed
+comparison and ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0).
+
+A projected cell is rendered in Rust, never built as jsonb in SQL (#6004).
+For a data leaf the statement returns the stored columns of the node row the
+leaf reads (`data`, the fragment columns and the root identity
+`storage::node_repo` reads), once per node alias however many cells read it;
+`aql::read` rebuilds the fragment with `storage::slim::rebuild`, evaluates
+the fragment path with the lax SQL/JSON path semantics PostgreSQL gives the
+same text (`aql::fragment`), and writes the cell with its object keys in
+jsonb order. A VERSION or EHR field, a function and an aggregate return
+their typed value (a `timestamptz` beside its session offset, so it renders
+as `to_jsonb` would), and a literal returns nothing. Each row is written
+once into its cells (`aql::cell`) and the `RESULT_SET` once into the body,
+its weak `ETag` the SHA-256 of the bytes as written without the
+`meta._created` stamp (`service::query::result_set`). `SELECT DISTINCT`
+and a projected list of attestations keep their cells as jsonb in SQL,
+where PostgreSQL compares or aggregates them. A debug build selects, in
+the same statement, the jsonb cell PostgreSQL builds beside each rendered
+cell and requires the two to be the same bytes. No openEHR spec governs the rendering: our own
+design. A path whose candidate
 types are mixed (an `ELEMENT`'s whole `DATA_VALUE`) compares and orders by
 keys read off each value's own `_type` (`aql::sql::coerce`): a number against
 a JSON number or the magnitude of a whole numeric `DV_ORDERED`, an ISO 8601

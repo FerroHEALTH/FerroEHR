@@ -31,3 +31,15 @@ pub enum DvUri {
     /// An instance of `DV_URI` itself (its own, least-rich form).
     DvUri(DvUriData),
 }
+
+impl From<DvEhrUri> for DvUri {
+    fn from(value: DvEhrUri) -> Self {
+        Self::DvEhrUri(value)
+    }
+}
+
+impl From<DvUriData> for DvUri {
+    fn from(value: DvUriData) -> Self {
+        Self::DvUri(value)
+    }
+}

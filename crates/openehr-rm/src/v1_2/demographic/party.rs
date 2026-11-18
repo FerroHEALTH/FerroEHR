@@ -24,13 +24,43 @@ use crate::v1_2::demographic::role::Role;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Party {
     /// The `AGENT` subtype of `PARTY`.
-    Agent(Agent),
+    Agent(Box<Agent>),
     /// The `GROUP` subtype of `PARTY`.
-    Group(Group),
+    Group(Box<Group>),
     /// The `ORGANISATION` subtype of `PARTY`.
-    Organisation(Organisation),
+    Organisation(Box<Organisation>),
     /// The `PERSON` subtype of `PARTY`.
-    Person(Person),
+    Person(Box<Person>),
     /// The `ROLE` subtype of `PARTY`.
-    Role(Role),
+    Role(Box<Role>),
+}
+
+impl From<Agent> for Party {
+    fn from(value: Agent) -> Self {
+        Self::Agent(Box::new(value))
+    }
+}
+
+impl From<Group> for Party {
+    fn from(value: Group) -> Self {
+        Self::Group(Box::new(value))
+    }
+}
+
+impl From<Organisation> for Party {
+    fn from(value: Organisation) -> Self {
+        Self::Organisation(Box::new(value))
+    }
+}
+
+impl From<Person> for Party {
+    fn from(value: Person) -> Self {
+        Self::Person(Box::new(value))
+    }
+}
+
+impl From<Role> for Party {
+    fn from(value: Role) -> Self {
+        Self::Role(Box::new(value))
+    }
 }

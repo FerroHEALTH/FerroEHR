@@ -34,9 +34,9 @@ pub struct ExtractChapterData {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
     /// The information content of this chapter.
     pub items: Option<Vec<ExtractItem>>,
 }
@@ -48,7 +48,19 @@ pub struct ExtractChapterData {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExtractChapter {
     /// The `EXTRACT_ENTITY_CHAPTER` subtype of `EXTRACT_CHAPTER`.
-    ExtractEntityChapter(ExtractEntityChapter),
+    ExtractEntityChapter(Box<ExtractEntityChapter>),
     /// An instance of `EXTRACT_CHAPTER` itself (its own, least-rich form).
     ExtractChapter(ExtractChapterData),
+}
+
+impl From<ExtractEntityChapter> for ExtractChapter {
+    fn from(value: ExtractEntityChapter) -> Self {
+        Self::ExtractEntityChapter(Box::new(value))
+    }
+}
+
+impl From<ExtractChapterData> for ExtractChapter {
+    fn from(value: ExtractChapterData) -> Self {
+        Self::ExtractChapter(value)
+    }
 }

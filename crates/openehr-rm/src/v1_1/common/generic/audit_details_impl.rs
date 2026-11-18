@@ -69,7 +69,7 @@ mod tests {
             },
             change_type: change_type(),
             description: None,
-            committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+            committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
         }
     }
 

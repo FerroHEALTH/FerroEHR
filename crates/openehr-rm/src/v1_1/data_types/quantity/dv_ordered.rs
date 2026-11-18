@@ -45,3 +45,57 @@ pub enum DvOrdered {
     /// The `DV_TIME` subtype of `DV_ORDERED`.
     DvTime(DvTime),
 }
+
+impl From<DvCount> for DvOrdered {
+    fn from(value: DvCount) -> Self {
+        Self::DvCount(value)
+    }
+}
+
+impl From<DvDate> for DvOrdered {
+    fn from(value: DvDate) -> Self {
+        Self::DvDate(value)
+    }
+}
+
+impl From<DvDateTime> for DvOrdered {
+    fn from(value: DvDateTime) -> Self {
+        Self::DvDateTime(value)
+    }
+}
+
+impl From<DvDuration> for DvOrdered {
+    fn from(value: DvDuration) -> Self {
+        Self::DvDuration(value)
+    }
+}
+
+impl From<DvOrdinal> for DvOrdered {
+    fn from(value: DvOrdinal) -> Self {
+        Self::DvOrdinal(value)
+    }
+}
+
+impl From<DvProportion> for DvOrdered {
+    fn from(value: DvProportion) -> Self {
+        Self::DvProportion(value)
+    }
+}
+
+impl From<DvQuantity> for DvOrdered {
+    fn from(value: DvQuantity) -> Self {
+        Self::DvQuantity(value)
+    }
+}
+
+impl From<DvScale> for DvOrdered {
+    fn from(value: DvScale) -> Self {
+        Self::DvScale(value)
+    }
+}
+
+impl From<DvTime> for DvOrdered {
+    fn from(value: DvTime) -> Self {
+        Self::DvTime(value)
+    }
+}

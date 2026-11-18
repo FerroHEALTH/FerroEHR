@@ -101,14 +101,14 @@ mod tests {
     fn range_with(lower: DvQuantity, upper: DvQuantity) -> ReferenceRange<DvOrdered> {
         ReferenceRange {
             meaning: meaning(),
-            range: DvInterval {
+            range: Box::new(DvInterval {
                 lower: Some(DvOrdered::DvQuantity(lower)),
                 upper: Some(DvOrdered::DvQuantity(upper)),
                 lower_unbounded: false,
                 upper_unbounded: false,
                 lower_included: true,
                 upper_included: true,
-            },
+            }),
         }
     }
 
@@ -160,14 +160,14 @@ mod tests {
     fn quantity_range(lower: DvQuantity, upper: DvQuantity) -> ReferenceRange<DvQuantity> {
         ReferenceRange {
             meaning: meaning(),
-            range: DvInterval {
+            range: Box::new(DvInterval {
                 lower: Some(lower),
                 upper: Some(upper),
                 lower_unbounded: false,
                 upper_unbounded: false,
                 lower_included: true,
                 upper_included: false,
-            },
+            }),
         }
     }
 
@@ -184,9 +184,11 @@ mod tests {
     #[test]
     fn a_nested_quantity_limit_breaks_range_is_simple() {
         let mut top = quantity(10.0);
-        top.other_reference_ranges = openehr_base::containers::present_nonempty(vec![
-            quantity_range(quantity(0.0), quantity(1.0)),
-        ]);
+        top.other_reference_ranges =
+            openehr_base::containers::present_nonempty(vec![quantity_range(
+                quantity(0.0),
+                quantity(1.0),
+            )]);
         let v = quantity_range(quantity(0.0), top).invariants();
         assert!(
             v.iter()

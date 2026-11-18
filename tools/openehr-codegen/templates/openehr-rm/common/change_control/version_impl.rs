@@ -210,7 +210,6 @@ pub fn canonical_form_of_json_with_data(
 
 #[cfg(test)]
 mod tests {
-    use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
     use super::*;
     use crate::v1_2::common::change_control::imported_version::ImportedVersion;
     use crate::v1_2::common::change_control::original_version::OriginalVersion;
@@ -221,6 +220,7 @@ mod tests {
     use crate::v1_2::data_types::text::code_phrase::CodePhrase;
     use crate::v1_2::data_types::text::dv_coded_text::DvCodedText;
     use openehr_base::v1_3::prelude::{ObjectId, ObjectRef, ObjectRefData, TerminologyId};
+    use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
 
     // The corpus-backed `canonical_form_of_json` tests are integration tests
     // (`tests/it/version_canonical_form.rs`): their fixture lives outside this
@@ -239,7 +239,7 @@ mod tests {
                 ),
             }),
             signature: None,
-            commit_audit: AuditDetails::AuditDetails(AuditDetailsData {
+            commit_audit: Box::new(AuditDetails::AuditDetails(AuditDetailsData {
                 system_id: "ferroehr.local".to_owned(),
                 time_committed: DvDateTime {
                     normal_status: None,
@@ -249,14 +249,20 @@ mod tests {
                     accuracy: None,
                     value: "2026-07-07T10:11:12Z".to_owned(),
                 },
-                change_type: coded(AuditChangeType::Creation.code(), AuditChangeType::Creation.rubric()),
+                change_type: coded(
+                    AuditChangeType::Creation.code(),
+                    AuditChangeType::Creation.rubric(),
+                ),
                 description: None,
-                committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
-            }),
+                committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
+            })),
             uid: ObjectVersionId::new(value.to_owned()).expect("a well-formed identifier"),
             preceding_version_uid: None,
             other_input_version_uids: openehr_base::containers::present_nonempty(Vec::new()),
-            lifecycle_state: coded(VersionLifecycleState::Complete.code(), VersionLifecycleState::Complete.rubric()),
+            lifecycle_state: coded(
+                VersionLifecycleState::Complete.code(),
+                VersionLifecycleState::Complete.rubric(),
+            ),
             attestations: openehr_base::containers::present_nonempty(Vec::new()),
             data: Some("content".to_owned()),
         }
@@ -264,7 +270,7 @@ mod tests {
 
     /// That same `ORIGINAL_VERSION` in the `VERSION` slot.
     fn typed_version(value: &str) -> Version<String> {
-        Version::OriginalVersion(typed_original(value))
+        Version::OriginalVersion(Box::new(typed_original(value)))
     }
 
     fn coded(code: &str, rubric: &str) -> DvCodedText {
@@ -331,7 +337,7 @@ mod tests {
                 ),
             }),
             signature: Some("local-wrapper-signature".to_owned()),
-            commit_audit: AuditDetails::AuditDetails(AuditDetailsData {
+            commit_audit: Box::new(AuditDetails::AuditDetails(AuditDetailsData {
                 system_id: "local.example".to_owned(),
                 time_committed: DvDateTime {
                     normal_status: None,
@@ -341,11 +347,14 @@ mod tests {
                     accuracy: None,
                     value: "2026-07-09T08:00:00Z".to_owned(),
                 },
-                change_type: coded(AuditChangeType::Creation.code(), AuditChangeType::Creation.rubric()),
+                change_type: coded(
+                    AuditChangeType::Creation.code(),
+                    AuditChangeType::Creation.rubric(),
+                ),
                 description: None,
-                committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
-            }),
-            item,
+                committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
+            })),
+            item: Box::new(item),
         });
         assert_eq!(
             wrapper.uid().value(),
@@ -370,13 +379,16 @@ mod tests {
             )
             .expect("a well-formed identifier"),
         );
-        let version = Version::OriginalVersion(original);
+        let version = Version::OriginalVersion(Box::new(original));
 
         assert_eq!(
             version.preceding_version_uid().map(ObjectVersionId::value),
             Some("8849182c-82ad-4088-a07f-48ead4180515::ferroehr.local::1")
         );
-        assert_eq!(version.lifecycle_state().value, VersionLifecycleState::Complete.rubric());
+        assert_eq!(
+            version.lifecycle_state().value,
+            VersionLifecycleState::Complete.rubric()
+        );
         assert_eq!(version.data(), Some(&"content".to_owned()));
     }
 
@@ -388,7 +400,7 @@ mod tests {
         let mut original =
             typed_original("8849182c-82ad-4088-a07f-48ead4180515::ferroehr.local::1");
         original.data = None;
-        let version = Version::OriginalVersion(original);
+        let version = Version::OriginalVersion(Box::new(original));
 
         assert!(version.preceding_version_uid().is_none());
         assert!(version.data().is_none());
@@ -416,7 +428,7 @@ mod tests {
                 ),
             }),
             signature: None,
-            commit_audit: AuditDetails::AuditDetails(AuditDetailsData {
+            commit_audit: Box::new(AuditDetails::AuditDetails(AuditDetailsData {
                 system_id: "local.example".to_owned(),
                 time_committed: DvDateTime {
                     normal_status: None,
@@ -426,18 +438,24 @@ mod tests {
                     accuracy: None,
                     value: "2026-07-09T08:00:00Z".to_owned(),
                 },
-                change_type: coded(AuditChangeType::Creation.code(), AuditChangeType::Creation.rubric()),
+                change_type: coded(
+                    AuditChangeType::Creation.code(),
+                    AuditChangeType::Creation.rubric(),
+                ),
                 description: None,
-                committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
-            }),
-            item,
+                committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
+            })),
+            item: Box::new(item),
         });
 
         assert_eq!(
             wrapper.preceding_version_uid().map(ObjectVersionId::value),
             Some("8849182c-82ad-4088-a07f-48ead4180515::remote.example::2")
         );
-        assert_eq!(wrapper.lifecycle_state().value, VersionLifecycleState::Complete.rubric());
+        assert_eq!(
+            wrapper.lifecycle_state().value,
+            VersionLifecycleState::Complete.rubric()
+        );
         assert_eq!(wrapper.data(), Some(&"imported content".to_owned()));
     }
 }

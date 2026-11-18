@@ -21,7 +21,7 @@ pub struct EventContext {
     /// Start time of the clinical session or other kind of event during which a provider performs a service of any kind for the patient.
     pub start_time: DvDateTime,
     /// Optional end time of the clinical session.
-    pub end_time: Option<DvDateTime>,
+    pub end_time: Option<Box<DvDateTime>>,
     /// The actual location where the session occurred, e.g. 'microbiology lab 2', 'home', 'ward A3'  and so on.
     pub location: Option<String>,
     /// The setting in which the clinical session took place. Coded using the openEHR Terminology,  setting  group.
@@ -31,7 +31,7 @@ pub struct EventContext {
     /// The health care facility under whose care the event took place.
     ///
     /// This is the most specific workgroup or delivery unit within a care delivery enterprise that has an official identifier in the health system, and can be used to ensure medico-legal accountability.
-    pub health_care_facility: Option<PartyIdentified>,
+    pub health_care_facility: Option<Box<PartyIdentified>>,
     /// Parties involved in the healthcare event. These would normally include the physician(s) and often the patient (but not the latter if the clinical session is a pathology test for example).
     pub participations: Option<openehr_base::containers::NonEmptyVec<Participation>>,
 }

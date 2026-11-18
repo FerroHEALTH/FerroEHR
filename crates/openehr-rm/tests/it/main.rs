@@ -23,6 +23,7 @@ mod canonical_serializer;
 #[cfg(feature = "draft")]
 mod draft;
 mod enforcement_reach;
+mod layout;
 mod nonempty_rules;
 mod release;
 mod rm_model;

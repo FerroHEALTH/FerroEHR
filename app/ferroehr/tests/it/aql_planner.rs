@@ -51,6 +51,41 @@ fn build_sql(q: &str) -> String {
         .to_string()
 }
 
+/// The built statement of `q` over the default test context.
+fn build_prepared(q: &str) -> ferroehr::aql::sql::PreparedQuery {
+    let ir = plan_ok(q);
+    let ctx = SqlCtx {
+        system_id: "sys.example.com".to_owned(),
+        ehr_ids: Vec::new(),
+        ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
+        ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
+        limit: None,
+        offset: None,
+        archetype_lineage: Arc::new(ArchetypeLineage::default()),
+        policy_parties: ferroehr::aql::sql::PolicyParties::Served,
+        access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
+    };
+    ferroehr::aql::sql::build(&ir, &Params::default(), &ctx)
+        .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"))
+}
+
+/// The fragment read of the first SELECT column of `q`: its path text and
+/// whether it is one array cell; the statement builds no jsonb for it.
+fn first_fragment(q: &str) -> (Option<String>, bool) {
+    let built = build_prepared(q);
+    assert!(
+        !built.sql.contains("jsonb_path_query") && !built.sql.contains("to_jsonb("),
+        "a projected data leaf builds no jsonb in SQL: {}",
+        built.sql
+    );
+    match &built.layout.columns[0].kind {
+        ferroehr::aql::sql::CellKind::Fragment(cell) => {
+            (cell.path.as_ref().map(|path| path.sql_text().0), cell.list)
+        }
+        other => panic!("{q}: expected a fragment cell, got {other:?}"),
+    }
+}
+
 #[expect(
     clippy::panic_in_result_fn,
     reason = "the parse step is fixture setup, not the behaviour under test: an \
@@ -1064,15 +1099,9 @@ fn anchored_multi_valued_fragment_predicate_is_existential() {
 /// semantics (no element invisible, row cardinality untouched).
 #[test]
 fn multi_valued_fragment_projection_is_an_array_cell() {
-    let sql = build_sql("SELECT c/links/target/value FROM EHR e CONTAINS COMPOSITION c");
-    assert!(
-        sql.contains("jsonb_path_query_array("),
-        "array-cell projection"
-    );
-    assert!(
-        sql.contains("nullif("),
-        "an empty match set is a NULL cell, not []"
-    );
+    let (path, list) =
+        first_fragment("SELECT c/links/target/value FROM EHR e CONTAINS COMPOSITION c");
+    assert!(path.is_some() && list, "array-cell projection");
 }
 
 /// A path that ends on a list attribute in a fragment names the list's
@@ -1080,40 +1109,17 @@ fn multi_valued_fragment_projection_is_an_array_cell() {
 /// list wrapped once more (#4413); the path below a list keeps its matches.
 #[test]
 fn a_fragment_path_ending_on_a_list_names_its_elements() {
-    // The jsonpath travels as a bound value, so it is read off the bound values.
-    let built = |q: &str| {
-        let ctx = SqlCtx {
-            system_id: "sys.example.com".to_owned(),
-            ehr_ids: Vec::new(),
-            ehr_scope_kind: ferroehr::aql::sql::EhrScopeKind::Named,
-            ehr_access: ferroehr::access_eval::condition::AccessCondition::default(),
-            limit: None,
-            offset: None,
-            archetype_lineage: Arc::new(ArchetypeLineage::default()),
-            policy_parties: ferroehr::aql::sql::PolicyParties::Served,
-            access_settings: ferroehr::aql::sql::EhrAccessReaders::Every,
-        };
-        let built = ferroehr::aql::sql::build(&plan_ok(q), &Params::default(), &ctx)
-            .unwrap_or_else(|e| panic!("SQL build failed for {q:?}: {e}"));
-        // Whether the array-cell projection runs over a bound jsonpath equal to `jsonpath`.
-        move |jsonpath: &str| {
-            let array_cell =
-                built.sql.contains("jsonb_path_query_array(") && built.sql.contains("nullif(");
-            let bound = format!("{:?}", built.values).contains(&format!("{jsonpath:?}"));
-            (array_cell, bound)
-        }
-    };
     let list =
         "SELECT c/feeder_audit/originating_system_item_ids FROM EHR e CONTAINS COMPOSITION c";
     assert_eq!(
-        built(list)("$.originating_system_item_ids[*]"),
-        (true, true),
+        first_fragment(list),
+        (Some("$.originating_system_item_ids[*]".to_owned()), true),
         "a path ending on a list projects an array cell over the list's elements"
     );
     let below = "SELECT c/links/target/value FROM EHR e CONTAINS COMPOSITION c";
     assert_eq!(
-        built(below)("$.links[*].target.value"),
-        (true, true),
+        first_fragment(below),
+        (Some("$.links[*].target.value".to_owned()), true),
         "a path below a list projects an array cell over each element's value"
     );
 }
@@ -1420,13 +1426,14 @@ fn other_composition_context_path_falls_back() {
 /// `RESULT_SET` cell keeps the verbatim `DV_DATE_TIME` value.
 #[test]
 fn projection_of_context_start_time_is_not_promoted() {
-    let sql = build_sql("SELECT c/context/start_time/value FROM EHR e CONTAINS COMPOSITION c");
+    let q = "SELECT c/context/start_time/value FROM EHR e CONTAINS COMPOSITION c";
     assert!(
-        !sql.contains("context_start"),
+        !build_sql(q).contains("context_start"),
         "projection must extract the canonical value, not the timestamptz column"
     );
-    assert!(
-        sql.contains("jsonb_path_query_first"),
+    assert_eq!(
+        first_fragment(q),
+        (Some("$.start_time.value".to_owned()), false),
         "projection extracts the leaf from the fragment"
     );
 }
@@ -1446,13 +1453,14 @@ fn composition_uid_value_is_synthesized_from_the_version_row() {
 /// uid synthesis: `c/uid` yields the `OBJECT_VERSION_ID` object cell.
 #[test]
 fn composition_uid_object_is_built() {
-    let sql = build_sql("SELECT c/uid FROM EHR e CONTAINS COMPOSITION c");
-    assert!(
-        sql.contains("jsonb_build_object"),
+    let built = build_prepared("SELECT c/uid FROM EHR e CONTAINS COMPOSITION c");
+    assert_eq!(
+        built.layout.columns[0].kind,
+        ferroehr::aql::sql::CellKind::Column(ferroehr::aql::sql::ColumnRender::VersionUid),
         "uid projects the OBJECT_VERSION_ID object"
     );
     assert!(
-        sql.contains("creating_system_id"),
+        built.sql.contains("creating_system_id"),
         "the object's value is the synthesized version id"
     );
 }
@@ -1462,12 +1470,12 @@ fn composition_uid_object_is_built() {
 /// OBSERVATION's uid falls through to the stored fragment.
 #[test]
 fn contained_object_uid_is_not_synthesized() {
-    let sql = build_sql(
-        "SELECT o/uid/value \
-         FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.bp.v1]",
-    );
-    assert!(
-        sql.contains("jsonb_path_query_first"),
+    assert_eq!(
+        first_fragment(
+            "SELECT o/uid/value \
+             FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.bp.v1]",
+        ),
+        (Some("$.uid.value".to_owned()), false),
         "the observation uid is read from its stored fragment"
     );
 }
@@ -2874,11 +2882,19 @@ fn a_composition_template_predicate_reads_the_version_column() {
     }
     // A projection returns the leaf as the fragment serves it: since storage
     // generation 5 a root's header leaves its fragment and is rebuilt with
-    // the version's template (#4904), so the read goes through the header
-    // rebuild rather than comparing the column.
-    let sql =
-        build_sql("SELECT c/archetype_details/template_id/value FROM EHR e CONTAINS COMPOSITION c");
-    assert!(sql.contains("node_archetype_details("), "{sql}");
+    // the version's template (#4904), so the cell reads the rebuilt header
+    // off the root's stored columns, the template among them, rather than
+    // comparing the column.
+    let q = "SELECT c/archetype_details/template_id/value FROM EHR e CONTAINS COMPOSITION c";
+    assert_eq!(
+        first_fragment(q),
+        (
+            Some("$.archetype_details.template_id.value".to_owned()),
+            false
+        )
+    );
+    let sql = build_sql(q);
+    assert!(sql.contains(r#""v1"."template_id""#), "{sql}");
     assert!(!sql.contains(r#""v1"."template_id" = "#), "{sql}");
 }
 

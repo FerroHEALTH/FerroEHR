@@ -72,3 +72,15 @@ pub enum OpenehrTerminologyGroupIdentifiers {
     /// An instance of `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS` itself (its own, least-rich form).
     OpenehrTerminologyGroupIdentifiers(OpenehrTerminologyGroupIdentifiersData),
 }
+
+impl From<TerminologyService> for OpenehrTerminologyGroupIdentifiers {
+    fn from(value: TerminologyService) -> Self {
+        Self::TerminologyService(value)
+    }
+}
+
+impl From<OpenehrTerminologyGroupIdentifiersData> for OpenehrTerminologyGroupIdentifiers {
+    fn from(value: OpenehrTerminologyGroupIdentifiersData) -> Self {
+        Self::OpenehrTerminologyGroupIdentifiers(value)
+    }
+}

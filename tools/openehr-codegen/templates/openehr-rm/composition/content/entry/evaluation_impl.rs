@@ -73,19 +73,19 @@ mod tests {
             archetype_node_id: "openEHR-EHR-EVALUATION.problem.v1".to_owned(),
             uid: None,
             links: openehr_base::containers::present_nonempty(Vec::new()),
-            archetype_details: Some(Archetyped {
+            archetype_details: Some(Box::new(Archetyped {
                 archetype_id: ArchetypeId {
                     value: "openEHR-EHR-EVALUATION.problem.v1".to_owned(),
                 },
                 template_id: None,
                 rm_version: "1.1.0".to_owned(),
-            }),
+            })),
             feeder_audit: None,
             language: code("ISO_639-1", "en"),
             encoding: code("IANA_character-sets", "UTF-8"),
             other_participations: openehr_base::containers::present_nonempty(Vec::new()),
             workflow_id: None,
-            subject: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+            subject: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
             provider: None,
             protocol: None,
             guideline_id: None,

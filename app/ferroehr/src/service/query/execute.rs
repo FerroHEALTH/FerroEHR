@@ -256,10 +256,7 @@ impl FerroEhrService {
         let served_origins = result.served_origins.clone();
         let origin_count = result.origin_count;
         let (accessed, served_ehr_content) = accessed_content(&result);
-        let mut outcome = QueryOutcome::plain(
-            result_set_json(aql, &executed, name, result)
-                .map_err(|error| Failure::analysis(error.into()))?,
-        );
+        let mut outcome = QueryOutcome::plain(result_set_json(aql, &executed, name, result));
         outcome.served_ehrs = served_ehrs;
         outcome.served_rows = served_rows;
         outcome.served_origins = served_origins;
@@ -624,6 +621,9 @@ fn map_exec_error(e: AqlError) -> ServiceError {
         AqlError::Exec(ExecError::Profile(e)) => e,
         AqlError::Exec(e @ ExecError::MissingColumnAlias { .. }) => {
             ServiceError::internal("bind a RESULT_SET column to its generated SQL alias", e)
+        }
+        AqlError::Exec(e @ ExecError::UnrenderedType { .. }) => {
+            ServiceError::internal("render a RESULT_SET column from its SQL type", e)
         }
         AqlError::Feature(_) | AqlError::Analysis(_) | AqlError::Sql(_) => {
             ServiceError::bad_request(e.to_string(), e)

@@ -43,9 +43,9 @@ pub struct Role {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
 
     // inherited: PARTY
     /// Identities used by the party to identify itself, such as legal name, stage names, aliases, nicknames and so on.
@@ -59,7 +59,7 @@ pub struct Role {
     /// Relationships in which this Party takes part as source.
     pub relationships: Option<openehr_base::containers::NonEmptyVec<PartyRelationship>>,
     /// Valid time interval for this role.
-    pub time_validity: Option<DvInterval<DvDate>>,
+    pub time_validity: Option<Box<DvInterval<DvDate>>>,
     /// Reference to Version container of Actor playing the role.
     pub performer: PartyRef,
     /// The capabilities of this role.

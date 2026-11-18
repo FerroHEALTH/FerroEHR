@@ -20,3 +20,15 @@ pub enum MessageContent {
     /// The `SYNC_EXTRACT_REQUEST` subtype of `MESSAGE_CONTENT`.
     SyncExtractRequest(SyncExtractRequest),
 }
+
+impl From<SyncExtract> for MessageContent {
+    fn from(value: SyncExtract) -> Self {
+        Self::SyncExtract(value)
+    }
+}
+
+impl From<SyncExtractRequest> for MessageContent {
+    fn from(value: SyncExtractRequest) -> Self {
+        Self::SyncExtractRequest(value)
+    }
+}

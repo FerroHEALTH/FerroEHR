@@ -380,7 +380,9 @@ async fn aql_rows(svc: &FerroEhrService, ehr_id: EhrId, caller: &Caller) -> usiz
     )
     .await
     .expect("the query runs");
-    outcome.result_set["rows"].as_array().map_or(0, Vec::len)
+    outcome.result_set.to_value().unwrap()["rows"]
+        .as_array()
+        .map_or(0, Vec::len)
 }
 
 /// Whether an EHR Extract exported for `caller` carries the `EHR_ACCESS`.
@@ -447,6 +449,7 @@ async fn a_missing_ehr_access_is_restored_at_boot() {
             .await
             .expect("the EHR_ACCESS head");
     for statement in [
+        "DELETE FROM node WHERE vo_id = $1",
         "DELETE FROM version WHERE vo_id = $1",
         "DELETE FROM vo_head WHERE vo_id = $1",
     ] {

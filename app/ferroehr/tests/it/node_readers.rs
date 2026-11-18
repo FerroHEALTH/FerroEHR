@@ -73,7 +73,9 @@ pub(crate) async fn aql_answers(svc: &FerroEhrService, queries: &[&str]) -> Vec<
             .await
             .map_err(|e| format!("{query}: {e:?}"))
             .expect("the AQL statement runs")
-            .result_set;
+            .result_set
+            .to_value()
+            .unwrap();
         let mut rows: Vec<String> = result
             .get("rows")
             .and_then(Value::as_array)

@@ -72,12 +72,15 @@ const COMPOSITION_FORMATS: &[WireFormat] = &[
 /// `415` (Resources.md §Simplified Formats MUST).
 async fn decode_composition_body(
     state: &AppState,
-    h: &http::HeaderMap,
-    body: &bytes::Bytes,
+    parts: &RequestParts,
 ) -> Result<Composition, RestError> {
+    let (h, body) = (&parts.headers, &parts.body);
     match negotiate::content_type_format(h) {
         Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml) => {
-            Ok(negotiate::decode::rm_value::<Composition>(h, body)?)
+            match parts.composition.take() {
+                Some(kept) => Ok(kept),
+                None => Ok(negotiate::decode::rm_value::<Composition>(h, body)?),
+            }
         }
         // The converted fragment re-enters through the same strict reader as a
         // canonical body: one decode, one refusal class.
@@ -127,7 +130,7 @@ pub(crate) async fn create(state: AppState, parts: RequestParts) -> Result<Respo
         CompositionCreateParams::PARAMS,
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
-    let body = decode_composition_body(&state, h, &parts.body).await?;
+    let body = decode_composition_body(&state, &parts).await?;
     let uv = crate::overview::committal::write_request(
         h,
         ferroehr::versioning::committer::request_committer(),
@@ -273,22 +276,15 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     let expand = params::query_param(q, "expand_multimedia").as_deref() == Some("true");
     let accept = negotiate::resolve_accept(h, COMPOSITION_FORMATS, WireFormat::CanonicalJson);
     let mut body = match body {
-        ReadBody::RawJson(text) if !expand && accept == Some(WireFormat::CanonicalJson) => {
-            let mut out = negotiate::body::body(ok, negotiate::APPLICATION_JSON, text);
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
-        }
-        // Canonical XML reads the stored text straight into the RM.
-        ReadBody::RawJson(text) if !expand && accept == Some(WireFormat::CanonicalXml) => {
-            let typed: Composition =
-                openehr_its::json::from_canonical_json(&text).map_err(|e| stored_fault(&e))?;
-            let mut out = negotiate::body::respond_xml(h, ok, &typed, "composition");
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
+        raw @ ReadBody::RawJson(_)
+            if !expand
+                && matches!(
+                    accept,
+                    Some(WireFormat::CanonicalJson | WireFormat::CanonicalXml)
+                ) =>
+        {
+            let out = negotiate::body::respond_read::<Composition>(h, ok, raw, "composition");
+            return Ok(versioned(out, meta.as_ref()));
         }
         other => stored_body(other)?,
     };
@@ -303,21 +299,14 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     // representations carry the version-identity headers too.
     match accept {
         Some(WireFormat::Flat) => {
-            let mut out =
+            let out =
                 crate::formats::dispatch::composition_flat_response(&state, ok, &body).await?;
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
+            return Ok(versioned(out, meta.as_ref()));
         }
         Some(WireFormat::Structured) => {
-            let mut out =
-                crate::formats::dispatch::composition_structured_response(&state, ok, &body)
-                    .await?;
-            if let Some(meta) = &meta {
-                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
-            }
-            return Ok(out);
+            let out = crate::formats::dispatch::composition_structured_response(&state, ok, &body)
+                .await?;
+            return Ok(versioned(out, meta.as_ref()));
         }
         _ => {}
     }
@@ -329,6 +318,14 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
         &resp,
         "composition",
     ))
+}
+
+/// `out` with the version-identity headers of `meta`, when the read has one.
+fn versioned(mut out: Response, meta: Option<&ResourceMeta>) -> Response {
+    if let Some(meta) = meta {
+        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
+    }
+    out
 }
 
 /// `composition_update` — commit a new version of a COMPOSITION.
@@ -347,7 +344,7 @@ pub(crate) async fn update(state: AppState, parts: RequestParts) -> Result<Respo
     )?;
     let ehr_id = parse_ehr_id(&p.ehr_id)?;
     let uid = parse_uid_based_id(&p.uid_based_id)?;
-    let body = decode_composition_body(&state, h, &parts.body).await?;
+    let body = decode_composition_body(&state, &parts).await?;
     // A body `uid` must name the same versioned object as the path.
     // NOTE: OAS-grounded (docs text silent) with no assigned status; the
     // fitting released row is 422 (Requests_and_responses.md §HTTP status codes).
@@ -597,15 +594,12 @@ fn commit_meta(ehr_id: EhrId, uid: String, committed: &Committed) -> ResourceMet
 /// The typed value of a read COMPOSITION body; the stored text is our own jsonb
 /// rendering, so a body that does not parse is an internal fault.
 fn stored_body(body: ReadBody) -> Result<Value, RestError> {
-    body.into_value().map_err(|e| stored_fault(&e))
-}
-
-/// The internal fault of a stored COMPOSITION body that does not read back.
-fn stored_fault(e: &dyn std::fmt::Display) -> RestError {
-    RestError::from(crate::overview::error::internal_fault(
-        "re-parse the stored composition body",
-        e,
-    ))
+    body.into_value().map_err(|e| {
+        RestError::from(crate::overview::error::internal_fault(
+            "re-parse the stored composition body",
+            &e,
+        ))
+    })
 }
 
 /// Render a COMPOSITION create/update response: FLAT/STRUCTURED interop bodies
@@ -668,7 +662,7 @@ async fn composition_write_response(
         (minimal, repr),
         Some("composition"),
         &meta,
-        &read,
+        read,
         "composition",
     ))
 }

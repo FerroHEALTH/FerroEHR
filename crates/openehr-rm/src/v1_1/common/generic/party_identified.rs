@@ -22,7 +22,7 @@ use openehr_base::v1_2::base_types::identification::party_ref::PartyRef;
 pub struct PartyIdentifiedData {
     // inherited: PARTY_PROXY
     /// Optional reference to more detailed demographic or identification information for this party, in an external system.
-    pub external_ref: Option<PartyRef>,
+    pub external_ref: Option<Box<PartyRef>>,
     /// Optional human-readable name (in String form).
     pub name: Option<String>,
     /// One or more formal identifiers (possibly computable).
@@ -43,4 +43,16 @@ pub enum PartyIdentified {
     PartyRelated(PartyRelated),
     /// An instance of `PARTY_IDENTIFIED` itself (its own, least-rich form).
     PartyIdentified(PartyIdentifiedData),
+}
+
+impl From<PartyRelated> for PartyIdentified {
+    fn from(value: PartyRelated) -> Self {
+        Self::PartyRelated(value)
+    }
+}
+
+impl From<PartyIdentifiedData> for PartyIdentified {
+    fn from(value: PartyIdentifiedData) -> Self {
+        Self::PartyIdentified(value)
+    }
 }

@@ -64,7 +64,7 @@ mod tests {
                 archetype_details: None,
                 feeder_audit: None,
                 null_flavour: None,
-                value: Some(DataValue::DvText(text("v"))),
+                value: Some(Box::new(DataValue::DvText(text("v")))),
                 null_reason: None,
             }),
         };

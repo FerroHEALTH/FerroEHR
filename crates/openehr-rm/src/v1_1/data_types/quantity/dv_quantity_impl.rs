@@ -141,7 +141,7 @@ impl Validate for DvQuantity {
         push_normal_range_consistency(
             out,
             "DV_QUANTITY",
-            self.normal_status.as_ref(),
+            self.normal_status.as_deref(),
             self.normal_range.as_deref(),
             self,
         );
@@ -366,13 +366,13 @@ mod tests {
         // In range + status "N": consistent.
         let mut q = quantity(); // magnitude 43.0
         q.normal_range = Some(range(0.0, 100.0));
-        q.normal_status = Some(status("N"));
+        q.normal_status = Some(Box::new(status("N")));
         assert_eq!(q.invariants(), Vec::<InvariantViolation>::new());
 
         // In range + status "H": inconsistent.
         let mut q = quantity();
         q.normal_range = Some(range(0.0, 100.0));
-        q.normal_status = Some(status("H"));
+        q.normal_status = Some(Box::new(status("H")));
         assert!(messages(&q).contains(
             &"Invariant Normal_range_and_status_consistency failed on type DV_QUANTITY".to_owned()
         ));
@@ -380,7 +380,7 @@ mod tests {
         // Out of range + status "N": inconsistent.
         let mut q = quantity();
         q.normal_range = Some(range(100.0, 200.0));
-        q.normal_status = Some(status("N"));
+        q.normal_status = Some(Box::new(status("N")));
         assert!(messages(&q).contains(
             &"Invariant Normal_range_and_status_consistency failed on type DV_QUANTITY".to_owned()
         ));
@@ -388,7 +388,7 @@ mod tests {
         // Out of range + status "H": consistent.
         let mut q = quantity();
         q.normal_range = Some(range(100.0, 200.0));
-        q.normal_status = Some(status("H"));
+        q.normal_status = Some(Box::new(status("H")));
         assert_eq!(q.invariants(), Vec::<InvariantViolation>::new());
     }
 

@@ -222,7 +222,7 @@ fn coded(code: &str) -> DvCodedText {
 
 /// An `ELEMENT` at `node`, named `name`, holding `value`.
 fn element(node: &str, name: DvText, value: DataValue) -> Item {
-    Item::Element(Element {
+    Item::Element(Box::new(Element {
         name,
         archetype_node_id: node.to_owned(),
         uid: None,
@@ -230,9 +230,9 @@ fn element(node: &str, name: DvText, value: DataValue) -> Item {
         archetype_details: None,
         feeder_audit: None,
         null_flavour: None,
-        value: Some(value),
+        value: Some(Box::new(value)),
         null_reason: None,
-    })
+    }))
 }
 
 /// An `ITEM_TREE` at `node`, named `name`, holding `items`.
@@ -277,12 +277,12 @@ fn agent(grant: &ClientGrant) -> Party {
         id: grant.client_id.clone(),
         r#type: Some(CLIENT_ID.to_owned()),
     };
-    Party::Agent(Agent {
+    Party::Agent(Box::new(Agent {
         name: plain_text(&grant.client_id),
         archetype_node_id: AGENT_ARCHETYPE.to_owned(),
         uid: None,
         links: None,
-        archetype_details: Some(archetyped(AGENT_ARCHETYPE)),
+        archetype_details: Some(Box::new(archetyped(AGENT_ARCHETYPE))),
         feeder_audit: None,
         identities: identities(&grant.client_id),
         contacts: None,
@@ -298,7 +298,7 @@ fn agent(grant: &ClientGrant) -> Party {
         relationships: None,
         languages: None,
         roles: None,
-    })
+    }))
 }
 
 /// The `ROLE` the party `performer` (its RM type and container) performs,
@@ -317,12 +317,12 @@ fn role(performer: (&str, VoId), operation: Operation, elements: &[(String, Stri
             DataValue::DvText(plain_text(value)),
         )
     }));
-    Party::Role(Role {
+    Party::Role(Box::new(Role {
         name: plain_text(code),
         archetype_node_id: ROLE_ARCHETYPE.to_owned(),
         uid: None,
         links: None,
-        archetype_details: Some(archetyped(ROLE_ARCHETYPE)),
+        archetype_details: Some(Box::new(archetyped(ROLE_ARCHETYPE))),
         feeder_audit: None,
         identities: identities(code),
         contacts: None,
@@ -344,7 +344,7 @@ fn role(performer: (&str, VoId), operation: Operation, elements: &[(String, Stri
             credentials: tree("at0023", "terms", items),
             time_validity: None,
         })),
-    })
+    }))
 }
 
 #[cfg(test)]

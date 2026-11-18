@@ -322,6 +322,23 @@ pub trait OrderedLimit {
 /// undecidable (the validator's structural fallback path).
 impl OrderedLimit for serde_json::Value {}
 
+/// A boxed limit orders as the value it holds: the RM layout boxes a large
+/// `DV_ORDERED` variant, which changes no comparison.
+impl<T: OrderedLimit> OrderedLimit for Box<T> {
+    fn strictly_comparable(&self, other: &Self) -> Option<bool> {
+        T::strictly_comparable(self, other)
+    }
+    fn less_than(&self, other: &Self) -> Option<bool> {
+        T::less_than(self, other)
+    }
+    fn less_or_equal(&self, other: &Self) -> Option<bool> {
+        T::less_or_equal(self, other)
+    }
+    fn is_simple(&self) -> Option<bool> {
+        T::is_simple(self)
+    }
+}
+
 /// Generate the [`OrderedLimit`] + inherent comparison functions for a
 /// concrete `DV_ORDERED` subtype from its comparability rule and its ordering
 /// key.
@@ -680,7 +697,7 @@ impl DvOrdered {
     pub fn is_normal(&self) -> Option<bool> {
         macro_rules! by_status {
             ($x:expr) => {
-                $x.normal_status.as_ref().map(|s| s.code_string == "N")
+                $x.normal_status.as_deref().map(|s| s.code_string == "N")
             };
         }
         // normal_range takes priority (spec Post_range), falling back to the

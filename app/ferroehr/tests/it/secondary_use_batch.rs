@@ -105,7 +105,9 @@ async fn batch(
         )
         .await
         .expect("the batch query runs")
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     result["rows"].as_array().cloned().unwrap_or_default()
 }
 
@@ -124,7 +126,9 @@ async fn committed_at(svc: &FerroEhrService, version_uid: &str) -> String {
         )
         .await
         .expect("read the commit instant")
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     result["rows"][0][0]
         .as_str()
         .expect("time_committed is a string")
@@ -239,7 +243,9 @@ async fn a_versioned_object_variable_answers_its_uid_and_owner() {
          CONTAINS COMPOSITION c ORDER BY v/uid/value")
     .await
     .expect("the versioned object query runs")
-    .result_set["rows"]
+    .result_set
+    .to_value()
+    .unwrap()["rows"]
         .clone();
     assert_eq!(
         rows,

@@ -126,6 +126,8 @@ async fn run_aql(svc: &FerroEhrService, aql: &str) -> Value {
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
         .result_set
+        .to_value()
+        .unwrap()
 }
 
 /// The set of `c/name/value` strings returned by a query (order-independent).

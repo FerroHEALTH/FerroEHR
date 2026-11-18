@@ -99,8 +99,9 @@ module.**
   AQL emitter's `fragment_source`, never bare `node.data`; a root row is read
   with its `version` row, which its uid and template come back from). `version`, `node` and `vo_attestation` are
   partitioned `BY LIST (tier)` with `hot`/`cold` partitions, so archiving is
-  `UPDATE … SET tier = 'cold'` and the foreign keys carry the referencing rows
-  across with `ON UPDATE CASCADE`; there are no mirror tables and no `*_all`
+  `UPDATE … SET tier = 'cold'`: `vo_attestation`'s foreign key carries its rows
+  across with `ON UPDATE CASCADE`, and `node`, which has no foreign key
+  (#5969), is moved and deleted by name in the same statement as its versions; there are no mirror tables and no `*_all`
   views. `LATEST_VERSION` is `vo_head.trunk_head_sys_version`, `ALL_VERSIONS`
   is `version` unfiltered. Every write emits contribution + commit audit in the
   same transaction. Change-control semantics are implemented against RM common

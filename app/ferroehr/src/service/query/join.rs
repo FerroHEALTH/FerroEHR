@@ -20,15 +20,9 @@
 //! query does; the party read and the crossing each
 //! leave an access record in their own domain.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 5): AQL result rows are arbitrary \
-              projections by specification (QUERY 1.1)"
-)]
-
 use std::collections::BTreeMap;
 
-use serde_json::Value;
+use crate::aql::cell::Cell;
 use uuid::Uuid;
 
 use crate::aql;
@@ -157,7 +151,8 @@ impl FerroEhrService {
         let clinical = self.run_clinical(job, halves, party_ctx, &pairs).await?;
         refuse_above(ceiling, clinical.rows.len(), "clinical")?;
 
-        let mut joined = join_rows(&parties, &pairs, &clinical.rows, job.plan.ehr_id)?;
+        let ehrs = clinical_ehrs(&clinical.rows, job.plan.ehr_id)?;
+        let mut joined = join_rows(&parties, &pairs, &ehrs);
         refuse_above(ceiling, joined.len(), "joined")?;
         sort_rows(&mut joined, job.plan, &party.rows, &clinical.rows);
         let page = cut_page(joined, page);
@@ -272,7 +267,7 @@ impl FerroEhrService {
                         source
                             .and_then(|cells| cells.get(column.index))
                             .cloned()
-                            .unwrap_or(Value::Null)
+                            .unwrap_or_else(Cell::null)
                     })
                     .collect(),
             );
@@ -307,10 +302,8 @@ impl FerroEhrService {
             .collect();
         let served_rows = u64::try_from(result.rows.len()).unwrap_or(u64::MAX);
         let (accessed, _) = accessed_content(&result);
-        let mut outcome = QueryOutcome::plain(
-            result_set_json(job.aql, &executed, job.name, result)
-                .map_err(|error| Failure::analysis(error.into()))?,
-        );
+        let mut outcome =
+            QueryOutcome::plain(result_set_json(job.aql, &executed, job.name, result));
         outcome.served_ehrs = served_ehrs;
         outcome.served_rows = served_rows;
         outcome.accessed = Some(accessed);
@@ -477,11 +470,14 @@ fn refuse_above(ceiling: Option<i64>, rows: usize, what: &str) -> Result<(), Fai
 /// The party each party row came from, read off the root's `uid/value`
 /// column: the versioned-object id before the first `::` (RM common master06
 /// §Version Identification).
-fn party_ids(rows: &[Vec<Value>], column: usize) -> Result<Vec<VoId>, Failure> {
+fn party_ids(rows: &[Vec<Cell>], column: usize) -> Result<Vec<VoId>, Failure> {
     rows.iter()
         .map(|row| {
-            let uid = row.get(column).and_then(Value::as_str).unwrap_or_default();
-            VoId::from_uid_head(uid).map_err(|e| {
+            let uid = row
+                .get(column)
+                .and_then(Cell::as_string)
+                .unwrap_or_default();
+            VoId::from_uid_head(&uid).map_err(|e| {
                 Failure::analysis(ServiceError::internal(
                     "read a party row's versioned-object id",
                     e,
@@ -491,22 +487,31 @@ fn party_ids(rows: &[Vec<Value>], column: usize) -> Result<Vec<VoId>, Failure> {
         .collect()
 }
 
+/// The EHR id each clinical row names in its hidden EHR column.
+///
+/// # Errors
+/// [`Failure`] when a row's column holds no string.
+fn clinical_ehrs(clinical: &[Vec<Cell>], ehr_column: usize) -> Result<Vec<String>, Failure> {
+    clinical
+        .iter()
+        .map(|row| {
+            row.get(ehr_column)
+                .and_then(Cell::as_string)
+                .ok_or_else(|| {
+                    Failure::analysis(ServiceError::exception(
+                        "read a clinical row's EHR id: the hidden EHR column is not a string",
+                    ))
+                })
+        })
+        .collect()
+}
+
 /// The joined rows, party-major: each party row with each clinical row of an
-/// EHR its party is the subject of.
-fn join_rows<'a>(
-    parties: &[VoId],
-    pairs: &[(VoId, EhrId)],
-    clinical: &'a [Vec<Value>],
-    ehr_column: usize,
-) -> Result<Vec<Joined<'a>>, Failure> {
+/// EHR its party is the subject of; `ehrs` holds each clinical row's EHR.
+fn join_rows<'a>(parties: &[VoId], pairs: &[(VoId, EhrId)], ehrs: &'a [String]) -> Vec<Joined<'a>> {
     let mut by_ehr: BTreeMap<&'a str, Vec<usize>> = BTreeMap::new();
-    for (i, row) in clinical.iter().enumerate() {
-        let ehr = row.get(ehr_column).and_then(Value::as_str).ok_or_else(|| {
-            Failure::analysis(ServiceError::exception(
-                "read a clinical row's EHR id: the hidden EHR column is not a string",
-            ))
-        })?;
-        by_ehr.entry(ehr).or_default().push(i);
+    for (i, ehr) in ehrs.iter().enumerate() {
+        by_ehr.entry(ehr.as_str()).or_default().push(i);
     }
     let mut linked: BTreeMap<Uuid, Vec<String>> = BTreeMap::new();
     for (party, ehr) in pairs {
@@ -524,7 +529,7 @@ fn join_rows<'a>(
             }
         }
     }
-    Ok(out)
+    out
 }
 
 /// For each row of a half, the dense rank of each prefix of that half's order
@@ -533,9 +538,9 @@ fn join_rows<'a>(
 /// The `j`-th rank of a row counts how many distinct tuples of the first
 /// `j + 1` keys precede it, so two rows that agree on every earlier key of
 /// the half compare on key `j` exactly as the database ordered it.
-fn prefix_ranks(rows: &[Vec<Value>], key_columns: &[usize]) -> Vec<Vec<usize>> {
+fn prefix_ranks(rows: &[Vec<Cell>], key_columns: &[usize]) -> Vec<Vec<usize>> {
     let mut out: Vec<Vec<usize>> = Vec::with_capacity(rows.len());
-    let mut previous: Option<&Vec<Value>> = None;
+    let mut previous: Option<&Vec<Cell>> = None;
     let mut counters = vec![0usize; key_columns.len()];
     for row in rows {
         if let Some(prev) = previous {
@@ -558,8 +563,8 @@ fn prefix_ranks(rows: &[Vec<Value>], key_columns: &[usize]) -> Vec<Vec<usize>> {
 fn sort_rows(
     joined: &mut [Joined<'_>],
     plan: &JoinPlan,
-    party: &[Vec<Value>],
-    clinical: &[Vec<Value>],
+    party: &[Vec<Cell>],
+    clinical: &[Vec<Cell>],
 ) {
     if plan.order.is_empty() {
         return;

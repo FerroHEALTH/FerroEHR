@@ -1,0 +1,13 @@
+# The most CPU instructions each codec micro-path may execute, counted by
+# callgrind (scripts/perf/instructions.sh, #6007): one line per path, as
+# `<path> <fixture> <ceiling>`. A ceiling of `report` is measured and not yet
+# judged; the core rewrite (#6001) sets each to its end state plus a small
+# margin, and from then on a ceiling only comes down, on an owner decision.
+json_to_rm lab report
+rm_to_json lab report
+xml_to_rm lab report
+rm_to_xml lab report
+json_to_rm ips report
+rm_to_json ips report
+xml_to_rm ips report
+rm_to_xml ips report

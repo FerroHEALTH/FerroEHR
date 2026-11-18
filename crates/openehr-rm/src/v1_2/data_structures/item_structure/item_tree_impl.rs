@@ -106,7 +106,7 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             null_flavour: None,
-            value: Some(DataValue::DvText(text(name))),
+            value: Some(Box::new(DataValue::DvText(text(name)))),
             null_reason: None,
         }
     }
@@ -139,11 +139,11 @@ mod tests {
 
     fn populated() -> Option<ItemTree> {
         Some(tree(Some(vec![
-            Item::Element(element("at0001", "systolic")),
-            Item::Cluster(cluster(
+            Item::from(element("at0001", "systolic")),
+            Item::from(cluster(
                 "at0002",
                 "group",
-                vec![Item::Element(element("at0003", "diastolic"))],
+                vec![Item::from(element("at0003", "diastolic"))],
             )?),
         ])))
     }

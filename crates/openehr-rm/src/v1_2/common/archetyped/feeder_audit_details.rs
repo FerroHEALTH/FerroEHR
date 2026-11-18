@@ -24,13 +24,13 @@ pub struct FeederAuditDetails {
     /// Identifier of the particular site/facility within an organisation which handled the item.
     ///
     /// For computability, this identifier needs to be e.g. a PKI identifier which can be included in the identifier list of the `PARTY_IDENTIFIED` object.
-    pub location: Option<PartyIdentified>,
+    pub location: Option<Box<PartyIdentified>>,
     /// Identifiers for subject of the received information item.
-    pub subject: Option<PartyProxy>,
+    pub subject: Option<Box<PartyProxy>>,
     /// Optional provider(s) who created, committed, forwarded or otherwise handled the item.
-    pub provider: Option<PartyIdentified>,
+    pub provider: Option<Box<PartyIdentified>>,
     /// Time of handling the item. For an originating system, this will be time of creation, for an intermediate feeder system, this will be a time of accession or other time of handling, where available.
-    pub time: Option<DvDateTime>,
+    pub time: Option<Box<DvDateTime>>,
     /// Any identifier used in the system such as  "interim" ,  "final" , or numeric versions if available.
     pub version_id: Option<String>,
     /// Optional attribute to carry any custom meta-data. May be archetyped.

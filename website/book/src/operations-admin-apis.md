@@ -484,6 +484,11 @@ lives in. It is also what the repair below uses to reach it.
   wrote them. The content is intact and every read serves it correctly; what is
   stale is the index over it, so a query that depends on the current shape does
   not reach this version until the repair below rewrites its rows.
+- `orphan_nodes`: decomposed rows exist that no stored version reads, because
+  their version is gone or lives in the other storage tier. `kind` names the
+  class of the rows' root. The sweep reports them once it has read every
+  version of a domain, and a sweep scoped by `committed_since` leaves them out,
+  since rows without a version have no commit time.
 
 `mismatch_count` is the full count. `mismatches` is capped at 1000 entries and
 `truncated` says whether the cap was reached; every mismatch is logged at
@@ -539,7 +544,8 @@ transaction, marker and all, because a write to a versioned object always
 happens in the primary tier.
 
 A logically deleted version stores no document, so it rebuilds to no rows,
-which is the repair for `unexpected_nodes`.
+which is the repair for `unexpected_nodes`. Rows reported `orphan_nodes` have no
+document to rebuild from, so the rebuild deletes them.
 
 The same route is the upgrade step after a release that changes how content is
 decomposed. Rows written by the older release hold the right content, so

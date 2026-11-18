@@ -21,7 +21,7 @@
               negotiate seam produced once (stored-content serving / commit interior)"
 )]
 
-use axum::response::Response;
+use axum::response::{IntoResponse as _, Response};
 use http::{HeaderMap, HeaderValue, StatusCode, header};
 use uuid::Uuid;
 
@@ -34,6 +34,7 @@ use ferroehr::access_eval::condition::AccessCondition;
 use ferroehr::access_log::view::LogStanding;
 use ferroehr::ids::EhrId;
 use ferroehr::service::query::request::AqlQueryRequest;
+use ferroehr::service::query::result_set::ResultSetDoc;
 
 /// The access pre-filter derived from the request: the caller's per-EHR
 /// `EHR_ACCESS` decision and what the caller may read of the access log.
@@ -59,9 +60,121 @@ impl QueryScope {
 }
 
 /// What a QUERY request body is called in the refusal of one that does not
-/// decode. The QUERY operations declare `application/json` only, and the body
-/// decodes once, straight into its DTO ([`negotiate::decode::typed_json`]).
-pub(super) const QUERY_BODY: &str = "query request body";
+/// decode.
+const QUERY_BODY: &str = "query request body";
+
+/// A QUERY body's members, as the canonical door judges them: the names of
+/// its top-level members, and the members whose values are open JSON and may
+/// hold a `_type`-tagged node.
+pub(super) trait OpenMembers {
+    /// The top-level member names the body carried.
+    fn names(&self) -> Vec<&str>;
+    /// The open members, each with the path of member names that leads to it.
+    fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)>;
+}
+
+/// The open members of a body: `query_parameters` and the undeclared members.
+fn open_members<'a>(
+    parameters: Option<&'a std::collections::BTreeMap<String, serde_json::Value>>,
+    undeclared: &'a std::collections::BTreeMap<String, serde_json::Value>,
+) -> Vec<(Vec<&'a str>, &'a serde_json::Value)> {
+    let parameters = parameters
+        .into_iter()
+        .flatten()
+        .map(|(name, value)| (vec!["query_parameters", name.as_str()], value));
+    let undeclared = undeclared
+        .iter()
+        .map(|(name, value)| (vec![name.as_str()], value));
+    parameters.chain(undeclared).collect()
+}
+
+/// The names of a body's present members, then its undeclared ones.
+fn member_names<'a>(
+    present: &[(&'a str, bool)],
+    undeclared: &'a std::collections::BTreeMap<String, serde_json::Value>,
+) -> Vec<&'a str> {
+    present
+        .iter()
+        .filter(|(_, carried)| *carried)
+        .map(|(name, _)| *name)
+        .chain(undeclared.keys().map(String::as_str))
+        .collect()
+}
+
+impl OpenMembers for openehr_its::rest::generated::query::AdhocQueryExecute {
+    fn names(&self) -> Vec<&str> {
+        let present = [
+            ("q", true),
+            ("offset", self.offset.is_some()),
+            ("fetch", self.fetch.is_some()),
+            ("query_parameters", self.query_parameters.is_some()),
+        ];
+        member_names(&present, &self.additional_properties)
+    }
+
+    fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)> {
+        open_members(self.query_parameters.as_ref(), &self.additional_properties)
+    }
+}
+
+impl OpenMembers for openehr_its::rest::generated::query::Query {
+    fn names(&self) -> Vec<&str> {
+        let present = [
+            ("offset", self.offset.is_some()),
+            ("fetch", self.fetch.is_some()),
+            ("query_parameters", self.query_parameters.is_some()),
+        ];
+        member_names(&present, &self.additional_properties)
+    }
+
+    fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)> {
+        open_members(self.query_parameters.as_ref(), &self.additional_properties)
+    }
+}
+
+/// Decodes a QUERY request body once, straight into its DTO `T`
+/// ([`negotiate::decode::typed_json`]), and refuses a `_type`-tagged node in it
+/// that carries a key its RM class does not declare, as the canonical door
+/// does ([`openehr_its::json::reject_undeclared_keys`]).
+///
+/// # Errors
+/// The decode's refusals, and a `400` for an undeclared key: a document the
+/// reader cannot read (ITS-REST overview `Requests_and_responses.md` §HTTP
+/// status codes).
+pub(super) fn query_body<T>(h: &HeaderMap, body: &bytes::Bytes) -> Result<T, RestError>
+where
+    T: serde::de::DeserializeOwned + OpenMembers,
+{
+    let decoded: T = negotiate::decode::typed_json(h, body, QUERY_BODY)?;
+    let refused = |e: openehr_its::json::JsonParseError| {
+        RestError::from(ApiError::BadRequest(format!(
+            "invalid canonical JSON body: {e}"
+        )))
+    };
+    let names = decoded.names();
+    let open = decoded.open();
+    // NOTE: a body tagged at its root is judged on its member names alone, the only part of it the door reads.
+    if let Some((_, tag)) = open.iter().find(|(path, _)| path.as_slice() == ["_type"]) {
+        let root: serde_json::Map<String, serde_json::Value> = names
+            .iter()
+            .map(|name| {
+                let value = if *name == "_type" {
+                    (*tag).clone()
+                } else {
+                    serde_json::Value::Null
+                };
+                ((*name).to_owned(), value)
+            })
+            .collect();
+        openehr_its::json::reject_undeclared_keys(&serde_json::Value::Object(root))
+            .map_err(refused)?;
+    }
+    for (path, value) in &open {
+        openehr_its::json::reject_undeclared_keys(value)
+            .map_err(|e| refused(path.iter().rev().fold(e, |e, name| e.in_field(name))))?;
+    }
+    Ok(decoded)
+}
 
 /// The canonical name of the `ehr_id` request header, spelled `openehr-ehr-id`
 /// by `Request.md` §Common Headers and Query Parameters.
@@ -166,57 +279,39 @@ pub(super) fn path_segment(parts: &RequestParts, key: &str) -> Result<String, Re
 ///
 /// `200_Query.yaml` declares a weak `ETag` "identifier of the `RESULT_SET`"
 /// (`headers/ETag_RESULT_SET.yaml`). The vendored `ResultSet` schema carries no
-/// `id` field, so the tag is a stable digest of the document's
-/// result-determining content ([`result_set_etag`]): identical result sets get
-/// identical tags. The body is negotiated by [`negotiate::body::respond`] — JSON only,
-/// the QUERY operations declaring no canonical-XML representation.
-pub(super) fn respond_result_set(headers: &HeaderMap, result_set: &serde_json::Value) -> Response {
-    let mut resp = negotiate::body::respond(headers, StatusCode::OK, result_set);
-    // Only a genuine 200 carries a RESULT_SET identifier; a negotiated 406 is an
-    // error body and gets no `ETag`.
-    if resp.status().is_success()
-        && let Ok(value) = HeaderValue::from_str(&result_set_etag(result_set))
+/// `id` field, so the tag is a digest of the document's result-determining
+/// bytes as written ([`ResultSetDoc::write`]): identical result sets get
+/// identical tags. The body is JSON only, the QUERY operations declaring no
+/// canonical-XML representation, so an `Accept` that admits no JSON is a
+/// `406`, which carries no `ETag`.
+pub(super) fn respond_result_set(headers: &HeaderMap, result_set: &ResultSetDoc) -> Response {
+    if negotiate::resolve_accept(
+        headers,
+        &[negotiate::WireFormat::CanonicalJson],
+        negotiate::WireFormat::CanonicalJson,
+    )
+    .is_none()
     {
+        return RestError::from(ApiError::NotAcceptable(
+            "this response is available as application/json only".to_owned(),
+        ))
+        .into_response();
+    }
+    let written = match result_set.write() {
+        Ok(written) => written,
+        Err(e) => {
+            return RestError::from(crate::overview::error::internal_fault(
+                "write the RESULT_SET",
+                &e,
+            ))
+            .into_response();
+        }
+    };
+    let mut resp = negotiate::body::body(StatusCode::OK, negotiate::APPLICATION_JSON, written.body);
+    if let Ok(value) = HeaderValue::from_str(&written.etag) {
         resp.headers_mut().insert(header::ETAG, value);
     }
     resp
-}
-
-/// Returns a weak `ETag` for a `RESULT_SET`: a deterministic 128-bit digest of
-/// the document's result-determining content, rendered as `W/"{uuid}"`.
-///
-/// The digest covers `name`, `q`, `meta._executed_aql`, `columns` and `rows`,
-/// and not the response-stamped metadata: an `ETag` "changes as soon as the
-/// resource changes" (`Requests_and_responses.md` §`ETag` and Last-Modified), so
-/// a digest over the per-response `_created` would mint a fresh tag for an
-/// unchanged result set. The executed AQL is included because two different
-/// queries may coincidentally return the same rows and are not the same result
-/// set.
-fn result_set_etag(result_set: &serde_json::Value) -> String {
-    let identity = serde_json::json!({
-        "name": result_set.get("name"),
-        "q": result_set.get("q"),
-        "executed_aql": result_set.pointer("/meta/_executed_aql"),
-        "columns": result_set.get("columns"),
-        "rows": result_set.get("rows"),
-    });
-    let bytes = serde_json::to_vec(&identity).unwrap_or_default();
-    format!("W/\"{}\"", stable_uuid(&bytes))
-}
-
-/// Returns a deterministic UUID from a byte digest: the first 128 bits of the
-/// input's SHA-256 digest.
-///
-/// SHA-256 (the pinned `sha2` crate) is a fixed, published algorithm, so the
-/// derived value is stable across program runs, Rust toolchains, and server
-/// versions — a served `ETag` must never change for an unchanged `RESULT_SET`.
-fn stable_uuid(bytes: &[u8]) -> Uuid {
-    use sha2::Digest as _;
-    let digest: [u8; 32] = sha2::Sha256::digest(bytes).into();
-    let (half, _) = digest.split_at(16);
-    let mut arr = [0u8; 16];
-    arr.copy_from_slice(half);
-    Uuid::from_bytes(arr)
 }
 
 /// Merges a paging value carried in the POST body with the same-named URL query
@@ -310,88 +405,9 @@ mod tests {
     }
 
     #[test]
-    fn stable_uuid_is_deterministic_and_content_sensitive() {
-        assert_eq!(stable_uuid(b"abc"), stable_uuid(b"abc"));
-        assert_ne!(stable_uuid(b"abc"), stable_uuid(b"abd"));
-    }
-
-    /// Pins a known `RESULT_SET` to its exact served `ETag` so a change to the
-    /// digest algorithm (or the identity-document shape it hashes) fails
-    /// loudly: a served `ETag` must never change for an unchanged `RESULT_SET`
-    /// ("It changes as soon as the resource changes",
-    /// `Requests_and_responses.md` §`ETag` and Last-Modified). The expected
-    /// value is the first 128 bits of the SHA-256 digest of the identity
-    /// document, computed independently with `openssl dgst -sha256`.
-    #[test]
-    fn result_set_etag_is_pinned_to_a_known_vector() {
-        let rs = serde_json::json!({"rows": [["x"]]});
-        assert_eq!(
-            result_set_etag(&rs),
-            "W/\"e9a0328f-52cf-352e-db43-ff1abe1de874\""
-        );
-    }
-
-    #[test]
-    fn result_set_etag_is_weak_and_stable() {
-        let rs = serde_json::json!({"rows": [[1, 2], [3, 4]]});
-        let tag = result_set_etag(&rs);
-        // 200_Query.yaml / ETag_RESULT_SET.yaml: weak form `W/"…"`.
-        assert!(tag.starts_with("W/\""), "weak ETag: {tag}");
-        assert!(tag.ends_with('"'), "quoted: {tag}");
-        // Stable for an identical RESULT_SET; different for a different one.
-        assert_eq!(tag, result_set_etag(&rs));
-        assert_ne!(tag, result_set_etag(&serde_json::json!({"rows": []})));
-    }
-
-    /// The tag identifies the RESULT SET, not the response instance: two
-    /// executions of the same query over the same data differ only in the
-    /// per-response `meta._created` stamp and MUST carry the same `ETag`
-    /// ("It changes as soon as the resource changes",
-    /// `Requests_and_responses.md` §`ETag` and Last-Modified) — while a genuine
-    /// change in the executed AQL, the columns or the rows MUST change it
-    /// ("A unique identifier of the resultSet", `Request.md` §Common Headers
-    /// and Query Parameters).
-    #[test]
-    fn result_set_etag_ignores_the_per_response_created_stamp() {
-        let execution = |created: &str, rows: serde_json::Value| {
-            serde_json::json!({
-                "meta": {
-                    "_type": "RESULTSET",
-                    "_schema_version": "1.0.0",
-                    "_created": created,
-                    "_executed_aql": "SELECT c/uid/value FROM COMPOSITION c",
-                },
-                "q": "SELECT c/uid/value FROM COMPOSITION c",
-                "columns": [{ "name": "#0", "path": "/uid/value" }],
-                "rows": rows,
-            })
-        };
-        let rows = serde_json::json!([["8849182c-82ad-4088-a07f-48ead4180515::s::1"]]);
-        assert_eq!(
-            result_set_etag(&execution("2026-08-03T09:00:00Z", rows.clone())),
-            result_set_etag(&execution("2026-08-03T11:30:42.117Z", rows.clone())),
-            "re-executing the same query over the same data must yield the same tag"
-        );
-        assert_ne!(
-            result_set_etag(&execution("2026-08-03T09:00:00Z", rows)),
-            result_set_etag(&execution("2026-08-03T09:00:00Z", serde_json::json!([]))),
-            "a different result set must yield a different tag"
-        );
-        // The executed AQL is part of the identity: identical rows from a
-        // different query are not the same result set.
-        let mut other_query = execution("2026-08-03T09:00:00Z", serde_json::json!([]));
-        other_query["meta"]["_executed_aql"] =
-            serde_json::json!("SELECT e/ehr_id/value FROM EHR e");
-        assert_ne!(
-            result_set_etag(&other_query),
-            result_set_etag(&execution("2026-08-03T09:00:00Z", serde_json::json!([]))),
-        );
-    }
-
-    #[test]
     fn respond_result_set_emits_etag_on_json_200() {
         // Empty Accept → JSON; the 200 carries the RESULT_SET ETag.
-        let rs = serde_json::json!({"rows": []});
+        let rs = ResultSetDoc::default();
         let resp = respond_result_set(&HeaderMap::new(), &rs);
         assert_eq!(resp.status(), StatusCode::OK);
         assert!(
@@ -404,7 +420,7 @@ mod tests {
     fn respond_result_set_no_etag_when_xml_only_accept() {
         // The query response has no canonical-XML shape → 406, and an error body
         // carries no RESULT_SET ETag.
-        let rs = serde_json::json!({"rows": []});
+        let rs = ResultSetDoc::default();
         let resp = respond_result_set(&headers(&[("accept", "application/xml")]), &rs);
         assert_eq!(resp.status(), StatusCode::NOT_ACCEPTABLE);
         assert!(etag(&resp).is_none());
