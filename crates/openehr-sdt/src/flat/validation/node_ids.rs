@@ -6,15 +6,13 @@
 //! §Reconstitutability), read under the interface id their Web Template node
 //! carries ([`WebTemplate::archetype_refs`]). The archetype-conformance walk
 //! and the FLAT and STRUCTURED read ([`crate::flat::flatten`]) both match an
-//! instance to the template through [`as_template_node_ids`].
+//! instance to the template through [`Mapped`].
 
 #![expect(
     clippy::disallowed_types,
     reason = "canonical JSON is the instance the archetype-conformance walk reads (#1694)"
 )]
 
-#[cfg(test)]
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use serde_json::Value;
@@ -42,8 +40,8 @@ pub(super) fn run<'i, I: Instance<'i>>(
 }
 
 /// An instance read with every `archetype_node_id` in `refs` replaced by the
-/// interface id it maps to: the reading [`as_template_node_ids`] gives a JSON
-/// value by rewriting a copy, here with no copy.
+/// interface id it maps to, with no copy of the instance; a `|raw` rendering
+/// carries the mapped ids too.
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Mapped<'i, I> {
     /// A node or value of the instance.
@@ -128,37 +126,6 @@ impl<'i, I: Instance<'i>> Instance<'i> for Mapped<'i, I> {
             }),
             Self::Id(s) => Some(Value::from(s)),
         }
-    }
-}
-
-/// `composition` with every archetype root it records by a full reference in
-/// [`WebTemplate::archetype_refs`] read under the interface id of its template
-/// node; borrowed unchanged when it records none.
-#[cfg(test)]
-pub(crate) fn as_template_node_ids<'a>(composition: &'a Value, wt: &WebTemplate) -> Cow<'a, Value> {
-    match &wt.archetype_refs {
-        Some(refs) if records_any_ref(composition, refs) => {
-            let mut instance = composition.clone();
-            to_template_node_ids(&mut instance, refs);
-            Cow::Owned(instance)
-        }
-        _ => Cow::Borrowed(composition),
-    }
-}
-
-/// Whether any LOCATABLE in `value` records one of `refs` as its
-/// `archetype_node_id`.
-#[cfg(test)]
-fn records_any_ref(value: &Value, refs: &BTreeMap<String, String>) -> bool {
-    match value {
-        Value::Object(o) => {
-            o.get("archetype_node_id")
-                .and_then(Value::as_str)
-                .is_some_and(|id| refs.contains_key(id))
-                || o.values().any(|v| records_any_ref(v, refs))
-        }
-        Value::Array(items) => items.iter().any(|v| records_any_ref(v, refs)),
-        _ => false,
     }
 }
 

@@ -17,41 +17,6 @@
 /// other than a synthesized canonical shape, each with the reason.
 const ALLOWLIST: &[(&str, &str)] = &[
     (
-        "flat/legacy/build.rs",
-        "the frozen canonical-JSON builder the typed one is proven equal to \
-         (#6003), read only by the equality test until it is deleted",
-    ),
-    (
-        "flat/legacy/ctx.rs",
-        "the frozen canonical-JSON builder the typed one is proven equal to \
-         (#6003), read only by the equality test until it is deleted",
-    ),
-    (
-        "flat/legacy/identity.rs",
-        "the frozen canonical-JSON builder the typed one is proven equal to \
-         (#6003), read only by the equality test until it is deleted",
-    ),
-    (
-        "flat/legacy/map/data_values.rs",
-        "the frozen canonical-JSON builder the typed one is proven equal to \
-         (#6003), read only by the equality test until it is deleted",
-    ),
-    (
-        "flat/legacy/map/mod.rs",
-        "the frozen canonical-JSON builder the typed one is proven equal to \
-         (#6003), read only by the equality test until it is deleted",
-    ),
-    (
-        "flat/legacy/map/parties.rs",
-        "the frozen canonical-JSON builder the typed one is proven equal to \
-         (#6003), read only by the equality test until it is deleted",
-    ),
-    (
-        "flat/legacy/map/structures.rs",
-        "the frozen canonical-JSON builder the typed one is proven equal to \
-         (#6003), read only by the equality test until it is deleted",
-    ),
-    (
         "flat/example.rs",
         "the example generator emits skeleton fragments a client fills in — \
          deliberately partial shapes",

@@ -42,7 +42,7 @@ pub(crate) mod identity;
 pub(crate) mod instance;
 mod instant;
 #[cfg(test)]
-mod legacy;
+mod parity;
 pub(crate) mod map;
 pub mod navigate;
 pub mod path;
