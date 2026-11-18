@@ -261,8 +261,9 @@ async fn documents_rendered(pool: &sqlx::PgPool) -> i64 {
     .expect("pg_stat_statements reads")
 }
 
-/// A page renders the document of each access-log entry it serves and of no
-/// other: the page is taken by the records' keys first (#5965).
+/// A page renders the document of no access-log entry in the database: the
+/// page is taken by the records' keys first (#5965), and the server joins
+/// each served entry from its stored parts (#6005).
 #[tokio::test]
 async fn a_page_renders_only_the_documents_it_serves() {
     let db = testkit::db().await.expect("testkit database");
@@ -284,10 +285,6 @@ async fn a_page_renders_only_the_documents_it_serves() {
     for case in cases() {
         for (count, offset) in [(20, 0), (7, 13), (20, 50), (1, 0)] {
             let (_, want_page) = reference(&pool, case.sql, count, offset).await;
-            let served = want_page
-                .iter()
-                .filter(|(chain, _)| chain == "access_log")
-                .count();
             sqlx::query(
                 "SELECT pg_stat_statements_reset(0, \
                  (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
@@ -309,10 +306,11 @@ async fn a_page_renders_only_the_documents_it_serves() {
                 "{}: the page",
                 case.name
             );
+            // NOTE: #6005, the server joins each served entry from its stored parts.
             assert_eq!(
                 documents_rendered(&pool).await,
-                i64::try_from(served).expect("a count"),
-                "{}, _count={count}, _offset={offset}: one document per served entry",
+                0,
+                "{}, _count={count}, _offset={offset}: no document rendered in the database",
                 case.name
             );
         }

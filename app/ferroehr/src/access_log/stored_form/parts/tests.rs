@@ -284,6 +284,133 @@ proptest! {
     }
 }
 
+/// The columns an intake row keeps for the record whose canonical form is
+/// `whole`, as the writer derives them.
+fn columns_of(whole: &str) -> (String, uuid::Uuid, jiff::Timestamp, Option<uuid::Uuid>) {
+    let cut = super::Cut::of(whole).expect("the whole reads");
+    let text = |path: &[&str]| cut.text_at(path).expect("a text reads");
+    let record_type = text(&["_type"]).expect("a record names its type");
+    let uid = text(&["uid", "value"])
+        .and_then(|uid| uuid::Uuid::parse_str(&uid).ok())
+        .unwrap_or_else(uuid::Uuid::nil);
+    let time = text(&["time_recorded", "value"])
+        .and_then(|at| at.parse::<jiff::Timestamp>().ok())
+        .unwrap_or(jiff::Timestamp::UNIX_EPOCH);
+    let ehr_id =
+        text(&["ehr_id", "value"]).and_then(|id| crate::access_log::stored_form::column_uuid(&id));
+    (record_type, uid, time, ehr_id)
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(4096))]
+
+    /// An entry's stored parts and columns assemble back into the exact
+    /// canonical form its content digest was computed over.
+    #[test]
+    fn an_entrys_parts_assemble_into_its_canonical_form(event in event()) {
+        let retention = stated(Some(jiff::civil::date(2031, 11, 8)), &LogRetention::default());
+        if let Some(entry) = entry_of(&event, None, "cdr.example.org", retention) {
+            let written = parts(&entry, &[LINK]).expect("the parts write");
+            let row = super::without_columns(&written.row).expect("the row part reads");
+            let (record_type, uid, time_recorded, ehr_id) = columns_of(&written.whole);
+            let columns = super::RowColumns { record_type: &record_type, uid, time_recorded, ehr_id };
+            let assembled = super::whole(&row, written.shared.as_deref(), &columns)
+                .expect("the parts assemble");
+            prop_assert_eq!(assembled, written.whole);
+        }
+    }
+}
+
+/// A record's parts and the columns of its row, assembled.
+fn assembled(record: &Value, columns: &super::RowColumns<'_>) -> (String, String) {
+    let written = parts(record, &[LINK]).expect("the parts write");
+    let row = super::without_columns(&written.row).expect("the row part reads");
+    let whole = super::whole(&row, written.shared.as_deref(), columns).expect("the parts assemble");
+    (whole, written.whole)
+}
+
+/// The access details of both parts merge by their at-codes, `outcome` and
+/// `query` by their members, and the columns give back `_type`, `uid`,
+/// `time_recorded` and `ehr_id`.
+#[test]
+fn the_columns_and_both_parts_assemble_back() {
+    let uid = "7d44b88c-4199-4bad-97dc-d78268e01398";
+    let ehr = "8849182c-82ad-4088-a07f-48ead4180515";
+    let record = serde_json::json!({
+        "_type": "ACCESS_LOG_ENTRY",
+        "uid": { "_type": "HIER_OBJECT_ID", "value": uid },
+        "ehr_id": { "_type": "HIER_OBJECT_ID", "value": ehr },
+        "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-18T10:11:12.3456Z" },
+        "accessor": { "kind": "person" },
+        "outcome": { "result": "granted", "delivered": 3 },
+        "query": { "language": "AQL", "rows": 2, "text_digest": "d" },
+        "system_id": "cdr",
+        "other_details": {
+            "_type": "ITEM_TREE",
+            "archetype_node_id": "x",
+            "items": [
+                { "archetype_node_id": "at0002", "v": 1 },
+                { "archetype_node_id": "at0004", "v": 2 },
+                { "archetype_node_id": "at0012", "v": 3 },
+                { "archetype_node_id": "at0018", "v": 4 },
+                { "archetype_node_id": "at0018", "v": 5 },
+                { "archetype_node_id": "at0027", "v": 6 }
+            ]
+        }
+    });
+    let columns = super::RowColumns {
+        record_type: "ACCESS_LOG_ENTRY",
+        uid: uuid::Uuid::parse_str(uid).expect("a uuid"),
+        time_recorded: "2026-11-18T10:11:12.3456Z".parse().expect("an instant"),
+        ehr_id: Some(uuid::Uuid::parse_str(ehr).expect("a uuid")),
+    };
+    let (whole, original) = assembled(&record, &columns);
+    assert_eq!(whole, original);
+}
+
+/// An id or instant the columns cannot give back stays in the row part,
+/// which replaces the column's member.
+#[test]
+fn a_member_the_row_part_keeps_replaces_the_columns() {
+    let record = serde_json::json!({
+        "_type": "ACCESS_LOG_ENTRY",
+        "uid": { "_type": "HIER_OBJECT_ID", "value": "7D44B88C-4199-4BAD-97DC-D78268E01398" },
+        "ehr_id": { "_type": "HIER_OBJECT_ID", "value": "not-a-uuid" },
+        "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-18T10:11:12.000+01:00" },
+        "accessor": { "kind": "person" },
+        "system_id": "cdr"
+    });
+    let columns = super::RowColumns {
+        record_type: "ACCESS_LOG_ENTRY",
+        uid: uuid::Uuid::parse_str("7d44b88c-4199-4bad-97dc-d78268e01398").expect("a uuid"),
+        time_recorded: "2026-11-18T09:11:12Z".parse().expect("an instant"),
+        ehr_id: None,
+    };
+    let (whole, original) = assembled(&record, &columns);
+    assert_eq!(whole, original);
+}
+
+/// A tombstone keeps no shared part: its row part and columns are the whole.
+#[test]
+fn a_tombstone_assembles_from_its_row() {
+    let record = serde_json::json!({
+        "_type": "ACCESS_LOG_TOMBSTONE",
+        "uid": { "_type": "HIER_OBJECT_ID", "value": "7d44b88c-4199-4bad-97dc-d78268e01398" },
+        "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-18T10:11:12Z" },
+        "time_removed": { "_type": "DV_DATE_TIME", "value": "2031-11-18T10:11:12Z" },
+        "grounds": [],
+        "system_id": "cdr"
+    });
+    let columns = super::RowColumns {
+        record_type: "ACCESS_LOG_TOMBSTONE",
+        uid: uuid::Uuid::parse_str("7d44b88c-4199-4bad-97dc-d78268e01398").expect("a uuid"),
+        time_recorded: "2026-11-18T10:11:12Z".parse().expect("an instant"),
+        ehr_id: None,
+    };
+    let (whole, original) = assembled(&record, &columns);
+    assert_eq!(whole, original);
+}
+
 /// A record that is no object has no parts.
 #[test]
 fn a_record_that_is_no_object_is_refused() {

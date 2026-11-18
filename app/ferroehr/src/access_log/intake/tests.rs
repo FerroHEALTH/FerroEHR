@@ -147,6 +147,7 @@ fn through_value(entry: &AccessLogEntry) -> (String, String, Option<(String, Str
         result_code: text("/outcome/result/defining_code/code_string"),
         party_id: text("/accessor/party/external_ref/id/value"),
         retain_until: text("/retention/retain_until/value"),
+        time_removed: text("/time_removed/value"),
     };
     let mut form = crate::access_log::stored_form::split(members);
     if let Value::Object(row) = &mut form.row {
