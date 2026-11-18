@@ -19,6 +19,7 @@ use ferroehr::service::query::request::{AqlQueryRequest, QueryOutcome};
 
 use super::response::{self, QueryScope};
 use crate::api::RequestParts;
+use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::params;
 use crate::state::AppState;
@@ -64,7 +65,8 @@ pub(super) async fn post(
 ) -> Result<QueryOutcome, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    let body: AdhocQueryExecute = response::decode_body(h, &parts.body)?;
+    let body: AdhocQueryExecute =
+        negotiate::decode::typed_json(h, &parts.body, response::QUERY_BODY)?;
     // The docs-text SHOULD-list draws no GET/POST distinction — the
     // URL forms are accepted here too; a body-vs-URL conflict is a
     // 400 (the same rule the two `ehr_id` carriers follow).

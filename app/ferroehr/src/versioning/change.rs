@@ -924,20 +924,6 @@ fn skipped_resend(r: &ResolvedWrite, audit: &AuditInput) -> Option<Committed> {
     })
 }
 
-/// Serializes the accepted, uid-stamped canonical value to the body bytes a
-/// point read serves verbatim (`version.body`, text taken before node
-/// decomposition, so the served wire keeps the codec's `_type`-first,
-/// BMM-declared field order).
-///
-/// # Errors
-/// [`ServiceError`] when the value cannot serialize (a non-finite number —
-/// unreachable for a codec-produced canonical value, refused loudly anyway).
-pub(crate) fn canonical_body_text(canonical: &Value) -> Result<String, ServiceError> {
-    crate::telemetry::conversion::record("value_to_text");
-    serde_json::to_string(canonical)
-        .map_err(|e| ServiceError::internal("serialize the canonical body", e))
-}
-
 /// Write the one PHI-free event-outbox row a single-object commit announces,
 /// when eventing is enabled (our own extension; no openEHR spec governs it — the
 /// row is skipped entirely, envelope included, when no consumer is configured).

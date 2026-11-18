@@ -346,7 +346,6 @@ fn scan_rows(rows: &[PgRow], columns: &[ColumnSpec]) -> Result<Scan, AqlError> {
         for (ci, spec) in columns.iter().enumerate() {
             match spec.kind {
                 CellKind::Scalar => {
-                    crate::telemetry::conversion::record("aql_cell_to_value");
                     let v: Option<Value> =
                         row.try_get(sql_col(spec, 0)?).map_err(ExecError::from)?;
                     cells.push(v.unwrap_or(Value::Null));
