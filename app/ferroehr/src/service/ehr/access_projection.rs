@@ -161,14 +161,14 @@ impl AccessCommit {
         match change {
             Change::Create {
                 kind: Kind::EhrAccess,
-                canonical,
+                body,
                 ..
-            } => has_settings(canonical).then(|| Self::Body(Some(canonical.clone()))),
+            } => has_settings(body.view()).then(|| Self::Body(Some(body.view().clone()))),
             Change::Modify {
                 kind: Kind::EhrAccess,
-                canonical,
+                body,
                 ..
-            } => Some(Self::Body(Some(canonical.clone()))),
+            } => Some(Self::Body(Some(body.view().clone()))),
             Change::Delete {
                 kind: Kind::EhrAccess,
                 ..

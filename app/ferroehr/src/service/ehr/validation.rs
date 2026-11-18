@@ -38,7 +38,9 @@ use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::validation::category::code;
 use crate::validation::versioned::composition_template_id;
+use crate::versioning::body::Body;
 use crate::versioning::{Kind, lifecycle};
+use openehr_rm::prelude::Composition;
 
 /// The instance size, in JSON nodes, above which the COMPOSITION validation
 /// passes hand their worker off before running.
@@ -192,19 +194,22 @@ impl FerroEhrService {
     )]
     pub(super) async fn validate_composition_for_commit(
         &self,
+        typed: Option<&Composition>,
         composition: &Value,
         incomplete: bool,
     ) -> Result<(), ServiceError> {
         let hand_off = exceeds_node_count(composition, VALIDATION_HANDOFF_NODES);
-        let mut messages = run_validation_pass(hand_off, || {
-            if incomplete {
-                openehr_sdt::rm_instance::validate_rm_and_terminology_incomplete_as(
-                    composition,
-                    "COMPOSITION",
-                )
-            } else {
-                openehr_sdt::rm_instance::validate_rm_and_terminology(composition, "COMPOSITION")
+        // NOTE: a `553|incomplete|` commit keeps the canonical-JSON passes by
+        // decision (#6002): its body need not read as strict typed RM.
+        let mut messages = run_validation_pass(hand_off, || match typed {
+            Some(typed) if !incomplete => {
+                openehr_sdt::rm_instance::validate_rm_and_terminology_typed(typed)
             }
+            _ if incomplete => openehr_sdt::rm_instance::validate_rm_and_terminology_incomplete_as(
+                composition,
+                "COMPOSITION",
+            ),
+            _ => openehr_sdt::rm_instance::validate_rm_and_terminology(composition, "COMPOSITION"),
         });
         let rm_terminology_failures = messages.len();
         let mut template_failures = 0;
@@ -296,7 +301,8 @@ impl FerroEhrService {
         match kind {
             Kind::Composition => {
                 self.privacy.enforce(kind.as_str(), data)?;
-                self.validate_composition_for_commit(data, incomplete).await
+                self.validate_composition_for_commit(None, data, incomplete)
+                    .await
             }
             Kind::EhrStatus => {
                 self.privacy.enforce(kind.as_str(), data)?;
@@ -319,6 +325,28 @@ impl FerroEhrService {
                 self.demographic_commit_check(kind, data, incomplete, None)
                     .await
             }
+        }
+    }
+
+    /// [`Self::validate_for_commit`] over a commit body: a typed COMPOSITION
+    /// runs the RM and terminology passes over typed RM, and its canonical
+    /// view the passes that still read JSON.
+    ///
+    /// # Errors
+    /// As [`Self::validate_for_commit`].
+    pub(crate) async fn validate_body_for_commit(
+        &self,
+        kind: Kind,
+        body: &Body,
+        incomplete: bool,
+    ) -> Result<(), ServiceError> {
+        match body {
+            Body::Composition { rm, view } => {
+                self.privacy.enforce(kind.as_str(), view)?;
+                self.validate_composition_for_commit(Some(rm), view, incomplete)
+                    .await
+            }
+            Body::Canonical(data) => self.validate_for_commit(kind, data, incomplete).await,
         }
     }
 }
