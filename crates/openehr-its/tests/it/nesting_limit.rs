@@ -92,7 +92,10 @@ fn json_reads_at_the_limit_on_the_smallest_stack() {
 #[test]
 fn json_refuses_one_level_past_the_limit() {
     let err = json_read(MAX_RM_NESTING + 1).expect_err("one level past the limit");
-    assert!(err.contains("nesting exceeds"), "{err}");
+    assert!(
+        err.contains(&openehr_base::nesting::NestingTooDeep.to_string()),
+        "{err}"
+    );
 }
 
 #[test]
@@ -126,5 +129,8 @@ fn xml_refuses_one_level_past_the_limit() {
         .join()
         .expect("the writer thread should not panic");
     let err = xml_read(deeper).expect_err("one level past the limit");
-    assert!(err.contains("nested RM object"), "{err}");
+    assert!(
+        err.contains(&openehr_base::nesting::NestingTooDeep.to_string()),
+        "{err}"
+    );
 }

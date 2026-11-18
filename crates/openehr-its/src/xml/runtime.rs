@@ -186,7 +186,7 @@ impl XmlError {
     /// ([`openehr_base::nesting::MAX_RM_NESTING`]).
     #[must_use]
     pub fn too_deep(cause: openehr_base::nesting::NestingTooDeep) -> Self {
-        Self::parse_source("reading a nested RM object", cause)
+        Self::parse_source(cause.to_string(), cause)
     }
 }
 
