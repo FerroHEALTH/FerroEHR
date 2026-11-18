@@ -190,7 +190,7 @@ pub enum FlatError {
 
     /// The built RM refuses an attribute or a value, or a mandatory attribute
     /// is left unset (#6003): the template-mediated 422 class.
-    #[error("the simplified document does not build a valid RM instance: {0}")]
+    #[error("the simplified document does not build a valid RM instance")]
     Rm(#[from] openehr_rm::v1_2::access::AccessError),
 
     /// A `|raw` canonical-JSON fragment the strict canonical reader refuses
