@@ -37,9 +37,9 @@ pub struct OpenehrContentItem {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
 
     // inherited: EXTRACT_CONTENT_ITEM
     /// True if the content item carried in this container was part of the primary set for the Extract, i.e. not added due to link-following.
@@ -49,5 +49,5 @@ pub struct OpenehrContentItem {
     /// True if the content of this item has not been included due to insufficient access rights of requestor.
     pub is_masked: Option<bool>,
     /// Content object.
-    pub item: Option<XVersionedObject<serde_json::Value>>,
+    pub item: Option<Box<XVersionedObject<serde_json::Value>>>,
 }

@@ -79,7 +79,7 @@ mod tests {
     }
 
     fn entry(subject: PartyProxy) -> Entry {
-        Entry::AdminEntry(AdminEntry {
+        Entry::AdminEntry(Box::new(AdminEntry {
             name: text("admin"),
             archetype_node_id: "openEHR-EHR-ADMIN_ENTRY.admin.v1".to_owned(),
             uid: None,
@@ -90,7 +90,7 @@ mod tests {
             encoding: code("IANA_character-sets", "UTF-8"),
             other_participations: None,
             workflow_id: None,
-            subject,
+            subject: Box::new(subject),
             provider: None,
             data: ItemStructure::ItemTree(Box::new(ItemTree {
                 name: text("tree"),
@@ -101,7 +101,7 @@ mod tests {
                 feeder_audit: None,
                 items: None,
             })),
-        })
+        }))
     }
 
     /// `Result implies subject.generating_type = "PARTY_SELF"`: true exactly

@@ -28,6 +28,12 @@ pub(crate) struct Model {
     pub(crate) classes: BTreeMap<String, BmmClass>,
     /// Lazy memo of [`nonempty_optional_lists`] (consulted per field).
     nonempty_memo: std::sync::OnceLock<BTreeSet<(String, String)>>,
+    /// Each class's `schema_name` (the last schema defining it wins, as for
+    /// [`Self::classes`]).
+    schema_of: BTreeMap<String, String>,
+    /// The size estimate behind the by-size boxing decision
+    /// ([`crate::plan::layout`]).
+    layout: crate::plan::layout::LayoutMemo,
 }
 
 /// Spec types provided by *dependency* crates. When a schema references a type
@@ -119,15 +125,29 @@ impl Model {
     #[must_use]
     pub(crate) fn merged(schemas: &[&BmmSchema]) -> Self {
         let mut classes = BTreeMap::new();
+        let mut schema_of = BTreeMap::new();
         for s in schemas {
             for (name, class) in &s.classes {
                 classes.insert(name.clone(), class.clone());
+                schema_of.insert(name.clone(), s.schema_name.clone());
             }
         }
         Model {
             classes,
             nonempty_memo: std::sync::OnceLock::new(),
+            schema_of,
+            layout: crate::plan::layout::LayoutMemo::default(),
         }
+    }
+
+    /// Whether `class` is defined by a schema named `schema_name`.
+    pub(crate) fn in_schema(&self, class: &str, schema_name: &str) -> bool {
+        self.schema_of.get(class).is_some_and(|s| s == schema_name)
+    }
+
+    /// The size-estimate memo of [`crate::plan::layout`].
+    pub(crate) fn layout_memo(&self) -> &crate::plan::layout::LayoutMemo {
+        &self.layout
     }
 
     pub(crate) fn get(&self, name: &str) -> Option<&BmmClass> {

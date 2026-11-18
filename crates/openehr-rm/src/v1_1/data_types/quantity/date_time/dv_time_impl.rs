@@ -50,7 +50,7 @@ impl DvTime {
     pub fn diff(&self, other: &Self) -> Option<DvDuration> {
         let difference = self.iso().diff(&other.iso())?;
         let (accuracy, accuracy_is_percent) =
-            match difference_accuracy(self.accuracy.as_ref(), other.accuracy.as_ref()) {
+            match difference_accuracy(self.accuracy.as_deref(), other.accuracy.as_deref()) {
                 CombinedAccuracy::Unrepresentable => return None,
                 CombinedAccuracy::Unknown => (None, None),
                 CombinedAccuracy::Known {
@@ -81,7 +81,7 @@ impl DvTime {
         Self {
             value: value.value,
             magnitude_status: None,
-            accuracy: displaced_accuracy(self.accuracy.as_ref(), a_diff),
+            accuracy: displaced_accuracy(self.accuracy.as_deref(), a_diff).map(Box::new),
             normal_range: None,
             normal_status: None,
             other_reference_ranges: openehr_base::containers::present_nonempty(Vec::new()),
@@ -112,7 +112,7 @@ impl Validate for DvTime {
         push_normal_range_consistency(
             out,
             "DV_TIME",
-            self.normal_status.as_ref(),
+            self.normal_status.as_deref(),
             self.normal_range.as_deref(),
             &DvOrdered::DvTime(self.clone()),
         );
@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn accuracy_follows_the_absolute_quantity_rule() {
         let mut precise = time("12:00:00");
-        precise.accuracy = Some(duration("PT10S"));
+        precise.accuracy = Some(Box::new(duration("PT10S")));
         let mut offset = duration("PT1H");
         offset.accuracy = Some(5.0);
         offset.accuracy_is_percent = Some(false);
@@ -213,7 +213,7 @@ mod tests {
 
         // `diff` reports the summed accuracy as the resulting amount's own.
         let mut other = time("11:00:00");
-        other.accuracy = Some(duration("PT20S"));
+        other.accuracy = Some(Box::new(duration("PT20S")));
         let difference = precise.diff(&other).expect("valid");
         assert_eq!(difference.accuracy, Some(30.0));
         assert_eq!(difference.accuracy_is_percent, Some(false));

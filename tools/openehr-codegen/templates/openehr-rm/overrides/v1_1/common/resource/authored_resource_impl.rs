@@ -110,7 +110,6 @@ impl Validate for AuthoredResource {
 
 #[cfg(test)]
 mod tests {
-    use openehr_term::codes::AuditChangeType;
     use super::*;
     use crate::v1_1::common::generic::audit_details::{AuditDetails, AuditDetailsData};
     use crate::v1_1::common::generic::party_proxy::PartyProxy;
@@ -123,6 +122,7 @@ mod tests {
     use crate::v1_1::data_types::text::dv_coded_text::DvCodedText;
     use openehr_base::v1_2::base_types::identification::object_version_id::ObjectVersionId;
     use openehr_base::v1_2::base_types::identification::terminology_id::TerminologyId;
+    use openehr_term::codes::AuditChangeType;
 
     fn resource(is_controlled: Option<bool>) -> AuthoredResource {
         AuthoredResource {
@@ -198,7 +198,7 @@ mod tests {
                             },
                         },
                         description: None,
-                        committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+                        committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
                     },
                 )),
             }),

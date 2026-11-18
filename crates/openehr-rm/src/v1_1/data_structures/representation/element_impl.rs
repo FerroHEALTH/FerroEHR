@@ -121,7 +121,7 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             null_flavour: None,
-            value: Some(DataValue::DvBoolean(DvBoolean { value: true })),
+            value: Some(Box::new(DataValue::DvBoolean(DvBoolean { value: true }))),
             null_reason: None,
         }
     }
@@ -135,14 +135,14 @@ mod tests {
     fn null_flavour_only_valid() {
         let mut e = element();
         e.value = None;
-        e.null_flavour = Some(null_flavour());
+        e.null_flavour = Some(Box::new(null_flavour()));
         assert_eq!(e.invariants(), Vec::<InvariantViolation>::new());
     }
 
     #[test]
     fn both_value_and_null_flavour_invalid() {
         let mut e = element();
-        e.null_flavour = Some(null_flavour());
+        e.null_flavour = Some(Box::new(null_flavour()));
         let v = e.invariants();
         assert!(
             v.iter()
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn null_reason_with_value_invalid() {
         let mut e = element();
-        e.null_reason = Some(text("some reason"));
+        e.null_reason = Some(Box::new(text("some reason")));
         let v = e.invariants();
         assert!(
             v.iter()
@@ -177,7 +177,7 @@ mod tests {
         let mut e = element();
         e.value = None;
         assert!(e.is_null());
-        e.null_flavour = Some(null_flavour());
+        e.null_flavour = Some(Box::new(null_flavour()));
         assert!(e.is_null());
     }
 

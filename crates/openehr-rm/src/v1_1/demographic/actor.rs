@@ -18,11 +18,35 @@ use crate::v1_1::demographic::person::Person;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Actor {
     /// The `AGENT` subtype of `ACTOR`.
-    Agent(Agent),
+    Agent(Box<Agent>),
     /// The `GROUP` subtype of `ACTOR`.
-    Group(Group),
+    Group(Box<Group>),
     /// The `ORGANISATION` subtype of `ACTOR`.
-    Organisation(Organisation),
+    Organisation(Box<Organisation>),
     /// The `PERSON` subtype of `ACTOR`.
-    Person(Person),
+    Person(Box<Person>),
+}
+
+impl From<Agent> for Actor {
+    fn from(value: Agent) -> Self {
+        Self::Agent(Box::new(value))
+    }
+}
+
+impl From<Group> for Actor {
+    fn from(value: Group) -> Self {
+        Self::Group(Box::new(value))
+    }
+}
+
+impl From<Organisation> for Actor {
+    fn from(value: Organisation) -> Self {
+        Self::Organisation(Box::new(value))
+    }
+}
+
+impl From<Person> for Actor {
+    fn from(value: Person) -> Self {
+        Self::Person(Box::new(value))
+    }
 }

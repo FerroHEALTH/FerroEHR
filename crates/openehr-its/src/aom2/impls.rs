@@ -95,6 +95,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::ArchetypeTerm {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::ArchetypeTerm {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -172,6 +173,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Assertion {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Assertion {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -239,6 +241,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::AssertionVariable {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::AssertionVariable {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -318,6 +321,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::AuthoredResource {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::AuthoredResource {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -410,6 +414,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Annotationlangset {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Annotationlangset {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -480,6 +485,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Annotationpathset {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Annotationpathset {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -559,6 +565,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Codedefinitionset {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Codedefinitionset {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -635,6 +642,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::ExprBinaryOperator {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::ExprBinaryOperator {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -766,6 +774,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::ExprLeaf {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::ExprLeaf {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -883,6 +892,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::ExprUnaryOperator {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::ExprUnaryOperator {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -970,6 +980,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Intervalofdate {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Intervalofdate {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1057,6 +1068,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Intervalofdatetime {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Intervalofdatetime {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1144,6 +1156,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Intervalofduration {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Intervalofduration {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1231,6 +1244,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Intervalofinteger {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Intervalofinteger {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1318,6 +1332,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Intervalofreal {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Intervalofreal {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1405,6 +1420,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Intervaloftime {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Intervaloftime {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1492,6 +1508,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Multiplicityinterval {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Multiplicityinterval {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1562,6 +1579,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::OperatorKind {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::OperatorKind {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1637,6 +1655,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PArchetype {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PArchetype {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -1908,6 +1927,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PArchetypeHrid {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PArchetypeHrid {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2001,6 +2021,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PArchetypeSlot {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PArchetypeSlot {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2091,6 +2112,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PArchetypeTerminology {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PArchetypeTerminology {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2213,6 +2235,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PAuthoredArchetype {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PAuthoredArchetype {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2384,6 +2407,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCArchetypeRoot {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCArchetypeRoot {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2484,6 +2508,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCAttribute {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCAttribute {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2557,6 +2582,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCAttributeTuple {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCAttributeTuple {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2645,6 +2671,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCBoolean {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCBoolean {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2754,6 +2781,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCComplexObject {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCComplexObject {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2846,6 +2874,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCComplexObjectProxy {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCComplexObjectProxy {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -2943,6 +2972,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCDate {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCDate {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3049,6 +3079,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCDateTime {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCDateTime {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3146,6 +3177,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCDefinedObject {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCDefinedObject {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3238,6 +3270,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCDuration {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCDuration {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3347,6 +3380,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCInteger {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCInteger {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3567,6 +3601,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCPrimitiveObject {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCPrimitiveObject {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3665,6 +3700,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCReal {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCReal {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3780,6 +3816,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCString {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCString {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3886,6 +3923,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCTemporal {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCTemporal {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -3982,6 +4020,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCTerminologyCode {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCTerminologyCode {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4095,6 +4134,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::PCTime {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::PCTime {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4221,6 +4261,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::ResourceDescription {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::ResourceDescription {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4418,6 +4459,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::ResourceDescriptionItem 
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::ResourceDescriptionItem {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4594,6 +4636,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::RuleStatement {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::RuleStatement {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4655,6 +4698,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::SiblingOrder {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::SiblingOrder {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4721,6 +4765,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::TerminologyCode {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::TerminologyCode {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4805,6 +4850,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::TranslationDetails {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::TranslationDetails {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4916,6 +4962,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::Termbindingset {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::Termbindingset {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,
@@ -4995,6 +5042,7 @@ impl crate::xml::runtime::ToXml for crate::aom2::types::ValueSet {
 }
 
 impl crate::xml::runtime::FromXml for crate::aom2::types::ValueSet {
+    #[inline(never)]
     fn from_xml(
         reader: &mut crate::xml::runtime::XmlReader,
         start: &crate::xml::runtime::StartTag,

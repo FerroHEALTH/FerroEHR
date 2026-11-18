@@ -421,24 +421,24 @@ fn decode_party_body(
     match kind {
         PartyKind::Agent => {
             rm_party::<openehr_rm::v1_1::demographic::agent::Agent, Agent>(h, body, profile)
-                .map(Party::Agent)
+                .map(Party::from)
         }
         PartyKind::Group => {
             rm_party::<openehr_rm::v1_1::demographic::group::Group, Group>(h, body, profile)
-                .map(Party::Group)
+                .map(Party::from)
         }
         PartyKind::Organisation => rm_party::<
             openehr_rm::v1_1::demographic::organisation::Organisation,
             Organisation,
         >(h, body, profile)
-        .map(Party::Organisation),
+        .map(Party::from),
         PartyKind::Person => {
             rm_party::<openehr_rm::v1_1::demographic::person::Person, Person>(h, body, profile)
-                .map(Party::Person)
+                .map(Party::from)
         }
         PartyKind::Role => {
             rm_party::<openehr_rm::v1_1::demographic::role::Role, Role>(h, body, profile)
-                .map(Party::Role)
+                .map(Party::from)
         }
     }
 }

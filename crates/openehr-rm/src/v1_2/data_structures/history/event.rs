@@ -18,7 +18,19 @@ use crate::v1_2::data_structures::history::point_event::PointEvent;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event<T> {
     /// The `INTERVAL_EVENT` subtype of `EVENT`.
-    IntervalEvent(IntervalEvent<T>),
+    IntervalEvent(Box<IntervalEvent<T>>),
     /// The `POINT_EVENT` subtype of `EVENT`.
-    PointEvent(PointEvent<T>),
+    PointEvent(Box<PointEvent<T>>),
+}
+
+impl<T> From<IntervalEvent<T>> for Event<T> {
+    fn from(value: IntervalEvent<T>) -> Self {
+        Self::IntervalEvent(Box::new(value))
+    }
+}
+
+impl<T> From<PointEvent<T>> for Event<T> {
+    fn from(value: PointEvent<T>) -> Self {
+        Self::PointEvent(Box::new(value))
+    }
 }

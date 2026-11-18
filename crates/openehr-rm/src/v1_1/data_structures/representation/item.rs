@@ -16,7 +16,19 @@ use crate::v1_1::data_structures::representation::element::Element;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Item {
     /// The `CLUSTER` subtype of `ITEM`.
-    Cluster(Cluster),
+    Cluster(Box<Cluster>),
     /// The `ELEMENT` subtype of `ITEM`.
-    Element(Element),
+    Element(Box<Element>),
+}
+
+impl From<Cluster> for Item {
+    fn from(value: Cluster) -> Self {
+        Self::Cluster(Box::new(value))
+    }
+}
+
+impl From<Element> for Item {
+    fn from(value: Element) -> Self {
+        Self::Element(Box::new(value))
+    }
 }

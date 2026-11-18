@@ -181,6 +181,13 @@ impl XmlError {
             source: Box::new(source),
         }
     }
+
+    /// A document nested deeper than the RM readers' one limit
+    /// ([`openehr_base::nesting::MAX_RM_NESTING`]).
+    #[must_use]
+    pub fn too_deep(cause: openehr_base::nesting::NestingTooDeep) -> Self {
+        Self::parse_source("reading a nested RM object", cause)
+    }
 }
 
 /// Writes canonical openEHR XML. A thin wrapper over `quick_xml::Writer` that
@@ -208,6 +215,22 @@ impl XmlWriter {
             w: Writer::new(Vec::new()),
             pending_root_ns: None,
         }
+    }
+
+    /// A writer that appends to `buffer`, so a caller renders a document
+    /// straight into the bytes it sends.
+    #[must_use]
+    pub fn with_buffer(buffer: Vec<u8>) -> Self {
+        Self {
+            w: Writer::new(buffer),
+            pending_root_ns: None,
+        }
+    }
+
+    /// The written bytes, with whatever the buffer held before.
+    #[must_use]
+    pub fn into_bytes(self) -> Vec<u8> {
+        self.w.into_inner()
     }
 
     /// Declare the default + `xsi` namespaces on the next (root) start tag.
@@ -311,6 +334,24 @@ pub fn to_xml<T: ToXml + ?Sized>(
     w.set_root_namespace(ns);
     value.write_xml(&mut w, root_tag, None)?;
     w.into_string()
+}
+
+/// Serialize a value as an openEHR canonical-XML document, appended to
+/// `buffer`: the one-pass form of [`to_xml`], for a caller that renders
+/// straight into a response body.
+///
+/// # Errors
+/// Propagates serialization errors.
+pub fn write_xml_into<T: ToXml + ?Sized>(
+    value: &T,
+    root_tag: &str,
+    ns: Namespace,
+    buffer: Vec<u8>,
+) -> Result<Vec<u8>, XmlError> {
+    let mut w = XmlWriter::with_buffer(buffer);
+    w.set_root_namespace(ns);
+    value.write_xml(&mut w, root_tag, None)?;
+    Ok(w.into_bytes())
 }
 
 /// Serializes a value as canonical XML under a statically-declared root type.
@@ -801,6 +842,11 @@ pub struct XmlReader<'a> {
 /// CLUSTER → ELEMENT → DATA_VALUE, plus nested clusters — is tens of levels in
 /// the most elaborate real templates, and the canonical-JSON reader's own
 /// equivalent bound (`serde_json`'s 128) sits in the same order of magnitude.
+///
+/// An RM document meets the RM readers' own, lower limit first
+/// ([`openehr_base::nesting::MAX_RM_NESTING`], counted in RM objects by the
+/// generated `FromXml` impls); this element bound also covers the archetype
+/// and template documents this reader parses.
 ///
 /// No openEHR spec bounds document nesting — our own design.
 pub const MAX_DEPTH: u32 = 256;

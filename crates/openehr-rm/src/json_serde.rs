@@ -220,10 +220,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::composition::content::entry
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -581,10 +584,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACTIVITY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -917,10 +923,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::address::Addre
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ADDRESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -1113,10 +1122,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ADDRESSED_MESSAGE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -1367,10 +1379,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ADMIN_ENTRY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -1732,10 +1747,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::agent::Agent {
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `AGENT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -1976,10 +1994,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::archetyped::archety
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ARCHETYPED` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -2170,10 +2191,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::generic::attestatio
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ATTESTATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -2410,10 +2434,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `AUDIT_DETAILS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -2679,10 +2706,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `AUTHORED_RESOURCE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -2893,10 +2923,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::capability::Ca
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CAPABILITY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -3229,10 +3262,13 @@ impl<'de, L: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CITATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -3496,10 +3532,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CLUSTER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -3683,10 +3722,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::text::code_phra
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CODE_PHRASE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -3811,10 +3853,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CODE_SET_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
@@ -3991,10 +4036,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::composition::composition::C
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `COMPOSITION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -4231,10 +4279,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::resource::consumable_use::C
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CONSUMABLE_USE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -4405,10 +4456,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::contact::Conta
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CONTACT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -4695,10 +4749,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CONTRIBUTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -5220,10 +5277,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::basic::dv_boole
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_BOOLEAN` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -5379,10 +5439,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::text::dv_coded_
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_CODED_TEXT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -5614,10 +5677,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::quantity::dv_co
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_COUNT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -5833,10 +5899,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_DATE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -6046,10 +6115,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_DATE_TIME` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -6273,10 +6345,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_DURATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -6442,10 +6517,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::uri::dv_ehr_uri
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_EHR_URI` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -6586,7 +6664,9 @@ type Value = crate::v1_1::data_types::time_specification::dv_general_time_specif
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `DV_GENERAL_TIME_SPECIFICATION` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
+let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
 let mut __seen_type = false;
 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -6698,10 +6778,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_IDENTIFIER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -6889,10 +6972,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_INTERVAL` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -7147,10 +7233,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_MULTIMEDIA` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -7507,10 +7596,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::quantity::dv_or
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_ORDINAL` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -7653,10 +7745,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::text::dv_paragr
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_PARAGRAPH` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -7783,10 +7878,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_PARSABLE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -7902,7 +8000,9 @@ type Value = crate::v1_1::data_types::time_specification::dv_periodic_time_speci
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `DV_PERIODIC_TIME_SPECIFICATION` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
+let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
 let mut __seen_type = false;
 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -8077,10 +8177,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_PROPORTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -8473,10 +8576,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::quantity::dv_qu
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_QUANTITY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -8725,10 +8831,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::quantity::dv_sc
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_SCALE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -8874,10 +8983,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::basic::dv_state
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_STATE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -9107,10 +9219,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::text::dv_text::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_TEXT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -9399,10 +9514,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_TIME` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -9620,10 +9738,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::uri::dv_uri::Dv
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_URI` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -9873,10 +9994,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::ehr::ehr::Ehr {
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EHR` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -10120,10 +10244,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::ehr::ehr_access::EhrAccess 
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EHR_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -10361,10 +10488,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::ehr::ehr_status::EhrStatus 
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EHR_STATUS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -10636,10 +10766,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ELEMENT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -11049,10 +11182,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EVALUATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -11447,10 +11583,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::composition::event_context:
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EVENT_CONTEXT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -11726,10 +11865,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::ehr_extract::common::extrac
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -12017,10 +12159,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_ACTION_REQUEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -12255,10 +12400,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_CHAPTER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -12632,10 +12780,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_ENTITY_CHAPTER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -12865,10 +13016,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_ENTITY_MANIFEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -13022,10 +13176,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_ERROR` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -13202,10 +13359,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_FOLDER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -13452,10 +13612,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_MANIFEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -13590,10 +13753,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_PARTICIPATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -13795,10 +13961,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_REQUEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -14037,10 +14206,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_SPEC` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -14267,10 +14439,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_UPDATE_SPEC` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -14444,10 +14619,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_VERSION_SPEC` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -14651,10 +14829,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::archetyped::feeder_
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `FEEDER_AUDIT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<_> = None;
                 let mut __s1: ::core::option::Option<_> = None;
@@ -14863,10 +15044,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `FEEDER_AUDIT_DETAILS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -15109,10 +15293,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::directory::folder::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `FOLDER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -15477,10 +15664,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `GENERIC_CONTENT_ITEM` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -15834,10 +16024,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::integration::generic_entry:
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `GENERIC_ENTRY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -16131,10 +16324,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::group::Group {
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `GROUP` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -16452,10 +16648,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `HISTORY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -16692,10 +16891,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `IMPORTED_VERSION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -16981,10 +17183,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `INSTRUCTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -17295,10 +17500,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `INSTRUCTION_DETAILS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -17510,10 +17718,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `INTERVAL_EVENT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -17773,10 +17984,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ISM_TRANSITION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -18050,10 +18264,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_LIST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -18270,10 +18487,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_SINGLE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -18575,10 +18795,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_TABLE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -18761,10 +18984,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::tags::item_tag::Ite
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_TAG` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -18969,10 +19195,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_TREE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -19220,10 +19449,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `Iso8601_date` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -19402,10 +19634,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `Iso8601_date_time` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -19581,10 +19816,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `Iso8601_duration` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -19755,10 +19993,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `Iso8601_time` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -20027,10 +20268,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::archetyped::link::L
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `LINK` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -20416,10 +20660,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `MEASUREMENT_SERVICE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
@@ -20524,10 +20771,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::ehr_extract::message::messa
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `MESSAGE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -20850,10 +21100,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `OBSERVATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -21095,7 +21348,9 @@ type Value = crate::v1_1::support::terminology::openehr_code_set_identifiers::Op
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `OPENEHR_CODE_SET_IDENTIFIERS` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
+let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
 let mut __seen_type = false;
 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
  match __key {
@@ -21325,10 +21580,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `OPENEHR_CONTENT_ITEM` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -21496,7 +21754,9 @@ type Value = crate::v1_1::support::terminology::openehr_terminology_group_identi
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
+let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
 let mut __seen_type = false;
 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
  match __key {
@@ -21743,10 +22003,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::organisation::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ORGANISATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -22073,10 +22336,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ORIGINAL_VERSION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -22287,10 +22553,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::generic::participat
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTICIPATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -22558,10 +22827,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_IDENTIFIED` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -22804,10 +23076,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::party_identity
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_IDENTITY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -23074,10 +23349,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::generic::party_rela
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_RELATED` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -23290,10 +23568,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_RELATIONSHIP` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -23500,10 +23781,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::common::generic::party_self
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_SELF` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -24002,10 +24286,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::person::Person
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PERSON` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -24300,10 +24587,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `POINT_EVENT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -24524,10 +24814,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `REFERENCE_RANGE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -24701,10 +24994,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `RESOURCE_DESCRIPTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<_> = None;
@@ -24940,10 +25236,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `RESOURCE_DESCRIPTION_ITEM` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -25143,10 +25442,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::resource::resource_usage::R
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `RESOURCE_USAGE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -25377,10 +25679,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `REVISION_HISTORY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -25498,10 +25803,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `REVISION_HISTORY_ITEM` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -25751,10 +26059,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::role::Role {
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ROLE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -26048,10 +26359,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `SECTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -26243,10 +26557,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::resource::service_use::Serv
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `SERVICE_USE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -26394,10 +26711,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `SYNC_EXTRACT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<_> = None;
@@ -26523,10 +26843,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `SYNC_EXTRACT_REQUEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -26672,10 +26995,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `SYNC_EXTRACT_SPEC` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<_> = None;
@@ -26813,10 +27139,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TERMINOLOGY_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
@@ -26911,10 +27240,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TERMINOLOGY_SERVICE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
@@ -27018,10 +27350,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::data_types::text::term_mapp
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TERM_MAPPING` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -27171,10 +27506,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TRANSLATION_DETAILS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -27402,10 +27740,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_COMPOSITION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -27548,10 +27889,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::ehr::versioned_ehr_access::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_EHR_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -27692,10 +28036,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::ehr::versioned_ehr_status::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_EHR_STATUS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -27838,10 +28185,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_FOLDER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -27986,10 +28336,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_OBJECT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -28207,10 +28560,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::demographic::versioned_part
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_PARTY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -28557,10 +28913,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_1::composition::view::view_sec
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VIEW_SECTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -28785,10 +29144,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_CONTRIBUTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -28975,10 +29337,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_COMPOSITION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -29201,10 +29566,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_EHR_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -29427,10 +29795,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_EHR_STATUS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -29650,10 +30021,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_FOLDER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -29873,10 +30247,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_OBJECT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -30178,10 +30555,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_PARTY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -30493,10 +30873,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::composition::content::entry
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -30854,10 +31237,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACTIVITY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -31190,10 +31576,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::address::Addre
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ADDRESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -31386,10 +31775,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ADDRESSED_MESSAGE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -31640,10 +32032,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ADMIN_ENTRY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -31986,10 +32381,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::agent::Agent {
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `AGENT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -32220,10 +32618,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::archetyped::archety
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ARCHETYPED` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -32414,10 +32815,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::generic::attestatio
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ATTESTATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -32654,10 +33058,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `AUDIT_DETAILS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -32923,10 +33330,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `AUTHORED_RESOURCE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -33137,10 +33547,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::capability::Ca
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CAPABILITY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -33441,10 +33854,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CLUSTER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -33628,10 +34044,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::text::code_phra
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CODE_PHRASE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -33756,10 +34175,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CODE_SET_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
@@ -33936,10 +34358,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::composition::composition::C
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `COMPOSITION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -34222,10 +34647,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::contact::Conta
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CONTACT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -34502,10 +34930,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `CONTRIBUTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -35027,10 +35458,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::basic::dv_boole
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_BOOLEAN` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -35186,10 +35620,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::text::dv_coded_
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_CODED_TEXT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -35421,10 +35858,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::quantity::dv_co
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_COUNT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -35640,10 +36080,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_DATE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -35853,10 +36296,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_DATE_TIME` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -36080,10 +36526,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_DURATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -36249,10 +36698,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::uri::dv_ehr_uri
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_EHR_URI` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -36393,7 +36845,9 @@ type Value = crate::v1_2::data_types::time_specification::dv_general_time_specif
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `DV_GENERAL_TIME_SPECIFICATION` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
+let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
 let mut __seen_type = false;
 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -36505,10 +36959,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_IDENTIFIER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -36696,10 +37153,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_INTERVAL` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -36954,10 +37414,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_MULTIMEDIA` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -37314,10 +37777,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::quantity::dv_or
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_ORDINAL` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -37460,10 +37926,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::text::dv_paragr
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_PARAGRAPH` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -37590,10 +38059,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_PARSABLE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -37709,7 +38181,9 @@ type Value = crate::v1_2::data_types::time_specification::dv_periodic_time_speci
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `DV_PERIODIC_TIME_SPECIFICATION` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
+let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
 let mut __seen_type = false;
 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -37884,10 +38358,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_PROPORTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -38280,10 +38757,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::quantity::dv_qu
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_QUANTITY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -38532,10 +39012,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::quantity::dv_sc
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_SCALE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -38681,10 +39164,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::basic::dv_state
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_STATE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -38914,10 +39400,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::text::dv_text::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_TEXT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -39206,10 +39695,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_TIME` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -39427,10 +39919,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::uri::dv_uri::Dv
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `DV_URI` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -39691,10 +40186,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::ehr::ehr::Ehr {
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EHR` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -39948,10 +40446,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::ehr::ehr_access::EhrAccess 
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EHR_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -40189,10 +40690,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::ehr::ehr_status::EhrStatus 
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EHR_STATUS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -40464,10 +40968,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ELEMENT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -40877,10 +41384,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EVALUATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -41275,10 +41785,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::composition::event_context:
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EVENT_CONTEXT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -41554,10 +42067,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::ehr_extract::common::extrac
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -41845,10 +42361,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_ACTION_REQUEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -42083,10 +42602,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_CHAPTER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -42460,10 +42982,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_ENTITY_CHAPTER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -42693,10 +43218,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_ENTITY_MANIFEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -42850,10 +43378,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_ERROR` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -43030,10 +43561,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_FOLDER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -43280,10 +43814,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_MANIFEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -43418,10 +43955,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_PARTICIPATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -43623,10 +44163,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_REQUEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -43865,10 +44408,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_SPEC` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -44095,10 +44641,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_UPDATE_SPEC` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -44272,10 +44821,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_VERSION_SPEC` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -44479,10 +45031,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::archetyped::feeder_
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `FEEDER_AUDIT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<_> = None;
                 let mut __s1: ::core::option::Option<_> = None;
@@ -44691,10 +45246,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `FEEDER_AUDIT_DETAILS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -44937,10 +45495,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::directory::folder::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `FOLDER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -45305,10 +45866,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `GENERIC_CONTENT_ITEM` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -45662,10 +46226,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::integration::generic_entry:
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `GENERIC_ENTRY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -45940,10 +46507,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::group::Group {
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `GROUP` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -46251,10 +46821,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `HISTORY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -46491,10 +47064,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `IMPORTED_VERSION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -46780,10 +47356,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `INSTRUCTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -47094,10 +47673,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `INSTRUCTION_DETAILS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -47309,10 +47891,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `INTERVAL_EVENT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -47572,10 +48157,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ISM_TRANSITION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -47849,10 +48437,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_LIST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -48069,10 +48660,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_SINGLE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -48374,10 +48968,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_TABLE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -48560,10 +49157,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::tags::item_tag::Ite
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_TAG` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -48768,10 +49368,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ITEM_TREE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -49019,10 +49622,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `Iso8601_date` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -49201,10 +49807,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `Iso8601_date_time` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -49380,10 +49989,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `Iso8601_duration` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -49554,10 +50166,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `Iso8601_time` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -49826,10 +50441,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::archetyped::link::L
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `LINK` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -50205,10 +50823,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `MEASUREMENT_SERVICE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
@@ -50313,10 +50934,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::ehr_extract::message::messa
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `MESSAGE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -50639,10 +51263,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `OBSERVATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -50884,7 +51511,9 @@ type Value = crate::v1_2::support::terminology::openehr_code_set_identifiers::Op
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `OPENEHR_CODE_SET_IDENTIFIERS` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
+let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
 let mut __seen_type = false;
 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
  match __key {
@@ -51114,10 +51743,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `OPENEHR_CONTENT_ITEM` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -51285,7 +51917,9 @@ type Value = crate::v1_2::support::terminology::openehr_terminology_group_identi
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `OPENEHR_TERMINOLOGY_GROUP_IDENTIFIERS` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
+let __nesting = ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
 let mut __seen_type = false;
 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
  match __key {
@@ -51513,10 +52147,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::organisation::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ORGANISATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -51833,10 +52470,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ORIGINAL_VERSION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -52047,10 +52687,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::generic::participat
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTICIPATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -52318,10 +52961,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_IDENTIFIED` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -52564,10 +53210,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::party_identity
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_IDENTITY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -52834,10 +53483,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::generic::party_rela
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_RELATED` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -53050,10 +53702,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_RELATIONSHIP` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -53260,10 +53915,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::common::generic::party_self
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PARTY_SELF` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -53733,10 +54391,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::person::Person
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `PERSON` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -54021,10 +54682,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `POINT_EVENT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -54245,10 +54909,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `REFERENCE_RANGE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -54422,10 +55089,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `RESOURCE_DESCRIPTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<_> = None;
@@ -54661,10 +55331,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `RESOURCE_DESCRIPTION_ITEM` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -54841,10 +55514,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `REVISION_HISTORY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -54962,10 +55638,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `REVISION_HISTORY_ITEM` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -55196,10 +55875,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::role::Role {
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ROLE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -55483,10 +56165,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `SECTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -55665,10 +56350,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `SYNC_EXTRACT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<_> = None;
@@ -55794,10 +56482,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `SYNC_EXTRACT_REQUEST` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
@@ -55943,10 +56634,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `SYNC_EXTRACT_SPEC` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<_> = None;
@@ -56084,10 +56778,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TERMINOLOGY_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
@@ -56182,10 +56879,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TERMINOLOGY_SERVICE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 while let Some(__key) = ::serde::de::MapAccess::next_key::<__Field>(&mut __map)? {
                     match __key {
@@ -56289,10 +56989,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::data_types::text::term_mapp
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TERM_MAPPING` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -56442,10 +57145,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `TRANSLATION_DETAILS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -56673,10 +57379,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_COMPOSITION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -56819,10 +57528,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::ehr::versioned_ehr_access::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_EHR_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -56963,10 +57675,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::ehr::versioned_ehr_status::
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_EHR_STATUS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -57109,10 +57824,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_FOLDER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -57257,10 +57975,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_OBJECT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -57478,10 +58199,13 @@ impl<'de> ::serde::Deserialize<'de> for crate::v1_2::demographic::versioned_part
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_PARTY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -57626,10 +58350,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_CONTRIBUTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -57816,10 +58543,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_COMPOSITION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -58042,10 +58772,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_EHR_ACCESS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -58268,10 +59001,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_EHR_STATUS` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -58491,10 +59227,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_FOLDER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -58714,10 +59453,13 @@ impl<'de, T: ::serde::de::DeserializeOwned> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_OBJECT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;
@@ -59019,10 +59761,13 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `X_VERSIONED_PARTY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
             ) -> ::core::result::Result<Self::Value, __A::Error> {
+                let __nesting =
+                    ::openehr_base::nesting::enter().map_err(::serde::de::Error::custom)?;
                 let mut __seen_type = false;
                 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
                 let mut __s1: ::core::option::Option<::core::option::Option<_>> = None;

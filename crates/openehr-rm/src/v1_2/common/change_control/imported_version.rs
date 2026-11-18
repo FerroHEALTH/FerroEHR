@@ -22,7 +22,7 @@ pub struct ImportedVersion<T> {
     /// OpenPGP digital signature or digest of content committed in this Version.
     pub signature: Option<String>,
     /// Audit trail corresponding to the committal of this version to the `VERSIONED_OBJECT`.
-    pub commit_audit: AuditDetails,
+    pub commit_audit: Box<AuditDetails>,
     /// The `ORIGINAL_VERSION` object that was imported.
-    pub item: OriginalVersion<T>,
+    pub item: Box<OriginalVersion<T>>,
 }

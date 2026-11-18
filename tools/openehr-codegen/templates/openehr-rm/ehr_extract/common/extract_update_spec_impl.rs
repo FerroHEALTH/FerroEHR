@@ -55,7 +55,8 @@ mod tests {
                     accuracy: None,
                     accuracy_is_percent: None,
                 }
-            }),
+            })
+            .map(Box::new),
             trigger_events: triggers,
             update_method: crate::v1_2::data_types::text::code_phrase::CodePhrase {
                 terminology_id:

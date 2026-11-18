@@ -145,12 +145,12 @@ impl SettingsCaller {
 /// The `external_ref` of a `PARTY_PROXY`.
 fn reference(proxy: &PartyProxy) -> Option<&PartyRef> {
     match proxy {
-        PartyProxy::PartySelf(party) => party.external_ref.as_ref(),
+        PartyProxy::PartySelf(party) => party.external_ref.as_deref(),
         PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(party)) => {
-            party.external_ref.as_ref()
+            party.external_ref.as_deref()
         }
         PartyProxy::PartyIdentified(PartyIdentified::PartyRelated(party)) => {
-            party.external_ref.as_ref()
+            party.external_ref.as_deref()
         }
     }
 }

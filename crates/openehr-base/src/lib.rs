@@ -113,6 +113,7 @@ impl std::str::FromStr for Generation {
 
 // hand-written modules (spec behaviour), auto-declared:
 pub mod containers;
+pub mod nesting;
 pub mod serde_support;
 pub mod validate;
 

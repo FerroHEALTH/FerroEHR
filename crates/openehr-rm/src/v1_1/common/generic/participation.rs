@@ -25,9 +25,9 @@ pub struct Participation {
     /// This attribute should be coded, but cannot be limited to the HL7v3:ParticipationFunction vocabulary, since it is too limited and hospital-oriented.
     pub function: DvText,
     /// Optional field for recording the 'mode' of the performer / activity interaction, e.g. present, by telephone, by email etc.
-    pub mode: Option<DvCodedText>,
+    pub mode: Option<Box<DvCodedText>>,
     /// The id and possibly demographic system link of the party participating in the activity.
-    pub performer: PartyProxy,
+    pub performer: Box<PartyProxy>,
     /// The time interval during which the participation took place, if it is used in an observational context (i.e. recording facts about the past); or the intended time interval of the participation when used in future contexts, such as EHR Instructions.
-    pub time: Option<DvInterval<DvDateTime>>,
+    pub time: Option<Box<DvInterval<DvDateTime>>>,
 }

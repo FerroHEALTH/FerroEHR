@@ -40,15 +40,15 @@ pub struct History<T> {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
     /// Time origin of this event history. The first event is not necessarily at the origin point.
     pub origin: DvDateTime,
     /// Period between samples in this segment if periodic.
-    pub period: Option<DvDuration>,
+    pub period: Option<Box<DvDuration>>,
     /// Duration of the entire History; either corresponds to the duration of all the events, and/or the duration represented by the summary, if it exists.
-    pub duration: Option<DvDuration>,
+    pub duration: Option<Box<DvDuration>>,
     /// Optional summary data that aggregates, organizes, reduces and transforms the event series.
     ///
     /// This may be a text or image that presents a graphical presentation, or some data that assists with the interpretation of the data.
