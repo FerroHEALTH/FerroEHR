@@ -21,7 +21,7 @@
 )]
 
 use crate::ids::{EhrId, VoId};
-use crate::service::response::{ResourceMeta, ServiceResponse};
+use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use serde_json::Value;
 
 use crate::error::ServiceError;
@@ -143,19 +143,21 @@ impl FerroEhrService {
         Ok(canonical)
     }
 
-    /// A [`ServiceResponse`] for a loaded versioned object: its canonical body
-    /// with the `uid` injected, plus the resource metadata for the wire
-    /// headers.
+    /// The response of a version read whose body may still be the stored
+    /// text ([`crate::versioning::read::read_raw`]): the text verbatim where the
+    /// commit stamped the version's own `uid` into it, else its canonical value
+    /// with the `uid` injected ([`Self::with_uid`]).
     ///
     /// # Errors
-    /// [`VersionIdError`] when the stored `creating_system_id` does not compose
-    /// into a well-formed `OBJECT_VERSION_ID` (see [`Self::with_uid`]).
-    pub(in crate::service) fn version_response(
+    /// The identifier fault of the stored version, and a stored body that is
+    /// not JSON.
+    pub(in crate::service) fn raw_version_response(
         &self,
         ehr_id: EhrId,
         vo_id: VoId,
-        read: VersionRead,
-    ) -> Result<ServiceResponse, VersionIdError> {
+        raw: crate::versioning::read::RawVersionRead,
+    ) -> Result<RawServiceResponse, ServiceError> {
+        let read = raw.read;
         let meta = self
             .version_meta(
                 ehr_id,
@@ -165,10 +167,49 @@ impl FerroEhrService {
                 read.time_committed,
             )
             .with_content(vec![read.content.clone()]);
-        Ok(ServiceResponse::new(
-            self.with_uid(read.canonical, vo_id, &read.creating_system_id, read.tree)?,
-            meta,
-        ))
+        Ok(RawServiceResponse {
+            body: self.served_body(vo_id, read, raw.raw_json)?,
+            meta: Some(meta),
+        })
+    }
+
+    /// The body a read serves of `read`, the version of `vo_id`: `raw_json`,
+    /// its stored text, verbatim where it carries the version's own `uid`,
+    /// else the canonical value with the `uid` injected.
+    ///
+    /// # Errors
+    /// The identifier fault of the stored version, and a stored body that is
+    /// not JSON.
+    pub(in crate::service) fn served_body(
+        &self,
+        vo_id: VoId,
+        read: VersionRead,
+        raw_json: Option<String>,
+    ) -> Result<ReadBody, ServiceError> {
+        let Some(text) = raw_json else {
+            return Ok(ReadBody::Value(self.with_uid(
+                read.canonical,
+                vo_id,
+                &read.creating_system_id,
+                read.tree,
+            )?));
+        };
+        let uid = object_version_id(vo_id, &read.creating_system_id, read.tree);
+        if carries_version_uid(&text, &uid) {
+            return Ok(ReadBody::RawJson(text));
+        }
+        let value: Value = serde_json::from_str(&text).map_err(|e| {
+            ServiceError::exception(format!(
+                "the stored body of {} {vo_id} is not decodable JSON: {e}",
+                read.kind.as_str()
+            ))
+        })?;
+        Ok(ReadBody::Value(self.with_uid(
+            value,
+            vo_id,
+            &read.creating_system_id,
+            read.tree,
+        )?))
     }
 
     /// A [`ServiceResponse`] for the VERSION envelope of a loaded version, an
@@ -281,4 +322,14 @@ pub(in crate::service) fn container_meta(
     last_modified: jiff::Timestamp,
 ) -> ResourceMeta {
     ResourceMeta::new(ehr_id.to_string(), vo_id.to_string()).with_last_modified(last_modified)
+}
+
+/// Whether `text`, a stored body in the compact form the commit writes
+/// (`canonical_body_text`), carries `uid` as its stamped `OBJECT_VERSION_ID`
+/// member, so the JSON read can serve it verbatim (#5755).
+fn carries_version_uid(text: &str, uid: &str) -> bool {
+    const OPEN: &str = r#""uid":{"_type":"OBJECT_VERSION_ID","value":""#;
+    text.split(OPEN)
+        .skip(1)
+        .any(|rest| rest.strip_prefix(uid).is_some_and(|r| r.starts_with("\"}")))
 }

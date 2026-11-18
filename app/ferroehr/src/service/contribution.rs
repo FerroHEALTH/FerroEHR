@@ -16,6 +16,7 @@ use std::collections::HashMap;
 
 use openehr_base::prelude::HierObjectId;
 use openehr_its::rest::generated::common::{UpdateAudit, UpdateVersion};
+use openehr_rm::prelude::DvText;
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -24,18 +25,19 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::demographic::validate::Container;
+use crate::service::ehr::status::SubjectColumns;
 use crate::system_log::categories::AccessedContent;
 use crate::system_log::event::AccessDomain;
 use crate::system_log::recorder::WriteFacts;
 use crate::versioning::Kind;
 use crate::versioning::attestation::PendingAttest;
 use crate::versioning::audit::{AuditInput, validate_commit_audit};
+use crate::versioning::body::{Body, decode_member};
 use crate::versioning::change::{self, Change, CommittedContribution};
 use crate::versioning::contribution::{
     Action, PlannedVersion, body_target_not_found_is_bad_request, check_kind_scope, data_kind,
     delete_change, needs_content_write_permission, parse_contribution_audit, parse_supplied_uid,
     plan_attestation, plan_version, plan_writes_content_without_reactivating, require_kind,
-    typed_decode_gate,
 };
 
 /// The pool the pseudonymisation domain this CONTRIBUTION belongs to is served
@@ -133,43 +135,28 @@ pub(crate) async fn commit_version_set(
     // so no pre-transaction read can race a concurrent EHR_STATUS flip.
     let needs_content_permission = needs_content_write_permission(&changes);
 
-    // The subject-sync hook runs after the commit, so the EHR_STATUS bodies
-    // are collected before `changes` moves into the commit engine.
-    let status_commits: Vec<Value> = changes
-        .iter()
-        .filter_map(|(_, c)| match c {
-            Change::Create {
-                kind: Kind::EhrStatus,
-                body,
-                ..
+    // The subject-sync hook and the folder item-reference check run after the
+    // commit (a folder may reference a sibling of its own set, RM ehr master04
+    // §Folders), so what they read is taken before `changes` moves into the
+    // commit engine.
+    let system_id = cx.effective_system_id();
+    let mut status_commits = Vec::new();
+    let mut folder_commits = Vec::new();
+    for (_, change) in &changes {
+        if let Change::Create { kind, body, .. } | Change::Modify { kind, body, .. } = change {
+            match kind {
+                Kind::EhrStatus => {
+                    status_commits.extend(SubjectColumns::of_body(body));
+                }
+                Kind::Folder => {
+                    folder_commits.push(crate::validation::versioned::local_item_refs(
+                        body, &system_id,
+                    ));
+                }
+                _ => {}
             }
-            | Change::Modify {
-                kind: Kind::EhrStatus,
-                body,
-                ..
-            } => body.canonical().cloned(),
-            _ => None,
-        })
-        .collect();
-    // The FOLDER bodies this set commits, for the post-insert item-reference
-    // check, run after the inserts because a folder may reference a sibling of
-    // its own set (RM ehr master04 §Folders).
-    let folder_commits: Vec<Value> = changes
-        .iter()
-        .filter_map(|(_, c)| match c {
-            Change::Create {
-                kind: Kind::Folder,
-                body,
-                ..
-            }
-            | Change::Modify {
-                kind: Kind::Folder,
-                body,
-                ..
-            } => body.canonical().cloned(),
-            _ => None,
-        })
-        .collect();
+        }
+    }
 
     let outcome = write_contribution(
         cx,
@@ -215,12 +202,13 @@ struct ContributionWrite<'a> {
     audit: &'a AuditInput,
     changes: Vec<(AuditInput, Change)>,
     attests: Vec<PendingAttest>,
-    /// The `EHR_STATUS` bodies the set commits, captured before `changes` moves
-    /// into the commit engine (the subject-sync hook runs after the commit).
-    status_commits: Vec<Value>,
-    /// The FOLDER bodies the set commits, for the post-insert item-reference
-    /// check.
-    folder_commits: Vec<Value>,
+    /// The promoted columns of the `EHR_STATUS` bodies the set commits,
+    /// captured before `changes` moves into the commit engine (the
+    /// subject-sync hook runs after the commit).
+    status_commits: Vec<SubjectColumns>,
+    /// The local item references of each FOLDER the set commits, for the
+    /// post-insert item-reference check.
+    folder_commits: Vec<Vec<crate::validation::versioned::LocalItemRef>>,
     /// Whether the set needs the content-write gate
     /// ([`needs_content_write_permission`]); evaluated in-transaction.
     needs_content_permission: bool,
@@ -303,13 +291,7 @@ async fn write_contribution(
     .map_err(body_target_not_found_is_bad_request)?;
     if let Some(ehr_id) = ehr_id {
         for folder in &write.folder_commits {
-            crate::validation::versioned::check_folder_item_refs(
-                &mut *tx,
-                ehr_id,
-                &cx.effective_system_id(),
-                folder,
-            )
-            .await?;
+            crate::validation::versioned::check_folder_item_refs(&mut *tx, ehr_id, folder).await?;
         }
         // Keep the EHR's promoted subject columns in sync after each committed
         // EHR_STATUS version (one EHR per subject — RM ehr master04 §EHR
@@ -379,13 +361,13 @@ async fn read_target_kinds(
 async fn build_change(
     cx: &FerroEhrService,
     kinds: &HashMap<VoId, Kind>,
-    v: PlannedVersion,
+    mut v: PlannedVersion,
     ehr_id: Option<EhrId>,
     party_only: bool,
 ) -> Result<(AuditInput, Change), ServiceError> {
     let change = match v.action {
-        Action::Create => create_change(cx, &v, ehr_id, party_only).await?,
-        Action::Modify => modify_change(cx, kinds, &v, party_only).await?,
+        Action::Create => create_change(cx, &mut v, ehr_id, party_only).await?,
+        Action::Modify => modify_change(cx, kinds, &mut v, party_only).await?,
         Action::Delete => delete_change(kinds, &v, party_only)?,
         // The `666|attestation|` branch collects every attest member and
         // `continue`s before this call, so this arm is a typed guard against
@@ -421,24 +403,29 @@ async fn build_change(
 async fn accept_content(
     cx: &FerroEhrService,
     (kind, container): (Kind, Option<Container>),
-    data: &Value,
+    data: Value,
     incomplete: bool,
     index: usize,
     party_only: bool,
-) -> Result<Option<String>, ServiceError> {
+) -> Result<(Body, Option<String>), ServiceError> {
     check_kind_scope(kind, party_only).map_err(|e| e.for_version_member(index))?;
-    typed_decode_gate(kind, data, incomplete).map_err(|e| e.for_version_member(index))?;
-    let checked = match container {
-        Some(container) if kind.is_party() => {
-            cx.demographic_commit_check(kind, data, incomplete, Some(container))
+    let typed = decode_member(kind, &data, incomplete).map_err(|e| e.for_version_member(index))?;
+    let checked = match (container, typed) {
+        (Some(container), _) if kind.is_party() => {
+            cx.demographic_commit_check(kind, &data, incomplete, Some(container))
                 .await
         }
-        _ => cx.validate_for_commit(kind, data, incomplete).await,
+        (_, Some(typed)) => cx.validate_body(kind, &typed, false).await,
+        (_, None) => cx.validate_for_commit(kind, &data, incomplete).await,
     };
     checked.map_err(|e| e.for_version_member(index))?;
-    Ok((kind == Kind::Composition)
-        .then(|| crate::validation::versioned::composition_template_id(data).map(str::to_owned))
-        .flatten())
+    // NOTE: the member is stored and signed as the value it was received as, the
+    // bytes its client wrote (#6003).
+    let body = Body::Canonical(data);
+    let template_id = (kind == Kind::Composition)
+        .then(|| body.template_id().map(str::to_owned))
+        .flatten();
+    Ok((body, template_id))
 }
 
 /// Resolves a creation member. Its kind comes from the payload `_type`.
@@ -451,11 +438,11 @@ async fn accept_content(
 /// master08-func_tc_ehr_contribution E.2 criterion).
 async fn create_change(
     cx: &FerroEhrService,
-    v: &PlannedVersion,
+    v: &mut PlannedVersion,
     ehr_id: Option<EhrId>,
     party_only: bool,
 ) -> Result<Change, ServiceError> {
-    let Some(data) = v.data.clone() else {
+    let Some(data) = v.data.take() else {
         return Err(ServiceError::content_invalid(
             Violation::new("is required on a creation version").with_path("data"),
         )
@@ -466,22 +453,22 @@ async fn create_change(
     // container the commit gives it.
     let allocated = kind.is_party().then(|| cx.allocate_party_id());
     let container = allocated.as_ref().map(|id| Container::New(id.id()));
-    let template_id = accept_content(
+    let (body, template_id) = accept_content(
         cx,
         (kind, container),
-        &data,
+        data,
         v.incomplete,
         v.index,
         party_only,
     )
     .await?;
     if let Some(ehr_id) = ehr_id {
-        reject_duplicate_singleton(cx, ehr_id, kind, &data).await?;
+        reject_duplicate_singleton(cx, ehr_id, kind, &body).await?;
     }
     Ok(Change::Create {
         allocated,
         kind,
-        body: data.into(),
+        body,
         template_id,
         signature: v.signature.clone(),
         lifecycle_state: Some(v.lifecycle_state.clone()),
@@ -498,10 +485,10 @@ async fn create_change(
 async fn modify_change(
     cx: &FerroEhrService,
     kinds: &HashMap<VoId, Kind>,
-    v: &PlannedVersion,
+    v: &mut PlannedVersion,
     party_only: bool,
 ) -> Result<Change, ServiceError> {
-    let Some(data) = v.data.clone() else {
+    let Some(data) = v.data.take() else {
         return Err(ServiceError::content_invalid(
             Violation::new("is required on a modification version").with_path("data"),
         )
@@ -513,10 +500,10 @@ async fn modify_change(
         ));
     };
     let kind = require_kind(kinds, vo_id).map_err(|e| e.for_version_member(v.index))?;
-    let template_id = accept_content(
+    let (body, template_id) = accept_content(
         cx,
         (kind, Some(Container::Existing(vo_id))),
-        &data,
+        data,
         v.incomplete,
         v.index,
         party_only,
@@ -525,7 +512,7 @@ async fn modify_change(
     Ok(Change::Modify {
         vo_id,
         kind,
-        body: data.into(),
+        body,
         expected: Some(expected),
         template_id,
         signature: v.signature.clone(),
@@ -580,7 +567,7 @@ async fn reject_duplicate_singleton(
     cx: &FerroEhrService,
     ehr_id: EhrId,
     kind: Kind,
-    data: &Value,
+    body: &Body,
 ) -> Result<(), ServiceError> {
     match kind {
         Kind::EhrStatus | Kind::EhrAccess => {
@@ -592,14 +579,18 @@ async fn reject_duplicate_singleton(
             }
         }
         Kind::Folder => {
-            let root = data
-                .get("archetype_node_id")
-                .and_then(Value::as_str)
-                .unwrap_or_default();
-            let name = data
-                .pointer("/name/value")
-                .and_then(Value::as_str)
-                .unwrap_or_default();
+            let root = body.archetype_node_id().unwrap_or_default();
+            let name = match body {
+                Body::Folder(folder) => match &folder.name {
+                    DvText::DvCodedText(text) => text.value.as_str(),
+                    DvText::DvText(text) => text.value.as_str(),
+                },
+                other => other
+                    .canonical()
+                    .and_then(|data| data.pointer("/name/value"))
+                    .and_then(Value::as_str)
+                    .unwrap_or_default(),
+            };
             if crate::storage::ehr_repo::live_folder_root_exists(&cx.pool, ehr_id, root, name)
                 .await?
             {

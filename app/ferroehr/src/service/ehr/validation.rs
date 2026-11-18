@@ -367,75 +367,6 @@ impl FerroEhrService {
             }
         }
     }
-
-    /// Validates a commit body and, when it is valid, externalizes its large
-    /// media, before any connection is held.
-    ///
-    /// A typed COMPOSITION runs the RM and terminology passes over typed RM;
-    /// the passes that still read JSON and the offload share one canonical
-    /// view, rendered here and dropped on return. The outer error is the
-    /// offload's, which refuses the write at once; the inner result is the
-    /// validation's, which the caller surfaces after its own gates.
-    ///
-    /// # Errors
-    /// The offload's [`ServiceError`].
-    pub(crate) async fn accept_body(
-        &self,
-        kind: Kind,
-        body: &mut Body,
-        incomplete: bool,
-    ) -> Result<Result<(), ServiceError>, ServiceError> {
-        match body {
-            // NOTE: a `553|incomplete|` commit keeps the canonical-JSON passes by
-            // decision (#6002), so it alone takes a canonical view to validate.
-            Body::Composition(rm) if incomplete => {
-                let view = openehr_its::json::to_canonical_value(rm.as_ref());
-                let validated = match self.privacy.enforce(kind.as_str(), &view) {
-                    Ok(()) => {
-                        self.validate_composition_for_commit(Submitted::Canonical(&view), true)
-                            .await
-                    }
-                    Err(refused) => Err(refused),
-                };
-                drop(view);
-                if validated.is_ok() {
-                    self.externalize_typed(rm).await?;
-                }
-                Ok(validated)
-            }
-            Body::Composition(rm) => {
-                let privacy = if self.privacy.reads_content() {
-                    crate::telemetry::conversion::record("rm_to_index");
-                    let rendered = crate::storage::render::index::render(rm.as_ref())
-                        .map_err(|e| ServiceError::internal("serialize the COMPOSITION", e))?;
-                    self.privacy.enforce_in(
-                        kind.as_str(),
-                        crate::privacy::tree::Indexed::root(&rendered),
-                    )
-                } else {
-                    Ok(())
-                };
-                let validated = match privacy {
-                    Ok(()) => {
-                        self.validate_composition_for_commit(Submitted::Typed(rm), false)
-                            .await
-                    }
-                    Err(refused) => Err(refused),
-                };
-                if validated.is_ok() {
-                    self.externalize_typed(rm).await?;
-                }
-                Ok(validated)
-            }
-            Body::Canonical(data) => {
-                let validated = self.validate_for_commit(kind, data, incomplete).await;
-                if validated.is_ok() {
-                    self.externalize(data).await?;
-                }
-                Ok(validated)
-            }
-        }
-    }
 }
 
 /// Runs the template-independent RM class-invariant and openEHR-terminology
@@ -465,11 +396,21 @@ pub(in crate::service) fn validate_rm_invariants_for_commit(
     declared: &str,
     incomplete: bool,
 ) -> Result<(), ServiceError> {
-    let messages = if incomplete {
+    rm_verdict(if incomplete {
         openehr_sdt::rm_instance::validate_rm_and_terminology_incomplete_as(data, declared)
     } else {
         openehr_sdt::rm_instance::validate_rm_and_terminology(data, declared)
-    };
+    })
+}
+
+/// The `422` of the RM class-invariant and terminology `messages` of a
+/// commit body, counted on the validation metrics; none when there are none.
+///
+/// # Errors
+/// [`ServiceError::ValidationFailed`] carrying every message at its path.
+pub(in crate::service) fn rm_verdict(
+    messages: Vec<openehr_sdt::rm_instance::ValidationMessage>,
+) -> Result<(), ServiceError> {
     if messages.is_empty() {
         return Ok(());
     }
@@ -708,8 +649,16 @@ mod tests {
         validate_folder,
     };
     use crate::error::ServiceError;
-    use crate::service::ehr::access::initial_ehr_access;
-    use crate::service::ehr::service::initial_ehr_status;
+
+    /// The default `EHR_STATUS`, as the canonical value these validators read.
+    fn initial_ehr_status() -> Value {
+        openehr_its::json::to_canonical_value(&crate::service::ehr::service::initial_ehr_status())
+    }
+
+    /// The default `EHR_ACCESS`, as the canonical value these validators read.
+    fn initial_ehr_access() -> Value {
+        openehr_its::json::to_canonical_value(&crate::service::ehr::access::initial_ehr_access())
+    }
 
     /// `EHR_STATUS.other_details` must be a concrete `ITEM_STRUCTURE`
     /// (RM ehr `ehr_status.adoc`): the four concrete subtypes pass, a foreign

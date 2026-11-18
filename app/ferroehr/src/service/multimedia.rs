@@ -26,7 +26,6 @@ use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::versioning::body::Body;
 use crate::versioning::change::Change;
-use openehr_rm::prelude::Composition;
 
 impl FerroEhrService {
     /// Externalizes every large inline `DV_MULTIMEDIA` in `body`, uploading the
@@ -83,24 +82,29 @@ impl FerroEhrService {
     pub(crate) async fn externalize_body(&self, body: &mut Body) -> Result<(), ServiceError> {
         match body {
             Body::Canonical(canonical) => self.externalize(canonical).await,
-            Body::Composition(rm) => self.externalize_typed(rm).await,
+            typed => match typed.as_rm_mut() {
+                Some(rm) => self.externalize_typed(rm).await,
+                None => Ok(()),
+            },
         }
     }
 
     /// Externalizes every large inline `DV_MULTIMEDIA` of the typed
-    /// COMPOSITION `rm` in place, uploading the blobs, before the write that
+    /// RM value `rm` in place, uploading the blobs, before the write that
     /// stores it takes a connection.
     ///
     /// # Errors
     /// [`ServiceError`] when an inline value is malformed or an upload fails.
     #[cfg(feature = "multimedia")]
-    pub(crate) async fn externalize_typed(&self, rm: &mut Composition) -> Result<(), ServiceError> {
-        use openehr_rm::v1_2::access::AsRm as _;
+    pub(crate) async fn externalize_typed(
+        &self,
+        rm: &mut dyn openehr_rm::v1_2::access::RmObject,
+    ) -> Result<(), ServiceError> {
         let Some(engine) = &self.multimedia else {
             return Ok(());
         };
         engine
-            .offload_typed(rm.as_rm_mut())
+            .offload_typed(rm)
             .await
             .map_err(|e| ServiceError::internal("externalize multimedia", e))
     }
@@ -116,7 +120,7 @@ impl FerroEhrService {
     )]
     pub(crate) async fn externalize_typed(
         &self,
-        _rm: &mut Composition,
+        _rm: &mut dyn openehr_rm::v1_2::access::RmObject,
     ) -> Result<(), ServiceError> {
         Ok(())
     }

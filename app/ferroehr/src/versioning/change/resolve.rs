@@ -158,11 +158,11 @@ fn content_lifecycle(
     #[cfg(feature = "multimedia")]
     if let Some(engine) = ctx.multimedia {
         match body {
-            Body::Composition(rm) => {
-                use openehr_rm::v1_2::access::AsRm as _;
-                engine.ensure_externalized_typed(rm.as_rm())
-            }
             Body::Canonical(canonical) => engine.ensure_externalized(canonical),
+            typed => match typed.as_rm() {
+                Some(rm) => engine.ensure_externalized_typed(rm),
+                None => Ok(()),
+            },
         }
         .map_err(|e| ServiceError::internal("externalize multimedia", e))?;
     }
@@ -196,11 +196,11 @@ async fn prepare_body(
         tree,
     ))?);
     let stable_compatible = match &body {
-        Body::Composition(rm) => {
-            ctx.spec_profile == crate::config::profile::SpecProfile::Stable
-                || openehr_rm::v1_2::released::expressible_in_released(rm.as_ref())
-        }
         Body::Canonical(canonical) => profile::stable_compatible(ctx.spec_profile, kind, canonical),
+        typed => {
+            ctx.spec_profile == crate::config::profile::SpecProfile::Stable
+                || typed.expressible_in_released().unwrap_or(false)
+        }
     };
     let rendered = body.render()?;
     let origins = ctx

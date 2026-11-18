@@ -49,7 +49,7 @@ pub(crate) async fn get<T: EhrObjectType>(
         .backend()
         .versioned_ehr_object(ehr_id, T::OBJECT)
         .await?;
-    Ok(negotiate::resource::read_rm::<T::Versioned>(
+    Ok(negotiate::resource::read_typed(
         h,
         &resp,
         T::VERSIONED_ROOT_TAG,

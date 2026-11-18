@@ -20,7 +20,7 @@ use crate::error::refusal::Missing;
 use crate::ids::{EhrId, VoId};
 use crate::service::FerroEhrService;
 use crate::service::datetime::parse_at_time;
-use crate::service::response::ServiceResponse;
+use crate::service::response::{RawServiceResponse, ServiceResponse};
 use crate::storage::version_repo::read::VersionAt;
 use crate::versioning::Kind;
 use crate::versioning::object_version_id::{VersionIdError, parse_tree_id};
@@ -81,6 +81,23 @@ impl FerroEhrService {
         object: EhrObject,
         a_time: Option<String>,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.ehr_object_raw(ehr_id, object, a_time)
+            .await?
+            .into_value_response()
+            .map_err(|e| ServiceError::internal("read a stored EHR object body", e))
+    }
+
+    /// [`Self::ehr_object`], with the body kept as the stored text where
+    /// nothing needs it parsed ([`crate::versioning::read::read_raw`]).
+    ///
+    /// # Errors
+    /// As [`Self::ehr_object`].
+    pub async fn ehr_object_raw(
+        &self,
+        ehr_id: EhrId,
+        object: EhrObject,
+        a_time: Option<String>,
+    ) -> Result<RawServiceResponse, ServiceError> {
         self.ensure_object_readable(ehr_id, object).await?;
         let kind = object.kind().as_str();
         let at = match a_time.as_deref().map(parse_at_time).transpose()? {
@@ -89,11 +106,11 @@ impl FerroEhrService {
         };
         // ONE statement: the container resolution and the version read merged
         // (an EHR holds exactly one container of each kind, RM ehr `ehr.adoc`).
-        let read = crate::versioning::read::read(&self.pool, self.spec_profile, at)
+        let raw = crate::versioning::read::read_raw(&self.pool, self.spec_profile, at)
             .await?
             .ok_or_else(|| missing_object(ehr_id, object))?;
-        let vo_id = read.vo_id;
-        Ok(self.version_response(ehr_id, vo_id, read)?)
+        let vo_id = raw.read.vo_id;
+        self.raw_version_response(ehr_id, vo_id, raw)
     }
 
     /// The **bare** `object` at a specific version (not the
@@ -113,11 +130,40 @@ impl FerroEhrService {
         vo_id: VoId,
         a_version: &str,
     ) -> Result<ServiceResponse, ServiceError> {
+        self.ehr_object_at_version_raw(ehr_id, object, vo_id, a_version)
+            .await?
+            .into_value_response()
+            .map_err(|e| ServiceError::internal("read a stored EHR object body", e))
+    }
+
+    /// [`Self::ehr_object_at_version`], with the body kept as the stored text
+    /// where nothing needs it parsed.
+    ///
+    /// # Errors
+    /// As [`Self::ehr_object_at_version`].
+    pub async fn ehr_object_at_version_raw(
+        &self,
+        ehr_id: EhrId,
+        object: EhrObject,
+        vo_id: VoId,
+        a_version: &str,
+    ) -> Result<RawServiceResponse, ServiceError> {
         self.ensure_object_readable(ehr_id, object).await?;
-        let read = self
-            .object_version_read(ehr_id, object, vo_id, a_version)
-            .await?;
-        Ok(self.version_response(ehr_id, vo_id, read)?)
+        let version = parse_tree_id(a_version).map_err(VersionIdError::into_argument)?;
+        let raw = crate::versioning::read::read_raw(
+            &self.pool,
+            self.spec_profile,
+            VersionAt::Tree(vo_id, version),
+        )
+        .await?
+        .filter(|r| r.read.ehr_id == Some(ehr_id) && r.read.kind == object.kind())
+        .ok_or_else(|| {
+            ServiceError::not_found(
+                Missing::ObjectVersion,
+                format!("{} {vo_id} v{version}", object.rm_type()),
+            )
+        })?;
+        self.raw_version_response(ehr_id, vo_id, raw)
     }
 
     /// The versioned object of the EHR's `object` with the container
@@ -133,7 +179,7 @@ impl FerroEhrService {
         &self,
         ehr_id: EhrId,
         object: EhrObject,
-    ) -> Result<ServiceResponse, ServiceError> {
+    ) -> Result<ServiceResponse<openehr_rm::prelude::VersionedObject>, ServiceError> {
         self.ensure_object_readable(ehr_id, object).await?;
         let vo_id = self.object_vo(ehr_id, object).await?;
         let (body, last_modified) =

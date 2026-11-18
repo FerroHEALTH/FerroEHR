@@ -22,7 +22,7 @@ use openehr_its::rest::generated::ehr::{
     VersionedCompositionVersionGetAtTimeParams, VersionedCompositionVersionGetByIdParams,
 };
 use openehr_its::rest::runtime::ApiError;
-use openehr_rm::prelude::{Composition, RevisionHistory, Version, VersionedComposition};
+use openehr_rm::prelude::{Composition, RevisionHistory, Version};
 
 use crate::api::RequestParts;
 use crate::api::ehr::{
@@ -49,7 +49,7 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     // 3.2(c)).
     let content = state.backend().audit_content_of_objects(&[vo_id]).await?;
     resp.meta = resp.meta.map(|meta| meta.with_content(content));
-    Ok(negotiate::resource::read_rm::<VersionedComposition>(
+    Ok(negotiate::resource::read_typed(
         h,
         &resp,
         VERSIONED_COMPOSITION_ROOT_TAG,

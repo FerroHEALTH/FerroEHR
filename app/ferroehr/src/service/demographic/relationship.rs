@@ -36,7 +36,7 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::support;
 use crate::service::demographic::validate::relationship_check;
-use crate::service::response::{ResourceMeta, ServiceResponse};
+use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::versioning::Kind;
@@ -232,6 +232,46 @@ impl FerroEhrService {
             return Ok(ServiceResponse::plain(Value::Null));
         }
         Ok(support::version_response(vo_id, read)?)
+    }
+
+    /// [`Self::read_relationship`], with the body kept as the stored text where
+    /// nothing needs it parsed ([`crate::versioning::read::read_raw`]).
+    ///
+    /// # Errors
+    /// As [`Self::read_relationship`].
+    pub(super) async fn read_relationship_raw(
+        &self,
+        vo_id: VoId,
+        version: Option<TreeId>,
+        at: Option<jiff::Timestamp>,
+    ) -> Result<RawServiceResponse, ServiceError> {
+        let miss = || {
+            ServiceError::not_found(
+                if version.is_some() || at.is_some() {
+                    Missing::ObjectVersion
+                } else {
+                    Missing::VersionedObject
+                },
+                format!("PARTY_RELATIONSHIP {vo_id}"),
+            )
+        };
+        let raw = support::load_ehrless_raw(
+            &self.demographic_pool,
+            self.spec_profile,
+            vo_id,
+            version,
+            at,
+            Kind::PartyRelationship,
+        )
+        .await?
+        .ok_or_else(miss)?;
+        if raw.read.deleted() {
+            return Ok(RawServiceResponse {
+                body: ReadBody::Value(Value::Null),
+                meta: None,
+            });
+        }
+        Ok(support::raw_version_response(vo_id, raw)?)
     }
 
     /// Commit a new version of an already-resolved relationship.
