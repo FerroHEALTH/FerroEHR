@@ -4,10 +4,11 @@
 //! AQL execution + `RESULT_SET` assembly (our own engine).
 //!
 //! [`execute`] plans-to-SQL ([`super::sql::build`]), runs the one statement on
-//! the `sqlx` pool, and assembles a [`QueryResult`] (column metadata + canonical
-//! JSON rows) the service renders as an ITS-REST 1.1.0 `RESULT_SET`. Scalar cells
-//! are read directly as canonical JSON (`jsonb`); whole-object cells reassemble
-//! their node subtree through the codec ([`crate::storage::codec::reassemble`]).
+//! the `sqlx` pool, and assembles a [`QueryResult`] (column metadata + rendered
+//! cells) the service writes as an ITS-REST 1.1.0 `RESULT_SET`. Every cell is
+//! rendered once from the stored and typed values the statement returns
+//! ([`super::read`]); whole-object cells reassemble their node subtree through
+//! the codec ([`crate::storage::codec::reassemble`]).
 
 #![expect(
     clippy::disallowed_types,
@@ -20,10 +21,11 @@ use sqlx::postgres::PgRow;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
+use super::cell::Cell;
 use super::error::{AqlError, ExecError};
 use super::ir::{Params, QueryIr};
 use super::sql::shape::Shapes;
-use super::sql::{CellKind, ColumnSpec, PreparedQuery, SqlCtx};
+use super::sql::{CellKind, ColumnSpec, Layout, PreparedQuery, SqlCtx};
 use crate::db::acquire::lease;
 use crate::ids::VoId;
 use crate::storage::node_repo::SubtreeAnchor;
@@ -42,13 +44,13 @@ pub struct ColumnMeta {
 }
 
 /// The assembled result of an AQL query: the SELECT column metadata and the rows
-/// (each a vector of canonical-JSON cells, aligned to `columns`).
+/// (each a vector of rendered cells, aligned to `columns`).
 #[derive(Debug, Clone)]
 pub struct QueryResult {
     /// The SELECT columns, in order.
     pub columns: Vec<ColumnMeta>,
     /// The rows; each is one cell per column.
-    pub rows: Vec<Vec<Value>>,
+    pub rows: Vec<Vec<Cell>>,
     /// The EHRs this statement actually served, each with the number of served
     /// rows that came from it, ordered by first appearance.
     ///
@@ -82,7 +84,7 @@ impl QueryResult {
     /// A result of `columns` and `rows` that attributes no row to an EHR, an
     /// origin or a version, and states no query constraint.
     #[must_use]
-    pub fn of_rows(columns: Vec<ColumnMeta>, rows: Vec<Vec<Value>>) -> Self {
+    pub fn of_rows(columns: Vec<ColumnMeta>, rows: Vec<Vec<Cell>>) -> Self {
         Self {
             columns,
             rows,
@@ -161,7 +163,10 @@ pub async fn execute(
         mut out_rows,
         anchors,
         pending,
-    } = scan_rows(&rows, &layout.columns)?;
+    } = scan_rows(&rows, &layout)?;
+
+    #[cfg(debug_assertions)]
+    same_as_sql_projection(pool, ir, params, ctx, &out_rows).await?;
 
     if !anchors.is_empty() {
         crate::versioning::profile::gate_result_bodies(pool, profile, &anchors)
@@ -170,7 +175,7 @@ pub async fn execute(
         let subtrees = crate::storage::node_repo::read_subtrees_canonical(pool, &anchors)
             .await
             .map_err(ExecError::from)?;
-        fill_whole_object_cells(&mut out_rows, pending, subtrees);
+        fill_whole_object_cells(&mut out_rows, pending, &subtrees);
     }
 
     // The versions the served rows came from: every bound root's locator
@@ -204,6 +209,62 @@ pub async fn execute(
         served_content: served.content,
         constraints: super::constraints::positive_constraints(ir, params),
     })
+}
+
+/// Holds the cells the Rust rendering wrote to the cells the same statement
+/// with its projection built as `jsonb` in PostgreSQL serves, byte for byte,
+/// in a debug build, so every test that runs AQL checks the rendering. A
+/// paged statement is skipped: the two plans may pick different rows of an
+/// unordered or tied page, and so is one that projects the current time,
+/// which each statement reads anew. Rows compare as a multiset.
+///
+/// # Errors
+/// [`AqlError`] when the SQL-projected statement cannot be built or run.
+#[cfg(debug_assertions)]
+async fn same_as_sql_projection(
+    pool: &PgPool,
+    ir: &QueryIr,
+    params: &Params,
+    ctx: &SqlCtx,
+    rendered: &[Vec<Cell>],
+) -> Result<(), AqlError> {
+    let clock = ir.select.iter().any(|column| {
+        matches!(
+            column.value,
+            super::ir::SelectValue::Function {
+                func: openehr_query::ast::BuiltinFunction::DateTime(_),
+                ..
+            }
+        )
+    });
+    if clock || ctx.limit.is_some() || ctx.offset.is_some() {
+        return Ok(());
+    }
+    let reference = super::sql::build_sql_projected(ir, params, ctx)?;
+    let rows = sqlx::query_with(sqlx::AssertSqlSafe(reference.sql), reference.values)
+        .persistent(false)
+        .fetch_all(
+            &mut *crate::db::acquire::acquire(pool)
+                .await
+                .map_err(ExecError::from)?,
+        )
+        .await
+        .map_err(ExecError::from)?;
+    let expected = scan_rows(&rows, &reference.layout)?.out_rows;
+    let key = |rows: &[Vec<Cell>]| {
+        let mut texts: Vec<String> = rows
+            .iter()
+            .map(|row| row.iter().map(Cell::json).collect::<Vec<_>>().join(","))
+            .collect();
+        texts.sort_unstable();
+        texts
+    };
+    debug_assert_eq!(
+        key(rendered),
+        key(&expected),
+        "the Rust-rendered cells are the cells PostgreSQL's jsonb projection serves"
+    );
+    Ok(())
 }
 
 /// The `(vo_id, sys_version)` pairs the served rows came from, read off the
@@ -319,51 +380,48 @@ fn ehrs_of(row: &PgRow, name: &str, aggregated: bool) -> Result<RowEhrs, AqlErro
 /// The EHRs one access column of a row names ([`ehrs_of`]).
 type RowEhrs = std::iter::Chain<std::option::IntoIter<Uuid>, std::vec::IntoIter<Uuid>>;
 
-/// The result of scanning the SQL rows: the assembled cells, the subtree
+/// The result of scanning the SQL rows: the rendered cells, the subtree
 /// anchors to batch-load, and the whole-object cells awaiting them.
 struct Scan {
-    out_rows: Vec<Vec<Value>>,
+    out_rows: Vec<Vec<Cell>>,
     anchors: Vec<SubtreeAnchor>,
     /// The whole-object cells to fill once the batch load resolves, by
     /// `(row, column)` position.
     pending: Vec<(usize, usize, SubtreeAnchor)>,
 }
 
-/// Assembles every cell of the result page.
+/// Renders every cell of the result page.
 ///
-/// Scalar cells read their JSON straight off the result row; whole-object
+/// Every other cell is rendered off its row ([`super::read`]); whole-object
 /// cells contribute a subtree anchor that is batch-loaded in ONE round trip
 /// after the scan — never one follow-up SELECT per candidate row.
 ///
 /// # Errors
 /// [`AqlError::Exec`] if a projected column is missing from the result row.
-fn scan_rows(rows: &[PgRow], columns: &[ColumnSpec]) -> Result<Scan, AqlError> {
-    let mut out_rows: Vec<Vec<Value>> = Vec::with_capacity(rows.len());
+fn scan_rows(rows: &[PgRow], layout: &Layout) -> Result<Scan, AqlError> {
+    let mut out_rows: Vec<Vec<Cell>> = Vec::with_capacity(rows.len());
     let mut anchors: Vec<SubtreeAnchor> = Vec::new();
     let mut pending: Vec<(usize, usize, SubtreeAnchor)> = Vec::new();
+    let Some(first) = rows.first() else {
+        return Ok(Scan {
+            out_rows,
+            anchors,
+            pending,
+        });
+    };
+    let plan = super::read::Plan::of(first, layout)?;
     for (ri, row) in rows.iter().enumerate() {
-        let mut cells = Vec::with_capacity(columns.len());
-        for (ci, spec) in columns.iter().enumerate() {
-            match spec.kind {
-                CellKind::Scalar => {
-                    let v: Option<Value> =
-                        row.try_get(sql_col(spec, 0)?).map_err(ExecError::from)?;
-                    cells.push(v.unwrap_or(Value::Null));
-                }
-                CellKind::WholeObject => {
-                    // A null vo-id locator (an outer-joined absent object) is a
-                    // Null cell with nothing to load.
-                    if let Some(anchor) = whole_object_anchor(row, spec)? {
-                        anchors.push(anchor);
-                        pending.push((ri, ci, anchor));
-                    }
-                    // Placeholder; a genuine value replaces it after the batch,
-                    // and an empty subtree (logical delete) correctly stays Null.
-                    cells.push(Value::Null);
-                }
+        for (ci, spec) in layout.columns.iter().enumerate() {
+            // A null vo-id locator (an outer-joined absent object) is a null
+            // cell with nothing to load.
+            if spec.kind == CellKind::WholeObject
+                && let Some(anchor) = whole_object_anchor(row, spec)?
+            {
+                anchors.push(anchor);
+                pending.push((ri, ci, anchor));
             }
         }
-        out_rows.push(cells);
+        out_rows.push(plan.cells(row, layout)?);
     }
     Ok(Scan {
         out_rows,
@@ -372,38 +430,22 @@ fn scan_rows(rows: &[PgRow], columns: &[ColumnSpec]) -> Result<Scan, AqlError> {
     })
 }
 
-/// Moves each reassembled document into the cell that projected it.
-///
-/// A document MOVES into its last pending cell; only a repeated anchor (the
-/// same version projected more than once on the page) pays a clone for the
-/// earlier cells.
+/// Writes each reassembled document into the cell that projected it; an
+/// anchor with no stored subtree (a logical delete) stays a null cell.
 fn fill_whole_object_cells(
-    out_rows: &mut [Vec<Value>],
+    out_rows: &mut [Vec<Cell>],
     pending: Vec<(usize, usize, SubtreeAnchor)>,
-    mut subtrees: std::collections::HashMap<SubtreeAnchor, Value>,
+    subtrees: &std::collections::HashMap<SubtreeAnchor, Value>,
 ) {
-    let mut remaining: std::collections::HashMap<SubtreeAnchor, usize> =
-        std::collections::HashMap::new();
-    for (_, _, anchor) in &pending {
-        *remaining.entry(*anchor).or_insert(0) += 1;
-    }
     for (ri, ci, anchor) in pending {
-        let last_use = remaining.get_mut(&anchor).is_none_or(|n| {
-            *n -= 1;
-            *n == 0
-        });
-        let value = if last_use {
-            subtrees.remove(&anchor)
-        } else {
-            subtrees.get(&anchor).cloned()
-        };
         // `(ri, ci)` was recorded while building `out_rows`, so the cell
         // exists; fetched rather than indexed so a future refactor cannot turn
         // a bookkeeping slip into a panic on a request path.
-        if let (Some(value), Some(cell)) =
-            (value, out_rows.get_mut(ri).and_then(|row| row.get_mut(ci)))
-        {
-            *cell = value;
+        if let (Some(value), Some(cell)) = (
+            subtrees.get(&anchor),
+            out_rows.get_mut(ri).and_then(|row| row.get_mut(ci)),
+        ) {
+            *cell = Cell::of_value(value);
         }
     }
 }

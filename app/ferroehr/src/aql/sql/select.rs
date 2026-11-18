@@ -8,9 +8,11 @@
 //!
 //! No openEHR spec governs the projection mechanics — this is our own design.
 //! Every structure step a SELECT path descends through is bound once per row
-//! ([`Builder::bind_select_paths`] states the row grain). A scalar column is
-//! emitted as `to_jsonb(expr)`; a whole structure object emits (`vo_id`,
-//! `sys_version`, `num`, `num_cap`) and is reassembled at read time.
+//! ([`Builder::bind_select_paths`] states the row grain). A cell is rendered in
+//! Rust from the values its columns return (`project`); a `SELECT DISTINCT`
+//! and an attestation list emit `to_jsonb(expr)`, and a whole structure object
+//! emits (`vo_id`, `sys_version`, `num`, `num_cap`) and is reassembled at read
+//! time.
 
 use sea_query::{Alias, Expr, ExprTrait as _, Func};
 
@@ -113,6 +115,14 @@ impl Builder<'_> {
 
     fn emit_select_column(&mut self, i: usize, col: &SelectColumn) -> Result<ColumnSpec, AqlError> {
         let name = col.alias.clone().unwrap_or_else(|| format!("#{i}"));
+        let whole = matches!(
+            &col.value,
+            SelectValue::Path(PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf))
+                if leaf.is_whole_object()
+        );
+        if !whole && let Some(spec) = self.rendered_column(i, col)? {
+            return Ok(spec);
+        }
         match &col.value {
             SelectValue::Path(PathTarget::Data(leaf)) if leaf.is_whole_object() => {
                 let mut spec = self.emit_whole_object(i, name, leaf)?;
@@ -162,10 +172,7 @@ impl Builder<'_> {
                 arg,
                 distinct,
             } => {
-                let agg = match arg {
-                    None => aggregate_expr(*func, None, *distinct),
-                    Some(target) => self.aggregate_over(*func, target, *distinct)?,
-                };
+                let agg = self.aggregate_value(*func, arg.as_ref(), *distinct)?;
                 let sql_col = format!("col{i}");
                 self.q.expr_as(to_jsonb(agg), Alias::new(sql_col.as_str()));
                 Ok(ColumnSpec {
@@ -477,6 +484,23 @@ fn json_null_is_null(value: Expr) -> Expr {
 }
 
 impl Builder<'_> {
+    /// The aggregate `func` over `arg`, `COUNT(*)` without one (QUERY
+    /// master03 §Aggregate functions).
+    ///
+    /// # Errors
+    /// [`AqlError`] from lowering the argument.
+    pub(super) fn aggregate_value(
+        &mut self,
+        func: AggFunc,
+        arg: Option<&PathTarget>,
+        distinct: bool,
+    ) -> Result<Expr, AqlError> {
+        match arg {
+            None => Ok(aggregate_expr(func, None, distinct)),
+            Some(target) => self.aggregate_over(func, target, distinct),
+        }
+    }
+
     /// The aggregate `func` over the values of `target` (QUERY master03
     /// §Aggregate functions).
     ///

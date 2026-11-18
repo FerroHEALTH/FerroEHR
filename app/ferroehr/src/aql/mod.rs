@@ -17,14 +17,17 @@
 
 pub mod access_log;
 mod analyze;
+pub mod cell;
 pub mod constraints;
 pub mod error;
 pub mod exec;
+pub mod fragment;
 pub mod ir;
 mod ir_impl;
 pub mod join;
 pub mod lineage;
 mod lower;
+mod read;
 pub mod sql;
 pub mod terminology;
 mod version_path;

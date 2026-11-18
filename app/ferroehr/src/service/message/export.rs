@@ -416,13 +416,14 @@ impl FerroEhrService {
                         e.message()
                     ))
                 })?;
-            let empty = Vec::new();
-            let rows = outcome
+            let cells: Vec<Value> = outcome
                 .result_set
-                .get("rows")
-                .and_then(Value::as_array)
-                .unwrap_or(&empty);
-            for cell in rows.iter().filter_map(Value::as_array).flatten() {
+                .rows()
+                .iter()
+                .flatten()
+                .map(crate::aql::cell::Cell::to_value)
+                .collect();
+            for cell in &cells {
                 let candidate = match cell {
                     Value::String(s) => Some(s.as_str()),
                     Value::Object(_) => cell.pointer("/uid/value").and_then(Value::as_str),

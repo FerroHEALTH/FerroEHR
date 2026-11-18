@@ -562,7 +562,9 @@ async fn one_row(svc: &FerroEhrService, ehr: EhrId, aql: &str) -> Value {
         .execute_aql(aql, None, &request)
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     let rows = result
         .pointer("/rows")
         .and_then(Value::as_array)

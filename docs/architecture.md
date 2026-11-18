@@ -580,10 +580,29 @@ Parsed AST (`openehr-query`, done) → **path analysis + typing against a
 BMM-generated RM attribute model** (attribute→types, multiplicity,
 abstract→concrete descendants — generated, not reflected, not hand-written)
 → **our typed query IR** → SQL via `sea-query` (nested-set interval joins for
-CONTAINS chains; `jsonb_path_query_first` for leaf extraction and
-`jsonb_path_query` as a lateral set-returning function for array unnesting;
-`ext.openehr_magnitude` and `ext.openehr_timestamp` for typed comparison and
-ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0). A path whose candidate
+CONTAINS chains; `jsonb_path_query_first` for a leaf a WHERE or ORDER BY
+reads and `jsonb_path_query` as a lateral set-returning function for array
+unnesting; `ext.openehr_magnitude` and `ext.openehr_timestamp` for typed
+comparison and ordering) → execute (`sqlx`) → `RESULT_SET` (1.1.0).
+
+A projected cell is rendered in Rust, never built as jsonb in SQL (#6004).
+For a data leaf the statement returns the stored columns of the node row the
+leaf reads (`data`, the fragment columns and the root identity
+`storage::node_repo` reads), once per node alias however many cells read it;
+`aql::read` rebuilds the fragment with `storage::slim::rebuild`, evaluates
+the fragment path with the lax SQL/JSON path semantics PostgreSQL gives the
+same text (`aql::fragment`), and writes the cell with its object keys in
+jsonb order. A VERSION or EHR field, a function and an aggregate return
+their typed value (a `timestamptz` beside its session offset, so it renders
+as `to_jsonb` would), and a literal returns nothing. Each row is written
+once into its cells (`aql::cell`) and the `RESULT_SET` once into the body,
+its weak `ETag` the SHA-256 of the bytes as written without the
+`meta._created` stamp (`service::query::result_set`). `SELECT DISTINCT`
+and a projected list of attestations keep their cells as jsonb in SQL,
+where PostgreSQL compares or aggregates them. A debug build runs every
+statement a second time with its projection built in SQL and requires
+byte-identical cells. No openEHR spec governs the rendering: our own
+design. A path whose candidate
 types are mixed (an `ELEMENT`'s whole `DATA_VALUE`) compares and orders by
 keys read off each value's own `_type` (`aql::sql::coerce`): a number against
 a JSON number or the magnitude of a whole numeric `DV_ORDERED`, an ISO 8601

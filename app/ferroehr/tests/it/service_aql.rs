@@ -118,6 +118,8 @@ async fn run_aql(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> 
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
         .result_set
+        .to_value()
+        .unwrap()
 }
 
 fn rows(result: &Value) -> &Vec<Value> {

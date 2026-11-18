@@ -86,7 +86,7 @@ fn chains_at_the_depth_bound_run_through_every_pass_and_postgresql() {
                 .execute_aql(&aql, None, &scope(&ehr_id))
                 .await
                 .expect("a query at the bound runs");
-            let rows = answer.result_set["rows"]
+            let rows = answer.result_set.to_value().unwrap()["rows"]
                 .as_array()
                 .expect("a rows array")
                 .len();

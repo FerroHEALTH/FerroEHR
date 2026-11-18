@@ -35,6 +35,7 @@
 )]
 
 mod aql_named_statements;
+mod aql_render_differential;
 mod canonical_json_literals;
 mod cold_start_burst;
 mod cold_start_pools;

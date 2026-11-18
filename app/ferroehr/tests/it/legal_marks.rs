@@ -87,7 +87,9 @@ async fn population_rows(svc: &FerroEhrService) -> usize {
         )
         .await
         .expect("population query")
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     result["rows"].as_array().map_or(0, Vec::len)
 }
 
@@ -104,7 +106,9 @@ async fn scoped_rows(svc: &FerroEhrService, ehr_id: EhrId) -> usize {
         )
         .await
         .expect("scoped query")
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     result["rows"].as_array().map_or(0, Vec::len)
 }
 

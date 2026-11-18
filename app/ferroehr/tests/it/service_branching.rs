@@ -506,7 +506,9 @@ async fn all_versions_returns_the_branch_row_beside_the_trunk() {
         )
         .await
         .expect("ALL_VERSIONS query")
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     let uids: Vec<String> = result["rows"]
         .as_array()
         .expect("rows")
@@ -535,7 +537,9 @@ async fn all_versions_returns_the_branch_row_beside_the_trunk() {
         )
         .await
         .expect("LATEST_VERSION query")
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     let latest_uids: Vec<String> = latest["rows"]
         .as_array()
         .expect("rows")
