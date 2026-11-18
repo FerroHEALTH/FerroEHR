@@ -90,6 +90,7 @@ mod committer_check;
 mod composition_passthrough;
 mod composition_version_copy;
 mod console_request_lines;
+mod contribution_stored_form;
 mod db_lease;
 mod db_outage;
 mod db_request_scope;

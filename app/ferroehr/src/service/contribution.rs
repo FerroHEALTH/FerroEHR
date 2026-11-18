@@ -404,24 +404,27 @@ async fn accept_content(
     cx: &FerroEhrService,
     (kind, container): (Kind, Option<Container>),
     data: Value,
-    incomplete: bool,
+    (incomplete, signed): (bool, bool),
     index: usize,
     party_only: bool,
 ) -> Result<(Body, Option<String>), ServiceError> {
     check_kind_scope(kind, party_only).map_err(|e| e.for_version_member(index))?;
     let typed = decode_member(kind, &data, incomplete).map_err(|e| e.for_version_member(index))?;
-    let checked = match (container, typed) {
+    let checked = match (container, typed.as_ref()) {
         (Some(container), _) if kind.is_party() => {
             cx.demographic_commit_check(kind, &data, incomplete, Some(container))
                 .await
         }
-        (_, Some(typed)) => cx.validate_body(kind, &typed, false).await,
+        (_, Some(typed)) => cx.validate_body(kind, typed, false).await,
         (_, None) => cx.validate_for_commit(kind, &data, incomplete).await,
     };
     checked.map_err(|e| e.for_version_member(index))?;
-    // NOTE: the member is stored and signed as the value it was received as, the
-    // bytes its client wrote (#6003).
-    let body = Body::Canonical(data);
+    // NOTE: a member is stored as its typed canonical rendering, as every route
+    // stores; one its client signed keeps the bytes that signature covers (#6003).
+    let body = match typed {
+        Some(typed) if !signed => typed,
+        _ => Body::Canonical(data),
+    };
     let template_id = (kind == Kind::Composition)
         .then(|| body.template_id().map(str::to_owned))
         .flatten();
@@ -457,7 +460,7 @@ async fn create_change(
         cx,
         (kind, container),
         data,
-        v.incomplete,
+        (v.incomplete, v.signature.is_some()),
         v.index,
         party_only,
     )
@@ -504,7 +507,7 @@ async fn modify_change(
         cx,
         (kind, Some(Container::Existing(vo_id))),
         data,
-        v.incomplete,
+        (v.incomplete, v.signature.is_some()),
         v.index,
         party_only,
     )
