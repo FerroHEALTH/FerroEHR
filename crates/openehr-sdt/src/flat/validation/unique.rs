@@ -14,21 +14,17 @@
 //! §LOCATABLE). Every other attribute, `archetype_node_id` included, is part of
 //! the value. Numbers compare by value, so `1` equals `1.0`.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "value equality compares canonical-JSON members as the RM-instance validation \
-              reads them (#1694)"
-)]
-
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
-use serde_json::Value;
+use crate::flat::instance::Instance;
 
 /// The positions of the first two members that are equal by value, if any.
-pub(super) fn first_duplicate(members: &[&Value]) -> Option<(usize, usize)> {
+pub(super) fn first_duplicate<'i, I: Instance<'i>>(members: &[I]) -> Option<(usize, usize)> {
     let mut seen: BTreeMap<String, usize> = BTreeMap::new();
     for (index, member) in members.iter().enumerate() {
-        let key = comparable(member, true).to_string();
+        let mut key = String::new();
+        comparable(*member, true, &mut key);
         if let Some(&first) = seen.get(&key) {
             return Some((first, index));
         }
@@ -37,37 +33,44 @@ pub(super) fn first_duplicate(members: &[&Value]) -> Option<(usize, usize)> {
     None
 }
 
-/// `value` with the attributes that never take part in value equality
-/// removed, its object members in key order and its numbers normalised.
-fn comparable(value: &Value, member: bool) -> Value {
-    match value {
-        Value::Object(map) => {
-            let mut keys: Vec<&String> = map
-                .keys()
-                .filter(|k| k.as_str() != "uid" && !(member && k.as_str() == "name"))
-                .collect();
-            keys.sort();
-            let mut out = serde_json::Map::new();
-            for key in keys {
-                if let Some(v) = map.get(key) {
-                    out.insert(key.clone(), comparable(v, false));
-                }
+/// A text that is equal for two values exactly when they are equal by value:
+/// attributes in name order, `uid` left out at any depth and `name` on the
+/// member itself, numbers by their value.
+fn comparable<'i, I: Instance<'i>>(value: I, member: bool, out: &mut String) {
+    if !value.is_object() {
+        match value.as_f64() {
+            Some(f) if f.abs() < 9.0e15 => {
+                let _ = write!(out, "{f:?}");
             }
-            Value::Object(out)
+            _ => out.push_str(&value.render()),
         }
-        Value::Array(items) => Value::Array(items.iter().map(|v| comparable(v, false)).collect()),
-        Value::Number(n) => number(n),
-        other => other.clone(),
+        return;
     }
-}
-
-/// A number in one form per value: every number f64 holds exactly, integers
-/// below 2^53 among them, becomes that float, so `1` and `1.0` compare equal.
-fn number(n: &serde_json::Number) -> Value {
-    match n.as_f64() {
-        Some(f) if f.abs() < 9.0e15 => Value::from(f),
-        _ => Value::Number(n.clone()),
+    out.push('{');
+    if let Some(t) = value.rm_type() {
+        let _ = write!(out, "_type={t:?};");
     }
+    let mut keys: Vec<&str> = value
+        .keys()
+        .into_iter()
+        .filter(|k| *k != "uid" && !(member && *k == "name"))
+        .collect();
+    keys.sort_unstable();
+    for key in keys {
+        let _ = write!(out, "{key:?}=");
+        if let Some(items) = value.members(key) {
+            out.push('[');
+            for item in items {
+                comparable(item, false, out);
+                out.push(',');
+            }
+            out.push(']');
+        } else if let Some(v) = value.attr(key) {
+            comparable(v, false, out);
+        }
+        out.push(';');
+    }
+    out.push('}');
 }
 
 #[cfg(test)]
