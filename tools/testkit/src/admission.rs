@@ -9,13 +9,12 @@
 //! and a pool. The server refuses a connection past its `max_connections`
 //! (`PostgreSQL` 18, "Connections and Authentication",
 //! <https://www.postgresql.org/docs/18/runtime-config-connection.html>), and
-//! a refused connection failed whichever test asked for it: three suites at
-//! once drew 26,762 refusals and failed 255 tests that pass alone, at
-//! 200 connections. So a test
-//! process takes one of a fixed number of slots before it creates its first
-//! clone and waits while none is free. The number follows the server's own
-//! setting, so the processes admitted at once fit the server whatever runs
-//! beside them.
+//! a refused connection failed whichever test asked for it: at 200
+//! connections, three suites at once drew 26,762 refusals and failed 255
+//! tests that pass alone. So a test process takes one of a fixed number of
+//! slots before it creates its first clone and waits while none is free. The
+//! number follows the server's own setting, so the processes admitted at
+//! once fit the server whatever runs beside them.
 //!
 //! A slot is a session-level advisory lock on a connection the process keeps
 //! until it ends, so the slot is given back however the test ends
