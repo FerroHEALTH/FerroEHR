@@ -28,8 +28,8 @@ use crate::service::demographic::support;
 use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::validate::Container;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::decoded;
 use crate::versioning::change::{self, Change, CommittedContribution, WriteEnvelope};
-use crate::versioning::contribution::typed_decode_gate;
 use crate::versioning::lifecycle;
 
 /// One party a [`FerroEhrService::create_parties`] commits.
@@ -79,11 +79,11 @@ impl FerroEhrService {
         for (index, party) in parties.into_iter().enumerate() {
             let kind = support::kind_of(party.kind);
             let incomplete = party.lifecycle_state.as_deref() == Some(lifecycle::state::INCOMPLETE);
-            typed_decode_gate(kind, &party.body, incomplete)
-                .map_err(|e| e.for_version_member(index))?;
-            self.demographic_commit_check(
+            let body =
+                decoded(kind, party.body, incomplete).map_err(|e| e.for_version_member(index))?;
+            self.demographic_body_check(
                 kind,
-                &party.body,
+                &body,
                 incomplete,
                 Some(Container::New(party.id.id())),
             )
@@ -95,7 +95,7 @@ impl FerroEhrService {
             };
             changes.push((
                 audit.clone(),
-                Change::create_allocated(party.id, kind, party.body, envelope),
+                Change::create_allocated(party.id, kind, body, envelope),
             ));
         }
         // The set's large media go to the blob store before a connection is held.

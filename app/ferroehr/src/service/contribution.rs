@@ -410,8 +410,11 @@ async fn accept_content(
 ) -> Result<(Body, Option<String>), ServiceError> {
     check_kind_scope(kind, party_only).map_err(|e| e.for_version_member(index))?;
     let typed = decode_member(kind, &data, incomplete).map_err(|e| e.for_version_member(index))?;
-    let checked = match (container, typed.as_ref()) {
-        (Some(container), _) if kind.is_party() => {
+    let checked = match (container, &typed) {
+        (container, Some(typed)) if kind.is_demographic() => {
+            cx.demographic_typed_check(kind, typed, container).await
+        }
+        (Some(container), None) if kind.is_party() => {
             cx.demographic_commit_check(kind, &data, incomplete, Some(container))
                 .await
         }

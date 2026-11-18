@@ -33,6 +33,7 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::tag_target_tail;
 use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
+use crate::versioning::body::Body;
 use crate::versioning::object_version_id::{TreeId, UidAddress};
 use openehr_rm::prelude::{Party, PartyRelationship};
 
@@ -96,12 +97,9 @@ impl FerroEhrService {
         // the response seam needs no tag read here; when the request carried
         // `openehr-item-tag` header tags, the wire adapter persists them after
         // the create and re-populates the seam itself (person_create.yaml).
-        self.commit_new_party(
-            kind,
-            request.map(|data| openehr_its::json::to_canonical_value(&data)),
-        )
-        .await
-        .map_err(ServiceError::flattened)
+        self.commit_new_party(kind, request.map(Body::from))
+            .await
+            .map_err(ServiceError::flattened)
     }
 
     /// Read a party of the routed [`PartyKind`] by uid-based id (bare
@@ -158,13 +156,9 @@ impl FerroEhrService {
                 format!("{} {vo_id}", kind.rm_type()),
             )
         })?;
-        self.commit_party_update(
-            current,
-            precondition,
-            request.map(|data| openehr_its::json::to_canonical_value(&data)),
-        )
-        .await
-        .map_err(ServiceError::flattened)
+        self.commit_party_update(current, precondition, request.map(Body::from))
+            .await
+            .map_err(ServiceError::flattened)
     }
 
     /// Logically delete a party of the routed [`PartyKind`]
@@ -400,7 +394,7 @@ impl FerroEhrService {
         &self,
         request: WriteRequest<PartyRelationship>,
     ) -> Result<ServiceResponse, ServiceError> {
-        self.create_relationship(request.map(|data| openehr_its::json::to_canonical_value(&data)))
+        self.create_relationship(request.map(Body::from))
             .await
             .map_err(ServiceError::flattened)
     }
@@ -463,13 +457,9 @@ impl FerroEhrService {
                 format!("PARTY_RELATIONSHIP {vo_id}"),
             )
         })?;
-        self.commit_relationship_update(
-            current,
-            precondition,
-            request.map(|data| openehr_its::json::to_canonical_value(&data)),
-        )
-        .await
-        .map_err(ServiceError::flattened)
+        self.commit_relationship_update(current, precondition, request.map(Body::from))
+            .await
+            .map_err(ServiceError::flattened)
     }
 
     /// Logically delete a relationship. Mirrors `party_delete`: the path

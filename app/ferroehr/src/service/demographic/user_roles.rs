@@ -40,8 +40,8 @@ use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::user_write::{ScimCommit, UserWriteError};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::decoded;
 use crate::versioning::change::{Change, WriteEnvelope};
-use crate::versioning::contribution::typed_decode_gate;
 use openehr_rm::draft::access_control::terminology::{TERMINOLOGY_ID_ACCESS, coded_text};
 
 /// A role a User holds: the code of its `ROLE`'s name in its terminology.
@@ -156,7 +156,7 @@ impl FerroEhrService {
                 object.insert("time_validity".to_owned(), from(&today));
             }
             let state = self.first_state(&body, write.role_template).await?;
-            typed_decode_gate(Kind::Role, &body, false)?;
+            let body = decoded(Kind::Role, body, false)?;
             let reference = party_ref(write.namespace, "ROLE", id.id());
             if let Some(roles) = listed.as_object_mut().map(|object| {
                 object
@@ -183,6 +183,11 @@ impl FerroEhrService {
                 lifecycle_state: Some(write.person_state.to_owned()),
                 ..WriteEnvelope::default()
             };
+            let listed = decoded(
+                Kind::Person,
+                listed,
+                write.person_state == crate::versioning::lifecycle::state::INCOMPLETE,
+            )?;
             changes.push(Change::modify(
                 person,
                 Kind::Person,
@@ -216,6 +221,11 @@ impl FerroEhrService {
             object.insert("time_validity".to_owned(), until(lower.as_deref(), today));
         }
         let state = self.first_state(&body, template).await?;
+        let body = decoded(
+            Kind::Role,
+            body,
+            state == crate::versioning::lifecycle::state::INCOMPLETE,
+        )?;
         let envelope = WriteEnvelope {
             lifecycle_state: Some(state),
             ..WriteEnvelope::default()

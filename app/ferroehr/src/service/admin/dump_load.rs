@@ -1581,10 +1581,9 @@ fn restore_refusal(refusal: StoreError) -> Result<Option<String>, ServiceError> 
         | StoreError::ForeignReference
         | StoreError::Unsealed { .. }
         | StoreError::Crypto(_) => Ok(Some(refusal.to_string())),
-        other @ StoreError::Repo(_) => Err(ServiceError::internal(
-            "restore the sealed national identifiers",
-            other,
-        )),
+        other @ (StoreError::Repo(_) | StoreError::Render(_) | StoreError::Substitute(_)) => Err(
+            ServiceError::internal("restore the sealed national identifiers", other),
+        ),
     }
 }
 

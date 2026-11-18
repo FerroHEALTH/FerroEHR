@@ -23,12 +23,14 @@ use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::support;
+use crate::service::demographic::template::demographic_rules;
 use crate::service::demographic::types::PartyKind;
-use crate::service::demographic::validate::{Container, party_invariants};
+use crate::service::demographic::validate::Container;
 use crate::service::response::{ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::versioning::audit::change_type;
+use crate::versioning::body::Body;
 use crate::versioning::change::precondition::lock_current;
 use crate::versioning::change::{Change, Write};
 use crate::versioning::object_version_id::{TreeId, object_version_id};
@@ -137,16 +139,15 @@ impl FerroEhrService {
     pub(super) async fn commit_new_party(
         &self,
         kind: PartyKind,
-        request: WriteRequest<Value>,
+        request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
         // The id is allocated before the checks, so the relationships are
         // judged against the container the commit gives the party.
         let allocated = self.allocate_party_id();
-        party_invariants(
-            kind.rm_type(),
+        let rendered = demographic_rules(
+            support::kind_of(kind),
             &request.data,
-            false,
-            Container::New(allocated.id()),
+            Some(Container::New(allocated.id())),
         )?;
         // The caller's request merges with the server rules, BOTH halves the
         // committal headers carry: the `UPDATE_AUDIT` attributes and the
@@ -159,14 +160,20 @@ impl FerroEhrService {
             envelope,
             incomplete,
         } = self.resolve_write(&request, change_type::CREATION, "PARTY creation")?;
-        self.mapped_template_gate(kind.rm_type(), &request.data, incomplete)
-            .await?;
+        self.demographic_template_gate(
+            support::kind_of(kind),
+            &request.data,
+            rendered.as_ref(),
+            incomplete,
+        )
+        .await?;
+        drop(rendered);
         let mut body = request.data;
         // Keep the served bytes for the in-memory representation, unless the
         // commit rewrites the body (then the fresh read is the stored form).
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
         // The large media go to the blob store before a connection is held.
-        self.externalize(&mut body).await?;
+        self.externalize_body(&mut body).await?;
         let create = Change::create_allocated(allocated, support::kind_of(kind), body, envelope);
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
@@ -174,7 +181,10 @@ impl FerroEhrService {
             })
             .await?;
         match repr_body {
-            Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
+            Some(body) => Ok(support::committed_response(
+                body.into_canonical(),
+                &committed,
+            )?),
             None => {
                 self.read_party(kind, committed.vo_id, Some(committed.tree), None)
                     .await
@@ -274,7 +284,7 @@ impl FerroEhrService {
         &self,
         current: CurrentParty,
         precondition: Precondition,
-        request: WriteRequest<Value>,
+        request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
         let kind = current.kind;
         let vo_id = current.vo_id;
@@ -285,17 +295,22 @@ impl FerroEhrService {
                     format!("{} {vo_id} is deleted", kind.rm_type()),
                 ));
             }
-            party_invariants(
-                kind.rm_type(),
+            let rendered = demographic_rules(
+                support::kind_of(kind),
                 &request.data,
-                false,
-                Container::Existing(vo_id),
+                Some(Container::Existing(vo_id)),
             )?;
             self.resolve_write(&request, change_type::MODIFICATION, "PARTY update")
+                .map(|resolved| (resolved, rendered))
         })();
         let checked = match checked {
-            Ok(resolved) => self
-                .mapped_template_gate(kind.rm_type(), &request.data, resolved.incomplete)
+            Ok((resolved, rendered)) => self
+                .demographic_template_gate(
+                    support::kind_of(kind),
+                    &request.data,
+                    rendered.as_ref(),
+                    resolved.incomplete,
+                )
                 .await
                 .map(|()| resolved),
             Err(e) => Err(e),
@@ -304,7 +319,7 @@ impl FerroEhrService {
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
         // A valid body's large media go to the blob store before a connection is held.
         if checked.is_ok() {
-            self.externalize(&mut body).await?;
+            self.externalize_body(&mut body).await?;
         }
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
@@ -325,7 +340,10 @@ impl FerroEhrService {
             })
             .await?;
         match repr_body {
-            Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
+            Some(body) => Ok(support::committed_response(
+                body.into_canonical(),
+                &committed,
+            )?),
             None => {
                 self.read_party(kind, committed.vo_id, Some(committed.tree), None)
                     .await

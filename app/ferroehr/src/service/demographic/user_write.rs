@@ -33,8 +33,8 @@ use crate::service::demographic::user_lifecycle::{Transition, transition};
 use crate::service::demographic::validate::Container;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::decoded;
 use crate::versioning::change::{self, Change, CommittedContribution, WriteEnvelope};
-use crate::versioning::contribution::typed_decode_gate;
 use crate::versioning::lifecycle::state;
 
 /// What a write changes in a User.
@@ -161,10 +161,10 @@ impl FerroEhrService {
             // NOTE: RM common master06 §Abandoned and Inactive States, an abandoned
             // item is one that lost relevance while incomplete, so its content is.
             let incomplete = matches!(*lifecycle, state::INCOMPLETE | state::ABANDONED);
-            typed_decode_gate(Kind::Person, &body, incomplete)?;
-            self.demographic_commit_check(
+            let typed = decoded(Kind::Person, body.clone(), incomplete)?;
+            self.demographic_body_check(
                 Kind::Person,
-                &body,
+                &typed,
                 incomplete,
                 Some(Container::Existing(id)),
             )
@@ -174,7 +174,7 @@ impl FerroEhrService {
                 lifecycle_state: Some((*lifecycle).to_owned()),
                 ..WriteEnvelope::default()
             };
-            let change = Change::modify(id, Kind::Person, body.clone(), Some(tree), None, envelope);
+            let change = Change::modify(id, Kind::Person, typed, Some(tree), None, envelope);
             let deactivates = matches!(*lifecycle, state::INACTIVE | state::ABANDONED);
             let commit = ScimCommit {
                 limit: deactivates.then_some(limit),

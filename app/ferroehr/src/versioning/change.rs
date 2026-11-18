@@ -533,6 +533,8 @@ struct ResolvedWrite {
     /// the body was decomposed (#5220); `None` for a logical delete and for
     /// every kind but a party.
     party_facts: Option<Box<crate::party_binding::derive::Facts>>,
+    /// The party references the body carries ([`super::party_refs::of_body`]).
+    party_refs: Vec<super::party_refs::Reference>,
     /// The version whose node rows this one reads when its content equals the
     /// preceding tip's (`version.content_sys_version`, #4415); the body is
     /// then signed and not decomposed.
@@ -667,7 +669,7 @@ async fn apply_change(
     scope: CommitScope<'_>,
     change: Change,
     skip_identical: bool,
-) -> Result<(Committed, Uuid), ServiceError> {
+) -> Result<(Committed, Uuid, Vec<super::party_refs::Reference>), ServiceError> {
     let CommitScope {
         ehr_id,
         contribution,
@@ -751,23 +753,20 @@ async fn apply_change(
         }
     };
     admit_written(gate.as_ref(), &resolved)?;
+    let references = std::mem::take(&mut resolved.party_refs);
     if skip_identical && let Some(existing) = skipped_resend(&resolved, audit) {
-        return Ok((existing, Uuid::nil()));
+        return Ok((existing, Uuid::nil(), references));
     }
     let party_facts = resolved.party_facts.take();
     // Boxed: the resolved write and the folded commit hold the whole version in their state,
     // which would otherwise put every caller's future over the size the lint allows.
-    let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
+    let (committed, id) = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
+    let facts = party_facts.as_deref();
     Box::pin(project::committed(
-        tx,
-        ctx,
-        ehr_id,
-        &committed.0,
-        party_facts.as_deref(),
-        access,
+        tx, ctx, ehr_id, &committed, facts, access,
     ))
     .await?;
-    Ok(committed)
+    Ok((committed, id, references))
 }
 
 /// Commit a [`ResolvedWrite`] — compute the `VERSION.signature`, then write the
@@ -1039,11 +1038,7 @@ pub(crate) async fn commit(
         known,
         placement,
     } = write;
-    let references: Vec<_> = crate::versioning::party_refs::of_change(&change)
-        .into_iter()
-        .map(|reference| (None, reference))
-        .collect();
-    let (committed, contribution_id) = apply_change(
+    let (committed, contribution_id, references) = apply_change(
         tx,
         CommitScope {
             ehr_id,
@@ -1057,6 +1052,7 @@ pub(crate) async fn commit(
         ctx.skip_identical_resend,
     )
     .await?;
+    let references: Vec<_> = references.into_iter().map(|r| (None, r)).collect();
     crate::versioning::party_refs::check(tx, &references).await?;
     crate::party_binding::grants::caller::subject::settle(tx, [committed.kind]).await?;
     if !committed.skipped {
@@ -1128,21 +1124,13 @@ pub(crate) async fn commit_contribution(
         Folded::Contribution { id: uid, ehr_id },
     )
     .await?;
-    let references: Vec<_> = changes
-        .iter()
-        .enumerate()
-        .flat_map(|(index, (_, change))| {
-            crate::versioning::party_refs::of_change(change)
-                .into_iter()
-                .map(move |reference| (Some(index), reference))
-        })
-        .collect();
+    let mut references = Vec::new();
     let mut committed = Vec::with_capacity(changes.len() + attests.len());
-    for (version_audit, change) in changes {
+    for (index, (version_audit, change)) in changes.into_iter().enumerate() {
         // Each change writes its own `commit_audit` + `version` under the shared
         // contribution through the folded CTE, at the contribution's one `now()`,
         // so the signature is computable up front.
-        let (change_committed, _cid) = apply_change(
+        let (change_committed, _cid, change_references) = apply_change(
             tx,
             CommitScope {
                 ehr_id,
@@ -1156,6 +1144,7 @@ pub(crate) async fn commit_contribution(
             false,
         )
         .await?;
+        references.extend(change_references.into_iter().map(|r| (Some(index), r)));
         committed.push(change_committed);
     }
     crate::versioning::party_refs::check(tx, &references).await?;

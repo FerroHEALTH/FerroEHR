@@ -81,6 +81,7 @@ async fn serve_folder(
         &parts.headers,
         resp,
         openehr_its::xml::LOCATABLE_ROOT,
+        Tree::Ehr,
     ))
 }
 

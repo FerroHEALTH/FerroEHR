@@ -439,13 +439,13 @@ pub(in crate::service) fn rm_verdict(
 /// an `EHR_STATUS` or `EHR_ACCESS` is a root. The other direction, the
 /// root-identity rule and `LOCATABLE.Links_valid` belong to the whole-instance
 /// pass (`openehr_rm::v1_2::validate::check_archetyped_valid`).
-pub(in crate::service) fn validate_root_locatable(
-    obj: &serde_json::Map<String, Value>,
+pub(in crate::service) fn validate_root_locatable<'a, T: crate::versioning::tree::Tree<'a>>(
+    obj: T,
     kind: &str,
 ) -> Result<(), ServiceError> {
     let details = obj
         .get("archetype_details")
-        .filter(|v| v.is_object())
+        .filter(|v| v.shape() == crate::versioning::tree::Shape::Object)
         .ok_or_else(|| {
             ServiceError::content_invalid(
                 Violation::new(format!(
@@ -459,9 +459,7 @@ pub(in crate::service) fn validate_root_locatable(
             )
         })?;
     details
-        .get("archetype_id")
-        .and_then(|a| a.get("value"))
-        .and_then(Value::as_str)
+        .pointer_text("/archetype_id/value")
         .filter(|s| !s.is_empty())
         .ok_or_else(|| {
             ServiceError::content_invalid(
@@ -528,7 +526,7 @@ pub(in crate::service) fn validate_ehr_status(
         }
     }
 
-    validate_root_locatable(obj, "EHR_STATUS")?;
+    validate_root_locatable(status, "EHR_STATUS")?;
     validate_rm_invariants_for_commit(status, "EHR_STATUS", incomplete)
 }
 
@@ -570,7 +568,7 @@ pub(in crate::service) fn validate_ehr_access(
     // EHR_ACCESS carries the same unconditional Is_archetype_root as
     // EHR_STATUS (RM ehr `ehr_access.adoc`), so the root-LOCATABLE
     // invariants apply identically.
-    validate_root_locatable(obj, "EHR_ACCESS")?;
+    validate_root_locatable(access, "EHR_ACCESS")?;
     if let Some(settings) = obj.get("settings").filter(|v| !v.is_null()) {
         crate::service::ehr::access_settings::check_written_settings(settings)?;
     }

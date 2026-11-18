@@ -30,7 +30,7 @@ pub(super) type SubjectRef = (String, String);
 fn is_record_subject(node: &Value) -> bool {
     node.get("name")
         .and_then(coded)
-        .is_some_and(|code| RecordSubject::read(TERMINOLOGY_ID_ACCESS, code).is_ok())
+        .is_some_and(|code| RecordSubject::read(TERMINOLOGY_ID_ACCESS, &code).is_ok())
 }
 
 /// The reference the record subject element `node` names.
@@ -79,7 +79,17 @@ pub(super) fn take_record_subjects(body: &mut Value, subjects: &[SubjectRef]) ->
 /// skipping one whose reference it already declares.
 pub(super) fn put_record_subjects(body: &mut Value, elements: Vec<Value>) {
     let held = record_subjects(body);
-    let Some(Value::Array(items)) = body.pointer_mut("/details/items") else {
+    // NOTE: the stored typed rendering leaves an empty `items` out, so the
+    // list is opened again when the first element returns (#6003).
+    let Some(Value::Array(items)) = body
+        .pointer_mut("/details")
+        .and_then(Value::as_object_mut)
+        .map(|details| {
+            details
+                .entry("items")
+                .or_insert_with(|| Value::Array(Vec::new()))
+        })
+    else {
         return;
     };
     for element in elements {

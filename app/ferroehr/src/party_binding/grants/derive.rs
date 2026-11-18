@@ -27,6 +27,7 @@ use crate::party_binding::grants::caller::{self, CallerFact, FactKind};
 use crate::party_binding::grants::operation::{NOT_AFTER, NOT_BEFORE, Operation, is_qualifier};
 use crate::party_binding::policy_mark::{ACTS_FOR, CLIENT_ID, TERMINOLOGY, carries, coded};
 use crate::versioning::Kind;
+use crate::versioning::tree::{Shape, Tree};
 
 /// A `Not before` or `Not after` bound of a capability's credentials.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,8 +85,7 @@ pub(crate) struct GrantFacts {
 }
 
 impl GrantFacts {
-    /// Derives what `body`, a party of `kind`, holds.
-    pub(crate) fn of(kind: Kind, body: &Value) -> Self {
+    pub(crate) fn of<'a, T: Tree<'a>>(kind: Kind, body: T) -> Self {
         let mut facts = Self::default();
         match kind {
             Kind::Agent | Kind::Person | Kind::Organisation | Kind::Group => {
@@ -105,12 +105,11 @@ impl GrantFacts {
                 facts.clients = found;
                 facts.provider = body
                     .get("relationships")
-                    .and_then(Value::as_array)
                     .into_iter()
-                    .flatten()
-                    .filter(|relationship| carries(relationship, TERMINOLOGY, ACTS_FOR))
+                    .flat_map(Tree::items)
+                    .filter(|relationship| carries(*relationship, TERMINOLOGY, ACTS_FOR))
                     .find_map(|relationship| {
-                        container(relationship.pointer("/target/id/value")?.as_str()?)
+                        container(&relationship.pointer_text("/target/id/value")?)
                     });
                 if kind == Kind::Organisation {
                     facts.identifier = body.get("details").and_then(provider_identifier);
@@ -122,9 +121,8 @@ impl GrantFacts {
                 caller::coded_name(body, FactKind::Role, &mut facts);
                 for (ordinal, capability) in body
                     .get("capabilities")
-                    .and_then(Value::as_array)
                     .into_iter()
-                    .flatten()
+                    .flat_map(Tree::items)
                     .enumerate()
                 {
                     let ordinal = i32::try_from(ordinal).unwrap_or(i32::MAX);
@@ -145,13 +143,13 @@ impl GrantFacts {
 /// that is a code of [`crate::party_binding::policy_mark::TERMINOLOGY`] no
 /// table defines, such as a removed one: neither a qualifier nor an
 /// operation, which its commit refuses.
-fn unknown_names(ordinal: i32, capability: &Value, unread: &mut Vec<String>) {
+fn unknown_names<'a, T: Tree<'a>>(ordinal: i32, capability: T, unread: &mut Vec<String>) {
     let Some(credentials) = capability.get("credentials") else {
         return;
     };
     walk(credentials, &mut |node| {
         if let Some(code) = node.get("name").and_then(coded)
-            && !is_qualifier(code)
+            && !is_qualifier(&code)
             && Operation::of(code.trim()).is_none()
         {
             unread.push(format!(
@@ -163,8 +161,8 @@ fn unknown_names(ordinal: i32, capability: &Value, unread: &mut Vec<String>) {
 }
 
 impl CapabilityFacts {
-    /// The operations `capability`, at `ordinal`, grants.
-    fn of(ordinal: i32, capability: &Value) -> Vec<Self> {
+    /// The facts of the capability at `ordinal`, one per operation it grants.
+    fn of<'a, T: Tree<'a>>(ordinal: i32, capability: T) -> Vec<Self> {
         let Some(credentials) = capability.get("credentials") else {
             return Vec::new();
         };
@@ -174,35 +172,37 @@ impl CapabilityFacts {
             // NOTE: the value of an element a qualifier names is that qualifier's
             // value, such as an agreement's access class, and never an operation.
             if let Some(code) = node.get("value").and_then(coded)
-                && !name.is_some_and(is_qualifier)
-                && !is_qualifier(code)
-                && !codes.iter().any(|held| held == code)
+                && !name.as_deref().is_some_and(is_qualifier)
+                && !is_qualifier(&code)
+                && !codes.iter().any(|held| *held == code)
             {
-                codes.push(code.to_owned());
+                codes.push(code.into_owned());
             }
         });
         let (before, after) = bounds(credentials);
+        let validity = capability.get("time_validity").map(Tree::to_value);
+        let credentials = Some(credentials.to_value());
         codes
             .into_iter()
             .map(|code| Self {
                 ordinal,
                 code,
-                validity: capability.get("time_validity").cloned(),
+                validity: validity.clone(),
                 not_before: before,
                 not_after: after,
-                credentials: Some(credentials.clone()),
+                credentials: credentials.clone(),
             })
             .collect()
     }
 }
 
-/// The first `Not before` and `Not after` bounds of the capability
-/// `credentials`.
-pub(crate) fn bounds(credentials: &Value) -> (Bound, Bound) {
+/// The `not_before` and `not_after` bounds `credentials` name, each
+/// [`Bound::Open`] when no element names it.
+pub(crate) fn bounds<'a, T: Tree<'a>>(credentials: T) -> (Bound, Bound) {
     let (mut before, mut after) = (Bound::Open, Bound::Open);
     walk(
         credentials,
-        &mut |node| match node.get("name").and_then(coded) {
+        &mut |node| match node.get("name").and_then(coded).as_deref() {
             Some(NOT_BEFORE) if before == Bound::Open => before = bound(node),
             Some(NOT_AFTER) if after == Bound::Open => after = bound(node),
             _ => {}
@@ -211,66 +211,58 @@ pub(crate) fn bounds(credentials: &Value) -> (Bound, Bound) {
     (before, after)
 }
 
-/// Calls `visit` on `value` and every object below it.
-pub(crate) fn walk<'a>(value: &'a Value, visit: &mut impl FnMut(&'a Value)) {
-    match value {
-        Value::Object(map) => {
+/// Visits every object in `value`, itself first, in document order.
+pub(crate) fn walk<'a, T: Tree<'a>>(value: T, visit: &mut impl FnMut(T)) {
+    match value.shape() {
+        Shape::Object => {
             visit(value);
-            for member in map.values() {
+            for (_, member) in value.members() {
                 walk(member, visit);
             }
         }
-        Value::Array(items) => {
-            for item in items {
+        Shape::Array => {
+            for item in value.items() {
                 walk(item, visit);
             }
         }
-        _ => {}
+        Shape::String | Shape::Other => {}
     }
 }
 
-/// The `(issuer, client_id)` of `value` when it is a `DV_IDENTIFIER` of type
-/// [`CLIENT_ID`] with an issuer and an id.
-fn client(value: &Value) -> Option<(String, String)> {
-    let text = |key: &str| value.get(key).and_then(Value::as_str);
-    (text("_type") == Some("DV_IDENTIFIER") && text("type") == Some(CLIENT_ID))
-        .then(|| Some((text("issuer")?.to_owned(), text("id")?.to_owned())))
-        .flatten()
+/// The `(issuer, id)` of `value` when it is a client identifier.
+fn client<'a, T: Tree<'a>>(value: T) -> Option<(String, String)> {
+    let text = |key: &str| value.get_text(key);
+    (text("_type").as_deref() == Some("DV_IDENTIFIER")
+        && text("type").as_deref() == Some(CLIENT_ID))
+    .then(|| Some((text("issuer")?.into_owned(), text("id")?.into_owned())))
+    .flatten()
 }
 
-/// The `(issuer, id)` of the first `DV_IDENTIFIER` below `details` that names
-/// no client.
-fn provider_identifier(details: &Value) -> Option<(String, String)> {
+/// The `(issuer, id)` of the first identifier in `details` that is no client
+/// identifier.
+fn provider_identifier<'a, T: Tree<'a>>(details: T) -> Option<(String, String)> {
     let mut found = None;
     walk(details, &mut |value| {
-        let text = |key: &str| value.get(key).and_then(Value::as_str);
+        let text = |key: &str| value.get_text(key);
         if found.is_none()
-            && text("_type") == Some("DV_IDENTIFIER")
-            && text("type") != Some(CLIENT_ID)
+            && text("_type").as_deref() == Some("DV_IDENTIFIER")
+            && text("type").as_deref() != Some(CLIENT_ID)
             && let (Some(issuer), Some(id)) = (text("issuer"), text("id"))
         {
-            found = Some((issuer.to_owned(), id.to_owned()));
+            found = Some((issuer.into_owned(), id.into_owned()));
         }
     });
     found
 }
 
-/// The bound the `DV_DATE_TIME` value of the element `element` names.
-fn bound(element: &Value) -> Bound {
+/// The bound the `DV_DATE_TIME` value of `element` sets.
+fn bound<'a, T: Tree<'a>>(element: T) -> Bound {
     element
-        .get("value")
-        .and_then(|value| value.get("value"))
-        .and_then(Value::as_str)
-        .and_then(instant)
+        .pointer_text("/value/value")
+        .and_then(|text| instant(&text))
         .map_or(Bound::Unreadable, Bound::At)
 }
 
-/// The instant an ISO 8601 date-time names (RM `data_types` `DV_DATE_TIME`):
-/// at its offset, or in UTC when it carries none, the zone the server reads
-/// every `DV_DATE` in.
-///
-/// A `DV_DATE_TIME` reduced below the hour, or a text that is no date-time,
-/// names none.
 pub(crate) fn instant(text: &str) -> Option<jiff::Timestamp> {
     let text = text.trim();
     if let Ok(at) = text.parse::<jiff::Timestamp>() {

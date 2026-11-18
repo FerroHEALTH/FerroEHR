@@ -32,6 +32,7 @@ use serde_json::Value;
 use crate::error::{ServiceError, Violation};
 use crate::ids::VoId;
 use crate::versioning::party_refs::{self, Referent};
+use crate::versioning::tree::{Shape, Tree};
 
 /// The RM `_type` a `PARTY_RELATIONSHIP` versioned object stores.
 const RELATIONSHIP_RM_TYPE: &str = "PARTY_RELATIONSHIP";
@@ -110,12 +111,16 @@ pub(crate) fn party_check(
 ///
 /// NOTE: no openEHR operation states a status for a body/path id mismatch; the `422`
 /// matches the COMPOSITION update's (ITS-REST overview §HTTP status codes).
-fn uid_names_container(rm_type: &str, data: &Value, container: VoId) -> Result<(), ServiceError> {
-    let Some(uid) = data.pointer("/uid/value").and_then(Value::as_str) else {
+fn uid_names_container<'a, T: Tree<'a>>(
+    rm_type: &str,
+    data: T,
+    container: VoId,
+) -> Result<(), ServiceError> {
+    let Some(uid) = data.pointer_text("/uid/value") else {
         return Ok(());
     };
-    let object_id = ObjectVersionId::new(uid).map_or_else(
-        |_| uid.to_owned(),
+    let object_id = ObjectVersionId::new(uid.as_ref()).map_or_else(
+        |_| uid.clone().into_owned(),
         |version_id| version_id.object_id().value().into_owned(),
     );
     if composite_ids_equal(&object_id, &container.to_string()) {
@@ -141,17 +146,17 @@ fn uid_names_container(rm_type: &str, data: &Value, container: VoId) -> Result<(
 ///
 /// NOTE: a client cannot know the id a create mints (RM common master06 §Version
 /// Identification), so it adds relationships on update: our own design.
-fn relationships_validity(
+fn relationships_validity<'a, T: Tree<'a>>(
     rm_type: &str,
-    data: &Value,
+    data: T,
     container: Container,
 ) -> Result<(), ServiceError> {
-    let Some(relationships) = data.get("relationships").and_then(Value::as_array) else {
+    let Some(relationships) = data.get("relationships") else {
         return Ok(());
     };
     let own = container.id().to_string();
-    for (i, rel) in relationships.iter().enumerate() {
-        let source = rel.pointer("/source/id/value").and_then(Value::as_str);
+    for (i, rel) in relationships.items().enumerate() {
+        let source = rel.pointer_text("/source/id/value");
         let Some(source) = source.filter(|s| !composite_ids_equal(s, &own)) else {
             continue;
         };
@@ -182,29 +187,23 @@ fn relationships_validity(
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] naming the rule and the reference's path.
-fn references(rm_type: &str, data: &Value) -> Result<(), ServiceError> {
-    let present = |value: Option<&Value>| value.filter(|v| !v.is_null()).cloned();
-    let list = |key: &str| {
-        data.get(key)
-            .and_then(Value::as_array)
-            .cloned()
-            .unwrap_or_default()
-    };
-    for (i, rel) in list("relationships").iter().enumerate() {
+fn references<'a, T: Tree<'a>>(rm_type: &str, data: T) -> Result<(), ServiceError> {
+    let list = |key: &str| data.get(key).into_iter().flat_map(Tree::items);
+    for (i, rel) in list("relationships").enumerate() {
         for end in ["source", "target"] {
-            if let Some(reference) = present(rel.get(end)) {
+            if let Some(reference) = rel.get(end).and_then(Tree::present) {
                 let path = format!("{rm_type}.relationships[{i}].{end}");
-                party_refs::shape_of(&reference, &path, Referent::Party)?;
+                party_refs::shape_of(reference, &path, Referent::Party)?;
             }
         }
     }
-    for (i, role) in list("roles").iter().enumerate() {
+    for (i, role) in list("roles").enumerate() {
         party_refs::shape_of(role, &format!("{rm_type}.roles[{i}]"), Referent::Role)?;
     }
     if rm_type == "ROLE"
-        && let Some(performer) = present(data.get("performer"))
+        && let Some(performer) = data.get("performer").and_then(Tree::present)
     {
-        party_refs::shape_of(&performer, "ROLE.performer", Referent::Actor)?;
+        party_refs::shape_of(performer, "ROLE.performer", Referent::Actor)?;
     }
     Ok(())
 }
@@ -223,19 +222,38 @@ fn references(rm_type: &str, data: &Value) -> Result<(), ServiceError> {
 ///
 /// # Errors
 /// [`ServiceError::Unprocessable`] naming the violated rule.
-pub(super) fn party_invariants(
+pub(crate) fn party_invariants(
     rm_type: &str,
     data: &Value,
     incomplete: bool,
+    container: Container,
+) -> Result<(), ServiceError> {
+    party_rules(rm_type, data, container)?;
+    // The checks above are root-scoped, but the RM class invariants bind every
+    // node, so this whole-instance pass judges an identity, contact or nested
+    // CLUSTER below the root by the rules a COMPOSITION's nodes get.
+    crate::service::ehr::validation::validate_rm_invariants_for_commit(data, rm_type, incomplete)
+}
+
+/// The root-scoped PARTY rules of a body of `rm_type` as part of `container`,
+/// read through either body shape: the root half of `LOCATABLE.Archetyped_valid`,
+/// the `uid` naming the container, the shape of every party reference and
+/// `PARTY.Relationships_validity`.
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] naming the first rule the body breaks.
+pub(crate) fn party_rules<'a, T: Tree<'a>>(
+    rm_type: &str,
+    data: T,
     container: Container,
 ) -> Result<(), ServiceError> {
     // PARTY is unconditionally an archetype root (`demographic.party.adoc`
     // §Invariants `Is_archetype_root`), so `Archetyped_valid`'s "a root MUST
     // carry ARCHETYPED" direction applies here — the one a per-node pass cannot
     // express. Root identity and `Links_valid` belong to the whole-instance
-    // pass run below.
-    if let Some(obj) = data.as_object() {
-        crate::service::ehr::validation::validate_root_locatable(obj, rm_type)?;
+    // pass.
+    if data.shape() == Shape::Object {
+        crate::service::ehr::validation::validate_root_locatable(data, rm_type)?;
     }
 
     // NOTE: Identities_valid (1..* → NonEmptyVec) and the present-implies-
@@ -246,12 +264,25 @@ pub(super) fn party_invariants(
         uid_names_container(rm_type, data, id)?;
     }
     references(rm_type, data)?;
-    relationships_validity(rm_type, data, container)?;
+    relationships_validity(rm_type, data, container)
+}
 
-    // The checks above are root-scoped, but the RM class invariants bind every
-    // node, so this whole-instance pass judges an identity, contact or nested
-    // CLUSTER below the root by the rules a COMPOSITION's nodes get.
-    crate::service::ehr::validation::validate_rm_invariants_for_commit(data, rm_type, incomplete)
+/// `PARTY_RELATIONSHIP.source` and `target`, each a continuant `PARTY_REF`
+/// that holds `PARTY_REF.Type_validity`.
+///
+/// # Errors
+/// [`ServiceError::Unprocessable`] naming the first end that breaks a rule.
+pub(crate) fn relationship_ends(
+    typed: &openehr_rm::prelude::PartyRelationship,
+) -> Result<(), ServiceError> {
+    for (field, reference) in [("source", &typed.source), ("target", &typed.target)] {
+        party_refs::shape(
+            reference,
+            &format!("PARTY_RELATIONSHIP.{field}"),
+            Referent::Party,
+        )?;
+    }
+    Ok(())
 }
 
 /// Structurally validate a candidate `PARTY_RELATIONSHIP` body: deserialize into
@@ -278,15 +309,8 @@ pub(crate) fn relationship_check(data: &Value, incomplete: bool) -> Result<(), S
         Err(_) if incomplete => None,
         Err(e) => return Err(ServiceError::canonical_decode(data, e)),
     };
-    for (field, reference) in typed
-        .iter()
-        .flat_map(|t| [("source", &t.source), ("target", &t.target)])
-    {
-        party_refs::shape(
-            reference,
-            &format!("PARTY_RELATIONSHIP.{field}"),
-            Referent::Party,
-        )?;
+    if let Some(typed) = &typed {
+        relationship_ends(typed)?;
     }
     // `PARTY_RELATIONSHIP` is a LOCATABLE too
     // (`RM/docs/UML/classes/org.openehr.rm.demographic.party_relationship.adoc`),

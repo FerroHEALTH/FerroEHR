@@ -63,7 +63,6 @@
 pub mod config;
 pub mod detect;
 mod identifier_kind;
-pub(crate) mod tree;
 
 use std::fmt::Write as _;
 
@@ -74,7 +73,7 @@ use crate::error::ServiceError;
 use crate::privacy::config::{PrivacyConfig, ScanMode};
 use crate::privacy::detect::{CustomPattern, IdentifierRule};
 use crate::privacy::identifier_kind::{DeclaredKind, declared_kind};
-use crate::privacy::tree::{Shape, Tree};
+use crate::versioning::tree::{Shape, Tree};
 
 /// The JSON key whose value is a terminology code by construction, and which
 /// the identifier scanner therefore skips.
@@ -288,7 +287,7 @@ impl PrivacyPolicy {
     }
 
     /// [`Self::findings`] over a body read through either shape
-    /// ([`crate::privacy::tree`]).
+    /// ([`crate::versioning::tree`]).
     pub(crate) fn findings_in<'a, T: Tree<'a>>(&self, root: &str, body: T) -> Vec<Finding> {
         let mut findings = Vec::new();
         if root == "EHR_STATUS" && self.subject_rule_in_force() {
@@ -329,7 +328,7 @@ impl PrivacyPolicy {
     }
 
     /// [`Self::enforce`] over a body read through either shape
-    /// ([`crate::privacy::tree`]).
+    /// ([`crate::versioning::tree`]).
     ///
     /// # Errors
     /// As [`Self::enforce`].

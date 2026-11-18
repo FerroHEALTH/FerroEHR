@@ -717,7 +717,12 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     if resp.body.is_null() {
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
-    Ok(read_relationship(h, resp))
+    Ok(negotiate::resource::read_raw_rm::<PartyRelationship>(
+        h,
+        resp,
+        LOCATABLE_ROOT,
+        Tree::Demographic,
+    ))
 }
 
 /// The `party_relationship_update` operation.
@@ -854,16 +859,3 @@ fn write_relationship(
     out
 }
 
-/// A `200 OK` read of a relationship, setting the demographic
-/// `ETag`/`Last-Modified`. No `Location` — overview §Location: the header "MUST
-/// NOT be used to indicate an alternate representation of an existing resource
-/// (e.g. via `GET` method)".
-fn read_relationship(h: &http::HeaderMap, resp: RawServiceResponse) -> Response {
-    let RawServiceResponse { body, meta } = resp;
-    let mut out =
-        negotiate::body::respond_read::<PartyRelationship>(h, StatusCode::OK, body, LOCATABLE_ROOT);
-    if let Some(meta) = meta.as_ref() {
-        negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
-    }
-    out
-}

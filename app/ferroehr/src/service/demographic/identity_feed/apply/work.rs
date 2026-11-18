@@ -30,8 +30,8 @@ use crate::service::FerroEhrService;
 use crate::service::demographic::types::PartyKind;
 use crate::service::demographic::validate::Container;
 use crate::versioning::Kind;
+use crate::versioning::body::decoded;
 use crate::versioning::change::{Change, WriteEnvelope};
-use crate::versioning::contribution::typed_decode_gate;
 use crate::versioning::lifecycle::state;
 
 /// A patient `PERSON` an apply edits.
@@ -449,11 +449,11 @@ impl Work<'_> {
         let mut changes = Vec::with_capacity(edited.len());
         for (id, person) in edited {
             let incomplete = matches!(person.lifecycle.as_str(), state::INCOMPLETE);
-            typed_decode_gate(Kind::Person, &person.body, incomplete)?;
+            let body = decoded(Kind::Person, person.body, incomplete)?;
             self.service
-                .demographic_commit_check(
+                .demographic_body_check(
                     Kind::Person,
-                    &person.body,
+                    &body,
                     incomplete,
                     Some(Container::Existing(VoId(id))),
                 )
@@ -465,7 +465,7 @@ impl Work<'_> {
             changes.push(Change::modify(
                 VoId(id),
                 Kind::Person,
-                person.body,
+                body,
                 Some(person.tree),
                 None,
                 envelope,

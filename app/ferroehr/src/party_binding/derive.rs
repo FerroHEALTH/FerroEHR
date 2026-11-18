@@ -19,12 +19,15 @@
               the side table is derived from"
 )]
 
+use std::borrow::Cow;
+
 use serde_json::Value;
 use uuid::Uuid;
 
 use super::{BindingMapping, IdentifierSelector, NameSelector, Step};
 use crate::templates::identity::canonical_key;
 use crate::versioning::Kind;
+use crate::versioning::tree::{Shape, Tree};
 
 /// One `DV_IDENTIFIER` a selector holds: its issuer, its type and its id as
 /// written.
@@ -122,13 +125,10 @@ pub(crate) struct Facts {
 
 impl Facts {
     /// Derives what `body`, a party of `kind`, holds under `mapping`.
-    pub(crate) fn of(kind: Kind, body: &Value, mapping: &BindingMapping) -> Self {
+    pub(crate) fn of<'a, T: Tree<'a>>(kind: Kind, body: T, mapping: &BindingMapping) -> Self {
         let template = body
-            .get("archetype_details")
-            .and_then(|details| details.get("template_id"))
-            .and_then(|id| id.get("value"))
-            .and_then(Value::as_str)
-            .map(canonical_key);
+            .pointer_text("/archetype_details/template_id/value")
+            .map(|id| canonical_key(&id));
         let mut facts = Self {
             template,
             grants: super::grants::derive::GrantFacts::of(kind, body),
@@ -141,20 +141,16 @@ impl Facts {
             Kind::Group => facts.group(body, mapping),
             Kind::Role => {
                 facts.performer = body
-                    .get("performer")
-                    .and_then(|performer| performer.get("id"))
-                    .and_then(|id| id.get("value"))
-                    .and_then(Value::as_str)
-                    .map(str::to_owned);
-                facts.validity = body.get("time_validity").cloned();
+                    .pointer_text("/performer/id/value")
+                    .map(Cow::into_owned);
+                facts.validity = validity(body);
             }
             // NOTE: a standalone relationship container is listed at its target
             // like an inline one (RM demographic master02 §Party Relationships): our own design.
             Kind::PartyRelationship => {
                 let target = body
-                    .pointer("/target/id/value")
-                    .and_then(Value::as_str)
-                    .and_then(container);
+                    .pointer_text("/target/id/value")
+                    .and_then(|id| container(&id));
                 facts.targets.extend(target);
                 if crate::party_binding::policy_mark::carries(
                     body,
@@ -162,15 +158,14 @@ impl Facts {
                     crate::party_binding::policy_mark::REPRESENTS,
                 ) {
                     facts.representative = body
-                        .pointer("/source/id/value")
-                        .and_then(Value::as_str)
-                        .and_then(container);
+                        .pointer_text("/source/id/value")
+                        .and_then(|id| container(&id));
                     facts
                         .representations
                         .extend(target.map(|subject| Representation {
                             subject,
                             code: crate::party_binding::policy_mark::subject_relationship(body),
-                            validity: body.get("time_validity").cloned(),
+                            validity: validity(body),
                         }));
                 }
             }
@@ -181,22 +176,18 @@ impl Facts {
 
     /// The inline relationships: every target, and the memberships and
     /// representations among them.
-    fn relationships(&mut self, kind: Kind, body: &Value, mapping: &BindingMapping) {
-        let Some(relationships) = body.get("relationships").and_then(Value::as_array) else {
+    fn relationships<'a, T: Tree<'a>>(&mut self, kind: Kind, body: T, mapping: &BindingMapping) {
+        let Some(relationships) = body.get("relationships") else {
             return;
         };
         let person = kind == Kind::Person;
-        for relationship in relationships {
+        for relationship in relationships.items() {
             let target = relationship
-                .get("target")
-                .and_then(|target| target.get("id"))
-                .and_then(|id| id.get("value"))
-                .and_then(Value::as_str)
-                .and_then(container);
+                .pointer_text("/target/id/value")
+                .and_then(|id| container(&id));
             let archetype = relationship
-                .get("archetype_node_id")
-                .and_then(Value::as_str)
-                .map(str::to_lowercase);
+                .get_text("archetype_node_id")
+                .map(|id| id.to_lowercase());
             let is = |of: Option<&String>| of.is_some() && of == archetype.as_ref();
             if crate::party_binding::policy_mark::carries(
                 relationship,
@@ -208,7 +199,7 @@ impl Facts {
                     self.representations.push(Representation {
                         subject,
                         code: crate::party_binding::policy_mark::subject_relationship(relationship),
-                        validity: relationship.get("time_validity").cloned(),
+                        validity: validity(relationship),
                     });
                 }
             }
@@ -226,12 +217,12 @@ impl Facts {
     }
 
     /// The selector identifiers and roles of a `PERSON`.
-    fn person(&mut self, body: &Value, mapping: &BindingMapping) {
-        if let Some(roles) = body.get("roles").and_then(Value::as_array) {
+    fn person<'a, T: Tree<'a>>(&mut self, body: T, mapping: &BindingMapping) {
+        if let Some(roles) = body.get("roles") {
             self.roles = roles
-                .iter()
-                .filter_map(|role| role.get("id")?.get("value")?.as_str())
-                .filter_map(container)
+                .items()
+                .filter_map(|role| role.pointer_text("/id/value"))
+                .filter_map(|id| container(&id))
                 .collect();
         }
         if let Some(patient) = mapping
@@ -273,7 +264,7 @@ impl Facts {
 
     /// The `externalId`s and `displayName`s of a `GROUP` of the group
     /// template.
-    fn group(&mut self, body: &Value, mapping: &BindingMapping) {
+    fn group<'a, T: Tree<'a>>(&mut self, body: T, mapping: &BindingMapping) {
         let Some(group) = mapping
             .group
             .as_ref()
@@ -323,50 +314,40 @@ pub(crate) fn container(reference: &str) -> Option<Uuid> {
 }
 
 /// The `DV_IDENTIFIER`s `steps` address in `body`, in document order.
-fn dv_identifiers<'a>(body: &'a Value, steps: &[Step]) -> impl Iterator<Item = &'a Value> {
+fn dv_identifiers<'a, T: Tree<'a>>(body: T, steps: &[Step]) -> impl Iterator<Item = T> {
     select(body, steps)
         .into_iter()
-        .filter(|value| type_of(value) == Some("DV_IDENTIFIER"))
+        .filter(|value| type_of(*value).as_deref() == Some("DV_IDENTIFIER"))
 }
 
 impl IdentifierSelector {
-    /// The identifiers the selector holds in `body`, in document order: each
-    /// `DV_IDENTIFIER` of its type at its path with an issuer and an id, of
-    /// one of its issuers when it names any.
-    pub(crate) fn identifiers(&self, body: &Value) -> Vec<Identifier> {
+    /// The identifiers of `body` this selector chooses.
+    pub(crate) fn identifiers<'a, T: Tree<'a>>(&self, body: T) -> Vec<Identifier> {
         dv_identifiers(body, &self.parsed)
             .filter_map(|value| {
-                let text = |key: &str| value.get(key).and_then(Value::as_str);
-                if text("type") != Some(self.identifier_type.as_str()) {
+                let text = |key: &str| value.get_text(key);
+                if text("type").as_deref() != Some(self.identifier_type.as_str()) {
                     return None;
                 }
                 let issuer = text("issuer")?;
                 let id = text("id")?;
-                (self.issuers.is_empty() || self.issuers.iter().any(|held| held == issuer))
-                    .then(|| Identifier::new(issuer, &self.identifier_type, id))
+                (self.issuers.is_empty() || self.issuers.iter().any(|held| *held == issuer))
+                    .then(|| Identifier::new(&issuer, &self.identifier_type, &id))
             })
             .collect()
     }
 }
 
 impl super::PatientSelector {
-    /// The identifiers the patient selector holds in `body`, in document
-    /// order: each `DV_IDENTIFIER` at its path with an `issuer` and an `id`,
-    /// of any type. One without an issuer names no identifier domain, so the
-    /// patient cannot be found by it.
-    pub(crate) fn identifiers(&self, body: &Value) -> Vec<Identifier> {
+    /// The patient identifiers of `body` this selector chooses.
+    pub(crate) fn identifiers<'a, T: Tree<'a>>(&self, body: T) -> Vec<Identifier> {
         dv_identifiers(body, &self.parsed)
             .filter_map(|value| {
-                let text = |key: &str| {
-                    value
-                        .get(key)
-                        .and_then(Value::as_str)
-                        .filter(|text| !text.trim().is_empty())
-                };
+                let text = |key: &str| value.get_text(key).filter(|text| !text.trim().is_empty());
                 Some(Identifier::new(
-                    text("issuer")?,
-                    text("type").unwrap_or_default(),
-                    text("id")?,
+                    &text("issuer")?,
+                    &text("type").unwrap_or_default(),
+                    &text("id")?,
                 ))
             })
             .collect()
@@ -374,23 +355,24 @@ impl super::PatientSelector {
 }
 
 impl NameSelector {
-    /// The text values the selector holds in `body`, in document order: the
-    /// `value` of each `DV_TEXT` or `DV_CODED_TEXT` at its path.
-    pub(crate) fn names(&self, body: &Value) -> Vec<String> {
+    /// The names of `body` this selector chooses.
+    pub(crate) fn names<'a, T: Tree<'a>>(&self, body: T) -> Vec<String> {
         select(body, &self.parsed)
             .into_iter()
-            .filter(|value| matches!(type_of(value), Some("DV_TEXT" | "DV_CODED_TEXT")))
-            .filter_map(|value| value.get("value").and_then(Value::as_str))
-            .map(str::to_owned)
+            .filter(|value| {
+                matches!(
+                    type_of(*value).as_deref(),
+                    Some("DV_TEXT" | "DV_CODED_TEXT")
+                )
+            })
+            .filter_map(|value| value.get_text("value"))
+            .map(Cow::into_owned)
             .collect()
     }
 }
 
-/// The values `steps` address in `body`, as the lax SQL/JSON path of
-/// [`super::NameSelector`] reads them: a single attribute and a multiple one
-/// alike, and an array met on the way read element by element (PostgreSQL 18,
-/// "The SQL/JSON Path Language", lax mode).
-fn select<'a>(body: &'a Value, steps: &[Step]) -> Vec<&'a Value> {
+/// The values the steps `steps` select in `body`.
+fn select<'a, T: Tree<'a>>(body: T, steps: &[Step]) -> Vec<T> {
     let mut current = vec![body];
     for step in steps {
         let mut next = Vec::new();
@@ -399,7 +381,7 @@ fn select<'a>(body: &'a Value, steps: &[Step]) -> Vec<&'a Value> {
         }
         if let Some(node_id) = &step.node_id {
             next.retain(|value| {
-                value.get("archetype_node_id").and_then(Value::as_str) == Some(node_id.as_str())
+                value.get_text("archetype_node_id").as_deref() == Some(node_id.as_str())
             });
         }
         current = next;
@@ -407,27 +389,32 @@ fn select<'a>(body: &'a Value, steps: &[Step]) -> Vec<&'a Value> {
     current
 }
 
-/// Pushes onto `out` the members `attribute` names in `value`, each element
-/// of an array one member.
-fn members<'a>(value: &'a Value, attribute: &str, out: &mut Vec<&'a Value>) {
-    match value {
-        Value::Array(items) => {
-            for item in items {
+/// Pushes the members `attribute` of `value`, or of each item of an array,
+/// onto `out`, an array member's items one by one.
+fn members<'a, T: Tree<'a>>(value: T, attribute: &str, out: &mut Vec<T>) {
+    match value.shape() {
+        Shape::Array => {
+            for item in value.items() {
                 members(item, attribute, out);
             }
         }
-        Value::Object(map) => match map.get(attribute) {
-            Some(Value::Array(items)) => out.extend(items),
+        Shape::Object => match value.get(attribute) {
+            Some(member) if member.shape() == Shape::Array => out.extend(member.items()),
             Some(member) => out.push(member),
             None => {}
         },
-        _ => {}
+        Shape::String | Shape::Other => {}
     }
 }
 
 /// The `_type` of `value`.
-fn type_of(value: &Value) -> Option<&str> {
-    value.get("_type").and_then(Value::as_str)
+fn type_of<'a, T: Tree<'a>>(value: T) -> Option<Cow<'a, str>> {
+    value.get_text("_type")
+}
+
+/// The `time_validity` of `value`, kept as its canonical value.
+fn validity<'a, T: Tree<'a>>(value: T) -> Option<Value> {
+    value.get("time_validity").map(Tree::to_value)
 }
 
 #[cfg(test)]

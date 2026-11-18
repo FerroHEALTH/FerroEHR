@@ -75,7 +75,7 @@ impl FerroEhrService {
                 .map_err(|e| ServiceError::internal("serialize the commit body", e))?;
             self.privacy.enforce_in(
                 kind.as_str(),
-                crate::privacy::tree::Indexed::root(&rendered),
+                crate::versioning::tree::Indexed::root(&rendered),
             )?;
         }
         match body {

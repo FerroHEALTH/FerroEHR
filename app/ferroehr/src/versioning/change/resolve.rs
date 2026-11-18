@@ -76,6 +76,7 @@ pub(super) async fn resolve_delete(
         rendered: None,
         content_digest: None,
         party_facts: None,
+        party_refs: Vec::new(),
         shared_from: None,
         preceding: None,
         // A deleted version's data is Void (master06 §Logical
@@ -125,6 +126,9 @@ struct Prepared {
     /// What a party body holds that the binding hooks read, derived before
     /// the body is decomposed (#5220); `None` for every other kind.
     party_facts: Option<Box<crate::party_binding::derive::Facts>>,
+    /// The party references the body carries, judged after the commit's
+    /// inserts ([`crate::versioning::party_refs`]).
+    party_refs: Vec<crate::versioning::party_refs::Reference>,
 }
 
 /// The body bytes a point read serves verbatim (`version.body`) and their
@@ -185,11 +189,7 @@ async fn prepare_body(
     tree: TreeId,
     mut body: Body,
 ) -> Result<Prepared, ServiceError> {
-    // NOTE: only a demographic kind carries protected identifiers, and no
-    // demographic kind is committed as typed RM yet.
-    if let Body::Canonical(canonical) = &mut body {
-        seal_protected_identifiers(tx, ctx, kind, vo_id, canonical).await?;
-    }
+    seal_protected_identifiers(tx, ctx, kind, vo_id, &mut body).await?;
     body.stamp_uid(&version_uid(&object_version_id(
         vo_id,
         &ctx.system_id,
@@ -207,16 +207,17 @@ async fn prepare_body(
         .direct_origin
         .stamp_fed(crate::storage::render::fed_origins(&rendered))?;
     let content_digest = crate::storage::render::content_digest(&rendered);
-    let party_facts = body
-        .canonical()
-        .filter(|_| kind.is_demographic())
-        .map(|canonical| {
-            Box::new(crate::party_binding::derive::Facts::of(
-                kind,
-                canonical,
-                ctx.binding,
-            ))
-        });
+    // NOTE: the party hooks read the one rendering of the body, whichever
+    // form it was committed as (#6003).
+    let read = crate::versioning::tree::Indexed::root(&rendered);
+    let party_facts = kind.is_demographic().then(|| {
+        Box::new(crate::party_binding::derive::Facts::of(
+            kind,
+            read,
+            ctx.binding,
+        ))
+    });
+    let party_refs = crate::versioning::party_refs::of_body(kind, read);
     Ok(Prepared {
         body,
         rendered,
@@ -224,6 +225,7 @@ async fn prepare_body(
         origins,
         content_digest,
         party_facts,
+        party_refs,
     })
 }
 
@@ -265,6 +267,7 @@ pub(super) async fn resolve_create(
         rendered: Some(body.rendered),
         content_digest: Some(body.content_digest),
         party_facts: body.party_facts,
+        party_refs: body.party_refs,
         shared_from: None,
         preceding: None,
         stable_compatible: body.stable_compatible,
@@ -324,6 +327,7 @@ pub(super) async fn resolve_modify(
         rendered: Some(body.rendered),
         content_digest: Some(body.content_digest),
         party_facts: body.party_facts,
+        party_refs: body.party_refs,
         shared_from,
         preceding: Some(next.preceding),
         stable_compatible: body.stable_compatible,
@@ -363,7 +367,7 @@ async fn seal_protected_identifiers(
     ctx: &SigningCtx<'_>,
     kind: Kind,
     vo_id: VoId,
-    canonical: &mut Value,
+    body: &mut Body,
 ) -> Result<(), ServiceError> {
     let Some(engine) = ctx.identifiers else {
         return Ok(());
@@ -371,7 +375,7 @@ async fn seal_protected_identifiers(
     if !kind.is_demographic() {
         return Ok(());
     }
-    engine.externalize(tx, vo_id.0, canonical).await?;
+    engine.externalize(tx, vo_id.0, body).await?;
     Ok(())
 }
 

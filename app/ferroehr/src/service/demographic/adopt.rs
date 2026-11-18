@@ -39,8 +39,8 @@ use crate::system_log::event::{
     AccessDomain, AuditEvent, EventActionCode, EventOutcome, ObjectClass,
 };
 use crate::versioning::audit::{AuditInput, change_type, dv_text};
+use crate::versioning::body::decoded;
 use crate::versioning::change::{self, Change, WriteEnvelope};
-use crate::versioning::contribution::typed_decode_gate;
 use crate::versioning::lifecycle::state;
 
 /// The audit description of an adoption.
@@ -229,6 +229,16 @@ impl FerroEhrService {
                 }
             }
         }
+        let role = decoded(
+            support::kind_of(PartyKind::Role),
+            role,
+            role_state == state::INCOMPLETE,
+        )?;
+        let body = decoded(
+            support::kind_of(PartyKind::Person),
+            body,
+            lifecycle == state::INCOMPLETE,
+        )?;
         for (kind, data, incomplete, container) in [
             (
                 PartyKind::Role,
@@ -244,8 +254,7 @@ impl FerroEhrService {
             ),
         ] {
             let kind = support::kind_of(kind);
-            typed_decode_gate(kind, data, incomplete)?;
-            self.demographic_commit_check(kind, data, incomplete, Some(container))
+            self.demographic_body_check(kind, data, incomplete, Some(container))
                 .await?;
         }
         let role_change = Change::create_allocated(

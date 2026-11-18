@@ -246,6 +246,7 @@ impl FerroEhrService {
         self.validate_for_commit(Kind::EhrAccess, &access, false)
             .await?;
         self.externalize(&mut access).await?;
+        let access = crate::versioning::body::decoded(Kind::EhrAccess, access, false)?;
         let audit = self.audit(change_type::MODIFICATION, description);
         let committed = self
             .commit_one(&self.pool, Mode::Transaction, async move |_tx| {

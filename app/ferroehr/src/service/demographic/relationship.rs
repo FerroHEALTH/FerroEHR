@@ -35,12 +35,13 @@ use crate::ids::VoId;
 use crate::service::FerroEhrService;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::support;
-use crate::service::demographic::validate::relationship_check;
+use crate::service::demographic::template::demographic_rules;
 use crate::service::response::{RawServiceResponse, ReadBody, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::service::write::{Mode, Resolved};
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::Body;
 use crate::versioning::change::precondition::lock_current;
 use crate::versioning::change::{Change, Write};
 use crate::versioning::object_version_id::{TreeId, object_version_id};
@@ -176,9 +177,9 @@ impl FerroEhrService {
     /// so the response is always the stored form.
     pub(super) async fn create_relationship(
         &self,
-        request: WriteRequest<Value>,
+        request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
-        relationship_check(&request.data, false)?;
+        let rendered = demographic_rules(Kind::PartyRelationship, &request.data, None)?;
         // Both halves of the committal merge, the `UPDATE_AUDIT` attributes and
         // the VERSION `lifecycle_state` (ITS-REST overview
         // `Requests_and_responses.md` §"openehr-version and
@@ -194,12 +195,18 @@ impl FerroEhrService {
             change_type::CREATION,
             "PARTY_RELATIONSHIP creation",
         )?;
-        self.mapped_template_gate(Kind::PartyRelationship.as_str(), &request.data, incomplete)
-            .await?;
+        self.demographic_template_gate(
+            Kind::PartyRelationship,
+            &request.data,
+            rendered.as_ref(),
+            incomplete,
+        )
+        .await?;
+        drop(rendered);
         let mut body = request.data;
         let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
         // The large media go to the blob store before a connection is held.
-        self.externalize(&mut body).await?;
+        self.externalize_body(&mut body).await?;
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |_| {
                 Ok(Write::new(
@@ -210,7 +217,10 @@ impl FerroEhrService {
             })
             .await?;
         match canonical {
-            Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
+            Some(body) => Ok(support::committed_response(
+                body.into_canonical(),
+                &committed,
+            )?),
             None => {
                 self.read_relationship(committed.vo_id, Some(committed.tree), None)
                     .await
@@ -284,7 +294,7 @@ impl FerroEhrService {
         &self,
         current: CurrentRelationship,
         precondition: Precondition,
-        request: WriteRequest<Value>,
+        request: WriteRequest<Body>,
     ) -> Result<ServiceResponse, ServiceError> {
         let vo_id = current.vo_id;
         let checked = (|| {
@@ -294,18 +304,20 @@ impl FerroEhrService {
                     format!("PARTY_RELATIONSHIP {vo_id} is deleted"),
                 ));
             }
-            relationship_check(&request.data, false)?;
+            let rendered = demographic_rules(Kind::PartyRelationship, &request.data, None)?;
             self.resolve_write(
                 &request,
                 change_type::MODIFICATION,
                 "PARTY_RELATIONSHIP update",
             )
+            .map(|resolved| (resolved, rendered))
         })();
         let checked = match checked {
-            Ok(resolved) => self
-                .mapped_template_gate(
-                    Kind::PartyRelationship.as_str(),
+            Ok((resolved, rendered)) => self
+                .demographic_template_gate(
+                    Kind::PartyRelationship,
                     &request.data,
+                    rendered.as_ref(),
                     resolved.incomplete,
                 )
                 .await
@@ -316,7 +328,7 @@ impl FerroEhrService {
         let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
         // A valid body's large media go to the blob store before a connection is held.
         if checked.is_ok() {
-            self.externalize(&mut body).await?;
+            self.externalize_body(&mut body).await?;
         }
         let committed = self
             .commit_one(&self.demographic_pool, Mode::Transaction, async move |tx| {
@@ -339,7 +351,10 @@ impl FerroEhrService {
         // Metadata + in-hand body, unless the commit rewrote it: then the
         // stored form is read back.
         match canonical {
-            Some(canonical) => Ok(support::committed_response(canonical, &committed)?),
+            Some(body) => Ok(support::committed_response(
+                body.into_canonical(),
+                &committed,
+            )?),
             None => {
                 self.read_relationship(committed.vo_id, Some(committed.tree), None)
                     .await
