@@ -241,7 +241,7 @@ mod tests {
             normal_range: None,
             other_reference_ranges: None,
             magnitude_status: None,
-            accuracy,
+            accuracy: accuracy.map(Box::new),
             value: value.to_owned(),
         })
     }

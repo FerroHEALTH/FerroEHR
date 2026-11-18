@@ -18,5 +18,17 @@ pub enum Version<T> {
     /// The `IMPORTED_VERSION` subtype of `VERSION`.
     ImportedVersion(ImportedVersion<T>),
     /// The `ORIGINAL_VERSION` subtype of `VERSION`.
-    OriginalVersion(OriginalVersion<T>),
+    OriginalVersion(Box<OriginalVersion<T>>),
+}
+
+impl<T> From<ImportedVersion<T>> for Version<T> {
+    fn from(value: ImportedVersion<T>) -> Self {
+        Self::ImportedVersion(value)
+    }
+}
+
+impl<T> From<OriginalVersion<T>> for Version<T> {
+    fn from(value: OriginalVersion<T>) -> Self {
+        Self::OriginalVersion(Box::new(value))
+    }
 }

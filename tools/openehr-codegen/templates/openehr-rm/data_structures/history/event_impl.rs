@@ -59,8 +59,8 @@ impl<T> Event<T> {
 mod tests {
     use super::*;
     use crate::v1_2::data_structures::history::point_event::PointEvent;
-    use openehr_base::validate::Validate;
     use crate::v1_2::data_types::text::dv_text::{DvText, DvTextData};
+    use openehr_base::validate::Validate;
 
     fn text(value: &str) -> DvText {
         DvText::DvText(DvTextData {
@@ -85,7 +85,7 @@ mod tests {
     }
 
     fn event(time: &str) -> Event<i32> {
-        Event::PointEvent(PointEvent {
+        Event::PointEvent(Box::new(PointEvent {
             name: text("event"),
             archetype_node_id: "at0002".to_owned(),
             uid: None,
@@ -95,7 +95,7 @@ mod tests {
             time: date_time(time),
             state: None,
             data: 1,
-        })
+        }))
     }
 
     #[test]

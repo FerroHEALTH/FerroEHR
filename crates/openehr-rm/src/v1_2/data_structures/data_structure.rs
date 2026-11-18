@@ -22,13 +22,43 @@ use crate::v1_2::data_structures::item_structure::item_tree::ItemTree;
 #[derive(Debug, Clone, PartialEq)]
 pub enum DataStructure {
     /// The `HISTORY` subtype of `DATA_STRUCTURE`.
-    History(History<ItemStructure>),
+    History(Box<History<ItemStructure>>),
     /// The `ITEM_LIST` subtype of `DATA_STRUCTURE`.
-    ItemList(ItemList),
+    ItemList(Box<ItemList>),
     /// The `ITEM_SINGLE` subtype of `DATA_STRUCTURE`.
-    ItemSingle(ItemSingle),
+    ItemSingle(Box<ItemSingle>),
     /// The `ITEM_TABLE` subtype of `DATA_STRUCTURE`.
-    ItemTable(ItemTable),
+    ItemTable(Box<ItemTable>),
     /// The `ITEM_TREE` subtype of `DATA_STRUCTURE`.
-    ItemTree(ItemTree),
+    ItemTree(Box<ItemTree>),
+}
+
+impl From<History<ItemStructure>> for DataStructure {
+    fn from(value: History<ItemStructure>) -> Self {
+        Self::History(Box::new(value))
+    }
+}
+
+impl From<ItemList> for DataStructure {
+    fn from(value: ItemList) -> Self {
+        Self::ItemList(Box::new(value))
+    }
+}
+
+impl From<ItemSingle> for DataStructure {
+    fn from(value: ItemSingle) -> Self {
+        Self::ItemSingle(Box::new(value))
+    }
+}
+
+impl From<ItemTable> for DataStructure {
+    fn from(value: ItemTable) -> Self {
+        Self::ItemTable(Box::new(value))
+    }
+}
+
+impl From<ItemTree> for DataStructure {
+    fn from(value: ItemTree) -> Self {
+        Self::ItemTree(Box::new(value))
+    }
 }

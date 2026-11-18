@@ -41,7 +41,6 @@ impl<T> OriginalVersion<T> {
 
 #[cfg(test)]
 mod tests {
-    use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
     use super::*;
     use crate::v1_2::common::generic::audit_details::{AuditDetails, AuditDetailsData};
     use crate::v1_2::common::generic::party_proxy::PartyProxy;
@@ -52,6 +51,7 @@ mod tests {
     use openehr_base::v1_3::prelude::{
         HierObjectId, ObjectId, ObjectRef, ObjectRefData, ObjectVersionId, TerminologyId,
     };
+    use openehr_term::codes::{AuditChangeType, VersionLifecycleState};
 
     fn version(other_input: Vec<&str>) -> OriginalVersion<String> {
         OriginalVersion {
@@ -64,7 +64,7 @@ mod tests {
                 ),
             }),
             signature: None,
-            commit_audit: AuditDetails::AuditDetails(AuditDetailsData {
+            commit_audit: Box::new(AuditDetails::AuditDetails(AuditDetailsData {
                 system_id: "ferroehr.local".to_owned(),
                 time_committed: DvDateTime {
                     normal_status: None,
@@ -90,8 +90,8 @@ mod tests {
                     },
                 },
                 description: None,
-                committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
-            }),
+                committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
+            })),
             uid: ObjectVersionId::new(
                 "8849182c-82ad-4088-a07f-48ead4180515::ferroehr.local::3".to_owned(),
             )

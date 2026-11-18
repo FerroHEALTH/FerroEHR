@@ -77,7 +77,7 @@ mod tests {
             },
             change_type: coded(),
             description: None,
-            committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+            committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
             attested_view: None,
             proof: None,
             items: openehr_base::containers::present_nonempty(Vec::new()),

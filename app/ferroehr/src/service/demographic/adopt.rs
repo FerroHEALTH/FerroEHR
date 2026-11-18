@@ -281,11 +281,11 @@ impl FerroEhrService {
             description: Some(dv_text(DESCRIPTION)),
             committer: PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(
                 PartyIdentifiedData {
-                    external_ref: Some(PartyRef {
+                    external_ref: Some(Box::new(PartyRef {
                         namespace: namespace.to_owned(),
                         r#type: "PERSON".to_owned(),
                         id: ObjectId::HierObjectId(HierObjectId::from(admin)),
-                    }),
+                    })),
                     name: None,
                     identifiers: None,
                 },

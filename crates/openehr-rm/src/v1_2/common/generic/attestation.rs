@@ -35,11 +35,11 @@ pub struct Attestation {
     /// Reason for committal.
     ///
     /// This may be used to qualify the value in the `_change_type_` field. For example, if the change affects only the EHR directory, this field might be used to indicate 'Folder "episode 2018-02-16" added' or similar.
-    pub description: Option<DvText>,
+    pub description: Option<Box<DvText>>,
     /// Identity and optional reference into identity management service, of user who committed the item.
-    pub committer: PartyProxy,
+    pub committer: Box<PartyProxy>,
     /// Optional visual representation of content attested e.g. screen image.
-    pub attested_view: Option<DvMultimedia>,
+    pub attested_view: Option<Box<DvMultimedia>>,
     /// Proof of attestation.
     pub proof: Option<String>,
     /// Items attested, expressed as fully qualified runtime paths to the items in question.

@@ -20,3 +20,15 @@ pub enum DvEncapsulated {
     /// The `DV_PARSABLE` subtype of `DV_ENCAPSULATED`.
     DvParsable(DvParsable),
 }
+
+impl From<DvMultimedia> for DvEncapsulated {
+    fn from(value: DvMultimedia) -> Self {
+        Self::DvMultimedia(value)
+    }
+}
+
+impl From<DvParsable> for DvEncapsulated {
+    fn from(value: DvParsable) -> Self {
+        Self::DvParsable(value)
+    }
+}

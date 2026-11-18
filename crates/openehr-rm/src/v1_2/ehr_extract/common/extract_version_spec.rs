@@ -20,7 +20,7 @@ pub struct ExtractVersionSpec {
     /// Specifies commit time interval of items to source repository to include in Extract.
     ///
     /// By default, only latest versions whose commit times fall in the range are included. If include_all_versions is True, then the range includes all versions committed within the interval.
-    pub commit_time_interval: Option<DvInterval<DvDateTime>>,
+    pub commit_time_interval: Option<Box<DvInterval<DvDateTime>>>,
     /// True if revision histories of the items in the Extract are included. If included, it is always the full revision history.
     pub include_revision_history: bool,
     /// `True` if the data of items matched by the content spec should be included.

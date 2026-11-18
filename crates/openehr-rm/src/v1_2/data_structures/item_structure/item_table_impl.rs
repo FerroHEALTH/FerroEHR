@@ -227,7 +227,7 @@ impl ItemTable {
                     language: None,
                     encoding: None,
                 });
-                Item::Cluster(renamed)
+                Item::from(renamed)
             })
             .collect();
         row_cluster(self.name.clone(), &self.archetype_node_id, encoded)
@@ -263,7 +263,7 @@ fn cell_text(item: &Item) -> Option<&str> {
     let Item::Element(element) = item else {
         return None;
     };
-    match element.value.as_ref()? {
+    match element.value.as_deref()? {
         DataValue::DvText(text) => Some(text_of(text)),
         _ => None,
     }
@@ -310,7 +310,7 @@ impl Validate for ItemTable {
                     .map(|item| match item {
                         Item::Element(e) => (
                             name_of(&e.name),
-                            e.value.as_ref().map(std::mem::discriminant),
+                            e.value.as_deref().map(std::mem::discriminant),
                         ),
                         Item::Cluster(c) => (name_of(&c.name), None),
                     })
@@ -367,7 +367,7 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             null_flavour: None,
-            value: Some(DataValue::DvBoolean(DvBoolean { value: true })),
+            value: Some(Box::new(DataValue::DvBoolean(DvBoolean { value: true }))),
             null_reason: None,
         }
     }
@@ -400,14 +400,8 @@ mod tests {
     #[test]
     fn valid_table() {
         let t = table(vec![
-            row(vec![
-                Item::Element(element("id5")),
-                Item::Element(element("id6")),
-            ]),
-            row(vec![
-                Item::Element(element("id7")),
-                Item::Element(element("id8")),
-            ]),
+            row(vec![Item::from(element("id5")), Item::from(element("id6"))]),
+            row(vec![Item::from(element("id7")), Item::from(element("id8"))]),
         ]);
         assert_eq!(t.invariants(), Vec::<InvariantViolation>::new());
         assert_eq!(table(vec![]).invariants(), Vec::<InvariantViolation>::new()); // empty table is valid
@@ -415,10 +409,10 @@ mod tests {
 
     #[test]
     fn cluster_in_row_invalid() {
-        let nested = row(vec![Item::Element(element("id7"))]);
+        let nested = row(vec![Item::from(element("id7"))]);
         let t = table(vec![row(vec![
-            Item::Element(element("id5")),
-            Item::Cluster(nested),
+            Item::from(element("id5")),
+            Item::from(nested),
         ])]);
         let v = t.invariants();
         assert!(
@@ -431,11 +425,8 @@ mod tests {
     #[test]
     fn ragged_rows_invalid() {
         let t = table(vec![
-            row(vec![
-                Item::Element(element("id5")),
-                Item::Element(element("id6")),
-            ]),
-            row(vec![Item::Element(element("id7"))]),
+            row(vec![Item::from(element("id5")), Item::from(element("id6"))]),
+            row(vec![Item::from(element("id7"))]),
         ]);
         let v = t.invariants();
         assert!(
@@ -458,7 +449,7 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             null_flavour: None,
-            value: Some(value),
+            value: Some(Box::new(value)),
             null_reason: None,
         };
         let row = |elems: Vec<Element>| Cluster {
@@ -469,7 +460,7 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             items: openehr_base::containers::NonEmptyVec::new(
-                elems.into_iter().map(Item::Element).collect(),
+                elems.into_iter().map(Item::from).collect(),
             )
             .expect("the fixture row carries elements"),
         };
@@ -541,14 +532,14 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             null_flavour: None,
-            value: Some(DataValue::DvText(DvText::DvText(DvTextData {
+            value: Some(Box::new(DataValue::DvText(DvText::DvText(DvTextData {
                 value: value.to_owned(),
                 hyperlink: None,
                 formatting: None,
                 mappings: openehr_base::containers::present_nonempty(Vec::new()),
                 language: None,
                 encoding: None,
-            }))),
+            })))),
             null_reason: None,
         }
     }
@@ -562,7 +553,7 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             items: openehr_base::containers::NonEmptyVec::new(
-                cells.into_iter().map(Item::Element).collect(),
+                cells.into_iter().map(Item::from).collect(),
             )
             .expect("the fixture row carries cells"),
         }

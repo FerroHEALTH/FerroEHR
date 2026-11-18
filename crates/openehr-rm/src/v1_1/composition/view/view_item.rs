@@ -15,7 +15,19 @@ use crate::v1_1::composition::view::view_section::ViewSection;
 #[derive(Debug, Clone, PartialEq)]
 pub enum ViewItem {
     /// The `CITATION` subtype of `VIEW_ITEM`.
-    Citation(Citation<Locatable>),
+    Citation(Box<Citation<Locatable>>),
     /// The `VIEW_SECTION` subtype of `VIEW_ITEM`.
-    ViewSection(ViewSection),
+    ViewSection(Box<ViewSection>),
+}
+
+impl From<Citation<Locatable>> for ViewItem {
+    fn from(value: Citation<Locatable>) -> Self {
+        Self::Citation(Box::new(value))
+    }
+}
+
+impl From<ViewSection> for ViewItem {
+    fn from(value: ViewSection) -> Self {
+        Self::ViewSection(Box::new(value))
+    }
 }

@@ -17,9 +17,9 @@ pub struct DvMultimedia {
     /// Name of character encoding scheme in which this value is encoded.
     ///
     /// Coded from openEHR Code Set  character sets . Unicode is the default assumption in openEHR, with UTF-8 being the assumed encoding. This attribute allows for variations from these assumptions.
-    pub charset: Option<CodePhrase>,
+    pub charset: Option<Box<CodePhrase>>,
     /// Optional indicator of the localised language in which the data is written, if relevant. Coded from openEHR Code Set `languages`.
-    pub language: Option<CodePhrase>,
+    pub language: Option<Box<CodePhrase>>,
     /// Text to display in lieu of multimedia display/replay.
     pub alternate_text: Option<String>,
     /// URI reference to electronic information stored outside the record as a file, database entry etc, if supplied as a reference.
@@ -29,11 +29,11 @@ pub struct DvMultimedia {
     /// Data media type coded from openEHR code set  media types  (interface for the IANA MIME types code set).
     pub media_type: CodePhrase,
     /// Compression type, a coded value from the openEHR Integrity check code set. Void means no compression.
-    pub compression_algorithm: Option<CodePhrase>,
+    pub compression_algorithm: Option<Box<CodePhrase>>,
     /// Binary cryptographic integrity checksum.
     pub integrity_check: Option<String>,
     /// Type of integrity check, a coded value from the openEHR `Integrity check` code set.
-    pub integrity_check_algorithm: Option<CodePhrase>,
+    pub integrity_check_algorithm: Option<Box<CodePhrase>>,
     /// The thumbnail for this item, if one exists; mainly for graphics formats.
     pub thumbnail: Option<Box<DvMultimedia>>,
     /// Original size in bytes of unencoded encapsulated data. I.e. encodings such as base64, hexadecimal etc do not change the value of this attribute.

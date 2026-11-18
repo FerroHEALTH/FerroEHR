@@ -31,7 +31,7 @@ pub struct Ehr {
     /// Master list of all Versioned Composition references in this EHR.
     pub compositions: Option<Vec<ObjectRef>>,
     /// Optional directory structure for this EHR. If present, this is a reference to the first member of `_folders_`.
-    pub directory: Option<ObjectRef>,
+    pub directory: Option<Box<ObjectRef>>,
     /// Time of creation of the EHR.
     pub time_created: DvDateTime,
     /// Optional additional Folder structures for this EHR. If set, the `_directory_` attribute refers to the first member.

@@ -519,7 +519,9 @@ pub(in crate::service) fn initial_ehr_access() -> Value {
         archetype_node_id: ARCHETYPE.to_owned(),
         uid: None,
         links: None,
-        archetype_details: Some(crate::service::ehr::service::archetyped(ARCHETYPE)),
+        archetype_details: Some(Box::new(crate::service::ehr::service::archetyped(
+            ARCHETYPE,
+        ))),
         feeder_audit: None,
         // `EHR_ACCESS.settings` (0..1) — see the doc comment above: with no
         // access-control scheme in force the default carries none.

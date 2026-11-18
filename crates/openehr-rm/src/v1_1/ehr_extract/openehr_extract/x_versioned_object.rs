@@ -44,15 +44,51 @@ pub struct XVersionedObjectData<T> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum XVersionedObject<T> {
     /// The `X_VERSIONED_COMPOSITION` subtype of `X_VERSIONED_OBJECT`.
-    XVersionedComposition(XVersionedComposition),
+    XVersionedComposition(Box<XVersionedComposition>),
     /// The `X_VERSIONED_EHR_ACCESS` subtype of `X_VERSIONED_OBJECT`.
-    XVersionedEhrAccess(XVersionedEhrAccess),
+    XVersionedEhrAccess(Box<XVersionedEhrAccess>),
     /// The `X_VERSIONED_EHR_STATUS` subtype of `X_VERSIONED_OBJECT`.
-    XVersionedEhrStatus(XVersionedEhrStatus),
+    XVersionedEhrStatus(Box<XVersionedEhrStatus>),
     /// The `X_VERSIONED_FOLDER` subtype of `X_VERSIONED_OBJECT`.
-    XVersionedFolder(XVersionedFolder),
+    XVersionedFolder(Box<XVersionedFolder>),
     /// The `X_VERSIONED_PARTY` subtype of `X_VERSIONED_OBJECT`.
-    XVersionedParty(XVersionedParty),
+    XVersionedParty(Box<XVersionedParty>),
     /// An instance of `X_VERSIONED_OBJECT` itself (its own, least-rich form).
     XVersionedObject(XVersionedObjectData<T>),
+}
+
+impl<T> From<XVersionedComposition> for XVersionedObject<T> {
+    fn from(value: XVersionedComposition) -> Self {
+        Self::XVersionedComposition(Box::new(value))
+    }
+}
+
+impl<T> From<XVersionedEhrAccess> for XVersionedObject<T> {
+    fn from(value: XVersionedEhrAccess) -> Self {
+        Self::XVersionedEhrAccess(Box::new(value))
+    }
+}
+
+impl<T> From<XVersionedEhrStatus> for XVersionedObject<T> {
+    fn from(value: XVersionedEhrStatus) -> Self {
+        Self::XVersionedEhrStatus(Box::new(value))
+    }
+}
+
+impl<T> From<XVersionedFolder> for XVersionedObject<T> {
+    fn from(value: XVersionedFolder) -> Self {
+        Self::XVersionedFolder(Box::new(value))
+    }
+}
+
+impl<T> From<XVersionedParty> for XVersionedObject<T> {
+    fn from(value: XVersionedParty) -> Self {
+        Self::XVersionedParty(Box::new(value))
+    }
+}
+
+impl<T> From<XVersionedObjectData<T>> for XVersionedObject<T> {
+    fn from(value: XVersionedObjectData<T>) -> Self {
+        Self::XVersionedObject(value)
+    }
 }

@@ -16,7 +16,7 @@ use openehr_base::v1_2::base_types::identification::party_ref::PartyRef;
 pub struct PartyRelated {
     // inherited: PARTY_PROXY
     /// Optional reference to more detailed demographic or identification information for this party, in an external system.
-    pub external_ref: Option<PartyRef>,
+    pub external_ref: Option<Box<PartyRef>>,
 
     // inherited: PARTY_IDENTIFIED
     /// Optional human-readable name (in String form).

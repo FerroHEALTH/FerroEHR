@@ -21,7 +21,7 @@ pub struct ExtractUpdateSpec {
     /// If True, this Request is persisted in the server until further notice.
     pub persist_in_server: bool,
     /// Period for resending update Extracts in response to original Request.
-    pub repeat_period: Option<DvDuration>,
+    pub repeat_period: Option<Box<DvDuration>>,
     /// Set of Event names that will cause sending of update Extracts. Event types include:
     ///
     /// * `|any_change|` - any change in content items matched by content specification, e.g. new versions of persistent compositions. If the content list allows matching of any, or a wide range of archetypes, this event type will match any additions to the record.

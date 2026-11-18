@@ -30,9 +30,9 @@ impl Validate for DvScale {
         push_normal_range_consistency(
             out,
             "DV_SCALE",
-            self.normal_status.as_ref(),
+            self.normal_status.as_deref(),
             self.normal_range.as_deref(),
-            &DvOrdered::DvScale(self.clone()),
+            &DvOrdered::from(self.clone()),
         );
     }
 }

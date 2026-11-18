@@ -205,10 +205,10 @@ fn collect<'a>(path: &str, directive: &'a AccessDirective, named: &mut Vec<Named
 fn external_ref(proxy: &PartyProxy) -> Option<&PartyRef> {
     match proxy {
         PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(data)) => {
-            data.external_ref.as_ref()
+            data.external_ref.as_deref()
         }
         PartyProxy::PartyIdentified(PartyIdentified::PartyRelated(data)) => {
-            data.external_ref.as_ref()
+            data.external_ref.as_deref()
         }
         PartyProxy::PartySelf(_) => None,
     }

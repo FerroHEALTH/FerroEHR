@@ -30,9 +30,9 @@ impl Validate for DvOrdinal {
         push_normal_range_consistency(
             out,
             "DV_ORDINAL",
-            self.normal_status.as_ref(),
+            self.normal_status.as_deref(),
             self.normal_range.as_deref(),
-            &DvOrdered::DvOrdinal(self.clone()),
+            &DvOrdered::from(self.clone()),
         );
     }
 }
@@ -97,13 +97,13 @@ mod tests {
             upper_included: true,
         }));
         // Out of range but flagged normal → inconsistent.
-        o.normal_status = Some(CodePhrase {
+        o.normal_status = Some(Box::new(CodePhrase {
             terminology_id: TerminologyId {
                 value: "openehr_normal_statuses".to_owned(),
             },
             code_string: "N".to_owned(),
             preferred_term: None,
-        });
+        }));
         let v = o.invariants();
         assert!(
             v.iter().any(|m| m.message

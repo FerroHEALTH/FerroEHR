@@ -44,11 +44,11 @@ pub struct DvTextData {
     /// Optional indicator of the localised language in which the value is written.
     ///
     /// Coded from openEHR Code Set  languages . Only used when either the text object is in a different language from the enclosing `ENTRY`, or else the text object is being used outside of an `ENTRY` or other enclosing structure which indicates the language.
-    pub language: Option<CodePhrase>,
+    pub language: Option<Box<CodePhrase>>,
     /// Name of character encoding scheme in which this value is encoded.
     ///
     /// Coded from openEHR Code Set  character sets . Unicode is the default assumption in openEHR, with UTF-8 being the assumed encoding. This attribute allows for variations from these assumptions.
-    pub encoding: Option<CodePhrase>,
+    pub encoding: Option<Box<CodePhrase>>,
 }
 
 /// Polymorphic slot of `DV_TEXT`, dispatched on each payload's `_type`.
@@ -71,4 +71,16 @@ pub enum DvText {
     DvCodedText(DvCodedText),
     /// An instance of `DV_TEXT` itself (its own, least-rich form).
     DvText(DvTextData),
+}
+
+impl From<DvCodedText> for DvText {
+    fn from(value: DvCodedText) -> Self {
+        Self::DvCodedText(value)
+    }
+}
+
+impl From<DvTextData> for DvText {
+    fn from(value: DvTextData) -> Self {
+        Self::DvText(value)
+    }
 }

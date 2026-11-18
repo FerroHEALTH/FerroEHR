@@ -21,7 +21,7 @@ pub struct ServiceUse {
     /// The `identifier` attribute of openEHR `SERVICE_USE` (the vendored BMM carries no documentation for it).
     pub identifier: Option<GenericId>,
     /// The `start_time` attribute of openEHR `SERVICE_USE` (the vendored BMM carries no documentation for it).
-    pub start_time: Option<Iso8601DateTime>,
+    pub start_time: Option<Box<Iso8601DateTime>>,
     /// The `duration` attribute of openEHR `SERVICE_USE` (the vendored BMM carries no documentation for it).
-    pub duration: Option<Iso8601Duration>,
+    pub duration: Option<Box<Iso8601Duration>>,
 }

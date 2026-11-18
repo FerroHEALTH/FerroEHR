@@ -26,5 +26,5 @@ pub struct ResourceUsage {
     /// The `description` attribute of openEHR `RESOURCE_USAGE` (the vendored BMM carries no documentation for it).
     pub description: Option<String>,
     /// The `reference` attribute of openEHR `RESOURCE_USAGE` (the vendored BMM carries no documentation for it).
-    pub reference: Option<serde_json::Value>,
+    pub reference: Option<Box<serde_json::Value>>,
 }
