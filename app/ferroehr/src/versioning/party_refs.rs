@@ -18,23 +18,16 @@
 //! commit's transaction after the whole set is written, since one set may
 //! create a ROLE and the PERSON that names it.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694): the commit interior carries the canonical \
-              fragment the seam produced once"
-)]
-
 use std::collections::BTreeMap;
 
 use openehr_base::prelude::{ObjectId, PartyRef};
 use openehr_base::validate::Validate;
-use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::error::{ServiceError, Violation};
 use crate::versioning::Kind;
-use crate::versioning::change::Change;
+use crate::versioning::tree::Tree;
 
 /// The label a reference to one version rather than its container carries,
 /// on every attribute and both relationship representations.
@@ -168,14 +161,19 @@ pub(crate) fn shape(
 /// # Errors
 /// [`ServiceError::Unprocessable`] for a reference that does not decode, or
 /// one [`shape`] refuses.
-pub(crate) fn shape_of(value: &Value, path: &str, referent: Referent) -> Result<(), ServiceError> {
-    let typed = openehr_its::json::from_canonical_value::<PartyRef>(value).map_err(|e| {
-        ServiceError::content_invalid(
-            Violation::new("is not a well-formed PARTY_REF")
-                .with_path(path)
-                .with_decode_failure(&e),
-        )
-    })?;
+pub(crate) fn shape_of<'a, T: Tree<'a>>(
+    value: T,
+    path: &str,
+    referent: Referent,
+) -> Result<(), ServiceError> {
+    let typed =
+        openehr_its::json::from_canonical_value::<PartyRef>(&value.to_value()).map_err(|e| {
+            ServiceError::content_invalid(
+                Violation::new("is not a well-formed PARTY_REF")
+                    .with_path(path)
+                    .with_decode_failure(&e),
+            )
+        })?;
     shape(&typed, path, referent)
 }
 
@@ -189,32 +187,20 @@ pub(crate) struct Reference {
     path: String,
 }
 
-/// The references to judge in the body of `change`, each at its path: a
+/// The references to judge in `body`, a body of `kind`, each at its path: a
 /// ROLE's `performer`, an Actor's `roles` and a standalone relationship's
 /// `source` and `target`.
 ///
 /// An inline relationship's `target` is not among them: no openEHR rule binds
 /// it to a container this server holds, and the reverse index tolerates one it
 /// does not (our own design).
-pub(crate) fn of_change(change: &Change) -> Vec<Reference> {
-    let (kind, body) = match change {
-        // NOTE: only a party carries party references, and a party is
-        // committed as its canonical value.
-        Change::Create { kind, body, .. } | Change::Modify { kind, body, .. } => {
-            match body.canonical() {
-                Some(canonical) => (*kind, canonical),
-                None => return Vec::new(),
-            }
-        }
-        Change::Delete { .. } => return Vec::new(),
-    };
+pub(crate) fn of_body<'a, T: Tree<'a>>(kind: Kind, body: T) -> Vec<Reference> {
     let mut out = Vec::new();
-    let mut add = |value: Option<&Value>, path: String, referent: Referent| {
-        if let Some(value) = value.filter(|v| !v.is_null()) {
+    let mut add = |value: Option<T>, path: String, referent: Referent| {
+        if let Some(value) = value.and_then(Tree::present) {
             let container = value
-                .pointer("/id/value")
-                .and_then(Value::as_str)
-                .and_then(crate::party_binding::derive::container);
+                .pointer_text("/id/value")
+                .and_then(|id| crate::party_binding::derive::container(&id));
             out.push(Reference {
                 container,
                 referent,
@@ -240,9 +226,8 @@ pub(crate) fn of_change(change: &Change) -> Vec<Reference> {
         Kind::Agent | Kind::Group | Kind::Organisation | Kind::Person => {
             for (i, role) in body
                 .get("roles")
-                .and_then(Value::as_array)
                 .into_iter()
-                .flatten()
+                .flat_map(Tree::items)
                 .enumerate()
             {
                 add(

@@ -17,7 +17,9 @@
 )]
 
 use openehr_base::prelude::{ObjectVersionId, UidBasedId};
-use openehr_rm::prelude::{Composition, EhrAccess, EhrStatus, Folder};
+use openehr_rm::prelude::{
+    Agent, Composition, EhrAccess, EhrStatus, Folder, Group, Organisation, Person, Role,
+};
 use openehr_rm::v1_2::common::archetyped::archetyped::Archetyped;
 use openehr_rm::v1_2::demographic::party::Party;
 use openehr_rm::v1_2::demographic::party_relationship::PartyRelationship;
@@ -77,12 +79,6 @@ macro_rules! each_party {
     };
 }
 
-impl From<Value> for Body {
-    fn from(canonical: Value) -> Self {
-        Body::Canonical(canonical)
-    }
-}
-
 impl From<Composition> for Body {
     fn from(rm: Composition) -> Self {
         Body::Composition(Box::new(rm))
@@ -131,6 +127,14 @@ impl Body {
     /// A typed COMPOSITION body.
     pub(crate) fn composition(rm: Composition) -> Self {
         Body::Composition(Box::new(rm))
+    }
+
+    /// The body as a canonical value, for a response that serves it as one.
+    pub(crate) fn into_canonical(self) -> Value {
+        match self {
+            Body::Canonical(view) => view,
+            typed => openehr_its::json::to_canonical_value(&typed),
+        }
     }
 
     /// The canonical value of a body of a kind that has no typed form.
@@ -274,9 +278,7 @@ impl Body {
 /// covers), so the payload runs the same typed door every direct commit route
 /// passes through: content that cannot be converted to
 /// its RM resource is the 400 row (ITS-REST overview `Requests_and_responses.md`
-/// §HTTP status codes). The demographic kinds keep their typed door in
-/// `service::demographic::validate`; this door covers the EHR kinds, and is
-/// `None` for the others. A `553|incomplete|` commit skips it, the generated
+/// §HTTP status codes). A `553|incomplete|` commit skips it, the generated
 /// types making mandatory attributes structural where RM common master06
 /// §Incomplete Content lifts those bounds.
 ///
@@ -299,18 +301,44 @@ pub(crate) fn decode_member(
     if incomplete {
         return Ok(None);
     }
+    // NOTE: a party is read as the concrete class its container holds, so a body
+    // of another class is refused at this door as it is on the direct routes.
     match kind {
         Kind::Composition => typed::<Composition>(data),
         Kind::EhrStatus => typed::<EhrStatus>(data),
         Kind::EhrAccess => typed::<EhrAccess>(data),
         Kind::Folder => typed::<Folder>(data),
-        Kind::Agent
-        | Kind::Group
-        | Kind::Organisation
-        | Kind::Person
-        | Kind::Role
-        | Kind::PartyRelationship => Ok(None),
+        Kind::PartyRelationship => typed::<PartyRelationship>(data),
+        Kind::Agent => party::<Agent>(data),
+        Kind::Group => party::<Group>(data),
+        Kind::Organisation => party::<Organisation>(data),
+        Kind::Person => party::<Person>(data),
+        Kind::Role => party::<Role>(data),
     }
+}
+
+/// The body a server-built write of `kind` commits from its canonical value
+/// `data`: its typed RM, read through [`decode_member`], or the value itself
+/// for a `553|incomplete|` one.
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] when the strict reader refuses `data`.
+pub(crate) fn decoded(kind: Kind, data: Value, incomplete: bool) -> Result<Body, ServiceError> {
+    Ok(decode_member(kind, &data, incomplete)?.unwrap_or(Body::Canonical(data)))
+}
+
+/// The PARTY `data` holds, read strictly as its concrete class `T`.
+///
+/// # Errors
+/// [`ServiceError::BadRequest`] when the strict reader refuses `data` as a `T`.
+fn party<T>(data: &Value) -> Result<Option<Body>, ServiceError>
+where
+    T: serde::de::DeserializeOwned,
+    Party: From<T>,
+{
+    openehr_its::json::from_canonical_value::<T>(data)
+        .map(|rm| Some(Body::from(Party::from(rm))))
+        .map_err(|e| ServiceError::canonical_decode(data, e))
 }
 
 #[cfg(test)]

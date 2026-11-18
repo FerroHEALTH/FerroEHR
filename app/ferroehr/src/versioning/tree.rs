@@ -1,16 +1,18 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The JSON shape the data-minimisation pass reads a body through.
+//! The JSON shape the passes that read a commit body as JSON read it through.
 //!
 //! A body is a canonical value or the index of its one rendering
-//! ([`crate::storage::render::index`]), so a typed commit is scanned with no
-//! canonical value built (#6003). No openEHR spec governs this: our own design.
+//! ([`crate::storage::render::index`]), so a typed commit is read with no
+//! canonical value built (#6003). The data-minimisation pass, the party
+//! checks, the binding facts and the identifier scan read through it. No
+//! openEHR spec governs this: our own design.
 
 #![expect(
     clippy::disallowed_types,
     reason = "owner-approved 2026-08-03 (#1694): the canonical value is one of the two shapes \
-              the pass reads"
+              a body is read through"
 )]
 
 use std::borrow::Cow;
@@ -46,10 +48,34 @@ pub trait Tree<'a>: Copy + 'a {
     fn text(self) -> Option<Cow<'a, str>>;
     /// Whether the value is `null`.
     fn is_null(self) -> bool;
+    /// The value as a canonical value of its own, for a caller that keeps it.
+    fn to_value(self) -> Value;
 
     /// The string member `key` of an object.
     fn get_text(self, key: &str) -> Option<Cow<'a, str>> {
         self.get(key).and_then(Tree::text)
+    }
+
+    /// The value an RFC 6901 pointer of member names and array indices names.
+    fn pointer(self, pointer: &str) -> Option<Self> {
+        let mut at = self;
+        for step in pointer.split('/').skip(1) {
+            at = match at.shape() {
+                Shape::Array => at.items().nth(step.parse().ok()?)?,
+                _ => at.get(step)?,
+            };
+        }
+        Some(at)
+    }
+
+    /// The string a pointer names.
+    fn pointer_text(self, pointer: &str) -> Option<Cow<'a, str>> {
+        self.pointer(pointer).and_then(Tree::text)
+    }
+
+    /// The value, or `None` for `null`.
+    fn present(self) -> Option<Self> {
+        (!self.is_null()).then_some(self)
     }
 }
 
@@ -87,6 +113,10 @@ impl<'a> Tree<'a> for &'a Value {
 
     fn is_null(self) -> bool {
         Value::is_null(self)
+    }
+
+    fn to_value(self) -> Value {
+        self.clone()
     }
 }
 
@@ -151,5 +181,15 @@ impl<'a> Tree<'a> for Indexed<'a> {
 
     fn is_null(self) -> bool {
         self.doc.kind(self.id) == Some(Kind::Scalar) && self.doc.raw(self.id) == b"null"
+    }
+
+    #[expect(
+        clippy::expect_used,
+        reason = "the index spans only the values the JSON serializer wrote, so each span \
+                  is one JSON value by construction"
+    )]
+    fn to_value(self) -> Value {
+        serde_json::from_slice(self.doc.raw(self.id))
+            .expect("an indexed span should be one JSON value")
     }
 }

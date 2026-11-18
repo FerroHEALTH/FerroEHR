@@ -29,6 +29,8 @@ use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::types::PartyKind;
 use crate::service::version_update::WriteRequest;
 use crate::system_log::event::EventActionCode;
+use crate::versioning::Kind;
+use crate::versioning::body::decoded;
 
 /// A binding key: its `DV_IDENTIFIER.issuer` and its value.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,7 +106,11 @@ impl FerroEhrService {
         }
         let committed = Box::pin(rekey(
             change,
-            self.commit_party_update(current, precondition, WriteRequest::new(body)),
+            self.commit_party_update(
+                current,
+                precondition,
+                WriteRequest::new(decoded(Kind::Person, body, false)?),
+            ),
         ))
         .await;
         if let Some(recorder) = &recorder {

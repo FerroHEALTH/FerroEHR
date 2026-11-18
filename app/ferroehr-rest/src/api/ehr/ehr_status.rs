@@ -75,6 +75,7 @@ pub(crate) async fn get_by_version_id<T: EhrObjectType>(
         h,
         resp,
         openehr_its::xml::LOCATABLE_ROOT,
+        Tree::Ehr,
     ))
 }
 
@@ -105,6 +106,7 @@ pub(crate) async fn get_at_time<T: EhrObjectType>(
         h,
         resp,
         openehr_its::xml::LOCATABLE_ROOT,
+        Tree::Ehr,
     ))
 }
 

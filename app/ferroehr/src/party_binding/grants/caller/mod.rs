@@ -49,6 +49,8 @@ pub mod store;
 pub mod subject;
 
 use serde_json::Value;
+
+use crate::versioning::tree::Tree;
 use uuid::Uuid;
 
 use crate::error::{ServiceError, Violation};
@@ -161,7 +163,7 @@ pub(crate) struct CallerFact {
 /// `type = name`). A party named in text, or by a code of
 /// [`crate::party_binding::policy_mark::TERMINOLOGY`], names none, and a care
 /// relationship kind names nothing here.
-pub(crate) fn coded_name(body: &Value, kind: FactKind, facts: &mut GrantFacts) {
+pub(crate) fn coded_name<'a, T: Tree<'a>>(body: T, kind: FactKind, facts: &mut GrantFacts) {
     let (class, foreign) = match kind {
         FactKind::Role => ("ROLE", ForeignKind::Role),
         FactKind::OrganisationType => ("ORGANISATION", ForeignKind::OrganisationType),
@@ -169,11 +171,11 @@ pub(crate) fn coded_name(body: &Value, kind: FactKind, facts: &mut GrantFacts) {
     };
     let Some(name) = body
         .get("name")
-        .filter(|name| name.get("_type").and_then(Value::as_str) == Some("DV_CODED_TEXT"))
+        .filter(|name| name.get_text("_type").as_deref() == Some("DV_CODED_TEXT"))
     else {
         return;
     };
-    let coded: DvCodedText = match openehr_its::json::from_canonical_value(name) {
+    let coded: DvCodedText = match openehr_its::json::from_canonical_value(&name.to_value()) {
         Ok(coded) => coded,
         Err(error) => {
             facts.unread.push(format!(
@@ -201,7 +203,7 @@ pub(crate) fn coded_name(body: &Value, kind: FactKind, facts: &mut GrantFacts) {
 /// of a `PERSON`, its source, to a party of this store, its target, and a
 /// membership (`MBR`) of an `ORGANISATION` is its membership of a `GROUP`, such as
 /// the providers of a region.
-pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
+pub(crate) fn relationships<'a, T: Tree<'a>>(kind: Kind, body: T, facts: &mut GrantFacts) {
     if kind == Kind::PartyRelationship {
         if let Some(term) = care_kind(body) {
             facts.unread.push(format!(
@@ -213,16 +215,15 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
         }
         return;
     }
-    let held = body.get("relationships").and_then(Value::as_array);
-    for (ordinal, relationship) in held.into_iter().flatten().enumerate() {
+    let held = body.get("relationships");
+    for (ordinal, relationship) in held.into_iter().flat_map(Tree::items).enumerate() {
         let Some(code) = care_kind(relationship) else {
             continue;
         };
         let care = FactKind::from(code);
         let target = relationship
-            .pointer("/target/id/value")
-            .and_then(Value::as_str)
-            .and_then(container);
+            .pointer_text("/target/id/value")
+            .and_then(|id| container(&id));
         let refusal = match (kind, care, target) {
             (Kind::Person, _, Some(team))
             | (Kind::Organisation, FactKind::MemberOf, Some(team)) => {
@@ -230,7 +231,7 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
                     ordinal: i32::try_from(ordinal).unwrap_or(i32::MAX),
                     kind: care,
                     value: FactValue::Team(team),
-                    validity: relationship.get("time_validity").cloned(),
+                    validity: relationship.get("time_validity").map(Tree::to_value),
                     not_before: Bound::Open,
                     not_after: Bound::Open,
                 });
@@ -254,7 +255,7 @@ pub(crate) fn relationships(kind: Kind, body: &Value, facts: &mut GrantFacts) {
 
 /// The care relationship code `relationship` carries in its `name` or its
 /// `details`, the first of [`CareRelationship`] in contract order.
-fn care_kind(relationship: &Value) -> Option<CareRelationship> {
+fn care_kind<'a, T: Tree<'a>>(relationship: T) -> Option<CareRelationship> {
     CareRelationship::ALL
         .iter()
         .copied()
@@ -387,7 +388,7 @@ fn same_subjects(before: &[subject::DeclaredSubject], after: &[subject::Declared
 
 /// Whether `relationship` carries a code of [`CareRelationship`] in its
 /// `name` or its `details`: a care relationship, which SCIM never changes.
-pub(crate) fn is_care(relationship: &Value) -> bool {
+pub(crate) fn is_care<'a, T: Tree<'a>>(relationship: T) -> bool {
     care_kind(relationship).is_some()
 }
 

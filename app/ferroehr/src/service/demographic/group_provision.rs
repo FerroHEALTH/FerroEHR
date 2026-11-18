@@ -53,6 +53,7 @@ use crate::storage::version_repo;
 use crate::templates::identity::canonical_key;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::decoded;
 use crate::versioning::change::{Change, WriteEnvelope};
 use crate::versioning::lifecycle::state;
 
@@ -82,7 +83,7 @@ impl ProvisionedGroup {
     /// (#5617).
     #[must_use]
     pub fn care_team(&self) -> bool {
-        self.body.get("name").and_then(coded) == Some(GroupKind::CareTeam.code())
+        self.body.get("name").and_then(coded).as_deref() == Some(GroupKind::CareTeam.code())
     }
 }
 
@@ -201,6 +202,7 @@ impl FerroEhrService {
         let id = allocated.id();
         let body = self.group_body(mapping, writer, None, &state).await?;
         let lifecycle = self.first_state(&body, mapping.template).await?;
+        let body = decoded(Kind::Group, body, lifecycle == state::INCOMPLETE)?;
         let envelope = WriteEnvelope {
             lifecycle_state: Some(lifecycle),
             ..WriteEnvelope::default()
@@ -312,6 +314,7 @@ impl FerroEhrService {
                     && target_of(relationship) == Some(group))
             });
         }
+        let body = decoded(Kind::Person, body, lifecycle == state::INCOMPLETE)?;
         Ok(Some(Change::modify(
             member,
             Kind::Person,

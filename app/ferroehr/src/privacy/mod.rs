@@ -56,7 +56,6 @@
 pub mod config;
 pub mod detect;
 mod identifier_kind;
-pub mod tree;
 
 use std::fmt::Write as _;
 
@@ -66,7 +65,7 @@ use crate::error::ServiceError;
 use crate::privacy::config::{PrivacyConfig, ScanMode};
 use crate::privacy::detect::{CustomPattern, IdentifierRule};
 use crate::privacy::identifier_kind::{DeclaredKind, declared_kind};
-use crate::privacy::tree::{Shape, Tree};
+use crate::versioning::tree::{Shape, Tree};
 
 /// The JSON key whose value is a terminology code by construction, and which
 /// the identifier scanner therefore skips.
@@ -274,7 +273,7 @@ impl PrivacyPolicy {
     /// `root` names the RM type the body is (`COMPOSITION`, `EHR_STATUS`, …)
     /// and heads every reported path. The subject rule applies to an
     /// `EHR_STATUS` body only; the other two apply to every clinical kind.
-    /// The body is read through either shape ([`crate::privacy::tree`]).
+    /// The body is read through either shape ([`crate::versioning::tree`]).
     #[must_use]
     pub fn findings<'a, T: Tree<'a>>(&self, root: &str, body: T) -> Vec<Finding> {
         let mut findings = Vec::new();
@@ -311,7 +310,7 @@ impl PrivacyPolicy {
     /// [`ServiceError::ValidationFailed`] carrying one entry per refused finding,
     /// each keyed by its own RM path (→ 422). Under `identifier_scan.mode =
     /// "warn"` an identifier-shaped finding is logged and metered instead.
-    /// The body is read through either shape ([`crate::privacy::tree`]).
+    /// The body is read through either shape ([`crate::versioning::tree`]).
     pub(crate) fn enforce<'a, T: Tree<'a>>(
         &self,
         rm_type: &str,

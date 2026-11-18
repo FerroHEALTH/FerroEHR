@@ -291,6 +291,7 @@ pub(crate) fn read_raw_rm<T>(
     headers: &HeaderMap,
     resp: RawServiceResponse,
     root_tag: &str,
+    tree: Tree,
 ) -> Response
 where
     T: DeserializeOwned + ToXml,
@@ -298,7 +299,7 @@ where
     let RawServiceResponse { body, meta } = resp;
     let mut out = respond_read::<T>(headers, StatusCode::OK, body, root_tag);
     if let Some(meta) = &meta {
-        set_versioning_headers(&mut out, meta, Tree::Ehr);
+        set_versioning_headers(&mut out, meta, tree);
     }
     out
 }

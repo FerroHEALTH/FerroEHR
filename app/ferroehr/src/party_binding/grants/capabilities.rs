@@ -187,7 +187,7 @@ impl<'a> Credentials<'a> {
         let mut out = Vec::new();
         if let Some(tree) = self.0.and_then(|tree| tree.get("items")) {
             walk(tree, &mut |item| {
-                if item.get("name").and_then(coded) == Some(code) {
+                if item.get("name").and_then(coded).as_deref() == Some(code) {
                     out.push(item);
                 }
             });
@@ -376,7 +376,7 @@ impl<'a> SubjectScope<'a> {
             unnamed: false,
         };
         for value in credentials.values(SCOPES[2]) {
-            if coded(value) == Some(NO_SUBJECT_NAMESPACE) {
+            if coded(value).as_deref() == Some(NO_SUBJECT_NAMESPACE) {
                 scope.unnamed = true;
             } else if let Some(text) = value.get("value").and_then(Value::as_str) {
                 scope.named.push(text);
