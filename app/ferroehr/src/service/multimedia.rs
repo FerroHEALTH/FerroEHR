@@ -116,6 +116,7 @@ impl FerroEhrService {
     #[cfg(not(feature = "multimedia"))]
     #[expect(
         clippy::unused_async,
+        clippy::unused_async_trait_impl,
         reason = "signature parity with the multimedia twin, which awaits"
     )]
     pub(crate) async fn externalize_typed(
