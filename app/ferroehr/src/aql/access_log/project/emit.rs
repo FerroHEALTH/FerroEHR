@@ -16,7 +16,10 @@ use serde::ser::{
 use super::{Error, Reach, key_text, no_variant, utf8};
 
 /// The JSON text of `value` as it is shown.
-pub(super) fn emitted<T: Serialize + ?Sized>(reach: &mut Reach<'_>, value: &T) -> Result<String, Error> {
+pub(super) fn emitted<T: Serialize + ?Sized>(
+    reach: &mut Reach<'_>,
+    value: &T,
+) -> Result<String, Error> {
     let mut out = Vec::new();
     value.serialize(Emit {
         reach,

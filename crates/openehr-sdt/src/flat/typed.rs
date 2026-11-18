@@ -273,9 +273,13 @@ macro_rules! read_raw {
             RawClass::DataValue => Some($read::<DataValue>($text).map(|v| v.as_rm().clone_box())),
             RawClass::Locatable => Some($read::<Locatable>($text).map(|v| v.as_rm().clone_box())),
             RawClass::PartyProxy => Some($read::<PartyProxy>($text).map(|v| v.as_rm().clone_box())),
-            RawClass::CodePhrase => Some($read::<CodePhrase>($text).map(|v| -> Obj { Box::new(v) })),
+            RawClass::CodePhrase => {
+                Some($read::<CodePhrase>($text).map(|v| -> Obj { Box::new(v) }))
+            }
             RawClass::Link => Some($read::<Link>($text).map(|v| -> Obj { Box::new(v) })),
-            RawClass::FeederAudit => Some($read::<FeederAudit>($text).map(|v| -> Obj { Box::new(v) })),
+            RawClass::FeederAudit => {
+                Some($read::<FeederAudit>($text).map(|v| -> Obj { Box::new(v) }))
+            }
             RawClass::Participation => {
                 Some($read::<Participation>($text).map(|v| -> Obj { Box::new(v) }))
             }
@@ -347,8 +351,12 @@ pub(crate) fn raw_type(raw: &RawDatum) -> Option<std::borrow::Cow<'_, str>> {
             .and_then(Value::as_str)
             .map(std::borrow::Cow::Borrowed),
         // NOTE: a fragment that is no object names no type, the refusal the build gives it.
-        RawDatum::Text(text) => serde_json::from_str::<Tagged<'_>>(text.get())
-            .ok()
+        RawDatum::Text(text) => text
+            .get()
+            .trim_start()
+            .starts_with('{')
+            .then(|| serde_json::from_str::<Tagged<'_>>(text.get()).ok())
+            .flatten()
             .and_then(|tagged| tagged.rm_type),
     }
 }
@@ -471,7 +479,8 @@ pub(crate) struct RawJson<'a>(pub(crate) &'a dyn RmObject);
 impl serde::Serialize for RawJson<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::Error as _;
-        with_raw_value!(self.0, S::Error::custom, |value| value.serialize(serializer))
+        with_raw_value!(self.0, S::Error::custom, |value| value
+            .serialize(serializer))
     }
 }
 
@@ -483,7 +492,9 @@ impl serde::Serialize for RawJson<'_> {
 /// carries, or a partial one.
 pub(crate) fn canonical_of(object: &dyn RmObject) -> Result<Value, FlatError> {
     use openehr_its::json::to_canonical_value;
-    with_raw_value!(object, FlatError::Rm, |value| Ok(to_canonical_value(&value)))
+    with_raw_value!(object, FlatError::Rm, |value| Ok(to_canonical_value(
+        &value
+    )))
 }
 
 /// The canonical-JSON rendering of a tree that may still be partial: `_type`

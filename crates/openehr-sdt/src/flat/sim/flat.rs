@@ -117,7 +117,9 @@ impl<'de> serde::de::Visitor<'de> for FlatVisitor {
                     continue;
                 }
                 match well_formed(&key) {
-                    Ok(()) => node_at(&mut root, segment_part).raw = Some(RawDatum::Text(raw.to_owned())),
+                    Ok(()) => {
+                        node_at(&mut root, segment_part).raw = Some(RawDatum::Text(raw.to_owned()))
+                    }
                     Err(e) => refusal = Some(e),
                 }
                 continue;
@@ -154,7 +156,10 @@ fn raw_present(text: &str) -> bool {
     let mut chars = text.chars().filter(|c| !c.is_ascii_whitespace());
     !matches!(
         (chars.next(), chars.next(), chars.next()),
-        (Some('n'), Some('u'), Some('l')) | (Some('"'), Some('"'), None) | (Some('['), Some(']'), None) | (Some('{'), Some('}'), None)
+        (Some('n'), Some('u'), Some('l'))
+            | (Some('"'), Some('"'), None)
+            | (Some('['), Some(']'), None)
+            | (Some('{'), Some('}'), None)
     )
 }
 
@@ -219,12 +224,13 @@ impl serde::Serialize for FlatText<'_> {
         use serde::ser::SerializeMap;
         let mut map = serializer.serialize_map(None)?;
         each_datum(self.0, &mut |key, datum| match datum {
-            Datum::Value(value) => map.serialize_entry(&key, value),
+            Datum::Value(value) | Datum::Raw(RawDatum::Json(value)) => {
+                map.serialize_entry(&key, value)
+            }
             Datum::Raw(RawDatum::Rm(object)) => {
                 map.serialize_entry(&key, &crate::flat::typed::RawJson(&**object))
             }
             Datum::Raw(RawDatum::Text(text)) => map.serialize_entry(&key, text),
-            Datum::Raw(RawDatum::Json(value)) => map.serialize_entry(&key, value),
         })?;
         map.end()
     }
@@ -245,7 +251,9 @@ fn each_datum<E>(
     doc: &SimDocument,
     f: &mut impl FnMut(String, Datum<'_>) -> Result<(), E>,
 ) -> Result<(), E> {
-    each_child_node(doc, "", &mut |prefix, node| each_node_datum(node, prefix, f))
+    each_child_node(doc, "", &mut |prefix, node| {
+        each_node_datum(node, prefix, f)
+    })
 }
 
 /// Calls `f` with the key prefix and node of every non-empty child
@@ -386,13 +394,27 @@ mod tests {
         let text = serde_json::to_vec(&input).unwrap();
         let from_text = parse_flat_text(&text).unwrap().unwrap();
         assert_eq!(from_text, parse_flat(&input).unwrap());
-        let composer = from_text.child("root").and_then(|r| r.child("composer")).unwrap();
+        let composer = from_text
+            .child("root")
+            .and_then(|r| r.child("composer"))
+            .unwrap();
         let Some(RawDatum::Text(raw)) = &composer.raw else {
             panic!("the |raw datum keeps its text: {:?}", composer.raw);
         };
-        assert_eq!(raw.get(), r#"{"_type":"PARTY_IDENTIFIED","name":"Dr. Smith"}"#);
-        assert!(from_text.child("root").and_then(|r| r.child("gone")).is_none());
-        assert_eq!(write_flat(&from_text).unwrap(), serde_json::to_string(&emit_flat(&from_text)).unwrap());
+        assert_eq!(
+            raw.get(),
+            r#"{"_type":"PARTY_IDENTIFIED","name":"Dr. Smith"}"#
+        );
+        assert!(
+            from_text
+                .child("root")
+                .and_then(|r| r.child("gone"))
+                .is_none()
+        );
+        assert_eq!(
+            write_flat(&from_text).unwrap(),
+            serde_json::to_string(&emit_flat(&from_text)).unwrap()
+        );
     }
 
     /// A malformed key is the FLAT refusal and text that is no JSON object the

@@ -43,8 +43,8 @@ use openehr_rm::v1_2::validate::{
 };
 
 use crate::flat::webtemplate::model::WebTemplate;
-use walk::{NodeFields, descend_attribute};
 use openehr_its::wire_validate::validate_rm_invariants_as;
+use walk::{NodeFields, descend_attribute};
 
 /// A single validation violation, keyed by the RM path of the offending node
 /// (a message + path + violation kind).

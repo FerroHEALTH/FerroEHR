@@ -632,11 +632,21 @@ mod tests {
             ));
         }
         assert!(matches!(
-            build_leaf(&text(r#"{"_type": "DV_QUANTITY", "magnitude": "x"}"#), "DV_TEXT", None, "p"),
+            build_leaf(
+                &text(r#"{"_type": "DV_QUANTITY", "magnitude": "x"}"#),
+                "DV_TEXT",
+                None,
+                "p"
+            ),
             Err(FlatError::RawDecode { .. })
         ));
         assert!(matches!(
-            build_leaf(&text(r#"{"_type": "HIER_OBJECT_ID", "value": "x"}"#), "DV_TEXT", None, "p"),
+            build_leaf(
+                &text(r#"{"_type": "HIER_OBJECT_ID", "value": "x"}"#),
+                "DV_TEXT",
+                None,
+                "p"
+            ),
             Err(FlatError::InvalidRaw { .. })
         ));
     }
