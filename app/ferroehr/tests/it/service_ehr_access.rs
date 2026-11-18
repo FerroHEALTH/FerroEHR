@@ -380,7 +380,9 @@ async fn aql_rows(svc: &FerroEhrService, ehr_id: EhrId, caller: &Caller) -> usiz
     )
     .await
     .expect("the query runs");
-    outcome.result_set["rows"].as_array().map_or(0, Vec::len)
+    outcome.result_set.to_value().unwrap()["rows"]
+        .as_array()
+        .map_or(0, Vec::len)
 }
 
 /// Whether an EHR Extract exported for `caller` carries the `EHR_ACCESS`.

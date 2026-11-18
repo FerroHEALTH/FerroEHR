@@ -215,7 +215,9 @@ async fn run(svc: &FerroEhrService, aql: &str, request: AqlQueryRequest) -> Vec<
     svc.execute_aql(aql, None, &request)
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"))
-        .result_set["rows"]
+        .result_set
+        .to_value()
+        .unwrap()["rows"]
         .as_array()
         .expect("rows array")
         .clone()

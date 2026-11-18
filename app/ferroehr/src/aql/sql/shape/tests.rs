@@ -148,7 +148,7 @@ fn prepared(shapes: &Shapes, ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Pre
     let bound = shapes
         .prepare(ir, params, ctx)
         .expect("the request prepares");
-    let built = crate::aql::sql::build(ir, params, ctx).expect("the request builds");
+    let built = crate::aql::sql::build_executed(ir, params, ctx).expect("the request builds");
     assert_eq!(bound.sql, built.sql, "the text of the request's own build");
     assert_eq!(
         bound.values.0.0, built.values.0.0,

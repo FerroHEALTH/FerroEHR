@@ -163,6 +163,7 @@ impl IdentifierColumn {
 /// `agent.network.address`. An `entity.identifier` whose value is the
 /// event's request id or resource id is the [`IdentifierColumn`] token of its
 /// system instead.
+#[cfg(test)]
 #[must_use]
 pub(crate) fn document_tokens(
     document: &serde_json::Value,
@@ -200,6 +201,113 @@ pub(crate) fn document_tokens(
                 other => other.to_string(),
             }),
         });
+    }
+    tokens
+}
+
+/// The search tokens of `resource`, the rendering of `event`: the tokens
+/// [`document_tokens`] reads from the resource's JSON document, read from the
+/// typed resource with no document written (#6005).
+///
+/// Each element's nodes are the ones [`AuditElement::nodes`] reaches in the
+/// document: `agent.who.identifier`, the `what.identifier` of an entity whose
+/// role is the patient's (object-role `1`), `entity.what.identifier`,
+/// `source.observer.identifier`, `entity.type`, `entity.role`, `type` and
+/// `subtype`, and each `agent.network.address`.
+#[must_use]
+pub(crate) fn resource_tokens(
+    resource: &fhir_types::r4::audit_event::AuditEvent,
+    event: &AuditEvent,
+) -> BTreeSet<SearchToken> {
+    use fhir_types::r4::coding::Coding;
+    use fhir_types::r4::identifier::Identifier;
+    use fhir_types::r4::reference::Reference;
+    fn identifier_of(reference: Option<&Reference>) -> Option<&Identifier> {
+        reference.and_then(|reference| reference.identifier.as_deref())
+    }
+    let mut tokens = BTreeSet::new();
+    let mut identified = |element: AuditElement, identifier: &Identifier| {
+        let code = identifier
+            .value
+            .as_ref()
+            .and_then(|value| value.value.clone());
+        let column = IdentifierColumn::ALL.into_iter().find(|column| {
+            element == AuditElement::EntityIdentifier
+                && code.is_some()
+                && column.value(event) == code.as_deref()
+        });
+        tokens.insert(SearchToken {
+            parameter: column.map_or(element.parameter(), IdentifierColumn::parameter),
+            system: identifier
+                .system
+                .as_ref()
+                .and_then(|system| system.value.clone()),
+            code: if column.is_some() { None } else { code },
+        });
+    };
+    for agent in &resource.agent {
+        if let Some(identifier) = identifier_of(agent.who.as_ref()) {
+            identified(AuditElement::AgentIdentifier, identifier);
+        }
+    }
+    for entity in &resource.entity {
+        let patient = entity.role.as_ref().is_some_and(|role| {
+            role.code.as_ref().and_then(|code| code.value.as_deref()) == Some("1")
+                && role
+                    .system
+                    .as_ref()
+                    .and_then(|system| system.value.as_deref())
+                    == Some(crate::system_log::store::OBJECT_ROLE_SYSTEM)
+        });
+        if patient && let Some(identifier) = identifier_of(entity.what.as_ref()) {
+            identified(AuditElement::PatientIdentifier, identifier);
+        }
+    }
+    for entity in &resource.entity {
+        if let Some(identifier) = identifier_of(entity.what.as_ref()) {
+            identified(AuditElement::EntityIdentifier, identifier);
+        }
+    }
+    if let Some(identifier) = identifier_of(Some(&resource.source.observer)) {
+        identified(AuditElement::SourceIdentifier, identifier);
+    }
+    let mut coded = |element: AuditElement, coding: &Coding| {
+        tokens.insert(SearchToken {
+            parameter: element.parameter(),
+            system: coding
+                .system
+                .as_ref()
+                .and_then(|system| system.value.clone()),
+            code: coding.code.as_ref().and_then(|code| code.value.clone()),
+        });
+    };
+    for entity in &resource.entity {
+        if let Some(coding) = &entity.r#type {
+            coded(AuditElement::EntityType, coding);
+        }
+    }
+    for entity in &resource.entity {
+        if let Some(coding) = &entity.role {
+            coded(AuditElement::EntityRole, coding);
+        }
+    }
+    coded(AuditElement::Type, &resource.r#type);
+    for coding in &resource.subtype {
+        coded(AuditElement::Subtype, coding);
+    }
+    for agent in &resource.agent {
+        if let Some(address) = agent
+            .network
+            .as_ref()
+            .and_then(|network| network.address.as_ref())
+            .and_then(|address| address.value.clone())
+        {
+            tokens.insert(SearchToken {
+                parameter: ADDRESS,
+                system: None,
+                code: Some(address),
+            });
+        }
     }
     tokens
 }
@@ -622,6 +730,58 @@ fn token_lookup(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The tokens read from the typed resource are those its JSON document
+    /// holds at the nodes the profile's matching reads, for every kind of
+    /// record: unclassified exchanges and classified EHDS access records,
+    /// with and without a patient (#6005).
+    #[test]
+    fn the_typed_resource_holds_the_documents_tokens() {
+        use crate::system_log::categories::{AccessedContent, Classifier, QueryConstraints};
+        use crate::system_log::message::AuditContext;
+        use proptest::prelude::*;
+        let ctx = AuditContext {
+            source_id: "ferroehr".to_owned(),
+            enterprise_site_id: "1f332a66-0000-0000-0000-000000000001".to_owned(),
+            server_ip: "10.42.23.77".to_owned(),
+            value_if_missing: "UNKNOWN".to_owned(),
+            ..AuditContext::default()
+        };
+        let mut runner = proptest::test_runner::TestRunner::new(ProptestConfig::with_cases(2048));
+        let strategy = (
+            crate::access_log::stored_form::parts::tests::event(),
+            any::<bool>(),
+            proptest::option::of("[ -~]{1,12}"),
+            proptest::option::of("[0-9.]{7,15}"),
+        );
+        runner
+            .run(&strategy, |(mut event, classified, subject, address)| {
+                event.client_ip = address;
+                if classified {
+                    event.domain = crate::system_log::event::AccessDomain::Ehr;
+                    event.category = Some(Classifier::default().classify(
+                        &AccessedContent::Query(QueryConstraints {
+                            reaches_content: true,
+                            ..QueryConstraints::default()
+                        }),
+                        false,
+                    ));
+                }
+                let subject = subject.as_deref();
+                let resource = crate::system_log::fhir::to_resource(&event, &ctx, subject);
+                let document = crate::system_log::fhir::to_fhir(&event, &ctx, subject);
+                match (resource, document) {
+                    (Ok(resource), Ok(document)) => prop_assert_eq!(
+                        resource_tokens(resource.as_resource(), &event),
+                        document_tokens(&document, &event)
+                    ),
+                    (Err(_), Err(_)) => {}
+                    _ => prop_assert!(false, "both render or neither does"),
+                }
+                Ok(())
+            })
+            .expect("every record's tokens agree");
+    }
 
     /// Every element names a distinct parameter, and the shared ones are the
     /// code-system parameters and the audit source.

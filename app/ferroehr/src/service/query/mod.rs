@@ -35,7 +35,7 @@ pub mod config;
 mod execute;
 mod join;
 pub mod plan_cache;
-pub(crate) mod result_set;
+pub mod result_set;
 
 pub mod request;
 mod stale;

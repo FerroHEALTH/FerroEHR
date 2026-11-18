@@ -707,7 +707,9 @@ async fn ehr_read_with_its_counts() {
         )
         .await
         .expect("count the EHR's compositions")
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     assert_eq!(
         compositions["rows"][0][0],
         json!(1),

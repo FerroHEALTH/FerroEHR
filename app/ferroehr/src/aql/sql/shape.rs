@@ -165,10 +165,10 @@ impl Shapes {
         {
             self.bound.fetch_add(1, Ordering::Relaxed);
             #[cfg(debug_assertions)]
-            same_as_built(&prepared, &super::build(ir, params, ctx)?);
+            same_as_built(&prepared, &super::build_executed(ir, params, ctx)?);
             return Ok(prepared);
         }
-        let prepared = super::build(ir, params, ctx)?;
+        let prepared = super::build_executed(ir, params, ctx)?;
         match found {
             Some(entry) if matches!(entry.state, State::Seen) => {
                 let state = self
@@ -242,8 +242,8 @@ impl Shapes {
         let (params_one, ctx_one) = one.mask(&self.live_params, params, ctx);
         let (params_two, ctx_two) = two.mask(&self.live_params, params, ctx);
         // NOTE: our own design (#5783), a stand-in the build refuses leaves the key unshaped.
-        let first = super::build(ir, &params_one, &ctx_one).ok()?;
-        let second = super::build(ir, &params_two, &ctx_two).ok()?;
+        let first = super::build_executed(ir, &params_one, &ctx_one).ok()?;
+        let second = super::build_executed(ir, &params_two, &ctx_two).ok()?;
         if first.sql != second.sql || first.sql != prepared.sql {
             return None;
         }
@@ -301,6 +301,10 @@ fn same_as_built(bound: &PreparedQuery, built: &PreparedQuery) {
     debug_assert!(
         bound.values.0.0 == built.values.0.0,
         "a shape binds the build's values"
+    );
+    debug_assert_eq!(
+        bound.layout, built.layout,
+        "a shape reads its rows back as the build does"
     );
 }
 

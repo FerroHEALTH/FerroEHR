@@ -32,6 +32,7 @@ use crate::access_log::view::{
 };
 use crate::aql::access_log::sql::{LogScope, statement};
 use crate::aql::access_log::{LogCell, LogPlan};
+use crate::aql::cell::Cell;
 use crate::aql::exec::{ColumnMeta, QueryResult};
 use crate::aql::ir::Params;
 use crate::error::ServiceError;
@@ -133,10 +134,8 @@ impl FerroEhrService {
             },
         };
         let executed = substitute_params(aql, params);
-        let mut outcome = QueryOutcome::plain(
-            result_set_json(aql, &executed, name, result(plan, rows))
-                .map_err(|error| Failure::analysis(error.into()))?,
-        );
+        let mut outcome =
+            QueryOutcome::plain(result_set_json(aql, &executed, name, result(plan, &rows)));
         outcome.served_rows = served_rows;
         outcome.log_read = Some(log_read);
         Ok(outcome)
@@ -166,7 +165,7 @@ fn reader_of(request: &AqlQueryRequest) -> Result<(LogReader, Vec<EhrId>), Failu
 }
 
 /// The result of `plan` that served `rows`.
-fn result(plan: &LogPlan, rows: Vec<Vec<Value>>) -> QueryResult {
+fn result(plan: &LogPlan, rows: &[Vec<Value>]) -> QueryResult {
     let columns = plan
         .columns
         .iter()
@@ -178,7 +177,11 @@ fn result(plan: &LogPlan, rows: Vec<Vec<Value>>) -> QueryResult {
             },
         })
         .collect();
-    QueryResult::of_rows(columns, rows)
+    let cells = rows
+        .iter()
+        .map(|row| row.iter().map(Cell::of_value).collect())
+        .collect();
+    QueryResult::of_rows(columns, cells)
 }
 
 /// The row `plan` selects of `record`, read out of the view `reader` is

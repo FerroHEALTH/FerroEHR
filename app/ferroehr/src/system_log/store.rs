@@ -381,8 +381,9 @@ impl AuditStore {
         let compiled = writing.compiled().await?;
         let tokens: Vec<_> = records
             .map(|(event, subject)| {
-                let document = crate::system_log::fhir::to_fhir(event, &compiled.context, subject);
-                entries::tokens_of(document, event)
+                let resource =
+                    crate::system_log::fhir::to_resource(event, &compiled.context, subject);
+                entries::tokens_of(resource, event)
             })
             .collect();
         self.tokens.record_tokens(conn, &tokens).await
@@ -965,7 +966,7 @@ pub enum AuditElement {
 
 /// The code system the role of the patient entity is coded in (FHIR R4
 /// `object-role`, code `1` Patient).
-const OBJECT_ROLE_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/object-role";
+pub(crate) const OBJECT_ROLE_SYSTEM: &str = "http://terminology.hl7.org/CodeSystem/object-role";
 
 impl AuditElement {
     /// The nodes of `document` the element names, and whether each is an

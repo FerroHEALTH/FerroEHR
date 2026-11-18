@@ -61,7 +61,9 @@ async fn names(svc: &FerroEhrService, ehr: &EhrId, aql: &str) -> BTreeSet<String
         .execute_aql(aql, None, &request(ehr))
         .await
         .unwrap_or_else(|e| panic!("{aql}: {e:?}"))
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     result["rows"]
         .as_array()
         .expect("rows array")
