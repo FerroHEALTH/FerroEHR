@@ -324,12 +324,12 @@ proptest! {
         let retention = stated(Some(jiff::civil::date(2031, 11, 8)), &LogRetention::default());
         if let Some(entry) = entry_of(&event, None, "cdr.example.org", retention) {
             let index = if indexed {
-                super::IndexColumns {
+                super::index::IndexColumns {
                     request_id: event.request_id.as_deref(),
                     resource_id: event.object_id.as_deref(),
                 }
             } else {
-                super::IndexColumns {
+                super::index::IndexColumns {
                     request_id: request_id.as_deref(),
                     resource_id: resource_id.as_deref(),
                 }
@@ -343,7 +343,8 @@ proptest! {
 /// A composition read whose entry has access details on both parts: the
 /// caller's (principal, roles) shared, the access's own (origins, count) on
 /// the row, with a delivered count and a query.
-fn read_entry() -> openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry {
+pub(crate) fn read_entry()
+-> openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry {
     let mut event = AuditEvent::new(
         EventActionCode::Read,
         ObjectClass::Composition,
@@ -369,9 +370,12 @@ fn read_entry() -> openehr_rm::draft::access_log::access_log::access_log_entry::
 
 /// The form `record`'s stored parts, the columns of its row and the index
 /// columns `index` assemble into, and its canonical form.
-fn assembled<T: serde::Serialize>(record: &T, index: super::IndexColumns<'_>) -> (String, String) {
+fn assembled<T: serde::Serialize>(
+    record: &T,
+    index: super::index::IndexColumns<'_>,
+) -> (String, String) {
     let written = parts(record, &[LINK]).expect("the parts write");
-    let row = super::without_columns(&written.row, &index).expect("the row part reads");
+    let row = super::index::without_columns(&written.row, &index).expect("the row part reads");
     let (record_type, uid, time_recorded, ehr_id) = columns_of(&written.whole);
     let columns = super::RowColumns {
         record_type: &record_type,
@@ -386,7 +390,7 @@ fn assembled<T: serde::Serialize>(record: &T, index: super::IndexColumns<'_>) ->
 }
 
 /// The index columns the writer keeps for `read_entry`.
-const READ_INDEX: super::IndexColumns<'static> = super::IndexColumns {
+const READ_INDEX: super::index::IndexColumns<'static> = super::index::IndexColumns {
     request_id: Some("d44e8723-cf7e-4b37-8f52-60e1b3cd5f88"),
     resource_id: Some("8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1"),
 };
@@ -398,18 +402,18 @@ const READ_INDEX: super::IndexColumns<'static> = super::IndexColumns {
 fn the_row_part_leaves_the_request_and_version_to_their_columns() {
     let entry = read_entry();
     let written = parts(&entry, &[LINK]).expect("the parts write");
-    let row = super::without_columns(&written.row, &READ_INDEX).expect("the row part reads");
+    let row = super::index::without_columns(&written.row, &READ_INDEX).expect("the row part reads");
     assert!(written.row.contains("d44e8723") && written.row.contains("48ead4180515"));
     assert!(
         !row.contains("d44e8723") && !row.contains("48ead4180515") && !row.contains("null"),
         "{row}"
     );
     assert_eq!(assembled(&entry, READ_INDEX).0, written.whole);
-    let other = super::IndexColumns {
+    let other = super::index::IndexColumns {
         request_id: Some("another-request"),
         resource_id: Some("another::system::1"),
     };
-    let kept = super::without_columns(&written.row, &other).expect("the row part reads");
+    let kept = super::index::without_columns(&written.row, &other).expect("the row part reads");
     assert!(
         kept.contains("d44e8723") && kept.contains("48ead4180515"),
         "{kept}"
@@ -423,7 +427,7 @@ fn the_row_part_leaves_the_request_and_version_to_their_columns() {
         item.version_id = None;
     }
     let written = parts(&unversioned, &[LINK]).expect("the parts write");
-    let row = super::without_columns(&written.row, &READ_INDEX).expect("the row part reads");
+    let row = super::index::without_columns(&written.row, &READ_INDEX).expect("the row part reads");
     assert!(row.contains("\"version_id\":null"), "{row}");
     assert_eq!(assembled(&unversioned, READ_INDEX).0, written.whole);
 }

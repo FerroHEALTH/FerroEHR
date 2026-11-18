@@ -117,6 +117,27 @@ pub fn subject_withholds(path: &[&str], restrictions: &Restrictions) -> bool {
     }
 }
 
+/// The members the subject view leaves out of the value at `at`, in the
+/// order [`subject_view`] removes them.
+///
+/// `at` is the member path from the entry, list elements not counted, and
+/// `restricted` the members of the entry's accessor the policy's
+/// restrictions withhold.
+#[must_use]
+pub fn subject_removals<'r>(at: &[&str], restricted: &'r [&'static str]) -> Vec<&'r str> {
+    match at {
+        [] => ENTRY_WITHHELD.to_vec(),
+        ["accessor"] => ACCESSOR_WITHHELD
+            .iter()
+            .chain(restricted)
+            .copied()
+            .collect(),
+        ["query"] => QUERY_WITHHELD.to_vec(),
+        ["items", "origins"] => ORIGIN_WITHHELD.to_vec(),
+        _ => Vec::new(),
+    }
+}
+
 /// An accessor kind as the draft `accessor kind` group names it: the
 /// terminology id and the code.
 type KindCode = (String, String);
@@ -166,7 +187,15 @@ impl Restrictions {
     }
 
     /// The `ACCESSOR` members withheld from an accessor of `kind`.
-    fn members(&self, kind: &DvCodedText) -> impl Iterator<Item = &'static str> + '_ {
+    /// Restrictions that withhold `members` from every accessor of `kind`.
+    #[cfg(test)]
+    pub(crate) fn withholding(kind: &DvCodedText, members: &[&'static str]) -> Self {
+        let mut withheld = BTreeMap::new();
+        withheld.insert(kind_code(kind), members.iter().copied().collect());
+        Self { withheld }
+    }
+
+    pub(crate) fn members(&self, kind: &DvCodedText) -> impl Iterator<Item = &'static str> + '_ {
         self.withheld
             .get(&kind_code(kind))
             .into_iter()
