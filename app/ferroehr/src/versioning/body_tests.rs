@@ -197,6 +197,9 @@ fn the_typed_commit_writes_and_signs_the_bytes_the_canonical_one_did() {
     }
 }
 
+/// A nine-digit value that passes the BSN eleven-test and names no person.
+const SYNTHETIC_BSN: &str = "123456782"; // privacy-allow: synthetic, built to satisfy the published arithmetic
+
 /// `composition` with the record's subject as its composer, by name and by a
 /// formal identifier, and an identifier-shaped name: what the
 /// data-minimisation pass refuses.
@@ -205,7 +208,7 @@ fn identifying(composition: &Value) -> Value {
     planted["composer"] = json!({
         "_type": "PARTY_RELATED",
         "name": "A. Subject",
-        "identifiers": [{ "_type": "DV_IDENTIFIER", "id": "123456782" }],
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "id": SYNTHETIC_BSN }],
         "relationship": {
             "_type": "DV_CODED_TEXT",
             "value": "self",
@@ -216,7 +219,7 @@ fn identifying(composition: &Value) -> Value {
             }
         }
     });
-    planted["name"]["value"] = json!("123456782");
+    planted["name"]["value"] = json!(SYNTHETIC_BSN);
     planted
 }
 
