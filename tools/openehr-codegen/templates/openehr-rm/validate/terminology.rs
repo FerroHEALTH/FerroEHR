@@ -504,8 +504,8 @@ pub fn validate_rm_terminology(ty: &str, value: &Value, out: &mut Vec<InvariantV
 
 #[cfg(test)]
 mod tests {
-    use openehr_term::codes::AuditChangeType;
     use super::*;
+    use openehr_term::codes::AuditChangeType;
 
     /// This table is keyed on the exact wire `_type`, so an invariant declared
     /// on an ancestor reaches a descendant only by being repeated. `ATTESTATION`
@@ -527,8 +527,9 @@ mod tests {
             let mut out = Vec::new();
             validate_rm_terminology(ty, &node, &mut out);
             assert!(
-                out.iter()
-                    .any(|v| v.message == format!("Invariant Change_type_valid failed on type {ty}")),
+                out.iter().any(
+                    |v| v.message == format!("Invariant Change_type_valid failed on type {ty}")
+                ),
                 "{ty}: an out-of-group change_type must be refused, got {out:?}",
             );
         }
@@ -546,7 +547,10 @@ mod tests {
         for ty in ["AUDIT_DETAILS", "ATTESTATION"] {
             let mut out = Vec::new();
             validate_rm_terminology(ty, &valid, &mut out);
-            assert!(out.is_empty(), "{ty}: a valid change_type raises nothing, got {out:?}");
+            assert!(
+                out.is_empty(),
+                "{ty}: a valid change_type raises nothing, got {out:?}"
+            );
         }
     }
 }

@@ -14,5 +14,11 @@ use crate::v1_1::composition::view::citation::Citation;
 #[derive(Debug, Clone, PartialEq)]
 pub enum ViewEntry {
     /// The `CITATION` subtype of `VIEW_ENTRY`.
-    Citation(Citation<Locatable>),
+    Citation(Box<Citation<Locatable>>),
+}
+
+impl From<Citation<Locatable>> for ViewEntry {
+    fn from(value: Citation<Locatable>) -> Self {
+        Self::Citation(Box::new(value))
+    }
 }

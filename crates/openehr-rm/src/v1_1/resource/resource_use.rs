@@ -18,3 +18,15 @@ pub enum ResourceUse {
     /// The `SERVICE_USE` subtype of `RESOURCE_USE`.
     ServiceUse(ServiceUse),
 }
+
+impl From<ConsumableUse> for ResourceUse {
+    fn from(value: ConsumableUse) -> Self {
+        Self::ConsumableUse(value)
+    }
+}
+
+impl From<ServiceUse> for ResourceUse {
+    fn from(value: ServiceUse) -> Self {
+        Self::ServiceUse(value)
+    }
+}

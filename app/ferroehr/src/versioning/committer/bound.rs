@@ -101,7 +101,7 @@ pub fn server_committer(identity: &CommitterIdentity) -> Option<PartyProxy> {
             });
         return Some(PartyProxy::PartyIdentified(
             PartyIdentified::PartyIdentified(PartyIdentifiedData {
-                external_ref,
+                external_ref: external_ref.map(Box::new),
                 name: Some(client.clone()),
                 identifiers: Some(openehr_base::containers::NonEmptyVec::of(DvIdentifier {
                     issuer: Some(
@@ -176,7 +176,7 @@ fn portal_committer(identity: &CommitterIdentity, portal: &PortalParty) -> Party
     if !identity.representative {
         return PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(
             PartyIdentifiedData {
-                external_ref,
+                external_ref: external_ref.map(Box::new),
                 name: None,
                 identifiers: Some(openehr_base::containers::NonEmptyVec::of(login)),
             },
@@ -206,7 +206,7 @@ fn related(
         .unwrap_or("unknown")
         .to_owned();
     PartyProxy::PartyIdentified(PartyIdentified::PartyRelated(PartyRelated {
-        external_ref,
+        external_ref: external_ref.map(Box::new),
         name,
         identifiers: Some(openehr_base::containers::NonEmptyVec::of(login)),
         relationship: crate::versioning::audit::openehr_coded_text(code, rubric),
@@ -233,7 +233,7 @@ pub fn professional(
         });
     }
     PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(PartyIdentifiedData {
-        external_ref,
+        external_ref: external_ref.map(Box::new),
         name,
         identifiers: Some(identifiers),
     }))

@@ -49,7 +49,7 @@ pub enum DataValue {
     /// The `DV_IDENTIFIER` subtype of `DATA_VALUE`.
     DvIdentifier(DvIdentifier),
     /// The `DV_INTERVAL` subtype of `DATA_VALUE`.
-    DvInterval(DvInterval<DvOrdered>),
+    DvInterval(Box<DvInterval<DvOrdered>>),
     /// The `DV_MULTIMEDIA` subtype of `DATA_VALUE`.
     DvMultimedia(DvMultimedia),
     /// The `DV_ORDINAL` subtype of `DATA_VALUE`.
@@ -74,4 +74,124 @@ pub enum DataValue {
     DvTime(DvTime),
     /// The `DV_URI` subtype of `DATA_VALUE`.
     DvUri(DvUri),
+}
+
+impl From<DvBoolean> for DataValue {
+    fn from(value: DvBoolean) -> Self {
+        Self::DvBoolean(value)
+    }
+}
+
+impl From<DvCount> for DataValue {
+    fn from(value: DvCount) -> Self {
+        Self::DvCount(value)
+    }
+}
+
+impl From<DvDate> for DataValue {
+    fn from(value: DvDate) -> Self {
+        Self::DvDate(value)
+    }
+}
+
+impl From<DvDateTime> for DataValue {
+    fn from(value: DvDateTime) -> Self {
+        Self::DvDateTime(value)
+    }
+}
+
+impl From<DvDuration> for DataValue {
+    fn from(value: DvDuration) -> Self {
+        Self::DvDuration(value)
+    }
+}
+
+impl From<DvGeneralTimeSpecification> for DataValue {
+    fn from(value: DvGeneralTimeSpecification) -> Self {
+        Self::DvGeneralTimeSpecification(value)
+    }
+}
+
+impl From<DvIdentifier> for DataValue {
+    fn from(value: DvIdentifier) -> Self {
+        Self::DvIdentifier(value)
+    }
+}
+
+impl From<DvInterval<DvOrdered>> for DataValue {
+    fn from(value: DvInterval<DvOrdered>) -> Self {
+        Self::DvInterval(Box::new(value))
+    }
+}
+
+impl From<DvMultimedia> for DataValue {
+    fn from(value: DvMultimedia) -> Self {
+        Self::DvMultimedia(value)
+    }
+}
+
+impl From<DvOrdinal> for DataValue {
+    fn from(value: DvOrdinal) -> Self {
+        Self::DvOrdinal(value)
+    }
+}
+
+impl From<DvParagraph> for DataValue {
+    fn from(value: DvParagraph) -> Self {
+        Self::DvParagraph(value)
+    }
+}
+
+impl From<DvParsable> for DataValue {
+    fn from(value: DvParsable) -> Self {
+        Self::DvParsable(value)
+    }
+}
+
+impl From<DvPeriodicTimeSpecification> for DataValue {
+    fn from(value: DvPeriodicTimeSpecification) -> Self {
+        Self::DvPeriodicTimeSpecification(value)
+    }
+}
+
+impl From<DvProportion> for DataValue {
+    fn from(value: DvProportion) -> Self {
+        Self::DvProportion(value)
+    }
+}
+
+impl From<DvQuantity> for DataValue {
+    fn from(value: DvQuantity) -> Self {
+        Self::DvQuantity(value)
+    }
+}
+
+impl From<DvScale> for DataValue {
+    fn from(value: DvScale) -> Self {
+        Self::DvScale(value)
+    }
+}
+
+impl From<DvState> for DataValue {
+    fn from(value: DvState) -> Self {
+        Self::DvState(value)
+    }
+}
+
+impl From<DvText> for DataValue {
+    fn from(value: DvText) -> Self {
+        Self::DvText(value)
+    }
+}
+
+impl From<DvTime> for DataValue {
+    fn from(value: DvTime) -> Self {
+        Self::DvTime(value)
+    }
+}
+
+impl From<DvUri> for DataValue {
+    fn from(value: DvUri) -> Self {
+        Self::DvUri(value)
+    }
 }

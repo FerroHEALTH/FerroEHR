@@ -370,21 +370,21 @@ impl AuditInput {
                 system_id,
                 time_committed,
                 change_type,
-                description,
-                committer,
+                description: description.map(Box::new),
+                committer: Box::new(committer),
             }),
-            Some(parts) => AuditDetails::Attestation(Attestation {
+            Some(parts) => AuditDetails::Attestation(Box::new(Attestation {
                 system_id,
                 time_committed,
                 change_type,
-                description,
-                committer,
-                attested_view: parts.attested_view.clone(),
+                description: description.map(Box::new),
+                committer: Box::new(committer),
+                attested_view: parts.attested_view.clone().map(Box::new),
                 proof: parts.proof.clone(),
                 items: openehr_base::containers::present_nonempty(parts.items.clone()),
                 reason: parts.reason.clone(),
                 is_pending: parts.is_pending,
-            }),
+            })),
         }
     }
 

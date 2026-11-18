@@ -18,5 +18,5 @@ pub struct ReferenceRange<T> {
     /// Term whose value indicates the meaning of this range, e.g.  normal,  critical,  therapeutic  etc.
     pub meaning: DvText,
     /// The data range for this meaning, e.g. critical  etc.
-    pub range: DvInterval<T>,
+    pub range: Box<DvInterval<T>>,
 }

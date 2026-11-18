@@ -18,6 +18,7 @@ pub(crate) mod construction;
 pub(crate) mod drafts;
 pub(crate) mod elided_arguments;
 pub(crate) mod its_json_bounds;
+pub(crate) mod layout;
 pub(crate) mod ordered_hashes;
 pub(crate) mod overrides;
 pub(crate) mod rest_tagged;

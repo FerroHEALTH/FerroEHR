@@ -25,7 +25,7 @@ pub struct DvDuration {
     /// Optional normal status indicator of value with respect to normal range for this value.
     ///
     /// Often included by lab, even if the normal range itself is not included. Coded by ordinals in series HHH, HH, H, (nothing), L, LL, LLL; see openEHR terminology group  `normal_status`.
-    pub normal_status: Option<CodePhrase>,
+    pub normal_status: Option<Box<CodePhrase>>,
     /// Optional normal range.
     pub normal_range: Option<Box<DvInterval<DvOrdered>>>,
     /// Optional tagged other reference ranges for this value in its particular measurement context.

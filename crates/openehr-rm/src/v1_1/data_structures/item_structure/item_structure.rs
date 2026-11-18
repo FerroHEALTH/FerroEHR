@@ -26,3 +26,27 @@ pub enum ItemStructure {
     /// The `ITEM_TREE` subtype of `ITEM_STRUCTURE`.
     ItemTree(Box<ItemTree>),
 }
+
+impl From<ItemList> for ItemStructure {
+    fn from(value: ItemList) -> Self {
+        Self::ItemList(Box::new(value))
+    }
+}
+
+impl From<ItemSingle> for ItemStructure {
+    fn from(value: ItemSingle) -> Self {
+        Self::ItemSingle(Box::new(value))
+    }
+}
+
+impl From<ItemTable> for ItemStructure {
+    fn from(value: ItemTable) -> Self {
+        Self::ItemTable(Box::new(value))
+    }
+}
+
+impl From<ItemTree> for ItemStructure {
+    fn from(value: ItemTree) -> Self {
+        Self::ItemTree(Box::new(value))
+    }
+}

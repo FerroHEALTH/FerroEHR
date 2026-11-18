@@ -23,3 +23,21 @@ pub enum DvAbsoluteQuantity {
     /// The `DV_TIME` subtype of `DV_ABSOLUTE_QUANTITY`.
     DvTime(DvTime),
 }
+
+impl From<DvDate> for DvAbsoluteQuantity {
+    fn from(value: DvDate) -> Self {
+        Self::DvDate(value)
+    }
+}
+
+impl From<DvDateTime> for DvAbsoluteQuantity {
+    fn from(value: DvDateTime) -> Self {
+        Self::DvDateTime(value)
+    }
+}
+
+impl From<DvTime> for DvAbsoluteQuantity {
+    fn from(value: DvTime) -> Self {
+        Self::DvTime(value)
+    }
+}

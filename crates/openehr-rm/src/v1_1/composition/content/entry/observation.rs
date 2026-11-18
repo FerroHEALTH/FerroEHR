@@ -42,9 +42,9 @@ pub struct Observation {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
 
     // inherited: ENTRY
     /// Mandatory indicator of the localised language in which this Entry is written. Coded from openEHR Code Set  languages .
@@ -54,14 +54,14 @@ pub struct Observation {
     /// Other participations at `ENTRY` level.
     pub other_participations: Option<openehr_base::containers::NonEmptyVec<Participation>>,
     /// Identifier of externally held workflow engine data for this workflow execution, for this subject of care.
-    pub workflow_id: Option<ObjectRef>,
+    pub workflow_id: Option<Box<ObjectRef>>,
     /// Id of human subject of this `ENTRY`, e.g.:
     ///
     /// * organ donor
     /// * foetus
     /// * a family member
     /// * another clinically relevant person.
-    pub subject: PartyProxy,
+    pub subject: Box<PartyProxy>,
     /// Optional identification of provider of the information in this `ENTRY`, which might be:
     ///
     /// * the patient
@@ -70,7 +70,7 @@ pub struct Observation {
     /// * a device or software
     ///
     /// Generally only used when the recorder needs to make it explicit. Otherwise, Composition composer and other participants are assumed.
-    pub provider: Option<PartyProxy>,
+    pub provider: Option<Box<PartyProxy>>,
 
     // inherited: CARE_ENTRY
     /// Description of the method (i.e. how) the information in this entry was arrived at.
@@ -78,11 +78,11 @@ pub struct Observation {
     /// For `OBSERVATIONs`, this is a description of the method or instrument used. For `EVALUATIONs`, how the evaluation was arrived at. For `INSTRUCTIONs`, how to execute the Instruction. This may take the form of references to guidelines, including manually followed and executable; knowledge references such as a paper in Medline; clinical reasons within a larger care process.
     pub protocol: Option<ItemStructure>,
     /// Optional external identifier of guideline creating this Entry if relevant.
-    pub guideline_id: Option<ObjectRef>,
+    pub guideline_id: Option<Box<ObjectRef>>,
     /// The data of this observation, in the form of a history of values which may be of any complexity.
-    pub data: History<ItemStructure>,
+    pub data: Box<History<ItemStructure>>,
     /// Optional recording of the state of subject of this observation during the observation process, in the form of a separate history of values which may be of any complexity.
     ///
     /// State may also be recorded within the History of the data attribute.
-    pub state: Option<History<ItemStructure>>,
+    pub state: Option<Box<History<ItemStructure>>>,
 }

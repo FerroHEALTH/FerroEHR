@@ -89,7 +89,7 @@ mod tests {
     }
 
     fn person(name: &str) -> Party {
-        Party::Person(Person {
+        Party::Person(Box::new(Person {
             name: text(name),
             archetype_node_id: "openEHR-DEMOGRAPHIC-PERSON.person.v1".to_owned(),
             uid: None,
@@ -102,11 +102,11 @@ mod tests {
             relationships: None,
             languages: None,
             roles: None,
-        })
+        }))
     }
 
     fn organisation(name: &str) -> Party {
-        Party::Organisation(Organisation {
+        Party::Organisation(Box::new(Organisation {
             name: text(name),
             archetype_node_id: "openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v1".to_owned(),
             uid: None,
@@ -119,7 +119,7 @@ mod tests {
             relationships: None,
             languages: None,
             roles: None,
-        })
+        }))
     }
 
     /// `Type_valid: type = name` — the dispatch returns each subtype's own

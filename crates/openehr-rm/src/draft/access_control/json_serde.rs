@@ -131,6 +131,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_ACTOR_SCOPE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -345,6 +346,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_CLASSIFICATION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -605,6 +607,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_DATA_SCOPE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -968,6 +971,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_DIRECTIVE` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -1260,6 +1264,7 @@ type Value = crate::draft::access_control::access_control::access_directive_sett
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `ACCESS_DIRECTIVE_SETTINGS` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
 let mut __seen_type = false;
 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
@@ -1383,6 +1388,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_LABEL` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -1591,6 +1597,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_LOG_RESTRICTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -1866,6 +1873,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_LOG_RETENTION` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -2214,6 +2222,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_POLICY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -2495,6 +2504,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `ACCESS_RETENTION_BOUND` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -2724,6 +2734,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -3019,6 +3030,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_CHAPTER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -3313,6 +3325,7 @@ type Value = crate::draft::access_control::ehr_extract::common::extract_entity_c
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `EXTRACT_ENTITY_CHAPTER` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
 let mut __seen_type = false;
 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
@@ -3505,6 +3518,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `EXTRACT_FOLDER` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -3779,6 +3793,7 @@ type Value = crate::draft::access_control::ehr_extract::generic_extract::generic
 fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
 __f.write_str("an openEHR `GENERIC_CONTENT_ITEM` object")
 }
+#[inline(never)]
 fn visit_map<__A: ::serde::de::MapAccess<'de>>(self, mut __map: __A) -> ::core::result::Result<Self::Value, __A::Error> {
 let mut __seen_type = false;
 let mut __s0: ::core::option::Option<::core::option::Option<_>> = None;
@@ -4397,6 +4412,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_ACCESS_POLICY` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,
@@ -4539,6 +4555,7 @@ impl<'de> ::serde::Deserialize<'de>
             fn expecting(&self, __f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 __f.write_str("an openEHR `VERSIONED_OBJECT` object")
             }
+            #[inline(never)]
             fn visit_map<__A: ::serde::de::MapAccess<'de>>(
                 self,
                 mut __map: __A,

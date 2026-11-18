@@ -36,15 +36,15 @@ pub struct PartyRelationship {
     /// Links to other archetyped structures (data whose root object inherits from `ARCHETYPED`, such as `ENTRY`, `SECTION` and so on). Links may be to structures in other compositions.
     pub links: Option<openehr_base::containers::NonEmptyVec<Link>>,
     /// Details of archetyping used on this node.
-    pub archetype_details: Option<Archetyped>,
+    pub archetype_details: Option<Box<Archetyped>>,
     /// Audit trail from non-openEHR system of original commit of information forming the content of this node, or from a conversion gateway which has synthesised this node.
-    pub feeder_audit: Option<FeederAudit>,
+    pub feeder_audit: Option<Box<FeederAudit>>,
     /// The detailed description of the relationship.
     pub details: Option<ItemStructure>,
     /// Target of relationship.
     pub target: PartyRef,
     /// Valid time interval for this relationship.
-    pub time_validity: Option<DvInterval<DvDate>>,
+    pub time_validity: Option<Box<DvInterval<DvDate>>>,
     /// Source of relationship.
     pub source: PartyRef,
 }

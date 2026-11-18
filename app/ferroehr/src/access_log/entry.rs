@@ -341,7 +341,11 @@ fn party(event: &AuditEvent, issuer: &str) -> PartyProxy {
     if let Some(party) = binding.and_then(|binding| binding.party.as_ref()) {
         return PartyProxy::PartyIdentified(PartyIdentified::PartyIdentified(
             PartyIdentifiedData {
-                external_ref: Some(party_ref(&party.namespace, &party.class, &party.id)),
+                external_ref: Some(Box::new(party_ref(
+                    &party.namespace,
+                    &party.class,
+                    &party.id,
+                ))),
                 name: None,
                 identifiers: None,
             },

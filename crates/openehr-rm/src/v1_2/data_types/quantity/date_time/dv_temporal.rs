@@ -23,3 +23,21 @@ pub enum DvTemporal {
     /// The `DV_TIME` subtype of `DV_TEMPORAL`.
     DvTime(DvTime),
 }
+
+impl From<DvDate> for DvTemporal {
+    fn from(value: DvDate) -> Self {
+        Self::DvDate(value)
+    }
+}
+
+impl From<DvDateTime> for DvTemporal {
+    fn from(value: DvDateTime) -> Self {
+        Self::DvDateTime(value)
+    }
+}
+
+impl From<DvTime> for DvTemporal {
+    fn from(value: DvTime) -> Self {
+        Self::DvTime(value)
+    }
+}

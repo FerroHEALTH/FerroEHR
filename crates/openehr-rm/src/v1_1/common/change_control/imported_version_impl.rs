@@ -119,7 +119,7 @@ mod tests {
                 AuditChangeType::Creation.rubric(),
             ),
             description: None,
-            committer: PartyProxy::PartySelf(PartySelf { external_ref: None }),
+            committer: Box::new(PartyProxy::PartySelf(PartySelf { external_ref: None })),
         })
     }
 
@@ -143,7 +143,7 @@ mod tests {
         OriginalVersion {
             contribution: contribution("11111111-1111-4111-8111-111111111111"),
             signature: Some("foreign-signature".to_owned()),
-            commit_audit: audit("remote.example"),
+            commit_audit: Box::new(audit("remote.example")),
             uid: version_id("8849182c-82ad-4088-a07f-48ead4180515::remote.example::2"),
             preceding_version_uid: Some(version_id(
                 "8849182c-82ad-4088-a07f-48ead4180515::remote.example::1",
@@ -162,8 +162,8 @@ mod tests {
         ImportedVersion {
             contribution: contribution("22222222-2222-4222-8222-222222222222"),
             signature: Some("local-wrapper-signature".to_owned()),
-            commit_audit: audit("local.example"),
-            item,
+            commit_audit: Box::new(audit("local.example")),
+            item: Box::new(item),
         }
     }
 

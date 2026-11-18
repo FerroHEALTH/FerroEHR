@@ -67,9 +67,13 @@ pub(super) fn page_size(filter: &AuditSearchFilter) -> usize {
 }
 
 /// The number of records `condition` selects: those of the system chain,
-/// plus the indexed entries of the access log, read from their index columns
-/// alone (written by `audit.access_log_chain_move` and emptied when the entry
-/// becomes a tombstone).
+/// plus the indexed entries of the access log a page can return, the linked
+/// ones (#6000).
+///
+/// The access log's are counted from the entries' index columns alone, less
+/// those of the entries an intake row still names, which no link chains yet:
+/// an entry is linked or named by an intake row, never both, so neither
+/// count reads a link, and the first is read from the time index.
 fn total(condition: &Cond) -> SelectStatement {
     let system = count_of(
         Query::select()
@@ -78,14 +82,25 @@ fn total(condition: &Cond) -> SelectStatement {
             .cond_where(on_chain(condition, "system"))
             .to_owned(),
     );
-    let access_log = count_of(
+    let indexed = || {
         Query::select()
             .expr(Expr::col(Asterisk).count())
             .from((Alias::new(AUDIT), Alias::new(ACCESS_LOG_SEARCH)))
             .cond_where(condition.clone())
+            .to_owned()
+    };
+    let access_log = count_of(indexed());
+    // NOTE: our own design (#6000), the intake names the entries no link chains yet.
+    let unchained = count_of(
+        indexed()
+            .and_where(Expr::cust(
+                "entry_id = ANY (ARRAY(SELECT unnest(i.entries) FROM audit.access_log_intake i))",
+            ))
             .to_owned(),
     );
-    Query::select().expr(system.add(access_log)).to_owned()
+    Query::select()
+        .expr(system.add(access_log).sub(unchained))
+        .to_owned()
 }
 
 /// A scalar subquery of `count`.

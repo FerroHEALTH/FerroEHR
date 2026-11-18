@@ -1670,6 +1670,30 @@ jobs:
       - name: Codegen inputs match their pins
         run: bash scripts/vendor/codegen-inputs.sh --check
 
+  # The RM readers' one nesting limit read at the limit on the smallest
+  # RM-reading stack in a RELEASE build (#5997); the `test` lane runs the same
+  # test in a debug build. One test, so the release compile stays small.
+  nesting-release:
+    name: nesting limit (release)
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.queue_verified != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30 # v2.0.1
+        with:
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: cargo-nextest
+      - name: Read a document at the nesting limit on the smallest stack, release
+        run: cargo nextest run --locked --release -p openehr-its --all-features -E 'test(nesting_limit)'
+
   # ── Build + tests against PostgreSQL 18.6 ──────────────────────────────────
   # The catalogue's own artifact validation is no longer here: the instrument is
   # the separate Veredictum project (pinned in scripts/lib/veredictum.sh), and
@@ -3292,6 +3316,7 @@ jobs:
       - doc
       - msrv
       - codegen-drift
+      - nesting-release
       - build
       - instructions
       - test

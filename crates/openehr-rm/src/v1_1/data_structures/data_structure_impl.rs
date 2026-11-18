@@ -44,10 +44,10 @@ impl DataStructure {
     #[must_use]
     pub fn as_hierarchy(&self) -> Option<Item> {
         match self {
-            Self::ItemList(structure) => structure.as_hierarchy().map(Item::Cluster),
-            Self::ItemSingle(structure) => Some(Item::Element(structure.as_hierarchy().clone())),
-            Self::ItemTable(structure) => structure.as_hierarchy().map(Item::Cluster),
-            Self::ItemTree(structure) => structure.as_hierarchy().map(Item::Cluster),
+            Self::ItemList(structure) => structure.as_hierarchy().map(Item::from),
+            Self::ItemSingle(structure) => Some(Item::from(structure.as_hierarchy().clone())),
+            Self::ItemTable(structure) => structure.as_hierarchy().map(Item::from),
+            Self::ItemTree(structure) => structure.as_hierarchy().map(Item::from),
             Self::History(_) => None,
         }
     }
@@ -88,13 +88,13 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             null_flavour: None,
-            value: Some(DataValue::DvText(text(name))),
+            value: Some(Box::new(DataValue::DvText(text(name)))),
             null_reason: None,
         }
     }
 
     fn list(items: Option<Vec<Element>>) -> DataStructure {
-        DataStructure::ItemList(ItemList {
+        DataStructure::ItemList(Box::new(ItemList {
             name: text("list"),
             archetype_node_id: "at0000".to_owned(),
             uid: None,
@@ -102,11 +102,11 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             items,
-        })
+        }))
     }
 
     fn single() -> DataStructure {
-        DataStructure::ItemSingle(ItemSingle {
+        DataStructure::ItemSingle(Box::new(ItemSingle {
             name: text("single"),
             archetype_node_id: "at0000".to_owned(),
             uid: None,
@@ -114,11 +114,11 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             item: Box::new(element("at0001", "the element")),
-        })
+        }))
     }
 
     fn empty_tree() -> DataStructure {
-        DataStructure::ItemTree(ItemTree {
+        DataStructure::ItemTree(Box::new(ItemTree {
             name: text("tree"),
             archetype_node_id: "at0000".to_owned(),
             uid: None,
@@ -126,11 +126,11 @@ mod tests {
             archetype_details: None,
             feeder_audit: None,
             items: None,
-        })
+        }))
     }
 
     fn history() -> DataStructure {
-        DataStructure::History(History {
+        DataStructure::History(Box::new(History {
             name: text("history"),
             archetype_node_id: "at0000".to_owned(),
             uid: None,
@@ -148,7 +148,7 @@ mod tests {
             period: None,
             duration: None,
             summary: None,
-            events: Some(vec![Event::PointEvent(PointEvent {
+            events: Some(vec![Event::PointEvent(Box::new(PointEvent {
                 name: text("event"),
                 archetype_node_id: "at0001".to_owned(),
                 uid: None,
@@ -173,8 +173,8 @@ mod tests {
                     feeder_audit: None,
                     items: None,
                 })),
-            })]),
-        })
+            }))]),
+        }))
     }
 
     /// Each `ITEM_STRUCTURE` subtype answers with its own hierarchy, and the

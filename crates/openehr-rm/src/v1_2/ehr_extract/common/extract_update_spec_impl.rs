@@ -45,17 +45,19 @@ mod tests {
     ) -> ExtractUpdateSpec {
         ExtractUpdateSpec {
             persist_in_server: true,
-            repeat_period: repeat.then(|| {
-                crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration {
-                    value: "P1D".to_owned(),
-                    normal_status: None,
-                    normal_range: None,
-                    other_reference_ranges: None,
-                    magnitude_status: None,
-                    accuracy: None,
-                    accuracy_is_percent: None,
-                }
-            }),
+            repeat_period: repeat
+                .then(
+                    || crate::v1_2::data_types::quantity::date_time::dv_duration::DvDuration {
+                        value: "P1D".to_owned(),
+                        normal_status: None,
+                        normal_range: None,
+                        other_reference_ranges: None,
+                        magnitude_status: None,
+                        accuracy: None,
+                        accuracy_is_percent: None,
+                    },
+                )
+                .map(Box::new),
             trigger_events: triggers,
             update_method: crate::v1_2::data_types::text::code_phrase::CodePhrase {
                 terminology_id:

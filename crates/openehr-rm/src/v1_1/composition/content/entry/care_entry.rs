@@ -18,11 +18,35 @@ use crate::v1_1::composition::content::entry::observation::Observation;
 #[derive(Debug, Clone, PartialEq)]
 pub enum CareEntry {
     /// The `ACTION` subtype of `CARE_ENTRY`.
-    Action(Action),
+    Action(Box<Action>),
     /// The `EVALUATION` subtype of `CARE_ENTRY`.
-    Evaluation(Evaluation),
+    Evaluation(Box<Evaluation>),
     /// The `INSTRUCTION` subtype of `CARE_ENTRY`.
-    Instruction(Instruction),
+    Instruction(Box<Instruction>),
     /// The `OBSERVATION` subtype of `CARE_ENTRY`.
-    Observation(Observation),
+    Observation(Box<Observation>),
+}
+
+impl From<Action> for CareEntry {
+    fn from(value: Action) -> Self {
+        Self::Action(Box::new(value))
+    }
+}
+
+impl From<Evaluation> for CareEntry {
+    fn from(value: Evaluation) -> Self {
+        Self::Evaluation(Box::new(value))
+    }
+}
+
+impl From<Instruction> for CareEntry {
+    fn from(value: Instruction) -> Self {
+        Self::Instruction(Box::new(value))
+    }
+}
+
+impl From<Observation> for CareEntry {
+    fn from(value: Observation) -> Self {
+        Self::Observation(Box::new(value))
+    }
 }
