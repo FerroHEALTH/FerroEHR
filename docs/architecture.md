@@ -624,15 +624,32 @@ serialized JSON; AQL 1.1.0 leaves this open, so the reading is our own
 never through `float8` (#5753). The emitter uses no
 jsonpath item methods (their date/time conversions depend on the session
 TimeZone and are not index-legal), no `JSON_TABLE`, and no GIN index (it
-emits no GIN-servable operator; the baseline removed the index). The one
-value index is `idx_node_hot_value_search` on `ext.node_search_text`, the
-text an equality on a text leaf of an ELEMENT value compares against from
-the typed value columns or the stored fragment: the WHERE lowering adds, for
-such an equality, a FROM item of the distinct versions some ELEMENT row of
-which carries the value (`aql::sql::condition`, the value anchor), so a
-lookup by a value reads the one object instead of every node of the
-archetype (#4437). The feature envelope is documented per construct;
-rejections are explicit typed errors.
+emits no GIN-servable operator; the baseline removed the index). Three
+value indexes give a filter an entry: `idx_node_hot_value_search` on
+`ext.node_search_text`, the text an equality on a text leaf of an ELEMENT
+value compares against from the typed value columns or the stored fragment
+(#4437); `idx_node_hot_event_time` on `node.event_time`, the
+`ext.openehr_timestamp` of an event row's `time` and of a history row's
+`origin`, which the node insert stores; and `idx_node_hot_value_magnitude`
+on `ext.node_magnitude`, the number an ordering comparison of an ELEMENT
+value's `magnitude` reads from `value_num` or the stored fragment (#6022).
+The WHERE lowering adds, for a top-level comparison one of them serves, a
+FROM item of the distinct versions some row of which carries a value the
+comparison keeps (`aql::sql::anchor`), so the statement
+reads the objects the filter keeps instead of every node of the archetype.
+The comparison itself stays in the statement, and each anchor reads the
+value the comparison reads, so an anchor removes work and no row. The
+comparisons of one leaf share one anchor, so a window reads the rows inside
+it. An equality's anchor always applies. A range may keep most of the store,
+so its anchor depends on the statement (`aql::sql::anchor::RangeEntry`): in
+the flat shape the planner places it; a population statement that streams
+toward its LIMIT is led by the first row of each version the range keeps,
+read from the index row by row; and a statement that names its EHRs takes
+none, because their versions are its entry.
+`event_time` is a stored copy of a `STABLE` function's value: it equals the
+comparison's reading because every session runs under `TimeZone = UTC`,
+which the driver sets at connection start. The feature envelope is
+documented per construct; rejections are explicit typed errors.
 
 A cached plan renders its SQL once per statement shape (`aql::sql::shape`,
 #5783). The text depends on the parameters, the scope, the paging and the

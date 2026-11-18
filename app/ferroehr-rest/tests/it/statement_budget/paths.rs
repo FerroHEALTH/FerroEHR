@@ -154,7 +154,10 @@ struct Budget {
 /// feat/core-rewrite dfed03d9d plus a margin: none on conversions and round
 /// trips, 2% on allocations, 10% on the peak, 3% on WAL bytes, and one nested
 /// statement on a commit. The nested statements leave out the chainer's
-/// rounds, the release of the records the commits held among them.
+/// rounds, the release of the records the commits held among them. The
+/// commits have since taken the `event_time` column and the magnitude index
+/// (#6022): 246,564, 247,837, 248,829 and 248,242 WAL bytes measured against
+/// 242,177, 243,204, 244,956 and 244,045, 1.8% more, under the same ceilings.
 const BUDGETS: [Budget; 16] = [
     Budget {
         path: Path::CommitJson,

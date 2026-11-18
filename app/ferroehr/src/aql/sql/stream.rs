@@ -17,10 +17,10 @@ use crate::aql::ir::{
 };
 use crate::db::iden::{Ehr, Node, VersionRow, VoHead};
 
-use super::Builder;
 use super::expr::{col, hot, hot_unaliased};
 use super::from::{is_vo_root_type, strict_descendant};
 use super::head::{head_alias, node_key};
+use super::{Builder, SqlCtx};
 
 /// The streaming-shape plan: the linear containment chain eligible for the
 /// LIMIT-streaming FROM (see [`Builder::build_from_streaming`]).
@@ -262,6 +262,25 @@ fn root_node_referenced(ir: &QueryIr, root: usize) -> bool {
         needed |= path_needs_root_node(&key.path, root);
     }
     needed
+}
+
+/// Whether the LIMIT-streaming FROM shape may apply to a population query.
+/// QUERY master03 §LIMIT: without `ORDER BY`, "deterministic behavior" is
+/// explicitly not required — which rows return is unconstrained, so a lazy
+/// streaming scan is conformant. With `ORDER BY`, `DISTINCT`, or aggregates
+/// the full row set is needed anyway, and a population query keeps the flat
+/// shape for it. A population query that only counts its root objects takes
+/// the streaming shape for its version spine
+/// ([`StreamPlan::counts_roots`]).
+pub(super) fn streaming_eligible(ir: &QueryIr, ctx: &SqlCtx) -> bool {
+    ctx.limit.is_some()
+        && ctx.ehr_ids.is_empty()
+        && ir.order_by.is_empty()
+        && !ir.distinct
+        && !ir
+            .select
+            .iter()
+            .any(|c| matches!(c.value, SelectValue::Aggregate { .. }))
 }
 
 impl Builder<'_> {

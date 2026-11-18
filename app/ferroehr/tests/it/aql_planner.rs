@@ -1671,9 +1671,11 @@ const WARD_QUERY: &str = "SELECT e/ehr_id/value, c/uid/value \
 #[test]
 fn limit_without_order_by_streams() {
     let sql = build_sql_limited(WARD_QUERY);
+    // NOTE: #6022, the magnitude filter's anchor leads the spine row by row, never as the
+    // distinct versions, so the statement still stops at the LIMIT.
     assert!(
-        sql.contains(r#"FROM "version" AS "v"#),
-        "the version spine drives"
+        sql.contains(r#"JOIN "version" AS "v1""#) && !sql.contains("SELECT DISTINCT"),
+        "the version spine is walked lazily"
     );
     // The dead-root elision (the post-streaming ladder's rung 1): this query
     // reads nothing from the COMPOSITION root's node row (`c/uid/value` is
@@ -1694,9 +1696,9 @@ fn limit_without_order_by_streams() {
     // syntactic (an OFFSET clause of any value), so the fence holds.
     assert_eq!(
         sql.matches("OFFSET $").count(),
-        2 + sql.matches("LATERAL((").count(),
+        3 + sql.matches("LATERAL((").count(),
         "every lateral carries the pull-up fence, the predicate probe's step \
-         bindings included"
+         bindings included, and so does the anchor's earlier-row probe"
     );
     // The multi-valued-path predicate stays a CORRELATED probe: the EXISTS
     // lives inside a lateral (never a bare WHERE sublink the planner could

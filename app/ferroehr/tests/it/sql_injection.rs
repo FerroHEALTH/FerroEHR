@@ -35,9 +35,10 @@
 //!   `x{ctr}`, `xv{ctr}`, `s{ctr}`, `w{ctr}`, `b{ctr}`, `p{ctr}`, `qg{ctr}`,
 //!   `esv{ctr}`, `esn{ctr}`, `a_v{sid}`, the row bindings' inner `b{ctr}_n` /
 //!   `w{ctr}_n` and one-row `b{ctr}_one` / `w{ctr}_one`, the head probe
-//!   `b{ctr}_n_pin_head` of a versioned `OR` branch, and the streaming
+//!   `b{ctr}_n_pin_head` of a versioned `OR` branch, the streaming
 //!   source's inner `n{sid}_s` (`aql::sql::from`, `aql::sql::value`,
-//!   `aql::sql::select`).
+//!   `aql::sql::select`), and an anchor `va{ctr}` with its node rows
+//!   `va{ctr}_n` and `va{ctr}_e` (`aql::sql::anchor`).
 //! * **Output-column aliases** — `col{i}` / `col{i}_{vo,sv,num,cap}` from the
 //!   SELECT index (`aql::sql::select`), `access_ehr_{i}` /
 //!   `access_vo_{i}` / `access_sv_{i}` from the same index
@@ -592,6 +593,7 @@ const IDENTIFIERS: &[&str] = &[
     "time_compact",
     "party_self",
     "uid_derived",
+    "event_time",
     // version
     "kind",
     "trunk_version",
@@ -645,6 +647,7 @@ const ALIAS_PATTERNS: &[&str] = &[
     r"^(b|w)[0-9]+_(n|one)$",
     r"^b[0-9]+_n_pin_head$",
     r"^n[0-9]+_s$",
+    r"^va[0-9]+(_(n|e))?$",
     r"^p[0-9]+$",
     r"^qg[0-9]+$",
     r"^esv[0-9]+$",

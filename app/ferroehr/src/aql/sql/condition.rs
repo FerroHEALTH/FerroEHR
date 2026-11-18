@@ -45,28 +45,16 @@ use std::collections::VecDeque;
 
 use sea_query::{Alias, Expr, ExprTrait as _, Query, SelectStatement};
 
-use openehr_query::lexer::CompOp;
-
 use crate::aql::error::{AqlError, SqlError};
-use crate::aql::ir::{
-    self, Coercion, FragmentStep, LeafPath, Operand, ParamValue, PathTarget, StructureStep,
-    TypedLit,
-};
-use crate::db::iden::{Node, VersionRow};
+use crate::aql::ir::{self, Coercion, LeafPath, Operand, PathTarget, StructureStep};
+use crate::db::iden::Node;
 
 use super::coerce::{RawPartner, raw_key, target_types};
-use super::expr::{binoper, call, col, hot};
+use super::expr::{binoper, hot};
 use super::from::{BoundTable, attribute_child, binding_rows};
 use super::select::bindable_leaf;
 use super::value::ItemWalk;
 use super::{Builder, StepBinding, ValueMode};
-
-/// The RM type of the one structure node that carries a `value`, as a SQL
-/// LITERAL: `idx_node_hot_value_search` is partial on it, and a partial index
-/// serves a statement only when the statement proves its predicate, which a
-/// bound parameter in a generic plan cannot (PostgreSQL 18, "Partial
-/// Indexes").
-const ELEMENT_LITERAL: &str = "'ELEMENT'";
 
 impl Builder<'_> {
     /// The WHERE clause of the statement, or `None` without one.
@@ -89,71 +77,6 @@ impl Builder<'_> {
             }
         }
         self.lower_where(&filter, false).map(Some)
-    }
-
-    /// The value anchors of the WHERE clause: one per top-level conjunct that
-    /// tests a text leaf of an `ELEMENT` value for equality with a literal or
-    /// a parameter.
-    ///
-    /// A path binding is a correlated subquery the planner evaluates per
-    /// outer row, so a lookup by a value read every node of the archetype and
-    /// tested the value last (#4437). The anchor is the condition the
-    /// conjunct implies, stated as a FROM item the planner can start from:
-    /// the versions some `ELEMENT` row of which, under the leaf step's own
-    /// predicate, carries the value as its search text
-    /// (`ext.node_search_text`), which `idx_node_hot_value_search` serves.
-    /// A FROM item rather than an `EXISTS`: PostgreSQL pulls an `EXISTS` up
-    /// into a semi-join it orders freely only while the FROM list stays
-    /// within `join_collapse_limit`, eight items, which a projection of a
-    /// few path steps exceeds, and joins it last beyond that (PostgreSQL 18,
-    /// "Controlling the Planner with Explicit JOIN Clauses"). A conjunct
-    /// under `OR` or `NOT` implies nothing on its own and gets no anchor. No
-    /// openEHR spec governs access paths: our own design.
-    ///
-    /// # Errors
-    /// [`AqlError`] from the leaf step's predicate lowering.
-    pub(super) fn value_anchors(&mut self) -> Result<Vec<ValueAnchor>, AqlError> {
-        let Some(filter) = self.ir.filter.clone() else {
-            return Ok(Vec::new());
-        };
-        let mut anchors = Vec::new();
-        let mut conjuncts = vec![&filter];
-        while let Some(expr) = conjuncts.pop() {
-            match expr {
-                ir::Expr::And(a, b) => {
-                    conjuncts.push(b);
-                    conjuncts.push(a);
-                }
-                // NOTE: a `Raw` (mixed-type) equality with a string compares as text,
-                // the numeric branch being taken on a numeric literal alone
-                // (`Builder::value_test`), which no string operand is.
-                ir::Expr::Compare {
-                    lhs,
-                    op: CompOp::Eq,
-                    rhs,
-                    coercion: Coercion::Text | Coercion::Raw,
-                } => {
-                    let ((Operand::Path(PathTarget::Data(leaf)), bound)
-                    | (bound, Operand::Path(PathTarget::Data(leaf)))) = (lhs, rhs)
-                    else {
-                        continue;
-                    };
-                    let text = match bound {
-                        Operand::Literal(TypedLit::String(text)) => text.clone(),
-                        Operand::Param(name) => match self.params.get(name) {
-                            Some(ParamValue::Str(text)) => text.clone(),
-                            _ => continue,
-                        },
-                        _ => continue,
-                    };
-                    if let Some(anchor) = self.value_anchor(leaf, text)? {
-                        anchors.push(anchor);
-                    }
-                }
-                _ => {}
-            }
-        }
-        Ok(anchors)
     }
 
     /// The `version` alias of the versioned object that contains the source
@@ -187,67 +110,6 @@ impl Builder<'_> {
             }
         }
         find(&self.ir.contains, &self.vo_alias, None, sid)
-    }
-
-    /// The anchor of one equality on `leaf` with `text`, or `None` when the
-    /// leaf is no text leaf of an `ELEMENT` value ([`search_text_leaf`]).
-    ///
-    /// # Errors
-    /// [`AqlError`] from the leaf step's predicate lowering.
-    fn value_anchor(
-        &mut self,
-        leaf: &LeafPath,
-        text: String,
-    ) -> Result<Option<ValueAnchor>, AqlError> {
-        if !search_text_leaf(&leaf.fragment, &text) {
-            return Ok(None);
-        }
-        let (types, predicate) = match leaf.anchor.last() {
-            Some(step) => (&step.node_types, step.predicate.as_ref()),
-            None => match self.ir.sources.get(leaf.source.0) {
-                Some(ir::Source::Rm(source)) => (&source.rm_type, None),
-                _ => return Ok(None),
-            },
-        };
-        if !types.contains("ELEMENT") {
-            return Ok(None);
-        }
-        let Some(version) = self.version_alias_of(leaf.source.0) else {
-            return Ok(None);
-        };
-        let key = self.node_key_of(&version);
-        let alias = format!("va{}", self.next_ctr());
-        let node = format!("{alias}_n");
-        let mut select = Query::select();
-        select
-            .distinct()
-            .column((Alias::new(node.as_str()), Node::VoId))
-            .column((Alias::new(node.as_str()), Node::SysVersion))
-            .from_as(Node::Table, Alias::new(node.as_str()));
-        select.and_where(hot(&node, Node::Tier));
-        select.and_where(col(&node, Node::RmType).eq(Expr::cust(ELEMENT_LITERAL)));
-        if let Some(predicate) = predicate {
-            for cond in self.node_constraint_conds(&node, predicate)? {
-                select.and_where(cond);
-            }
-        }
-        select.and_where(
-            call(
-                "node_search_text",
-                vec![
-                    col(&node, Node::ValueType),
-                    col(&node, Node::ValueText),
-                    col(&node, Node::Data),
-                ],
-            )
-            .eq(Expr::val(text)),
-        );
-        Ok(Some(ValueAnchor {
-            alias,
-            version,
-            key,
-            select,
-        }))
     }
 
     /// The WHERE clause as a filter on an aggregate's items, or `None` when no
@@ -677,49 +539,5 @@ fn bound_paths(expr: &ir::Expr, f: &mut impl FnMut(&PathTarget)) {
         ir::Expr::Compare { .. } | ir::Expr::Like { .. } | ir::Expr::Matches { .. } => {
             expr.for_each_path(f);
         }
-    }
-}
-
-/// One value anchor ([`Builder::value_anchors`]): the distinct versions whose
-/// `ELEMENT` rows carry a value, as a FROM item linked to the version row of
-/// the leaf's versioned object.
-pub(super) struct ValueAnchor {
-    /// The item's alias.
-    pub(super) alias: String,
-    /// The `version` alias the item links to.
-    pub(super) version: String,
-    /// The column the item's `sys_version` joins: the node key of the version
-    /// row under its scope (`head::node_key`, #4944).
-    key: Expr,
-    /// The item: `SELECT DISTINCT vo_id, sys_version FROM node …`.
-    pub(super) select: SelectStatement,
-}
-
-impl ValueAnchor {
-    /// The join condition between the item and its version row.
-    pub(super) fn link(&self) -> Expr {
-        col(&self.alias, Node::VoId)
-            .eq(col(&self.version, VersionRow::VoId))
-            .and(col(&self.alias, Node::SysVersion).eq(self.key.clone()))
-    }
-}
-
-/// Whether an equality of the fragment path `steps` with `text` compares the
-/// text `ext.node_search_text` yields for every `ELEMENT` row that can
-/// satisfy it: a `DV_IDENTIFIER` id, a `DV_QUANTITY`'s units, a symbol's
-/// value, or the `value` member.
-///
-/// A `DV_ORDINAL` or `DV_SCALE` `value` is a number while its search text is
-/// its symbol, so an equality of `value/value` is anchored only on a text no
-/// number renders as.
-fn search_text_leaf(steps: &[FragmentStep], text: &str) -> bool {
-    if steps.iter().any(|step| step.predicate.is_some()) {
-        return false;
-    }
-    let names: Vec<&str> = steps.iter().map(|step| step.name.as_str()).collect();
-    match names.as_slice() {
-        ["value", "id" | "units"] | ["value", "symbol", "value"] => true,
-        ["value", "value"] => text.parse::<f64>().is_err(),
-        _ => false,
     }
 }
