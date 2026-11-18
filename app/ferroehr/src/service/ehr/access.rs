@@ -494,7 +494,7 @@ pub(in crate::service) fn initial_ehr_access_change() -> Change {
     Change::Create {
         allocated: None,
         kind: Kind::EhrAccess,
-        canonical: initial_ehr_access(),
+        body: initial_ehr_access().into(),
         template_id: None,
         signature: None,
         lifecycle_state: None,

@@ -3,31 +3,24 @@
 
 //! The constructors of a [`Change`] a service write builds.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694): commit bodies are the canonical \
-              form the commit interior carries (stored-content class)"
-)]
-
-use serde_json::Value;
-
 use super::{Change, WriteEnvelope};
 use crate::ids::{AllocatedVoId, VoId};
 use crate::versioning::Kind;
+use crate::versioning::body::Body;
 use crate::versioning::object_version_id::TreeId;
 
 impl Change {
     /// A [`Change::Create`] of `canonical` with the caller's envelope.
     pub(crate) fn create(
         kind: Kind,
-        canonical: Value,
+        canonical: impl Into<Body>,
         template_id: Option<String>,
         envelope: WriteEnvelope,
     ) -> Self {
         Change::Create {
             allocated: None,
             kind,
-            canonical,
+            body: canonical.into(),
             template_id,
             signature: envelope.signature,
             lifecycle_state: envelope.lifecycle_state,
@@ -42,13 +35,13 @@ impl Change {
     pub(crate) fn create_allocated(
         allocated: AllocatedVoId,
         kind: Kind,
-        canonical: Value,
+        canonical: impl Into<Body>,
         envelope: WriteEnvelope,
     ) -> Self {
         Change::Create {
             allocated: Some(allocated),
             kind,
-            canonical,
+            body: canonical.into(),
             template_id: None,
             signature: envelope.signature,
             lifecycle_state: envelope.lifecycle_state,
@@ -62,7 +55,7 @@ impl Change {
     pub(crate) fn modify(
         vo_id: VoId,
         kind: Kind,
-        canonical: Value,
+        canonical: impl Into<Body>,
         expected: Option<TreeId>,
         template_id: Option<String>,
         envelope: WriteEnvelope,
@@ -70,7 +63,7 @@ impl Change {
         Change::Modify {
             vo_id,
             kind,
-            canonical,
+            body: canonical.into(),
             expected,
             template_id,
             signature: envelope.signature,

@@ -17,17 +17,16 @@
     reason = "the `553|incomplete|` commit keeps its canonical-JSON value (ITS-JSON) — the one \
               Value form of an RM instance the rewrite keeps (#1694, #6002)"
 )]
-// NOTE: the walks adopt this view in this same rewrite (rmpath, the archetype-conformance pass).
-#![expect(
-    dead_code,
-    reason = "adopted by rmpath and flat::validation in the core rewrite (#6002)"
-)]
 
 use openehr_rm::v1_2::access::RmRef;
 use openehr_rm::v1_2::paths::{PathSegment, Predicate};
 use serde_json::Value;
 
 /// A read-only view of one RM instance node or attribute value.
+#[expect(
+    dead_code,
+    reason = "the archetype-conformance pass reads the rest of the view as it moves onto it (#6002)"
+)]
 pub(crate) trait Instance<'a>: Copy {
     /// The node's RM class: the wire `_type` of a JSON value, the concrete
     /// class of a typed one.

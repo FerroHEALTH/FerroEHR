@@ -215,9 +215,6 @@ async fn judged_on(
 /// an unfulfillable `Accept`.
 pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response, RestError> {
     let h = &parts.headers;
-    let q = parts.query.as_deref();
-    let ok = StatusCode::OK;
-    let no_content = StatusCode::NO_CONTENT;
     let p = parts.decode(
         CompositionGetParams::from_request,
         CompositionGetParams::PARAMS,
@@ -271,6 +268,24 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     {
         return Ok(resp);
     }
+    render_read(&state, &parts, body, meta).await
+}
+
+/// Renders the COMPOSITION a `composition_get` read in the representation
+/// `Accept` names, with the version-identity headers of `meta`.
+///
+/// # Errors
+/// A `500` for a stored body that does not read back, and the simplified
+/// renderers' refusals.
+async fn render_read(
+    state: &AppState,
+    parts: &RequestParts,
+    body: ReadBody,
+    meta: Option<ResourceMeta>,
+) -> Result<Response, RestError> {
+    let h = &parts.headers;
+    let q = parts.query.as_deref();
+    let ok = StatusCode::OK;
     // A plain JSON accept with no multimedia expansion serves the stored
     // bytes verbatim (the body is uid-stamped at commit); the rest parse.
     let expand = params::query_param(q, "expand_multimedia").as_deref() == Some("true");
@@ -291,21 +306,20 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     // A deleted version resolves to a null body → 204 No Content
     // (composition_get.yaml `204_because_deleted*`).
     if body.is_null() {
-        return Ok(negotiate::body::empty(no_content));
+        return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
-    body = super::expand_multimedia_if_requested(&state, q, body).await?;
+    body = super::expand_multimedia_if_requested(state, q, body).await?;
     // "The `ETag` value is independent of its resource serialization format
     // (JSON/XML)" (§"ETag and Last-Modified"), so the simplified
     // representations carry the version-identity headers too.
     match accept {
         Some(WireFormat::Flat) => {
-            let out =
-                crate::formats::dispatch::composition_flat_response(&state, ok, &body).await?;
+            let out = crate::formats::dispatch::composition_flat_response(state, ok, &body).await?;
             return Ok(versioned(out, meta.as_ref()));
         }
         Some(WireFormat::Structured) => {
-            let out = crate::formats::dispatch::composition_structured_response(&state, ok, &body)
-                .await?;
+            let out =
+                crate::formats::dispatch::composition_structured_response(state, ok, &body).await?;
             return Ok(versioned(out, meta.as_ref()));
         }
         _ => {}

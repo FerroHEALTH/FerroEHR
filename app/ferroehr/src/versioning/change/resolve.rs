@@ -14,12 +14,13 @@ use serde_json::Value;
 use sqlx::PgConnection;
 
 use super::{
-    ResolvedWrite, next_version, reject_deleted_with_data, resolve_lifecycle, stamp_version_uid,
-    validate_transition,
+    ResolvedWrite, next_version, reject_deleted_with_data, resolve_lifecycle, validate_transition,
+    version_uid,
 };
 use crate::error::ServiceError;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
 use crate::storage::identifier_repo;
+use crate::versioning::body::Body;
 use crate::versioning::object_version_id::{TreeId, object_version_id};
 use crate::versioning::{
     Kind, SigningCtx, attestation, external, lifecycle, person, profile, system,
@@ -70,7 +71,7 @@ pub(super) async fn resolve_delete(
         other_input_version_uids,
         template_id: None,
         client_signature: signature,
-        body: Value::Null,
+        body: None,
         canonical_text: None,
         content_digest: None,
         party_facts: None,
@@ -99,7 +100,7 @@ pub(super) struct Placing {
 pub(super) struct Content {
     pub(super) allocated: Option<AllocatedVoId>,
     pub(super) kind: Kind,
-    pub(super) canonical: Value,
+    pub(super) body: Body,
     pub(super) lifecycle_state: Option<String>,
     pub(super) template_id: Option<String>,
     pub(super) signature: Option<String>,
@@ -111,7 +112,7 @@ pub(super) struct Content {
 /// `stable_compatible` stamp and its origins.
 struct Prepared {
     /// The sealed, uid-stamped body, decomposed only by the write (#5759).
-    body: Value,
+    body: Body,
     canonical_text: Option<String>,
     stable_compatible: bool,
     origins: Vec<String>,
@@ -124,8 +125,8 @@ struct Prepared {
 }
 
 /// The body bytes a point read serves verbatim (`version.body`) and their
-/// content digest, written in one pass over the accepted, uid-stamped
-/// canonical value.
+/// content digest, from one serialization of the accepted, uid-stamped body:
+/// the typed COMPOSITION itself, or the canonical value of another kind.
 ///
 /// The text keeps the codec's `_type`-first, BMM-declared member order, and is
 /// taken before node decomposition. The digest is SHA-256 over the same
@@ -140,40 +141,43 @@ struct Prepared {
 /// # Errors
 /// [`ServiceError`] when the value cannot serialize (a non-finite number,
 /// unreachable for a codec-produced canonical value, refused loudly anyway).
+pub(crate) fn body_text_and_digest(body: &Body) -> Result<(String, [u8; 32]), ServiceError> {
+    match body {
+        Body::Composition { rm, .. } => {
+            let mut text = Vec::with_capacity(16 * 1024);
+            openehr_its::json::write_canonical_json(rm.as_ref(), &mut text);
+            text_and_digest(text)
+        }
+        Body::Canonical(value) => canonical_text_and_digest(value),
+    }
+}
+
+/// [`body_text_and_digest`] of a canonical value.
+///
+/// # Errors
+/// As [`body_text_and_digest`].
 pub(crate) fn canonical_text_and_digest(
     canonical: &Value,
 ) -> Result<(String, [u8; 32]), ServiceError> {
-    use sha2::Digest as _;
     crate::telemetry::conversion::record("value_to_text");
-    let fault = |e: serde_json::Error| ServiceError::internal("serialize the canonical body", e);
+    let text = serde_json::to_vec(canonical)
+        .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
+    text_and_digest(text)
+}
+
+/// The compact canonical `text` and the SHA-256 of it with its root `uid`
+/// member left out.
+fn text_and_digest(text: Vec<u8>) -> Result<(String, [u8; 32]), ServiceError> {
+    use sha2::Digest as _;
     let mut digest = sha2::Sha256::new();
-    let Value::Object(map) = canonical else {
-        let text = serde_json::to_string(canonical).map_err(fault)?;
-        digest.update(text.as_bytes());
-        return Ok((text, digest.finalize().into()));
-    };
-    let mut text = Vec::with_capacity(4096);
-    text.push(b'{');
-    digest.update(b"{");
-    let mut digested = false;
-    for (key, value) in map {
-        if text.len() > 1 {
-            text.push(b',');
+    match crate::storage::render::root_member(&text, "uid") {
+        Some(span) => {
+            let (head, tail) = crate::storage::render::without_member(&text, span);
+            digest.update(head);
+            digest.update(tail);
         }
-        let start = text.len();
-        serde_json::to_writer(&mut text, key).map_err(fault)?;
-        text.push(b':');
-        serde_json::to_writer(&mut text, value).map_err(fault)?;
-        if key != "uid" {
-            if digested {
-                digest.update(b",");
-            }
-            digest.update(text.get(start..).unwrap_or_default());
-            digested = true;
-        }
+        None => digest.update(&text),
     }
-    text.push(b'}');
-    digest.update(b"}");
     let text = String::from_utf8(text)
         .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
     Ok((text, digest.finalize().into()))
@@ -213,26 +217,31 @@ async fn prepare_body(
     kind: Kind,
     vo_id: VoId,
     tree: TreeId,
-    mut canonical: Value,
+    mut body: Body,
 ) -> Result<Prepared, ServiceError> {
-    seal_protected_identifiers(tx, ctx, kind, vo_id, &mut canonical).await?;
-    stamp_version_uid(
-        &mut canonical,
-        &object_version_id(vo_id, &ctx.system_id, tree),
-    )?;
-    let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, &canonical);
-    let origins = ctx.direct_origin.stamp(&canonical)?;
-    let (canonical_text, content_digest) = canonical_text_and_digest(&canonical)?;
+    // NOTE: only a demographic kind carries protected identifiers, and no
+    // demographic kind is committed as typed RM yet.
+    if let Body::Canonical(canonical) = &mut body {
+        seal_protected_identifiers(tx, ctx, kind, vo_id, canonical).await?;
+    }
+    body.stamp_uid(&version_uid(&object_version_id(
+        vo_id,
+        &ctx.system_id,
+        tree,
+    ))?);
+    let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, body.view());
+    let origins = ctx.direct_origin.stamp(body.view())?;
+    let (canonical_text, content_digest) = body_text_and_digest(&body)?;
     let canonical_text = Some(canonical_text);
     let party_facts = kind.is_demographic().then(|| {
         Box::new(crate::party_binding::derive::Facts::of(
             kind,
-            &canonical,
+            body.view(),
             ctx.binding,
         ))
     });
     Ok(Prepared {
-        body: canonical,
+        body,
         canonical_text,
         stable_compatible,
         origins,
@@ -248,14 +257,14 @@ pub(super) async fn resolve_create(
     at: Placing,
     mut content: Content,
 ) -> Result<ResolvedWrite, ServiceError> {
-    let lifecycle = content_lifecycle(ctx, &content.canonical, content.lifecycle_state.take())?;
+    let lifecycle = content_lifecycle(ctx, content.body.view(), content.lifecycle_state.take())?;
     // a first version can only be `complete`/`incomplete`.
     validate_transition(None, &lifecycle)?;
-    person::refuse_composing_for_others(content.kind, &content.canonical)?;
-    system::admit_content(content.kind, &content.canonical)?;
+    person::refuse_composing_for_others(content.kind, content.body.view())?;
+    system::admit_content(content.kind, content.body.view())?;
     external::admit_content(
         content.kind,
-        &content.canonical,
+        content.body.view(),
         content.template_id.as_deref(),
     )?;
     let vo_id = content
@@ -263,7 +272,7 @@ pub(super) async fn resolve_create(
         .take()
         .map_or_else(|| VoId::minted(ctx.stamp), |allocated| allocated.id());
     let tree = TreeId::trunk(1);
-    let body = prepare_body(tx, ctx, content.kind, vo_id, tree, content.canonical).await?;
+    let body = prepare_body(tx, ctx, content.kind, vo_id, tree, content.body).await?;
     let time_committed = match at.known_now {
         Some(ts) => ts,
         None => crate::storage::version_repo::placement::tx_now(tx).await?,
@@ -279,7 +288,7 @@ pub(super) async fn resolve_create(
         other_input_version_uids: content.other_input_version_uids,
         template_id: content.template_id,
         client_signature: content.signature,
-        body: body.body,
+        body: Some(body.body),
         canonical_text: body.canonical_text,
         content_digest: Some(body.content_digest),
         party_facts: body.party_facts,
@@ -303,7 +312,7 @@ pub(super) async fn resolve_modify(
     mut content: Content,
 ) -> Result<ResolvedWrite, ServiceError> {
     let kind = content.kind;
-    let lifecycle = content_lifecycle(ctx, &content.canonical, content.lifecycle_state.take())?;
+    let lifecycle = content_lifecycle(ctx, content.body.view(), content.lifecycle_state.take())?;
     let next = next_version(
         tx,
         at.ehr_id,
@@ -314,14 +323,14 @@ pub(super) async fn resolve_modify(
         at.preplaced,
     )
     .await?;
-    person::refuse_composing_for_others(kind, &content.canonical)?;
-    system::admit_content(kind, &content.canonical)?;
-    external::admit_content(kind, &content.canonical, content.template_id.as_deref())?;
+    person::refuse_composing_for_others(kind, content.body.view())?;
+    system::admit_content(kind, content.body.view())?;
+    external::admit_content(kind, content.body.view(), content.template_id.as_deref())?;
     person::refuse_altering_others(tx, kind, vo_id, next.preceding_tree).await?;
     // the transition from the preceding version's state must be legal
     // (master06 §Version Lifecycle state machine).
     validate_transition(Some(&next.preceding_lifecycle), &lifecycle)?;
-    let body = prepare_body(tx, ctx, kind, vo_id, next.tree, content.canonical).await?;
+    let body = prepare_body(tx, ctx, kind, vo_id, next.tree, content.body).await?;
     // Content equal to the preceding tip's is stored once: the new version
     // reads the tip's rows (its own, or the ones it shares), and nothing of
     // the commit's own record is skipped (#4415).
@@ -338,7 +347,7 @@ pub(super) async fn resolve_modify(
         other_input_version_uids: content.other_input_version_uids,
         template_id: content.template_id,
         client_signature: content.signature,
-        body: body.body,
+        body: Some(body.body),
         canonical_text: body.canonical_text,
         content_digest: Some(body.content_digest),
         party_facts: body.party_facts,
