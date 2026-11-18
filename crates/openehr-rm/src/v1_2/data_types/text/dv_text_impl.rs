@@ -20,20 +20,46 @@ use openehr_base::validate::{InvariantViolation, Validate};
 
 impl Validate for DvText {
     fn validate_invariants(&self, out: &mut Vec<InvariantViolation>) {
-        let (ty, value, formatting) = match self {
-            DvText::DvText(t) => ("DV_TEXT", &t.value, t.formatting.as_deref()),
-            DvText::DvCodedText(t) => ("DV_CODED_TEXT", &t.value, t.formatting.as_deref()),
-        };
-        crate::v1_2::validate::generated::dv_text_core(ty, value, formatting, out);
-        // NOTE: RM data_types master05 §Text package — "plain_no_newlines":
-        // "newlines are not allowed"; every OTHER formatting value stays
-        // unvalidated, deliberately (the value space is open).
-        if formatting == Some("plain_no_newlines") && value.contains(['\n', '\r']) {
-            out.push(InvariantViolation::here(format!(
-                "formatting \"plain_no_newlines\" forbids newlines in value on type {ty} \
-                 (RM data_types master05 §Text package)"
-            )));
+        match self {
+            DvText::DvText(t) => t.validate_invariants(out),
+            DvText::DvCodedText(t) => t.validate_invariants(out),
         }
+    }
+}
+
+impl Validate for crate::v1_2::data_types::text::dv_text::DvTextData {
+    fn validate_invariants(&self, out: &mut Vec<InvariantViolation>) {
+        text_invariants("DV_TEXT", &self.value, self.formatting.as_deref(), out);
+    }
+}
+
+impl Validate for crate::v1_2::data_types::text::dv_coded_text::DvCodedText {
+    fn validate_invariants(&self, out: &mut Vec<InvariantViolation>) {
+        text_invariants(
+            "DV_CODED_TEXT",
+            &self.value,
+            self.formatting.as_deref(),
+            out,
+        );
+    }
+}
+
+/// The `DV_TEXT` invariants, which `DV_CODED_TEXT` inherits.
+fn text_invariants(
+    ty: &str,
+    value: &str,
+    formatting: Option<&str>,
+    out: &mut Vec<InvariantViolation>,
+) {
+    crate::v1_2::validate::generated::dv_text_core(ty, value, formatting, out);
+    // NOTE: RM data_types master05 §Text package — "plain_no_newlines":
+    // "newlines are not allowed"; every OTHER formatting value stays
+    // unvalidated, deliberately (the value space is open).
+    if formatting == Some("plain_no_newlines") && value.contains(['\n', '\r']) {
+        out.push(InvariantViolation::here(format!(
+            "formatting \"plain_no_newlines\" forbids newlines in value on type {ty} \
+             (RM data_types master05 §Text package)"
+        )));
     }
 }
 

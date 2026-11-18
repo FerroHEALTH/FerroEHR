@@ -93,6 +93,10 @@ pub mod terminology;
 // outer doc attribute here would force rustdoc to resolve the module's
 // intra-doc links in THIS module's scope instead of its own).
 pub mod typed_dispatch;
+// RM-instance validation over typed RM (its own `//!` module docs carry the
+// detail), and the walk it runs, generated (`openehr-codegen -- emit-validate`).
+pub mod tree;
+mod tree_generated;
 
 /// Run the allocation-free fast-path RM class-invariant check for a single
 /// canonical-JSON node, dispatching on its `_type`.
