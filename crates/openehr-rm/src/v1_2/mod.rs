@@ -19,6 +19,7 @@ pub mod prelude;
 pub mod support;
 
 // hand-written modules (spec behaviour), auto-declared:
+pub mod access;
 pub mod paths;
 pub mod typing;
 pub mod validate;

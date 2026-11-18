@@ -878,7 +878,16 @@ fn walk_files(g: &ComposedGeneration, unit: &ComposedUnit, aug: &BmmSchema) -> V
             external: &base_external,
         });
     }
-    crate::render::emit_walk::emit_files(&unit.model, &schemas)
+    let mut files = crate::render::emit_walk::emit_files(&unit.model, &schemas);
+    // The reflective accessor serves the Simplified Formats, which read and
+    // build the release model only.
+    if g.spec.current {
+        files.extend(crate::render::emit_access::emit_files(
+            &unit.model,
+            &schemas,
+        ));
+    }
+    files
 }
 
 /// Prefix every generated file path with the generation module directory
