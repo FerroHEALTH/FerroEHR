@@ -34,6 +34,7 @@
 use std::sync::Arc;
 
 use base64::Engine as _;
+use ferrohealth_session::cookies::CookieNames;
 use serde_json::Value;
 use tower::util::ServiceExt;
 
@@ -216,7 +217,7 @@ fn is_session_cookie(cookie: &str) -> bool {
         .trim_start_matches(ferrohealth_session::cookies::HOST_PREFIX)
         .starts_with(&format!(
             "{}=",
-            ferroehr_viewer::session::cookie_names().session()
+            CookieNames::for_console(ferroehr_viewer::session::COOKIE_BASE).session()
         ))
 }
 

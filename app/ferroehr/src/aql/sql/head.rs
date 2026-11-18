@@ -105,23 +105,15 @@ pub(super) fn bind_head(
     h
 }
 
-/// The node rows a version row `voa` reads: its own, or the rows of the
-/// version `content_sys_version` names when its content equalled its
-/// predecessor's at commit, the stored `version.content_key` (#4415). A plain
-/// column the planner joins and estimates on; a node-to-node join stays on the
-/// node key, both rows lying in one tree.
-pub(super) fn content_key(voa: &str) -> Expr {
-    col(voa, VersionRow::ContentKey)
-}
-
 /// The column a node row's `sys_version` joins for the version row `voa`
 /// under `scope`: the head's content key under `LATEST_VERSION`, whose head
-/// [`bind_head`] binds beside `voa`, and the version's own [`content_key`]
-/// otherwise.
+/// [`bind_head`] binds beside `voa`, and otherwise the version's own
+/// `version.content_key` (#4415): its rows, or those of the version whose
+/// content it equalled at commit.
 pub(super) fn node_key(voa: &str, scope: &VersionScope) -> Expr {
     match scope {
         VersionScope::Latest => col(&head_alias(voa), VoHead::TrunkHeadContentKey),
-        VersionScope::All | VersionScope::Predicate(_) => content_key(voa),
+        VersionScope::All | VersionScope::Predicate(_) => col(voa, VersionRow::ContentKey),
     }
 }
 
@@ -152,7 +144,10 @@ impl Builder<'_> {
         });
         // NOTE: every version alias is opened by an RM source (`vo_alias`); the content-key
         // join is the right answer under every scope, so an alias without one keeps it.
-        scope.map_or_else(|| content_key(voa), |scope| node_key(voa, scope))
+        scope.map_or_else(
+            || col(voa, VersionRow::ContentKey),
+            |scope| node_key(voa, scope),
+        )
     }
 
     /// Binds the head row of the version row `voa` and the predicates its
