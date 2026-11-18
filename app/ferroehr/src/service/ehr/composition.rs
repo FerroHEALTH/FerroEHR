@@ -41,8 +41,6 @@ use crate::versioning::read::VersionRead;
 use crate::versioning::wire::{revision_history, versioned_object};
 use openehr_rm::prelude::Composition;
 
-use crate::validation::versioned::composition_template_id;
-
 impl FerroEhrService {
     /// `create_composition`: commit the first version of a COMPOSITION in
     /// `ehr_id` from the caller's [`WriteRequest`], returning the committed
@@ -72,19 +70,16 @@ impl FerroEhrService {
         // Validation may consult the template store and the routed terminology
         // servers, so it runs before a connection is held; its result surfaces
         // after the EHR gates, in pre-check order. 553|incomplete| relaxes its
-        // strictness (master06 §Version Lifecycle).
+        // strictness (master06 §Version Lifecycle). A valid body's large media
+        // go to the blob store before a connection is held.
         let validated = self
-            .validate_body_for_commit(Kind::Composition, &composition, incomplete)
-            .await;
-        // A valid body's large media go to the blob store before a connection is held.
-        if validated.is_ok() {
-            self.externalize_body(&mut composition).await?;
-        }
+            .accept_body(Kind::Composition, &mut composition, incomplete)
+            .await?;
         // The committed template identity is promoted to `version.template_id`
         // — the SMART template resolver (`template_of_version`) and the
         // template-delete guard both read that column, so the direct route
         // stamps it exactly like the CONTRIBUTION route.
-        let template_id = composition_template_id(composition.view()).map(str::to_owned);
+        let template_id = composition.template_id().map(str::to_owned);
         // With no attestations and no event outbox the commit is ONE folded,
         // self-atomic statement, so no BEGIN/COMMIT is needed.
         let mode = if envelope.attestations.is_empty() && !self.signing_ctx().outbox_enabled {
@@ -101,7 +96,7 @@ impl FerroEhrService {
             let (commit_now, restriction) =
                 self.ensure_ehr_content_writable(&mut *conn, ehr_id).await?;
             validated?;
-            self.reject_duplicate_persistent(&mut *conn, ehr_id, composition.view())
+            self.reject_duplicate_persistent(&mut *conn, ehr_id, &composition)
                 .await?;
             Ok(Write::new(
                 Some(ehr_id),
@@ -398,18 +393,15 @@ impl FerroEhrService {
         let resolved =
             self.resolve_write(&request, change_type::MODIFICATION, "COMPOSITION update");
         let mut composition = Body::composition(request.data);
+        // A valid body's large media go to the blob store before a connection is held.
         let validated = match &resolved {
             Ok(parts) => Some(
-                self.validate_body_for_commit(Kind::Composition, &composition, parts.incomplete)
-                    .await,
+                self.accept_body(Kind::Composition, &mut composition, parts.incomplete)
+                    .await?,
             ),
             Err(_) => None,
         };
-        // A valid body's large media go to the blob store before a connection is held.
-        if matches!(validated, Some(Ok(()))) {
-            self.externalize_body(&mut composition).await?;
-        }
-        let template_id = composition_template_id(composition.view()).map(str::to_owned);
+        let template_id = composition.template_id().map(str::to_owned);
         self.commit_one(&self.pool, Mode::Transaction, async move |tx| {
             // Serialize concurrent writers of the same object, then read the
             // placement + every pre-check column in ONE statement (thaw riding).
@@ -468,7 +460,7 @@ impl FerroEhrService {
             // `versioned_composition.adoc`), checked off the same merged read.
             crate::validation::versioned::check_versioned_composition_first_root(
                 pre.first_root,
-                composition.view(),
+                &composition,
             )?;
             Ok(Write::new(
                 Some(ehr_id),

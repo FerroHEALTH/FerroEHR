@@ -33,7 +33,7 @@
 use serde_json::{Map, Value};
 
 use crate::storage::compact::{Compact, RootIdentity};
-use crate::storage::header::{Header, code_phrase_of, restore, slim_header};
+use crate::storage::header::{Header, code_phrase_of, restore};
 
 /// An `ELEMENT.value` held in the typed value columns instead of the
 /// fragment.
@@ -64,19 +64,6 @@ pub struct TypedValue {
     pub terminology: Option<String>,
 }
 
-/// What a row stores of its fragment.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Slim {
-    /// The keys no column rebuilds, `None` when nothing remains.
-    pub data: Option<Value>,
-    /// The `ELEMENT.value` the typed columns hold, if any.
-    pub value: Option<TypedValue>,
-    /// The header keys the row's columns hold.
-    pub header: Header,
-    /// The keys the row's markers stand for.
-    pub compact: Compact,
-}
-
 /// The data value types whose whole value is one string under `value`.
 pub const STRING_VALUED: [&str; 7] = [
     "DV_TEXT",
@@ -87,53 +74,6 @@ pub const STRING_VALUED: [&str; 7] = [
     "DV_URI",
     "DV_EHR_URI",
 ];
-
-/// Splits a node fragment into what the row stores and what its columns
-/// rebuild.
-///
-/// `rm_type` is the row's `rm_type` column (the fragment's `_type`), and
-/// `root` the version identity of the versioned object's root row
-/// (`num = 0`), whose `uid` and template the version row holds, or `None`
-/// below it.
-#[must_use]
-pub fn slim(rm_type: &str, root: Option<&RootIdentity<'_>>, data: Value) -> Slim {
-    let Value::Object(mut map) = data else {
-        return Slim {
-            data: Some(data),
-            value: None,
-            header: Header::default(),
-            compact: Compact::default(),
-        };
-    };
-    if map.get("_type").and_then(Value::as_str) == Some(rm_type) {
-        map.shift_remove("_type");
-    }
-    let header = slim_header(&mut map, root);
-    let compact = crate::storage::compact::compact(&mut map, root);
-    if map
-        .get("archetype_node_id")
-        .and_then(Value::as_str)
-        .is_some_and(|id| id == id.to_ascii_lowercase())
-    {
-        map.shift_remove("archetype_node_id");
-    }
-    if map.get("name").is_some_and(rebuildable_name) {
-        map.shift_remove("name");
-    }
-    let mut value = None;
-    if rm_type == "ELEMENT"
-        && let Some(typed) = map.get("value").and_then(typed_value)
-    {
-        map.shift_remove("value");
-        value = Some(typed);
-    }
-    Slim {
-        data: (!map.is_empty()).then_some(Value::Object(map)),
-        value,
-        header,
-        compact,
-    }
-}
 
 /// The columns of a `node` row that [`rebuild`] puts back into its fragment.
 #[derive(Debug, Clone, Copy)]
@@ -262,126 +202,21 @@ pub(crate) fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
     )
 }
 
-/// Whether `name` is a `DV_TEXT` or a simply coded `DV_CODED_TEXT` the name
-/// columns rebuild exactly.
-fn rebuildable_name(name: &Value) -> bool {
-    let Some(fields) = name.as_object() else {
-        return false;
-    };
-    match fields.get("_type").and_then(Value::as_str) {
-        Some("DV_TEXT") => has_keys(fields, &["_type", "value"]) && is_string(fields, "value"),
-        Some("DV_CODED_TEXT") => coded(fields).is_some(),
-        _ => false,
-    }
-}
-
-/// The typed form of an `ELEMENT.value`, when it has one of the shapes the
-/// typed columns rebuild exactly.
-fn typed_value(value: &Value) -> Option<TypedValue> {
-    let fields = value.as_object()?;
-    let value_type = fields.get("_type").and_then(Value::as_str)?;
-    let typed = |num: Option<String>, text: Option<String>, coding: Option<(String, String)>| {
-        let (code, terminology) = coding.unzip();
-        TypedValue {
-            value_type: value_type.to_owned(),
-            num,
-            text,
-            code,
-            terminology,
-        }
-    };
-    match value_type {
-        t if STRING_VALUED.contains(&t) => (has_keys(fields, &["_type", "value"])
-            && is_string(fields, "value"))
-        .then(|| typed(None, string(fields, "value"), None)),
-        "DV_BOOLEAN" => {
-            let flag = fields.get("value").and_then(Value::as_bool)?;
-            has_keys(fields, &["_type", "value"]).then(|| typed(None, Some(flag.to_string()), None))
-        }
-        "DV_IDENTIFIER" => (has_keys(fields, &["_type", "id"]) && is_string(fields, "id"))
-            .then(|| typed(None, string(fields, "id"), None)),
-        "DV_COUNT" => has_keys(fields, &["_type", "magnitude"])
-            .then(|| number(fields, "magnitude"))
-            .flatten()
-            .map(|n| typed(Some(n), None, None)),
-        "DV_QUANTITY" => (has_keys(fields, &["_type", "magnitude", "units"])
-            && is_string(fields, "units"))
-        .then(|| number(fields, "magnitude"))
-        .flatten()
-        .map(|n| typed(Some(n), string(fields, "units"), None)),
-        "DV_CODED_TEXT" => {
-            coded(fields).map(|(text, coding)| typed(None, Some(text), Some(coding)))
-        }
-        "DV_ORDINAL" => {
-            if !has_keys(fields, &["_type", "symbol", "value"]) {
-                return None;
-            }
-            let ordinal = number(fields, "value")?;
-            let symbol = fields.get("symbol").and_then(Value::as_object)?;
-            if symbol.get("_type").and_then(Value::as_str) != Some("DV_CODED_TEXT") {
-                return None;
-            }
-            let (text, coding) = coded(symbol)?;
-            Some(typed(Some(ordinal), Some(text), Some(coding)))
-        }
-        _ => None,
-    }
-}
-
-/// The value and the `(code_string, terminology_id)` of a `DV_CODED_TEXT`
-/// that carries nothing but those: `_type`, `value` and a `defining_code`
-/// with its `_type`, `code_string` and a `terminology_id` of `_type` and
-/// `value`.
-fn coded(fields: &Map<String, Value>) -> Option<(String, (String, String))> {
-    if !has_keys(fields, &["_type", "defining_code", "value"]) {
-        return None;
-    }
-    let text = string(fields, "value")?;
-    let code = fields.get("defining_code").and_then(Value::as_object)?;
-    if !has_keys(code, &["_type", "code_string", "terminology_id"])
-        || code.get("_type").and_then(Value::as_str) != Some("CODE_PHRASE")
-    {
-        return None;
-    }
-    let code_string = string(code, "code_string")?;
-    let terminology = code.get("terminology_id").and_then(Value::as_object)?;
-    if !has_keys(terminology, &["_type", "value"])
-        || terminology.get("_type").and_then(Value::as_str) != Some("TERMINOLOGY_ID")
-    {
-        return None;
-    }
-    Some((text, (code_string, string(terminology, "value")?)))
-}
-
-/// Whether `fields` carries exactly `keys`, in any order.
-pub(crate) fn has_keys(fields: &Map<String, Value>, keys: &[&str]) -> bool {
-    fields.len() == keys.len() && keys.iter().all(|key| fields.contains_key(*key))
-}
-
-/// Whether `fields[key]` is a JSON string.
-fn is_string(fields: &Map<String, Value>, key: &str) -> bool {
-    fields.get(key).is_some_and(Value::is_string)
-}
-
-/// `fields[key]` when it is a JSON string.
-pub(crate) fn string(fields: &Map<String, Value>, key: &str) -> Option<String> {
-    fields.get(key).and_then(Value::as_str).map(str::to_owned)
-}
-
-/// `fields[key]` in its JSON lexical form when it is a JSON number.
-fn number(fields: &Map<String, Value>, key: &str) -> Option<String> {
-    fields
-        .get(key)
-        .and_then(|value| value.as_number())
-        .map(ToString::to_string)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::codec::decompose;
     use crate::storage::header::jsonb_key_order;
+    use crate::storage::render::nodes::{SlimmedValue, slim_value, stored_nodes_with_fragments};
     use serde_json::json;
+
+    /// Slims `fragment` as a row of `rm_type` would.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "the tests hand each fragment over whole, as the row it stands for"
+    )]
+    fn slim(rm_type: &str, root: Option<&RootIdentity<'_>>, fragment: Value) -> SlimmedValue {
+        slim_value(rm_type, root, &fragment)
+    }
 
     /// What one corpus pass counted.
     #[derive(Debug, Default)]
@@ -481,10 +316,21 @@ mod tests {
             version_uid: &version_uid,
             template_id: template_id.as_deref(),
         };
-        let rows = decompose(composition).expect("the composition decomposes");
-        for row in &rows {
+        let rendered = crate::storage::render::index::render(&composition).expect("renders");
+        let (rows, whole) =
+            stored_nodes_with_fragments(&rendered, &identity).expect("the composition decomposes");
+        for (row, whole) in rows.iter().zip(&whole) {
             let root = (row.num == 0).then_some(&identity);
-            let stored = slim(&row.rm_type, root, row.data.clone());
+            let fragment: Value = serde_json::from_str(whole).expect("a fragment is JSON");
+            let stored = SlimmedValue {
+                data: row
+                    .data
+                    .as_deref()
+                    .map(|d| serde_json::from_str(d).expect("a stored fragment is JSON")),
+                value: row.value.clone(),
+                header: row.header.clone(),
+                compact: row.compact,
+            };
             let columns = Columns {
                 rm_type: &row.rm_type,
                 archetype: row.archetype.as_deref(),
@@ -500,10 +346,10 @@ mod tests {
             let from_db = stored.data.as_ref().map(jsonb_ordered);
             let rebuilt = rebuild(from_db.clone(), &columns, stored.value.as_ref())
                 .expect("a stored row rebuilds");
-            assert_eq!(rebuilt, row.data, "row {} at {:?}", row.num, row.path);
+            assert_eq!(rebuilt, fragment, "row {} at {:?}", row.num, row.path);
             assert_eq!(
                 serde_json::to_string(&rebuilt).expect("serializable"),
-                served_before(&row.data, &rebuilt, from_db.as_ref(), &stored.header),
+                served_before(&fragment, &rebuilt, from_db.as_ref(), &stored.header),
                 "key order of row {} at {:?}",
                 row.num,
                 row.path

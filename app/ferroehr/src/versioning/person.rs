@@ -13,6 +13,7 @@
 //! representative ([`crate::versioning::committer::resolve`]); these are the
 //! refusals. No openEHR spec governs who may change what: our own design.
 
+use crate::versioning::body::Body;
 use serde_json::Value;
 use sqlx::PgConnection;
 
@@ -35,13 +36,11 @@ use crate::versioning::object_version_id::TreeId;
 /// # Errors
 /// [`ServiceError::Restricted`] (`403`) when a person commits a COMPOSITION
 /// whose composer is neither `PARTY_SELF` nor `PARTY_RELATED`.
-pub(crate) fn refuse_composing_for_others(
-    kind: Kind,
-    canonical: &Value,
-) -> Result<(), ServiceError> {
+pub(crate) fn refuse_composing_for_others(kind: Kind, body: &Body) -> Result<(), ServiceError> {
     if kind != Kind::Composition || !crate::versioning::committer::inserts_for_the_person() {
         return Ok(());
     }
+    let canonical = body.view();
     let composer = canonical
         .get("composer")
         .and_then(|composer| composer.get("_type"))

@@ -37,7 +37,6 @@ use crate::error::{ServiceError, Violation};
 use crate::ids::EhrId;
 use crate::service::FerroEhrService;
 use crate::validation::category::code;
-use crate::validation::versioned::composition_template_id;
 use crate::versioning::body::Body;
 use crate::versioning::{Kind, lifecycle};
 use openehr_rm::prelude::Composition;
@@ -123,12 +122,12 @@ impl FerroEhrService {
         &self,
         executor: impl sqlx::PgExecutor<'e>,
         ehr_id: EhrId,
-        composition: &Value,
+        body: &Body,
     ) -> Result<(), ServiceError> {
-        if !is_persistent(composition) {
+        if body.category_code() != Some(code::PERSISTENT) {
             return Ok(());
         }
-        let Some(template_id) = composition_template_id(composition) else {
+        let Some(template_id) = body.template_id() else {
             return Ok(());
         };
         // ONE statement over the promoted `template_id` column and a body
@@ -328,25 +327,45 @@ impl FerroEhrService {
         }
     }
 
-    /// [`Self::validate_for_commit`] over a commit body: a typed COMPOSITION
-    /// runs the RM and terminology passes over typed RM, and its canonical
-    /// view the passes that still read JSON.
+    /// Validates a commit body and, when it is valid, externalizes its large
+    /// media, before any connection is held.
+    ///
+    /// A typed COMPOSITION runs the RM and terminology passes over typed RM;
+    /// the passes that still read JSON and the offload share one canonical
+    /// view, rendered here and dropped on return. The outer error is the
+    /// offload's, which refuses the write at once; the inner result is the
+    /// validation's, which the caller surfaces after its own gates.
     ///
     /// # Errors
-    /// As [`Self::validate_for_commit`].
-    pub(crate) async fn validate_body_for_commit(
+    /// The offload's [`ServiceError`].
+    pub(crate) async fn accept_body(
         &self,
         kind: Kind,
-        body: &Body,
+        body: &mut Body,
         incomplete: bool,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<Result<(), ServiceError>, ServiceError> {
         match body {
-            Body::Composition { rm, view } => {
-                self.privacy.enforce(kind.as_str(), view)?;
-                self.validate_composition_for_commit(Some(rm), view, incomplete)
-                    .await
+            Body::Composition(rm) => {
+                let mut view = openehr_its::json::to_canonical_value(rm.as_ref());
+                let validated = match self.privacy.enforce(kind.as_str(), &view) {
+                    Ok(()) => {
+                        self.validate_composition_for_commit(Some(rm), &view, incomplete)
+                            .await
+                    }
+                    Err(refused) => Err(refused),
+                };
+                if validated.is_ok() {
+                    self.externalize_view(rm, &mut view).await?;
+                }
+                Ok(validated)
             }
-            Body::Canonical(data) => self.validate_for_commit(kind, data, incomplete).await,
+            Body::Canonical(data) => {
+                let validated = self.validate_for_commit(kind, data, incomplete).await;
+                if validated.is_ok() {
+                    self.externalize(data).await?;
+                }
+                Ok(validated)
+            }
         }
     }
 }
@@ -398,16 +417,6 @@ pub(in crate::service) fn validate_rm_invariants_for_commit(
             .map(|m| InvariantViolation::at(m.path, m.message))
             .collect(),
     ))
-}
-
-/// Whether a COMPOSITION is `431|persistent|` (RM composition,
-/// `COMPOSITION.category` / `is_persistent()`), read from
-/// `category.defining_code.code_string`.
-fn is_persistent(composition: &Value) -> bool {
-    composition
-        .pointer("/category/defining_code/code_string")
-        .and_then(Value::as_str)
-        == Some(code::PERSISTENT)
 }
 
 /// The ROOT-ONLY half of `LOCATABLE.Archetyped_valid` for the always-root EHR

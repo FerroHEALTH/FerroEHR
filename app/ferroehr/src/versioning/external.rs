@@ -20,6 +20,7 @@
 //! 10.0.0, requirement 07.04; the eHDSI point of care is a name only, so the
 //! match on identifiers is our own design).
 
+use crate::versioning::body::Body;
 use serde_json::Value;
 use sqlx::PgConnection;
 
@@ -30,7 +31,7 @@ use crate::versioning::committer::ExternalCaller;
 use crate::versioning::committer::external::{
     ExternalProfessional, ORGANIZATION_ID_ISSUER, committer, may_dispense, point_of_care, provider,
 };
-use crate::versioning::system::{facility_of, identifiers, template_of};
+use crate::versioning::system::{facility_of, identifiers};
 
 /// Why a commit by an external organisation is refused.
 const ORGANISATION: &str =
@@ -51,13 +52,13 @@ const ORGANISATION: &str =
 /// for a dispensation whose token carries permissions without PPD-046.
 pub(crate) fn admit_content(
     kind: Kind,
-    canonical: &Value,
+    body: &Body,
     template_id: Option<&str>,
 ) -> Result<(), ServiceError> {
     let Some(external) = external() else {
         return Ok(());
     };
-    let template = template_of(canonical, template_id);
+    let template = template_id.or_else(|| body.template_id());
     match external {
         ExternalCaller::Person {
             writes,
@@ -70,7 +71,7 @@ pub(crate) fn admit_content(
                 committer(&identity, &professional)?;
             }
             admit_dispensing(&professional)?;
-            admit_facility(&professional, canonical)
+            admit_facility(&professional, &body.view())
         }
         ExternalCaller::Person { .. } => Err(ServiceError::not_permitted(
             "a verified external person commits only a COMPOSITION of a template its \

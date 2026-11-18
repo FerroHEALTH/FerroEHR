@@ -30,6 +30,7 @@
               the grant credentials a system commit is judged against"
 )]
 
+use crate::versioning::body::Body;
 use std::sync::Arc;
 
 use serde_json::Value;
@@ -77,7 +78,7 @@ fn composing_grants(kind: Kind) -> Result<Option<Arc<Capabilities>>, ServiceErro
 /// [`ServiceError::Unprocessable`] (`422`) for an organisation composer, a
 /// person act naming no professional by an identifier, and a COMPOSITION
 /// naming no facility of an admitting grant.
-pub(crate) fn admit_content(kind: Kind, canonical: &Value) -> Result<(), ServiceError> {
+pub(crate) fn admit_content(kind: Kind, body: &Body) -> Result<(), ServiceError> {
     let Some(capabilities) = composing_grants(kind)? else {
         return Ok(());
     };
@@ -85,7 +86,7 @@ pub(crate) fn admit_content(kind: Kind, canonical: &Value) -> Result<(), Service
         .of(Operation::CommitComposition)
         .map(Grant::credentials)
         .collect();
-    judge(&grants, canonical)
+    judge(&grants, &body.view())
 }
 
 /// Judges `canonical` against the `commit_composition` grants `grants`.
@@ -144,19 +145,6 @@ fn of_origin<'a>(grants: &[Credentials<'a>], origin: &str) -> Vec<Credentials<'a
         .copied()
         .filter(|grant| grant.words(ORIGIN).contains(&origin))
         .collect()
-}
-
-/// The template a COMPOSITION is of: `template_id` as the change carries it,
-/// or its body's `archetype_details.template_id`.
-pub(crate) fn template_of<'a>(
-    canonical: &'a Value,
-    template_id: Option<&'a str>,
-) -> Option<&'a str> {
-    template_id.or_else(|| {
-        canonical
-            .pointer("/archetype_details/template_id/value")
-            .and_then(Value::as_str)
-    })
 }
 
 /// Admits a logical deletion of `vo_id`, of `kind`, by the request's system

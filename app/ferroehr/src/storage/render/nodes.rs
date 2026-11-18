@@ -23,7 +23,7 @@ use crate::storage::structure::{archetype_parts, is_structure_type, is_versioned
 use super::index::{Kind, Member, NodeId, Rendered};
 
 /// One `node` row of a version, every column as it is stored.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct StoredNode {
     /// Pre-order number within the versioned object (root = 0).
     pub num: i32,
@@ -73,6 +73,37 @@ pub fn stored_nodes(
     body: &Rendered,
     root: &RootIdentity<'_>,
 ) -> Result<Vec<StoredNode>, StorageError> {
+    Ok(decompose(body, root, false)?.0)
+}
+
+/// The node rows of `body` with each row's whole fragment beside it: its
+/// members but its structure children, before the row slims it. The storage
+/// sweep compares stored rows, read back whole, with these.
+///
+/// # Errors
+/// As [`stored_nodes`].
+pub fn stored_nodes_with_fragments(
+    body: &Rendered,
+    root: &RootIdentity<'_>,
+) -> Result<(Vec<StoredNode>, Vec<String>), StorageError> {
+    decompose(body, root, true)
+}
+
+/// One decomposition: what it reads and what it has written so far.
+struct Walk<'a, 'r> {
+    body: &'a Rendered,
+    root: &'a RootIdentity<'r>,
+    rows: Vec<StoredNode>,
+    /// The whole fragment of each row, when asked for.
+    whole: Option<Vec<String>>,
+}
+
+/// [`stored_nodes`], with each row's whole fragment when `whole` is set.
+fn decompose(
+    body: &Rendered,
+    root: &RootIdentity<'_>,
+    whole: bool,
+) -> Result<(Vec<StoredNode>, Vec<String>), StorageError> {
     let top = body.root();
     let root_type = body.rm_type(top);
     if !root_type.as_deref().is_some_and(is_versioned_root_type) {
@@ -80,8 +111,16 @@ pub fn stored_nodes(
             root_type.map(Cow::into_owned),
         ));
     }
-    let mut rows = Vec::new();
-    walk(body, top, String::new(), -1, root, &mut rows)?;
+    let mut walk = Walk {
+        body,
+        root,
+        rows: Vec::new(),
+        whole: whole.then(Vec::new),
+    };
+    walk.node(top, String::new(), -1)?;
+    let Walk {
+        mut rows, whole, ..
+    } = walk;
     let mut caps: Vec<i32> = rows.iter().map(|r| r.num).collect();
     for i in (1..rows.len()).rev() {
         let (Some(cap), Some(parent)) = (
@@ -104,94 +143,93 @@ pub fn stored_nodes(
     if let (Some(row), Some(cap)) = (rows.first_mut(), caps.first()) {
         row.num_cap = *cap;
     }
-    Ok(rows)
+    Ok((rows, whole.unwrap_or_default()))
 }
 
-/// Pushes the row of `node` and then, in written order, the rows of its
-/// structure children.
-fn walk(
-    body: &Rendered,
-    node: NodeId,
-    path: String,
-    parent: i32,
-    root: &RootIdentity<'_>,
-    rows: &mut Vec<StoredNode>,
-) -> Result<(), StorageError> {
-    let index = rows.len();
-    let num = i32::try_from(index).unwrap_or(i32::MAX);
-    let rm_type = body.rm_type(node).map(Cow::into_owned).unwrap_or_default();
-    let archetype = body
-        .get_str(node, "archetype_node_id")
-        .map(|id| id.to_ascii_lowercase());
-    let (arch_entity, arch_concept, arch_major) = archetype
-        .as_deref()
-        .and_then(archetype_parts)
-        .map_or((None, None, None), |(e, c, m)| (Some(e), Some(c), Some(m)));
-    let label = body.get(node, "name");
-    let name = label
-        .and_then(|n| body.get_str(n, "value"))
-        .map(Cow::into_owned);
-    let defining_code = label.and_then(|n| body.get(n, "defining_code"));
-    let name_code = defining_code
-        .and_then(|c| body.get_str(c, "code_string"))
-        .map(Cow::into_owned);
-    let name_terminology = defining_code
-        .and_then(|c| body.get(c, "terminology_id"))
-        .and_then(|t| body.get_str(t, "value"))
-        .map(Cow::into_owned);
-    let promoted = promoted(body, num, &rm_type, node);
+impl Walk<'_, '_> {
+    /// Pushes the row of `node` and then, in written order, the rows of its
+    /// structure children.
+    fn node(&mut self, node: NodeId, path: String, parent: i32) -> Result<(), StorageError> {
+        let (body, root) = (self.body, self.root);
+        let index = self.rows.len();
+        let num = i32::try_from(index).unwrap_or(i32::MAX);
+        let rm_type = body.rm_type(node).map(Cow::into_owned).unwrap_or_default();
+        let archetype = body
+            .get_str(node, "archetype_node_id")
+            .map(|id| id.to_ascii_lowercase());
+        let (arch_entity, arch_concept, arch_major) = archetype
+            .as_deref()
+            .and_then(archetype_parts)
+            .map_or((None, None, None), |(e, c, m)| (Some(e), Some(c), Some(m)));
+        let label = body.get(node, "name");
+        let name = label
+            .and_then(|n| body.get_str(n, "value"))
+            .map(Cow::into_owned);
+        let defining_code = label.and_then(|n| body.get(n, "defining_code"));
+        let name_code = defining_code
+            .and_then(|c| body.get_str(c, "code_string"))
+            .map(Cow::into_owned);
+        let name_terminology = defining_code
+            .and_then(|c| body.get(c, "terminology_id"))
+            .and_then(|t| body.get_str(t, "value"))
+            .map(Cow::into_owned);
+        let promoted = promoted(body, num, &rm_type, node);
 
-    let mut kept: Vec<&Member> = Vec::new();
-    let mut structure: Vec<&Member> = Vec::new();
-    for member in body.members(node) {
-        if carries_structure(body, member)? {
-            structure.push(member);
-        } else {
-            kept.push(member);
-        }
-    }
-    let slimmed = slim(body, &rm_type, (num == 0).then_some(root), kept);
-    rows.push(StoredNode {
-        num,
-        num_cap: num,
-        parent_num: parent.max(0),
-        rm_type,
-        archetype,
-        arch_entity,
-        arch_concept,
-        arch_major,
-        name,
-        name_code,
-        name_terminology,
-        path: String::new(),
-        data: slimmed.data,
-        value: slimmed.value,
-        header: slimmed.header,
-        compact: slimmed.compact,
-        promoted,
-    });
-    for member in structure {
-        let attribute = body.key(member);
-        let child = Rendered::value(member);
-        if body.kind(child) == Some(Kind::Object) {
-            walk(body, child, format!("{path}{attribute}."), num, root, rows)?;
-        } else {
-            for (i, item) in body.items(child).iter().enumerate() {
-                walk(
-                    body,
-                    *item,
-                    format!("{path}{attribute}{i}."),
-                    num,
-                    root,
-                    rows,
-                )?;
+        let mut kept: Vec<&Member> = Vec::new();
+        let mut structure: Vec<&Member> = Vec::new();
+        for member in body.members(node) {
+            if carries_structure(body, member)? {
+                structure.push(member);
+            } else {
+                kept.push(member);
             }
         }
+        if let Some(whole) = self.whole.as_mut() {
+            let members: Vec<Kept<'_>> = kept
+                .iter()
+                .map(|member| Kept {
+                    member,
+                    replaced: None,
+                })
+                .collect();
+            whole.push(fragment(body, &members).unwrap_or_else(|| "{}".to_owned()));
+        }
+        let slimmed = slim(body, &rm_type, (num == 0).then_some(root), kept);
+        self.rows.push(StoredNode {
+            num,
+            num_cap: num,
+            parent_num: parent.max(0),
+            rm_type,
+            archetype,
+            arch_entity,
+            arch_concept,
+            arch_major,
+            name,
+            name_code,
+            name_terminology,
+            path: String::new(),
+            data: slimmed.data,
+            value: slimmed.value,
+            header: slimmed.header,
+            compact: slimmed.compact,
+            promoted,
+        });
+        for member in structure {
+            let attribute = body.key(member);
+            let child = Rendered::value(member);
+            if body.kind(child) == Some(Kind::Object) {
+                self.node(child, format!("{path}{attribute}."), num)?;
+            } else {
+                for (i, item) in body.items(child).iter().enumerate() {
+                    self.node(*item, format!("{path}{attribute}{i}."), num)?;
+                }
+            }
+        }
+        if let Some(row) = self.rows.get_mut(index) {
+            row.path = path;
+        }
+        Ok(())
     }
-    if let Some(row) = rows.get_mut(index) {
-        row.path = path;
-    }
-    Ok(())
 }
 
 /// Whether one member's value is a structure node, or an array of them.
@@ -577,18 +615,63 @@ fn typed_value(body: &Rendered, value: NodeId) -> Option<TypedValue> {
     }
 }
 
+/// A fragment slimmed as one row would slim it, its stored data read back:
+/// the unit tests of the storage form state the rules over these.
+#[cfg(test)]
+#[derive(Debug, Clone, PartialEq)]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the tests state the slimming rules over canonical fragments"
+)]
+pub(crate) struct SlimmedValue {
+    /// The stored fragment, read back.
+    pub(crate) data: Option<serde_json::Value>,
+    /// The typed value columns.
+    pub(crate) value: Option<TypedValue>,
+    /// The header columns.
+    pub(crate) header: Header,
+    /// The marker columns.
+    pub(crate) compact: Compact,
+}
+
+/// Slims every member of `fragment` as a row of `rm_type` would, against the
+/// version identity `root` of a root row.
 #[cfg(test)]
 #[expect(
     clippy::disallowed_types,
-    reason = "the test holds the rows read off the rendering equal to the rows the canonical \
-              value decomposed and slimmed into"
+    reason = "the tests state the slimming rules over canonical fragments"
+)]
+pub(crate) fn slim_value(
+    rm_type: &str,
+    root: Option<&RootIdentity<'_>>,
+    fragment: &serde_json::Value,
+) -> SlimmedValue {
+    let body = super::index::render(fragment).expect("a fragment renders");
+    let kept: Vec<&Member> = body.members(body.root()).iter().collect();
+    let slimmed = slim(&body, rm_type, root, kept);
+    SlimmedValue {
+        data: slimmed
+            .data
+            .map(|d| serde_json::from_str(&d).expect("a stored fragment is JSON")),
+        value: slimmed.value,
+        header: slimmed.header,
+        compact: slimmed.compact,
+    }
+}
+
+#[cfg(test)]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the test reads the stored rows back into the canonical value they came from"
 )]
 mod tests {
     use serde_json::Value;
 
-    use super::{StoredNode, stored_nodes};
+    use super::stored_nodes_with_fragments;
     use crate::storage::compact::RootIdentity;
     use crate::storage::render::index::render;
+    use crate::storage::row::ReadRow;
+    use crate::storage::slim::{Columns, rebuild};
     use crate::storage::structure::is_versioned_root_type;
 
     /// Every versioned object in the repository's corpora, by path.
@@ -632,57 +715,15 @@ mod tests {
         out
     }
 
-    /// The rows the canonical-value decomposition and slimming store.
-    fn canonical_rows(value: &Value, root: &RootIdentity<'_>) -> Vec<StoredNode> {
-        let rows = crate::storage::codec::decompose(value.clone()).unwrap();
-        rows.into_iter()
-            .map(|row| {
-                let slim = crate::storage::slim::slim(
-                    &row.rm_type,
-                    (row.num == 0).then_some(root),
-                    row.data.clone(),
-                );
-                StoredNode {
-                    num: row.num,
-                    num_cap: row.num_cap,
-                    parent_num: row.parent_num,
-                    rm_type: row.rm_type,
-                    archetype: row.archetype,
-                    arch_entity: row.arch_entity,
-                    arch_concept: row.arch_concept,
-                    arch_major: row.arch_major,
-                    name: row.name,
-                    name_code: row.name_code,
-                    name_terminology: row.name_terminology,
-                    path: row.path,
-                    data: slim.data.map(|d| serde_json::to_string(&d).unwrap()),
-                    value: slim.value,
-                    header: slim.header,
-                    compact: slim.compact,
-                    promoted: row.promoted,
-                }
-            })
-            .collect()
-    }
-
-    /// A row with its fragment read back, so two fragments compare as the
-    /// jsonb values they are stored as.
-    fn comparable(mut row: StoredNode) -> (StoredNode, Option<Value>) {
-        let data = row
-            .data
-            .take()
-            .map(|d| serde_json::from_str::<Value>(&d).unwrap());
-        (row, data)
-    }
-
-    /// The rows read off the one rendering are the rows the canonical value
-    /// decomposed and slimmed into, every column, on every versioned object of
-    /// the corpora, with and without the root identity matching (#6003).
+    /// Every row read off the rendering rebuilds, through the columns the read
+    /// path rebuilds it from ([`rebuild`]), to its whole fragment, and the rows
+    /// reassemble to the body, on every versioned object of the corpora, with
+    /// the root identity matching and not (#6003).
     #[test]
-    fn the_rendering_stores_the_rows_the_canonical_value_did() {
+    fn every_stored_row_reads_back_to_the_body() {
         let documents = corpus();
         assert!(documents.len() >= 200, "{} documents", documents.len());
-        let mut compared = 0_usize;
+        let mut rows_read = 0_usize;
         for (path, value) in documents {
             let uid = value
                 .pointer("/uid/value")
@@ -693,7 +734,6 @@ mod tests {
                 .pointer("/archetype_details/template_id/value")
                 .and_then(Value::as_str)
                 .map(str::to_owned);
-            let expected_rows = crate::storage::codec::decompose(value.clone()).map(|_| ());
             let rendered = render(&value).unwrap();
             for root in [
                 RootIdentity {
@@ -705,28 +745,50 @@ mod tests {
                     template_id: None,
                 },
             ] {
-                match expected_rows {
-                    Ok(()) => {
-                        let expected: Vec<_> = canonical_rows(&value, &root)
-                            .into_iter()
-                            .map(comparable)
-                            .collect();
-                        let actual: Vec<_> = stored_nodes(&rendered, &root)
-                            .unwrap()
-                            .into_iter()
-                            .map(comparable)
-                            .collect();
-                        assert_eq!(actual, expected, "{path}");
-                        compared += 1;
-                    }
-                    Err(ref refusal) => assert_eq!(
-                        stored_nodes(&rendered, &root).unwrap_err().to_string(),
-                        refusal.to_string(),
-                        "{path}"
-                    ),
+                let Ok((rows, whole)) = stored_nodes_with_fragments(&rendered, &root) else {
+                    continue;
+                };
+                let mut read = Vec::new();
+                for (row, whole) in rows.iter().zip(&whole) {
+                    let columns = Columns {
+                        rm_type: &row.rm_type,
+                        archetype: row.archetype.as_deref(),
+                        name: row.name.as_deref(),
+                        name_code: row.name_code.as_deref(),
+                        name_terminology: row.name_terminology.as_deref(),
+                        rm_version: row.header.rm_version.as_deref(),
+                        language: row.header.language.as_deref(),
+                        encoding: row.header.encoding.as_deref(),
+                        compact: row.compact,
+                        root: (row.num == 0).then_some(root),
+                    };
+                    let data = row
+                        .data
+                        .as_deref()
+                        .map(|d| serde_json::from_str::<Value>(d).unwrap());
+                    let rebuilt = rebuild(data, &columns, row.value.as_ref()).unwrap();
+                    assert_eq!(
+                        rebuilt,
+                        serde_json::from_str::<Value>(whole).unwrap(),
+                        "{path} row {}",
+                        row.num
+                    );
+                    read.push(ReadRow {
+                        num: row.num,
+                        num_cap: row.num_cap,
+                        parent_num: row.parent_num,
+                        path: row.path.clone(),
+                        data: rebuilt,
+                    });
                 }
+                assert_eq!(
+                    crate::storage::codec::reassemble(&read).unwrap(),
+                    value,
+                    "{path}"
+                );
+                rows_read += rows.len();
             }
         }
-        assert!(compared >= 400, "{compared} comparisons");
+        assert!(rows_read >= 10_000, "{rows_read} rows read back");
     }
 }

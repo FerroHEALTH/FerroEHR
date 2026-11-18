@@ -36,15 +36,38 @@ pub enum Kind {
     Scalar,
 }
 
+/// A byte or index range, held in 32 bits: [`render`] refuses a text past
+/// `u32::MAX` bytes, so every offset fits.
+#[derive(Debug, Clone, Copy, Default)]
+struct Span {
+    start: u32,
+    end: u32,
+}
+
+impl Span {
+    fn new(start: usize, end: usize) -> Self {
+        Self {
+            start: u32::try_from(start).unwrap_or(u32::MAX),
+            end: u32::try_from(end).unwrap_or(u32::MAX),
+        }
+    }
+
+    fn range(self) -> Range<usize> {
+        // NOTE: u32 widens to usize losslessly on every supported target.
+        usize::try_from(self.start).unwrap_or(usize::MAX)
+            ..usize::try_from(self.end).unwrap_or(usize::MAX)
+    }
+}
+
 /// One value of the rendered text.
 #[derive(Debug, Clone)]
 struct Node {
     kind: Kind,
     /// The value's bytes, quotes and brackets included.
-    span: Range<usize>,
+    span: Span,
     /// The value's members (an object) or items (an array) in
     /// [`Rendered::members`] or [`Rendered::items`].
-    children: Range<usize>,
+    children: Span,
 }
 
 /// One member of an object.
@@ -52,9 +75,9 @@ struct Node {
 pub struct Member {
     /// The member's name, without its quotes (RM attribute names carry no
     /// escape).
-    key: Range<usize>,
+    key: Span,
     /// The member's whole bytes, `"name":value`.
-    span: Range<usize>,
+    span: Span,
     /// The member's value.
     value: NodeId,
 }
@@ -83,6 +106,11 @@ pub fn render<T: Serialize + ?Sized>(value: &T) -> Result<Rendered, serde_json::
     let root = observer.last.ok_or_else(|| {
         <serde_json::Error as serde::ser::Error>::custom("the value wrote no JSON")
     })?;
+    if u32::try_from(observer.out.len()).is_err() {
+        return Err(<serde_json::Error as serde::ser::Error>::custom(
+            "the rendered text is past the 4 GiB an index offset holds",
+        ));
+    }
     Ok(Rendered {
         text: observer.out,
         nodes: observer.nodes,
@@ -130,7 +158,7 @@ impl Rendered {
     #[must_use]
     pub fn raw(&self, id: NodeId) -> &[u8] {
         self.node(id)
-            .and_then(|n| self.text.get(n.span.clone()))
+            .and_then(|n| self.text.get(n.span.range()))
             .unwrap_or_default()
     }
 
@@ -140,7 +168,7 @@ impl Rendered {
     pub fn members(&self, id: NodeId) -> &[Member] {
         match self.node(id) {
             Some(n) if n.kind == Kind::Object => {
-                self.members.get(n.children.clone()).unwrap_or_default()
+                self.members.get(n.children.range()).unwrap_or_default()
             }
             _ => &[],
         }
@@ -152,7 +180,7 @@ impl Rendered {
     pub fn items(&self, id: NodeId) -> &[NodeId] {
         match self.node(id) {
             Some(n) if n.kind == Kind::Array => {
-                self.items.get(n.children.clone()).unwrap_or_default()
+                self.items.get(n.children.range()).unwrap_or_default()
             }
             _ => &[],
         }
@@ -162,7 +190,7 @@ impl Rendered {
     #[must_use]
     pub fn key(&self, member: &Member) -> &str {
         self.text
-            .get(member.key.clone())
+            .get(member.key.range())
             .and_then(|k| std::str::from_utf8(k).ok())
             .unwrap_or_default()
     }
@@ -170,13 +198,13 @@ impl Rendered {
     /// The whole bytes of `member`, `"name":value`.
     #[must_use]
     pub fn member_raw(&self, member: &Member) -> &[u8] {
-        self.text.get(member.span.clone()).unwrap_or_default()
+        self.text.get(member.span.range()).unwrap_or_default()
     }
 
     /// The byte range of `member` in [`Self::text`].
     #[must_use]
     pub fn member_span(member: &Member) -> Range<usize> {
-        member.span.clone()
+        member.span.range()
     }
 
     /// The value of `member`.
@@ -275,7 +303,7 @@ impl Rendered {
 struct Frame {
     node: usize,
     key_start: usize,
-    key: Range<usize>,
+    key: Span,
     member_start: usize,
     members: Vec<Member>,
     items: Vec<NodeId>,
@@ -301,8 +329,8 @@ impl Observer {
         let index = self.nodes.len();
         self.nodes.push(Node {
             kind,
-            span: start..start,
-            children: 0..0,
+            span: Span::new(start, start),
+            children: Span::default(),
         });
         index
     }
@@ -310,7 +338,7 @@ impl Observer {
     fn finish(&mut self, index: usize) {
         let end = self.out.len();
         if let Some(node) = self.nodes.get_mut(index) {
-            node.span.end = end;
+            node.span = Span::new(node.span.range().start, end);
         }
         self.last = NodeId::try_from(index).ok();
     }
@@ -340,11 +368,11 @@ impl Observer {
         let children = if self.nodes.get(frame.node).map(|n| n.kind) == Some(Kind::Object) {
             let start = self.members.len();
             self.members.append(&mut frame.members);
-            start..self.members.len()
+            Span::new(start, self.members.len())
         } else {
             let start = self.items.len();
             self.items.append(&mut frame.items);
-            start..self.items.len()
+            Span::new(start, self.items.len())
         };
         if let Some(node) = self.nodes.get_mut(frame.node) {
             node.children = children;
@@ -496,7 +524,7 @@ impl Formatter for &mut Observer {
         let at = self.out.len();
         if let Some(frame) = self.stack.last_mut() {
             // The name's quotes are left out of its range.
-            frame.key = frame.key_start.saturating_add(1)..at.saturating_sub(1);
+            frame.key = Span::new(frame.key_start.saturating_add(1), at.saturating_sub(1));
         }
         Ok(())
     }
@@ -509,8 +537,8 @@ impl Formatter for &mut Observer {
         let at = self.out.len();
         if let (Some(frame), Some(value)) = (self.stack.last_mut(), self.last.take()) {
             frame.members.push(Member {
-                key: frame.key.clone(),
-                span: frame.member_start..at,
+                key: frame.key,
+                span: Span::new(frame.member_start, at),
                 value,
             });
         }

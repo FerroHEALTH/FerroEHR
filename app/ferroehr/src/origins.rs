@@ -103,7 +103,14 @@ impl DirectOrigin {
     /// [`ServiceError::Forbidden`] (`403`) when the body carries no feeder
     /// audit and the committer's grants name more than one origin.
     pub fn stamp(&self, canonical: &Value) -> Result<Vec<String>, ServiceError> {
-        let fed = crate::versioning::origins::fed(canonical);
+        self.stamp_fed(crate::versioning::origins::fed(canonical))
+    }
+
+    /// [`Self::stamp`] over the feeder origins `fed` already read off a body.
+    ///
+    /// # Errors
+    /// As [`Self::stamp`].
+    pub fn stamp_fed(&self, fed: BTreeSet<String>) -> Result<Vec<String>, ServiceError> {
         if !fed.is_empty() {
             return Ok(fed.into_iter().collect());
         }

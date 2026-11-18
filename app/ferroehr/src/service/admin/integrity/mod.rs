@@ -44,7 +44,7 @@ use uuid::Uuid;
 use crate::error::ServiceError;
 use crate::ids::VoId;
 use crate::service::FerroEhrService;
-use crate::storage::codec::{decompose, reassemble};
+use crate::storage::codec::reassemble;
 use crate::storage::integrity::{self, StorageParityScope};
 use crate::storage::node_repo::read_version_rows_all;
 use crate::storage::row::ReadRow;
@@ -256,17 +256,31 @@ struct VersionKey {
 /// naming the body, which is the honest outcome for a version whose two copies
 /// agree on content the codec can no longer index.
 fn rows_are_current(stored: &[ReadRow], body: &Value) -> bool {
-    let Ok(fresh) = decompose(body.clone()) else {
+    // NOTE: the root identity decides only how a row slims, never its whole
+    // fragment or its place in the tree, which is all this compares.
+    let root = crate::storage::compact::RootIdentity {
+        version_uid: "",
+        template_id: None,
+    };
+    let Ok(rendered) = crate::storage::render::index::render(body) else {
+        return false;
+    };
+    let Ok((fresh, whole)) =
+        crate::storage::render::nodes::stored_nodes_with_fragments(&rendered, &root)
+    else {
         return false;
     };
     stored.len() == fresh.len()
-        && stored.iter().zip(&fresh).all(|(stored, fresh)| {
-            stored.num == fresh.num
-                && stored.num_cap == fresh.num_cap
-                && stored.parent_num == fresh.parent_num
-                && stored.path == fresh.path
-                && stored.data == fresh.data
-        })
+        && stored
+            .iter()
+            .zip(fresh.iter().zip(&whole))
+            .all(|(stored, (fresh, whole))| {
+                stored.num == fresh.num
+                    && stored.num_cap == fresh.num_cap
+                    && stored.parent_num == fresh.parent_num
+                    && stored.path == fresh.path
+                    && serde_json::from_str::<Value>(whole).is_ok_and(|w| stored.data == w)
+            })
 }
 
 impl FerroEhrService {

@@ -4,36 +4,34 @@
 //! The content a commit carries: a typed COMPOSITION, or the canonical value
 //! of a kind whose commit has not moved onto typed RM yet (#6003).
 //!
-//! The typed COMPOSITION is what the commit stamps, writes as `version.body`
-//! and signs. Its `view` is the one canonical value the passes that still read
-//! JSON take (archetype conformance, constraint bindings, privacy, multimedia
-//! offload, node decomposition); it is produced once, at the edge of the
-//! commit, and kept equal to the typed value. No openEHR spec governs the
-//! commit's internal representation: our own design.
+//! The typed COMPOSITION is what the commit stamps, renders once as
+//! `version.body` and its node rows, and signs. A pass that still reads JSON
+//! (archetype conformance, constraint bindings, privacy, the multimedia
+//! offload, and the policy checks of a system client or a verified external
+//! caller) takes a canonical view rendered for it and dropped after it. No
+//! openEHR spec governs the commit's internal representation: our own design.
 
 #![expect(
     clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694): the canonical view the JSON-reading commit \
-              passes take until they read typed RM (#6003)"
+    reason = "owner-approved 2026-08-03 (#1694): the canonical value of the kinds whose commit \
+              is not typed yet, and the view the JSON-reading passes take (#6003)"
 )]
+
+use std::borrow::Cow;
 
 use openehr_base::prelude::{ObjectVersionId, UidBasedId};
 use openehr_rm::prelude::Composition;
 use serde_json::Value;
 
 use crate::error::ServiceError;
+use crate::storage::render::index::Rendered;
 
 /// The content of a create or a modify. It has no `Debug`: it is clinical
 /// content (`reliability.md`).
 #[derive(Clone)]
 pub(crate) enum Body {
-    /// A COMPOSITION as typed RM, with its canonical view.
-    Composition {
-        /// The typed COMPOSITION the commit writes and signs.
-        rm: Box<Composition>,
-        /// Its canonical value, for the passes that still read JSON.
-        view: Value,
-    },
+    /// A COMPOSITION as typed RM.
+    Composition(Box<Composition>),
     /// The canonical value of any other kind.
     Canonical(Value),
 }
@@ -45,55 +43,93 @@ impl From<Value> for Body {
 }
 
 impl Body {
-    /// A typed COMPOSITION body, with its canonical view rendered once.
+    /// A typed COMPOSITION body.
     pub(crate) fn composition(rm: Composition) -> Self {
-        let view = openehr_its::json::to_canonical_value(&rm);
-        Body::Composition {
-            rm: Box::new(rm),
-            view,
-        }
+        Body::Composition(Box::new(rm))
     }
 
-    /// The canonical value of the body.
-    pub(crate) fn view(&self) -> &Value {
+    /// The canonical value of the body: borrowed for a canonical body,
+    /// rendered for a typed one, for the passes that still read JSON.
+    pub(crate) fn view(&self) -> Cow<'_, Value> {
         match self {
-            Body::Composition { view, .. } | Body::Canonical(view) => view,
+            Body::Composition(rm) => Cow::Owned(openehr_its::json::to_canonical_value(rm.as_ref())),
+            Body::Canonical(view) => Cow::Borrowed(view),
         }
     }
 
-    /// The canonical value of a body whose typed form, if any, it does not
-    /// change: the caller only reads it or rewrites a kind with no typed form.
-    pub(crate) fn into_view(self) -> Value {
+    /// The canonical value of a body of a kind that has no typed form.
+    pub(crate) fn canonical(&self) -> Option<&Value> {
         match self {
-            Body::Composition { view, .. } | Body::Canonical(view) => view,
+            Body::Composition(_) => None,
+            Body::Canonical(view) => Some(view),
         }
     }
 
-    /// Re-reads the typed COMPOSITION from its view after a pass rewrote the
-    /// view (the multimedia offload); a canonical body has nothing to re-read.
-    ///
-    /// # Errors
-    /// [`ServiceError`] when the rewritten view no longer reads as a
-    /// COMPOSITION, which the offload never produces.
-    pub(crate) fn retype_from_view(&mut self) -> Result<(), ServiceError> {
-        if let Body::Composition { rm, view } = self {
-            **rm = openehr_its::json::from_canonical_value(view).map_err(|e| {
-                ServiceError::internal("re-read the COMPOSITION after its offload", e)
-            })?;
+    /// The root's `archetype_node_id`.
+    pub(crate) fn archetype_node_id(&self) -> Option<&str> {
+        match self {
+            Body::Composition(rm) => Some(rm.archetype_node_id.as_str()),
+            Body::Canonical(view) => view.get("archetype_node_id").and_then(Value::as_str),
         }
-        Ok(())
     }
 
-    /// Stamps the version's own `OBJECT_VERSION_ID` into the root `uid` of
-    /// the typed value and of its view alike.
+    /// The template id the root's `archetype_details` names.
+    pub(crate) fn template_id(&self) -> Option<&str> {
+        match self {
+            Body::Composition(rm) => rm
+                .archetype_details
+                .as_ref()
+                .and_then(|details| details.template_id.as_ref())
+                .map(|id| id.value.as_str()),
+            Body::Canonical(view) => view
+                .pointer("/archetype_details/template_id/value")
+                .and_then(Value::as_str),
+        }
+    }
+
+    /// The code string of a COMPOSITION's `category`.
+    pub(crate) fn category_code(&self) -> Option<&str> {
+        match self {
+            Body::Composition(rm) => Some(rm.category.defining_code.code_string.as_str()),
+            Body::Canonical(view) => view
+                .pointer("/category/defining_code/code_string")
+                .and_then(Value::as_str),
+        }
+    }
+
+    /// Stamps the version's own `OBJECT_VERSION_ID` into the root `uid`.
     pub(crate) fn stamp_uid(&mut self, uid: &ObjectVersionId) {
         match self {
-            Body::Composition { rm, view } => {
-                rm.uid = Some(UidBasedId::ObjectVersionId(uid.clone()));
-                super::change::stamp_uid_value(view, uid);
-            }
+            Body::Composition(rm) => rm.uid = Some(UidBasedId::ObjectVersionId(uid.clone())),
             Body::Canonical(view) => super::change::stamp_uid_value(view, uid),
         }
+    }
+
+    /// The one rendering of the body to compact canonical JSON, indexed
+    /// ([`crate::storage::render::index`]).
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the body does not serialize (a non-finite
+    /// number, unreachable for a codec-produced value, refused loudly anyway).
+    pub(crate) fn render(&self) -> Result<Rendered, ServiceError> {
+        let fault = |e| ServiceError::internal("serialize the canonical body", e);
+        match self {
+            Body::Composition(rm) => {
+                crate::telemetry::conversion::record("rm_to_text");
+                crate::storage::render::index::render(rm.as_ref()).map_err(fault)
+            }
+            Body::Canonical(view) => Self::render_canonical(view),
+        }
+    }
+
+    /// [`Self::render`] of a canonical value.
+    ///
+    /// # Errors
+    /// As [`Self::render`].
+    pub(crate) fn render_canonical(canonical: &Value) -> Result<Rendered, ServiceError> {
+        crate::telemetry::conversion::record("value_to_text");
+        crate::storage::render::index::render(canonical)
+            .map_err(|e| ServiceError::internal("serialize the canonical body", e))
     }
 }
 
@@ -104,7 +140,6 @@ mod tests {
     use serde_json::{Value, json};
 
     use super::Body;
-    use crate::versioning::change::resolve::body_text_and_digest;
     use crate::versioning::change::stamp_uid_value;
 
     /// Every COMPOSITION in the repository's corpora that reads as strict typed RM.
@@ -189,12 +224,16 @@ mod tests {
             stamp_uid_value(&mut view, &uid);
             let mut body = Body::composition(typed);
             body.stamp_uid(&uid);
+            let rendered = body.render().unwrap();
             assert_eq!(
-                body_text_and_digest(&body).unwrap(),
+                (
+                    String::from_utf8(rendered.text().to_vec()).unwrap(),
+                    crate::storage::render::content_digest(&rendered)
+                ),
                 canonical_path(&view),
                 "{path}"
             );
-            let Body::Composition { rm, .. } = &body else {
+            let Body::Composition(rm) = &body else {
                 panic!("{path} was built as a COMPOSITION");
             };
             assert_eq!(

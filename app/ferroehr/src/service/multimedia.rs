@@ -26,6 +26,7 @@ use crate::error::ServiceError;
 use crate::service::FerroEhrService;
 use crate::versioning::body::Body;
 use crate::versioning::change::Change;
+use openehr_rm::prelude::Composition;
 
 impl FerroEhrService {
     /// Externalizes every large inline `DV_MULTIMEDIA` in `body`, uploading the
@@ -83,14 +84,52 @@ impl FerroEhrService {
     pub(crate) async fn externalize_body(&self, body: &mut Body) -> Result<(), ServiceError> {
         match body {
             Body::Canonical(canonical) => self.externalize(canonical).await,
-            Body::Composition { view, .. } => {
-                if !self.holds_inline_media(view) {
+            Body::Composition(rm) => {
+                if !self.offloads() {
                     return Ok(());
                 }
-                self.externalize(view).await?;
-                body.retype_from_view()
+                let mut view = openehr_its::json::to_canonical_value(rm.as_ref());
+                self.externalize_view(rm, &mut view).await
             }
         }
+    }
+
+    /// Externalizes the media of the typed COMPOSITION `rm` through its
+    /// canonical `view`, re-reading `rm` only when the view held a value to
+    /// externalize.
+    ///
+    /// # Errors
+    /// The [`Self::externalize`] failure, or the re-read's.
+    pub(crate) async fn externalize_view(
+        &self,
+        rm: &mut Composition,
+        view: &mut Value,
+    ) -> Result<(), ServiceError> {
+        if !self.holds_inline_media(view) {
+            return Ok(());
+        }
+        self.externalize(view).await?;
+        *rm = openehr_its::json::from_canonical_value(view)
+            .map_err(|e| ServiceError::internal("re-read the COMPOSITION after its offload", e))?;
+        Ok(())
+    }
+
+    /// Whether this deployment externalizes media at all.
+    #[cfg(feature = "multimedia")]
+    pub(crate) fn offloads(&self) -> bool {
+        self.multimedia
+            .as_ref()
+            .is_some_and(|engine| engine.offload_enabled())
+    }
+
+    /// The slim twin: nothing is ever externalized.
+    #[cfg(not(feature = "multimedia"))]
+    #[expect(
+        clippy::unused_self,
+        reason = "signature parity with the multimedia twin, which reads the engine"
+    )]
+    pub(crate) fn offloads(&self) -> bool {
+        false
     }
 
     /// Whether `body` holds a value the offload would externalize.
