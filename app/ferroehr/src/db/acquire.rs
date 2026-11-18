@@ -37,7 +37,10 @@
 //! connection to the pool once: at [`release_held`], which the HTTP layer calls
 //! when the handler has answered, so the work after its last statement (the
 //! audit record, the response's way out) holds no connection, or else when
-//! the scope ends. How long the request held each connection is recorded on
+//! the scope ends. While the request waits for a pool or for another task's
+//! work ([`handoff`]), the scope keeps nothing: what it kept goes back before
+//! the wait, and a connection a read beside the wait gives back goes to its
+//! pool (#6027). How long the request held each connection is recorded on
 //! [`DB_POOL_HOLD_DURATION`](crate::telemetry::metrics::DB_POOL_HOLD_DURATION)
 //! (#5774). Outside a scope every guard returns its connection to the pool,
 //! as before.
@@ -46,7 +49,7 @@
 //!
 //! [`Pool::acquire`]: sqlx::Pool::acquire
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::time::Instant;
@@ -137,6 +140,9 @@ tokio::task_local! {
     /// The pool of each connection a [`request_scope`] has checked out now,
     /// with the pool's name.
     static OUT: RefCell<Vec<(usize, Option<PoolName>)>>;
+    /// The waits of a [`request_scope`] in progress now ([`handoff`]); while
+    /// there is one, the scope keeps no connection.
+    static WAITS: Cell<u32>;
 }
 
 /// Runs `body` as one request: the connection each pool hands it is kept
@@ -148,7 +154,7 @@ pub async fn request_scope<F: Future>(body: F) -> F::Output {
         release_held();
         output
     });
-    tracked(kept).await
+    tracked(WAITS.scope(Cell::new(0), kept)).await
 }
 
 /// Runs `body`, a background task, with its checkouts counted.
@@ -242,10 +248,101 @@ pub fn release_held() {
 /// the work it waits for may need a connection of the same pool: requests
 /// each keeping one and waiting so hold the pool until the acquire timeout
 /// (#5879, #6008). Every wait of a request for another task's work goes
-/// through here. No specification governs this: our own design.
+/// through here.
+///
+/// A request can run two reads side by side, each on its own pool. A
+/// connection one of them gives back while the other waits here is not kept
+/// either ([`Checkout`]): kept, it would be held across the rest of this
+/// wait, and requests each keeping one pool's connection so while they wait
+/// for another's stall as above (#6027). No specification governs this: our
+/// own design.
 pub async fn handoff<F: Future>(wait: F) -> F::Output {
+    let _waiting = Waiting::begin();
     release_held();
-    wait.await
+    let output = wait.await;
+    kept_while_waiting();
+    output
+}
+
+/// Awaits `wait`, a [`handoff`] unless it is ready at once.
+///
+/// For a wait that waits for another task's work only some of the times it
+/// runs: a copy another request is loading, or a lock another holds. Ready
+/// at once, it gives nothing back. No specification governs this: our own
+/// design (#6027).
+pub async fn awaiting<F: Future>(wait: F) -> F::Output {
+    let mut wait = std::pin::pin!(wait);
+    let first = std::future::poll_fn(|cx| std::task::Poll::Ready(wait.as_mut().poll(cx))).await;
+    match first {
+        std::task::Poll::Ready(output) => output,
+        std::task::Poll::Pending => handoff(wait).await,
+    }
+}
+
+/// One wait of the current [`request_scope`] in progress, counted in
+/// [`WAITS`] until it drops, which a request dropped mid-wait does too.
+struct Waiting {
+    counted: bool,
+}
+
+impl Waiting {
+    /// Counts a wait of the current scope; outside a scope it counts nothing.
+    fn begin() -> Self {
+        let counted = WAITS
+            .try_with(|waits| waits.set(waits.get().saturating_add(1)))
+            .is_ok();
+        Self { counted }
+    }
+}
+
+impl Drop for Waiting {
+    fn drop(&mut self) {
+        if self.counted {
+            // NOTE: our own design (#6027), the scope outlives every wait counted in it.
+            let _outside_a_scope = WAITS.try_with(|waits| waits.set(waits.get().saturating_sub(1)));
+        }
+    }
+}
+
+/// Whether the current [`request_scope`] waits for a pool or for another
+/// task's work now.
+fn waiting() -> bool {
+    WAITS.try_with(|waits| waits.get() > 0).unwrap_or(false)
+}
+
+/// A wait of the current [`request_scope`] ended with a connection kept:
+/// the request held that connection idle while it waited. Debug builds
+/// refuse it; a release build counts it on
+/// [`DB_POOL_NESTED_ACQUIRES`](crate::telemetry::metrics::DB_POOL_NESTED_ACQUIRES)
+/// with `order="kept_while_waiting"` and warns. No openEHR spec governs
+/// this: our own design (#6027).
+fn kept_while_waiting() {
+    let kept: Vec<&'static str> = HELD
+        .try_with(|held| {
+            held.try_borrow()
+                .map(|held| held.iter().map(|kept| label(kept.name)).collect())
+                .unwrap_or_default()
+        })
+        .unwrap_or_default();
+    debug_assert!(
+        kept.is_empty(),
+        "a request kept a connection while it waited for a pool or another task (#6027)"
+    );
+    for pool in kept {
+        crate::telemetry::metrics::metrics()
+            .db_pool_nested_acquires
+            .add(
+                1,
+                &[
+                    KeyValue::new(POOL, pool),
+                    KeyValue::new("order", "kept_while_waiting"),
+                ],
+            );
+        tracing::warn!(
+            pool,
+            "a request kept a connection while it waited for a pool or another task"
+        );
+    }
 }
 
 /// Records that a request held a connection of the pool `name` from `since`
@@ -277,9 +374,11 @@ fn take_held(key: usize) -> Option<Held> {
     .flatten()
 }
 
-/// A connection [`acquire`] handed out. It derefs to the connection; when it
-/// drops, the connection goes back to the current [`request_scope`] when that
-/// keeps none of its pool yet, and to the pool otherwise.
+/// A connection [`acquire`] handed out. It derefs to the connection.
+///
+/// When it drops, the connection goes back to the current [`request_scope`]
+/// when that keeps none of its pool yet and waits for nothing ([`handoff`]),
+/// and to the pool otherwise.
 #[derive(Debug)]
 pub struct Checkout {
     conn: Option<PoolConnection<Postgres>>,
@@ -373,9 +472,11 @@ impl Drop for Checkout {
         let (pool, since, name) = (self.pool, self.since, self.name);
         // Outside a scope the closure is dropped unrun, and dropping `conn`
         // returns it to the pool; a scope already keeping a connection of
-        // this pool hands it back, and the request's hold of it ends here.
+        // this pool, or waiting for a pool or another task, hands it back,
+        // and the request's hold of it ends here.
+        let waiting = waiting();
         let returned = HELD.try_with(move |held| match held.try_borrow_mut() {
-            Ok(mut held) if !held.iter().any(|kept| kept.pool == pool) => {
+            Ok(mut held) if !waiting && !held.iter().any(|kept| kept.pool == pool) => {
                 held.push(Held {
                     pool,
                     conn,
