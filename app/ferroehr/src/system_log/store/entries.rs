@@ -17,12 +17,6 @@
 //! act alone, so it is stored once. No openEHR spec governs
 //! audit storage: our own design.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 6, settled by #1885): the store carries an \
-              already-rendered FHIR document, never a typed resource"
-)]
-
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
@@ -121,10 +115,13 @@ impl AuditStore {
                 categories: &policy.categories,
             };
             let (event, subject) = projection.record(&entry, 0)?;
-            let document =
-                crate::system_log::fhir::to_fhir(&event, projection.context, subject.as_deref());
+            let resource = crate::system_log::fhir::to_resource(
+                &event,
+                projection.context,
+                subject.as_deref(),
+            );
             tokens.push(
-                tokens_of(document, &event)
+                tokens_of(resource, &event)
                     .into_iter()
                     .map(|token| crate::access_log::intake::IntakeToken {
                         shares: super::AuditElement::shares(token.parameter),
@@ -293,15 +290,15 @@ impl AuditStore {
     }
 }
 
-/// The ITI-81 search tokens of `document`, the rendering of `event`; none,
+/// The ITI-81 search tokens of `resource`, the rendering of `event`; none,
 /// metered and logged, when it could not be rendered, since it cannot be
 /// served either.
 pub(super) fn tokens_of(
-    document: Result<serde_json::Value, AuditError>,
+    resource: Result<ihe_atna::balp::AuditEventResource, AuditError>,
     event: &AuditEvent,
 ) -> BTreeSet<crate::system_log::search::SearchToken> {
-    match document {
-        Ok(document) => crate::system_log::search::document_tokens(&document, event),
+    match resource {
+        Ok(resource) => crate::system_log::search::resource_tokens(resource.as_resource(), event),
         Err(e) => {
             crate::telemetry::metrics::metrics()
                 .atna_audit_serialize_failed
