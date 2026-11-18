@@ -143,6 +143,18 @@ pub fn validate_composition(composition: &Value, wt: &WebTemplate) -> Vec<Valida
     out
 }
 
+/// [`validate_composition`] over a typed COMPOSITION: the RM-instance passes
+/// and the archetype-conformance pass, with no canonical-JSON value (#6002).
+#[must_use]
+pub fn validate_composition_typed(
+    composition: &openehr_rm::v1_2::composition::composition::Composition,
+    wt: &WebTemplate,
+) -> Vec<ValidationMessage> {
+    let mut out = validate_rm_and_terminology_typed(composition);
+    out.extend(crate::flat::validation::validate_archetype_conformance_typed(composition, wt));
+    out
+}
+
 /// Validate a canonical-JSON party against its `WebTemplate`, RM invariants,
 /// and the RM-mandated openEHR terminology.
 ///

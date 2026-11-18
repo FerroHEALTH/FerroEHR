@@ -19,6 +19,7 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 
 use super::Validator;
+use crate::flat::instance::Instance;
 use crate::flat::webtemplate::model::WebTemplate;
 
 /// Walk `composition` against `wt` with the configured validator.
@@ -26,10 +27,98 @@ use crate::flat::webtemplate::model::WebTemplate;
 /// An archetype root the instance records by the full reference the template
 /// inlined is read under the interface id its template node carries
 /// ([`WebTemplate::archetype_refs`]), so the walk matches it to its node.
-pub(super) fn run(mut v: Validator, composition: &Value, wt: &WebTemplate) -> Validator {
+pub(super) fn run<'i, I: Instance<'i>>(
+    mut v: Validator,
+    composition: I,
+    wt: &'i WebTemplate,
+) -> Validator {
     v.slot_fills_enumerated = wt.archetype_refs.is_some();
-    v.walk(&as_template_node_ids(composition, wt), &wt.tree);
+    match &wt.archetype_refs {
+        Some(refs) => v.walk(Mapped::Node(composition, refs), &wt.tree),
+        None => v.walk(composition, &wt.tree),
+    }
     v
+}
+
+/// An instance read with every `archetype_node_id` in `refs` replaced by the
+/// interface id it maps to: the reading [`as_template_node_ids`] gives a JSON
+/// value by rewriting a copy, here with no copy.
+#[derive(Debug, Clone, Copy)]
+enum Mapped<'i, I> {
+    /// A node or value of the instance.
+    Node(I, &'i BTreeMap<String, String>),
+    /// A mapped `archetype_node_id`.
+    Id(&'i str),
+}
+
+impl<'i, I: Instance<'i>> Instance<'i> for Mapped<'i, I> {
+    fn rm_type(self) -> Option<&'i str> {
+        match self {
+            Self::Node(n, _) => n.rm_type(),
+            Self::Id(_) => None,
+        }
+    }
+    fn attr(self, name: &str) -> Option<Self> {
+        let Self::Node(n, refs) = self else {
+            return None;
+        };
+        if name == "archetype_node_id"
+            && let Some(interface) = n.str_at(name).and_then(|id| refs.get(id))
+        {
+            return Some(Self::Id(interface));
+        }
+        n.attr(name).map(|v| Self::Node(v, refs))
+    }
+    fn members(self, name: &str) -> Option<Vec<Self>> {
+        match self {
+            Self::Node(n, refs) => n
+                .members(name)
+                .map(|m| m.into_iter().map(|v| Self::Node(v, refs)).collect()),
+            Self::Id(_) => None,
+        }
+    }
+    fn is_present(self, name: &str) -> bool {
+        matches!(self, Self::Node(n, _) if n.is_present(name))
+    }
+    fn is_object(self) -> bool {
+        matches!(self, Self::Node(n, _) if n.is_object())
+    }
+    fn as_str(self) -> Option<&'i str> {
+        match self {
+            Self::Node(n, _) => n.as_str(),
+            Self::Id(s) => Some(s),
+        }
+    }
+    fn as_f64(self) -> Option<f64> {
+        match self {
+            Self::Node(n, _) => n.as_f64(),
+            Self::Id(_) => None,
+        }
+    }
+    fn as_i64(self) -> Option<i64> {
+        match self {
+            Self::Node(n, _) => n.as_i64(),
+            Self::Id(_) => None,
+        }
+    }
+    fn as_bool(self) -> Option<bool> {
+        match self {
+            Self::Node(n, _) => n.as_bool(),
+            Self::Id(_) => None,
+        }
+    }
+    fn render(self) -> String {
+        match self {
+            Self::Node(n, _) => n.render(),
+            Self::Id(s) => Value::from(s).to_string(),
+        }
+    }
+    fn keys(self) -> Vec<&'i str> {
+        match self {
+            Self::Node(n, _) => n.keys(),
+            Self::Id(_) => Vec::new(),
+        }
+    }
 }
 
 /// `composition` with every archetype root it records by a full reference in
