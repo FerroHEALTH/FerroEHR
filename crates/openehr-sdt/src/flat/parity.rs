@@ -82,8 +82,7 @@ fn compositions() -> Vec<(PathBuf, Value)> {
     .filter_map(|path| {
         let text = std::fs::read_to_string(&path).ok()?;
         let value: Value = serde_json::from_str(&text).ok()?;
-        (value.get("_type").and_then(Value::as_str) == Some("COMPOSITION"))
-            .then_some((path, value))
+        (value.get("_type").and_then(Value::as_str) == Some("COMPOSITION")).then_some((path, value))
     })
     .collect()
 }
@@ -122,9 +121,9 @@ fn compare_build(label: &str, doc: &SimDocument, wt: &WebTemplate, tally: &mut T
             }
         }
         (Err(_), Err(_)) => tally.refused_by_both += 1,
-        (Ok(_), Err(e)) => tally
-            .failures
-            .push(format!("{label}: only the projection's strict read refuses: {e}")),
+        (Ok(_), Err(e)) => tally.failures.push(format!(
+            "{label}: only the projection's strict read refuses: {e}"
+        )),
         (Err(e), Ok(_)) => tally
             .failures
             .push(format!("{label}: only the typed build refuses: {e}")),
@@ -149,10 +148,19 @@ fn compare_composition(label: &str, value: &Value, wt: &WebTemplate, tally: &mut
                 flat::emit_flat(&new)
             ));
         }
-        if flat::write_flat(&new).ok() != serde_json::to_string(&flat::emit_flat(&new)).ok() {
+        let text = flat::write_flat(&new).ok();
+        if text != serde_json::to_string(&flat::emit_flat(&new)).ok() {
             tally
                 .failures
                 .push(format!("{label}: the streamed FLAT text differs"));
+        }
+        let from_text = text
+            .as_deref()
+            .and_then(|text| flat::parse_flat_text(text.as_bytes()).ok()?.ok());
+        if from_text != flat::parse_flat(&flat::emit_flat(&new)).ok() {
+            tally.failures.push(format!(
+                "{label}: the FLAT text reads to another tree than its map"
+            ));
         }
     }
     match flat::parse_flat(&flat::emit_flat(&from_value)) {
@@ -169,9 +177,22 @@ fn the_typed_build_and_flatten_agree_with_the_canonical_json_forms() {
     assert!(wts.len() > 100, "{} templates", wts.len());
     let mut tally = Tally::default();
     for wt in wts.iter().filter(|wt| wt.tree.rm_type == "COMPOSITION") {
-        for level in [DetailLevel::Required, DetailLevel::Medium, DetailLevel::Complete] {
+        for level in [
+            DetailLevel::Required,
+            DetailLevel::Medium,
+            DetailLevel::Complete,
+        ] {
             let label = format!("{} example {level:?}", wt.template_id);
-            match flat::parse_flat(&example_composition_flat(wt, level)) {
+            let example = example_composition_flat(wt, level);
+            let text = serde_json::to_vec(&example).unwrap_or_default();
+            if flat::parse_flat_text(&text).ok().and_then(Result::ok)
+                != flat::parse_flat(&example).ok()
+            {
+                tally.failures.push(format!(
+                    "{label}: the example's text reads to another tree than its map"
+                ));
+            }
+            match flat::parse_flat(&example) {
                 Ok(tree) => compare_build(&label, &tree, wt, &mut tally),
                 Err(e) => tally
                     .failures

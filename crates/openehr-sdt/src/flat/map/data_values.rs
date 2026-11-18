@@ -20,6 +20,7 @@
               the builders read it into typed RM and the emitters write it (#1694, #6003)"
 )]
 
+use openehr_rm::v1_2::access;
 use openehr_rm::v1_2::access::{RmObject, RmValue};
 use openehr_rm::v1_2::typing::{RmType, base_name};
 use serde_json::{Value, json};
@@ -137,7 +138,7 @@ fn attach_ordered_internal(
 /// # Errors
 /// [`FlatError::Rm`] for a datum that is no string.
 pub(super) fn duration(value: &Value) -> Result<Obj, FlatError> {
-    let mut d = typed::new("DV_DURATION")?;
+    let mut d = access::construct("DV_DURATION")?;
     d.put_datum("value", value)?;
     Ok(d)
 }
@@ -231,10 +232,10 @@ fn build_core(
         "DV_PROPORTION" => build_proportion(node),
         "DV_ORDINAL" => build_ordinal(node, "DV_ORDINAL", "ordinal", wt),
         "DV_SCALE" => build_ordinal(node, "DV_SCALE", "scale", wt),
-        "DV_BOOLEAN" => bare_typed(node, "DV_BOOLEAN"),
+        "DV_BOOLEAN" => from_bare(node, "DV_BOOLEAN", "value"),
         "DV_DURATION" => build_amount_temporal(node, base, true),
         "DV_DATE_TIME" | "DV_DATE" | "DV_TIME" => build_amount_temporal(node, base, false),
-        "DV_URI" | "DV_EHR_URI" => bare_typed(node, base),
+        "DV_URI" | "DV_EHR_URI" => from_bare(node, base, "value"),
         "DV_IDENTIFIER" => parties::build_identifier(node).map(Some),
         // master05 §PARTY_PROXY → the three subtype tables. `PERSON` is the
         // `PARTY_REF.type` used when the datum carries an `|id` but no
@@ -247,7 +248,7 @@ fn build_core(
         "DV_MULTIMEDIA" => build_multimedia(node),
         "DV_PARSABLE" => build_parsable(node),
         "DV_INTERVAL" => build_interval(node, &interval_limit(rm_type)).map(Some),
-        _ => bare_typed(node, base),
+        _ => from_bare(node, base, "value"),
     }
 }
 
@@ -286,7 +287,7 @@ fn build_text(node: &SimNode, ty: &str) -> Result<Option<Obj>, FlatError> {
     let Some(value) = node.bare().or_else(|| attr(node, "value")) else {
         return Ok(None);
     };
-    let mut o = typed::new(ty)?;
+    let mut o = access::construct(ty)?;
     o.put_datum("value", value)?;
     put_suffixes(&mut *o, node, &[("formatting", "formatting")])?;
     Ok(Some(o))
@@ -308,7 +309,7 @@ fn build_coded_text(
     let terminology = attr_str(node, "terminology")
         .or_else(|| wt_terminology(wt))
         .unwrap_or("local");
-    let mut o = typed::new(ty)?;
+    let mut o = access::construct(ty)?;
     match attr(node, "value") {
         Some(value) => o.put_datum("value", value)?,
         None => {
@@ -370,7 +371,7 @@ fn build_quantity(node: &SimNode) -> Result<Option<Obj>, FlatError> {
     let Some(magnitude) = attr(node, "magnitude") else {
         return Ok(None);
     };
-    let mut o = typed::new("DV_QUANTITY")?;
+    let mut o = access::construct("DV_QUANTITY")?;
     o.put_datum("magnitude", magnitude)?;
     put_suffixes(
         &mut *o,
@@ -393,7 +394,7 @@ fn build_proportion(node: &SimNode) -> Result<Option<Obj>, FlatError> {
     let Some(numerator) = attr(node, "numerator") else {
         return Ok(None);
     };
-    let mut o = typed::new("DV_PROPORTION")?;
+    let mut o = access::construct("DV_PROPORTION")?;
     o.put_datum("numerator", numerator)?;
     put_suffixes(
         &mut *o,
@@ -433,7 +434,7 @@ fn build_ordinal(
         return Ok(None);
     };
     let terminology = attr_str(node, "terminology").unwrap_or("local");
-    let mut symbol = typed::new("DV_CODED_TEXT")?;
+    let mut symbol = access::construct("DV_CODED_TEXT")?;
     match attr(node, "value") {
         Some(value) => symbol.put_datum("value", value)?,
         None => {
@@ -446,7 +447,7 @@ fn build_ordinal(
         "defining_code",
         o(code_phrase_obj(code, terminology, None)?),
     )?;
-    let mut o = typed::new(ty)?;
+    let mut o = access::construct(ty)?;
     o.put_datum("value", &numeric)?;
     o.put("symbol", typed::o(symbol))?;
     Ok(Some(o))
@@ -469,10 +470,10 @@ fn build_amount_temporal(
 /// master05 §DV_MULTIMEDIA: bare = `uri`; `media_type` + `size` are RM-mandatory
 /// (`size` defaults to 0 when the FLAT lacks `|size`).
 fn build_multimedia(node: &SimNode) -> Result<Option<Obj>, FlatError> {
-    let mut o = typed::new("DV_MULTIMEDIA")?;
+    let mut o = access::construct("DV_MULTIMEDIA")?;
     let mut carries_content = false;
     if let Some(uri) = node.bare() {
-        let mut dv_uri = typed::new("DV_URI")?;
+        let mut dv_uri = access::construct("DV_URI")?;
         dv_uri.put_datum("value", uri)?;
         o.put("uri", typed::o(dv_uri))?;
         carries_content = true;
@@ -517,7 +518,7 @@ fn build_parsable(node: &SimNode) -> Result<Option<Obj>, FlatError> {
     let Some(value) = node.bare().or_else(|| attr(node, "value")) else {
         return Ok(None);
     };
-    let mut o = typed::new("DV_PARSABLE")?;
+    let mut o = access::construct("DV_PARSABLE")?;
     o.put_datum("value", value)?;
     match attr(node, "formalism") {
         Some(formalism) => o.put_datum("formalism", formalism)?,
@@ -526,16 +527,12 @@ fn build_parsable(node: &SimNode) -> Result<Option<Obj>, FlatError> {
     Ok(Some(o))
 }
 
-fn bare_typed(node: &SimNode, ty: &str) -> Result<Option<Obj>, FlatError> {
-    from_bare(node, ty, "value")
-}
-
 /// A `ty` whose `attr` is the bare datum of `node`; `None` without one.
 fn from_bare(node: &SimNode, ty: &str, attr: &str) -> Result<Option<Obj>, FlatError> {
     let Some(value) = node.bare() else {
         return Ok(None);
     };
-    let mut o = typed::new(ty)?;
+    let mut o = access::construct(ty)?;
     o.put_datum(attr, value)?;
     Ok(Some(o))
 }
@@ -543,7 +540,7 @@ fn from_bare(node: &SimNode, ty: &str, attr: &str) -> Result<Option<Obj>, FlatEr
 /// master05 §TERM_MAPPING. `pub(super)` — reused by [`super::structures`] for the
 /// `_mapping:i` family via [`build_indexed`].
 pub(super) fn build_term_mapping(node: &SimNode) -> Result<Obj, FlatError> {
-    let mut o = typed::new("TERM_MAPPING")?;
+    let mut o = access::construct("TERM_MAPPING")?;
     match attr(node, "match") {
         Some(m) if m.is_string() => o.put_datum("match", m)?,
         _ => o.put("match", RmValue::Character('='))?,
@@ -561,7 +558,7 @@ pub(super) fn build_term_mapping(node: &SimNode) -> Result<Obj, FlatError> {
 /// (defaults: unbounded=false, included=true). `pub(super)` — reused by the
 /// `_normal_range` family in [`super::structures`].
 pub(super) fn build_interval(node: &SimNode, t: &str) -> Result<Obj, FlatError> {
-    let mut iv = typed::new("DV_INTERVAL")?;
+    let mut iv = access::construct("DV_INTERVAL")?;
     for bound in ["lower", "upper"] {
         if let Some(n) = single(node, bound)
             && let Some(dv) = build_leaf(n, t, None)?

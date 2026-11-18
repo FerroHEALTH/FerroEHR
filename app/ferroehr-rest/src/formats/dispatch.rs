@@ -33,7 +33,7 @@
 use axum::response::Response;
 use bytes::Bytes;
 use http::{HeaderMap, StatusCode};
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 use openehr_its::rest::generated::ehr::NewContribution;
 use openehr_its::rest::runtime::ApiError;
@@ -128,24 +128,24 @@ fn flat_output_err(e: &openehr_sdt::flat::error::FlatError) -> RestError {
 // ── COMPOSITION: request side ──────────────────────────────────────────────
 
 /// Parse a FLAT request body into the typed COMPOSITION the commit seam takes,
-/// driven by the template named in the `openehr-template-id` header: one parse
-/// of the FLAT text, one build into typed RM (#6003).
+/// driven by the template named in the `openehr-template-id` header: the FLAT
+/// text read once into the simplified tree, which builds typed RM, with no
+/// JSON value of the document between them (#6003).
 pub(crate) async fn composition_from_flat(
     state: &AppState,
     headers: &HeaderMap,
     body: &Bytes,
 ) -> Result<Composition, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
-    ferroehr::telemetry::conversion::record("text_to_flat");
-    let flat: Map<String, Value> = serde_json::from_slice(body)
+    ferroehr::telemetry::conversion::record("flat_to_rm");
+    let tree = openehr_sdt::flat::sim::flat::parse_flat_text(body)
         .map_err(|e| RestError::from(ApiError::BadRequest(format!("invalid FLAT JSON: {e}"))))?;
     let wt = state
         .backend()
         .web_template(&template_id)
         .await
         .map_err(RestError::from)?;
-    ferroehr::telemetry::conversion::record("flat_to_rm");
-    openehr_sdt::flat::convert::submitted_rm_from_flat(&flat, &wt, &now())
+    tree.and_then(|tree| openehr_sdt::flat::convert::submitted_rm_from_tree(&tree, &wt, &now()))
         .map_err(|e| flat_input_err(&e))
 }
 

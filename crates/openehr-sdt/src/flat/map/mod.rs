@@ -56,6 +56,7 @@ pub(crate) mod emit;
 pub(crate) mod parties;
 pub(crate) mod structures;
 
+use openehr_rm::v1_2::access;
 use openehr_rm::v1_2::access::{RmObject, RmValue};
 use openehr_rm::v1_2::typing::base_name;
 use serde_json::Value;
@@ -100,8 +101,8 @@ pub(crate) fn build_leaf(
     // canonical RM JSON and MUST carry `_type`. RM→FLAT produces it only for
     // a value no master05 table can express (a `DV_STATE`, a non-conforming
     // stored value).
-    if let Some(raw) = node.attrs.get("raw") {
-        return typed::decode_raw(raw, path);
+    if let Some(raw) = &node.raw {
+        return typed::raw_object(raw, path);
     }
 
     // NOTE: simplified_formats master05-rm_mapping has no DV_STATE table, so
@@ -129,7 +130,7 @@ pub(crate) fn build_leaf(
         if list_open_of(wt_node) == Some(false) {
             return Err(FlatError::OtherOnClosedValueSet(path.to_owned()));
         }
-        let mut text = typed::new("DV_TEXT")?;
+        let mut text = access::construct("DV_TEXT")?;
         text.put_datum("value", other)?;
         return Ok(text);
     }
@@ -355,29 +356,29 @@ pub(crate) fn raw_value(
     path: &str,
     types: &[&str],
 ) -> Option<Result<Obj, FlatError>> {
-    let raw = node.attrs.get("raw")?;
+    let raw = node.raw.as_ref()?;
     let invalid = |reason: String| FlatError::InvalidRaw {
         path: path.to_owned(),
         reason,
     };
-    let Some(rm_type) = raw.get("_type").and_then(Value::as_str) else {
+    let Some(rm_type) = typed::raw_type(raw) else {
         return Some(Err(FlatError::RawWithoutType {
             path: path.to_owned(),
         }));
     };
-    if !types.contains(&rm_type) {
+    if !types.contains(&&*rm_type) {
         return Some(Err(invalid(format!(
             "the |raw value is a {rm_type}, expected one of {}",
             types.join(", ")
         ))));
     }
-    if node.attrs.len() > 1 || !node.children.is_empty() {
+    if !node.attrs.is_empty() || !node.children.is_empty() {
         return Some(Err(invalid(
             "|raw carries the whole value, so no other suffix or sub-path may stand beside it"
                 .to_owned(),
         )));
     }
-    Some(typed::decode_raw(raw, path))
+    Some(typed::raw_object(raw, path))
 }
 
 /// The concrete `PARTY_PROXY` classes (RM common `generic` package §PARTY_PROXY
@@ -424,21 +425,16 @@ pub(crate) fn coded_from_group(group_id: &str, token: &str) -> Result<Obj, FlatE
     let term = openehr_term::bundle::openehr();
     if term.is_valid_code(group_id, token) {
         let value = term.rubric(group_id, token, "en").unwrap_or(token);
-        return coded_text("openehr", token, value);
+        return typed::dv_coded_text(value, "openehr", token);
     }
     if let Some(concept) = term
         .concepts_in_group(group_id)
         .iter()
         .find(|c| c.rubric == token)
     {
-        return coded_text("openehr", &concept.id, token);
+        return typed::dv_coded_text(token, "openehr", &concept.id);
     }
-    coded_text("openehr", token, token)
-}
-
-/// A `DV_CODED_TEXT` from its display value + `(terminology, code)`.
-pub(super) fn coded_text(terminology: &str, code: &str, value: &str) -> Result<Obj, FlatError> {
-    typed::dv_coded_text(value, terminology, code)
+    typed::dv_coded_text(token, "openehr", token)
 }
 
 /// The `listOpen` marker from the first web-template input that carries one
@@ -555,11 +551,12 @@ fn is_known_suffix(base: &str, suffix: &str) -> bool {
 }
 
 /// Reject any `|suffix` on `node` not defined for `base` (master05 per-type
-/// tables). The bare `""` datum and the master04 bypass suffixes `raw`/`other`
-/// are always tolerated here (their own rules run in [`build_leaf`]).
+/// tables). The bare `""` datum and the master04 bypass suffix `other` are
+/// always tolerated here (its own rules run in [`build_leaf`]); a `|raw`
+/// datum sits apart from the suffixes ([`SimNode::raw`]).
 fn reject_unknown_suffixes(node: &SimNode, base: &str, path: &str) -> Result<(), FlatError> {
     for key in node.attrs.keys() {
-        if key.is_empty() || key == "raw" || key == "other" {
+        if key.is_empty() || key == "other" {
             continue;
         }
         // A leaf datum suffix is single-level; guard defensively against a
@@ -584,7 +581,7 @@ mod tests {
     fn leaf(pairs: &[(&str, Value)]) -> SimNode {
         let mut n = SimNode::default();
         for (k, v) in pairs {
-            n.attrs.insert((*k).to_owned(), v.clone());
+            n.put_datum((*k).to_owned(), v.clone());
         }
         n
     }
@@ -609,6 +606,38 @@ mod tests {
         assert!(matches!(
             build_leaf(&node, "DV_TEXT", None, "p"),
             Err(FlatError::RawWithoutType { .. })
+        ));
+    }
+
+    /// A `|raw` datum read from FLAT text reads and refuses as its value does
+    /// (#6003).
+    #[test]
+    fn raw_text_reads_as_its_value_does() {
+        let text = |t: &str| SimNode {
+            raw: Some(crate::flat::sim::RawDatum::Text(
+                serde_json::value::RawValue::from_string(t.to_owned()).unwrap(),
+            )),
+            ..SimNode::default()
+        };
+        let quantity = r#"{"_type": "DV_QUANTITY", "magnitude": 120.0, "units": "mm[Hg]"}"#;
+        let built = build_leaf(&text(quantity), "DV_TEXT", None, "p").unwrap();
+        assert_eq!(
+            typed::canonical_of(&*built).unwrap(),
+            json!({"_type": "DV_QUANTITY", "magnitude": 120.0, "units": "mm[Hg]"})
+        );
+        for untyped in [r#"{"magnitude": 1}"#, "5", r#"["x"]"#] {
+            assert!(matches!(
+                build_leaf(&text(untyped), "DV_TEXT", None, "p"),
+                Err(FlatError::RawWithoutType { .. })
+            ));
+        }
+        assert!(matches!(
+            build_leaf(&text(r#"{"_type": "DV_QUANTITY", "magnitude": "x"}"#), "DV_TEXT", None, "p"),
+            Err(FlatError::RawDecode { .. })
+        ));
+        assert!(matches!(
+            build_leaf(&text(r#"{"_type": "HIER_OBJECT_ID", "value": "x"}"#), "DV_TEXT", None, "p"),
+            Err(FlatError::InvalidRaw { .. })
         ));
     }
 

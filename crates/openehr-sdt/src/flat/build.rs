@@ -32,6 +32,7 @@ use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use openehr_rm::prelude::Composition;
+use openehr_rm::v1_2::access;
 use openehr_rm::v1_2::access::{RmObject, RmValue};
 use openehr_rm::v1_2::paths::PathSegment;
 use openehr_rm::v1_2::typing::base_name;
@@ -145,7 +146,7 @@ pub fn build_composition_with(
     now: &str,
     options: &BuildOptions<'_>,
 ) -> Result<Composition, FlatError> {
-    typed::finish(composition_tree(doc, wt, now, options)?)
+    Ok(access::finish(composition_tree(doc, wt, now, options)?)?)
 }
 
 /// The COMPOSITION tree [`build_composition_with`] finishes: every RM-mandatory
@@ -199,7 +200,7 @@ pub(crate) fn composition_tree(
 
     let mut comp = match build(&wt.tree, data_root, root_id, &build_ctx)? {
         Some(built) => built,
-        None => typed::new("COMPOSITION")?,
+        None => access::construct("COMPOSITION")?,
     };
     finish_identity(
         &mut *comp,
@@ -264,7 +265,7 @@ pub fn build_party(
         });
     }
     let tree = build_root_tree(doc, wt, options)?;
-    let party = typed::finish::<Party>(tree).map_err(|e| FlatError::PartyDecode {
+    let party = access::finish::<Party>(tree).map_err(|e| FlatError::PartyDecode {
         class: class.to_owned(),
         source: Box::new(e),
     })?;
@@ -325,7 +326,7 @@ fn build_root_tree(
     let build_ctx = BuildCtx::new(wt, options);
     let mut root = match build(&wt.tree, data_root, root_id, &build_ctx)? {
         Some(built) => built,
-        None => typed::new(concrete_type(&wt.tree.rm_type))?,
+        None => access::construct(concrete_type(&wt.tree.rm_type))?,
     };
     finish_identity(
         &mut *root,
@@ -464,13 +465,6 @@ fn has_explicit_event_context(ctx_node: Option<&SimNode>) -> bool {
             "time" | "end_time" | "setting" | "location" | "health_care_facility"
         ) || key.starts_with("participation_")
     })
-}
-
-/// The `|raw` bypass on a container node: the payload must be a
-/// canonical-JSON RM object carrying `_type`
-/// (`master04 §Raw canonical JSON`).
-fn build_raw(raw: &Value, path: &str) -> Result<Obj, FlatError> {
-    typed::decode_raw(raw, path)
 }
 
 // ── the template walk ──────────────────────────────────────────────────────
@@ -674,7 +668,7 @@ fn build(
         node
     };
 
-    let mut obj = typed::new(concrete_type(&node.rm_type))?;
+    let mut obj = access::construct(concrete_type(&node.rm_type))?;
     // `OBSERVATION/history_origin` (master05 §OBSERVATION `/history_origin`) is
     // an alias for `data.origin`; captured here and applied after the mandatory
     // HISTORY is materialised (see below).
@@ -686,8 +680,8 @@ fn build(
     // (master04 §Raw canonical JSON) or as one of the few datum suffixes the
     // master05 per-type tables place on a container; anything else is an
     // unknown suffix.
-    if let Some(raw) = sim.attrs.get("raw") {
-        return build_raw(raw, path).map(Some);
+    if let Some(raw) = &sim.raw {
+        return typed::raw_object(raw, path).map(Some);
     }
     map::apply_container_datum_attrs(node, sim, path, &mut *obj)?;
 
@@ -834,6 +828,7 @@ fn apply_container_attrs(
 /// null flavour can legitimately reach the builder.
 fn is_null_flavoured(sim: &SimNode) -> bool {
     sim.attrs.is_empty()
+        && sim.raw.is_none()
         && sim
             .children
             .get("_null_flavour")
@@ -1191,7 +1186,7 @@ fn coded_group_value(node: &SimNode, group: &str, sub_path: &str) -> Result<Obj,
 /// (master05 §ISM_TRANSITION). `current_state` is 1..1 DV_CODED_TEXT, the other
 /// two 0..1 DV_CODED_TEXT (RM ehr `ism_transition.adoc`).
 fn build_ism_transition(node: &SimNode, path: &str) -> Result<Obj, FlatError> {
-    let mut ism = typed::new("ISM_TRANSITION")?;
+    let mut ism = access::construct("ISM_TRANSITION")?;
     for (seg, group) in [
         ("current_state", Some("instruction_states")),
         ("transition", Some("instruction_transitions")),
@@ -1652,7 +1647,7 @@ fn new_struct<'a>(
             node_id,
         ),
     };
-    let mut o = typed::new(rm_type)?;
+    let mut o = access::construct(rm_type)?;
     // `name` is `LOCATABLE.name`, so stamping it on a class that does not
     // inherit LOCATABLE authors a member the RM does not declare — the live
     // case is `ISM_TRANSITION`, which inherits PATHABLE (RM
@@ -1712,14 +1707,14 @@ fn conforming_type<'a>(
     let Some(declared) = schema::attribute(parent, attr).map(|a| a.declared_type) else {
         return inferred;
     };
-    if schema::is_a(inferred, declared) {
+    if openehr_rm::v1_2::model::is_a(inferred, declared) {
         return inferred;
     }
     node_id
         .filter(|id| openehr_rm::v1_2::paths::is_archetype_root_node_id(id))
         .and_then(|id| id.split('.').next())
         .and_then(|qualified| qualified.rsplit('-').next())
-        .filter(|class| schema::is_a(class, declared))
+        .filter(|class| openehr_rm::v1_2::model::is_a(class, declared))
         .unwrap_or(inferred)
 }
 
@@ -1810,7 +1805,7 @@ fn fill_non_locatable(obj: &mut dyn RmObject, rm_type: &str) -> Result<bool, Fla
     // its `performer: PARTY_PROXY [1..1]` is mandatory, and the identity-free
     // `PARTY_SELF` fills it without inventing a person.
     if rm_type == "PARTICIPATION" {
-        obj.or_put("performer", || Ok(o(typed::new("PARTY_SELF")?)))?;
+        obj.or_put("performer", || Ok(o(access::construct("PARTY_SELF")?)))?;
         return Ok(true);
     }
     // PARTY_PROXY subtypes are not LOCATABLE either, and `PARTY_IDENTIFIED.name`
@@ -1860,7 +1855,7 @@ fn fill_mandatory_entry_attributes(
         rm_type,
         "OBSERVATION" | "EVALUATION" | "INSTRUCTION" | "ACTION" | "ADMIN_ENTRY" | "GENERIC_ENTRY"
     ) {
-        obj.or_put("subject", || Ok(o(typed::new("PARTY_SELF")?)))?;
+        obj.or_put("subject", || Ok(o(access::construct("PARTY_SELF")?)))?;
     }
     match rm_type {
         "OBSERVATION" => obj.or_put("data", || {
@@ -2056,7 +2051,7 @@ fn complete_tree(
 /// identifier, a reference or a party proxy (RM data_types, common, BASE
 /// identification packages), none of which contains a LOCATABLE.
 fn holds_no_structure(rm_type: &str) -> bool {
-    use openehr_rm::v1_2::access::schema::is_a;
+    use openehr_rm::v1_2::model::is_a;
     rm_type == "CODE_PHRASE"
         || is_a(rm_type, "DATA_VALUE")
         || is_a(rm_type, "PARTY_PROXY")
@@ -2117,7 +2112,9 @@ fn fill_structural_mandatory(obj: &mut dyn RmObject, rm_type: &str) -> Result<()
             Ok(o(typed::dv_coded_text("initial", "openehr", "524")?))
         }),
         "INSTRUCTION" => obj.or_put("narrative", || Ok(o(typed::dv_text("<narrative>")?))),
-        "ACTION" => obj.or_put("ism_transition", || Ok(o(typed::new("ISM_TRANSITION")?))),
+        "ACTION" => obj.or_put("ism_transition", || {
+            Ok(o(access::construct("ISM_TRANSITION")?))
+        }),
         // The ITEM_TREE / ITEM_LIST / CLUSTER `items` and the ITEM_TABLE `rows`
         // stay unwritten when empty (ITS-REST Resources.md §JSON Format).
         _ => Ok(()),
@@ -2134,7 +2131,7 @@ mod tests {
     fn a_history_without_an_event_carries_no_events_member() {
         let built = structural_container("HISTORY", "at0001", "History").unwrap();
         assert!(!built.is_set("events"), "{built:?}");
-        let mut obj = typed::new("HISTORY").unwrap();
+        let mut obj = access::construct("HISTORY").unwrap();
         fill_structural_mandatory(&mut *obj, "HISTORY").unwrap();
         assert!(obj.is_set("origin") && !obj.is_set("events"), "{obj:?}");
     }

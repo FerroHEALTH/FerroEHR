@@ -97,7 +97,7 @@ pub(crate) fn emit_leaf<'a, I: Instance<'a>>(
         }
         // master05 has no §DV_STATE table, so the value goes out whole as
         // master04 §Raw canonical JSON (`|raw`), the one specified carrier.
-        "DV_STATE" => put(out, "raw", Some(rm)),
+        "DV_STATE" => out.raw = rm.to_raw(),
         // master05 §CODE_PHRASE.
         "CODE_PHRASE" => {
             let (code, term, pref) = code_phrase_parts(rm);
@@ -391,8 +391,8 @@ fn emit_locatable_attrs<'a, I: Instance<'a>>(rm: I, out: &mut SimNode) {
         let target = out.occurrence_mut("_feeder_audit", None);
         if audit_parties_survive(fa) {
             emit_feeder_audit(fa, target);
-        } else if let Some(raw) = fa.to_value() {
-            target.attrs.insert("raw".to_owned(), raw);
+        } else if let Some(raw) = fa.to_raw() {
+            target.raw = Some(raw);
         }
     }
 }

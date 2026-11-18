@@ -162,7 +162,7 @@ async fn the_intake_statement_grows_with_its_tokens_alone() {
     .expect("the render policy");
 
     take(&pool, &policy, 1).await;
-    let evicted = testkit::statement_window(&pool)
+    let evicted = testkit::statements::statement_window(&pool)
         .await
         .expect("the statement counts reset");
     take(&pool, &policy, 1).await;
@@ -174,7 +174,7 @@ async fn the_intake_statement_grows_with_its_tokens_alone() {
     .fetch_all(&pool)
     .await
     .expect("pg_stat_statements reads");
-    testkit::assert_statements_kept(&pool, evicted)
+    testkit::statements::assert_statements_kept(&pool, evicted)
         .await
         .expect("no statement evicted while the test counted them");
     let (keys, own): (Vec<_>, Vec<_>) = statements

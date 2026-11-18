@@ -30,7 +30,7 @@ use serde_json::{Map, Value};
 
 use crate::flat::error::FlatError;
 use crate::flat::path::FlatKey;
-use crate::flat::sim::{SimDocument, SimNode, is_present};
+use crate::flat::sim::{RawDatum, SimDocument, SimNode, is_present};
 
 /// The `ctx` grouping property (`master04 §Structured format` rule 4).
 const CTX: &str = "ctx";
@@ -103,7 +103,7 @@ fn parse_child_property(node: &mut SimNode, key: &str, value: &Value) -> Result<
     if let Some(chain) = key.strip_prefix('|') {
         // Validate the suffix-chain syntax by parsing it as a key tail.
         FlatKey::parse(&format!("x|{chain}"))?;
-        node.attrs.insert(chain.to_owned(), value.clone());
+        node.put_datum(chain.to_owned(), value.clone());
         return Ok(());
     }
     // A segment name, optionally `:i`-indexed (rule 2 allows indices to
@@ -177,6 +177,9 @@ fn emit_node(node: &SimNode) -> Value {
         return bare.clone();
     }
     let mut out = Map::new();
+    if let Some(raw) = node.raw.as_ref().and_then(RawDatum::to_value) {
+        out.insert("|raw".to_owned(), raw);
+    }
     for (chain, value) in &node.attrs {
         let key = if chain.is_empty() {
             String::new()
@@ -254,7 +257,7 @@ fn parse_ctx_item(occ: &mut SimNode, value: &Value, key: &str) -> Result<(), Fla
                         ),
                     });
                 };
-                occ.attrs.insert(chain.to_owned(), val.clone());
+                occ.put_datum(chain.to_owned(), val.clone());
             }
             Ok(())
         }
@@ -287,6 +290,9 @@ fn emit_ctx_item(occ: &SimNode) -> Value {
         return bare.clone();
     }
     let mut out = Map::new();
+    if let Some(raw) = occ.raw.as_ref().and_then(RawDatum::to_value) {
+        out.insert("|raw".to_owned(), raw);
+    }
     for (chain, value) in &occ.attrs {
         let key = if chain.is_empty() {
             String::new()

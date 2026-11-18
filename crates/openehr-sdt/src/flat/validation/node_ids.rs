@@ -127,6 +127,9 @@ impl<'i, I: Instance<'i>> Instance<'i> for Mapped<'i, I> {
             Self::Id(s) => Some(Value::from(s)),
         }
     }
+    fn to_raw(self) -> Option<crate::flat::sim::RawDatum> {
+        self.to_value().map(crate::flat::sim::RawDatum::Json)
+    }
 }
 
 /// Rewrite every `archetype_node_id` found in `refs` to the interface id it

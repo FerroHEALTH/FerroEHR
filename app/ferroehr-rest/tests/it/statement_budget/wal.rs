@@ -433,7 +433,7 @@ async fn a_composition_commit_stays_within_its_wal_ceiling() {
             .sum();
         let per_commit = commits.div_euclid(REQUESTS);
         let nested = nested_calls(&pool).await.div_euclid(REQUESTS);
-        testkit::assert_statements_kept(&pool, evicted)
+        testkit::statements::assert_statements_kept(&pool, evicted)
             .await
             .expect("no statement evicted while the test counted them");
         writeln!(
@@ -497,7 +497,7 @@ async fn commit_window(
     commits: impl Future<Output = ()>,
 ) -> (Vec<(String, u64, u64)>, i64) {
     drained(pool).await;
-    let evicted = testkit::statement_window(pool)
+    let evicted = testkit::statements::statement_window(pool)
         .await
         .expect("the statement counts reset");
     let mut keeper = ferroehr::db::acquire::acquire(pool)

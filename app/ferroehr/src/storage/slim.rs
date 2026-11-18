@@ -206,7 +206,7 @@ pub(crate) fn object<const N: usize>(fields: [(&str, Value); N]) -> Value {
 mod tests {
     use super::*;
     use crate::storage::header::jsonb_key_order;
-    use crate::storage::render::nodes::{SlimmedValue, slim_value, stored_nodes_with_fragments};
+    use crate::storage::render::nodes::{SlimmedValue, decompose, slim_value};
     use serde_json::json;
 
     /// Slims `fragment` as a row of `rm_type` would.
@@ -318,7 +318,7 @@ mod tests {
         };
         let rendered = crate::storage::render::index::render(&composition).expect("renders");
         let (rows, whole) =
-            stored_nodes_with_fragments(&rendered, &identity).expect("the composition decomposes");
+            decompose(&rendered, &identity, true).expect("the composition decomposes");
         for (row, whole) in rows.iter().zip(&whole) {
             let root = (row.num == 0).then_some(&identity);
             let fragment: Value = serde_json::from_str(whole).expect("a fragment is JSON");

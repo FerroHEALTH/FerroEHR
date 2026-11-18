@@ -5,14 +5,15 @@
 //! Formats (#6003).
 //!
 //! The FLAT and STRUCTURED build fills RM objects by attribute name through
-//! the reflective accessor of `openehr_rm::v1_2::access`: [`new`] starts an
-//! object with every attribute unset, [`Build`] writes into it, and the
-//! caller's `finish` turns the tree into the real struct. A datum the client
+//! the reflective accessor of `openehr_rm::v1_2::access`: `access::construct`
+//! starts an object with every attribute unset, [`Build`] writes into it, and
+//! `access::finish` turns the tree into the real struct. A datum the client
 //! wrote as JSON enters through [`Build::put_datum`], which reads it as the
-//! attribute's primitive; a `|raw` fragment through [`decode_raw`], the strict
-//! canonical reader of its class. [`canonical_of`] renders a typed object back
-//! to canonical JSON, the one form `|raw` output takes. No openEHR
-//! specification governs this construction: our own design.
+//! attribute's primitive; a `|raw` fragment through [`raw_object`], the strict
+//! canonical reader of its class. [`RawJson`] writes a typed object back as
+//! canonical JSON text, the one form `|raw` output takes, and
+//! [`canonical_of`] as its value. No openEHR specification governs this
+//! construction: our own design.
 
 #![expect(
     clippy::disallowed_types,
@@ -20,22 +21,14 @@
               master04 §Raw canonical JSON), the edge this module reads them across (#1694, #6003)"
 )]
 
-use openehr_rm::v1_2::access::FromRm;
-use openehr_rm::v1_2::access::{self, AccessError, RmObject, RmRef, RmValue, Site, schema};
+use openehr_rm::v1_2::access::{self, AccessError, FromRm, RmObject, RmRef, RmValue, Site, schema};
 use serde_json::Value;
 
 use crate::flat::error::FlatError;
+use crate::flat::sim::RawDatum;
 
 /// An RM object under construction, or a finished one.
 pub(crate) type Obj = Box<dyn RmObject>;
-
-/// Starts an object of the concrete class `rm_type`, every attribute unset.
-///
-/// # Errors
-/// [`FlatError::Rm`] for a name that is no concrete RM class.
-pub(crate) fn new(rm_type: &str) -> Result<Obj, FlatError> {
-    Ok(access::construct(rm_type)?)
-}
 
 /// An object of class `rm_type` with `attributes` written in order.
 ///
@@ -45,7 +38,7 @@ pub(crate) fn make<'a>(
     rm_type: &str,
     attributes: impl IntoIterator<Item = (&'a str, RmValue)>,
 ) -> Result<Obj, FlatError> {
-    let mut o = new(rm_type)?;
+    let mut o = access::construct(rm_type)?;
     for (attr, value) in attributes {
         o.put(attr, value)?;
     }
@@ -192,144 +185,305 @@ pub(crate) fn datum(
     }))
 }
 
-/// Finishes the tree `root` as the real `T`.
-///
-/// # Errors
-/// [`FlatError::Rm`] naming the first mandatory attribute left unset, or a
-/// value of the wrong kind.
-pub(crate) fn finish<T: FromRm>(root: Obj) -> Result<T, FlatError> {
-    Ok(access::finish::<T>(root)?)
+/// The RM classes a `|raw` datum carries whole (master04 §Raw canonical
+/// JSON): the ones a Simplified-Formats attribute takes as one object.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RawClass {
+    DataValue,
+    Locatable,
+    PartyProxy,
+    CodePhrase,
+    Link,
+    FeederAudit,
+    Participation,
+    ObjectRef,
+    HierObjectId,
+    ObjectVersionId,
+    GenericId,
+    PartyRef,
+    IsmTransition,
+    TermMapping,
+    InstructionDetails,
+    FeederAuditDetails,
+    EventContext,
 }
 
-/// The typed object a `|raw` canonical-JSON fragment carries (master04 §Raw
-/// canonical JSON), read by the strict canonical reader of its class.
+impl RawClass {
+    /// The class an object of `rm_type` is read and written as.
+    fn of(rm_type: &str) -> Option<Self> {
+        let is_a = |ancestor: &str| openehr_rm::v1_2::model::is_a(rm_type, ancestor);
+        Some(if is_a("DATA_VALUE") {
+            Self::DataValue
+        } else if is_a("LOCATABLE") {
+            Self::Locatable
+        } else if is_a("PARTY_PROXY") {
+            Self::PartyProxy
+        } else {
+            match rm_type {
+                "CODE_PHRASE" => Self::CodePhrase,
+                "LINK" => Self::Link,
+                "FEEDER_AUDIT" => Self::FeederAudit,
+                "PARTICIPATION" => Self::Participation,
+                "OBJECT_REF" => Self::ObjectRef,
+                "HIER_OBJECT_ID" => Self::HierObjectId,
+                "OBJECT_VERSION_ID" => Self::ObjectVersionId,
+                "GENERIC_ID" => Self::GenericId,
+                "PARTY_REF" => Self::PartyRef,
+                "ISM_TRANSITION" => Self::IsmTransition,
+                "TERM_MAPPING" => Self::TermMapping,
+                "INSTRUCTION_DETAILS" => Self::InstructionDetails,
+                "FEEDER_AUDIT_DETAILS" => Self::FeederAuditDetails,
+                "EVENT_CONTEXT" => Self::EventContext,
+                _ => return None,
+            }
+        })
+    }
+
+    /// Whether a client's `|raw` fragment may carry the class: the classes a
+    /// Simplified-Formats attribute takes whole on input.
+    fn read(self) -> bool {
+        matches!(
+            self,
+            Self::DataValue
+                | Self::Locatable
+                | Self::PartyProxy
+                | Self::CodePhrase
+                | Self::Link
+                | Self::FeederAudit
+                | Self::Participation
+                | Self::PartyRef
+        )
+    }
+}
+
+/// Reads `$text` as the class `$class` names into a typed object, through
+/// the reader `$read`.
+macro_rules! read_raw {
+    ($class:expr, $read:ident, $text:expr) => {{
+        use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
+        use openehr_rm::v1_2::access::AsRm;
+        use openehr_rm::v1_2::common::archetyped::feeder_audit::FeederAudit;
+        use openehr_rm::v1_2::common::archetyped::link::Link;
+        use openehr_rm::v1_2::common::archetyped::locatable::Locatable;
+        use openehr_rm::v1_2::common::generic::participation::Participation;
+        use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
+        use openehr_rm::v1_2::data_types::basic::data_value::DataValue;
+        use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
+        let object: Option<Result<Obj, _>> = match $class {
+            RawClass::DataValue => Some($read::<DataValue>($text).map(|v| v.as_rm().clone_box())),
+            RawClass::Locatable => Some($read::<Locatable>($text).map(|v| v.as_rm().clone_box())),
+            RawClass::PartyProxy => Some($read::<PartyProxy>($text).map(|v| v.as_rm().clone_box())),
+            RawClass::CodePhrase => Some($read::<CodePhrase>($text).map(|v| -> Obj { Box::new(v) })),
+            RawClass::Link => Some($read::<Link>($text).map(|v| -> Obj { Box::new(v) })),
+            RawClass::FeederAudit => Some($read::<FeederAudit>($text).map(|v| -> Obj { Box::new(v) })),
+            RawClass::Participation => {
+                Some($read::<Participation>($text).map(|v| -> Obj { Box::new(v) }))
+            }
+            RawClass::PartyRef => Some($read::<PartyRef>($text).map(|v| -> Obj { Box::new(v) })),
+            _ => None,
+        };
+        object
+    }};
+}
+
+/// The typed object a `|raw` datum carries (master04 §Raw canonical JSON),
+/// read by the strict canonical reader of its class.
 ///
 /// # Errors
 /// [`FlatError::RawWithoutType`] for a fragment without `_type`,
 /// [`FlatError::InvalidRaw`] for a class no Simplified-Formats attribute
 /// takes whole, and [`FlatError::RawDecode`] for one the reader refuses.
-pub(crate) fn decode_raw(raw: &Value, path: &str) -> Result<Obj, FlatError> {
-    use openehr_its::json::from_canonical_value;
-    use openehr_rm::v1_2::access::AsRm;
-    use openehr_rm::v1_2::common::archetyped::feeder_audit::FeederAudit;
-    use openehr_rm::v1_2::common::archetyped::link::Link;
-    use openehr_rm::v1_2::common::archetyped::locatable::Locatable;
-    use openehr_rm::v1_2::common::generic::participation::Participation;
-    use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
-    use openehr_rm::v1_2::data_types::basic::data_value::DataValue;
-    use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
-
-    let Some(rm_type) = raw.get("_type").and_then(Value::as_str) else {
-        return Err(FlatError::RawWithoutType {
-            path: path.to_owned(),
-        });
+pub(crate) fn raw_object(raw: &RawDatum, path: &str) -> Result<Obj, FlatError> {
+    let without_type = || FlatError::RawWithoutType {
+        path: path.to_owned(),
     };
     let decode_err = |source| FlatError::RawDecode {
         path: path.to_owned(),
         source,
     };
-    let is_a = |ancestor: &str| schema::is_a(rm_type, ancestor);
-    let object: Obj = if is_a("DATA_VALUE") {
-        from_canonical_value::<DataValue>(raw)
-            .map_err(decode_err)?
-            .as_rm()
-            .clone_box()
-    } else if is_a("LOCATABLE") {
-        from_canonical_value::<Locatable>(raw)
-            .map_err(decode_err)?
-            .as_rm()
-            .clone_box()
-    } else if is_a("PARTY_PROXY") {
-        from_canonical_value::<PartyProxy>(raw)
-            .map_err(decode_err)?
-            .as_rm()
-            .clone_box()
-    } else {
-        match rm_type {
-            "CODE_PHRASE" => Box::new(from_canonical_value::<CodePhrase>(raw).map_err(decode_err)?),
-            "LINK" => Box::new(from_canonical_value::<Link>(raw).map_err(decode_err)?),
-            "FEEDER_AUDIT" => {
-                Box::new(from_canonical_value::<FeederAudit>(raw).map_err(decode_err)?)
-            }
-            "PARTICIPATION" => {
-                Box::new(from_canonical_value::<Participation>(raw).map_err(decode_err)?)
-            }
-            "PARTY_REF" => Box::new(
-                from_canonical_value::<
-                    openehr_base::v1_3::base_types::identification::party_ref::PartyRef,
-                >(raw)
-                .map_err(decode_err)?,
-            ),
-            other => {
-                return Err(FlatError::InvalidRaw {
-                    path: path.to_owned(),
-                    reason: format!("no simplified attribute takes a {other} whole"),
-                });
-            }
-        }
+    let rm_type = raw_type(raw).ok_or_else(without_type)?;
+    let read = RawClass::of(&rm_type).filter(|class| class.read());
+    let invalid = || FlatError::InvalidRaw {
+        path: path.to_owned(),
+        reason: format!("no simplified attribute takes a {rm_type} whole"),
     };
-    Ok(object)
+    match raw {
+        RawDatum::Rm(object) => read.map(|_| object.clone_box()).ok_or_else(invalid),
+        RawDatum::Json(value) => {
+            use openehr_its::json::from_canonical_value;
+            let class = read.ok_or_else(invalid)?;
+            read_raw!(class, from_canonical_value, value)
+                .ok_or_else(invalid)?
+                .map_err(decode_err)
+        }
+        RawDatum::Text(text) => {
+            // NOTE: the fragment's read is its part of the FLAT document's one parse (#6003).
+            use serde_json::from_str;
+            let class = read.ok_or_else(invalid)?;
+            read_raw!(class, from_str, text.get())
+                .ok_or_else(invalid)?
+                .or_else(|_| {
+                    // NOTE: the strict reader runs again on a refusal only, for the path it names.
+                    use openehr_its::json::from_canonical_json;
+                    read_raw!(class, from_canonical_json, text.get())
+                        .ok_or_else(invalid)?
+                        .map_err(decode_err)
+                })
+        }
+    }
 }
 
-/// The canonical JSON of a typed object, as the `|raw` output of the FLAT and
-/// STRUCTURED read carries it (master04 §Raw canonical JSON).
+/// The `_type` a `|raw` datum names, `None` for one without it or no object.
+pub(crate) fn raw_type(raw: &RawDatum) -> Option<std::borrow::Cow<'_, str>> {
+    #[derive(serde::Deserialize)]
+    struct Tagged<'a> {
+        #[serde(rename = "_type", borrow)]
+        rm_type: Option<std::borrow::Cow<'a, str>>,
+    }
+    match raw {
+        RawDatum::Rm(object) => Some(std::borrow::Cow::Borrowed(object.rm_type())),
+        RawDatum::Json(value) => value
+            .get("_type")
+            .and_then(Value::as_str)
+            .map(std::borrow::Cow::Borrowed),
+        // NOTE: a fragment that is no object names no type, the refusal the build gives it.
+        RawDatum::Text(text) => serde_json::from_str::<Tagged<'_>>(text.get())
+            .ok()
+            .and_then(|tagged| tagged.rm_type),
+    }
+}
+
+/// The `|raw` datum of a typed object, `None` for an object outside the
+/// classes a `|raw` output carries.
+pub(crate) fn raw_of(object: &dyn RmObject) -> Option<RawDatum> {
+    RawClass::of(object.rm_type()).map(|_| RawDatum::Rm(object.clone_box()))
+}
+
+/// Converts `$object` into the concrete type of its [`RawClass`] and
+/// evaluates `$body` with `$value` bound to it; `$refused` maps the
+/// [`AccessError`] of a partial object or a class no `|raw` output carries.
+macro_rules! with_raw_value {
+    ($object:expr, $refused:expr, |$value:ident| $body:expr) => {{
+        use openehr_base::v1_3::base_types::identification::generic_id::GenericId;
+        use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
+        use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
+        use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
+        use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
+        use openehr_rm::v1_2::common::archetyped::feeder_audit::FeederAudit;
+        use openehr_rm::v1_2::common::archetyped::feeder_audit_details::FeederAuditDetails;
+        use openehr_rm::v1_2::common::archetyped::link::Link;
+        use openehr_rm::v1_2::common::archetyped::locatable::Locatable;
+        use openehr_rm::v1_2::common::generic::participation::Participation;
+        use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
+        use openehr_rm::v1_2::composition::content::entry::instruction_details::InstructionDetails;
+        use openehr_rm::v1_2::composition::content::entry::ism_transition::IsmTransition;
+        use openehr_rm::v1_2::composition::event_context::EventContext;
+        use openehr_rm::v1_2::data_types::basic::data_value::DataValue;
+        use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
+        use openehr_rm::v1_2::data_types::text::term_mapping::TermMapping;
+
+        let object: &dyn RmObject = $object;
+        let rm_type = object.rm_type();
+        let at = Site {
+            rm_type,
+            attribute: "",
+            declared: rm_type,
+        };
+        let copy = object.clone_box();
+        match RawClass::of(rm_type) {
+            Some(RawClass::DataValue) => {
+                let $value = DataValue::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::Locatable) => {
+                let $value = Locatable::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::PartyProxy) => {
+                let $value = PartyProxy::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::CodePhrase) => {
+                let $value = CodePhrase::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::Link) => {
+                let $value = Link::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::FeederAudit) => {
+                let $value = FeederAudit::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::Participation) => {
+                let $value = Participation::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::ObjectRef) => {
+                let $value = ObjectRef::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::HierObjectId) => {
+                let $value = HierObjectId::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::ObjectVersionId) => {
+                let $value = ObjectVersionId::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::GenericId) => {
+                let $value = GenericId::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::PartyRef) => {
+                let $value = PartyRef::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::IsmTransition) => {
+                let $value = IsmTransition::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::TermMapping) => {
+                let $value = TermMapping::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::InstructionDetails) => {
+                let $value = InstructionDetails::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::FeederAuditDetails) => {
+                let $value = FeederAuditDetails::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            Some(RawClass::EventContext) => {
+                let $value = EventContext::from_rm(copy, at).map_err($refused)?;
+                $body
+            }
+            None => Err($refused(AccessError::UnknownType(rm_type.to_owned()))),
+        }
+    }};
+}
+
+/// A typed object written as its canonical JSON, the `|raw` output of the
+/// FLAT text (master04 §Raw canonical JSON), with no JSON value built.
+pub(crate) struct RawJson<'a>(pub(crate) &'a dyn RmObject);
+
+impl serde::Serialize for RawJson<'_> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::Error as _;
+        with_raw_value!(self.0, S::Error::custom, |value| value.serialize(serializer))
+    }
+}
+
+/// The canonical JSON of a typed object, as the `|raw` output of a FLAT map
+/// or a STRUCTURED document carries it (master04 §Raw canonical JSON).
 ///
 /// # Errors
 /// [`FlatError::Rm`] for an object outside the classes a `|raw` output
 /// carries, or a partial one.
 pub(crate) fn canonical_of(object: &dyn RmObject) -> Result<Value, FlatError> {
-    use openehr_base::v1_3::base_types::identification::generic_id::GenericId;
-    use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
-    use openehr_base::v1_3::base_types::identification::object_ref::ObjectRef;
-    use openehr_base::v1_3::base_types::identification::object_version_id::ObjectVersionId;
-    use openehr_base::v1_3::base_types::identification::party_ref::PartyRef;
     use openehr_its::json::to_canonical_value;
-    use openehr_rm::v1_2::common::archetyped::feeder_audit::FeederAudit;
-    use openehr_rm::v1_2::common::archetyped::feeder_audit_details::FeederAuditDetails;
-    use openehr_rm::v1_2::common::archetyped::link::Link;
-    use openehr_rm::v1_2::common::archetyped::locatable::Locatable;
-    use openehr_rm::v1_2::common::generic::participation::Participation;
-    use openehr_rm::v1_2::common::generic::party_proxy::PartyProxy;
-    use openehr_rm::v1_2::composition::content::entry::instruction_details::InstructionDetails;
-    use openehr_rm::v1_2::composition::content::entry::ism_transition::IsmTransition;
-    use openehr_rm::v1_2::composition::event_context::EventContext;
-    use openehr_rm::v1_2::data_types::basic::data_value::DataValue;
-    use openehr_rm::v1_2::data_types::text::code_phrase::CodePhrase;
-    use openehr_rm::v1_2::data_types::text::term_mapping::TermMapping;
-
-    let rm_type = object.rm_type();
-    let at = Site {
-        rm_type,
-        attribute: "",
-        declared: rm_type,
-    };
-    let copy = object.clone_box();
-    let is_a = |ancestor: &str| schema::is_a(rm_type, ancestor);
-    Ok(if is_a("DATA_VALUE") {
-        to_canonical_value(&DataValue::from_rm(copy, at)?)
-    } else if is_a("LOCATABLE") {
-        to_canonical_value(&Locatable::from_rm(copy, at)?)
-    } else if is_a("PARTY_PROXY") {
-        to_canonical_value(&PartyProxy::from_rm(copy, at)?)
-    } else {
-        match rm_type {
-            "CODE_PHRASE" => to_canonical_value(&CodePhrase::from_rm(copy, at)?),
-            "LINK" => to_canonical_value(&Link::from_rm(copy, at)?),
-            "FEEDER_AUDIT" => to_canonical_value(&FeederAudit::from_rm(copy, at)?),
-            "PARTICIPATION" => to_canonical_value(&Participation::from_rm(copy, at)?),
-            "OBJECT_REF" => to_canonical_value(&ObjectRef::from_rm(copy, at)?),
-            "HIER_OBJECT_ID" => to_canonical_value(&HierObjectId::from_rm(copy, at)?),
-            "OBJECT_VERSION_ID" => to_canonical_value(&ObjectVersionId::from_rm(copy, at)?),
-            "GENERIC_ID" => to_canonical_value(&GenericId::from_rm(copy, at)?),
-            "PARTY_REF" => to_canonical_value(&PartyRef::from_rm(copy, at)?),
-            "ISM_TRANSITION" => to_canonical_value(&IsmTransition::from_rm(copy, at)?),
-            "TERM_MAPPING" => to_canonical_value(&TermMapping::from_rm(copy, at)?),
-            "INSTRUCTION_DETAILS" => to_canonical_value(&InstructionDetails::from_rm(copy, at)?),
-            "FEEDER_AUDIT_DETAILS" => to_canonical_value(&FeederAuditDetails::from_rm(copy, at)?),
-            "EVENT_CONTEXT" => to_canonical_value(&EventContext::from_rm(copy, at)?),
-            _ => return Err(FlatError::Rm(AccessError::UnknownType(rm_type.to_owned()))),
-        }
-    })
+    with_raw_value!(object, FlatError::Rm, |value| Ok(to_canonical_value(&value)))
 }
 
 /// The canonical-JSON rendering of a tree that may still be partial: `_type`

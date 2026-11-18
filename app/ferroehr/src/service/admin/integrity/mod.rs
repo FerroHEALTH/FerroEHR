@@ -265,8 +265,7 @@ fn rows_are_current(stored: &[ReadRow], body: &Value) -> bool {
     let Ok(rendered) = crate::storage::render::index::render(body) else {
         return false;
     };
-    let Ok((fresh, whole)) =
-        crate::storage::render::nodes::stored_nodes_with_fragments(&rendered, &root)
+    let Ok((fresh, whole)) = crate::storage::render::nodes::decompose(&rendered, &root, true)
     else {
         return false;
     };

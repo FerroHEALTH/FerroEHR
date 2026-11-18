@@ -272,7 +272,7 @@ impl Rendered {
     /// The `_type` of the object `id`.
     #[must_use]
     pub fn rm_type(&self, id: NodeId) -> Option<Cow<'_, str>> {
-        self.get_str(id, "_type")
+        self.get(id, "_type").and_then(|v| self.str(v))
     }
 
     /// Whether the object `id` has exactly the members `keys`, in any order.
