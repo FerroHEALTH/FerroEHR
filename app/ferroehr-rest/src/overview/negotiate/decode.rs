@@ -62,6 +62,7 @@ pub(crate) fn typed_json<T: DeserializeOwned>(
     what: &str,
 ) -> Result<T, ApiError> {
     require_json(headers)?;
+    ferroehr::telemetry::conversion::record("text_to_dto");
     let mut de = serde_json::Deserializer::from_slice(body);
     serde_path_to_error::deserialize::<_, T>(&mut de).map_err(|e| {
         let path = e.path().to_string();
@@ -114,8 +115,9 @@ where
         }
         Some(WireFormat::CanonicalXml) => {
             require_known_xml_lineage(headers)?;
-            let xml = text_body(body)?;
-            openehr_its::xml::from_canonical_xml(&xml)
+            let xml = std::str::from_utf8(body)
+                .map_err(|e| ApiError::BadRequest(format!("body is not UTF-8: {e}")))?;
+            openehr_its::xml::from_canonical_xml(xml)
                 .map_err(|e| ApiError::BadRequest(format!("invalid canonical XML body: {e}")))
         }
         _ => Err(ApiError::UnsupportedMediaType(format!(
@@ -218,6 +220,7 @@ pub(crate) fn require_text_plain(headers: &HeaderMap) -> Result<(), ApiError> {
 }
 
 fn parse_json(body: &Bytes) -> Result<serde_json::Value, ApiError> {
+    ferroehr::telemetry::conversion::record("text_to_value");
     let value: serde_json::Value = serde_json::from_slice(body)
         .map_err(|e| ApiError::BadRequest(format!("invalid JSON body: {e}")))?;
     // The strict reader at the door: a wire key the RM class does not declare

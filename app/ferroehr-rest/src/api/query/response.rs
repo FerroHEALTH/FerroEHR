@@ -58,20 +58,121 @@ impl QueryScope {
     }
 }
 
-/// Decodes a JSON request body into `T`.
+/// What a QUERY request body is called in the refusal of one that does not
+/// decode.
+const QUERY_BODY: &str = "query request body";
+
+/// A QUERY body's members, as the canonical door judges them: the names of
+/// its top-level members, and the members whose values are open JSON and may
+/// hold a `_type`-tagged node.
+pub(super) trait OpenMembers {
+    /// The top-level member names the body carried.
+    fn names(&self) -> Vec<&str>;
+    /// The open members, each with the path of member names that leads to it.
+    fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)>;
+}
+
+/// The open members of a body: `query_parameters` and the undeclared members.
+fn open_members<'a>(
+    parameters: Option<&'a std::collections::BTreeMap<String, serde_json::Value>>,
+    undeclared: &'a std::collections::BTreeMap<String, serde_json::Value>,
+) -> Vec<(Vec<&'a str>, &'a serde_json::Value)> {
+    let parameters = parameters
+        .into_iter()
+        .flatten()
+        .map(|(name, value)| (vec!["query_parameters", name.as_str()], value));
+    let undeclared = undeclared
+        .iter()
+        .map(|(name, value)| (vec![name.as_str()], value));
+    parameters.chain(undeclared).collect()
+}
+
+/// The names of a body's present members, then its undeclared ones.
+fn member_names<'a>(
+    present: &[(&'a str, bool)],
+    undeclared: &'a std::collections::BTreeMap<String, serde_json::Value>,
+) -> Vec<&'a str> {
+    present
+        .iter()
+        .filter(|(_, carried)| *carried)
+        .map(|(name, _)| *name)
+        .chain(undeclared.keys().map(String::as_str))
+        .collect()
+}
+
+impl OpenMembers for openehr_its::rest::generated::query::AdhocQueryExecute {
+    fn names(&self) -> Vec<&str> {
+        let present = [
+            ("q", true),
+            ("offset", self.offset.is_some()),
+            ("fetch", self.fetch.is_some()),
+            ("query_parameters", self.query_parameters.is_some()),
+        ];
+        member_names(&present, &self.additional_properties)
+    }
+
+    fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)> {
+        open_members(self.query_parameters.as_ref(), &self.additional_properties)
+    }
+}
+
+impl OpenMembers for openehr_its::rest::generated::query::Query {
+    fn names(&self) -> Vec<&str> {
+        let present = [
+            ("offset", self.offset.is_some()),
+            ("fetch", self.fetch.is_some()),
+            ("query_parameters", self.query_parameters.is_some()),
+        ];
+        member_names(&present, &self.additional_properties)
+    }
+
+    fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)> {
+        open_members(self.query_parameters.as_ref(), &self.additional_properties)
+    }
+}
+
+/// Decodes a QUERY request body once, straight into its DTO `T`
+/// ([`negotiate::decode::typed_json`]), and refuses a `_type`-tagged node in it
+/// that carries a key its RM class does not declare, as the canonical door
+/// does ([`openehr_its::json::reject_undeclared_keys`]).
 ///
-/// The QUERY operations declare `application/json` only, so a non-JSON
-/// `Content-Type` is rejected by [`negotiate::decode::json_value`].
-pub(super) fn decode_body<T: serde::de::DeserializeOwned>(
-    h: &HeaderMap,
-    body: &bytes::Bytes,
-) -> Result<T, RestError> {
-    let value = negotiate::decode::json_value(h, body).map_err(RestError::from)?;
-    serde_json::from_value(value).map_err(|e| {
+/// # Errors
+/// The decode's refusals, and a `400` for an undeclared key: a document the
+/// reader cannot read (ITS-REST overview `Requests_and_responses.md` §HTTP
+/// status codes).
+pub(super) fn query_body<T>(h: &HeaderMap, body: &bytes::Bytes) -> Result<T, RestError>
+where
+    T: serde::de::DeserializeOwned + OpenMembers,
+{
+    let decoded: T = negotiate::decode::typed_json(h, body, QUERY_BODY)?;
+    let refused = |e: openehr_its::json::JsonParseError| {
         RestError::from(ApiError::BadRequest(format!(
-            "invalid query request body: {e}"
+            "invalid canonical JSON body: {e}"
         )))
-    })
+    };
+    let names = decoded.names();
+    let open = decoded.open();
+    // NOTE: a body tagged at its root is judged on its member names alone, the only part of it the door reads.
+    if let Some((_, tag)) = open.iter().find(|(path, _)| path.as_slice() == ["_type"]) {
+        let root: serde_json::Map<String, serde_json::Value> = names
+            .iter()
+            .map(|name| {
+                let value = if *name == "_type" {
+                    (*tag).clone()
+                } else {
+                    serde_json::Value::Null
+                };
+                ((*name).to_owned(), value)
+            })
+            .collect();
+        openehr_its::json::reject_undeclared_keys(&serde_json::Value::Object(root))
+            .map_err(refused)?;
+    }
+    for (path, value) in &open {
+        openehr_its::json::reject_undeclared_keys(value)
+            .map_err(|e| refused(path.iter().rev().fold(e, |e, name| e.in_field(name))))?;
+    }
+    Ok(decoded)
 }
 
 /// The canonical name of the `ehr_id` request header, spelled `openehr-ehr-id`
@@ -520,19 +621,26 @@ mod tests {
     }
 
     #[test]
-    fn decode_body_parses_json_and_rejects_xml() {
+    fn a_query_body_parses_json_and_rejects_xml() {
         let json_h = headers(&[("content-type", "application/json")]);
-        let value: serde_json::Value =
-            decode_body(&json_h, &Bytes::from_static(br#"{"offset":0}"#)).unwrap();
+        let value: serde_json::Value = negotiate::decode::typed_json(
+            &json_h,
+            &Bytes::from_static(br#"{"offset":0}"#),
+            QUERY_BODY,
+        )
+        .unwrap();
         assert_eq!(value["offset"], 0);
 
         let xml_h = headers(&[("content-type", "application/xml")]);
-        let err =
-            decode_body::<serde_json::Value>(&xml_h, &Bytes::from_static(b"<q/>")).unwrap_err();
+        let err = negotiate::decode::typed_json::<serde_json::Value>(
+            &xml_h,
+            &Bytes::from_static(b"<q/>"),
+            QUERY_BODY,
+        )
+        .unwrap_err();
         assert!(
-            matches!(err.error(), ApiError::UnsupportedMediaType(_)),
-            "got {:?}",
-            err.error()
+            matches!(err, ApiError::UnsupportedMediaType(_)),
+            "got {err:?}"
         );
     }
 

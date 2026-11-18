@@ -33,7 +33,7 @@ use serde_json::Value;
 pub mod parts;
 
 /// The members of an entry the shared part holds.
-const SHARED: [&str; 8] = [
+pub(crate) const SHARED: [&str; 8] = [
     "accessor",
     "action",
     "authorisations",
@@ -198,7 +198,7 @@ pub fn column_instant(text: &str) -> bool {
 /// The instant `at` as `audit.access_log_instant_text` writes it; `None`
 /// when that text would not give `at` back, finer than a microsecond or past
 /// a four-digit year.
-fn instant_text(at: jiff::Timestamp) -> Option<String> {
+pub(super) fn instant_text(at: jiff::Timestamp) -> Option<String> {
     let civil = at.to_zoned(jiff::tz::TimeZone::UTC).datetime();
     let nanos = civil.subsec_nanosecond();
     if nanos.rem_euclid(1000) != 0 || !(1000..=9999).contains(&civil.year()) {

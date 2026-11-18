@@ -16,15 +16,16 @@
 use std::time::{Duration, Instant};
 
 use jiff_sqlx::Timestamp;
+use sha2::{Digest as _, Sha256};
+
+use crate::access_log::stored_form::parts::{Cut, Derived};
 use sqlx::Row;
 use sqlx::postgres::{PgConnection, PgRow};
 
 use crate::db::acquire::acquire;
-use crate::digest::sha256_hex;
 use crate::system_log::AuditError;
 use crate::system_log::store::AuditStore;
 use crate::system_log::store::chains::{AuditChain, AuditChainFinding, VerifyScope, finding};
-use openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json;
 
 /// How long one step of a walk aims to take: well under any statement
 /// timeout, and short enough that a step holds the database briefly.
@@ -344,8 +345,10 @@ const fn statements(chain: AuditChain) -> Statements {
     }
 }
 
-/// The positions in `(after, upto]` whose entry no longer digests to its
-/// link's `content_digest`, read a page at a time.
+/// The positions in `(after, upto]` whose record was changed after it was
+/// written, read a page at a time: an entry that no longer digests to its
+/// link's `content_digest`, and an entry or tombstone whose derived columns
+/// are not those its content decides (#6005).
 async fn modified_between(
     conn: &mut PgConnection,
     mut after: i64,
@@ -354,15 +357,13 @@ async fn modified_between(
     let mut modified = Vec::new();
     loop {
         let rows = sqlx::query(concat!(
-            "SELECT r.chain_seq, \
-             CASE WHEN pg_input_is_valid(r.content, 'jsonb') \
-                  AND (sh.content IS NULL OR pg_input_is_valid(sh.content, 'jsonb')) THEN ",
-            crate::access_log::store::document!(),
-            "::text END AS document, encode(r.content_digest, 'hex') AS content_digest \
+            "SELECT r.chain_seq, ",
+            crate::access_log::store::entry_parts!(),
+            ", r.content_digest, r.action_terminology, r.action_code, r.result_terminology, \
+             r.result_code, r.party_id, r.retain_until, r.time_removed, r.fold_after \
              FROM audit.access_log_record r \
              LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared \
-             WHERE r.chain_seq > $1 AND r.chain_seq <= $2 \
-             AND r.record_type = 'ACCESS_LOG_ENTRY' ORDER BY r.chain_seq LIMIT $3"
+             WHERE r.chain_seq > $1 AND r.chain_seq <= $2 ORDER BY r.chain_seq LIMIT $3"
         ))
         .bind(after)
         .bind(upto)
@@ -374,27 +375,112 @@ async fn modified_between(
         };
         after = last.try_get("chain_seq")?;
         for row in &rows {
-            if !content_intact(row)? {
+            if !record_intact(row)? {
                 modified.push(row.try_get("chain_seq")?);
             }
         }
     }
 }
 
-/// Whether the entry `row` holds still digests to its `content_digest`; an
-/// entry whose canonical form no longer reads does not.
-fn content_intact(row: &PgRow) -> Result<bool, AuditError> {
-    let document: Option<String> = row.try_get("document")?;
-    let recorded: String = row.try_get("content_digest")?;
-    // NOTE: our own design; a record whose parts no longer parse was changed after it was written.
-    let Some(Ok(joined)) = document.map(|text| serde_json::from_str::<serde_json::Value>(&text))
-    else {
+/// Whether the record `row` holds is as it was written: its stored parts
+/// join into a canonical form without a link, an entry's digests to its
+/// `content_digest`, and every column the log derives from the content
+/// holds what the content decides. A record whose parts no longer join was
+/// changed after it was written.
+fn record_intact(row: &PgRow) -> Result<bool, AuditError> {
+    // NOTE: our own design (#6005); a record whose parts no longer join was changed after it was
+    // written.
+    let document = match crate::access_log::store::document_of(row) {
+        Ok(document) => document,
+        Err(crate::access_log::store::AccessLogError::Unreadable { .. }) => return Ok(false),
+        Err(other) => return Err(other.into()),
+    };
+    let record_type: &str = row.try_get("entry_type")?;
+    if record_type == "ACCESS_LOG_ENTRY" {
+        let recorded: Vec<u8> = row.try_get("content_digest")?;
+        if Sha256::digest(document.as_bytes()).as_slice() != recorded.as_slice() {
+            return Ok(false);
+        }
+    }
+    let Ok(cut) = Cut::of(&document) else {
         return Ok(false);
     };
-    let Ok(form) = canonical_json(&joined) else {
+    if cut.has("link") {
+        return Ok(false);
+    }
+    let Ok(derived) = Derived::of(&cut) else {
         return Ok(false);
     };
-    Ok(sha256_hex(&form) == recorded)
+    columns_hold(row, record_type, &derived)
+}
+
+/// Whether the derived columns of `row` hold `derived`, each read as the
+/// database casts its text (`audit.access_log_entry_derive`).
+fn columns_hold(row: &PgRow, record_type: &str, derived: &Derived) -> Result<bool, AuditError> {
+    let instant = |text: &Option<String>| -> Option<Option<jiff::Timestamp>> {
+        match text {
+            None => Some(None),
+            Some(text) => text
+                .parse::<jiff::Timestamp>()
+                .ok()
+                .and_then(|at| at.round(jiff::Unit::Microsecond).ok())
+                .map(Some),
+        }
+    };
+    let column_instant = |name: &str| -> Result<Option<jiff::Timestamp>, sqlx::Error> {
+        Ok(row
+            .try_get::<Option<Timestamp>, _>(name)?
+            .map(Timestamp::to_jiff))
+    };
+    let (Some(time_recorded), Some(time_removed)) = (
+        instant(&derived.time_recorded),
+        instant(&derived.time_removed),
+    ) else {
+        return Ok(false);
+    };
+    let fold_after = match (time_removed, time_recorded) {
+        (Some(removed), Some(recorded)) => {
+            let Ok(kept) = removed.since(recorded) else {
+                return Ok(false);
+            };
+            let Ok(fold) = removed.checked_add(kept) else {
+                return Ok(false);
+            };
+            Some(fold)
+        }
+        _ => None,
+    };
+    let retain_until = match &derived.retain_until {
+        None => None,
+        Some(text) => match text.parse::<jiff::civil::Date>() {
+            Ok(date) => Some(date),
+            Err(_) => return Ok(false),
+        },
+    };
+    let uid = derived
+        .uid
+        .as_deref()
+        .and_then(|uid| uuid::Uuid::parse_str(uid).ok());
+    let ehr_id = derived
+        .ehr_id
+        .as_deref()
+        .and_then(crate::access_log::stored_form::column_uuid);
+    let text = |name: &str| row.try_get::<Option<String>, _>(name);
+    Ok(derived.record_type.as_deref() == Some(record_type)
+        && uid == Some(row.try_get::<uuid::Uuid, _>("entry_uid")?)
+        && time_recorded == column_instant("recorded_at")?
+        && ehr_id == row.try_get::<Option<uuid::Uuid>, _>("entry_ehr")?
+        && derived.action_terminology == text("action_terminology")?
+        && derived.action_code == text("action_code")?
+        && derived.result_terminology == text("result_terminology")?
+        && derived.result_code == text("result_code")?
+        && derived.party_id == text("party_id")?
+        && retain_until
+            == row
+                .try_get::<Option<jiff_sqlx::Date>, _>("retain_until")?
+                .map(jiff_sqlx::Date::to_jiff)
+        && time_removed == column_instant("time_removed")?
+        && fold_after == column_instant("fold_after")?)
 }
 
 #[cfg(test)]

@@ -14,8 +14,8 @@ use serde_json::Value;
 use sqlx::PgConnection;
 
 use super::{
-    ResolvedWrite, canonical_body_text, next_version, reject_deleted_with_data, resolve_lifecycle,
-    stamp_version_uid, validate_transition,
+    ResolvedWrite, next_version, reject_deleted_with_data, resolve_lifecycle, stamp_version_uid,
+    validate_transition,
 };
 use crate::error::ServiceError;
 use crate::ids::{AllocatedVoId, EhrId, VoId};
@@ -123,39 +123,60 @@ struct Prepared {
     party_facts: Option<Box<crate::party_binding::derive::Facts>>,
 }
 
-/// SHA-256 over the canonical ITS-JSON bytes of `canonical` with the root
-/// `uid` removed, the digest a version's content is compared with its
-/// predecessor's on (#4415).
+/// The body bytes a point read serves verbatim (`version.body`) and their
+/// content digest, written in one pass over the accepted, uid-stamped
+/// canonical value.
+///
+/// The text keeps the codec's `_type`-first, BMM-declared member order, and is
+/// taken before node decomposition. The digest is SHA-256 over the same
+/// compact bytes with the root `uid` member left out, the digest a version's
+/// content is compared with its predecessor's on (#4415).
 ///
 /// NOTE: RM ehr `master05-composition_package.adoc` §Event Context makes
 /// `context` content (a changed `start_time` or `setting` is a clinical
 /// change), and `feeder_audit` is content the version carries, so only the
-/// server-assigned `uid` leaves the digested bytes; the serializer is the one
-/// that writes `version.body`, so equal bodies digest equal.
-pub(crate) fn content_digest(canonical: &Value) -> Result<[u8; 32], ServiceError> {
+/// server-assigned `uid` leaves the digested bytes.
+///
+/// # Errors
+/// [`ServiceError`] when the value cannot serialize (a non-finite number,
+/// unreachable for a codec-produced canonical value, refused loudly anyway).
+pub(crate) fn canonical_text_and_digest(
+    canonical: &Value,
+) -> Result<(String, [u8; 32]), ServiceError> {
     use sha2::Digest as _;
-    let text = serde_json::to_string(&WithoutUid(canonical))
-        .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
-    Ok(sha2::Sha256::digest(text.as_bytes()).into())
-}
-
-/// A canonical body serialized as [`canonical_body_text`] writes it, less
-/// the root `uid`, without a copy of the body (#5220).
-struct WithoutUid<'a>(&'a Value);
-
-impl serde::Serialize for WithoutUid<'_> {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        use serde::ser::SerializeMap as _;
-        let Value::Object(map) = self.0 else {
-            return self.0.serialize(serializer);
-        };
-        let kept = map.len() - usize::from(map.contains_key("uid"));
-        let mut out = serializer.serialize_map(Some(kept))?;
-        for (key, value) in map.iter().filter(|(key, _)| key.as_str() != "uid") {
-            out.serialize_entry(key, value)?;
+    crate::telemetry::conversion::record("value_to_text");
+    let fault = |e: serde_json::Error| ServiceError::internal("serialize the canonical body", e);
+    let mut digest = sha2::Sha256::new();
+    let Value::Object(map) = canonical else {
+        let text = serde_json::to_string(canonical).map_err(fault)?;
+        digest.update(text.as_bytes());
+        return Ok((text, digest.finalize().into()));
+    };
+    let mut text = Vec::with_capacity(4096);
+    text.push(b'{');
+    digest.update(b"{");
+    let mut digested = false;
+    for (key, value) in map {
+        if text.len() > 1 {
+            text.push(b',');
         }
-        out.end()
+        let start = text.len();
+        serde_json::to_writer(&mut text, key).map_err(fault)?;
+        text.push(b':');
+        serde_json::to_writer(&mut text, value).map_err(fault)?;
+        if key != "uid" {
+            if digested {
+                digest.update(b",");
+            }
+            digest.update(text.get(start..).unwrap_or_default());
+            digested = true;
+        }
     }
+    text.push(b'}');
+    digest.update(b"}");
+    let text = String::from_utf8(text)
+        .map_err(|e| ServiceError::internal("serialize the canonical body", e))?;
+    Ok((text, digest.finalize().into()))
 }
 
 /// The lifecycle state a content write commits, with the deleted state refused,
@@ -201,8 +222,8 @@ async fn prepare_body(
     )?;
     let stable_compatible = profile::stable_compatible(ctx.spec_profile, kind, &canonical);
     let origins = ctx.direct_origin.stamp(&canonical)?;
-    let canonical_text = Some(canonical_body_text(&canonical)?);
-    let content_digest = content_digest(&canonical)?;
+    let (canonical_text, content_digest) = canonical_text_and_digest(&canonical)?;
+    let canonical_text = Some(canonical_text);
     let party_facts = kind.is_demographic().then(|| {
         Box::new(crate::party_binding::derive::Facts::of(
             kind,
@@ -393,4 +414,46 @@ async fn retire_protected_identifiers(
     }
     identifier_repo::retire_live(tx, vo_id).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::canonical_text_and_digest;
+
+    /// The digest of the one-pass writer, written the way the two passes it
+    /// replaced wrote it: the compact text with the root `uid` taken out.
+    fn two_pass(canonical: &serde_json::Value) -> (String, [u8; 32]) {
+        use sha2::Digest as _;
+        let mut without = canonical.clone();
+        if let Some(map) = without.as_object_mut() {
+            map.shift_remove("uid");
+        }
+        let digested = serde_json::to_string(&without).unwrap();
+        (
+            serde_json::to_string(canonical).unwrap(),
+            sha2::Sha256::digest(digested.as_bytes()).into(),
+        )
+    }
+
+    #[test]
+    fn one_pass_writes_the_text_and_digest_two_passes_wrote() {
+        let uid = json!({ "_type": "OBJECT_VERSION_ID", "value": "a::b::1" });
+        for canonical in [
+            json!({ "_type": "COMPOSITION", "uid": uid, "name": { "value": "\"ä\"" } }),
+            json!({ "uid": uid, "_type": "COMPOSITION", "language": 1.5 }),
+            json!({ "_type": "COMPOSITION", "name": "n", "uid": uid }),
+            json!({ "_type": "COMPOSITION" }),
+            json!({ "uid": uid }),
+            json!({}),
+            json!(null),
+        ] {
+            assert_eq!(
+                canonical_text_and_digest(&canonical).unwrap(),
+                two_pass(&canonical),
+                "{canonical}"
+            );
+        }
+    }
 }

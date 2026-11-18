@@ -216,6 +216,66 @@ async fn the_iti81_total_is_counted_from_the_time_index() {
     }
 }
 
+/// Every node of the plan `plan`: its type, the relation it reads and the
+/// index it reads it by, empty when it names none.
+fn plan_nodes(plan: &serde_json::Value) -> Vec<(String, String, String)> {
+    let mut nodes = Vec::new();
+    let mut pending = vec![plan];
+    while let Some(value) = pending.pop() {
+        match value {
+            serde_json::Value::Array(items) => pending.extend(items),
+            serde_json::Value::Object(members) => {
+                if let Some(kind) = members.get("Node Type").and_then(serde_json::Value::as_str) {
+                    let text = |name: &str| {
+                        members
+                            .get(name)
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or_default()
+                            .to_owned()
+                    };
+                    nodes.push((kind.to_owned(), text("Relation Name"), text("Index Name")));
+                }
+                pending.extend(members.values());
+            }
+            _ => {}
+        }
+    }
+    nodes
+}
+
+/// The entries of the ITI-81 total an intake row still names, which no page
+/// returns, are found by the entries' key and never by a read of the whole
+/// log or of the links (#6000).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_iti81_total_finds_the_unchained_entries_by_their_key() {
+    let seeded = seed(ENTRIES).await;
+    let pool = seeded.db.pool();
+    vacuum(&pool).await;
+    for unchained in [
+        "SELECT count(*) FROM audit.access_log_search \
+         WHERE entry_id = ANY (ARRAY(SELECT unnest(i.entries) FROM audit.access_log_intake i))",
+        "SELECT count(*) FROM audit.access_log_search \
+         WHERE recorded_at >= now() - interval '1 hour' AND recorded_at < now() \
+         AND entry_id = ANY (ARRAY(SELECT unnest(i.entries) FROM audit.access_log_intake i))",
+    ] {
+        let plan = plan(&pool, unchained).await;
+        let nodes = plan_nodes(&serde_json::from_str(&plan).expect("a plan"));
+        let reads = |relation: &str, node: &str| {
+            nodes
+                .iter()
+                .any(|(kind, read, _)| kind == node && read == relation)
+        };
+        assert!(
+            nodes
+                .iter()
+                .any(|(_, _, index)| index == "pk_access_log_entry")
+                && !reads("access_log_entry", "Seq Scan")
+                && !nodes.iter().any(|(_, read, _)| read == "access_log_link"),
+            "`{unchained}` finds the entries by their key: {plan}"
+        );
+    }
+}
+
 /// The seeded log takes no more than [`CEILING`] bytes per entry, every
 /// relation of the access log counted, after a vacuum, as the log stands
 /// between the autovacuum runs of a deployment.

@@ -134,6 +134,7 @@ pub(crate) async fn composition_from_flat(
     body: &Bytes,
 ) -> Result<Value, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
+    ferroehr::telemetry::conversion::record("text_to_flat");
     let flat: Map<String, Value> = serde_json::from_slice(body)
         .map_err(|e| RestError::from(ApiError::BadRequest(format!("invalid FLAT JSON: {e}"))))?;
     let wt = state
@@ -141,6 +142,7 @@ pub(crate) async fn composition_from_flat(
         .web_template(&template_id)
         .await
         .map_err(RestError::from)?;
+    ferroehr::telemetry::conversion::record("flat_to_value");
     openehr_sdt::flat::convert::submitted_composition_from_flat(&flat, &wt, &now())
         .map_err(|e| flat_input_err(&e))
 }
@@ -152,6 +154,7 @@ pub(crate) async fn composition_from_structured(
     body: &Bytes,
 ) -> Result<Value, RestError> {
     let template_id = header_template_id(headers).ok_or_else(missing_template_id)?;
+    ferroehr::telemetry::conversion::record("text_to_structured");
     let structured: Value = serde_json::from_slice(body).map_err(|e| {
         RestError::from(ApiError::BadRequest(format!(
             "invalid STRUCTURED JSON: {e}"
@@ -162,6 +165,7 @@ pub(crate) async fn composition_from_structured(
         .web_template(&template_id)
         .await
         .map_err(RestError::from)?;
+    ferroehr::telemetry::conversion::record("structured_to_value");
     openehr_sdt::flat::convert::submitted_composition_from_structured(&structured, &wt, &now())
         .map_err(|e| flat_input_err(&e))
 }
@@ -200,8 +204,10 @@ pub(crate) fn composition_flat_response_with(
     comp: &Value,
     wt: &openehr_sdt::flat::webtemplate::model::WebTemplate,
 ) -> Result<Response, RestError> {
+    ferroehr::telemetry::conversion::record("value_to_flat");
     let flat = openehr_sdt::flat::convert::composition_to_flat(comp, wt)
         .map_err(|e| flat_output_err(&e))?;
+    ferroehr::telemetry::conversion::record("flat_to_text");
     let json =
         serde_json::to_string(&flat).map_err(|e| internal(format!("FLAT serialization: {e}")))?;
     Ok(negotiate::body::body(
@@ -233,6 +239,8 @@ pub(crate) fn composition_structured_response_with(
     comp: &Value,
     wt: &openehr_sdt::flat::webtemplate::model::WebTemplate,
 ) -> Result<Response, RestError> {
+    ferroehr::telemetry::conversion::record("value_to_structured");
+    ferroehr::telemetry::conversion::record("structured_to_text");
     let structured = openehr_sdt::flat::convert::composition_to_structured(comp, wt)
         .map_err(|e| flat_output_err(&e))?;
     let json = serde_json::to_string(&structured)

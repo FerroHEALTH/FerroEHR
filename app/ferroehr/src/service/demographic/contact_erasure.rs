@@ -45,8 +45,7 @@ use crate::service::admin::integrity::rebuild::{NodeRebuildOutcome, rebuild_in_t
 use crate::storage::erasure;
 use crate::storage::version_repo::tier;
 use crate::system_log::event::{AuditEvent, EventActionCode};
-use crate::versioning::change::canonical_body_text;
-use crate::versioning::change::resolve::content_digest;
+use crate::versioning::change::resolve::canonical_text_and_digest;
 
 /// The most deleted Users one sweep erases.
 const SWEEP_BATCH: i64 = 100;
@@ -144,8 +143,7 @@ impl FerroEhrService {
             if removed.is_none() {
                 continue;
             }
-            let erased = canonical_body_text(&value)?;
-            let digest = content_digest(&value)?;
+            let (erased, digest) = canonical_text_and_digest(&value)?;
             erasure::replace_version_body(tx, party, sys_version, &erased, &digest).await?;
             if let NodeRebuildOutcome::Refused { reason } =
                 rebuild_in_tx(tx, party, sys_version).await?

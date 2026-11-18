@@ -64,7 +64,7 @@ pub(super) async fn post(
 ) -> Result<QueryOutcome, RestError> {
     let h = &parts.headers;
     let q = parts.query.as_deref();
-    let body: AdhocQueryExecute = response::decode_body(h, &parts.body)?;
+    let body: AdhocQueryExecute = response::query_body(h, &parts.body)?;
     // The docs-text SHOULD-list draws no GET/POST distinction — the
     // URL forms are accepted here too; a body-vs-URL conflict is a
     // 400 (the same rule the two `ehr_id` carriers follow).
