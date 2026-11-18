@@ -55,11 +55,10 @@ impl FerroEhrService {
     pub(crate) async fn archetype_lineage(&self) -> Arc<ArchetypeLineage> {
         // `try_get_with` is moka's single-flight: concurrent misses share one
         // artefact-store read instead of stampeding it.
-        match self
+        let loading = self
             .archetype_lineage
-            .try_get_with((), self.load_archetype_lineage())
-            .await
-        {
+            .try_get_with((), self.load_archetype_lineage());
+        match crate::db::acquire::awaiting(loading).await {
             Ok(lineage) => lineage,
             Err(error) => {
                 tracing::warn!(

@@ -107,7 +107,7 @@ impl RegisteredTemplates {
 
     /// Reads every registered id again and installs them.
     async fn read(&self) -> Result<(), StorageError> {
-        let _installing = self.installing.lock().await;
+        let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
         let ids = template_repo::registered_template_ids(&self.pool).await?;
         *self.ids.write().unwrap_or_else(PoisonError::into_inner) = Arc::new(ids);
         Ok(())

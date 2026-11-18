@@ -311,12 +311,12 @@ impl LiveGrants {
             let (revision, facts_revision) = store::revisions(&mut conn).await?;
             if Some(revision) != self.revision() {
                 kind = "grants";
-                let _installing = self.installing.lock().await;
+                let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
                 let loaded = store::load(&mut conn).await?;
                 self.install(loaded);
             } else if Some(facts_revision) != self.facts_revision() {
                 kind = "facts";
-                let _installing = self.installing.lock().await;
+                let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
                 let since = self.facts_revision();
                 let changed = read_facts(&mut conn, since).await?;
                 let mut stamped: Vec<Uuid> =

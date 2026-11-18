@@ -271,7 +271,7 @@ impl LivePolicy {
         if store::head(&self.pool).await? == self.in_force().version {
             return Ok(());
         }
-        let _installing = self.installing.lock().await;
+        let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
         let Some(row) = store::newest(&self.pool).await? else {
             return Ok(());
         };
