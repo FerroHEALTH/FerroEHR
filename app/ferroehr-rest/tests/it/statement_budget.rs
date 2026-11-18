@@ -60,6 +60,10 @@ const CHAINER_TAKE: u64 = 1;
 const CHAINER_ROUND: u64 = 8;
 /// The nested statements of a chainer round of the system chain.
 const SYSTEM_ROUND: u64 = 6;
+/// The nested statements of a chainer round's release of the records the
+/// committed writes held (#5762): the switch on and off, and the update of
+/// each intake.
+const CHAINER_RELEASE: u64 = 4;
 /// The budget of one kind of request: its round trips, and the statements
 /// nested in them.
 struct Budget {
