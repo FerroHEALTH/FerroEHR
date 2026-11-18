@@ -342,7 +342,7 @@ impl Builder<'_> {
     /// the `EXISTS` builder, and the streaming laterals all share.
     pub(super) fn rm_conds(&self, alias: &str, r: &RmSource) -> Result<Vec<Expr>, AqlError> {
         let mut out = Vec::new();
-        if let Some(cond) = type_cond(alias, &r.rm_type) {
+        if let Some(cond) = type_cond(alias, &r.rm_type)? {
             out.push(cond);
         }
         if let Some(a) = &r.archetype {

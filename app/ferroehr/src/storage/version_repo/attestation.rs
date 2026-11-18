@@ -99,6 +99,7 @@ pub async fn attestation_target(
     let row = sqlx::query(
         "WITH tv AS (UPDATE version SET tier = 'hot' \
                      WHERE vo_id = $1 AND tier = 'cold'), \
+         tn AS (UPDATE node SET tier = 'hot' WHERE tier = 'cold' AND vo_id = $1), \
          th AS (UPDATE vo_head SET tier = 'hot', archived_at = NULL, archive_reason = NULL \
                 WHERE vo_id = $1 AND tier = 'cold') \
          SELECT ehr_id, sys_version, creating_system_id, \
