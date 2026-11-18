@@ -39,7 +39,9 @@ The same default run, every family the required job runs, also runs from
 `deploy-probe-scheduled.yml`: daily and on a dispatch against the images built
 from the tree it checks out, and after each completed Containers run on main
 against the server and postgres images that run published, each pinned by its
-digest, never the mutable `:main` tag (#5673). It uploads `compose.json`.
+digest, never the mutable `:main` tag (#5673). A Containers run is probed
+while its commit is main's newest, which is the commit the workflow checks
+out (#6028). It uploads `compose.json`.
 A failed call prints the lines both instances logged for its request id, and
 the instances log `ferrohealth_smart` at `debug`, so a `401` shows the reason
 its body leaves out.
