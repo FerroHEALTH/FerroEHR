@@ -13,7 +13,7 @@
 //! separations that make it safe.
 //!
 //! The body is JSON only, decoded through the group's own
-//! [`response::decode_body`], and the paging/parameter members are spelled the
+//! [`negotiate::decode::typed_json`], and the paging/parameter members are spelled the
 //! way the released `AdhocQueryExecute` spells them (`q`, `offset`, `fetch`,
 //! `query_parameters`) so a client that already speaks the query API needs no
 //! second vocabulary. There is no `ehr_id`: the cohort IS the scope.
@@ -35,6 +35,7 @@ use ferroehr::service::query::request::AqlQueryRequest;
 
 use super::response::{self, QueryScope};
 use crate::api::RequestParts;
+use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
 
@@ -97,7 +98,7 @@ pub(super) struct SubjectSelector {
 /// # Errors
 ///
 /// [`ApiError::NotFound`] when the deployment binds no cohort predicate (the
-/// route serves nothing), the decode failures of [`response::decode_body`], and
+/// route serves nothing), the decode failures of [`negotiate::decode::typed_json`], and
 /// whatever [`ferroehr::service::linkage::cohort::CohortError`] maps onto —
 /// `400` for a malformed request, `422` above the configured cohort ceiling.
 pub(super) async fn execute(
@@ -112,7 +113,8 @@ pub(super) async fn execute(
             "cohort queries are not configured on this server".to_owned(),
         )));
     }
-    let body: CohortExecute = response::decode_body(&parts.headers, &parts.body)?;
+    let body: CohortExecute =
+        negotiate::decode::typed_json(&parts.headers, &parts.body, response::QUERY_BODY)?;
     let inner = scope.apply(AqlQueryRequest {
         ehr_ids: Vec::new(),
         offset: body.offset,
