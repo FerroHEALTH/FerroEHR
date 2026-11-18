@@ -125,7 +125,7 @@ where
 pub(crate) fn respond_read<T>(
     headers: &HeaderMap,
     status: StatusCode,
-    read: &ReadBody,
+    read: ReadBody,
     root_tag: &str,
 ) -> Response
 where
@@ -133,18 +133,20 @@ where
 {
     let text = match read {
         ReadBody::RawJson(text) => text,
-        ReadBody::Value(value) => return respond_rm::<T>(headers, status, value, root_tag),
+        ReadBody::Value(value) => return respond_rm::<T>(headers, status, &value, root_tag),
     };
     match resolve_accept(headers, CANONICAL, WireFormat::CanonicalJson) {
-        Some(WireFormat::CanonicalJson) => body(status, APPLICATION_JSON, text.clone()),
-        Some(WireFormat::CanonicalXml) => match openehr_its::json::from_canonical_json::<T>(text) {
-            Ok(typed) => respond_xml(headers, status, &typed, root_tag),
-            Err(e) => crate::overview::error::internal_fault(
-                "re-type the stored canonical JSON for the XML response",
-                &format!("<{root_tag}>: {e}"),
-            )
-            .into_response_body(),
-        },
+        Some(WireFormat::CanonicalJson) => body(status, APPLICATION_JSON, text),
+        Some(WireFormat::CanonicalXml) => {
+            match openehr_its::json::from_canonical_json::<T>(&text) {
+                Ok(typed) => respond_xml(headers, status, &typed, root_tag),
+                Err(e) => crate::overview::error::internal_fault(
+                    "re-type the stored canonical JSON for the XML response",
+                    &format!("<{root_tag}>: {e}"),
+                )
+                .into_response_body(),
+            }
+        }
         _ => ApiError::NotAcceptable(
             "this resource is available as application/json or application/xml".to_owned(),
         )

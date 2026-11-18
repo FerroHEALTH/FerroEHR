@@ -13,7 +13,7 @@
 //! separations that make it safe.
 //!
 //! The body is JSON only, decoded through the group's own
-//! [`negotiate::decode::typed_json`], and the paging/parameter members are spelled the
+//! [`response::query_body`], and the paging/parameter members are spelled the
 //! way the released `AdhocQueryExecute` spells them (`q`, `offset`, `fetch`,
 //! `query_parameters`) so a client that already speaks the query API needs no
 //! second vocabulary. There is no `ehr_id`: the cohort IS the scope.
@@ -35,9 +35,33 @@ use ferroehr::service::query::request::AqlQueryRequest;
 
 use super::response::{self, QueryScope};
 use crate::api::RequestParts;
-use crate::negotiate;
 use crate::overview::error::RestError;
 use crate::state::AppState;
+
+impl response::OpenMembers for CohortExecute {
+    fn names(&self) -> Vec<&str> {
+        [
+            ("q", true),
+            ("cohort", !self.cohort.is_empty()),
+            ("subjects", !self.subjects.is_empty()),
+            ("purpose", self.purpose.is_some()),
+            ("query_parameters", self.query_parameters.is_some()),
+            ("offset", self.offset.is_some()),
+            ("fetch", self.fetch.is_some()),
+        ]
+        .into_iter()
+        .filter_map(|(name, carried)| carried.then_some(name))
+        .collect()
+    }
+
+    fn open(&self) -> Vec<(Vec<&str>, &serde_json::Value)> {
+        self.query_parameters
+            .iter()
+            .flatten()
+            .map(|(name, value)| (vec!["query_parameters", name.as_str()], value))
+            .collect()
+    }
+}
 
 /// The `POST /query/cohort` request body.
 #[derive(Debug, Deserialize)]
@@ -98,7 +122,7 @@ pub(super) struct SubjectSelector {
 /// # Errors
 ///
 /// [`ApiError::NotFound`] when the deployment binds no cohort predicate (the
-/// route serves nothing), the decode failures of [`negotiate::decode::typed_json`], and
+/// route serves nothing), the decode failures of [`response::query_body`], and
 /// whatever [`ferroehr::service::linkage::cohort::CohortError`] maps onto —
 /// `400` for a malformed request, `422` above the configured cohort ceiling.
 pub(super) async fn execute(
@@ -113,8 +137,7 @@ pub(super) async fn execute(
             "cohort queries are not configured on this server".to_owned(),
         )));
     }
-    let body: CohortExecute =
-        negotiate::decode::typed_json(&parts.headers, &parts.body, response::QUERY_BODY)?;
+    let body: CohortExecute = response::query_body(&parts.headers, &parts.body)?;
     let inner = scope.apply(AqlQueryRequest {
         ehr_ids: Vec::new(),
         offset: body.offset,
