@@ -135,7 +135,8 @@ impl AccessLogStore {
              AND ($13::text IS NULL OR r.party_id = $13) \
              AND ($14::text IS NULL OR sh.content::jsonb #>> '{accessor,credential,issuer}' = $14) \
              AND ($15::text IS NULL OR sh.content::jsonb #>> '{accessor,credential,subject}' = $15) \
-             AND ($16::text IS NULL OR r.content::jsonb #>> '{channel,request_id}' = $16) \
+             AND ($16::text IS NULL OR audit.access_log_row_part(r.content::jsonb, r.request_id, \
+                  r.resource_id) #>> '{channel,request_id}' = $16) \
              AND NOT ($17::boolean \
                   AND sh.content::jsonb #>> '{accessor,kind,defining_code,terminology_id,value}' \
                       IS NOT DISTINCT FROM $18 \

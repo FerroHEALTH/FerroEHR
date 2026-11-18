@@ -24,14 +24,16 @@ const REQUESTS: u64 = 20;
 /// The most write-ahead log the access log may write, by kind of request:
 /// per entry, over the row records of the entry, its link, the intake queue
 /// row that names it, the shared parts and their indexes, and per chainer
-/// pass, over the access log's chain head. Each is the value CI measured with
-/// `pg_walinspect`, 2% above (#6010): per entry 3242, 2580, 1990 and 3132,
-/// the same locally but for the commit's 3135, and 207 per pass that links.
+/// pass, over the access log's chain head. Each is the value measured with
+/// `pg_walinspect`, 2% above: per entry 2746, 2196, 1876 and 2639 once the
+/// row part leaves the request and the version to their columns and the
+/// shared part keeps what the classification read (#6005), and 207 per pass
+/// that links (#6010).
 const CEILINGS: [(Kind, (u64, u64)); 4] = [
-    (Kind::Read, (3306, 211)),
-    (Kind::Single, (2631, 211)),
-    (Kind::Population, (2029, 211)),
-    (Kind::Write, (3194, 211)),
+    (Kind::Read, (2801, 211)),
+    (Kind::Single, (2240, 211)),
+    (Kind::Population, (1914, 211)),
+    (Kind::Write, (2692, 211)),
 ];
 
 /// A kind of request, and how to send one.

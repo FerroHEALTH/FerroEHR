@@ -366,3 +366,25 @@ fn a_resolved_token_criterion_reads_the_token_index() {
     let (_, _, unresolved, _) = build_search_statements(&filter, &[]);
     assert!(unresolved.contains("false"), "{unresolved}");
 }
+
+/// A filter whose criteria are each of their own kind with one value is of
+/// the bounded shape set that runs as named statements; its text does not
+/// change with the values it binds. A criterion with several values, or a
+/// kind named twice, is not.
+#[test]
+fn a_filter_of_single_valued_distinct_criteria_is_shaped() {
+    let shaped = filter_with("a");
+    assert!(super::search_page::shaped(&shaped));
+    let (count_a, _, page_a, _) = build_search_statements(&shaped, &RESOLVED);
+    let (count_b, _, page_b, _) = build_search_statements(&filter_with("other"), &RESOLVED);
+    assert_eq!((count_a, page_a), (count_b, page_b));
+    let mut several = filter_with("a");
+    several.criteria.push(AuditCriterion::Outcome(vec![0, 4]));
+    assert!(!super::search_page::shaped(&several));
+    let mut twice = filter_with("a");
+    twice
+        .criteria
+        .push(AuditCriterion::Patient(vec!["b".to_owned()]));
+    assert!(!super::search_page::shaped(&twice));
+    assert!(super::search_page::shaped(&AuditSearchFilter::default()));
+}

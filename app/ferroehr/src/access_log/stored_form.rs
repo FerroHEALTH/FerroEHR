@@ -7,7 +7,8 @@
 //! Every entry of one request repeats who accessed, how they authenticated,
 //! the roles and authorisations they acted under, their purposes and the
 //! retention their access calls for, and the same caller's next request
-//! repeats it again. That shared part is stored once in
+//! repeats it again, as their accesses to data of one template repeat what
+//! the classification read. That shared part is stored once in
 //! `audit.access_log_shared`, keyed by the SHA-256 of its canonical form, and
 //! each row of `audit.access_log_entry` keeps the rest: its uid, time, EHR,
 //! items, outcome, request and query, and the access details that differ per
@@ -50,8 +51,10 @@ pub(crate) const SHARED: [&str; 8] = [
 /// The at-codes of the access details the shared part holds
 /// (`crate::access_log::details`): the caller, the credential, the
 /// classification map and the kind of access, the same for every EHR a
-/// request reached.
-const SHARED_DETAILS: [&str; 18] = [
+/// request reached, and what the classification read, which repeats for
+/// every access of a caller to data of one template or by one query shape
+/// (#6005).
+const SHARED_DETAILS: [&str; 19] = [
     "at0001", // event action
     "at0002", // resource class
     "at0004", // principal
@@ -63,6 +66,7 @@ const SHARED_DETAILS: [&str; 18] = [
     "at0015", // purpose
     "at0016", // legal basis
     "at0020", // category map digest
+    "at0021", // category content
     "at0022", // acting mode
     "at0023", // assurance level
     "at0024", // assurance value
@@ -357,7 +361,8 @@ mod tests {
         assert_eq!(join(stored.row, stored.shared), entry);
     }
 
-    /// The shared at-codes are the codes of the caller's details.
+    /// The shared at-codes are the codes of the caller's details and of what
+    /// the classification read.
     #[cfg(feature = "fhir")]
     #[test]
     fn the_shared_codes_name_the_callers_details() {
@@ -374,6 +379,7 @@ mod tests {
             Detail::Purpose,
             Detail::LegalBasis,
             Detail::CategoryMapDigest,
+            Detail::CategoryContent,
             Detail::ActingMode,
             Detail::AssuranceLevel,
             Detail::AssuranceValue,
