@@ -101,6 +101,9 @@ ihe-atna = { workspace = true, features = ["retrieve"], optional = true }
 fhir-search = { workspace = true }
 
 [dev-dependencies]
+# The hot-path budget counts each request's allocations (#6007); the crate
+# installs its counting allocator as this test binary's global allocator.
+allocation-counter.workspace = true
 openehr-lang = { path = "../../crates/openehr-lang" }
 testkit = { path = "../../tools/testkit" }
 # The audit tests read the access record `ehds-logging` writes by its names.

@@ -58,21 +58,10 @@ impl QueryScope {
     }
 }
 
-/// Decodes a JSON request body into `T`.
-///
-/// The QUERY operations declare `application/json` only, so a non-JSON
-/// `Content-Type` is rejected by [`negotiate::decode::json_value`].
-pub(super) fn decode_body<T: serde::de::DeserializeOwned>(
-    h: &HeaderMap,
-    body: &bytes::Bytes,
-) -> Result<T, RestError> {
-    let value = negotiate::decode::json_value(h, body).map_err(RestError::from)?;
-    serde_json::from_value(value).map_err(|e| {
-        RestError::from(ApiError::BadRequest(format!(
-            "invalid query request body: {e}"
-        )))
-    })
-}
+/// What a QUERY request body is called in the refusal of one that does not
+/// decode. The QUERY operations declare `application/json` only, and the body
+/// decodes once, straight into its DTO ([`negotiate::decode::typed_json`]).
+pub(super) const QUERY_BODY: &str = "query request body";
 
 /// The canonical name of the `ehr_id` request header, spelled `openehr-ehr-id`
 /// by `Request.md` §Common Headers and Query Parameters.
@@ -520,19 +509,26 @@ mod tests {
     }
 
     #[test]
-    fn decode_body_parses_json_and_rejects_xml() {
+    fn a_query_body_parses_json_and_rejects_xml() {
         let json_h = headers(&[("content-type", "application/json")]);
-        let value: serde_json::Value =
-            decode_body(&json_h, &Bytes::from_static(br#"{"offset":0}"#)).unwrap();
+        let value: serde_json::Value = negotiate::decode::typed_json(
+            &json_h,
+            &Bytes::from_static(br#"{"offset":0}"#),
+            QUERY_BODY,
+        )
+        .unwrap();
         assert_eq!(value["offset"], 0);
 
         let xml_h = headers(&[("content-type", "application/xml")]);
-        let err =
-            decode_body::<serde_json::Value>(&xml_h, &Bytes::from_static(b"<q/>")).unwrap_err();
+        let err = negotiate::decode::typed_json::<serde_json::Value>(
+            &xml_h,
+            &Bytes::from_static(b"<q/>"),
+            QUERY_BODY,
+        )
+        .unwrap_err();
         assert!(
-            matches!(err.error(), ApiError::UnsupportedMediaType(_)),
-            "got {:?}",
-            err.error()
+            matches!(err, ApiError::UnsupportedMediaType(_)),
+            "got {err:?}"
         );
     }
 

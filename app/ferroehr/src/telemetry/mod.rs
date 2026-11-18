@@ -15,6 +15,7 @@
 //! telemetry is separate from the ATNA audit trail (`crate::system_log`).
 
 pub mod access_path;
+pub mod conversion;
 pub mod indicators;
 pub mod metrics;
 pub mod samplers;

@@ -35,6 +35,7 @@ use crate::common::BASE;
 use ferroehr::db::pool::SESSION_SETUP_SPAN;
 
 mod intake;
+mod paths;
 mod wal;
 
 /// The EHRs the population query serves, each with one composition.

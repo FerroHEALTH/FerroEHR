@@ -280,6 +280,16 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
             }
             return Ok(out);
         }
+        // Canonical XML reads the stored text straight into the RM.
+        ReadBody::RawJson(text) if !expand && accept == Some(WireFormat::CanonicalXml) => {
+            let typed: Composition =
+                openehr_its::json::from_canonical_json(&text).map_err(|e| stored_fault(&e))?;
+            let mut out = negotiate::body::respond_xml(h, ok, &typed, "composition");
+            if let Some(meta) = &meta {
+                negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Ehr);
+            }
+            return Ok(out);
+        }
         other => stored_body(other)?,
     };
     // A deleted version resolves to a null body → 204 No Content
@@ -587,12 +597,15 @@ fn commit_meta(ehr_id: EhrId, uid: String, committed: &Committed) -> ResourceMet
 /// The typed value of a read COMPOSITION body; the stored text is our own jsonb
 /// rendering, so a body that does not parse is an internal fault.
 fn stored_body(body: ReadBody) -> Result<Value, RestError> {
-    body.into_value().map_err(|e| {
-        RestError::from(crate::overview::error::internal_fault(
-            "re-parse the stored composition body",
-            &e,
-        ))
-    })
+    body.into_value().map_err(|e| stored_fault(&e))
+}
+
+/// The internal fault of a stored COMPOSITION body that does not read back.
+fn stored_fault(e: &dyn std::fmt::Display) -> RestError {
+    RestError::from(crate::overview::error::internal_fault(
+        "re-parse the stored composition body",
+        e,
+    ))
 }
 
 /// Render a COMPOSITION create/update response: FLAT/STRUCTURED interop bodies
@@ -639,26 +652,23 @@ async fn composition_write_response(
         negotiate::prefer::set_preference_applied(&mut out, AppliedPreference::Representation);
         return Ok(out);
     }
-    let body = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
+    let read = if negotiate::prefer::prefers(h, negotiate::prefer::Preference::Representation) {
         let ovid = parse_version_uid(&meta.uid)?;
-        stored_body(
-            state
-                .backend()
-                .composition_at_version(ehr_id, ovid)
-                .await?
-                .body,
-        )?
+        state
+            .backend()
+            .composition_at_version(ehr_id, ovid)
+            .await?
+            .body
     } else {
-        Value::Null
+        ReadBody::Value(Value::Null)
     };
-    let resp = ServiceResponse::new(body, meta);
-    Ok(negotiate::resource::write_rm::<Composition>(
+    Ok(negotiate::resource::write_read_rm::<Composition>(
         h,
         base,
-        minimal,
-        repr,
+        (minimal, repr),
         Some("composition"),
-        &resp,
+        &meta,
+        &read,
         "composition",
     ))
 }
