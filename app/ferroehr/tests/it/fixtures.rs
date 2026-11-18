@@ -488,12 +488,7 @@ pub(crate) async fn subject_ehr_ids(
     namespace: &str,
 ) -> Vec<String> {
     match svc.ehr_read_for_subject(id, namespace).await {
-        Ok(read) => vec![
-            read.body["ehr_id"]["value"]
-                .as_str()
-                .expect("the EHR carries its ehr_id")
-                .to_owned(),
-        ],
+        Ok(read) => vec![read.body.ehr_id.value().to_owned()],
         Err(e) => {
             assert!(
                 matches!(
@@ -843,4 +838,47 @@ pub(crate) fn canonical_entry(document: &str) -> String {
     let read = serde_json::from_str::<Value>(document).expect("an entry");
     openehr_rm::v1_2::common::change_control::canonical_form_impl::canonical_json(&read)
         .expect("the canonical form")
+}
+
+/// The node rows the write path cuts `body` into, each beside its whole
+/// fragment (structure children pruned, before the row slims it).
+pub(crate) fn whole_rows(
+    body: &Value,
+) -> Result<
+    Vec<(ferroehr::storage::render::nodes::StoredNode, Value)>,
+    ferroehr::storage::error::StorageError,
+> {
+    let rendered = ferroehr::storage::render::index::render(body)
+        .map_err(ferroehr::storage::error::StorageError::BodyEncode)?;
+    let root = ferroehr::storage::compact::RootIdentity {
+        version_uid: "",
+        template_id: None,
+    };
+    let (rows, whole) =
+        ferroehr::storage::render::nodes::stored_nodes_with_fragments(&rendered, &root)?;
+    Ok(rows
+        .into_iter()
+        .zip(whole)
+        .map(|(row, whole)| {
+            (
+                row,
+                serde_json::from_str(&whole).expect("a fragment is JSON"),
+            )
+        })
+        .collect())
+}
+
+/// The lean read rows of [`whole_rows`], which `reassemble` takes.
+pub(crate) fn read_rows(
+    rows: &[(ferroehr::storage::render::nodes::StoredNode, Value)],
+) -> Vec<ferroehr::storage::row::ReadRow> {
+    rows.iter()
+        .map(|(row, data)| ferroehr::storage::row::ReadRow {
+            num: row.num,
+            num_cap: row.num_cap,
+            parent_num: row.parent_num,
+            path: row.path.clone(),
+            data: data.clone(),
+        })
+        .collect()
 }

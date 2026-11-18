@@ -726,8 +726,8 @@ pub(crate) fn needs_content_write_permission(changes: &[(AuditInput, Change)]) -
             body,
             ..
         } => {
-            body.view()
-                .pointer("/is_modifiable")
+            body.canonical()
+                .and_then(|canonical| canonical.pointer("/is_modifiable"))
                 .and_then(Value::as_bool)
                 == Some(true)
         }

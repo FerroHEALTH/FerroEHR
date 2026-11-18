@@ -103,7 +103,7 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     else {
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     };
-    let at = super::party::pinned_instant(pinned, &resp);
+    let at = super::party::pinned_instant(pinned, resp.meta.as_ref());
     let reverse = state
         .backend()
         .party_reverse_relationships(vo_id, at)

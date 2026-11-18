@@ -77,7 +77,8 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     )
     .await;
     let held: ferroehr::ids::EhrId = HELD.parse().expect("an EHR id");
-    let ehr = svc.ehr_read(held).await.expect("the EHR").body;
+    let ehr =
+        openehr_its::json::to_canonical_value(&svc.ehr_read(held).await.expect("the EHR").body);
     svc.create_ehr_contribution(
         held,
         access_contribution(&ehr, &restricted_to(&pool, "bob").await),

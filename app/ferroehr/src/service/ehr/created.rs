@@ -10,7 +10,8 @@
 use std::time::Duration;
 
 use moka::future::Cache;
-use serde_json::Value;
+
+use openehr_rm::prelude::Ehr;
 
 use crate::ids::EhrId;
 
@@ -21,7 +22,7 @@ pub(crate) const CREATED_EHRS: u64 = 4096;
 const KEPT: Duration = Duration::from_secs(30);
 
 /// The kept representations, by EHR.
-pub(crate) type CreatedEhrs = Cache<EhrId, Value>;
+pub(crate) type CreatedEhrs = Cache<EhrId, Ehr>;
 
 /// An empty copy of at most `capacity` representations.
 pub(crate) fn created_ehrs(capacity: u64) -> CreatedEhrs {

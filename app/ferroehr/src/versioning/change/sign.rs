@@ -41,7 +41,7 @@ pub(super) fn body_and_signature(
     let signs = r.client_signature.is_none() && ctx.signer.enabled();
     let body = match r.body.as_ref().filter(|_| signs) {
         None => Signed::Void,
-        Some(Body::Composition { rm, .. }) => Signed::Composition(rm),
+        Some(Body::Composition(rm)) => Signed::Composition(rm),
         Some(Body::Canonical(value)) => Signed::Value(value),
     };
     version_signature(

@@ -39,6 +39,7 @@ mod offload;
 
 use crate::multimedia::blob::{BlobError, BlobKey, BlobStore, BlobStoreParams};
 use crate::multimedia::offload::{Base64Text, DV_MULTIMEDIA, Fetched};
+use openehr_rm::v1_2::access::RmObject;
 
 /// A failure in the multimedia externalization path.
 #[derive(Debug, thiserror::Error)]
@@ -197,6 +198,34 @@ impl MultimediaEngine {
             self.store
                 .write_if_absent(&blob.key, blob.size, offload::decoded_chunks(&blob.data))
                 .await?;
+        }
+        Ok(())
+    }
+
+    /// [`Self::offload`] over a typed RM value, with no canonical value built.
+    ///
+    /// # Errors
+    /// As [`Self::offload`].
+    pub async fn offload_typed(&self, value: &mut dyn RmObject) -> Result<(), MultimediaError> {
+        if !self.offload_enabled {
+            return Ok(());
+        }
+        let pending = offload::plan_offload_typed(value, self.threshold, &self.store)?;
+        for blob in pending {
+            self.store
+                .write_if_absent(&blob.key, blob.size, offload::decoded_chunks(&blob.data))
+                .await?;
+        }
+        Ok(())
+    }
+
+    /// [`Self::ensure_externalized`] over a typed RM value.
+    ///
+    /// # Errors
+    /// As [`Self::ensure_externalized`].
+    pub fn ensure_externalized_typed(&self, value: &dyn RmObject) -> Result<(), MultimediaError> {
+        if self.offload_enabled && offload::needs_offload_typed(value, self.threshold)? {
+            return Err(MultimediaError::NotExternalized);
         }
         Ok(())
     }

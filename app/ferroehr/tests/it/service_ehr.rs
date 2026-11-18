@@ -56,18 +56,22 @@ async fn ehr_composition_lifecycle_end_to_end() {
     // that returned uuid, so the meta assertions fold into the uuid/body checks.
     let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
     let ehr_id = ehr_uuid.to_string();
-    let ehr = svc.ehr_read(ehr_uuid).await.expect("ehr object").body;
+    let ehr = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_uuid).await.expect("ehr object").body,
+    );
     assert_eq!(ehr["_type"], "EHR");
     assert_eq!(ehr["ehr_id"]["value"], ehr_id);
 
-    let fetched = svc.ehr_read(ehr_uuid).await.expect("ehr_get_by_id").body;
+    let fetched = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_uuid).await.expect("ehr_get_by_id").body,
+    );
     assert_eq!(fetched["ehr_id"]["value"], ehr_id);
 
     // ── EHR_STATUS: read v1, update → v2, optimistic concurrency ─────────────
     let status_v1 = svc
         .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("status get");
     let status_ovid_v1 = uid(&status_v1).to_owned();
     assert!(status_ovid_v1.ends_with("::1"), "got {status_ovid_v1}");
@@ -87,7 +91,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     let status_v2 = svc
         .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("status v2");
     assert_eq!(status_v2["is_modifiable"], json!(false));
 
@@ -130,7 +134,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
             sp[2],
         )
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("status by version");
     assert_eq!(status_by_v["_type"], "EHR_STATUS");
     assert_eq!(uid(&status_by_v), status_ovid_v1);
@@ -182,7 +186,7 @@ async fn ehr_composition_lifecycle_end_to_end() {
     let versioned = svc
         .versioned_composition(ehr_uuid, comp_vo_uuid)
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("versioned_composition_get");
     // RM ehr master04: the concrete binding VERSIONED_COMPOSITION, never the
     // generic VERSIONED_OBJECT, appears on the wire.
@@ -434,7 +438,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     let status_v1 = svc
         .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("status v1");
     let status_ovid_v1 = uid(&status_v1).to_owned();
     let mut deactivate = status_v1.clone();
@@ -527,7 +531,7 @@ async fn is_modifiable_false_blocks_content_writes_but_not_ehr_status() {
     let status_v2 = svc
         .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("status v2");
     assert_eq!(status_v2["is_modifiable"], json!(false));
     let mut reactivate = status_v2.clone();
@@ -776,7 +780,7 @@ async fn ehr_status_subject_type_is_enforced_end_to_end() {
     let status_v1 = svc
         .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("status v1");
     assert!(
         !uid(&status_v1).is_empty(),
@@ -1048,7 +1052,7 @@ async fn revision_history_lists_every_version() {
     let mut status = svc
         .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("status");
     let ovid_v1 = uid(&status).to_owned();
     status.as_object_mut().unwrap().remove("uid");
@@ -1060,7 +1064,7 @@ async fn revision_history_lists_every_version() {
     let history = svc
         .ehr_object_revision_history(ehr_uuid, EhrObject::Status)
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("revision history");
     assert_eq!(history["_type"], "REVISION_HISTORY");
     let items = history["items"].as_array().expect("items");
@@ -1106,14 +1110,14 @@ async fn ehr_get_by_subject_finds_the_ehr() {
     let found = svc
         .ehr_read_for_subject("patient-123", "patients")
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("get by subject");
     assert_eq!(found["ehr_id"]["value"], ehr_id);
 
     assert!(
         svc.ehr_read_for_subject("nobody", "patients")
             .await
-            .map(|r| r.body)
+            .map(|r| openehr_its::json::to_canonical_value(&r.body))
             .is_err()
     );
 }
@@ -1772,7 +1776,9 @@ async fn ehr_creation_produces_an_ehr_access() {
     let (_db, svc) = crate::fixtures::service().await;
 
     let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
-    let ehr = svc.ehr_read(ehr_uuid).await.expect("ehr object").body;
+    let ehr = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_uuid).await.expect("ehr object").body,
+    );
     let access = &ehr["ehr_access"];
     assert_eq!(access["_type"], "OBJECT_REF");
     assert_eq!(
@@ -1953,7 +1959,8 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
     let ehr_uuid = crate::fixtures::create_ehr(&svc).await;
 
     // Before any folder: `EHR.folders`/`EHR.directory` (both 0..1) are absent.
-    let ehr0 = svc.ehr_read(ehr_uuid).await.expect("ehr0").body;
+    let ehr0 =
+        openehr_its::json::to_canonical_value(&svc.ehr_read(ehr_uuid).await.expect("ehr0").body);
     assert!(
         ehr0.get("folders").is_none(),
         "no folders before any hierarchy, got {ehr0}"
@@ -2006,7 +2013,9 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
 
     // EHR read: `folders` lists BOTH refs in rank order; each is an OBJECT_REF to
     // a VERSIONED_FOLDER, namespace local (RM ehr §EHR Class `Folders_valid`).
-    let ehr = svc.ehr_read(ehr_uuid).await.expect("ehr with folders").body;
+    let ehr = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_uuid).await.expect("ehr with folders").body,
+    );
     let folders = ehr["folders"].as_array().expect("folders array");
     assert_eq!(folders.len(), 2, "both hierarchies indexed, got {ehr}");
     for (member, vo) in folders.iter().zip([&vo1, &vo2]) {
@@ -2076,7 +2085,9 @@ async fn ehr_folders_indexes_multiple_hierarchies_in_rank_order() {
         "the directory falls through to hierarchy 2"
     );
     // EHR read: `folders` now lists only the live hierarchy 2; directory == it.
-    let ehr_after = svc.ehr_read(ehr_uuid).await.expect("ehr after delete").body;
+    let ehr_after = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_uuid).await.expect("ehr after delete").body,
+    );
     let folders_after = ehr_after["folders"].as_array().expect("folders after");
     assert_eq!(
         folders_after.len(),
@@ -2134,11 +2145,12 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
         .unwrap()
         .to_owned();
 
-    let ehr = svc
-        .ehr_read(ehr_uuid)
-        .await
-        .expect("ehr with two folders")
-        .body;
+    let ehr = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_uuid)
+            .await
+            .expect("ehr with two folders")
+            .body,
+    );
     assert_eq!(ehr["folders"].as_array().unwrap().len(), 2);
 
     // Logically delete the SECONDARY (rank 2) via CONTRIBUTION (523|deleted|; a
@@ -2157,7 +2169,9 @@ async fn logical_delete_of_a_secondary_hierarchy_drops_it_from_folders() {
     .expect("delete secondary hierarchy");
 
     // `folders` now lists only the live hierarchy 1; directory == it (rank 1).
-    let ehr2 = svc.ehr_read(ehr_uuid).await.expect("ehr after delete").body;
+    let ehr2 = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_uuid).await.expect("ehr after delete").body,
+    );
     let folders = ehr2["folders"].as_array().expect("folders");
     assert_eq!(
         folders.len(),
@@ -2444,13 +2458,15 @@ async fn write_responses_match_a_fresh_read() {
         .ehr_created_object(ehr_uuid)
         .await
         .expect("ehr_created_object (built from commit, stash)");
-    let fresh = svc
-        .ehr_read(ehr_uuid)
-        .await
-        .expect("ehr_object (fresh read)")
-        .body;
+    let fresh = openehr_its::json::to_canonical_value(
+        &svc.ehr_read(ehr_uuid)
+            .await
+            .expect("ehr_object (fresh read)")
+            .body,
+    );
     assert_eq!(
-        built, fresh,
+        openehr_its::json::to_canonical_value(&built),
+        fresh,
         "the EHR body built from the commit results must equal a fresh ehr_summary read"
     );
 
@@ -2547,11 +2563,13 @@ async fn ehr_system_id_is_recorded_at_creation_and_survives_a_config_change() {
     let first = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_system_id("openehr.first.example.com");
     let ehr_uuid = crate::fixtures::create_ehr(&first).await;
-    let at_creation = first
-        .ehr_read(ehr_uuid)
-        .await
-        .expect("ehr at creation")
-        .body;
+    let at_creation = openehr_its::json::to_canonical_value(
+        &first
+            .ehr_read(ehr_uuid)
+            .await
+            .expect("ehr at creation")
+            .body,
+    );
     assert_eq!(
         at_creation["system_id"]["value"], "openehr.first.example.com",
         "the create response reports the creating system"
@@ -2562,11 +2580,13 @@ async fn ehr_system_id_is_recorded_at_creation_and_survives_a_config_change() {
     // configured system id — the deployment-reconfiguration scenario.
     let second = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&db.pool()))
         .with_system_id("openehr.second.example.com");
-    let after_reconfigure = second
-        .ehr_read(ehr_uuid)
-        .await
-        .expect("ehr after reconfigure")
-        .body;
+    let after_reconfigure = openehr_its::json::to_canonical_value(
+        &second
+            .ehr_read(ehr_uuid)
+            .await
+            .expect("ehr after reconfigure")
+            .body,
+    );
     assert_eq!(
         after_reconfigure["system_id"]["value"], "openehr.first.example.com",
         "EHR.system_id is the stored creating-system value, not the live config"
@@ -2579,7 +2599,9 @@ async fn ehr_system_id_is_recorded_at_creation_and_survives_a_config_change() {
     // An EHR created AFTER the change does take the new id — the value is
     // pinned at creation, not frozen repository-wide.
     let later_uuid = crate::fixtures::create_ehr(&second).await;
-    let later = second.ehr_read(later_uuid).await.expect("later ehr").body;
+    let later = openehr_its::json::to_canonical_value(
+        &second.ehr_read(later_uuid).await.expect("later ehr").body,
+    );
     assert_eq!(
         later["system_id"]["value"], "openehr.second.example.com",
         "a new EHR records the system that created IT"
@@ -2702,13 +2724,13 @@ async fn subject_identity_is_matched_exactly_and_never_case_folded() {
     let by_lower = svc
         .ehr_read_for_subject("case-subject-a", "patients")
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("lookup by the exact lower-case subject");
     assert_eq!(by_lower["ehr_id"]["value"], lower.to_string());
     let by_upper = svc
         .ehr_read_for_subject("Case-Subject-A", "patients")
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("lookup by the exact case-variant subject");
     assert_eq!(by_upper["ehr_id"]["value"], upper.to_string());
 
@@ -2810,7 +2832,7 @@ async fn wrong_kind_uid_on_a_resource_read_is_not_found() {
     let status_v1 = svc
         .ehr_object(ehr_uuid, EhrObject::Status, None)
         .await
-        .map(|r| r.body)
+        .map(|r| openehr_its::json::to_canonical_value(&r.body))
         .expect("status get");
     let status_version_id = uid(&status_v1).to_owned();
     let status_container: ferroehr::ids::VoId = status_version_id

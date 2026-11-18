@@ -4,11 +4,11 @@
 //! What a write is about to store, as the access evaluator judges it before
 //! anything is stored (#5626). No openEHR spec governs this: our own design.
 
-use serde_json::Value;
-
 use crate::access_eval::scope::{Item, Object};
 use crate::error::ServiceError;
-use crate::storage::row::NodeRow;
+use crate::storage::compact::RootIdentity;
+use crate::storage::render::Decomposed;
+use crate::storage::render::index::Rendered;
 use crate::versioning::body::Body;
 use crate::versioning::restriction;
 
@@ -22,7 +22,7 @@ pub(super) fn admit_written(
     gate: Option<&restriction::WriteGate>,
     resolved: &super::ResolvedWrite,
 ) -> Result<(), ServiceError> {
-    let Some(gate) = gate.filter(|_| resolved.canonical_text.is_some()) else {
+    let Some(gate) = gate.filter(|_| resolved.rendered.is_some()) else {
         return Ok(());
     };
     let archetype = root_archetype(resolved.body.as_ref());
@@ -38,36 +38,23 @@ pub(super) fn admit_written(
 /// The root's `archetype_node_id` off the body, for the outbox envelope, the
 /// audit record and the access evaluator; `None` for a logical delete.
 pub(super) fn root_archetype(body: Option<&Body>) -> Option<String> {
-    body?
-        .view()
-        .get("archetype_node_id")
-        .and_then(Value::as_str)
-        .map(str::to_owned)
+    body?.archetype_node_id().map(str::to_owned)
 }
 
-/// The node rows a body decomposes into, their fragments index-aligned, and
-/// the external blob URIs it references ([`nodes`]).
-pub(super) type Nodes = (Vec<NodeRow>, Vec<Value>, Vec<String>);
-
-/// The node rows `body` decomposes into, each with its fragment taken out
-/// for the write to store uncopied, and the external blob URIs the body
-/// references (#5759); none for a logical delete or a version that `shares`
-/// its predecessor's rows.
+/// The node rows and blob URIs read off the rendering of a body, slimmed
+/// against the version identity `root`; none for a logical delete or a
+/// version that `shares` its predecessor's rows.
 ///
 /// # Errors
 /// The decomposition's refusal of a body that is no single tree.
-pub(super) fn nodes(body: Option<Body>, shares: bool) -> Result<Nodes, ServiceError> {
-    let Some(body) = body.filter(|_| !shares).map(Body::into_view) else {
-        return Ok((Vec::new(), Vec::new(), Vec::new()));
+pub(super) fn nodes(
+    rendered: Option<&Rendered>,
+    root: &RootIdentity<'_>,
+    shares: bool,
+) -> Result<Decomposed, ServiceError> {
+    let Some(rendered) = rendered.filter(|_| !shares) else {
+        return Ok(Decomposed::default());
     };
-    let uris = crate::storage::blob_ref::uris_of(&body);
-    crate::telemetry::conversion::record("value_to_nodes");
-    // NOTE: each fragment is bound as a `jsonb` parameter, which serializes it to text.
-    crate::telemetry::conversion::record("fragments_to_text");
-    let mut rows = crate::storage::codec::decompose(body)?;
-    let fragments = rows
-        .iter_mut()
-        .map(|row| std::mem::take(&mut row.data))
-        .collect();
-    Ok((rows, fragments, uris))
+    crate::telemetry::conversion::record("text_to_nodes");
+    Ok(crate::storage::render::decomposed(rendered, root)?)
 }

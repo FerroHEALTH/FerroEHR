@@ -7,23 +7,16 @@
 //! No openEHR spec governs the `node` table — it is our own decomposed store.
 //! This module is the single home for the `node` write: the folded commit,
 //! the EHR Extract import, the integrity rebuild and the archive load all
-//! bind their rows here, slimmed by [`crate::storage::slim::slim`] against
-//! the identity of their version; the reads are [`crate::storage::node_repo`].
+//! bind their rows here, read off the one rendering of their body
+//! ([`crate::storage::render`]); the reads are [`crate::storage::node_repo`].
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 1): stored canonical fragments — a typed \
-              round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
-)]
-
-use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
 
 use crate::ids::{EhrId, VoId};
-use crate::storage::compact::RootIdentity;
 use crate::storage::error::StorageError;
-use crate::storage::row::NodeRow;
+use crate::storage::render::Decomposed;
+use crate::storage::render::nodes::StoredNode;
 
 /// The promoted-leaf parts of a node insert: the column list, the converting
 /// selects, the array parameters from `first_param` on, and the `unnest`
@@ -78,12 +71,12 @@ fn write_nodes_sql(per_row_context: bool) -> String {
          party_self, uid_derived{columns}) \
          SELECT {context_select}, t.num, t.num_cap, t.parent_num, t.rm_type, \
          t.archetype, t.arch_entity, t.arch_concept, t.arch_major, t.name, t.name_code, \
-         t.name_terminology, t.path, t.data, t.value_type, t.value_num::numeric, t.value_text, \
+         t.name_terminology, t.path, t.data::jsonb, t.value_type, t.value_num::numeric, t.value_text, \
          t.value_code, t.value_terminology, t.rm_version, t.language, t.encoding, \
          t.origin_compact, t.time_compact, t.party_self, t.uid_derived{selects} \
          FROM unnest({context_arrays}{separator}$4::int[], $5::int[], $6::int[], $7::text[], $8::text[], \
          $9::text[], $10::text[], $11::int[], $12::text[], $13::text[], $14::text[], \
-         $15::text[], $16::jsonb[], $17::text[], $18::text[], $19::text[], $20::text[], \
+         $15::text[], $16::text[], $17::text[], $18::text[], $19::text[], $20::text[], \
          $21::text[], $22::text[], $23::text[], $24::text[], $25::boolean[], $26::boolean[], \
          $27::boolean[], $28::boolean[]{arrays}) \
          AS t({context_names}num, num_cap, parent_num, rm_type, archetype, arch_entity, \
@@ -116,12 +109,12 @@ pub(crate) fn node_insert_cte(vo: &str, sys: &str, ehr: &str, first_array_param:
          party_self, uid_derived{columns}) \
          SELECT {vo}, {sys}, {ehr}, t.num, t.num_cap, t.parent_num, t.rm_type, \
          t.archetype, t.arch_entity, t.arch_concept, t.arch_major, t.name, t.name_code, \
-         t.name_terminology, t.path, t.data, t.value_type, t.value_num::numeric, t.value_text, \
+         t.name_terminology, t.path, t.data::jsonb, t.value_type, t.value_num::numeric, t.value_text, \
          t.value_code, t.value_terminology, t.rm_version, t.language, t.encoding, \
          t.origin_compact, t.time_compact, t.party_self, t.uid_derived{selects} \
          FROM unnest(${}::int[], ${}::int[], ${}::int[], ${}::text[], ${}::text[], \
          ${}::text[], ${}::text[], ${}::int[], ${}::text[], ${}::text[], ${}::text[], \
-         ${}::text[], ${}::jsonb[], ${}::text[], ${}::text[], ${}::text[], ${}::text[], \
+         ${}::text[], ${}::text[], ${}::text[], ${}::text[], ${}::text[], ${}::text[], \
          ${}::text[], ${}::text[], ${}::text[], ${}::text[], ${}::boolean[], ${}::boolean[], \
          ${}::boolean[], ${}::boolean[]{arrays}) \
          AS t(num, num_cap, parent_num, rm_type, archetype, arch_entity, \
@@ -164,17 +157,17 @@ static WRITE_NODES_BATCH_SQL: std::sync::LazyLock<String> =
 /// Bulk-insert the decomposed node rows of one stored version — ONE
 /// fixed-text `unnest` statement whatever the row count.
 ///
-/// `rows` is the output of [`crate::storage::codec::decompose`]; the storage
-/// context (`vo_id`/`sys_version`/`ehr_id`) is supplied here and written onto
-/// every row as constant scalars.
+/// `version` is the output of [`crate::storage::render::decompose`]; the
+/// storage context (`vo_id`/`sys_version`/`ehr_id`) is supplied here and
+/// written onto every row as constant scalars.
 ///
 /// A logically-deleted version (data Void, RM common master06 §Logical
-/// Deletion) has no node rows — the caller simply passes an empty slice and no
+/// Deletion) has no node rows — the caller simply passes an empty set and no
 /// statement runs.
 ///
-/// The externalized multimedia URIs the rows reference are indexed in the same
-/// transaction ([`crate::storage::blob_ref::record`]), so the blob collector
-/// never has to scan `node`.
+/// The externalized multimedia URIs the body references are indexed in the
+/// same transaction ([`crate::storage::blob_ref::record_uris`]), so the blob
+/// collector never has to scan `node`.
 ///
 /// # Errors
 ///
@@ -184,28 +177,24 @@ pub async fn write_nodes(
     vo_id: VoId,
     sys_version: i32,
     ehr_id: Option<EhrId>,
-    root: &RootIdentity<'_>,
-    rows: &[NodeRow],
+    version: &Decomposed,
 ) -> Result<(), StorageError> {
-    if rows.is_empty() {
+    if version.rows.is_empty() {
         return Ok(());
     }
     let query = sqlx::query(sqlx::AssertSqlSafe(WRITE_NODES_SQL.as_str()))
         .bind(vo_id)
         .bind(sys_version)
         .bind(ehr_id);
-    let refs = rows
-        .iter()
-        .map(|row| (row, root, row.data.clone()))
-        .collect();
-    bind_node_arrays(query, refs).execute(&mut *tx).await?;
-    crate::storage::blob_ref::record(tx, &[(vo_id, sys_version, rows)]).await?;
+    bind_node_arrays(query, &version.rows.iter().collect::<Vec<_>>())
+        .execute(&mut *tx)
+        .await?;
+    crate::storage::blob_ref::record_uris(tx, vo_id, sys_version, &version.blob_uris).await?;
     Ok(())
 }
 
-/// The node rows of one stored version, with the storage context and the
-/// version identity the root row's fragment is slimmed against.
-#[derive(Debug, Clone, PartialEq)]
+/// The node rows of one stored version, with its storage context.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VersionNodes {
     /// The versioned object.
     pub vo_id: VoId,
@@ -213,23 +202,8 @@ pub struct VersionNodes {
     pub sys_version: i32,
     /// The owning EHR, `None` for a demographic party.
     pub ehr_id: Option<EhrId>,
-    /// The version's `OBJECT_VERSION_ID` text
-    /// ([`crate::storage::compact::version_uid`]).
-    pub version_uid: String,
-    /// `version.template_id`.
-    pub template_id: Option<String>,
-    /// The decomposed rows.
-    pub rows: Vec<NodeRow>,
-}
-
-impl VersionNodes {
-    /// The root identity the rows are slimmed against.
-    fn root(&self) -> RootIdentity<'_> {
-        RootIdentity {
-            version_uid: &self.version_uid,
-            template_id: self.template_id.as_deref(),
-        }
-    }
+    /// The decomposed rows and the blob URIs of the body.
+    pub version: Decomposed,
 }
 
 /// Bulk-insert the decomposed node rows of MANY stored versions in ONE
@@ -240,8 +214,8 @@ impl VersionNodes {
 /// binding as constants. The archive load writes a whole record's node rows
 /// through this (never one statement per version), and their externalized
 /// multimedia URIs are indexed with them
-/// ([`crate::storage::blob_ref::record`]), so a loaded record's blobs are as
-/// visible to the collector as a committed one's.
+/// ([`crate::storage::blob_ref::record_uris`]), so a loaded record's blobs are
+/// as visible to the collector as a committed one's.
 ///
 /// # Errors
 ///
@@ -250,33 +224,36 @@ pub async fn write_nodes_batch(
     tx: &mut PgConnection,
     versions: &[VersionNodes],
 ) -> Result<(), StorageError> {
-    let n: usize = versions.iter().map(|version| version.rows.len()).sum();
+    let n: usize = versions.iter().map(|v| v.version.rows.len()).sum();
     if n == 0 {
         return Ok(());
     }
     let mut vo_ids: Vec<Uuid> = Vec::with_capacity(n);
     let mut sys_versions: Vec<i32> = Vec::with_capacity(n);
     let mut ehr_ids: Vec<Option<Uuid>> = Vec::with_capacity(n);
-    let roots: Vec<RootIdentity<'_>> = versions.iter().map(VersionNodes::root).collect();
-    let mut refs: Vec<(&NodeRow, &RootIdentity<'_>, Value)> = Vec::with_capacity(n);
-    for (version, root) in versions.iter().zip(&roots) {
-        for row in &version.rows {
+    let mut rows: Vec<&StoredNode> = Vec::with_capacity(n);
+    for version in versions {
+        for row in &version.version.rows {
             vo_ids.push(version.vo_id.0);
             sys_versions.push(version.sys_version);
             ehr_ids.push(version.ehr_id.map(|e| e.0));
-            refs.push((row, root, row.data.clone()));
+            rows.push(row);
         }
     }
     let query = sqlx::query(sqlx::AssertSqlSafe(WRITE_NODES_BATCH_SQL.as_str()))
         .bind(vo_ids)
         .bind(sys_versions)
         .bind(ehr_ids);
-    bind_node_arrays(query, refs).execute(&mut *tx).await?;
-    let blob_refs: Vec<(VoId, i32, &[NodeRow])> = versions
-        .iter()
-        .map(|version| (version.vo_id, version.sys_version, version.rows.as_slice()))
-        .collect();
-    crate::storage::blob_ref::record(tx, &blob_refs).await?;
+    bind_node_arrays(query, &rows).execute(&mut *tx).await?;
+    for version in versions {
+        crate::storage::blob_ref::record_uris(
+            tx,
+            version.vo_id,
+            version.sys_version,
+            &version.version.blob_uris,
+        )
+        .await?;
+    }
     Ok(())
 }
 
@@ -284,16 +261,14 @@ pub async fn write_nodes_batch(
 /// onto a node-insert statement whose storage-context parameters (`$1..$3`)
 /// are already bound.
 ///
-/// The fragment is stored slimmed ([`crate::storage::slim::slim`]): the keys
-/// the row's columns hold are left out, a typed `ELEMENT` value fills the
-/// five value columns instead, the header columns hold the archetype header,
-/// language and encoding, and the four markers say which keys the row left
-/// out beyond those. Each row comes with the identity of its version, which
-/// the root row (`num = 0`) is slimmed against, and its fragment by value, so a
-/// caller done with its rows gives the fragments up uncopied (#5759).
+/// Each row arrives slimmed ([`crate::storage::render::nodes`]): its fragment
+/// text leaves out the keys its columns hold, a typed `ELEMENT` value fills
+/// the five value columns instead, the header columns hold the archetype
+/// header, language and encoding, and the four markers say which keys the row
+/// left out beyond those.
 pub(crate) fn bind_node_arrays<'q>(
     mut query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
-    rows: Vec<(&'q NodeRow, &'q RootIdentity<'q>, Value)>,
+    rows: &[&'q StoredNode],
 ) -> sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments> {
     let n = rows.len();
     let mut nums = Vec::with_capacity(n);
@@ -308,26 +283,24 @@ pub(crate) fn bind_node_arrays<'q>(
     let mut name_codes: Vec<Option<&str>> = Vec::with_capacity(n);
     let mut name_terminologies: Vec<Option<&str>> = Vec::with_capacity(n);
     let mut paths: Vec<&str> = Vec::with_capacity(n);
-    let mut datas: Vec<Option<Value>> = Vec::with_capacity(n);
-    let mut value_types: Vec<Option<String>> = Vec::with_capacity(n);
-    let mut value_nums: Vec<Option<String>> = Vec::with_capacity(n);
-    let mut value_texts: Vec<Option<String>> = Vec::with_capacity(n);
-    let mut value_codes: Vec<Option<String>> = Vec::with_capacity(n);
-    let mut value_terminologies: Vec<Option<String>> = Vec::with_capacity(n);
-    let mut rm_versions: Vec<Option<String>> = Vec::with_capacity(n);
-    let mut languages: Vec<Option<String>> = Vec::with_capacity(n);
-    let mut encodings: Vec<Option<String>> = Vec::with_capacity(n);
+    let mut datas: Vec<Option<&str>> = Vec::with_capacity(n);
+    let mut value_types: Vec<Option<&str>> = Vec::with_capacity(n);
+    let mut value_nums: Vec<Option<&str>> = Vec::with_capacity(n);
+    let mut value_texts: Vec<Option<&str>> = Vec::with_capacity(n);
+    let mut value_codes: Vec<Option<&str>> = Vec::with_capacity(n);
+    let mut value_terminologies: Vec<Option<&str>> = Vec::with_capacity(n);
+    let mut rm_versions: Vec<Option<&str>> = Vec::with_capacity(n);
+    let mut languages: Vec<Option<&str>> = Vec::with_capacity(n);
+    let mut encodings: Vec<Option<&str>> = Vec::with_capacity(n);
     let mut origin_compacts: Vec<Option<bool>> = Vec::with_capacity(n);
     let mut time_compacts: Vec<Option<bool>> = Vec::with_capacity(n);
     let mut party_selfs: Vec<Option<bool>> = Vec::with_capacity(n);
     let mut uid_deriveds: Vec<Option<bool>> = Vec::with_capacity(n);
-    let mut written: Vec<&'q NodeRow> = Vec::with_capacity(n);
-    for (row, root, data) in rows {
-        written.push(row);
+    for row in rows {
         nums.push(row.num);
         num_caps.push(row.num_cap);
         parent_nums.push(row.parent_num);
-        rm_types.push(&row.rm_type);
+        rm_types.push(row.rm_type.as_str());
         archetypes.push(row.archetype.as_deref());
         arch_entities.push(row.arch_entity.as_deref());
         arch_concepts.push(row.arch_concept.as_deref());
@@ -335,25 +308,21 @@ pub(crate) fn bind_node_arrays<'q>(
         names.push(row.name.as_deref());
         name_codes.push(row.name_code.as_deref());
         name_terminologies.push(row.name_terminology.as_deref());
-        paths.push(&row.path);
-        let stored = crate::storage::slim::slim(&row.rm_type, (row.num == 0).then_some(root), data);
-        datas.push(stored.data);
-        rm_versions.push(stored.header.rm_version);
-        languages.push(stored.header.language);
-        encodings.push(stored.header.encoding);
-        origin_compacts.push(stored.compact.origin.then_some(true));
-        time_compacts.push(stored.compact.time.then_some(true));
-        party_selfs.push(stored.compact.party_self.then_some(true));
-        uid_deriveds.push(stored.compact.uid_derived.then_some(true));
-        let (value_type, num, text, code, terminology) = stored
-            .value
-            .map(|v| (Some(v.value_type), v.num, v.text, v.code, v.terminology))
-            .unwrap_or_default();
-        value_types.push(value_type);
-        value_nums.push(num);
-        value_texts.push(text);
-        value_codes.push(code);
-        value_terminologies.push(terminology);
+        paths.push(row.path.as_str());
+        datas.push(row.data.as_deref());
+        rm_versions.push(row.header.rm_version.as_deref());
+        languages.push(row.header.language.as_deref());
+        encodings.push(row.header.encoding.as_deref());
+        origin_compacts.push(row.compact.origin.then_some(true));
+        time_compacts.push(row.compact.time.then_some(true));
+        party_selfs.push(row.compact.party_self.then_some(true));
+        uid_deriveds.push(row.compact.uid_derived.then_some(true));
+        let value = row.value.as_ref();
+        value_types.push(value.map(|v| v.value_type.as_str()));
+        value_nums.push(value.and_then(|v| v.num.as_deref()));
+        value_texts.push(value.and_then(|v| v.text.as_deref()));
+        value_codes.push(value.and_then(|v| v.code.as_deref()));
+        value_terminologies.push(value.and_then(|v| v.terminology.as_deref()));
     }
     query = query
         .bind(nums)
@@ -382,7 +351,7 @@ pub(crate) fn bind_node_arrays<'q>(
         .bind(party_selfs)
         .bind(uid_deriveds);
     for (i, _leaf) in crate::storage::promoted::PROMOTED_LEAVES.iter().enumerate() {
-        let leaf_values: Vec<Option<&str>> = written
+        let leaf_values: Vec<Option<&str>> = rows
             .iter()
             .map(|row| row.promoted.get(i).and_then(Option::as_deref))
             .collect();

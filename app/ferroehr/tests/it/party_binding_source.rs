@@ -699,7 +699,9 @@ async fn memberships(svc: &FerroEhrService, member: VoId, groups: &[VoId]) {
         None,
     ))
     .await
-    .expect("the PERSON reads");
+    .expect("the PERSON reads")
+    .into_value_response()
+    .expect("the stored body parses");
     let uid = read.meta.as_ref().expect("a version").uid.clone();
     let mut body = read.body;
     let object = body.as_object_mut().expect("a PERSON object");
@@ -741,7 +743,9 @@ async fn held_groups(svc: &FerroEhrService, member: VoId) -> Vec<VoId> {
         None,
     ))
     .await
-    .expect("the PERSON reads");
+    .expect("the PERSON reads")
+    .into_value_response()
+    .expect("the stored body parses");
     read.body["relationships"]
         .as_array()
         .map(Vec::as_slice)
@@ -993,7 +997,9 @@ async fn a_large_group_writes_only_the_rows_a_change_changes() {
         None,
     ))
     .await
-    .expect("the PERSON reads");
+    .expect("the PERSON reads")
+    .into_value_response()
+    .expect("the stored body parses");
     let uid = read.meta.as_ref().expect("a version").uid.clone();
     let mut body = read.body;
     body.as_object_mut().expect("an object").remove("uid");

@@ -68,6 +68,7 @@ pub mod audit;
 pub(crate) mod body;
 pub mod change;
 pub mod committer;
+pub(crate) mod content_facts;
 pub(crate) mod contribution;
 pub(crate) mod external;
 pub(crate) mod import;

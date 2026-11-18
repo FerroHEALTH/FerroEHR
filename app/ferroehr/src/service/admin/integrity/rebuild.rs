@@ -49,7 +49,6 @@ use crate::service::FerroEhrService;
 use crate::service::admin::integrity::{
     StorageDomain, StorageParityDefect, StorageParityEvent, StorageParityMismatch,
 };
-use crate::storage::codec::decompose;
 use crate::storage::integrity::{self, StorageParityScope};
 use crate::storage::node_repo::{delete_version_nodes, read_version_canonical};
 use crate::storage::node_write::write_nodes;
@@ -353,24 +352,24 @@ pub(in crate::service) async fn rebuild_in_tx(
             });
         }
     };
-    let rows = match decompose(body.clone()) {
-        Ok(rows) => rows,
+    let root = crate::storage::compact::RootIdentity {
+        version_uid: &version.version_uid,
+        template_id: version.template_id.as_deref(),
+    };
+    let stored = match crate::storage::render::decompose(&body, &root) {
+        Ok(stored) => stored,
         Err(e) => {
             return Ok(NodeRebuildOutcome::Refused {
                 reason: format!("the stored body does not decompose: {e}"),
             });
         }
     };
-    let node_rows = u32::try_from(rows.len()).unwrap_or(u32::MAX);
+    let node_rows = u32::try_from(stored.rows.len()).unwrap_or(u32::MAX);
 
     // The row set is replaced wholesale: a nested-set numbering is only
     // meaningful as a whole (`crate::storage::codec`).
     delete_version_nodes(tx, vo_id, sys_version).await?;
-    let root = crate::storage::compact::RootIdentity {
-        version_uid: &version.version_uid,
-        template_id: version.template_id.as_deref(),
-    };
-    write_nodes(tx, vo_id, sys_version, version.ehr_id, &root, &rows).await?;
+    write_nodes(tx, vo_id, sys_version, version.ehr_id, &stored).await?;
     // The version reads its own rows again, whatever it shared before.
     crate::storage::node_repo::unshare_content(tx, vo_id, sys_version).await?;
 

@@ -30,6 +30,8 @@
               the grant credentials a system commit is judged against"
 )]
 
+use crate::versioning::body::Body;
+use crate::versioning::content_facts::ContentFacts;
 use std::sync::Arc;
 
 use serde_json::Value;
@@ -77,7 +79,7 @@ fn composing_grants(kind: Kind) -> Result<Option<Arc<Capabilities>>, ServiceErro
 /// [`ServiceError::Unprocessable`] (`422`) for an organisation composer, a
 /// person act naming no professional by an identifier, and a COMPOSITION
 /// naming no facility of an admitting grant.
-pub(crate) fn admit_content(kind: Kind, canonical: &Value) -> Result<(), ServiceError> {
+pub(crate) fn admit_content(kind: Kind, body: &Body) -> Result<(), ServiceError> {
     let Some(capabilities) = composing_grants(kind)? else {
         return Ok(());
     };
@@ -85,12 +87,12 @@ pub(crate) fn admit_content(kind: Kind, canonical: &Value) -> Result<(), Service
         .of(Operation::CommitComposition)
         .map(Grant::credentials)
         .collect();
-    judge(&grants, canonical)
+    judge(&grants, &body.content_facts())
 }
 
 /// Judges `canonical` against the `commit_composition` grants `grants`.
-fn judge(grants: &[Credentials<'_>], canonical: &Value) -> Result<(), ServiceError> {
-    if organisation_composer(canonical) {
+fn judge(grants: &[Credentials<'_>], facts: &ContentFacts<'_>) -> Result<(), ServiceError> {
+    if facts.composer_ref_type == Some("ORGANISATION") {
         return Err(ServiceError::content_invalid(
             Violation::new(
                 "names an organisation, and the composer is the person primarily responsible \
@@ -103,7 +105,7 @@ fn judge(grants: &[Credentials<'_>], canonical: &Value) -> Result<(), ServiceErr
     let devices: Vec<Credentials<'_>> = grants
         .iter()
         .copied()
-        .filter(|grant| device_act(*grant, canonical))
+        .filter(|grant| device_act(*grant, facts))
         .collect();
     let admitting: Vec<Credentials<'_>> = if devices.is_empty() {
         let relays = of_origin(grants, RELAY);
@@ -114,7 +116,7 @@ fn judge(grants: &[Credentials<'_>], canonical: &Value) -> Result<(), ServiceErr
                  a local person who acted commits under a token of their own",
             ));
         }
-        if !names_professional(canonical) {
+        if !names_professional(facts) {
             return Err(ServiceError::content_invalid(
                 Violation::new(
                     "a relayed person act names the professional by an identifier, in the \
@@ -134,7 +136,7 @@ fn judge(grants: &[Credentials<'_>], canonical: &Value) -> Result<(), ServiceErr
         }
         devices
     };
-    admit_facility(&admitting, canonical)
+    admit_facility(&admitting, facts)
 }
 
 /// The grants of `grants` whose `origin` elements code `origin`.
@@ -144,19 +146,6 @@ fn of_origin<'a>(grants: &[Credentials<'a>], origin: &str) -> Vec<Credentials<'a
         .copied()
         .filter(|grant| grant.words(ORIGIN).contains(&origin))
         .collect()
-}
-
-/// The template a COMPOSITION is of: `template_id` as the change carries it,
-/// or its body's `archetype_details.template_id`.
-pub(crate) fn template_of<'a>(
-    canonical: &'a Value,
-    template_id: Option<&'a str>,
-) -> Option<&'a str> {
-    template_id.or_else(|| {
-        canonical
-            .pointer("/archetype_details/template_id/value")
-            .and_then(Value::as_str)
-    })
 }
 
 /// Admits a logical deletion of `vo_id`, of `kind`, by the request's system
@@ -211,10 +200,16 @@ fn facilities(grant: Credentials<'_>) -> Vec<Facility<'_>> {
 /// Refuses a COMPOSITION naming no facility of the grants `admitting`: in
 /// `EVENT_CONTEXT.health_care_facility`, or with no context in
 /// `feeder_audit.originating_system_audit.location`.
-fn admit_facility(admitting: &[Credentials<'_>], canonical: &Value) -> Result<(), ServiceError> {
-    let (facility, path) = facility_of(canonical);
+fn admit_facility(
+    admitting: &[Credentials<'_>],
+    facts: &ContentFacts<'_>,
+) -> Result<(), ServiceError> {
+    let path = facts.facility_path;
     let covered: Vec<Facility<'_>> = admitting.iter().copied().flat_map(facilities).collect();
-    if let Some((issuer, id)) = identifiers(facility)
+    if let Some((issuer, id)) = facts
+        .facility
+        .iter()
+        .copied()
         .find(|(issuer, id)| covered.iter().any(|listed| listed.covers(issuer, id)))
     {
         crate::system_log::access_context::record_facility(issuer, id);
@@ -230,82 +225,29 @@ fn admit_facility(admitting: &[Credentials<'_>], canonical: &Value) -> Result<()
     ))
 }
 
-/// The facility `canonical` names, with its path: its
-/// `EVENT_CONTEXT.health_care_facility`, or with no context its
-/// `feeder_audit.originating_system_audit.location`.
-pub(crate) fn facility_of(canonical: &Value) -> (Option<&Value>, &'static str) {
-    match canonical.get("context").filter(|c| !c.is_null()) {
-        Some(context) => (
-            context.get("health_care_facility"),
-            "EVENT_CONTEXT.health_care_facility",
-        ),
-        None => (
-            canonical.pointer("/feeder_audit/originating_system_audit/location"),
-            "COMPOSITION.feeder_audit.originating_system_audit.location",
-        ),
-    }
-}
-
 /// Whether `canonical`'s composer is a `PARTY_IDENTIFIED` whose identifier of
 /// an issuer `grant` lists as a `device_identifier_issuer` is the
 /// `feeder_audit.originating_system_audit.system_id`: a device's registration.
-fn device_act(grant: Credentials<'_>, canonical: &Value) -> bool {
-    let Some(composer) = canonical.get("composer").filter(|composer| {
-        composer.get("_type").and_then(Value::as_str) == Some("PARTY_IDENTIFIED")
-    }) else {
+fn device_act(grant: Credentials<'_>, facts: &ContentFacts<'_>) -> bool {
+    if facts.composer_type != Some("PARTY_IDENTIFIED") {
         return false;
-    };
-    let Some(system) = canonical
-        .pointer("/feeder_audit/originating_system_audit/system_id")
-        .and_then(Value::as_str)
-    else {
+    }
+    let Some(system) = facts.feeder_system_id else {
         return false;
     };
     let issuers = grant.texts(DEVICE_IDENTIFIER_ISSUER);
-    identifiers(Some(composer)).any(|(issuer, id)| id == system && issuers.contains(&issuer))
-}
-
-/// Whether `canonical`'s composer references an `ORGANISATION`.
-fn organisation_composer(canonical: &Value) -> bool {
-    canonical
-        .pointer("/composer/external_ref/type")
-        .and_then(Value::as_str)
-        == Some("ORGANISATION")
+    facts
+        .composer_identifiers
+        .iter()
+        .any(|(issuer, id)| *id == system && issuers.contains(issuer))
 }
 
 /// Whether `canonical` names a professional by an identifier: its composer,
 /// or the performer of one of its context's participations, is a
 /// `PARTY_IDENTIFIED` carrying one.
-fn names_professional(canonical: &Value) -> bool {
-    let identified = |party: Option<&Value>| {
-        party.is_some_and(|party| {
-            party.get("_type").and_then(Value::as_str) == Some("PARTY_IDENTIFIED")
-                && identifiers(Some(party)).next().is_some()
-        })
-    };
-    identified(canonical.get("composer"))
-        || canonical
-            .pointer("/context/participations")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-            .any(|participation| identified(participation.get("performer")))
-}
-
-/// Every `(issuer, id)` of `party`'s `identifiers`, skipping one without an
-/// issuer.
-pub(crate) fn identifiers(party: Option<&Value>) -> impl Iterator<Item = (&str, &str)> {
-    party
-        .and_then(|party| party.get("identifiers"))
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(|identifier| {
-            Some((
-                identifier.get("issuer")?.as_str()?,
-                identifier.get("id")?.as_str()?,
-            ))
-        })
+fn names_professional(facts: &ContentFacts<'_>) -> bool {
+    (facts.composer_type == Some("PARTY_IDENTIFIED") && !facts.composer_identifiers.is_empty())
+        || facts.identified_performer
 }
 
 #[cfg(test)]
@@ -313,6 +255,27 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    /// The rules over a canonical COMPOSITION, as a CONTRIBUTION member
+    /// carries one.
+    fn admit_facility(
+        admitting: &[Credentials<'_>],
+        canonical: &Value,
+    ) -> Result<(), ServiceError> {
+        super::admit_facility(admitting, &ContentFacts::of_canonical(canonical))
+    }
+
+    fn device_act(grant: Credentials<'_>, canonical: &Value) -> bool {
+        super::device_act(grant, &ContentFacts::of_canonical(canonical))
+    }
+
+    fn judge(grants: &[Credentials<'_>], canonical: &Value) -> Result<(), ServiceError> {
+        super::judge(grants, &ContentFacts::of_canonical(canonical))
+    }
+
+    fn names_professional(canonical: &Value) -> bool {
+        super::names_professional(&ContentFacts::of_canonical(canonical))
+    }
     use crate::party_binding::policy_mark::TERMINOLOGY;
 
     fn coded(code: &str) -> Value {

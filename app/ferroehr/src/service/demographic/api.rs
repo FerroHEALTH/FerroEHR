@@ -31,7 +31,7 @@ use crate::service::datetime::parse_at_time;
 use crate::service::demographic::precondition::Precondition;
 use crate::service::demographic::types::PartyKind;
 use crate::service::ehr::tags::tag_target_tail;
-use crate::service::response::{ResourceMeta, ServiceResponse};
+use crate::service::response::{RawServiceResponse, ResourceMeta, ServiceResponse};
 use crate::service::version_update::WriteRequest;
 use crate::versioning::object_version_id::{TreeId, UidAddress};
 use openehr_rm::prelude::{Party, PartyRelationship};
@@ -49,9 +49,9 @@ impl FerroEhrService {
     async fn attach_party_item_tags(
         &self,
         vo_id: VoId,
-        resp: &mut ServiceResponse,
+        meta: &mut Option<ResourceMeta>,
     ) -> Result<(), ServiceError> {
-        if resp.meta.is_none() {
+        if meta.is_none() {
             return Ok(());
         }
         // The two response headers carry DISTINCT collections (overview
@@ -60,14 +60,13 @@ impl FerroEhrService {
         // `openehr-version-item-tag`. The version tail comes from the response
         // metadata's own OBJECT_VERSION_ID.
         // NOTE: a meta uid that is no OBJECT_VERSION_ID names no version, so no version set rides.
-        let served = resp
-            .meta
+        let served = meta
             .as_ref()
             .and_then(|m| ObjectVersionId::from_str(&m.uid).ok());
         let (container, version) = self
             .party_tag_sets(vo_id, tag_target_tail(served.as_ref()))
             .await?;
-        if let Some(meta) = resp.meta.as_mut() {
+        if let Some(meta) = meta.as_mut() {
             meta.item_tags = Some(container);
             meta.version_item_tags = version;
         }
@@ -123,12 +122,12 @@ impl FerroEhrService {
         kind: PartyKind,
         address: UidAddress,
         version_at_time: Option<String>,
-    ) -> Result<ServiceResponse, ServiceError> {
+    ) -> Result<RawServiceResponse, ServiceError> {
         let (vo_id, version, at) = self.gated_address(address, version_at_time).await?;
-        let mut resp = self.read_party(kind, vo_id, version, at).await?;
+        let mut resp = self.read_party_raw(kind, vo_id, version, at).await?;
         // Attach the party's stored ITEM_TAGs for the item-tag response headers
         // (person_get.yaml). A deleted read carries no metadata → no-op.
-        self.attach_party_item_tags(vo_id, &mut resp).await?;
+        self.attach_party_item_tags(vo_id, &mut resp.meta).await?;
         Ok(resp)
     }
 

@@ -30,14 +30,6 @@
 //! `COMPOSITION`, `EHR_STATUS` and `EHR_ACCESS` satisfy this; `FOLDER` does not,
 //! so a `FOLDER` leaf would need an explicit `num = 0` guard on the read side.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694 family 1): stored canonical fragments — a typed \
-              round-trip drops forward-compatible keys (the openEHR release strategy: minors are compatible supersets)"
-)]
-
-use serde_json::Value;
-
 /// The physical type a promoted column carries.
 ///
 /// It selects the write-time SQL conversion ([`crate::storage::node_repo`]) and
@@ -81,54 +73,22 @@ pub static PROMOTED_LEAVES: &[PromotedLeaf] = &[
     },
 ];
 
-/// The raw promoted-leaf text for one node row, aligned to
-/// [`PROMOTED_LEAVES`] (entry `i` ↔ index `i`).
-///
-/// An entry is `Some` only on the versioned-object root (`num == 0`) whose
-/// `rm_type` matches and whose leaf value is present; `None` everywhere else,
-/// so non-root rows and context-less compositions carry all-`None`.
-///
-/// Called at decomposition time with the node's **pre-pruning** JSON, so the
-/// leaf (which may sit inside an about-to-be-split structure child, e.g.
-/// `EVENT_CONTEXT`) is still reachable.
-#[must_use]
-pub fn extract(num: i32, rm_type: &str, json: &Value) -> Vec<Option<String>> {
-    // Only a versioned-object root carries promoted leaves; every other row
-    // returns the EMPTY vec (allocation-free — `Vec::new` does not allocate),
-    // which the node writer's positional `.get(i)` reads as all-`None`.
-    if num != 0 {
-        return Vec::new();
-    }
-    PROMOTED_LEAVES
-        .iter()
-        .map(|leaf| {
-            if rm_type == leaf.rm_type {
-                leaf_text(json, leaf.path)
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-/// Follow `path` into `json` and read the scalar leaf as canonical text (the
-/// same text the AQL `#>> '{}'` extraction would read). Absent path, JSON null,
-/// or a non-scalar (object/array) leaf yield `None`.
-fn leaf_text(json: &Value, path: &[&str]) -> Option<String> {
-    let mut cur = json;
-    for step in path {
-        cur = cur.get(step)?;
-    }
-    match cur {
-        Value::String(s) => Some(s.clone()),
-        Value::Number(_) | Value::Bool(_) => Some(cur.to_string()),
-        Value::Null | Value::Array(_) | Value::Object(_) => None,
-    }
-}
-
 #[cfg(test)]
+#[expect(
+    clippy::disallowed_types,
+    reason = "the tests state the promoted leaves of canonical bodies"
+)]
 mod tests {
     use super::*;
+
+    /// The promoted leaves of every row of the decomposition of `body`.
+    fn promoted(body: &serde_json::Value) -> Vec<Vec<Option<String>>> {
+        crate::storage::codec::decompose(body.clone())
+            .unwrap()
+            .into_iter()
+            .map(|row| row.promoted)
+            .collect()
+    }
     use serde_json::json;
 
     /// Every entry's `rm_type` must occur only at a versioned-object root that
@@ -154,9 +114,10 @@ mod tests {
                 "start_time": {"_type": "DV_DATE_TIME", "value": "2021-01-02T03:04:05Z"}
             }
         });
+        // The EVENT_CONTEXT is a structure node of its own, and promotes nothing.
         assert_eq!(
-            extract(0, "COMPOSITION", &comp),
-            vec![Some("2021-01-02T03:04:05Z".to_owned())]
+            promoted(&comp),
+            vec![vec![Some("2021-01-02T03:04:05Z".to_owned())], Vec::new()]
         );
     }
 
@@ -164,17 +125,18 @@ mod tests {
     fn no_promotion_off_the_root_or_wrong_type() {
         let comp = json!({
             "_type": "COMPOSITION",
-            "context": {"start_time": {"value": "2021-01-02T03:04:05Z"}}
+            "context": {"start_time": {"value": "2021-01-02T03:04:05Z"}},
+            "content": [{"_type": "OBSERVATION", "context": {"start_time": {"value": "x"}}}]
         });
         // Not the root (num != 0): the allocation-free empty vec, which the
         // node writer's positional `.get(i)` reads as all-`None`.
         assert_eq!(
-            extract(2, "COMPOSITION", &comp),
-            Vec::<Option<String>>::new()
+            promoted(&comp),
+            vec![vec![Some("2021-01-02T03:04:05Z".to_owned())], Vec::new()]
         );
         // Root, but not a registered rm_type.
-        let obs = json!({"_type": "OBSERVATION"});
-        assert_eq!(extract(0, "OBSERVATION", &obs), vec![None]);
+        let status = json!({"_type": "EHR_STATUS", "context": {"start_time": {"value": "x"}}});
+        assert_eq!(promoted(&status), vec![vec![None]]);
     }
 
     #[test]
@@ -182,6 +144,6 @@ mod tests {
         // A persistent COMPOSITION with no context (RM ehr master03
         // §COMPOSITION.context [0..1]).
         let comp = json!({"_type": "COMPOSITION", "name": {"value": "persistent"}});
-        assert_eq!(extract(0, "COMPOSITION", &comp), vec![None]);
+        assert_eq!(promoted(&comp), vec![vec![None]]);
     }
 }

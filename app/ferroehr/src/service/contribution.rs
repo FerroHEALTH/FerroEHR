@@ -147,7 +147,7 @@ pub(crate) async fn commit_version_set(
                 kind: Kind::EhrStatus,
                 body,
                 ..
-            } => Some(body.view().clone()),
+            } => body.canonical().cloned(),
             _ => None,
         })
         .collect();
@@ -166,7 +166,7 @@ pub(crate) async fn commit_version_set(
                 kind: Kind::Folder,
                 body,
                 ..
-            } => Some(body.view().clone()),
+            } => body.canonical().cloned(),
             _ => None,
         })
         .collect();
@@ -284,9 +284,7 @@ async fn write_contribution(
         } = change
         {
             crate::validation::versioned::check_versioned_composition_invariants(
-                &mut tx,
-                *vo_id,
-                body.view(),
+                &mut tx, *vo_id, body,
             )
             .await
             .map_err(body_target_not_found_is_bad_request)?;

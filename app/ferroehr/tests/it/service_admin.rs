@@ -698,6 +698,8 @@ async fn physical_party_delete_cascades_relationships_and_spares_partner() {
         svc.party_get(PartyKind::Person, crate::fixtures::at(p2.clone()), None)
             .await
             .expect("p2 still readable")
+            .into_value_response()
+            .expect("the stored body parses")
             .body["_type"],
         "PERSON"
     );
@@ -792,7 +794,9 @@ async fn archive_marks_vos_idempotently_and_reads_stay_unchanged() {
     let party = svc
         .party_get(PartyKind::Person, crate::fixtures::at(person.clone()), None)
         .await
-        .expect("party still readable after archive");
+        .expect("party still readable after archive")
+        .into_value_response()
+        .expect("the stored body parses");
     assert_eq!(party.body["_type"], "PERSON");
 
     // All-or-nothing: a batch with one unknown EHR → 404 and nothing new is

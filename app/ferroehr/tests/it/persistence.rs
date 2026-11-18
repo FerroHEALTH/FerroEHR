@@ -12,8 +12,11 @@
 use std::path::Path;
 
 use ferroehr::db;
-use ferroehr::storage::codec::{decompose, reassemble};
-use ferroehr::storage::row::NodeRow;
+use ferroehr::storage::codec::reassemble;
+use ferroehr::storage::render::nodes::StoredNode;
+use ferroehr::storage::row::ReadRow;
+
+use crate::fixtures::whole_rows as decompose;
 use serde_json::Value;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -929,11 +932,10 @@ async fn node_codec_round_trips_through_the_database() {
             continue;
         }
         let (vo, ehr_id) = seed_version(&pool).await;
-        let rows =
-            decompose(composition.clone()).unwrap_or_else(|e| panic!("decompose {path:?}: {e}"));
+        let rows = decompose(&composition).unwrap_or_else(|e| panic!("decompose {path:?}: {e}"));
         insert_nodes(&pool, vo, 1, ehr_id, &rows).await;
 
-        let read: Vec<NodeRow> = sqlx::query(
+        let read: Vec<ReadRow> = sqlx::query(
             "SELECT num, num_cap, parent_num, rm_type, archetype, name, name_code,
                     name_terminology, path, data
              FROM node WHERE vo_id = $1 AND sys_version = 1 ORDER BY num",
@@ -943,23 +945,12 @@ async fn node_codec_round_trips_through_the_database() {
         .await
         .expect("read nodes")
         .into_iter()
-        .map(|r| NodeRow {
+        .map(|r| ReadRow {
             num: r.get("num"),
             num_cap: r.get("num_cap"),
             parent_num: r.get("parent_num"),
-            rm_type: r.get("rm_type"),
-            archetype: r.get("archetype"),
-            // arch_* are query-only promoted columns, unused by `reassemble`.
-            arch_entity: None,
-            arch_concept: None,
-            arch_major: None,
-            name: r.get("name"),
-            name_code: r.get("name_code"),
-            name_terminology: r.get("name_terminology"),
             path: r.get("path"),
             data: r.get("data"),
-            // Promoted-leaf columns are query-only and unused by `reassemble`.
-            promoted: Vec::new(),
         })
         .collect();
 
@@ -976,7 +967,7 @@ async fn node_codec_round_trips_through_the_database() {
     // The CONTAINS shape works against real rows (IPS sample).
     let (vo, ehr_id) = seed_version(&pool).await;
     let composition = corpus_sample();
-    let rows = decompose(composition).expect("decompose");
+    let rows = decompose(&composition).expect("decompose");
     insert_nodes(&pool, vo, 1, ehr_id, &rows).await;
     let contains: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM node c
@@ -989,8 +980,12 @@ async fn node_codec_round_trips_through_the_database() {
     .fetch_one(&pool)
     .await
     .expect("contains query");
-    let expected = i64::try_from(rows.iter().filter(|r| r.rm_type == "OBSERVATION").count())
-        .expect("count fits");
+    let expected = i64::try_from(
+        rows.iter()
+            .filter(|(r, _)| r.rm_type == "OBSERVATION")
+            .count(),
+    )
+    .expect("count fits");
     assert_eq!(contains, expected);
 }
 
@@ -1014,7 +1009,7 @@ async fn template_id_is_read_back_from_version() {
         .await
         .expect("set template_id");
     // Nodes so the read-back can reassemble the current version.
-    let rows = decompose(corpus_sample()).expect("decompose");
+    let rows = decompose(&corpus_sample()).expect("decompose");
     insert_nodes(&pool, vo, 1, ehr_id, &rows).await;
 
     let service = FerroEhrService::new(&db::domain::DomainPools::from_shared(&pool));
@@ -1170,8 +1165,14 @@ async fn seed_head(pool: &PgPool, vo: Uuid) {
     .expect("head row");
 }
 
-async fn insert_nodes(pool: &PgPool, vo: Uuid, sys_version: i32, ehr_id: Uuid, rows: &[NodeRow]) {
-    for row in rows {
+async fn insert_nodes(
+    pool: &PgPool,
+    vo: Uuid,
+    sys_version: i32,
+    ehr_id: Uuid,
+    rows: &[(StoredNode, Value)],
+) {
+    for (row, data) in rows {
         sqlx::query(
             "INSERT INTO node (vo_id, sys_version, num, num_cap, parent_num,
                                ehr_id, rm_type, archetype, name, path, data)
@@ -1187,7 +1188,7 @@ async fn insert_nodes(pool: &PgPool, vo: Uuid, sys_version: i32, ehr_id: Uuid, r
         .bind(&row.archetype)
         .bind(&row.name)
         .bind(&row.path)
-        .bind(&row.data)
+        .bind(data)
         .execute(pool)
         .await
         .expect("insert node");
@@ -1264,39 +1265,30 @@ async fn write_nodes_survives_more_than_4095_rows() {
     let mut rows = Vec::with_capacity(n);
     for i in 0..n {
         let num = i32::try_from(i).expect("row ordinal fits i32");
-        rows.push(NodeRow {
+        rows.push(StoredNode {
             num,
             num_cap: num,
             parent_num: 0,
             rm_type: "ELEMENT".to_owned(),
-            archetype: None,
-            arch_entity: None,
-            arch_concept: None,
-            arch_major: None,
-            name: None,
-            name_code: None,
-            name_terminology: None,
+            archetype: Some("at0001".to_owned()),
             path: if i == 0 {
                 String::new()
             } else {
                 format!("items{i}.")
             },
-            data: serde_json::json!({"_type": "ELEMENT", "archetype_node_id": "at0001"}),
-            promoted: Vec::new(),
+            ..StoredNode::default()
         });
     }
     let mut tx = pool.begin().await.expect("begin");
-    let root = ferroehr::storage::compact::RootIdentity {
-        version_uid: "a::b::1",
-        template_id: None,
-    };
     ferroehr::storage::node_write::write_nodes(
         &mut tx,
         ferroehr::ids::VoId(vo),
         1,
         Some(ferroehr::ids::EhrId(ehr_id)),
-        &root,
-        &rows,
+        &ferroehr::storage::render::Decomposed {
+            rows,
+            blob_uris: Vec::new(),
+        },
     )
     .await
     .expect("a 5,000-row version must write in one statement");
