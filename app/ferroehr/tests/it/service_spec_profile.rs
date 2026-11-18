@@ -250,7 +250,7 @@ async fn an_unstamped_version_sharing_its_predecessors_tree_is_assessed_on_that_
     let refused = stable_service(&pool)
         .execute_aql(query, None, &AqlQueryRequest::default())
         .await
-        .map(|r| r.result_set);
+        .map(|r| r.result_set.to_value().unwrap());
     assert!(
         matches!(
             refused,
@@ -303,7 +303,7 @@ async fn a_version_whose_root_the_gate_cannot_read_is_refused() {
             &AqlQueryRequest::default(),
         )
         .await
-        .map(|r| r.result_set);
+        .map(|r| r.result_set.to_value().unwrap());
     assert!(
         refused.is_err(),
         "a version the gate cannot read is refused, got {refused:?}"
@@ -507,7 +507,7 @@ async fn query_rows(svc: &FerroEhrService, aql: &str, ehr_id: EhrId) -> Vec<Valu
         .execute_aql(aql, None, &ehr_scope(ehr_id))
         .await
         .unwrap_or_else(|e| panic!("query {aql:?}: {e:?}"));
-    outcome.result_set["rows"]
+    outcome.result_set.to_value().unwrap()["rows"]
         .as_array()
         .expect("the RESULT_SET carries a rows array")
         .clone()

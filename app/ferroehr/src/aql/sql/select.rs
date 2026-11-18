@@ -8,9 +8,11 @@
 //!
 //! No openEHR spec governs the projection mechanics — this is our own design.
 //! Every structure step a SELECT path descends through is bound once per row
-//! ([`Builder::bind_select_paths`] states the row grain). A scalar column is
-//! emitted as `to_jsonb(expr)`; a whole structure object emits (`vo_id`,
-//! `sys_version`, `num`, `num_cap`) and is reassembled at read time.
+//! ([`Builder::bind_select_paths`] states the row grain). A cell is rendered in
+//! Rust from the values its columns return (`project`); a `SELECT DISTINCT`
+//! and an attestation list emit `to_jsonb(expr)`, and a whole structure object
+//! emits (`vo_id`, `sys_version`, `num`, `num_cap`) and is reassembled at read
+//! time.
 
 use sea_query::{Alias, Expr, ExprTrait as _, Func};
 
@@ -121,7 +123,7 @@ impl Builder<'_> {
                 if col.path.is_some() {
                     spec.path.clone_from(&col.path);
                 }
-                Ok(spec)
+                return Ok(spec);
             }
             // `e/ehr_status` (whole) / `e/ehr_status/<structure child>` (whole):
             // join the EHR_STATUS root, then reassemble the addressed subtree.
@@ -131,62 +133,55 @@ impl Builder<'_> {
                 if col.path.is_some() {
                     spec.path.clone_from(&col.path);
                 }
-                Ok(spec)
+                return Ok(spec);
             }
-            SelectValue::Path(target) => {
-                let expr = self.value_expr(target, ValueMode::Projection)?;
-                let sql_col = format!("col{i}");
-                self.q.expr_as(to_jsonb(expr), Alias::new(sql_col.as_str()));
-                Ok(ColumnSpec {
-                    name,
-                    path: col.path.clone().or_else(|| target_path_string(target)),
-                    kind: CellKind::Scalar,
-                    sql_cols: vec![sql_col],
-                })
+            _ => {}
+        }
+        if let Some(mut spec) = self.rendered_column(i, col)? {
+            // NOTE: our own design (#6004), a debug build selects the jsonb cell beside the
+            // rendered one, so every AQL test holds the two to the same bytes (`aql::read`).
+            if self.references {
+                let reference = format!("ref{i}");
+                self.emit_sql_cell(col, &reference)?;
+                spec.reference = Some(reference);
             }
-            SelectValue::Literal(lit) => {
-                let sql_col = format!("col{i}");
-                self.q.expr_as(
-                    to_jsonb(Expr::val(literal_value(lit))),
-                    Alias::new(sql_col.as_str()),
-                );
-                Ok(ColumnSpec {
-                    name,
-                    path: None,
-                    kind: CellKind::Scalar,
-                    sql_cols: vec![sql_col],
-                })
-            }
+            return Ok(spec);
+        }
+        let sql_col = format!("col{i}");
+        self.emit_sql_cell(col, &sql_col)?;
+        Ok(ColumnSpec {
+            name,
+            path: match &col.value {
+                SelectValue::Path(target) => {
+                    col.path.clone().or_else(|| target_path_string(target))
+                }
+                _ => None,
+            },
+            kind: CellKind::Scalar,
+            sql_cols: vec![sql_col],
+            reference: None,
+        })
+    }
+
+    /// Selects SELECT column `col` as the jsonb cell PostgreSQL builds,
+    /// under `alias`: the form of a `SELECT DISTINCT`, an attestation list
+    /// and a debug build's reference cell.
+    ///
+    /// # Errors
+    /// [`AqlError`] from lowering the column's value.
+    fn emit_sql_cell(&mut self, col: &SelectColumn, alias: &str) -> Result<(), AqlError> {
+        let expr = match &col.value {
+            SelectValue::Path(target) => self.value_expr(target, ValueMode::Projection)?,
+            SelectValue::Literal(lit) => Expr::val(literal_value(lit)),
             SelectValue::Aggregate {
                 func,
                 arg,
                 distinct,
-            } => {
-                let agg = match arg {
-                    None => aggregate_expr(*func, None, *distinct),
-                    Some(target) => self.aggregate_over(*func, target, *distinct)?,
-                };
-                let sql_col = format!("col{i}");
-                self.q.expr_as(to_jsonb(agg), Alias::new(sql_col.as_str()));
-                Ok(ColumnSpec {
-                    name,
-                    path: None,
-                    kind: CellKind::Scalar,
-                    sql_cols: vec![sql_col],
-                })
-            }
-            SelectValue::Function { func, args } => {
-                let expr = self.scalar_fn_expr(*func, args)?;
-                let sql_col = format!("col{i}");
-                self.q.expr_as(to_jsonb(expr), Alias::new(sql_col.as_str()));
-                Ok(ColumnSpec {
-                    name,
-                    path: None,
-                    kind: CellKind::Scalar,
-                    sql_cols: vec![sql_col],
-                })
-            }
-        }
+            } => self.aggregate_value(*func, arg.as_ref(), *distinct)?,
+            SelectValue::Function { func, args } => self.scalar_fn_expr(*func, args)?,
+        };
+        self.q.expr_as(to_jsonb(expr), Alias::new(alias));
+        Ok(())
     }
 
     fn emit_whole_object(
@@ -239,6 +234,7 @@ impl Builder<'_> {
             path: Some(leaf_path_string(leaf)),
             kind: CellKind::WholeObject,
             sql_cols,
+            reference: None,
         })
     }
 
@@ -477,6 +473,23 @@ fn json_null_is_null(value: Expr) -> Expr {
 }
 
 impl Builder<'_> {
+    /// The aggregate `func` over `arg`, `COUNT(*)` without one (QUERY
+    /// master03 §Aggregate functions).
+    ///
+    /// # Errors
+    /// [`AqlError`] from lowering the argument.
+    pub(super) fn aggregate_value(
+        &mut self,
+        func: AggFunc,
+        arg: Option<&PathTarget>,
+        distinct: bool,
+    ) -> Result<Expr, AqlError> {
+        match arg {
+            None => Ok(aggregate_expr(func, None, distinct)),
+            Some(target) => self.aggregate_over(func, target, distinct),
+        }
+    }
+
     /// The aggregate `func` over the values of `target` (QUERY master03
     /// §Aggregate functions).
     ///

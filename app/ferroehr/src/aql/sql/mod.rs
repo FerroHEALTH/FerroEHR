@@ -63,6 +63,7 @@ mod head;
 mod jsonpath;
 mod pinned;
 mod predicate;
+mod project;
 mod scope;
 mod select;
 pub mod shape;
@@ -214,17 +215,63 @@ pub enum EhrScopeKind {
 }
 
 /// How one `RESULT_SET` cell is read back from the query rows.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CellKind {
-    /// A single SQL column read as one canonical-JSON value.
+    /// A single SQL column holding the cell as `jsonb`: what a `SELECT
+    /// DISTINCT` and an attestation list project, whose values PostgreSQL
+    /// compares or aggregates.
     Scalar,
     /// A whole structure object: four locator columns (`vo_id`, `sys_version`,
     /// `num`, `num_cap`) the executor reassembles through the node codec.
     WholeObject,
+    /// A data leaf read in Rust off the stored columns of a node row
+    /// ([`NodeGroup`]): the fragment rebuilt and its path evaluated
+    /// ([`crate::aql::fragment`]).
+    Fragment(FragmentCell),
+    /// One typed SQL value, rendered in Rust ([`crate::aql::cell`]); a
+    /// `timestamptz` carries its session offset in a second column.
+    Column(ColumnRender),
+    /// An AQL literal, rendered from the query with no SQL column.
+    Literal(crate::aql::ir::TypedLit),
+}
+
+/// A data leaf read off a node group.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FragmentCell {
+    /// The index of the node group in [`Layout::node_groups`].
+    pub group: usize,
+    /// The fragment path, `None` for the whole fragment.
+    pub path: Option<crate::aql::fragment::FragmentPath>,
+    /// Whether every match is one array cell (`NULL` for none) rather than
+    /// the first match.
+    pub list: bool,
+    /// Whether the first SQL column is the source's root predicate, which
+    /// must hold for the cell to carry a value.
+    pub guarded: bool,
+}
+
+/// How a [`CellKind::Column`] value is rendered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColumnRender {
+    /// By the column's SQL type.
+    Typed,
+    /// A `timestamptz` beside its session offset in seconds.
+    Timestamp,
+    /// The `OBJECT_VERSION_ID` object of a version uid text.
+    VersionUid,
+}
+
+/// The stored columns of one node row a statement returns for the cells
+/// read off it: `data`, the fragment columns and the root identity
+/// (`crate::storage::node_repo`), consecutive from the column `first`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NodeGroup {
+    /// The SQL alias of the group's first column.
+    pub first: String,
 }
 
 /// The read-back plan + `RESULT_SET` metadata for one SELECT column.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ColumnSpec {
     /// The `RESULT_SET` column name (the `AS` alias, else `#{index}`).
     pub name: String,
@@ -235,6 +282,10 @@ pub struct ColumnSpec {
     /// The generated SQL column alias(es): one for [`CellKind::Scalar`], four
     /// (`vo`, `sv`, `num`, `cap`) for [`CellKind::WholeObject`].
     pub sql_cols: Vec<String>,
+    /// In a debug build, the SQL alias of the jsonb cell PostgreSQL builds
+    /// for a rendered column, which the rendered cell must equal byte for
+    /// byte (`crate::aql::read`); `None` otherwise.
+    pub reference: Option<String>,
 }
 
 /// A built, bindable query: the SQL text, its bound values, and the per-column
@@ -255,10 +306,12 @@ pub struct PreparedQuery {
 
 /// How the executor reads the rows of a statement back: the `RESULT_SET`
 /// columns and the hidden access-logging columns beside them.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Layout {
     /// The `RESULT_SET` column read-back plan, in SELECT order.
     pub columns: Vec<ColumnSpec>,
+    /// The node rows whose stored columns the fragment cells read.
+    pub node_groups: Vec<NodeGroup>,
     /// The SQL aliases of the hidden access-logging columns, one per bound
     /// `EHR` source and per bound VO root, appended after the projection.
     ///
@@ -424,6 +477,12 @@ struct Builder<'a> {
     /// The structure steps the SELECT paths bind once per row
     /// ([`Builder::bind_select_paths`]), one entry per distinct step prefix.
     step_bindings: Vec<StepBinding>,
+    /// The node aliases whose stored columns the projection returns, in
+    /// group order ([`NodeGroup`]).
+    node_groups: Vec<(String, NodeGroup)>,
+    /// Whether each rendered cell also selects the jsonb cell PostgreSQL
+    /// builds for it ([`build_executed`]).
+    references: bool,
 }
 
 /// One bound structure-step prefix: the steps from `source` down, and the
@@ -464,6 +523,8 @@ impl<'a> Builder<'a> {
                 &ctx.ehr_access,
             ),
             step_bindings: Vec::new(),
+            node_groups: Vec::new(),
+            references: false,
         }
     }
 
@@ -628,69 +689,98 @@ pub fn pinned_ehr(ir: &QueryIr, params: &Params) -> Option<String> {
 /// no row (`NOT CONTAINS`), and [`SqlError`] for a planner-accepted construct
 /// the SQL generator does not render.
 pub fn build(ir: &QueryIr, params: &Params, ctx: &SqlCtx) -> Result<PreparedQuery, AqlError> {
-    from::refuse_negated_reads(ir)?;
-    // NOTE: our own design (#5699), the service reads care before a statement is built, so an
-    // unread care is refused loudly rather than withholding every cared row.
-    if ctx.ehr_access.reads_care()
-        && ctx.ehr_access.groups().is_some_and(|groups| {
-            groups.cared == crate::access_eval::condition::care::Care::Unresolved
+    let builder = Builder::new(ir, params, ctx);
+    Builder::lower(builder)
+}
+
+/// The statement the executor runs for `ir`: [`build`], and in a debug
+/// build each rendered cell beside the jsonb cell PostgreSQL builds for it,
+/// which the executor holds the rendered cell to byte for byte
+/// (`crate::aql::read`), so every AQL test checks the rendering.
+///
+/// # Errors
+/// As [`build`].
+pub(crate) fn build_executed(
+    ir: &QueryIr,
+    params: &Params,
+    ctx: &SqlCtx,
+) -> Result<PreparedQuery, AqlError> {
+    let mut builder = Builder::new(ir, params, ctx);
+    builder.references = cfg!(debug_assertions);
+    Builder::lower(builder)
+}
+
+impl Builder<'_> {
+    /// Lowers the builder's query to its statement ([`build`]).
+    ///
+    /// # Errors
+    /// As [`build`].
+    fn lower(mut b: Self) -> Result<PreparedQuery, AqlError> {
+        let (ir, ctx) = (b.ir, b.ctx);
+        from::refuse_negated_reads(ir)?;
+        // NOTE: our own design (#5699), the service reads care before a statement is built, so an
+        // unread care is refused loudly rather than withholding every cared row.
+        if ctx.ehr_access.reads_care()
+            && ctx.ehr_access.groups().is_some_and(|groups| {
+                groups.cared == crate::access_eval::condition::care::Care::Unresolved
+            })
+        {
+            return Err(SqlError::Unsupported(
+                "an access condition whose care the service has not read".to_owned(),
+            )
+            .into());
+        }
+        // A query aimed at named EHRs, or pinned to one by its own text, reads only
+        // those EHRs' versions, which the spine enters through the `ehr_id` index,
+        // so it streams whatever its clauses: the flat shape left the planner a
+        // join search that cost 40 to 60 ms against a 1 ms execution (#5076).
+        let plan = stream::streaming_plan(ir).filter(|plan| {
+            streaming_eligible(ir, ctx)
+                || ctx.names_ehrs()
+                || (ctx.ehr_ids.is_empty() && (plan.counts_roots(ir) || plan.pins_one_ehr(ir)))
+        });
+        match plan {
+            Some(plan) => b.build_from_streaming(&plan)?,
+            None => b.build_from(&ir.contains)?,
+        }
+        let clinical = ir.domain == QueryDomain::Clinical;
+        if clinical {
+            b.apply_ehr_scope();
+            b.apply_population_gate();
+        }
+        b.bind_select_paths()?;
+        let columns = b.build_select()?;
+        let (access_ehr_cols, access_settled_cols) = if clinical {
+            b.build_access_ehr_columns(ir)
+        } else {
+            (Vec::new(), Vec::new())
+        };
+        let access_version_cols = b.build_access_version_columns(ir);
+        b.build_where()?;
+        b.build_order_by()?;
+        b.build_paging();
+        if ir.distinct {
+            b.q.distinct();
+        }
+        let (sql, values) = match access::census(&ctx.ehr_access) {
+            Some(census) => b.q.with(census).build_sqlx(PostgresQueryBuilder),
+            None => b.q.build_sqlx(PostgresQueryBuilder),
+        };
+        Ok(PreparedQuery {
+            sql: sql.into(),
+            values,
+            shaped: false,
+            layout: Arc::new(Layout {
+                columns,
+                node_groups: b.node_groups.into_iter().map(|(_, group)| group).collect(),
+                access_aggregated: !access_ehr_cols.is_empty()
+                    && ir.select.iter().any(|column| {
+                        matches!(column.value, crate::aql::ir::SelectValue::Aggregate { .. })
+                    }),
+                access_ehr_cols,
+                access_settled_cols,
+                access_version_cols,
+            }),
         })
-    {
-        return Err(SqlError::Unsupported(
-            "an access condition whose care the service has not read".to_owned(),
-        )
-        .into());
     }
-    let mut b = Builder::new(ir, params, ctx);
-    // A query aimed at named EHRs, or pinned to one by its own text, reads only
-    // those EHRs' versions, which the spine enters through the `ehr_id` index,
-    // so it streams whatever its clauses: the flat shape left the planner a
-    // join search that cost 40 to 60 ms against a 1 ms execution (#5076).
-    let plan = stream::streaming_plan(ir).filter(|plan| {
-        streaming_eligible(ir, ctx)
-            || ctx.names_ehrs()
-            || (ctx.ehr_ids.is_empty() && (plan.counts_roots(ir) || plan.pins_one_ehr(ir)))
-    });
-    match plan {
-        Some(plan) => b.build_from_streaming(&plan)?,
-        None => b.build_from(&ir.contains)?,
-    }
-    let clinical = ir.domain == QueryDomain::Clinical;
-    if clinical {
-        b.apply_ehr_scope();
-        b.apply_population_gate();
-    }
-    b.bind_select_paths()?;
-    let columns = b.build_select()?;
-    let (access_ehr_cols, access_settled_cols) = if clinical {
-        b.build_access_ehr_columns(ir)
-    } else {
-        (Vec::new(), Vec::new())
-    };
-    let access_version_cols = b.build_access_version_columns(ir);
-    b.build_where()?;
-    b.build_order_by()?;
-    b.build_paging();
-    if ir.distinct {
-        b.q.distinct();
-    }
-    let (sql, values) = match access::census(&ctx.ehr_access) {
-        Some(census) => b.q.with(census).build_sqlx(PostgresQueryBuilder),
-        None => b.q.build_sqlx(PostgresQueryBuilder),
-    };
-    Ok(PreparedQuery {
-        sql: sql.into(),
-        values,
-        shaped: false,
-        layout: Arc::new(Layout {
-            columns,
-            access_aggregated: !access_ehr_cols.is_empty()
-                && ir.select.iter().any(|column| {
-                    matches!(column.value, crate::aql::ir::SelectValue::Aggregate { .. })
-                }),
-            access_ehr_cols,
-            access_settled_cols,
-            access_version_cols,
-        }),
-    })
 }

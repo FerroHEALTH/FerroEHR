@@ -607,7 +607,9 @@ async fn aql_composition_names(svc: &FerroEhrService) -> Vec<String> {
         )
         .await
         .expect("ad-hoc AQL")
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     result
         .get("rows")
         .and_then(Value::as_array)

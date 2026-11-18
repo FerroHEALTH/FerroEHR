@@ -35,7 +35,7 @@ async fn rows(svc: &FerroEhrService, aql: &str) -> Result<Vec<Value>, ServiceErr
     let outcome = svc
         .execute_aql(aql, None, &AqlQueryRequest::default())
         .await?;
-    Ok(outcome.result_set["rows"]
+    Ok(outcome.result_set.to_value().unwrap()["rows"]
         .as_array()
         .expect("a rows array")
         .clone())

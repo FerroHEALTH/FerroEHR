@@ -121,6 +121,8 @@ async fn resolved(svc: &FerroEhrService, subject: SubjectRef) -> Result<Vec<Stri
     Ok(outcome
         .query
         .result_set
+        .to_value()
+        .unwrap()
         .get("rows")
         .and_then(Value::as_array)
         .map(|rows| {

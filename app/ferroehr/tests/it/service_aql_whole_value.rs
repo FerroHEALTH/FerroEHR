@@ -74,7 +74,9 @@ async fn column(
         .execute_aql(aql, None, &request(ehr, params))
         .await
         .unwrap_or_else(|e| panic!("the query failed: {e:?}"))
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     result["rows"]
         .as_array()
         .expect("rows array")
@@ -407,7 +409,9 @@ async fn a_uid_predicate_in_a_class_expression_selects_its_version() {
         )
         .await
         .unwrap_or_else(|e| panic!("population query: {e:?}"))
-        .result_set;
+        .result_set
+        .to_value()
+        .unwrap();
     assert!(got["rows"] == json!([[one]]), "the streaming root");
 }
 

@@ -135,7 +135,12 @@ async fn an_aql_page_records_the_union_of_the_origins_it_served() {
         .expect("the query runs");
     let mut expected = vec![creating_system, "lab.example".to_owned()];
     expected.sort();
-    assert_eq!(outcome.served_origins, expected, "{}", outcome.result_set);
+    assert_eq!(
+        outcome.served_origins,
+        expected,
+        "{}",
+        outcome.result_set.to_value().unwrap()
+    );
     assert_eq!(outcome.origin_count, 2);
 
     // A leaf projection over one root still knows which versions it served.

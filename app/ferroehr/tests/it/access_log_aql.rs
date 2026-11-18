@@ -86,7 +86,7 @@ async fn rows(svc: &FerroEhrService, aql: &str, request: &AqlQueryRequest) -> Ve
         .execute_aql(aql, None, request)
         .await
         .unwrap_or_else(|error| panic!("{aql}: {error}"));
-    let rows = outcome.result_set["rows"]
+    let rows = outcome.result_set.to_value().unwrap()["rows"]
         .as_array()
         .cloned()
         .expect("rows");

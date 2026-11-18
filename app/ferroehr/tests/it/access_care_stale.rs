@@ -266,7 +266,9 @@ async fn query(svc: &FerroEhrService, aql: &str) -> Result<usize, ServiceError> 
         ..AqlQueryRequest::default()
     };
     let outcome = Box::pin(svc.execute_aql(aql, None, &request)).await?;
-    Ok(outcome.result_set["rows"].as_array().map_or(0, Vec::len))
+    Ok(outcome.result_set.to_value().unwrap()["rows"]
+        .as_array()
+        .map_or(0, Vec::len))
 }
 
 /// What one request read: whether the composition by id was admitted, the

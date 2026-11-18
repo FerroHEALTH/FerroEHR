@@ -319,8 +319,7 @@ impl FerroEhrService {
             return Ok(self.suppress(
                 CohortOutcome {
                     query: QueryOutcome::plain(
-                        crate::service::query::result_set::empty_result_set(&request.aql)
-                            .map_err(|error| CohortError::Query(error.into()))?,
+                        crate::service::query::result_set::empty_result_set(&request.aql),
                     ),
                     cohort_size,
                     served_ehrs: 0,
@@ -458,28 +457,19 @@ impl FerroEhrService {
             outcome.served_ehrs = 0;
             outcome.query.served_ehrs.clear();
             outcome.query.served_rows = 0;
-            if let Some(map) = outcome.query.result_set.as_object_mut() {
-                map.insert("rows".to_owned(), serde_json::Value::Array(Vec::new()));
-            }
+            outcome.query.result_set.clear_rows();
         }
         // NOTE: no openEHR spec governs this key — the released `ResultSetMetadata`
         // declares `additionalProperties: true`, so the cohort facts ride there.
-        if let Some(meta) = outcome
-            .query
-            .result_set
-            .get_mut("meta")
-            .and_then(serde_json::Value::as_object_mut)
-        {
-            meta.insert(
-                "cohort".to_owned(),
-                serde_json::json!({
-                    "size": outcome.cohort_size,
-                    "served_ehrs": outcome.served_ehrs,
-                    "suppressed": outcome.suppressed,
-                    "definition": hash,
-                }),
-            );
-        }
+        outcome.query.result_set.insert_meta(
+            "cohort",
+            serde_json::json!({
+                "size": outcome.cohort_size,
+                "served_ehrs": outcome.served_ehrs,
+                "suppressed": outcome.suppressed,
+                "definition": hash,
+            }),
+        );
         outcome
     }
 
