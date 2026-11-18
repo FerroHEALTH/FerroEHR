@@ -253,7 +253,7 @@ impl LiveRegisters {
         {
             return Ok(());
         }
-        let _installing = self.installing.lock().await;
+        let _installing = crate::db::acquire::awaiting(self.installing.lock()).await;
         let categories = newest(Register::AuditCategories);
         let held = self.categories();
         let categories_changed = categories != held.version;

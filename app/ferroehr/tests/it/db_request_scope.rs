@@ -12,7 +12,7 @@
 use sqlx::PgPool;
 
 use ferroehr::db::DbConfig;
-use ferroehr::db::acquire::{acquire, release_held, request_scope};
+use ferroehr::db::acquire::{acquire, awaiting, release_held, request_scope};
 use ferroehr::db::domain::Domain;
 
 /// Connections checked out of `pool` right now.
@@ -163,6 +163,75 @@ async fn requests_taking_two_pools_in_opposite_orders_never_wait_for_each_other(
     .await;
     assert!(answered.is_ok(), "the requests waited for each other");
     assert!(started.elapsed() < std::time::Duration::from_secs(2));
+}
+
+/// A request runs a clinical read and a party read side by side, and the
+/// clinical one waits for its pool. The connection the party read gives back
+/// meanwhile goes to the party pool: kept by the waiting request, it would be
+/// held for the whole wait, and requests each keeping one pool's connection
+/// while they wait for the other's stall until the acquire times out (#6027).
+#[tokio::test]
+async fn a_request_waiting_for_a_pool_keeps_no_connection_a_read_beside_it_gave_back() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = one_connection_pools(&db).await;
+    let clinical_taken = acquire(&pools.clinical)
+        .await
+        .expect("the clinical connection");
+    let (party_read, read) = tokio::sync::oneshot::channel();
+    let (clinical, party) = (pools.clinical.clone(), pools.party.clone());
+    let request = tokio::spawn(request_scope(async move {
+        futures::future::join(touch(&clinical), async {
+            touch(&party).await;
+            party_read
+                .send(())
+                .expect("the test waits for the party read");
+        })
+        .await;
+    }));
+    read.await.expect("the party read ran");
+    let party_free =
+        tokio::time::timeout(std::time::Duration::from_secs(2), acquire(&pools.party)).await;
+    assert!(
+        party_free.is_ok_and(|conn| conn.is_ok()),
+        "the request kept its party connection while it waited for the clinical pool"
+    );
+    drop(clinical_taken);
+    tokio::time::timeout(std::time::Duration::from_secs(4), request)
+        .await
+        .expect("the request is answered once the clinical pool is free")
+        .expect("the request ran");
+}
+
+/// A request keeps its connection across a wait that is ready at once, and
+/// gives it back before a wait for another task's work: a copy another
+/// request is loading, or a lock another holds, whose holder may need a
+/// connection of the same pool (#6027).
+#[tokio::test]
+async fn a_request_gives_its_connection_back_before_it_waits_for_another_task() {
+    let db = testkit::db().await.expect("testkit database");
+    let pools = one_connection_pools(&db).await;
+    let pool = pools.clinical.clone();
+    let (answer, answered) = tokio::sync::oneshot::channel::<()>();
+    let (waiting, waits) = tokio::sync::oneshot::channel();
+    let request = tokio::spawn(request_scope(async move {
+        touch(&pool).await;
+        awaiting(std::future::ready(())).await;
+        assert_eq!(
+            in_use(&pool),
+            1,
+            "a wait that is ready keeps the connection"
+        );
+        waiting.send(()).expect("the test waits for the request");
+        awaiting(answered).await.expect("the other task answers");
+    }));
+    waits.await.expect("the request reached its wait");
+    assert_eq!(
+        settled_in_use(&pools.clinical, 0).await,
+        0,
+        "the request kept its connection while it waited for another task"
+    );
+    answer.send(()).expect("the request waits for the answer");
+    request.await.expect("the request ran");
 }
 
 /// A request that asks a pool for a second connection while it holds one of

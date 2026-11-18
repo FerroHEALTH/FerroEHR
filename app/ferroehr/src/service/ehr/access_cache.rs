@@ -6,6 +6,7 @@
 //! read that finds a newer revision. No openEHR spec governs the copy: our
 //! own design (#5509, #5588, #5589).
 
+use crate::db::acquire::awaiting;
 use crate::db::domain::Domain;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -136,7 +137,7 @@ impl EhrAccessCache {
             refilled(EHR, &loaded);
             loaded
         };
-        let loaded = self.inner.try_get_with(ehr_id, init).await;
+        let loaded = single_flight(&self.inner, ehr_id, init).await;
         looked_up(EHR, Lookup::of(&ran), 1);
         if self.drops.load(Ordering::Acquire) != seen {
             self.inner.invalidate(&ehr_id).await;
@@ -196,7 +197,7 @@ impl EhrAccessCache {
             refilled(CLASSES, &loaded);
             loaded.map(Arc::new)
         };
-        let loaded = self.classes.try_get_with((), init).await;
+        let loaded = single_flight(&self.classes, (), init).await;
         looked_up(CLASSES, Lookup::of(&ran), 1);
         if let Ok(classes) = &loaded {
             let held = u64::try_from(classes.classes.len()).unwrap_or(u64::MAX);
@@ -227,6 +228,27 @@ impl Subscriber for EhrAccessCache {
         self.forget_every();
         Box::pin(std::future::ready(()))
     }
+}
+
+/// The value `cache` holds for `key`, or the one `init` loads, run at most
+/// once under contention (`moka`'s `try_get_with`).
+///
+/// A hit keeps what the request keeps. A miss waits for a load, this
+/// caller's or another's, which needs a connection, so the request gives its
+/// own back first ([`awaiting`], #6027).
+async fn single_flight<K, V>(
+    cache: &Cache<K, V>,
+    key: K,
+    init: impl Future<Output = Result<V, ServiceError>>,
+) -> Result<V, Arc<ServiceError>>
+where
+    K: std::hash::Hash + Eq + Send + Sync + 'static,
+    V: Clone + Send + Sync + 'static,
+{
+    if let Some(held) = cache.get(&key).await {
+        return Ok(held);
+    }
+    awaiting(Box::pin(cache.try_get_with(key, init))).await
 }
 
 /// The listener on [`CHANNEL`], dropping from `cache`.
