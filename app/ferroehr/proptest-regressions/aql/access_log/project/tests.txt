@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 9867e046d34e4f63af779b26ce0c50c177708232905966aff7bfd74ec19bd97d # shrinks to event = AuditEvent { action: Create, object: Ehr, event_type: Some(RestOperation("composition_get")), outcome: Success, user_id: " ", issuer: None, client_id: None, user_is_requestor: true, roles: [], client_ip: None, ehr_id: Some("7d44b88c-4199-4bad-97dc-d78268e01398"), subject_namespace: None, judged_subject: None, subject_lookup_failed: false, object_id: None, token_id: None, domain: Ehr, purpose: None, permit: None, emergency_access: false, legal_basis: None, result_count: None, origins: [], origin_count: None, category: None, category_map_digest: None, actor: ActorAuthentication { mode: None, assurance_level: None, assurance_value: None, professional_id: None }, request_id: None, binding: None, summary: None, token: None, decision: Admitted, entry: ByDomain, query: None, decided: None, timestamp: 2026-11-18T05:42:58.643131Z }, withhold = false

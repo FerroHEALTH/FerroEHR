@@ -488,7 +488,7 @@ impl AccessLogStore {
 
 /// The tombstone of `entry`, removed at `time_removed` on `grounds`: its uid,
 /// `system_id`, `time_recorded` and link, and nothing else of it.
-pub(super) fn tombstone_of(
+pub(crate) fn tombstone_of(
     entry: AccessLogEntry,
     time_removed: DvDateTime,
     grounds: NonEmptyVec<DvCodedText>,
@@ -601,7 +601,7 @@ pub(crate) fn document_of(row: &PgRow) -> Result<String, AccessLogError> {
             .try_get::<jiff_sqlx::Timestamp, _>("recorded_at")?
             .to_jiff(),
         ehr_id: row.try_get("entry_ehr")?,
-        index: stored_form::parts::IndexColumns {
+        index: stored_form::parts::index::IndexColumns {
             request_id: row.try_get("request_id")?,
             resource_id: row.try_get("resource_id")?,
         },
