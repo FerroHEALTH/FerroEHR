@@ -211,6 +211,34 @@ pub fn validate_rm_and_terminology(root: &Value, declared: &str) -> Vec<Validati
     validate_with(root, declared, LowerBounds::Enforced)
 }
 
+/// [`validate_rm_and_terminology`] over a typed RM resource: the same two
+/// passes, the same messages and paths, with no canonical-JSON value and no
+/// per-node decode (#6002).
+///
+/// The reader has already refused what a typed tree cannot hold (an
+/// undeclared member, a foreign `_type`, an absent or empty `1..*` container),
+/// so this runs the class invariants, the per-node checks and the terminology
+/// bindings. The messages come in canonical attribute order. A
+/// `553|incomplete|` commit cannot be read into strict typed RM and keeps
+/// [`validate_rm_and_terminology_incomplete_as`].
+#[must_use]
+pub fn validate_rm_and_terminology_typed<T: openehr_rm::v1_2::validate::tree::Walk + ?Sized>(
+    root: &T,
+) -> Vec<ValidationMessage> {
+    use openehr_rm::v1_2::validate::tree::{TreeKind, validate_tree};
+    validate_tree(root)
+        .into_iter()
+        .map(|v| ValidationMessage {
+            path: v.path,
+            message: v.message,
+            kind: match v.kind {
+                TreeKind::Invariant => ValidationKind::Invariant,
+                TreeKind::Terminology => ValidationKind::Terminology,
+            },
+        })
+        .collect()
+}
+
 /// [`validate_rm_and_terminology`] for a `553|incomplete|` commit: the
 /// mandatory-presence and cardinality-lower-bound layers are relaxed to zero,
 /// every other layer runs at full strength.

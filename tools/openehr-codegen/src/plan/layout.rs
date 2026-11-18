@@ -178,9 +178,9 @@ fn bound_bindings(model: &Model, class: &str, generics: &[String]) -> BTreeMap<S
 
 /// A parsed rendered type: a path head and its generic arguments.
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Ty {
-    head: String,
-    args: Vec<Ty>,
+pub(crate) struct Ty {
+    pub(crate) head: String,
+    pub(crate) args: Vec<Ty>,
 }
 
 impl Ty {
@@ -194,7 +194,7 @@ impl Ty {
     }
 }
 
-fn parse(s: &str) -> Option<Ty> {
+pub(crate) fn parse(s: &str) -> Option<Ty> {
     let mut chars = s.chars().filter(|c| !c.is_whitespace()).peekable();
     let ty = parse_ty(&mut chars)?;
     chars.peek().is_none().then_some(ty)

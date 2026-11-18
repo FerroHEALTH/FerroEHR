@@ -89,7 +89,9 @@ const RM_MODEL_FILES: &[&str] = &[
 /// order: one invariant-core file per RM generation.
 const VALIDATE_FILES: &[&str] = &[
     "openehr-rm/src/v1_1/validate/generated.rs",
+    "openehr-rm/src/v1_1/validate/tree_generated.rs",
     "openehr-rm/src/v1_2/validate/generated.rs",
+    "openehr-rm/src/v1_2/validate/tree_generated.rs",
 ];
 
 /// The generated spec crates `emit` composes, one per `COMPOSITIONS` row.
