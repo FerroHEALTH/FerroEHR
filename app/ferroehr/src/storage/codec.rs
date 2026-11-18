@@ -104,7 +104,7 @@ fn is_structure(v: &Value) -> bool {
 }
 
 /// The node rows of `root` with their whole fragments, cut by the write path's
-/// decomposition ([`crate::storage::render::nodes::stored_nodes_with_fragments`]):
+/// decomposition ([`crate::storage::render::nodes::decompose`]):
 /// the shape the unit tests state the decomposition in.
 ///
 /// # Errors
@@ -121,8 +121,7 @@ pub(crate) fn decompose(root: Value) -> Result<Vec<crate::storage::row::NodeRow>
         version_uid: "",
         template_id: None,
     };
-    let (rows, whole) =
-        crate::storage::render::nodes::stored_nodes_with_fragments(&rendered, &identity)?;
+    let (rows, whole) = crate::storage::render::nodes::decompose(&rendered, &identity, true)?;
     rows.into_iter()
         .zip(whole)
         .map(|(row, whole)| {

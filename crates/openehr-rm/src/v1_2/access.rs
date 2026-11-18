@@ -345,11 +345,23 @@ impl Partial {
         i: usize,
         attribute: &'static str,
     ) -> Result<Option<T>, AccessError> {
+        self.opt_single(i, attribute, |value, site| match value {
+            RmValue::Object(o) => T::from_rm(o, site),
+            other => Err(site.refuse(&other.kind())),
+        })
+    }
+
+    /// The value of an optional single attribute, read by `read`.
+    fn opt_single<T>(
+        &mut self,
+        i: usize,
+        attribute: &'static str,
+        read: impl FnOnce(RmValue, Site) -> Result<T, AccessError>,
+    ) -> Result<Option<T>, AccessError> {
         let site = self.site(attribute);
         match self.take(i) {
             Slot::Unset => Ok(None),
-            Slot::Single(RmValue::Object(o)) => T::from_rm(o, site).map(Some),
-            Slot::Single(other) => Err(site.refuse(&other.kind())),
+            Slot::Single(value) => read(value, site).map(Some),
             Slot::Many(_) => Err(site.refuse("a list")),
         }
     }
@@ -412,12 +424,7 @@ impl Partial {
         i: usize,
         attribute: &'static str,
     ) -> Result<Option<T>, AccessError> {
-        let site = self.site(attribute);
-        match self.take(i) {
-            Slot::Unset => Ok(None),
-            Slot::Single(value) => T::from_value(value, site).map(Some),
-            Slot::Many(_) => Err(site.refuse("a list")),
-        }
+        self.opt_single(i, attribute, |value, site| T::from_value(value, site))
     }
 
     /// The primitive of a mandatory single attribute.
@@ -742,11 +749,5 @@ pub mod schema {
     #[must_use]
     pub fn attribute_names(rm_type: &str) -> Option<&'static [&'static str]> {
         super::generated::attributes(rm_type).map(|(_, names)| names)
-    }
-
-    /// Whether `rm_type` is `ancestor` or one of its descendants.
-    #[must_use]
-    pub fn is_a(rm_type: &str, ancestor: &str) -> bool {
-        model::is_a(rm_type, ancestor)
     }
 }

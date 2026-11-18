@@ -73,7 +73,7 @@ impl FerroEhrService {
             crate::telemetry::conversion::record("rm_to_index");
             let rendered = crate::storage::render::index::render(body)
                 .map_err(|e| ServiceError::internal("serialize the commit body", e))?;
-            self.privacy.enforce_in(
+            self.privacy.enforce(
                 kind.as_str(),
                 crate::versioning::tree::Indexed::root(&rendered),
             )?;

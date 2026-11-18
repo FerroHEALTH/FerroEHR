@@ -33,6 +33,7 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 
 use crate::flat::error::FlatError;
+use openehr_rm::v1_2::access;
 
 use crate::flat::map::coded_from_group;
 use crate::flat::sim::SimNode;
@@ -262,7 +263,7 @@ fn resolve_composer(ctx: &SimNode, d: &CtxDefaults) -> Result<Option<Obj>, FlatE
         .and_then(SimNode::bare)
         .and_then(Value::as_str);
     if self_flag {
-        let mut p = typed::new("PARTY_SELF")?;
+        let mut p = access::construct("PARTY_SELF")?;
         if let Some(id) = id {
             p.put("external_ref", o(party_ref(id, d, "PERSON")?))?;
         }
@@ -438,7 +439,7 @@ fn resolve_participations(ctx: &SimNode, d: &CtxDefaults) -> Result<Vec<Obj>, Fl
         let performer = if identifiers.is_empty() {
             party_identified(name, id, d, "PERSON")?
         } else {
-            let mut performer = typed::new("PARTY_IDENTIFIED")?;
+            let mut performer = access::construct("PARTY_IDENTIFIED")?;
             if let Some(n) = name {
                 performer.put_datum("name", n)?;
             }
@@ -522,7 +523,7 @@ fn party_identified(
 ) -> Result<Obj, FlatError> {
     match (name, id) {
         (_, Some(id)) => {
-            let mut p = typed::new("PARTY_IDENTIFIED")?;
+            let mut p = access::construct("PARTY_IDENTIFIED")?;
             if let Some(n) = name {
                 p.put_datum("name", n)?;
             }
@@ -530,11 +531,11 @@ fn party_identified(
             Ok(p)
         }
         (Some(n), None) => {
-            let mut p = typed::new("PARTY_IDENTIFIED")?;
+            let mut p = access::construct("PARTY_IDENTIFIED")?;
             p.put_datum("name", n)?;
             Ok(p)
         }
-        (None, None) => typed::new("PARTY_SELF"),
+        (None, None) => Ok(access::construct("PARTY_SELF")?),
     }
 }
 

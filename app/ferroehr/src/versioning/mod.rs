@@ -83,7 +83,7 @@ pub(crate) mod read;
 pub(crate) mod restriction;
 pub mod signature;
 pub(crate) mod system;
-pub(crate) mod tree;
+pub mod tree;
 pub(crate) mod wire;
 
 // Re-exports: the versioning API the service layer and its adapters consume.

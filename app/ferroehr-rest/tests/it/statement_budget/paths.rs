@@ -644,7 +644,7 @@ async fn measure(
         world.observe(path, n, &headers);
     }
     drained(pool).await;
-    let evicted = testkit::statement_window(pool)
+    let evicted = testkit::statements::statement_window(pool)
         .await
         .expect("the statement counts reset");
     *counter.0.lock().unwrap() = Counts::default();
@@ -689,7 +689,7 @@ async fn measure(
     out.round_trips = counts.round_trips.div_euclid(REQUESTS);
     out.nested = nested.saturating_sub(chainer).div_euclid(REQUESTS);
     out.wal = wal_bytes(pool).await.div_euclid(REQUESTS);
-    testkit::assert_statements_kept(pool, evicted)
+    testkit::statements::assert_statements_kept(pool, evicted)
         .await
         .expect("no statement evicted while the test counted them");
     out

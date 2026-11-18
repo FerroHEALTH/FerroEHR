@@ -193,11 +193,11 @@ pub fn write_typed_value(
         }
         "DV_BOOLEAN" => {
             kind(out);
-            out.push_str(if text == Some("true") {
-                r#","value":true}"#
+            if text == Some("true") {
+                out.push_str(r#","value":true}"#);
             } else {
-                r#","value":false}"#
-            });
+                out.push_str(r#","value":false}"#);
+            }
         }
         _ => {
             kind(out);
@@ -252,14 +252,13 @@ pub fn numeric_text(bytes: &[u8]) -> Option<String> {
     }
     if dscale > 0 {
         out.push('.');
-        let mut frac = String::new();
+        let start = out.len();
         let mut i = weight + 1;
-        while frac.len() < dscale {
-            let _ = write!(frac, "{:04}", digit(i)?);
+        while out.len() - start < dscale {
+            let _ = write!(out, "{:04}", digit(i)?);
             i += 1;
         }
-        frac.truncate(dscale);
-        out.push_str(&frac);
+        out.truncate(start + dscale);
     }
     Some(out)
 }

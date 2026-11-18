@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The JSON shape the passes that read a commit body as JSON read it through:
-//! a canonical value, or the index of a body's one rendering
+//! The JSON shape the passes that read a commit body as JSON read it through.
+//!
+//! A body is a canonical value or the index of its one rendering
 //! ([`crate::storage::render::index`]), so a typed commit is read with no
 //! canonical value built (#6003). The data-minimisation pass, the party
 //! checks, the binding facts and the identifier scan read through it. No
@@ -22,7 +23,7 @@ use crate::storage::render::index::{Kind, NodeId, Rendered};
 
 /// What a value is, as the pass tells it apart.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Shape {
+pub enum Shape {
     /// An object.
     Object,
     /// An array.
@@ -34,7 +35,7 @@ pub(crate) enum Shape {
 }
 
 /// One value of a body, read through either shape.
-pub(crate) trait Tree<'a>: Copy + 'a {
+pub trait Tree<'a>: Copy + 'a {
     /// What the value is.
     fn shape(self) -> Shape;
     /// The member `key` of an object.

@@ -192,8 +192,8 @@ fn constructibility_no_non_constructible_type_is_emitted() {
 #[test]
 fn determinism_plan_is_stable_across_runs() {
     for key in testsupport::crate_keys() {
-        let a = testsupport::plan_shapes(key).unwrap();
-        let b = testsupport::plan_shapes(key).unwrap();
+        let a = testsupport::shapes::plan_shapes(key).unwrap();
+        let b = testsupport::shapes::plan_shapes(key).unwrap();
         assert_eq!(a, b, "{key}: plan differs between two runs");
         assert!(!a.is_empty(), "{key}: empty plan");
     }
@@ -1951,8 +1951,8 @@ fn no_mandatory_plain_container_is_reachable_from_a_committed_resource() {
         "CONTRIBUTION",
         "ORIGINAL_VERSION",
     ];
-    let found =
-        testsupport::reachable_mandatory_containers(&roots).expect("the RM composition loads");
+    let found = testsupport::shapes::reachable_mandatory_containers(&roots)
+        .expect("the RM composition loads");
     assert!(
         found.is_empty(),
         "reachable mandatory plain containers: {found:?}"

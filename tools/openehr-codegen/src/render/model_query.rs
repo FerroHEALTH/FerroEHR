@@ -44,9 +44,8 @@
     reason = "dev tooling over JSON artifacts (vendored BMM/OAS bundles, emitter reports) — not the \
               application (#1694)"
 )]
-use crate::analyze::{
-    External, Model, augment_with_reemit, class_paths, cross_schema_reemit, emittable_specs,
-};
+use crate::analyze::reemit::{augment_with_reemit, cross_schema_reemit};
+use crate::analyze::{External, Model, class_paths, emittable_specs};
 use crate::load::bmm::{BmmCardinality, BmmClass, BmmPropKind, BmmProperty, BmmSchema, BmmType};
 use crate::plan::composition::{self, compose};
 use crate::plan::overrides::{back_reference, class_binding};
@@ -582,6 +581,57 @@ fn render_json(rows: &[Row]) -> Result<String, Error> {
     let mut out = serde_json::to_string_pretty(&values)?;
     out.push('\n');
     Ok(out)
+}
+
+/// Parse `model-query`'s options (`--flag value` and `--flag=value` both work).
+///
+/// # Errors
+/// Returns an error naming the valid options if an option is unknown, and an
+/// error naming the valid values if `--format` is not one of them.
+pub(crate) fn parse_args(
+    args: &[String],
+) -> Result<(Query<'_>, Format), Box<dyn std::error::Error>> {
+    let mut query = Query::default();
+    let mut format = Format::Table;
+    let mut i = 0;
+    while let Some(arg) = args.get(i) {
+        let (flag, inline) = match arg.split_once('=') {
+            Some((f, v)) => (f, Some(v)),
+            None => (arg.as_str(), None),
+        };
+        // A valueless switch must not swallow the next argument.
+        if flag == "--flattened" {
+            query.flattened = true;
+            i += 1;
+            continue;
+        }
+        let value = if let Some(v) = inline {
+            i += 1;
+            Some(v)
+        } else {
+            let v = args.get(i + 1).map(String::as_str);
+            i += 2;
+            v
+        };
+        let required = || -> Result<&str, Box<dyn std::error::Error>> {
+            value.ok_or_else(|| format!("option {flag} needs a value").into())
+        };
+        match flag {
+            "--class" => query.class = Some(required()?),
+            "--attribute" => query.attribute = Some(required()?),
+            "--component" => query.component = Some(required()?),
+            "--format" => format = Format::parse(required()?)?,
+            other => {
+                return Err(format!(
+                    "unknown model-query option {other:?}; valid options: --class NAME, \
+                     --attribute NAME, --component KEY, --flattened, --format {}",
+                    Format::VALID
+                )
+                .into());
+            }
+        }
+    }
+    Ok((query, format))
 }
 
 #[cfg(test)]

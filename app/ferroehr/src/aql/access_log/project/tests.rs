@@ -64,7 +64,7 @@ const PATHS: [&str; 30] = [
 
 /// `text` typed against the entry's classes.
 fn path(text: &str) -> LogPath {
-    let query = parse_str(&format!("SELECT {text} FROM ACCESS_LOG_ENTRY l")).expect("parses");
+    let query = parse_str(&["SELECT ", text, " FROM ACCESS_LOG_ENTRY l"].concat()).expect("parses");
     let Some(ColumnExpr::Path(path)) = query.select.columns.first().map(|c| c.column.clone())
     else {
         panic!("a path column");

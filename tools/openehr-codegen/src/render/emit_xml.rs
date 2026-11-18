@@ -21,6 +21,7 @@ use crate::plan::overrides::resolve_default;
 use crate::plan::xml_overrides::{xml_ancestor_shape, xml_tool_extensions, xml_value_wrapped};
 use crate::plan::{XmlField, XmlType};
 use crate::render::emit_xml_guards::Guards;
+use crate::render::generics::generic_header;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
@@ -134,20 +135,6 @@ pub(crate) fn emit_file(
     }
     guards.verdict(xsd)?;
     Ok(b)
-}
-
-/// `(impl<…: Bound> , <…>)` — the impl-generics header and the type-args suffix.
-fn generic_header(generics: &[String], bound: &str) -> (String, String) {
-    if generics.is_empty() {
-        (String::new(), String::new())
-    } else {
-        let bounded = generics
-            .iter()
-            .map(|g| format!("{g}: {bound}"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        (format!("<{bounded}>"), format!("<{}>", generics.join(", ")))
-    }
 }
 
 /// A local accumulator variable name for a field. Strips the `r#` raw-identifier

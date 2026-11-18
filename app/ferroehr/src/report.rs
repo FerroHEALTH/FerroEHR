@@ -360,7 +360,7 @@ impl DatabaseFailure {
     ///
     /// A read is `unreachable` when no connection was ever made: a failure
     /// only opening a connection produces
-    /// ([`crate::storage::error::is_connect_failure`], the storage bridge's own
+    /// ([`crate::storage::error::session::is_connect_failure`], the storage bridge's own
     /// connect-phase classifier), or a pool that handed out none within its
     /// acquire timeout. Anything else failed on a connection that worked, so
     /// the database is `unreadable`.
@@ -374,7 +374,7 @@ impl DatabaseFailure {
                 let verdict = match error {
                     DbError::Sqlx(e)
                         if matches!(e, sqlx::Error::PoolTimedOut)
-                            || crate::storage::error::is_connect_failure(e) =>
+                            || crate::storage::error::session::is_connect_failure(e) =>
                     {
                         "unreachable"
                     }

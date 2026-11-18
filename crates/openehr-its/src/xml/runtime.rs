@@ -330,11 +330,22 @@ pub fn to_xml<T: ToXml + ?Sized>(
     root_tag: &str,
     ns: Namespace,
 ) -> Result<String, XmlError> {
+    write_document(value, root_tag, None, ns, XmlWriter::new())?.into_string()
+}
+
+/// Writes `value` as a canonical-XML document under `root_tag` into `w`, the
+/// one rendering a codec entry point counts.
+fn write_document<T: ToXml + ?Sized>(
+    value: &T,
+    root_tag: &str,
+    declared: Option<&str>,
+    ns: Namespace,
+    mut w: XmlWriter,
+) -> Result<XmlWriter, XmlError> {
     crate::conversion::record::<T>("to_xml");
-    let mut w = XmlWriter::new();
     w.set_root_namespace(ns);
-    value.write_xml(&mut w, root_tag, None)?;
-    w.into_string()
+    value.write_xml(&mut w, root_tag, declared)?;
+    Ok(w)
 }
 
 /// Serialize a value as an openEHR canonical-XML document, appended to
@@ -349,10 +360,7 @@ pub fn write_xml_into<T: ToXml + ?Sized>(
     ns: Namespace,
     buffer: Vec<u8>,
 ) -> Result<Vec<u8>, XmlError> {
-    crate::conversion::record::<T>("to_xml");
-    let mut w = XmlWriter::with_buffer(buffer);
-    w.set_root_namespace(ns);
-    value.write_xml(&mut w, root_tag, None)?;
+    let w = write_document(value, root_tag, None, ns, XmlWriter::with_buffer(buffer))?;
     Ok(w.into_bytes())
 }
 
@@ -371,11 +379,7 @@ pub fn to_xml_declared<T: ToXml + ?Sized>(
     declared: &str,
     ns: Namespace,
 ) -> Result<String, XmlError> {
-    crate::conversion::record::<T>("to_xml");
-    let mut w = XmlWriter::new();
-    w.set_root_namespace(ns);
-    value.write_xml(&mut w, root_tag, Some(declared))?;
-    w.into_string()
+    write_document(value, root_tag, Some(declared), ns, XmlWriter::new())?.into_string()
 }
 
 /// A value that serializes to canonical openEHR XML.
@@ -1088,9 +1092,16 @@ fn to_start_tag(e: &BytesStart<'_>) -> Result<StartTag, XmlError> {
 pub fn from_xml<T: FromXml>(xml: &str) -> Result<T, XmlError> {
     crate::conversion::record::<T>("from_xml");
     let mut reader = XmlReader::new(xml);
+    let root = root_start(&mut reader)?;
+    T::from_xml(&mut reader, &root)
+}
+
+/// The start tag of a document's root element, the events before it read
+/// past.
+fn root_start(reader: &mut XmlReader<'_>) -> Result<StartTag, XmlError> {
     loop {
         match reader.read()? {
-            XmlEvent::Start(s) => return T::from_xml(&mut reader, &s),
+            XmlEvent::Start(s) => return Ok(s),
             XmlEvent::Eof => return Err(XmlError::Parse("no root element".into())),
             _ => {}
         }
@@ -1110,19 +1121,14 @@ pub fn from_xml<T: FromXml>(xml: &str) -> Result<T, XmlError> {
 pub fn from_xml_rooted<T: FromXml>(xml: &str, root: &str) -> Result<T, XmlError> {
     crate::conversion::record::<T>("from_xml");
     let mut reader = XmlReader::new(xml);
-    loop {
-        match reader.read()? {
-            XmlEvent::Start(s) if s.name == root => return T::from_xml(&mut reader, &s),
-            XmlEvent::Start(s) => {
-                return Err(XmlError::UnexpectedRoot {
-                    expected: root.to_owned(),
-                    found: s.name,
-                });
-            }
-            XmlEvent::Eof => return Err(XmlError::Parse("no root element".into())),
-            _ => {}
-        }
+    let start = root_start(&mut reader)?;
+    if start.name != root {
+        return Err(XmlError::UnexpectedRoot {
+            expected: root.to_owned(),
+            found: start.name,
+        });
     }
+    T::from_xml(&mut reader, &start)
 }
 
 /// Write a model `String` in the `OBJECT_ID` shape its schema slot names:
@@ -1313,61 +1319,7 @@ impl FromXml for XmlAny {
 }
 
 #[cfg(test)]
-mod real_lexical_tests {
-    use super::xsd_double_lexical;
-
-    /// Every `Real` shape against the `xs:double` lexical space (XML Schema
-    /// Part 2 §3.2.5), including the three special values a bare
-    /// `f64::to_string` spells wrongly.
-    #[test]
-    fn real_values_take_the_xsd_double_lexical_form() {
-        // Whole reals keep the decimal point openEHR writes.
-        assert_eq!(xsd_double_lexical(120.0), "120.0");
-        assert_eq!(xsd_double_lexical(0.0), "0.0");
-        assert_eq!(xsd_double_lexical(-0.0), "-0.0");
-        assert_eq!(xsd_double_lexical(-7.0), "-7.0");
-        // Fractional reals round-trip through the shortest form.
-        assert_eq!(xsd_double_lexical(5.66), "5.66");
-        assert_eq!(
-            xsd_double_lexical(32.299_869_242_485_19),
-            "32.29986924248519"
-        );
-        // The special values: `INF` / `-INF` / `NaN`, never Rust's spellings.
-        assert_eq!(xsd_double_lexical(f64::INFINITY), "INF");
-        assert_eq!(xsd_double_lexical(f64::NEG_INFINITY), "-INF");
-        assert_eq!(xsd_double_lexical(f64::NAN), "NaN");
-        assert_ne!(xsd_double_lexical(f64::INFINITY), f64::INFINITY.to_string());
-    }
-
-    /// The emitted lexeme must parse back to the same value — the fidelity
-    /// property the round-trip gates rest on.
-    #[test]
-    fn every_emitted_lexeme_parses_back() {
-        for v in [
-            120.0_f64,
-            -0.0,
-            5.66,
-            32.299_869_242_485_19,
-            1e21,
-            1e-7,
-            f64::MAX,
-            f64::MIN_POSITIVE,
-            f64::INFINITY,
-            f64::NEG_INFINITY,
-        ] {
-            let text = xsd_double_lexical(v);
-            let back: f64 = text
-                .parse()
-                .unwrap_or_else(|e| panic!("{text:?} does not parse back: {e}"));
-            assert_eq!(back.to_bits(), v.to_bits(), "{text:?}");
-        }
-        assert!(
-            xsd_double_lexical(f64::NAN)
-                .parse::<f64>()
-                .is_ok_and(f64::is_nan)
-        );
-    }
-}
+mod real_lexical_tests;
 
 #[cfg(test)]
 mod xml_any_namespace_tests {

@@ -17,7 +17,8 @@
               application (#1694)"
 )]
 use crate::analyze::invariants::{self, Bucket};
-use crate::analyze::{Model, augment_with_reemit, class_paths, cross_schema_reemit};
+use crate::analyze::reemit::{augment_with_reemit, cross_schema_reemit};
+use crate::analyze::{Model, class_paths};
 use crate::cli;
 use crate::load::bmm::{BmmPropKind, BmmSchema, BmmType};
 use crate::load::impls::SiblingImpls;
@@ -30,6 +31,7 @@ use crate::render::{emit_rest, model_query, naming};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub mod decision_checks;
+pub mod shapes;
 
 type Error = Box<dyn std::error::Error>;
 
@@ -503,135 +505,6 @@ pub fn constructibility_offenders(key: &str) -> Result<Vec<String>, Error> {
 }
 
 // ── determinism ─────────────────────────────────────────────────────────────
-
-/// The stage-3 plan for a crate, as comparable data.
-///
-/// The decided Rust shape (`Struct` / `Enum` / `PolyEnum` / `EnumLiterals` /
-/// `Newtype` / `Skip`) of every class of every BMM generation composing the
-/// crate, keyed `"<bmm file>::<CLASS>"`.
-/// The key carries the generation because a class name may be declared by more
-/// than one, with a different decided shape in each.
-///
-/// # Errors
-/// Returns an error if the crate's BMM files cannot be loaded.
-pub fn plan_shapes(key: &str) -> Result<BTreeMap<String, String>, Error> {
-    let c = compose(key)?;
-    let mut out = BTreeMap::new();
-    for g in &c.generations {
-        for u in &g.units {
-            let used = u.model.used_as_type();
-            for (name, class) in &u.schema.classes {
-                out.insert(
-                    format!("{}::{name}", u.spec.file),
-                    shape_name(&decide(&u.model, class, &used)).to_string(),
-                );
-            }
-        }
-    }
-    Ok(out)
-}
-
-/// The estimated size in bytes of every type the CURRENT generation of crate
-/// `key` emits, keyed by Rust type name (the estimate behind the by-size
-/// boxing decision of `plan::layout`).
-///
-/// # Errors
-/// Returns an error if the composition's BMM files cannot be loaded.
-pub fn estimated_sizes(key: &str) -> Result<BTreeMap<String, usize>, Error> {
-    let c = compose(key)?;
-    let g = c.current();
-    let mut out = BTreeMap::new();
-    for u in &g.units {
-        let used = u.model.used_as_type();
-        for (name, class) in &u.schema.classes {
-            let e = decide(&u.model, class, &used);
-            if matches!(e, Emission::Skip) {
-                continue;
-            }
-            let ty = naming::type_name(name);
-            let generics = crate::render::emit::struct_generics(&u.model, class);
-            let rendered = if generics.is_empty() {
-                ty.clone()
-            } else {
-                let args: Vec<String> = generics
-                    .iter()
-                    .map(|p| {
-                        u.model.resolved_param_bound(name, p).map_or_else(
-                            || "serde_json::Value".to_string(),
-                            |b| naming::type_name(&b),
-                        )
-                    })
-                    .collect();
-                format!("{ty}<{}>", args.join(", "))
-            };
-            out.insert(ty, crate::plan::layout::estimated_size(&u.model, &rendered));
-            if matches!(e, Emission::PolyEnum(_)) {
-                let data = format!("{}Data", naming::type_name(name));
-                out.insert(
-                    data.clone(),
-                    crate::plan::layout::estimated_size(&u.model, &data),
-                );
-            }
-        }
-    }
-    Ok(out)
-}
-
-/// Every mandatory `0..*` container reachable from `roots`, as `CLASS.attribute`.
-///
-/// A mandatory `0..*` container is a plain `Vec` or map the canonical-JSON
-/// reader reads as empty when absent; reachable means through attributes and
-/// subtypes, in the CURRENT RM generation.
-///
-/// # Errors
-/// Returns an error if the RM composition's BMM files cannot be loaded.
-pub fn reachable_mandatory_containers(roots: &[&str]) -> Result<Vec<String>, Error> {
-    let c = compose("rm")?;
-    let g = c.current();
-    let mut out = Vec::new();
-    for u in &g.units {
-        let model = &u.model;
-        let mut seen: BTreeSet<String> = BTreeSet::new();
-        let mut stack: Vec<String> = roots.iter().map(|r| (*r).to_string()).collect();
-        while let Some(name) = stack.pop() {
-            if !seen.insert(name.clone()) {
-                continue;
-            }
-            let Some(class) = model.get(&name) else {
-                continue;
-            };
-            stack.extend(model.enum_variants(&name));
-            for f in model.json_fields(&name) {
-                if matches!(f.kind, crate::plan::JsonFieldKind::Container) {
-                    out.push(format!("{name}.{}", f.wire_name));
-                }
-            }
-            for rp in model.flattened_props(class) {
-                let mut roots = BTreeSet::new();
-                match &rp.prop.kind {
-                    BmmPropKind::Single(t) | BmmPropKind::Container { item: t, .. } => {
-                        model.effective_roots(t, &mut roots);
-                    }
-                }
-                stack.extend(roots);
-            }
-        }
-    }
-    out.sort();
-    out.dedup();
-    Ok(out)
-}
-
-fn shape_name(e: &Emission) -> &'static str {
-    match e {
-        Emission::Struct => "Struct",
-        Emission::Enum(_) => "Enum",
-        Emission::PolyEnum(_) => "PolyEnum",
-        Emission::EnumLiterals(_) => "EnumLiterals",
-        Emission::Newtype(_) => "Newtype",
-        Emission::Skip => "Skip",
-    }
-}
 
 /// Render every generated spec crate's `src/` tree (`emit`) to an in-memory
 /// map, keyed by each file's path relative to the workspace `crates/`

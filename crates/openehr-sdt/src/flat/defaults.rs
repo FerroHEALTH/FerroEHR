@@ -6,6 +6,7 @@
 //! language, territory, composer and EVENT_CONTEXT, the root links, and the
 //! per-entry defaults the build's completion walk applies node by node.
 
+use openehr_rm::v1_2::access;
 use openehr_rm::v1_2::access::{RmObject, RmRef};
 
 use crate::flat::build::{DEFAULT_TIME, is_entry_family};
@@ -43,7 +44,7 @@ pub(crate) fn apply_composition_ctx(
     if !explicit_event_context && !comp.is_set("context") {
         return Ok(());
     }
-    comp.or_put("context", || Ok(o(typed::new("EVENT_CONTEXT")?)))?;
+    comp.or_put("context", || Ok(o(access::construct("EVENT_CONTEXT")?)))?;
     let Some(context) = comp.object_mut("context") else {
         return Ok(());
     };
@@ -209,7 +210,9 @@ fn apply_action_defaults(
     let Some(state) = &defaults.action_ism_current_state else {
         return Ok(());
     };
-    obj.or_put("ism_transition", || Ok(o(typed::new("ISM_TRANSITION")?)))?;
+    obj.or_put("ism_transition", || {
+        Ok(o(access::construct("ISM_TRANSITION")?))
+    })?;
     if let Some(ism) = obj.object_mut("ism_transition") {
         ism.or_put("current_state", || Ok(o(state.clone_box())))?;
     }
@@ -222,7 +225,7 @@ mod tests {
     use crate::flat::typed::Obj;
 
     fn event(time: Option<&str>) -> Obj {
-        let mut ev = typed::new("POINT_EVENT").unwrap();
+        let mut ev = access::construct("POINT_EVENT").unwrap();
         if let Some(time) = time {
             ev.put("time", o(typed::dv_date_time(time).unwrap()))
                 .unwrap();
@@ -231,7 +234,7 @@ mod tests {
     }
 
     fn observation(events: Vec<Obj>) -> Obj {
-        let mut history = typed::new("HISTORY").unwrap();
+        let mut history = access::construct("HISTORY").unwrap();
         for ev in events {
             history.push_obj("events", ev).unwrap();
         }
