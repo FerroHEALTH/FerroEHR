@@ -191,6 +191,26 @@ BEGIN
 END;
 $$;
 
+-- ── the ITI-81 total ────────────────────────────────────────────────────────
+
+-- The entry id joins the index of the entries (#6000). A page reads linked
+-- entries only, and the total counts what the pages return: every entry is
+-- either linked or named by an intake row, never both (the chain move links
+-- an intake row's entries and removes the row in one statement), so the
+-- total is the count of the time index less the entries the intake still
+-- names, both read in one snapshot, and neither reads a link.
+CREATE OR REPLACE VIEW access_log_search AS
+    SELECT l.chain_seq, e.time_recorded AS recorded_at, e.event_action AS action,
+           e.event_outcome AS outcome, e.principal, e.patient_id, e.resource_id,
+           e.request_id, e.client_ip, e.classified_ehr_id AS ehr_id, e.search_tokens,
+           e.id AS entry_id
+      FROM access_log_entry e
+      LEFT JOIN access_log_link l ON l.entry_id = e.id
+     WHERE e.render_policy_id IS NOT NULL;
+
+COMMENT ON VIEW access_log_search IS
+    'The ITI-81 index of the access-log entries: what the search filters on, read from the entry''s row, the position of a linked entry (NULL for one the chainer has not linked yet) and the entry''s id. A tombstone is not in it.';
+
 DO $grants$
 BEGIN
     IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ferroehr_clinical') THEN
