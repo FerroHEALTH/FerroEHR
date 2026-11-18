@@ -321,11 +321,47 @@ proptest! {
     }
 }
 
-/// A record's parts and the columns of its row, assembled.
-fn assembled(record: &Value, columns: &super::RowColumns<'_>) -> (String, String) {
+/// A composition read whose entry has access details on both parts: the
+/// caller's (principal, roles) shared, the access's own (origins, count) on
+/// the row, with a delivered count and a query.
+fn read_entry() -> openehr_rm::draft::access_log::access_log::access_log_entry::AccessLogEntry {
+    let mut event = AuditEvent::new(
+        EventActionCode::Read,
+        ObjectClass::Composition,
+        EventOutcome::Success,
+    );
+    event.event_type = Some(EventType::rest("composition_get"));
+    "nurse".clone_into(&mut event.user_id);
+    event.ehr_id = Some("7d44b88c-4199-4bad-97dc-d78268e01398".to_owned());
+    event.object_id = Some("8849182c-82ad-4088-a07f-48ead4180515::cdr.example.org::1".to_owned());
+    event.request_id = Some("d44e8723-cf7e-4b37-8f52-60e1b3cd5f88".to_owned());
+    event.roles = vec!["USER".to_owned(), "NURSE".to_owned()];
+    event.origins = vec!["cdr.example.org".to_owned(), "other.example.org".to_owned()];
+    event.result_count = Some(3);
+    event.query = Some(QueryNaming::of("AQL", "SELECT c FROM COMPOSITION c", None));
+    event.timestamp = "2026-11-18T10:11:12.3456Z".parse().expect("an instant");
+    let retention = stated(
+        Some(jiff::civil::date(2031, 11, 8)),
+        &LogRetention::default(),
+    );
+    entry_of(&event, Some("patient-1"), "cdr.example.org", retention)
+        .expect("a read writes an entry")
+}
+
+/// The canonical form of `record` and the form its stored parts and the
+/// columns of its row assemble into.
+fn assembled<T: serde::Serialize>(record: &T) -> (String, String) {
     let written = parts(record, &[LINK]).expect("the parts write");
     let row = super::without_columns(&written.row).expect("the row part reads");
-    let whole = super::whole(&row, written.shared.as_deref(), columns).expect("the parts assemble");
+    let (record_type, uid, time_recorded, ehr_id) = columns_of(&written.whole);
+    let columns = super::RowColumns {
+        record_type: &record_type,
+        uid,
+        time_recorded,
+        ehr_id,
+    };
+    let whole =
+        super::whole(&row, written.shared.as_deref(), &columns).expect("the parts assemble");
     (whole, written.whole)
 }
 
@@ -334,37 +370,14 @@ fn assembled(record: &Value, columns: &super::RowColumns<'_>) -> (String, String
 /// `time_recorded` and `ehr_id`.
 #[test]
 fn the_columns_and_both_parts_assemble_back() {
-    let uid = "7d44b88c-4199-4bad-97dc-d78268e01398";
-    let ehr = "8849182c-82ad-4088-a07f-48ead4180515";
-    let record = serde_json::json!({
-        "_type": "ACCESS_LOG_ENTRY",
-        "uid": { "_type": "HIER_OBJECT_ID", "value": uid },
-        "ehr_id": { "_type": "HIER_OBJECT_ID", "value": ehr },
-        "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-18T10:11:12.3456Z" },
-        "accessor": { "kind": "person" },
-        "outcome": { "result": "granted", "delivered": 3 },
-        "query": { "language": "AQL", "rows": 2, "text_digest": "d" },
-        "system_id": "cdr",
-        "other_details": {
-            "_type": "ITEM_TREE",
-            "archetype_node_id": "x",
-            "items": [
-                { "archetype_node_id": "at0002", "v": 1 },
-                { "archetype_node_id": "at0004", "v": 2 },
-                { "archetype_node_id": "at0012", "v": 3 },
-                { "archetype_node_id": "at0018", "v": 4 },
-                { "archetype_node_id": "at0018", "v": 5 },
-                { "archetype_node_id": "at0027", "v": 6 }
-            ]
-        }
-    });
-    let columns = super::RowColumns {
-        record_type: "ACCESS_LOG_ENTRY",
-        uid: uuid::Uuid::parse_str(uid).expect("a uuid"),
-        time_recorded: "2026-11-18T10:11:12.3456Z".parse().expect("an instant"),
-        ehr_id: Some(uuid::Uuid::parse_str(ehr).expect("a uuid")),
-    };
-    let (whole, original) = assembled(&record, &columns);
+    let entry = read_entry();
+    let written = parts(&entry, &[LINK]).expect("the parts write");
+    assert!(
+        written.row.contains("at0018") && !written.row.contains("at0004"),
+        "{}",
+        written.row
+    );
+    let (whole, original) = assembled(&entry);
     assert_eq!(whole, original);
 }
 
@@ -372,42 +385,33 @@ fn the_columns_and_both_parts_assemble_back() {
 /// which replaces the column's member.
 #[test]
 fn a_member_the_row_part_keeps_replaces_the_columns() {
-    let record = serde_json::json!({
-        "_type": "ACCESS_LOG_ENTRY",
-        "uid": { "_type": "HIER_OBJECT_ID", "value": "7D44B88C-4199-4BAD-97DC-D78268E01398" },
-        "ehr_id": { "_type": "HIER_OBJECT_ID", "value": "not-a-uuid" },
-        "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-18T10:11:12.000+01:00" },
-        "accessor": { "kind": "person" },
-        "system_id": "cdr"
-    });
-    let columns = super::RowColumns {
-        record_type: "ACCESS_LOG_ENTRY",
-        uid: uuid::Uuid::parse_str("7d44b88c-4199-4bad-97dc-d78268e01398").expect("a uuid"),
-        time_recorded: "2026-11-18T09:11:12Z".parse().expect("an instant"),
-        ehr_id: None,
-    };
-    let (whole, original) = assembled(&record, &columns);
+    use openehr_base::v1_3::base_types::identification::hier_object_id::HierObjectId;
+    let mut entry = read_entry();
+    entry.uid = HierObjectId::new("1.2.840.10008.3.1.2.3.4").expect("an OID uid");
+    entry.ehr_id = Some(HierObjectId::new("2.16.840.1.113883.2.4.6.3").expect("an OID EHR id"));
+    entry.time_recorded = crate::versioning::audit::dv_date_time(
+        &"2026-11-18T09:11:12Z".parse().expect("an instant"),
+    );
+    "2026-11-18T10:11:12+01:00".clone_into(&mut entry.time_recorded.value);
+    let (whole, original) = assembled(&entry);
     assert_eq!(whole, original);
 }
 
 /// A tombstone keeps no shared part: its row part and columns are the whole.
 #[test]
 fn a_tombstone_assembles_from_its_row() {
-    let record = serde_json::json!({
-        "_type": "ACCESS_LOG_TOMBSTONE",
-        "uid": { "_type": "HIER_OBJECT_ID", "value": "7d44b88c-4199-4bad-97dc-d78268e01398" },
-        "time_recorded": { "_type": "DV_DATE_TIME", "value": "2026-11-18T10:11:12Z" },
-        "time_removed": { "_type": "DV_DATE_TIME", "value": "2031-11-18T10:11:12Z" },
-        "grounds": [],
-        "system_id": "cdr"
-    });
-    let columns = super::RowColumns {
-        record_type: "ACCESS_LOG_TOMBSTONE",
-        uid: uuid::Uuid::parse_str("7d44b88c-4199-4bad-97dc-d78268e01398").expect("a uuid"),
-        time_recorded: "2026-11-18T10:11:12Z".parse().expect("an instant"),
-        ehr_id: None,
-    };
-    let (whole, original) = assembled(&record, &columns);
+    let entry = read_entry();
+    let grounds = entry.retention.grounds.clone();
+    let tombstone = crate::access_log::store::tombstone_of(
+        entry,
+        crate::versioning::audit::dv_date_time(
+            &"2031-11-09T00:00:00Z".parse().expect("an instant"),
+        ),
+        grounds,
+    );
+    let written = parts(&tombstone, &[LINK]).expect("the parts write");
+    assert_eq!(written.shared, None);
+    let (whole, original) = assembled(&tombstone);
     assert_eq!(whole, original);
 }
 
