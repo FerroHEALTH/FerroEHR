@@ -425,6 +425,20 @@ impl FerroEhrService {
         self.read_relationship(vo_id, version, at).await
     }
 
+    /// [`Self::party_relationship_get`], with the body kept as the stored text
+    /// where nothing needs it parsed.
+    ///
+    /// # Errors
+    /// As [`Self::party_relationship_get`].
+    pub async fn party_relationship_get_raw(
+        &self,
+        address: UidAddress,
+        version_at_time: Option<String>,
+    ) -> Result<RawServiceResponse, ServiceError> {
+        let (vo_id, version, at) = self.gated_address(address, version_at_time).await?;
+        self.read_relationship_raw(vo_id, version, at).await
+    }
+
     /// Update a relationship under a mandatory `If-Match` precondition
     /// (ITS-REST overview §"If-Match and accidental overwrites"). The current
     /// version is resolved ONCE (lean): the same handle serves the `If-Match`

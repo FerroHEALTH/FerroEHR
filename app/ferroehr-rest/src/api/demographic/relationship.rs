@@ -43,7 +43,7 @@ use crate::negotiate::body::respond_rm;
 use crate::overview::error::RestError;
 use crate::overview::negotiate::resource::Tree;
 use crate::state::AppState;
-use ferroehr::service::response::ServiceResponse;
+use ferroehr::service::response::{RawServiceResponse, ServiceResponse};
 use ferroehr::versioning::object_version_id::parse_uid_based_id;
 
 /// The `PARTY_RELATIONSHIP` extension routes as a native `utoipa-axum` router,
@@ -712,12 +712,12 @@ pub(crate) async fn get(state: AppState, parts: RequestParts) -> Result<Response
     let p = parts.decode(AgentGetParams::from_request, AgentGetParams::PARAMS)?;
     let resp = state
         .backend()
-        .party_relationship_get(parse_uid_based_id(&p.uid_based_id)?, p.version_at_time)
+        .party_relationship_get_raw(parse_uid_based_id(&p.uid_based_id)?, p.version_at_time)
         .await?;
-    if resp.is_empty() {
+    if resp.body.is_null() {
         return Ok(negotiate::body::empty(StatusCode::NO_CONTENT));
     }
-    Ok(read_relationship(h, &resp))
+    Ok(read_relationship(h, resp))
 }
 
 /// The `party_relationship_update` operation.
@@ -858,9 +858,11 @@ fn write_relationship(
 /// `ETag`/`Last-Modified`. No `Location` — overview §Location: the header "MUST
 /// NOT be used to indicate an alternate representation of an existing resource
 /// (e.g. via `GET` method)".
-fn read_relationship(h: &http::HeaderMap, resp: &ServiceResponse) -> Response {
-    let mut out = respond_rm::<PartyRelationship>(h, StatusCode::OK, &resp.body, LOCATABLE_ROOT);
-    if let Some(meta) = resp.meta.as_ref() {
+fn read_relationship(h: &http::HeaderMap, resp: RawServiceResponse) -> Response {
+    let RawServiceResponse { body, meta } = resp;
+    let mut out =
+        negotiate::body::respond_read::<PartyRelationship>(h, StatusCode::OK, body, LOCATABLE_ROOT);
+    if let Some(meta) = meta.as_ref() {
         negotiate::resource::set_versioning_headers(&mut out, meta, Tree::Demographic);
     }
     out

@@ -32,6 +32,7 @@ use crate::storage::ehr_repo::{self, PromotedColumns};
 use crate::storage::error::StorageError;
 use crate::versioning::Kind;
 use crate::versioning::audit::change_type;
+use crate::versioning::body::Body;
 use crate::versioning::change::precondition::{ensure_preceding, lock_current, tip_uid};
 use crate::versioning::change::{Change, Write};
 
@@ -106,28 +107,14 @@ impl FerroEhrService {
         &self,
         tx: &mut PgConnection,
         ehr_id: EhrId,
-        canonical: &Value,
+        promoted: &SubjectColumns,
     ) -> Result<(), ServiceError> {
         // The same promoted-column extraction the EHR-create path folds into
         // its initial INSERT (single-sourced so both promote identical values).
         // The is_modifiable sync (the content-write guard, RM ehr master04
         // §EHR Active Status) rides this same UPDATE — zero extra statements.
-        let (subject_id, namespace, is_queryable, is_modifiable) = ehr_promoted_columns(canonical);
-        let digest = self.care_subject_digest(
-            crate::storage::access_projection::EhrSubject::stored(
-                namespace.map(str::to_owned),
-                subject_id.map(str::to_owned),
-            )
-            .as_ref(),
-        );
-        let columns = PromotedColumns {
-            subject_id,
-            subject_namespace: namespace,
-            is_queryable,
-            is_modifiable,
-            subject_digest: digest.as_deref(),
-        };
-        ehr_repo::update_promoted_columns(tx, ehr_id, columns)
+        let digest = self.care_subject_digest(promoted.subject().as_ref());
+        ehr_repo::update_promoted_columns(tx, ehr_id, promoted.columns(digest.as_deref()))
             .await
             .map_err(|e| match e {
                 // NOTE: ITS-REST EHR API `409_EHR` refuses a second EHR for one subject
@@ -170,8 +157,8 @@ impl FerroEhrService {
         let Some(status) = ehr_repo::current_status_root(tx, ehr_id).await? else {
             return Ok(());
         };
-        let (subject_id, namespace, _, _) = ehr_promoted_columns(&status);
-        if let (Some(subject_id), Some(namespace)) = (subject_id, namespace)
+        let promoted = SubjectColumns::of_canonical(&status);
+        if let Some((subject_id, namespace)) = promoted.subject.as_ref()
             && let Some(owner) =
                 ehr_repo::ehr_id_by_subject(&mut *tx, subject_id, namespace).await?
             && owner != ehr_id
@@ -186,42 +173,87 @@ impl FerroEhrService {
                 ),
             )));
         }
-        self.sync_ehr_subject(tx, ehr_id, &status).await
+        self.sync_ehr_subject(tx, ehr_id, &promoted).await
     }
 }
 
-/// Extract the promoted `ehr`-table columns from an `EHR_STATUS` canonical
-/// value: the subject `(id, namespace)` — only a COMPLETE `external_ref` pair
-/// identifies a subject (RM ehr master04 §EHR Status; an anonymous
-/// `PARTY_SELF` yields `(None, None)`) — and the two 1..1 Boolean status flags
-/// `is_queryable` (RM ehr master04 §EHR Status) and `is_modifiable` (RM ehr
-/// master04 §EHR Active Status), each defaulting to `true` (matching the
-/// column default and the default `EHR_STATUS` when a raw path omits them).
-/// Shared by the EHR-create path's folded INSERT and the update/contribution
+/// The promoted `ehr`-table columns of an `EHR_STATUS`: the subject
+/// `(id, namespace)` — only a COMPLETE `external_ref` pair identifies a subject
+/// (RM ehr master04 §EHR Status; an anonymous `PARTY_SELF` yields none) — and
+/// the two 1..1 Boolean status flags `is_queryable` (RM ehr master04 §EHR
+/// Status) and `is_modifiable` (RM ehr master04 §EHR Active Status), each
+/// defaulting to `true` (matching the column default and the default
+/// `EHR_STATUS` when a raw path omits them). Shared by the EHR-create path's
+/// folded INSERT and the update/contribution
 /// [`FerroEhrService::sync_ehr_subject`] hook so both promote identical values.
 /// No openEHR spec governs the promoted columns — our own storage design.
-pub(in crate::service) fn ehr_promoted_columns(
-    canonical: &Value,
-) -> (Option<&str>, Option<&str>, bool, bool) {
-    let subject_id = canonical
-        .pointer("/subject/external_ref/id/value")
-        .and_then(Value::as_str);
-    let namespace = canonical
-        .pointer("/subject/external_ref/namespace")
-        .and_then(Value::as_str);
-    let (subject_id, namespace) = match (subject_id, namespace) {
-        (Some(id), Some(ns)) => (Some(id), Some(ns)),
-        _ => (None, None),
-    };
-    let is_queryable = canonical
-        .pointer("/is_queryable")
-        .and_then(Value::as_bool)
-        .unwrap_or(true);
-    let is_modifiable = canonical
-        .pointer("/is_modifiable")
-        .and_then(Value::as_bool)
-        .unwrap_or(true);
-    (subject_id, namespace, is_queryable, is_modifiable)
+#[derive(Debug, Clone)]
+pub(crate) struct SubjectColumns {
+    /// The subject's `(id, namespace)`.
+    pub(crate) subject: Option<(String, String)>,
+    /// `EHR_STATUS.is_queryable`.
+    pub(crate) is_queryable: bool,
+    /// `EHR_STATUS.is_modifiable`.
+    pub(crate) is_modifiable: bool,
+}
+
+impl SubjectColumns {
+    /// The columns of a typed `EHR_STATUS`.
+    pub(crate) fn of_typed(status: &EhrStatus) -> Self {
+        let subject = status.subject.external_ref.as_deref().map(|external| {
+            let id = crate::validation::versioned::object_id_value(&external.id).to_owned();
+            (id, external.namespace.clone())
+        });
+        Self {
+            subject,
+            is_queryable: status.is_queryable,
+            is_modifiable: status.is_modifiable,
+        }
+    }
+
+    /// The columns of an `EHR_STATUS` canonical value.
+    pub(crate) fn of_canonical(canonical: &Value) -> Self {
+        let subject_id = canonical
+            .pointer("/subject/external_ref/id/value")
+            .and_then(Value::as_str);
+        let namespace = canonical
+            .pointer("/subject/external_ref/namespace")
+            .and_then(Value::as_str);
+        let flag = |pointer: &str| canonical.pointer(pointer).and_then(Value::as_bool);
+        Self {
+            subject: subject_id
+                .zip(namespace)
+                .map(|(id, ns)| (id.to_owned(), ns.to_owned())),
+            is_queryable: flag("/is_queryable").unwrap_or(true),
+            is_modifiable: flag("/is_modifiable").unwrap_or(true),
+        }
+    }
+
+    /// The columns of an `EHR_STATUS` commit body; `None` for another kind.
+    pub(crate) fn of_body(body: &Body) -> Option<Self> {
+        match body {
+            Body::EhrStatus(status) => Some(Self::of_typed(status)),
+            Body::Canonical(canonical) => Some(Self::of_canonical(canonical)),
+            _ => None,
+        }
+    }
+
+    /// The subject the access projection keys care relationships by.
+    pub(crate) fn subject(&self) -> Option<crate::storage::access_projection::EhrSubject> {
+        let (id, namespace) = self.subject.clone().unzip();
+        crate::storage::access_projection::EhrSubject::stored(namespace, id)
+    }
+
+    /// The columns, with the subject digest `digest`.
+    pub(crate) fn columns<'a>(&'a self, digest: Option<&'a [u8]>) -> PromotedColumns<'a> {
+        PromotedColumns {
+            subject_id: self.subject.as_ref().map(|(id, _)| id.as_str()),
+            subject_namespace: self.subject.as_ref().map(|(_, ns)| ns.as_str()),
+            is_queryable: self.is_queryable,
+            is_modifiable: self.is_modifiable,
+            subject_digest: digest,
+        }
+    }
 }
 
 impl FerroEhrService {
@@ -250,26 +282,23 @@ impl FerroEhrService {
         // Request resolution and validation run before the transaction, and
         // their refusals surface after the `If-Match` check, in pre-check order.
         let resolved = self.resolve_write(&request, change_type::MODIFICATION, "EHR_STATUS update");
-        let body = openehr_its::json::to_canonical_value(&request.data);
+        let preceding = request.preceding;
+        let promoted = SubjectColumns::of_typed(&request.data);
+        let mut content = Body::from(request.data);
+        // A valid body's large media go to the blob store before a connection is held.
         let validated = match &resolved {
             Ok(parts) => Some(
-                self.validate_for_commit(Kind::EhrStatus, &body, parts.incomplete)
-                    .await,
+                self.accept_body(Kind::EhrStatus, &mut content, parts.incomplete)
+                    .await?,
             ),
             Err(_) => None,
         };
-        let preceding = request.preceding;
-        let mut content = body.clone();
-        // A valid body's large media go to the blob store before a connection is held.
-        if matches!(validated, Some(Ok(()))) {
-            self.externalize(&mut content).await?;
-        }
         // Keep the promoted subject columns in sync (the subject may have
         // changed); the is_queryable promotion rides this same UPDATE.
         let committed = self
             .commit_one(
                 &self.pool,
-                Mode::SyncSubject(an_ehr_id, &body),
+                Mode::SyncSubject(an_ehr_id, promoted),
                 async move |tx| {
                     let placement =
                         lock_current(tx, Some(an_ehr_id), vo_id, Kind::EhrStatus).await?;

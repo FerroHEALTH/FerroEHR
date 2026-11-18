@@ -822,11 +822,12 @@ impl AuditStore {
         };
         let (count_sql, count_values, sql, values) =
             search_page::build_search_statements(filter, &resolved);
-        // NOTE: an unnamed statement is planned with the token ids it binds (PostgreSQL 18,
-        // "PREPARE", plan_cache_mode), so a rare token reaches its index rather than a generic plan.
+        // NOTE: our own design (#6005), a shape's text is a named statement that PostgreSQL may
+        // plan once per connection (plan_cache_mode auto); any other text goes unnamed.
+        let shaped = search_page::shaped(filter);
         let total = if filter.total {
             let total: i64 = sqlx::query_scalar_with(sqlx::AssertSqlSafe(count_sql), count_values)
-                .persistent(false)
+                .persistent(shaped)
                 .fetch_one(&mut *acquire(&self.pool).await?)
                 .await?;
             Some(total)
@@ -834,7 +835,7 @@ impl AuditStore {
             None
         };
         let mut rows = sqlx::query_with(sqlx::AssertSqlSafe(sql), values)
-            .persistent(false)
+            .persistent(shaped)
             .fetch_all(&mut *acquire(&self.pool).await?)
             .await?;
         // The page statement reads one record past the page, which says whether a next

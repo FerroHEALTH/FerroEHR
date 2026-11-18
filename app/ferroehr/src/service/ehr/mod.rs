@@ -41,6 +41,7 @@
 //! ([`crate::storage::ehr_repo`] / [`crate::storage::version_repo`]); no openEHR
 //! spec governs the schema — our own design.
 
+mod accept;
 pub(in crate::service) mod access;
 pub(in crate::service) mod access_cache;
 pub mod care_projection;
@@ -53,7 +54,7 @@ pub(in crate::service) mod meta;
 pub mod object;
 pub mod read_ahead;
 pub(crate) mod service;
-mod status;
+pub(in crate::service) mod status;
 pub(in crate::service) mod tags;
 pub(crate) mod validation;
 pub(crate) mod version_copy;

@@ -10,7 +10,9 @@
 //! The paths are the commit of a COMPOSITION in canonical JSON, canonical XML
 //! and FLAT, its read in the same three formats, the EHR read, a single-EHR
 //! and a population AQL query, an ITI-81 page and a party read, all over the
-//! IPS composition (128 KB, 402 node rows).
+//! IPS composition (128 KB, 402 node rows), and the commit of that composition
+//! as a CONTRIBUTION, its read at an instant, the `EHR_STATUS` commit and read,
+//! and the commit of a PERSON.
 //!
 //! The conversions are the `trace` events under
 //! [`openehr_its::conversion::TARGET`]: the codec entry points record each
@@ -85,10 +87,15 @@ enum Path {
     AqlPopulation,
     Iti81,
     PartyRead,
+    CommitContribution,
+    ReadAtTime,
+    CommitStatus,
+    ReadStatus,
+    CommitParty,
 }
 
 impl Path {
-    const ALL: [Self; 11] = [
+    const ALL: [Self; 16] = [
         Self::CommitJson,
         Self::CommitXml,
         Self::CommitFlat,
@@ -100,6 +107,11 @@ impl Path {
         Self::AqlPopulation,
         Self::Iti81,
         Self::PartyRead,
+        Self::CommitContribution,
+        Self::ReadAtTime,
+        Self::CommitStatus,
+        Self::ReadStatus,
+        Self::CommitParty,
     ];
 
     fn name(self) -> &'static str {
@@ -115,6 +127,11 @@ impl Path {
             Self::AqlPopulation => "population AQL",
             Self::Iti81 => "ITI-81 page",
             Self::PartyRead => "party read",
+            Self::CommitContribution => "contribution commit",
+            Self::ReadAtTime => "read at time",
+            Self::CommitStatus => "EHR_STATUS commit",
+            Self::ReadStatus => "EHR_STATUS read",
+            Self::CommitParty => "party commit",
         }
     }
 }
@@ -147,7 +164,7 @@ const fn reported(path: Path) -> Budget {
 /// 13cda4c7f, debug build) the paths measured, per request, conversions /
 /// allocations / round trips / nested statements / WAL bytes: recorded on
 /// #6007.
-const BUDGETS: [Budget; 11] = [
+const BUDGETS: [Budget; 16] = [
     reported(Path::CommitJson),
     reported(Path::CommitXml),
     reported(Path::CommitFlat),
@@ -159,6 +176,11 @@ const BUDGETS: [Budget; 11] = [
     reported(Path::AqlPopulation),
     reported(Path::Iti81),
     reported(Path::PartyRead),
+    reported(Path::CommitContribution),
+    reported(Path::ReadAtTime),
+    reported(Path::CommitStatus),
+    reported(Path::ReadStatus),
+    reported(Path::CommitParty),
 ];
 
 /// Counts, inside a [`PATH_SPAN`] span, the `sqlx::query` events (the round
@@ -310,6 +332,25 @@ struct World {
     flat: String,
     template_id: String,
     party: String,
+    person: String,
+    /// An instant after every fixture commit.
+    at: String,
+    /// The `EHR_STATUS` a status commit writes, without its `uid`.
+    status: String,
+    /// The current `EHR_STATUS` version uid of each EHR, which the next status
+    /// commit names in `If-Match`.
+    status_uids: Mutex<Vec<String>>,
+}
+
+/// The `ETag` value of a response, unquoted.
+fn etag(headers: &HeaderMap) -> String {
+    headers
+        .get(header::ETAG)
+        .and_then(|v| v.to_str().ok())
+        .expect("an ETag")
+        .trim_start_matches("W/")
+        .trim_matches('"')
+        .to_owned()
 }
 
 /// The versioned-object id an `ETag` names.
@@ -363,17 +404,68 @@ impl World {
                 user: "root",
                 accept: JSON,
                 headers: Vec::new(),
-                body: Some((JSON, person)),
+                body: Some((JSON, person.clone())),
             },
         )
         .await;
         assert_eq!(status, StatusCode::CREATED, "the person: {body}");
+        let mut status_uids = Vec::new();
+        let mut status_body = String::new();
+        for (ehr, _) in &ehrs {
+            let (code, headers, body) = plain(
+                app,
+                &Call {
+                    method: "GET",
+                    uri: format!("{BASE}/ehr/{ehr}/ehr_status"),
+                    user: "root",
+                    accept: JSON,
+                    headers: Vec::new(),
+                    body: None,
+                },
+            )
+            .await;
+            assert_eq!(code, StatusCode::OK, "the EHR_STATUS: {body}");
+            status_uids.push(etag(&headers));
+            let mut value: Value = serde_json::from_str(&body).expect("the EHR_STATUS");
+            value
+                .as_object_mut()
+                .expect("an object")
+                .shift_remove("uid");
+            status_body = value.to_string();
+        }
         Self {
             ehrs,
             xml,
             flat,
             template_id,
             party: object_id(&headers),
+            person,
+            at: jiff::Timestamp::now().to_string(),
+            status: status_body,
+            status_uids: Mutex::new(status_uids),
+        }
+    }
+
+    /// Records what the answer to the `n`th request of `path` changed.
+    fn observe(&self, path: Path, n: usize, headers: &HeaderMap) {
+        if path == Path::CommitStatus {
+            self.status_uids.lock().unwrap()[n % self.ehrs.len()] = etag(headers);
+        }
+    }
+
+    /// The `n`th status commit, to the EHR `ehr`.
+    fn status_commit(&self, ehr: &str, n: usize) -> Call {
+        let tip = self.status_uids.lock().unwrap()[n % self.ehrs.len()].clone();
+        Call {
+            method: "PUT",
+            uri: format!("{BASE}/ehr/{ehr}/ehr_status"),
+            user: "root",
+            accept: JSON,
+            headers: vec![
+                ("Prefer", "return=minimal".to_owned()),
+                ("If-Match", format!("\"{tip}\"")),
+            ],
+            body: Some((JSON, self.status.clone())),
         }
     }
 
@@ -442,8 +534,53 @@ impl World {
                 "root",
                 JSON,
             ),
+            Path::CommitContribution => Call {
+                method: "POST",
+                uri: format!("{BASE}/ehr/{ehr}/contribution"),
+                user: "root",
+                accept: JSON,
+                headers: minimal.clone(),
+                body: Some((JSON, contribution().to_string())),
+            },
+            Path::ReadAtTime => get(
+                format!("{composition}?version_at_time={}", self.at),
+                "nurse",
+                JSON,
+            ),
+            Path::CommitStatus => self.status_commit(ehr, n),
+            Path::ReadStatus => get(format!("{BASE}/ehr/{ehr}/ehr_status"), "nurse", JSON),
+            Path::CommitParty => Call {
+                method: "POST",
+                uri: format!("{BASE}/demographic/person"),
+                user: "root",
+                accept: JSON,
+                headers: minimal.clone(),
+                body: Some((JSON, self.person.clone())),
+            },
         }
     }
+}
+
+/// A CONTRIBUTION that creates the IPS composition.
+fn contribution() -> Value {
+    let coded = |code: &str, value: &str| {
+        serde_json::json!({ "_type": "DV_CODED_TEXT", "value": value,
+            "defining_code": { "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": code } })
+    };
+    let committer = serde_json::json!({ "_type": "PARTY_IDENTIFIED",
+        "identifiers": [{ "_type": "DV_IDENTIFIER", "issuer": "ferroehr", "id": "root" }] });
+    serde_json::json!({
+        "_type": "CONTRIBUTION",
+        "versions": [ {
+            "_type": "ORIGINAL_VERSION",
+            "commit_audit": { "change_type": coded("249", "creation"), "committer": committer },
+            "lifecycle_state": coded("532", "complete"),
+            "data": common::ips_canonical_composition(),
+        } ],
+        "audit": { "change_type": coded("249", "creation"), "committer": committer },
+    })
 }
 
 /// What one path measured over [`REQUESTS`] requests.
@@ -501,8 +638,10 @@ async fn measure(
     path: Path,
 ) -> Measure {
     for n in 0..WARM {
-        let (status, _, body) = plain(app, &world.call(path, usize::try_from(n).unwrap())).await;
+        let n = usize::try_from(n).unwrap();
+        let (status, headers, body) = plain(app, &world.call(path, n)).await;
         assert!(status.is_success(), "{}: {status} {body}", path.name());
+        world.observe(path, n, &headers);
     }
     drained(pool).await;
     let evicted = testkit::statement_window(pool)
@@ -511,9 +650,10 @@ async fn measure(
     *counter.0.lock().unwrap() = Counts::default();
     let mut out = Measure::default();
     for n in 0..REQUESTS {
-        let call = world.call(path, usize::try_from(WARM + n).unwrap());
+        let n = usize::try_from(WARM + n).unwrap();
+        let call = world.call(path, n);
         let mut allocated = Allocated::default();
-        let (status, _, body) = Measured {
+        let (status, headers, body) = Measured {
             inner: Box::pin(
                 exchange(app, call.request()).instrument(tracing::info_span!(PATH_SPAN)),
             ),
@@ -526,6 +666,7 @@ async fn measure(
             path.name(),
             String::from_utf8_lossy(&body)
         );
+        world.observe(path, n, &headers);
         out.allocated.count += allocated.count;
         out.allocated.bytes += allocated.bytes;
         out.peak = out.peak.max(allocated.peak);

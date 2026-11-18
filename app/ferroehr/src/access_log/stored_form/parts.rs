@@ -22,6 +22,8 @@ use serde::Serialize;
 
 use super::{DETAILS, ITEMS, NODE, SHARED, SHARED_DETAILS, SPLIT};
 
+pub mod index;
+
 /// A record's canonical form and its stored parts, each in its canonical
 /// form.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -141,26 +143,6 @@ impl<'w> Cut<'w> {
         }
         string_text(value)
     }
-}
-
-/// The row part `row` of an entry without the members its columns give back.
-///
-/// `_type` always goes, and `uid`, `ehr_id` and `time_recorded` when the
-/// column gives back their exact text ([`super::column_uuid`],
-/// [`super::column_instant`]); `audit.access_log_document` puts them back for
-/// a row part without `_type` (#5784).
-///
-/// # Errors
-/// A [`serde_json::Error`] when `row` is no canonical object.
-pub fn without_columns(row: &str) -> Result<String, serde_json::Error> {
-    let members = members(row).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?;
-    let mut kept = Object::with_capacity(row.len());
-    for (name, value) in members {
-        if !column_member(name, value) {
-            kept.push(name, value);
-        }
-    }
-    Ok(kept.finish())
 }
 
 /// Whether the top-level member `name` with the canonical value `value` is
@@ -420,6 +402,14 @@ impl Object {
         self.out.push_str(value);
     }
 
+    /// Opens the member whose canonical name, quotes included, is `name`,
+    /// whose value the caller writes to `out` next.
+    fn open(&mut self, name: &str) {
+        self.out.push(if self.out.is_empty() { '{' } else { ',' });
+        self.out.push_str(name);
+        self.out.push(':');
+    }
+
     /// Adds the member `plain`, a name with nothing to escape.
     fn push_named(&mut self, plain: &str, value: &str) {
         self.out.push(if self.out.is_empty() { '{' } else { ',' });
@@ -591,7 +581,7 @@ impl Derived {
 }
 
 /// The columns of a stored row that give back the members its row part
-/// leaves out ([`without_columns`]).
+/// leaves out ([`index::without_columns`]).
 #[derive(Debug, Clone, Copy)]
 pub struct RowColumns<'c> {
     /// The record's `_type`.
@@ -602,6 +592,8 @@ pub struct RowColumns<'c> {
     pub time_recorded: jiff::Timestamp,
     /// The record's `ehr_id`, when the column keeps it.
     pub ehr_id: Option<uuid::Uuid>,
+    /// The index columns that give back members of the row part.
+    pub index: index::IndexColumns<'c>,
 }
 
 /// A member being assembled: its canonical name, quotes included, and its
@@ -627,9 +619,15 @@ pub fn whole(
     shared: Option<&str>,
     columns: &RowColumns<'_>,
 ) -> Result<String, serde_json::Error> {
-    let own = members(row).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?;
+    let mut own = members(row).ok_or_else(|| serde::ser::Error::custom(NO_OBJECT))?;
     let mut top: Vec<Member<'_>> = Vec::with_capacity(own.len() + 16);
+    let mut restoring = Vec::new();
     if !own.iter().any(|(name, _)| is_name(name, "_type")) {
+        for (name, value) in &own {
+            if let Cow::Owned(text) = index::restored(name, value, &columns.index)? {
+                restoring.push((*name, text));
+            }
+        }
         top.push((
             "\"_type\"".into(),
             serde_json::to_string(columns.record_type)?.into(),
@@ -649,6 +647,11 @@ pub fn whole(
                 "\"ehr_id\"".into(),
                 typed_text(HIER_OBJECT_ID, ehr_id).into(),
             ));
+        }
+    }
+    for (name, text) in &restoring {
+        if let Some(member) = own.iter_mut().find(|(have, _)| have == name) {
+            member.1 = text.as_str();
         }
     }
     let Some(shared) = shared else {

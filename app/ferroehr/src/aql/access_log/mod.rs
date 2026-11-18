@@ -21,6 +21,7 @@
 //! draft model.
 
 pub mod path;
+pub mod project;
 pub mod sql;
 
 use openehr_query::ast::{

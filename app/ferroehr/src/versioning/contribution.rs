@@ -725,12 +725,16 @@ pub(crate) fn needs_content_write_permission(changes: &[(AuditInput, Change)]) -
             kind: Kind::EhrStatus,
             body,
             ..
-        } => {
-            body.canonical()
-                .and_then(|canonical| canonical.pointer("/is_modifiable"))
-                .and_then(Value::as_bool)
-                == Some(true)
-        }
+        } => match body {
+            crate::versioning::body::Body::EhrStatus(status) => status.is_modifiable,
+            other => {
+                other
+                    .canonical()
+                    .and_then(|canonical| canonical.pointer("/is_modifiable"))
+                    .and_then(Value::as_bool)
+                    == Some(true)
+            }
+        },
         _ => false,
     });
     carries_content && !reactivates

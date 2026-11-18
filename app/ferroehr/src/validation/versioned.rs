@@ -99,23 +99,67 @@ pub(crate) fn check_versioned_composition_first_root(
     Ok(())
 }
 
-/// The OPT `template_id` a COMPOSITION declares
-/// (`archetype_details.template_id.value`), if any: the derivation both the
-/// direct composition path and the CONTRIBUTION commit path stamp
-/// `version.template_id` with (the template-delete 409 guard counts that
-/// column — physical deletes never orphan committed data).
-pub(crate) fn composition_template_id(composition: &Value) -> Option<&str> {
-    composition
-        .pointer("/archetype_details/template_id/value")
-        .and_then(Value::as_str)
-}
-
-/// A `FOLDER.items` `OBJECT_REF` whose `namespace` claims THIS system,
-/// collected by [`collect_local_item_refs`] for target resolution.
-struct LocalItemRef {
+/// A `FOLDER.items` `OBJECT_REF` whose `namespace` claims THIS system, with
+/// its RM instance path, for target resolution.
+pub(crate) struct LocalItemRef {
     path: String,
     namespace: String,
     id_value: String,
+}
+
+/// Every `items` reference in the FOLDER commit body `folder` whose
+/// `namespace` is `local` or this server's own system id, with its RM
+/// instance path; none for a body of another kind.
+pub(crate) fn local_item_refs(folder: &Body, system_id: &str) -> Vec<LocalItemRef> {
+    let mut out = Vec::new();
+    match folder {
+        Body::Folder(rm) => collect_typed_item_refs(rm, system_id, "", &mut out),
+        Body::Canonical(view) => collect_local_item_refs(view, system_id, "", &mut out),
+        _ => {}
+    }
+    out
+}
+
+/// [`collect_local_item_refs`] over a typed FOLDER tree.
+fn collect_typed_item_refs(
+    folder: &openehr_rm::prelude::Folder,
+    system_id: &str,
+    at: &str,
+    out: &mut Vec<LocalItemRef>,
+) {
+    use openehr_base::prelude::ObjectRef;
+    for (i, item) in folder.items.iter().flatten().enumerate() {
+        let (namespace, id_value) = match item {
+            ObjectRef::AccessGroupRef(r) => (&r.namespace, object_id_value(&r.id)),
+            ObjectRef::LocatableRef(r) => (&r.namespace, r.id.value()),
+            ObjectRef::PartyRef(r) => (&r.namespace, object_id_value(&r.id)),
+            ObjectRef::ObjectRef(r) => (&r.namespace, object_id_value(&r.id)),
+        };
+        if namespace != "local" && namespace != system_id {
+            continue;
+        }
+        out.push(LocalItemRef {
+            path: format!("{at}/items[{i}]"),
+            namespace: namespace.clone(),
+            id_value: id_value.to_owned(),
+        });
+    }
+    for (i, sub) in folder.folders.iter().flatten().enumerate() {
+        collect_typed_item_refs(sub, system_id, &format!("{at}/folders[{i}]"), out);
+    }
+}
+
+/// The `value` of an `OBJECT_ID` of any of its kinds.
+pub(crate) fn object_id_value(id: &openehr_base::prelude::ObjectId) -> &str {
+    use openehr_base::prelude::ObjectId;
+    match id {
+        ObjectId::ArchetypeId(id) => &id.value,
+        ObjectId::GenericId(id) => &id.value,
+        ObjectId::HierObjectId(id) => id.value(),
+        ObjectId::ObjectVersionId(id) => id.value(),
+        ObjectId::TemplateId(id) => &id.value,
+        ObjectId::TerminologyId(id) => &id.value,
+    }
 }
 
 /// Collect every `items` reference in the FOLDER tree whose `namespace` is
@@ -173,14 +217,11 @@ fn item_ref_root(id_value: &str) -> Option<uuid::Uuid> {
 pub(crate) async fn check_folder_item_refs<'e>(
     executor: impl sqlx::PgExecutor<'e>,
     ehr_id: EhrId,
-    system_id: &str,
-    folder: &Value,
+    refs: &[LocalItemRef],
 ) -> Result<(), ServiceError> {
     // NOTE: no released openEHR text constrains FOLDER.items resolvability
     // (BASE object_ref.adoc; no ITS-REST directory 422) — own-design safety
     // net, register AMB-211: refs claiming this system must resolve.
-    let mut refs = Vec::new();
-    collect_local_item_refs(folder, system_id, "", &mut refs);
     if refs.is_empty() {
         return Ok(());
     }

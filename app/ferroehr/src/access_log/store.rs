@@ -136,7 +136,8 @@ pub fn canonical_form(record: &impl serde::Serialize) -> Result<String, AccessLo
 macro_rules! entry_parts {
     () => {
         "r.content AS row_part, sh.content AS shared_part, r.record_type AS entry_type, \
-         r.uid AS entry_uid, r.time_recorded AS recorded_at, r.ehr_id AS entry_ehr"
+         r.uid AS entry_uid, r.time_recorded AS recorded_at, r.ehr_id AS entry_ehr, \
+         r.request_id, r.resource_id"
     };
 }
 pub(crate) use entry_parts;
@@ -487,7 +488,7 @@ impl AccessLogStore {
 
 /// The tombstone of `entry`, removed at `time_removed` on `grounds`: its uid,
 /// `system_id`, `time_recorded` and link, and nothing else of it.
-pub(super) fn tombstone_of(
+pub(crate) fn tombstone_of(
     entry: AccessLogEntry,
     time_removed: DvDateTime,
     grounds: NonEmptyVec<DvCodedText>,
@@ -600,6 +601,10 @@ pub(crate) fn document_of(row: &PgRow) -> Result<String, AccessLogError> {
             .try_get::<jiff_sqlx::Timestamp, _>("recorded_at")?
             .to_jiff(),
         ehr_id: row.try_get("entry_ehr")?,
+        index: stored_form::parts::index::IndexColumns {
+            request_id: row.try_get("request_id")?,
+            resource_id: row.try_get("resource_id")?,
+        },
     };
     stored_form::parts::whole(
         row.try_get("row_part")?,

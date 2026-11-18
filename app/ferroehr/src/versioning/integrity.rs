@@ -98,7 +98,7 @@ pub(crate) fn sign_version(
 }
 
 /// The `data` a signed version carries: none (a logical delete), a canonical
-/// value, or a typed COMPOSITION written into the canonical form straight from
+/// value, or a typed commit body written into the canonical form straight from
 /// its `Serialize` impl.
 #[derive(Clone, Copy)]
 pub(crate) enum Signed<'a> {
@@ -106,8 +106,8 @@ pub(crate) enum Signed<'a> {
     Void,
     /// A canonical value.
     Value(&'a Value),
-    /// A typed COMPOSITION.
-    Composition(&'a openehr_rm::prelude::Composition),
+    /// A typed commit body.
+    Typed(&'a crate::versioning::body::Body),
 }
 
 /// JCS-serialize and sign the envelope joined with its `data` through a
@@ -131,7 +131,7 @@ fn sign_canonical_with_data(
     let canonical = match data {
         Signed::Void => canonical_form_of_json_with_data(ov, &Value::Null),
         Signed::Value(data) => canonical_form_of_json_with_data(ov, data),
-        Signed::Composition(data) => {
+        Signed::Typed(data) => {
             typed_canonical_form(ov, data).map_err(CanonicalFormError::Canonicalize)
         }
     }
@@ -148,9 +148,9 @@ fn sign_canonical_with_data(
 /// of `data`, with no such value built (#6003).
 ///
 /// [`canonical_form_of_json_with_data`]: openehr_rm::v1_2::common::change_control::version_impl::canonical_form_of_json_with_data
-pub(crate) fn typed_canonical_form(
+pub(crate) fn typed_canonical_form<T: serde::Serialize + ?Sized>(
     ov: &Value,
-    data: &openehr_rm::prelude::Composition,
+    data: &T,
 ) -> Result<String, serde_json::Error> {
     let mut object =
         openehr_rm::v1_2::common::change_control::canonical_serializer_impl::CanonicalObject::default();

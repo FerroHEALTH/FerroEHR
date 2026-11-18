@@ -1339,7 +1339,7 @@ pub(crate) async fn audit_texts(pool: &PgPool) -> Vec<String> {
     .expect("read the stored audit rows");
     let entries: Vec<String> = sqlx::query_scalar::<_, String>(
         "SELECT audit.access_log_document(r.content, sh.content, r.record_type, r.uid, \
-         r.time_recorded, r.ehr_id)::text FROM audit.access_log_record r \
+         r.time_recorded, r.ehr_id, r.request_id, r.resource_id)::text FROM audit.access_log_record r \
          LEFT JOIN audit.access_log_shared sh ON sh.digest = r.shared ORDER BY r.chain_seq",
     )
     .fetch_all(pool)

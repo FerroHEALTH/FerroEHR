@@ -9,15 +9,8 @@
 //! `master06-change_control_package.adoc` §Committal and Audits). No openEHR
 //! spec governs how the commit is run against the database: our own design.
 
-#![expect(
-    clippy::disallowed_types,
-    reason = "owner-approved 2026-08-03 (#1694): the commit interior carries the canonical \
-              fragment the seam produced once"
-)]
-
 use std::pin::Pin;
 
-use serde_json::Value;
 use sqlx::{PgConnection, PgPool};
 
 use crate::error::ServiceError;
@@ -35,7 +28,7 @@ use crate::versioning::change::{Committed, Write, WriteEnvelope, commit, record_
 use crate::versioning::lifecycle;
 
 /// How [`FerroEhrService::commit_one`] runs a write against the database.
-pub(in crate::service) enum Mode<'a> {
+pub(in crate::service) enum Mode {
     /// BEGIN, the prepare step, the change, COMMIT.
     Transaction,
     /// The prepare step and the change on the bare connection, without BEGIN:
@@ -45,7 +38,7 @@ pub(in crate::service) enum Mode<'a> {
     /// [`Mode::Transaction`], with the EHR's promoted subject columns synced
     /// from this `EHR_STATUS` body after the change, inside the same
     /// transaction ([`FerroEhrService::sync_ehr_subject`]).
-    SyncSubject(EhrId, &'a Value),
+    SyncSubject(EhrId, crate::service::ehr::status::SubjectColumns),
 }
 
 /// A [`WriteRequest`]'s commit metadata, resolved against the server rules.
@@ -129,7 +122,7 @@ impl FerroEhrService {
     pub(in crate::service) fn commit_one<'s, P>(
         &'s self,
         pool: &'s PgPool,
-        mode: Mode<'s>,
+        mode: Mode,
         prepare: P,
     ) -> Pin<Box<impl Future<Output = Result<Committed, ServiceError>> + 's>>
     where
@@ -161,7 +154,7 @@ impl FerroEhrService {
                     let committed = commit(&mut tx, write, &signing_ctx).await?;
                     let facts = self.written_facts(&mut tx, ehr_id, &committed).await;
                     if let Mode::SyncSubject(ehr_id, status) = mode {
-                        self.sync_ehr_subject(&mut tx, ehr_id, status).await?;
+                        self.sync_ehr_subject(&mut tx, ehr_id, &status).await?;
                         self.commit_recorded(tx, &facts, Vec::new()).await?;
                         invalidate = Some(ehr_id);
                     } else {

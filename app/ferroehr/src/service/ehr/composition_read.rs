@@ -272,44 +272,10 @@ impl FerroEhrService {
                 &read.creating_system_id,
             ))
             .with_content(vec![read.content.clone()]);
-        let Some(text) = raw.raw_json else {
-            let stamped =
-                self.with_uid(read.canonical, vo_id, &read.creating_system_id, read.tree)?;
-            return Ok(RawServiceResponse {
-                body: ReadBody::Value(stamped),
-                meta: Some(meta),
-            });
-        };
-        let uid = crate::versioning::object_version_id::object_version_id(
-            vo_id,
-            &read.creating_system_id,
-            read.tree,
-        );
-        if carries_version_uid(&text, &uid) {
-            return Ok(RawServiceResponse {
-                body: ReadBody::RawJson(text),
-                meta: Some(meta),
-            });
-        }
-        let value: Value = serde_json::from_str(&text).map_err(|e| {
-            ServiceError::exception(format!(
-                "the stored body of COMPOSITION {vo_id} is not decodable JSON: {e}"
-            ))
-        })?;
-        let stamped = self.with_uid(value, vo_id, &read.creating_system_id, read.tree)?;
+        let body = self.served_body(vo_id, read, raw.raw_json)?;
         Ok(RawServiceResponse {
-            body: ReadBody::Value(stamped),
+            body,
             meta: Some(meta),
         })
     }
-}
-
-/// Whether `text`, a stored body in the compact form the commit writes
-/// (`canonical_body_text`), carries `uid` as its stamped `OBJECT_VERSION_ID`
-/// member, so the JSON read can serve it verbatim (#5755).
-fn carries_version_uid(text: &str, uid: &str) -> bool {
-    const OPEN: &str = r#""uid":{"_type":"OBJECT_VERSION_ID","value":""#;
-    text.split(OPEN)
-        .skip(1)
-        .any(|rest| rest.strip_prefix(uid).is_some_and(|r| r.starts_with("\"}")))
 }
