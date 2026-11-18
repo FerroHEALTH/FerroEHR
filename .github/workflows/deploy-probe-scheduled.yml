@@ -15,6 +15,12 @@
 # postgres images that run published, each pinned by digest. The mutable
 # `:main` tag named whatever was last published, and a probe of an image older
 # than its tree read the tree's new grant terminology as no grant (#5673).
+#
+# WHAT IT CHECKS OUT. Every event checks out the commit GitHub hands the run,
+# which for a `workflow_run` is main's newest commit, and never a ref read
+# from the event payload. A Containers run probes only while its commit is
+# still that newest commit; once main has moved on, the Containers run of the
+# newer commit probes its own images.
 name: deploy-probe (scheduled)
 
 on:
@@ -74,7 +80,10 @@ jobs:
   # green on main while the scenario failed.
   published-images:
     name: published images
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_sha == github.sha
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
@@ -85,7 +94,7 @@ jobs:
       - id: resolve
         name: Resolve the digests the run published
         env:
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           # digest_of <ref>: the digest <ref> names, or nothing when it names none.
@@ -128,17 +137,12 @@ jobs:
     permissions:
       contents: read
     steps:
+      # The commit of the run. After a Containers run that is the commit whose
+      # images are probed (published-images), so the scripts and the images
+      # are one generation.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: github.event_name != 'workflow_run'
         with:
           persist-credentials: false
-      # The scripts of the commit whose images are probed, so the two are one
-      # generation; the trigger admits main's Containers runs alone.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: github.event_name == 'workflow_run'
-        with:
-          persist-credentials: false
-          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: needs.binary.result == 'success'
         with:
