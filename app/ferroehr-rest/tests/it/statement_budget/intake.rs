@@ -162,13 +162,9 @@ async fn the_intake_statement_grows_with_its_tokens_alone() {
     .expect("the render policy");
 
     take(&pool, &policy, 1).await;
-    sqlx::query(
-        "SELECT pg_stat_statements_reset(0, \
-         (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
-    )
-    .execute(&pool)
-    .await
-    .expect("the statement counts reset");
+    let evicted = testkit::statement_window(&pool)
+        .await
+        .expect("the statement counts reset");
     take(&pool, &policy, 1).await;
     let statements: Vec<(i64, String)> = sqlx::query_as(
         "SELECT calls, left(regexp_replace(query, '\\s+', ' ', 'g'), 120) FROM pg_stat_statements \
@@ -178,6 +174,9 @@ async fn the_intake_statement_grows_with_its_tokens_alone() {
     .fetch_all(&pool)
     .await
     .expect("pg_stat_statements reads");
+    testkit::assert_statements_kept(&pool, evicted)
+        .await
+        .expect("no statement evicted while the test counted them");
     let (keys, own): (Vec<_>, Vec<_>) = statements
         .iter()
         .partition(|(_, query)| query.contains("FOR KEY SHARE"));

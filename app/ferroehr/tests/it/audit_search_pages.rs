@@ -288,13 +288,9 @@ async fn a_page_renders_only_the_documents_it_serves() {
                 .iter()
                 .filter(|(chain, _)| chain == "access_log")
                 .count();
-            sqlx::query(
-                "SELECT pg_stat_statements_reset(0, \
-                 (SELECT oid FROM pg_database WHERE datname = current_database()), 0)",
-            )
-            .execute(&pool)
-            .await
-            .expect("the statement counts reset");
+            let evicted = testkit::statement_window(&pool)
+                .await
+                .expect("the statement counts reset");
             let page = store
                 .search(&AuditSearchFilter {
                     count,
@@ -315,6 +311,9 @@ async fn a_page_renders_only_the_documents_it_serves() {
                 "{}, _count={count}, _offset={offset}: one document per served entry",
                 case.name
             );
+            testkit::assert_statements_kept(&pool, evicted)
+                .await
+                .expect("no statement evicted while the test counted them");
         }
     }
 }
